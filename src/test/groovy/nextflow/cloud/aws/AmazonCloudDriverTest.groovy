@@ -33,6 +33,7 @@ import nextflow.Global
 import nextflow.cloud.CloudConfig
 import nextflow.cloud.LaunchConfig
 import nextflow.cloud.types.CloudInstanceStatus
+import nextflow.cloud.types.CloudInstanceType
 import nextflow.config.ConfigBuilder
 import nextflow.util.MemoryUnit
 import org.apache.commons.lang.SerializationUtils
@@ -558,6 +559,7 @@ class AmazonCloudDriverTest extends Specification {
         final SECURITY =  ['sg-123']
         final SUBNET = 'subnet-666'
         final BLOCK = new BlockDeviceMapping().withDeviceName('/dev/xvdc')
+        final IAM_PROFILE = 'foo-role'
         def cfg = Mock(LaunchConfig)
         cfg.getNextflow() >> { new CloudConfig.Nextflow([version:'1.0', trace:'INFO']) }
         def driver = Spy(AmazonCloudDriver)
@@ -573,6 +575,7 @@ class AmazonCloudDriverTest extends Specification {
         (1.._) * cfg.getKeyName() >> KEY
         (1.._) * cfg.getSecurityGroups() >> SECURITY
         (1.._) * cfg.getSubnetId() >> SUBNET
+        (1.._) * cfg.getIamProfile() >> IAM_PROFILE
 
         req instanceof RunInstancesRequest
         req.getMinCount() == COUNT
@@ -584,6 +587,7 @@ class AmazonCloudDriverTest extends Specification {
         req.getSubnetId() == SUBNET
         req.getBlockDeviceMappings().size() == 1
         req.getBlockDeviceMappings()[0] == BLOCK
+        req.getIamInstanceProfile().getName() == IAM_PROFILE
     }
 
     def 'should create a spot instance request' () {
@@ -597,6 +601,7 @@ class AmazonCloudDriverTest extends Specification {
         final SUBNET = 'subnet-784'
         final PRICE = '1.52'
         final BLOCK = new BlockDeviceMapping().withDeviceName('/dev/xvdc')
+        final IAM_PROFILE = 'bar-profile'
         def cfg = Mock(LaunchConfig)
         cfg.getNextflow() >> { new CloudConfig.Nextflow([version:'1.0', trace:'INFO']) }
         def driver = Spy(AmazonCloudDriver)
@@ -612,6 +617,7 @@ class AmazonCloudDriverTest extends Specification {
         (1.._) * cfg.getKeyName() >> KEY
         (1.._) * cfg.getSecurityGroups() >> SECURITY
         (1.._) * cfg.getSubnetId() >> SUBNET
+        (1.._) * cfg.getIamProfile() >> IAM_PROFILE
         1 * cfg.getSpotPrice() >> PRICE
 
         req instanceof RequestSpotInstancesRequest
@@ -624,6 +630,7 @@ class AmazonCloudDriverTest extends Specification {
         req.getLaunchSpecification().getSubnetId() == SUBNET
         req.getLaunchSpecification().getBlockDeviceMappings().size() == 1
         req.getLaunchSpecification().getBlockDeviceMappings()[0] == BLOCK
+        req.getLaunchSpecification().getIamInstanceProfile().name == IAM_PROFILE
 
     }
 
@@ -674,9 +681,59 @@ class AmazonCloudDriverTest extends Specification {
         def driver = Spy(AmazonCloudDriver, constructorArgs: [Mock(AmazonEC2Client)])
 
         when:
-        def result = driver.fetchRole()
+        def result = driver.fetchIamProfile()
         then:
         driver.getUrl('http://169.254.169.254/latest/meta-data/iam/security-credentials/') >> 'iam-role-here'
         result == 'iam-role-here'
     }
+
+    def 'should validate a config' () {
+
+        given:
+        def driver = Spy(AmazonCloudDriver, constructorArgs: [Mock(AmazonEC2Client)])
+        def cfg
+
+        when:
+        cfg = CloudConfig.create(cloud: [imageId:'ami-123', instanceType: 't2.xxx'])
+        driver.validate(cfg)
+        then:
+        1 * driver.describeInstanceType('t2.xxx') >> { [:] as CloudInstanceType }
+        1 * driver.getAccessKey() >> 'xxx'
+        1 * driver.getSecretKey() >> 'yyy'
+
+        when:
+        cfg = CloudConfig.create(cloud: [imageId:'ami-123', instanceType: 't2.xxx', iamProfile: 'foo-role'])
+        driver.validate(cfg)
+        then:
+        1 * driver.describeInstanceType('t2.xxx') >> { [:] as CloudInstanceType }
+        1 * driver.getAccessKey() >> null
+        0 * driver.fetchIamProfile()
+
+        when:
+        cfg = CloudConfig.create(cloud: [imageId:'ami-123', instanceType: 't2.xxx'])
+        driver.validate(cfg)
+        then:
+        1 * driver.describeInstanceType('t2.xxx') >> { [:] as CloudInstanceType }
+        1 * driver.getAccessKey() >> null
+        1 * driver.fetchIamProfile() >> 'secret'
+        cfg.getIamProfile() == 'secret'
+
+        when:
+        cfg = CloudConfig.create(cloud: [imageId:'ami-123', instanceType: 't2.xxx'])
+        driver.validate(cfg)
+        then:
+        1 * driver.describeInstanceType('t2.xxx') >> { [:] as CloudInstanceType }
+        1 * driver.getAccessKey() >> null
+        1 * driver.fetchIamProfile() >> null
+        thrown(IllegalArgumentException)
+    }
+
+    def 'should validate config with profile' () {
+        given:
+        def driver = Spy(AmazonCloudDriver, constructorArgs: [Mock(AmazonEC2Client)])
+        def cfg = Mock(LaunchConfig)
+
+
+    }
 }
+

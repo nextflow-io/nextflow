@@ -85,8 +85,6 @@ class AmazonCloudDriver implements CloudDriver {
 
     private String region
 
-    private String role
-
     AmazonCloudDriver() {
         this(Collections.emptyMap())
     }
@@ -94,31 +92,24 @@ class AmazonCloudDriver implements CloudDriver {
     @CompileDynamic
     AmazonCloudDriver(Map config) {
         // -- get the aws credentials
+        def credentials
         if( config.accessKey && config.secretKey ) {
             this.accessKey = config.accessKey
             this.secretKey = config.secretKey
         }
-        else {
-            def credentials = Global.getAwsCredentials()
-            if( credentials ) {
-                this.accessKey = credentials[0]
-                this.secretKey = credentials[1]
-            }
-            else {
-                role = fetchRole()
-                if( role )
-                    log.debug "Using AWS IAM role: $role"
-                else
-                    throw new AbortOperationException('Missing AWS access and secret keys -- Make sure to define in your system environment the following variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`')
-            }
+        else if( (credentials=Global.getAwsCredentials()) ) {
+            this.accessKey = credentials[0]
+            this.secretKey = credentials[1]
         }
 
+        if( !accessKey && !fetchIamProfile() )
+            throw new AbortOperationException("Missing AWS security credentials -- Provide access/security keys pair or define a IAM instance profile (suggested)")
+
         // -- get the aws default region
-        region = config.region ?: Global.getAwsRegion()
-        if( !region )
-            region = fetchRegion()
+        region = config.region ?: Global.getAwsRegion() ?: fetchRegion()
         if( !region )
             throw new AbortOperationException('Missing AWS region -- Make sure to define in your system environment the variable `AWS_DEFAULT_REGION`')
+
     }
 
     /** only for testing purpose */
@@ -127,7 +118,11 @@ class AmazonCloudDriver implements CloudDriver {
         this.ec2client = client
     }
 
-    protected String fetchRole() {
+    protected String getAccessKey() { accessKey }
+
+    protected String getSecretKey() { secretKey }
+
+    protected String fetchIamProfile() {
         try {
             def role = getUrl('http://169.254.169.254/latest/meta-data/iam/security-credentials/').readLines()
             if( role.size() != 1 )
@@ -237,11 +232,11 @@ class AmazonCloudDriver implements CloudDriver {
         if( cfg.instanceStorageDevice && cfg.instanceStorageMount )
             profile += "export NXF_TEMP='${cfg.instanceStorageMount}'\n"
 
-        if( accessKey )
+        // access/secret keys are propagated only if IAM profile is not specified
+        if( !cfg.iamProfile && accessKey && secretKey ) {
             profile += "export AWS_ACCESS_KEY_ID='$accessKey'\n"
-
-        if( secretKey )
             profile += "export AWS_SECRET_ACCESS_KEY='$secretKey'\n"
+        }
 
         if( region )
             profile += "export AWS_DEFAULT_REGION='$region'\n"
@@ -386,8 +381,9 @@ class AmazonCloudDriver implements CloudDriver {
         req.instanceType = cfg.instanceType
         req.userData = getUserDataAsBase64(cfg)
         req.setBlockDeviceMappings( getBlockDeviceMappings(cfg) )
-        if( role ) {
-            req.setIamInstanceProfile( new IamInstanceProfileSpecification().withName(role) )
+        if( cfg.iamProfile ) {
+            def profile = new IamInstanceProfileSpecification().withName(cfg.iamProfile)
+            req.setIamInstanceProfile(profile)
         }
 
         if( cfg.keyName )
@@ -426,11 +422,11 @@ class AmazonCloudDriver implements CloudDriver {
                 spec.withAllSecurityGroups(allGroups)
             }
 
-            if( role )
-                spec.setIamInstanceProfile(new IamInstanceProfileSpecification().withName(role) )
-
+            if( iamProfile ) {
+                def profile = new IamInstanceProfileSpecification().withName(cfg.iamProfile)
+                spec.setIamInstanceProfile(profile)
+            }
         }
-
 
         new RequestSpotInstancesRequest()
                 .withInstanceCount(instanceCount)
@@ -654,6 +650,18 @@ class AmazonCloudDriver implements CloudDriver {
 
         if( !describeInstanceType(config.instanceType) )
             throw new IllegalArgumentException("Unknown EC2 instance type: ${config.instanceType}")
+
+        if( getAccessKey() && getSecretKey() ) {
+            log.debug "AWS authentication based on access/secret credentials"
+        }
+        else {
+            def profile = config.iamProfile
+            if( !profile )
+                config.iamProfile = profile = fetchIamProfile()
+            if( !profile )
+                throw new IllegalArgumentException("Missing auth credentials -- Provide the accessKey/secretKey or IAM instance profile")
+            log.debug "AWS authentication based IAM profile: `$profile`"
+        }
     }
 
     @Override
