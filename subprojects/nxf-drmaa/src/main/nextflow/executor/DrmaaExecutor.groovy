@@ -181,12 +181,15 @@ class DrmaaTaskHandler extends TaskHandler {
         return result.join(' ')
     }
 
+    protected createBashWrapper() {
+        new BashWrapperBuilder(task) .build()
+    }
 
     @Override
     void submit() {
 
         // create the wrapper script
-        new BashWrapperBuilder(task) .build()
+        createBashWrapper()
 
         JobTemplate template = drmaa.createJobTemplate()
         template.setJobName(taskName)
