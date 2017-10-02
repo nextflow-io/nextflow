@@ -42,7 +42,6 @@ import nextflow.script.ValueInParam
 import nextflow.util.CacheHelper
 import spock.lang.Specification
 import spock.lang.Unroll
-import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -379,20 +378,6 @@ class TaskProcessorTest extends Specification {
         holder.sourceObj == localFile
         holder.storePath == localFile.toRealPath()
         holder.stageName == localFile.getFileName().toString()
-
-        /*
-         * when the input is a on a foreign file system
-         * it is need to copy it to a local file
-         */
-        when:
-        def remoteFile = TestHelper.createInMemTempFile('remote_file.txt')
-        remoteFile.text = 'alpha beta gamma delta'
-        holder = processor.normalizeInputToFile(remoteFile,'input.1')
-        then:
-        holder.sourceObj == remoteFile
-        holder.storePath.fileSystem == FileSystems.default
-        holder.storePath.text == 'alpha beta gamma delta'
-        holder.stageName == remoteFile.getName()
 
         /*
          * any generic input that is not a file is converted to a string
