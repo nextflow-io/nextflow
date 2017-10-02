@@ -56,7 +56,6 @@ class DrmaaExecutorTest extends Specification {
         handler instanceof DrmaaTaskHandler
         handler.workDir == workDir
         handler.taskName == 'nf-Hello'
-        handler.wrapperFile.exists()
 
         cleanup:
         workDir?.deleteDir()
@@ -76,11 +75,11 @@ class DrmaaExecutorTest extends Specification {
         def task = new TaskRun(id: TaskId.of(1), name: 'hello', workDir: workDir, config: [queue: 'short'])
         def executor = [ getDrmaaSession: { drmaa } ] as DrmaaExecutor
 
-        def handler = new DrmaaTaskHandler(task, executor)
+        def handler = Spy(DrmaaTaskHandler, constructorArgs: [task, executor])
         when:
         handler.submit()
-
         then:
+        1 * handler.createBashWrapper() >> null
         handler.status == TaskStatus.SUBMITTED
         handler.jobId == '12345'
 
