@@ -19,13 +19,14 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.file.FileDownloader
 import nextflow.processor.TaskBean
 import nextflow.util.Escape
-
 /**
  * Simple file strategy that stages input files creating symlinks
  * and copies the output files using the {@code cp} command.
@@ -66,10 +67,12 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     String separatorChar = '\n'
 
+    private FileDownloader downloader
 
     SimpleFileCopyStrategy() {
         this.inputFiles = [:]
         this.outputFiles = []
+        this.downloader = new FileDownloader()
     }
 
 
@@ -79,6 +82,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         this.targetDir = bean.targetDir
         this.stageinMode = bean.stageInMode
         this.stageoutMode = bean.stageOutMode
+        this.downloader = new FileDownloader()
     }
 
 
@@ -92,9 +96,11 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
     String getStageInputFilesScript() {
         assert inputFiles != null
 
+        final staging = downloader.downloadForeignFiles(inputFiles)
+
         def delete = []
         def links = []
-        inputFiles.each { stageName, storePath ->
+        staging.each { stageName, storePath ->
 
             // delete all previous files with the same name
             delete << "rm -f ${Escape.path(stageName)}"
