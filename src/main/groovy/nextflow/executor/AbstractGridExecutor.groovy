@@ -69,7 +69,7 @@ abstract class AbstractGridExecutor extends Executor {
         assert task
         assert task.workDir
 
-        return new GridTaskHandler(task, this)
+        new GridTaskHandler(task, this)
     }
 
     protected BashWrapperBuilder createBashWrapperBuilder(TaskRun task) {

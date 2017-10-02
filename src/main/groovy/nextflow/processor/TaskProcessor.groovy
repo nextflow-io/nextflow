@@ -18,7 +18,11 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.processor
-import java.nio.file.Files
+import static nextflow.processor.ErrorStrategy.FINISH
+import static nextflow.processor.ErrorStrategy.IGNORE
+import static nextflow.processor.ErrorStrategy.RETRY
+import static nextflow.processor.ErrorStrategy.TERMINATE
+
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -86,11 +90,7 @@ import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.CollectionHelper
-
-import static nextflow.processor.ErrorStrategy.*
-
 import nextflow.util.Escape
-
 /**
  * Implement nextflow process execution logic
  *
@@ -1602,37 +1602,8 @@ class TaskProcessor {
         /*
          * when it is a local file, just return a reference holder to it
          */
-        if( input instanceof Path && input.fileSystem == FileHelper.workDirFileSystem ) {
-            return new FileHolder(input)
-        }
-
-        /*
-         * when it is a file stored in a "foreign" storage, copy
-         * to a local file and return a reference holder to the local file
-         */
-
         if( input instanceof Path ) {
-            try {
-                log.debug "Copying to process workdir foreign file: ${input.toUri().toString()}"
-                def result = Nextflow.tempFile(input.getFileName().toString())
-                InputStream source = null
-                try {
-                    source = Files.newInputStream(input)
-                    Files.copy(source, result)
-                }
-                finally {
-                    source?.closeQuietly()
-                }
-                return new FileHolder(input, result)
-            }
-            catch( IOException e ) {
-                def message = "Can't stage file ${input.toUri().toString()}"
-                if( e instanceof NoSuchFileException )
-                    message += " -- file does not exist"
-                else if( e.message )
-                    message += " -- reason: ${e.message}"
-                throw new ProcessStageException(message, e)
-            }
+            return new FileHolder(input)
         }
 
         /*
