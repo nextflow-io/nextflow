@@ -153,10 +153,6 @@ class AssetManagerTest extends Specification {
     }
 
 
-    // Downloading the first time with a tag (not branch) should work fine.
-    // But the second time with the same tag (which would just be a pull)
-    // will cause a detached HEAD exception with jgit.
-    // So we don't pull the repo is tagged and instead return Already Up To Date.
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testPullTagTwice() {
 
@@ -171,13 +167,12 @@ class AssetManagerTest extends Specification {
         folder.resolve('nextflow-io/hello/.git').isDirectory()
 
         when:
-        def result = manager.download("v1.2")
+        manager.download("v1.2")
         then:
         noExceptionThrown()
-        result == "Already-up-to-date"
     }
 
-    // Hashes should behave the same as tags.
+    // The hashes used here are NOT associated with tags.
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testPullHashTwice() {
 
@@ -187,12 +182,12 @@ class AssetManagerTest extends Specification {
         def manager = new AssetManager().build('nextflow-io/hello', [github: [auth: token]])
 
         when:
-        manager.download("0ec2ecd0ac13bc7e32594c0258ebce55e383d241")
+        manager.download("6b9515aba6c7efc6a9b3f273ce116fc0c224bf68")
         then:
         folder.resolve('nextflow-io/hello/.git').isDirectory()
 
         when:
-        def result = manager.download("0ec2ecd0ac13bc7e32594c0258ebce55e383d241")
+        def result = manager.download("6b9515aba6c7efc6a9b3f273ce116fc0c224bf68")
         then:
         noExceptionThrown()
         result == "Already-up-to-date"
@@ -222,6 +217,8 @@ class AssetManagerTest extends Specification {
 
     // First clone a repo with a tag, then forget to include the -r argument
     // when you execute nextflow.
+    // Note that while the download will work, execution will fail subsequently
+    // at a separate check - this just tests that we don't fail because of a detached head.
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testPullTagThenBranch() {
 
@@ -236,10 +233,9 @@ class AssetManagerTest extends Specification {
         folder.resolve('nextflow-io/hello/.git').isDirectory()
 
         when:
-        def result = manager.download()
+        manager.download()
         then:
         noExceptionThrown()
-        result == "Already-up-to-date"
     }
 
 

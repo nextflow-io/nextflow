@@ -567,44 +567,26 @@ class AssetManager {
             }
         }
 
-        // JGit does not apparently support pulling tagged repos.
-        // Pulling a tag always results in a DetachedHeadException.
-        // The jgit equivalent of `git pull origin tag` does not work.
-        // Therefore we don't pull if we've cloned a tagged repo and
-        // simply assume that it's up to date.
-        if ( taggedRepo() ) {
-            log.debug("Repo appears to be checked out to a TAG, so we are NOT pulling the repo and assuming it is already up to date!")
+        def pull = git.pull()
+        def revInfo = getCurrentRevisionAndName()
+
+        if ( revInfo.revType == RevisionInfo.Type.COMMIT ) {
+            log.debug("Repo appears to be checked out to a commit hash, but not a TAG, so we are NOT pulling the repo and assuming it is already up to date!")
             return MergeResult.MergeStatus.ALREADY_UP_TO_DATE.toString()
-
-        // For normal branches pull get any updated code.
-        } else {
-            log.debug("Not apparently a tagged repo - pulling!")
-
-            def pull = git.pull()
-            if( provider.hasCredentials() )
-                pull.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password))
-
-            def result = pull.call()
-            if(!result.isSuccessful())
-                throw new AbortOperationException("Cannot pull project `$project` -- ${result.toString()}")
-
-            return result?.mergeResult?.mergeStatus?.toString()
         }
-    }
 
-    /**
-     * Check if the repo is checked out to a TAG or commit hash.
-     *
-     * @return true if the repo is checked out to a TAG or commit hash, false otherwise.
-     */
-    private boolean taggedRepo() {
-        // getFullBranch returns a string like "refs/heads/branchname" if
-        // the repo is checked out a branch.  If it's checked out to a tag or
-        // commit hash, then it returns the ObjectId in hex format.
-        // So we just check if the branch path starts with "refs/heads" or not.
-        def full = git.getRepository().getFullBranch()
-        log.debug("Repo branch/tag: " + full)
-        return !full.startsWith("refs/heads")
+        if ( revInfo.revType == RevisionInfo.Type.TAG ) {
+            pull.setRemoteBranchName( "refs/tags/" + revInfo.revision )
+        }
+
+        if( provider.hasCredentials() )
+            pull.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password))
+
+        def result = pull.call()
+        if(!result.isSuccessful())
+            throw new AbortOperationException("Cannot pull project `$project` -- ${result.toString()}")
+
+        return result?.mergeResult?.mergeStatus?.toString()
     }
 
     /**
@@ -658,7 +640,7 @@ class AssetManager {
             return null
 
         if( head.isSymbolic() ) {
-            return new RevisionInfo(head.objectId.name(), Repository.shortenRefName(head.getTarget().getName()))
+            return new RevisionInfo(head.objectId.name(), Repository.shortenRefName(head.getTarget().getName()), RevisionInfo.Type.BRANCH)
         }
 
         if( !head.getObjectId() )
@@ -668,10 +650,10 @@ class AssetManager {
         Map<ObjectId, String> allNames = git.nameRev().addPrefix( "refs/tags/" ).add(head.objectId).call()
         def name = allNames.get( head.objectId )
         if( name ) {
-            return new RevisionInfo(head.objectId.name(), name)
+            return new RevisionInfo(head.objectId.name(), name, RevisionInfo.Type.TAG)
         }
         else {
-            return new RevisionInfo(head.objectId.name())
+            return new RevisionInfo(head.objectId.name(), null, RevisionInfo.Type.COMMIT)
         }
     }
 
@@ -875,6 +857,11 @@ class AssetManager {
      */
     @Canonical
     static class RevisionInfo {
+        public enum Type {
+            TAG,
+            COMMIT,
+            BRANCH
+        }
 
         /**
          * Git commit ID
@@ -885,6 +872,11 @@ class AssetManager {
          * Git tab or branch name
          */
         String revision
+
+        /**
+         * The revision type.
+         */
+        Type revType
 
         /**
          * @return A formatted string containing the commitId and revision properties
