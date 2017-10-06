@@ -72,7 +72,6 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
     SimpleFileCopyStrategy() {
         this.inputFiles = [:]
         this.outputFiles = []
-        this.downloader = new FileDownloader()
     }
 
 
@@ -82,7 +81,12 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         this.targetDir = bean.targetDir
         this.stageinMode = bean.stageInMode
         this.stageoutMode = bean.stageOutMode
-        this.downloader = new FileDownloader()
+    }
+
+    protected Map<String,Path> downloadForeignFiles(Map<String,Path> files) {
+        if( !downloader )
+            downloader = new FileDownloader()
+        downloader.downloadForeignFiles(files)
     }
 
 
@@ -96,7 +100,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
     String getStageInputFilesScript() {
         assert inputFiles != null
 
-        final staging = downloader.downloadForeignFiles(inputFiles)
+        final staging = downloadForeignFiles(inputFiles)
 
         def delete = []
         def links = []
