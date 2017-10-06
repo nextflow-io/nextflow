@@ -25,8 +25,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         given:
         def handler = [:] as AwsBatchTaskHandler
         expect:
-        handler.normalizeName('foo') == 'foo'
-        handler.normalizeName('foo (12)') == 'foo_12'
+        handler.normalizeJobName('foo') == 'foo'
+        handler.normalizeJobName('foo (12)') == 'foo_12'
     }
 
     @Unroll
@@ -112,55 +112,59 @@ class AwsBatchTaskHandlerTest extends Specification {
         def req = handler.newSubmitRequest(task)
         then:
         1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
-        1 * handler.getJobQueueAndDefinition(task) >> ['foo', 'bar']
+        1 * handler.getJobQueue(task) >> 'queue1'
+        1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> [VAR_FOO, VAR_BAR]
         1 * handler.wrapperFile >> Paths.get('/bucket/test/.command.run')
 
         req.getJobName() == 'batchtask'
-        req.getJobQueue() == 'foo'
-        req.getJobDefinition() == 'bar'
+        req.getJobQueue() == 'queue1'
+        req.getJobDefinition() == 'job-def:1'
         req.getContainerOverrides().getVcpus() == 4
         req.getContainerOverrides().getMemory() == 8192
         req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
         req.getContainerOverrides().getCommand() == ['bash', '-c', "/bin/aws s3 cp s3://bucket/test/.command.run - | bash 2>&1 | tee .command.log".toString()]
 
-
     }
 
-    def 'should return job queue and definition'() {
+    def 'should return job queue'() {
         given:
         def handler = Spy(AwsBatchTaskHandler)
         def task = Mock(TaskRun)
 
         when:
-        def result = handler.getJobQueueAndDefinition(task)
-        then:
-        task.getConfig() >> [queue: 'my-queue/my-job']
-        0 * handler.checkJobDefinition(_)
-        0 * task.getContainer()
-        result == ['my-queue', 'my-job']
-
-        when:
-        result = handler.getJobQueueAndDefinition(task)
+        def result = handler.getJobQueue(task)
         then:
         task.getConfig() >> [queue: 'my-queue']
-        1 * task.getContainer() >> 'docker/image:1.1'
-        1 * handler.checkJobDefinition('docker/image:1.1') >> 'nf-docker-image-1-1'
-        result == ['my-queue', 'nf-docker-image-1-1']
+        result == 'my-queue'
 
         when:
-        handler.getJobQueueAndDefinition(task)
-        then:
-        task.getConfig() >> [queue: 'my-queue']
-        1 * task.getContainer() >> null
-        0 * handler.checkJobDefinition('docker/image:1.1') >> 'nf-docker-image-1-1'
-        thrown(ProcessNotRecoverableException)
-
-        when:
-        handler.getJobQueueAndDefinition(task)
+        handler.getJobQueue(task)
         then:
         task.getConfig() >> [:]
         thrown(ProcessNotRecoverableException)
+    }
+
+    def 'should return job definition' () {
+        given:
+        def IMAGE = 'user/image:tag'
+        def JOB_NAME = 'nf-user-image-tag'
+        def handler = Spy(AwsBatchTaskHandler)
+        def task = Mock(TaskRun)
+
+        when:
+        def result = handler.getJobDefinition(task)
+        then:
+        1 * task.getContainer() >> 'job-definition://queue-name'
+        0 * handler.resolveJobDefinition(_)
+        result == 'queue-name'
+
+        when:
+        result = handler.getJobDefinition(task)
+        then:
+        1 * task.getContainer() >> IMAGE
+        1 * handler.resolveJobDefinition(IMAGE) >> JOB_NAME
+        result == JOB_NAME
 
     }
 
@@ -194,9 +198,9 @@ class AwsBatchTaskHandlerTest extends Specification {
         def handler = Spy(AwsBatchTaskHandler)
 
         expect:
-        handler.getJobDefinitionName(null) == null
-        handler.getJobDefinitionName('foo') == 'nf-foo'
-        handler.getJobDefinitionName('foo:1') == 'nf-foo-1'
+        handler.normalizeJobDefinitionName(null) == null
+        handler.normalizeJobDefinitionName('foo') == 'nf-foo'
+        handler.normalizeJobDefinitionName('foo:1') == 'nf-foo-1'
     }
 
 
@@ -210,7 +214,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def req = Mock(RegisterJobDefinitionRequest)
 
         when:
-        handler.checkJobDefinition(IMAGE)
+        handler.resolveJobDefinition(IMAGE)
         then:
         1 * handler.makeJobDefRequest(IMAGE) >> req
         1 * req.getJobDefinitionName() >> JOB_NAME
@@ -219,7 +223,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.createJobDef(req) >> null
 
         when:
-        handler.checkJobDefinition(IMAGE)
+        handler.resolveJobDefinition(IMAGE)
         then:
         // second time are not invoked for the same image
         0 * handler.makeJobDefRequest(IMAGE) >> req
@@ -309,7 +313,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def result = handler.makeJobDefRequest(IMAGE)
         then:
-        1 * handler.getJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> new AwsOptions()
         result.jobDefinitionName == JOB_NAME
         result.type == 'container'
@@ -319,7 +323,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         result = handler.makeJobDefRequest(IMAGE)
         then:
-        1 * handler.getJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
         1 * handler.getAwsOptions() >> new AwsOptions(cliPath: '/home/conda/bin/aws')
         result.jobDefinitionName == JOB_NAME
         result.type == 'container'
