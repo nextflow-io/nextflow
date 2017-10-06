@@ -48,7 +48,7 @@ class CacheHelperTest extends Specification {
         file.deleteOnExit()
         file.text = 'Hello'
 
-        def aFile = Hashing.murmur3_128().newHasher().putUnencodedChars(file.absolutePath).putLong(file.length()).putLong(file.lastModified()).hash()
+        def aFile = Hashing.murmur3_128().newHasher().putUnencodedChars(file.toPath().toAbsolutePath().normalize().toString()).putLong(file.length()).putLong(file.lastModified()).hash()
 
 
         expect:
