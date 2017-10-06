@@ -35,7 +35,8 @@ import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import nextflow.util.Escape
 /**
- * Experimental AWS Batch executor
+ * AWS Batch executor
+ * https://aws.amazon.com/batch/
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -43,6 +44,9 @@ import nextflow.util.Escape
 @CompileStatic
 class AwsBatchExecutor extends Executor {
 
+    /**
+     * AWS batch client instance
+     */
     @PackageScope
     static AWSBatchClient client
 
@@ -88,13 +92,14 @@ class AwsBatchExecutor extends Executor {
     TaskHandler createTaskHandler(TaskRun task) {
         assert task
         assert task.workDir
-
-        log.debug "Launching process > ${task.name} -- work folder: ${task.workDir}"
+        log.debug "Launching process > ${task.name} -- work folder: ${task.workDirStr}"
         new AwsBatchTaskHandler(task, this)
     }
 }
 
-
+/**
+ * Implements a task handler for AWS Batch jobs
+ */
 @Slf4j
 @CompileStatic
 class AwsBatchTaskHandler extends TaskHandler {
@@ -133,7 +138,12 @@ class AwsBatchTaskHandler extends TaskHandler {
     /** only for testing purpose -- do not use */
     protected AwsBatchTaskHandler() {}
 
-
+    /**
+     * Create a new Batch task handler
+     *
+     * @param task The {@link TaskRun} descriptor of the task to run
+     * @param executor The {@link AwsBatchExecutor} instance
+     */
     AwsBatchTaskHandler(TaskRun task, AwsBatchExecutor executor) {
         super(task)
         this.bean = new TaskBean(task)
@@ -152,6 +162,9 @@ class AwsBatchTaskHandler extends TaskHandler {
         this.traceFile = task.workDir.resolve(TaskRun.CMD_TRACE)
     }
 
+    /**
+     * @return An instance of {@link AwsOptions} holding Batch specific settings
+     */
     protected AwsOptions getAwsOptions() {
 
         String name = executor.name
@@ -162,6 +175,9 @@ class AwsBatchTaskHandler extends TaskHandler {
         new AwsOptions(cliPath: cli, storageClass: storage, storageEncryption: encrypt)
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     boolean checkIfRunning() {
         if( !jobId )
@@ -175,6 +191,9 @@ class AwsBatchTaskHandler extends TaskHandler {
         return job.status in ['RUNNING', 'SUCCEEDED', 'FAILED']
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     boolean checkIfCompleted() {
         assert jobId
@@ -206,6 +225,9 @@ class AwsBatchTaskHandler extends TaskHandler {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     void kill() {
         assert jobId
@@ -215,18 +237,20 @@ class AwsBatchTaskHandler extends TaskHandler {
         log.debug "[AWS BATCH] killing job=$jobId; response=$resp"
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     void submit() {
-
         /*
          * create task wrapper
          */
-        def launcher = new AwsBatchScriptLauncher(bean,awsOptions)
+        final launcher = new AwsBatchScriptLauncher(bean,awsOptions)
         launcher.scratch = true
         launcher.build()
 
         final req = newSubmitRequest(task)
-        log.debug "[AWS BATCH] now job request > $req"
+        log.trace "[AWS BATCH] now job request > $req"
 
         /*
          * submit the task execution
@@ -237,33 +261,45 @@ class AwsBatchTaskHandler extends TaskHandler {
         log.debug "[AWS BATCH] submitted > job=$jobId; work-dir=${task.getWorkDirStr()}"
     }
 
-    protected List<String> getJobQueueAndDefinition(TaskRun task) {
-        def queue = task.config.queue?.toString()
+    /**
+     * Retrieve the queue name to use to submit the task execution
+     *
+     * @param task The {@link TaskRun} object to be executed
+     * @return The Batch queue name defined by this job execution
+     */
+    protected String getJobQueue(TaskRun task) {
+        final queue = task.config.queue?.toString()
         if( !queue )
             throw new ProcessNotRecoverableException("Missing AWS Batch job queue -- provide it by using the process `queue` directive")
 
-        if( queue.contains('/') ) {
-            def result = queue.tokenize('/')
-            if( result.size() != 2 ) throw new ProcessNotRecoverableException("Invalid AWS Batch job queue definition: $queue -- it must be in the form: jobQueue/jobDefinition")
-            return result
-        }
-
-        // use the container definition
-        def container = task.getContainer()
-        if( !container )
-            throw new ProcessNotRecoverableException("Invalid AWS Batch job definition -- provide a Docker image name or a Batch job definition name")
-
-        def jobDef = checkJobDefinition(container)
-        return [queue,jobDef]
+        return queue
     }
 
     /**
-     * Maps a docker container image to a Batch Job Definition name
+     * Get the Batch job definition name used to run the specified task
+     *
+     * @param task The {@link TaskRun} object to be executed
+     * @return The Batch job definition name defined by this job execution
+     */
+    protected String getJobDefinition(TaskRun task) {
+        final container = task.getContainer()
+        if( !container )
+            throw new ProcessNotRecoverableException("Invalid AWS Batch job definition -- provide a Docker image name or a Batch job definition name")
+
+        if( container.startsWith('job-definition://')) {
+            return container.substring(17)
+        }
+
+        resolveJobDefinition(container)
+    }
+
+    /**
+     * Maps a docker container image to a Batch job definition name
      *
      * @param container The Docker container image name which need to be used to run the job
      * @return The Batch Job Definition name associated with the specified container
      */
-    protected String checkJobDefinition(String container) {
+    protected String resolveJobDefinition(String container) {
         if( jobDefinitions.containsKey(container) )
             return jobDefinitions[container]
 
@@ -286,11 +322,16 @@ class AwsBatchTaskHandler extends TaskHandler {
             jobDefinitions[container] = name
             return name
         }
-
     }
 
+    /**
+     * Create a Batch job definition request object for the specified Docker image
+     *
+     * @param image The Docker container image for which is required to create a Batch job definition
+     * @return An instance of {@link RegisterJobDefinitionRequest} for the specified Docker image
+     */
     protected RegisterJobDefinitionRequest makeJobDefRequest(String image) {
-        final name = getJobDefinitionName(image)
+        final name = normalizeJobDefinitionName(image)
         final result = new RegisterJobDefinitionRequest()
         result.setJobDefinitionName(name)
         result.setType(JobDefinitionType.Container)
@@ -327,8 +368,15 @@ class AwsBatchTaskHandler extends TaskHandler {
         return result
     }
 
+    /**
+     * Look for a Batch job definition in ACTIVE status for the given name and NF job definition ID
+     *
+     * @param name The Batch job definition name
+     * @param jobId A unique job definition ID generated by NF
+     * @return The fully qualified Batch job definition name eg {@code my-job-definition:3}
+     */
     protected String findJobDef(String name, String jobId) {
-        log.debug "[AWS BATCH] checking job definition with name=$name; jobid=$jobId"
+        log.trace "[AWS BATCH] checking job definition with name=$name; jobid=$jobId"
         final req = new DescribeJobDefinitionsRequest().withJobDefinitionName(name)
         final res = client.describeJobDefinitions(req)
         final jobs = res.getJobDefinitions()
@@ -339,31 +387,48 @@ class AwsBatchTaskHandler extends TaskHandler {
         return job ? "$name:$job.revision" : null
     }
 
+    /**
+     * Create (aka register) a new Batch job definition
+     *
+     * @param req A {@link RegisterJobDefinitionRequest} representing the Batch jib definition to create
+     * @return The fully qualified Batch job definition name eg {@code my-job-definition:3}
+     */
     protected String createJobDef(RegisterJobDefinitionRequest req) {
         final res = client.registerJobDefinition(req)
         return "${res.jobDefinitionName}:$res.revision"
     }
 
-    protected String getJobDefinitionName(String name) {
+    /**
+     * Make a name string complaint with the Batch job definition format
+     *
+     * @param name A job name
+     * @return A given name formatted to be used as Job definition name
+     */
+    protected String normalizeJobDefinitionName(String name) {
         if( !name ) return null
         def result = name.replaceAll(/[^a-zA-Z0-9\-_]+/,'-')
         return "nf-" + result
     }
 
+    /**
+     * Create a new Batch job request for the given NF {@link TaskRun}
+     *
+     * @param task A {@link TaskRun} to be executed as Batch job
+     * @return A {@link SubmitJobRequest} instance representing the Batch job to submit
+     */
     protected SubmitJobRequest newSubmitRequest(TaskRun task) {
 
-        def awsCli = getAwsOptions().cliPath ?: 'aws'
         // the cmd list to launch it
+        def awsCli = getAwsOptions().cliPath ?: 'aws'
         def cmd = ['bash','-c', "$awsCli s3 cp s3:/${getWrapperFile()} - | bash 2>&1 | tee $TaskRun.CMD_LOG".toString() ] as List<String>
 
-        def jobQueueAndDefinition = getJobQueueAndDefinition(task)
         /*
          * create the request object
          */
         def result = new SubmitJobRequest()
-        result.setJobName(normalizeName(task.name))
-        result.setJobQueue(jobQueueAndDefinition[0])
-        result.setJobDefinition(jobQueueAndDefinition[1])
+        result.setJobName(normalizeJobName(task.name))
+        result.setJobQueue(getJobQueue(task))
+        result.setJobDefinition(getJobDefinition(task))
 
         // set the actual command
         def container = new ContainerOverrides()
@@ -384,6 +449,9 @@ class AwsBatchTaskHandler extends TaskHandler {
         return result
     }
 
+    /**
+     * @return The list of environment variables to be defined in the Batch job execution context
+     */
     protected List<KeyValuePair> getEnvironmentVars() {
         def vars = []
         if( bean.environment )
@@ -393,16 +461,27 @@ class AwsBatchTaskHandler extends TaskHandler {
         return vars
     }
 
+    /**
+     * @return The launcher script file {@link Path}
+     */
     protected Path getWrapperFile() {
         wrapperFile
     }
 
-    protected String normalizeName(String str) {
-        str.replaceAll(' ','_').replaceAll(/[^a-zA-Z0-9_]/,'')
+    /**
+     * Remove invalid characters from a job name string
+     *
+     * @param name A job name containing possible invalid character
+     * @return A job name without invalid characters
+     */
+    protected String normalizeJobName(String name) {
+        name.replaceAll(' ','_').replaceAll(/[^a-zA-Z0-9_]/,'')
     }
 }
 
-
+/**
+ * Implements BASH launcher script for AWS Batch jobs
+ */
 class AwsBatchScriptLauncher extends BashWrapperBuilder {
 
     AwsBatchScriptLauncher( TaskBean bean, AwsOptions opts ) {
@@ -545,7 +624,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
 }
 
 /**
- * Helper class wrapping AWS config options
+ * Helper class wrapping AWS config options required for Batch job executions
  */
 @Slf4j
 @CompileStatic

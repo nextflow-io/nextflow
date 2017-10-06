@@ -1115,7 +1115,7 @@ class TaskProcessor {
         }
 
         if( task?.workDir )
-            message << "\nWork dir:\n  ${task.workDir.toString()}"
+            message << "\nWork dir:\n  ${task.workDirStr}"
 
         return message
     }
@@ -1180,7 +1180,7 @@ class TaskProcessor {
         }
 
         if( task?.workDir )
-            message << "\nWork dir:\n  ${task.workDir.toString()}"
+            message << "\nWork dir:\n  ${task.workDirStr}"
 
         message << "\nTip: ${getRndTip()}"
 
