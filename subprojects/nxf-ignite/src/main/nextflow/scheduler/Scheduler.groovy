@@ -134,7 +134,7 @@ class Scheduler {
      * @param ignite An {@link Ignite} instance
      * @param monitor A {@link TaskPollingMonitor} instance
      */
-    public Scheduler init(Ignite ignite, TaskPollingMonitor monitor) {
+    Scheduler init(Ignite ignite, TaskPollingMonitor monitor) {
         assert ignite
         assert monitor
 
