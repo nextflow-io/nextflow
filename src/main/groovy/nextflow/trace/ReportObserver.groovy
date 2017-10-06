@@ -184,12 +184,16 @@ class ReportObserver implements TraceObserver {
     }
 
     protected String renderJsonData(Collection<TraceRecord> data) {
+        def List<String> formats = null
+        def List<String> fields = null
         def result = new StringBuilder()
         result << '{ "trace": [\n'
         int i=0
         for( TraceRecord record : data ) {
             if( i++ ) result << ','
-            record.renderJson(result)
+            if( !formats ) formats = TraceRecord.FIELDS.values().collect { it!='str' ? 'num' : 'str' }
+            if( !fields ) fields = TraceRecord.FIELDS.keySet() as List
+            record.renderJson(result,fields,formats)
         }
         result << ']}'
         return result.toString()
