@@ -215,6 +215,11 @@ class Launcher {
                 normalized << TimelineObserver.DEF_FILE_NAME
             }
 
+            else if( current == '-with-broadcast' && (i==args.size() || args[i].startsWith('-'))) {
+                log.info "with broadcast found"
+                normalized << '-'
+            }
+
             else if( current == '-with-dag' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << GraphObserver.DEF_FILE_NAME
             }
