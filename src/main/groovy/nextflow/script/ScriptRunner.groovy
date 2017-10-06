@@ -358,8 +358,9 @@ class ScriptRunner {
     @PackageScope
     String getCommandLine() { commandLine }
 
+    @PackageScope
     @CompileDynamic
-    protected fetchContainers() {
+    def fetchContainers() {
 
         def result = [:]
         if( session.config.process instanceof Map<String,?> ) {

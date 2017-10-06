@@ -339,7 +339,7 @@ class Launcher {
         println ''
     }
 
-    protected Launcher command( String[] args ) {
+    Launcher command( String[] args ) {
         /*
          * CLI argument parsing
          */
@@ -384,7 +384,7 @@ class Launcher {
     /**
      * Launch the pipeline execution
      */
-    protected int run() {
+    int run() {
 
         /*
          * setup environment

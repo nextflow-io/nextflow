@@ -118,7 +118,8 @@ class Autoscaler implements Closeable {
      * @param nodes The map holding the current cluster topology
      * @param tasks The map of scheduled tasks
      */
-    protected void init(Map<UUID,NodeData> nodes, Map<TaskId,TaskHolder> tasks) {
+    @PackageScope
+    void init(Map<UUID,NodeData> nodes, Map<TaskId,TaskHolder> tasks) {
 
         this.workerNodes = nodes
         this.scheduledTasks = tasks
