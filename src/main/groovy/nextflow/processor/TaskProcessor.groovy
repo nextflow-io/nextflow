@@ -982,7 +982,8 @@ class TaskProcessor {
      *      or an instance of {@TaskFault} representing the cause of the error (that implicitly means
      *      a {@link ErrorStrategy#TERMINATE})
      */
-    final synchronized protected resumeOrDie( TaskRun task, Throwable error ) {
+    @PackageScope
+    final synchronized resumeOrDie( TaskRun task, Throwable error ) {
         log.trace "Handling unexpected condition for\n  task: $task\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
         ErrorStrategy errorStrategy = TERMINATE

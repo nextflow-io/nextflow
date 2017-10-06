@@ -81,8 +81,7 @@ class MemoryUnit implements Comparable<MemoryUnit>, Serializable, Cloneable {
             int p = UNITS.indexOf(unit)
             if ( p == -1 ) {
                 // try adding a 'B' specified
-                unit += 'B'
-                p = UNITS.indexOf(unit)
+                p = UNITS.indexOf(unit+'B')
                 if( p == -1 ) {
                     throw new IllegalArgumentException("Not a valid file size unit: ${str}")
                 }
