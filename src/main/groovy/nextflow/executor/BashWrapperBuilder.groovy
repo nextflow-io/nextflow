@@ -284,6 +284,27 @@ class BashWrapperBuilder {
         systemOsName == 'Linux' && containerConfig?.fixOwnership && containerInit() && containerConfig.engine == 'docker' // <-- note: only for docker (shifter is not affected)
     }
 
+    protected void makeEnvironmentFile(Path environmentFile) {
+
+        /*
+         * add modules to the environment file
+         */
+        if( moduleNames ) {
+            environmentFile << MODULE_LOAD << ENDL << ENDL
+            moduleNames.each {
+                environmentFile << moduleLoad(it) << ENDL
+            }
+        }
+
+        /*
+         * save the environment
+         */
+        if( environment ) {
+            // create the *bash* environment script
+            environmentFile << TaskProcessor.bashEnvironmentScript(environment)
+        }
+
+    }
     /**
      * Build up the BASH wrapper script file which will launch the user provided script
      * @return The {@code Path} of the created wrapper script
@@ -311,23 +332,7 @@ class BashWrapperBuilder {
             inputFile.text = input
         }
 
-        /*
-         * add modules to the environment file
-         */
-        if( moduleNames ) {
-            environmentFile << MODULE_LOAD << ENDL << ENDL
-            moduleNames.each {
-                environmentFile << moduleLoad(it) << ENDL
-            }
-        }
-
-        /*
-         * save the environment
-         */
-        if( environment ) {
-            // create the *bash* environment script
-            environmentFile << TaskProcessor.bashEnvironmentScript(environment)
-        }
+        makeEnvironmentFile(environmentFile)
 
         // whenever it has to change to the scratch directory
         final changeDir = getScratchDirectoryCommand()
@@ -498,8 +503,8 @@ class BashWrapperBuilder {
          * un-stage output files
          */
         if( changeDir ) {
-            wrapper << copyFile(TaskRun.CMD_OUTFILE, workDir) << ' || true' << ENDL
-            wrapper << copyFile(TaskRun.CMD_ERRFILE, workDir) << ' || true' << ENDL
+            wrapper << copyFileToWorkDir(TaskRun.CMD_OUTFILE) << ' || true' << ENDL
+            wrapper << copyFileToWorkDir(TaskRun.CMD_ERRFILE) << ' || true' << ENDL
         }
 
         def unstagingScript
@@ -507,7 +512,7 @@ class BashWrapperBuilder {
             wrapper << unstagingScript << ENDL
 
         if( changeDir && statsEnabled )
-            wrapper << copyFile(TaskRun.CMD_TRACE, workDir) << ' || true' << ENDL
+            wrapper << copyFileToWorkDir(TaskRun.CMD_TRACE) << ' || true' << ENDL
 
         if( afterScript ) {
             wrapper << '# user `afterScript`' << ENDL
@@ -516,6 +521,10 @@ class BashWrapperBuilder {
 
         wrapperFile.text = wrapperScript = wrapper.toString()
         return wrapperFile
+    }
+
+    private String copyFileToWorkDir(String fileName) {
+        copyFile(fileName, workDir.resolve(fileName))
     }
 
     /**

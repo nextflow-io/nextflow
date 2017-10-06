@@ -21,6 +21,7 @@
 package nextflow.processor
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.executor.AwsBatchExecutor
 import nextflow.executor.CondorExecutor
 import nextflow.executor.CrgExecutor
 import nextflow.executor.Executor
@@ -64,7 +65,8 @@ class ProcessFactory {
             'bsc': LsfExecutor,
             'condor': CondorExecutor,
             'k8s': KubernetesExecutor,
-            'nqsii': NqsiiExecutor
+            'nqsii': NqsiiExecutor,
+            'awsbatch': AwsBatchExecutor
     ]
 
     private final Session session
@@ -130,7 +132,7 @@ class ProcessFactory {
         if( !executorName )
             return LocalExecutor
 
-        def clazz =  executorsMap[executorName.toLowerCase()]
+        def clazz =  executorsMap[executorName.toLowerCase().replace('-','')]
         if( !clazz )
             throw new IllegalArgumentException("Unknown executor name: $executorName")
 
