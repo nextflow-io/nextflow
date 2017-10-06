@@ -91,20 +91,20 @@ abstract class CascadingConfig<K,V> {
 
     boolean isEmpty() { config.isEmpty() }
 
-    protected containsAttribute( K key ) {
+    boolean containsAttribute( K key ) {
         config.containsKey(key) ?: ( parent ? parent.containsAttribute(key) : false )
     }
 
-    protected V getAttribute(K key) {
+    V getAttribute(K key) {
         getAttribute(key, null)
     }
 
-    protected V getAttribute(K key, V defValue) {
+    V getAttribute(K key, V defValue) {
         checkField(key)
         return config.containsKey(key) ? config.get(key) : ( parent && parent.containsAttribute(key) ? parent.getAttribute(key) : defValue )
     }
 
-    protected V getOrCreateAttribute(K key, Closure<V> missing) {
+    V getOrCreateAttribute(K key, Closure<V> missing) {
         def result = getAttribute(key)
         if( result == null ) {
             result = missing.call()
@@ -113,7 +113,7 @@ abstract class CascadingConfig<K,V> {
         return result
     }
 
-    protected void setAttribute( K key, V value ) {
+    void setAttribute( K key, V value ) {
         checkField(key)
         config.put(key,value)
     }
