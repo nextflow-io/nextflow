@@ -2,8 +2,6 @@ package nextflow.executor
 import java.nio.file.Path
 import java.nio.file.Paths
 
-import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.regions.RegionUtils
 import com.amazonaws.services.batch.AWSBatchClient
 import com.amazonaws.services.batch.model.CancelJobRequest
 import com.amazonaws.services.batch.model.ContainerOverrides
@@ -20,15 +18,20 @@ import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.Volume
 import com.upplication.s3fs.S3Path
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
+import groovy.transform.ToString
 import groovy.util.logging.Slf4j
-import nextflow.Global
+import nextflow.Nextflow
+import nextflow.cloud.aws.AmazonCloudDriver
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessNotRecoverableException
+import nextflow.extension.FilesEx
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.util.CacheHelper
@@ -48,7 +51,9 @@ class AwsBatchExecutor extends Executor {
      * AWS batch client instance
      */
     @PackageScope
-    static AWSBatchClient client
+    private static AWSBatchClient client
+
+    private static Path remoteBinDir = null
 
     @Override
     void register() {
@@ -62,25 +67,36 @@ class AwsBatchExecutor extends Executor {
             throw new AbortOperationException("When using `$name` executor a S3 bucket must be provided as working directory -- Add the option `-w s3://<your-bucket/path>` to your run command line")
         }
 
+        def path = session.config.navigate('env.PATH')
+        if( path ) {
+            log.warn "Environment PATH defined in config file is ignored by AWS Batch executor"
+        }
+
+        /*
+         * upload local binaries
+         */
+        def disableBinDir = session.getExecConfigProp(name, 'disableRemoteBinDir', false)
+        if( session.binDir && !session.binDir.empty() && !disableBinDir ) {
+            def s3 = Nextflow.tempDir()
+            log.info "Uploading local `bin` scripts folder to ${s3.toUriString()}/bin"
+            remoteBinDir = FilesEx.copyTo(session.binDir, s3)
+        }
+
         /*
          * retrieve config and credentials and create AWS client
          */
-        def keys = Global.getAwsCredentials()
-        if( !keys )
-            throw new IllegalStateException("Missing AWS credentials")
+        client = new AmazonCloudDriver(session.config).getBatchClient()
 
-        // TODO improve to remove deprecated API
-        def credentials = new BasicAWSCredentials(keys[0], keys[1])
-        client = new AWSBatchClient(credentials)
+    }
 
-        def str = Global.getAwsRegion()
-        if( str ) {
-            def region = RegionUtils.getRegion(Global.getAwsRegion());
-            if( region == null )
-                throw new IllegalArgumentException("Not a valid S3 region name: ${str}");
-            client.setRegion(region);
-        }
+    @PackageScope
+    Path getRemoteBinDir() {
+        remoteBinDir
+    }
 
+    @PackageScope
+    AWSBatchClient getClient() {
+        client
     }
 
     @Override
@@ -92,7 +108,7 @@ class AwsBatchExecutor extends Executor {
     TaskHandler createTaskHandler(TaskRun task) {
         assert task
         assert task.workDir
-        log.debug "Launching process > ${task.name} -- work folder: ${task.workDirStr}"
+        log.debug "[AWS BATCH] Launching process > ${task.name} -- work folder: ${task.workDirStr}"
         new AwsBatchTaskHandler(task, this)
     }
 }
@@ -165,14 +181,18 @@ class AwsBatchTaskHandler extends TaskHandler {
     /**
      * @return An instance of {@link AwsOptions} holding Batch specific settings
      */
+    @Memoized
     protected AwsOptions getAwsOptions() {
 
-        String name = executor.name
-        String cli = executor.session.getExecConfigProp(name,'awscli',null)
-        String storage = executor.session.config.navigate('aws.client.upload_storage_class')
-        String encrypt = executor.session.config.navigate('aws.client.storage_encryption')
+        final name = executor.name
 
-        new AwsOptions(cliPath: cli, storageClass: storage, storageEncryption: encrypt)
+        new AwsOptions(
+                cliPath: executor.session.getExecConfigProp(name,'awscli',null) as String,
+                storageClass: executor.session.config.navigate('aws.client.upload_storage_class') as String,
+                storageEncryption: executor.session.config.navigate('aws.client.storage_encryption') as String,
+                remoteBinDir: executor.remoteBinDir as String
+            )
+
     }
 
     /**
@@ -220,7 +240,7 @@ class AwsBatchTaskHandler extends TaskHandler {
             exitFile.text as Integer
         }
         catch( Exception e ) {
-            log.debug "Cannot read exitstatus for task: `$task.name`", e
+            log.debug "[AWS BATCH] Cannot read exitstatus for task: `$task.name`", e
             return Integer.MAX_VALUE
         }
     }
@@ -245,7 +265,7 @@ class AwsBatchTaskHandler extends TaskHandler {
         /*
          * create task wrapper
          */
-        final launcher = new AwsBatchScriptLauncher(bean,awsOptions)
+        final launcher = new AwsBatchScriptLauncher(bean,getAwsOptions())
         launcher.scratch = true
         launcher.build()
 
@@ -419,8 +439,8 @@ class AwsBatchTaskHandler extends TaskHandler {
     protected SubmitJobRequest newSubmitRequest(TaskRun task) {
 
         // the cmd list to launch it
-        def awsCli = getAwsOptions().cliPath ?: 'aws'
-        def cmd = ['bash','-c', "$awsCli s3 cp s3:/${getWrapperFile()} - | bash 2>&1 | tee $TaskRun.CMD_LOG".toString() ] as List<String>
+        def cli = awsOptions.cliPath ?: 'aws'
+        def cmd = ['bash','-c', "$cli s3 cp s3:/${getWrapperFile()} - | bash 2>&1".toString() ] as List<String>
 
         /*
          * create the request object
@@ -454,8 +474,6 @@ class AwsBatchTaskHandler extends TaskHandler {
      */
     protected List<KeyValuePair> getEnvironmentVars() {
         def vars = []
-        if( bean.environment )
-            bean.environment.each { k,v -> vars << new KeyValuePair().withName(k).withValue(v) }
         if( this.environment?.containsKey('NXF_DEBUG') )
             vars << new KeyValuePair().withName('NXF_DEBUG').withValue(this.environment['NXF_DEBUG'])
         return vars
@@ -490,7 +508,11 @@ class AwsBatchScriptLauncher extends BashWrapperBuilder {
 
     protected boolean containerInit() { false }
 
-    protected void makeEnvironmentFile(Path file) { /* do nothing */  }
+    protected void makeEnvironmentFile(Path file) {
+        /**
+         * Do nothing here - Environment is managed is built by {@link AwsBatchFileCopyStrategy}
+         */
+    }
 }
 
 /**
@@ -506,6 +528,8 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
 
     private AwsOptions opts
 
+    private Map<String,String> environment
+
     AwsBatchFileCopyStrategy( TaskBean task, AwsOptions opts ) {
         this.workDir = task.workDir
         this.targetDir = task.getTargetDir()
@@ -518,11 +542,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
             inputFiles[TaskRun.CMD_INFILE] = workDir.resolve(TaskRun.CMD_INFILE)
         }
         this.opts = opts
-    }
-
-    @Override
-    protected Map<String,Path> downloadForeignFiles(Map<String,Path> files) {
-        return files
+        this.environment = task.environment
     }
 
     /**
@@ -536,7 +556,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         final storage = opts.storageClass ?: 'STANDARD'
 		final encryption = opts.storageEncryption ? "--sse $opts.storageEncryption " : ''
 
-        """
+        def uploader = """
         # aws helper
         nxf_s3_upload() {
             local pattern=\$1
@@ -552,6 +572,26 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
 
         """.stripIndent()
 
+        def env = getEnvScript()
+        return env ? uploader + env : uploader
+    }
+
+    protected String getEnvScript() {
+        final result = new StringBuilder()
+        final copy = environment ? new HashMap<String,String>(environment) : Collections.<String,String>emptyMap()
+        final path = copy.containsKey('PATH')
+        // remove any external PATH
+        if( path )
+            copy.remove('PATH')
+        // when a remote bin directory is provide managed it properly
+        if( opts.remoteBinDir ) {
+            result << "${opts.cliPath?:'aws'} s3 cp --recursive --quiet s3:/${opts.remoteBinDir} \$PWD/nextflow-bin\n"
+            result << "chmod +x \$PWD/nextflow-bin/*\n"
+            result << "export PATH=\$PWD/nextflow-bin:\$PATH\n"
+        }
+        result << TaskProcessor.bashEnvironmentScript(copy)
+
+        return result.size() ? "# process environment\n" + result.toString() + '\n' : null
     }
 
     /**
@@ -579,7 +619,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         def normalized = normalizeGlobStarPaths(outputFiles)
 
         // create a bash script that will copy the out file to the working directory
-        log.debug "Unstaging file path: $normalized"
+        log.debug "[AWS BATCH] Unstaging file path: $normalized"
         if( normalized ) {
             result << ""
             normalized.each {
@@ -621,12 +661,17 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         "${path.name} && nxf_s3_upload ${Escape.path(path.name)} s3:/${Escape.path(path.getParent())} || true"
     }
 
+    String pipeInputFile( Path path ) {
+        " <(${opts.cliPath ?: 'aws'} s3 cp --quiet s3:/$path -)"
+    }
+
 }
 
 /**
  * Helper class wrapping AWS config options required for Batch job executions
  */
 @Slf4j
+@ToString
 @CompileStatic
 class AwsOptions {
 
@@ -635,6 +680,8 @@ class AwsOptions {
     String storageClass
 
     String storageEncryption
+
+    String remoteBinDir
 
     void setStorageClass(String value) {
         if( value in [null, 'STANDARD', 'REDUCED_REDUNDANCY'])
@@ -659,4 +706,5 @@ class AwsOptions {
             this.cliPath = value
         }
     }
+
 }

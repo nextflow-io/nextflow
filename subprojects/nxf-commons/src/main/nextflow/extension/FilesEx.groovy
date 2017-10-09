@@ -1482,4 +1482,16 @@ class FilesEx {
     static URI getUri( File self ) {
         self.toURI()
     }
+
+    static String toUriString( Path path ) {
+        if(!path)
+            return null
+        def scheme = path.getFileSystem().provider().scheme
+        if( scheme == 'file' )
+            return path.toString()
+        if( scheme == 's3')
+            return "$scheme:/$path".toString()
+        else
+            return path.toUri().toString()
+    }
 }

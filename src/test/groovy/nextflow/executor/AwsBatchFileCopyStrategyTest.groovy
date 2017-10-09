@@ -31,8 +31,8 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                 workDir: Paths.get('/data/work/a4/a4cf1fd2b040ae9b36ff46c34'),
                 outputFiles: []
         )
-        def opts = Spy(AwsOptions)
-        def copy = new AwsBatchFileCopyStrategy(bean, opts)
+        def opts = Mock(AwsOptions)
+        def copy = Spy(AwsBatchFileCopyStrategy, constructorArgs: [bean, opts])
 
         when:
         def script = copy.getBeforeStartScript()
@@ -40,6 +40,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         1 * opts.getCliPath() >> null
         1 * opts.getStorageClass() >> null
         1 * opts.getStorageEncryption() >> null
+        1 * copy.getEnvScript() >>  null
 
         script == '''
                 # aws helper
@@ -63,6 +64,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         1 * opts.getCliPath() >> '/foo/aws'
         1 * opts.getStorageClass() >> 'REDUCED_REDUNDANCY'
         2 * opts.getStorageEncryption() >> 'AES256'
+        1 * copy.getEnvScript() >> 'export PATH=/foo/bar/bin\n'
 
         script == '''
                 # aws helper
@@ -78,7 +80,61 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                   done
                 }
 
+                export PATH=/foo/bar/bin
             '''.stripIndent()
+    }
+
+    def 'should return env variables' () {
+
+        given:
+        def bean = new TaskBean(
+                workDir: Paths.get('/data/work/a4/a4cf1fd2b040ae9b36ff46c34'),
+                environment: [FOO: 'hola', BAR:'world', PATH:'xxx']
+        )
+        def opts = Mock(AwsOptions)
+        def copy = Spy(AwsBatchFileCopyStrategy, constructorArgs: [bean, opts])
+
+        when:
+        def script = copy.getEnvScript()
+        then:
+        // note: PATH is always removed
+        opts.getRemoteBinDir() >> null
+        script == '''
+            # process environment
+            export BAR="world"
+            export FOO="hola"
+
+            '''.stripIndent().leftTrim()
+
+        when:
+        script = copy.getEnvScript()
+        then:
+        opts.getRemoteBinDir() >> '/foo/bar'
+        script == '''
+            # process environment
+            aws s3 cp --recursive --quiet s3://foo/bar $PWD/nextflow-bin
+            chmod +x $PWD/nextflow-bin/*
+            export PATH=$PWD/nextflow-bin:$PATH
+            export BAR="world"
+            export FOO="hola"
+
+            '''.stripIndent().leftTrim()
+
+        when:
+        script = copy.getEnvScript()
+        then:
+        opts.getCliPath() >> '/conda/bin/aws'
+        opts.getRemoteBinDir() >> '/foo/bar'
+        script == '''
+            # process environment
+            /conda/bin/aws s3 cp --recursive --quiet s3://foo/bar $PWD/nextflow-bin
+            chmod +x $PWD/nextflow-bin/*
+            export PATH=$PWD/nextflow-bin:$PATH
+            export BAR="world"
+            export FOO="hola"
+
+            '''.stripIndent().leftTrim()
+
 
     }
 

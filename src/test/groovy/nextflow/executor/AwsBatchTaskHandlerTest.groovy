@@ -123,7 +123,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getContainerOverrides().getVcpus() == 4
         req.getContainerOverrides().getMemory() == 8192
         req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
-        req.getContainerOverrides().getCommand() == ['bash', '-c', "/bin/aws s3 cp s3://bucket/test/.command.run - | bash 2>&1 | tee .command.log".toString()]
+        req.getContainerOverrides().getCommand() == ['bash', '-c', "/bin/aws s3 cp s3://bucket/test/.command.run - | bash 2>&1".toString()]
 
     }
 
@@ -182,15 +182,13 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def vars = handler.getEnvironmentVars()
         then:
-        vars.size() == 2
-        vars == [ VAR_FOO, VAR_BAR ]
+        vars.size() == 0
 
         when:
         handler.environment = [NXF_DEBUG: 2, NXF_FOO: 'ignore']
         vars = handler.getEnvironmentVars()
         then:
-        vars == [ VAR_FOO, VAR_BAR, VAR_NXF ]
-        vars.size() == 3
+        vars == [ VAR_NXF ]
     }
 
     def 'should strip invalid chars for job definition name' () {

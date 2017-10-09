@@ -19,7 +19,7 @@
  */
 
 package nextflow.processor
-import java.nio.file.FileSystems
+
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -479,8 +479,9 @@ class TaskRun implements Cloneable {
     }
 
     String getWorkDirStr() {
-        if( !workDir ) return null
-        workDir.fileSystem == FileSystems.default ? workDir.toString() : workDir.toUri().toString()
+        if( !workDir )
+            return null
+        return workDir.toUriString()
     }
 
     static final public String CMD_LOG = '.command.log'
