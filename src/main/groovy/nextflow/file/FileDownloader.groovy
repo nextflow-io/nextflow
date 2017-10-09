@@ -1,6 +1,5 @@
 package nextflow.file
 
-import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.Callable
@@ -20,6 +19,7 @@ import nextflow.Global
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.exception.ProcessStageException
+import nextflow.extension.FilesEx
 
 /**
  * Download foreign (ie. remote) file to the local
@@ -79,7 +79,7 @@ class FileDownloader {
     }
 
     /**
-     * Download a foreign file (ie. remote) storing it the current pipeline execution directoty
+     * Download a foreign file (ie. remote) storing it the current pipeline execution directory
      *
      * @param filePath The {@link Path} of the remote file to download
      * @return The path of a local copy of the remote file
@@ -114,16 +114,7 @@ class FileDownloader {
 
     private Path downloadForeignFile0(Path filePath) {
         log.debug "Copying to process workdir foreign file: ${filePath.toUri().toString()}"
-        def result = Nextflow.tempFile(filePath.getFileName().toString())
-        InputStream source = null
-        try {
-            source = Files.newInputStream(filePath)
-            Files.copy(source, result)
-        }
-        finally {
-            source?.closeQuietly()
-        }
-        return result
+        FilesEx.copyTo(filePath, Nextflow.tempDir())
     }
 
     @Canonical
