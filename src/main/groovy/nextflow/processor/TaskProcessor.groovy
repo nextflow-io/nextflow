@@ -1104,9 +1104,9 @@ class TaskProcessor {
         return errorStrategy
     }
 
-    final protected formatGuardError( List message, FailedGuardException error, TaskRun task ) {
+    final protected List<String> formatGuardError( List<String> message, FailedGuardException error, TaskRun task ) {
         // compose a readable error message
-        message << formatErrorCause( error )
+        message << formatErrorCause(error)
 
         if( error.source )  {
             message << "\nWhen block:"
@@ -1121,7 +1121,7 @@ class TaskProcessor {
         return message
     }
 
-    final protected formatTaskError( List message, Throwable error, TaskRun task ) {
+    final protected List<String> formatTaskError( List<String> message, Throwable error, TaskRun task ) {
 
         // compose a readable error message
         message << formatErrorCause( error )
@@ -1172,7 +1172,7 @@ class TaskProcessor {
         }
         else {
             if( task?.source )  {
-                message << "\nSource block:"
+                message << "Source block:"
                 task.source.stripIndent().eachLine {
                     message << "  $it"
                 }
