@@ -466,7 +466,7 @@ class BashWrapperBuilder {
             stub << 'start_millis=$(nxf_date)'  << ENDL
             stub << '(' << ENDL
             stub << interpreter << " " << fileStr(scriptFile)
-            if( input != null ) stub << " < " << fileStr(inputFile)
+            if( input != null ) stub << pipeInputFile(inputFile)
             stub << ENDL
             stub << ') &' << ENDL
             stub << 'pid=$!' << ENDL                     // get the PID of the main job
@@ -491,7 +491,7 @@ class BashWrapperBuilder {
         else {
             wrapper << interpreter << " " << fileStr(scriptFile)
             if( containerBuilder && !executable ) wrapper << "\""
-            if( input != null ) wrapper << " < " << fileStr(inputFile)
+            if( input != null ) wrapper << pipeInputFile(inputFile)
         }
         wrapper << ENDL
         wrapper << ') >"$COUT" 2>"$CERR" &' << ENDL

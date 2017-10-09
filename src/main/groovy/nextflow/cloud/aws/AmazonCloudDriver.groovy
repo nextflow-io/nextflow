@@ -28,7 +28,9 @@ import javax.mail.internet.MimeMessage
 import javax.mail.internet.MimeMultipart
 
 import com.amazonaws.auth.BasicAWSCredentials
+import com.amazonaws.regions.Region
 import com.amazonaws.regions.RegionUtils
+import com.amazonaws.services.batch.AWSBatchClient
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.BlockDeviceMapping
 import com.amazonaws.services.ec2.model.CreateTagsRequest
@@ -77,7 +79,7 @@ import nextflow.util.ServiceName
 @ServiceName('aws')
 class AmazonCloudDriver implements CloudDriver {
 
-    AmazonEC2Client ec2client
+    AmazonEC2Client ec2Client
 
     private String accessKey
 
@@ -115,7 +117,7 @@ class AmazonCloudDriver implements CloudDriver {
     /** only for testing purpose */
     @CompileDynamic
     protected AmazonCloudDriver( AmazonEC2Client client ) {
-        this.ec2client = client
+        this.ec2Client = client
     }
 
     protected String getAccessKey() { accessKey }
@@ -146,20 +148,38 @@ class AmazonCloudDriver implements CloudDriver {
         }
     }
 
-    static private AmazonEC2Client createEc2Client( String accessKey, String secretKey, String region ) {
-        def result = (accessKey && secretKey
-                        ? new AmazonEC2Client(new BasicAWSCredentials(accessKey, secretKey))
-                        : new AmazonEC2Client())
-        if( region )
-            result.setRegion( RegionUtils.getRegion(region) )
+    private Region getRegionObj(String region) {
+        final result = RegionUtils.getRegion(region)
+        if( !result )
+            throw new IllegalArgumentException("Not a valid AWS region name: $region");
         return result
     }
 
-    synchronized private AmazonEC2Client getClient() {
-        if( ec2client == null ) {
-            ec2client = createEc2Client(accessKey, secretKey, region)
-        }
-        return ec2client
+    synchronized  AmazonEC2Client getEc2Client() {
+
+        if( ec2Client )
+            return ec2Client
+
+        def result = (accessKey && secretKey
+                ? new AmazonEC2Client(new BasicAWSCredentials(accessKey, secretKey))
+                : new AmazonEC2Client())
+
+        if( region )
+            result.setRegion(getRegionObj(region))
+
+        return result
+    }
+
+    @Memoized
+    AWSBatchClient getBatchClient() {
+        def result = (accessKey && secretKey
+                ? new AWSBatchClient(new BasicAWSCredentials(accessKey, secretKey))
+                : new AWSBatchClient())
+
+        if( region )
+            result.setRegion(getRegionObj(region))
+
+        return result
     }
 
     @PackageScope
@@ -368,7 +388,7 @@ class AmazonCloudDriver implements CloudDriver {
     BlockDeviceMapping getRooDeviceMapping( String imageId ) {
         final req = new DescribeImagesRequest()
         req.setImageIds( [imageId] )
-        final Image image = getClient().describeImages(req).getImages().get(0)
+        final Image image = getEc2Client().describeImages(req).getImages().get(0)
         return image.blockDeviceMappings.find { it.deviceName == image.rootDeviceName }
     }
 
@@ -448,7 +468,7 @@ class AmazonCloudDriver implements CloudDriver {
     private List<String> launchPlainInstances0(int instanceCount, LaunchConfig cfg) {
         log.debug "AWS submitting launch request for $instanceCount instances; config: $cfg"
         def req = makeRunRequest(instanceCount, cfg)
-        RunInstancesResult response = getClient().runInstances(req)
+        RunInstancesResult response = getEc2Client().runInstances(req)
         return response.reservation.getInstances() *. instanceId
     }
 
@@ -456,16 +476,16 @@ class AmazonCloudDriver implements CloudDriver {
         log.debug "AWS submitting launch request for $instanceCount SPOT instances; config: $cfg"
 
         def req = makeSpotRequest(instanceCount, cfg)
-        RequestSpotInstancesResult response = getClient().requestSpotInstances(req)
+        RequestSpotInstancesResult response = getEc2Client().requestSpotInstances(req)
         def spotIds = response.spotInstanceRequests *. spotInstanceRequestId
         log.debug "AWS spot request IDs: ${spotIds.join(',')}"
 
         // -- wait for fulfill the spot request
-        def waiter = getClient().waiters().spotInstanceRequestFulfilled()
+        def waiter = getEc2Client().waiters().spotInstanceRequestFulfilled()
         def describeInstances = new DescribeSpotInstanceRequestsRequest().withSpotInstanceRequestIds(spotIds)
         waiter.run( new WaiterParameters<>().withRequest(describeInstances)  )
 
-        def result = getClient().describeSpotInstanceRequests(describeInstances)
+        def result = getEc2Client().describeSpotInstanceRequests(describeInstances)
         return result.spotInstanceRequests *. instanceId
     }
 
@@ -540,7 +560,7 @@ class AmazonCloudDriver implements CloudDriver {
             request.setInstanceIds(instanceIds)
 
         // -- submit the request
-        def result = getClient().describeInstances(request)
+        def result = getEc2Client().describeInstances(request)
         def itr1 = result.reservations.iterator()
         while( itr1.hasNext() ) {
             def reservation = itr1.next()
@@ -579,21 +599,21 @@ class AmazonCloudDriver implements CloudDriver {
 
     @PackageScope
     void waitRunning( Collection<String> instancesId ) {
-        def waiter = getClient().waiters().instanceRunning()
+        def waiter = getEc2Client().waiters().instanceRunning()
         def describeInstances = new DescribeInstancesRequest().withInstanceIds(instancesId)
         waiter.run( new WaiterParameters<>().withRequest(describeInstances)  )
     }
 
     @PackageScope
     void waitStatusOk( Collection<String> instanceIds ) {
-        def waiter = getClient().waiters().instanceStatusOk()
+        def waiter = getEc2Client().waiters().instanceStatusOk()
         def describeInstances = new DescribeInstanceStatusRequest().withInstanceIds(instanceIds)
         waiter.run( new WaiterParameters<>().withRequest(describeInstances) )
     }
 
     @PackageScope
     void waitTerminated( Collection<String> instanceIds ) {
-        def waiter = getClient().waiters().instanceTerminated()
+        def waiter = getEc2Client().waiters().instanceTerminated()
         def describeInstances = new DescribeInstancesRequest().withInstanceIds(instanceIds)
         waiter.run( new WaiterParameters<>().withRequest(describeInstances) )
     }
@@ -608,7 +628,7 @@ class AmazonCloudDriver implements CloudDriver {
                 .withResources(instanceIds)
                 .withTags( tags.collect { k, v -> new Tag(k, v) } )
 
-        getClient().createTags(req)
+        getEc2Client().createTags(req)
     }
 
 
@@ -620,7 +640,7 @@ class AmazonCloudDriver implements CloudDriver {
             req.setInstanceTypes( instanceTypes as Collection<String> )
         }
 
-        def history = getClient().describeSpotPriceHistory(req).getSpotPriceHistory()
+        def history = getEc2Client().describeSpotPriceHistory(req).getSpotPriceHistory()
         history.each { SpotPrice entry ->
 
             def price = new CloudSpotPrice(
@@ -638,7 +658,7 @@ class AmazonCloudDriver implements CloudDriver {
     void terminateInstances( Collection<String> instanceIds ) {
         log.debug "Terminating EC2 instances: ids=${instanceIds?.join(',')}"
         if( !instanceIds ) return
-        getClient().terminateInstances(new TerminateInstancesRequest().withInstanceIds(instanceIds))
+        getEc2Client().terminateInstances(new TerminateInstancesRequest().withInstanceIds(instanceIds))
     }
 
     void validate(LaunchConfig config) {

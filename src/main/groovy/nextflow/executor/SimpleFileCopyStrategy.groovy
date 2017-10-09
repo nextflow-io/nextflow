@@ -299,4 +299,8 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         Escape.path(file)
     }
 
+    String pipeInputFile(Path file) {
+        " < ${Escape.path(file)}"
+    }
+
 }
