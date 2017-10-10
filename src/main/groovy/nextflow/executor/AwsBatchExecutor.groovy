@@ -56,6 +56,10 @@ class AwsBatchExecutor extends Executor {
 
     private static Path remoteBinDir = null
 
+    final boolean isContainerNative() {
+        return true
+    }
+
     @Override
     void register() {
         super.register()
@@ -507,8 +511,6 @@ class AwsBatchScriptLauncher extends BashWrapperBuilder {
     AwsBatchScriptLauncher( TaskBean bean, AwsOptions opts ) {
         super(bean, new AwsBatchFileCopyStrategy(bean,opts))
     }
-
-    protected boolean containerInit() { false }
 
     protected void makeEnvironmentFile(Path file) {
         /**

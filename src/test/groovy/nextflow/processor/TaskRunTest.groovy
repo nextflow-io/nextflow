@@ -25,6 +25,7 @@ import java.nio.file.Paths
 import ch.grengine.Grengine
 import nextflow.Session
 import nextflow.container.ContainerConfig
+import nextflow.executor.Executor
 import nextflow.file.FileHolder
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
@@ -560,4 +561,90 @@ class TaskRunTest extends Specification {
         task.template == file
 
     }
+
+    def 'should check container native flag' () {
+
+        given:
+        def executor = Mock(Executor)
+        def task = Spy(TaskRun);
+        task.processor = Mock(TaskProcessor)
+
+        when:
+        def result = task.isContainerNative()
+        then:
+        1 * task.processor.getExecutor() >> executor
+        result == false
+
+        when:
+        result = task.isContainerNative()
+        then:
+        1 * task.processor.getExecutor() >> executor
+        1 * executor.isContainerNative() >> true
+        result == true
+    }
+
+    def 'should check container enabled flag' () {
+
+        given:
+        def task = Spy(TaskRun);
+
+        when:
+        def enabled = task.isContainerEnabled()
+        then:
+        1 * task.getConfig() >> new TaskConfig()
+        !enabled
+
+        when:
+        enabled = task.isContainerEnabled()
+        then:
+        // NO container image is specified => NOT enable even if `enabled` flag is set to true
+        _ * task.getConfig() >> new TaskConfig()
+        _ * task.isContainerExecutable() >> false
+        _ * task.getContainerConfig() >> new ContainerConfig([enabled: true])
+        _ * task.isContainerNative() >> false
+        !enabled
+
+        when:
+        enabled = task.isContainerEnabled()
+        then:
+        // container is specified, not enabled
+        _ * task.getConfig() >> new TaskConfig(container:'foo/bar')
+        _ * task.isContainerExecutable() >> false
+        _ * task.getContainerConfig() >> new ContainerConfig([:])
+        _ * task.isContainerNative() >> false
+        !enabled
+
+        when:
+        enabled = task.isContainerEnabled()
+        then:
+        // container is specified AND executable => enabled
+        _ * task.getConfig() >> new TaskConfig(container:'foo/bar')
+        _ * task.isContainerExecutable() >> true
+        _ * task.getContainerConfig() >> new ContainerConfig([:])
+        _ * task.isContainerNative() >> false
+        enabled
+
+        when:
+        enabled = task.isContainerEnabled()
+        then:
+        // container is specified AND native executor (eg kubernetes) => enabled
+        _ * task.getConfig() >> new TaskConfig(container:'foo/bar')
+        _ * task.isContainerExecutable() >> false
+        _ * task.getContainerConfig() >> new ContainerConfig([:])
+        _ * task.isContainerNative() >> true
+        enabled
+
+        when:
+        enabled = task.isContainerEnabled()
+        then:
+        // container is specified AND enabled => enabled
+        _ * task.getConfig() >> new TaskConfig(container:'foo/bar')
+        _ * task.isContainerExecutable() >> false
+        _ * task.getContainerConfig() >> new ContainerConfig([enabled: true])
+        _ * task.isContainerNative() >> false
+        enabled
+
+    }
+
+
 }

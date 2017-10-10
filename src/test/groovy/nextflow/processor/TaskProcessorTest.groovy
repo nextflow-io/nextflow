@@ -655,4 +655,35 @@ class TaskProcessorTest extends Specification {
 
     }
 
+    def 'should make task unique id' () {
+
+        given:
+        def task = Mock(TaskRun)
+        def session = Mock(Session)
+        session.getBinEntries() >> ['foo.sh': Paths.get('/some/path/foo.sh'), 'bar.sh': Paths.get('/some/path/bar.sh')]
+        def processor = Spy(TaskProcessor)
+        processor.session = session
+        processor.config = Mock(ProcessConfig)
+
+        when:
+        def uuid = processor.createTaskHashKey(task)
+        then:
+        1 * session.getUniqueId() >> UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')
+        2 * task.getSource() >> 'hello world'
+        1 * processor.getTaskGlobalVars(task) >> [:]
+        1 * task.isContainerEnabled() >> false
+        0 * task.getContainer()
+        uuid.toString() == '14cc05f32bc37f2d1a370871b1f5be4f'
+
+        when:
+        uuid = processor.createTaskHashKey(task)
+        then:
+        1 * session.getUniqueId() >> UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')
+        2 * task.getSource() >> 'hello world'
+        1 * processor.getTaskGlobalVars(task) >> [:]
+        1 * task.isContainerEnabled() >> true
+        1 * task.getContainer() >> 'foo/bar'
+        uuid.toString() == '50608212f83b30ef91169eac359b5e64'
+    }
+
 }

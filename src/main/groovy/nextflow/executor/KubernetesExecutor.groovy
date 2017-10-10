@@ -44,6 +44,11 @@ class KubernetesExecutor extends AbstractGridExecutor {
 
     static final public String CMD_K8S = '.command.yml'
 
+    @Override
+    boolean isContainerNative() {
+        return true
+    }
+
     final protected BashWrapperBuilder createBashWrapperBuilder(TaskRun task) {
 
         if( !task.config.container ) {
@@ -168,17 +173,6 @@ class KubernetesExecutor extends AbstractGridExecutor {
         /* only for tests -- don not use */
         protected KubernetesWrapperBuilder(TaskBean bean) {
             super(bean)
-        }
-
-        /**
-         * Container execution is managed by Kubernetes thus disable
-         * the execution through the job wrapper script
-         *
-         * @return {@code false}
-         */
-        @Override
-        protected boolean containerInit() {
-            return false
         }
 
         @Override
