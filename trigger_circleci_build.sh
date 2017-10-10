@@ -39,9 +39,10 @@ function trigger_build() {
 
 
 trigger_build nextflow-io/tests
+trigger_build nextflow-io/examples
 trigger_build nextflow-io/hello
 trigger_build nextflow-io/rnatoy
-trigger_build nextflow-io/examples
+trigger_build nextflow-io/rnaseq-nf
 trigger_build cbcrg/piper-nf
 trigger_build cbcrg/kallisto-nf
 trigger_build cbcrg/lncRNA-Annotation-nf
