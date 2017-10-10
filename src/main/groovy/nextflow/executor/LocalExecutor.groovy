@@ -59,26 +59,11 @@ class LocalExecutor extends Executor {
         assert task.workDir
 
         if( task.type == ScriptType.GROOVY )
-            return createNativeTaskHandler(task)
-
+            return new NativeTaskHandler(task,this)
         else
-            return createBashTaskHandler(task)
+            return new LocalTaskHandler(task,this)
 
     }
-
-    protected TaskHandler createBashTaskHandler(TaskRun task) {
-
-        // create the wrapper script
-        final bash = new BashWrapperBuilder(task)
-        bash.build()
-
-        new LocalTaskHandler(task,this)
-    }
-
-    protected TaskHandler createNativeTaskHandler(TaskRun task) {
-        new NativeTaskHandler(task,this)
-    }
-
 
 }
 
@@ -128,6 +113,9 @@ class LocalTaskHandler extends TaskHandler {
 
     @Override
     def void submit() {
+        // create the wrapper script
+        new BashWrapperBuilder(task) .build()
+
         // the cmd list to launch it
         def job = new ArrayList(BashWrapperBuilder.BASH) << wrapperFile.getName()
         // NOTE: the actual command is wrapper by another bash whose stream

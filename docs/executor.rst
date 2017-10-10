@@ -220,36 +220,6 @@ The amount of resources requested by each job submission is defined by the follo
 * :ref:`process-memory`
 * :ref:`process-clusterOptions`
 
-
-.. _dnanexus-executor:
-
-DNAnexus
-========
-
-The `DNAnexus` executor allows you to run your pipeline in the `DNAnexus <http://dnanexus.com/>`_ cloud platform.
-
-Nextflow pipeline to be executed in the DNAnexus platform need to be packaged as DNAnexus app. Read how bundle and
-deploy Nextflow apps in the :ref:`dnanexus-page` section.
-
-The `dnanexus` executor allows your script to submit pipeline's processes in the DNAnexus cloud platform as separate jobs.
-It has to be specified in the configuration file or on the program command line options, as shown below::
-
-    process.executor = 'dnanexus'
-
-
-Property 'instanceType'
-------------------------
-
-The ``instanceType`` configuration property allows you to specify the instance type to be used by a process when
-executing the required job. For example::
-
-     process.executor = 'dnanexus'
-     process.instanceType = 'dx_m1.xlarge'
-
-
-The list of instance types, that can be used for this property, is available in the `Run Specification
-<https://wiki.dnanexus.com/API-Specification-v1.0.0/IO-and-Run-Specifications#Run-Specification>`_ page.
-
 .. _ignite-executor:
 
 Ignite

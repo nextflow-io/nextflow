@@ -244,7 +244,6 @@ class CloudConfig extends LaunchConfig {
     }
 
     CloudConfig validate(CloudDriver driver) {
-        if( !role ) throw new IllegalStateException("Missing cloud config `role` attribute")
         if( !imageId ) throw new IllegalStateException("Missing cloud config `imageId` attribute")
         if( !instanceType ) throw new IllegalStateException("Missing cloud config `instanceType` attribute")
         if( !clusterName ) throw new IllegalStateException("Missing cloud launch cluster name")

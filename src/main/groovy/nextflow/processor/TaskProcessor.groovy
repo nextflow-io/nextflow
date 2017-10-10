@@ -18,7 +18,11 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.processor
-import java.nio.file.Files
+import static nextflow.processor.ErrorStrategy.FINISH
+import static nextflow.processor.ErrorStrategy.IGNORE
+import static nextflow.processor.ErrorStrategy.RETRY
+import static nextflow.processor.ErrorStrategy.TERMINATE
+
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -86,11 +90,7 @@ import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.CollectionHelper
-
-import static nextflow.processor.ErrorStrategy.*
-
 import nextflow.util.Escape
-
 /**
  * Implement nextflow process execution logic
  *
@@ -1104,9 +1104,9 @@ class TaskProcessor {
         return errorStrategy
     }
 
-    final protected formatGuardError( List message, FailedGuardException error, TaskRun task ) {
+    final protected List<String> formatGuardError( List<String> message, FailedGuardException error, TaskRun task ) {
         // compose a readable error message
-        message << formatErrorCause( error )
+        message << formatErrorCause(error)
 
         if( error.source )  {
             message << "\nWhen block:"
@@ -1116,12 +1116,12 @@ class TaskProcessor {
         }
 
         if( task?.workDir )
-            message << "\nWork dir:\n  ${task.workDir.toString()}"
+            message << "\nWork dir:\n  ${task.workDirStr}"
 
         return message
     }
 
-    final protected formatTaskError( List message, Throwable error, TaskRun task ) {
+    final protected List<String> formatTaskError( List<String> message, Throwable error, TaskRun task ) {
 
         // compose a readable error message
         message << formatErrorCause( error )
@@ -1172,7 +1172,7 @@ class TaskProcessor {
         }
         else {
             if( task?.source )  {
-                message << "\nSource block:"
+                message << "Source block:"
                 task.source.stripIndent().eachLine {
                     message << "  $it"
                 }
@@ -1181,7 +1181,7 @@ class TaskProcessor {
         }
 
         if( task?.workDir )
-            message << "\nWork dir:\n  ${task.workDir.toString()}"
+            message << "\nWork dir:\n  ${task.workDirStr}"
 
         message << "\nTip: ${getRndTip()}"
 
@@ -1603,37 +1603,8 @@ class TaskProcessor {
         /*
          * when it is a local file, just return a reference holder to it
          */
-        if( input instanceof Path && input.fileSystem == FileHelper.workDirFileSystem ) {
-            return new FileHolder(input)
-        }
-
-        /*
-         * when it is a file stored in a "foreign" storage, copy
-         * to a local file and return a reference holder to the local file
-         */
-
         if( input instanceof Path ) {
-            try {
-                log.debug "Copying to process workdir foreign file: ${input.toUri().toString()}"
-                def result = Nextflow.tempFile(input.getFileName().toString())
-                InputStream source = null
-                try {
-                    source = Files.newInputStream(input)
-                    Files.copy(source, result)
-                }
-                finally {
-                    source?.closeQuietly()
-                }
-                return new FileHolder(input, result)
-            }
-            catch( IOException e ) {
-                def message = "Can't stage file ${input.toUri().toString()}"
-                if( e instanceof NoSuchFileException )
-                    message += " -- file does not exist"
-                else if( e.message )
-                    message += " -- reason: ${e.message}"
-                throw new ProcessStageException(message, e)
-            }
+            return new FileHolder(input)
         }
 
         /*
@@ -1871,12 +1842,38 @@ class TaskProcessor {
             vars.each { k, v -> keys.add( k ); keys.add( v ) }
         }
 
+        final binEntries = getTaskBinEntries(task.source)
+        if( binEntries ) {
+            log.trace "Task: $name > Adding scripts on project bin path: ${-> binEntries.join('; ')}"
+            keys.addAll(binEntries)
+        }
+
         final mode = config.getHashMode()
         final hash = CacheHelper.hasher(keys, mode).hash()
         if( session.dumpHashes ) {
             traceInputsHashes(task, keys, mode, hash)
         }
         return hash
+    }
+
+    /**
+     * This method scans the task command string looking for invocations of scripts
+     * defined in the project bin folder.
+     *
+     * @param script The task command string
+     * @return The list of paths of scripts in the project bin folder referenced in the task command
+     */
+    @Memoized
+    protected List<Path> getTaskBinEntries(String script) {
+        def result = []
+        def tokenizer = new StringTokenizer(script," \t\n\r\f()[]{};&|<>`")
+        while( tokenizer.hasMoreTokens() ) {
+            def token = tokenizer.nextToken()
+            def path = session.binEntries.get(token)
+            if( path )
+                result.add(path)
+        }
+        return result;
     }
 
     private void traceInputsHashes( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {

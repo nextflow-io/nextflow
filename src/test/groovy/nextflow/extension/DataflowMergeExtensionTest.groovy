@@ -44,15 +44,26 @@ class DataflowMergeExtensionTest extends Specification {
         assert !session.dag.isEmpty()
     }
 
-    def 'should merge with open array'() {
-
+    def 'should merge with open array with custom closure'() {
         when:
         def alpha = Channel.from(1, 3, 5);
-        def beta = Channel.from(2, 4, 6);
-        def delta = Channel.from(7,8,1);
+        def beta =  Channel.from(2, 4, 6);
+        def delta = Channel.from(7, 8, 1);
+        def result = alpha.merge( beta, delta ) { a,b,c -> [c,b,a] }
+        then:
+        result instanceof DataflowQueue
+        result.val == [7,2,1]
+        result.val == [8,4,3]
+        result.val == [1,6,5]
+        result.val == Channel.STOP
+    }
 
-        def result = alpha.merge( beta, delta ) { a,b,c -> [a,b,c] }
-
+    def 'should merge with open array' () {
+        when:
+        def alpha = Channel.from(1, 3, 5);
+        def beta =  Channel.from(2, 4, 6);
+        def delta = Channel.from(7, 8, 1);
+        def result = alpha.merge( beta, delta )
         then:
         result instanceof DataflowQueue
         result.val == [1,2,7]
@@ -61,21 +72,57 @@ class DataflowMergeExtensionTest extends Specification {
         result.val == Channel.STOP
     }
 
+    def 'should merge with with default'() {
+
+        when:
+        def left =  Channel.from(1, 3, 5);
+        def right = Channel.from(2, 4, 6);
+        def result = left.merge(right)
+        then:
+        result instanceof DataflowQueue
+        result.val == [1,2]
+        result.val == [3,4]
+        result.val == [5,6]
+        result.val == Channel.STOP
+
+        when:
+        left  = Channel.from(1, 2, 3);
+        right = Channel.from(['a','b'], ['p','q'], ['x','z']);
+        result = left.merge(right)
+        then:
+        result instanceof DataflowQueue
+        result.val == [1, 'a','b']
+        result.val == [2, 'p','q']
+        result.val == [3, 'x','z']
+        result.val == Channel.STOP
+
+        when:
+        left  = Channel.from('A','B','C');
+        right = Channel.from(['a',[1,2,3]], ['b',[3,4,5]], ['c',[6,7,8]]);
+        result = left.merge(right)
+        then:
+        result instanceof DataflowQueue
+        result.val == ['A', 'a', [1,2,3]]
+        result.val == ['B', 'b', [3,4,5]]
+        result.val == ['C', 'c', [6,7,8]]
+        result.val == Channel.STOP
+
+    }
+
     def 'should merge with list'() {
 
         when:
         def alpha = Channel.from(1, 3, 5);
-        def beta = Channel.from(2, 4, 6);
-        def delta = Channel.from(7,8,1);
-
+        def beta  = Channel.from(2, 4, 6);
+        def delta = Channel.from(7, 8, 1);
         def result = alpha.merge( [beta, delta] ) { a,b,c -> [c,b,a] }
-
         then:
         result instanceof DataflowQueue
         result.val == [7,2,1]
         result.val == [8,4,3]
         result.val == [1,6,5]
         result.val == Channel.STOP
+
     }
 
     def 'should merge with queue'() {
@@ -94,14 +141,23 @@ class DataflowMergeExtensionTest extends Specification {
         result.val == Channel.STOP
     }
 
-    def 'should merge with variables'() {
+    def 'should merge with variables with custom closure'() {
 
         when:
         def alpha = Channel.value('Hello');
         def beta = Channel.value('World')
+        def result = alpha.merge(beta) { a,b -> [b, a] }
+        then:
+        result instanceof DataflowVariable
+        result.val == ['World', 'Hello']
+        result.val == ['World', 'Hello']
+    }
 
-        def result = alpha.merge(beta) { a,b -> [a, b] }
-
+    def 'should merge variables' () {
+        when:
+        def alpha = Channel.value('Hello');
+        def beta = Channel.value('World')
+        def result = alpha.merge(beta)
         then:
         result instanceof DataflowVariable
         result.val == ['Hello','World']

@@ -38,7 +38,10 @@ import java.nio.file.attribute.FileTime
 import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermissions
 
+import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import groovy.transform.stc.ClosureParams
+import groovy.transform.stc.FromString
 import groovy.util.logging.Slf4j
 import nextflow.file.FileHelper
 import nextflow.io.ByteBufferBackedInputStream
@@ -631,7 +634,7 @@ class FilesEx {
      * @param self The folder to list
      * @return A list of {@code Path} or {@code null} if the path is not a folder
      */
-    def static Path[] listFiles(Path self) {
+    def static Path[] listFiles(Path self, @ClosureParams(value = FromString.class, options = ["java.nio.file.Path", "java.nio.file.Path,java.nio.file.attribute.BasicFileAttributes"]) Closure<Boolean> filter=null) {
 
         if( !self.isDirectory() )
             return null
@@ -640,7 +643,8 @@ class FilesEx {
         Files.walkFileTree(self, new SimpleFileVisitor<Path>() {
 
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                result.add( file )
+                if( filter==null || invokeFilter(filter,file,attrs) )
+                    result.add( file )
                 FileVisitResult.CONTINUE
             }
 
@@ -658,6 +662,19 @@ class FilesEx {
 
         return result as Path[]
 
+    }
+
+    @CompileStatic
+    static private boolean invokeFilter(Closure<Boolean> filter, Path file, BasicFileAttributes attrs) {
+        def params = filter.maximumNumberOfParameters
+        if( params==1 ) {
+            filter.call(file)
+        }
+        else if( params==2 ) {
+            filter.call(file,attrs)
+        }
+        else
+            throw new IllegalArgumentException("Path `listFiles` filter closure cannot take more than 2 parameters")
     }
 
     /**
@@ -1464,5 +1481,17 @@ class FilesEx {
 
     static URI getUri( File self ) {
         self.toURI()
+    }
+
+    static String toUriString( Path path ) {
+        if(!path)
+            return null
+        def scheme = path.getFileSystem().provider().scheme
+        if( scheme == 'file' )
+            return path.toString()
+        if( scheme == 's3')
+            return "$scheme:/$path".toString()
+        else
+            return path.toUri().toString()
     }
 }

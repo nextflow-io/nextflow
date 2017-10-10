@@ -63,7 +63,7 @@ ext {
 allprojects {
     apply plugin: 'java'
 
-    version = '0.25.7'
+    version = '0.26.0-SNAPSHOT'
     group = 'io.nextflow'
 
     sourceCompatibility = 1.7
@@ -117,7 +117,6 @@ configurations {
     capsule
     //provided
     drmaa.extendsFrom runtime
-    dnanexus.extendsFrom runtime
     ignite.extendsFrom runtime
     console.extendsFrom runtime
     gdocLibs.extendsFrom runtime
@@ -147,8 +146,9 @@ dependencies {
         exclude group: 'org.apache.tika', module: 'tika-core'
         exclude group: 'com.amazonaws', module: 'aws-java-sdk-s3'
     }
-    compile ('com.amazonaws:aws-java-sdk-s3:1.11.25')
-    compile ('com.amazonaws:aws-java-sdk-ec2:1.11.25')
+    compile ('com.amazonaws:aws-java-sdk-s3:1.11.172')
+    compile ('com.amazonaws:aws-java-sdk-ec2:1.11.172')
+    compile ('com.amazonaws:aws-java-sdk-batch:1.11.172')
     compile ('javax.mail:mail:1.4.7')
     compile ('org.yaml:snakeyaml:1.18')
 
@@ -161,11 +161,6 @@ dependencies {
 
     // Capsule manages the fat jar building process
     capsule(project(':my-capsule'))
-
-    // DnaNexus build dependencies
-    dnanexus(project(':nxf-dnanexus')) {
-        exclude module: 'nextflow'
-    }
 
     ignite(project(':nxf-ignite')) {
         exclude module: 'nextflow'
@@ -431,39 +426,11 @@ task packAll(type: Jar) {
     }
 }
 
-/*
- * Creates a self-contained *fat* jar shipping all required dependencies
- * including DnaNexus stuff
- */
-task packDx(type: Jar) {
-    dependsOn ':my-capsule:jar', configurations.dnanexus
-    archiveName = "nextflow-${version}-dx.jar"
-
-    from jar // embed our application jar
-    from (configurations.dnanexus)
-    from (configurations.capsule.collect { zipTree(it) })
-
-    manifest {
-        attributes(
-                'Main-Class'        : 'CapsuleLoader',
-                'Application-Name'  : 'nextflow-dx',
-                'Application-Class' : mainClassName,
-                'Application-Version': version,
-                'Min-Java-Version'  : '1.7.0'
-        )
-    }
-
-    doLast {
-        ant.copy(file: "$buildDir/libs/nextflow-${version}-dx.jar", todir: releaseDir, overwrite: true)
-        println "+ Nextflow package `DX` copied to: $releaseDir\n"
-    }
-}
-
 
 /*
  * Compile and pack all packages
  */
-task pack( dependsOn: [packOne, packDx, packAll]) {
+task pack( dependsOn: [packOne, packAll]) {
 
 }
 
@@ -553,58 +520,6 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
     """.stripIndent()
 
     commandLine 'bash', '-e', temp.absolutePath
-}
-
-
-/*
- * Create the dnanexus application archive and project structure
- */
-
-File dxProject = file('./dx-project')
-
-task dnanexus(dependsOn: packDx) {
-
-    doLast {
-
-        def binFolder = new File(dxProject,'resources/usr/bin')
-        binFolder.mkdirs()
-        ant.copy(file: "nextflow", todir: binFolder, overwrite: true)
-
-        def framework = new File(dxProject, "resources/opt/nextflow/framework/$version/")
-        framework.mkdirs()
-        ant.copy(file: "$buildDir/libs/nextflow-${version}-dx.jar", todir: framework, overwrite: true)
-
-        def dxApp = file('./subprojects/nxf-dnanexus/dxapp.json')
-        def dxScript = file('./subprojects/nxf-dnanexus/dxapp.sh')
-
-        // copy the 'dxapp.json' if not exists
-        def target = new File(dxProject, dxApp.name)
-        if( !target.exists() ) {
-            target.text = dxApp.text
-        }
-
-        // copy the 'dxapp.sh' if not exists
-        target = new File(dxProject, dxScript.name)
-        if( !target.exists() ) {
-            target.text = dxScript.text
-        }
-
-        // copy the example files
-        target = new File(dxProject,'resources/examples')
-        target.mkdirs()
-        def examples = new File('./tests')
-        examples.eachFile {
-            def copy = new File(target, it.name)
-            if( it.isFile() && !copy.exists() ) copy.text = it.text
-        }
-
-        println """
-        DnaNexus project ready
-        1. move to ${dxProject}
-        2. build it with the command 'dx build -f'
-        3. launch it using the command 'dx run nextflow'
-        """
-    }
 }
 
 

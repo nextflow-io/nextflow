@@ -86,11 +86,7 @@ class DrmaaExecutor extends Executor {
 
         log.debug "Launching process > ${task.name} -- work folder: ${task.workDir}"
 
-        // create the wrapper script
-        final bash = new BashWrapperBuilder(task)
-        bash.build()
-
-        return new DrmaaTaskHandler(task, this)
+        new DrmaaTaskHandler(task, this)
     }
 
 
@@ -185,9 +181,15 @@ class DrmaaTaskHandler extends TaskHandler {
         return result.join(' ')
     }
 
+    protected createBashWrapper() {
+        new BashWrapperBuilder(task) .build()
+    }
 
     @Override
     void submit() {
+
+        // create the wrapper script
+        createBashWrapper()
 
         JobTemplate template = drmaa.createJobTemplate()
         template.setJobName(taskName)

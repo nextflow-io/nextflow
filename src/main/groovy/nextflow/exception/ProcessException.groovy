@@ -32,9 +32,5 @@ import groovy.transform.InheritConstructors;
 @InheritConstructors
 class ProcessException extends Exception {
 
-    static ProcessException UNKNOWN_ERROR = new ProcessException("Unknown process error")
-
-    static ProcessException CANCELLED_ERROR = new ProcessException("Process has been cancelled")
-
 }
 

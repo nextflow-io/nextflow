@@ -21,7 +21,6 @@ Contents:
    config
    awscloud
    amazons3
-   dnanexus
    docker
    singularity
    ignite

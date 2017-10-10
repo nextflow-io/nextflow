@@ -94,7 +94,6 @@ The following HPC and cloud platforms are supported:
 * `PBS Works <http://www.pbsworks.com/gridengine/>`_
 * `Torque <http://www.adaptivecomputing.com/products/open-source/torque/>`_
 * `HTCondor <https://research.cs.wisc.edu/htcondor/>`_
-* `DNAnexus <http://www.dnanexus.com>`_
 
 
 Read :ref:`executor-page` section to learn more about Nextflow executors.

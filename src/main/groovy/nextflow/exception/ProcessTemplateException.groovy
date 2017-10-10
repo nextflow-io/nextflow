@@ -28,5 +28,5 @@ import groovy.transform.InheritConstructors
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors
-class ProcessMissingTemplateException extends ProcessException {
+class ProcessTemplateException extends ProcessException {
 }
