@@ -239,6 +239,7 @@ The amount of resources requested by each task submission is defined by the foll
 Read the :ref:`ignite-page` section in this documentation to learn how to configure Nextflow to deploy and run an
 Ignite cluster in your infrastructure.
 
+.. _kubernetes-executor:
 
 Kubernetes
 ==========
@@ -261,10 +262,21 @@ The following directives can be used to define the amount of computing resources
 * :ref:`process-memory`
 * :ref:`process-container`
 
+.. _awsbatch-executor:
 
+AWS Batch
+==========
 
+Nextflow supports `AWS Batch <https://aws.amazon.com/batch/>`_ service which allows submitting jobs in the cloud
+without having to spin out and manage a cluster of virtual machines. AWS Batch uses Docker containers to run tasks,
+which makes deploying pipelines much simpler.
 
+The pipeline processes must specify the Docker image to use by defining the ``container`` directive, either in the pipeline
+script or the ``nextflow.config`` file.
 
+To enable this executor set the property ``process.executor = 'awsbatch'`` in the ``nextflow.config`` file.
 
+The pipeline can be launched either in a local computer or a EC2 instance. The latter is suggested for heavy or long
+running workloads. Moreover a S3 bucket must be used as pipeline work directory.
 
-
+See the :ref:`AWS Batch<awscloud-batch>` page for further configuration details.

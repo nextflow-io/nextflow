@@ -1,4 +1,4 @@
-.. _amazonscloud-page:
+.. _awscloud-page:
 
 ************
 Amazon Cloud
@@ -244,16 +244,146 @@ It's even possible to refine the showed data by specifying a filtering and order
 It will only print instance types having 4 cpus and sorting them by the best price per cpu.
 
 
-
-
-
 Advanced configuration
 ======================
 
 Read :ref:`Cloud configuration<config-cloud>` section to learn more about advanced cloud configuration options.
 
 
+.. _awscloud-batch:
 
+AWS Batch
+=========
+
+
+.. warning:: This is a beta feature. Currently only available in the `0.26.0-SNAPSHOT` version.
+
+`AWS Batch <https://aws.amazon.com/batch/>`_ is a managed computing service that allows the execution of containerised
+workloads in the Amazon cloud infrastructure.
+
+Nextflow provides a built-in support for AWS Batch which allows the seamless deployment of a Nextflow pipeline
+in the cloud offloading the process executions as Batch jobs.
+
+Configuration
+-------------
+
+1 - Make sure your pipeline processes specifies one or more Docker containers by using the :ref:`process-container` directive.
+
+2 - Container images need to be published in a Docker registry such as `Docker Hub <https://hub.docker.com/>`_,
+`Quay <https://quay.io/>`_ or `ECS Container Registry <https://aws.amazon.com/ecr/>`_ accessible that can be reached
+by ECS Batch.
+
+3 - Specify the AWS Batch :ref:`executor<awsbatch-executor>` in the pipeline configuration.
+
+4 - Specify one or more AWS Batch queues for the execution of your pipeline by using the :ref:`process-queue` directive.
+Batch queues allow you to bind the execution of a process to a specific computing environment ie. number of CPUs,
+type of instances (On-demand or Spot), scaling ability, etc. See the `AWS Batch documentation <http://docs.aws.amazon.com/batch/latest/userguide/create-job-queue.html>`_ to learn
+how to setup Batch queues.
+
+5 (optional) - Nextflow automatically creates a Batch `Job definition <http://docs.aws.amazon.com/batch/latest/userguide/job_definitions.html>`_
+to submit your pipeline process executions. However you may still need to fine control the configuration of a specific
+job. In this case you can associate a process execution with a *Job definition* of your choice by using the
+:ref:`process-container` directive specifing, in place of the Docker image name, the Job definition name
+prefixed by the ``job-definition://`` string.
+
+An example ``nextflow.config`` file is shown below::
+
+    process.executor = 'awsbatch'
+    process.queue = 'my-batch-queue'
+    process.container = 'quay.io/biocontainers/salmon'
+
+
+.. note:: Nextflow requires to access the AWS command line tool (``aws``) from the container in which the job runs
+  in order to stage the required input files and to copy back the resulting output files in the
+  `S3 storage <https://aws.amazon.com/s3/>`_.
+
+The ``aws`` tool can either be included in container image(s) used by your pipeline execution or
+installed in a custom AMI that need to used in place of the default AMI when configuring the Batch
+`Computing environment <http://docs.aws.amazon.com/batch/latest/userguide/compute_environments.html>`_.
+
+The latter approach is preferred  because it allows the use of existing Docker images without the need to add
+the AWS CLI tool to them.
+
+Moreover AWS Batch uses the default ECS instance AMI, which has only a 22 GB storage volume which may not
+be enough for real world data analysis pipelines.
+
+
+Custom AMI
+----------
+
+In the EC2 Dashboard, click the `Launch Instance` button, then choose `AWS Marketplace` in the left pane and enter
+`ECS` in the search box. In result list select `Amazon ECS-Optimized Amazon Linux AMI`, then continue as usual to
+configure and launch the instance.
+
+.. note:: In the storage configuration make sure to specify an EBS volume large enough for the needs of your pipeline execution.
+
+When the instance is running, SSH into it, install the AWS CLI tools as explained below or any other required tool
+that may be required.
+
+Once done that, create a new AMI by using the *Create Image* option in the EC2 Dashboard or the AWS command line tool.
+
+The new AMI ID should be specified when creating the Batch
+`Computing environment <http://docs.aws.amazon.com/batch/latest/userguide/compute_environments.html>`_.
+
+
+AWS CLI installation
+--------------------
+
+The AWS cli tool needs to be installed by using a self-contained package manager such as `Conda <https://conda.io>`_.
+
+The following snippet shows how to install AWS CLI with Miniconda::
+
+    sudo yum install -y wget
+    wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    bash Miniconda3-latest-Linux-x86_64.sh -b -f -p $HOME/miniconda
+    $HOME/miniconda/bin/conda install -c conda-forge awscli
+
+
+
+.. note:: The ``aws`` tool will be placed in a directory named ``bin`` in the main
+  installation folder. Modifying this directory structure will cause the tool to not work properly.
+
+
+By default Nextflow will assume the AWS CLI tool is directly available in the container. To use an installation
+from the host image specify the ``awscli`` parameter in the Nextflow :ref:`executor <awsbatch-executor>`
+configuration as shown below::
+
+    executor.awscli = '/home/ec2-home/miniconda/bin/aws'
+
+
+Pipeline execution
+------------------
+
+The pipeline can be launched either in a local computer or a EC2 instance. The latter is suggested for heavy or long
+running workloads.
+
+Pipeline input data should to be stored in the Input data `S3 storage <https://aws.amazon.com/s3/>`_. In the same
+manner the pipeline execution must specifies a S3 bucket as working directory. For example::
+
+  nextflow run my-pipeline -w s3://my-bucket/some/path
+
+
+
+Troubleshooting
+---------------
+
+**Problem**: The Pipeline execution terminates with an AWS error message similar to the one shown below::
+
+    JobQueue <your queue> not found
+
+
+Make sure you have defined a AWS region in the Nextflow configuration file and it matches the region
+in which your Batch environment has been created.
+
+**Problem**: A process execution fails reporting the following error message::
+
+  Process <your task> terminated for an unknown reason -- Likely it has been terminated by the external system
+
+This may happen when Batch is unable to execute the process script. A common cause of this problem is that the
+Docker container image you have specified uses a non standard `entrypoint <https://docs.docker.com/engine/reference/builder/#entrypoint>`_
+which does not allow the execution of the BASH launcher script required by Nextflow to run the job.
+
+Check also the Job execution log in the AWS Batch dashboard for further error details.
 
 
 
