@@ -22,6 +22,7 @@ package nextflow
 import static nextflow.Const.S3_UPLOADER_CLASS
 
 import java.lang.reflect.Method
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -123,6 +124,8 @@ class Session implements ISession {
     List<Path> libDir
 
     private Path binDir
+
+    private Map<String,Path> binEntries = [:]
 
     /**
      * The unique identifier of this session
@@ -442,9 +445,9 @@ class Session implements ISession {
      * The folder where script binaries file are located, by default the folder 'bin'
      * in the script base directory
      */
-    Path getBinDir() {
-        binDir
-    }
+    Path getBinDir() { binDir }
+
+    Map<String,Path> getBinEntries() { binEntries ?: Collections.<String,Path>emptyMap() }
 
     void setBaseDir( Path baseDir ) {
         this.baseDir = baseDir
@@ -452,13 +455,22 @@ class Session implements ISession {
         def path = baseDir.resolve('bin')
         if( path.exists() && path.isDirectory() ) {
             this.binDir = path
+            this.binEntries = findBinEntries(path)
         }
         else {
             log.debug "Script base path does not exist or is not a directory: ${path}"
         }
     }
 
-    def void setLibDir( String str ) {
+    protected Map<String,Path> findBinEntries(Path path) {
+        def result = [:]
+        path
+                .listFiles { file -> Files.isExecutable(file) }
+                .each { Path file -> result.put(file.name,file)  }
+        return result
+    }
+
+    void setLibDir( String str ) {
 
         if( !str ) return
 

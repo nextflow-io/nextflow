@@ -62,10 +62,13 @@ class TestHelper {
         Files.createTempDirectory(tmp, 'test')
     }
 
-    static Path createInMemTempFile(String name='temp.file') {
+    static Path createInMemTempFile(String name='temp.file', String content=null) {
         Path tmp = fs.getPath("/tmp");
         tmp.mkdir()
-        Files.createTempDirectory(tmp, 'test').resolve(name)
+        def result = Files.createTempDirectory(tmp, 'test').resolve(name)
+        if( content )
+            result.text = content
+        return result
     }
 
     @Memoized

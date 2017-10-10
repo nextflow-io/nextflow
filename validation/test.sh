@@ -27,7 +27,6 @@ git clone https://github.com/nextflow-io/hello
   $NXF_CMD run . -resume
 )
 
-
 #
 # Rna-Toy
 #
@@ -81,3 +80,6 @@ docker pull cbcrg/piper-nf
   $NXF_CMD run . -with-docker 
   $NXF_CMD run . -with-docker -resume 
 )
+
+
+

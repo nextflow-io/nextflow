@@ -523,8 +523,8 @@ class BashWrapperBuilderTest extends Specification {
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
-                cp .command.out ${folder} || true
-                cp .command.err ${folder} || true
+                cp .command.out ${folder}/.command.out || true
+                cp .command.err ${folder}/.command.err || true
                 """
                         .stripIndent().leftTrim()
 
@@ -649,9 +649,9 @@ class BashWrapperBuilderTest extends Specification {
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
-                cp .command.out ${folder} || true
-                cp .command.err ${folder} || true
-                cp .command.trace ${folder} || true
+                cp .command.out ${folder}/.command.out || true
+                cp .command.err ${folder}/.command.err || true
+                cp .command.trace ${folder}/.command.trace || true
                 """
                         .stripIndent().leftTrim()
 
@@ -1424,8 +1424,8 @@ class BashWrapperBuilderTest extends Specification {
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
-                cp .command.out ${folder} || true
-                cp .command.err ${folder} || true
+                cp .command.out ${folder}/.command.out || true
+                cp .command.err ${folder}/.command.err || true
                 """
                         .stripIndent().leftTrim()
 

@@ -71,4 +71,6 @@ interface ScriptFileCopyStrategy {
      */
     String exitFile( Path file )
 
+    String pipeInputFile( Path file )
+
 }

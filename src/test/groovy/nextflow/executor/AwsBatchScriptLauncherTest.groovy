@@ -1,65 +1,41 @@
-/*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
- *
- *   This file is part of 'Nextflow'.
- *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
- *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 package nextflow.executor
+
 import java.nio.file.Files
 
-import nextflow.Session
-import nextflow.processor.TaskConfig
-import nextflow.processor.TaskProcessor
-import nextflow.processor.TaskRun
+import nextflow.processor.TaskBean
 import spock.lang.Specification
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CirrusWrapperBuilderTest extends Specification {
+class AwsBatchScriptLauncherTest extends Specification {
 
-    def 'test cirrus script wrapper' () {
+    def 'test bash wrapper with input'() {
 
         given:
         def folder = Files.createTempDirectory('test')
-        def processor = Mock(TaskProcessor)
-        processor.getProcessEnvironment() >> [:]
-        processor.getSession() >> new Session()
-        processor.getConfig() >> [:]
-        def config = new TaskConfig()
-        def task = new TaskRun(
-                name: 'Hello 1',
-                workDir: folder,
-                processor: processor,
-                config: config,
-                script: 'echo Hello world!'
-            )
 
         /*
          * simple bash run
          */
         when:
-        def executor = [:] as CirrusExecutor
-        def bash = executor.createBashWrapperBuilder(task)
+        def opts = Mock(AwsOptions)
+        def bash = new AwsBatchScriptLauncher([
+                name: 'Hello 1',
+                workDir: folder,
+                scratch: true,
+                script: 'echo Hello world!',
+                input: 'Ciao ciao'
+        ] as TaskBean, opts)
         bash.build()
 
         then:
         Files.exists(folder.resolve('.command.sh'))
         Files.exists(folder.resolve('.command.run'))
+        Files.exists(folder.resolve('.command.in'))
+
+        folder.resolve('.command.in').text == 'Ciao ciao'
 
         folder.resolve('.command.sh').text ==
                 '''
@@ -106,7 +82,7 @@ class CirrusWrapperBuilderTest extends Specification {
 
                 on_exit() {
                   exit_status=\${ret:=\$?}
-                  printf \$exit_status > .exitcode && es3 -q -v 0 --no-stats sync .exitcode s3:/${folder} || true
+                  printf \$exit_status > .exitcode && nxf_s3_upload .exitcode s3:/${folder} || true
                   set +u
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
@@ -124,15 +100,29 @@ class CirrusWrapperBuilderTest extends Specification {
 
                 NXF_SCRATCH="\$(set +u; nxf_mktemp \$TMPDIR)"
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
-                # fetch scripts
-                es3 test s3:/${folder}/.command.env && es3 cat s3:/${folder}/.command.env > .command.env
-                es3 test s3:/${folder}/.command.sh && es3 cat s3:/${folder}/.command.sh > .command.sh
-                es3 test s3:/${folder}/.command.in && es3 cat s3:/${folder}/.command.in > .command.in
-                es3 test s3:/${folder}/.command.run.1 && es3 cat s3:/${folder}/.command.run.1 > .command.run.1
 
-                es3 touch s3:/${folder}/.command.begin
+                # aws helper
+                nxf_s3_upload() {
+                    local pattern=\$1
+                    local s3path=\$2
+                    for name in \$pattern;do
+                      if [[ -d "\$name" ]]; then
+                        aws s3 cp \$name \$s3path/\$name --quiet --recursive --storage-class STANDARD
+                      else
+                        aws s3 cp \$name \$s3path/\$name --quiet --storage-class STANDARD
+                      fi
+                  done
+                }
+
+
+                touch .command.begin && nxf_s3_upload .command.begin s3:/${folder} && rm .command.begin
                 [ -f .command.env ] && source .command.env
                 [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
+                rm -f .command.sh
+                rm -f .command.in
+                aws s3 cp --quiet s3:/${folder}/.command.sh .command.sh
+                aws s3 cp --quiet s3:/${folder}/.command.in .command.in
+
 
                 set +e
                 COUT=\$PWD/.command.po; mkfifo "\$COUT"
@@ -142,13 +132,13 @@ class CirrusWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                /bin/bash -ue .command.sh
+                /bin/bash -ue .command.sh <(aws s3 cp --quiet s3:/${folder}/.command.in -)
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
-                es3 -q -v 0 --no-stats sync .command.out s3:/${folder}/.command.out || true
-                es3 -q -v 0 --no-stats sync .command.err s3:/${folder}/.command.err || true
+                nxf_s3_upload .command.out s3:/${folder} || true
+                nxf_s3_upload .command.err s3:/${folder} || true
                 """
                         .stripIndent().leftTrim()
 
@@ -156,5 +146,4 @@ class CirrusWrapperBuilderTest extends Specification {
         cleanup:
         folder?.deleteDir()
     }
-
 }

@@ -196,7 +196,9 @@ class CmdCloud extends CmdBase implements UsageAware {
         if( imageId ) result.setImageId(imageId)
         if( spotPrice ) result.setSpotPrice(spotPrice)
 
-        return result.build()
+        result.build()
+        result.validate(driver)
+        return result
     }
 
     /**
@@ -273,11 +275,12 @@ class CmdCloud extends CmdBase implements UsageAware {
      * @param count
      * @return
      */
-    private List<String> addNodes0(final String clusterName, int count, CloudConfig cloudConfig) {
+    private List<String> addNodes0(int count, CloudConfig cloudConfig) {
         assert count, 'Parameter count must be greater than zero'
 
         // -- validate before launch nodes
-        cloudConfig.validate(driver)
+        if( !cloudConfig.role )
+            throw new IllegalStateException("Missing cloud config `role` attribute")
 
         // -- submit the launch request
         final nodes = count==1 ? 'node' : 'nodes'
@@ -500,12 +503,12 @@ class CmdCloud extends CmdBase implements UsageAware {
 
             if( count > 1 ) {
                 // -- launch the worker nodes
-                def workerIds = addNodes0(clusterName, (int)count-1, cloudConfig.setRole(ROLE_WORKER))
+                def workerIds = addNodes0((int)count-1, cloudConfig.setRole(ROLE_WORKER))
                 printWorkerInstances(workerIds)
             }
 
             // -- launch the master node
-            def masterId = addNodes0(clusterName, 1, cloudConfig.setRole(ROLE_MASTER))
+            def masterId = addNodes0(1, cloudConfig.setRole(ROLE_MASTER))
             printMasterInstance(masterId.first(), cloudConfig)
         }
 
@@ -545,7 +548,7 @@ class CmdCloud extends CmdBase implements UsageAware {
                 throw new AbortOperationException("No cluster available with name `$clusterName`")
 
             // launch the node
-            def instanceIds = addNodes0(clusterName, count, cloudConfig)
+            def instanceIds = addNodes0( count, cloudConfig)
             printWorkerInstances(instanceIds)
         }
 

@@ -241,6 +241,18 @@ class DataflowExtensionsTest extends Specification {
         result.val == Channel.STOP
     }
 
+    def testMapManyDefault  () {
+
+        when:
+        def result = Channel.from( [1,2], ['a',['b','c']] ).flatMap()
+        then:
+        result.val == 1
+        result.val == 2
+        result.val == 'a'
+        result.val == ['b','c']  // <-- nested list are preserved
+        result.val == Channel.STOP
+    }
+
     def testMapManyWithHashArray () {
 
         when:

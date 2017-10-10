@@ -2,6 +2,7 @@ package nextflow.extension
 
 import nextflow.Session
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -14,7 +15,7 @@ class DataflowHelperTest extends Specification {
         new Session()
     }
 
-    def testHandlerNames() {
+    def 'should subscribe handlers'() {
 
         when:
         DataflowHelper.checkSubscribeHandlers( [:] )
@@ -37,4 +38,20 @@ class DataflowHelperTest extends Specification {
         thrown(IllegalArgumentException)
     }
 
+    @Unroll
+    def 'should split entry' () {
+        when:
+        def pair = DataflowHelper.split(pivot, entry)
+        then:
+        pair.keys == keys
+        pair.values == values
+
+        where:
+        pivot           | entry                         | keys          | values
+        [0]             | ['A','B','C','D','E','F']     | ['A']         | ['B','C','D','E','F']
+        [0,1]           | ['A','B','C','D','E','F']     | ['A','B']     | ['C','D','E','F']
+        [0,2]           | ['A','B','C','D','E','F']     | ['A','C']     | ['B','D','E','F']
+        [0,1,4]         | ['A','B','C','D','E','F']     | ['A','B','E'] | ['C','D','F']
+        [0]             | 'A'                           | ['A']         | []
+    }
 }

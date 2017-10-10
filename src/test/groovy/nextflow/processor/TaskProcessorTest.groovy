@@ -42,7 +42,6 @@ import nextflow.script.ValueInParam
 import nextflow.util.CacheHelper
 import spock.lang.Specification
 import spock.lang.Unroll
-import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -381,20 +380,6 @@ class TaskProcessorTest extends Specification {
         holder.stageName == localFile.getFileName().toString()
 
         /*
-         * when the input is a on a foreign file system
-         * it is need to copy it to a local file
-         */
-        when:
-        def remoteFile = TestHelper.createInMemTempFile('remote_file.txt')
-        remoteFile.text = 'alpha beta gamma delta'
-        holder = processor.normalizeInputToFile(remoteFile,'input.1')
-        then:
-        holder.sourceObj == remoteFile
-        holder.storePath.fileSystem == FileSystems.default
-        holder.storePath.text == 'alpha beta gamma delta'
-        holder.stageName == remoteFile.getName()
-
-        /*
          * any generic input that is not a file is converted to a string
          * and save to the local file system
          */
@@ -647,6 +632,27 @@ class TaskProcessorTest extends Specification {
         processor.visitOptions(param,'dir-name') == [type:'any', followLinks: true, maxDepth: 5, hidden: false, relative: false]
     }
 
+    def 'should get bin files in the script command' () {
 
+        given:
+        def session = Mock(Session)
+        session.getBinEntries() >> ['foo.sh': Paths.get('/some/path/foo.sh'), 'bar.sh': Paths.get('/some/path/bar.sh')]
+        def processor = [:] as TaskProcessor
+        processor.session = session
+
+        when:
+        def result = processor.getTaskBinEntries('var=x foo.sh')
+        then:
+        result.size()==1
+        result.contains(Paths.get('/some/path/foo.sh'))
+
+        when:
+        result = processor.getTaskBinEntries('echo $(foo.sh); bar.sh')
+        then:
+        result.size()==2
+        result.contains(Paths.get('/some/path/foo.sh'))
+        result.contains(Paths.get('/some/path/bar.sh'))
+
+    }
 
 }
