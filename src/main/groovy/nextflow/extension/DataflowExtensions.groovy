@@ -1739,4 +1739,10 @@ class DataflowExtensions {
         return target;
     }
 
+    static final DataflowReadChannel transpose( final DataflowReadChannel source, final Map params=null ) {
+        def result = new TransposeOp(source,params).apply()
+        NodeMarker.addOperatorNode('transpose', source, result)
+        return result
+    }
+
 }
