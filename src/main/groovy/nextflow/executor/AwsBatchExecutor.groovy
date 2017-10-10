@@ -18,6 +18,7 @@ import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.Volume
 import com.upplication.s3fs.S3Path
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.transform.ToString
@@ -178,6 +179,7 @@ class AwsBatchTaskHandler extends TaskHandler {
         this.traceFile = task.workDir.resolve(TaskRun.CMD_TRACE)
     }
 
+
     /**
      * @return An instance of {@link AwsOptions} holding Batch specific settings
      */
@@ -188,8 +190,8 @@ class AwsBatchTaskHandler extends TaskHandler {
 
         new AwsOptions(
                 cliPath: executor.session.getExecConfigProp(name,'awscli',null) as String,
-                storageClass: executor.session.config.navigate('aws.client.upload_storage_class') as String,
-                storageEncryption: executor.session.config.navigate('aws.client.storage_encryption') as String,
+                storageClass: executor.session.config.navigate('aws.client.uploadStorageClass') as String,
+                storageEncryption: executor.session.config.navigate('aws.client.storageEncryption') as String,
                 remoteBinDir: executor.remoteBinDir as String
             )
 
@@ -672,6 +674,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
  */
 @Slf4j
 @ToString
+@EqualsAndHashCode
 @CompileStatic
 class AwsOptions {
 
