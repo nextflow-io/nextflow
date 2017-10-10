@@ -19,52 +19,50 @@ import nextflow.Global
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.exception.ProcessStageException
-import nextflow.extension.FilesEx
-
 /**
- * Download foreign (ie. remote) file to the local
+ * Move foreign (ie. remote) files to the staging work area
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class FileDownloader {
+class FilePorter {
 
     static protected ExecutorService executor
 
     static Random rnd = Random.newInstance()
 
     /**
-     * Given a map of files, downloads all the ones stored in a foreign file system
+     * Given a map of files, copies all the ones stored in a foreign file system
      * and store them in the current working directory
      *
      * @param filesMap A map of files
      * @return A new files map in which all foreign {@link Path} are replaced with local paths
      */
-    Map<String,Path> downloadForeignFiles(Map<String, Path> filesMap) {
+    Map<String,Path> stageForeignFiles(Map<String, Path> filesMap) {
         List<Callable<NamePathPair>> actions = []
         List<Path> paths = []
 
-        // check for foreign file to download
+        // check for foreign file to copy
         for( Map.Entry<String,Path> entry : filesMap ) {
             def name = entry.getKey()
             def path = entry.getValue()
             if( path.fileSystem == FileHelper.workDirFileSystem )
                 continue
-            // download the path with a thread pool
-            actions << { new NamePathPair(name, downloadForeignFile(path)) } as Callable<NamePathPair>
+            // copy the path with a thread pool
+            actions << { new NamePathPair(name, stageForeignFile(path)) } as Callable<NamePathPair>
             paths << path
         }
 
-        // no foreign file to download, just return the original map
+        // no foreign file to copy, just return the original map
         if( !actions )
             return filesMap
 
-        log.trace "Downloading foreign files: $paths"
+        log.trace "Stage foreign files: $paths"
         def result = new HashMap(filesMap)
 
         def futures = getExecutor().invokeAll(actions)
-        log.trace "Download foreign files completes: $paths"
+        log.trace "Stage foreign files completes: $paths"
 
         try {
             for( Future<NamePathPair> fut : futures ) {
@@ -81,19 +79,19 @@ class FileDownloader {
     /**
      * Download a foreign file (ie. remote) storing it the current pipeline execution directory
      *
-     * @param filePath The {@link Path} of the remote file to download
+     * @param filePath The {@link Path} of the remote file to copy
      * @return The path of a local copy of the remote file
      */
-    protected Path downloadForeignFile(Path filePath) {
+    protected Path stageForeignFile(Path filePath) {
         int max = getMaxRetries()
         int count = 0
         while( true ) {
             try {
-                return downloadForeignFile0(filePath)
+                return stageForeignFile0(filePath)
             }
             catch( IOException e ) {
                 if( count++ < max && !(e instanceof NoSuchFileException )) {
-                    log.warn "Unable to download foreign file: ${filePath.toUri().toString()} (try ${count}) -- Cause: $e.message"
+                    log.warn "Unable to stage foreign file: ${filePath.toUriString()} (try ${count}) -- Cause: $e.message"
                     sleep (10 + rnd.nextInt(300))
                     continue
                 }
@@ -112,9 +110,10 @@ class FileDownloader {
         return message
     }
 
-    private Path downloadForeignFile0(Path filePath) {
-        log.debug "Copying to process workdir foreign file: ${filePath.toUri().toString()}"
-        FilesEx.copyTo(filePath, Nextflow.tempDir())
+    private Path stageForeignFile0(Path source) {
+        final target = Nextflow.tempDir().resolve(source.getName())
+        log.debug "Copying foreign file ${source.toUriString()} to work dir: ${target.toUriString()}"
+        return FileHelper.copyPath(source, target)
     }
 
     @Canonical
@@ -129,33 +128,33 @@ class FileDownloader {
 
     /**
      * @return
-     *      The maximum number of threads used for parallel files download.
-     *      This value can be defined by using the {@code download.maxThreads} configuration setting
+     *      The maximum number of threads used for parallel files copy.
+     *      This value can be defined by using the {@code filePorter.maxThreads} configuration setting
      *      (default: <number of avail CPU cores>)
      */
     static protected int getMaxThreads() {
-        Integer result = Global.session.config.navigate('download.maxThreads') as Integer
+        Integer result = Global.session.config.navigate('filePorter.maxThreads') as Integer
         if( !result )
             result = Runtime.runtime.availableProcessors()
-        log.debug "Inputs download.maxThreads=$result"
+        log.debug "filePorter.maxThreads=$result"
         return result
     }
 
     /**
      * @return
-     *      The maximum number of time the download is retried in case of an unexpected error.
-     *      This value can be defined by using the {@code download.maxRetries} configuration setting (default: 3).
+     *      The maximum number of time the copy process is retried in case of an unexpected error.
+     *      This value can be defined by using the {@code filePorter.maxRetries} configuration setting (default: 3).
      */
     static int getMaxRetries() {
-        Integer result = Global.session.config.navigate('download.maxRetries') as Integer
+        Integer result = Global.session.config.navigate('filePorter.maxRetries') as Integer
         if( !result )
             result = 3
-        log.debug "Inputs download.maxThreads=$result"
+        log.debug "filePorter.maxThreads=$result"
         return result
     }
 
     /**
-     * @return Creates lazily the executor service used to download remote files
+     * @return Creates lazily the executor service used to stage remote files
      */
     static synchronized private ExecutorService getExecutor() {
         if( !executor ) {
@@ -185,7 +184,7 @@ class FileDownloader {
     static private class DownloaderThreadFactory implements ThreadFactory {
         private final ThreadGroup group;
         private final AtomicInteger threadNumber = new AtomicInteger(1);
-        private final String namePrefix = "Downloader-"
+        private final String namePrefix = "FilePorter-"
 
         DownloaderThreadFactory() {
             SecurityManager s = System.getSecurityManager();
