@@ -34,8 +34,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         given:
         def cfg = [
                 aws: [client: [
-                        upload_storage_class: awsStorClass,
-                        storage_encryption  : awsStorEncrypt]],
+                        uploadStorageClass: awsStorClass,
+                        storageEncryption  : awsStorEncrypt]],
                 executor: [
                         awscli: awscliPath
                 ]
@@ -333,5 +333,6 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.containerProperties.volumes[0].name == 'aws-cli'
 
     }
+
 
 }
