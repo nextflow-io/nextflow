@@ -24,7 +24,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.file.FileDownloader
+import nextflow.file.FilePorter
 import nextflow.processor.TaskBean
 import nextflow.util.Escape
 /**
@@ -67,7 +67,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     String separatorChar = '\n'
 
-    private FileDownloader downloader
+    private FilePorter porter
 
     SimpleFileCopyStrategy() {
         this.inputFiles = [:]
@@ -84,9 +84,9 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
     }
 
     protected Map<String,Path> downloadForeignFiles(Map<String,Path> files) {
-        if( !downloader )
-            downloader = new FileDownloader()
-        downloader.downloadForeignFiles(files)
+        if( !porter )
+            porter = new FilePorter()
+        porter.stageForeignFiles(files)
     }
 
 

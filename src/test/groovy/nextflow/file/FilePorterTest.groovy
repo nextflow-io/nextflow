@@ -11,19 +11,19 @@ import test.TestHelper
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class FileDownloaderTest extends Specification {
+class FilePorterTest extends Specification {
 
     def 'should get the max threads value' () {
 
         when:
         new Session()
         then:
-        FileDownloader.getMaxThreads() == Runtime.getRuntime().availableProcessors()
+        FilePorter.getMaxThreads() == Runtime.getRuntime().availableProcessors()
 
         when:
-        new Session([download: [maxThreads: 99]])
+        new Session([filePorter: [maxThreads: 99]])
         then:
-        FileDownloader.getMaxThreads() == 99
+        FilePorter.getMaxThreads() == 99
 
     }
 
@@ -32,16 +32,16 @@ class FileDownloaderTest extends Specification {
         when:
         new Session()
         then:
-        FileDownloader.getMaxRetries() == 3
+        FilePorter.getMaxRetries() == 3
 
         when:
-        new Session([download: [maxRetries: 88]])
+        new Session([filePorter: [maxRetries: 88]])
         then:
-        FileDownloader.getMaxRetries() == 88
+        FilePorter.getMaxRetries() == 88
 
     }
 
-    def 'should download foreign files' () {
+    def 'should copy foreign files' () {
 
         given:
         def folder = Files.createTempDirectory('test')
@@ -52,8 +52,8 @@ class FileDownloaderTest extends Specification {
         def files = [foo: local, bar: foreign1, baz: foreign2]
 
         when:
-        def d = new FileDownloader()
-        def result = d.downloadForeignFiles(files)
+        def d = new FilePorter()
+        def result = d.stageForeignFiles(files)
         then:
         result.foo ==  Paths.get('local.txt')
 
