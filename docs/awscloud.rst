@@ -290,6 +290,7 @@ An example ``nextflow.config`` file is shown below::
     process.executor = 'awsbatch'
     process.queue = 'my-batch-queue'
     process.container = 'quay.io/biocontainers/salmon'
+    aws.region = 'eu-west-1'
 
 
 .. note:: Nextflow requires to access the AWS command line tool (``aws``) from the container in which the job runs
