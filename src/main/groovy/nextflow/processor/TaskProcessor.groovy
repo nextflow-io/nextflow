@@ -156,13 +156,13 @@ class TaskProcessor {
     /**
      * The underlying executor which will run the task
      */
-    protected final Executor executor
+    protected Executor executor
 
     /**
      * The corresponding task configuration properties, it holds the inputs/outputs
      * definition as well as other execution meta-declaration
      */
-    protected final ProcessConfig config
+    protected ProcessConfig config
 
     /**
      * Count the number of time an error occurred
@@ -285,6 +285,11 @@ class TaskProcessor {
      * @return The processor name
      */
     String getName() { name }
+
+    /**
+     * @return The {@link Executor} associated to this processor
+     */
+    Executor getExecutor() { executor }
 
     /**
      * @return The {@code DataflowOperator} underlying this process
@@ -1826,9 +1831,13 @@ class TaskProcessor {
 
     }
 
-    final protected createTaskHashKey(TaskRun task) {
+    final protected HashCode createTaskHashKey(TaskRun task) {
 
         List keys = [ session.uniqueId, name, task.source ]
+
+        if( task.containerEnabled )
+            keys << task.container
+
         // add all the input name-value pairs to the key generator
         task.inputs.each {
             keys.add( it.key.name )
@@ -1887,7 +1896,7 @@ class TaskProcessor {
         log.info(buffer.toString())
     }
 
-    final protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
+    protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
         getTaskGlobalVars( task.context.getVariableNames(), ownerScript.binding, task.context.getHolder() )
     }
 

@@ -77,6 +77,10 @@ class TaskBean implements Serializable, Cloneable {
 
     boolean executable
 
+    boolean containerNative
+
+    boolean containerEnabled
+
     Map<String,Path> inputFiles
 
     List<String> outputFiles
@@ -126,6 +130,8 @@ class TaskBean implements Serializable, Cloneable {
         this.containerConfig = task.getContainerConfig()
         this.containerMemory = task.config.getMemory()
         this.executable = task.isContainerExecutable()
+        this.containerNative = task.isContainerNative()
+        this.containerEnabled = task.isContainerEnabled()
 
         // stats
         this.statsEnabled = task.getProcessor().getSession().statsEnabled

@@ -101,5 +101,11 @@ abstract class Executor {
      */
     abstract TaskHandler createTaskHandler(TaskRun task)
 
+    /**
+     * @return {@code true} whenever the containerization is managed by the executor itself
+     */
+    boolean isContainerNative() {
+        return false
+    }
 
 }

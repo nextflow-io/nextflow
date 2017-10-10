@@ -779,7 +779,8 @@ class BashWrapperBuilderTest extends Specification {
                 workDir: folder,
                 script: 'echo Hello world!',
                 containerImage: 'busybox',
-                containerConfig: [engine: 'docker', sudo: true, enabled: true]
+                containerConfig: [engine: 'docker', sudo: true, enabled: true],
+                containerEnabled: true,
                 ] as TaskBean)
         bash.build()
 
@@ -889,6 +890,7 @@ class BashWrapperBuilderTest extends Specification {
                 workDir: folder,
                 script: 'echo Hello world!',
                 containerImage: 'busybox',
+                containerEnabled: true,
                 containerConfig: [engine: 'docker', temp: 'auto', enabled: true]
                 ] as TaskBean)
         bash.build()
@@ -1001,6 +1003,7 @@ class BashWrapperBuilderTest extends Specification {
                 name: 'Hello 5',
                 workDir: folder,
                 script: 'echo Hello world!',
+                containerEnabled: true,
                 containerImage: 'ubuntu',
                 containerConfig: [engine: 'docker', temp: 'auto', enabled: true, remove:false, kill: false]
                 ] as TaskBean)
@@ -1110,6 +1113,7 @@ class BashWrapperBuilderTest extends Specification {
                 name: 'Hello 6',
                 workDir: folder,
                 script: 'echo Hello world!',
+                containerEnabled: true,
                 containerImage: 'ubuntu',
                 containerConfig: [engine: 'docker', temp: 'auto', enabled: true, remove:false, kill: 'SIGXXX']
                 ] as TaskBean)
@@ -1222,6 +1226,7 @@ class BashWrapperBuilderTest extends Specification {
                 name: 'Hello 7',
                 workDir: folder,
                 script: 'echo Hello world!',
+                containerEnabled: true,
                 containerImage: 'busybox',
                 containerMount: '/folder with blanks' as Path,
                 containerConfig: [engine: 'docker', enabled: true]
@@ -1334,6 +1339,7 @@ class BashWrapperBuilderTest extends Specification {
                 workDir: folder,
                 scratch: true,
                 script: 'echo Hello world!',
+                containerEnabled: true,
                 containerImage: 'busybox',
                 containerConfig: [engine: 'docker', sudo: true, enabled: true]
         ] as TaskBean)
@@ -1446,6 +1452,7 @@ class BashWrapperBuilderTest extends Specification {
         def bash = new BashWrapperBuilder([
                 workDir: folder,
                 script: 'echo Hello world!',
+                containerEnabled: true,
                 containerImage: 'sl65',
                 containerConfig: [enabled: true, fixOwnership: true, engine: 'docker'] as ContainerConfig
                 ] as TaskBean)
@@ -1972,6 +1979,7 @@ class BashWrapperBuilderTest extends Specification {
                 name: 'Hello 1',
                 workDir: folder,
                 script: 'echo Hello world!',
+                containerEnabled: true,
                 containerImage: 'docker:ubuntu:latest',
                 environment: [PATH: '/path/to/bin'],
                 containerConfig: [enabled: true, engine: 'shifter'] as ContainerConfig

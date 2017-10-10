@@ -605,7 +605,15 @@ class TaskRun implements Cloneable {
      * @return {@true} when the process runs an *executable* container
      */
     boolean isContainerExecutable() {
-        config.container == true
+        getConfig().container == true
+    }
+
+    boolean isContainerNative() {
+        processor.executor?.isContainerNative() ?: false
+    }
+
+    boolean isContainerEnabled() {
+        getConfig().container && (isContainerExecutable() || getContainerConfig().enabled || isContainerNative())
     }
 
     boolean isSuccess( status = exitStatus ) {

@@ -273,15 +273,8 @@ class BashWrapperBuilder {
         return "NXF_SCRATCH=\"\$(set +u; nxf_mktemp $scratchStr)\""
     }
 
-    /**
-     * Setup container related variables
-     */
-    protected boolean containerInit() {
-        containerImage && (executable || containerConfig.isEnabled())
-    }
-
     protected boolean fixOwnership() {
-        systemOsName == 'Linux' && containerConfig?.fixOwnership && containerInit() && containerConfig.engine == 'docker' // <-- note: only for docker (shifter is not affected)
+        systemOsName == 'Linux' && containerConfig?.fixOwnership && runWithContainer && containerConfig.engine == 'docker' // <-- note: only for docker (shifter is not affected)
     }
 
     protected void makeEnvironmentFile(Path environmentFile) {
@@ -323,7 +316,7 @@ class BashWrapperBuilder {
         final stubFile = workDir.resolve(TaskRun.CMD_STUB)
 
         // set true when running with through a container engine
-        runWithContainer = containerInit()
+        runWithContainer = containerEnabled && !containerNative
 
         /*
          * save the input when required
