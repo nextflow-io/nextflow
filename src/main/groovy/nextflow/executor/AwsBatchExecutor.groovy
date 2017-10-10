@@ -108,7 +108,7 @@ class AwsBatchExecutor extends Executor {
     TaskHandler createTaskHandler(TaskRun task) {
         assert task
         assert task.workDir
-        log.debug "[AWS BATCH] Launching process > ${task.name} -- work folder: ${task.workDirStr}"
+        log.trace "[AWS BATCH] Launching process > ${task.name} -- work folder: ${task.workDirStr}"
         new AwsBatchTaskHandler(task, this)
     }
 }
@@ -619,7 +619,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         def normalized = normalizeGlobStarPaths(outputFiles)
 
         // create a bash script that will copy the out file to the working directory
-        log.debug "[AWS BATCH] Unstaging file path: $normalized"
+        log.trace "[AWS BATCH] Unstaging file path: $normalized"
         if( normalized ) {
             result << ""
             normalized.each {
