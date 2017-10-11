@@ -231,9 +231,9 @@ class TransposeOpTest extends Specification {
         def op = new TransposeOp(ch)
 
         expect:
-        op.fetchIndexes(['a','b','c']) == []
-        op.fetchIndexes(['a','b',['c','d']]) == [2]
-        op.fetchIndexes(['a',['b'],'x',['c','d']]) == [1,3]
+        op.findIndexes(['a','b','c']) == []
+        op.findIndexes(['a','b',['c','d']]) == [2]
+        op.findIndexes(['a',['b'],'x',['c','d']]) == [1,3]
     }
 
     @Timeout(1)

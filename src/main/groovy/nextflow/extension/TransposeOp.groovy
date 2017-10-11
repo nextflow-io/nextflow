@@ -56,7 +56,7 @@ class TransposeOp {
         item instanceof List ? transpose0(item) : target.bind(item)
     }
 
-    protected List<Integer> fetchIndexes(List tuple) {
+    protected List<Integer> findIndexes(List tuple) {
         def c = tuple.size()
         def result = new ArrayList(c)
         for( int i=0; i<c; i++ ) {
@@ -82,21 +82,22 @@ class TransposeOp {
      * @param tuple The current channel tuple
      */
     protected void transpose0(List tuple) {
-        List<Integer> indexes = cols ? checkIndexes(tuple,cols) : fetchIndexes(tuple)
+        // find the indexes of list elements in the provided tuple emitted by a channel
+        List<Integer> indexes = cols ? checkIndexes(tuple,cols) : findIndexes(tuple)
 
         if( !indexes ) {
             target.bind(tuple)
             return
         }
 
-        // find the max
+        // find the max size of list elements to transpose
         int max=-1
         for( int i=0; i<indexes.size(); i++ ) {
             def c = ((List)tuple[ indexes[i] ]).size()
             if( c>max ) max=c
         }
 
-        for( int i=0; true; i++ ) {
+        for( int i=0; i<max; i++ ) {
             final c = tuple.size()
             final buffer = new ArrayList(c)
             for( int j=0; j<c; j++ ) {
@@ -106,7 +107,7 @@ class TransposeOp {
                     if( i<list.size() ) {
                         buffer[j] = list[i]
                     }
-                    else if( remainder && i<max ) {
+                    else if( remainder ) {
                         buffer[j] = null
                     }
                     else
