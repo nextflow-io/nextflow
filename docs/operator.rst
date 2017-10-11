@@ -280,8 +280,7 @@ These operators are:
 * `reduce`_
 * `toList`_
 * `toSortedList`_
-
-
+* `transpose`_
 
 map
 ------
@@ -733,6 +732,39 @@ You may also pass a comparator closure as an argument to the ``toSortedList`` op
    [[lisa, 10], [maggie, 7], [homer, 5], [marge, 3], [bart, 2]]
 
 See also: `collect`_ operator.
+
+transpose
+---------
+
+The ``traspose`` operator transforms a channel in such a way that the emitted items are the result of a transposition
+of all tuple elements in each item. For example::
+
+    Channel.from([
+       ['a', ['p', 'q'], ['u','v'] ],
+       ['b', ['s', 't'], ['x','y'] ]
+       ])
+       .transpose()
+       .println()
+
+The above snippet prints::
+
+    [a, p, u]
+    [a, q, v]
+    [b, s, x]
+    [b, t, y]
+
+
+Available parameters:
+
+=========== ============================
+Field       Description
+=========== ============================
+by          The index (zero based) of the element to be transposed.
+            Multiple elements can be defined specifying as list of indices e.g. ``by: [0,2]``
+remainder   When ``false`` incomplete tuples are discarded (default). When ``true`` incomplete tuples are emitted
+            containing a `null` in place of a missing element.
+=========== ============================
+
 
 Splitting operators
 ====================
