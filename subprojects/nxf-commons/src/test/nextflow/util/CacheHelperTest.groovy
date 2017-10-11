@@ -44,12 +44,16 @@ class CacheHelperTest extends Specification {
         def aMap =  Hashing.murmur3_128().newHasher().putInt(1).putUnencodedChars('String1').putBoolean(true).hash()
         def aList = Hashing.murmur3_128().newHasher().putUnencodedChars('A').putUnencodedChars('B').putUnencodedChars('C').hash()
 
-        def file = File.createTempFile('xxx','yyy')
+        def file = Files.createTempFile('test', null)
         file.deleteOnExit()
         file.text = 'Hello'
 
-        def aFile = Hashing.murmur3_128().newHasher().putUnencodedChars(file.absolutePath).putLong(file.length()).putLong(file.lastModified()).hash()
-
+        def aFile = Hashing.murmur3_128()
+                        .newHasher()
+                        .putUnencodedChars(file.toAbsolutePath().toString())
+                        .putLong(Files.size(file))
+                        .putLong(Files.getLastModifiedTime(file).toMillis())
+                        .hash()
 
         expect:
         CacheHelper.hasher(1).hash() == anInteger
