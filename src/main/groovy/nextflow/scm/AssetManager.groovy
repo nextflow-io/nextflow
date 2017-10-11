@@ -33,6 +33,7 @@ import nextflow.script.ScriptFile
 import nextflow.util.IniFile
 import org.eclipse.jgit.api.CreateBranchCommand
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.api.MergeResult
 import org.eclipse.jgit.api.ListBranchCommand
 import org.eclipse.jgit.api.errors.RefNotFoundException
 import org.eclipse.jgit.errors.RepositoryNotFoundException
@@ -566,8 +567,18 @@ class AssetManager {
             }
         }
 
-        // now pull to update it
         def pull = git.pull()
+        def revInfo = getCurrentRevisionAndName()
+
+        if ( revInfo.revType == RevisionInfo.Type.COMMIT ) {
+            log.debug("Repo appears to be checked out to a commit hash, but not a TAG, so we are NOT pulling the repo and assuming it is already up to date!")
+            return MergeResult.MergeStatus.ALREADY_UP_TO_DATE.toString()
+        }
+
+        if ( revInfo.revType == RevisionInfo.Type.TAG ) {
+            pull.setRemoteBranchName( "refs/tags/" + revInfo.revision )
+        }
+
         if( provider.hasCredentials() )
             pull.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password))
 
@@ -630,7 +641,7 @@ class AssetManager {
             return null
 
         if( head.isSymbolic() ) {
-            return new RevisionInfo(head.objectId.name(), Repository.shortenRefName(head.getTarget().getName()))
+            return new RevisionInfo(head.objectId.name(), Repository.shortenRefName(head.getTarget().getName()), RevisionInfo.Type.BRANCH)
         }
 
         if( !head.getObjectId() )
@@ -640,10 +651,10 @@ class AssetManager {
         Map<ObjectId, String> allNames = git.nameRev().addPrefix( "refs/tags/" ).add(head.objectId).call()
         def name = allNames.get( head.objectId )
         if( name ) {
-            return new RevisionInfo(head.objectId.name(), name)
+            return new RevisionInfo(head.objectId.name(), name, RevisionInfo.Type.TAG)
         }
         else {
-            return new RevisionInfo(head.objectId.name())
+            return new RevisionInfo(head.objectId.name(), null, RevisionInfo.Type.COMMIT)
         }
     }
 
@@ -847,6 +858,11 @@ class AssetManager {
      */
     @Canonical
     static class RevisionInfo {
+        public enum Type {
+            TAG,
+            COMMIT,
+            BRANCH
+        }
 
         /**
          * Git commit ID
@@ -857,6 +873,11 @@ class AssetManager {
          * Git tab or branch name
          */
         String revision
+
+        /**
+         * The revision type.
+         */
+        Type revType
 
         /**
          * @return A formatted string containing the commitId and revision properties
