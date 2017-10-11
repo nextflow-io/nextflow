@@ -66,8 +66,8 @@ allprojects {
     version = '0.26.0-beta3'
     group = 'io.nextflow'
 
-    sourceCompatibility = 1.7
-    targetCompatibility = 1.7
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
 
     repositories {
         jcenter()
