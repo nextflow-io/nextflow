@@ -463,6 +463,7 @@ class TaskPollingMonitor implements TaskMonitor {
                 }
                 catch ( Exception e ) {
                     handleException(handler, e)
+                    session.notifyTaskComplete(handler)
                 }
             }
             else
