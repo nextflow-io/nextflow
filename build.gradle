@@ -136,7 +136,7 @@ dependencies {
     compile "ch.qos.logback:logback-classic:1.1.10"
     compile "ch.qos.logback:logback-core:1.1.10"
     compile "org.codehaus.gpars:gpars:1.2.1"
-    compile("ch.grengine:grengine:1.0.3")
+    compile("ch.grengine:grengine:1.2.1") { exclude group: 'org.codehaus.groovy', module: 'groovy-all' }
     compile "commons-lang:commons-lang:2.6"
     compile "com.beust:jcommander:1.35"
     compile("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }

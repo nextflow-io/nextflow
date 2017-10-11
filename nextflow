@@ -265,20 +265,25 @@ if [ ! -x "$JAVA_CMD" ] ; then
     fi
 fi
 
-# Verify installed Java version
-if [ ! -d "$NXF_LAUNCHER" ]; then # <-- only the first time
-    JAVA_OUT="$($JAVA_CMD $NXF_OPTS -version 2>&1)"
-    if [ $? -ne 0 ]; then
-        echo_red "${JAVA_OUT:-Failed to launch the Java virtual machine}"
-        echo_yellow "Note: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n NXF_OPTS: $NXF_OPTS\n"
-        exit 1
-    fi
-    echo "$JAVA_OUT" | awk '/version/ {print $3}' | grep '"1\.[7|8]\..*"' > /dev/null
-    if [ $? -ne 0 ]; then
-         echo_red "Error: cannot find Java or it's a wrong version -- please make sure that Java 7 or higher it's installed"
-         echo_yellow "Note: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n JAVA_HOME: $JAVA_HOME\n"
-         exit 1
-    fi
+# Retrieve the java version from a NF local file
+JAVA_KEY="$NXF_HOME/tmp/ver/$(realpath $JAVA_CMD | sed 's@/@.@g')"
+if [ -e $JAVA_KEY ]; then
+  JAVA_VER="$(cat $JAVA_KEY)"
+else
+  JAVA_VER="$($JAVA_CMD $NXF_OPTS -version 2>&1)"
+  if [ $? -ne 0 ]; then
+      echo_red "${JAVA_VER:-Failed to launch the Java virtual machine}"
+      echo_yellow "Note: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n NXF_OPTS: $NXF_OPTS\n"
+      exit 1
+  fi
+  JAVA_VER=$(echo "$JAVA_VER" | awk '/version/ {gsub(/"/, "", $3); print $3}')
+  if [[ ! $JAVA_VER =~ ^1.8 && ! $JAVA_VER =~ ^9 ]]; then
+      echo_red "Error: cannot find Java or it's a wrong version -- please make sure that Java 8 or higher is installed"
+      echo_yellow "Note: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n JAVA_HOME: $JAVA_HOME\n"
+      exit 1
+  fi
+  mkdir -p $(dirname $JAVA_KEY)
+  echo $JAVA_VER > $JAVA_KEY
 fi
 
 # Verify nextflow jar is available
@@ -313,6 +318,7 @@ if [[ $cmd == console ]]; then bg=1;
 else JAVA_OPTS+=" -Djava.awt.headless=true"
 fi
 
+[[ "$JAVA_VER" =~ ^9 ]] && JAVA_OPTS+=" --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --illegal-access=deny"
 [[ "$NXF_MODE" ]] && JAVA_OPTS+=" -Dcapsule.mode=$NXF_MODE"
 [[ "$JAVA_HOME" ]] && JAVA_OPTS+=" -Dcapsule.java.home=$JAVA_HOME"
 [[ "$CAPSULE_LOG" ]] && JAVA_OPTS+=" -Dcapsule.log=$CAPSULE_LOG"
