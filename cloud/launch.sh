@@ -124,7 +124,7 @@ fi
 #
 local scriptschell=$(mktemp)
 cat <<EndOfString >> $scriptschell
-#!/bin/bash
+#!/usr/bin/env bash
 su - ec2-user << 'EndOfScript'
 export AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID"
 export AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"

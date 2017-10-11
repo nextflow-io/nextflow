@@ -323,7 +323,7 @@ class AmazonCloudDriver implements CloudDriver {
         }
 
         if( builder ) {
-            builder.add(0, '#!/bin/bash')
+            builder.add(0, '#!/usr/bin/env bash')
         }
 
         builder.join('\n')

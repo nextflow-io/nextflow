@@ -65,18 +65,18 @@ class ContainerScriptTokensTest extends Specification {
 
         when:
         script = '''
-            #!/bin/bash
+            #!/usr/bin/env bash
             container/name --foo --bar
             '''
         then:
         ContainerScriptTokens.parse( script ).image == 'container/name'
         ContainerScriptTokens.parse( script ).index == 1
         ContainerScriptTokens.parse( script ).variables == [:]
-        ContainerScriptTokens.parse( script ).lines == ['#!/bin/bash', 'container/name --foo --bar']
+        ContainerScriptTokens.parse( script ).lines == ['#!/usr/bin/env bash', 'container/name --foo --bar']
 
         when:
         script = '''
-            #!/bin/bash
+            #!/usr/bin/env bash
             THIS='one'
             THAT="two"
 
@@ -89,7 +89,7 @@ class ContainerScriptTokensTest extends Specification {
         ContainerScriptTokens.parse( script ).image ==  'hello/world'
         ContainerScriptTokens.parse( script ).index == 4
         ContainerScriptTokens.parse( script ).variables == [THIS:'one', THAT:'two']
-        ContainerScriptTokens.parse( script ).lines == ['#!/bin/bash', "THIS='one'", 'THAT="two"', '', 'hello/world --foo --bar', 'some','other', 'stuff']
+        ContainerScriptTokens.parse( script ).lines == ['#!/usr/bin/env bash', "THIS='one'", 'THAT="two"', '', 'hello/world --foo --bar', 'some','other', 'stuff']
 
     }
 

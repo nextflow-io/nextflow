@@ -39,7 +39,7 @@ class AwsBatchScriptLauncherTest extends Specification {
 
         folder.resolve('.command.sh').text ==
                 '''
-                #!/bin/bash -ue
+                #!/usr/bin/env bash -ue
                 echo Hello world!
                 '''
                         .stripIndent().leftTrim()
@@ -47,7 +47,7 @@ class AwsBatchScriptLauncherTest extends Specification {
 
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash
+                #!/usr/bin/env bash
                 # NEXTFLOW TASK: Hello 1
                 set -e
                 set -u
@@ -132,7 +132,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                /bin/bash -ue .command.sh <(aws s3 cp --quiet s3:/${folder}/.command.in -)
+                /usr/bin/env bash -ue .command.sh <(aws s3 cp --quiet s3:/${folder}/.command.in -)
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?

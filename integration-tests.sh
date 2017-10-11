@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 export NXF_CMD=$PWD/nextflow; 
 (

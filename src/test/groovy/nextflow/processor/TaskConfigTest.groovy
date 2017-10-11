@@ -45,9 +45,9 @@ class TaskConfigTest extends Specification {
 
         where:
         expected             | value
-        ['/bin/bash', '-ue'] | null
-        ['/bin/bash', '-ue'] | []
-        ['/bin/bash', '-ue'] | ''
+        ['/usr/bin/env bash', '-ue'] | null
+        ['/usr/bin/env bash', '-ue'] | []
+        ['/usr/bin/env bash', '-ue'] | ''
         ['bash']             | 'bash'
         ['bash']             | ['bash']
         ['bash', '-e']       | ['bash', '-e']

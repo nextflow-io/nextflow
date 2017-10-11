@@ -45,7 +45,7 @@ class ProcessConfigTest extends Specification {
         def config = new ProcessConfig(script)
 
         expect:
-        config.shell ==  ['/bin/bash','-ue']
+        config.shell ==  ['/usr/bin/env bash','-ue']
         config.cacheable
         config.validExitStatus == [0]
     }

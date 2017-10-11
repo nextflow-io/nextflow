@@ -79,7 +79,7 @@ class BashWrapperBuilderTest extends Specification {
                 containerImage: 'docker_x',
                 environment: [a:1, b:2],
                 script: 'echo ciao',
-                shell: ['bash','-e']
+                shell: ['/usr/bin/env bash','-e']
         )
 
         when:
@@ -93,7 +93,7 @@ class BashWrapperBuilderTest extends Specification {
         wrapper.containerImage == 'docker_x'
         wrapper.environment ==  [a:1, b:2]
         wrapper.script ==  'echo ciao'
-        wrapper.shell == ['bash','-e']
+        wrapper.shell == ['/usr/bin/env bash','-e']
     }
 
 
@@ -120,7 +120,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.sh').text ==
                 '''
-                #!/bin/bash -ue
+                #!/usr/bin/env bash -ue
                 echo Hello world!
                 '''
                 .stripIndent().leftTrim()
@@ -128,7 +128,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash
+                #!/usr/bin/env bash
                 #BSUB -x 1
                 #BSUB -y 2
                 # NEXTFLOW TASK: Hello 1
@@ -194,7 +194,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                /bin/bash -ue ${folder}/.command.sh
+                /usr/bin/env bash -ue ${folder}/.command.sh
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -231,7 +231,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.sh').text ==
                 '''
-                #!/bin/bash -ue
+                #!/usr/bin/env bash -ue
                 echo Hello world!
                 '''
                         .stripIndent().leftTrim()
@@ -239,7 +239,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash
+                #!/usr/bin/env bash
                 # NEXTFLOW TASK: Hello 1
                 set -e
                 set -u
@@ -303,7 +303,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                /bin/bash ${folder}/.command.run.1
+                /usr/bin/env bash ${folder}/.command.run.1
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -313,7 +313,7 @@ class BashWrapperBuilderTest extends Specification {
 
                 folder.resolve('.command.run.1').text ==
                 """
-                #!/bin/bash
+                #!/usr/bin/env bash
                 set -e
                 set -u
                 NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
@@ -402,7 +402,7 @@ class BashWrapperBuilderTest extends Specification {
                 touch .command.trace
                 start_millis=\$(nxf_date)
                 (
-                /bin/bash -ue ${folder}/.command.sh
+                /usr/bin/env bash -ue ${folder}/.command.sh
                 ) &
                 pid=\$!
                 nxf_trace "\$pid" .command.trace &
@@ -445,7 +445,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.sh').text ==
                 '''
-                #!/bin/bash -ue
+                #!/usr/bin/env bash -ue
                 echo Hello world!
                 '''
                         .stripIndent().leftTrim()
@@ -453,7 +453,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash
+                #!/usr/bin/env bash
                 # NEXTFLOW TASK: Hello 1
                 set -e
                 set -u
@@ -518,7 +518,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                /bin/bash -ue ${folder}/.command.sh < ${folder}/.command.in
+                /usr/bin/env bash -ue ${folder}/.command.sh < ${folder}/.command.in
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -568,7 +568,7 @@ class BashWrapperBuilderTest extends Specification {
          */
         folder.resolve('.command.sh').text ==
                 '''
-                #!/bin/bash -ue
+                #!/usr/bin/env bash -ue
                 echo Hello world!
                 '''
                         .stripIndent().leftTrim()
@@ -579,7 +579,7 @@ class BashWrapperBuilderTest extends Specification {
          */
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash
+                #!/usr/bin/env bash
                 # NEXTFLOW TASK: Hello 2
                 set -e
                 set -u
@@ -644,7 +644,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                /bin/bash ${folder}/.command.run.1
+                /usr/bin/env bash ${folder}/.command.run.1
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -657,7 +657,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.run.1').text ==
             """
-            #!/bin/bash
+            #!/usr/bin/env bash
             set -e
             set -u
             NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
@@ -746,7 +746,7 @@ class BashWrapperBuilderTest extends Specification {
             touch .command.trace
             start_millis=\$(nxf_date)
             (
-            /bin/bash -ue ${folder}/.command.sh < ${folder}/.command.in
+            /usr/bin/env bash -ue ${folder}/.command.sh < ${folder}/.command.in
             ) &
             pid=\$!
             nxf_trace "\$pid" .command.trace &
@@ -790,7 +790,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.sh').text ==
                 '''
-                #!/bin/bash -ue
+                #!/usr/bin/env bash -ue
                 echo Hello world!
                 '''
                         .stripIndent().leftTrim()
@@ -798,7 +798,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash
+                #!/usr/bin/env bash
                 # NEXTFLOW TASK: Hello 3
                 set -e
                 set -u
@@ -863,7 +863,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                sudo docker run -i -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID busybox -c "/bin/bash -ue ${folder}/.command.sh"
+                sudo docker run -i -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /usr/bin/env bash --name \$NXF_BOXID busybox -c "/usr/bin/env bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -901,7 +901,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.sh').text ==
                 '''
-                #!/bin/bash -ue
+                #!/usr/bin/env bash -ue
                 echo Hello world!
                 '''
                         .stripIndent().leftTrim()
@@ -909,7 +909,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash
+                #!/usr/bin/env bash
                 # NEXTFLOW TASK: Hello 4
                 set -e
                 set -u
@@ -974,7 +974,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID busybox -c "/bin/bash -ue ${folder}/.command.sh"
+                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /usr/bin/env bash --name \$NXF_BOXID busybox -c "/usr/bin/env bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -1015,7 +1015,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.sh').text ==
                 '''
-                #!/bin/bash -ue
+                #!/usr/bin/env bash -ue
                 echo Hello world!
                 '''
                         .stripIndent().leftTrim()
@@ -1023,7 +1023,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash
+                #!/usr/bin/env bash
                 # NEXTFLOW TASK: Hello 5
                 set -e
                 set -u
@@ -1087,7 +1087,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID ubuntu -c "/bin/bash -ue ${folder}/.command.sh"
+                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /usr/bin/env bash --name \$NXF_BOXID ubuntu -c "/usr/bin/env bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -1125,7 +1125,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.sh').text ==
                 '''
-                #!/bin/bash -ue
+                #!/usr/bin/env bash -ue
                 echo Hello world!
                 '''
                         .stripIndent().leftTrim()
@@ -1133,7 +1133,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash
+                #!/usr/bin/env bash
                 # NEXTFLOW TASK: Hello 6
                 set -e
                 set -u
@@ -1197,7 +1197,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID ubuntu -c "/bin/bash -ue ${folder}/.command.sh"
+                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /usr/bin/env bash --name \$NXF_BOXID ubuntu -c "/usr/bin/env bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -1239,7 +1239,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.sh').text ==
                 '''
-                #!/bin/bash -ue
+                #!/usr/bin/env bash -ue
                 echo Hello world!
                 '''
                         .stripIndent().leftTrim()
@@ -1247,7 +1247,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash
+                #!/usr/bin/env bash
                 # NEXTFLOW TASK: Hello 7
                 set -e
                 set -u
@@ -1312,7 +1312,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                docker run -i -v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID busybox -c "/bin/bash -ue ${folder}/.command.sh"
+                docker run -i -v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /usr/bin/env bash --name \$NXF_BOXID busybox -c "/usr/bin/env bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -1351,7 +1351,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.sh').text ==
                 '''
-                #!/bin/bash -ue
+                #!/usr/bin/env bash -ue
                 echo Hello world!
                 '''
                         .stripIndent().leftTrim()
@@ -1359,7 +1359,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash
+                #!/usr/bin/env bash
                 # NEXTFLOW TASK: Hello 3
                 set -e
                 set -u
@@ -1425,7 +1425,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                sudo docker run -i -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID busybox -c "/bin/bash -ue ${folder}/.command.sh"
+                sudo docker run -i -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /usr/bin/env bash --name \$NXF_BOXID busybox -c "/usr/bin/env bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -1494,7 +1494,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.sh').text ==
                 """
-                #!/bin/bash -ue
+                #!/usr/bin/env bash -ue
                 FOO=bar
                 docker run -i -e "NXF_DEBUG=\${NXF_DEBUG:=0}" -e "FOO=bar" -v $folder:$folder -v "\$PWD":"\$PWD" -w "\$PWD" --name \$NXF_BOXID docker-io/busybox --fox --baz
                 """
@@ -1502,7 +1502,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash
+                #!/usr/bin/env bash
                 # NEXTFLOW TASK: Hello
                 set -e
                 set -u
@@ -1567,7 +1567,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                /bin/bash -ue ${folder}/.command.sh
+                /usr/bin/env bash -ue ${folder}/.command.sh
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -1600,7 +1600,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.sh').text ==
                 """
-                #!/bin/bash -ue
+                #!/usr/bin/env bash -ue
                 docker run -i -v $folder:$folder -v "\$PWD":"\$PWD" -w "\$PWD" --name \$NXF_BOXID my.registry.com/docker-io/busybox --fox --baz
                 """
                         .stripIndent().leftTrim()
@@ -1875,7 +1875,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.sh').text ==
                 '''
-                #!/bin/bash -ue
+                #!/usr/bin/env bash -ue
                 echo Hello world!
                 '''
                         .stripIndent().leftTrim()
@@ -1883,7 +1883,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash
+                #!/usr/bin/env bash
                 # NEXTFLOW TASK: Hello 9
                 set -e
                 set -u
@@ -1949,7 +1949,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                /bin/bash -ue ${folder}/.command.sh
+                /usr/bin/env bash -ue ${folder}/.command.sh
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -1992,7 +1992,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.sh').text ==
                 '''
-                #!/bin/bash -ue
+                #!/usr/bin/env bash -ue
                 echo Hello world!
                 '''
                         .stripIndent().leftTrim()
@@ -2000,7 +2000,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.run').text ==
                 """
-                #!/bin/bash
+                #!/usr/bin/env bash
                 # NEXTFLOW TASK: Hello 1
                 set -e
                 set -u
@@ -2086,7 +2086,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee2=\$!
                 (
                 shifter_pull docker:ubuntu:latest
-                NXF_DEBUG=\${NXF_DEBUG:=0} BASH_ENV=\"${folder}/.command.env\" shifter --image docker:ubuntu:latest /bin/bash -c "/bin/bash -ue ${folder}/.command.sh"
+                NXF_DEBUG=\${NXF_DEBUG:=0} BASH_ENV=\"${folder}/.command.env\" shifter --image docker:ubuntu:latest /usr/bin/env bash -c "/usr/bin/env bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?

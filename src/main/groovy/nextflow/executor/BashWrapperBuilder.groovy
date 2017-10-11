@@ -65,7 +65,7 @@ class BashWrapperBuilder {
         catch( Exception e ) {
             log.warn "Invalid value for `NXF_DEBUG` variable: $str -- See http://www.nextflow.io/docs/latest/config.html#environment-variables"
         }
-        BASH = Collections.unmodifiableList(  level > 0 ? ['/bin/bash','-uex'] : ['/bin/bash','-ue'] )
+        BASH = Collections.unmodifiableList(  level > 0 ? ['/usr/bin/env bash','-uex'] : ['/usr/bin/env bash','-ue'] )
 
     }
 
@@ -372,7 +372,7 @@ class BashWrapperBuilder {
          */
 
         def wrapper = new StringBuilder()
-        wrapper << '#!/bin/bash' << ENDL
+        wrapper << '#!/usr/bin/env bash' << ENDL
         if( headerScript )
             wrapper << headerScript << ENDL
 
@@ -449,7 +449,7 @@ class BashWrapperBuilder {
          */
         if( statsEnabled || fixOwnership() ) {
             final stub = new StringBuilder()
-            stub << '#!/bin/bash' << ENDL
+            stub << '#!/usr/bin/env bash' << ENDL
             stub << 'set -e' << ENDL
             stub << 'set -u' << ENDL
             stub << 'NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 2 ]] && set -x' << ENDL << ENDL
@@ -478,7 +478,7 @@ class BashWrapperBuilder {
             stubFile.text = stub.toString()
 
             // invoke it from the main script
-            wrapper << "/bin/bash " << fileStr(stubFile)
+            wrapper << "/usr/bin/env bash " << fileStr(stubFile)
             if( containerBuilder && !executable ) wrapper << "\""
         }
         else {
@@ -642,7 +642,7 @@ class BashWrapperBuilder {
 
         // override the docker entry point the image is NOT defined as executable
         if( !executable )
-            builder.params(entry: '/bin/bash')
+            builder.params(entry: '/usr/bin/env bash')
 
         builder.build()
         return builder

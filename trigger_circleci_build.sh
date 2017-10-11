@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # See 
 # https://circleci.com/docs/nightly-builds/

@@ -243,7 +243,7 @@ class AmazonCloudDriverTest extends Specification {
         def script = driver.cloudInitScript(cloud)
         then:
         script ==   '''
-                    #!/bin/bash
+                    #!/usr/bin/env bash
                     su - ec2-user << 'EndOfScript'
                     (
                     set -e

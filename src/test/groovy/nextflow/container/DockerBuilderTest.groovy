@@ -86,9 +86,9 @@ class DockerBuilderTest extends Specification {
                 .runCommand == 'sudo docker run -i -v "$PWD":"$PWD" -w "$PWD" busybox'
 
         new DockerBuilder('busybox')
-                .params(entry: '/bin/bash')
+                .params(entry: '/usr/bin/env bash')
                 .build()
-                .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --entrypoint /bin/bash busybox'
+                .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --entrypoint /usr/bin/env bash busybox'
 
         new DockerBuilder('busybox')
                 .params(runOptions: '-x --zeta')
@@ -244,7 +244,7 @@ class DockerBuilderTest extends Specification {
 
         when:
         def script = '''
-            #!/bin/bash
+            #!/usr/bin/env bash
             FOO=bar
             busybox --foo --bar
             do_this
@@ -256,7 +256,7 @@ class DockerBuilderTest extends Specification {
 
         then:
         docker.addContainerRunCommand(tokens) == '''
-            #!/bin/bash
+            #!/usr/bin/env bash
             FOO=bar
             docker run -i -e "FOO=bar" -v "$PWD":"$PWD" -w "$PWD" busybox --foo --bar
             do_this
@@ -265,12 +265,12 @@ class DockerBuilderTest extends Specification {
                 .stripIndent().leftTrim()
 
         when:
-        tokens = ContainerScriptTokens.parse('#!/bin/bash\nbusybox')
+        tokens = ContainerScriptTokens.parse('#!/usr/bin/env bash\nbusybox')
         docker = new DockerBuilder('busybox')
         docker.build()
         then:
         docker.addContainerRunCommand(tokens) == '''
-            #!/bin/bash
+            #!/usr/bin/env bash
             docker run -i -v "$PWD":"$PWD" -w "$PWD" busybox
             '''
                 .stripIndent().leftTrim()

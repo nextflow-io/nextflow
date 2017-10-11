@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Copyright (c) 2013-2016, Centre for Genomic Regulation (CRG).
 # Copyright (c) 2013-2016, Paolo Di Tommaso and the respective authors.

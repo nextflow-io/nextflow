@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 VER='16.0.1'
 FILE="guava-$VER.jar"

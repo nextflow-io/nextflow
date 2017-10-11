@@ -73,22 +73,22 @@ class ShifterBuilderTest extends Specification {
                 .runCommand == 'shifter --verbose --image busybox'
 
         new ShifterBuilder('ubuntu:latest')
-                .params(entry: '/bin/bash')
+                .params(entry: '/usr/bin/env bash')
                 .build()
-                .runCommand == 'shifter --image ubuntu:latest /bin/bash'
+                .runCommand == 'shifter --image ubuntu:latest /usr/bin/env bash'
 
         new ShifterBuilder('ubuntu')
-                .params(entry: '/bin/bash')
+                .params(entry: '/usr/bin/env bash')
                 .addEnv(Paths.get("/data/env_file"))
                 .build()
-                .runCommand == 'BASH_ENV="/data/env_file" shifter --image ubuntu /bin/bash'
+                .runCommand == 'BASH_ENV="/data/env_file" shifter --image ubuntu /usr/bin/env bash'
 
         new ShifterBuilder('fedora')
-                .params(entry: '/bin/bash')
+                .params(entry: '/usr/bin/env bash')
                 .addEnv([VAR_X:1, VAR_Y:2])
                 .addEnv("VAR_Z=3")
                 .build()
-                .runCommand == 'VAR_X=1 VAR_Y=2 VAR_Z=3 shifter --image fedora /bin/bash'
+                .runCommand == 'VAR_X=1 VAR_Y=2 VAR_Z=3 shifter --image fedora /usr/bin/env bash'
 
     }
 

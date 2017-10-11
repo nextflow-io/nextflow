@@ -252,7 +252,7 @@ class CondorExecutorTest extends Specification {
         folder.resolve('.command.run').canExecute()
 
         folder.resolve('.command.sh').text == '''
-                #!/bin/bash -ue
+                #!/usr/bin/env bash -ue
                 echo Hello world!
                 '''
                 .stripIndent()

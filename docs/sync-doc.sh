@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 TARGET=../../nextflow-website/assets
 LATEST=$TARGET/docs/latest/
 
