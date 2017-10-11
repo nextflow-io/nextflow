@@ -154,6 +154,92 @@ class AssetManagerTest extends Specification {
 
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def testPullTagTwice() {
+
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/hello', [github: [auth: token]])
+
+        when:
+        manager.download("v1.2")
+        then:
+        folder.resolve('nextflow-io/hello/.git').isDirectory()
+
+        when:
+        manager.download("v1.2")
+        then:
+        noExceptionThrown()
+    }
+
+    // The hashes used here are NOT associated with tags.
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def testPullHashTwice() {
+
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/hello', [github: [auth: token]])
+
+        when:
+        manager.download("6b9515aba6c7efc6a9b3f273ce116fc0c224bf68")
+        then:
+        folder.resolve('nextflow-io/hello/.git').isDirectory()
+
+        when:
+        def result = manager.download("6b9515aba6c7efc6a9b3f273ce116fc0c224bf68")
+        then:
+        noExceptionThrown()
+        result == "Already-up-to-date"
+    }
+
+
+    // Downloading a branch first and then pulling the branch
+    // should work fine, unlike with tags.
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def testPullBranchTwice() {
+
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/hello', [github: [auth: token]])
+
+        when:
+        manager.download("mybranch")
+        then:
+        folder.resolve('nextflow-io/hello/.git').isDirectory()
+
+        when:
+        manager.download("mybranch")
+        then:
+        noExceptionThrown()
+    }
+
+    // First clone a repo with a tag, then forget to include the -r argument
+    // when you execute nextflow.
+    // Note that while the download will work, execution will fail subsequently
+    // at a separate check - this just tests that we don't fail because of a detached head.
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def testPullTagThenBranch() {
+
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/hello', [github: [auth: token]])
+
+        when:
+        manager.download("v1.2")
+        then:
+        folder.resolve('nextflow-io/hello/.git').isDirectory()
+
+        when:
+        manager.download()
+        then:
+        noExceptionThrown()
+    }
+
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def testClone() {
 
         given:
