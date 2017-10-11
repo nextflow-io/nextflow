@@ -88,7 +88,7 @@ function get() {
 
 function make_temp() {
     local base=${NXF_TEMP:=$PWD}
-    if [ "$(uname)" = 'Darwin' ]; then mktemp "${base}/nxf-tmp.XXXXX" || exit $?
+    if [ "$(uname)" = 'Darwin' ] || [ "$(uname)" = 'FreeBSD' ]; then mktemp "${base}/nxf-tmp.XXXXX" || exit $?
     else mktemp -t nxf-tmp.XXXXX -p "${base}" || exit $?
     fi
 }
