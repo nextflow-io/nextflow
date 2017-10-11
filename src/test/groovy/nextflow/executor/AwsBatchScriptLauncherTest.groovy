@@ -75,7 +75,7 @@ class AwsBatchScriptLauncherTest extends Specification {
 
                 nxf_mktemp() {
                     local base=\${1:-/tmp}
-                    if [[ \$(uname) = Darwin ]]; then mktemp -d \$base/nxf.XXXXXXXXXX
+                    if [[ \$(uname) = Darwin ]] || [[ \$(uname) = FreeBSD ]]; then mktemp -d \$base/nxf.XXXXXXXXXX
                     else TMPDIR="\$base" mktemp -d -t nxf.XXXXXXXXXX
                     fi
                 }
