@@ -57,4 +57,4 @@ else
 endif
 
 pack:
-	./gradlew pack
+	./gradlew packAll
