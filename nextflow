@@ -273,17 +273,21 @@ else
   JAVA_VER="$($JAVA_CMD $NXF_OPTS -version 2>&1)"
   if [ $? -ne 0 ]; then
       echo_red "${JAVA_VER:-Failed to launch the Java virtual machine}"
-      echo_yellow "Note: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n NXF_OPTS: $NXF_OPTS\n"
+      echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n NXF_OPTS: $NXF_OPTS\n"
       exit 1
   fi
   JAVA_VER=$(echo "$JAVA_VER" | awk '/version/ {gsub(/"/, "", $3); print $3}')
   if [[ ! $JAVA_VER =~ ^1.8 && ! $JAVA_VER =~ ^9 ]]; then
-      echo_red "Error: cannot find Java or it's a wrong version -- please make sure that Java 8 or higher is installed"
-      echo_yellow "Note: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n JAVA_HOME: $JAVA_HOME\n"
+      echo_red "ERROR: cannot find Java or it's a wrong version -- please make sure that Java 8"
+      echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n JAVA_HOME: $JAVA_HOME\n"
       exit 1
   fi
   mkdir -p $(dirname $JAVA_KEY)
   echo $JAVA_VER > $JAVA_KEY
+fi
+if [[ "$JAVA_VER" =~ ^9 ]]; then
+  echo_yellow "WARN: Nextflow support for Java 9 is still in beta stage and some advanced features are not supported"
+  echo_yellow "WARN: It is suggested the use of Java version 8"
 fi
 
 # Verify nextflow jar is available
@@ -318,7 +322,6 @@ if [[ $cmd == console ]]; then bg=1;
 else JAVA_OPTS+=" -Djava.awt.headless=true"
 fi
 
-[[ "$JAVA_VER" =~ ^9 ]] && JAVA_OPTS+=" --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --illegal-access=deny"
 [[ "$NXF_MODE" ]] && JAVA_OPTS+=" -Dcapsule.mode=$NXF_MODE"
 [[ "$JAVA_HOME" ]] && JAVA_OPTS+=" -Dcapsule.java.home=$JAVA_HOME"
 [[ "$CAPSULE_LOG" ]] && JAVA_OPTS+=" -Dcapsule.log=$CAPSULE_LOG"
@@ -353,6 +356,7 @@ fi
 env_md5() {
 cat <<EOF | $MD5 | cut -f1 -d' '
 $JAVA_CMD
+$JAVA_VER
 $JAVA_OPTS
 $NXF_HOME
 $NXF_VER
@@ -369,8 +373,21 @@ if [ -s "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ]; then
     launcher=($(cat "$LAUNCH_FILE"))
 else
     # otherwise run the capsule and get the result classpath in the 'launcher' and save it to a file
-    launcher=($("$JAVA_CMD" $JAVA_OPTS -jar "$NXF_BIN"))
+    cli=($("$JAVA_CMD" $JAVA_OPTS -jar "$NXF_BIN"))
     [[ $? -ne 0 ]] && echo_red 'Unable to initialize nextflow environment' && exit $?
+
+    if [[ "$JAVA_VER" =~ ^9 ]]; then
+      echo_yellow "Nextflow support for Java 8 is still experimental an some advanced features are not yet supported -- Please use Java 8"
+      launcher=("${cli[@]:0:1}")
+      launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
+      launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
+      launcher+=(--add-opens=java.base/java.util=ALL-UNNAMED)
+      launcher+=(--add-opens=java.base/sun.nio.ch=ALL-UNNAMED)
+      launcher+=(--illegal-access=deny)
+      launcher+=("${cli[@]:1}")
+    else
+      launcher=("${cli[@]}")
+    fi
 
     # Don't show errors if the LAUNCH_FILE can't be created
     if mkdir -p "${NXF_LAUNCHER}" 2>/dev/null; then
