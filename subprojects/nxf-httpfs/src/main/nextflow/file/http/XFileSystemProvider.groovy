@@ -45,6 +45,8 @@ import java.util.concurrent.TimeUnit
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import sun.net.www.protocol.ftp.FtpURLConnection
+
 /**
  * Implements a read-only JSR-203 complaint file system provider for http/ftp protocols
  *
@@ -376,8 +378,11 @@ abstract class XFileSystemProvider extends FileSystemProvider {
     }
 
     protected XFileAttributes readHttpAttributes(XPath path) {
-        final conn = (HttpURLConnection)path.toUri().toURL().openConnection()
-        if ( conn.getResponseCode() in [200, 301, 302]) {
+        final conn = path.toUri().toURL().openConnection()
+        if( conn instanceof FtpURLConnection ) {
+            return new XFileAttributes(null,-1)
+        }
+        if ( conn instanceof HttpURLConnection && conn.getResponseCode() in [200, 301, 302]) {
             def header = conn.getHeaderFields()
             return readHttpAttributes(header)
         }
@@ -386,7 +391,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
     protected XFileAttributes readHttpAttributes(Map<String,List<String>> header) {
         def lastMod = header.get("Last-Modified")?.get(0)
-        long contentLen = header.get("Content-Length")?.get(0)?.toLong() ?: 0
+        long contentLen = header.get("Content-Length")?.get(0)?.toLong() ?: -1
         def dateFormat = new SimpleDateFormat('E, dd MMM yyyy HH:mm:ss Z')
         def modTime = lastMod ? FileTime.from(dateFormat.parse(lastMod).time, TimeUnit.MILLISECONDS) : (FileTime)null
         new XFileAttributes(modTime, contentLen)
