@@ -91,7 +91,9 @@ class FilePorter {
             }
             catch( IOException e ) {
                 if( count++ < max && !(e instanceof NoSuchFileException )) {
-                    log.warn "Unable to stage foreign file: ${filePath.toUriString()} (try ${count}) -- Cause: $e.message"
+                    def message = "Unable to stage foreign file: ${filePath.toUriString()} (try ${count}) -- Cause: $e.message"
+                    log.isDebugEnabled() ? log.warn(message, e) : log.warn(message)
+
                     sleep (10 + rnd.nextInt(300))
                     continue
                 }
