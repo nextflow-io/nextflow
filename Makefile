@@ -51,10 +51,16 @@ refresh:
 
 test:
 ifndef class
-	./gradlew -q ${module}:test
+	./gradlew ${module}:test
 else
-	./gradlew -q ${module}:test --tests ${class}
+	./gradlew ${module}:test --tests ${class}
 endif
 
 pack:
 	./gradlew packAll
+
+deploy:
+	./gradlew deploy
+
+close:
+	./gradlew closeRepository promoteRepository
