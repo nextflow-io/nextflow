@@ -44,12 +44,12 @@ class CsvSplitterTest extends Specification {
 
         then:
         items.size() == 5
+        items[0] instanceof List
         items[0] == ['alpha', 'beta', 'delta']
         items[1] == ['gamma', '', 'zeta']
         items[2] == ['eta', 'theta', 'iota']
         items[3] == ['mu', 'nu', 'xi']
         items[4] == ['pi', 'rho', 'sigma']
-
     }
 
     def testSplitRowsWithLimit() {
@@ -59,6 +59,7 @@ class CsvSplitterTest extends Specification {
 
         then:
         items.size() == 3
+        items[0] instanceof List
         items[0] == ['alpha', 'beta', 'delta']
         items[1] == ['gamma', '', 'zeta']
         items[2] == ['eta', 'theta', 'iota']
@@ -71,6 +72,7 @@ class CsvSplitterTest extends Specification {
         def items = new CsvSplitter().target(text).options(skip:3).list()
         then:
         items.size() == 2
+        items[0] instanceof List
         items[0] == ['mu', 'nu', 'xi']
         items[1] == ['pi', 'rho', 'sigma']
 
@@ -78,6 +80,7 @@ class CsvSplitterTest extends Specification {
         items = new CsvSplitter().target(text).options(skip:1, limit: 3).list()
         then:
         items.size() == 3
+        items[0] instanceof List
         items[0] == ['gamma', '', 'zeta']
         items[1] == ['eta', 'theta', 'iota']
         items[2] == ['mu', 'nu', 'xi']
