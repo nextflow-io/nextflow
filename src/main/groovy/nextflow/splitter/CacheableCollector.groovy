@@ -42,6 +42,8 @@ trait CacheableCollector  {
         KryoHelper.serialize(allPaths, marker)
     }
 
+    Path getBaseFile() { baseFile }
+
     boolean checkCached() {
         try {
             def marker = baseFile.resolveSibling('.chunks')
