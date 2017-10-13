@@ -105,10 +105,11 @@ class TextFileCollector implements CollectorStrategy, CacheableCollector, Closea
     }
 
     private void closeWriter() {
-        if(!writer) return
-        writer.flush()
-        writer.closeQuietly()
-        writer = null
+        if( writer ) {
+            writer.flush()
+            writer.closeQuietly()
+            writer = null
+        }
     }
 
     @Override
