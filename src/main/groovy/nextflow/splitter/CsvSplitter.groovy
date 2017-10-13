@@ -169,9 +169,9 @@ class CsvSplitter extends AbstractTextSplitter {
         if( !line )
             return null
 
-        def tokens = StringUtils.splitPreserveAllTokens(line, sep)
+        def tokens = StringUtils.splitPreserveAllTokens(line, sep) as List<String>
         // -- strip blanks and quote
-        for( int i=0; i<tokens.length; i++ ) {
+        for( int i=0; i<tokens.size(); i++ ) {
             tokens[i] = strip(tokens[i])
         }
 
