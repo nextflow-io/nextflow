@@ -1629,7 +1629,7 @@ class TaskProcessor {
         def len = allItems.size()
 
         // use a bag so that cache hash key is not affected by file entries order
-        def files = new ArrayBag(len)
+        def files = new ArrayBag<FileHolder>(len)
         for( def item : allItems ) {
             files << normalizeInputToFile(item, "input.${++count}")
         }
@@ -1799,6 +1799,7 @@ class TaskProcessor {
     final protected void makeTaskContextStage2( TaskRun task, Map secondPass, int count ) {
 
         final ctx = task.context
+        final allNames = new HashMap<String,Integer>()
 
         // -- all file parameters are processed in a second pass
         //    so that we can use resolve the variables that eventually are in the file name
@@ -1809,6 +1810,10 @@ class TaskProcessor {
             def resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
             ctx.put( param.name, singleItemOrList(resolved) )
             count += resolved.size()
+            for( FileHolder item : resolved ) {
+                Integer num = allNames.getOrCreate(item.stageName, 0) +1
+                allNames.put(item.stageName,num)
+            }
 
             // add the value to the task instance context
             task.setInput(param, resolved)
@@ -1818,6 +1823,12 @@ class TaskProcessor {
         //    so that lazy directives will be resolved against it
         task.config.context = ctx
 
+        // check conflicting file names
+        def conflicts = allNames.findAll { name, num -> num>1 }
+        if( conflicts ) {
+            def message = "Process `$name` is staging two or more input files with the same name -- offending files: ${conflicts.keySet().join(', ')}"
+            throw new ProcessNotRecoverableException(message)
+        }
     }
 
     final protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
