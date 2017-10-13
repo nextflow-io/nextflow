@@ -36,12 +36,6 @@ interface CollectorStrategy {
     void add( Object item )
 
     /**
-     * Skip to the next chunk. All following {@link #add(java.lang.Object)} invocations will
-     * refer to a new chunk
-     */
-    void next()
-
-    /**
      * @return {@code true} if at least an item as been added
      */
     boolean hasChunk()
@@ -49,6 +43,6 @@ interface CollectorStrategy {
     /**
      * @return The chunk made up of the added items
      */
-    Object getChunk()
+    Object nextChunk()
 
 }

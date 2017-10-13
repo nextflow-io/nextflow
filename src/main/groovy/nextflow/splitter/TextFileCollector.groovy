@@ -92,8 +92,11 @@ class TextFileCollector implements CollectorStrategy, CacheableCollector, Closea
     }
 
     @Override
-    def getChunk() {
-        currentPath
+    def nextChunk() {
+        closeWriter()
+        def result = currentPath
+        currentPath = null
+        return result
     }
 
     @Override
@@ -101,19 +104,16 @@ class TextFileCollector implements CollectorStrategy, CacheableCollector, Closea
         return currentPath != null
     }
 
-    @Override
-    void next() {
-        if( writer ) {
-            writer.flush()
-            writer.closeQuietly()
-            writer = null
-            currentPath = null
-        }
+    private void closeWriter() {
+        if(!writer) return
+        writer.flush()
+        writer.closeQuietly()
+        writer = null
     }
 
     @Override
     void close() throws IOException {
-        next()
+        closeWriter()
         markComplete()
     }
 
