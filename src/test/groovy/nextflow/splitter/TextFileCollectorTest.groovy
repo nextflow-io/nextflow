@@ -19,10 +19,14 @@
  */
 
 package nextflow.splitter
+import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Paths
 
 import spock.lang.Specification
+
+import static test.TestHelper.gunzip
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -116,5 +120,47 @@ class TextFileCollectorTest extends Specification {
         cleanup:
         base?.parent?.deleteDir()
     }
+
+    def 'test compress chunks' () {
+
+        given:
+        def base = Files.createTempDirectory('test').resolve('chunk.fasta')
+        def collector = new TextFileCollector(base, Charset.defaultCharset(), true)
+
+        when:
+        collector.add('>seq1\n')
+        collector.add('alpha\n')
+        assert collector.getChunk() == base.resolveSibling('chunk.1.fasta.gz')
+
+        collector.next()
+        collector.add('>seq2\n')
+        collector.add('gamma\n')
+        collector.add('>seq3\n')
+        collector.add('beta\n')
+        assert collector.getChunk() == base.resolveSibling('chunk.2.fasta.gz')
+
+        collector.next()
+        collector.add('>seq4\n')
+        collector.add('kappa\n')
+        collector.add('>seq5\n')
+        collector.add('iota\n')
+        collector.add('delta\n')
+        assert collector.getChunk() == base.resolveSibling('chunk.3.fasta.gz')
+
+        collector.next()
+        collector.close()
+
+        then:
+        gunzip(base.resolveSibling('chunk.1.fasta.gz')) == '>seq1\nalpha\n'
+        gunzip(base.resolveSibling('chunk.2.fasta.gz')) == '>seq2\ngamma\n>seq3\nbeta\n'
+        gunzip(base.resolveSibling('chunk.3.fasta.gz')) == '>seq4\nkappa\n>seq5\niota\ndelta\n'
+        base.resolveSibling('.chunks').exists()
+        collector.checkCached()
+        collector.getAllChunks()*.name == ['chunk.1.fasta.gz','chunk.2.fasta.gz','chunk.3.fasta.gz']
+
+        cleanup:
+        base?.parent?.deleteDir()
+    }
+
 
 }

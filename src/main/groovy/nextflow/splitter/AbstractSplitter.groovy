@@ -140,10 +140,10 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
 
         setSource(source)
 
-        collector = createCollector()
-        if( collector instanceof CacheableCollector && collector.checkCached() ) {
-            log.debug "Operator `$operatorName` reusing cached chunks at path: ${collector.baseFile}"
-            result = resumeFromCache(collector)
+        final chunks = collector = createCollector()
+        if( chunks instanceof CacheableCollector && chunks.checkCached() ) {
+            log.debug "Operator `$operatorName` reusing cached chunks at path: ${chunks.getBaseFile()}"
+            result = resumeFromCache(chunks)
         }
 
         else {

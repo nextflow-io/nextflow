@@ -51,6 +51,8 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
 
     protected String collectName
 
+    protected boolean compress
+
     AbstractTextSplitter options(Map options) {
         super.options(options)
 
@@ -69,9 +71,15 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
             fileMode = true
         }
 
+        if( options.compress?.toString() == 'true' )
+            compress = options.compress as boolean
+
         // file mode and record cannot be used at the same time
         if( fileMode && recordMode )
-            throw new AbortOperationException("Parameters `file` and `record` conflict on operator: $operatorName")
+            throw new AbortOperationException("Parameters `file` and `record` conflict -- check operator `$operatorName`")
+
+        if( !fileMode && compress )
+            throw new AbortOperationException("Parameter `compress` requires also the use of parameter `file: true` -- check operator `$operatorName`")
 
         return this
     }
@@ -85,6 +93,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
         def result = super.validOptions()
         result.charset = [ Charset, Map, String ]
         result.file = [Boolean, Path, CharSequence]
+        result.compress = [Boolean]
         return result
     }
 
@@ -114,7 +123,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
             return newReader(obj.toPath(), charset)
 
         if( obj instanceof char[] )
-            return new StringReader(new String((char[])obj))
+            return new StringReader(new String(obj))
 
         throw new IllegalArgumentException("Object of class '${obj.class.name}' does not support 'splitter' methods")
 
@@ -236,7 +245,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
 
         if( fileMode ) {
             def baseFile = getCollectorBaseFile()
-            return new TextFileCollector(baseFile, charset)
+            return new TextFileCollector(baseFile, charset, compress)
         }
 
         return new CharSequenceCollector()

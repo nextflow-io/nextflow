@@ -20,8 +20,10 @@
 
 package nextflow.splitter
 import java.nio.charset.Charset
+import java.nio.charset.CharsetEncoder
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.zip.GZIPOutputStream
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -37,15 +39,18 @@ class TextFileCollector implements CollectorStrategy, CacheableCollector, Closea
 
     private int index
 
-    private BufferedWriter writer
+    private Writer writer
 
     private Path currentPath
 
-    TextFileCollector(Path baseFile, Charset charset = Charset.defaultCharset() ) {
+    private boolean compress
+
+    TextFileCollector(Path baseFile, Charset charset = Charset.defaultCharset(), boolean compress=false ) {
         assert baseFile
 
         this.baseFile = baseFile
         this.charset = charset
+        this.compress = compress
     }
 
     @PackageScope
@@ -53,6 +58,8 @@ class TextFileCollector implements CollectorStrategy, CacheableCollector, Closea
         def baseName = file.getBaseName()
         def suffix = file.getExtension()
         String fileName = suffix ? "${baseName}.${index}.${suffix}" : "${baseName}.${index}"
+        if( compress )
+            fileName += '.gz'
         return file.resolveSibling( fileName )
     }
 
@@ -65,13 +72,23 @@ class TextFileCollector implements CollectorStrategy, CacheableCollector, Closea
         if( !writer ) {
             currentPath = getNextNameFor(baseFile, ++index)
             allPaths << currentPath
-            writer = Files.newBufferedWriter(currentPath, charset)
+            writer = getOutputWriter(currentPath, charset, compress)
         }
-
 
         def str = record.toString()
         writer.write(str, 0, str.length())
 
+    }
+
+    protected Writer getOutputWriter(Path path, Charset charset, boolean compress) {
+        if( compress ) {
+            CharsetEncoder encoder = charset.newEncoder()
+            def zip = new GZIPOutputStream(Files.newOutputStream(path))
+            return new BufferedWriter(new OutputStreamWriter(zip, encoder))
+        }
+        else {
+            return Files.newBufferedWriter(path,charset)
+        }
     }
 
     @Override

@@ -21,6 +21,7 @@
 package test
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.zip.GZIPInputStream
 
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
@@ -83,4 +84,10 @@ class TestHelper {
             sleep 100
         }
     }
+
+    static String gunzip(Path path) {
+        def file = new GZIPInputStream(new FileInputStream(path.toFile()));
+        file.text
+    }
+
 }
