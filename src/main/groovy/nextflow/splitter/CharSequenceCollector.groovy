@@ -52,14 +52,14 @@ class CharSequenceCollector implements CollectorStrategy {
     }
 
     @Override
-    void next() {
-        count = 0
-        holder.setLength(0)
-    }
-
-    @Override
-    def getChunk() {
-        toString()
+    def nextChunk() {
+        try {
+            return toString()
+        }
+        finally {
+            count = 0
+            holder.setLength(0)
+        }
     }
 
     String toString() {

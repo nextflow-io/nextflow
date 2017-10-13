@@ -38,18 +38,18 @@ class ObjectListCollector implements CollectorStrategy {
     }
 
     @Override
-    def getChunk() {
-        new ArrayList(holder)
+    def nextChunk() {
+        try {
+            return new ArrayList(holder)
+        }
+        finally {
+            holder.clear()
+        }
     }
 
     @Override
     boolean hasChunk() {
         return !holder.isEmpty()
-    }
-
-    @Override
-    void next() {
-        holder.clear()
     }
 
 }

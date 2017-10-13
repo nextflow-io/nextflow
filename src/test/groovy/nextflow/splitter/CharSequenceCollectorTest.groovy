@@ -59,7 +59,7 @@ class CharSequenceCollectorTest extends Specification {
         buffer.hasChunk()
 
         when:
-        buffer.next()
+        buffer.nextChunk()
         then:
         !buffer.hasChunk()
 
@@ -72,7 +72,7 @@ class CharSequenceCollectorTest extends Specification {
         buffer.add('hello')
 
         when:
-        buffer.next()
+        buffer.nextChunk()
         then:
         !buffer.hasChunk()
         buffer.toString() == ''

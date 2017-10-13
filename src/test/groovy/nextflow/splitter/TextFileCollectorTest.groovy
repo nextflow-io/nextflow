@@ -53,24 +53,21 @@ class TextFileCollectorTest extends Specification {
         when:
         buffer.add('>seq1\n')
         buffer.add('alpha\n')
-        assert buffer.getChunk() == base.resolveSibling('chunk.1.fasta')
+        assert buffer.nextChunk() == base.resolveSibling('chunk.1.fasta')
 
-        buffer.next()
         buffer.add('>seq2\n')
         buffer.add('gamma\n')
         buffer.add('>seq3\n')
         buffer.add('beta\n')
-        assert buffer.getChunk() == base.resolveSibling('chunk.2.fasta')
+        assert buffer.nextChunk() == base.resolveSibling('chunk.2.fasta')
 
-        buffer.next()
         buffer.add('>seq4\n')
         buffer.add('kappa\n')
         buffer.add('>seq5\n')
         buffer.add('iota\n')
         buffer.add('delta\n')
-        assert buffer.getChunk() == base.resolveSibling('chunk.3.fasta')
+        assert buffer.nextChunk() == base.resolveSibling('chunk.3.fasta')
 
-        buffer.next()
         buffer.close()
 
         then:
@@ -104,7 +101,7 @@ class TextFileCollectorTest extends Specification {
         buffer.hasChunk()
 
         when:
-        buffer.next()
+        buffer.nextChunk()
         buffer.add('>seq2\n')
         buffer.add('gamma\n')
         buffer.add('>seq3\n')
@@ -113,7 +110,7 @@ class TextFileCollectorTest extends Specification {
         buffer.hasChunk()
 
         when:
-        buffer.next()
+        buffer.nextChunk()
         then:
         !buffer.hasChunk()
 
@@ -130,24 +127,21 @@ class TextFileCollectorTest extends Specification {
         when:
         collector.add('>seq1\n')
         collector.add('alpha\n')
-        assert collector.getChunk() == base.resolveSibling('chunk.1.fasta.gz')
+        assert collector.nextChunk() == base.resolveSibling('chunk.1.fasta.gz')
 
-        collector.next()
         collector.add('>seq2\n')
         collector.add('gamma\n')
         collector.add('>seq3\n')
         collector.add('beta\n')
-        assert collector.getChunk() == base.resolveSibling('chunk.2.fasta.gz')
+        assert collector.nextChunk() == base.resolveSibling('chunk.2.fasta.gz')
 
-        collector.next()
         collector.add('>seq4\n')
         collector.add('kappa\n')
         collector.add('>seq5\n')
         collector.add('iota\n')
         collector.add('delta\n')
-        assert collector.getChunk() == base.resolveSibling('chunk.3.fasta.gz')
+        assert collector.nextChunk() == base.resolveSibling('chunk.3.fasta.gz')
 
-        collector.next()
         collector.close()
 
         then:
