@@ -33,14 +33,27 @@ interface ScriptFileCopyStrategy {
     String getBeforeStartScript()
 
     /**
-     * @return A BASH snippet included in the wrapper script that stages the task input files
+     * Resolve all foreign file to storing then in the pipeline working directory
+     *
+     * @param inputFile A map of <file name, path location> of files. It can hold both local and foreign files
+     * @return
+     *      A map <file name, path location> of files in which all foreign files have been replaced
+     *      by local copies in the working directory
      */
-    String getStageInputFilesScript()
+    Map<String,Path> resolveForeignFiles(Map<String,Path> inputFile)
 
     /**
+     * @param inputFiles All the input files as a map of {@code <stage name, store path>} pairs
+     * @return A BASH snippet included in the wrapper script that stages the task input files
+     */
+    String getStageInputFilesScript(Map<String,Path> inputFiles)
+
+    /**
+     * @param outputFiles List of the output file names to unstage
+     * @param targetDir The directory where output files need to be unstaged ie. stored
      * @return A BASH snippet included in the wrapper script that un-stages the task output files
      */
-    String getUnstageOutputFilesScript()
+    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir)
 
     /**
      * Command to 'touch' a file
@@ -71,6 +84,12 @@ interface ScriptFileCopyStrategy {
      */
     String exitFile( Path file )
 
+    /**
+     * BASH command to redirect the specified file on the standard input
+     *
+     * @param file The file to be piped as an input
+     * @return BASH redirection for the specified file
+     */
     String pipeInputFile( Path file )
 
 }

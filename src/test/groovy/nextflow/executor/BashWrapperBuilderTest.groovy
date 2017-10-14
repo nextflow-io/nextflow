@@ -19,6 +19,7 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -2099,5 +2100,29 @@ class BashWrapperBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should resolve foreign files' () {
+
+        given:
+        def INPUTS = [
+                'foo.txt': Paths.get('/some/foo.txt'),
+                'bar.txt': Paths.get('/some/bar.txt'),
+        ]
+
+        def RESOLVED = [
+                'foo.txt': Paths.get('/some/foo.txt'),
+                'BAR.txt': Paths.get('/some/BAR.txt'),
+        ]
+        def bean = Mock(TaskBean)
+        bean.getInputFiles() >> INPUTS
+        def copy = Mock(SimpleFileCopyStrategy)
+        def bash = Spy(BashWrapperBuilder, constructorArgs:[bean, copy])
+
+        when:
+        def files = bash.getResolvedInputs()
+        then:
+        1 * copy.resolveForeignFiles(INPUTS) >> RESOLVED
+        files == RESOLVED
+
+    }
 
 }

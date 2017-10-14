@@ -132,7 +132,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                /bin/bash -ue .command.sh <(aws s3 cp --quiet s3:/${folder}/.command.in -)
+                /bin/bash -ue .command.sh < .command.in
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
