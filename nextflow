@@ -19,7 +19,7 @@
 #  along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'0.25.7'}
+NXF_VER=${NXF_VER:-'0.26.0-SNAPSHOT'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -40,7 +40,7 @@ fi
 fi
 
 function echo_red() {
-    echo -e "$RED$*$NORMAL"
+    >&2 echo -e "$RED$*$NORMAL"
 }
 
 function echo_green() {
@@ -48,7 +48,7 @@ function echo_green() {
 }
 
 function echo_yellow() {
-    echo -e "$YELLOW$*$NORMAL"
+    >&2 echo -e "$YELLOW$*$NORMAL"
 }
 
 function die() {
@@ -56,7 +56,7 @@ function die() {
   exit 1
 }
 
-get_abs_filename() {
+function get_abs_filename() {
   echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 }
 
@@ -66,7 +66,7 @@ function get() {
     elif command -v wget &>/dev/null; then
         GET="wget -q $1 -O $2"
     else
-        echo_red "Error: cannot find 'curl' nor 'wget' utility --  please install one of them"
+        echo_red "ERROR: Cannot find 'curl' nor 'wget' utility --  please install one of them"
         exit 1
     fi
 
@@ -74,7 +74,7 @@ function get() {
     $GET; status=$?
     printf "\r\033[K"
     if [ $status -ne 0 ]; then
-        echo_red "Error: cannot download nextflow required file -- make sure you can connect to the internet"
+        echo_red "ERROR: Cannot download nextflow required file -- make sure you can connect to the internet"
         echo ""
         echo "Alternatively you can try to download this file:"
         echo "    $1"
@@ -90,6 +90,17 @@ function make_temp() {
     local base=${NXF_TEMP:=$PWD}
     if [ "$(uname)" = 'Darwin' ]; then mktemp "${base}/nxf-tmp.XXXXX" || exit $?
     else mktemp -t nxf-tmp.XXXXX -p "${base}" || exit $?
+    fi
+}
+
+function resolve_link() {
+    if command -v realpath &>/dev/null; then
+      realpath $1
+    elif command -v readlink &>/dev/null; then
+      readlink -f $1
+    else
+      echo_yellow "WARN: Neither \`realpath\` nor \`readlink\` command can be found"
+      exit 1
     fi
 }
 
@@ -266,8 +277,8 @@ if [ ! -x "$JAVA_CMD" ] ; then
 fi
 
 # Retrieve the java version from a NF local file
-JAVA_KEY="$NXF_HOME/tmp/ver/$(realpath $JAVA_CMD | sed 's@/@.@g')"
-if [ -e $JAVA_KEY ]; then
+JAVA_KEY="$NXF_HOME/tmp/ver/$(resolve_link $JAVA_CMD | sed 's@/@.@g')"
+if [ -f $JAVA_KEY ]; then
   JAVA_VER="$(cat $JAVA_KEY)"
 else
   JAVA_VER="$($JAVA_CMD $NXF_OPTS -version 2>&1)"
@@ -283,7 +294,7 @@ else
       exit 1
   fi
   mkdir -p $(dirname $JAVA_KEY)
-  echo $JAVA_VER > $JAVA_KEY
+  [[ -f $JAVA_VER ]] && echo $JAVA_VER > $JAVA_KEY
 fi
 if [[ "$JAVA_VER" =~ ^9 ]]; then
   echo_yellow "WARN: Nextflow support for Java 9 is still in beta stage and some advanced features are not supported"
