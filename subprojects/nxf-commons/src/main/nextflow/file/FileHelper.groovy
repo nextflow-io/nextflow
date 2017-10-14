@@ -209,7 +209,7 @@ class FileHelper {
                 continue
             }
             if( !FilesEx.mkdirs(result) ) {
-                throw new IOException("Unable to create temporary parth: $result -- Verify file system access permission")
+                throw new IOException("Unable to create temporary part: $result -- Verify file system access permissions or if a file having the same name exists")
             }
 
             return result.toAbsolutePath()

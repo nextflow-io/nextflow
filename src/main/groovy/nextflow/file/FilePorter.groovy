@@ -62,7 +62,7 @@ class FilePorter {
         def result = new HashMap(filesMap)
 
         def futures = getExecutor().invokeAll(actions)
-        log.trace "Stage foreign files completes: $paths"
+        log.trace "Stage foreign files completed: $paths"
 
         try {
             for( Future<NamePathPair> fut : futures ) {
