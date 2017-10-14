@@ -298,11 +298,15 @@ class BashWrapperBuilder {
         }
 
     }
+
+    protected Map<String,Path> getResolvedInputs() {
+        copyStrategy.resolveForeignFiles(inputFiles)
+    }
+
     /**
      * Build up the BASH wrapper script file which will launch the user provided script
      * @return The {@code Path} of the created wrapper script
      */
-
     Path build() {
         assert workDir, "Missing 'workDir' property in BashWrapperBuilder object"
         assert script, "Missing 'script' property in BashWrapperBuilder object"
@@ -420,7 +424,7 @@ class BashWrapperBuilder {
         wrapper << '[[ $NXF_SCRATCH ]] && echo "nxf-scratch-dir $HOSTNAME:$NXF_SCRATCH" && cd $NXF_SCRATCH' << ENDL
 
         // staging input files when required
-        def stagingScript = copyStrategy.getStageInputFilesScript()
+        def stagingScript = copyStrategy.getStageInputFilesScript(resolvedInputs)
         if( stagingScript ) {
             wrapper << stagingScript << ENDL
         }
@@ -501,7 +505,7 @@ class BashWrapperBuilder {
         }
 
         def unstagingScript
-        if( (changeDir || workDir != targetDir) && (unstagingScript=copyStrategy.getUnstageOutputFilesScript()) )
+        if( (changeDir || workDir != targetDir) && (unstagingScript=copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)) )
             wrapper << unstagingScript << ENDL
 
         if( changeDir && statsEnabled )
@@ -585,7 +589,7 @@ class BashWrapperBuilder {
         /*
          * initialise the builder
          */
-        builder.addMountForInputs(inputFiles)
+        builder.addMountForInputs(resolvedInputs)
 
         if( !executable )
             builder.addMount(binDir)

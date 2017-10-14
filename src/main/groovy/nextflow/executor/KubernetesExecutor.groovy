@@ -198,7 +198,7 @@ class KubernetesExecutor extends AbstractGridExecutor {
         private String makeYaml() {
 
             // get input files paths
-            def paths = DockerBuilder.inputFilesToPaths(inputFiles)
+            def paths = DockerBuilder.inputFilesToPaths(getResolvedInputs())
             // add standard paths
             if( binDir ) paths << binDir
             if( workDir ) paths << workDir

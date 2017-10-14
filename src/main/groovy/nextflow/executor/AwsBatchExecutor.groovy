@@ -510,6 +510,12 @@ class AwsBatchScriptLauncher extends BashWrapperBuilder {
 
     AwsBatchScriptLauncher( TaskBean bean, AwsOptions opts ) {
         super(bean, new AwsBatchFileCopyStrategy(bean,opts))
+        // include task script as an input to force its staging in the container work directory
+        bean.inputFiles[TaskRun.CMD_SCRIPT] = bean.workDir.resolve(TaskRun.CMD_SCRIPT)
+        // include task stdin file
+        if( bean.input != null ) {
+            bean.inputFiles[TaskRun.CMD_INFILE] = bean.workDir.resolve(TaskRun.CMD_INFILE)
+        }
     }
 
     protected void makeEnvironmentFile(Path file) {
@@ -528,23 +534,11 @@ class AwsBatchScriptLauncher extends BashWrapperBuilder {
 @CompileStatic
 class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
 
-    private Path workDir
-
     private AwsOptions opts
 
     private Map<String,String> environment
 
     AwsBatchFileCopyStrategy( TaskBean task, AwsOptions opts ) {
-        this.workDir = task.workDir
-        this.targetDir = task.getTargetDir()
-        this.outputFiles = task.getOutputFiles()
-        this.inputFiles = task.getInputFiles()
-        // include task script
-        this.inputFiles[TaskRun.CMD_SCRIPT] = workDir.resolve(TaskRun.CMD_SCRIPT)
-        // include task stdin file
-        if( task.input != null ) {
-            inputFiles[TaskRun.CMD_INFILE] = workDir.resolve(TaskRun.CMD_INFILE)
-        }
         this.opts = opts
         this.environment = task.environment
     }
@@ -616,7 +610,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      * {@inheritDoc}
      */
     @Override
-    String getUnstageOutputFilesScript() {
+    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
 
         // collect all the expected names (pattern) for files to be un-staged
         def result = []
@@ -665,10 +659,13 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         "${path.name} && nxf_s3_upload ${Escape.path(path.name)} s3:/${Escape.path(path.getParent())} || true"
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     String pipeInputFile( Path path ) {
-        " <(${opts.cliPath ?: 'aws'} s3 cp --quiet s3:/$path -)"
+        " < ${Escape.path(path.getFileName())}"
     }
-
 }
 
 /**

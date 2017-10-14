@@ -21,6 +21,7 @@
 package nextflow.executor
 
 import java.nio.file.Files
+import java.nio.file.Path
 
 import nextflow.processor.TaskRun
 
@@ -79,8 +80,19 @@ class IgScriptStagingStrategy extends IgFileStagingStrategy implements ScriptFil
      * @return A {@code null} string
      */
     @Override
-    String getStageInputFilesScript() {
+    String getStageInputFilesScript(Map<String,Path> inputFiles) {
         return null
+    }
+
+    /**
+     * Turn off remote file download
+     *
+     * @param inputFiles
+     * @return
+     */
+    @Override
+    Map<String,Path> resolveForeignFiles(Map<String,Path> inputFiles) {
+        return inputFiles
     }
 
     /**
@@ -89,7 +101,7 @@ class IgScriptStagingStrategy extends IgFileStagingStrategy implements ScriptFil
      * @return A {@code null} string
      */
     @Override
-    String getUnstageOutputFilesScript() {
+    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
         return null
     }
 
