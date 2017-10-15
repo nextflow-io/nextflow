@@ -89,8 +89,8 @@ class FastaSplitter extends AbstractTextSplitter {
         String header = null
 
         def body = new StringBuilder()
-        fasta.eachLine { String line ->
-            line = line.trim()
+        fasta.eachLine { line ->
+            line = (line as String).trim()
             if( !line ) return
             if( line.startsWith(';')) return
             if( !header ) {
@@ -123,7 +123,7 @@ class FastaSplitter extends AbstractTextSplitter {
 
         if( record.seqString ) {
             def buff = new StringBuilder()
-            body.eachLine { buff.append(it) }
+            body.eachLine { it -> buff.append(it as String) }
             result.seqString = buff.toString()
         }
 
