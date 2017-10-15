@@ -66,9 +66,7 @@ class SplitterMergeClosure extends Closure {
                 if( i==0 ) {
                     result = new ArrayList(entry)
                 }
-                else {
-                    result[indexes[i]] = entry[indexes[i]]
-                }
+                result[indexes[i]] = entry[indexes[i]]
             }
             else
                 throw new IllegalArgumentException("Invalid splitter entry -- offending value: $item")
