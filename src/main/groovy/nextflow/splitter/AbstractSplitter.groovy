@@ -62,7 +62,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
 
     protected long limit
 
-    protected int elem = -1
+    protected Integer elem
 
     private targetObj
 
@@ -140,6 +140,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
 
         setSource(source)
 
+
         final chunks = collector = createCollector()
         if( chunks instanceof CacheableCollector && chunks.checkCached() ) {
             log.debug "Operator `$operatorName` reusing cached chunks at path: ${chunks.getBaseFile()}"
@@ -184,19 +185,30 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
     @PackageScope
     def findSource( List tuple ) {
 
-        if( elem != -1 )
+        if( elem >= 0 )
             return tuple.get(elem)
 
+        // find the elem-th item having Path or File type
+        int pos = elem != null ? -elem : 1
+        int count = 0
         for( int i=0; i<tuple.size(); i++ ) {
             def it = tuple[i]
             if(  it instanceof Path || it instanceof File ) {
-                elem = i
-                break
+                if( ++count == pos ) {
+                    elem = i
+                    return tuple.get(i)
+                }
             }
         }
 
-        if( elem == -1 ) elem = 0
-        return tuple.get(elem)
+        // -- not found, if default was null just return the first item
+        if( elem == null ) {
+            elem = 0
+            return tuple.get(0)
+        }
+
+        // -- otherwise if a `elem` value was specified but not found, raise an exception
+        throw new IllegalArgumentException("Cannot find splittable file (elem=$elem)")
     }
 
     /**
