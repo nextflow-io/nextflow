@@ -6,7 +6,10 @@ NEXTFLOW CHANGE-LOG
 - Added support for AWS IAM role #422
 - Added Experimental support for Java 9 #462
 - Added transpose operator #440
-- Added join operator #460 
+- Added join operator #460
+- Added html report (-with-report option)
+- Added Gzip compression support to splitXxx operators #484
+- Added Support PE Fastq files splitting #436
 - Improved merge operator #458
 - Fixed HEAD is detached error #389 
 - Fixed Include container name when calculating cache key #443
@@ -18,6 +21,9 @@ NEXTFLOW CHANGE-LOG
 - Fixed unable to download from gitlab.com public repository #457
 - Fixed Print work directory when a task fails #445
 - Fixed Misleading command line parameter type conversion #434
+- Fixed Nextflow should not stage files that have the same name #470
+- Fixed SplitCsv returns array objects instead of Lists #487
+- Fixed Cannot cast object FtpURLConnection error #482
 - Removed support support for Java 7 #385
 - Removed deprecated Cirrus/ClusterK executor
 - Removed deprecated support for DNAnexus #386
