@@ -114,7 +114,8 @@ class CsvSplitter extends AbstractTextSplitter {
      */
     protected Map<String,?> validOptions() {
         def result = super.validOptions()
-        result.remove('file')   // <-- `file` mode not support by CsvSplitter
+        result.remove('file')       // <-- `file` mode not support by CsvSplitter
+        result.remove('compress')   // <-- `compress` mode not supported
         result.sep = String
         result.strip = Boolean
         result.header = [ Boolean, List ]
