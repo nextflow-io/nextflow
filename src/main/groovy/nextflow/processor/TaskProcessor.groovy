@@ -99,6 +99,159 @@ import nextflow.util.Escape
 @Slf4j
 class TaskProcessor {
 
+    /**
+     * Implements the closure which *combines* all the iteration
+     *
+     * @param numOfInputs Number of in/out channel
+     * @param indexes The list of indexes which identify the position of iterators in the input channels
+     * @return The closure implementing the iteration/forwarding logic
+     */
+    @CompileStatic
+    class ForwardClosure extends Closure {
+
+        final private Integer len
+
+        final private int numOfParams
+
+        final private List<Integer> indexes
+
+        ForwardClosure(int len, List<Integer> indexes) {
+            super(null, null);
+            assert len>=1
+            this.len = len
+            this.numOfParams = len+1
+            this.indexes = indexes
+        }
+
+        @Override
+        public int getMaximumNumberOfParameters() {
+            numOfParams
+        }
+
+        @Override
+        public Class[] getParameterTypes() {
+            def result = new Class[numOfParams]
+            for( int i=0; i<result.size(); i++ )
+                result[i] = Object
+            return result
+        }
+
+        @Override
+        public void setDelegate(final Object delegate) {
+            super.setDelegate(delegate);
+        }
+
+        @Override
+        public void setResolveStrategy(final int resolveStrategy) {
+            super.setResolveStrategy(resolveStrategy);
+        }
+
+        @Override
+        public Object call(final Object... args) {
+            final target = ((DataflowProcessor) getDelegate())
+            /*
+             * Explaining the following code:
+             *
+             * - 'out' holds the list of all input values which need to be forwarded (bound) to output as many
+             *   times are the items in the iteration list
+             *
+             * - the iteration list(s) is (are) passed like in the closure inputs like the other values,
+             *   the *indexes* argument defines the which of them are the iteration lists
+             *
+             * - 'itr' holds the list of all iteration lists
+             *
+             * - using the groovy method a combination of all values is create (cartesian product)
+             *   see http://groovy.codehaus.org/groovy-jdk/java/util/Collection.html#combinations()
+             *
+             * - the resulting values are replaced in the 'out' array of values and forwarded out
+             *
+             */
+
+            def out = args[0..-2]
+            def itr = indexes.collect { args[it] }
+            List<List> cmb = itr.combinations()
+
+            for( int i=0; i<cmb.size(); i++ ) {
+                List entries = cmb[i]
+                int count = 0
+                for( int j=0; j<len; j++ ) {
+                    if( j in this.indexes ) {
+                        out[j] = entries[count++]
+                    }
+                }
+
+                target.bindAllOutputValues( out as Object[] )
+            }
+
+            return null
+        }
+
+        @Override
+        public Object call(final Object arguments) {
+            throw new UnsupportedOperationException()
+        }
+
+
+        @Override
+        public Object call() {
+            throw new UnsupportedOperationException()
+        }
+    }
+
+    /**
+     * Adapter closure to call the {@link #invokeTask(java.lang.Object)} method
+     */
+    class InvokeTaskAdapter extends Closure {
+
+        private int numOfParams
+
+        InvokeTaskAdapter(int n) {
+            super(null, null);
+            numOfParams = n
+        }
+
+        @Override
+        public int getMaximumNumberOfParameters() {
+            numOfParams
+        }
+
+        @Override
+        public Class[] getParameterTypes() {
+            def result = new Class[numOfParams]
+            for( int i=0; i<result.size(); i++ )
+                result[i] = Object
+            return result
+        }
+
+        @Override
+        public void setDelegate(final Object delegate) {
+            super.setDelegate(delegate);
+        }
+
+        @Override
+        public void setResolveStrategy(final int resolveStrategy) {
+            super.setResolveStrategy(resolveStrategy);
+        }
+
+        @Override
+        public Object call(final Object arguments) {
+            TaskProcessor.this.invokeTask(arguments)
+            return null
+        }
+
+        @Override
+        public Object call(final Object... args) {
+            TaskProcessor.this.invokeTask(args as List)
+            return null
+        }
+
+        @Override
+        public Object call() {
+            throw new UnsupportedOperationException()
+        }
+
+    }
+
     static enum RunType {
         SUBMIT('Submitted process'),
         RETRY('Re-submitted process')
@@ -409,7 +562,7 @@ class TaskProcessor {
          * check if there are some iterators declaration
          * the list holds the index in the list of all *inputs* for the {@code each} declaration
          */
-        def iteratorIndexes = []
+        List<Integer> iteratorIndexes = []
         config.getInputs().eachWithIndex { param, index ->
             if( param instanceof EachInParam ) {
                 log.trace "Process ${name} > got each param: ${param.name} at index: ${index} -- ${param.dump()}"
@@ -441,7 +594,7 @@ class TaskProcessor {
             size.times { linkingChannels[it] = new DataflowQueue() }
 
             // the script implementing the iterating process
-            final forwarder = createForwardWrapper(size, iteratorIndexes)
+            final forwarder = new ForwardClosure(size, iteratorIndexes)
 
             // instantiate the iteration process
             def stopAfterFirstRun = allScalarValues
@@ -458,11 +611,6 @@ class TaskProcessor {
             opInputs.add( config.getInputs().getChannels().last() )
         }
 
-
-        /*
-         * create a mock closure to trigger the operator
-         */
-        final wrapper = createCallbackWrapper( opInputs.size(), this.&invokeTask )
 
         /*
          * define the max forks attribute:
@@ -486,7 +634,8 @@ class TaskProcessor {
         config.getOutputs().setSingleton(singleton)
         def interceptor = new TaskProcessorInterceptor(opInputs, singleton)
         def params = [inputs: opInputs, maxForks: maxForks, listeners: [interceptor] ]
-        session.allOperators << (operator = new DataflowOperator(group, params, wrapper))
+        def invoke = new InvokeTaskAdapter(opInputs.size())
+        session.allOperators << (operator = new DataflowOperator(group, params, invoke))
 
         // notify the creation of a new vertex the execution DAG
         NodeMarker.addProcessNode(this, config.getInputs(), config.getOutputs())
@@ -501,65 +650,6 @@ class TaskProcessor {
         for( int i=0; i<size; i++ )
             result.set(i, 1)
         return result
-    }
-
-    /**
-     * Implements the closure which *combines* all the iteration
-     *
-     * @param numOfInputs Number of in/out channel
-     * @param indexes The list of indexes which identify the position of iterators in the input channels
-     * @return The closure implementing the iteration/forwarding logic
-     */
-    protected createForwardWrapper( int len, List indexes ) {
-
-        final args = []
-        (len+1).times { args << "x$it" }
-
-        final outs = []
-        len.times { outs << "x$it" }
-
-        /*
-         * Explaining the following closure:
-         *
-         * - it has to be evaluated as a string since the number of input must much the number input channel
-         *   that is known only at runtime
-         *
-         * - 'out' holds the list of all input values which need to be forwarded (bound) to output as many
-         *   times are the items in the iteration list
-         *
-         * - the iteration list(s) is (are) passed like in the closure inputs like the other values,
-         *   the *indexes* argument defines the which of them are the iteration lists
-         *
-         * - 'itr' holds the list of all iteration lists
-         *
-         * - using the groovy method a combination of all values is create (cartesian product)
-         *   see http://groovy.codehaus.org/groovy-jdk/java/util/Collection.html#combinations()
-         *
-         * - the resulting values are replaced in the 'out' array of values and forwarded out
-         *
-         */
-
-        final str =
-                """
-            { ${args.join(',')} ->
-                def out = [ ${outs.join(',')} ]
-                def itr = [ ${indexes.collect { 'x'+it }.join(',')} ]
-                def cmb = itr.combinations()
-                for( entries in cmb ) {
-                    def count = 0
-                    ${len}.times { i->
-                        if( i in indexes ) { out[i] = entries[count++] }
-                    }
-                    bindAllOutputValues( *out )
-                }
-            }
-            """
-
-
-        final Binding binding = new Binding( indexes: indexes )
-        final result = (Closure)grengine.run(str, binding)
-        return result
-
     }
 
 
@@ -677,27 +767,6 @@ class TaskProcessor {
         }
 
         return null
-    }
-
-    /**
-     * Wraps the target method by a closure declaring as many arguments as many are the user declared inputs
-     * object.
-     *
-     * @param n The number of inputs
-     * @param method The method which will execute the task
-     * @return The operator closure adapter
-     */
-    final protected Closure createCallbackWrapper( int n, Closure method ) {
-
-        final args = []
-        for( int i=0; i<n; i++ )
-            args << "__p$i"
-
-        final str = " { ${args.join(',')} -> callback([ ${args.join(',')} ]) }"
-        final binding = new Binding( ['callback': method] )
-        final result = (Closure)grengine.run(str,binding)
-
-        return result
     }
 
     /**
