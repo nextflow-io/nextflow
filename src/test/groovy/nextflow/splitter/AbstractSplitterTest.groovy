@@ -20,6 +20,7 @@
 
 package nextflow.splitter
 
+import java.nio.file.Path
 import java.nio.file.Paths
 
 import spock.lang.Specification
@@ -29,11 +30,10 @@ import spock.lang.Specification
  */
 class AbstractSplitterTest extends Specification {
 
+    private Path file(String name) { Paths.get(name) }
 
     def 'test invokeEachClosure method'() {
 
-        given:
-        def file = Paths.get('/some/file.txt')
 
         when:
         def splitter = [:] as AbstractSplitter
@@ -69,25 +69,58 @@ class AbstractSplitterTest extends Specification {
         when:
         splitter = [:] as AbstractSplitter
         then:
-        splitter.elem == -1
+        splitter.elem == null
         splitter.findSource([ 10, 20 ]) == 10
         splitter.elem == 0
 
         when:
         splitter = [:] as AbstractSplitter
         then:
-        splitter.elem == -1
-        splitter.findSource([ 10, Paths.get('/hello') ]) == Paths.get('/hello')
+        splitter.elem == null
+        splitter.findSource([ 10, file('/hello') ]) == file('/hello')
         splitter.elem == 1
 
+        when:
+        splitter = [:] as AbstractSplitter
+        splitter.elem = -2  // <-- find the second file
+        then:
+        splitter.findSource([ 10, 20, file('/hello'), 30, 40, file('/second'), file('/third') ]) == file('/second')
+        splitter.elem == 5
+
+        when:
+        splitter = [:] as AbstractSplitter
+        splitter.elem = -3  // <-- find the third file
+        then:
+        splitter.findSource([ 10, 20, file('/hello'), 30, 40, file('/second'), file('/third') ]) == file('/third')
+        splitter.elem == 6
 
         when:
         splitter = [:] as AbstractSplitter
         splitter.elem = 1
         then:
-        splitter.findSource([ 10, 20, Paths.get('/hello') ]) == 20
+        splitter.findSource([ 10, 20, file('/hello') ]) == 20
+        splitter.elem == 1
 
+        when:
+        splitter = [:] as AbstractSplitter
+        splitter.elem = 0
+        then:
+        splitter.findSource([ 10, 20, Paths.get('/hello') ]) == 10
+        splitter.elem == 0
 
+        when:
+        splitter = [:] as AbstractSplitter
+        splitter.elem = -1
+        splitter.findSource([ 10, 20 ])
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        splitter = [:] as AbstractSplitter
+        splitter.elem = -2
+        splitter.findSource([ 10, 20, Paths.get('/hello') ])
+        then:
+        thrown(IllegalArgumentException)
     }
 
 }

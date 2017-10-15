@@ -954,6 +954,7 @@ Available parameters:
 Field       Description
 =========== ============================
 by          Defines the number of *reads* in each `chunk` (default: ``1``)
+pe          When ``true`` splits paired-end read files, therefore items emitted by the source channel must be tuples in which at least two elements are the read-pair files to be splitted.
 limit       Limits the number of retrieved *reads* to the specified value.
 record      Parse each entry in the FASTQ file as record objects (see following table for accepted values)
 charset     Parse the content by using the specified charset e.g. ``UTF-8``

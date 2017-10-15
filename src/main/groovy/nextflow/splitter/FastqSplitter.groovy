@@ -19,9 +19,13 @@
  */
 
 package nextflow.splitter
+
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.exception.StopSplitIterationException
 
 /**
@@ -37,12 +41,40 @@ import nextflow.exception.StopSplitIterationException
 @InheritConstructors
 class FastqSplitter extends AbstractTextSplitter {
 
+    /**
+     * Wrapper class that holds the index of the element splitter
+     *
+     * See {@link nextflow.extension.SplitterMergeClosure}
+     */
+    @Canonical
+    static class SplitIndex {
+        int value
+    }
+
     private boolean processQualityField
+
+    private boolean emitSplitIndex
 
     @Override
     protected Map<String,Object> validOptions() {
         def result = super.validOptions()
         result.record = [ Boolean, Map ]
+        return result
+    }
+
+    FastqSplitter setEmitSplitIndex( boolean value ) {
+        emitSplitIndex = value
+        return this
+    }
+
+    @PackageScope
+    def findSource( List tuple ) {
+        def result = super.findSource(tuple)
+
+        if( emitSplitIndex && into instanceof DataflowWriteChannel ) {
+            append(into,new SplitIndex(elem))
+        }
+
         return result
     }
 
