@@ -892,6 +892,7 @@ by          Defines the number of sequences in each `chunk` (default: ``1``)
 limit       Limits the number of retrieved sequences to the specified value.
 record      Parse each entry in the FASTA file as record objects (see following table for accepted values)
 charset     Parse the content by using the specified charset e.g. ``UTF-8``
+compress    When ``true`` resulting file chunks are GZIP compressed. The ``.gz`` suffix is automatically added to chunk file names.
 decompress  When ``true``, decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
 file        When ``true`` saves each split to a file. Use a string instead of ``true`` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in order to save the split files into the specified folder.
 elem        The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)
@@ -958,7 +959,8 @@ pe          When ``true`` splits paired-end read files, therefore items emitted 
 limit       Limits the number of retrieved *reads* to the specified value.
 record      Parse each entry in the FASTQ file as record objects (see following table for accepted values)
 charset     Parse the content by using the specified charset e.g. ``UTF-8``
-decompress  When ``true``, decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
+compress    When ``true`` resulting file chunks are GZIP compressed. The ``.gz`` suffix is automatically added to chunk file names.
+decompress  When ``true`` decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
 file        When ``true`` saves each split to a file. Use a string instead of ``true`` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in order to save the split files into the specified folder.
 elem        The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)
 =========== ============================
@@ -1023,6 +1025,7 @@ Field       Description
 by          Defines the number of lines in each `chunk` (default: ``1``)
 limit       Limits the number of retrieved lines to the specified value.
 charset     Parse the content by using the specified charset e.g. ``UTF-8``
+compress    When ``true`` resulting file chunks are GZIP compressed. The ``.gz`` suffix is automatically added to chunk file names.
 decompress  When ``true``, decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
 file        When ``true`` saves each split to a file. Use a string instead of ``true`` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in oder to save the split files into the specified folder.
 elem        The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)
