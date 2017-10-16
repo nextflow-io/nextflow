@@ -19,8 +19,7 @@ checkout:
 test:
     pre:
         - rm $HOME/.gitconfig
-        - mkdir "$HOME/.nextflow" && echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
-        - make assemble
+        - mkdir -p "$HOME/.nextflow" && echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
     override:
         - make check install && ./integration-tests.sh :
             timeout: 2700
