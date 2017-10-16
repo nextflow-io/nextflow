@@ -622,7 +622,6 @@ configure(deployable) {
     signArchives.onlyIf { enableSignArchives }
 }
 
-// verbose tests logging
 //test {
 //    testLogging {
 //        events "passed", "skipped", "failed", "standardOut", "standardError"
