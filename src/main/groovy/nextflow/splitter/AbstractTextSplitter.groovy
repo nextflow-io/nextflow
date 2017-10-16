@@ -53,6 +53,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
 
     protected boolean compress
 
+
     AbstractTextSplitter options(Map options) {
         super.options(options)
 
@@ -249,9 +250,10 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
         return new CharSequenceCollector()
     }
 
-    private String getCollectFileName() {
-        if( collectName )
-            return collectName
+    protected String getCollectFileName() {
+        if( collectName ) {
+            return multiSplit ? "${collectName}_${elem}" : collectName
+        }
 
         if( sourceFile ) {
             def fileName = sourceFile.getName()
@@ -261,7 +263,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
             return fileName
         }
 
-        return 'chunk'
+        return multiSplit ? "chunk_$elem" : 'chunk'
     }
 
     /**
@@ -271,17 +273,20 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
     Path getCollectorBaseFile () {
 
         final fileName = getCollectFileName()
+        log.trace "Splitter collector file name: $fileName"
+
         Path result
         if( collectPath ) {
             result = collectPath.isDirectory() ? collectPath.resolve(fileName) : collectPath
         }
 
         else if( sourceFile ) {
-            result = Nextflow.cacheableFile( [sourceFile, getCacheableOptions()],  fileName)
+            result = Nextflow.cacheableFile( [sourceFile, getCacheableOptions()], fileName)
         }
 
-        else
-            result = Nextflow.cacheableFile( [targetObj, getCacheableOptions()], collectName ?: fileName )
+        else {
+            result = Nextflow.cacheableFile( [targetObj, getCacheableOptions()], fileName )
+        }
 
         log.debug "Splitter `$operatorName` collector path: $result"
         return result

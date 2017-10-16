@@ -48,7 +48,10 @@ class FastqSplitter extends AbstractTextSplitter {
      */
     @Canonical
     static class SplitIndex {
+
         int value
+
+        String toString() { "SplitIndex($value)" }
     }
 
     private boolean processQualityField
@@ -72,6 +75,7 @@ class FastqSplitter extends AbstractTextSplitter {
         def result = super.findSource(tuple)
 
         if( emitSplitIndex && into instanceof DataflowWriteChannel ) {
+            log.trace("Emitting split index: $elem")
             append(into,new SplitIndex(elem))
         }
 
