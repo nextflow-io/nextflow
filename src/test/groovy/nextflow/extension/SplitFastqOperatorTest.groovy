@@ -1,19 +1,17 @@
 package nextflow.extension
+import static test.TestHelper.gunzip
 
 import java.nio.file.Files
 
 import nextflow.Channel
 import spock.lang.Specification
 import spock.lang.Timeout
-
-import static test.TestHelper.gunzip
-
 import test.TestHelper
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(10)
 class SplitFastqOperatorTest extends Specification {
 
     String READS = '''
@@ -55,7 +53,6 @@ class SplitFastqOperatorTest extends Specification {
         '''.stripIndent().leftTrim()
 
 
-    @Timeout(1)
     def 'should split a fastq' () {
 
         when:
@@ -88,7 +85,6 @@ class SplitFastqOperatorTest extends Specification {
         target.val == Channel.STOP
     }
 
-    @Timeout(1)
     def 'should split a fastq to gzip chunks' () {
 
         given:

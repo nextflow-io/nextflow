@@ -1,8 +1,10 @@
 package nextflow.extension
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.splitter.AbstractSplitter
 import nextflow.splitter.FastqSplitter
@@ -26,11 +28,6 @@ class SplitOp {
     private DataflowReadChannel source
 
     /**
-     * The channel emitting the splitter chunks
-     */
-    private DataflowQueue output
-
-    /**
      * Index of the elements to which a split operation need to be applied
      */
     private List<Integer> indexes
@@ -49,6 +46,8 @@ class SplitOp {
      * Whenever the splitter is applied to a paired-end read files (only valid for {@code splitFastaq} operator.
      */
     private boolean pairedEnd
+
+    private boolean multiSplit
 
     /**
      * Creates a splitter operator
@@ -70,14 +69,17 @@ class SplitOp {
             throw new IllegalArgumentException("Parameter `pe` and `elem` conflicts")
 
         if( params.pe == true ) {
-            params.remove('pe') // <-- remove to avoid entering in a loop
             indexes = [-1,-2]
+            multiSplit = true
+            pairedEnd = true
         }
-        if( params.elem instanceof List<Integer> )
+        if( params.elem instanceof List<Integer> ) {
             indexes = params.elem as List<Integer>
+            multiSplit = true
+        }
 
         // -- validate options
-        if( params.autoClose == true )
+        if( params.containsKey('autoClose') )
             throw new IllegalArgumentException('Parameter `autoClose` do not supported')
         // turn off channel auto-close
         params.autoClose = false
@@ -87,14 +89,21 @@ class SplitOp {
 
     }
 
-    SplitOp setSplitIndex( int value ) {
-        params.elem = value
-        return this
-    }
+    /** Only for testing -- do not use */
+    @PackageScope SplitOp() { }
 
-    DataflowQueue apply() {
-        indexes ? splitMultiEntries() : splitSingleEntry()
-        return output
+    @PackageScope String getMethodName() { methodName }
+
+    @PackageScope boolean isMultiSplit() { multiSplit }
+
+    @PackageScope boolean isPairedEnd() { pairedEnd }
+
+    @PackageScope List<Integer> getIndexes() { indexes }
+
+    @PackageScope getParams() { params }
+
+    DataflowWriteChannel apply() {
+        multiSplit ? splitMultiEntries() : splitSingleEntry(source, params)
     }
 
     /**
@@ -102,7 +111,7 @@ class SplitOp {
      * on a separate channel. All channels are then merged to a
      * single output result channel.
      */
-    private void splitMultiEntries() {
+    protected DataflowWriteChannel splitMultiEntries() {
 
         final cardinality = indexes.size()
 
@@ -113,44 +122,66 @@ class SplitOp {
         def splitted = new ArrayList(cardinality)
         for( int i=0; i<cardinality; i++ ) {
             def channel = (DataflowQueue)copies.get(i)
-            def op = new SplitOp(channel, methodName, params)
-            op.splitIndex = indexes.get(i)
-            op.pairedEnd = true
-            splitted.add( op.apply() )
+            def opts = new HashMap(params)
+            opts.remove('pe')
+            opts.elem = indexes.get(i)
+            def result = splitSingleEntry(channel, opts)
+            splitted.add( result )
         }
 
         // now merge the result
-        this.output = new DataflowQueue()
-        DataflowHelper.newOperator(splitted, [output], new SplitterMergeClosure(indexes))
+        def output = new DataflowQueue()
+        applyMergingOperator(splitted, output, indexes)
+        return output
     }
 
     /**
      * Apply the split operation to a single element
      */
-    private void splitSingleEntry() {
+    protected DataflowWriteChannel splitSingleEntry(DataflowReadChannel origin, Map params) {
 
-        // create a new DataflowChannel that will receive the splitter entries
-        if( params.into instanceof DataflowQueue ) {
-            output = (DataflowQueue)params.into
-        }
-        else {
-            output = params.into = new DataflowQueue<>()
-        }
+        def output = getOrCreateDataflowQueue(params)
 
         // create the splitter and set the options
-        def splitter = SplitterFactory
-                .create(methodName)
-                .options(params) as AbstractSplitter
+        def splitter = createSplitter(methodName, params)
 
-        if( pairedEnd ) {
+        if( multiSplit )
+            splitter.multiSplit = true
+
+        if( pairedEnd )
             (splitter as FastqSplitter).emitSplitIndex = true
-        }
 
-        DataflowHelper.subscribeImpl ( source, [
-                onNext: { entry -> splitter.target(entry).apply() },
-                onComplete: { output << Channel.STOP }
-        ] )
-
+        applySplittingOperator(origin, output, splitter)
+        return output
     }
 
+    protected void applySplittingOperator( DataflowReadChannel origin, DataflowWriteChannel output, AbstractSplitter splitter ) {
+        final next = { entry -> splitter.target(entry).apply() }
+        final done = { output << Channel.STOP }
+
+        DataflowHelper.subscribeImpl ( origin, [onNext: next, onComplete: done ])
+    }
+
+    protected AbstractSplitter createSplitter(String methodName, Map params) {
+        SplitterFactory
+                .create(methodName)
+                .options(params) as AbstractSplitter
+    }
+
+    protected void applyMergingOperator(List splitted, DataflowQueue output, List<Integer> indexes) {
+        DataflowHelper.newOperator(splitted, [output], new SplitterMergeClosure(indexes))
+    }
+
+    protected DataflowWriteChannel getOrCreateDataflowQueue(Map params) {
+        def result
+        // create a new DataflowChannel that will receive the splitter entries
+        if( params.into instanceof DataflowQueue ) {
+            result = (DataflowQueue)params.into
+        }
+        else {
+            result = params.into = new DataflowQueue<>()
+        }
+
+        return result
+    }
 }

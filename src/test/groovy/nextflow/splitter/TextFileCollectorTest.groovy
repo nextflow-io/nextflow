@@ -47,36 +47,36 @@ class TextFileCollectorTest extends Specification {
     def 'test add text' () {
 
         given:
-        def base = Files.createTempDirectory('test').resolve('chunk.fasta')
+        def base = Files.createTempDirectory('test').resolve('sample.fasta')
         def buffer = new TextFileCollector(base)
 
         when:
         buffer.add('>seq1\n')
         buffer.add('alpha\n')
-        assert buffer.nextChunk() == base.resolveSibling('chunk.1.fasta')
+        assert buffer.nextChunk() == base.resolveSibling('sample.1.fasta')
 
         buffer.add('>seq2\n')
         buffer.add('gamma\n')
         buffer.add('>seq3\n')
         buffer.add('beta\n')
-        assert buffer.nextChunk() == base.resolveSibling('chunk.2.fasta')
+        assert buffer.nextChunk() == base.resolveSibling('sample.2.fasta')
 
         buffer.add('>seq4\n')
         buffer.add('kappa\n')
         buffer.add('>seq5\n')
         buffer.add('iota\n')
         buffer.add('delta\n')
-        assert buffer.nextChunk() == base.resolveSibling('chunk.3.fasta')
+        assert buffer.nextChunk() == base.resolveSibling('sample.3.fasta')
 
         buffer.close()
 
         then:
-        base.resolveSibling('chunk.1.fasta').text == '>seq1\nalpha\n'
-        base.resolveSibling('chunk.2.fasta').text == '>seq2\ngamma\n>seq3\nbeta\n'
-        base.resolveSibling('chunk.3.fasta').text == '>seq4\nkappa\n>seq5\niota\ndelta\n'
-        base.resolveSibling('.chunks').exists()
+        base.resolveSibling('sample.1.fasta').text == '>seq1\nalpha\n'
+        base.resolveSibling('sample.2.fasta').text == '>seq2\ngamma\n>seq3\nbeta\n'
+        base.resolveSibling('sample.3.fasta').text == '>seq4\nkappa\n>seq5\niota\ndelta\n'
+        base.resolveSibling('.chunks.sample.fasta').exists()
         buffer.checkCached()
-        buffer.getAllChunks()*.name == ['chunk.1.fasta','chunk.2.fasta','chunk.3.fasta']
+        buffer.getAllChunks()*.name == ['sample.1.fasta','sample.2.fasta','sample.3.fasta']
 
         cleanup:
         base?.parent?.deleteDir()
@@ -121,36 +121,36 @@ class TextFileCollectorTest extends Specification {
     def 'test compress chunks' () {
 
         given:
-        def base = Files.createTempDirectory('test').resolve('chunk.fasta')
+        def base = Files.createTempDirectory('test').resolve('sample.fasta')
         def collector = new TextFileCollector(base, Charset.defaultCharset(), true)
 
         when:
         collector.add('>seq1\n')
         collector.add('alpha\n')
-        assert collector.nextChunk() == base.resolveSibling('chunk.1.fasta.gz')
+        assert collector.nextChunk() == base.resolveSibling('sample.1.fasta.gz')
 
         collector.add('>seq2\n')
         collector.add('gamma\n')
         collector.add('>seq3\n')
         collector.add('beta\n')
-        assert collector.nextChunk() == base.resolveSibling('chunk.2.fasta.gz')
+        assert collector.nextChunk() == base.resolveSibling('sample.2.fasta.gz')
 
         collector.add('>seq4\n')
         collector.add('kappa\n')
         collector.add('>seq5\n')
         collector.add('iota\n')
         collector.add('delta\n')
-        assert collector.nextChunk() == base.resolveSibling('chunk.3.fasta.gz')
+        assert collector.nextChunk() == base.resolveSibling('sample.3.fasta.gz')
 
         collector.close()
 
         then:
-        gunzip(base.resolveSibling('chunk.1.fasta.gz')) == '>seq1\nalpha\n'
-        gunzip(base.resolveSibling('chunk.2.fasta.gz')) == '>seq2\ngamma\n>seq3\nbeta\n'
-        gunzip(base.resolveSibling('chunk.3.fasta.gz')) == '>seq4\nkappa\n>seq5\niota\ndelta\n'
-        base.resolveSibling('.chunks').exists()
+        gunzip(base.resolveSibling('sample.1.fasta.gz')) == '>seq1\nalpha\n'
+        gunzip(base.resolveSibling('sample.2.fasta.gz')) == '>seq2\ngamma\n>seq3\nbeta\n'
+        gunzip(base.resolveSibling('sample.3.fasta.gz')) == '>seq4\nkappa\n>seq5\niota\ndelta\n'
+        base.resolveSibling('.chunks.sample.fasta').exists()
         collector.checkCached()
-        collector.getAllChunks()*.name == ['chunk.1.fasta.gz','chunk.2.fasta.gz','chunk.3.fasta.gz']
+        collector.getAllChunks()*.name == ['sample.1.fasta.gz','sample.2.fasta.gz','sample.3.fasta.gz']
 
         cleanup:
         base?.parent?.deleteDir()

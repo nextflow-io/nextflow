@@ -68,6 +68,8 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
 
     private CollectorStrategy collector
 
+    protected boolean multiSplit
+
     AbstractSplitter() { }
 
     /**
@@ -124,6 +126,11 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
     AbstractSplitter setRecordFields( Map fields ) {
         recordMode = true
         recordFields = fields
+        return this
+    }
+
+    AbstractSplitter setMultiSplit(boolean value) {
+        this.multiSplit = value
         return this
     }
 

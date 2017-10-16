@@ -48,6 +48,13 @@ class AbstractTextSplitterTest extends Specification {
 
         when:
         splitter = [:] as AbstractTextSplitter
+        splitter.options(file: folder, by: 2, elem:2)
+        splitter.multiSplit = true
+        then:
+        splitter.getCollectorBaseFile() == folder.resolve('chunk_2')
+
+        when:
+        splitter = [:] as AbstractTextSplitter
         splitter.options(file: Paths.get('/some/file.txt'), by: 2)
         then:
         splitter.getCollectorBaseFile() == Paths.get('/some/file.txt')
@@ -68,6 +75,14 @@ class AbstractTextSplitterTest extends Specification {
         result.name == 'chunk_name'
         result.toString().startsWith( folder.toString() )
 
+        when:
+        splitter = [:] as AbstractTextSplitter
+        splitter.options(file: 'chunk_name', by:2, elem:3)
+        splitter.multiSplit = true
+        result = splitter.getCollectorBaseFile()
+        then:
+        result.name == 'chunk_name_3'
+        result.toString().startsWith( folder.toString() )
 
         when:
         splitter = [:] as AbstractTextSplitter
