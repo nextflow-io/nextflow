@@ -361,6 +361,9 @@ class SplitFastqOperatorTest extends Specification {
         result = channel.val
         then:
         result == Channel.STOP
+        // finally check the existence of the
+        folder.resolve('.chunks.sample_1.fq').exists()
+        folder.resolve('.chunks.sample_2.fq').exists()
 
     }
 }

@@ -28,26 +28,29 @@ class SplitOp {
     private DataflowReadChannel source
 
     /**
-     * Index of the elements to which a split operation need to be applied
-     */
-    private List<Integer> indexes
-
-    /**
-     * The name of the operator eg. {code splitFasta}
-     */
-    private String methodName
-
-    /**
      * Operator named parameters
      */
-    private Map params
+    @PackageScope Map params
 
     /**
      * Whenever the splitter is applied to a paired-end read files (only valid for {@code splitFastaq} operator.
      */
-    private boolean pairedEnd
+    @PackageScope boolean pairedEnd
 
-    private boolean multiSplit
+    /**
+     * Whenever the splitter is applied to multiple file elements
+     */
+    @PackageScope boolean multiSplit
+
+    /**
+     * Index of the elements to which a split operation need to be applied
+     */
+    @PackageScope List<Integer> indexes
+
+    /**
+     * The name of the operator eg. {code splitFasta}
+     */
+    @PackageScope String methodName
 
     /**
      * Creates a splitter operator
@@ -89,19 +92,11 @@ class SplitOp {
 
     }
 
-    /** Only for testing -- do not use */
-    @PackageScope SplitOp() { }
-
-    @PackageScope String getMethodName() { methodName }
-
-    @PackageScope boolean isMultiSplit() { multiSplit }
-
-    @PackageScope boolean isPairedEnd() { pairedEnd }
-
-    @PackageScope List<Integer> getIndexes() { indexes }
-
-    @PackageScope getParams() { params }
-
+    /**
+     * Applies the splitting operator
+     *
+     * @return the output channel emitting the resulting split chunks
+     */
     DataflowWriteChannel apply() {
         multiSplit ? splitMultiEntries() : splitSingleEntry(source, params)
     }
@@ -112,24 +107,24 @@ class SplitOp {
      * single output result channel.
      */
     protected DataflowWriteChannel splitMultiEntries() {
-
+        assert indexes
         final cardinality = indexes.size()
 
-        // creates a copy of `source` channel for each element to split
-        def copies = new IntoOp(source, cardinality).apply().getOutputs()
+        // -- creates a copy of `source` channel for each element to split
+        def copies = createSourceCopies(source, cardinality)
 
-        // applies the splitter the each channel copy
+        // -- applies the splitter the each channel copy
         def splitted = new ArrayList(cardinality)
         for( int i=0; i<cardinality; i++ ) {
-            def channel = (DataflowQueue)copies.get(i)
+            def channel = copies.get(i)
             def opts = new HashMap(params)
             opts.remove('pe')
             opts.elem = indexes.get(i)
-            def result = splitSingleEntry(channel, opts)
+            def result = splitSingleEntry(channel as DataflowReadChannel, opts)
             splitted.add( result )
         }
 
-        // now merge the result
+        // -- now merge the result
         def output = new DataflowQueue()
         applyMergingOperator(splitted, output, indexes)
         return output
@@ -140,46 +135,60 @@ class SplitOp {
      */
     protected DataflowWriteChannel splitSingleEntry(DataflowReadChannel origin, Map params) {
 
-        def output = getOrCreateDataflowQueue(params)
+        // -- get the output channel
+        final output = getOrCreateDataflowQueue(params)
+        // -- the output channel is passed to the splitter by using the `into` parameter
+        params.into = output
 
-        // create the splitter and set the options
+        // -- create the splitter and set the options
         def splitter = createSplitter(methodName, params)
 
+        // -- specify if it's a multi-file splitting operation
         if( multiSplit )
             splitter.multiSplit = true
 
+        // -- specify if it's a paired-end fastq splitting operation
         if( pairedEnd )
             (splitter as FastqSplitter).emitSplitIndex = true
 
+        // -- finally apply the splitting operator
         applySplittingOperator(origin, output, splitter)
         return output
     }
 
-    protected void applySplittingOperator( DataflowReadChannel origin, DataflowWriteChannel output, AbstractSplitter splitter ) {
+    @PackageScope
+    List<DataflowWriteChannel> createSourceCopies(DataflowReadChannel source, int n) {
+        new IntoOp(source, n).apply().getOutputs()
+    }
+
+    @PackageScope
+    void applySplittingOperator( DataflowReadChannel origin, DataflowWriteChannel output, AbstractSplitter splitter ) {
         final next = { entry -> splitter.target(entry).apply() }
         final done = { output << Channel.STOP }
-
         DataflowHelper.subscribeImpl ( origin, [onNext: next, onComplete: done ])
     }
 
-    protected AbstractSplitter createSplitter(String methodName, Map params) {
+    @PackageScope
+    AbstractSplitter createSplitter(String methodName, Map params) {
         SplitterFactory
                 .create(methodName)
                 .options(params) as AbstractSplitter
     }
 
-    protected void applyMergingOperator(List splitted, DataflowQueue output, List<Integer> indexes) {
+    @PackageScope
+    void applyMergingOperator(List splitted, DataflowWriteChannel output, List<Integer> indexes) {
         DataflowHelper.newOperator(splitted, [output], new SplitterMergeClosure(indexes))
     }
 
-    protected DataflowWriteChannel getOrCreateDataflowQueue(Map params) {
+    @PackageScope
+    DataflowWriteChannel getOrCreateDataflowQueue(Map params) {
         def result
         // create a new DataflowChannel that will receive the splitter entries
         if( params.into instanceof DataflowQueue ) {
             result = (DataflowQueue)params.into
         }
         else {
-            result = params.into = new DataflowQueue<>()
+            result = new DataflowQueue<>()
         }
 
         return result
