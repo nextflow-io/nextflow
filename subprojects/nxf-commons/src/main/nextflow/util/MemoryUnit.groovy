@@ -108,23 +108,23 @@ class MemoryUnit implements Comparable<MemoryUnit>, Serializable, Cloneable {
         size >> 30
     }
 
-    def plus( MemoryUnit value )  {
+    MemoryUnit plus( MemoryUnit value )  {
         return value != null ? new MemoryUnit( size + value.size ) : this
     }
 
-    def minus( MemoryUnit value )  {
+    MemoryUnit minus( MemoryUnit value )  {
         return value != null ? new MemoryUnit( size - value.size ) : this
     }
 
-    def multiply( Number value ) {
+    MemoryUnit multiply( Number value ) {
         return new MemoryUnit( (long)(size * value) )
     }
 
-    def div( Number value ) {
+    MemoryUnit div( Number value ) {
         return new MemoryUnit( Math.round((double)(size / value)) )
     }
 
-    def String toString() {
+    String toString() {
         if(size <= 0) {
             return "0"
         }
@@ -139,11 +139,11 @@ class MemoryUnit implements Comparable<MemoryUnit>, Serializable, Cloneable {
         return this.size <=> that.size
     }
 
-    static of( String value ) {
+    static MemoryUnit of( String value ) {
         new MemoryUnit(value)
     }
 
-    static of( long value ) {
+    static MemoryUnit of( long value ) {
         new MemoryUnit(value)
     }
 
