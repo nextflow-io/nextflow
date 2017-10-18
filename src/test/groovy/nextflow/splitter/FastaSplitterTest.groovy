@@ -333,5 +333,93 @@ class FastaSplitterTest extends Specification {
 
     }
 
+    def 'should split by size' () {
+        given:
+        def fasta = '''
+            >1aboA
+            NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
+            NYITPVN
+            >1ycsB
+            KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY
+            VPRNLLGLYP
+            >1pht
+            GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG
+            WLNGYNETTGERGDFPGTYVEYIGRKKISP
+            >1vie
+            DRVRKKSGAAWQGQIVGWYCTNLTPEGYAVESEAHPGSVQIYPVAALERI
+            N
+            >1ihvA
+            NFRVYYRDSRDPVWKGPAKLLWKGEGAVVIQDNSDIKVVPRRKAKIIRD
+            '''
+                .stripIndent().leftTrim()
+
+        when:
+        def result = new FastaSplitter().options(size: '150 B').target(fasta).list()
+
+        then:
+        result[0] == '''
+                    >1aboA
+                    NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
+                    NYITPVN
+                    >1ycsB
+                    KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY
+                    VPRNLLGLYP
+                    >1pht
+                    GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG
+                    WLNGYNETTGERGDFPGTYVEYIGRKKISP
+                    '''.stripIndent().leftTrim()
+
+        result[1] == '''
+                    >1vie
+                    DRVRKKSGAAWQGQIVGWYCTNLTPEGYAVESEAHPGSVQIYPVAALERI
+                    N
+                    >1ihvA
+                    NFRVYYRDSRDPVWKGPAKLLWKGEGAVVIQDNSDIKVVPRRKAKIIRD
+                    '''.stripIndent().leftTrim()
+    }
+
+    def 'should fetch a record' () {
+
+        given:
+        def fasta = """\
+                >prot1
+                LCLYTHIGRNIYYGS1
+                EWIWGGFSVDKATLN
+                ;
+                ; comment
+                ;
+                >prot2
+                LLILILLLLLLALLS
+                GLMPFLHTSKHRSMM
+                IENY
+                """.stripIndent()
+
+        when:
+        def splitter = new FastaSplitter()
+        def result = splitter.fetchRecord(new BufferedReader(new StringReader(fasta)))
+        then:
+        result == '''
+                >prot1
+                LCLYTHIGRNIYYGS1
+                EWIWGGFSVDKATLN
+                '''.stripIndent().leftTrim()
+
+        splitter.counter.increment == 1
+        splitter.counter.size == 1
+
+        when:
+        splitter = new FastaSplitter().options(size: '1MB')
+        result = splitter.fetchRecord(new BufferedReader(new StringReader(fasta)))
+        then:
+        result == '''
+                >prot1
+                LCLYTHIGRNIYYGS1
+                EWIWGGFSVDKATLN
+                '''.stripIndent().leftTrim()
+
+        splitter.counter.increment == 31
+        splitter.counter.size == 1024 * 1024
+
+    }
 
 }

@@ -31,6 +31,7 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.exception.StopSplitIterationException
 import nextflow.util.CheckHelper
+import nextflow.util.MemoryUnit
 /**
  * Generic data splitter, provide main methods/interfaces
  *
@@ -41,8 +42,6 @@ import nextflow.util.CheckHelper
 abstract class AbstractSplitter<T> implements SplitterStrategy {
 
     protected Map fOptionsMap
-
-    protected int count = 1
 
     protected def into
 
@@ -69,6 +68,8 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
     private CollectorStrategy collector
 
     protected boolean multiSplit
+
+    protected EntryCounter counter = new EntryCounter(1)
 
     AbstractSplitter() { }
 
@@ -102,11 +103,6 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
      * @return The splitter raw target object
      */
     protected Object getTargetObj() { targetObj }
-
-    /**
-     * @return The number of entry of which each chunk is made up
-     */
-    int getCount() { count }
 
     /**
      * @return The target object that receives the splitted chunks. It can be a {@link groovyx.gpars.dataflow.DataflowChannel} or a {@code List}
@@ -287,7 +283,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
         closure = (Closure)options.each
 
         if( options.by )
-            count = options.by as Integer
+            counter = new EntryCounter(options.by as Integer)
 
         into = options.into
 
