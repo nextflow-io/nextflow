@@ -209,7 +209,7 @@ class CsvSplitter extends AbstractTextSplitter {
 
     protected CollectorStrategy createCollector() {
 
-        if( count>1 )
+        if( counter.isEnabled() )
             return new ObjectListCollector()
 
         return null

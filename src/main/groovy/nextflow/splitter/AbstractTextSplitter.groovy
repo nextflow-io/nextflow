@@ -53,6 +53,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
 
     protected boolean compress
 
+    private long itemsCount
 
     AbstractTextSplitter options(Map options) {
         super.options(options)
@@ -155,12 +156,8 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
             return new BufferedReader(targetObject)
     }
 
-    private int blockCount
-
-    private long itemsCount
-
     protected boolean isCollectorEnabled() {
-        return (count > 1 || fileMode)
+        return (counter.isEnabled() || fileMode)
     }
 
     /**
@@ -207,6 +204,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
 
     /**
      * Add the fetched record to the current collection and emit a new chunk
+     *
      * @param record The read record object
      * @return A value returned by the user splitting closure
      */
@@ -218,9 +216,9 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
             // -- append to the list buffer
             collector.add(record)
 
-            if( ++blockCount == count ) {
+            if( counter.hasNext() ) {
                 result = invokeEachClosure(closure, collector.nextChunk())
-                blockCount = 0
+                counter.reset()
             }
         }
         else {

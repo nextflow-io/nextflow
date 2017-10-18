@@ -24,7 +24,9 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
+import nextflow.exception.AbortOperationException
 import nextflow.util.CacheHelper
+import nextflow.util.MemoryUnit
 /**
  * Split FASTA formatted text content or files
  *
@@ -39,11 +41,45 @@ class FastaSplitter extends AbstractTextSplitter {
 
     static private Pattern PATTERN_FASTA_DESC = ~/^\S+\s+(.*)/
 
+    private boolean incrementBySize
+
+    private StringBuilder buffer = new StringBuilder()
+
+    private String line
+
     @Override
     protected Map<String,Object> validOptions() {
         def result = super.validOptions()
         result.record = [ Boolean, Map ]
+        result.size = [String, MemoryUnit, Number]
         return result
+    }
+
+    FastaSplitter options( Map options ) {
+        super.options(options)
+
+        if( options.size && options.by )
+            throw new AbortOperationException("Parameter `by` and `size` conflicts -- check operator `$operatorName`")
+
+        if( options.size ) {
+            final size = parseChunkSize(options.size)
+            counter = new EntryCounter(size, true)
+            incrementBySize = true
+        }
+
+        return this
+    }
+
+
+    protected long parseChunkSize( value ) {
+        assert value != null
+        if( value instanceof Number )
+            return value.toLong()
+        if( value instanceof CharSequence )
+            return MemoryUnit.of(value.toString()).toBytes()
+        if( value instanceof MemoryUnit )
+            return value.toBytes()
+        throw new IllegalArgumentException("Not a valid `size` value: $value [${value.getClass().getName()}] -- check operator `${getOperatorName()}`")
     }
 
     /**
@@ -163,10 +199,6 @@ class FastaSplitter extends AbstractTextSplitter {
     }
 
 
-    private StringBuilder buffer = new StringBuilder()
-
-    private String line
-
     @Override
     protected process( Reader targetObject ) {
         line = null
@@ -178,6 +210,7 @@ class FastaSplitter extends AbstractTextSplitter {
 
         buffer.setLength(0)
         boolean openBlock = false
+        int size = 0
 
         // check if a line from a previous iteration is available
         if( line==null )
@@ -199,11 +232,15 @@ class FastaSplitter extends AbstractTextSplitter {
             }
             else {
                 buffer << line << '\n'
+                size += line.size()
             }
 
             // next line
             line = reader.readLine()
         }
+
+        if( incrementBySize )
+            counter.setIncrement(size)
 
         String result = buffer.size() ? buffer.toString() : null
         if( result && recordMode )
