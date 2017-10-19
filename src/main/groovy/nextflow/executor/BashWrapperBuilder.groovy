@@ -642,7 +642,7 @@ class BashWrapperBuilder {
 
         // override the docker entry point the image is NOT defined as executable
         if( !executable )
-            builder.params(entry: '/usr/bin/env bash')
+            builder.params(entry: '/bin/bash')
 
         builder.build()
         return builder

@@ -863,7 +863,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                sudo docker run -i -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /usr/bin/env bash --name \$NXF_BOXID busybox -c "/usr/bin/env bash -ue ${folder}/.command.sh"
+                sudo docker run -i -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID busybox -c "/usr/bin/env bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -974,7 +974,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /usr/bin/env bash --name \$NXF_BOXID busybox -c "/usr/bin/env bash -ue ${folder}/.command.sh"
+                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID busybox -c "/usr/bin/env bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -1087,7 +1087,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /usr/bin/env bash --name \$NXF_BOXID ubuntu -c "/usr/bin/env bash -ue ${folder}/.command.sh"
+                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID ubuntu -c "/usr/bin/env bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -1197,7 +1197,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /usr/bin/env bash --name \$NXF_BOXID ubuntu -c "/usr/bin/env bash -ue ${folder}/.command.sh"
+                docker run -i -v \$(nxf_mktemp):/tmp -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID ubuntu -c "/usr/bin/env bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -1312,7 +1312,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                docker run -i -v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /usr/bin/env bash --name \$NXF_BOXID busybox -c "/usr/bin/env bash -ue ${folder}/.command.sh"
+                docker run -i -v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID busybox -c "/usr/bin/env bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -1425,7 +1425,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                sudo docker run -i -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /usr/bin/env bash --name \$NXF_BOXID busybox -c "/usr/bin/env bash -ue ${folder}/.command.sh"
+                sudo docker run -i -v ${folder}:${folder} -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID busybox -c "/usr/bin/env bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -2086,7 +2086,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee2=\$!
                 (
                 shifter_pull docker:ubuntu:latest
-                NXF_DEBUG=\${NXF_DEBUG:=0} BASH_ENV=\"${folder}/.command.env\" shifter --image docker:ubuntu:latest /usr/bin/env bash -c "/usr/bin/env bash -ue ${folder}/.command.sh"
+                NXF_DEBUG=\${NXF_DEBUG:=0} BASH_ENV=\"${folder}/.command.env\" shifter --image docker:ubuntu:latest /bin/bash -c "/usr/bin/env bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?

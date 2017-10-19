@@ -86,9 +86,9 @@ class DockerBuilderTest extends Specification {
                 .runCommand == 'sudo docker run -i -v "$PWD":"$PWD" -w "$PWD" busybox'
 
         new DockerBuilder('busybox')
-                .params(entry: '/usr/bin/env bash')
+                .params(entry: '/bin/bash')
                 .build()
-                .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --entrypoint /usr/bin/env bash busybox'
+                .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --entrypoint /bin/bash busybox'
 
         new DockerBuilder('busybox')
                 .params(runOptions: '-x --zeta')
