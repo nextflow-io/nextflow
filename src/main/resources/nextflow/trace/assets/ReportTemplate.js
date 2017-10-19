@@ -2,6 +2,12 @@
 window.data_byprocess = {};
 $(function() {
 
+  // Script block clicked
+  $('#tasks_table').on('click', '.script_block', function(e){
+    e.preventDefault();
+    $(this).toggleClass('short');
+  });
+
   // Collect stats by process
   for(i=0; i<window.data['trace'].length; i++){
     var proc = window.data['trace'][i]['process']
@@ -13,28 +19,61 @@ $(function() {
 
   // Plot histograms of resource usage
   var cpu_data = [];
+  var pct_cpu_used_data = [];
   var mem_data = [];
+  var pct_mem_used_data = [];
   var time_data = [];
+  var readwrite_data = [];
+  var readwrite_hasdata = false;
   for(var pname in window.data_byprocess){
     if (window.data_byprocess.hasOwnProperty(pname)) {
       var c = [];
+      var pc = [];
       var m = [];
+      var pm = [];
       var t = [];
+      var d = [];
       for (var i = 0; i < window.data_byprocess[pname].length; i ++) {
         c[i] = parseInt(window.data_byprocess[pname][i]['%cpu']);
-        m[i] = parseInt(window.data_byprocess[pname][i]['vmem']);
-        t[i] = parseInt(window.data_byprocess[pname][i]['duration']);
+        pc[i] = (parseInt(window.data_byprocess[pname][i]['%cpu']) / (parseInt(window.data_byprocess[pname][i]['cpus']) * 100)) * 100;
+        m[i] = parseInt(window.data_byprocess[pname][i]['vmem']) / 1000000000;
+        pm[i] = (parseInt(window.data_byprocess[pname][i]['vmem']) / parseInt(window.data_byprocess[pname][i]['memory'])) * 100
+        t[i] = moment.duration( parseInt(window.data_byprocess[pname][i]['duration']) ).asMinutes();
+        d[i] = (parseInt(window.data_byprocess[pname][i]['read_bytes']) + parseInt(window.data_byprocess[pname][i]['write_bytes'])) / 1000000000;
+        if (d[i] > 0){ readwrite_hasdata = true; }
       }
       cpu_data.push({y: c, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
+      pct_cpu_used_data.push({y: pc, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
       mem_data.push({y: m, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
+      pct_mem_used_data.push({y: pm, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
       time_data.push({y: t, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
+      readwrite_data.push({y: d, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
     }
   }
-  Plotly.newPlot('cpuplot', cpu_data, { title: 'Workflow CPU Usage', yaxis: {title: '% single core CPU usage'} });
-  Plotly.newPlot('memplot', mem_data, { title: 'Workflow Memory Usage', yaxis: {title: 'Memory (bytes)'} });
-  Plotly.newPlot('timeplot', time_data, { title: 'Workflow Task Durations', yaxis: {title: 'Duration (milliseconds)'} });
+  Plotly.newPlot('cpuplot', cpu_data, { title: 'CPU Usage', yaxis: {title: '% single core CPU usage'} });
+  Plotly.newPlot('pctcpuplot', pct_cpu_used_data, { title: '% Requested CPU Used', yaxis: {title: '% Allocated CPUs Used', range: [0, 100]} });
+  Plotly.newPlot('memplot', mem_data, { title: 'Memory Usage', yaxis: {title: 'Memory (gb)'} });
+  Plotly.newPlot('pctmemplot', pct_mem_used_data, { title: '% Requested Memory Used', yaxis: {title: '% Allocated Memory Used', range: [0, 100]} });
+  Plotly.newPlot('timeplot', time_data, { title: 'Task Durations', yaxis: {title: 'Duration (minutes)'} });
+  if(readwrite_hasdata){
+    Plotly.newPlot('readwriteplot', readwrite_data, { title: 'Disk Read+Write', yaxis: {title: 'Read bytes + write (gb)'} });
+  } else {
+    $('#readwriteplot_div').hide();
+  }
 
   // Build the trace table
+  function make_duration(ms){
+    if (ms == '-' || ms == 0){
+      return ms;
+    }
+    return moment.duration( parseInt(ms) ).asMinutes().toFixed(2);
+  }
+  function make_date(ms){
+    if (ms == '-' || ms == 0){
+      return ms;
+    }
+    return moment( parseInt(ms) ).format();
+  }
   for(i=0; i<window.data['trace'].length; i++){
     // Use a nice label for the status
     var status = window.data['trace'][i]['status'];
@@ -62,21 +101,21 @@ $(function() {
       '<td>' + status + '</td>'+
       '<td><code>' + window.data['trace'][i]['hash'] + '</code></td>'+
       '<td>' + window.data['trace'][i]['exit'] + '</td>'+
-      '<td>' + window.data['trace'][i]['submit'] + '</td>'+
-      '<td>' + window.data['trace'][i]['start'] + '</td>'+
+      '<td>' + make_date(window.data['trace'][i]['submit']) + '</td>'+
+      '<td>' + make_date(window.data['trace'][i]['start']) + '</td>'+
       '<td>' + window.data['trace'][i]['module'] + '</td>'+
       '<td>' + window.data['trace'][i]['container'] + '</td>'+
       '<td>' + window.data['trace'][i]['cpus'] + '</td>'+
       '<td>' + window.data['trace'][i]['memory'] + '</td>'+
-      '<td>' + window.data['trace'][i]['time'] + '</td>'+
+      '<td>' + make_duration(window.data['trace'][i]['time']) + '</td>'+
       '<td>' + window.data['trace'][i]['disk'] + '</td>'+
       '<td>' + window.data['trace'][i]['attempt'] + '</td>'+
-      '<td><pre><code>' + script.trim() + '</code></pre></td>'+
+      '<td><pre class="script_block short"><code>' + script.trim() + '</code></pre></td>'+
       '<td><samp>' + window.data['trace'][i]['scratch'] + '</samp></td>'+
       '<td><samp>' + window.data['trace'][i]['workdir'] + '</samp></td>'+
-      '<td>' + window.data['trace'][i]['complete'] + '</td>'+
-      '<td>' + window.data['trace'][i]['duration'] + '</td>'+
-      '<td>' + window.data['trace'][i]['realtime'] + '</td>'+
+      '<td>' + make_date(window.data['trace'][i]['complete']) + '</td>'+
+      '<td>' + make_duration(window.data['trace'][i]['duration']) + '</td>'+
+      '<td>' + make_duration(window.data['trace'][i]['realtime']) + '</td>'+
       '<td>' + window.data['trace'][i]['%cpu'] + '</td>'+
       '<td>' + window.data['trace'][i]['%mem'] + '</td>'+
       '<td>' + window.data['trace'][i]['vmem'] + '</td>'+
@@ -94,7 +133,11 @@ $(function() {
   }
   $('#tasks_table').DataTable({
     "lengthMenu": [[25, 50, 100, -1], [25, 50, 100, "All"]],
-    "scrollX": true
+    "scrollX": true,
+    // TODO: This doesn't work or have any effect
+    "columnDefs": [
+      { "width": "200px", "targets": "_all" }
+    ]
   });
 
 });
