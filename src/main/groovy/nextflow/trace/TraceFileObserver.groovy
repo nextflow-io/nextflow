@@ -288,7 +288,7 @@ class TraceFileObserver implements TraceObserver {
      */
     String render(TraceRecord trace) {
         assert trace
-        trace.render(fields, formats, separator)
+        trace.renderText(fields, formats, separator)
     }
 
 }
