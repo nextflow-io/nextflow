@@ -685,6 +685,41 @@ class Session implements ISession {
     ExecutorService getExecService() { execService }
 
     /**
+     * Validate the config file
+     *
+     * @param processNames The list of process names defined in the pipeline script
+     */
+    void validateConfig(Collection<String> processNames) {
+        def warns = validateConfig0(processNames)
+        for( String str : warns )
+            log.warn str
+    }
+
+    protected List<String> validateConfig0(Collection<String> processNames) {
+        def result = []
+
+        if( !(config.process instanceof Map) )
+            return result
+
+        // verifies that all process config names have a match with a defined process
+        def keys = (config.process as Map).keySet()
+        for(String key : keys) {
+            if( !key.startsWith('$') )
+                continue
+            def name = key.substring(1)
+            if( !processNames.contains(name) ) {
+                def suggestion = processNames.closest(name)
+                def message = "The config file defines settings for an unknown process: $name"
+                if( suggestion )
+                    message += " -- Did you mean: ${suggestion.first()}?"
+                result << message
+            }
+        }
+
+        return result
+    }
+
+    /**
      * Register a shutdown hook to close services when the session terminates
      * @param Closure
      */

@@ -33,6 +33,7 @@ import nextflow.script.TokenVar
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.ConstructorNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.VariableScope
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
@@ -43,6 +44,7 @@ import org.codehaus.groovy.ast.expr.ConstructorCallExpression
 import org.codehaus.groovy.ast.expr.DeclarationExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.GStringExpression
+import org.codehaus.groovy.ast.expr.ListExpression
 import org.codehaus.groovy.ast.expr.MapExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.PropertyExpression
@@ -76,6 +78,8 @@ public class NextflowDSLImpl implements ASTTransformation {
 
     protected GStringToLazyVisitor makeGStringLazyVisitor
 
+    protected Set<String> processNames = []
+
     @Override
     void visit(ASTNode[] astNodes, SourceUnit unit) {
 
@@ -91,6 +95,52 @@ public class NextflowDSLImpl implements ASTTransformation {
         new ClassCodeVisitorSupport() {
 
             protected SourceUnit getSourceUnit() { unit }
+
+            /**
+             * Creates a statement that invokes the {@link nextflow.script.BaseScript#init(java.util.List)} method
+             * used to initialize the script with metadata collected during script parsing
+             * @return The method invocation statement
+             */
+            protected Statement invokeBaseScriptInit() {
+                final names = new ListExpression()
+                processNames.each { names.addExpression(new ConstantExpression(it.toString())) }
+
+                // the method list argument
+                final args = new ArgumentListExpression()
+                args.addExpression(names)
+
+                final call = new MethodCallExpression(new VariableExpression('this'), 'init', args)
+                final stm = new ExpressionStatement(call)
+                return stm
+            }
+
+            /**
+             * Add to constructor a method call to inject parsed metadata
+             * @param node
+             */
+            protected void injectMetadata(ClassNode node) {
+                for( ConstructorNode constructor : node.getDeclaredConstructors() ) {
+                    def code = constructor.getCode()
+                    if( code instanceof BlockStatement ) {
+                        code.addStatement( invokeBaseScriptInit() )
+                    }
+                    else if( code instanceof ExpressionStatement ) {
+                        def expr = code
+                        def block = new BlockStatement()
+                        block.addStatement(expr)
+                        block.addStatement( invokeBaseScriptInit() )
+                        constructor.setCode(block)
+                    }
+                    else
+                        throw new IllegalStateException("Invalid constructor expression: $code")
+                }
+            }
+
+            protected void visitObjectInitializerStatements(ClassNode node) {
+                injectMetadata(node)
+                super.visitObjectInitializerStatements(node)
+            }
+
 
             void visitMethodCallExpression(MethodCallExpression methodCall) {
                 // pre-condition to be verified to apply the transformation
@@ -771,6 +821,10 @@ public class NextflowDSLImpl implements ASTTransformation {
 
         def nested = list[0] as MethodCallExpression
         def name = nested.getMethodAsString()
+        // check the process name is not defined yet
+        if( !processNames.add(name) ) {
+            log.warn "Process `$name` is defined two or more times"
+        }
 
         // the nested method arguments are the arguments to be passed
         // to the process definition, plus adding the process *name*

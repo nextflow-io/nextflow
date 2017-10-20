@@ -313,5 +313,14 @@ class SessionTest extends Specification {
 
     }
 
+    def 'should get a warning message' () {
+
+        given:
+        def session = new Session([process: ['$foo': [cpus:1], '$bar':[mem:'10GB']]])
+        expect:
+        session.validateConfig0(['foo','bar','baz']) == []
+        session.validateConfig0(['foo','baz']) == ['The config file defines settings for an unknown process: bar -- Did you mean: baz?']
+    }
+
 
 }
