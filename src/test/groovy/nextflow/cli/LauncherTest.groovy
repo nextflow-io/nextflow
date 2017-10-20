@@ -196,6 +196,10 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run','-with-trace', '-x') == ['run', '-with-trace','trace.txt', '-x']
         launcher.normalizeArgs('run','-with-trace', 'file.x') == ['run', '-with-trace','file.x']
 
+        launcher.normalizeArgs('run','-with-report') == ['run', '-with-report','report.html']
+        launcher.normalizeArgs('run','-with-report', '-x') == ['run', '-with-report','report.html', '-x']
+        launcher.normalizeArgs('run','-with-report', 'file.x') == ['run', '-with-report','file.x']
+
         launcher.normalizeArgs('run','-with-timeline') == ['run', '-with-timeline','timeline.html']
         launcher.normalizeArgs('run','-with-timeline', '-x') == ['run', '-with-timeline','timeline.html', '-x']
         launcher.normalizeArgs('run','-with-timeline', 'file.x') == ['run', '-with-timeline','file.x']

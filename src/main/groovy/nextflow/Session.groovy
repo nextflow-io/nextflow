@@ -49,6 +49,7 @@ import nextflow.processor.TaskProcessor
 import nextflow.script.ScriptBinding
 import nextflow.trace.ExtraeTraceObserver
 import nextflow.trace.GraphObserver
+import nextflow.trace.ReportObserver
 import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceObserver
@@ -307,6 +308,7 @@ class Session implements ISession {
         def result = new ConcurrentLinkedQueue()
 
         createTraceFileObserver(result)
+        createReportObserver(result)
         createTimelineObserver(result)
         createExtraeObserver(result)
         createDagObserver(result)
@@ -326,6 +328,20 @@ class Session implements ISession {
             catch( Exception e ) {
                 log.warn("Unable to load Extrae profiler",e)
             }
+        }
+    }
+
+    /**
+     * Create workflow report file observer
+     */
+    protected void createReportObserver(Collection<TraceObserver> result) {
+        Boolean isEnabled = config.navigate('report.enabled') as Boolean
+        if( isEnabled ) {
+            String fileName = config.navigate('report.file')
+            if( !fileName ) fileName = ReportObserver.DEF_FILE_NAME
+            def traceFile = (fileName as Path).complete()
+            def observer = new ReportObserver(traceFile)
+            result << observer
         }
     }
 
