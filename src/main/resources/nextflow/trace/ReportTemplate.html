@@ -35,6 +35,11 @@
   body {
     padding-top: 56px;
   }
+  .navbar-brand img {
+    width: 20px;
+    height: 20px;
+    margin: 0 10px 5px 0;
+  }
   pre {
     margin-bottom: 0;
   }
@@ -45,6 +50,10 @@
     border-radius: 5px;
     background-color: #F0F2F4;
     font-size: 0.8rem;
+  }
+  table td {
+    max-width: 200px;
+    overflow-x: auto;
   }
   .script_block.short {
     max-height: 30px;
@@ -68,7 +77,10 @@
 </head>
 <body>
   <nav id="nf-report-navbar" class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
-    <a class="navbar-brand" href="#">Nextflow Report</a>
+    <a class="navbar-brand" href="#">
+      <img src="data:image/png;base64,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">
+      Nextflow Report
+    </a>
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
@@ -78,11 +90,14 @@
         <li class="nav-item"><a class="nav-link" href="#resources">Resources</a></li>
         <li class="nav-item"><a class="nav-link" href="#tasks">Tasks</a></li>
       </ul>
+      <span class="navbar-text">
+        [${workflow.runName}]
+      </span>
     </div>
   </nav>
 
   <div class="jumbotron mb-0">
-    <div class="container" data-spy="scroll" data-target="#nf-report-navbar" data-offset="0">
+    <div class="container">
 
       <h1 class="display-3">Nextflow workflow report</h1>
       <h2 class="text-muted mb-4"><samp>[${workflow.runName}]</samp> ${workflow.resume ? '<em>(resumed run)</em>' : ''}</h2>
@@ -107,7 +122,10 @@
 
       <dl>
         <dt>Run times</dt>
-        <dd>${workflow.start} - ${workflow.complete} (duration: <strong>${workflow.duration}</strong>)</dd>
+        <dd>
+          <span id="workflow_start">${workflow.start}</span> - <span id="workflow_complete">${workflow.complete}</span>
+          (<span id="completed_fromnow"></span>duration: <strong>${workflow.duration}</strong>)
+        </dd>
 
         <dt>Nextflow command</dt>
         <dd><pre class="nfcommand"><code>${workflow.commandLine}</code></pre></dd>
@@ -178,12 +196,12 @@
     <h4>CPU Usage</h4>
     <ul class="nav nav-tabs" id="cpuplot_tabs" role="tablist">
       <li class="nav-item">
-        <a class="nav-link active" id="cpuplot_tablink" data-toggle="tab" href="#pctcpuplot_tabpanel" role="tab" aria-controls="cpuplot_tabpanel" aria-expanded="true">
+        <a class="nav-link active" id="pctcpuplot_tablink" data-toggle="tab" href="#pctcpuplot_tabpanel" role="tab" aria-controls="cpuplot_tabpanel" aria-expanded="true">
           % Allocated
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" id="pctcpuplot_tablink" data-toggle="tab" href="#cpuplot_tabpanel" role="tab" aria-controls="pctcpuplot_tabpanel" aria-expanded="false">
+        <a class="nav-link" id="cpuplot_tablink" data-toggle="tab" href="#cpuplot_tabpanel" role="tab" aria-controls="pctcpuplot_tabpanel" aria-expanded="false">
           Raw Usage
         </a>
       </li>
@@ -220,7 +238,26 @@
     </div>
 
     <h4>Job Duration</h4>
-    <div id="timeplot"></div>
+    <ul class="nav nav-tabs" id="timeplot_tabs" role="tablist">
+      <li class="nav-item">
+        <a class="nav-link active" id="pcttimeplot_tablink" data-toggle="tab" href="#pcttimeplot_tabpanel" role="tab" aria-controls="pcttimeplot_tabpanel" aria-expanded="true">
+          % Allocated
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="timeplot_tablink" data-toggle="tab" href="#timeplot_tabpanel" role="tab" aria-controls="timeplot_tabpanel" aria-expanded="false">
+          Raw Usage
+        </a>
+      </li>
+    </ul>
+    <div class="tab-content" id="timeplot_tabcontent">
+      <div class="tab-pane fade show active" id="pcttimeplot_tabpanel" role="tabpanel">
+        <div id="pcttimeplot"></div>
+      </div>
+      <div class="tab-pane fade" id="timeplot_tabpanel" role="tabpanel">
+        <div id="timeplot"></div>
+      </div>
+    </div>
 
     <div id="readwriteplot_div">
       <h4>Disk Read / Write</h4>
