@@ -121,31 +121,24 @@ $(function() {
       '<td>' + window.data['trace'][i]['task_id'] + '</td>'+
       '<td>' + window.data['trace'][i]['process'] + '</td>'+
       '<td>' + window.data['trace'][i]['tag'] + '</td>'+
-      '<td>' + window.data['trace'][i]['name'] + '</td>'+
       '<td>' + status + '</td>'+
       '<td><code>' + window.data['trace'][i]['hash'] + '</code></td>'+
-      '<td>' + window.data['trace'][i]['exit'] + '</td>'+
-      '<td>' + make_date(window.data['trace'][i]['submit']) + '</td>'+
-      '<td>' + make_date(window.data['trace'][i]['start']) + '</td>'+
-      '<td>' + window.data['trace'][i]['module'] + '</td>'+
-      '<td>' + window.data['trace'][i]['container'] + '</td>'+
       '<td>' + window.data['trace'][i]['cpus'] + '</td>'+
-      '<td>' + window.data['trace'][i]['memory'] + '</td>'+
-      '<td>' + make_duration(window.data['trace'][i]['time']) + '</td>'+
-      '<td>' + window.data['trace'][i]['disk'] + '</td>'+
-      '<td>' + window.data['trace'][i]['attempt'] + '</td>'+
-      '<td><pre class="script_block short"><code>' + script.trim() + '</code></pre></td>'+
-      '<td><samp>' + window.data['trace'][i]['scratch'] + '</samp></td>'+
-      '<td><samp>' + window.data['trace'][i]['workdir'] + '</samp></td>'+
-      '<td>' + make_date(window.data['trace'][i]['complete']) + '</td>'+
-      '<td>' + make_duration(window.data['trace'][i]['duration']) + '</td>'+
-      '<td>' + make_duration(window.data['trace'][i]['realtime']) + '</td>'+
       '<td>' + window.data['trace'][i]['%cpu'] + '</td>'+
+      '<td>' + window.data['trace'][i]['memory'] + '</td>'+
       '<td>' + window.data['trace'][i]['%mem'] + '</td>'+
       '<td>' + window.data['trace'][i]['vmem'] + '</td>'+
       '<td>' + window.data['trace'][i]['rss'] + '</td>'+
       '<td>' + window.data['trace'][i]['peak_vmem'] + '</td>'+
       '<td>' + window.data['trace'][i]['peak_rss'] + '</td>'+
+      '<td>' + make_duration(window.data['trace'][i]['time']) + '</td>'+
+      '<td>' + make_duration(window.data['trace'][i]['duration']) + '</td>'+
+      '<td>' + make_duration(window.data['trace'][i]['realtime']) + '</td>'+
+      '<td><pre class="script_block short"><code>' + script.trim() + '</code></pre></td>'+
+      '<td>' + window.data['trace'][i]['exit'] + '</td>'+
+      '<td>' + make_date(window.data['trace'][i]['submit']) + '</td>'+
+      '<td>' + make_date(window.data['trace'][i]['start']) + '</td>'+
+      '<td>' + make_date(window.data['trace'][i]['complete']) + '</td>'+
       '<td>' + window.data['trace'][i]['rchar'] + '</td>'+
       '<td>' + window.data['trace'][i]['wchar'] + '</td>'+
       '<td>' + window.data['trace'][i]['syscr'] + '</td>'+
@@ -153,6 +146,13 @@ $(function() {
       '<td>' + window.data['trace'][i]['read_bytes'] + '</td>'+
       '<td>' + window.data['trace'][i]['write_bytes'] + '</td>'+
       '<td>' + window.data['trace'][i]['native_id'] + '</td>'+
+      '<td>' + window.data['trace'][i]['name'] + '</td>'+
+      '<td>' + window.data['trace'][i]['module'] + '</td>'+
+      '<td>' + window.data['trace'][i]['container'] + '</td>'+
+      '<td>' + window.data['trace'][i]['disk'] + '</td>'+
+      '<td>' + window.data['trace'][i]['attempt'] + '</td>'+
+      '<td><samp>' + window.data['trace'][i]['scratch'] + '</samp></td>'+
+      '<td><samp>' + window.data['trace'][i]['workdir'] + '</samp></td>'+
     +'</tr>');
   }
   $('#tasks_table').removeAttr('width').DataTable({
