@@ -152,6 +152,8 @@ class ScriptRunner {
         try {
             // parse the script
             script = parseScript(scriptText, args)
+            // validate the config
+            validate()
             // run the code
             run()
             // await termination
@@ -310,6 +312,13 @@ class ScriptRunner {
                 .hash()
 
         return "_nf_script_${hash}"
+    }
+
+    /**
+     * Check preconditions before run the main script
+     */
+    protected void validate() {
+        session.validateConfig(script.getProcessNames())
     }
 
     /**

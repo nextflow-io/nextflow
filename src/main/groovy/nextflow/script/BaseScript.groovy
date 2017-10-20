@@ -37,10 +37,23 @@ abstract class BaseScript extends Script {
         super(binding)
     }
 
+    /**
+     * This method is get invoked by the DSL parser
+     * @param processNames
+     */
+    protected void init( List<String> processNames ) {
+        this.processNames = processNames
+    }
+
     /*
      * The script execution session, declare it private to prevent the user script to be able to access it
      */
     private Session sessionObj
+
+    /**
+     * The list of process defined in the pipeline script
+     */
+    private List<String> processNames
 
     @PackageScope
     void setSession( Session value )  {
@@ -52,6 +65,11 @@ abstract class BaseScript extends Script {
             sessionObj = Global.session as Session
         }
         return sessionObj
+    }
+
+    @PackageScope
+    List<String> getProcessNames() {
+        processNames
     }
 
     /**
