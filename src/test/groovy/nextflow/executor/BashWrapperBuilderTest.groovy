@@ -2125,4 +2125,16 @@ class BashWrapperBuilderTest extends Specification {
 
     }
 
+    def 'should create module command' () {
+        given:
+        def wrapper = new BashWrapperBuilder(Mock(TaskBean))
+
+        expect:
+        wrapper.moduleLoad('foo')  == 'nxf_module_load foo'
+        wrapper.moduleLoad('foo/1.2')  == 'nxf_module_load foo 1.2'
+        wrapper.moduleLoad('foo/bar/1.2')  == 'nxf_module_load foo/bar 1.2'
+        wrapper.moduleLoad('foo/bar/')  == 'nxf_module_load foo/bar '
+
+    }
+
 }

@@ -653,7 +653,8 @@ class BashWrapperBuilder {
     }
 
     String moduleLoad(String name) {
-        "nxf_module_load ${name.tokenize('/').join(' ')}"
+        int p = name.lastIndexOf('/')
+        p != -1 ? "nxf_module_load ${name.substring(0,p)} ${name.substring(p+1)}" : "nxf_module_load ${name}"
     }
 
 }
