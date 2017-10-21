@@ -515,7 +515,8 @@ class DataflowExtensions {
      * @return The resulting channel emitting the taken values
      */
     static final <V> DataflowReadChannel<V> take( final DataflowReadChannel<V> source, int n ) {
-        assert !(source instanceof DataflowExpression)
+        if( source instanceof DataflowExpression )
+            throw new IllegalArgumentException("Operator `take` cannot be applied to a value channel")
 
         def count = 0
         final target = new DataflowQueue<V>()
