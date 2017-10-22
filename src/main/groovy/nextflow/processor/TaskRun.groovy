@@ -41,6 +41,7 @@ import nextflow.exception.ProcessNotRecoverableException
 import nextflow.file.FileHolder
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
+import nextflow.script.FilemapInParam
 import nextflow.script.FileOutParam
 import nextflow.script.InParam
 import nextflow.script.OutParam
@@ -383,7 +384,7 @@ class TaskRun implements Cloneable {
     }
 
     Map<InParam,List<FileHolder>> getInputFiles() {
-        (Map<InParam,List<FileHolder>>) getInputsByType( FileInParam )
+        (Map<InParam,List<FileHolder>>) getInputsByType( FileInParam ) + (Map<InParam,List<FileHolder>>) getInputsByType( FilemapInParam )
     }
 
     /**

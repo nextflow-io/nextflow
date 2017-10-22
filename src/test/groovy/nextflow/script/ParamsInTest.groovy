@@ -642,6 +642,33 @@ class ParamsInTest extends Specification {
 
     }
 
+    def testFilemapInParam() {
+        setup:
+        def text = '''
+            m = [ 'x': java.nio.file.Paths.get('file.x'), 'y': java.nio.file.Paths.get('file.y')]
+
+            process hola {
+              input:
+              filemap m
+
+              return ''
+            }
+            '''
+
+        when:
+        def process = parseAndReturnProcess(text)
+        FileInParam in1 = process.config.getInputs().get(0)
+
+        then:
+        process.config.getInputs().size() == 1
+
+        in1.keySet() == ['x', 'y']
+        in1.values() == ['file.x', 'file.y']
+        in1.index == 0
+        in1.inner.get(0) instanceof FilemapInParam
+
+    }
+
     def testMissingVariable () {
 
         setup:

@@ -73,6 +73,7 @@ import nextflow.script.BasicMode
 import nextflow.script.EachInParam
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
+import nextflow.script.FilemapInParam
 import nextflow.script.FileOutParam
 import nextflow.script.InParam
 import nextflow.script.MissingParam
@@ -1844,6 +1845,19 @@ class TaskProcessor {
                 case ValueInParam:
                     contextMap.put( param.name, val )
                     break
+
+                case FilemapInParam:
+                    def normalized = normalizeInputToFiles(val.values(),count)
+                    def mapfile = val
+                    int i = 0
+                    mapfile.keySet().each {
+                        mapfile[it] = Paths.get(normalized[i++].stageName)
+                    }
+
+                    contextMap.put( param.name,  mapfile)
+                    count += normalized.size()
+                    task.setInput(param, normalized)
+                    return
 
                 case FileInParam:
                     secondPass[param] = val
