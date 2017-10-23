@@ -39,6 +39,7 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.ChainWithClosure
+import groovyx.gpars.dataflow.operator.ControlMessage
 import groovyx.gpars.dataflow.operator.CopyChannelsClosure
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowProcessor
@@ -259,7 +260,9 @@ class DataflowExtensions {
      * @return
      */
     static final <V> DataflowReadChannel<V> reduce(final DataflowReadChannel<?> source, final Closure<V> closure) {
-        assert source instanceof DataflowQueue
+        if( source instanceof DataflowExpression )
+            throw new IllegalArgumentException('Operator `reduce` cannot be applied to a value channel')
+
         final target = new DataflowVariable()
         reduceImpl( source, target, null, closure )
         NodeMarker.addOperatorNode('reduce', source, target)
@@ -282,7 +285,9 @@ class DataflowExtensions {
      * @return
      */
     static final <V> DataflowReadChannel<V> reduce(final DataflowReadChannel<?> source, V seed, final Closure<V> closure) {
-        assert !(source instanceof DataflowExpression)
+        if( source instanceof DataflowExpression )
+            throw new IllegalArgumentException('Operator `reduce` cannot be applied to a value channel')
+
         final target = new DataflowVariable()
         reduceImpl( source, target, seed, closure )
         NodeMarker.addOperatorNode('reduce', source, target)
@@ -325,21 +330,40 @@ class DataflowExtensions {
      */
     static final <V> DataflowReadChannel<V> filter(final DataflowReadChannel<V> source, final Object criteria) {
         def discriminator = new BooleanReturningMethodInvoker("isCase");
+
         def target = newChannelBy(source)
-        newOperator(source, target, {
-            def result = discriminator.invoke(criteria, (Object)it)
-            if( result ) target.bind(it)
-        })
+        if( source instanceof DataflowExpression ) {
+            source.whenBound {
+                def result = it instanceof ControlMessage ? false : discriminator.invoke(criteria, (Object)it)
+                target.bind( result ? it : Channel.STOP )
+            }
+        }
+        else {
+            newOperator(source, target, {
+                def result = discriminator.invoke(criteria, (Object)it)
+                if( result ) target.bind(it)
+            })
+        }
+
         NodeMarker.addOperatorNode('filter', source, target)
         return target
     }
 
     static <T> DataflowReadChannel<T> filter(DataflowReadChannel<T> source, final Closure<Boolean> closure) {
         def target = newChannelBy(source)
-        newOperator(source, target, {
-            def result = DefaultTypeTransformation.castToBoolean(closure.call(it))
-            if( result ) target.bind(it)
-        })
+        if( source instanceof DataflowExpression ) {
+            source.whenBound {
+                def result = it instanceof ControlMessage ? false : DefaultTypeTransformation.castToBoolean(closure.call(it))
+                target.bind( result ? it : Channel.STOP )
+            }
+        }
+        else {
+            newOperator(source, target, {
+                def result = DefaultTypeTransformation.castToBoolean(closure.call(it))
+                if( result ) target.bind(it)
+            })
+        }
+
         NodeMarker.addOperatorNode('filter', source, target)
         return target
     }
@@ -465,7 +489,7 @@ class DataflowExtensions {
      */
     static final <V> DataflowReadChannel<V> first( DataflowReadChannel<V> source ) {
         if( source instanceof DataflowExpression ) {
-            def msg = "The use of `first` operator is unnecessary when applied to a value channel"
+            def msg = "The operator `first` is useless when applied to a value channel which returns a single value by definition"
             def name = session?.binding?.getVariableName(source)
             if( name )
                 msg += " -- check channel `$name`"
@@ -488,15 +512,22 @@ class DataflowExtensions {
      * @return
      */
     static final <V> DataflowReadChannel<V> first( final DataflowReadChannel<V> source, Object criteria ) {
-        assert !(source instanceof DataflowExpression)
 
         def target = new DataflowVariable()
         def discriminator = new BooleanReturningMethodInvoker("isCase");
 
-        newOperator([source],[]) {
-            if( discriminator.invoke(criteria, it) ) {
-                target.bind(it)
-                ((DataflowProcessor) getDelegate()).terminate()
+        if( source instanceof DataflowExpression ) {
+            source.whenBound {
+                def result = it instanceof ControlMessage ? false : discriminator.invoke(criteria, it)
+                target.bind( result ? it : Channel.STOP )
+            }
+        }
+        else {
+            newOperator([source],[]) {
+                if( discriminator.invoke(criteria, it) ) {
+                    target.bind(it)
+                    ((DataflowProcessor) getDelegate()).terminate()
+                }
             }
         }
 
@@ -1705,7 +1736,8 @@ class DataflowExtensions {
     }
 
     static <V> DataflowReadChannel<V> randomSample(final DataflowReadChannel source, int n, Long seed = null) {
-        assert !(source instanceof DataflowExpression)
+        if( source instanceof DataflowExpression )
+            throw new IllegalArgumentException("Operator `randomSample` cannot be applied to a value channel")
 
         final result = new RandomSampleOp(source,n, seed).apply()
         NodeMarker.addOperatorNode('randomSample', source, result)
