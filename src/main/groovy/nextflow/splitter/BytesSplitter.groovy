@@ -55,7 +55,7 @@ class BytesSplitter extends AbstractBinarySplitter {
                 }
 
                 // -- check the limit of allowed rows has been reached
-                if( limit && ++bytesCount == limit )
+                if( limit>0 && ++bytesCount == limit )
                     break
             }
 
