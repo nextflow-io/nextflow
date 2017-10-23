@@ -183,7 +183,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
                 result = processChunk( record )
 
                 // -- check the limit of allowed rows has been reached
-                if( limit && ++itemsCount == limit )
+                if( limit>0 && ++itemsCount == limit )
                     break
             }
 
