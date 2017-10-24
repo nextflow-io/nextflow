@@ -4,14 +4,42 @@
 Tracing & visualisation
 ***********************
 
-Nextflow can produce an execution tracing report that provides some information for a basic performance analysis
-of a pipeline execution. A more advanced analysis is possible by using the `Extrae` and `Paraver` tools integrated with Nextflow.
-
-
-.. _trace-report:
+.. _execution-report:
 
 Execution report
 ================
+
+Nextflow can create an HTML execution report which includes in a single document many useful information
+about a workflow execution. The report is organised in the three main sections: `Summary`, `Resources` and `Tasks`.
+
+Summary
+-------
+
+The `Summary` section reports reports the execution status, the launch command, overall execution time and some
+other workflow metadata. You can see an example below.
+
+.. image:: images/report-summary-min.png
+
+
+Resources
+---------
+
+The `Resources` sections displays the usages of CPUs, memory and time for each workflow process in a graphical manner.
+
+.. image:: images/report-resources-min.png
+
+Tasks
+-----
+
+Finally the `Tasks` section lists all executed tasks reporting for each of them, the status, the actual command script
+and many other runtime information. You can see an example below.
+
+.. image:: images/report-tasks-min.png
+
+.. _trace-report:
+
+Trace report
+============
 
 Nextflow creates an execution tracing file that contains some useful information about each process executed in your pipeline
 script, including: submission time, start time, completion time, cpu and memory used.
