@@ -889,6 +889,7 @@ Available parameters:
 Field       Description
 =========== ============================
 by          Defines the number of sequences in each `chunk` (default: ``1``)
+size        Defines the size in memory units of the expected chunks eg. `1.MB`.
 limit       Limits the number of retrieved sequences to the specified value.
 record      Parse each entry in the FASTA file as record objects (see following table for accepted values)
 charset     Parse the content by using the specified charset e.g. ``UTF-8``
