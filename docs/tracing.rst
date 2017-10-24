@@ -10,13 +10,22 @@ Execution report
 ================
 
 Nextflow can create an HTML execution report which includes in a single document many useful information
-about a workflow execution. The report is organised in the three main sections: `Summary`, `Resources` and `Tasks`.
+about a workflow execution. The report is organised in the three main sections: `Summary`, `Resources` and `Tasks`
+(see below for details).
+
+To enable the creation of this report add the ``-with-report`` command line option when launching the pipeline
+execution. For example::
+
+  nextflow run <pipeline name> -with-report [file name]
+
+The report file name can be specified as an optional parameter following the report option.
+
 
 Summary
 -------
 
 The `Summary` section reports reports the execution status, the launch command, overall execution time and some
-other workflow metadata. You can see an example below.
+other workflow metadata. You can see an example below:
 
 .. image:: images/report-summary-min.png
 
@@ -32,7 +41,7 @@ Tasks
 -----
 
 Finally the `Tasks` section lists all executed tasks reporting for each of them, the status, the actual command script
-and many other runtime information. You can see an example below.
+and many other runtime information. You can see an example below:
 
 .. image:: images/report-tasks-min.png
 
