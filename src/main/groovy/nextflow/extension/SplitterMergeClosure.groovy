@@ -50,7 +50,7 @@ class SplitterMergeClosure extends Closure {
 
     @Override
     public Object call(final Object... args) {
-        log.trace "merging ($emissionCount) args=$args"
+        log.trace "merging ($emissionCount) indexes=$indexes; args=$args"
         List result = null
         boolean header = false
         for( int i=0; i<args.size(); i++ ) {
@@ -72,7 +72,7 @@ class SplitterMergeClosure extends Closure {
                 result[indexes[i]] = entry[indexes[i]]
             }
             else
-                throw new IllegalArgumentException("Invalid splitter entry -- offending value: $item")
+                throw new IllegalArgumentException("Invalid splitter entry -- offending value=$item; indexes=$indexes; args=$args")
 
         }
 
