@@ -9,7 +9,7 @@ Tracing & visualisation
 Execution report
 ================
 
-Nextflow can create an HTML execution report which includes in a single document many useful information
+Nextflow can create an HTML execution report: a single document which includes many useful metrics
 about a workflow execution. The report is organised in the three main sections: `Summary`, `Resources` and `Tasks`
 (see below for details).
 
@@ -33,7 +33,12 @@ other workflow metadata. You can see an example below:
 Resources
 ---------
 
-The `Resources` sections displays the usages of CPUs, memory and time for each workflow process in a graphical manner.
+The `Resources` sections plots the distributions of resource usages for each workflow process
+using the interactive `HighCharts <https://www.highcharts.com/>`_ plotting library.
+
+Plots are shown for CPU, memory, time and disk read+write. The first three have two tabs with
+the raw values and a percentage representation showing what proportion of the allocated resources
+were used. This is helpful to check that job pipeline requests are efficient.
 
 .. image:: images/report-resources-min.png
 
@@ -41,7 +46,7 @@ Tasks
 -----
 
 Finally the `Tasks` section lists all executed tasks reporting for each of them, the status, the actual command script
-and many other runtime information. You can see an example below:
+and many other runtime metrics. You can see an example below:
 
 .. image:: images/report-tasks-min.png
 
@@ -317,4 +322,3 @@ Read the `Extrae`_ documentation for more information about it.
 .. _Barcelona Supercomputing Center: http://www.bsc.es
 .. _Paraver: http://www.bsc.es/computer-sciences/performance-tools/paraver
 .. _Extrae: http://www.bsc.es/computer-sciences/extrae
-
