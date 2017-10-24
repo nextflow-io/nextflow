@@ -1,7 +1,7 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-0.26.0 - xx Oct 2017 
+0.26.0-RC1 - 24 Oct 2017
 - Added support for AWS Batch #475
 - Added support for AWS IAM role #422
 - Added Experimental support for Java 9 #462
@@ -10,7 +10,12 @@ NEXTFLOW CHANGE-LOG
 - Added html report (-with-report option)
 - Added Gzip compression support to splitXxx operators #484
 - Added Support PE Fastq files splitting #436
+- Added Operator splitFasta should allow the creation of chunk having the same size #472
+- Added HTML execution report #490 #491
+- Added New scientist names #485
 - Improved merge operator #458
+- Improved value channel handling for reduce, filter, first, take and randomSample operators
+- Prints a warning message when the config file defines setting not matching any process definition
 - Fixed HEAD is detached error #389 
 - Fixed Include container name when calculating cache key #443
 - Fixed Invalidate process cache when a referenced external script is modified #413
@@ -24,6 +29,7 @@ NEXTFLOW CHANGE-LOG
 - Fixed Nextflow should not stage files that have the same name #470
 - Fixed SplitCsv returns array objects instead of Lists #487
 - Fixed Cannot cast object FtpURLConnection error #482
+- Fixed Nested Environment Module names are not loaded properly #489
 - Removed support support for Java 7 #385
 - Removed deprecated Cirrus/ClusterK executor
 - Removed deprecated support for DNAnexus #386
