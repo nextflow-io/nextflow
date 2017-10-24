@@ -105,6 +105,7 @@ Trace report layout and other configuration settings can be specified by using t
 
 Please read :ref:`Trace scope <config-trace>` section to learn more about it.
 
+.. _timeline-report:
 
 Timeline report
 ===============
@@ -112,7 +113,7 @@ Timeline report
 Nextflow can render an HTML timeline for all processes executed in your pipeline. An example of the timeline
 report is shown below:
 
-.. image:: images/timeline.png
+.. image:: images/timeline-min.png
 
 
 Each bar represents a process run in the pipeline execution. The bar length represents the task duration time (wall-time).
@@ -132,6 +133,7 @@ execution. For example::
 
 The report file name can be specified as an optional parameter following the timeline option.
 
+.. _dag-visualisation:
 
 DAG visualisation
 =================
