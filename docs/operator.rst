@@ -917,7 +917,7 @@ width       Define the length of a single line when the ``sequence`` field is us
 
 
 splitFastq
------------
+----------
 
 The ``splitFastq`` operator allows you to split the entries emitted by a channel, that are formatted using the
 `FASTQ format <http://en.wikipedia.org/wiki/FASTQ_format>`_. It returns a channel which emits a text chunk
@@ -930,7 +930,7 @@ sequences each::
    Channel
         .fromPath('misc/sample.fastq')
         .splitFastq( by: 10 )
-        .subscribe { print it }
+        .println()
 
 
 .. warning:: By default chunks are kept in memory. When splitting big files specify the parameter ``file: true`` to save the
@@ -947,7 +947,23 @@ the required fields, or just specify ``record: true`` as in the example shown be
    Channel
         .fromPath('misc/sample.fastq')
         .splitFastq( record: true )
-        .subscribe { record -> println record.readHeader }
+        .println { record -> record.readHeader }
+
+
+Finally the ``splitFastq`` operator is able to split paired-end read pair FASTQ files. It must be applied to a channel
+which emits tuples containing at list two elements that are the files to be splitted. For example::
+
+    Channel
+        .fromFilePairs('/my/data/SRR*_{1,2}.fastq', flat:true)
+        .splitFastq(by: 100_000, pe:true, file:true)
+        .println()
+
+
+.. note:: The ``fromFilePairs`` requires the ``flat:true`` option to have the file pairs as separate elements
+  in the produced tuples.
+
+.. warning:: This operator assumes that the order of the PE reads correspond with each other and both files contain
+  the same number of reads.
 
 
 Available parameters:
