@@ -275,18 +275,22 @@ class SplitFastqOperatorTest extends Specification {
 
         given:
         def folder = Files.createTempDirectory('test')
-        def file1 = TestHelper.createInMemTempFile('sample_1.fq', READS)
-        def file2 = TestHelper.createInMemTempFile('sample_2.fq', READS2)
+        def file_a_1 = TestHelper.createInMemTempFile('aaa_1.fq', READS)
+        def file_a_2 = TestHelper.createInMemTempFile('aaa_2.fq', READS2)
+        def file_b_1 = TestHelper.createInMemTempFile('bbb_1.fq', READS)
+        def file_b_2 = TestHelper.createInMemTempFile('bbb_2.fq', READS2)
         def channel
         def result
 
         when:
-        channel = Channel.from([['sample_id',file1,file2]]).splitFastq(by:1, pe:true, file:folder)
+        channel = Channel
+                    .from([ ['aaa_id',file_a_1,file_a_2], ['bbb_id',file_b_1,file_b_2] ])
+                    .splitFastq(by:1, pe:true, file:folder)
         result = channel.val
         then:
-        result[0] == 'sample_id'
-        result[1].name == 'sample_1.1.fq'
-        result[2].name == 'sample_2.1.fq'
+        result[0] == 'aaa_id'
+        result[1].name == 'aaa_1.1.fq'
+        result[2].name == 'aaa_2.1.fq'
         result[1].text == '''
                         @SRR636272.19519409/1
                         GGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAAGAAGGTGCCACAGATCG
@@ -303,9 +307,9 @@ class SplitFastqOperatorTest extends Specification {
         when:
         result = channel.val
         then:
-        result[0] == 'sample_id'
-        result[1].name == 'sample_1.2.fq'
-        result[2].name == 'sample_2.2.fq'
+        result[0] == 'aaa_id'
+        result[1].name == 'aaa_1.2.fq'
+        result[2].name == 'aaa_2.2.fq'
         result[1].text == '''
                         @SRR636272.13995011/1
                         GCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAGATCGGAAGAGCACACGTCTGAACTCC
@@ -322,9 +326,9 @@ class SplitFastqOperatorTest extends Specification {
         when:
         result = channel.val
         then:
-        result[0] == 'sample_id'
-        result[1].name == 'sample_1.3.fq'
-        result[2].name == 'sample_2.3.fq'
+        result[0] == 'aaa_id'
+        result[1].name == 'aaa_1.3.fq'
+        result[2].name == 'aaa_2.3.fq'
         result[1].text == '''
                         @SRR636272.21107783/1
                         CGGGGAGCGCGGGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTAGGGAGCACCCCGCCGCAGGGGGACAGGCGAGATCGGAAGAGCACACGTCT
@@ -341,9 +345,9 @@ class SplitFastqOperatorTest extends Specification {
         when:
         result = channel.val
         then:
-        result[0] == 'sample_id'
-        result[1].name == 'sample_1.4.fq'
-        result[2].name == 'sample_2.4.fq'
+        result[0] == 'aaa_id'
+        result[1].name == 'aaa_1.4.fq'
+        result[2].name == 'aaa_2.4.fq'
         result[1].text == '''
                         @SRR636272.23331539/1
                         GGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAAGAAGGTGCCACAGCTGGAGGAGCTGCTGGCCGGGAGGGACTTCACCGGCGAGATCGGAAGAG
@@ -360,10 +364,51 @@ class SplitFastqOperatorTest extends Specification {
         when:
         result = channel.val
         then:
+        result[0] == 'bbb_id'
+        result[1].name == 'bbb_1.1.fq'
+        result[2].name == 'bbb_2.1.fq'
+        result[1].text == '''
+                        @SRR636272.19519409/1
+                        GGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAAGAAGGTGCCACAGATCG
+                        +
+                        CCCFFFFDHHD;FF=GGDHGGHIIIGHIIIBDGBFCAHG@E=6?CBDBB;?BB@BD8BB;BDB<>>;@?BB<9>&5<?288AAABDBBBBACBCAC?@AD?CAC?
+                        '''.stripIndent().leftTrim()
+        result[2].text == '''
+                        @SRR636272.19519409/2
+                        GGCCCGGCAGCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAAGAAGGTGCCACAGATCG
+                        +
+                        CCCFFFFDHHD;FF=GGDHGGHIIIGHIIIBDGBFCAHG@E=6?CBDBB;?BB@BD8BB;BDB<>>;@?BB<9>&5<?288AAABDBBBBACBCAC?@AD?CAC?
+                        '''.stripIndent().leftTrim()
+
+        when:
+        result = channel.val
+        then:
+        result[0] == 'bbb_id'
+        result[1].name == 'bbb_1.2.fq'
+        result[2].name == 'bbb_2.2.fq'
+
+        when:
+        result = channel.val
+        then:
+        result[0] == 'bbb_id'
+        result[1].name == 'bbb_1.3.fq'
+        result[2].name == 'bbb_2.3.fq'
+
+        when:
+        result = channel.val
+        then:
+        result[0] == 'bbb_id'
+        result[1].name == 'bbb_1.4.fq'
+        result[2].name == 'bbb_2.4.fq'
+
+        when:
+        result = channel.val
+        then:
         result == Channel.STOP
         // finally check the existence of the
-        folder.resolve('.chunks.sample_1.fq').exists()
-        folder.resolve('.chunks.sample_2.fq').exists()
-
+        folder.resolve('.chunks.aaa_1.fq').exists()
+        folder.resolve('.chunks.aaa_2.fq').exists()
+        folder.resolve('.chunks.bbb_1.fq').exists()
+        folder.resolve('.chunks.bbb_2.fq').exists()
     }
 }
