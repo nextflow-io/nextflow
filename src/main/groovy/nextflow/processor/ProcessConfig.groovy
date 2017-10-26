@@ -174,6 +174,20 @@ class ProcessConfig implements Map<String,Object> {
         throw new IllegalDirectiveException(message)
     }
 
+    Object invokeMethod(String name, Object args) {
+        /*
+         * This is need to patch #497 -- what is happening is that when in the config file
+         * is defined a directive like `memory`, `cpus`, etc in by using a closure,
+         * this closure is interpreted as method definition and it get invoked if a
+         * directive with the same name is defined in the process definition.
+         * To avoid that the offending property is removed from the map before the method
+         * is evaluated.
+         */
+        if( configProperties.get(name) instanceof Closure )
+            configProperties.remove(name)
+        super.invokeMethod(name, args)
+    }
+
     def methodMissing( String name, def args ) {
         checkName(name)
 
