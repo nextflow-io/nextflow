@@ -1,5 +1,10 @@
 // JavaScript used to power the Nextflow Report Template output.
 window.data_byprocess = {};
+
+function xround(n) {
+  return Math.round(n*10)/10;
+}
+
 $(function() {
 
   // Script block clicked
@@ -34,30 +39,30 @@ $(function() {
   var readwrite_hasdata = false;
   for(var pname in window.data_byprocess){
     if (window.data_byprocess.hasOwnProperty(pname)) {
-      var c = [];
+      var rc = [];
       var pc = [];
-      var m = [];
+      var rm = [];
       var pm = [];
-      var t = [];
+      var rt = [];
       var pt = [];
-      var d = [];
+      var rd = [];
       for (var i = 0; i < window.data_byprocess[pname].length; i ++) {
-        c[i] = parseInt(window.data_byprocess[pname][i]['%cpu']);
-        pc[i] = (parseInt(window.data_byprocess[pname][i]['%cpu']) / (parseInt(window.data_byprocess[pname][i]['cpus']) * 100)) * 100;
-        m[i] = parseInt(window.data_byprocess[pname][i]['vmem']) / 1000000000;
-        pm[i] = (parseInt(window.data_byprocess[pname][i]['vmem']) / parseInt(window.data_byprocess[pname][i]['memory'])) * 100
-        t[i] = moment.duration( parseInt(window.data_byprocess[pname][i]['duration']) ).asMinutes();
-        pt[i] =  (parseInt(window.data_byprocess[pname][i]['duration']) / parseInt(window.data_byprocess[pname][i]['time'])) * 100
-        d[i] = (parseInt(window.data_byprocess[pname][i]['read_bytes']) + parseInt(window.data_byprocess[pname][i]['write_bytes'])) / 1000000000;
-        if (d[i] > 0){ readwrite_hasdata = true; }
+        rc[i] = xround(parseInt(window.data_byprocess[pname][i]['%cpu']));
+        pc[i] = xround((parseInt(window.data_byprocess[pname][i]['%cpu']) / (parseInt(window.data_byprocess[pname][i]['cpus']) * 100)) * 100);
+        rm[i] = xround(parseInt(window.data_byprocess[pname][i]['vmem']) / 1000000000);
+        pm[i] = xround((parseInt(window.data_byprocess[pname][i]['vmem']) / parseInt(window.data_byprocess[pname][i]['memory'])) * 100)
+        rt[i] = xround(moment.duration( parseInt(window.data_byprocess[pname][i]['duration']) ).asMinutes());
+        pt[i] = xround((parseInt(window.data_byprocess[pname][i]['duration']) / parseInt(window.data_byprocess[pname][i]['time'])) * 100)
+        rd[i] = xround((parseInt(window.data_byprocess[pname][i]['read_bytes']) + parseInt(window.data_byprocess[pname][i]['write_bytes'])) / 1000000000);
+        if (rd[i] > 0){ readwrite_hasdata = true; }
       }
-      cpu_data.push({y: c, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
+      cpu_data.push({y: rc, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
       pct_cpu_used_data.push({y: pc, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
-      mem_data.push({y: m, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
+      mem_data.push({y: rm, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
       pct_mem_used_data.push({y: pm, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
-      time_data.push({y: t, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
+      time_data.push({y: rt, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
       pct_time_used_data.push({y: pt, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
-      readwrite_data.push({y: d, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
+      readwrite_data.push({y: rd, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
     }
   }
   Plotly.newPlot('pctcpuplot', pct_cpu_used_data, { title: '% Requested CPU Used', yaxis: {title: '% Allocated CPUs Used', range: [0, 100]} });
