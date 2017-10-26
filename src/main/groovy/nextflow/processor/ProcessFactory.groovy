@@ -237,9 +237,11 @@ class ProcessFactory {
         // Note: the config object is wrapped by a TaskConfigWrapper because it is needed
         // to raise a MissingPropertyException when some values are missing, thus the closure
         // will try to fallback on the owner object
-        def script = processConfig
-                .throwExceptionOnMissingProperty(true)
-                .with ( body ) as TaskBody
+        processConfig.throwExceptionOnMissingProperty(true)
+        def copy = (Closure)body.clone()
+        copy.setResolveStrategy(Closure.DELEGATE_FIRST);
+        copy.setDelegate(processConfig);
+        def script = copy.call() as TaskBody
         processConfig.throwExceptionOnMissingProperty(false)
         if ( !script )
             throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
