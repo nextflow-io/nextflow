@@ -106,8 +106,7 @@ class TaskProcessor {
      * @param indexes The list of indexes which identify the position of iterators in the input channels
      * @return The closure implementing the iteration/forwarding logic
      */
-    @CompileStatic
-    class ForwardClosure extends Closure {
+    static class ForwardClosure extends Closure {
 
         final private Integer len
 
@@ -134,16 +133,6 @@ class TaskProcessor {
             for( int i=0; i<result.size(); i++ )
                 result[i] = Object
             return result
-        }
-
-        @Override
-        public void setDelegate(final Object delegate) {
-            super.setDelegate(delegate);
-        }
-
-        @Override
-        public void setResolveStrategy(final int resolveStrategy) {
-            super.setResolveStrategy(resolveStrategy);
         }
 
         @Override
@@ -191,7 +180,6 @@ class TaskProcessor {
             throw new UnsupportedOperationException()
         }
 
-
         @Override
         public Object call() {
             throw new UnsupportedOperationException()
@@ -201,12 +189,16 @@ class TaskProcessor {
     /**
      * Adapter closure to call the {@link #invokeTask(java.lang.Object)} method
      */
-    class InvokeTaskAdapter extends Closure {
+    @CompileStatic
+    static class InvokeTaskAdapter extends Closure {
 
         private int numOfParams
 
-        InvokeTaskAdapter(int n) {
+        private TaskProcessor processor
+
+        InvokeTaskAdapter(TaskProcessor p, int n) {
             super(null, null);
+            processor = p
             numOfParams = n
         }
 
@@ -224,24 +216,14 @@ class TaskProcessor {
         }
 
         @Override
-        public void setDelegate(final Object delegate) {
-            super.setDelegate(delegate);
-        }
-
-        @Override
-        public void setResolveStrategy(final int resolveStrategy) {
-            super.setResolveStrategy(resolveStrategy);
-        }
-
-        @Override
         public Object call(final Object arguments) {
-            TaskProcessor.this.invokeTask(arguments)
+            processor.invokeTask(arguments)
             return null
         }
 
         @Override
         public Object call(final Object... args) {
-            TaskProcessor.this.invokeTask(args as List)
+            processor.invokeTask(args as List)
             return null
         }
 
@@ -249,7 +231,6 @@ class TaskProcessor {
         public Object call() {
             throw new UnsupportedOperationException()
         }
-
     }
 
     static enum RunType {
@@ -634,7 +615,7 @@ class TaskProcessor {
         config.getOutputs().setSingleton(singleton)
         def interceptor = new TaskProcessorInterceptor(opInputs, singleton)
         def params = [inputs: opInputs, maxForks: maxForks, listeners: [interceptor] ]
-        def invoke = new InvokeTaskAdapter(opInputs.size())
+        def invoke = new InvokeTaskAdapter(this, opInputs.size())
         session.allOperators << (operator = new DataflowOperator(group, params, invoke))
 
         // notify the creation of a new vertex the execution DAG
