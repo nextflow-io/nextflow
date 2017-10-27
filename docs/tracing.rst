@@ -50,6 +50,15 @@ and many other runtime metrics. You can see an example below:
 
 .. image:: images/report-tasks-min.png
 
+
+.. note:: Nextflow collect these metrics running a background process for each job in the target environment.
+  Make sure the following tools are available ``ps``, ``date``, ``sed``, ``egrep``, ``awk`` in the system where
+  the jobs are executed. Moreover some of these metrics are not reported when using a Mac OSX system. See the note
+  message about that in the `Trace report`_ below.
+
+.. warning:: A common problem when using a third party container image is that it does not ship one or more of the
+  above utilities resulting in an empty execution report.
+
 .. _trace-report:
 
 Trace report
@@ -57,9 +66,6 @@ Trace report
 
 Nextflow creates an execution tracing file that contains some useful information about each process executed in your pipeline
 script, including: submission time, start time, completion time, cpu and memory used.
-
-.. warning:: This is an incubating feature. It may change in future Nextflow releases.
-
 
 In order to create the execution trace file add the ``-with-trace`` command line option when launching the pipeline execution.
 For example::
