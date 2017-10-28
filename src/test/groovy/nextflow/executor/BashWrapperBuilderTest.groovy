@@ -2011,7 +2011,7 @@ class BashWrapperBuilderTest extends Specification {
                 function shifter_img() {
                   local cmd=\$1
                   local image=\$2
-                  shifterimg -v \$cmd \$image |  awk -F: '\$0~/status/{gsub("[\\", ]","",\$2);print \$2}'
+                  shifterimg -v \$cmd \$image |  awk -F: '\$0~/"status":/{gsub("[\\", ]","",\$2);print \$2}'
                 }
 
                 function shifter_pull() {
