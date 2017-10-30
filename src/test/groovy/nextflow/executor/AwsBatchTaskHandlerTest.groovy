@@ -10,7 +10,7 @@ import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
 import com.amazonaws.services.batch.model.RegisterJobDefinitionResult
 import com.amazonaws.services.batch.model.RetryStrategy
 import nextflow.Session
-import nextflow.exception.ProcessNotRecoverableException
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
@@ -90,12 +90,12 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         new AwsOptions(cliPath: 'bin/aws')
         then:
-        thrown(ProcessNotRecoverableException)
+        thrown(ProcessUnrecoverableException)
 
         when:
         new AwsOptions(cliPath: '/foo/aws')
         then:
-        thrown(ProcessNotRecoverableException)
+        thrown(ProcessUnrecoverableException)
     }
 
 
@@ -170,7 +170,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         handler.getJobQueue(task)
         then:
         task.getConfig() >> [:]
-        thrown(ProcessNotRecoverableException)
+        thrown(ProcessUnrecoverableException)
     }
 
     def 'should return job definition' () {

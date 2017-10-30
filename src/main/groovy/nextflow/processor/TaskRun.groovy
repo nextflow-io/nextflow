@@ -37,7 +37,7 @@ import nextflow.container.UdockerBuilder
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessTemplateException
-import nextflow.exception.ProcessNotRecoverableException
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.file.FileHolder
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
@@ -672,7 +672,7 @@ class TaskRun implements Cloneable {
             throw e
         }
         catch( Throwable e ) {
-            throw new ProcessNotRecoverableException("Process `$name` script contains error(s)", e)
+            throw new ProcessUnrecoverableException("Process `$name` script contains error(s)", e)
         }
 
     }

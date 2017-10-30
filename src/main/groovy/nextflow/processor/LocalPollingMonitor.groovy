@@ -26,7 +26,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.exception.ProcessNotRecoverableException
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 
@@ -162,7 +162,7 @@ class LocalPollingMonitor extends TaskPollingMonitor {
      * @return
      *      {@code true} if enough resources are available, {@code false} otherwise
      * @throws
-     *      ProcessNotRecoverableException When the resource request exceed the total
+     *      ProcessUnrecoverableException When the resource request exceed the total
      *      amount of resources provided by the underlying system e.g. task requires 10 cpus
      *      and the system provide 8 cpus
      *
@@ -172,11 +172,11 @@ class LocalPollingMonitor extends TaskPollingMonitor {
 
         final taskCpus = cpus(handler)
         if( taskCpus>maxCpus )
-            throw new ProcessNotRecoverableException("Process requirement exceed available CPUs -- req: $taskCpus; avail: $maxCpus")
+            throw new ProcessUnrecoverableException("Process requirement exceed available CPUs -- req: $taskCpus; avail: $maxCpus")
 
         final taskMemory = mem(handler)
         if( taskMemory>maxMemory)
-            throw new ProcessNotRecoverableException("Process requirement exceed available memory -- req: ${new MemoryUnit(taskMemory)}; avail: ${new MemoryUnit(maxMemory)}")
+            throw new ProcessUnrecoverableException("Process requirement exceed available memory -- req: ${new MemoryUnit(taskMemory)}; avail: ${new MemoryUnit(maxMemory)}")
 
         final result = super.canSubmit(handler) && taskCpus <= availCpus && taskMemory <= availMemory
         if( !result && log.isTraceEnabled( ) ) {

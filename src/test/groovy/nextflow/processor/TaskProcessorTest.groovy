@@ -30,7 +30,7 @@ import nextflow.Global
 import nextflow.ISession
 import nextflow.Session
 import nextflow.exception.ProcessException
-import nextflow.exception.ProcessNotRecoverableException
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.NopeExecutor
 import nextflow.file.FileHolder
 import nextflow.script.BaseScript
@@ -427,7 +427,7 @@ class TaskProcessorTest extends Specification {
         given:
         def task
         def proc = [:] as TaskProcessor
-        def error = Mock(ProcessNotRecoverableException)
+        def error = Mock(ProcessUnrecoverableException)
 
         when:
         task = new TaskRun()

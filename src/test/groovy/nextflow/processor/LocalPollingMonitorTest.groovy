@@ -24,7 +24,7 @@ import java.lang.management.ManagementFactory
 
 import com.sun.management.OperatingSystemMXBean
 import nextflow.Session
-import nextflow.exception.ProcessNotRecoverableException
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
 /**
@@ -176,7 +176,7 @@ class LocalPollingMonitorTest extends Specification {
         when:
         monitor.canSubmit(handler)
         then:
-        def e1 = thrown(ProcessNotRecoverableException)
+        def e1 = thrown(ProcessUnrecoverableException)
         e1.message == 'Process requirement exceed available CPUs -- req: 12; avail: 10'
 
 
@@ -204,7 +204,7 @@ class LocalPollingMonitorTest extends Specification {
         when:
         monitor.canSubmit(handler)
         then:
-        def e2 = thrown(ProcessNotRecoverableException)
+        def e2 = thrown(ProcessUnrecoverableException)
         e2.message == 'Process requirement exceed available memory -- req: 22 GB; avail: 20 GB'
 
     }

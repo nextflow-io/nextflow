@@ -27,7 +27,7 @@ import java.nio.file.Path
 
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
-import nextflow.exception.ProcessNotRecoverableException
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.StopSplitIterationException
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
@@ -257,7 +257,7 @@ class Nextflow {
      * @param message An optional error message
      */
     static void error( String message = null ) {
-        throw message ? new ProcessNotRecoverableException(message) : new ProcessNotRecoverableException()
+        throw message ? new ProcessUnrecoverableException(message) : new ProcessUnrecoverableException()
     }
 
     /**

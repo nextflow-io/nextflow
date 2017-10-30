@@ -27,7 +27,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Nextflow
 import nextflow.cloud.aws.AmazonCloudDriver
 import nextflow.exception.AbortOperationException
-import nextflow.exception.ProcessNotRecoverableException
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.extension.FilesEx
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskBean
@@ -297,7 +297,7 @@ class AwsBatchTaskHandler extends TaskHandler {
     protected String getJobQueue(TaskRun task) {
         final queue = task.config.queue?.toString()
         if( !queue )
-            throw new ProcessNotRecoverableException("Missing AWS Batch job queue -- provide it by using the process `queue` directive")
+            throw new ProcessUnrecoverableException("Missing AWS Batch job queue -- provide it by using the process `queue` directive")
 
         return queue
     }
@@ -311,7 +311,7 @@ class AwsBatchTaskHandler extends TaskHandler {
     protected String getJobDefinition(TaskRun task) {
         final container = task.getContainer()
         if( !container )
-            throw new ProcessNotRecoverableException("Invalid AWS Batch job definition -- provide a Docker image name or a Batch job definition name")
+            throw new ProcessUnrecoverableException("Invalid AWS Batch job definition -- provide a Docker image name or a Batch job definition name")
 
         if( container.startsWith('job-definition://')) {
             return container.substring(17)
@@ -723,8 +723,8 @@ class AwsOptions {
         if( !value )
             this.cliPath = null
         else {
-            if( !value.startsWith('/') ) throw new ProcessNotRecoverableException("Not a valid aws-cli tools path: $value -- it must be an absolute path")
-            if( !value.endsWith('/bin/aws')) throw new ProcessNotRecoverableException("Not a valid aws-cli tools path: $value -- it must end with the `/bin/aws` suffix")
+            if( !value.startsWith('/') ) throw new ProcessUnrecoverableException("Not a valid aws-cli tools path: $value -- it must be an absolute path")
+            if( !value.endsWith('/bin/aws')) throw new ProcessUnrecoverableException("Not a valid aws-cli tools path: $value -- it must end with the `/bin/aws` suffix")
             this.cliPath = value
         }
     }
