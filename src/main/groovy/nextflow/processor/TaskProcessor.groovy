@@ -60,7 +60,7 @@ import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
-import nextflow.exception.ProcessNotRecoverableException
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.ProcessStageException
 import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
@@ -1121,7 +1121,7 @@ class TaskProcessor {
         final errorStrategy = task.config.getErrorStrategy()
 
         // retry is not allowed when the script cannot be compiled or similar errors
-        if( error instanceof ProcessNotRecoverableException ) {
+        if( error instanceof ProcessUnrecoverableException ) {
             return !errorStrategy.soft ? errorStrategy : ErrorStrategy.TERMINATE
         }
 
@@ -1877,7 +1877,7 @@ class TaskProcessor {
         def conflicts = allNames.findAll { name, num -> num>1 }
         if( conflicts ) {
             def message = "Process `$name` is staging two or more input files with the same name -- offending files: ${conflicts.keySet().join(', ')}"
-            throw new ProcessNotRecoverableException(message)
+            throw new ProcessUnrecoverableException(message)
         }
     }
 

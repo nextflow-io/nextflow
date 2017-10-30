@@ -31,6 +31,6 @@ import groovy.transform.InheritConstructors
  */
 
 @InheritConstructors
-class ProcessNotRecoverableException extends ProcessException {
+class ProcessUnrecoverableException extends ProcessException {
 
 }
