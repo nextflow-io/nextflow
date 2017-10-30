@@ -451,23 +451,23 @@ class TaskPollingMonitor implements TaskMonitor {
         int count = 0
         def itr = pendingQueue.iterator()
         while( itr.hasNext() ) {
-            def handler = itr.next()
-            if( !canSubmit(handler))
-                continue
+            final handler = itr.next()
+            try {
+                if( !canSubmit(handler))
+                    continue
 
-            if( !session.aborted && !session.cancelled ) {
-                itr.remove(); count++   // <-- remove the task in all cases
-                try {
+                if( !session.aborted && !session.cancelled ) {
+                    itr.remove(); count++   // <-- remove the task in all cases
                     submit(handler)
                     session.notifyTaskSubmit(handler)
                 }
-                catch ( Exception e ) {
-                    handleException(handler, e)
-                    session.notifyTaskComplete(handler)
-                }
+                else
+                    break
             }
-            else
-                break
+            catch ( Exception e ) {
+                handleException(handler, e)
+                session.notifyTaskComplete(handler)
+            }
         }
 
         return count
