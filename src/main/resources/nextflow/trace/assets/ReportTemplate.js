@@ -51,8 +51,8 @@ $(function() {
         pc[i] = xround((parseInt(window.data_byprocess[pname][i]['%cpu']) / (parseInt(window.data_byprocess[pname][i]['cpus']) * 100)) * 100);
         rm[i] = xround(parseInt(window.data_byprocess[pname][i]['vmem']) / 1000000000);
         pm[i] = xround((parseInt(window.data_byprocess[pname][i]['vmem']) / parseInt(window.data_byprocess[pname][i]['memory'])) * 100)
-        rt[i] = xround(moment.duration( parseInt(window.data_byprocess[pname][i]['duration']) ).asMinutes());
-        pt[i] = xround((parseInt(window.data_byprocess[pname][i]['duration']) / parseInt(window.data_byprocess[pname][i]['time'])) * 100)
+        rt[i] = xround(moment.duration( parseInt(window.data_byprocess[pname][i]['realtime']) ).asMinutes());
+        pt[i] = xround((parseInt(window.data_byprocess[pname][i]['realtime']) / parseInt(window.data_byprocess[pname][i]['time'])) * 100)
         rd[i] = xround((parseInt(window.data_byprocess[pname][i]['read_bytes']) + parseInt(window.data_byprocess[pname][i]['write_bytes'])) / 1000000000);
         if (rd[i] > 0){ readwrite_hasdata = true; }
       }
@@ -86,7 +86,7 @@ $(function() {
   });
   $('#timeplot_tablink').on('shown.bs.tab', function (e) {
      if($('#timeplot').is(':empty')){
-       Plotly.newPlot('timeplot', time_data, { title: 'Task Durations', yaxis: {title: 'Duration (minutes)'} });
+       Plotly.newPlot('timeplot', time_data, { title: 'Task execution real-time', yaxis: {title: 'Execution time (minutes)'} });
      }
   });
 
