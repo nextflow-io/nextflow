@@ -16,9 +16,9 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         def RUN = Paths.get('/some/data/.command.run')
         def copy = new AwsBatchFileCopyStrategy(Mock(TaskBean), Mock(AwsOptions))
         expect:
-        copy.touchFile(RUN) == "touch .command.run && nxf_s3_upload .command.run s3://some/data && rm .command.run"
+        copy.touchFile(RUN) == "echo start | aws s3 cp - s3://some/data/.command.run"
         copy.copyFile("nobel_prize_results.gz",Paths.get("/some/data/nobel_prize_results.gz")) == "nxf_s3_upload nobel_prize_results.gz s3://some/data"
-        copy.exitFile(EXIT) == ".exitcode && nxf_s3_upload .exitcode s3://some/path || true"
+        copy.exitFile(EXIT) == "| aws s3 cp - s3://some/path/.exitcode || true"
         copy.getUnstageOutputFilesScript(OUTPUTS,TARGET) == "\nnxf_s3_upload 'outputs_*' s3://data/results || true\nnxf_s3_upload 'final_folder' s3://data/results || true"
         copy.stageInputFile(FILE, 'foo.txt') == 'aws s3 cp --quiet s3://some/data/nobel_prize_results.gz foo.txt'
     }

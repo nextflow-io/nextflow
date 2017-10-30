@@ -8,6 +8,7 @@ import com.amazonaws.services.batch.model.JobDefinition
 import com.amazonaws.services.batch.model.KeyValuePair
 import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
 import com.amazonaws.services.batch.model.RegisterJobDefinitionResult
+import com.amazonaws.services.batch.model.RetryStrategy
 import nextflow.Session
 import nextflow.exception.ProcessNotRecoverableException
 import nextflow.processor.TaskBean
@@ -105,7 +106,37 @@ class AwsBatchTaskHandlerTest extends Specification {
         def VAR_BAR = new KeyValuePair().withName('BAR').withValue('2')
         def task = Mock(TaskRun)
         task.getName() >> 'batch-task'
-        task.getConfig() >> new TaskConfig(memory: '8GB', cpus: 4)
+        task.getConfig() >> new TaskConfig(memory: '8GB', cpus: 4, maxRetries: 2, errorStrategy: 'retry')
+
+        def handler = Spy(AwsBatchTaskHandler)
+        when:
+        def req = handler.newSubmitRequest(task)
+        then:
+        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+        1 * handler.getJobQueue(task) >> 'queue1'
+        1 * handler.getJobDefinition(task) >> 'job-def:1'
+        1 * handler.getEnvironmentVars() >> [VAR_FOO, VAR_BAR]
+        1 * handler.wrapperFile >> Paths.get('/bucket/test/.command.run')
+        1 * handler.getLogFile() >> Paths.get('/bucket/test/.command.log')
+
+        req.getJobName() == 'batchtask'
+        req.getJobQueue() == 'queue1'
+        req.getJobDefinition() == 'job-def:1'
+        req.getContainerOverrides().getVcpus() == 4
+        req.getContainerOverrides().getMemory() == 8192
+        req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
+        req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "/bin/aws s3 cp s3://bucket/test/.command.run - | bash 2>&1 | /bin/aws s3 cp - s3://bucket/test/.command.log".toString()]
+        req.getRetryStrategy() == null  // <-- retry is managed by NF, hence this must be null
+    }
+
+    def 'should create an aws submit request with retry'() {
+
+        given:
+        def VAR_FOO = new KeyValuePair().withName('FOO').withValue('1')
+        def VAR_BAR = new KeyValuePair().withName('BAR').withValue('2')
+        def task = Mock(TaskRun)
+        task.getName() >> 'batch-task'
+        task.getConfig() >> new TaskConfig(memory: '8GB', cpus: 4, maxRetries: 2)
 
         def handler = Spy(AwsBatchTaskHandler)
         when:
@@ -120,11 +151,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getJobName() == 'batchtask'
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
-        req.getContainerOverrides().getVcpus() == 4
-        req.getContainerOverrides().getMemory() == 8192
-        req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
-        req.getContainerOverrides().getCommand() == ['bash', '-c', "/bin/aws s3 cp s3://bucket/test/.command.run - | bash 2>&1".toString()]
-
+        // no error `retry` error strategy is defined by NF, use `maxRetries` to se Batch attempts
+        req.getRetryStrategy() == new RetryStrategy().withAttempts(3)
     }
 
     def 'should return job queue'() {

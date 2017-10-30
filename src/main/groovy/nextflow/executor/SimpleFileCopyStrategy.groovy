@@ -279,7 +279,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     @Override
     String exitFile(Path file) {
-        Escape.path(file)
+        "> ${Escape.path(file)}"
     }
 
     /**

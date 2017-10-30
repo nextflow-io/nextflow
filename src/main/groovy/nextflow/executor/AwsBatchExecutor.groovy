@@ -14,6 +14,7 @@ import com.amazonaws.services.batch.model.JobDefinitionType
 import com.amazonaws.services.batch.model.KeyValuePair
 import com.amazonaws.services.batch.model.MountPoint
 import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
+import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.Volume
 import com.upplication.s3fs.S3Path
@@ -28,6 +29,7 @@ import nextflow.cloud.aws.AmazonCloudDriver
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessNotRecoverableException
 import nextflow.extension.FilesEx
+import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
@@ -272,7 +274,6 @@ class AwsBatchTaskHandler extends TaskHandler {
          * create task wrapper
          */
         final launcher = new AwsBatchScriptLauncher(bean,getAwsOptions())
-        launcher.scratch = true
         launcher.build()
 
         final req = newSubmitRequest(task)
@@ -446,7 +447,7 @@ class AwsBatchTaskHandler extends TaskHandler {
 
         // the cmd list to launch it
         def cli = awsOptions.cliPath ?: 'aws'
-        def cmd = ['bash','-c', "$cli s3 cp s3:/${getWrapperFile()} - | bash 2>&1".toString() ] as List<String>
+        def cmd = ['bash','-o','pipefail','-c', "$cli s3 cp s3:/${getWrapperFile()} - | bash 2>&1 | $cli s3 cp - s3:/${getLogFile()}".toString() ] as List<String>
 
         /*
          * create the request object
@@ -455,6 +456,13 @@ class AwsBatchTaskHandler extends TaskHandler {
         result.setJobName(normalizeJobName(task.name))
         result.setJobQueue(getJobQueue(task))
         result.setJobDefinition(getJobDefinition(task))
+
+        // NF uses `maxRetries` *only* if `retry` error strategy is specified
+        // otherwise delegates the the retry to AWS Batch
+        if( task.config.getMaxRetries() && task.config.getErrorStrategy() != ErrorStrategy.RETRY ) {
+            def retry = new RetryStrategy().withAttempts( task.config.getMaxRetries()+1 )
+            result.setRetryStrategy(retry)
+        }
 
         // set the actual command
         def container = new ContainerOverrides()
@@ -488,9 +496,12 @@ class AwsBatchTaskHandler extends TaskHandler {
     /**
      * @return The launcher script file {@link Path}
      */
-    protected Path getWrapperFile() {
-        wrapperFile
-    }
+    protected Path getWrapperFile() { wrapperFile }
+
+    /**
+     * @return The launcher log file {@link Path}
+     */
+    protected Path getLogFile() { logFile }
 
     /**
      * Remove invalid characters from a job name string
@@ -506,10 +517,13 @@ class AwsBatchTaskHandler extends TaskHandler {
 /**
  * Implements BASH launcher script for AWS Batch jobs
  */
+@CompileStatic
 class AwsBatchScriptLauncher extends BashWrapperBuilder {
 
     AwsBatchScriptLauncher( TaskBean bean, AwsOptions opts ) {
         super(bean, new AwsBatchFileCopyStrategy(bean,opts))
+        // enable the copying of output file to the S3 work dir
+        copyOutputsToWorkDir = true
         // include task script as an input to force its staging in the container work directory
         bean.inputFiles[TaskRun.CMD_SCRIPT] = bean.workDir.resolve(TaskRun.CMD_SCRIPT)
         // add the wrapper file when stats are enabled
@@ -637,7 +651,8 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String touchFile( Path file ) {
-        "touch ${file.name} && nxf_s3_upload ${file.name} s3:/${file.getParent()} && rm ${file.name}"
+        final cli = opts.cliPath ?: 'aws'
+        "echo start | $cli s3 cp - s3:/${Escape.path(file)}"
     }
 
     /**
@@ -660,7 +675,8 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      * {@inheritDoc}
      */
     String exitFile( Path path ) {
-        "${path.name} && nxf_s3_upload ${Escape.path(path.name)} s3:/${Escape.path(path.getParent())} || true"
+        final cli = opts.cliPath ?: 'aws'
+        "| $cli s3 cp - s3:/${Escape.path(path)} || true"
     }
 
     /**
