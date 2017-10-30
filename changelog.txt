@@ -1,6 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.26.0-RC2 - 30 Oct 207
+- Fixed TMP and TMPDIR variables are not passed in Singularity environment #496
+- Fixed Dynamic resources directive when defined both in a process and the config file cause an error #497
+- Added Experimental support for Shifter containers #500 #501
+- Improved AWS Batch task logging and task attempts
+- Improved Execution report showing task realtime instead of task duration on time box plot
+
 0.26.0-RC1 - 24 Oct 2017
 - Added support for AWS Batch #475
 - Added support for AWS IAM role #422
