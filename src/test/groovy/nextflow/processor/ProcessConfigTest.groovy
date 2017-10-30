@@ -48,6 +48,9 @@ class ProcessConfigTest extends Specification {
         config.shell ==  ['/bin/bash','-ue']
         config.cacheable
         config.validExitStatus == [0]
+        config.maxRetries == 0
+        config.maxErrors == -1
+        config.errorStrategy == ErrorStrategy.TERMINATE
     }
 
     def 'should set properties' () {

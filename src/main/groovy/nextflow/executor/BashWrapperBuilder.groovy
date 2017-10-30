@@ -106,7 +106,7 @@ class BashWrapperBuilder {
 
         on_exit() {
           exit_status=${ret:=$?}
-          printf $exit_status > __EXIT_FILE__
+          printf $exit_status __EXIT_FILE__
           set +u
           [[ "$COUT" ]] && rm -f "$COUT" || true
           [[ "$CERR" ]] && rm -f "$CERR" || true
@@ -237,6 +237,8 @@ class BashWrapperBuilder {
 
     private boolean runWithContainer
 
+    protected boolean copyOutputsToWorkDir
+
     BashWrapperBuilder( TaskRun task ) {
         this(new TaskBean(task))
     }
@@ -333,6 +335,8 @@ class BashWrapperBuilder {
 
         // whenever it has to change to the scratch directory
         final changeDir = getScratchDirectoryCommand()
+        if( changeDir )
+            copyOutputsToWorkDir = true
 
         /*
          * process the task script
@@ -499,16 +503,16 @@ class BashWrapperBuilder {
         /*
          * un-stage output files
          */
-        if( changeDir ) {
+        if( copyOutputsToWorkDir ) {
             wrapper << copyFileToWorkDir(TaskRun.CMD_OUTFILE) << ' || true' << ENDL
             wrapper << copyFileToWorkDir(TaskRun.CMD_ERRFILE) << ' || true' << ENDL
         }
 
         def unstagingScript
-        if( (changeDir || workDir != targetDir) && (unstagingScript=copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)) )
+        if( (copyOutputsToWorkDir || workDir != targetDir) && (unstagingScript=copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir?:workDir)) )
             wrapper << unstagingScript << ENDL
 
-        if( changeDir && statsEnabled )
+        if( copyOutputsToWorkDir && statsEnabled )
             wrapper << copyFileToWorkDir(TaskRun.CMD_TRACE) << ' || true' << ENDL
 
         if( afterScript ) {
