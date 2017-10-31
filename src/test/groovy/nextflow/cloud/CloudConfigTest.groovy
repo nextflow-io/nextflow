@@ -49,7 +49,7 @@ class CloudConfigTest extends Specification {
                 sharedStorageId: 'fs-1803efd1',
                 sharedStorageMount: '/mnt/efs',
                 spotPrice: 0.55,
-                iamProfile: 'foo-role',
+                instanceRole: 'foo-role',
                 dockerPull: 'cbcrg/image:tag'
         ]
 
@@ -68,7 +68,7 @@ class CloudConfigTest extends Specification {
             sharedStorageMount == '/mnt/efs'
             spotPrice == '0.55'
             dockerPull == ['cbcrg/image:tag']
-            iamProfile == 'foo-role'
+            instanceRole == 'foo-role'
         }
 
     }

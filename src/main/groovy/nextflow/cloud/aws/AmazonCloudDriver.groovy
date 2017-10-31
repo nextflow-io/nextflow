@@ -104,7 +104,7 @@ class AmazonCloudDriver implements CloudDriver {
             this.secretKey = credentials[1]
         }
 
-        if( !accessKey && !fetchIamProfile() )
+        if( !accessKey && !fetchIamRole() )
             throw new AbortOperationException("Missing AWS security credentials -- Provide access/security keys pair or define a IAM instance profile (suggested)")
 
         // -- get the aws default region
@@ -124,7 +124,7 @@ class AmazonCloudDriver implements CloudDriver {
 
     protected String getSecretKey() { secretKey }
 
-    protected String fetchIamProfile() {
+    protected String fetchIamRole() {
         try {
             def role = getUrl('http://169.254.169.254/latest/meta-data/iam/security-credentials/').readLines()
             if( role.size() != 1 )
@@ -253,7 +253,7 @@ class AmazonCloudDriver implements CloudDriver {
             profile += "export NXF_TEMP='${cfg.instanceStorageMount}'\n"
 
         // access/secret keys are propagated only if IAM profile is not specified
-        if( !cfg.iamProfile && accessKey && secretKey ) {
+        if( !cfg.instanceRole && accessKey && secretKey ) {
             profile += "export AWS_ACCESS_KEY_ID='$accessKey'\n"
             profile += "export AWS_SECRET_ACCESS_KEY='$secretKey'\n"
         }
@@ -401,9 +401,9 @@ class AmazonCloudDriver implements CloudDriver {
         req.instanceType = cfg.instanceType
         req.userData = getUserDataAsBase64(cfg)
         req.setBlockDeviceMappings( getBlockDeviceMappings(cfg) )
-        if( cfg.iamProfile ) {
-            def profile = new IamInstanceProfileSpecification().withName(cfg.iamProfile)
-            req.setIamInstanceProfile(profile)
+        if( cfg.instanceRole ) {
+            def role = new IamInstanceProfileSpecification().withName(cfg.instanceRole)
+            req.setIamInstanceProfile(role)
         }
 
         if( cfg.keyName )
@@ -442,9 +442,9 @@ class AmazonCloudDriver implements CloudDriver {
                 spec.withAllSecurityGroups(allGroups)
             }
 
-            if( iamProfile ) {
-                def profile = new IamInstanceProfileSpecification().withName(cfg.iamProfile)
-                spec.setIamInstanceProfile(profile)
+            if( instanceRole ) {
+                def role = new IamInstanceProfileSpecification().withName(cfg.instanceRole)
+                spec.setIamInstanceProfile(role)
             }
         }
 
@@ -675,12 +675,12 @@ class AmazonCloudDriver implements CloudDriver {
             log.debug "AWS authentication based on access/secret credentials"
         }
         else {
-            def profile = config.iamProfile
-            if( !profile )
-                config.iamProfile = profile = fetchIamProfile()
-            if( !profile )
+            def role = config.instanceRole
+            if( !role )
+                config.instanceRole = role = fetchIamRole()
+            if( !role )
                 throw new IllegalArgumentException("Missing auth credentials -- Provide the accessKey/secretKey or IAM instance profile")
-            log.debug "AWS authentication based IAM profile: `$profile`"
+            log.debug "AWS authentication based IAM instance-role: `$role`"
         }
     }
 

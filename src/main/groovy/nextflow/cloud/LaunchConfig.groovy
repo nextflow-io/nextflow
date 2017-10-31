@@ -85,12 +85,12 @@ class LaunchConfig extends CascadingConfig<String,Object> {
     }
 
     @ConfigField
-    String getIamProfile() {
-        getAttribute('iamProfile')
+    String getInstanceRole() {
+        getAttribute('instanceRole')
     }
 
-    LaunchConfig setIamProfile(String profile) {
-        setAttribute('iamProfile',profile)
+    LaunchConfig setInstanceRole(String profile) {
+        setAttribute('instanceRole',profile)
         return this
     }
 

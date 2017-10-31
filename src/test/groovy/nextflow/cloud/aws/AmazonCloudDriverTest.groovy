@@ -575,7 +575,7 @@ class AmazonCloudDriverTest extends Specification {
         (1.._) * cfg.getKeyName() >> KEY
         (1.._) * cfg.getSecurityGroups() >> SECURITY
         (1.._) * cfg.getSubnetId() >> SUBNET
-        (1.._) * cfg.getIamProfile() >> IAM_PROFILE
+        (1.._) * cfg.getInstanceRole() >> IAM_PROFILE
 
         req instanceof RunInstancesRequest
         req.getMinCount() == COUNT
@@ -617,7 +617,7 @@ class AmazonCloudDriverTest extends Specification {
         (1.._) * cfg.getKeyName() >> KEY
         (1.._) * cfg.getSecurityGroups() >> SECURITY
         (1.._) * cfg.getSubnetId() >> SUBNET
-        (1.._) * cfg.getIamProfile() >> IAM_PROFILE
+        (1.._) * cfg.getInstanceRole() >> IAM_PROFILE
         1 * cfg.getSpotPrice() >> PRICE
 
         req instanceof RequestSpotInstancesRequest
@@ -681,7 +681,7 @@ class AmazonCloudDriverTest extends Specification {
         def driver = Spy(AmazonCloudDriver, constructorArgs: [Mock(AmazonEC2Client)])
 
         when:
-        def result = driver.fetchIamProfile()
+        def result = driver.fetchIamRole()
         then:
         driver.getUrl('http://169.254.169.254/latest/meta-data/iam/security-credentials/') >> 'iam-role-here'
         result == 'iam-role-here'
@@ -702,12 +702,12 @@ class AmazonCloudDriverTest extends Specification {
         1 * driver.getSecretKey() >> 'yyy'
 
         when:
-        cfg = CloudConfig.create(cloud: [imageId:'ami-123', instanceType: 't2.xxx', iamProfile: 'foo-role'])
+        cfg = CloudConfig.create(cloud: [imageId:'ami-123', instanceType: 't2.xxx', instanceRole: 'foo-role'])
         driver.validate(cfg)
         then:
         1 * driver.describeInstanceType('t2.xxx') >> { [:] as CloudInstanceType }
         1 * driver.getAccessKey() >> null
-        0 * driver.fetchIamProfile()
+        0 * driver.fetchIamRole()
 
         when:
         cfg = CloudConfig.create(cloud: [imageId:'ami-123', instanceType: 't2.xxx'])
@@ -715,8 +715,8 @@ class AmazonCloudDriverTest extends Specification {
         then:
         1 * driver.describeInstanceType('t2.xxx') >> { [:] as CloudInstanceType }
         1 * driver.getAccessKey() >> null
-        1 * driver.fetchIamProfile() >> 'secret'
-        cfg.getIamProfile() == 'secret'
+        1 * driver.fetchIamRole() >> 'secret'
+        cfg.getInstanceRole() == 'secret'
 
         when:
         cfg = CloudConfig.create(cloud: [imageId:'ami-123', instanceType: 't2.xxx'])
@@ -724,7 +724,7 @@ class AmazonCloudDriverTest extends Specification {
         then:
         1 * driver.describeInstanceType('t2.xxx') >> { [:] as CloudInstanceType }
         1 * driver.getAccessKey() >> null
-        1 * driver.fetchIamProfile() >> null
+        1 * driver.fetchIamRole() >> null
         thrown(IllegalArgumentException)
     }
 
