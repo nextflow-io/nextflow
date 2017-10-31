@@ -255,7 +255,7 @@ Read :ref:`Cloud configuration<config-cloud>` section to learn more about advanc
 AWS Batch
 =========
 
-.. warning:: This is a beta feature. It is only available in version `0.26.0-beta1` or higher.
+.. warning:: This is a beta feature. It is only available in version `0.26.0-RC1` or higher.
 
 `AWS Batch <https://aws.amazon.com/batch/>`_ is a managed computing service that allows the execution of containerised
 workloads in the Amazon cloud infrastructure.
@@ -315,10 +315,43 @@ In the EC2 Dashboard, click the `Launch Instance` button, then choose `AWS Marke
 `ECS` in the search box. In result list select `Amazon ECS-Optimized Amazon Linux AMI`, then continue as usual to
 configure and launch the instance.
 
-.. note:: In the storage configuration make sure to specify an EBS volume large enough for the needs of your pipeline execution.
+.. note:: The selected instance has a bootstrap volume of 8GB and a second EBS volume 22G for computation which is
+  hardly enough for real world genomic workloads. Make sure to specify an amount of storage in the second volume
+  large enough for the needs of your pipeline execution.
 
 When the instance is running, SSH into it, install the AWS CLI tools as explained below or any other required tool
 that may be required.
+
+Also make sure the Docker configuration reflects the amount of storage you have specified when launching the instance
+as shown below::
+
+    $ docker info | grep -i data
+     Data file:
+     Metadata file:
+     Data Space Used: 500.2 MB
+     Data Space Total: 1.061 TB
+     Data Space Available: 1.06 TB
+     Metadata Space Used: 733.2 kB
+     Metadata Space Total: 1.074 GB
+     Metadata Space Available: 1.073 GB
+
+The above example shows the Docker data configuration for a 1000GB EBS data volume. See the `ECS Storage documentation <http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-ami-storage-config.html>`_
+for more details.
+
+.. warning:: Independently the amount of available storage, the maximum storage size of a single Docker container is,
+  by default, 10GB. See `dm.basesize <https://docs.docker.com/engine/reference/commandline/dockerd/#dmbasesize>`_ for
+  more details.
+
+You can verify the current setting by using this command::
+
+     $ docker info | grep -i base
+       Base Device Size: 10.74 GB
+
+If your pipeline needs more storage for a single task execution, you will need to specify the ``dm.basesize`` setting
+with a proper value in the ``/etc/sysconfig/docker-storage`` configuration file.
+See `here <https://forums.aws.amazon.com/message.jspa?messageID=811761#811761>`_
+and `here <https://www.projectatomic.io/blog/2016/03/daemon_option_basedevicesize/>`_ for details.
+
 
 Once done that, create a new AMI by using the *Create Image* option in the EC2 Dashboard or the AWS command line tool.
 
@@ -336,12 +369,17 @@ The following snippet shows how to install AWS CLI with Miniconda::
     sudo yum install -y wget
     wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
     bash Miniconda3-latest-Linux-x86_64.sh -b -f -p $HOME/miniconda
-    $HOME/miniconda/bin/conda install -c conda-forge awscli
+    rm Miniconda3-latest-Linux-x86_64.sh
+    $HOME/miniconda/bin/conda install -c conda-forge -y awscli
+
+When complete verifies that the AWS cli package works correctly::
+
+    $ ./miniconda/bin/aws --version
+    aws-cli/1.11.120 Python/3.6.3 Linux/4.9.43-17.39.amzn1.x86_64 botocore/1.5.83
 
 
-
-.. note:: The ``aws`` tool will be placed in a directory named ``bin`` in the main
-  installation folder. Modifying this directory structure will cause the tool to not work properly.
+.. note:: The ``aws`` tool will be placed in a directory named ``bin`` in the main installation folder.
+  Modifying this directory structure, after the installation, will cause the tool to not work properly.
 
 
 By default Nextflow will assume the AWS CLI tool is directly available in the container. To use an installation
