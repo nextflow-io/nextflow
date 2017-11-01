@@ -337,7 +337,7 @@ class AwsBatchTaskHandler extends TaskHandler {
                 return jobDefinitions[container]
 
             def req = makeJobDefRequest(container)
-            def name = findJobDef(req.jobDefinitionName, req.parameters?.nxf_jobid)
+            def name = findJobDef(req.jobDefinitionName, req.parameters?.'nf-token')
             if( name ) {
                 log.debug "[AWS BATCH] Found job definition name=$name; container=$container"
             }
@@ -390,7 +390,7 @@ class AwsBatchTaskHandler extends TaskHandler {
 
         // create a job marker uuid
         def uuid = CacheHelper.hasher([name, image, awscli]).hash().toString()
-        result.setParameters([nxf_jobid:uuid])
+        result.setParameters(['nf-token':uuid])
 
         return result
     }
@@ -410,7 +410,7 @@ class AwsBatchTaskHandler extends TaskHandler {
         if( jobs.size()==0 )
             return null
 
-        def job = jobs.find { JobDefinition it -> it.status == 'ACTIVE' && it.parameters?.nxf_jobid == jobId  }
+        def job = jobs.find { JobDefinition it -> it.status == 'ACTIVE' && it.parameters?.'nf-token' == jobId  }
         return job ? "$name:$job.revision" : null
     }
 

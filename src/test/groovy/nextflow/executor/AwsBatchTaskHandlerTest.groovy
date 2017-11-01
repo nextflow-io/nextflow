@@ -244,7 +244,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * handler.makeJobDefRequest(IMAGE) >> req
         1 * req.getJobDefinitionName() >> JOB_NAME
-        2 * req.getParameters() >> [ nxf_jobid: JOB_ID ]
+        2 * req.getParameters() >> [ 'nf-token': JOB_ID ]
         1 * handler.findJobDef(JOB_NAME, JOB_ID) >> null
         1 * handler.createJobDef(req) >> null
 
@@ -284,7 +284,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * client.describeJobDefinitions(req) >> res
         1 * res.getJobDefinitions() >> [job]
         1 * job.getStatus() >> 'ACTIVE'
-        2 * job.getParameters() >> [nxf_jobid: JOB_ID]
+        2 * job.getParameters() >> ['nf-token': JOB_ID]
         1 * job.getRevision() >> 3
         result == "$JOB_NAME:3"
 
@@ -343,7 +343,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getAwsOptions() >> new AwsOptions()
         result.jobDefinitionName == JOB_NAME
         result.type == 'container'
-        result.parameters.nxf_jobid == 'fdb5ef295f566138a43252b2ea272282'
+        result.parameters.'nf-token' == 'fdb5ef295f566138a43252b2ea272282'
         !result.containerProperties.mountPoints
 
         when:
@@ -353,7 +353,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getAwsOptions() >> new AwsOptions(cliPath: '/home/conda/bin/aws')
         result.jobDefinitionName == JOB_NAME
         result.type == 'container'
-        result.parameters.nxf_jobid == '9c56fd073d32e0c29f51f12afdfe4750'
+        result.parameters.'nf-token' == '9c56fd073d32e0c29f51f12afdfe4750'
         result.containerProperties.mountPoints[0].sourceVolume == 'aws-cli'
         result.containerProperties.mountPoints[0].containerPath == '/home/conda'
         result.containerProperties.mountPoints[0].readOnly
