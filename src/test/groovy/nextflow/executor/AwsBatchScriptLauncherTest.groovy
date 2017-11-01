@@ -85,6 +85,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                   set +u
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
+                  rm -rf \$NXF_SCRATCH || true
                   exit \$exit_status
                 }
 
@@ -96,7 +97,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
-                NXF_SCRATCH=''
+                NXF_SCRATCH="\$(set +u; nxf_mktemp \$TMPDIR)"
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
 
                 # aws helper
@@ -159,6 +160,7 @@ class AwsBatchScriptLauncherTest extends Specification {
         def bash = new AwsBatchScriptLauncher([
                 name: 'Hello 1',
                 workDir: folder,
+                targetDir: folder,
                 statsEnabled: true,
                 outputFiles: ['foo.txt', 'bar.fastq'],
                 script: 'echo Hello world!',
@@ -222,6 +224,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                   set +u
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
+                  rm -rf \$NXF_SCRATCH || true
                   exit \$exit_status
                 }
 
@@ -233,7 +236,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                 trap on_exit EXIT
                 trap on_term TERM INT USR1 USR2
 
-                NXF_SCRATCH=''
+                NXF_SCRATCH="\$(set +u; nxf_mktemp \$TMPDIR)"
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
 
                 # aws helper
