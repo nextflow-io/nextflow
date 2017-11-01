@@ -237,8 +237,6 @@ class BashWrapperBuilder {
 
     private boolean runWithContainer
 
-    protected boolean copyOutputsToWorkDir
-
     BashWrapperBuilder( TaskRun task ) {
         this(new TaskBean(task))
     }
@@ -335,8 +333,6 @@ class BashWrapperBuilder {
 
         // whenever it has to change to the scratch directory
         final changeDir = getScratchDirectoryCommand()
-        if( changeDir )
-            copyOutputsToWorkDir = true
 
         /*
          * process the task script
@@ -503,16 +499,16 @@ class BashWrapperBuilder {
         /*
          * un-stage output files
          */
-        if( copyOutputsToWorkDir ) {
+        if( changeDir ) {
             wrapper << copyFileToWorkDir(TaskRun.CMD_OUTFILE) << ' || true' << ENDL
             wrapper << copyFileToWorkDir(TaskRun.CMD_ERRFILE) << ' || true' << ENDL
         }
 
         def unstagingScript
-        if( (copyOutputsToWorkDir || workDir != targetDir) && (unstagingScript=copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir?:workDir)) )
+        if( (changeDir || workDir != targetDir) && (unstagingScript=copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)) )
             wrapper << unstagingScript << ENDL
 
-        if( copyOutputsToWorkDir && statsEnabled )
+        if( changeDir && statsEnabled )
             wrapper << copyFileToWorkDir(TaskRun.CMD_TRACE) << ' || true' << ENDL
 
         if( afterScript ) {
