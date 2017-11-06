@@ -165,6 +165,7 @@ class CloudConfig extends LaunchConfig {
             getAttribute('terminateWhenIdle') as boolean
         }
 
+        @Deprecated
         @ConfigField
         String getTerminationPolicy() {
             getAttribute('terminationPolicy')
