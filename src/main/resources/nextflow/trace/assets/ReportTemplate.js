@@ -92,77 +92,112 @@ $(function() {
 
   // Build the trace table
   function make_duration(ms){
+    if($('#nf-table-humanreadable').val() == 'false'){
+      return ms;
+    }
     if (ms == '-' || ms == 0){
       return ms;
     }
     return moment.duration( parseInt(ms) ).asMinutes().toFixed(2);
   }
   function make_date(ms){
+    if($('#nf-table-humanreadable').val() == 'false'){
+      return ms;
+    }
     if (ms == '-' || ms == 0){
       return ms;
     }
     return moment( parseInt(ms) ).format();
   }
-  for(i=0; i<window.data['trace'].length; i++){
-    // Use a nice label for the status
-    var status = window.data['trace'][i]['status'];
-    if(status == 'COMPLETED'){ status = '<span class="badge badge-success">COMPLETED</span>'; }
-    if(status == 'CACHED'){ status = '<span class="badge badge-secondary">CACHED</span>'; }
-    if(status == 'ABORTED'){ status = '<span class="badge badge-danger">ABORTED</span>'; }
-    if(status == 'FAILED'){ status = '<span class="badge badge-danger">FAILED</span>'; }
-    // Trim whitespace properly from the script
-    var script = '';
-    var lines = window.data['trace'][i]['script'].split("\n");
-    var ws_re = /^(\s+)/g;
-    var flws_match = ws_re.exec(lines[1]);
-    if(flws_match == null){
-      script = window.data['trace'][i]['script'];
-    } else {
-      for(var j=0; j<lines.length; j++){
-        script += lines[j].replace(new RegExp('^'+flws_match[1]), '').replace(/\s+$/,'') + "\n";
-      }
+  function make_memory(bytes){
+    if($('#nf-table-humanreadable').val() == 'false'){
+      return bytes;
     }
-    $('#tasks_table tbody').append('<tr>'+
-      '<td>' + window.data['trace'][i]['task_id'] + '</td>'+
-      '<td>' + window.data['trace'][i]['process'] + '</td>'+
-      '<td>' + window.data['trace'][i]['tag'] + '</td>'+
-      '<td>' + status + '</td>'+
-      '<td><code>' + window.data['trace'][i]['hash'] + '</code></td>'+
-      '<td>' + window.data['trace'][i]['cpus'] + '</td>'+
-      '<td>' + window.data['trace'][i]['%cpu'] + '</td>'+
-      '<td>' + window.data['trace'][i]['memory'] + '</td>'+
-      '<td>' + window.data['trace'][i]['%mem'] + '</td>'+
-      '<td>' + window.data['trace'][i]['vmem'] + '</td>'+
-      '<td>' + window.data['trace'][i]['rss'] + '</td>'+
-      '<td>' + window.data['trace'][i]['peak_vmem'] + '</td>'+
-      '<td>' + window.data['trace'][i]['peak_rss'] + '</td>'+
-      '<td>' + make_duration(window.data['trace'][i]['time']) + '</td>'+
-      '<td>' + make_duration(window.data['trace'][i]['duration']) + '</td>'+
-      '<td>' + make_duration(window.data['trace'][i]['realtime']) + '</td>'+
-      '<td><pre class="script_block short"><code>' + script.trim() + '</code></pre></td>'+
-      '<td>' + window.data['trace'][i]['exit'] + '</td>'+
-      '<td>' + make_date(window.data['trace'][i]['submit']) + '</td>'+
-      '<td>' + make_date(window.data['trace'][i]['start']) + '</td>'+
-      '<td>' + make_date(window.data['trace'][i]['complete']) + '</td>'+
-      '<td>' + window.data['trace'][i]['rchar'] + '</td>'+
-      '<td>' + window.data['trace'][i]['wchar'] + '</td>'+
-      '<td>' + window.data['trace'][i]['syscr'] + '</td>'+
-      '<td>' + window.data['trace'][i]['syscw'] + '</td>'+
-      '<td>' + window.data['trace'][i]['read_bytes'] + '</td>'+
-      '<td>' + window.data['trace'][i]['write_bytes'] + '</td>'+
-      '<td>' + window.data['trace'][i]['native_id'] + '</td>'+
-      '<td>' + window.data['trace'][i]['name'] + '</td>'+
-      '<td>' + window.data['trace'][i]['module'] + '</td>'+
-      '<td>' + window.data['trace'][i]['container'] + '</td>'+
-      '<td>' + window.data['trace'][i]['disk'] + '</td>'+
-      '<td>' + window.data['trace'][i]['attempt'] + '</td>'+
-      '<td><samp>' + window.data['trace'][i]['scratch'] + '</samp></td>'+
-      '<td><samp>' + window.data['trace'][i]['workdir'] + '</samp></td>'+
-    +'</tr>');
+    if (bytes == '-' || ms == 0){
+      return bytes;
+    }
+    // https://stackoverflow.com/a/14919494
+    var thresh = 1000;
+    if(Math.abs(bytes) < thresh) {
+      return bytes + ' B';
+    }
+    var units = ['kB','MB','GB','TB','PB','EB','ZB','YB'];
+    var u = -1;
+    do {
+        bytes /= thresh;
+        ++u;
+    } while(Math.abs(bytes) >= thresh && u < units.length - 1);
+    return bytes.toFixed(1)+' '+units[u];
   }
-  $('#tasks_table').removeAttr('width').DataTable({
-    "lengthMenu": [[25, 50, 100, -1], [25, 50, 100, "All"]],
-    "scrollX": true
+  function make_tasks_table(){
+    // reset
+    $('#tasks_table tbody').html('');
+    for(i=0; i<window.data['trace'].length; i++){
+      // Use a nice label for the status
+      var status = window.data['trace'][i]['status'];
+      if(status == 'COMPLETED'){ status = '<span class="badge badge-success">COMPLETED</span>'; }
+      if(status == 'CACHED'){ status = '<span class="badge badge-secondary">CACHED</span>'; }
+      if(status == 'ABORTED'){ status = '<span class="badge badge-danger">ABORTED</span>'; }
+      if(status == 'FAILED'){ status = '<span class="badge badge-danger">FAILED</span>'; }
+      // Trim whitespace properly from the script
+      var script = '';
+      var lines = window.data['trace'][i]['script'].split("\n");
+      var ws_re = /^(\s+)/g;
+      var flws_match = ws_re.exec(lines[1]);
+      if(flws_match == null){
+        script = window.data['trace'][i]['script'];
+      } else {
+        for(var j=0; j<lines.length; j++){
+          script += lines[j].replace(new RegExp('^'+flws_match[1]), '').replace(/\s+$/,'') + "\n";
+        }
+      }
+      $('#tasks_table tbody').append('<tr>'+
+        '<td>' + window.data['trace'][i]['task_id'] + '</td>'+
+        '<td>' + window.data['trace'][i]['process'] + '</td>'+
+        '<td>' + window.data['trace'][i]['tag'] + '</td>'+
+        '<td>' + status + '</td>'+
+        '<td><code>' + window.data['trace'][i]['hash'] + '</code></td>'+
+        '<td>' + window.data['trace'][i]['cpus'] + '</td>'+
+        '<td>' + window.data['trace'][i]['%cpu'] + '</td>'+
+        '<td>' + make_memory(window.data['trace'][i]['memory']) + '</td>'+
+        '<td>' + window.data['trace'][i]['%mem'] + '</td>'+
+        '<td>' + make_memory(window.data['trace'][i]['vmem']) + '</td>'+
+        '<td>' + make_memory(window.data['trace'][i]['rss']) + '</td>'+
+        '<td>' + make_memory(window.data['trace'][i]['peak_vmem']) + '</td>'+
+        '<td>' + make_memory(window.data['trace'][i]['peak_rss']) + '</td>'+
+        '<td>' + make_duration(window.data['trace'][i]['time']) + '</td>'+
+        '<td>' + make_duration(window.data['trace'][i]['duration']) + '</td>'+
+        '<td>' + make_duration(window.data['trace'][i]['realtime']) + '</td>'+
+        '<td><pre class="script_block short"><code>' + script.trim() + '</code></pre></td>'+
+        '<td>' + window.data['trace'][i]['exit'] + '</td>'+
+        '<td>' + make_date(window.data['trace'][i]['submit']) + '</td>'+
+        '<td>' + make_date(window.data['trace'][i]['start']) + '</td>'+
+        '<td>' + make_date(window.data['trace'][i]['complete']) + '</td>'+
+        '<td>' + make_memory(window.data['trace'][i]['rchar']) + '</td>'+
+        '<td>' + make_memory(window.data['trace'][i]['wchar']) + '</td>'+
+        '<td>' + make_memory(window.data['trace'][i]['syscr']) + '</td>'+
+        '<td>' + make_memory(window.data['trace'][i]['syscw']) + '</td>'+
+        '<td>' + make_memory(window.data['trace'][i]['read_bytes']) + '</td>'+
+        '<td>' + make_memory(window.data['trace'][i]['write_bytes']) + '</td>'+
+        '<td>' + window.data['trace'][i]['native_id'] + '</td>'+
+        '<td>' + window.data['trace'][i]['name'] + '</td>'+
+        '<td>' + window.data['trace'][i]['module'] + '</td>'+
+        '<td>' + window.data['trace'][i]['container'] + '</td>'+
+        '<td>' + window.data['trace'][i]['disk'] + '</td>'+
+        '<td>' + window.data['trace'][i]['attempt'] + '</td>'+
+        '<td><samp>' + window.data['trace'][i]['scratch'] + '</samp></td>'+
+        '<td><samp>' + window.data['trace'][i]['workdir'] + '</samp></td>'+
+      +'</tr>');
+    }
+    $('#tasks_table').removeAttr('width').DataTable({
+      "lengthMenu": [[25, 50, 100, -1], [25, 50, 100, "All"]],
+      "scrollX": true
+    });
+  }
+
+  // Dropdown changed about raw / human readable values in table
+  $('#nf-table-humanreadable').change(function(){
+    make_tasks_table();
   });
 
 });
