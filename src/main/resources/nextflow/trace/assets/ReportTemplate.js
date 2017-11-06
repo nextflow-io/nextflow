@@ -36,6 +36,7 @@ $(function() {
   var time_data = [];
   var pct_time_used_data = [];
   var readwrite_data = [];
+  var time_alloc_hasdata = false;
   var readwrite_hasdata = false;
   for(var pname in window.data_byprocess){
     if (window.data_byprocess.hasOwnProperty(pname)) {
@@ -54,6 +55,7 @@ $(function() {
         rt[i] = xround(moment.duration( parseInt(window.data_byprocess[pname][i]['realtime']) ).asMinutes());
         pt[i] = xround((parseInt(window.data_byprocess[pname][i]['realtime']) / parseInt(window.data_byprocess[pname][i]['time'])) * 100)
         rd[i] = xround((parseInt(window.data_byprocess[pname][i]['read_bytes']) + parseInt(window.data_byprocess[pname][i]['write_bytes'])) / 1000000000);
+        if (parseInt(window.data_byprocess[pname][i]['time']) > 0){ time_alloc_hasdata = true; }
         if (rd[i] > 0){ readwrite_hasdata = true; }
       }
       cpu_data.push({y: rc, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
@@ -67,7 +69,13 @@ $(function() {
   }
   Plotly.newPlot('pctcpuplot', pct_cpu_used_data, { title: '% Requested CPU Used', yaxis: {title: '% Allocated CPUs Used', range: [0, 100]} });
   Plotly.newPlot('pctmemplot', pct_mem_used_data, { title: '% Requested Memory Used', yaxis: {title: '% Allocated Memory Used', range: [0, 100]} });
-  Plotly.newPlot('pcttimeplot', pct_time_used_data, { title: '% Requested Time Used', yaxis: {title: '% Allocated Time Used', range: [0, 100]} });
+  if(time_alloc_hasdata){
+    Plotly.newPlot('pcttimeplot', pct_time_used_data, { title: '% Requested Time Used', yaxis: {title: '% Allocated Time Used', range: [0, 100]} });
+  } else {
+    $('#timeplot_tabs, #timeplot_tabcontent').remove();
+    $('#timeplot_header').after('<div id="timeplot"></div>');
+    Plotly.newPlot('timeplot', time_data, { title: 'Task execution real-time', yaxis: {title: 'Execution time (minutes)'} });
+  }
   if(readwrite_hasdata){
     Plotly.newPlot('readwriteplot', readwrite_data, { title: 'Disk Read+Write', yaxis: {title: 'Read bytes + write (gb)'} });
   } else {
