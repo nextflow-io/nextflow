@@ -113,7 +113,7 @@ $(function() {
     if($('#nf-table-humanreadable').val() == 'false'){
       return bytes;
     }
-    if (bytes == '-' || ms == 0){
+    if (bytes == '-' || bytes == 0){
       return bytes;
     }
     // https://stackoverflow.com/a/14919494
@@ -131,7 +131,11 @@ $(function() {
   }
   function make_tasks_table(){
     // reset
+    if ( $.fn.dataTable.isDataTable( '#tasks_table' ) ) {
+      $('#tasks_table').DataTable().destroy();
+    }
     $('#tasks_table tbody').html('');
+    // Add rows
     for(i=0; i<window.data['trace'].length; i++){
       // Use a nice label for the status
       var status = window.data['trace'][i]['status'];
@@ -199,5 +203,7 @@ $(function() {
   $('#nf-table-humanreadable').change(function(){
     make_tasks_table();
   });
+  // Make the table on page load
+  make_tasks_table();
 
 });
