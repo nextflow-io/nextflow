@@ -1071,63 +1071,43 @@ The combining operators are:
 into
 -------
 
-The ``into`` operator connects a source channel to one or more target channels in such a way the values emitted by
-the source channel are copied to the target channel(s). For example::
+The ``into`` operator connects a source channel to two or more target channels in such a way the values emitted by
+the source channel are copied to the target channels. For example::
 
-    target = Channel.create()
-    target.subscribe { println it }
-	
-    Channel
-        .from( 'a', 'b', 'c', 'd' )     
-        .into( target )
-      
-::
-  
-    a
-    b
-    c
-    d
+   Channel
+        .from( 'a', 'b', 'c' )
+        .into{ foo; bar }
 
-
-.. note:: The target channel specified as a parameter to the ``into`` operator must have been declared previously.
-
-A second version of the ``into`` operator takes a :ref:`closure <script-closure>` as a parameter which declares one or more
-target channels to which the source one is connected. For example::
-
-    Channel
-        .from( 'a', 'b', 'c', 'd' )
-        .into { foo; bar }
-
-The advantage of using this syntax is that the ``into`` operator implicitly creates the target channel(s) as needed
-and you won't need to create it/them as in the previous example.
-
-
-Finally, a third version of the ``into`` operator takes an integer `n` as an argument and returns
-a list of `n` channels, each of which emits a copy of the items that were emitted by the
-source channel. For example::
-
-
-    (foo, bar) = Channel.from( 'a','b','c').into(2)
-    foo.subscribe { println "Channel 1 emit: " + it }
-    bar.subscribe { println "Channel 2 emit: " + it }
+    foo.println{ "Foo emit: " + it }
+    bar.println{ "Bar emit: " + it }
 
 ::
 
     Foo emit: a
     Foo emit: b
     Foo emit: c
-
     Bar emit: a
     Bar emit: b
     Bar emit: c
+
+.. note:: Note the use in this example of curly brackets and the ``;`` as channel names separator. This is needed
+  because the actual parameter of ``into`` is a :ref:`closure <script-closure>` which defines the target channels
+  to which the source one is connected.
+
+A second version of the ``into`` operator takes an integer `n` as an argument and returns
+a list of `n` channels, each of which emits a copy of the items that were emitted by the
+source channel. For example::
+
+
+    (foo, bar) = Channel.from( 'a','b','c').into(2)
+    foo.println{ "Foo emit: " + it }
+    bar.println{ "Bar emit: " + it }
 
 
 .. note:: The above example takes advantage of the :ref:`multiple assignment <script-multiple-assignment>` syntax
   in order to assign two variables at once using the list of channels returned by the ``into`` operator.
 
-
-
-See also `tap`_, `separate`_ and `route`_ operators.
+See also `tap`_ and `separate`_ operators.
 
 
 tap

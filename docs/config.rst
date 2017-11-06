@@ -432,6 +432,7 @@ Name                        Description
 bootStorageSize             Boot storage volume size e.g. ``10 GB``.
 imageId                     Identifier of the virtual machine(s) to launch e.g. ``ami-43f49030``.
 instanceRole                IAM role granting required permissions and authorizations in the launched instances.
+                            When specifying an IAM role no access/security keys are installed in the cluster deployed in the cloud.
 instanceType                Type of the virtual machine(s) to launch e.g. ``m4.xlarge``.
 instanceStorageMount        Instance ephemeral storage mount path e.g. ``/mnt/scratch``.
 instanceStorageDevice       Instance ephemeral storage device name e.g. ``/dev/xvdc``.

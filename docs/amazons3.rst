@@ -61,6 +61,7 @@ Nextflow looks for AWS credentials in the following order:
     #. the environment variables ``AWS_ACCESS_KEY`` and ``AWS_SECRET_KEY``
     #. the `default` profile in the AWS credentials file located at ``~/.aws/credentials``
     #. the `default` profile in the AWS client configuration file located at ``~/.aws/config``
+    #. the temporary AWS credentials provided by an IAM instance role. See `IAM Roles <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html>`_ documentation for details.
 
 
 More information regarding `AWS Security Credentials <http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html>`_
