@@ -1,7 +1,17 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-0.26.0-RC2 - 30 Oct 207
+0.26.0 8 Nov 2017
+- Fixed file method does not interpret correctly S3 path with globs #509
+- Fixed Execution hangs when the amount of requested resources exceed the available ones #502
+- Minor change in the execution report #507 #508 
+- Make AWS clustering compliant with billing by seconds
+- Refactored `nf-token` AWS job definition parameter #475
+- Run Batch task in a scratch directory to avoid undefined execution folder #475
+- Renamed `iamProfile` to `instanceRole` #422
+- Renamed ProcessNotRecoverableException to ProcessUnrecoverableException
+
+0.26.0-RC2 - 30 Oct 2107
 - Fixed TMP and TMPDIR variables are not passed in Singularity environment #496
 - Fixed Dynamic resources directive when defined both in a process and the config file cause an error #497
 - Added Experimental support for Shifter containers #500 #501
