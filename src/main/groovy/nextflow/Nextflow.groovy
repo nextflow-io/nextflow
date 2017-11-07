@@ -136,19 +136,16 @@ class Nextflow {
      * @param path A file path eventually including a glob pattern e.g. /some/path/file*.txt
      * @return An instance of {@link Path} when a single file is matched or a list of {@link Path}s
      */
-    static file( Map options = null, def path ) {
-        assert path
+    static file( Map options = null, def filePattern ) {
 
-        if( path == null )
+        if( filePattern == null )
             return null
 
+        def path = filePattern as Path
         def glob = options?.containsKey('glob') ? options.glob as boolean : true
         if( !glob ) {
-            return ( path instanceof Path
-                    ? path.complete()
-                    : FileHelper.asPath(path.toString()).complete())
+            return path.complete()
         }
-
 
         // if it isn't a glob pattern simply return it a normalized absolute Path object
         def splitter = FilePatternSplitter.glob().parse(path.toString())
@@ -162,13 +159,8 @@ class Nextflow {
             }
         }
 
-        FileSystem fs = null
-        if( path instanceof Path ) {
-            fs = path.getFileSystem()
-        }
-
         // revolve the glob pattern returning all matches
-        return fileNamePattern(splitter, options, fs)
+        return fileNamePattern(splitter, options, path.getFileSystem())
     }
 
     static files( Map options=null, def path ) {
