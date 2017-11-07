@@ -270,6 +270,13 @@
     <p>This table shows information about each task in the workflow. Use the search box on the right
       to filter rows for specific values. Clicking headers will sort the table by that value and
       scrolling side to side will reveal more columns.</p>
+    <form class="form-inline">
+      <label class="mr-sm-2" for="nf-table-humanreadable">Values shown as:</label>
+      <select class="custom-select mb-2 mr-sm-2 mb-sm-0" id="nf-table-humanreadable">
+        <option value="true">Human readable</option>
+        <option value="false">Raw values</option>
+      </select>
+    </form>
   </div>
   <div class="container-fluid">
     <table class="table small table-striped" id="tasks_table">
