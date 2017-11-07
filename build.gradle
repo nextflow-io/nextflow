@@ -415,12 +415,14 @@ task packAll(type: Jar) {
     doLast {
         file(releaseDir).mkdir()
         // cleanup
+        def source = file("$buildDir/libs/nextflow-${version}-all.jar")
         def target = file("$releaseDir/nextflow-${version}-all"); target.delete()
         // append the big jar
         target.withOutputStream {
             it << file('nextflow').text.replaceAll(/NXF_PACK\=.*/, 'NXF_PACK=all')
-            it << new FileInputStream(file("$buildDir/libs/nextflow-${version}-all.jar"))
+            it << new FileInputStream(source)
         }
+        source.delete()
         // done
         println "+ Nextflow package `ALL` copied to: $releaseDir\n"
     }
@@ -431,7 +433,7 @@ task packAll(type: Jar) {
  * Compile and pack all packages
  */
 task pack( dependsOn: [packOne, packAll]) {
-
+    "rm $buildDir/libs/*".execute()
 }
 
 
