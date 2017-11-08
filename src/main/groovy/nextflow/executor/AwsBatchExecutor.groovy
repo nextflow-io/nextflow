@@ -198,7 +198,8 @@ class AwsBatchTaskHandler extends TaskHandler {
                 cliPath: executor.session.getExecConfigProp(name,'awscli',null) as String,
                 storageClass: executor.session.config.navigate('aws.client.uploadStorageClass') as String,
                 storageEncryption: executor.session.config.navigate('aws.client.storageEncryption') as String,
-                remoteBinDir: executor.remoteBinDir as String
+                remoteBinDir: executor.remoteBinDir as String,
+                region: executor.session.config.navigate('aws.region') as String
             )
 
     }
@@ -605,6 +606,9 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
             result << "chmod +x \$PWD/nextflow-bin/*\n"
             result << "export PATH=\$PWD/nextflow-bin:\$PATH\n"
         }
+        if (opts.region) {
+            result << "export AWS_DEFAULT_REGION=${opts.region}"
+        }
         result << TaskProcessor.bashEnvironmentScript(copy)
 
         return result.size() ? "# process environment\n" + result.toString() + '\n' : null
@@ -704,6 +708,8 @@ class AwsOptions {
     String storageEncryption
 
     String remoteBinDir
+
+    String region
 
     void setStorageClass(String value) {
         if( value in [null, 'STANDARD', 'REDUCED_REDUNDANCY'])
