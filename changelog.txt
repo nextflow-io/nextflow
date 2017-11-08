@@ -1,7 +1,7 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-0.26.0 8 Nov 2017
+0.26.0 - 8 Nov 2017
 - Fixed file method does not interpret correctly S3 path with globs #509
 - Fixed Execution hangs when the amount of requested resources exceed the available ones #502
 - Minor change in the execution report #507 #508 
