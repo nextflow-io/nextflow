@@ -1876,7 +1876,8 @@ class TaskProcessor {
         // check conflicting file names
         def conflicts = allNames.findAll { name, num -> num>1 }
         if( conflicts ) {
-            def message = "Process `$name` is staging two or more input files with the same name -- offending files: ${conflicts.keySet().join(', ')}"
+            log.debug("Process $name > collision check staing file names: $allNames")
+            def message = "Process `$name` input file name collision -- There are multiple input files for each of the following file names: ${conflicts.keySet().join(', ')}"
             throw new ProcessUnrecoverableException(message)
         }
     }
