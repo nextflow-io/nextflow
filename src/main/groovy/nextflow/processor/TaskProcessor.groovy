@@ -1952,7 +1952,7 @@ class TaskProcessor {
         def buffer = new StringBuilder()
         buffer.append("[${task.name}] cache hash: ${hash}; mode: $mode; entries: \n")
         for( Object item : entries ) {
-            buffer.append( "  ${CacheHelper.hasher(item, mode).hash()} [${item?.class?.name}] $item \n")
+            buffer.append( "  ${CacheHelper.hasher(item, mode).hash()} [${item?.getClass()?.getName()}] $item \n")
         }
 
         log.info(buffer.toString())
