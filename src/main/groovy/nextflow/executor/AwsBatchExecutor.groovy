@@ -607,7 +607,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
             result << "export PATH=\$PWD/nextflow-bin:\$PATH\n"
         }
         if (opts.region) {
-            result << "export AWS_DEFAULT_REGION=${opts.region}"
+            result << "export AWS_DEFAULT_REGION=${opts.region}\n"
         }
         result << TaskProcessor.bashEnvironmentScript(copy)
 
