@@ -128,6 +128,22 @@ class AwsBatchFileCopyStrategyTest extends Specification {
 
             '''.stripIndent().leftTrim()
 
+        when:
+        script = copy.getEnvScript()
+        then:
+        opts.getCliPath() >> '/conda/bin/aws'
+        opts.getRemoteBinDir() >> '/foo/bar'
+        opts.getRegion() >> 'eu-west-1'
+        script == '''
+            # process environment
+            /conda/bin/aws s3 cp --recursive --quiet s3://foo/bar $PWD/nextflow-bin
+            chmod +x $PWD/nextflow-bin/*
+            export PATH=$PWD/nextflow-bin:$PATH
+            export AWS_DEFAULT_REGION=eu-west-1
+            export BAR="world"
+            export FOO="hola"
+
+            '''.stripIndent().leftTrim()
 
     }
 
