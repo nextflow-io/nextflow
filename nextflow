@@ -293,10 +293,10 @@ else
     echo_ref "Not a valid Nextflow version: $NXF_VER"
     exit 1
   fi
-  version_check="^(1.8|9)"
-  version_message="Java 8"
   major=${BASH_REMATCH[1]}
   minor=${BASH_REMATCH[2]}
+  version_check="^(1.8|9)"
+  version_message="Java 8"
   # legacy version - Java 7/8 only
   if [[ $major==0 && $minor<26 ]]; then
     version_check="^(1.7|1.8)"
