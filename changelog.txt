@@ -1,6 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.26.1 - TBD 
+- Execution report enhancements #521
+- Fixed Add AWS_DEFAULT_REGION environment variable to bash wrapper scripts #512 #512
+- Fixed New launcher script does not allow the execution of legacy version with Java 7 #519
+- Fixed Error message reporting file name collision is misleading #516
+
 0.26.0 - 8 Nov 2017
 - Fixed file method does not interpret correctly S3 path with globs #509
 - Fixed Execution hangs when the amount of requested resources exceed the available ones #502
