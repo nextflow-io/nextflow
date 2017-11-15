@@ -162,6 +162,11 @@ class WorkflowMetadata {
      */
     boolean resume
 
+    /**
+     * Which container engine was used to execute the workflow
+     */
+    String containerEngine
+
     final private ScriptRunner owner
 
     final private List<Closure> onCompleteActions = []
@@ -192,6 +197,7 @@ class WorkflowMetadata {
         this.sessionId = owner.session.uniqueId
         this.resume = owner.session.resumeMode
         this.runName = owner.session.runName
+        this.containerEngine = owner.session.containerConfig?.getEngine()
 
         // check if there's a onComplete action in the config file
         registerConfigAction(owner.session.config.workflow as Map)
@@ -250,6 +256,12 @@ class WorkflowMetadata {
         onErrorActions.add(clone)
     }
 
+    /**
+     * Dynamic getter for workflow metadata attributes
+     *
+     * @param field
+     * @return The value associated to the specified field
+     */
     def get(String field) {
         InvokerHelper.getProperty(this,field)
     }

@@ -23,9 +23,11 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.attribute.PosixFilePermission
 
+import nextflow.container.ContainerConfig
 import nextflow.trace.TraceFileObserver
 import nextflow.util.Duration
 import spock.lang.Specification
+import spock.lang.Unroll
 import test.TestHelper
 /**
  *
@@ -322,5 +324,22 @@ class SessionTest extends Specification {
         session.validateConfig0(['foo','baz']) == ['The config file defines settings for an unknown process: bar -- Did you mean: baz?']
     }
 
+    @Unroll
+    def 'should return engine type' () {
+        given:
+        def session =  new Session([(engine): config])
+
+        expect:
+        session.containerConfig == config as ContainerConfig
+        session.containerConfig.enabled
+        session.containerConfig.engine == engine
+
+        where:
+        engine      | config
+        'docker'    | [enabled: true, x:'alpha', y: 'beta']
+        'docker'    | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
+        'udocker'   | [enabled: true, x:'alpha', y: 'beta']
+        'shifter'   | [enabled: true, x:'delta', y: 'gamma']
+    }
 
 }

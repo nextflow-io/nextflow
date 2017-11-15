@@ -75,7 +75,7 @@ class WorkflowMetadataTest extends Specification {
          * config file onComplete handler
          */
         def handlerInvoked
-        def session = new Session([workflow: [onComplete: { -> handlerInvoked=workflow.commandLine } ]  ])
+        def session = new Session([workflow: [onComplete: { -> handlerInvoked=workflow.commandLine } ], docker:[enabled:true]  ])
 
         /*
          * script runner
@@ -108,6 +108,7 @@ class WorkflowMetadataTest extends Specification {
         metadata.profile == 'standard'
         metadata.sessionId == session.uniqueId
         metadata.runName == session.runName
+        metadata.containerEngine == 'docker'
         !metadata.resume
 
         when:
