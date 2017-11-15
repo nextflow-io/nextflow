@@ -36,9 +36,11 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
+import nextflow.container.ContainerConfig
 import nextflow.dag.DAG
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortSignalException
+import nextflow.exception.IllegalConfigException
 import nextflow.exception.MissingLibraryException
 import nextflow.file.FileHelper
 import nextflow.processor.ErrorStrategy
@@ -176,6 +178,11 @@ class Session implements ISession {
     TaskFault getFault() { fault }
 
     Throwable getError() { error }
+
+    private ContainerConfig containerConfigCache
+
+    private Integer containerConfigHash
+
 
     /**
      * Creates a new session with an 'empty' (default) configuration
@@ -837,6 +844,35 @@ class Session implements ISession {
         errorAction = action
     }
 
+    /**
+     * @return A {@link ContainerConfig} object representing the container engine configuration defined in config object
+     */
+    @Memoized
+    ContainerConfig getContainerConfig() {
+
+        def engines = new LinkedList<Map>()
+        getContainerConfig0('docker', engines)
+        getContainerConfig0('shifter', engines)
+        getContainerConfig0('udocker', engines)
+        getContainerConfig0('singularity', engines)
+
+        def enabled = engines.findAll { it.enabled?.toString() == 'true' }
+        if( enabled.size() > 1 ) {
+            def names = enabled.collect { it.engine }
+            throw new IllegalConfigException("Cannot enable more than one container engine -- Choose either one of: ${names.join(', ')}")
+        }
+
+        (enabled ? enabled.get(0) : ( engines ? engines.get(0) : [engine:'docker'] )) as ContainerConfig
+    }
+
+
+    private void getContainerConfig0(String engine, List<Map> drivers) {
+        def config = this.config?.get(engine) as Map
+        if( config ) {
+            config.engine = engine
+            drivers << config
+        }
+    }
 
     @Memoized
     public getExecConfigProp( String execName, String name, Object defValue, Map env = null  ) {

@@ -22,6 +22,7 @@ package nextflow.executor
 import java.nio.file.Files
 
 import nextflow.Session
+import nextflow.container.ContainerConfig
 import nextflow.processor.ProcessConfig
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
@@ -232,14 +233,16 @@ class CondorExecutorTest extends Specification {
     def 'should create condor submit file' () {
 
         given:
+        def session = Mock(Session)
+        session.getContainerConfig() >> new ContainerConfig(enabled:false)
         def folder = Files.createTempDirectory('test')
         def executor = [:] as CondorExecutor
         def task = new TaskRun(name: 'Hello', workDir: folder, script: 'echo Hello world!')
         task.config = Mock(TaskConfig)
         task.processor = Mock(TaskProcessor)
         task.processor.getProcessEnvironment() >> [:]
-        task.processor.getSession() >> Mock(Session)
         task.processor.getConfig() >> Mock(ProcessConfig)
+        task.processor.getSession() >> session
 
         /*
          * simple bash run

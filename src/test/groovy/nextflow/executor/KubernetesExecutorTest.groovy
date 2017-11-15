@@ -22,6 +22,7 @@ package nextflow.executor
 import java.nio.file.Files
 
 import nextflow.Session
+import nextflow.container.ContainerConfig
 import nextflow.processor.ProcessConfig
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
@@ -74,6 +75,9 @@ class KubernetesExecutorTest extends Specification {
     def 'should create the kubernetes yaml job descriptor' () {
 
         given:
+        def session = Mock(Session)
+        session.getContainerConfig() >> new ContainerConfig(enabled:false)
+
         def folder = Files.createTempDirectory('test')
         def executor = [:] as KubernetesExecutor
         def task = new TaskRun(name: 'Hello', workDir: folder, script: 'echo Hello world!')
@@ -81,8 +85,8 @@ class KubernetesExecutorTest extends Specification {
         task.config = new TaskConfig([container: 'ubuntu', cpus: 8, memory: '4GB'])
         task.processor = Mock(TaskProcessor)
         task.processor.getProcessEnvironment() >> [:]
-        task.processor.getSession() >> Mock(Session)
         task.processor.getConfig() >> Mock(ProcessConfig)
+        task.processor.getSession() >> session
 
         /*
          * simple bash run

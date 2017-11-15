@@ -19,7 +19,6 @@
  */
 
 package nextflow.processor
-
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -34,7 +33,6 @@ import nextflow.container.ShifterBuilder
 import nextflow.container.SingularityBuilder
 import nextflow.container.SingularityCache
 import nextflow.container.UdockerBuilder
-import nextflow.exception.IllegalConfigException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessTemplateException
 import nextflow.exception.ProcessUnrecoverableException
@@ -140,10 +138,6 @@ class TaskRun implements Cloneable {
      * Task produced standard error
      */
     def stderr
-
-    private ContainerConfig containerConfigCache
-
-    private Integer containerConfigHash
 
     /**
      * @return The task produced stdout result as string
@@ -559,36 +553,13 @@ class TaskRun implements Cloneable {
         }
     }
 
+    /**
+     * @return The {@link ContainerConfig} object associated to this task
+     */
     ContainerConfig getContainerConfig() {
-
-        if( containerConfigCache != null && containerConfigHash == processor.getSession().config?.hashCode() ) {
-            return containerConfigCache
-        }
-
-        def engines = new LinkedList<Map>()
-        getContainerConfig0('docker', engines)
-        getContainerConfig0('shifter', engines)
-        getContainerConfig0('udocker', engines)
-        getContainerConfig0('singularity', engines)
-
-        def enabled = engines.findAll { it.enabled?.toString() == 'true' }
-        if( enabled.size() > 1 ) {
-            def names = enabled.collect { it.engine }
-            throw new IllegalConfigException("Cannot enable more than one container engine -- Choose either one of: ${names.join(', ')}")
-        }
-
-        containerConfigHash = processor.getSession().config?.hashCode()
-        containerConfigCache = (enabled ? enabled.get(0) : ( engines ? engines.get(0) : [engine:'docker'] )) as ContainerConfig
+        processor.getSession().getContainerConfig()
     }
 
-
-    private void getContainerConfig0(String engine, List<Map> drivers) {
-        def config = processor.getSession().config?.get(engine) as Map
-        if( config ) {
-            config.engine = engine
-            drivers << config
-        }
-    }
 
     /**
      * @return {@true} when the process must run within a container and the docker engine is enabled

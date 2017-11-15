@@ -132,6 +132,9 @@
       </dl>
 
       <dl class="row small">
+        <dt class="col-sm-3">CPU-Hours</dt>
+        <dd class="col-sm-9"><samp>${compute_time}</samp></dd>
+
         <dt class="col-sm-3">Launch directory</dt>
         <dd class="col-sm-9"><samp>${workflow.launchDir}</samp></dd>
 
@@ -169,15 +172,18 @@
           """
         } %>
 
-        <% if (workflow.container) {
-          out << """
-          <dt class="col-sm-3">Workflow container</dt>
-          <dd class="col-sm-9"><samp>${workflow.container}</samp></dd>
-          """
-        } %>
-
         <dt class="col-sm-3">Workflow profile</dt>
         <dd class="col-sm-9">${workflow.profile}</dd>
+
+        <% if (workflow.container) {
+        out << """
+        <dt class="col-sm-3">Workflow container</dt>
+        <dd class="col-sm-9"><samp>${workflow.container}</samp></dd>
+
+        <dt class="col-sm-3">Container engine</dt>
+        <dd class="col-sm-9"><samp>${workflow.containerEngine?:'-'}</samp></dd>
+        """
+        } %>
 
         <dt class="col-sm-3">Nextflow version</dt>
         <dd class="col-sm-9">version ${workflow.nextflow.version}, build ${workflow.nextflow.build} (${workflow.nextflow.timestamp})</dd>
