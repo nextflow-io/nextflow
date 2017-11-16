@@ -19,6 +19,9 @@
  */
 
 package nextflow.container
+
+import groovy.util.logging.Slf4j
+
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -32,6 +35,7 @@ import nextflow.util.Escape
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
+@Slf4j
 class SingularityBuilder extends ContainerBuilder {
 
     private String entryPoint
@@ -149,8 +153,4 @@ class SingularityBuilder extends ContainerBuilder {
         return runCommand
     }
 
-    static String normalizeImageName(String img) {
-        if( !img ) return null
-        img.startsWith("/") ? img : Paths.get(img).toAbsolutePath().toString()
-    }
 }

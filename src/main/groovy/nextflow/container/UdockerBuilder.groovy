@@ -118,24 +118,4 @@ class UdockerBuilder extends ContainerBuilder {
         return wrapper
     }
 
-
-    /**
-     * Normalize Shifter image name adding `docker:` prefix or `:latest`
-     * when required
-     *
-     * @param imageName The container image name
-     * @param shifterConfig Shifter configuration map
-     * @return Image name in Shifter canonical format
-     */
-    static String normalizeImageName( String imageName ) {
-
-        if( !imageName )
-            return null
-
-        if( !imageName.contains(':') )
-            imageName += ':latest'
-
-        return imageName
-    }
-
 }

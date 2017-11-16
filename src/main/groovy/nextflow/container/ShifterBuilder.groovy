@@ -113,32 +113,6 @@ class ShifterBuilder extends ContainerBuilder {
     }
 
     /**
-     * Normalize Shifter image name adding `docker:` prefix or `:latest`
-     * when required
-     *
-     * @param imageName The container image name
-     * @param shifterConfig Shifter configuration map
-     * @return Image name in Shifter canonical format
-     */
-    static String normalizeImageName( String imageName, Map shifterConfig ) {
-
-        if( !imageName )
-            return null
-
-        def items = imageName.tokenize(':')
-        if( items.size()==3 ) {
-            // it is in the canonical form i.e. `type:image:tag`
-            return imageName
-        }
-
-        if( items.size()==1 ) {
-            return "docker:$imageName:latest"
-        }
-
-        return !imageName.startsWith("docker:") ? "docker:$imageName" : "$imageName:latest"
-    }
-
-    /**
      * Get the env command line option for the give environment definition
      *
      * @param env
