@@ -202,32 +202,4 @@ class DockerBuilder extends ContainerBuilder {
     @Override
     String getKillCommand() { killCommand }
 
-    static boolean isAbsoluteDockerName(String image) {
-        def p = image.indexOf('/')
-        if( p==-1 )
-            return false
-
-        image = image.substring(0,p)
-        image.contains('.') || image.contains(':')
-    }
-
-    static String normalizeImageName( String imageName, Map containerConf ) {
-
-        if( !imageName )
-            return null
-
-        String reg = containerConf?.registry
-        if( !reg )
-            return imageName
-
-        if( isAbsoluteDockerName(imageName) )
-            return imageName
-
-        if( !reg.endsWith('/') )
-            reg += '/'
-
-        return reg + imageName
-    }
-
-
 }

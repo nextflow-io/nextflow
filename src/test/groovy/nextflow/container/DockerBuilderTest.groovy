@@ -211,35 +211,6 @@ class DockerBuilderTest extends Specification {
 
     }
 
-    def 'test is absolute image name' () {
-
-        expect:
-        !DockerBuilder.isAbsoluteDockerName('hello')
-        !DockerBuilder.isAbsoluteDockerName('image/name')
-        DockerBuilder.isAbsoluteDockerName('registry:5000/image/name')
-        DockerBuilder.isAbsoluteDockerName('d.reg/image/name')
-        DockerBuilder.isAbsoluteDockerName('d.reg/image')
-
-    }
-
-    def 'test normalize docker image name' () {
-
-        expect:
-        DockerBuilder.normalizeImageName(image, [registry: registry]) == expected
-
-        where:
-        image                       | registry  | expected
-        null                        | null      | null
-        null                        | 'd.reg'   | null
-        'hello'                     | null      | 'hello'
-        'cbcrg/hello'               | null      | 'cbcrg/hello'
-        'cbcrg/hello'               | 'd.reg'   | 'd.reg/cbcrg/hello'
-        'cbcrg/hello'               | 'd.reg/'  | 'd.reg/cbcrg/hello'
-        'registry:5000/cbcrg/hello' | 'd.reg'   | 'registry:5000/cbcrg/hello'
-
-    }
-
-
     def 'should add docker run to shell script' () {
 
         when:

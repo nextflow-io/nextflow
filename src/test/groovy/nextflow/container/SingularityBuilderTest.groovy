@@ -96,12 +96,4 @@ class SingularityBuilderTest extends Specification {
                 .addEnv( new File('/bash/env.txt') )
                 .getEnvExports() == 'export X=1; export ALPHA="aaa";  export BETA="bbb"; export BASH_ENV="/bash/env.txt"; '
     }
-
-    def 'should normalise container path' () {
-        expect:
-        SingularityBuilder.normalizeImageName(null) == null
-        SingularityBuilder.normalizeImageName('') == null
-        SingularityBuilder.normalizeImageName('/abs/path/bar.img') == '/abs/path/bar.img'
-        SingularityBuilder.normalizeImageName('foo.img') == Paths.get('foo.img').toAbsolutePath().toString()
-    }
 }
