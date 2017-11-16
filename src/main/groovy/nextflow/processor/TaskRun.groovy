@@ -531,9 +531,8 @@ class TaskRun implements Cloneable {
         }
 
         final cfg = getContainerConfig()
-        final n =  new ContainerHandler(cfg)
-
-        n.normalizeImageName(imageName)
+        final handler = new ContainerHandler(cfg)
+        handler.normalizeImageName(imageName)
     }
 
     /**
