@@ -1,9 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-0.26.1 - TBD 
+0.26.1 - 17 Nov 206
 - Execution report enhancements #521
-- Fixed Add AWS_DEFAULT_REGION environment variable to bash wrapper scripts #512 #512
+- Fixed Add AWS_DEFAULT_REGION environment variable to bash wrapper scripts #512 #513
 - Fixed New launcher script does not allow the execution of legacy version with Java 7 #519
 - Fixed Error message reporting file name collision is misleading #516
 
