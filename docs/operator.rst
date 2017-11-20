@@ -1382,7 +1382,7 @@ Optionally, a mapping function can be specified in order to provide a custom rul
 in a similar manner as shown for the `phase`_ operator.
 
 collectFile
-------------
+-----------
 
 The ``collectFile`` operator allows you to gather the items emitted by a channel and save them to one or more files.
 The operator returns a new channel that emits the collected file(s).
@@ -1437,6 +1437,7 @@ The following parameters can be used with the ``collectFile`` operator:
 =============== ========================
 Name            Description
 =============== ========================
+keepHeader      Prepend the resulting file with the header fetched in the first collected file. The header size (ie. lines) can be specified by using the ``size`` parameter (default: ``false``).
 name            Name of the file where all received values are stored.
 newLine         Appends a ``newline`` character automatically after each entry (default: ``false``).
 seed            A value or a map of values used to initialise the files content.
