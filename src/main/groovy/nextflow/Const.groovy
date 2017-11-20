@@ -53,12 +53,20 @@ class Const {
     /**
      * The app build time as linux/unix timestamp
      */
+<<<<<<< Updated upstream
     static public final long APP_TIMESTAMP = 1504718708767
+=======
+    static public final long APP_TIMESTAMP = 1510671612193
+>>>>>>> Stashed changes
 
     /**
      * The app build number
      */
+<<<<<<< Updated upstream
     static public final int APP_BUILDNUM = 4531
+=======
+    static public final int APP_BUILDNUM = 4707
+>>>>>>> Stashed changes
 
     /**
      * The date time formatter string
