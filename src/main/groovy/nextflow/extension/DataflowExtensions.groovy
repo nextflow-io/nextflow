@@ -1778,4 +1778,20 @@ class DataflowExtensions {
         return result
     }
 
+    static final DataflowReadChannel dump(final DataflowReadChannel source, Closure closure = null) {
+        dump(source, Collections.emptyMap(), closure)
+    }
+
+    static final DataflowReadChannel dump(final DataflowReadChannel source, Map opts, Closure closure = null) {
+        def op = new DumpOp(source, opts, closure)
+        if( op.isEnabled() ) {
+            def target = op.apply()
+            NodeMarker.addOperatorNode('dump', source, target)
+            return target;
+        }
+        else {
+            return source
+        }
+    }
+
 }

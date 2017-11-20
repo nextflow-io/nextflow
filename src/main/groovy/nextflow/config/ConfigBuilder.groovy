@@ -366,6 +366,9 @@ class ConfigBuilder {
         if( cmdRun.dumpHashes )
             config.dumpHashes = cmdRun.dumpHashes
 
+        if( cmdRun.dumpChannels )
+            config.dumpChannels = cmdRun.dumpChannels.tokenize(',')
+
         // -- other configuration parameters
         if( cmdRun.poolSize ) {
             config.poolSize = cmdRun.poolSize

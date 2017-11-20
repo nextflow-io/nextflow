@@ -177,6 +177,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-dump-hashes'], description = 'Dump task hash keys for debugging purpose')
     boolean dumpHashes
 
+    @Parameter(names=['-dump-channels'], description = 'Dump channels for debugging purpose')
+    String dumpChannels
+
     @Override
     final String getName() { NAME }
 
