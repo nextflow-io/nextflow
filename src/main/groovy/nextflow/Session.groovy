@@ -179,11 +179,6 @@ class Session implements ISession {
 
     Throwable getError() { error }
 
-    private ContainerConfig containerConfigCache
-
-    private Integer containerConfigHash
-
-
     /**
      * Creates a new session with an 'empty' (default) configuration
      */
