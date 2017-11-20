@@ -290,8 +290,9 @@ class BashWrapperBuilder {
         return "NXF_SCRATCH=\"\$(set +u; nxf_mktemp $scratchStr)\""
     }
 
+    @Deprecated
     protected boolean fixOwnership() {
-        systemOsName == 'Linux' && containerConfig?.fixOwnership && runWithContainer && containerConfig.engine == 'docker' // <-- note: only for docker (shifter is not affected)
+        systemOsName == 'Linux' && containerConfig?.fixOwnership && containerConfig?.disableUserMapping && runWithContainer && containerConfig.engine == 'docker' // <-- note: only for docker (shifter is not affected)
     }
 
     protected Map<String,Path> getResolvedInputs() {

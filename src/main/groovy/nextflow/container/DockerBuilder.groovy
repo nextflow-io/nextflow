@@ -40,7 +40,7 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
     private boolean tty
 
-    private static final String USER_AND_HOME_EMULATION = '-u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME'
+    private static final String USER_AND_HOME_EMULATION = '-u $(id -u):$(id -g) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME'
 
     private String removeCommand
 
@@ -49,6 +49,8 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
     private kill = true
 
     private boolean legacy
+
+    private boolean disableUserMapping
 
     DockerBuilder( String name ) {
         this.image = name
@@ -91,6 +93,9 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
         if( params.containsKey('readOnlyInputs') )
             this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
 
+        if( params.containsKey('disableUserMapping') )
+            this.disableUserMapping = params.disableUserMapping as boolean
+
         return this
     }
 
@@ -114,6 +119,11 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
         result << 'run -i '
 
+        if( userEmulation )
+            result << USER_AND_HOME_EMULATION << ' '
+        else if( !disableUserMapping )
+            result << '-u $(id -u):$(id -g) '
+
         if( cpus ) {
             if( legacy )
                 result << "--cpuset ${cpus} "
@@ -132,9 +142,6 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
         if( temp )
             result << "-v $temp:/tmp "
-
-        if( userEmulation )
-            result << USER_AND_HOME_EMULATION << ' '
 
         // mount the input folders
         result << makeVolumes(mounts)

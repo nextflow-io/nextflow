@@ -21,12 +21,14 @@
 package nextflow.container
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 
 /**
  * Models container engine configuration
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class ContainerConfig extends LinkedHashMap {
 
@@ -47,5 +49,10 @@ class ContainerConfig extends LinkedHashMap {
 
     String getEngine() {
         get('engine')
+    }
+
+    void setFixOwnership(boolean value) {
+        if( value ) log.warn "Docker `fixOwnership` setting is not required any more and it has been deprecated"
+        put('fixOwnership', value)
     }
 }
