@@ -173,7 +173,11 @@ class Session implements ISession {
 
     private boolean dumpHashes
 
+    private List<String> dumpChannels
+
     boolean getDumpHashes() { dumpHashes }
+
+    List<String> getDumpChannels() { dumpChannels }
 
     TaskFault getFault() { fault }
 
@@ -233,6 +237,7 @@ class Session implements ISession {
         this.binding = binding
         this.config = binding.config
         this.dumpHashes = config.dumpHashes
+        this.dumpChannels = (List<String>)config.dumpChannels
 
         // -- poor man session object dependency injection
         Global.setSession(this)
