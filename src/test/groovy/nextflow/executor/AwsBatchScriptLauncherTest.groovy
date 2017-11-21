@@ -116,7 +116,6 @@ class AwsBatchScriptLauncherTest extends Specification {
 
                 echo start | /conda/bin/aws s3 cp - s3:/${folder}/.command.begin
                 # task environment
-                export AWS_DEFAULT_REGION="eu-west-1"
                 export FOO="1"
                 export BAR="any"
 

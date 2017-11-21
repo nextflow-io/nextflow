@@ -446,8 +446,16 @@ class AwsBatchTaskHandler extends TaskHandler {
     protected SubmitJobRequest newSubmitRequest(TaskRun task) {
 
         // the cmd list to launch it
-        def cli = awsOptions.cliPath ?: 'aws'
-        def cmd = ['bash','-o','pipefail','-c', "$cli s3 cp s3:/${getWrapperFile()} - | bash 2>&1 | $cli s3 cp - s3:/${getLogFile()}".toString() ] as List<String>
+        def opts = getAwsOptions()
+        def aws = opts.cliPath ?: 'aws'
+        def cmd = "$aws s3 cp s3:/${getWrapperFile()} - | bash 2>&1 | $aws s3 cp - s3:/${getLogFile()}"
+        // prepend with AWS region if required
+        // note: this guarantees that the region is defined before any `aws` command is run and it's inherited by the main script
+        if( opts.region ) {
+            cmd = "export AWS_DEFAULT_REGION='$opts.region'; " + cmd
+        }
+        // final launcher command
+        def cli = ['bash','-o','pipefail','-c', cmd.toString() ] as List<String>
 
         /*
          * create the request object
@@ -466,7 +474,7 @@ class AwsBatchTaskHandler extends TaskHandler {
 
         // set the actual command
         def container = new ContainerOverrides()
-        container.command = cmd
+        container.command = cli
         // set the task memory
         if( task.config.getMemory() )
             container.memory = (int)task.config.getMemory().toMega()
@@ -600,9 +608,6 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
             result << "${opts.cliPath?:'aws'} s3 cp --recursive --quiet s3:/${opts.remoteBinDir} \$PWD/nextflow-bin\n"
             result << "chmod +x \$PWD/nextflow-bin/*\n"
             result << "export PATH=\$PWD/nextflow-bin:\$PATH\n"
-        }
-        if( opts.region ) {
-            copy.AWS_DEFAULT_REGION = opts.region
         }
         // finally render the environment
         final envSnippet = super.getEnvScript(copy)

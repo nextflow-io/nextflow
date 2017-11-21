@@ -109,6 +109,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         task.getConfig() >> new TaskConfig(memory: '8GB', cpus: 4, maxRetries: 2, errorStrategy: 'retry')
 
         def handler = Spy(AwsBatchTaskHandler)
+
         when:
         def req = handler.newSubmitRequest(task)
         then:
@@ -127,6 +128,26 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
         req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "/bin/aws s3 cp s3://bucket/test/.command.run - | bash 2>&1 | /bin/aws s3 cp - s3://bucket/test/.command.log".toString()]
         req.getRetryStrategy() == null  // <-- retry is managed by NF, hence this must be null
+
+        when:
+        req = handler.newSubmitRequest(task)
+        then:
+        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', region: 'eu-west-1') }
+        1 * handler.getJobQueue(task) >> 'queue1'
+        1 * handler.getJobDefinition(task) >> 'job-def:1'
+        1 * handler.getEnvironmentVars() >> [VAR_FOO, VAR_BAR]
+        1 * handler.wrapperFile >> Paths.get('/bucket/test/.command.run')
+        1 * handler.getLogFile() >> Paths.get('/bucket/test/.command.log')
+
+        req.getJobName() == 'batchtask'
+        req.getJobQueue() == 'queue1'
+        req.getJobDefinition() == 'job-def:1'
+        req.getContainerOverrides().getVcpus() == 4
+        req.getContainerOverrides().getMemory() == 8192
+        req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
+        req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "export AWS_DEFAULT_REGION='eu-west-1'; /bin/aws s3 cp s3://bucket/test/.command.run - | bash 2>&1 | /bin/aws s3 cp - s3://bucket/test/.command.log".toString()]
+        req.getRetryStrategy() == null  // <-- retry is managed by NF, hence this must be null
+
     }
 
     def 'should create an aws submit request with retry'() {
@@ -139,6 +160,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         task.getConfig() >> new TaskConfig(memory: '8GB', cpus: 4, maxRetries: 2)
 
         def handler = Spy(AwsBatchTaskHandler)
+
         when:
         def req = handler.newSubmitRequest(task)
         then:
@@ -147,6 +169,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> [VAR_FOO, VAR_BAR]
         1 * handler.wrapperFile >> Paths.get('/bucket/test/.command.run')
+        1 * handler.getLogFile() >> Paths.get('/bucket/test/.command.log')
 
         req.getJobName() == 'batchtask'
         req.getJobQueue() == 'queue1'
