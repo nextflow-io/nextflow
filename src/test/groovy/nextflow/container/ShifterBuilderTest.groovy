@@ -19,11 +19,7 @@
  */
 
 package nextflow.container
-
 import spock.lang.Specification
-
-import java.nio.file.Paths
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -37,9 +33,7 @@ class ShifterBuilderTest extends Specification {
 
         expect:
         builder.makeEnv('X=1').toString() == 'X=1'
-        builder.makeEnv([VAR_X:1, VAR_Y: 2]).toString() == 'VAR_X=1 VAR_Y=2'
-        builder.makeEnv( Paths.get('/some/file.env') ).toString() == 'BASH_ENV="/some/file.env"'
-        builder.makeEnv( new File('/some/file.env') ).toString() == 'BASH_ENV="/some/file.env"'
+        builder.makeEnv([VAR_X:1, VAR_Y: 2]).toString() == 'VAR_X="1" VAR_Y="2"'
     }
 
     def 'should build the shifter run command' () {
@@ -59,18 +53,12 @@ class ShifterBuilderTest extends Specification {
                 .build()
                 .runCommand == 'shifter --image ubuntu:latest /bin/bash'
 
-        new ShifterBuilder('ubuntu')
-                .params(entry: '/bin/bash')
-                .addEnv(Paths.get("/data/env_file"))
-                .build()
-                .runCommand == 'BASH_ENV="/data/env_file" shifter --image ubuntu /bin/bash'
-
         new ShifterBuilder('fedora')
                 .params(entry: '/bin/bash')
                 .addEnv([VAR_X:1, VAR_Y:2])
                 .addEnv("VAR_Z=3")
                 .build()
-                .runCommand == 'VAR_X=1 VAR_Y=2 VAR_Z=3 shifter --image fedora /bin/bash'
+                .runCommand == 'VAR_X="1" VAR_Y="2" VAR_Z=3 shifter --image fedora /bin/bash'
 
     }
 

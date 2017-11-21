@@ -170,6 +170,13 @@ abstract class ContainerBuilder {
         return result.join('\n')
     }
 
+    protected CharSequence appendEnv( StringBuilder result ) {
+        for( Object e : env ) {
+            makeEnv(e, result) << ' '
+        }
+        return result
+    }
+
     /**
      * Get the env command line option for the give environment definition
      *
@@ -178,14 +185,8 @@ abstract class ContainerBuilder {
      * @return
      */
     protected CharSequence makeEnv( env, StringBuilder result = new StringBuilder() ) {
-        // append the environment configuration
-        if( env instanceof File ) {
-            env = env.toPath()
-        }
-        if( env instanceof Path ) {
-            result << '-e "BASH_ENV=' << Escape.path(env) << '"'
-        }
-        else if( env instanceof Map ) {
+
+        if( env instanceof Map ) {
             short index = 0
             for( Map.Entry entry : env.entrySet() ) {
                 if( index++ ) result << ' '

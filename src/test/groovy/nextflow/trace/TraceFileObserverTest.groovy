@@ -104,6 +104,7 @@ class TraceFileObserverTest extends Specification {
         task.processor = Mock(TaskProcessor)
         task.processor.getSession() >> new Session()
         task.processor.getName() >> 'x'
+        task.processor.getProcessEnvironment() >> [:]
 
         def handler = new NopeTaskHandler(task)
         def now = System.currentTimeMillis()

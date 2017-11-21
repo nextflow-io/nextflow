@@ -19,9 +19,6 @@
  */
 
 package nextflow.container
-import java.nio.file.Path
-
-import nextflow.util.Escape
 /**
  * Wrap a task execution in a Shifter container
  *
@@ -72,9 +69,7 @@ class ShifterBuilder extends ContainerBuilder {
     ShifterBuilder build(StringBuilder result) {
         assert image
 
-        for( def entry : env ) {
-            result << makeEnv(entry) << ' '
-        }
+        appendEnv(result)
 
         result << 'shifter '
 
@@ -120,18 +115,12 @@ class ShifterBuilder extends ContainerBuilder {
      * @return
      */
     protected CharSequence makeEnv( env, StringBuilder result = new StringBuilder() ) {
-        // append the environment configuration
-        if( env instanceof File ) {
-            env = env.toPath()
-        }
-        if( env instanceof Path ) {
-            result << 'BASH_ENV="' << Escape.path(env) << '"'
-        }
-        else if( env instanceof Map ) {
+
+        if( env instanceof Map ) {
             short index = 0
             for( Map.Entry entry : env.entrySet() ) {
                 if( index++ ) result << ' '
-                result << ("${entry.key}=${entry.value}")
+                result << ("${entry.key}=\"${entry.value}\"")
             }
         }
         else if( env instanceof String && env.contains('=') ) {

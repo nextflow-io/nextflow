@@ -55,14 +55,12 @@ class DockerBuilderTest extends Specification {
         expect:
         builder.makeEnv('X=1').toString() == '-e "X=1"'
         builder.makeEnv([VAR_X:1, VAR_Y: 2]).toString() == '-e "VAR_X=1" -e "VAR_Y=2"'
-        builder.makeEnv( Paths.get('/some/file.env') ).toString() == '-e "BASH_ENV=/some/file.env"'
-        builder.makeEnv( new File('/some/file.env') ).toString() == '-e "BASH_ENV=/some/file.env"'
     }
 
     def 'test docker create command line'() {
 
         setup:
-        def envFile = Paths.get('/data/env file')
+        def env = [FOO: 1, BAR: 'hello world']
         def db_file = Paths.get('/home/db')
 
         expect:
@@ -71,9 +69,9 @@ class DockerBuilderTest extends Specification {
                 .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('fedora')
-                .addEnv(envFile)
+                .addEnv(env)
                 .build()
-                .runCommand == 'docker run -i -e "BASH_ENV=/data/env\\ file" -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i -e "FOO=1" -e "BAR=hello world" -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('ubuntu')
                 .params(temp:'/hola')
@@ -111,11 +109,11 @@ class DockerBuilderTest extends Specification {
                 .runCommand == 'docker --tlsverify --tlscert="/path/to/my/cert" run -i -v "$PWD":"$PWD" -w "$PWD" busybox'
 
         new DockerBuilder('fedora')
-                .addEnv(envFile)
+                .addEnv(env)
                 .addMount(db_file)
                 .addMount(db_file)  // <-- add twice the same to prove that the final string won't contain duplicates
                 .build()
-                .runCommand == 'docker run -i -e "BASH_ENV=/data/env\\ file" -v /home/db:/home/db -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i -e "FOO=1" -e "BAR=hello world" -v /home/db:/home/db -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('fedora')
                 .params(readOnlyInputs: true)

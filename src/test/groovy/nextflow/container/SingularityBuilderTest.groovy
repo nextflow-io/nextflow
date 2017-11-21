@@ -93,7 +93,7 @@ class SingularityBuilderTest extends Specification {
         new SingularityBuilder('busybox')
                 .addEnv('X=1')
                 .addEnv(ALPHA:'aaa', BETA: 'bbb')
-                .addEnv( new File('/bash/env.txt') )
-                .getEnvExports() == 'export X=1; export ALPHA="aaa";  export BETA="bbb"; export BASH_ENV="/bash/env.txt"; '
+                .build()
+                .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" SINGULARITYENV_X=1 SINGULARITYENV_ALPHA="aaa" SINGULARITYENV_BETA="bbb" singularity exec busybox'
     }
 }

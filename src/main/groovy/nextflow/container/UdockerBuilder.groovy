@@ -82,9 +82,7 @@ class UdockerBuilder extends ContainerBuilder {
         }
 
         // add the environment
-        for( def entry : env ) {
-            result << makeEnv(entry) << ' '
-        }
+        appendEnv(result)
 
         if( temp )
             result << "-v $temp:/tmp "

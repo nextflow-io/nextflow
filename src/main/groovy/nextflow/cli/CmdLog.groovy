@@ -59,7 +59,6 @@ class CmdLog extends CmdBase implements CacheBase {
         ALL_FIELDS << 'stdout'
         ALL_FIELDS << 'stderr'
         ALL_FIELDS << 'log'
-        ALL_FIELDS << 'env'
         ALL_FIELDS.sort(true)
     }
 
@@ -257,10 +256,6 @@ class CmdLog extends CmdBase implements CacheBase {
 
             if( key == 'log' ) {
                 return fetch(getWorkDir().resolve(TaskRun.CMD_LOG))
-            }
-
-            if( key == 'env' ) {
-                return fetch(getWorkDir().resolve(TaskRun.CMD_ENV))
             }
 
             if( key == 'pcpu' )

@@ -163,6 +163,7 @@ public abstract class TaskHandler {
         record.memory = task.config.getMemory()?.toBytes()
         record.disk = task.config.getDisk()?.toBytes()
         record.time = task.config.getTime()?.toMillis()
+        record.env = task.getEnvironmentStr()
 
         if( isCompleted() ) {
             if( completeTimeMillis ) {

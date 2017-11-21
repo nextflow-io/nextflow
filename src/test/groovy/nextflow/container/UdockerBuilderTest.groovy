@@ -39,8 +39,6 @@ class UdockerBuilderTest extends Specification {
         expect:
         builder.makeEnv('X=1').toString() == '-e "X=1"'
         builder.makeEnv([VAR_X:1, VAR_Y: 2]).toString() == '-e "VAR_X=1" -e "VAR_Y=2"'
-        builder.makeEnv( Paths.get('/some/file.env') ).toString() == '-e "BASH_ENV=/some/file.env"'
-        builder.makeEnv( new File('/some/file.env') ).toString() == '-e "BASH_ENV=/some/file.env"'
     }
 
 
@@ -63,7 +61,7 @@ class UdockerBuilderTest extends Specification {
     def 'should get run cmd line' () {
 
         given:
-        def envFile = Paths.get('/data/env.file')
+        def env = [FOO:1, BAR:'hello world']
         def db_file = Paths.get('/home/db')
 
         expect:
@@ -72,9 +70,9 @@ class UdockerBuilderTest extends Specification {
                 .runCommand == 'udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest") /bin/bash'
 
         new UdockerBuilder('fedora')
-                .addEnv(envFile)
+                .addEnv(env)
                 .build()
-                .runCommand == 'udocker.py run --rm -e "BASH_ENV=/data/env.file" -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest") /bin/bash'
+                .runCommand == 'udocker.py run --rm -e "FOO=1" -e "BAR=hello world" -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest") /bin/bash'
 
         new UdockerBuilder('fedora')
                 .setCpus('1,2')
@@ -83,9 +81,9 @@ class UdockerBuilderTest extends Specification {
 
         new UdockerBuilder('fedora')
                 .addMount(db_file)
-                .addEnv(envFile)
+                .addEnv(env)
                 .build()
-                .runCommand == 'udocker.py run --rm -e "BASH_ENV=/data/env.file" -v /home/db:/home/db -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest") /bin/bash'
+                .runCommand == 'udocker.py run --rm -e "FOO=1" -e "BAR=hello world" -v /home/db:/home/db -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest") /bin/bash'
 
         new UdockerBuilder('busybox')
                 .params(remove: false)

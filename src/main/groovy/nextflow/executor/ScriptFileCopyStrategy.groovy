@@ -92,4 +92,10 @@ interface ScriptFileCopyStrategy {
      */
     String pipeInputFile( Path file )
 
+    /**
+     * @param environment The task environment
+     * @return The environment initialisation snippet
+     */
+    String getEnvScript(Map environment)
+
 }
