@@ -93,7 +93,8 @@ class TraceRecord implements Serializable {
             cpus:       'num',
             memory:     'mem',
             disk:       'mem',
-            time:       'time'
+            time:       'time',
+            env:        'str'
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [

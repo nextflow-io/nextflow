@@ -34,7 +34,6 @@ import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
-import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.util.CacheHelper
@@ -98,7 +97,7 @@ class AwsBatchExecutor extends Executor {
 
     @PackageScope
     Path getRemoteBinDir() {
-        remoteBinDir
+            remoteBinDir
     }
 
     @PackageScope
@@ -537,11 +536,6 @@ class AwsBatchScriptLauncher extends BashWrapperBuilder {
         }
     }
 
-    protected void makeEnvironmentFile(Path file) {
-        /**
-         * Do nothing here - Environment is managed is built by {@link AwsBatchFileCopyStrategy}
-         */
-    }
 }
 
 /**
@@ -573,7 +567,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         final storage = opts.storageClass ?: 'STANDARD'
 		final encryption = opts.storageEncryption ? "--sse $opts.storageEncryption " : ''
 
-        def uploader = """
+        """
         # aws helper
         nxf_s3_upload() {
             local pattern=\$1
@@ -586,14 +580,15 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
               fi
           done
         }
-
         """.stripIndent()
 
-        def env = getEnvScript()
-        return env ? uploader + env : uploader
     }
 
-    protected String getEnvScript() {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    String getEnvScript(Map environment) {
         final result = new StringBuilder()
         final copy = environment ? new HashMap<String,String>(environment) : Collections.<String,String>emptyMap()
         final path = copy.containsKey('PATH')
@@ -606,12 +601,14 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
             result << "chmod +x \$PWD/nextflow-bin/*\n"
             result << "export PATH=\$PWD/nextflow-bin:\$PATH\n"
         }
-        if (opts.region) {
-            result << "export AWS_DEFAULT_REGION=${opts.region}\n"
+        if( opts.region ) {
+            copy.AWS_DEFAULT_REGION = opts.region
         }
-        result << TaskProcessor.bashEnvironmentScript(copy)
-
-        return result.size() ? "# process environment\n" + result.toString() + '\n' : null
+        // finally render the environment
+        final envSnippet = super.getEnvScript(copy)
+        if( envSnippet )
+            result << envSnippet
+        return result.toString()
     }
 
     /**

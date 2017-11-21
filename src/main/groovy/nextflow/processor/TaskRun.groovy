@@ -453,7 +453,7 @@ class TaskRun implements Cloneable {
     /**
      * @return A map containing the task environment defined as input declaration by this task
      */
-    Map<String,String> getInputEnvironment() {
+    protected Map<String,String> getInputEnvironment() {
         final Map<String,String> environment = [:]
         getInputsByType( EnvInParam ).each { param, value ->
             environment.put( param.name, value?.toString() )
@@ -461,6 +461,24 @@ class TaskRun implements Cloneable {
         return environment
     }
 
+    /**
+     * @return A map representing the task execution environment
+     */
+    Map<String,String> getEnvironment() {
+        // note: create a copy of the process environment to avoid concurrent
+        // process executions override each others
+        final result = new HashMap( getProcessor().getProcessEnvironment() )
+        result.putAll( getInputEnvironment() )
+        return result
+    }
+
+    String getEnvironmentStr() {
+        def env = getEnvironment()
+        if( !env ) return null
+        def result = new StringBuilder()
+        env.each { k,v -> result.append(k).append('=').append(v).append('\n') }
+        result.toString()
+    }
 
     Path getTargetDir() {
         config.getStoreDir() ?: workDir
@@ -477,7 +495,6 @@ class TaskRun implements Cloneable {
     }
 
     static final public String CMD_LOG = '.command.log'
-    static final public String CMD_ENV = '.command.env'
     static final public String CMD_SCRIPT = '.command.sh'
     static final public String CMD_INFILE = '.command.in'
     static final public String CMD_OUTFILE = '.command.out'

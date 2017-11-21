@@ -646,5 +646,46 @@ class TaskRunTest extends Specification {
 
     }
 
+    def 'should get task environment' () {
+
+        given:
+        def task = Spy(TaskRun);
+        def proc = Mock(TaskProcessor)
+
+        when:
+        def env = task.getEnvironment()
+        then:
+        1 * task.getProcessor() >> proc
+        1 * proc.getProcessEnvironment() >> [FOO: 'hola', BAR: 'world']
+        1 * task.getInputEnvironment() >> [BAR: 'mundo', OMEGA: 'ooo']
+        env ==  [FOO: 'hola', BAR: 'mundo', OMEGA: 'ooo']   // note: `BAR` in the process config should be overridden by `BAR` in the task input
+
+    }
+
+    def 'should get task env as string' () {
+
+        given:
+        def task = Spy(TaskRun);
+
+        when:
+        def env = task.getEnvironmentStr()
+        then:
+        1 * task.getEnvironment() >> [FOO: 1, BAR: 2, BAZ: 'hello world']
+        env ==  '''
+                FOO=1
+                BAR=2
+                BAZ=hello world
+                '''
+                .stripIndent().leftTrim()
+
+
+        when:
+        env = task.getEnvironmentStr()
+        then:
+        1 * task.getEnvironment() >> [:]
+        env == null
+
+    }
+
 
 }

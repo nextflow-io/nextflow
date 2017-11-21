@@ -36,23 +36,21 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         1 * opts.getCliPath() >> null
         1 * opts.getStorageClass() >> null
         1 * opts.getStorageEncryption() >> null
-        1 * copy.getEnvScript() >>  null
 
-        script == '''
-                # aws helper
-                nxf_s3_upload() {
-                    local pattern=$1
-                    local s3path=$2
-                    for name in $pattern;do
-                      if [[ -d "$name" ]]; then
-                        aws s3 cp $name $s3path/$name --quiet --recursive --storage-class STANDARD
-                      else
-                        aws s3 cp $name $s3path/$name --quiet --storage-class STANDARD
-                      fi
-                  done
-                }
-
-            '''.stripIndent()
+        script ==   '''
+                    # aws helper
+                    nxf_s3_upload() {
+                        local pattern=$1
+                        local s3path=$2
+                        for name in $pattern;do
+                          if [[ -d "$name" ]]; then
+                            aws s3 cp $name $s3path/$name --quiet --recursive --storage-class STANDARD
+                          else
+                            aws s3 cp $name $s3path/$name --quiet --storage-class STANDARD
+                          fi
+                      done
+                    }
+                    '''.stripIndent()
 
         when:
         script = copy.getBeforeStartScript()
@@ -60,7 +58,6 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         1 * opts.getCliPath() >> '/foo/aws'
         1 * opts.getStorageClass() >> 'REDUCED_REDUNDANCY'
         2 * opts.getStorageEncryption() >> 'AES256'
-        1 * copy.getEnvScript() >> 'export PATH=/foo/bar/bin\n'
 
         script == '''
                 # aws helper
@@ -75,36 +72,33 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                       fi
                   done
                 }
-
-                export PATH=/foo/bar/bin
             '''.stripIndent()
     }
 
     def 'should return env variables' () {
 
         given:
-        def bean = new TaskBean( environment: [FOO: 'hola', BAR:'world', PATH:'xxx'] )
+        def ENV = [FOO: 'hola', BAR:'world', PATH:'xxx']
+        def bean = Mock(TaskBean)
         def opts = Mock(AwsOptions)
         def copy = Spy(AwsBatchFileCopyStrategy, constructorArgs: [bean, opts])
 
         when:
-        def script = copy.getEnvScript()
+        def script = copy.getEnvScript(ENV)
         then:
         // note: PATH is always removed
         opts.getRemoteBinDir() >> null
         script == '''
-            # process environment
             export BAR="world"
             export FOO="hola"
 
             '''.stripIndent().leftTrim()
 
         when:
-        script = copy.getEnvScript()
+        script = copy.getEnvScript(ENV)
         then:
         opts.getRemoteBinDir() >> '/foo/bar'
         script == '''
-            # process environment
             aws s3 cp --recursive --quiet s3://foo/bar $PWD/nextflow-bin
             chmod +x $PWD/nextflow-bin/*
             export PATH=$PWD/nextflow-bin:$PATH
@@ -114,12 +108,11 @@ class AwsBatchFileCopyStrategyTest extends Specification {
             '''.stripIndent().leftTrim()
 
         when:
-        script = copy.getEnvScript()
+        script = copy.getEnvScript(ENV)
         then:
         opts.getCliPath() >> '/conda/bin/aws'
         opts.getRemoteBinDir() >> '/foo/bar'
         script == '''
-            # process environment
             /conda/bin/aws s3 cp --recursive --quiet s3://foo/bar $PWD/nextflow-bin
             chmod +x $PWD/nextflow-bin/*
             export PATH=$PWD/nextflow-bin:$PATH
@@ -129,17 +122,16 @@ class AwsBatchFileCopyStrategyTest extends Specification {
             '''.stripIndent().leftTrim()
 
         when:
-        script = copy.getEnvScript()
+        script = copy.getEnvScript(ENV)
         then:
         opts.getCliPath() >> '/conda/bin/aws'
         opts.getRemoteBinDir() >> '/foo/bar'
         opts.getRegion() >> 'eu-west-1'
         script == '''
-            # process environment
             /conda/bin/aws s3 cp --recursive --quiet s3://foo/bar $PWD/nextflow-bin
             chmod +x $PWD/nextflow-bin/*
             export PATH=$PWD/nextflow-bin:$PATH
-            export AWS_DEFAULT_REGION=eu-west-1
+            export AWS_DEFAULT_REGION="eu-west-1"
             export BAR="world"
             export FOO="hola"
 

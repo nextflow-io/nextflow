@@ -26,6 +26,7 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.file.FilePorter
 import nextflow.processor.TaskBean
+import nextflow.processor.TaskProcessor
 import nextflow.util.Escape
 /**
  * Simple file strategy that stages input files creating symlinks
@@ -288,6 +289,18 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
     @Override
     String pipeInputFile(Path file) {
         " < ${Escape.path(file)}"
+    }
+
+    @Override
+    String getEnvScript(Map environment) {
+
+        if( !environment )
+            return null
+
+        // create the *bash* environment script
+        def wrapper = new StringBuilder()
+        wrapper << TaskProcessor.bashEnvironmentScript(environment) << '\n'
+        return wrapper.toString()
     }
 
 }

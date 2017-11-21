@@ -277,28 +277,6 @@ class BashWrapperBuilder {
         systemOsName == 'Linux' && containerConfig?.fixOwnership && runWithContainer && containerConfig.engine == 'docker' // <-- note: only for docker (shifter is not affected)
     }
 
-    protected void makeEnvironmentFile(Path environmentFile) {
-
-        /*
-         * add modules to the environment file
-         */
-        if( moduleNames ) {
-            environmentFile << MODULE_LOAD << ENDL << ENDL
-            moduleNames.each {
-                environmentFile << moduleLoad(it) << ENDL
-            }
-        }
-
-        /*
-         * save the environment
-         */
-        if( environment ) {
-            // create the *bash* environment script
-            environmentFile << TaskProcessor.bashEnvironmentScript(environment)
-        }
-
-    }
-
     protected Map<String,Path> getResolvedInputs() {
         copyStrategy.resolveForeignFiles(inputFiles)
     }
@@ -313,7 +291,6 @@ class BashWrapperBuilder {
 
         final scriptFile = workDir.resolve(TaskRun.CMD_SCRIPT)
         final inputFile = workDir.resolve(TaskRun.CMD_INFILE)
-        final environmentFile = workDir.resolve(TaskRun.CMD_ENV)
         final startedFile = workDir.resolve(TaskRun.CMD_START)
         final exitedFile = workDir.resolve(TaskRun.CMD_EXIT)
         final wrapperFile = workDir.resolve(TaskRun.CMD_RUN)
@@ -328,8 +305,6 @@ class BashWrapperBuilder {
         if( input != null ) {
             inputFile.text = input
         }
-
-        makeEnvironmentFile(environmentFile)
 
         // whenever it has to change to the scratch directory
         final changeDir = getScratchDirectoryCommand()
@@ -414,11 +389,27 @@ class BashWrapperBuilder {
             wrapper << beforeScript << ENDL
         }
 
+
+        /*
+         * add modules to the environment file
+         * note: singularity engine can be loaded by using module
+         * TODO: should the module snippet go *after* env definition
+         */
+        if( moduleNames ) {
+            wrapper << MODULE_LOAD << ENDL << ENDL
+            moduleNames.each {
+                wrapper << moduleLoad(it) << ENDL
+            }
+            wrapper << ENDL
+        }
+
         // source the environment
         // note: skip this when it's a containerized task because in that case
         //  the environment is provided using container specific options
-        if( !runWithContainer ) {
-            wrapper << "[ -f "<< fileStr(environmentFile) << " ]" << " && source " << fileStr(environmentFile) << ENDL
+        final envSnippet = copyStrategy.getEnvScript(environment)
+        if( !runWithContainer && envSnippet ) {
+            wrapper << '# task environment' << ENDL
+            wrapper << envSnippet
         }
 
         wrapper << '[[ $NXF_SCRATCH ]] && echo "nxf-scratch-dir $HOSTNAME:$NXF_SCRATCH" && cd $NXF_SCRATCH' << ENDL
@@ -444,7 +435,7 @@ class BashWrapperBuilder {
         if( containerBuilder && !executable ) {
             containerBuilder.appendRunCommand(wrapper) << " -c \""
             if( containerBuilder instanceof SingularityBuilder ) {
-                wrapper << 'cd $PWD; ' << containerBuilder.getEnvExports()
+                wrapper << 'cd $PWD; '
             }
         }
 
@@ -610,7 +601,7 @@ class BashWrapperBuilder {
             builder.addRunOptions(containerCpuset)
 
         // set the environment
-        if( environment ) {
+        if( this.environment ) {
             // export the nextflow script debug variable
             builder.addEnv( 'NXF_DEBUG=${NXF_DEBUG:=0}')
 
@@ -622,10 +613,10 @@ class BashWrapperBuilder {
                 // PATH variable cannot be extended in an executable container
                 // make sure to not include it to avoid to override the container PATH
                 environment.remove('PATH')
-                builder.addEnv( environment )
             }
-            else
-                builder.addEnv( workDir.resolve(TaskRun.CMD_ENV) )
+
+            // finally add the environment
+            builder.addEnv( environment )
 
         }
 

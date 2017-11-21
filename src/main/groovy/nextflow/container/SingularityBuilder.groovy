@@ -19,14 +19,8 @@
  */
 
 package nextflow.container
-
-import groovy.util.logging.Slf4j
-
-import java.nio.file.Path
-import java.nio.file.Paths
-
 import groovy.transform.CompileStatic
-import nextflow.util.Escape
+import groovy.util.logging.Slf4j
 /**
  * Implements a builder for Singularity containerisation
  *
@@ -80,7 +74,9 @@ class SingularityBuilder extends ContainerBuilder {
     @Override
     SingularityBuilder build(StringBuilder result) {
 
-        result << 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" '
+        result << 'set +u; env - PATH="$PATH" '
+
+        appendEnv(result)
 
         result << 'singularity '
 
@@ -115,23 +111,23 @@ class SingularityBuilder extends ContainerBuilder {
     }
 
     @Override
+    protected CharSequence appendEnv(StringBuilder result) {
+        result << 'SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" '
+        super.appendEnv(result)
+    }
+
+    @Override
     protected CharSequence makeEnv( env, StringBuilder result = new StringBuilder() ) {
-        // append the environment configuration
-        if( env instanceof File ) {
-            env = env.toPath()
-        }
-        if( env instanceof Path ) {
-            result << 'export BASH_ENV="' << Escape.path(env) << '"; '
-        }
-        else if( env instanceof Map ) {
-            short index = 0
+
+        if( env instanceof Map ) {
+            int index=0
             for( Map.Entry entry : env.entrySet() ) {
                 if( index++ ) result << ' '
-                result << "export ${entry.key}=\"${entry.value}\"; "
+                result << "SINGULARITYENV_${entry.key}=\"${entry.value}\""
             }
         }
         else if( env instanceof String && env.contains('=') ) {
-            result << 'export ' << env << '; '
+            result << 'SINGULARITYENV_' << env
         }
         else if( env ) {
             throw new IllegalArgumentException("Not a valid environment value: $env [${env.class.name}]")

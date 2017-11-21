@@ -132,9 +132,7 @@ class DockerBuilder extends ContainerBuilder {
             result << '-t '
 
         // add the environment
-        for( def entry : env ) {
-            result << makeEnv(entry) << ' '
-        }
+        appendEnv(result)
 
         if( temp )
             result << "-v $temp:/tmp "
