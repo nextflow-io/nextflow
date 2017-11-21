@@ -27,6 +27,7 @@ import nextflow.cli.CmdConfig
 import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
+import nextflow.exception.ConfigParseException
 import spock.lang.Specification
 /**
  *
@@ -869,5 +870,36 @@ class ConfigBuilderTest extends Specification {
         then:
         config.params == [foo:'Ciao', bar:20, data: '/some/path']
     }
+
+    def 'should warn about missing attribute' () {
+
+        given:
+        def file = Files.createTempFile('test','config')
+        file.deleteOnExit()
+        file.text =
+                '''
+                params.foo = HOME
+                '''
+
+
+        when:
+        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
+        def cfg = new ConfigBuilder().setOptions(opt).build()
+        then:
+        cfg.params.foo == System.getenv('HOME')
+
+        when:
+        file.text =
+                '''
+                params.foo = bar
+                '''
+        opt = new CliOptions(config: [file.toFile().canonicalPath] )
+        new ConfigBuilder().setOptions(opt).build()
+        then:
+        def e = thrown(ConfigParseException)
+        e.message == "Unknown config attribute: bar -- check config file: ${file.toRealPath()}".toString()
+
+    }
+
 }
 

@@ -267,14 +267,10 @@ class ConfigBuilder {
             configEntries.each { entry ->
 
                 try {
-                    if( entry instanceof File )
-                        result.merge( slurper.parse(entry) )
-
-                    else if( entry instanceof Path )
-                        result.merge( slurper.parse(entry.toFile()) )
-
-                    else if( entry )
-                        result.merge( slurper.parse(entry.toString()) )
+                    merge(result, slurper, entry )
+                }
+                catch( ConfigParseException e ) {
+                    throw e
                 }
                 catch( Exception e ) {
                     def message = (entry instanceof Path ? "Unable to parse config file: '$entry' " : "Unable to parse configuration ")
@@ -288,6 +284,48 @@ class ConfigBuilder {
         }
 
         return result
+    }
+
+    /**
+     * Merge the main config with a separate config file
+     *
+     * @param result The main {@link ConfigObject}
+     * @param slurper The {@ComposedConfigSlurper} parsed instance
+     * @param entry The next config snippet/file to be parsed
+     * @return
+     */
+    protected void merge(ConfigObject result, ComposedConfigSlurper slurper, entry ) {
+        if( !entry )
+            return
+
+        ConfigObject config
+        if( entry instanceof File )
+            config = slurper.parse(entry)
+
+        else if( entry instanceof Path )
+            config = slurper.parse(entry.toFile())
+
+        else
+            config = slurper.parse(entry.toString())
+
+        validate(config,entry)
+        result.merge(config)
+    }
+
+    /**
+     * Validate a config object verifying is does not contains unresolved attributes
+     *
+     * @param config The {@link ConfigObject} to verify
+     * @param file The source config file/snipper
+     * @return
+     */
+    protected validate(ConfigObject config, file) {
+        config.each { k, v ->
+            if( v instanceof ConfigObject ) {
+                if( v.isEmpty() ) throw new ConfigParseException("Unknown config attribute: $k -- check config file: $file")
+                validate(v,file)
+            }
+        }
     }
 
     protected checkValidProfile(Collection<String> names) {
