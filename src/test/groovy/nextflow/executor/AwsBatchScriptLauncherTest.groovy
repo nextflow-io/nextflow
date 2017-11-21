@@ -258,10 +258,10 @@ class AwsBatchScriptLauncherTest extends Specification {
                 echo start | aws s3 cp - s3:/${folder}/.command.begin
                 [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
                 rm -f .command.sh
-                rm -f .command.run.1
+                rm -f .command.stub
                 rm -f .command.in
                 aws s3 cp --quiet s3:/${folder}/.command.sh .command.sh
-                aws s3 cp --quiet s3:/${folder}/.command.run.1 .command.run.1
+                aws s3 cp --quiet s3:/${folder}/.command.stub .command.stub
                 aws s3 cp --quiet s3:/${folder}/.command.in .command.in
 
 
@@ -273,7 +273,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                /bin/bash .command.run.1
+                /bin/bash .command.stub
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?

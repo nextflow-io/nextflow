@@ -227,7 +227,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         Files.exists(folder.resolve('.command.sh'))
         Files.exists(folder.resolve('.command.run'))
-        Files.exists(folder.resolve('.command.run.1'))
+        Files.exists(folder.resolve('.command.stub'))
 
         folder.resolve('.command.sh').text ==
                 '''
@@ -302,7 +302,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                /bin/bash ${folder}/.command.run.1
+                /bin/bash ${folder}/.command.stub
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -310,7 +310,7 @@ class BashWrapperBuilderTest extends Specification {
                 """
                         .stripIndent().leftTrim()
 
-                folder.resolve('.command.run.1').text ==
+                folder.resolve('.command.stub').text ==
                 """
                 #!/bin/bash
                 set -e
@@ -554,7 +554,7 @@ class BashWrapperBuilderTest extends Specification {
         Files.exists(folder.resolve('.command.sh'))
         Files.exists(folder.resolve('.command.run'))
         Files.exists(folder.resolve('.command.in'))
-        Files.exists(folder.resolve('.command.run.1'))
+        Files.exists(folder.resolve('.command.stub'))
 
         /*
          * data input file
@@ -641,7 +641,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                /bin/bash ${folder}/.command.run.1
+                /bin/bash ${folder}/.command.stub
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -652,7 +652,7 @@ class BashWrapperBuilderTest extends Specification {
                 """
                         .stripIndent().leftTrim()
 
-        folder.resolve('.command.run.1').text ==
+        folder.resolve('.command.stub').text ==
             """
             #!/bin/bash
             set -e
@@ -1458,7 +1458,7 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
 
-        folder.resolve('.command.run.1').readLines()[-2..-1].join('\n') ==
+        folder.resolve('.command.stub').readLines()[-2..-1].join('\n') ==
                 """
                 # patch root ownership problem of files created with docker
                 [ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${folder}/{*,.*} || true
