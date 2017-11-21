@@ -94,10 +94,15 @@ function make_temp() {
 }
 
 function resolve_link() {
+    [[ ! -f $1 ]] && exit 1
     if command -v realpath &>/dev/null; then
       realpath $1
     elif command -v readlink &>/dev/null; then
-      readlink -f $1
+      local target="$1"
+      while [ -L "$target" ]; do
+        target="$(readlink "$target")"
+      done
+      echo "$(cd "$(dirname "$target")"; pwd -P)/$target"
     else
       echo_yellow "WARN: Neither \`realpath\` nor \`readlink\` command can be found"
       exit 1
