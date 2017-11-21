@@ -389,11 +389,9 @@ class BashWrapperBuilder {
             wrapper << beforeScript << ENDL
         }
 
-
         /*
          * add modules to the environment file
          * note: singularity engine can be loaded by using module
-         * TODO: should the module snippet go *after* env definition
          */
         if( moduleNames ) {
             wrapper << MODULE_LOAD << ENDL << ENDL
