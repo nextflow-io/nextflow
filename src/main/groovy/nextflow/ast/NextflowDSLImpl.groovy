@@ -173,33 +173,8 @@ public class NextflowDSLImpl implements ASTTransformation {
         }
     }
 
-
-
     /**
-     * This transformation applies to tasks code block and translate
-     * the script string to be executed wrapping it by a closure
-     * <p>
-     *     For example:
-     * <pre>
-     *     task {
-     *         input x: someChannel
-     *         output 'resultFile'
-     *
-     *         "do this; do that"
-     *     }
-     *
-     * </pre>
-     * becomes:
-     *
-     * <pre>
-     *     task {
-     *         input x: someChannel
-     *         output 'resultFile'
-     *
-     *         { -> "do this; do that" }
-     *     }
-     *
-     * </pre>
+     * Transform a DSL `process` definition into a proper method invocation
      *
      * @param methodCall
      * @param unit
@@ -207,14 +182,13 @@ public class NextflowDSLImpl implements ASTTransformation {
     protected void convertProcessBlock( MethodCallExpression methodCall, SourceUnit unit ) {
         log.trace "Apply task closure transformation to method call: $methodCall"
 
-        def args = methodCall.arguments as ArgumentListExpression
-        def lastArg = args.expressions.size()>0 ? args.getExpression(args.expressions.size()-1) : null
-        def isClosure = lastArg instanceof ClosureExpression
+        final args = methodCall.arguments as ArgumentListExpression
+        final lastArg = args.expressions.size()>0 ? args.getExpression(args.expressions.size()-1) : null
+        final isClosure = lastArg instanceof ClosureExpression
 
         if( isClosure ) {
             // the block holding all the statements defined in the process (closure) definition
-            def block = (lastArg as ClosureExpression).code as BlockStatement
-            int len = block.statements.size()
+            final block = (lastArg as ClosureExpression).code as BlockStatement
 
             makeGStringLazyVisitor = new GStringToLazyVisitor(unit)
 
@@ -271,16 +245,29 @@ public class NextflowDSLImpl implements ASTTransformation {
 
                     // capture the statements in a when guard and remove from the current block
                     case 'when':
-                        iterator.remove()
-                        whenStatements << stm
-                        readSource(stm,whenSource,unit)
-                        break
+                        if( iterator.hasNext() ) {
+                            iterator.remove()
+                            whenStatements << stm
+                            readSource(stm,whenSource,unit)
+                            break
+                        }
+                        // when entering in this branch means that this is the last statement,
+                        // which is supposed to be the task command
+                        // hence if no previous `when` statement has been processed, a syntax error is returned
+                        else if( !whenStatements ) {
+                            int line = methodCall.lineNumber
+                            int coln = methodCall.columnNumber
+                            unit.addError(new SyntaxException("Invalid process definition -- Empty `when` or missing `script` statement", line, coln))
+                            return
+                        }
+                        else
+                            break
 
                     default:
                         if(currentLabel) {
                             def line = stm.getLineNumber()
                             def coln = stm.getColumnNumber()
-                            unit.addError(new SyntaxException("Invalid process block definition -- Unknown keyword `$currentLabel`",line,coln))
+                            unit.addError(new SyntaxException("Invalid process definition -- Unknown keyword `$currentLabel`",line,coln))
                             return
                         }
 
@@ -299,9 +286,8 @@ public class NextflowDSLImpl implements ASTTransformation {
             /*
              * wrap all the statements after the 'exec:'  label by a new closure containing them (in a new block)
              */
+            final len = block.statements.size()
             boolean done = false
-            int line = methodCall.lineNumber
-            int coln = methodCall.columnNumber
             if( execStatements ) {
                 // create a new Closure
                 def execBlock = new BlockStatement(execStatements, new VariableScope(block.variableScope))
@@ -323,25 +309,22 @@ public class NextflowDSLImpl implements ASTTransformation {
                 readSource(stm,source,unit)
 
                 if ( stm instanceof ReturnStatement  ){
-                    List result = wrapExpressionWithClosure(block, stm.getExpression(), len, source, unit)
-                    done = result[0]
-                    line = result[1] as int
-                    coln = result[2] as int
+                    done = wrapExpressionWithClosure(block, stm.getExpression(), len, source, unit)
                 }
 
                 else if ( stm instanceof ExpressionStatement )  {
-                    List result = wrapExpressionWithClosure(block, stm.getExpression(), len, source, unit)
-                    done = result[0]
-                    line = result[1] as int
-                    coln = result[2] as int
+                    done = wrapExpressionWithClosure(block, stm.getExpression(), len, source, unit)
                 }
+
                 // set the 'script' flag
                 currentLabel = 'script'
             }
 
             if (!done) {
                 log.trace "Invalid 'process' definition -- Process must terminate with string expression"
-                unit.addError( new SyntaxException("Not a valid process definition -- Make sure the process ends with a script wrapped by quote characters", line,coln))
+                int line = methodCall.lineNumber
+                int coln = methodCall.columnNumber
+                unit.addError( new SyntaxException("Invalid process definition -- Make sure the process ends with a script wrapped by quote characters",line,coln))
             }
         }
     }
@@ -768,7 +751,7 @@ public class NextflowDSLImpl implements ASTTransformation {
      *      <li>3nd item: on error condition the column containing the error in the source script, zero otherwise
      *
      */
-    protected List wrapExpressionWithClosure( BlockStatement block, Expression expr, int len, CharSequence source, SourceUnit unit ) {
+    protected boolean wrapExpressionWithClosure( BlockStatement block, Expression expr, int len, CharSequence source, SourceUnit unit ) {
         if( expr instanceof GStringExpression || expr instanceof ConstantExpression ) {
             // remove the last expression
             block.statements.remove(len-1)
@@ -782,17 +765,17 @@ public class NextflowDSLImpl implements ASTTransformation {
             def wrap = makeScriptWrapper(closureExp, source, 'script', unit )
             block.statements.add( new ExpressionStatement(wrap) )
 
-            return [true,0,0]
+            return true
         }
         else if( expr instanceof ClosureExpression ) {
             // do not touch it
-            return [true,0,0]
+            return true
         }
         else {
             log.trace "Invalid process result expression: ${expr} -- Only constant or string expression can be used"
         }
 
-        return [false, expr.lineNumber, expr.columnNumber]
+        return false
     }
 
     /**
