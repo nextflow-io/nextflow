@@ -408,7 +408,7 @@ class KubernetesExecutorTest extends Specification {
         bash.build()
 
         then:
-        folder.resolve('.command.run.1').readLines()[-2..-1].join('\n') ==
+        folder.resolve('.command.stub').readLines()[-2..-1].join('\n') ==
                 """
                 # patch root ownership problem of files created with docker
                 [ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${folder}/{*,.*} || true
