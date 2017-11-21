@@ -152,6 +152,8 @@ class ScriptRunner {
         try {
             // parse the script
             script = parseScript(scriptText, args)
+            // validate the config
+            validate()
             // run the code
             run()
             // await termination
@@ -313,6 +315,13 @@ class ScriptRunner {
     }
 
     /**
+     * Check preconditions before run the main script
+     */
+    protected void validate() {
+        session.validateConfig(script.getProcessNames())
+    }
+
+    /**
      * Launch the Nextflow script execution
      *
      * @return The value as returned by the user provided script
@@ -358,8 +367,9 @@ class ScriptRunner {
     @PackageScope
     String getCommandLine() { commandLine }
 
+    @PackageScope
     @CompileDynamic
-    protected fetchContainers() {
+    def fetchContainers() {
 
         def result = [:]
         if( session.config.process instanceof Map<String,?> ) {

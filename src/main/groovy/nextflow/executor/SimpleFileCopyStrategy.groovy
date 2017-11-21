@@ -22,10 +22,11 @@ package nextflow.executor
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.file.FilePorter
 import nextflow.processor.TaskBean
 import nextflow.util.Escape
-
 /**
  * Simple file strategy that stages input files creating symlinks
  * and copies the output files using the {@code cp} command.
@@ -35,21 +36,6 @@ import nextflow.util.Escape
 @Slf4j
 @CompileStatic
 class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
-
-    /**
-     * All the input files as a map of {@code <stage name, store path>} pairs
-     */
-    Map<String,Path> inputFiles
-
-    /**
-     * The output file names
-     */
-    List<String> outputFiles
-
-    /**
-     * Path where output files need to be copied
-     */
-    Path targetDir
 
     /**
      * Specify how output files are copied to the target path
@@ -66,30 +52,38 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     String separatorChar = '\n'
 
+    private FilePorter porter
 
-    SimpleFileCopyStrategy() {
-        this.inputFiles = [:]
-        this.outputFiles = []
-    }
-
+    SimpleFileCopyStrategy() { }
 
     SimpleFileCopyStrategy( TaskBean bean ) {
-        this.inputFiles = bean.inputFiles
-        this.outputFiles = bean.outputFiles
-        this.targetDir = bean.targetDir
         this.stageinMode = bean.stageInMode
         this.stageoutMode = bean.stageOutMode
     }
 
+    @Override
+    Map<String,Path> resolveForeignFiles(Map<String,Path> files) {
+        resolveForeignFiles0(files)
+    }
+
+    /*
+     * implements as memoized method to avoid to download/upload multiple times the same file
+     */
+    @Memoized
+    private Map<String,Path> resolveForeignFiles0(Map<String,Path> files) {
+        if( !porter )
+            porter = new FilePorter()
+        porter.stageForeignFiles(files)
+    }
 
     /**
      * Given a map of the input file parameters with respective values,
      * create the BASH script to stage them into the task working space
      *
-     * @param inputs An associative array mapping each {@code FileInParam} to the corresponding file (or generic value)
+     * @param inputFiles All the input files as a map of {@code <stage name, store path>} pairs
      * @return The BASH script to stage them
      */
-    String getStageInputFilesScript() {
+    String getStageInputFilesScript(Map<String,Path> inputFiles) {
         assert inputFiles != null
 
         def delete = []
@@ -136,7 +130,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * to the shared working directory
      */
     @Override
-    String getUnstageOutputFilesScript() {
+    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
 
         // collect all the expected names (pattern) for files to be un-staged
         def result = []
@@ -256,7 +250,6 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         return null
     }
 
-
     /**
      * {@inheritDoc}
      */
@@ -286,7 +279,15 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     @Override
     String exitFile(Path file) {
-        Escape.path(file)
+        "> ${Escape.path(file)}"
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    String pipeInputFile(Path file) {
+        " < ${Escape.path(file)}"
     }
 
 }

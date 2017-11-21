@@ -46,7 +46,19 @@ declare -a args=()
 DEBUG=''
 COLUMNS=${COLUMNS:-`tput cols 2> /dev/tty`}
 MAIN_CLASS=${MAIN_CLASS:-'nextflow.cli.Launcher'}
+JAVA_VER="$(java -version 2>&1)"
+if [ $? -ne 0 ]; then
+    echo "${JAVA_VER:-Failed to launch the Java virtual machine}"
+    exit 1
+fi
+JAVA_VER=$(echo "$JAVA_VER" | awk '/version/ {gsub(/"/, "", $3); print $3}')
+if [[ ! $JAVA_VER =~ ^1.8 && ! $JAVA_VER =~ ^9 ]]; then
+    echo "Error: cannot find Java or it's a wrong version -- please make sure that Java 8 or higher is installed"
+    exit 1
+fi
 JVM_ARGS+=" -Dfile.encoding=UTF-8 -noverify -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
+[[ "$JAVA_VER" =~ ^9 ]] && JVM_ARGS+=" --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --illegal-access=deny"
+
 ## flight recorded -- http://docs.oracle.com/javacomponents/jmc-5-4/jfr-runtime-guide/run.htm
 ##JVM_ARGS+=" -XX:+UnlockCommercialFeatures -XX:+FlightRecorder -XX:StartFlightRecording=duration=60s,filename=myrecording.jfr"
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
@@ -66,7 +78,7 @@ EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}
 # classpath when the application is compiled with gradle
 #
 if [ -e "$base_dir/build/libs" ]; then
-  CLASSPATH=`ls $base_dir/build/libs/* | egrep 'nextflow-[0-9]+\.[0-9]+\.[0-9]+(-[A-Z0-9]+)?.jar$'`
+  CLASSPATH=`ls $base_dir/build/libs/* | egrep 'nextflow-[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?.jar$'`
 
   # -- append runtime libraries
   [[ ! -f "$base_dir/.launch.classpath" ]] && echo "Missing '.launch.classpath' file -- create it by running: ./gradlew exportClasspath" && exit 1

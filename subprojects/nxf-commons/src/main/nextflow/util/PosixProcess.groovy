@@ -37,7 +37,6 @@ class PosixProcess {
 
     PosixProcess( Process process ) {
         assert process
-        assert process.class.name == 'java.lang.UNIXProcess'
 
         target = process
     }

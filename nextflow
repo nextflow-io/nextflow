@@ -19,7 +19,7 @@
 #  along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'0.25.7'}
+NXF_VER=${NXF_VER:-'0.26.0'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -40,7 +40,7 @@ fi
 fi
 
 function echo_red() {
-    echo -e "$RED$*$NORMAL"
+    >&2 echo -e "$RED$*$NORMAL"
 }
 
 function echo_green() {
@@ -48,7 +48,7 @@ function echo_green() {
 }
 
 function echo_yellow() {
-    echo -e "$YELLOW$*$NORMAL"
+    >&2 echo -e "$YELLOW$*$NORMAL"
 }
 
 function die() {
@@ -56,7 +56,7 @@ function die() {
   exit 1
 }
 
-get_abs_filename() {
+function get_abs_filename() {
   echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 }
 
@@ -66,7 +66,7 @@ function get() {
     elif command -v wget &>/dev/null; then
         GET="wget -q $1 -O $2"
     else
-        echo_red "Error: cannot find 'curl' nor 'wget' utility --  please install one of them"
+        echo_red "ERROR: Cannot find 'curl' nor 'wget' utility --  please install one of them"
         exit 1
     fi
 
@@ -74,7 +74,7 @@ function get() {
     $GET; status=$?
     printf "\r\033[K"
     if [ $status -ne 0 ]; then
-        echo_red "Error: cannot download nextflow required file -- make sure you can connect to the internet"
+        echo_red "ERROR: Cannot download nextflow required file -- make sure you can connect to the internet"
         echo ""
         echo "Alternatively you can try to download this file:"
         echo "    $1"
@@ -90,6 +90,17 @@ function make_temp() {
     local base=${NXF_TEMP:=$PWD}
     if [ "$(uname)" = 'Darwin' ]; then mktemp "${base}/nxf-tmp.XXXXX" || exit $?
     else mktemp -t nxf-tmp.XXXXX -p "${base}" || exit $?
+    fi
+}
+
+function resolve_link() {
+    if command -v realpath &>/dev/null; then
+      realpath $1
+    elif command -v readlink &>/dev/null; then
+      readlink -f $1
+    else
+      echo_yellow "WARN: Neither \`realpath\` nor \`readlink\` command can be found"
+      exit 1
     fi
 }
 
@@ -265,20 +276,43 @@ if [ ! -x "$JAVA_CMD" ] ; then
     fi
 fi
 
-# Verify installed Java version
-if [ ! -d "$NXF_LAUNCHER" ]; then # <-- only the first time
-    JAVA_OUT="$($JAVA_CMD $NXF_OPTS -version 2>&1)"
-    if [ $? -ne 0 ]; then
-        echo_red "${JAVA_OUT:-Failed to launch the Java virtual machine}"
-        echo_yellow "Note: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n NXF_OPTS: $NXF_OPTS\n"
-        exit 1
-    fi
-    echo "$JAVA_OUT" | awk '/version/ {print $3}' | grep '"1\.[7|8]\..*"' > /dev/null
-    if [ $? -ne 0 ]; then
-         echo_red "Error: cannot find Java or it's a wrong version -- please make sure that Java 7 or higher it's installed"
-         echo_yellow "Note: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n JAVA_HOME: $JAVA_HOME\n"
-         exit 1
-    fi
+# Retrieve the java version from a NF local file
+JAVA_KEY="$NXF_HOME/tmp/ver/$(resolve_link $JAVA_CMD | sed 's@/@.@g')"
+if [ -f $JAVA_KEY ]; then
+  JAVA_VER="$(cat $JAVA_KEY)"
+else
+  JAVA_VER="$($JAVA_CMD $NXF_OPTS -version 2>&1)"
+  if [ $? -ne 0 ]; then
+      echo_red "${JAVA_VER:-Failed to launch the Java virtual machine}"
+      echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n NXF_OPTS: $NXF_OPTS\n"
+      exit 1
+  fi
+  JAVA_VER=$(echo "$JAVA_VER" | awk '/version/ {gsub(/"/, "", $3); print $3}')
+  # check NF version
+  if [[ ! $NXF_VER =~ ([0-9]+)\.([0-9]+)\.([0-9].*) ]]; then
+    echo_ref "Not a valid Nextflow version: $NXF_VER"
+    exit 1
+  fi
+  version_check="^(1.8|9)"
+  version_message="Java 8"
+  major=${BASH_REMATCH[1]}
+  minor=${BASH_REMATCH[2]}
+  # legacy version - Java 7/8 only
+  if [[ $major==0 && $minor<26 ]]; then
+    version_check="^(1.7|1.8)"
+    version_message="Java 7 or 8"
+  fi
+  if [[ ! $JAVA_VER =~ $version_check ]]; then
+      echo_red "ERROR: Cannot find Java or it's a wrong version -- please make sure that $version_message is installed"
+      echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n JAVA_HOME: $JAVA_HOME\n"
+      exit 1
+  fi
+  mkdir -p $(dirname $JAVA_KEY)
+  [[ -f $JAVA_VER ]] && echo $JAVA_VER > $JAVA_KEY
+fi
+if [[ "$JAVA_VER" =~ ^9 ]]; then
+  echo_yellow "WARN: Nextflow support for Java 9 is still in beta stage and some advanced features are not supported"
+  echo_yellow "WARN: It is suggested the use of Java version 8"
 fi
 
 # Verify nextflow jar is available
@@ -347,6 +381,7 @@ fi
 env_md5() {
 cat <<EOF | $MD5 | cut -f1 -d' '
 $JAVA_CMD
+$JAVA_VER
 $JAVA_OPTS
 $NXF_HOME
 $NXF_VER
@@ -363,8 +398,21 @@ if [ -s "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ]; then
     launcher=($(cat "$LAUNCH_FILE"))
 else
     # otherwise run the capsule and get the result classpath in the 'launcher' and save it to a file
-    launcher=($("$JAVA_CMD" $JAVA_OPTS -jar "$NXF_BIN"))
+    cli=($("$JAVA_CMD" $JAVA_OPTS -jar "$NXF_BIN"))
     [[ $? -ne 0 ]] && echo_red 'Unable to initialize nextflow environment' && exit $?
+
+    if [[ "$JAVA_VER" =~ ^9 ]]; then
+      echo_yellow "Nextflow support for Java 8 is still experimental an some advanced features are not yet supported -- Please use Java 8"
+      launcher=("${cli[@]:0:1}")
+      launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
+      launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
+      launcher+=(--add-opens=java.base/java.util=ALL-UNNAMED)
+      launcher+=(--add-opens=java.base/sun.nio.ch=ALL-UNNAMED)
+      launcher+=(--illegal-access=deny)
+      launcher+=("${cli[@]:1}")
+    else
+      launcher=("${cli[@]}")
+    fi
 
     # Don't show errors if the LAUNCH_FILE can't be created
     if mkdir -p "${NXF_LAUNCHER}" 2>/dev/null; then

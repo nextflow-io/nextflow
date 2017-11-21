@@ -30,7 +30,7 @@ import nextflow.Global
 import nextflow.ISession
 import nextflow.Session
 import nextflow.exception.ProcessException
-import nextflow.exception.ProcessNotRecoverableException
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.NopeExecutor
 import nextflow.file.FileHolder
 import nextflow.script.BaseScript
@@ -42,7 +42,6 @@ import nextflow.script.ValueInParam
 import nextflow.util.CacheHelper
 import spock.lang.Specification
 import spock.lang.Unroll
-import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -381,20 +380,6 @@ class TaskProcessorTest extends Specification {
         holder.stageName == localFile.getFileName().toString()
 
         /*
-         * when the input is a on a foreign file system
-         * it is need to copy it to a local file
-         */
-        when:
-        def remoteFile = TestHelper.createInMemTempFile('remote_file.txt')
-        remoteFile.text = 'alpha beta gamma delta'
-        holder = processor.normalizeInputToFile(remoteFile,'input.1')
-        then:
-        holder.sourceObj == remoteFile
-        holder.storePath.fileSystem == FileSystems.default
-        holder.storePath.text == 'alpha beta gamma delta'
-        holder.stageName == remoteFile.getName()
-
-        /*
          * any generic input that is not a file is converted to a string
          * and save to the local file system
          */
@@ -442,7 +427,7 @@ class TaskProcessorTest extends Specification {
         given:
         def task
         def proc = [:] as TaskProcessor
-        def error = Mock(ProcessNotRecoverableException)
+        def error = Mock(ProcessUnrecoverableException)
 
         when:
         task = new TaskRun()
@@ -647,6 +632,58 @@ class TaskProcessorTest extends Specification {
         processor.visitOptions(param,'dir-name') == [type:'any', followLinks: true, maxDepth: 5, hidden: false, relative: false]
     }
 
+    def 'should get bin files in the script command' () {
 
+        given:
+        def session = Mock(Session)
+        session.getBinEntries() >> ['foo.sh': Paths.get('/some/path/foo.sh'), 'bar.sh': Paths.get('/some/path/bar.sh')]
+        def processor = [:] as TaskProcessor
+        processor.session = session
+
+        when:
+        def result = processor.getTaskBinEntries('var=x foo.sh')
+        then:
+        result.size()==1
+        result.contains(Paths.get('/some/path/foo.sh'))
+
+        when:
+        result = processor.getTaskBinEntries('echo $(foo.sh); bar.sh')
+        then:
+        result.size()==2
+        result.contains(Paths.get('/some/path/foo.sh'))
+        result.contains(Paths.get('/some/path/bar.sh'))
+
+    }
+
+    def 'should make task unique id' () {
+
+        given:
+        def task = Mock(TaskRun)
+        def session = Mock(Session)
+        session.getBinEntries() >> ['foo.sh': Paths.get('/some/path/foo.sh'), 'bar.sh': Paths.get('/some/path/bar.sh')]
+        def processor = Spy(TaskProcessor)
+        processor.session = session
+        processor.config = Mock(ProcessConfig)
+
+        when:
+        def uuid = processor.createTaskHashKey(task)
+        then:
+        1 * session.getUniqueId() >> UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')
+        2 * task.getSource() >> 'hello world'
+        1 * processor.getTaskGlobalVars(task) >> [:]
+        1 * task.isContainerEnabled() >> false
+        0 * task.getContainer()
+        uuid.toString() == '14cc05f32bc37f2d1a370871b1f5be4f'
+
+        when:
+        uuid = processor.createTaskHashKey(task)
+        then:
+        1 * session.getUniqueId() >> UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')
+        2 * task.getSource() >> 'hello world'
+        1 * processor.getTaskGlobalVars(task) >> [:]
+        1 * task.isContainerEnabled() >> true
+        1 * task.getContainer() >> 'foo/bar'
+        uuid.toString() == '50608212f83b30ef91169eac359b5e64'
+    }
 
 }

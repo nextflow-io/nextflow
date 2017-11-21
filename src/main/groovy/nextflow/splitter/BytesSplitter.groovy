@@ -39,22 +39,23 @@ class BytesSplitter extends AbstractBinarySplitter {
         def result = null
         int c=0
         long bytesCount=0
-        byte[] buffer = new byte[count]
+        byte[] buffer = new byte[counter.size]
         int item
 
         try {
 
             while( (item=targetObject.read()) != -1 ) {
-                buffer[c] = (byte)item
+                buffer[c++] = (byte)item
 
-                if ( ++c == count ) {
-                    c = 0
+                if ( counter.hasNext() ) {
                     result = invokeEachClosure(closure, buffer)
-                    buffer = new byte[count]
+                    buffer = new byte[counter.size]
+                    c = 0
+                    counter.reset()
                 }
 
                 // -- check the limit of allowed rows has been reached
-                if( limit && ++bytesCount == limit )
+                if( limit>0 && ++bytesCount == limit )
                     break
             }
 
@@ -70,7 +71,7 @@ class BytesSplitter extends AbstractBinarySplitter {
          */
 
         if ( c ) {
-            if( c != count ) {
+            if( c != counter.size ) {
                 def copy = new byte[c]
                 System.arraycopy(buffer,0,copy,0,c)
                 buffer = copy

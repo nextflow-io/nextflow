@@ -21,6 +21,7 @@
 package nextflow.processor
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.executor.AwsBatchExecutor
 import nextflow.executor.CondorExecutor
 import nextflow.executor.CrgExecutor
 import nextflow.executor.Executor
@@ -64,7 +65,8 @@ class ProcessFactory {
             'bsc': LsfExecutor,
             'condor': CondorExecutor,
             'k8s': KubernetesExecutor,
-            'nqsii': NqsiiExecutor
+            'nqsii': NqsiiExecutor,
+            'awsbatch': AwsBatchExecutor
     ]
 
     private final Session session
@@ -130,7 +132,7 @@ class ProcessFactory {
         if( !executorName )
             return LocalExecutor
 
-        def clazz =  executorsMap[executorName.toLowerCase()]
+        def clazz =  executorsMap[executorName.toLowerCase().replace('-','')]
         if( !clazz )
             throw new IllegalArgumentException("Unknown executor name: $executorName")
 
@@ -235,9 +237,11 @@ class ProcessFactory {
         // Note: the config object is wrapped by a TaskConfigWrapper because it is needed
         // to raise a MissingPropertyException when some values are missing, thus the closure
         // will try to fallback on the owner object
-        def script = processConfig
-                .throwExceptionOnMissingProperty(true)
-                .with ( body ) as TaskBody
+        processConfig.throwExceptionOnMissingProperty(true)
+        def copy = (Closure)body.clone()
+        copy.setResolveStrategy(Closure.DELEGATE_FIRST);
+        copy.setDelegate(processConfig);
+        def script = copy.call() as TaskBody
         processConfig.throwExceptionOnMissingProperty(false)
         if ( !script )
             throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")

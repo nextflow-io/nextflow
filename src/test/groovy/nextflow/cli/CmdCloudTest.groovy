@@ -22,6 +22,7 @@ package nextflow.cli
 
 import java.nio.file.Files
 
+import nextflow.cloud.CloudDriver
 import nextflow.exception.AbortOperationException
 import spock.lang.Specification
 import spock.util.environment.RestoreSystemProperties
@@ -87,6 +88,7 @@ class CmdCloudTest extends Specification {
             imageId: 'ami-blah',
             instanceType: 'm4.xxlarge'
         ]]
+        cmd.driver = Mock(CloudDriver)
 
         when:
         def config1 = cmd.makeConfig('my-cloud')

@@ -39,6 +39,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
 import nextflow.trace.GraphObserver
+import nextflow.trace.ReportObserver
 import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
 import nextflow.util.LoggerHelper
@@ -211,6 +212,10 @@ class Launcher {
                 normalized << TraceFileObserver.DEF_FILE_NAME
             }
 
+            else if( current == '-with-report' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << ReportObserver.DEF_FILE_NAME
+            }
+
             else if( current == '-with-timeline' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << TimelineObserver.DEF_FILE_NAME
             }
@@ -339,7 +344,7 @@ class Launcher {
         println ''
     }
 
-    protected Launcher command( String[] args ) {
+    Launcher command( String[] args ) {
         /*
          * CLI argument parsing
          */
@@ -384,7 +389,7 @@ class Launcher {
     /**
      * Launch the pipeline execution
      */
-    protected int run() {
+    int run() {
 
         /*
          * setup environment

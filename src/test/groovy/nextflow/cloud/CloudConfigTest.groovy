@@ -49,6 +49,7 @@ class CloudConfigTest extends Specification {
                 sharedStorageId: 'fs-1803efd1',
                 sharedStorageMount: '/mnt/efs',
                 spotPrice: 0.55,
+                instanceRole: 'foo-role',
                 dockerPull: 'cbcrg/image:tag'
         ]
 
@@ -67,13 +68,13 @@ class CloudConfigTest extends Specification {
             sharedStorageMount == '/mnt/efs'
             spotPrice == '0.55'
             dockerPull == ['cbcrg/image:tag']
+            instanceRole == 'foo-role'
         }
 
     }
 
 
     def 'should return a pretty formatted string' () {
-
 
         given:
         def config = [

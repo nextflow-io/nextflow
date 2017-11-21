@@ -159,6 +159,10 @@ public abstract class TaskHandler {
         record.scratch = task.getScratch()
         record.workdir = task.getWorkDirStr()
         record.queue = task.config.queue
+        record.cpus = task.config.getCpus()
+        record.memory = task.config.getMemory()?.toBytes()
+        record.disk = task.config.getDisk()?.toBytes()
+        record.time = task.config.getTime()?.toMillis()
 
         if( isCompleted() ) {
             if( completeTimeMillis ) {

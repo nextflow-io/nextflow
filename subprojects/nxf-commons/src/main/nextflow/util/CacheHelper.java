@@ -178,10 +178,18 @@ public class CacheHelper {
      * @return The updated {@code Hasher} object
      */
     static private Hasher hashFile( Hasher hasher, Path path, HashMode mode ) {
-        if( mode == HashMode.DEEP && Files.isRegularFile(path))
-            return hashFileContent(hasher, path);
+        BasicFileAttributes attrs=null;
+        try {
+            attrs = Files.readAttributes(path, BasicFileAttributes.class);
+        }
+        catch(IOException e) {
+            log.debug("Unable to get file attributes file: {} -- Cause: {}", path, e.toString());
+        }
 
-        return hashFileMetadata(hasher, path);
+        if( mode==HashMode.DEEP && attrs!=null && attrs.isRegularFile() )
+            return hashFileContent(hasher, path);
+        else
+            return hashFileMetadata(hasher, path, attrs);
     }
 
     /**
@@ -191,22 +199,16 @@ public class CacheHelper {
      * @param file file The {@code Path} object to hash
      * @return The updated {@code Hasher} object
      */
-    static private Hasher hashFileMetadata( Hasher hasher, Path file ) {
+    static private Hasher hashFileMetadata( Hasher hasher, Path file, BasicFileAttributes attrs ) {
 
-        hasher = hasher.putUnencodedChars( file.toAbsolutePath().normalize().toString() );
-
-        try {
-            BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class);
+        hasher = hasher.putUnencodedChars( file.toAbsolutePath().toString() );
+        if( attrs != null ) {
             hasher = hasher.putLong(attrs.size());
-            if( attrs.lastAccessTime() != null) {
+            if( attrs.lastModifiedTime() != null) {
                 hasher = hasher.putLong( attrs.lastModifiedTime().toMillis() );
             }
-            return hasher;
         }
-        catch (IOException e) {
-            log.debug("Unable to hash file: {} -- Cause: {}", file, e.toString());
-            return hasher;
-        }
+        return hasher;
     }
 
 

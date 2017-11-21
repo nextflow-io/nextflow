@@ -217,12 +217,10 @@ Once the cluster deployment completes, SSH in the master node following the inst
 you will be able to run your Nextflow pipeline as usual. 
 
 
-    
-
 Required dependencies
 ---------------------
 
-Java 7 or higher
+Java 8 
 
 Build from source
 -----------------
@@ -262,18 +260,13 @@ Then you will be able to run nextflow using the `nextflow` launcher script in th
 Known compilation problems 
 ---------------------------
 
-Nextflow can be compiled with both JDK 7 or JDK 8. However when compiling with the later you **won't** be able
-to run it on Java 7. The Java compiler used by the build process can be choose by setting the
+Nextflow required JDK 8 to be compiled. The Java compiler used by the build process can be choose by setting the
 `JAVA_HOME` environment variable accordingly. 
  
 
 If the compilation stops reporting the error: `java.lang.VerifyError: Bad <init> method call from inside of a branch`,
 this is due to a bug affecting the following Java JDK:
 
-- 1.7.0 update 55
-- 1.7.0 update 65
-- 1.7.0 update 67
-- 1.7.0 update 71
 - 1.8.0 update 11
 - 1.8.0 update 20
 
@@ -304,7 +297,7 @@ If you have it installed in your computer, follow the steps below in order to us
 5. Confirm the default import options and click on "Finish" to finalize the project configuration.
 6. When the import process complete, select the "Project structure" command in the "File" menu bar.
 7. In the showed dialog click on the "Project" item in the list of the left, and make sure that
-   the "Project SDK" choice on the right contains Java 7 (or higher).
+   the "Project SDK" choice on the right contains Java 8.
 
 
 Documentation

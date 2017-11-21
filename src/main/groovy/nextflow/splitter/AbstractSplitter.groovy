@@ -31,6 +31,7 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.exception.StopSplitIterationException
 import nextflow.util.CheckHelper
+import nextflow.util.MemoryUnit
 /**
  * Generic data splitter, provide main methods/interfaces
  *
@@ -41,8 +42,6 @@ import nextflow.util.CheckHelper
 abstract class AbstractSplitter<T> implements SplitterStrategy {
 
     protected Map fOptionsMap
-
-    protected int count = 1
 
     protected def into
 
@@ -62,11 +61,15 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
 
     protected long limit
 
-    protected int elem = -1
+    protected Integer elem
 
     private targetObj
 
     private CollectorStrategy collector
+
+    protected boolean multiSplit
+
+    protected EntryCounter counter = new EntryCounter(1)
 
     AbstractSplitter() { }
 
@@ -102,11 +105,6 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
     protected Object getTargetObj() { targetObj }
 
     /**
-     * @return The number of entry of which each chunk is made up
-     */
-    int getCount() { count }
-
-    /**
      * @return The target object that receives the splitted chunks. It can be a {@link groovyx.gpars.dataflow.DataflowChannel} or a {@code List}
      */
     def getInto() { into }
@@ -127,6 +125,11 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
         return this
     }
 
+    AbstractSplitter setMultiSplit(boolean value) {
+        this.multiSplit = value
+        return this
+    }
+
     /**
      * Apply the splitting operation on the given object
      *
@@ -140,10 +143,11 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
 
         setSource(source)
 
-        collector = createCollector()
-        if( collector instanceof CacheableCollector && collector.checkCached() ) {
-            log.debug "Operator `$operatorName` reusing cached chunks at path: ${collector.baseFile}"
-            result = resumeFromCache(collector)
+
+        final chunks = collector = createCollector()
+        if( chunks instanceof CacheableCollector && chunks.checkCached() ) {
+            log.debug "Operator `$operatorName` reusing cached chunks at path: ${chunks.getBaseFile()}"
+            result = resumeFromCache(chunks)
         }
 
         else {
@@ -184,19 +188,30 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
     @PackageScope
     def findSource( List tuple ) {
 
-        if( elem != -1 )
+        if( elem >= 0 )
             return tuple.get(elem)
 
+        // find the elem-th item having Path or File type
+        int pos = elem != null ? -elem : 1
+        int count = 0
         for( int i=0; i<tuple.size(); i++ ) {
             def it = tuple[i]
             if(  it instanceof Path || it instanceof File ) {
-                elem = i
-                break
+                if( ++count == pos ) {
+                    elem = i
+                    return tuple.get(i)
+                }
             }
         }
 
-        if( elem == -1 ) elem = 0
-        return tuple.get(elem)
+        // -- not found, if default was null just return the first item
+        if( elem == null ) {
+            elem = 0
+            return tuple.get(0)
+        }
+
+        // -- otherwise if a `elem` value was specified but not found, raise an exception
+        throw new IllegalArgumentException("Cannot find splittable file (elem=$elem)")
     }
 
     /**
@@ -268,7 +283,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
         closure = (Closure)options.each
 
         if( options.by )
-            count = options.by as Integer
+            counter = new EntryCounter(options.by as Integer)
 
         into = options.into
 

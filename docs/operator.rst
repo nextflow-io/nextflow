@@ -71,7 +71,7 @@ are returned::
 
 
 Finally, a filtering condition can be defined by using any a boolean `predicate`. A predicate is expressed by
-a :ref:`closure <script-closure>` retuning a boolean value. For example the following fragment shows how filter
+a :ref:`closure <script-closure>` returning a boolean value. For example the following fragment shows how filter
 a channel emitting numbers so that the `odd` values are returned::
 
     Channel
@@ -218,7 +218,7 @@ from the channel to which is applied. For example::
 The above snippet will print 10 numbers in the range from 1 to 100.
 
 The operator supports a second parameter that allows to set the initial `seed` for the random number generator.
-By setting it, the ``randomsSample`` operator will always return the same pseudo-random sequence. For example::
+By setting it, the ``randomSample`` operator will always return the same pseudo-random sequence. For example::
 
   Channel
         .from( 1..100 )
@@ -280,8 +280,7 @@ These operators are:
 * `reduce`_
 * `toList`_
 * `toSortedList`_
-
-
+* `transpose`_
 
 map
 ------
@@ -441,7 +440,7 @@ It prints::
     [3, [B, D]]
 
 By default the first entry in the tuple is used a the grouping key. A different key can be chosen by using the
-``by`` parameter and specifing the index of entry to be used as key (the index is zero-based). For example::
+``by`` parameter and specifying the index of entry to be used as key (the index is zero-based). For example::
 
    Channel
         .from( [1,'A'], [1,'B'], [2,'C'], [3, 'B'], [1,'C'], [2, 'A'], [3, 'D'] )
@@ -734,6 +733,39 @@ You may also pass a comparator closure as an argument to the ``toSortedList`` op
 
 See also: `collect`_ operator.
 
+transpose
+---------
+
+The ``traspose`` operator transforms a channel in such a way that the emitted items are the result of a transposition
+of all tuple elements in each item. For example::
+
+    Channel.from([
+       ['a', ['p', 'q'], ['u','v'] ],
+       ['b', ['s', 't'], ['x','y'] ]
+       ])
+       .transpose()
+       .println()
+
+The above snippet prints::
+
+    [a, p, u]
+    [a, q, v]
+    [b, s, x]
+    [b, t, y]
+
+
+Available parameters:
+
+=========== ============================
+Field       Description
+=========== ============================
+by          The index (zero based) of the element to be transposed.
+            Multiple elements can be defined specifying as list of indices e.g. ``by: [0,2]``
+remainder   When ``false`` incomplete tuples are discarded (default). When ``true`` incomplete tuples are emitted
+            containing a `null` in place of a missing element.
+=========== ============================
+
+
 Splitting operators
 ====================
 
@@ -857,11 +889,13 @@ Available parameters:
 Field       Description
 =========== ============================
 by          Defines the number of sequences in each `chunk` (default: ``1``)
+size        Defines the size in memory units of the expected chunks eg. `1.MB`.
 limit       Limits the number of retrieved sequences to the specified value.
 record      Parse each entry in the FASTA file as record objects (see following table for accepted values)
 charset     Parse the content by using the specified charset e.g. ``UTF-8``
+compress    When ``true`` resulting file chunks are GZIP compressed. The ``.gz`` suffix is automatically added to chunk file names.
 decompress  When ``true``, decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
-file        When ``true`` saves each split to a file. Use a string instead of ``true`` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in oder to save the split files into the specified folder.
+file        When ``true`` saves each split to a file. Use a string instead of ``true`` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in order to save the split files into the specified folder.
 elem        The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)
 =========== ============================
 
@@ -883,7 +917,7 @@ width       Define the length of a single line when the ``sequence`` field is us
 
 
 splitFastq
------------
+----------
 
 The ``splitFastq`` operator allows you to split the entries emitted by a channel, that are formatted using the
 `FASTQ format <http://en.wikipedia.org/wiki/FASTQ_format>`_. It returns a channel which emits a text chunk
@@ -896,7 +930,7 @@ sequences each::
    Channel
         .fromPath('misc/sample.fastq')
         .splitFastq( by: 10 )
-        .subscribe { print it }
+        .println()
 
 
 .. warning:: By default chunks are kept in memory. When splitting big files specify the parameter ``file: true`` to save the
@@ -913,7 +947,23 @@ the required fields, or just specify ``record: true`` as in the example shown be
    Channel
         .fromPath('misc/sample.fastq')
         .splitFastq( record: true )
-        .subscribe { record -> println record.readHeader }
+        .println { record -> record.readHeader }
+
+
+Finally the ``splitFastq`` operator is able to split paired-end read pair FASTQ files. It must be applied to a channel
+which emits tuples containing at list two elements that are the files to be splitted. For example::
+
+    Channel
+        .fromFilePairs('/my/data/SRR*_{1,2}.fastq', flat:true)
+        .splitFastq(by: 100_000, pe:true, file:true)
+        .println()
+
+
+.. note:: The ``fromFilePairs`` requires the ``flat:true`` option to have the file pairs as separate elements
+  in the produced tuples.
+
+.. warning:: This operator assumes that the order of the PE reads correspond with each other and both files contain
+  the same number of reads.
 
 
 Available parameters:
@@ -922,11 +972,13 @@ Available parameters:
 Field       Description
 =========== ============================
 by          Defines the number of *reads* in each `chunk` (default: ``1``)
+pe          When ``true`` splits paired-end read files, therefore items emitted by the source channel must be tuples in which at least two elements are the read-pair files to be splitted.
 limit       Limits the number of retrieved *reads* to the specified value.
 record      Parse each entry in the FASTQ file as record objects (see following table for accepted values)
 charset     Parse the content by using the specified charset e.g. ``UTF-8``
-decompress  When ``true``, decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
-file        When ``true`` saves each split to a file. Use a string instead of ``true`` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in oder to save the split files into the specified folder.
+compress    When ``true`` resulting file chunks are GZIP compressed. The ``.gz`` suffix is automatically added to chunk file names.
+decompress  When ``true`` decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
+file        When ``true`` saves each split to a file. Use a string instead of ``true`` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in order to save the split files into the specified folder.
 elem        The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)
 =========== ============================
 
@@ -990,6 +1042,7 @@ Field       Description
 by          Defines the number of lines in each `chunk` (default: ``1``)
 limit       Limits the number of retrieved lines to the specified value.
 charset     Parse the content by using the specified charset e.g. ``UTF-8``
+compress    When ``true`` resulting file chunks are GZIP compressed. The ``.gz`` suffix is automatically added to chunk file names.
 decompress  When ``true``, decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
 file        When ``true`` saves each split to a file. Use a string instead of ``true`` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in oder to save the split files into the specified folder.
 elem        The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)
@@ -1006,6 +1059,7 @@ The combining operators are:
 * `combine`_
 * `concat`_
 * `into`_
+* `join`_
 * `merge`_
 * `mix`_
 * `phase`_
@@ -1017,63 +1071,43 @@ The combining operators are:
 into
 -------
 
-The ``into`` operator connects a source channel to one or more target channels in such a way the values emitted by
-the source channel are copied to the target channel(s). For example::
+The ``into`` operator connects a source channel to two or more target channels in such a way the values emitted by
+the source channel are copied to the target channels. For example::
 
-    target = Channel.create()
-    target.subscribe { println it }
-	
-    Channel
-        .from( 'a', 'b', 'c', 'd' )     
-        .into( target )
-      
-::
-  
-    a
-    b
-    c
-    d
+   Channel
+        .from( 'a', 'b', 'c' )
+        .into{ foo; bar }
 
-
-.. note:: The target channel specified as a parameter to the ``into`` operator must have been declared previously.
-
-A second version of the ``into`` operator takes a :ref:`closure <script-closure>` as a parameter which declares one or more
-target channels to which the source one is connected. For example::
-
-    Channel
-        .from( 'a', 'b', 'c', 'd' )
-        .into { foo; bar }
-
-The advantage of using this syntax is that the ``into`` operator implicitly creates the target channel(s) as needed
-and you won't need to create it/them as in the previous example.
-
-
-Finally, a third version of the ``into`` operator takes an integer `n` as an argument and returns
-a list of `n` channels, each of which emits a copy of the items that were emitted by the
-source channel. For example::
-
-
-    (foo, bar) = Channel.from( 'a','b','c').into(2)
-    foo.subscribe { println "Channel 1 emit: " + it }
-    bar.subscribe { println "Channel 2 emit: " + it }
+    foo.println{ "Foo emit: " + it }
+    bar.println{ "Bar emit: " + it }
 
 ::
 
     Foo emit: a
     Foo emit: b
     Foo emit: c
-
     Bar emit: a
     Bar emit: b
     Bar emit: c
+
+.. note:: Note the use in this example of curly brackets and the ``;`` as channel names separator. This is needed
+  because the actual parameter of ``into`` is a :ref:`closure <script-closure>` which defines the target channels
+  to which the source one is connected.
+
+A second version of the ``into`` operator takes an integer `n` as an argument and returns
+a list of `n` channels, each of which emits a copy of the items that were emitted by the
+source channel. For example::
+
+
+    (foo, bar) = Channel.from( 'a','b','c').into(2)
+    foo.println{ "Foo emit: " + it }
+    bar.println{ "Bar emit: " + it }
 
 
 .. note:: The above example takes advantage of the :ref:`multiple assignment <script-multiple-assignment>` syntax
   in order to assign two variables at once using the list of channels returned by the ``into`` operator.
 
-
-
-See also `tap`_, `separate`_ and `route`_ operators.
+See also `tap`_ and `separate`_ operators.
 
 
 tap
@@ -1129,6 +1163,56 @@ Using the closure syntax the above example can be rewritten as shown below::
 
 See also `into`_ and `separate`_ operators.
 
+.. _operator-join:
+
+join
+-----
+
+The ``join`` operator creates a channel that joins together the items emitted by two channels for which exits
+a matching key. The key is defined, by default, as the first element in each item emitted.
+
+For example::
+
+  left = Channel.from(['X', 1], ['Y', 2], ['Z', 3], ['P', 7])
+  right= Channel.from(['Z', 6], ['Y', 5], ['X', 4])
+  left.join(right).println()
+
+The resulting channel emits::
+
+  [Z, 3, 6]
+  [Y, 2, 5]
+  [X, 1, 4]
+
+The `index` of a different matching element can be specified by using the ``by`` parameter.
+
+The ``join`` operator can emit all the pairs that are incomplete, i.e. the items for which a matching element
+is missing, by specifying the optional parameter ``remainder`` as shown below::
+
+    left = Channel.from(['X', 1], ['Y', 2], ['Z', 3], ['P', 7])
+    right= Channel.from(['Z', 6], ['Y', 5], ['X', 4])
+    left.join(right, remainder: true).println()
+
+The above example prints::
+
+    [Y, 2, 5]
+    [Z, 3, 6]
+    [X, 1, 4]
+    [P, 7, null]
+
+
+The following parameters can be used with the ``join`` operator:
+
+=============== ========================
+Name            Description
+=============== ========================
+by              The index (zero based) of the element to be used as grouping key.
+                A key composed by multiple elements can be defined specifying a list of indices e.g. ``by: [0,2]``
+remainder       When ``false`` incomplete tuples (i.e. with less than `size` grouped items)
+                are discarded (default). When ``true`` incomplete tuples are emitted as the ending emission.
+=============== ========================
+
+
+.. _operator-merge:
 
 merge
 --------
@@ -1142,8 +1226,8 @@ and the other which emits a series of even integers::
     evens = Channel.from([2, 4, 6]);
 
     odds
-        .merge( evens ) { o, e -> [o, e] }
-        .subscribe { println it }
+        .merge( evens )
+        .println()
 
 ::
 
@@ -1151,6 +1235,14 @@ and the other which emits a series of even integers::
     [3, 4]
     [5, 6]
 
+An option closure can be provide to customise the items emitted by the resulting merged channel. For example::
+
+    odds  = Channel.from([1, 3, 5, 7, 9]);
+    evens = Channel.from([2, 4, 6]);
+
+    odds
+        .merge( evens ) { a, b -> tuple(b*b, a) }
+        .println()
 
 
 mix
@@ -1195,6 +1287,8 @@ For example::
 
 phase
 --------
+
+.. warning:: This operator is deprecated. Use the `join`_ operator instead.
 
 The ``phase`` operator creates a channel that synchronizes the values emitted by two other channels,
 in such a way that it emits pairs of items that have a matching key.
@@ -1247,6 +1341,7 @@ It prints::
     [5, null]
     [null, 4]
 
+See also `join`_ operator.
 
 .. _operator-cross:
 
@@ -1904,7 +1999,7 @@ ifEmpty
 --------
 
 The ``ifEmpty`` operator creates a channel which emits a default value, specified as the operator parameter, when the channel to which
-is applied is *empty* i.e. doesn't emit any value. Otherwise the it will empty the same sequence of entries as the original channel.
+is applied is *empty* i.e. doesn't emit any value. Otherwise it will emit the same sequence of entries as the original channel.
 
 Thus, the following example prints::
 

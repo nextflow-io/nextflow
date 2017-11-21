@@ -48,13 +48,13 @@ class PhaseOp {
     private Closure mapper = DataflowExtensions.DEFAULT_MAPPING_CLOSURE
 
     PhaseOp( DataflowReadChannel source, DataflowReadChannel target ) {
-        CheckHelper.checkParams('phase', opts, PHASE_PARAMS)
         this.source = source
         this.target = target
         this.opts = [:]
     }
 
     PhaseOp setOpts( Map opts ) {
+        CheckHelper.checkParams('phase', opts, PHASE_PARAMS)
         this.opts = opts
         return this
     }

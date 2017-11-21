@@ -19,7 +19,7 @@
  */
 
 package nextflow.processor
-import java.nio.file.FileSystems
+
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -36,8 +36,8 @@ import nextflow.container.SingularityCache
 import nextflow.container.UdockerBuilder
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.ProcessException
-import nextflow.exception.ProcessMissingTemplateException
-import nextflow.exception.ProcessNotRecoverableException
+import nextflow.exception.ProcessTemplateException
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.file.FileHolder
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
@@ -479,8 +479,9 @@ class TaskRun implements Cloneable {
     }
 
     String getWorkDirStr() {
-        if( !workDir ) return null
-        workDir.fileSystem == FileSystems.default ? workDir.toString() : workDir.toUri().toString()
+        if( !workDir )
+            return null
+        return workDir.toUriString()
     }
 
     static final public String CMD_LOG = '.command.log'
@@ -604,7 +605,15 @@ class TaskRun implements Cloneable {
      * @return {@true} when the process runs an *executable* container
      */
     boolean isContainerExecutable() {
-        config.container == true
+        getConfig().container == true
+    }
+
+    boolean isContainerNative() {
+        processor.executor?.isContainerNative() ?: false
+    }
+
+    boolean isContainerEnabled() {
+        getConfig().container && (isContainerExecutable() || getContainerConfig().enabled || isContainerNative())
     }
 
     boolean isSuccess( status = exitStatus ) {
@@ -663,7 +672,7 @@ class TaskRun implements Cloneable {
             throw e
         }
         catch( Throwable e ) {
-            throw new ProcessNotRecoverableException("Process `$name` script contains error(s)", e)
+            throw new ProcessUnrecoverableException("Process `$name` script contains error(s)", e)
         }
 
     }
@@ -690,7 +699,14 @@ class TaskRun implements Cloneable {
             return engine.render(source, context)
         }
         catch( NoSuchFileException e ) {
-            throw new ProcessMissingTemplateException("Process `${processor.name}` can't find template file: $template")
+            throw new ProcessTemplateException("Process `${processor.name}` can't find template file: $template")
+        }
+        catch( MissingPropertyException e ) {
+            throw new ProcessTemplateException("No such property `$e.property` -- check template file: $template")
+        }
+        catch( Exception e ) {
+            def msg = (e.message ?: "Unexpected error") + " -- check template file: $template"
+            throw new ProcessTemplateException(msg, e)
         }
     }
 

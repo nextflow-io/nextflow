@@ -76,7 +76,7 @@ class SingularityBuilder extends ContainerBuilder {
     @Override
     SingularityBuilder build(StringBuilder result) {
 
-        result << 'env - PATH="$PATH" '
+        result << 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" '
 
         result << 'singularity '
 

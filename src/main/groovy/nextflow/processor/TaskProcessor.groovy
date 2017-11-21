@@ -18,7 +18,11 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.processor
-import java.nio.file.Files
+import static nextflow.processor.ErrorStrategy.FINISH
+import static nextflow.processor.ErrorStrategy.IGNORE
+import static nextflow.processor.ErrorStrategy.RETRY
+import static nextflow.processor.ErrorStrategy.TERMINATE
+
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -56,7 +60,7 @@ import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
-import nextflow.exception.ProcessNotRecoverableException
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.ProcessStageException
 import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
@@ -86,11 +90,7 @@ import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.CollectionHelper
-
-import static nextflow.processor.ErrorStrategy.*
-
 import nextflow.util.Escape
-
 /**
  * Implement nextflow process execution logic
  *
@@ -98,6 +98,140 @@ import nextflow.util.Escape
  */
 @Slf4j
 class TaskProcessor {
+
+    /**
+     * Implements the closure which *combines* all the iteration
+     *
+     * @param numOfInputs Number of in/out channel
+     * @param indexes The list of indexes which identify the position of iterators in the input channels
+     * @return The closure implementing the iteration/forwarding logic
+     */
+    static class ForwardClosure extends Closure {
+
+        final private Integer len
+
+        final private int numOfParams
+
+        final private List<Integer> indexes
+
+        ForwardClosure(int len, List<Integer> indexes) {
+            super(null, null);
+            assert len>=1
+            this.len = len
+            this.numOfParams = len+1
+            this.indexes = indexes
+        }
+
+        @Override
+        public int getMaximumNumberOfParameters() {
+            numOfParams
+        }
+
+        @Override
+        public Class[] getParameterTypes() {
+            def result = new Class[numOfParams]
+            for( int i=0; i<result.size(); i++ )
+                result[i] = Object
+            return result
+        }
+
+        @Override
+        public Object call(final Object... args) {
+            final target = ((DataflowProcessor) getDelegate())
+            /*
+             * Explaining the following code:
+             *
+             * - 'out' holds the list of all input values which need to be forwarded (bound) to output as many
+             *   times are the items in the iteration list
+             *
+             * - the iteration list(s) is (are) passed like in the closure inputs like the other values,
+             *   the *indexes* argument defines the which of them are the iteration lists
+             *
+             * - 'itr' holds the list of all iteration lists
+             *
+             * - using the groovy method a combination of all values is create (cartesian product)
+             *   see http://groovy.codehaus.org/groovy-jdk/java/util/Collection.html#combinations()
+             *
+             * - the resulting values are replaced in the 'out' array of values and forwarded out
+             *
+             */
+
+            def out = args[0..-2]
+            def itr = indexes.collect { args[it] }
+            List<List> cmb = itr.combinations()
+
+            for( int i=0; i<cmb.size(); i++ ) {
+                List entries = cmb[i]
+                int count = 0
+                for( int j=0; j<len; j++ ) {
+                    if( j in this.indexes ) {
+                        out[j] = entries[count++]
+                    }
+                }
+
+                target.bindAllOutputValues( out as Object[] )
+            }
+
+            return null
+        }
+
+        @Override
+        public Object call(final Object arguments) {
+            throw new UnsupportedOperationException()
+        }
+
+        @Override
+        public Object call() {
+            throw new UnsupportedOperationException()
+        }
+    }
+
+    /**
+     * Adapter closure to call the {@link #invokeTask(java.lang.Object)} method
+     */
+    @CompileStatic
+    static class InvokeTaskAdapter extends Closure {
+
+        private int numOfParams
+
+        private TaskProcessor processor
+
+        InvokeTaskAdapter(TaskProcessor p, int n) {
+            super(null, null);
+            processor = p
+            numOfParams = n
+        }
+
+        @Override
+        public int getMaximumNumberOfParameters() {
+            numOfParams
+        }
+
+        @Override
+        public Class[] getParameterTypes() {
+            def result = new Class[numOfParams]
+            for( int i=0; i<result.size(); i++ )
+                result[i] = Object
+            return result
+        }
+
+        @Override
+        public Object call(final Object arguments) {
+            processor.invokeTask(arguments)
+            return null
+        }
+
+        @Override
+        public Object call(final Object... args) {
+            processor.invokeTask(args as List)
+            return null
+        }
+
+        @Override
+        public Object call() {
+            throw new UnsupportedOperationException()
+        }
+    }
 
     static enum RunType {
         SUBMIT('Submitted process'),
@@ -156,13 +290,13 @@ class TaskProcessor {
     /**
      * The underlying executor which will run the task
      */
-    protected final Executor executor
+    protected Executor executor
 
     /**
      * The corresponding task configuration properties, it holds the inputs/outputs
      * definition as well as other execution meta-declaration
      */
-    protected final ProcessConfig config
+    protected ProcessConfig config
 
     /**
      * Count the number of time an error occurred
@@ -287,6 +421,11 @@ class TaskProcessor {
     String getName() { name }
 
     /**
+     * @return The {@link Executor} associated to this processor
+     */
+    Executor getExecutor() { executor }
+
+    /**
      * @return The {@code DataflowOperator} underlying this process
      */
     DataflowProcessor getOperator() { operator }
@@ -404,7 +543,7 @@ class TaskProcessor {
          * check if there are some iterators declaration
          * the list holds the index in the list of all *inputs* for the {@code each} declaration
          */
-        def iteratorIndexes = []
+        List<Integer> iteratorIndexes = []
         config.getInputs().eachWithIndex { param, index ->
             if( param instanceof EachInParam ) {
                 log.trace "Process ${name} > got each param: ${param.name} at index: ${index} -- ${param.dump()}"
@@ -436,7 +575,7 @@ class TaskProcessor {
             size.times { linkingChannels[it] = new DataflowQueue() }
 
             // the script implementing the iterating process
-            final forwarder = createForwardWrapper(size, iteratorIndexes)
+            final forwarder = new ForwardClosure(size, iteratorIndexes)
 
             // instantiate the iteration process
             def stopAfterFirstRun = allScalarValues
@@ -453,11 +592,6 @@ class TaskProcessor {
             opInputs.add( config.getInputs().getChannels().last() )
         }
 
-
-        /*
-         * create a mock closure to trigger the operator
-         */
-        final wrapper = createCallbackWrapper( opInputs.size(), this.&invokeTask )
 
         /*
          * define the max forks attribute:
@@ -481,7 +615,8 @@ class TaskProcessor {
         config.getOutputs().setSingleton(singleton)
         def interceptor = new TaskProcessorInterceptor(opInputs, singleton)
         def params = [inputs: opInputs, maxForks: maxForks, listeners: [interceptor] ]
-        session.allOperators << (operator = new DataflowOperator(group, params, wrapper))
+        def invoke = new InvokeTaskAdapter(this, opInputs.size())
+        session.allOperators << (operator = new DataflowOperator(group, params, invoke))
 
         // notify the creation of a new vertex the execution DAG
         NodeMarker.addProcessNode(this, config.getInputs(), config.getOutputs())
@@ -496,65 +631,6 @@ class TaskProcessor {
         for( int i=0; i<size; i++ )
             result.set(i, 1)
         return result
-    }
-
-    /**
-     * Implements the closure which *combines* all the iteration
-     *
-     * @param numOfInputs Number of in/out channel
-     * @param indexes The list of indexes which identify the position of iterators in the input channels
-     * @return The closure implementing the iteration/forwarding logic
-     */
-    protected createForwardWrapper( int len, List indexes ) {
-
-        final args = []
-        (len+1).times { args << "x$it" }
-
-        final outs = []
-        len.times { outs << "x$it" }
-
-        /*
-         * Explaining the following closure:
-         *
-         * - it has to be evaluated as a string since the number of input must much the number input channel
-         *   that is known only at runtime
-         *
-         * - 'out' holds the list of all input values which need to be forwarded (bound) to output as many
-         *   times are the items in the iteration list
-         *
-         * - the iteration list(s) is (are) passed like in the closure inputs like the other values,
-         *   the *indexes* argument defines the which of them are the iteration lists
-         *
-         * - 'itr' holds the list of all iteration lists
-         *
-         * - using the groovy method a combination of all values is create (cartesian product)
-         *   see http://groovy.codehaus.org/groovy-jdk/java/util/Collection.html#combinations()
-         *
-         * - the resulting values are replaced in the 'out' array of values and forwarded out
-         *
-         */
-
-        final str =
-                """
-            { ${args.join(',')} ->
-                def out = [ ${outs.join(',')} ]
-                def itr = [ ${indexes.collect { 'x'+it }.join(',')} ]
-                def cmb = itr.combinations()
-                for( entries in cmb ) {
-                    def count = 0
-                    ${len}.times { i->
-                        if( i in indexes ) { out[i] = entries[count++] }
-                    }
-                    bindAllOutputValues( *out )
-                }
-            }
-            """
-
-
-        final Binding binding = new Binding( indexes: indexes )
-        final result = (Closure)grengine.run(str, binding)
-        return result
-
     }
 
 
@@ -672,27 +748,6 @@ class TaskProcessor {
         }
 
         return null
-    }
-
-    /**
-     * Wraps the target method by a closure declaring as many arguments as many are the user declared inputs
-     * object.
-     *
-     * @param n The number of inputs
-     * @param method The method which will execute the task
-     * @return The operator closure adapter
-     */
-    final protected Closure createCallbackWrapper( int n, Closure method ) {
-
-        final args = []
-        for( int i=0; i<n; i++ )
-            args << "__p$i"
-
-        final str = " { ${args.join(',')} -> callback([ ${args.join(',')} ]) }"
-        final binding = new Binding( ['callback': method] )
-        final result = (Closure)grengine.run(str,binding)
-
-        return result
     }
 
     /**
@@ -982,7 +1037,8 @@ class TaskProcessor {
      *      or an instance of {@TaskFault} representing the cause of the error (that implicitly means
      *      a {@link ErrorStrategy#TERMINATE})
      */
-    final synchronized protected resumeOrDie( TaskRun task, Throwable error ) {
+    @PackageScope
+    final synchronized resumeOrDie( TaskRun task, Throwable error ) {
         log.trace "Handling unexpected condition for\n  task: $task\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
         ErrorStrategy errorStrategy = TERMINATE
@@ -993,7 +1049,7 @@ class TaskProcessor {
 
             // -- retry without increasing the error counts
             if( error.cause instanceof CloudSpotTerminationException ) {
-                log.warn "${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
+                log.info "[$task.hashLog] NOTE: ${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
                 final taskCopy = task.makeCopy()
                 taskCopy.runType = RunType.RETRY
                 session.getExecService().submit { checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false ) }
@@ -1014,10 +1070,10 @@ class TaskProcessor {
 
                 errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount)
                 if( errorStrategy.soft ) {
-                    def msg = error.getMessage()
+                    def msg = "[$task.hashLog] NOTE: $error.message"
                     if( errorStrategy == IGNORE ) msg += " -- Error is ignored"
                     else if( errorStrategy == RETRY ) msg += " -- Execution is retried ($taskErrCount)"
-                    log.warn msg
+                    log.info msg
                     task.failed = true
                     return errorStrategy
                 }
@@ -1065,7 +1121,7 @@ class TaskProcessor {
         final errorStrategy = task.config.getErrorStrategy()
 
         // retry is not allowed when the script cannot be compiled or similar errors
-        if( error instanceof ProcessNotRecoverableException ) {
+        if( error instanceof ProcessUnrecoverableException ) {
             return !errorStrategy.soft ? errorStrategy : ErrorStrategy.TERMINATE
         }
 
@@ -1103,9 +1159,9 @@ class TaskProcessor {
         return errorStrategy
     }
 
-    final protected formatGuardError( List message, FailedGuardException error, TaskRun task ) {
+    final protected List<String> formatGuardError( List<String> message, FailedGuardException error, TaskRun task ) {
         // compose a readable error message
-        message << formatErrorCause( error )
+        message << formatErrorCause(error)
 
         if( error.source )  {
             message << "\nWhen block:"
@@ -1115,12 +1171,12 @@ class TaskProcessor {
         }
 
         if( task?.workDir )
-            message << "\nWork dir:\n  ${task.workDir.toString()}"
+            message << "\nWork dir:\n  ${task.workDirStr}"
 
         return message
     }
 
-    final protected formatTaskError( List message, Throwable error, TaskRun task ) {
+    final protected List<String> formatTaskError( List<String> message, Throwable error, TaskRun task ) {
 
         // compose a readable error message
         message << formatErrorCause( error )
@@ -1171,7 +1227,7 @@ class TaskProcessor {
         }
         else {
             if( task?.source )  {
-                message << "\nSource block:"
+                message << "Source block:"
                 task.source.stripIndent().eachLine {
                     message << "  $it"
                 }
@@ -1180,7 +1236,7 @@ class TaskProcessor {
         }
 
         if( task?.workDir )
-            message << "\nWork dir:\n  ${task.workDir.toString()}"
+            message << "\nWork dir:\n  ${task.workDirStr}"
 
         message << "\nTip: ${getRndTip()}"
 
@@ -1602,37 +1658,8 @@ class TaskProcessor {
         /*
          * when it is a local file, just return a reference holder to it
          */
-        if( input instanceof Path && input.fileSystem == FileHelper.workDirFileSystem ) {
-            return new FileHolder(input)
-        }
-
-        /*
-         * when it is a file stored in a "foreign" storage, copy
-         * to a local file and return a reference holder to the local file
-         */
-
         if( input instanceof Path ) {
-            try {
-                log.debug "Copying to process workdir foreign file: ${input.toUri().toString()}"
-                def result = Nextflow.tempFile(input.getFileName().toString())
-                InputStream source = null
-                try {
-                    source = Files.newInputStream(input)
-                    Files.copy(source, result)
-                }
-                finally {
-                    source?.closeQuietly()
-                }
-                return new FileHolder(input, result)
-            }
-            catch( IOException e ) {
-                def message = "Can't stage file ${input.toUri().toString()}"
-                if( e instanceof NoSuchFileException )
-                    message += " -- file does not exist"
-                else if( e.message )
-                    message += " -- reason: ${e.message}"
-                throw new ProcessStageException(message, e)
-            }
+            return new FileHolder(input)
         }
 
         /*
@@ -1652,7 +1679,7 @@ class TaskProcessor {
         def len = allItems.size()
 
         // use a bag so that cache hash key is not affected by file entries order
-        def files = new ArrayBag(len)
+        def files = new ArrayBag<FileHolder>(len)
         for( def item : allItems ) {
             files << normalizeInputToFile(item, "input.${++count}")
         }
@@ -1822,6 +1849,7 @@ class TaskProcessor {
     final protected void makeTaskContextStage2( TaskRun task, Map secondPass, int count ) {
 
         final ctx = task.context
+        final allNames = new HashMap<String,Integer>()
 
         // -- all file parameters are processed in a second pass
         //    so that we can use resolve the variables that eventually are in the file name
@@ -1832,6 +1860,10 @@ class TaskProcessor {
             def resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
             ctx.put( param.name, singleItemOrList(resolved) )
             count += resolved.size()
+            for( FileHolder item : resolved ) {
+                Integer num = allNames.getOrCreate(item.stageName, 0) +1
+                allNames.put(item.stageName,num)
+            }
 
             // add the value to the task instance context
             task.setInput(param, resolved)
@@ -1841,6 +1873,13 @@ class TaskProcessor {
         //    so that lazy directives will be resolved against it
         task.config.context = ctx
 
+        // check conflicting file names
+        def conflicts = allNames.findAll { name, num -> num>1 }
+        if( conflicts ) {
+            log.debug("Process $name > collision check staing file names: $allNames")
+            def message = "Process `$name` input file name collision -- There are multiple input files for each of the following file names: ${conflicts.keySet().join(', ')}"
+            throw new ProcessUnrecoverableException(message)
+        }
     }
 
     final protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {
@@ -1854,9 +1893,13 @@ class TaskProcessor {
 
     }
 
-    final protected createTaskHashKey(TaskRun task) {
+    final protected HashCode createTaskHashKey(TaskRun task) {
 
         List keys = [ session.uniqueId, name, task.source ]
+
+        if( task.containerEnabled )
+            keys << task.container
+
         // add all the input name-value pairs to the key generator
         task.inputs.each {
             keys.add( it.key.name )
@@ -1870,6 +1913,12 @@ class TaskProcessor {
             vars.each { k, v -> keys.add( k ); keys.add( v ) }
         }
 
+        final binEntries = getTaskBinEntries(task.source)
+        if( binEntries ) {
+            log.trace "Task: $name > Adding scripts on project bin path: ${-> binEntries.join('; ')}"
+            keys.addAll(binEntries)
+        }
+
         final mode = config.getHashMode()
         final hash = CacheHelper.hasher(keys, mode).hash()
         if( session.dumpHashes ) {
@@ -1878,18 +1927,38 @@ class TaskProcessor {
         return hash
     }
 
+    /**
+     * This method scans the task command string looking for invocations of scripts
+     * defined in the project bin folder.
+     *
+     * @param script The task command string
+     * @return The list of paths of scripts in the project bin folder referenced in the task command
+     */
+    @Memoized
+    protected List<Path> getTaskBinEntries(String script) {
+        def result = []
+        def tokenizer = new StringTokenizer(script," \t\n\r\f()[]{};&|<>`")
+        while( tokenizer.hasMoreTokens() ) {
+            def token = tokenizer.nextToken()
+            def path = session.binEntries.get(token)
+            if( path )
+                result.add(path)
+        }
+        return result;
+    }
+
     private void traceInputsHashes( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {
 
         def buffer = new StringBuilder()
         buffer.append("[${task.name}] cache hash: ${hash}; mode: $mode; entries: \n")
         for( Object item : entries ) {
-            buffer.append( "  ${CacheHelper.hasher(item, mode).hash()} [${item?.class?.name}] $item \n")
+            buffer.append( "  ${CacheHelper.hasher(item, mode).hash()} [${item?.getClass()?.getName()}] $item \n")
         }
 
         log.info(buffer.toString())
     }
 
-    final protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
+    protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
         getTaskGlobalVars( task.context.getVariableNames(), ownerScript.binding, task.context.getHolder() )
     }
 

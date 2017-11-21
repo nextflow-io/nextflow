@@ -57,7 +57,7 @@ class Autoscaler implements Closeable {
     private CloudDriver driver
 
     /**
-     * The reference to the underlying Ignite clusetr
+     * The reference to the underlying Ignite cluster
      */
     private Ignite ignite
 
@@ -118,7 +118,8 @@ class Autoscaler implements Closeable {
      * @param nodes The map holding the current cluster topology
      * @param tasks The map of scheduled tasks
      */
-    protected void init(Map<UUID,NodeData> nodes, Map<TaskId,TaskHolder> tasks) {
+    @PackageScope
+    void init(Map<UUID,NodeData> nodes, Map<TaskId,TaskHolder> tasks) {
 
         this.workerNodes = nodes
         this.scheduledTasks = tasks
@@ -444,7 +445,6 @@ class Autoscaler implements Closeable {
 
     @PackageScope List<String> applyTerminationPolicy( Collection<UUID> idleNodeIds) {
 
-        def policy = scalerConfig.terminationPolicy
         def killList = new ArrayList<String>(idleNodeIds.size())
         def itr = idleNodeIds.iterator()
         while( itr.hasNext() ) {
@@ -456,18 +456,8 @@ class Autoscaler implements Closeable {
                 continue
             }
 
-            if( policy == 'eager' ) {
-                killList << data.instanceId
-            }
-            else {
-                // -- kill only the instances approaching the 1h interval
-                def uptime = (int)data.uptime.toMinutes() % 60
-                if( uptime >= 55 ) {  // <-- return only the ones that are approaching a full hour
-                    killList << data.instanceId
-                }
-            }
+            killList << data.instanceId
         }
-
 
        return killList
     }

@@ -50,7 +50,7 @@ class XFileSystemProviderTest extends Specification {
         attrs = fs.readHttpAttributes([:])
         then:
         attrs.lastModifiedTime() == null
-        attrs.size() == 0
+        attrs.size() == -1
     }
 
     def "should read file attributes from HttpPath"() {
@@ -63,5 +63,17 @@ class XFileSystemProviderTest extends Specification {
         then:
         attrs.lastModifiedTime() == null
         attrs.size() > 0
+    }
+
+    def "should read file attributes from FtpPath"() {
+        given:
+        def fsp = new FtpFileSystemProvider()
+        def path = (XPath)fsp.getPath(new URI('ftp://ftp.ebi.ac.uk/robots.txt'))
+
+        when:
+        def attrs = fsp.readHttpAttributes(path)
+        then:
+        attrs.lastModifiedTime() == null
+        attrs.size() == -1
     }
 }

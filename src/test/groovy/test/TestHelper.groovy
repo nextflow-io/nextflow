@@ -21,6 +21,7 @@
 package test
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.zip.GZIPInputStream
 
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
@@ -62,10 +63,13 @@ class TestHelper {
         Files.createTempDirectory(tmp, 'test')
     }
 
-    static Path createInMemTempFile(String name='temp.file') {
+    static Path createInMemTempFile(String name='temp.file', String content=null) {
         Path tmp = fs.getPath("/tmp");
         tmp.mkdir()
-        Files.createTempDirectory(tmp, 'test').resolve(name)
+        def result = Files.createTempDirectory(tmp, 'test').resolve(name)
+        if( content )
+            result.text = content
+        return result
     }
 
     @Memoized
@@ -80,4 +84,10 @@ class TestHelper {
             sleep 100
         }
     }
+
+    static String gunzip(Path path) {
+        def file = new GZIPInputStream(new FileInputStream(path.toFile()));
+        file.text
+    }
+
 }

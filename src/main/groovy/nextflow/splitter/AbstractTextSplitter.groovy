@@ -51,6 +51,10 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
 
     protected String collectName
 
+    protected boolean compress
+
+    private long itemsCount
+
     AbstractTextSplitter options(Map options) {
         super.options(options)
 
@@ -69,9 +73,15 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
             fileMode = true
         }
 
+        if( options.compress?.toString() == 'true' )
+            compress = options.compress as boolean
+
         // file mode and record cannot be used at the same time
         if( fileMode && recordMode )
-            throw new AbortOperationException("Parameters `file` and `record` conflict on operator: $operatorName")
+            throw new AbortOperationException("Parameters `file` and `record` conflict -- check operator `$operatorName`")
+
+        if( !fileMode && compress )
+            throw new AbortOperationException("Parameter `compress` requires also the use of parameter `file: true` -- check operator `$operatorName`")
 
         return this
     }
@@ -85,6 +95,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
         def result = super.validOptions()
         result.charset = [ Charset, Map, String ]
         result.file = [Boolean, Path, CharSequence]
+        result.compress = [Boolean]
         return result
     }
 
@@ -114,7 +125,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
             return newReader(obj.toPath(), charset)
 
         if( obj instanceof char[] )
-            return new StringReader(new String((char[])obj))
+            return new StringReader(new String(obj))
 
         throw new IllegalArgumentException("Object of class '${obj.class.name}' does not support 'splitter' methods")
 
@@ -145,12 +156,8 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
             return new BufferedReader(targetObject)
     }
 
-    private int blockCount
-
-    private long itemsCount
-
     protected boolean isCollectorEnabled() {
-        return (count > 1 || fileMode)
+        return (counter.isEnabled() || fileMode)
     }
 
     /**
@@ -176,13 +183,13 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
                 result = processChunk( record )
 
                 // -- check the limit of allowed rows has been reached
-                if( limit && ++itemsCount == limit )
+                if( limit>0 && ++itemsCount == limit )
                     break
             }
 
             // make sure to process collected entries
             if ( collector && collector.hasChunk() ) {
-                result = invokeEachClosure(closure, collector.getChunk())
+                result = invokeEachClosure(closure, collector.nextChunk())
             }
         }
 
@@ -197,6 +204,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
 
     /**
      * Add the fetched record to the current collection and emit a new chunk
+     *
      * @param record The read record object
      * @return A value returned by the user splitting closure
      */
@@ -208,11 +216,9 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
             // -- append to the list buffer
             collector.add(record)
 
-            if( ++blockCount == count ) {
-                result = invokeEachClosure(closure, collector.getChunk())
-                // reset the buffer
-                collector.next()
-                blockCount = 0
+            if( counter.hasNext() ) {
+                result = invokeEachClosure(closure, collector.nextChunk())
+                counter.reset()
             }
         }
         else {
@@ -236,15 +242,16 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
 
         if( fileMode ) {
             def baseFile = getCollectorBaseFile()
-            return new TextFileCollector(baseFile, charset)
+            return new TextFileCollector(baseFile, charset, compress)
         }
 
         return new CharSequenceCollector()
     }
 
-    private String getCollectFileName() {
-        if( collectName )
-            return collectName
+    protected String getCollectFileName() {
+        if( collectName ) {
+            return multiSplit ? "${collectName}_${elem}" : collectName
+        }
 
         if( sourceFile ) {
             def fileName = sourceFile.getName()
@@ -254,7 +261,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
             return fileName
         }
 
-        return 'chunk'
+        return multiSplit ? "chunk_$elem" : 'chunk'
     }
 
     /**
@@ -264,17 +271,20 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
     Path getCollectorBaseFile () {
 
         final fileName = getCollectFileName()
+        log.trace "Splitter collector file name: $fileName"
+
         Path result
         if( collectPath ) {
             result = collectPath.isDirectory() ? collectPath.resolve(fileName) : collectPath
         }
 
         else if( sourceFile ) {
-            result = Nextflow.cacheableFile( [sourceFile, getCacheableOptions()],  fileName)
+            result = Nextflow.cacheableFile( [sourceFile, getCacheableOptions()], fileName)
         }
 
-        else
-            result = Nextflow.cacheableFile( [targetObj, getCacheableOptions()], collectName ?: fileName )
+        else {
+            result = Nextflow.cacheableFile( [targetObj, getCacheableOptions()], fileName )
+        }
 
         log.debug "Splitter `$operatorName` collector path: $result"
         return result

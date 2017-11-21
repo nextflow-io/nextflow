@@ -395,6 +395,7 @@ proxyPassword               The password to use when connecting through a proxy.
 socketSendBufferSizeHint    The Size hint (in bytes) for the low level TCP send buffer.
 socketRecvBufferSizeHint    The Size hint (in bytes) for the low level TCP receive buffer.
 socketTimeout               The amount of time to wait (in milliseconds) for data to be transferred over an established, open connection before the connection is timed out.
+storageEncryption           The S3 server side encryption to be used when saving objects on S3 (currently only AES256 is supported)
 userAgent                   The HTTP user agent header passed with all HTTP requests.
 uploadMaxThreads            The maximum number of threads used for multipart upload.
 uploadChunkSize             The size of a single part in a multipart upload (default: `10 MB`).
@@ -409,6 +410,8 @@ For example::
         client {
             maxConnections = 20
             connectionTimeout = 10000
+            uploadStorageClass = 'REDUCED_REDUNDANCY'
+            storageEncryption = 'AES256'
         }
     }
 
@@ -428,6 +431,8 @@ Name                        Description
 =========================== ================
 bootStorageSize             Boot storage volume size e.g. ``10 GB``.
 imageId                     Identifier of the virtual machine(s) to launch e.g. ``ami-43f49030``.
+instanceRole                IAM role granting required permissions and authorizations in the launched instances.
+                            When specifying an IAM role no access/security keys are installed in the cluster deployed in the cloud.
 instanceType                Type of the virtual machine(s) to launch e.g. ``m4.xlarge``.
 instanceStorageMount        Instance ephemeral storage mount path e.g. ``/mnt/scratch``.
 instanceStorageDevice       Instance ephemeral storage device name e.g. ``/dev/xvdc``.

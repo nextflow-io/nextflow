@@ -4,20 +4,68 @@
 Tracing & visualisation
 ***********************
 
-Nextflow can produce an execution tracing report that provides some information for a basic performance analysis
-of a pipeline execution. A more advanced analysis is possible by using the `Extrae` and `Paraver` tools integrated with Nextflow.
-
-
-.. _trace-report:
+.. _execution-report:
 
 Execution report
 ================
 
+Nextflow can create an HTML execution report: a single document which includes many useful metrics
+about a workflow execution. The report is organised in the three main sections: `Summary`, `Resources` and `Tasks`
+(see below for details).
+
+To enable the creation of this report add the ``-with-report`` command line option when launching the pipeline
+execution. For example::
+
+  nextflow run <pipeline name> -with-report [file name]
+
+The report file name can be specified as an optional parameter following the report option.
+
+
+Summary
+-------
+
+The `Summary` section reports reports the execution status, the launch command, overall execution time and some
+other workflow metadata. You can see an example below:
+
+.. image:: images/report-summary-min.png
+
+
+Resources
+---------
+
+The `Resources` sections plots the distributions of resource usages for each workflow process
+using the interactive `HighCharts <https://www.highcharts.com/>`_ plotting library.
+
+Plots are shown for CPU, memory, time and disk read+write. The first three have two tabs with
+the raw values and a percentage representation showing what proportion of the allocated resources
+were used. This is helpful to check that job pipeline requests are efficient.
+
+.. image:: images/report-resources-min.png
+
+Tasks
+-----
+
+Finally the `Tasks` section lists all executed tasks reporting for each of them, the status, the actual command script
+and many other runtime metrics. You can see an example below:
+
+.. image:: images/report-tasks-min.png
+
+
+.. note:: Nextflow collect these metrics running a background process for each job in the target environment.
+  Make sure the following tools are available ``ps``, ``date``, ``sed``, ``egrep``, ``awk`` in the system where
+  the jobs are executed. Moreover some of these metrics are not reported when using a Mac OSX system. See the note
+  message about that in the `Trace report`_ below.
+
+.. warning:: A common problem when using a third party container image is that it does not ship one or more of the
+  above utilities resulting in an empty execution report.
+
+.. _trace-report:
+
+Trace report
+============
+
 Nextflow creates an execution tracing file that contains some useful information about each process executed in your pipeline
 script, including: submission time, start time, completion time, cpu and memory used.
-
-.. warning:: This is an incubating feature. It may change in future Nextflow releases.
-
 
 In order to create the execution trace file add the ``-with-trace`` command line option when launching the pipeline execution.
 For example::
@@ -68,6 +116,10 @@ status                  Task status.
 exit                    POSIX process exit status.
 module                  Environment module used to run the task.
 container               Docker image name used to execute the task.
+cpus                    The cpus number request for the task execution.
+time                    The time request for the task execution
+disk                    The disk space request for the task execution.
+memory                  The memory request for the task execution.
 attempt                 Attempt at which the task completed.
 submit                  Timestamp when the task has been submitted.
 start                   Timestamp when the task execution has started.
@@ -101,6 +153,7 @@ Trace report layout and other configuration settings can be specified by using t
 
 Please read :ref:`Trace scope <config-trace>` section to learn more about it.
 
+.. _timeline-report:
 
 Timeline report
 ===============
@@ -108,7 +161,7 @@ Timeline report
 Nextflow can render an HTML timeline for all processes executed in your pipeline. An example of the timeline
 report is shown below:
 
-.. image:: images/timeline.png
+.. image:: images/timeline-min.png
 
 
 Each bar represents a process run in the pipeline execution. The bar length represents the task duration time (wall-time).
@@ -128,6 +181,7 @@ execution. For example::
 
 The report file name can be specified as an optional parameter following the timeline option.
 
+.. _dag-visualisation:
 
 DAG visualisation
 =================
@@ -274,4 +328,3 @@ Read the `Extrae`_ documentation for more information about it.
 .. _Barcelona Supercomputing Center: http://www.bsc.es
 .. _Paraver: http://www.bsc.es/computer-sciences/performance-tools/paraver
 .. _Extrae: http://www.bsc.es/computer-sciences/extrae
-

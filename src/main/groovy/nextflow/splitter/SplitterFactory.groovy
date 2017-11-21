@@ -21,14 +21,11 @@
 package nextflow.splitter
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
-import nextflow.Channel
-import nextflow.Global
-import nextflow.Session
 import nextflow.dag.NodeMarker
 import nextflow.extension.DataflowHelper
+import nextflow.extension.SplitOp
 /**
  * Factory class for splitter objects
  *
@@ -40,24 +37,23 @@ import nextflow.extension.DataflowHelper
 @CompileStatic
 class SplitterFactory {
 
-    @Lazy
-    static private Session session = { Global.session as Session } ()
-
     /**
      * Creates a splitter object by specifying the strategy name
      *
      * @param strategy The splitting strategy e.g. {@code 'fasta'}, {@code 'fastq'}, etc
-     * @param object
-     *      A map containing named parameters used to initialize the splitter object.
-     *      See {@link AbstractSplitter#options(java.util.Map)}
+     * @param method The actual method name used to invoke the splitter function
      */
-    static SplitterStrategy create( String strategy, String method = null ) {
+    static SplitterStrategy create( String strategy ) {
         assert strategy
-        String name = strategy.contains('.') ? strategy : "nextflow.splitter.${strategy.capitalize()}Splitter"
+
+        String name = strategy.startsWith('split') || strategy.startsWith('count') ? strategy = strategy.substring(5) : strategy
+
+        if( !name.contains('.') )
+            name = "nextflow.splitter.${strategy.capitalize()}Splitter"
+
         try {
             def clazz = (Class<SplitterStrategy>) Class.forName(name)
-            String operator = method ? method + strategy.capitalize() : null
-            create(clazz, operator )
+            create(clazz, strategy.capitalize())
         }
         catch( ClassNotFoundException e ) {
             log.debug "Cannot find any class implementing a split strategy for: $strategy"
@@ -103,9 +99,7 @@ class SplitterFactory {
             throw e
 
         // load the splitter class
-        def method = methodName.substring(0,5)
-        def qualifier = methodName.substring(5)
-        def splitter = create(qualifier, method)
+        def splitter = create(methodName)
         if( !splitter )
             throw e
 
@@ -115,10 +109,10 @@ class SplitterFactory {
         /*
          * call the 'split'
          */
-        if( method == 'split' ) {
+        if( methodName.startsWith('split') ) {
             // when the  target obj is a channel use call
             if( obj instanceof DataflowReadChannel ) {
-                def outbound = splitOverChannel( obj, splitter, opt )
+                def outbound = new SplitOp( obj, methodName, opt ).apply()
                 NodeMarker.addOperatorNode(methodName, obj, outbound)
                 return outbound
             }
@@ -132,6 +126,8 @@ class SplitterFactory {
          * otherwise handle 'count'
          */
         else {
+            // DEPRECATED TO BE REMOVED
+            log.warn "Method `$methodName` has been deprecated and it will be removed in a future release"
             // when the  target obj is a channel use call
             if( obj instanceof DataflowReadChannel ) {
                 def outbound = countOverChannel( obj, splitter, opt )
@@ -147,44 +143,7 @@ class SplitterFactory {
 
     }
 
-    /**
-     * Implements dynamic method extension for splitter operators
-     *
-     * @param source
-     * @param splitter
-     * @param opts
-     * @return
-     */
-    static protected splitOverChannel( DataflowReadChannel source, SplitterStrategy splitter, Map opts )  {
 
-        def strategy = splitter as AbstractSplitter
-
-        if( opts.containsKey('autoClose') ) throw new IllegalArgumentException('Parameter `autoClose` do not supported')
-        if( opts.into && !(opts.into instanceof DataflowQueue) ) throw new IllegalArgumentException('Parameter `into` must reference a channel object')
-
-        // create a new DataflowChannel that will receive the splitter entries
-        DataflowQueue resultChannel
-        if( opts.into ) {
-            resultChannel = opts.into as DataflowQueue
-        }
-        else {
-            resultChannel = opts.into = new DataflowQueue()
-        }
-
-        // turn off channel auto-close
-        opts.autoClose = false
-
-        // set the splitter strategy options
-        strategy.options(opts)
-
-        DataflowHelper.subscribeImpl ( source, [
-                onNext: { entry -> strategy.target(entry).apply() },
-                onComplete: { resultChannel << Channel.STOP }
-        ] )
-
-        // return the resulting channel
-        return resultChannel
-    }
 
     /**
      *  Implements dynamic method extension for counter operators

@@ -85,6 +85,16 @@ class LaunchConfig extends CascadingConfig<String,Object> {
     }
 
     @ConfigField
+    String getInstanceRole() {
+        getAttribute('instanceRole')
+    }
+
+    LaunchConfig setInstanceRole(String profile) {
+        setAttribute('instanceRole',profile)
+        return this
+    }
+
+    @ConfigField
     List<String> getSecurityGroup() {
         getSecurityGroups()
     }

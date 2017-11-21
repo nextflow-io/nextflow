@@ -17,9 +17,9 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 import nextflow.processor.TaskProcessor
 import nextflow.script.ScriptRunner
+import nextflow.util.MemoryUnit
 import spock.lang.Shared
 import spock.lang.Specification
 /**
@@ -171,6 +171,50 @@ class FunctionalTests extends Specification {
         processor.config.ext.alpha == 'aaa'
         processor.config.ext.beta == 'BBB'
         processor.config.ext.delta == 'DDD'
+    }
+
+
+    def 'test configure processor with dynamic resources'() {
+
+        setup:
+        def configStr = '''
+             process {
+                cpus = { 2 * task.attempt }
+                memory = { 1.GB * task.attempt  }
+                time = { 1.h * task.attempt }
+
+                $taskHello.errorStrategy = 'finish'
+            }
+            '''
+        def cfg = new ConfigSlurper().parse(configStr)
+
+
+        when:
+        def script = '''
+
+            process taskHello {
+                cpus 2
+                memory 3.GB
+                time '1 h'
+                errorStrategy 'ignore'
+
+                script:
+                'echo hello'
+            }
+
+            '''
+
+        def runner = new ScriptRunner(cfg)
+        runner.setScript(script).execute()
+        def processor = runner.scriptObj.taskProcessor
+
+        then:
+        processor instanceof TaskProcessor
+        processor.config.cpus == 2
+        processor.config.memory == MemoryUnit.of('3 GB')
+        processor.config.time == '1 h'
+        processor.config.errorStrategy == 'finish'
+
     }
 
 }

@@ -11,6 +11,10 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.Channel
 import nextflow.Nextflow
+
+import static nextflow.extension.DataflowHelper.addToList
+import static nextflow.extension.DataflowHelper.split
+
 /**
  * Implements the {@link DataflowExtensions#spread(groovyx.gpars.dataflow.DataflowReadChannel, java.lang.Object)} operator
  *
@@ -19,11 +23,6 @@ import nextflow.Nextflow
 @Slf4j
 @CompileStatic
 class CombineOp {
-
-    static class KeyPair {
-        List keys
-        List values
-    }
 
     static final List<Integer> NONE = []
 
@@ -96,36 +95,6 @@ class CombineOp {
             }}
 
         return opts
-    }
-
-    @PackageScope
-    void addToList(List result, entry)  {
-        if( entry instanceof List ) {
-            result.addAll(entry)
-        }
-        else {
-            result.add(entry)
-        }
-    }
-
-    @PackageScope
-    KeyPair split(List<Integer> pivot, entry) {
-        if( !(entry instanceof List) )
-            throw new IllegalArgumentException("Not a valid `combine` entry: $entry")
-
-        def list = (List)entry
-        def result = new KeyPair()
-        result.keys = new ArrayList(pivot.size())
-        result.values = new ArrayList(list.size())
-
-        for( int i=0; i<list.size(); i++ ) {
-            if( i in pivot )
-                result.keys << list[i]
-            else
-                result.values << list[i]
-        }
-
-        return result
     }
 
     @PackageScope

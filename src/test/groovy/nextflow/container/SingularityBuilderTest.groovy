@@ -39,41 +39,41 @@ class SingularityBuilderTest extends Specification {
         expect:
         new SingularityBuilder('busybox')
                 .build()
-                .runCommand == 'env - PATH="$PATH" singularity exec busybox'
+                .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec busybox'
 
         new SingularityBuilder('busybox')
                 .params(entry: '/bin/bash')
                 .build()
-                .runCommand == 'env - PATH="$PATH" singularity exec busybox /bin/bash'
+                .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec busybox /bin/bash'
 
         new SingularityBuilder('busybox')
                 .params(engineOptions: '-q -v')
                 .build()
-                .runCommand == 'env - PATH="$PATH" singularity -q -v exec busybox'
+                .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity -q -v exec busybox'
 
         new SingularityBuilder('busybox')
                 .params(runOptions: '--contain --writable')
                 .build()
-                .runCommand == 'env - PATH="$PATH" singularity exec --contain --writable busybox'
+                .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec --contain --writable busybox'
 
         new SingularityBuilder('ubuntu')
                 .addMount(path1)
                 .build()
-                .runCommand == 'env - PATH="$PATH" singularity exec ubuntu'
+                .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec ubuntu'
 
         new SingularityBuilder('ubuntu')
                 .addMount(path1)
                 .addMount(path2)
                 .params(autoMounts: true)
                 .build()
-                .runCommand == 'env - PATH="$PATH" singularity exec -B /foo/data/file1 -B /bar/data/file2 -B "$PWD" ubuntu'
+                .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec -B /foo/data/file1 -B /bar/data/file2 -B "$PWD" ubuntu'
 
         new SingularityBuilder('ubuntu')
                 .addMount(path1)
                 .addMount(path1)
                 .params(autoMounts: true)
                 .build()
-                .runCommand == 'env - PATH="$PATH" singularity exec -B /foo/data/file1 -B "$PWD" ubuntu'
+                .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec -B /foo/data/file1 -B "$PWD" ubuntu'
 
         new SingularityBuilder('ubuntu')
                 .addMount(path1)
@@ -81,7 +81,7 @@ class SingularityBuilderTest extends Specification {
                 .params(autoMounts: true)
                 .params(readOnlyInputs: true)
                 .build()
-                .runCommand == 'env - PATH="$PATH" singularity exec -B /foo/data/file1:/foo/data/file1:ro -B "$PWD" ubuntu'
+                .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec -B /foo/data/file1:/foo/data/file1:ro -B "$PWD" ubuntu'
     }
 
     def 'should return export variables' () {

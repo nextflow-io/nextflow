@@ -63,11 +63,11 @@ ext {
 allprojects {
     apply plugin: 'java'
 
-    version = '0.25.7'
+    version = '0.26.0'
     group = 'io.nextflow'
 
-    sourceCompatibility = 1.7
-    targetCompatibility = 1.7
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
 
     repositories {
         jcenter()
@@ -87,7 +87,7 @@ allprojects {
         // test configuration
         testCompile ("cglib:cglib-nodep:2.2")
         testCompile ("org.objenesis:objenesis:1.4")
-        testCompile ("org.spockframework:spock-core:1.0-groovy-2.4")
+        testCompile ("org.spockframework:spock-core:1.1-groovy-2.4")
         testCompile 'com.google.jimfs:jimfs:1.0'
         testCompile 'com.github.kirviq:dumbster:1.7.1'
         // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sec:module_replacement
@@ -118,7 +118,6 @@ configurations {
     capsule
     //provided
     drmaa.extendsFrom runtime
-    dnanexus.extendsFrom runtime
     ignite.extendsFrom runtime
     console.extendsFrom runtime
     gdocLibs.extendsFrom runtime
@@ -138,18 +137,19 @@ dependencies {
     compile "ch.qos.logback:logback-classic:1.1.10"
     compile "ch.qos.logback:logback-core:1.1.10"
     compile "org.codehaus.gpars:gpars:1.2.1"
-    compile("ch.grengine:grengine:1.0.3")
+    compile("ch.grengine:grengine:1.2.1") { exclude group: 'org.codehaus.groovy', module: 'groovy-all' }
     compile "commons-lang:commons-lang:2.6"
     compile "com.beust:jcommander:1.35"
     compile("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
     compile('org.iq80.leveldb:leveldb:0.7')
-    compile('org.eclipse.jgit:org.eclipse.jgit:4.3.1.201605051710-r')
-    compile('io.nextflow:nxf-s3fs:1.0.0') {
+    compile('org.eclipse.jgit:org.eclipse.jgit:4.8.0.201706111038-r')
+    compile('io.nextflow:nxf-s3fs:1.0.1') {
         exclude group: 'org.apache.tika', module: 'tika-core'
         exclude group: 'com.amazonaws', module: 'aws-java-sdk-s3'
     }
-    compile ('com.amazonaws:aws-java-sdk-s3:1.11.25')
-    compile ('com.amazonaws:aws-java-sdk-ec2:1.11.25')
+    compile ('com.amazonaws:aws-java-sdk-s3:1.11.172')
+    compile ('com.amazonaws:aws-java-sdk-ec2:1.11.172')
+    compile ('com.amazonaws:aws-java-sdk-batch:1.11.172')
     compile ('javax.mail:mail:1.4.7')
     compile ('org.yaml:snakeyaml:1.18')
 
@@ -162,11 +162,6 @@ dependencies {
 
     // Capsule manages the fat jar building process
     capsule(project(':my-capsule'))
-
-    // DnaNexus build dependencies
-    dnanexus(project(':nxf-dnanexus')) {
-        exclude module: 'nextflow'
-    }
 
     ignite(project(':nxf-ignite')) {
         exclude module: 'nextflow'
@@ -421,42 +416,16 @@ task packAll(type: Jar) {
     doLast {
         file(releaseDir).mkdir()
         // cleanup
+        def source = file("$buildDir/libs/nextflow-${version}-all.jar")
         def target = file("$releaseDir/nextflow-${version}-all"); target.delete()
         // append the big jar
         target.withOutputStream {
             it << file('nextflow').text.replaceAll(/NXF_PACK\=.*/, 'NXF_PACK=all')
-            it << new FileInputStream(file("$buildDir/libs/nextflow-${version}-all.jar"))
+            it << new FileInputStream(source)
         }
+        source.delete()
         // done
         println "+ Nextflow package `ALL` copied to: $releaseDir\n"
-    }
-}
-
-/*
- * Creates a self-contained *fat* jar shipping all required dependencies
- * including DnaNexus stuff
- */
-task packDx(type: Jar) {
-    dependsOn ':my-capsule:jar', configurations.dnanexus
-    archiveName = "nextflow-${version}-dx.jar"
-
-    from jar // embed our application jar
-    from (configurations.dnanexus)
-    from (configurations.capsule.collect { zipTree(it) })
-
-    manifest {
-        attributes(
-                'Main-Class'        : 'CapsuleLoader',
-                'Application-Name'  : 'nextflow-dx',
-                'Application-Class' : mainClassName,
-                'Application-Version': version,
-                'Min-Java-Version'  : '1.7.0'
-        )
-    }
-
-    doLast {
-        ant.copy(file: "$buildDir/libs/nextflow-${version}-dx.jar", todir: releaseDir, overwrite: true)
-        println "+ Nextflow package `DX` copied to: $releaseDir\n"
     }
 }
 
@@ -464,8 +433,8 @@ task packDx(type: Jar) {
 /*
  * Compile and pack all packages
  */
-task pack( dependsOn: [packOne, packDx, packAll]) {
-
+task pack( dependsOn: [packOne, packAll]) {
+    "rm $buildDir/libs/*".execute()
 }
 
 
@@ -533,9 +502,9 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
     def launcherSha256 = file('nextflow.sha256').absoluteFile
     def nextflowAllFile = file("$releaseDir/nextflow-${version}-all")
 
-    def temp = File.createTempFile('upload',null)
-    temp.deleteOnExit()
-    temp.text =  """\
+    def snapshot = version ==~ /^.+(-RC\d+|\-SNAPSHOT)$/
+    def isLatest = !snapshot
+    def cmd =  """\
     # tag the release
     git push || exit \$?
     (git tag -a v$version -m 'Tagging version $version [release]' -f && git push origin v$version -f) || exit \$?
@@ -543,69 +512,23 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
     github-release release -u nextflow-io -r nextflow -t v$version --pre-release
     github-release upload -u nextflow-io -r nextflow -t v$version --file ${launcherFile} --name ${launcherFile.name}
     github-release upload -u nextflow-io -r nextflow -t v$version --file ${nextflowAllFile} --name ${nextflowAllFile.name}
-
-    # publish the script as the latest
-    export AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS}
-    export AWS_SECRET_ACCESS_KEY=${System.env.NXF_AWS_SECRET}
-    aws s3 cp $launcherFile s3://www.nextflow.io/releases/latest/nextflow $s3CmdOpts
-    aws s3 cp $launcherSha1 s3://www.nextflow.io/releases/latest/nextflow.sha1 $s3CmdOpts
-    aws s3 cp $launcherSha256 s3://www.nextflow.io/releases/latest/nextflow.sha256 $s3CmdOpts
-    aws s3 cp $launcherSha256 s3://www.nextflow.io/releases/latest/nextflow.md5 $s3CmdOpts
     """.stripIndent()
 
+    if( isLatest )
+        cmd += """
+        # publish the script as the latest
+        export AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS}
+        export AWS_SECRET_ACCESS_KEY=${System.env.NXF_AWS_SECRET}
+        aws s3 cp $launcherFile s3://www.nextflow.io/releases/latest/nextflow $s3CmdOpts
+        aws s3 cp $launcherSha1 s3://www.nextflow.io/releases/latest/nextflow.sha1 $s3CmdOpts
+        aws s3 cp $launcherSha256 s3://www.nextflow.io/releases/latest/nextflow.sha256 $s3CmdOpts
+        aws s3 cp $launcherSha256 s3://www.nextflow.io/releases/latest/nextflow.md5 $s3CmdOpts
+        """.stripIndent()
+
+    def temp = File.createTempFile('upload',null)
+    temp.deleteOnExit()
+    temp.text = cmd
     commandLine 'bash', '-e', temp.absolutePath
-}
-
-
-/*
- * Create the dnanexus application archive and project structure
- */
-
-File dxProject = file('./dx-project')
-
-task dnanexus(dependsOn: packDx) {
-
-    doLast {
-
-        def binFolder = new File(dxProject,'resources/usr/bin')
-        binFolder.mkdirs()
-        ant.copy(file: "nextflow", todir: binFolder, overwrite: true)
-
-        def framework = new File(dxProject, "resources/opt/nextflow/framework/$version/")
-        framework.mkdirs()
-        ant.copy(file: "$buildDir/libs/nextflow-${version}-dx.jar", todir: framework, overwrite: true)
-
-        def dxApp = file('./subprojects/nxf-dnanexus/dxapp.json')
-        def dxScript = file('./subprojects/nxf-dnanexus/dxapp.sh')
-
-        // copy the 'dxapp.json' if not exists
-        def target = new File(dxProject, dxApp.name)
-        if( !target.exists() ) {
-            target.text = dxApp.text
-        }
-
-        // copy the 'dxapp.sh' if not exists
-        target = new File(dxProject, dxScript.name)
-        if( !target.exists() ) {
-            target.text = dxScript.text
-        }
-
-        // copy the example files
-        target = new File(dxProject,'resources/examples')
-        target.mkdirs()
-        def examples = new File('./tests')
-        examples.eachFile {
-            def copy = new File(target, it.name)
-            if( it.isFile() && !copy.exists() ) copy.text = it.text
-        }
-
-        println """
-        DnaNexus project ready
-        1. move to ${dxProject}
-        2. build it with the command 'dx build -f'
-        3. launch it using the command 'dx run nextflow'
-        """
-    }
 }
 
 
@@ -708,7 +631,6 @@ configure(deployable) {
     signArchives.onlyIf { enableSignArchives }
 }
 
-// verbose tests logging
 //test {
 //    testLogging {
 //        events "passed", "skipped", "failed", "standardOut", "standardError"

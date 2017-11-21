@@ -7,8 +7,10 @@ machine:
         GRADLE_OPTS: -Dorg.gradle.daemon=false
 
 dependencies:
+    pre:
+        - mkdir -p ~/.nextflow/aws
     cache_directories:
-        - "~/.nextflow/aws"
+        - ~/.nextflow/aws
 
 checkout:
     post:
@@ -17,7 +19,7 @@ checkout:
 test:
     pre:
         - rm $HOME/.gitconfig
-        - mkdir "$HOME/.nextflow" && echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
+        - mkdir -p "$HOME/.nextflow" && echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
         - make assemble
     override:
         - make check install && ./integration-tests.sh :

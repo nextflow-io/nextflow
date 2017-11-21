@@ -106,7 +106,7 @@ class BashWrapperBuilder {
 
         on_exit() {
           exit_status=${ret:=$?}
-          printf $exit_status > __EXIT_FILE__
+          printf $exit_status __EXIT_FILE__
           set +u
           [[ "$COUT" ]] && rm -f "$COUT" || true
           [[ "$CERR" ]] && rm -f "$CERR" || true
@@ -273,43 +273,11 @@ class BashWrapperBuilder {
         return "NXF_SCRATCH=\"\$(set +u; nxf_mktemp $scratchStr)\""
     }
 
-    /**
-     * Setup container related variables
-     */
-    protected boolean containerInit() {
-        containerImage && (executable || containerConfig.isEnabled())
-    }
-
     protected boolean fixOwnership() {
-        systemOsName == 'Linux' && containerConfig?.fixOwnership && containerInit() && containerConfig.engine == 'docker' // <-- note: only for docker (shifter is not affected)
+        systemOsName == 'Linux' && containerConfig?.fixOwnership && runWithContainer && containerConfig.engine == 'docker' // <-- note: only for docker (shifter is not affected)
     }
 
-    /**
-     * Build up the BASH wrapper script file which will launch the user provided script
-     * @return The {@code Path} of the created wrapper script
-     */
-
-    Path build() {
-        assert workDir, "Missing 'workDir' property in BashWrapperBuilder object"
-        assert script, "Missing 'script' property in BashWrapperBuilder object"
-
-        final scriptFile = workDir.resolve(TaskRun.CMD_SCRIPT)
-        final inputFile = workDir.resolve(TaskRun.CMD_INFILE)
-        final environmentFile = workDir.resolve(TaskRun.CMD_ENV)
-        final startedFile = workDir.resolve(TaskRun.CMD_START)
-        final exitedFile = workDir.resolve(TaskRun.CMD_EXIT)
-        final wrapperFile = workDir.resolve(TaskRun.CMD_RUN)
-        final stubFile = workDir.resolve(TaskRun.CMD_STUB)
-
-        // set true when running with through a container engine
-        runWithContainer = containerInit()
-
-        /*
-         * save the input when required
-         */
-        if( input != null ) {
-            inputFile.text = input
-        }
+    protected void makeEnvironmentFile(Path environmentFile) {
 
         /*
          * add modules to the environment file
@@ -328,6 +296,40 @@ class BashWrapperBuilder {
             // create the *bash* environment script
             environmentFile << TaskProcessor.bashEnvironmentScript(environment)
         }
+
+    }
+
+    protected Map<String,Path> getResolvedInputs() {
+        copyStrategy.resolveForeignFiles(inputFiles)
+    }
+
+    /**
+     * Build up the BASH wrapper script file which will launch the user provided script
+     * @return The {@code Path} of the created wrapper script
+     */
+    Path build() {
+        assert workDir, "Missing 'workDir' property in BashWrapperBuilder object"
+        assert script, "Missing 'script' property in BashWrapperBuilder object"
+
+        final scriptFile = workDir.resolve(TaskRun.CMD_SCRIPT)
+        final inputFile = workDir.resolve(TaskRun.CMD_INFILE)
+        final environmentFile = workDir.resolve(TaskRun.CMD_ENV)
+        final startedFile = workDir.resolve(TaskRun.CMD_START)
+        final exitedFile = workDir.resolve(TaskRun.CMD_EXIT)
+        final wrapperFile = workDir.resolve(TaskRun.CMD_RUN)
+        final stubFile = workDir.resolve(TaskRun.CMD_STUB)
+
+        // set true when running with through a container engine
+        runWithContainer = containerEnabled && !containerNative
+
+        /*
+         * save the input when required
+         */
+        if( input != null ) {
+            inputFile.text = input
+        }
+
+        makeEnvironmentFile(environmentFile)
 
         // whenever it has to change to the scratch directory
         final changeDir = getScratchDirectoryCommand()
@@ -422,7 +424,7 @@ class BashWrapperBuilder {
         wrapper << '[[ $NXF_SCRATCH ]] && echo "nxf-scratch-dir $HOSTNAME:$NXF_SCRATCH" && cd $NXF_SCRATCH' << ENDL
 
         // staging input files when required
-        def stagingScript = copyStrategy.getStageInputFilesScript()
+        def stagingScript = copyStrategy.getStageInputFilesScript(resolvedInputs)
         if( stagingScript ) {
             wrapper << stagingScript << ENDL
         }
@@ -461,7 +463,7 @@ class BashWrapperBuilder {
             stub << 'start_millis=$(nxf_date)'  << ENDL
             stub << '(' << ENDL
             stub << interpreter << " " << fileStr(scriptFile)
-            if( input != null ) stub << " < " << fileStr(inputFile)
+            if( input != null ) stub << pipeInputFile(inputFile)
             stub << ENDL
             stub << ') &' << ENDL
             stub << 'pid=$!' << ENDL                     // get the PID of the main job
@@ -486,7 +488,7 @@ class BashWrapperBuilder {
         else {
             wrapper << interpreter << " " << fileStr(scriptFile)
             if( containerBuilder && !executable ) wrapper << "\""
-            if( input != null ) wrapper << " < " << fileStr(inputFile)
+            if( input != null ) wrapper << pipeInputFile(inputFile)
         }
         wrapper << ENDL
         wrapper << ') >"$COUT" 2>"$CERR" &' << ENDL
@@ -498,16 +500,16 @@ class BashWrapperBuilder {
          * un-stage output files
          */
         if( changeDir ) {
-            wrapper << copyFile(TaskRun.CMD_OUTFILE, workDir) << ' || true' << ENDL
-            wrapper << copyFile(TaskRun.CMD_ERRFILE, workDir) << ' || true' << ENDL
+            wrapper << copyFileToWorkDir(TaskRun.CMD_OUTFILE) << ' || true' << ENDL
+            wrapper << copyFileToWorkDir(TaskRun.CMD_ERRFILE) << ' || true' << ENDL
         }
 
         def unstagingScript
-        if( (changeDir || workDir != targetDir) && (unstagingScript=copyStrategy.getUnstageOutputFilesScript()) )
+        if( (changeDir || workDir != targetDir) && (unstagingScript=copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)) )
             wrapper << unstagingScript << ENDL
 
         if( changeDir && statsEnabled )
-            wrapper << copyFile(TaskRun.CMD_TRACE, workDir) << ' || true' << ENDL
+            wrapper << copyFileToWorkDir(TaskRun.CMD_TRACE) << ' || true' << ENDL
 
         if( afterScript ) {
             wrapper << '# user `afterScript`' << ENDL
@@ -516,6 +518,10 @@ class BashWrapperBuilder {
 
         wrapperFile.text = wrapperScript = wrapper.toString()
         return wrapperFile
+    }
+
+    private String copyFileToWorkDir(String fileName) {
+        copyFile(fileName, workDir.resolve(fileName))
     }
 
     /**
@@ -583,7 +589,7 @@ class BashWrapperBuilder {
         /*
          * initialise the builder
          */
-        builder.addMountForInputs(inputFiles)
+        builder.addMountForInputs(resolvedInputs)
 
         if( !executable )
             builder.addMount(binDir)
@@ -647,7 +653,8 @@ class BashWrapperBuilder {
     }
 
     String moduleLoad(String name) {
-        "nxf_module_load ${name.tokenize('/').join(' ')}"
+        int p = name.lastIndexOf('/')
+        p != -1 ? "nxf_module_load ${name.substring(0,p)} ${name.substring(p+1)}" : "nxf_module_load ${name}"
     }
 
 }

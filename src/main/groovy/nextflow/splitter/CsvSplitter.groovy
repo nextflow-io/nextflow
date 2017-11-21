@@ -114,7 +114,8 @@ class CsvSplitter extends AbstractTextSplitter {
      */
     protected Map<String,?> validOptions() {
         def result = super.validOptions()
-        result.remove('file')   // <-- `file` mode not support by CsvSplitter
+        result.remove('file')       // <-- `file` mode not support by CsvSplitter
+        result.remove('compress')   // <-- `compress` mode not supported
         result.sep = String
         result.strip = Boolean
         result.header = [ Boolean, List ]
@@ -169,9 +170,9 @@ class CsvSplitter extends AbstractTextSplitter {
         if( !line )
             return null
 
-        def tokens = StringUtils.splitPreserveAllTokens(line, sep)
+        def tokens = StringUtils.splitPreserveAllTokens(line, sep) as List<String>
         // -- strip blanks and quote
-        for( int i=0; i<tokens.length; i++ ) {
+        for( int i=0; i<tokens.size(); i++ ) {
             tokens[i] = strip(tokens[i])
         }
 
@@ -208,7 +209,7 @@ class CsvSplitter extends AbstractTextSplitter {
 
     protected CollectorStrategy createCollector() {
 
-        if( count>1 )
+        if( counter.isEnabled() )
             return new ObjectListCollector()
 
         return null

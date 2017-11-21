@@ -37,12 +37,10 @@ import nextflow.file.FileHelper
 import nextflow.scm.AssetManager
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
-import nextflow.util.ConfigHelper
 import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import org.yaml.snakeyaml.Yaml
-
 /**
  * CLI sub-command RUN
  *
@@ -140,6 +138,9 @@ class CmdRun extends CmdBase implements HubOptions {
 
     @Parameter(names = ['-with-trace'], description = 'Create processes execution tracing file')
     String withTrace
+
+    @Parameter(names = ['-with-report'], description = 'Create processes execution html report')
+    String withReport
 
     @Parameter(names = ['-with-timeline'], description = 'Create processes execution timeline file')
     String withTimeline
@@ -331,9 +332,23 @@ class CmdRun extends CmdBase implements HubOptions {
 
         // set the CLI params
         params?.each { key, value ->
-            result.put( key, ConfigHelper.parseValue(value) )
+            result.put( key, parseParam(value) )
         }
         return result
+    }
+
+    static private parseParam( String str ) {
+
+        if ( str == null ) return null
+
+        if ( str.toLowerCase() == 'true') return Boolean.TRUE
+        if ( str.toLowerCase() == 'false' ) return Boolean.FALSE
+
+        if ( str.isInteger() ) return str.toInteger()
+        if ( str.isLong() ) return str.toLong()
+        if ( str.isDouble() ) return str.toDouble()
+
+        return str
     }
 
     private Path validateParamsFile(String file) {

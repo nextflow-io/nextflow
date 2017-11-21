@@ -89,7 +89,7 @@ SLURM
 =====
 
 
-The `SLURM` executor allows you to run your pipeline script by using the `SLURM <https://computing.llnl.gov/linux/slurm/>`_ resource manager.
+The `SLURM` executor allows you to run your pipeline script by using the `SLURM <https://slurm.schedmd.com/documentation.html>`_ resource manager.
 
 Nextflow manages each process as a separate job that is submitted to the cluster by using the ``sbatch`` command.
 
@@ -220,36 +220,6 @@ The amount of resources requested by each job submission is defined by the follo
 * :ref:`process-memory`
 * :ref:`process-clusterOptions`
 
-
-.. _dnanexus-executor:
-
-DNAnexus
-========
-
-The `DNAnexus` executor allows you to run your pipeline in the `DNAnexus <http://dnanexus.com/>`_ cloud platform.
-
-Nextflow pipeline to be executed in the DNAnexus platform need to be packaged as DNAnexus app. Read how bundle and
-deploy Nextflow apps in the :ref:`dnanexus-page` section.
-
-The `dnanexus` executor allows your script to submit pipeline's processes in the DNAnexus cloud platform as separate jobs.
-It has to be specified in the configuration file or on the program command line options, as shown below::
-
-    process.executor = 'dnanexus'
-
-
-Property 'instanceType'
-------------------------
-
-The ``instanceType`` configuration property allows you to specify the instance type to be used by a process when
-executing the required job. For example::
-
-     process.executor = 'dnanexus'
-     process.instanceType = 'dx_m1.xlarge'
-
-
-The list of instance types, that can be used for this property, is available in the `Run Specification
-<https://wiki.dnanexus.com/API-Specification-v1.0.0/IO-and-Run-Specifications#Run-Specification>`_ page.
-
 .. _ignite-executor:
 
 Ignite
@@ -269,6 +239,7 @@ The amount of resources requested by each task submission is defined by the foll
 Read the :ref:`ignite-page` section in this documentation to learn how to configure Nextflow to deploy and run an
 Ignite cluster in your infrastructure.
 
+.. _kubernetes-executor:
 
 Kubernetes
 ==========
@@ -291,10 +262,21 @@ The following directives can be used to define the amount of computing resources
 * :ref:`process-memory`
 * :ref:`process-container`
 
+.. _awsbatch-executor:
 
+AWS Batch
+==========
 
+Nextflow supports `AWS Batch <https://aws.amazon.com/batch/>`_ service which allows submitting jobs in the cloud
+without having to spin out and manage a cluster of virtual machines. AWS Batch uses Docker containers to run tasks,
+which makes deploying pipelines much simpler.
 
+The pipeline processes must specify the Docker image to use by defining the ``container`` directive, either in the pipeline
+script or the ``nextflow.config`` file.
 
+To enable this executor set the property ``process.executor = 'awsbatch'`` in the ``nextflow.config`` file.
 
+The pipeline can be launched either in a local computer or a EC2 instance. The latter is suggested for heavy or long
+running workloads. Moreover a S3 bucket must be used as pipeline work directory.
 
-
+See the :ref:`AWS Batch<awscloud-batch>` page for further configuration details.

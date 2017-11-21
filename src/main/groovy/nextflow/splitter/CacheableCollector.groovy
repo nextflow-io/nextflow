@@ -24,6 +24,9 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.util.KryoHelper
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
 /**
  * Defines a trait which can cache the produced chunks
  *
@@ -32,20 +35,26 @@ import nextflow.util.KryoHelper
 @CompileStatic
 trait CacheableCollector  {
 
+    static final private Logger log = LoggerFactory.getLogger(CacheableCollector)
+
     @PackageScope Path baseFile
 
     @PackageScope List<Path> allPaths = []
 
     void markComplete() throws IOException {
         // save the list of all chunks
-        def marker = baseFile.resolveSibling('.chunks')
+        def marker = baseFile.resolveSibling(".chunks.${baseFile.name}")
+        log.trace "Caching chunk paths > marker=$marker; chunks=$allPaths"
         KryoHelper.serialize(allPaths, marker)
     }
 
+    Path getBaseFile() { baseFile }
+
     boolean checkCached() {
         try {
-            def marker = baseFile.resolveSibling('.chunks')
+            def marker = baseFile.resolveSibling(".chunks.${baseFile.name}")
             allPaths = (List<Path>)KryoHelper.deserialize(marker)
+            log.trace "Found cached chunk paths > marker=$marker; chunks=$allPaths"
             return true
         }
         catch( IOException e ) {

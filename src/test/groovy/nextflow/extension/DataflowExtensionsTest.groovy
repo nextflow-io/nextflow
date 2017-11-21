@@ -31,6 +31,7 @@ import spock.lang.Timeout
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(10)
 class DataflowExtensionsTest extends Specification {
 
     def setupSpec() {
@@ -81,6 +82,13 @@ class DataflowExtensionsTest extends Specification {
         Channel.from(1,2,4,2,4,5,6,7,4).filter(2) .count().val == 2
         Channel.from(1,2,4,2,4,5,6,7,4).filter(4) .count().val == 3
 
+    }
+
+    def testFilterWithValue() {
+        expect:
+        Channel.value(3).filter { it>1 }.val == 3
+        Channel.value(0).filter { it>1 }.val == Channel.STOP
+        Channel.value(Channel.STOP).filter { it>1 }.val == Channel.STOP
     }
 
     def testSubscribe() {
@@ -211,7 +219,6 @@ class DataflowExtensionsTest extends Specification {
         result.val == Channel.STOP
     }
 
-    @Timeout(1)
     def testMapManyWithSingleton() {
 
         when:
@@ -238,6 +245,18 @@ class DataflowExtensionsTest extends Specification {
         result.val == [2,1]
         result.val == ['a','b']
         result.val == ['b','a']
+        result.val == Channel.STOP
+    }
+
+    def testMapManyDefault  () {
+
+        when:
+        def result = Channel.from( [1,2], ['a',['b','c']] ).flatMap()
+        then:
+        result.val == 1
+        result.val == 2
+        result.val == 'a'
+        result.val == ['b','c']  // <-- nested list are preserved
         result.val == Channel.STOP
     }
 
@@ -323,6 +342,20 @@ class DataflowExtensionsTest extends Specification {
 
         expect:
         Channel.from(3,6,4,5,4,3,4).first().val == 3
+    }
+
+    def testFirstWithCriteria() {
+        expect:
+        Channel.from(3,6,4,5,4,3,4).first{ it>4 } .val == 6
+    }
+
+    def testFirstWithValue() {
+
+        expect:
+        Channel.value(3).first().val == 3
+        Channel.value(3).first{ it>1 }.val == 3
+        Channel.value(3).first{ it>3 }.val == Channel.STOP
+        Channel.value(Channel.STOP).first { it>3 }.val == Channel.STOP
     }
 
 
@@ -629,7 +662,6 @@ class DataflowExtensionsTest extends Specification {
         result.val == Channel.STOP
     }
 
-    @Timeout(1)
     def testSpreadWithSingleton() {
         when:
         def result = Channel.value(7).spread(['a','b','c'])
@@ -720,7 +752,6 @@ class DataflowExtensionsTest extends Specification {
         r4.val == Channel.STOP
     }
 
-    @Timeout(1)
     def testFlattenWithSingleton() {
         when:
         def result = Channel.value([3,2,1]).flatten()
@@ -928,7 +959,6 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
-    @Timeout(1)
     def testMixWithSingleton() {
         when:
         def result = Channel.value(1).mix( Channel.from([2,3])  )
@@ -1068,7 +1098,6 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
-    @Timeout(1)
     def testContactWithSingleton() {
         when:
         def result = Channel.value(1).concat( Channel.from(2,3) )
@@ -1322,7 +1351,6 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
-    @Timeout(1)
     def 'should close the dataflow channel' () {
 
         when:

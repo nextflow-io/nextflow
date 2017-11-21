@@ -45,10 +45,12 @@ class GitlabRepositoryProvider extends RepositoryProvider {
 
     @Override
     protected void auth( URLConnection connection ) {
-        if(!config.token)
-            throw new AbortOperationException("Missing Gitlab private token -- Check file: ${ProviderConfig.SCM_FILE}")
-        // set the token in the request header
-        connection.setRequestProperty("PRIVATE-TOKEN", config.token)
+        if( hasCredentials() ) {
+            if(!config.token)
+                throw new AbortOperationException("Missing Gitlab private token -- Check file: ${ProviderConfig.SCM_FILE}")
+            // set the token in the request header
+            connection.setRequestProperty("PRIVATE-TOKEN", config.token)
+        }
     }
 
     @Override

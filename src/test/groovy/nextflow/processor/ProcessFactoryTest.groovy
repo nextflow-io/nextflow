@@ -19,16 +19,20 @@
  */
 
 package nextflow.processor
-
 import nextflow.Session
+import nextflow.executor.AwsBatchExecutor
 import nextflow.executor.CondorExecutor
 import nextflow.executor.Executor
-import nextflow.util.ServiceName
+import nextflow.executor.KubernetesExecutor
 import nextflow.executor.LocalExecutor
+import nextflow.executor.LsfExecutor
 import nextflow.executor.NopeExecutor
+import nextflow.executor.PbsExecutor
 import nextflow.executor.SgeExecutor
+import nextflow.executor.SlurmExecutor
 import nextflow.script.BaseScript
 import nextflow.script.ScriptType
+import nextflow.util.ServiceName
 import spock.lang.Specification
 /**
  *
@@ -47,7 +51,15 @@ class ProcessFactoryTest extends Specification {
         factory.loadExecutorClass('local') == LocalExecutor
         factory.loadExecutorClass('sge') == SgeExecutor
         factory.loadExecutorClass('oge') == SgeExecutor
+        factory.loadExecutorClass('uge') == SgeExecutor
+        factory.loadExecutorClass('lsf') == LsfExecutor
+        factory.loadExecutorClass('pbs') == PbsExecutor
+        factory.loadExecutorClass('slurm') == SlurmExecutor
         factory.loadExecutorClass('condor') == CondorExecutor
+        factory.loadExecutorClass('k8s') == KubernetesExecutor
+        factory.loadExecutorClass('awsbatch') == AwsBatchExecutor
+        factory.loadExecutorClass('AwsBatch') == AwsBatchExecutor
+        factory.loadExecutorClass('aws-batch') == AwsBatchExecutor
         factory.loadExecutorClass('x') == XExecutor  // <-- this is loaded by the name
 
         when:

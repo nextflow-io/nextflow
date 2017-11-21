@@ -1,6 +1,56 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.26.0 - 8 Nov 2017
+- Fixed file method does not interpret correctly S3 path with globs #509
+- Fixed Execution hangs when the amount of requested resources exceed the available ones #502
+- Minor change in the execution report #507 #508 
+- Make AWS clustering compliant with billing by seconds
+- Refactored `nf-token` AWS job definition parameter #475
+- Run Batch task in a scratch directory to avoid undefined execution folder #475
+- Renamed `iamProfile` to `instanceRole` #422
+- Renamed ProcessNotRecoverableException to ProcessUnrecoverableException
+
+0.26.0-RC2 - 30 Oct 2107
+- Fixed TMP and TMPDIR variables are not passed in Singularity environment #496
+- Fixed Dynamic resources directive when defined both in a process and the config file cause an error #497
+- Added Experimental support for Shifter containers #500 #501
+- Improved AWS Batch task logging and task attempts
+- Improved Execution report showing task realtime instead of task duration on time box plot
+
+0.26.0-RC1 - 24 Oct 2017
+- Added support for AWS Batch #475
+- Added support for AWS IAM role #422
+- Added Experimental support for Java 9 #462
+- Added transpose operator #440
+- Added join operator #460
+- Added html report (-with-report option)
+- Added Gzip compression support to splitXxx operators #484
+- Added Support PE Fastq files splitting #436
+- Added Operator splitFasta should allow the creation of chunk having the same size #472
+- Added HTML execution report #490 #491
+- Added New scientist names #485
+- Improved merge operator #458
+- Improved value channel handling for reduce, filter, first, take and randomSample operators
+- Prints a warning message when the config file defines setting not matching any process definition
+- Fixed HEAD is detached error #389 
+- Fixed Include container name when calculating cache key #443
+- Fixed Invalidate process cache when a referenced external script is modified #413
+- Fixed Execution failure is not reported in the trace file when retry error strategy is used #404
+- Fixed "when" directive should not allow staging of input files for a process, if the criteria are not met #424
+- Fixed Failure during foreign files download cause execution to stop abruptly #295
+- Fixed The parameter groupName cannot be used with the parameter subnet #465
+- Fixed unable to download from gitlab.com public repository #457
+- Fixed Print work directory when a task fails #445
+- Fixed Misleading command line parameter type conversion #434
+- Fixed Nextflow should not stage files that have the same name #470
+- Fixed SplitCsv returns array objects instead of Lists #487
+- Fixed Cannot cast object FtpURLConnection error #482
+- Fixed Nested Environment Module names are not loaded properly #489
+- Removed support support for Java 7 #385
+- Removed deprecated Cirrus/ClusterK executor
+- Removed deprecated support for DNAnexus #386
+
 0.25.7 - 6 Sep 2017
 - Fixed Unable to parse the AWS price list API #444
 - Added seed parameter to `randomSample` operator #410

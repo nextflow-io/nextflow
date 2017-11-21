@@ -19,6 +19,7 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -523,8 +524,8 @@ class BashWrapperBuilderTest extends Specification {
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
-                cp .command.out ${folder} || true
-                cp .command.err ${folder} || true
+                cp .command.out ${folder}/.command.out || true
+                cp .command.err ${folder}/.command.err || true
                 """
                         .stripIndent().leftTrim()
 
@@ -649,9 +650,9 @@ class BashWrapperBuilderTest extends Specification {
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
-                cp .command.out ${folder} || true
-                cp .command.err ${folder} || true
-                cp .command.trace ${folder} || true
+                cp .command.out ${folder}/.command.out || true
+                cp .command.err ${folder}/.command.err || true
+                cp .command.trace ${folder}/.command.trace || true
                 """
                         .stripIndent().leftTrim()
 
@@ -779,7 +780,8 @@ class BashWrapperBuilderTest extends Specification {
                 workDir: folder,
                 script: 'echo Hello world!',
                 containerImage: 'busybox',
-                containerConfig: [engine: 'docker', sudo: true, enabled: true]
+                containerConfig: [engine: 'docker', sudo: true, enabled: true],
+                containerEnabled: true,
                 ] as TaskBean)
         bash.build()
 
@@ -889,6 +891,7 @@ class BashWrapperBuilderTest extends Specification {
                 workDir: folder,
                 script: 'echo Hello world!',
                 containerImage: 'busybox',
+                containerEnabled: true,
                 containerConfig: [engine: 'docker', temp: 'auto', enabled: true]
                 ] as TaskBean)
         bash.build()
@@ -1001,6 +1004,7 @@ class BashWrapperBuilderTest extends Specification {
                 name: 'Hello 5',
                 workDir: folder,
                 script: 'echo Hello world!',
+                containerEnabled: true,
                 containerImage: 'ubuntu',
                 containerConfig: [engine: 'docker', temp: 'auto', enabled: true, remove:false, kill: false]
                 ] as TaskBean)
@@ -1110,6 +1114,7 @@ class BashWrapperBuilderTest extends Specification {
                 name: 'Hello 6',
                 workDir: folder,
                 script: 'echo Hello world!',
+                containerEnabled: true,
                 containerImage: 'ubuntu',
                 containerConfig: [engine: 'docker', temp: 'auto', enabled: true, remove:false, kill: 'SIGXXX']
                 ] as TaskBean)
@@ -1222,6 +1227,7 @@ class BashWrapperBuilderTest extends Specification {
                 name: 'Hello 7',
                 workDir: folder,
                 script: 'echo Hello world!',
+                containerEnabled: true,
                 containerImage: 'busybox',
                 containerMount: '/folder with blanks' as Path,
                 containerConfig: [engine: 'docker', enabled: true]
@@ -1334,6 +1340,7 @@ class BashWrapperBuilderTest extends Specification {
                 workDir: folder,
                 scratch: true,
                 script: 'echo Hello world!',
+                containerEnabled: true,
                 containerImage: 'busybox',
                 containerConfig: [engine: 'docker', sudo: true, enabled: true]
         ] as TaskBean)
@@ -1424,8 +1431,8 @@ class BashWrapperBuilderTest extends Specification {
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
-                cp .command.out ${folder} || true
-                cp .command.err ${folder} || true
+                cp .command.out ${folder}/.command.out || true
+                cp .command.err ${folder}/.command.err || true
                 """
                         .stripIndent().leftTrim()
 
@@ -1446,6 +1453,7 @@ class BashWrapperBuilderTest extends Specification {
         def bash = new BashWrapperBuilder([
                 workDir: folder,
                 script: 'echo Hello world!',
+                containerEnabled: true,
                 containerImage: 'sl65',
                 containerConfig: [enabled: true, fixOwnership: true, engine: 'docker'] as ContainerConfig
                 ] as TaskBean)
@@ -1972,6 +1980,7 @@ class BashWrapperBuilderTest extends Specification {
                 name: 'Hello 1',
                 workDir: folder,
                 script: 'echo Hello world!',
+                containerEnabled: true,
                 containerImage: 'docker:ubuntu:latest',
                 environment: [PATH: '/path/to/bin'],
                 containerConfig: [enabled: true, engine: 'shifter'] as ContainerConfig
@@ -2002,7 +2011,7 @@ class BashWrapperBuilderTest extends Specification {
                 function shifter_img() {
                   local cmd=\$1
                   local image=\$2
-                  shifterimg -v \$cmd \$image |  awk -F: '\$0~/status/{gsub("[\\", ]","",\$2);print \$2}'
+                  shifterimg -v \$cmd \$image |  awk -F: '\$0~/"status":/{gsub("[\\", ]","",\$2);print \$2}'
                 }
 
                 function shifter_pull() {
@@ -2091,5 +2100,41 @@ class BashWrapperBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should resolve foreign files' () {
+
+        given:
+        def INPUTS = [
+                'foo.txt': Paths.get('/some/foo.txt'),
+                'bar.txt': Paths.get('/some/bar.txt'),
+        ]
+
+        def RESOLVED = [
+                'foo.txt': Paths.get('/some/foo.txt'),
+                'BAR.txt': Paths.get('/some/BAR.txt'),
+        ]
+        def bean = Mock(TaskBean)
+        bean.getInputFiles() >> INPUTS
+        def copy = Mock(SimpleFileCopyStrategy)
+        def bash = Spy(BashWrapperBuilder, constructorArgs:[bean, copy])
+
+        when:
+        def files = bash.getResolvedInputs()
+        then:
+        1 * copy.resolveForeignFiles(INPUTS) >> RESOLVED
+        files == RESOLVED
+
+    }
+
+    def 'should create module command' () {
+        given:
+        def wrapper = new BashWrapperBuilder(Mock(TaskBean))
+
+        expect:
+        wrapper.moduleLoad('foo')  == 'nxf_module_load foo'
+        wrapper.moduleLoad('foo/1.2')  == 'nxf_module_load foo 1.2'
+        wrapper.moduleLoad('foo/bar/1.2')  == 'nxf_module_load foo/bar 1.2'
+        wrapper.moduleLoad('foo/bar/')  == 'nxf_module_load foo/bar '
+
+    }
 
 }

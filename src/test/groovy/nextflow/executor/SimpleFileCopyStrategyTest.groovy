@@ -19,11 +19,15 @@
  */
 
 package nextflow.executor
+
+import java.nio.file.Files
 import java.nio.file.Paths
 
+import nextflow.Session
 import nextflow.processor.TaskBean
 import spock.lang.Specification
 import spock.lang.Unroll
+import test.TestHelper
 
 /**
  *
@@ -42,8 +46,8 @@ class SimpleFileCopyStrategyTest extends Specification {
         files['sub/dir/seq_4.fa']  = Paths.get("/home'data/file4")
 
         when:
-        def strategy = new SimpleFileCopyStrategy(inputFiles: files)
-        def script = strategy.getStageInputFilesScript()
+        def strategy = new SimpleFileCopyStrategy()
+        def script = strategy.getStageInputFilesScript(files)
         def lines = script.readLines()
 
         then:
@@ -64,8 +68,8 @@ class SimpleFileCopyStrategyTest extends Specification {
         files = [:]
         files['file.txt'] = Paths.get('/data/file')
         files['seq_1.fa'] = Paths.get('/data/seq')
-        strategy = new SimpleFileCopyStrategy(inputFiles: files, separatorChar: '; ')
-        script = strategy.getStageInputFilesScript()
+        strategy = new SimpleFileCopyStrategy(separatorChar: '; ')
+        script = strategy.getStageInputFilesScript(files)
         lines = script.readLines()
 
         then:
@@ -180,13 +184,12 @@ class SimpleFileCopyStrategyTest extends Specification {
     def 'should return stage-in script' () {
 
         given:
-        def task = new TaskBean(
-            inputFiles: ['hello.txt': Paths.get('/some/file.txt'), 'dir/to/file.txt': Paths.get('/other/file.txt')]
-        )
+        def inputs = ['hello.txt': Paths.get('/some/file.txt'), 'dir/to/file.txt': Paths.get('/other/file.txt')]
+        def task = new TaskBean()
 
         when:
         def strategy = new SimpleFileCopyStrategy(task)
-        def script = strategy.getStageInputFilesScript()
+        def script = strategy.getStageInputFilesScript(inputs)
         then:
         script == '''
                 rm -f hello.txt
@@ -201,14 +204,12 @@ class SimpleFileCopyStrategyTest extends Specification {
     def 'should return stage-in script with copy' () {
 
         given:
-        def task = new TaskBean(
-                inputFiles: ['hello.txt': Paths.get('/some/file.txt'), 'dir/to/file.txt': Paths.get('/other/file.txt')],
-                stageInMode: 'copy'
-        )
+        def inputs = ['hello.txt': Paths.get('/some/file.txt'), 'dir/to/file.txt': Paths.get('/other/file.txt')]
+        def task = new TaskBean( stageInMode: 'copy' )
 
         when:
         def strategy = new SimpleFileCopyStrategy(task)
-        def script = strategy.getStageInputFilesScript()
+        def script = strategy.getStageInputFilesScript(inputs)
         then:
         script == '''
                 rm -f hello.txt
@@ -224,11 +225,13 @@ class SimpleFileCopyStrategyTest extends Specification {
     def 'should return cp script to unstage output files' () {
 
         given:
-        def task = new TaskBean( outputFiles: [ 'simple.txt', 'my/path/file.bam' ], targetDir: Paths.get('/target/work dir'))
+        def outputs =  [ 'simple.txt', 'my/path/file.bam' ]
+        def target = Paths.get('/target/work dir')
+        def task = new TaskBean()
 
         when:
         def strategy = new SimpleFileCopyStrategy(task)
-        def script = strategy.getUnstageOutputFilesScript()
+        def script = strategy.getUnstageOutputFilesScript(outputs, target)
         then:
         script == '''
                 mkdir -p /target/work\\ dir
@@ -242,11 +245,13 @@ class SimpleFileCopyStrategyTest extends Specification {
     def 'should return rsync script to unstage output files' () {
 
         given:
-        def task = new TaskBean( outputFiles: [ 'simple.txt', 'my/path/file.bam' ], targetDir: Paths.get("/target/work's"), stageOutMode: 'rsync')
+        def outputs = [ 'simple.txt', 'my/path/file.bam' ];
+        def target = Paths.get("/target/work's")
+        def task = new TaskBean(stageOutMode: 'rsync')
 
         when:
         def strategy = new SimpleFileCopyStrategy(task)
-        def script = strategy.getUnstageOutputFilesScript()
+        def script = strategy.getUnstageOutputFilesScript(outputs,target)
         then:
         script == '''
                 mkdir -p /target/work\\'s
@@ -255,6 +260,31 @@ class SimpleFileCopyStrategyTest extends Specification {
                 '''
                 .stripIndent().rightTrim()
 
+    }
+
+    def 'should resolve foreign files' () {
+        given:
+        def workDir = Files.createTempDirectory('test')
+        def session = new Session()
+        session.workDir = workDir
+        def INPUTS = [
+                'foo.txt': Paths.get('/some/foo.txt'),
+                'bar.txt': Paths.get('/some/bar.txt'),
+                'hello.txt': TestHelper.createInMemTempFile('any.name','Hello world')
+        ]
+        def strategy = new SimpleFileCopyStrategy(Mock(TaskBean))
+
+        when:
+        def result = strategy.resolveForeignFiles(INPUTS)
+        then:
+        result.size() == 3
+        result['foo.txt'] == Paths.get('/some/foo.txt')
+        result['bar.txt'] == Paths.get('/some/bar.txt')
+        result['hello.txt'].text == 'Hello world'
+        result['hello.txt'].toString().startsWith(workDir.toString())
+
+        cleanup:
+        workDir.deleteDir()
     }
 
 }

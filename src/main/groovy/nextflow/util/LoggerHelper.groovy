@@ -309,6 +309,9 @@ class LoggerHelper {
      */
     static class PrettyConsoleLayout extends LayoutBase<ILoggingEvent> {
 
+        PrettyConsoleLayout() {
+        }
+
         public String doLayout(ILoggingEvent event) {
             StringBuilder buffer = new StringBuilder(128);
             if( event.level == Level.INFO ) {

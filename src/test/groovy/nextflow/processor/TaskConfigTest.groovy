@@ -166,6 +166,36 @@ class TaskConfigTest extends Specification {
 
     }
 
+    def testMaxRetriesDefault() {
+        TaskConfig config
+
+        when:
+        config = new TaskConfig()
+        then:
+        config.maxRetries == 0
+        config.getMaxRetries() == 0
+        config.getErrorStrategy() == ErrorStrategy.TERMINATE
+
+        when:
+        config = new TaskConfig()
+        config.errorStrategy = 'retry'
+        then:
+        config.maxRetries == 1
+        config.getMaxRetries() == 1
+        config.errorStrategy == ErrorStrategy.RETRY
+        config.getErrorStrategy() == ErrorStrategy.RETRY
+
+        when:
+        config = new TaskConfig()
+        config.maxRetries = 3
+        config.errorStrategy = 'retry'
+        then:
+        config.maxRetries == 3
+        config.getMaxRetries() == 3
+        config.errorStrategy == ErrorStrategy.RETRY
+        config.getErrorStrategy() == ErrorStrategy.RETRY
+    }
+
     def testMaxErrors() {
 
         when:

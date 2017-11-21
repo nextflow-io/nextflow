@@ -343,23 +343,23 @@ class AutoscalerTest extends Specification {
         // ==> not nodes killed
         when:
         scaler.enabled = true
-        scaler.scalerConfig = Autoscale.create([terminateWhenIdle: false, idleTimeout: '1 s', terminationPolicy: 'eager'])
+        scaler.scalerConfig = Autoscale.create([terminateWhenIdle: false, idleTimeout: '1 s'])
         scaler.checkIdleNodes()
         then:
         0 * scaler.getLocalNodeId()
         0 * scaler.applyTerminationPolicy(_)
         0 * scaler.killNodes(_)
 
-        // termination policy is not `eager`
-        // ==> kill only node up between 55 to 60 minutes (i.e. node # 4)
-        when:
-        scaler.enabled = true
-        scaler.scalerConfig = Autoscale.create([terminateWhenIdle: true, idleTimeout: '1 s' ])
-        scaler.checkIdleNodes()
-        then:
-        1 * scaler.getLocalNodeId() >> n3
-        1 * scaler.applyTerminationPolicy([n2,n4,n5])
-        1 * scaler.killNodes(['i4'])
+//        // termination policy is not `eager`
+//        // ==> kill only node up between 55 to 60 minutes (i.e. node # 4)
+//        when:
+//        scaler.enabled = true
+//        scaler.scalerConfig = Autoscale.create([terminateWhenIdle: true, idleTimeout: '1 s' ])
+//        scaler.checkIdleNodes()
+//        then:
+//        1 * scaler.getLocalNodeId() >> n3
+//        1 * scaler.applyTerminationPolicy([n2,n4,n5])
+//        1 * scaler.killNodes(['i4'])
 
     }
 
