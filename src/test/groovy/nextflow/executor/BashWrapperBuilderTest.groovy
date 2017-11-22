@@ -1856,7 +1856,7 @@ class BashWrapperBuilderTest extends Specification {
                       local new_module="\$mod"; [[ \$ver ]] && new_module+="/\$ver"
 
                       if [[ ! \$(module list 2>&1 | grep -o "\$new_module") ]]; then
-                        old_module=\$(module list 2>&1 | grep -Eo "\$mod\\/[^\\( \\n]+" || true)
+                        old_module=\$(module list 2>&1 | grep -Eow "\$mod\\/[^\\( \\n]+" || true)
                         if [[ \$ver && \$old_module ]]; then
                           module switch \$old_module \$new_module
                         else
@@ -1960,7 +1960,7 @@ class BashWrapperBuilderTest extends Specification {
                       local new_module="\$mod"; [[ \$ver ]] && new_module+="/\$ver"
 
                       if [[ ! \$(module list 2>&1 | grep -o "\$new_module") ]]; then
-                        old_module=\$(module list 2>&1 | grep -Eo "\$mod\\/[^\\( \\n]+" || true)
+                        old_module=\$(module list 2>&1 | grep -Eow "\$mod\\/[^\\( \\n]+" || true)
                         if [[ \$ver && \$old_module ]]; then
                           module switch \$old_module \$new_module
                         else
