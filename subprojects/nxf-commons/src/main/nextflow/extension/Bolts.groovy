@@ -607,10 +607,10 @@ class Bolts {
         // sort the Levenshtein Distance and get the fist entry
         def sorted = diffs.sort { Map.Entry<String,Integer> it -> it.value }
         def nearest = (Map.Entry<String,Integer>)sorted.find()
-        def min = nearest.value
-        def len = sample.length()
+        int min = nearest.value
+        int len = sample.length()
 
-        def threshold = len<=3 ? 1 : ( len > 10 ? 5 : Math.floor(len/2))
+        int threshold = len<=3 ? 1 : ( len > 10 ? 5 : Math.floorDiv(len,2))
 
         List<String> result
         if( min <= threshold ) {
