@@ -292,14 +292,24 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
     }
 
     @Override
-    String getEnvScript(Map environment) {
+    String getEnvScript(Map environment, String handler=null) {
 
         if( !environment )
             return null
 
         // create the *bash* environment script
         def wrapper = new StringBuilder()
-        wrapper << TaskProcessor.bashEnvironmentScript(environment) << '\n'
+        if( !handler ) {
+            wrapper << TaskProcessor.bashEnvironmentScript(environment)
+        }
+        else {
+            wrapper << "${handler}() {\n"
+            wrapper << 'cat << EOF\n'
+            wrapper << TaskProcessor.bashEnvironmentScript(environment, true)
+            wrapper << 'EOF\n'
+            wrapper << '}\n'
+        }
+
         return wrapper.toString()
     }
 

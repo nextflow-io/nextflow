@@ -91,7 +91,7 @@ class TaskBeanTest extends Specification {
         bean.containerImage == 'busybox:latest'
         bean.containerConfig == [docker: true, registry: 'x'] as ContainerConfig
         bean.containerMemory == new MemoryUnit('1GB')
-        bean.executable
+        bean.containerExecutable
         bean.statsEnabled
 
         bean.inputFiles == [file_1: Paths.get('/file/one'), file_2: Paths.get('/file/two')]

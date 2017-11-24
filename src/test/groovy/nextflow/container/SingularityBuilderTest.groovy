@@ -42,11 +42,6 @@ class SingularityBuilderTest extends Specification {
                 .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec busybox'
 
         new SingularityBuilder('busybox')
-                .params(entry: '/bin/bash')
-                .build()
-                .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec busybox /bin/bash'
-
-        new SingularityBuilder('busybox')
                 .params(engineOptions: '-q -v')
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity -q -v exec busybox'
@@ -95,5 +90,26 @@ class SingularityBuilderTest extends Specification {
                 .addEnv(ALPHA:'aaa', BETA: 'bbb')
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" SINGULARITYENV_X=1 SINGULARITYENV_ALPHA="aaa" SINGULARITYENV_BETA="bbb" singularity exec busybox'
+    }
+
+
+    def 'should get run command' () {
+
+        when:
+        def cmd = new SingularityBuilder('ubuntu.img').build().getRunCommand()
+        then:
+        cmd == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec ubuntu.img'
+
+        when:
+        cmd = new SingularityBuilder('ubuntu.img').build().getRunCommand('bwa --this --that file.fastq')
+        then:
+        cmd == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec ubuntu.img bwa --this --that file.fastq'
+
+        when:
+        cmd = new SingularityBuilder('ubuntu.img').params(entry:'/bin/sh').build().getRunCommand('bwa --this --that file.fastq')
+        then:
+        cmd == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec ubuntu.img /bin/sh -c "cd $PWD; bwa --this --that file.fastq"'
+
+
     }
 }

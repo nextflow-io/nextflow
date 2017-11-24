@@ -96,6 +96,6 @@ interface ScriptFileCopyStrategy {
      * @param environment The task environment
      * @return The environment initialisation snippet
      */
-    String getEnvScript(Map environment)
+    String getEnvScript(Map environment, String wrapName)
 
 }

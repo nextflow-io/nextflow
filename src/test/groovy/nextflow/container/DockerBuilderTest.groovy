@@ -248,4 +248,24 @@ class DockerBuilderTest extends Specification {
     }
 
 
+    def 'should get run command line' () {
+
+        when:
+        def cli = new DockerBuilder('ubuntu:14').build().getRunCommand()
+        then:
+        cli ==  'docker run -i -v "$PWD":"$PWD" -w "$PWD" ubuntu:14'
+
+        when:
+        cli = new DockerBuilder('ubuntu:14').build().getRunCommand('bwa --this --that file.fasta')
+        then:
+        cli ==  'docker run -i -v "$PWD":"$PWD" -w "$PWD" ubuntu:14 bwa --this --that file.fasta'
+
+        when:
+        cli = new DockerBuilder('ubuntu:14').params(entry:'/bin/bash').build().getRunCommand('bwa --this --that file.fasta')
+        then:
+        cli ==  'docker run -i -v "$PWD":"$PWD" -w "$PWD" --entrypoint /bin/bash ubuntu:14 -c "bwa --this --that file.fasta"'
+
+    }
+
+
 }
