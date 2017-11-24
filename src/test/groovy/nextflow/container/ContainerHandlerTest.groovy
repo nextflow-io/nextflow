@@ -93,7 +93,7 @@ class ContainerHandlerTest extends Specification {
         def foo = base.resolve('foo'); foo.mkdir()
         def bar = Files.createFile(foo.resolve('bar'))
         def img = Files.createFile(base.resolve('bar.img'))
-        def n = new ContainerHandler([:], base.toAbsolutePath().toString())
+        def n = new ContainerHandler([:], base)
 
         expect:
         n.normalizeSingularityImageName('foo/bar') == bar.toAbsolutePath().toString()
@@ -160,7 +160,7 @@ class ContainerHandlerTest extends Specification {
 
         then:
         1 * n.normalizeSingularityImageName(image) >> normalized
-        intExpected * n.createCache(n.cfg, normalized) >> expected
+        intExpected * n.createCache(n.config, normalized) >> expected
         result == expected
 
         where:

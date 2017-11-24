@@ -1,4 +1,6 @@
 package nextflow.container
+
+import java.nio.file.Path
 import java.nio.file.Paths
 
 import groovy.transform.PackageScope
@@ -8,23 +10,27 @@ import groovy.transform.PackageScope
  * the the current select container engine
  *
  * @author Emilio Palumbo <emiliopalumbo@gmail.com>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ContainerHandler {
 
-    private ContainerConfig cfg
-    private String baseDir
+    final private static Path CWD = Paths.get('.')
+
+    private ContainerConfig config
+
+    private Path baseDir
 
     ContainerHandler(Map containerConfig) {
-        this(containerConfig, null)
+        this(containerConfig, CWD)
     }
 
-    ContainerHandler(Map containerConfig, String dir) {
-        this.cfg = containerConfig as ContainerConfig
+    ContainerHandler(Map containerConfig, Path dir) {
+        this.config = containerConfig as ContainerConfig
         this.baseDir = dir
     }
 
     String normalizeImageName(String imageName) {
-        final engine = cfg.getEngine()
+        final engine = config.getEngine()
         if( engine == 'shifter' ) {
             normalizeShifterImageName(imageName)
         }
@@ -34,7 +40,7 @@ class ContainerHandler {
         else if( engine == 'singularity' ) {
             def normalizedImageName = normalizeSingularityImageName(imageName)
             if (normalizedImageName && (normalizedImageName.startsWith("docker://") || normalizedImageName.startsWith("shub://"))) {
-                return createCache(this.cfg, normalizedImageName)
+                return createCache(this.config, normalizedImageName)
             }
             return normalizedImageName
         }
@@ -87,7 +93,7 @@ class ContainerHandler {
         if( !imageName )
             return null
 
-        String reg = this.cfg?.registry
+        String reg = this.config?.registry
         if( !reg )
             return imageName
 
@@ -148,7 +154,7 @@ class ContainerHandler {
             return Paths.get(new URI(img)).toAbsolutePath().toString()
         }
 
-        def imagePath = Paths.get(baseDir, img)
+        def imagePath = baseDir.resolve(img)
 
         if( imagePath.exists() ) {
             return imagePath.toAbsolutePath().toString()
