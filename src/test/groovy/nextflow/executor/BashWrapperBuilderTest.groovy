@@ -1555,7 +1555,7 @@ class BashWrapperBuilderTest extends Specification {
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
                 # task environment
-                nxf_task_env() {
+                nxf_taskenv() {
                 cat << EOF
                 export FOO="bar"
                 EOF
@@ -2218,7 +2218,7 @@ class BashWrapperBuilderTest extends Specification {
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
                 # task environment
-                nxf_task_env() {
+                nxf_taskenv() {
                 cat << EOF
                 export PATH="/path/to/bin:\\\$PATH"
                 export FOO="xxx"
@@ -2236,7 +2236,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee2=\$!
                 (
                 shifter_pull docker:ubuntu:latest
-                NXF_DEBUG=\${NXF_DEBUG:=0} shifter --image docker:ubuntu:latest /bin/bash -c "eval \$(nxf_task_env); /bin/bash -ue ${folder}/.command.sh"
+                NXF_DEBUG=\${NXF_DEBUG:=0} shifter --image docker:ubuntu:latest /bin/bash -c "eval \$(nxf_taskenv); /bin/bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -2325,7 +2325,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         env ==  '''
                 # task environment
-                nxf_task_env() {
+                nxf_taskenv() {
                 cat << EOF
                 export FOO="hello"
                 export BAR="hello world"
