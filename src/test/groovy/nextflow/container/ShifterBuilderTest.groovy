@@ -41,26 +41,52 @@ class ShifterBuilderTest extends Specification {
         expect:
         new ShifterBuilder('busybox')
                 .build()
-                .runCommand == 'shifter --image busybox'
+                .@runCommand == 'shifter --image busybox'
 
         new ShifterBuilder('busybox')
                 .params(verbose: true)
                 .build()
-                .runCommand == 'shifter --verbose --image busybox'
-
-        new ShifterBuilder('ubuntu:latest')
-                .params(entry: '/bin/bash')
-                .build()
-                .runCommand == 'shifter --image ubuntu:latest /bin/bash'
+                .@runCommand == 'shifter --verbose --image busybox'
 
         new ShifterBuilder('fedora')
-                .params(entry: '/bin/bash')
                 .addEnv([VAR_X:1, VAR_Y:2])
                 .addEnv("VAR_Z=3")
                 .build()
-                .runCommand == 'VAR_X="1" VAR_Y="2" VAR_Z=3 shifter --image fedora /bin/bash'
+                .@runCommand == 'VAR_X="1" VAR_Y="2" VAR_Z=3 shifter --image fedora'
 
     }
+
+    def 'should get run command line' () {
+
+        when:
+        def cli = new ShifterBuilder('ubuntu:14').build().getRunCommand()
+        then:
+        cli ==  '''
+                shifter_pull ubuntu:14
+                shifter --image ubuntu:14
+                '''
+                .stripIndent().trim()
+
+        when:
+        cli = new ShifterBuilder('ubuntu:14').build().getRunCommand('bwa --this --that file.fasta')
+        then:
+        cli ==  '''
+                shifter_pull ubuntu:14
+                shifter --image ubuntu:14 bwa --this --that file.fasta
+                '''
+                .stripIndent().trim()
+
+        when:
+        cli = new ShifterBuilder('ubuntu:14').params(entry:'/bin/bash').build().getRunCommand('bwa --this --that file.fasta')
+        then:
+        cli ==  '''
+                shifter_pull ubuntu:14
+                shifter --image ubuntu:14 /bin/bash -c "bwa --this --that file.fasta"
+                '''
+                .stripIndent().trim()
+
+    }
+
 
 
 }

@@ -75,7 +75,7 @@ class TaskBean implements Serializable, Cloneable {
 
     String afterScript
 
-    boolean executable
+    boolean containerExecutable
 
     boolean containerNative
 
@@ -126,7 +126,7 @@ class TaskBean implements Serializable, Cloneable {
         this.containerImage = task.getContainer()
         this.containerConfig = task.getContainerConfig()
         this.containerMemory = task.config.getMemory()
-        this.executable = task.isContainerExecutable()
+        this.containerExecutable = task.isContainerExecutable()
         this.containerNative = task.isContainerNative()
         this.containerEnabled = task.isContainerEnabled()
 

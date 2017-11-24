@@ -26,7 +26,7 @@ package nextflow.container
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ShifterBuilder extends ContainerBuilder {
+class ShifterBuilder extends ContainerBuilder<ShifterBuilder> {
 
     static private String SHIFTER_HELPERS = '''
         function shifter_img() {
@@ -51,19 +51,12 @@ class ShifterBuilder extends ContainerBuilder {
         '''.stripIndent()
 
 
-    private String entryPoint
-
     private boolean verbose
-
-    private String runCommand
 
     ShifterBuilder( String image ) {
         assert image
         this.image = image
     }
-
-    @Override
-    String getRunCommand() { runCommand }
 
     @Override
     ShifterBuilder build(StringBuilder result) {
@@ -77,9 +70,6 @@ class ShifterBuilder extends ContainerBuilder {
             result << '--verbose '
 
         result << '--image ' << image
-
-        if( entryPoint )
-            result << ' ' << entryPoint
 
         runCommand = result.toString()
         return this
@@ -101,10 +91,11 @@ class ShifterBuilder extends ContainerBuilder {
     }
 
     @Override
-    StringBuilder appendRunCommand( StringBuilder wrapper ) {
-        wrapper << 'shifter_pull ' << image << '\n'
-        wrapper << runCommand
-        return wrapper
+    String getRunCommand() {
+        def run = super.getRunCommand()
+        def result = "shifter_pull $image\n"
+        result += run
+        return result
     }
 
     /**

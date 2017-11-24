@@ -30,11 +30,7 @@ import groovy.util.logging.Slf4j
  */
 @CompileStatic
 @Slf4j
-class SingularityBuilder extends ContainerBuilder {
-
-    private String entryPoint
-
-    private String runCommand
+class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
     private boolean autoMounts
 
@@ -95,9 +91,6 @@ class SingularityBuilder extends ContainerBuilder {
 
         result << image
 
-        if( entryPoint )
-            result  << ' ' << entryPoint
-
         runCommand = result.toString()
 
         return this
@@ -145,8 +138,16 @@ class SingularityBuilder extends ContainerBuilder {
     }
 
     @Override
-    String getRunCommand() {
-        return runCommand
+    String getRunCommand(String launcher) {
+        if( !runCommand )
+            throw new IllegalStateException("Missing `runCommand` -- make sure `build` method has been invoked")
+
+        if( launcher ) {
+            def result = getRunCommand()
+            result += entryPoint ? " $entryPoint -c \"cd \$PWD; $launcher\"" : " $launcher"
+            return result
+        }
+        return getRunCommand() + ' ' + launcher
     }
 
 }

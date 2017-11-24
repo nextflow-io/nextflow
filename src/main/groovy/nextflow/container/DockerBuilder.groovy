@@ -26,7 +26,7 @@ import groovy.transform.CompileStatic
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class DockerBuilder extends ContainerBuilder {
+class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
     private boolean sudo
 
@@ -40,11 +40,7 @@ class DockerBuilder extends ContainerBuilder {
 
     private boolean tty
 
-    private String entryPoint
-
     private static final String USER_AND_HOME_EMULATION = '-u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME'
-
-    private String runCommand
 
     private String removeCommand
 
@@ -182,11 +178,15 @@ class DockerBuilder extends ContainerBuilder {
         return this
     }
 
-
-    /**
-     * @return The command string to run a container from Docker image
-     */
-    String getRunCommand() { runCommand }
+    @Override
+    String getRunCommand(String launcher) {
+        if( launcher ) {
+            def result = getRunCommand()
+            result += entryPoint ? " -c \"$launcher\"" : " $launcher"
+            return result
+        }
+        return getRunCommand() + ' ' + launcher
+    }
 
     /**
      * @return The command string to remove a container

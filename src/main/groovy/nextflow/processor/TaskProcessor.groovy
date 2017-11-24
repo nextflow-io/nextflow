@@ -1795,12 +1795,12 @@ class TaskProcessor {
      * Given a map holding variables key-value pairs, create a script fragment
      * exporting the required environment variables
      */
-    static String bashEnvironmentScript( Map<String,String> environment ) {
+    static String bashEnvironmentScript( Map<String,String> environment, boolean escape=false ) {
 
         final script = []
         environment.each { name, value ->
             if( name ==~ /[a-zA-Z_]+[a-zA-Z0-9_]*/ ) {
-                script << "export $name=\"$value\""
+                script << "export $name=\"${escape ? value.replace('$','\\$') : value}\""
             }
             else {
                 log.trace "Illegal environment variable name: '${name}'"

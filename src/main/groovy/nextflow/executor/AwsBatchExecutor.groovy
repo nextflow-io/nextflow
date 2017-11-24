@@ -596,7 +596,10 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      * {@inheritDoc}
      */
     @Override
-    String getEnvScript(Map environment) {
+    String getEnvScript(Map environment, String handler) {
+        if( handler )
+            throw new IllegalArgumentException("Parameter `wrapHandler` not supported by ${this.class.simpleName}")
+
         final result = new StringBuilder()
         final copy = environment ? new HashMap<String,String>(environment) : Collections.<String,String>emptyMap()
         final path = copy.containsKey('PATH')
@@ -610,7 +613,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
             result << "export PATH=\$PWD/nextflow-bin:\$PATH\n"
         }
         // finally render the environment
-        final envSnippet = super.getEnvScript(copy)
+        final envSnippet = super.getEnvScript(copy,null)
         if( envSnippet )
             result << envSnippet
         return result.toString()

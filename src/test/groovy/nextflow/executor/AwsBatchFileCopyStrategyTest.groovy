@@ -91,7 +91,6 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         script == '''
             export BAR="world"
             export FOO="hola"
-
             '''.stripIndent().leftTrim()
 
         when:
@@ -104,7 +103,6 @@ class AwsBatchFileCopyStrategyTest extends Specification {
             export PATH=$PWD/nextflow-bin:$PATH
             export BAR="world"
             export FOO="hola"
-
             '''.stripIndent().leftTrim()
 
         when:
@@ -118,7 +116,6 @@ class AwsBatchFileCopyStrategyTest extends Specification {
             export PATH=$PWD/nextflow-bin:$PATH
             export BAR="world"
             export FOO="hola"
-
             '''.stripIndent().leftTrim()
 
         when:
@@ -133,7 +130,6 @@ class AwsBatchFileCopyStrategyTest extends Specification {
             export PATH=$PWD/nextflow-bin:$PATH
             export BAR="world"
             export FOO="hola"
-
             '''.stripIndent().leftTrim()
 
     }

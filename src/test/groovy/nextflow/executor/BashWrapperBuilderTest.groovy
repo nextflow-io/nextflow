@@ -1554,6 +1554,13 @@ class BashWrapperBuilderTest extends Specification {
                 NXF_SCRATCH=''
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
+                # task environment
+                nxf_task_env() {
+                cat << EOF
+                export FOO="bar"
+                EOF
+                }
+
                 [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
                 set +e
@@ -1610,7 +1617,7 @@ class BashWrapperBuilderTest extends Specification {
         when:
         bash = new BashWrapperBuilder( new TaskBean() )
         then:
-        bash.scriptCleanUp( Paths.get("/my/exit/file's"), 'NXF_SCRATCH=xx', null ) ==
+        bash.scriptCleanUp( Paths.get("/my/exit/file's"), 'NXF_SCRATCH=xx' ) ==
                     '''
                     nxf_env() {
                         echo '============= task environment ============='
@@ -1665,8 +1672,9 @@ class BashWrapperBuilderTest extends Specification {
         builder.getRemoveCommand() >> 'docker rm x'
         builder.getKillCommand() >> 'docker kill x'
         bash = new BashWrapperBuilder(new TaskBean())
+        bash.containerBuilder = builder
         then:
-        bash.scriptCleanUp( Paths.get('/my/exit/xxx'), null, builder ) ==
+        bash.scriptCleanUp( Paths.get('/my/exit/xxx'), null ) ==
                 '''
                     nxf_env() {
                         echo '============= task environment ============='
@@ -1721,8 +1729,9 @@ class BashWrapperBuilderTest extends Specification {
         builder.getRemoveCommand() >> 'docker rm x'
         builder.getKillCommand() >> 'docker kill x'
         bash = new BashWrapperBuilder(new TaskBean())
+        bash.containerBuilder = builder
         then:
-        bash.scriptCleanUp( Paths.get('/my/exit/xxx'), 'NXF_SCRATCH=xxx', builder ) ==
+        bash.scriptCleanUp( Paths.get('/my/exit/xxx'), 'NXF_SCRATCH=xxx' ) ==
                 '''
                     nxf_env() {
                         echo '============= task environment ============='
@@ -2114,7 +2123,7 @@ class BashWrapperBuilderTest extends Specification {
                 script: 'echo Hello world!',
                 containerEnabled: true,
                 containerImage: 'docker:ubuntu:latest',
-                environment: [PATH: '/path/to/bin', FOO: 'xxx'],
+                environment: [PATH: '/path/to/bin:$PATH', FOO: 'xxx'],
                 containerConfig: [enabled: true, engine: 'shifter'] as ContainerConfig
         ] as TaskBean)
         bash.build()
@@ -2208,6 +2217,14 @@ class BashWrapperBuilderTest extends Specification {
                 NXF_SCRATCH=''
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
+                # task environment
+                nxf_task_env() {
+                cat << EOF
+                export PATH="/path/to/bin:\\\$PATH"
+                export FOO="xxx"
+                EOF
+                }
+
                 [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
                 set +e
@@ -2219,7 +2236,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee2=\$!
                 (
                 shifter_pull docker:ubuntu:latest
-                NXF_DEBUG=\${NXF_DEBUG:=0} PATH="/path/to/bin" FOO="xxx" shifter --image docker:ubuntu:latest /bin/bash -c "/bin/bash -ue ${folder}/.command.sh"
+                NXF_DEBUG=\${NXF_DEBUG:=0} shifter --image docker:ubuntu:latest /bin/bash -c "eval \$(nxf_task_env); /bin/bash -ue ${folder}/.command.sh"
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -2268,5 +2285,58 @@ class BashWrapperBuilderTest extends Specification {
         wrapper.moduleLoad('foo/bar/')  == 'nxf_module_load foo/bar '
 
     }
+
+
+    def 'should create the task environment' () {
+
+        given:
+        def ENV = [FOO: 'hello', BAR: 'hello world', PATH: '/some/path:$PATH']
+        BashWrapperBuilder builder
+        def strategy = new SimpleFileCopyStrategy()
+        def env
+
+        when:
+        builder = new BashWrapperBuilder(runWithContainer: false, copyStrategy: strategy)
+        env = builder.createTaskEnvironment([:])
+        then:
+        env == null
+
+        when:
+        builder = new BashWrapperBuilder(runWithContainer: false, copyStrategy: strategy)
+        env = builder.createTaskEnvironment(ENV)
+        then:
+        env ==  '''
+                # task environment
+                export FOO="hello"
+                export BAR="hello world"
+                export PATH="/some/path:$PATH"
+                '''
+                .stripIndent().leftTrim()
+
+        when:
+        builder = new BashWrapperBuilder(runWithContainer: true, copyStrategy: strategy)
+        env = builder.createTaskEnvironment([:])
+        then:
+        env == null
+
+        when:
+        builder = new BashWrapperBuilder(runWithContainer: true, copyStrategy: strategy)
+        env = builder.createTaskEnvironment(ENV)
+        then:
+        env ==  '''
+                # task environment
+                nxf_task_env() {
+                cat << EOF
+                export FOO="hello"
+                export BAR="hello world"
+                export PATH="/some/path:\\$PATH"
+                EOF
+                }
+                '''
+                .stripIndent().leftTrim()
+
+    }
+
+
 
 }
