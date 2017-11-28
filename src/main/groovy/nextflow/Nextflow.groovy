@@ -35,6 +35,7 @@ import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.util.ArrayTuple
 import nextflow.util.CacheHelper
+import nextflow.util.SendMail
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
@@ -340,6 +341,31 @@ class Nextflow {
         return result
     }
 
+    /**
+     * Implements built-in send mail functionality
+     *
+     * @param params
+     *      A map object holding the mail parameters
+     *      - to: String or a List of strings representing the mail recipients
+     *      - cc: String or a List of strings representing the mail recipients in carbon copy
+     *      - from: String representing the mail sender address
+     *      - subject: The mail subject
+     *      - body: The main body
+     *      - attach: The mail attachment
+     * @return
+     */
+    static boolean sendMail( Map params ) {
+        final config = (Global.session as Session).config
+        def mailer = new SendMail().setConfig(config as Map)
+        try {
+            mailer.send(params)
+            return true
+        }
+        catch( Exception e ) {
+            return false
+        }
+
+    }
 
 
 }

@@ -28,13 +28,13 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 
 /**
- * This class implement the send mail functionality
+ * This class implements the send mail functionality
  *
  * @author Edgar Garriga <edgano@@gmail.com>
  */
 @Slf4j
 class SendMail {
-    /** Different protocols Netxflow is able to use to send email */
+    /** Different protocols Nextflow is able to use to send email */
     static final List<String> PROTOCOLS = ['smtp','imap']
 
     /** the type of the server ie. IMAP or SMTP */
@@ -48,20 +48,41 @@ class SendMail {
 
     private String password
 
-    /**To send the attachment as a file attached or as a text in the body **/
+    /**To send the attachment as a file attached or as a text in the body */
     private boolean includeFile
 
     /** Either system tool `sendmail` or `mail` */
     private String mailer
 
     private String SYS_MAILER
+
     {
         SYS_MAILER = findSysMailer()
     }
+
+    SendMail setConfig( Map config ) {
+        if( !config )
+            return
+
+        if( config.host )
+            this.host = config.host
+        if( config.port )
+            this.port = config.port?.toString()
+        if( config.protocol )
+            this.protocol = config.protocol
+        if( config.user)
+            this.user = config.user
+        if( config.password )
+            this.password = config.password
+
+        return this
+    }
+
     @Memoized
     protected String getMailer() {
         mailer ?: findSysMailer()
     }
+
     protected String findSysMailer() {
 
         // first try `sendmail`
@@ -70,15 +91,20 @@ class SendMail {
 
         else if( runCommand("command -v mail &>/dev/null") == 0  )
             return 'mail'
+
         log.warn "Missing system mail command -- Make sure to have either `sendmail` or `mail` tool installed otherwise configure your mail server properties in the nextflow config file"
         return null
     }
+
     protected int runCommand(String cmd) {
         def proc = ['bash','-c',cmd].execute()
         proc.waitForOrKill(1_000)
         return proc.exitValue()
     }
-    /**Get the properties of the system and insert the properties needed to the mailing procedure**/
+
+    /**
+     * Get the properties of the system and insert the properties needed to the mailing procedure
+     */
     protected Properties createProps() {
         def properties = System.getProperties();
 
@@ -95,7 +121,10 @@ class SendMail {
 
         return properties
     }
-    /**Nextflow will create a Message to send it usin Java API
+
+    /**
+     * Nextflow will create a Message to send it using the Java API
+     *
      * <li>@param to: The receiver of the email
      * <li>@param from: The sender of the email
      * <li>@param subject: The subject of the email
@@ -104,7 +133,7 @@ class SendMail {
      *
      * @return Message Object
      *
-     * **/
+     */
     protected Message createJavaMessage(String to, String from, String subject, String body, Path attachment=null) {
 
         // Get the default Session object.
@@ -150,21 +179,26 @@ class SendMail {
         message.setContent(multipart);
         return message
     }
-    /**Send the Message using the Java API
+
+    /**
+     * Send the Message using the Java API
      * <li>@param to: The receiver of the email
      * <li>@param from: The sender of the email
      * <li>@param subject: The subject of the email
      * <li>@param body: String with the content of the email
      * <li>@param attachment: Path of the attachment file, can be NULL
      *
-     * **/
+     */
     protected void sendByJavaMail(String to, String from, String subject, String body, Path attachment=null) {
 
         def message = createJavaMessage(to, from, subject, body, attachment)
         // Send message
         Transport.send(message);
     }
-    /**Send the Message using the host message service.
+
+    /**
+     * Send the Message using the host message service.
+     *
      * It could be `sendmail()` or `mail()`
      * To use one or the other, it use @see getMailer()
      *
@@ -176,7 +210,10 @@ class SendMail {
      *
      * @return Message Object
      *
-     * **/
+     */
+
+    // TODO: `from` is not used, looks weird
+
     protected List<String> sendBySysMail(String to, String from, String subject, String body, Path attachment=null) {
 
         List<String> result = new LinkedList<String>()
@@ -194,6 +231,9 @@ class SendMail {
             attachment
             ---
             */
+
+            // TODO: this looks to simple to work, what about the `body`, `from`, `subject` fields?
+            // TODO: bash pipe and redirection won't work in this way
             result.add("sendmail")
             result.add("-t")
             result.add(to)
@@ -203,6 +243,8 @@ class SendMail {
         else if( mailer=='mail' ) {
             if(includeFile){
                 //echo "BODY" | mail -s "SUBJECT"  -a /users/cn/egarriga/example.html edgar.garriga@crg.es
+                // TODO: as above, echo pipe won't work in this way.
+                // The body need to be redirected through the ProcessBuilder. See https://stackoverflow.com/a/28740942/395921
                 result.add("echo")
                 result.add(body)
                 result.add("|")
@@ -226,22 +268,7 @@ class SendMail {
                 result.add(to)
             }
         }
-            //todo check MUTT
 
-            //todo sendEmail
-        //http://caspian.dotconf.net/menu/Software/SendEmail/
-        /*  result.add("sendEmail")
-            result.add("-f")
-            result.add(from)
-            result.add("-t")
-            result.add(to)
-            result.add("-u")
-            result.add(subject)
-            result.add("-m")
-            result.add(body)
-            result.add("-a")
-            result.add(attachment)
-        */
         else
             throw new IllegalStateException("Invalid mailer function: $mailer")
 
@@ -267,15 +294,17 @@ class SendMail {
         }
     }
 
-    public Message[] receiveMail(String user, String password) throws MessagingException {
-        javax.mail.Session session = javax.mail.Session.getDefaultInstance(createProps());
+    void send( Map params ) {
 
-        Store store = session.getStore("imap");
-        store.connect(host, port, user, password);
-        Folder inbox = store.getFolder("INBOX");
+        final to = params.to as String
+        final from = params.from as String
+        final subject = params.subject as String
+        final body = params.body as String
+        final attach = params.attach as Path
 
-        inbox.open(Folder.READ_ONLY);
-
-        return inbox.getMessages();
+        // TODO: it should support `cc` field
+        // TODO: `to` and `cc` should be List of email addresses
+        send(to, from, subject, body, attach)
     }
+
 }
