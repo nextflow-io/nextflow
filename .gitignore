@@ -36,3 +36,5 @@ temp
 gradle.properties
 .dockerignore
 .launch.classpath
+build.gradle
+src/main/groovy/nextflow/Const.groovy

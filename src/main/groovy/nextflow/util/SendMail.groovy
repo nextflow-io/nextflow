@@ -21,12 +21,11 @@
 package nextflow.util
 
 import java.nio.file.Path
+import javax.mail.*;
+import javax.mail.internet.*;
 
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-
-import javax.mail.*;
-import javax.mail.internet.*;
 
 /**
  * This class implement the send mail functionality
@@ -48,6 +47,9 @@ class SendMail {
     private String user
 
     private String password
+
+    /**To send the attachment as a file attached or as a text in the body **/
+    private boolean includeFile
 
     /** Either system tool `sendmail` or `mail` */
     private String mailer
@@ -128,12 +130,21 @@ class SendMail {
         // Set text message part
         multipart.addBodyPart(messageBodyPart);
 
-        if(attachment)
+        if(attachment && includeFile)
         {
+            //println("*****FILE IN ATTACHMENT")
             // Part two is attachment
             messageBodyPart = new MimeBodyPart();
-            messageBodyPart.attachFile(new File(attachment));
+            messageBodyPart.attachFile(new File(attachment.toString()));
             multipart.addBodyPart(messageBodyPart);
+        } else if(attachment && !includeFile){          //send attachment in body
+            //println("*****NOT ***FILE IN ATTACHMENT")
+
+            messageBodyPart = new MimeBodyPart();
+            String fileString = new File(attachment.toString()).text
+            //println("fileString: \n"+fileString+"+++++")
+            messageBodyPart.setText(fileString)
+            multipart.addBodyPart(messageBodyPart)
         }
         // Send the complete message parts
         message.setContent(multipart);
@@ -152,24 +163,66 @@ class SendMail {
         List<String> result = new LinkedList<String>()
 
         def mailer = getMailer()
+
         if ( mailer=="sendmail" ) {
-            //command="[\'sendmail\',\'-a\']"
+            //  /usr/sbin/sendmail -t edgar.garriga@crg.es < /users/cn/egarriga/example.txt
+            /*
+            Subject: Subject INSIDE
+            From: a@example.com
+            ---
+            THIS IS AN ATTACHMENT
+            hola mundo
+            attachment
+            ---
+            */
             result.add("sendmail")
+            result.add("-t")
             result.add(to)
-            result.add(body)
+            result.add("<")
+            result.add(attachment)
         }
         else if( mailer=='mail' ) {
-            //command=["mail", "-s", subject, to]
-            result.add("mail")
-            result.add("-s")
-            result.add(subject)
-            result.add(to)
-            result.add(" <<< "+body)
-            // MAIL FROM A FILE
-            //  mail -s "This is Subject" someone@example.com < /path/to/file
-            // ATTACHMENT
-            //  "This is message body" | mail -s "This is Subject" -r "Harry<harry@gmail.com>" -a /path/to/file someone@example.com
+            if(includeFile){
+                //echo "BODY" | mail -s "SUBJECT"  -a /users/cn/egarriga/example.html edgar.garriga@crg.es
+                result.add("echo")
+                result.add(body)
+                result.add("|")
+                result.add("mail")
+                result.add("-s")
+                result.add(subject)
+                result.add("-a")
+                result.add(attachment)
+                result.add(to)
+            }else{
+                //echo "BODY" | mail -s "SUBJECT" edgar.garriga@crg.es
+                String attachmentString = new File(attachment.toString()).text
+                body = body+"\n ATTACHMENT FILE: \n"+attachmentString
+
+                result.add("echo")
+                result.add(body)
+                result.add("|")
+                result.add("mail")
+                result.add("-s")
+                result.add(subject)
+                result.add(to)
+            }
         }
+            //todo check MUTT
+
+            //todo sendEmail
+        //http://caspian.dotconf.net/menu/Software/SendEmail/
+        /*  result.add("sendEmail")
+            result.add("-f")
+            result.add(from)
+            result.add("-t")
+            result.add(to)
+            result.add("-u")
+            result.add(subject)
+            result.add("-m")
+            result.add(body)
+            result.add("-a")
+            result.add(attachment)
+        */
         else
             throw new IllegalStateException("Invalid mailer function: $mailer")
 
@@ -177,6 +230,8 @@ class SendMail {
     }
 
     public void send(String to, String from, String subject, String body, Path attachment=null) {
+        if(!attachment)
+            includeFile=false
         if( host ) {
             sendByJavaMail(to, from, subject, body, attachment)
         }
