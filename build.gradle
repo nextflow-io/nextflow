@@ -63,7 +63,7 @@ ext {
 allprojects {
     apply plugin: 'java'
 
-    version = '0.26.2'
+    version = '0.26.3-SNAPSHOT'
     group = 'io.nextflow'
 
     sourceCompatibility = 1.8
