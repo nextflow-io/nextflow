@@ -43,7 +43,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                 nxf_s3_upload() {
                     local pattern=$1
                     local s3path=$2
-                    for name in $pattern;do
+                    for name in $(eval "ls $pattern");do
                       if [[ -d "$name" ]]; then
                         aws s3 cp $name $s3path/$name --quiet --recursive --storage-class STANDARD
                       else
@@ -67,7 +67,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                 nxf_s3_upload() {
                     local pattern=$1
                     local s3path=$2
-                    for name in $pattern;do
+                    for name in $(eval "ls $pattern");do
                       if [[ -d "$name" ]]; then
                         /foo/aws s3 cp $name $s3path/$name --quiet --recursive --sse AES256 --storage-class REDUCED_REDUNDANCY
                       else
