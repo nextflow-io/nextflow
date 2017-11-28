@@ -1,14 +1,10 @@
 package nextflow.util
 
-import javax.activation.DataHandler
-import javax.mail.BodyPart
 import javax.mail.Header
 import javax.mail.Message
-import javax.mail.Multipart
 import javax.mail.Part
 import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeBodyPart
-import javax.mail.internet.MimeMessage
 import javax.mail.internet.MimeMultipart
 import java.nio.file.Path
 import com.icegreen.greenmail.util.GreenMail
@@ -170,58 +166,6 @@ class SendMailTest extends Specification {
         this.getBodyAsString(message2).get(1).replaceAll("\\r","") == attachmentList.get(0).toString()
     }
 
-    /*def "sending mails using LINUX/MAC"() {
-        given:
-        String smtpHost = ''
-
-        SendMail mailingClass = new SendMail(
-                smtpHost, ServerSetupTest.SMTP.port,
-                "localhost", ServerSetupTest.IMAP.port,
-                greenMailUser.login, greenMailUser.password)
-
-        String to = "receiver@testmailingclass.net"
-        String from = greenMailUser.email
-        String subject = "Sending test"
-        String content = "This content should be sent by the user."
-        String attachment = "/home/edgar/Desktop/nextflowGit/src/test/groovy/nextflow/util/example.jpg"
-
-        when:
-        mailingClass.mailer = 'mac'
-        mailingClass.send(to, from, subject, content, attachment)
-
-        then:
-        greenMail.receivedMessages.size() == 1
-        Message message = greenMail.receivedMessages[0]
-        message.from == [new InternetAddress(from)]
-        message.allRecipients.contains(new InternetAddress(to))
-        message.subject == subject
-    }*/
-
-    /*def "receiving mails using JAVA"() {
-        given:
-        String smtpHost = 'localhost'
-
-        SendMail mailingClass = new SendMail(
-                smtpHost, ServerSetupTest.SMTP.port,
-                "localhost", ServerSetupTest.IMAP.port,
-                greenMailUser.login, greenMailUser.password)
-
-        String from = "sender@testmailingclass.net"
-        String subject = "Sending test"
-        String content = "This content should be received by the user."
-        deliverMessage(from, subject, content)
-
-        when:
-        Message[] messages = mailingClass.receiveMail(greenMailUser.login, greenMailUser.password)
-
-        then:
-        messages.size() == 1
-        Message message = messages[0]
-        message.from == [new InternetAddress(from)]
-        message.allRecipients == [new InternetAddress(greenMailUser.email)]
-        message.subject == subject
-    }*/
-
     private void printMessage(Message message) {
         if (message.getContent() instanceof MimeMultipart) {
             System.out.println("-------------------------------------------------------");
@@ -238,13 +182,6 @@ class SendMailTest extends Specification {
                 if (Part.ATTACHMENT.equalsIgnoreCase(part.getDisposition())) {
                     println("***Attachment ***")
                     println("File name: " + part.getFileName())
-                    //convert byte  to string >> usefull for pictures??
-                    /*int n = part.getContent().available();
-                        byte[] bytes = new byte[n];
-                        part.getContent().read(bytes, 0, n);
-                        String attachmentString = new String(bytes, StandardCharsets.UTF_8); // Or any encoding.
-                        println("File attachment: "+attachmentString)*/
-                    part.toString();
 
                     println(part.getContent().toString())
                     println("***Attachment END***")
@@ -267,7 +204,6 @@ class SendMailTest extends Specification {
         for (int i = 0; i < mimeMultipart.getCount(); i++) {
             MimeBodyPart part = (MimeBodyPart) mimeMultipart.getBodyPart(i);
             if(!Part.ATTACHMENT.equalsIgnoreCase(part.getDisposition())){
-                //println(">>><<< "+part.getContent().toString())
                 result.add(part.getContent().toString())
             }
         }
@@ -282,22 +218,11 @@ class SendMailTest extends Specification {
         for (int i = 0; i < mimeMultipart.getCount(); i++) {
             MimeBodyPart part = (MimeBodyPart) mimeMultipart.getBodyPart(i);
             if (Part.ATTACHMENT.equalsIgnoreCase(part.getDisposition())) {
-                //println("File name: " + part.getFileName())
                 part.toString();
                 result.add(part.getContent().toString())
             }
         }
         return result;
-    }
-
-    private MimeMessage deliverMessage(String from, String subject, String text) {
-        MimeMessage message = new MimeMessage((javax.mail.Session) null)
-        message.setFrom(new InternetAddress(from))
-        message.setRecipients(Message.RecipientType.TO, greenMailUser.email)
-        message.setSubject(subject)
-        message.setText(text)
-        greenMailUser.deliver(message)
-        return message
     }
 
 }

@@ -30,11 +30,11 @@ import groovy.util.logging.Slf4j
 /**
  * This class implement the send mail functionality
  *
- * @author Edgar Garriga
+ * @author Edgar Garriga <edgano@@gmail.com>
  */
 @Slf4j
 class SendMail {
-
+    /** Different protocols Netxflow is able to use to send email */
     static final List<String> PROTOCOLS = ['smtp','imap']
 
     /** the type of the server ie. IMAP or SMTP */
@@ -55,16 +55,13 @@ class SendMail {
     private String mailer
 
     private String SYS_MAILER
-
     {
         SYS_MAILER = findSysMailer()
     }
-
     @Memoized
     protected String getMailer() {
         mailer ?: findSysMailer()
     }
-
     protected String findSysMailer() {
 
         // first try `sendmail`
@@ -73,17 +70,15 @@ class SendMail {
 
         else if( runCommand("command -v mail &>/dev/null") == 0  )
             return 'mail'
-
         log.warn "Missing system mail command -- Make sure to have either `sendmail` or `mail` tool installed otherwise configure your mail server properties in the nextflow config file"
         return null
     }
-
     protected int runCommand(String cmd) {
         def proc = ['bash','-c',cmd].execute()
         proc.waitForOrKill(1_000)
         return proc.exitValue()
     }
-
+    /**Get the properties of the system and insert the properties needed to the mailing procedure**/
     protected Properties createProps() {
         def properties = System.getProperties();
 
@@ -100,7 +95,16 @@ class SendMail {
 
         return properties
     }
-
+    /**Nextflow will create a Message to send it usin Java API
+     * <li>@param to: The receiver of the email
+     * <li>@param from: The sender of the email
+     * <li>@param subject: The subject of the email
+     * <li>@param body: String with the content of the email
+     * <li>@param attachment: Path of the attachment file, can be NULL
+     *
+     * @return Message Object
+     *
+     * **/
     protected Message createJavaMessage(String to, String from, String subject, String body, Path attachment=null) {
 
         // Get the default Session object.
@@ -132,17 +136,13 @@ class SendMail {
 
         if(attachment && includeFile)
         {
-            //println("*****FILE IN ATTACHMENT")
             // Part two is attachment
             messageBodyPart = new MimeBodyPart();
             messageBodyPart.attachFile(new File(attachment.toString()));
             multipart.addBodyPart(messageBodyPart);
-        } else if(attachment && !includeFile){          //send attachment in body
-            //println("*****NOT ***FILE IN ATTACHMENT")
-
+        } else if(attachment && !includeFile){          //send attachment in the body
             messageBodyPart = new MimeBodyPart();
             String fileString = new File(attachment.toString()).text
-            //println("fileString: \n"+fileString+"+++++")
             messageBodyPart.setText(fileString)
             multipart.addBodyPart(messageBodyPart)
         }
@@ -150,14 +150,33 @@ class SendMail {
         message.setContent(multipart);
         return message
     }
-
+    /**Send the Message using the Java API
+     * <li>@param to: The receiver of the email
+     * <li>@param from: The sender of the email
+     * <li>@param subject: The subject of the email
+     * <li>@param body: String with the content of the email
+     * <li>@param attachment: Path of the attachment file, can be NULL
+     *
+     * **/
     protected void sendByJavaMail(String to, String from, String subject, String body, Path attachment=null) {
 
         def message = createJavaMessage(to, from, subject, body, attachment)
         // Send message
         Transport.send(message);
     }
-
+    /**Send the Message using the host message service.
+     * It could be `sendmail()` or `mail()`
+     * To use one or the other, it use @see getMailer()
+     *
+     * <li>@param to: The receiver of the email
+     * <li>@param from: The sender of the email
+     * <li>@param subject: The subject of the email
+     * <li>@param body: String with the content of the email
+     * <li>@param attachment: Path of the attachment file, can be NULL
+     *
+     * @return Message Object
+     *
+     * **/
     protected List<String> sendBySysMail(String to, String from, String subject, String body, Path attachment=null) {
 
         List<String> result = new LinkedList<String>()
