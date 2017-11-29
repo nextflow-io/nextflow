@@ -649,6 +649,7 @@ class TaskRunTest extends Specification {
     def 'should get task environment' () {
 
         given:
+        def EXPECT = [FOO: 'hola', BAR: 'mundo', OMEGA: 'ooo',_OPTS:'any']
         def task = Spy(TaskRun);
         def proc = Mock(TaskProcessor)
 
@@ -657,9 +658,17 @@ class TaskRunTest extends Specification {
         then:
         1 * task.getProcessor() >> proc
         1 * proc.getProcessEnvironment() >> [FOO: 'hola', BAR: 'world']
-        1 * task.getInputEnvironment() >> [BAR: 'mundo', OMEGA: 'ooo']
-        env ==  [FOO: 'hola', BAR: 'mundo', OMEGA: 'ooo']   // note: `BAR` in the process config should be overridden by `BAR` in the task input
+        1 * task.getInputEnvironment() >> [BAR: 'mundo', OMEGA: 'ooo', _OPTS: 'any']
+        env ==  EXPECT   // note: `BAR` in the process config should be overridden by `BAR` in the task input
+        str(env) == str(EXPECT)
+    }
 
+    private String str(Map env) {
+        def result = ''
+        env.each { k, v ->
+            result += "$k=$v\n"
+        }
+        return result
     }
 
     def 'should get task env as string' () {
