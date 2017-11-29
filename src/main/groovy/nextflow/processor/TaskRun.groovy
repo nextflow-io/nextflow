@@ -467,7 +467,9 @@ class TaskRun implements Cloneable {
     Map<String,String> getEnvironment() {
         // note: create a copy of the process environment to avoid concurrent
         // process executions override each others
-        final result = new HashMap( getProcessor().getProcessEnvironment() )
+        // IMPORTANT: when copying the environment map a LinkedHashMap must be used to preserve
+        // the insertion order of the env entries (ie. export FOO=1; export BAR=$FOO)
+        final result = new LinkedHashMap( getProcessor().getProcessEnvironment() )
         result.putAll( getInputEnvironment() )
         return result
     }
