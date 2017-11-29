@@ -5,6 +5,8 @@ import spock.lang.Specification
 import java.nio.file.Paths
 import java.nio.file.Files
 
+import spock.lang.Unroll
+
 /**
  * @author Emilio Palumbo <emiliopalumbo@gmail.com>
  */
@@ -65,10 +67,11 @@ class ContainerHandlerTest extends Specification {
         'docker:busybox'              | 'docker:busybox:latest'
     }
 
-    def 'test normalize singularity image name' () {
+    @Unroll
+    def 'test normalize singularity image #image' () {
 
         given:
-        def n = new ContainerHandler([:])
+        def n = new ContainerHandler([:], Paths.get('/root/dir'))
 
         expect:
         n.normalizeSingularityImageName(image) == expected
@@ -79,11 +82,14 @@ class ContainerHandlerTest extends Specification {
         ''                         | null
         '/abs/path/bar.img'        | '/abs/path/bar.img'
         'file:///abs/path/bar.img' | '/abs/path/bar.img'
+        'file://foo/bar.img'       | '/root/dir/foo/bar.img'
         'docker://library/busybox' | 'docker://library/busybox'
         'shub://busybox'           | 'shub://busybox'
+        'foo://busybox'            | 'foo://busybox'
         'foo'                      | 'docker://foo'
         'foo:2.0'                  | 'docker://foo:2.0'
         'foo.img'                  | 'docker://foo.img'
+        'quay.io/busybox'          | 'docker://quay.io/busybox'
     }
 
     def 'test singularity relative path exists' () {
