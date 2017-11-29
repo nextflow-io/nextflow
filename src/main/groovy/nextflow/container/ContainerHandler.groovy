@@ -1,10 +1,8 @@
 package nextflow.container
-
 import java.nio.file.Path
 import java.nio.file.Paths
 
 import groovy.transform.PackageScope
-
 /**
  * Helper class to normalise a container image name depending
  * the the current select container engine
@@ -14,7 +12,7 @@ import groovy.transform.PackageScope
  */
 class ContainerHandler {
 
-    final private static Path CWD = Paths.get('.')
+    final private static Path CWD = Paths.get('.').toAbsolutePath()
 
     private ContainerConfig config
 
@@ -146,22 +144,28 @@ class ContainerHandler {
         if( !img )
             return null
 
-        if (img.startsWith("/") || img.startsWith("docker://") || img.startsWith("shub://")) {
+        // when starts with `/` it's an absolute image file path, just return it
+        if( img.startsWith("/") )
+            return img
+
+         // when starts with `file://` it's an image file path, resolve it against the current path
+        if (img.startsWith("file://")) {
+             return baseDir.resolve(img.substring(7)).toString()
+        }
+
+        // check if matches a protocol scheme such as `docker://xxx`
+        if( img =~ '^[^/:\\. ]+://(.*)' ) {
             return img
         }
 
-        if (img.startsWith("file://")) {
-            return Paths.get(new URI(img)).toAbsolutePath().toString()
-        }
-
+        // if it's the path of an existing image file return it
         def imagePath = baseDir.resolve(img)
-
         if( imagePath.exists() ) {
-            return imagePath.toAbsolutePath().toString()
+            return imagePath.toString()
         }
 
-        img = "docker://${img}"
-
-        return img
+        // in all other case it's supposed to be the name of an image in the docker hub
+        // prefix it with the `docker://` pseudo protocol used by singularity to download it
+        return "docker://${img}"
     }
 }
