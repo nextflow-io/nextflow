@@ -392,6 +392,7 @@ proxyHost                   The proxy host to connect through.
 proxyPort                   The port on the proxy host to connect through.
 proxyUsername               The user name to use when connecting through a proxy.
 proxyPassword               The password to use when connecting through a proxy.
+signerOverride              The name of the signature algorithm to use for signing requests made by the client.
 socketSendBufferSizeHint    The Size hint (in bytes) for the low level TCP send buffer.
 socketRecvBufferSizeHint    The Size hint (in bytes) for the low level TCP receive buffer.
 socketTimeout               The amount of time to wait (in milliseconds) for data to be transferred over an established, open connection before the connection is timed out.
