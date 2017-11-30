@@ -311,6 +311,7 @@ The following settings are available:
 ================== ================
 Name                Description
 ================== ================
+author              Project author name (use a comma to separate multiple names).
 homePage            Project home page URL
 description         Free text describing the pipeline project
 mainScript          Pipeline main script (default: ``main.nf``)
