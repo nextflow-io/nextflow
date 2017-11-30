@@ -578,7 +578,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         nxf_s3_upload() {
             local pattern=\$1
             local s3path=\$2
-            for name in \$(eval "ls \$pattern");do
+            for name in \$(eval "ls -d \$pattern");do
               if [[ -d "\$name" ]]; then
                 $cli s3 cp \$name \$s3path/\$name --quiet --recursive $encryption--storage-class $storage
               else
