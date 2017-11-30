@@ -1,7 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-0.26.2  27 Nov 2017
+0.26.3 - 30 Nov 2017
+- Fixed AWS Batch S3 upload function does not work if output is a directory #539 
+- Fixed AWS Batch S3 uploaded function does not resolve glob patterns containing curly brackets #535
+- Added author field in the config manifest scope #537
+- Upgrading s3fs library to 1.0.2 version supporting `signerOverride` S3 config property.
+
+0.26.2 - 27 Nov 2017
 - Fixed readlink illegal option when installing in macOS #527
 - Fixed Getting not descriptive error when using a when condition and script statement is not explicit #528
 - Fixed Function nxf_module_load matches partial names #530
