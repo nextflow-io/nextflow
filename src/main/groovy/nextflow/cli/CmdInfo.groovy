@@ -74,6 +74,8 @@ class CmdInfo extends CmdBase {
         println " home page   : ${manager.homePage}"
         if( manager.description )
         println " description : ${manager.description}"
+        if( manager.author )
+        println " author      : ${manager.author}"
 
         def revs = manager.getRevisions(level)
         if( revs.size() == 1 )

@@ -405,6 +405,10 @@ class AssetManager {
         readManifest().description ?: null
     }
 
+    String getAuthor() {
+        readManifest().author ?: null
+    }
+
     protected Map readManifest() {
         ConfigObject result = null
         try {
