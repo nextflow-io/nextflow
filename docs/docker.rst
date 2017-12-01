@@ -91,6 +91,8 @@ Read the :ref:`Process scope <config-process>` section to learn more about proce
 Executable containers
 ======================
 
+.. warning:: This feature has been deprecated. It will removed in future Nextflow release.
+
 An executable container is a Docker image which defines a command `entry point <https://docs.docker.com/reference/builder/#entrypoint>`_
 i.e. a command that is executed by default when the container start.
 
@@ -112,8 +114,6 @@ For example::
 The docker image name can be preceded by one or more lines containing comments or variables definition i.e. ``NAME=VALUE``
 and can be followed by one or more lines containing BASH commands.
 
-
-.. warning:: This is an experimental feature. It may change in future Nextflow releases.
 
 
 Advanced settings 

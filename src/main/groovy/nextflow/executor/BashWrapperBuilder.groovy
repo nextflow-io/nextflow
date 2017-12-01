@@ -335,6 +335,7 @@ class BashWrapperBuilder {
         ContainerScriptTokens scriptTokens = null
         def taskScript = TaskProcessor.normalizeScript(script, shell)
         if(this.containerExecutable) {
+            log.warn1("Process `$name` uses an executable container -- This feature has been deprecated and will be removed in a future release", firstOnly: true)
             scriptTokens = ContainerScriptTokens.parse(taskScript)
             environment.putAll( scriptTokens.variables )
         }
