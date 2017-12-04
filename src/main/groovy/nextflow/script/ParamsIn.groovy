@@ -19,7 +19,6 @@
  */
 
 package nextflow.script
-import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
@@ -31,7 +30,6 @@ import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.Nextflow
 import nextflow.exception.ProcessException
 import nextflow.extension.ToListOp
-import nextflow.processor.ProcessConfig
 /**
  * Base class for input/output parameters
  *
@@ -197,16 +195,12 @@ abstract class BaseInParam extends BaseParam implements InParam {
         return inChannel
     }
 
-    BaseInParam( ProcessConfig config ) {
-        this(config.getOwnerScript().getBinding(), config.getInputs())
-    }
-
     /**
      * @param script The global script object
      * @param obj
      */
-    BaseInParam( Binding binding, List holder, short ownerIndex = -1 ) {
-        super(binding,holder,ownerIndex)
+    BaseInParam( Binding binding, List holder, short index = -1 ) {
+        super(binding,holder,index)
     }
 
     abstract String getTypeName()
@@ -334,10 +328,13 @@ abstract class BaseInParam extends BaseParam implements InParam {
  *  Represents a process *file* input parameter
  */
 @Slf4j
-@InheritConstructors
 class FileInParam extends BaseInParam  {
 
     protected filePattern
+
+    FileInParam(Binding binding, List holder, short index = -1) {
+        super(binding, holder, index)
+    }
 
     @Override String getTypeName() { 'file' }
 
@@ -411,32 +408,41 @@ class FileInParam extends BaseInParam  {
         else
             return value
     }
-
-
 }
 
 /**
  *  Represents a process *environment* input parameter
  */
-@InheritConstructors
 class EnvInParam extends BaseInParam {
+
+    EnvInParam(Binding binding, List holder) {
+        super(binding, holder)
+    }
+
     @Override String getTypeName() { 'env' }
 }
 
 /**
  *  Represents a process *value* input parameter
  */
-@InheritConstructors
 class ValueInParam extends BaseInParam {
+
+    ValueInParam(Binding binding, List holder, short index = -1) {
+        super(binding, holder, index)
+    }
+
     @Override String getTypeName() { 'val' }
 }
 
 /**
  *  Represents a process *stdin* input parameter
  */
-@InheritConstructors
 @ToString(includePackage=false, includeSuper = true)
 class StdInParam extends BaseInParam {
+
+    StdInParam(Binding binding, List holder) {
+        super(binding, holder)
+    }
 
     String getName() { '-' }
 
@@ -446,9 +452,12 @@ class StdInParam extends BaseInParam {
 /**
  *  Represents a process input *iterator* parameter
  */
-@InheritConstructors
 @Slf4j
 class EachInParam extends BaseInParam {
+
+    EachInParam(Binding binding, List holder) {
+        super(binding, holder)
+    }
 
     @Override String getTypeName() { 'each' }
 
@@ -494,10 +503,14 @@ class EachInParam extends BaseInParam {
 
 }
 
-@InheritConstructors
+
 class SetInParam extends BaseInParam {
 
     final List<InParam> inner = []
+
+    SetInParam(Binding binding, List holder) {
+        super(binding, holder)
+    }
 
     @Override String getTypeName() { 'set' }
 
@@ -539,7 +552,6 @@ class SetInParam extends BaseInParam {
         }
 
         return this
-
     }
 
     private <T extends BaseInParam> T newItem( Class<T> type )  {
@@ -552,8 +564,8 @@ final class DefaultInParam extends ValueInParam {
 
     @Override String getTypeName() { 'default' }
 
-    DefaultInParam(ProcessConfig config) {
-        super(config)
+    DefaultInParam(Binding binding, List holder) {
+        super(binding, holder)
         final channel = new DataflowQueue(); channel.bind(Boolean.TRUE)
         from(channel)
         bind('$')

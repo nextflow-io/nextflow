@@ -246,6 +246,10 @@ class ProcessFactory {
         if ( !script )
             throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
 
+        newTaskProcessor(name, processConfig, script)
+    }
+
+    TaskProcessor newTaskProcessor( String name, ProcessConfig processConfig, TaskBody script ) {
         // load the executor to be used
         def execName = getExecutorName(processConfig) ?: DEFAULT_EXECUTOR
         def execClass = loadExecutorClass(execName)

@@ -19,7 +19,6 @@
  */
 
 package nextflow
-
 import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
@@ -339,7 +338,5 @@ class Nextflow {
 
         return result
     }
-
-
 
 }

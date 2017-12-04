@@ -107,6 +107,8 @@ class ProcessConfig implements Map<String,Object> {
 
     private outputs = new OutputsList()
 
+    private Binding binding
+
     /**
      * Initialize the taskConfig object with the defaults values
      *
@@ -117,6 +119,7 @@ class ProcessConfig implements Map<String,Object> {
     ProcessConfig( BaseScript script, Map important = null ) {
 
         ownerScript = script
+        binding = script.getBinding()
 
         // parse the attribute as List before adding it to the read-only list
         if( important?.containsKey('module') ) {
@@ -131,6 +134,10 @@ class ProcessConfig implements Map<String,Object> {
         configProperties.maxRetries = 0
         configProperties.maxErrors = -1
         configProperties.errorStrategy = ErrorStrategy.TERMINATE
+    }
+
+    void setBinding(Binding binding) {
+        this.binding = binding
     }
 
     /* Only for testing purpose */
@@ -269,54 +276,54 @@ class ProcessConfig implements Map<String,Object> {
     /// input parameters
 
     InParam _in_val( obj ) {
-        new ValueInParam(this).bind(obj)
+        new ValueInParam(binding,inputs).bind(obj)
     }
 
     InParam _in_file( obj ) {
-        new FileInParam(this).bind(obj)
+        new FileInParam(binding,inputs).bind(obj)
     }
 
     InParam _in_each( obj ) {
-        new EachInParam(this).bind(obj)
+        new EachInParam(binding,inputs).bind(obj)
     }
 
     InParam _in_set( Object... obj ) {
-        new SetInParam(this).bind(obj)
+        new SetInParam(binding,inputs).bind(obj)
     }
 
     InParam _in_stdin( obj = null ) {
-        def result = new StdInParam(this)
+        def result = new StdInParam(binding,inputs)
         if( obj ) result.bind(obj)
         result
     }
 
     InParam _in_env( obj ) {
-        new EnvInParam(this).bind(obj)
+        new EnvInParam(binding,inputs).bind(obj)
     }
 
 
     /// output parameters
 
     OutParam _out_val( Object obj ) {
-        new ValueOutParam(this).bind(obj)
+        new ValueOutParam(binding,outputs).bind(obj)
     }
 
     OutParam _out_file( Object obj ) {
         // note: check that is a String type to avoid to force
         // the evaluation of GString object to a string
         if( obj instanceof String && obj == '-' )
-            new StdOutParam(this).bind(obj)
+            new StdOutParam(binding,outputs).bind(obj)
 
         else
-            new FileOutParam(this).bind(obj)
+            new FileOutParam(binding,outputs).bind(obj)
     }
 
     OutParam _out_set( Object... obj ) {
-        new SetOutParam(this) .bind(obj)
+        new SetOutParam(binding,outputs) .bind(obj)
     }
 
     OutParam _out_stdout( obj = null ) {
-        def result = new StdOutParam(this).bind('-')
+        def result = new StdOutParam(binding,outputs).bind('-')
         if( obj ) result.into(obj)
         result
     }
@@ -327,11 +334,11 @@ class ProcessConfig implements Map<String,Object> {
      * provided by the user for the current task
      */
     def void fakeInput() {
-        new DefaultInParam(this)
+        new DefaultInParam(binding,inputs)
     }
 
     def void fakeOutput() {
-        new DefaultOutParam(this)
+        new DefaultOutParam(binding,outputs)
     }
 
 

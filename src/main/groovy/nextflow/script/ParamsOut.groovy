@@ -21,7 +21,6 @@
 package nextflow.script
 import java.nio.file.Path
 
-import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
@@ -29,7 +28,6 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.exception.IllegalFileException
 import nextflow.file.FilePatternSplitter
-import nextflow.processor.ProcessConfig
 import nextflow.util.BlankSeparatedList
 /**
  * Model a process generic input parameter
@@ -109,9 +107,6 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
         super(binding,list,ownerIndex)
     }
 
-    BaseOutParam( ProcessConfig config ) {
-        super(config.getOwnerScript().getBinding(), config.getOutputs())
-    }
 
     void lazyInit() {
 
@@ -275,8 +270,11 @@ trait MissingParam {
  * Model a process *file* output parameter
  */
 @Slf4j
-@InheritConstructors
 class FileOutParam extends BaseOutParam implements OutParam, OptionalParam {
+
+    FileOutParam( Binding binding, List list ) {
+        super(binding,list)
+    }
 
     /**
      * ONLY FOR TESTING DO NOT USE
@@ -504,10 +502,13 @@ class FileOutParam extends BaseOutParam implements OutParam, OptionalParam {
 /**
  * Model a process *value* output parameter
  */
-@InheritConstructors
 class ValueOutParam extends BaseOutParam {
 
     protected target
+
+    ValueOutParam( Binding binding, List list ) {
+        super(binding,list)
+    }
 
     String getName() {
         return nameObj ? super.getName() : null
@@ -555,16 +556,22 @@ class ValueOutParam extends BaseOutParam {
 /**
  * Model the process *stdout* parameter
  */
-@InheritConstructors
-class StdOutParam extends BaseOutParam { }
+class StdOutParam extends BaseOutParam {
+    StdOutParam(Binding binding, List list) {
+        super(binding,list)
+    }
+}
 
 
-@InheritConstructors
 class SetOutParam extends BaseOutParam implements OptionalParam {
 
     enum CombineMode implements OutParam.Mode { combine }
 
     final List<BaseOutParam> inner = []
+
+    SetOutParam(Binding binding, List list) {
+        super(binding,list)
+    }
 
     String getName() { toString() }
 
@@ -627,8 +634,8 @@ class SetOutParam extends BaseOutParam implements OptionalParam {
 
 final class DefaultOutParam extends StdOutParam {
 
-    DefaultOutParam( ProcessConfig config ) {
-        super(config)
+    DefaultOutParam(Binding binding, List list) {
+        super(binding,list)
         bind('-')
         into(new DataflowQueue())
     }

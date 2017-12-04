@@ -22,6 +22,7 @@ package nextflow.script
 import groovy.transform.PackageScope
 import nextflow.Global
 import nextflow.Session
+import nextflow.cwl.CwlTask
 import nextflow.processor.ProcessFactory
 import nextflow.processor.TaskProcessor
 /**
@@ -94,7 +95,8 @@ abstract class BaseScript extends Script {
 
     private ProcessFactory processFactory
 
-    private getProcessFactory() {
+    @PackageScope
+    ProcessFactory getProcessFactory() {
         if( !processFactory ) {
             processFactory = new ProcessFactory(this, getSession())
         }
@@ -151,5 +153,32 @@ abstract class BaseScript extends Script {
         // launch it
         result = taskProcessor.run()
     }
+
+    /**
+     * This method allows the import of CWL CommandLineTool descriptor.
+     *
+     * For example:
+     * <code>
+     *     // import the CWL descriptor
+     *     hello = cwlTask('some/path/Hello.cwl')
+     *
+     *     // Invokes the execution as NF process
+     *     // - inputs are specified as proper NF channel, input names have
+     *     //   to match CWL input declarations
+     *     out = hello(foo: channel1, bar: channel2)
+     *
+     *     // - it returns a Map object holding the corresponding output channels
+     *     //   as declared in the CWL descriptor
+     *     out.baz.println()
+     *
+     * @See {@link CwlTask}
+     *
+     * @param cwlUri A local path or a remote URI of a CWL CommandLineTool descriptor file
+     * @return The corresponding {@link CwlTask} instance
+     */
+    protected CwlTask cwlTask( cwlUri ) {
+        new CwlTask(this, cwlUri)
+    }
+
 
 }
