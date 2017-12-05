@@ -901,5 +901,31 @@ class ConfigBuilderTest extends Specification {
 
     }
 
+
+    def 'should collect config files' () {
+
+        given:
+        def slurper = new ComposedConfigSlurper()
+        def file1 = Files.createTempFile('test1', null)
+        def file2 = Files.createTempFile('test2', null)
+        def result = new ConfigObject()
+        def builder = new ConfigBuilder()
+
+        file1.text = 'foo = 1'
+        file2.text = 'bar = 2'
+
+        when:
+        builder.merge(result, slurper, file1)
+        builder.merge(result, slurper, file2)
+        then:
+        result.foo == 1
+        result.bar == 2
+        builder.configFiles == [file1, file2]
+
+        cleanup:
+        file1?.delete()
+        file2?.delete()
+    }
+
 }
 

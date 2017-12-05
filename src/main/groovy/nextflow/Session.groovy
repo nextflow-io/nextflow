@@ -126,6 +126,11 @@ class Session implements ISession {
      */
     List<Path> libDir
 
+    /**
+     * List files that concurrent on the session configuration
+     */
+    List<Path> configFiles
+
     private Path binDir
 
     private Map<String,Path> binEntries = [:]

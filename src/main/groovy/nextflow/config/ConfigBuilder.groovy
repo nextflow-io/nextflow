@@ -58,6 +58,8 @@ class ConfigBuilder {
 
     boolean validateProfile
 
+    List<Path> configFiles = []
+
     ConfigBuilder setOptions( CliOptions options ) {
         this.options = options
         return this
@@ -235,7 +237,7 @@ class ConfigBuilder {
     }
 
 
-    def ConfigObject buildConfig0( Map env, List configEntries )  {
+    protected ConfigObject buildConfig0( Map env, List configEntries )  {
         assert env != null
 
         final slurper = new ComposedConfigSlurper()
@@ -299,11 +301,15 @@ class ConfigBuilder {
             return
 
         ConfigObject config
-        if( entry instanceof File )
+        if( entry instanceof File ) {
+            configFiles << entry.toPath()
             config = slurper.parse(entry)
+        }
 
-        else if( entry instanceof Path )
+        else if( entry instanceof Path ) {
+            configFiles << entry
             config = slurper.parse(entry.toFile())
+        }
 
         else
             config = slurper.parse(entry.toString())
