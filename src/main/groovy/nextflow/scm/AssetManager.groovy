@@ -608,7 +608,7 @@ class AssetManager {
         clone.setURI(uri)
         clone.setDirectory(directory)
         if( provider.hasCredentials() )
-            clone.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password))
+            clone.setCredentialsProvider(new UsernamePasswordCredentialsProvider(provider.user, provider.password))
 
         if( revision )
             clone.setBranch(revision)
@@ -620,7 +620,7 @@ class AssetManager {
      * @return The symbolic name of the current revision i.e. the current checked out branch or tag
      */
     String getCurrentRevision() {
-        Ref head = git.getRepository().getRef(Constants.HEAD);
+        Ref head = git.getRepository().findRef(Constants.HEAD);
         if( !head )
             return '(unknown)'
 
@@ -636,7 +636,7 @@ class AssetManager {
     }
 
     RevisionInfo getCurrentRevisionAndName() {
-        Ref head = git.getRepository().getRef(Constants.HEAD);
+        Ref head = git.getRepository().findRef(Constants.HEAD);
         if( !head )
             return null
 
@@ -774,7 +774,7 @@ class AssetManager {
 
     }
 
-    public void updateModules() {
+    void updateModules() {
 
         if( !localPath )
             return // nothing to do
