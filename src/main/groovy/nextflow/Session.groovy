@@ -330,6 +330,7 @@ class Session implements ISession {
         Boolean isEnabled = config.navigate('extrae.enabled') as Boolean
         if( isEnabled ) {
             try {
+                log.warn "The support for Extrae profiling has been deprecated and it will be removed in a future release"
                 result << new ExtraeTraceObserver()
             }
             catch( Exception e ) {
