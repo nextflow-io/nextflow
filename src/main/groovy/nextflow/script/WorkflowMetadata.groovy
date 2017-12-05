@@ -167,6 +167,11 @@ class WorkflowMetadata {
      */
     String containerEngine
 
+    /**
+     * The list of files that concurred to create the config object
+     */
+    List<Path> configFiles
+
     final private ScriptRunner owner
 
     final private List<Closure> onCompleteActions = []
@@ -198,6 +203,7 @@ class WorkflowMetadata {
         this.resume = owner.session.resumeMode
         this.runName = owner.session.runName
         this.containerEngine = owner.session.containerConfig?.getEngine()
+        this.configFiles = owner.session.configFiles?.collect { it.toAbsolutePath() }
 
         // check if there's a onComplete action in the config file
         registerConfigAction(owner.session.config.workflow as Map)

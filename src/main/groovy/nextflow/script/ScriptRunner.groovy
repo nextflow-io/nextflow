@@ -19,7 +19,6 @@
  */
 
 package nextflow.script
-
 import static nextflow.util.ConfigHelper.parseValue
 
 import java.nio.file.Path
@@ -33,6 +32,7 @@ import nextflow.Channel
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.ast.NextflowDSL
+import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.file.FileHelper
@@ -94,25 +94,32 @@ class ScriptRunner {
     /**
      * Instantiate the runner object creating a new session
      */
-    def ScriptRunner( ) {
+    ScriptRunner( ) {
         this( [:] )
     }
 
-    def ScriptRunner( Map config ) {
-        session = new Session(config)
+    ScriptRunner( Map config ) {
+        this.session = new Session(config)
     }
 
-    def ScriptRunner( Session session ) {
+    ScriptRunner( Session session ) {
         this.session = session
     }
 
-    def ScriptRunner setScript( ScriptFile script ) {
+    ScriptRunner setScript( ScriptFile script ) {
         this.scriptFile = script
         this.scriptText = script.text
         return this
     }
 
-    def ScriptRunner setScript( String text ) {
+    ScriptRunner( ConfigBuilder builder ) {
+        this.session = new Session(builder.build())
+        // note config files are collected during the build process
+        // this line should be after `ConfigBuilder#build`
+        this.session.configFiles = builder.configFiles
+    }
+
+    ScriptRunner setScript( String text ) {
         this.scriptText = text
         return this
     }

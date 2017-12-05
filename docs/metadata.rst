@@ -34,6 +34,7 @@ revision                    Git branch/tag of the executed workflow repository.
 projectDir                  Directory where the workflow project is stored in the computer.
 launchDir                   Directory where the workflow execution has been launched.
 workDir                     Workflow working directory.
+configFiles                 Configuration files used for the workflow execution.
 container                   Docker image used to run workflow tasks. When more than one image is used
                             it returns a map object containing `[process name, image name]` pair entries.
 commandLine                 Command line as entered by the user to launch the workflow execution.
