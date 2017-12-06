@@ -145,7 +145,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getContainerOverrides().getVcpus() == 4
         req.getContainerOverrides().getMemory() == 8192
         req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
-        req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "export AWS_DEFAULT_REGION='eu-west-1'; /bin/aws s3 cp s3://bucket/test/.command.run - | bash 2>&1 | /bin/aws s3 cp - s3://bucket/test/.command.log".toString()]
+        req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "/bin/aws --region eu-west-1 s3 cp s3://bucket/test/.command.run - | bash 2>&1 | /bin/aws --region eu-west-1 s3 cp - s3://bucket/test/.command.log".toString()]
         req.getRetryStrategy() == null  // <-- retry is managed by NF, hence this must be null
 
     }

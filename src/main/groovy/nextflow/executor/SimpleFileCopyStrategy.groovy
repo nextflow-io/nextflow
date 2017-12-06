@@ -24,6 +24,8 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.Global
+import nextflow.Session
 import nextflow.file.FilePorter
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
@@ -98,7 +100,6 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
             links << stageInputFile( storePath, stageName )
 
         }
-        links << '' // just to have new-line at the end of the script
 
         // return a big string containing the command
         return (delete + links).join(separatorChar)
@@ -140,11 +141,10 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         // create a bash script that will copy the out file to the working directory
         log.trace "Unstaging file path: $normalized"
         if( normalized ) {
-            result << ""
-            result << "mkdir -p ${Escape.path(targetDir)}"
+            result << getUnstagePrefix(targetDir)
             for( int i=0; i<normalized.size(); i++ ) {
                 final path = normalized[i]
-                final cmd = stageOutCommand(path, targetDir.toString(), stageoutMode) + ' || true' // <-- add true to avoid it stops on errors
+                final cmd = stageOutCommand(path, targetDir, stageoutMode) + ' || true' // <-- add true to avoid it stops on errors
                 result << cmd
             }
         }
@@ -166,14 +166,52 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         throw new IllegalArgumentException("Unknown stage-in strategy: $mode")
     }
 
+    protected AwsOptions getAwsOptions() {
+        new AwsOptions(Global.session as Session)
+    }
+
+    protected String getPathScheme(Path path) {
+        path.getFileSystem().provider().getScheme()
+    }
+
+    protected String getUnstagePrefix(Path targetDir) {
+
+        final scheme = getPathScheme(targetDir)
+        if( scheme == 'file' ) {
+            def result = "# copy output files\n"
+            result += "mkdir -p ${Escape.path(targetDir)}"
+            return result
+        }
+        else if( scheme == 's3' ) {
+            def result = S3Helper.getUploaderScript(getAwsOptions()).leftTrim()
+            result += "\n# copy output files"
+            return result
+        }
+        else {
+            throw new IllegalArgumentException("Unsupported target path: ${targetDir.toUriString()}")
+        }
+    }
+
     /**
      * Compose a `cp` or `mv` command given the source and target paths
      *
      * @param source
-     * @param target
+     * @param targetDir
      * @param move When {@code true} use unix {@code mv} instead of {@code cp}
      * @return A shell copy or move command string
      */
+
+    protected String stageOutCommand( String source, Path targetDir, String mode = null) {
+        def scheme = getPathScheme(targetDir)
+        if( scheme == 'file' )
+            return stageOutCommand(source, targetDir.toString(), mode)
+
+        if( scheme == 's3' )
+            return "nxf_s3_upload '$source' s3:/$targetDir"
+
+        throw new IllegalArgumentException("Unsupported target path: ${targetDir.toUriString()}")
+    }
+
     protected String stageOutCommand( String source, String target, String mode = null) {
 
         def cmd

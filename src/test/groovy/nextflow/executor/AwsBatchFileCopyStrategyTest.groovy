@@ -14,7 +14,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         def FILE = Paths.get('/some/data/nobel_prize_results.gz')
         def EXIT = Paths.get('/some/path/.exitcode')
         def RUN = Paths.get('/some/data/.command.run')
-        def copy = new AwsBatchFileCopyStrategy(Mock(TaskBean), Mock(AwsOptions))
+        def copy = new AwsBatchFileCopyStrategy(Mock(TaskBean), new AwsOptions())
         expect:
         copy.touchFile(RUN) == "echo start | aws s3 cp - s3://some/data/.command.run"
         copy.copyFile("nobel_prize_results.gz",Paths.get("/some/data/nobel_prize_results.gz")) == "nxf_s3_upload nobel_prize_results.gz s3://some/data"
@@ -33,7 +33,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         when:
         def script = copy.getBeforeStartScript()
         then:
-        1 * opts.getCliPath() >> null
+        1 * opts.getAwsCli() >> 'aws'
         1 * opts.getStorageClass() >> null
         1 * opts.getStorageEncryption() >> null
 
@@ -55,7 +55,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         when:
         script = copy.getBeforeStartScript()
         then:
-        1 * opts.getCliPath() >> '/foo/aws'
+        1 * opts.getAwsCli() >> '/foo/aws'
         1 * opts.getStorageClass() >> 'REDUCED_REDUNDANCY'
         2 * opts.getStorageEncryption() >> 'AES256'
 
@@ -88,6 +88,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         then:
         // note: PATH is always removed
         opts.getRemoteBinDir() >> null
+        opts.getCliPath() >> null
         script == '''
             export BAR="world"
             export FOO="hola"
@@ -97,6 +98,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         script = copy.getEnvScript(ENV)
         then:
         opts.getRemoteBinDir() >> '/foo/bar'
+        opts.getAwsCli() >> 'aws'
         script == '''
             aws s3 cp --recursive --quiet s3://foo/bar $PWD/nextflow-bin
             chmod +x $PWD/nextflow-bin/*
@@ -108,7 +110,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         when:
         script = copy.getEnvScript(ENV)
         then:
-        opts.getCliPath() >> '/conda/bin/aws'
+        opts.getAwsCli() >> '/conda/bin/aws'
         opts.getRemoteBinDir() >> '/foo/bar'
         script == '''
             /conda/bin/aws s3 cp --recursive --quiet s3://foo/bar $PWD/nextflow-bin
@@ -121,7 +123,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         when:
         script = copy.getEnvScript(ENV)
         then:
-        opts.getCliPath() >> '/conda/bin/aws'
+        opts.getAwsCli() >> '/conda/bin/aws'
         opts.getRemoteBinDir() >> '/foo/bar'
         opts.getRegion() >> 'eu-west-1'
         script == '''
