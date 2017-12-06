@@ -47,7 +47,7 @@ class ScriptFile {
     String repository
 
     /**
-     * The
+     * The revision information of the current version (commit id, branch/tag name)
      */
     AssetManager.RevisionInfo revisionInfo
 
@@ -80,7 +80,7 @@ class ScriptFile {
     /**
      * @return Repository tag or branch
      */
-    String getRevision() { revisionInfo?.revision }
+    String getRevision() { revisionInfo?.name }
 
     ScriptFile( File file ) {
         assert file

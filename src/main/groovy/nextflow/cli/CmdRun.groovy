@@ -278,11 +278,13 @@ class CmdRun extends CmdBase implements HubOptions {
         def manager = new AssetManager(pipelineName, this)
         def repo = manager.getProject()
 
+        boolean checkForUpdate = true
         if( !manager.isRunnable() || latest ) {
             log.info "Pulling $repo ..."
             def result = manager.download()
             if( result )
                 log.info " $result"
+            checkForUpdate = false
         }
         // checkout requested revision
         try {
@@ -290,6 +292,8 @@ class CmdRun extends CmdBase implements HubOptions {
             manager.updateModules()
             def scriptFile = manager.getScriptFile()
             log.info "Launching `$repo` [$runName] - revision: ${scriptFile.revisionInfo}"
+            if( checkForUpdate )
+                manager.checkRemoteStatus(scriptFile.revisionInfo)
             // return the script file
             return scriptFile
         }

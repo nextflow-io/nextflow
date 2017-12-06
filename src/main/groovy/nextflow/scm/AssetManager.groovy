@@ -19,7 +19,6 @@
  */
 
 package nextflow.scm
-
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -33,8 +32,8 @@ import nextflow.script.ScriptFile
 import nextflow.util.IniFile
 import org.eclipse.jgit.api.CreateBranchCommand
 import org.eclipse.jgit.api.Git
-import org.eclipse.jgit.api.MergeResult
 import org.eclipse.jgit.api.ListBranchCommand
+import org.eclipse.jgit.api.MergeResult
 import org.eclipse.jgit.api.errors.RefNotFoundException
 import org.eclipse.jgit.errors.RepositoryNotFoundException
 import org.eclipse.jgit.lib.Constants
@@ -570,13 +569,13 @@ class AssetManager {
         def pull = git.pull()
         def revInfo = getCurrentRevisionAndName()
 
-        if ( revInfo.revType == RevisionInfo.Type.COMMIT ) {
+        if ( revInfo.type == RevisionInfo.Type.COMMIT ) {
             log.debug("Repo appears to be checked out to a commit hash, but not a TAG, so we are NOT pulling the repo and assuming it is already up to date!")
             return MergeResult.MergeStatus.ALREADY_UP_TO_DATE.toString()
         }
 
-        if ( revInfo.revType == RevisionInfo.Type.TAG ) {
-            pull.setRemoteBranchName( "refs/tags/" + revInfo.revision )
+        if ( revInfo.type == RevisionInfo.Type.TAG ) {
+            pull.setRemoteBranchName( "refs/tags/" + revInfo.name )
         }
 
         if( provider.hasCredentials() )
@@ -630,7 +629,7 @@ class AssetManager {
         if( !head.getObjectId() )
             return '(unknown)'
 
-        // try to resolve the the current object it to a tag name
+        // try to resolve the the current object id to a tag name
         Map<ObjectId, String> names = git.nameRev().addPrefix( "refs/tags/" ).add(head.objectId).call()
         names.get( head.objectId ) ?: head.objectId.name()
     }
@@ -647,7 +646,7 @@ class AssetManager {
         if( !head.getObjectId() )
             return null
 
-        // try to resolve the the current object it to a tag name
+        // try to resolve the the current object id to a tag name
         Map<ObjectId, String> allNames = git.nameRev().addPrefix( "refs/tags/" ).add(head.objectId).call()
         def name = allNames.get( head.objectId )
         if( name ) {
@@ -677,15 +676,12 @@ class AssetManager {
         def current = getCurrentRevision()
         def master = getDefaultBranch()
 
-        List<String> branches = git.branchList()
-            .setListMode(ListBranchCommand.ListMode.ALL)
-            .call()
+        List<String> branches = getBranchList()
             .findAll { it.name.startsWith('refs/heads/') || it.name.startsWith('refs/remotes/origin/') }
             .unique { shortenRefName(it.name) }
             .collect { Ref it -> formatRef(it,current,master,false,level) }
 
-        List<String> tags = git.tagList()
-                .call()
+        List<String> tags = getTagList()
                 .findAll  { it.name.startsWith('refs/tags/') }
                 .collect { formatRef(it,current,master,true,level) }
 
@@ -693,6 +689,20 @@ class AssetManager {
         result.addAll(branches)
         result.addAll(tags)
         return result
+    }
+
+    @Memoized
+    protected List<Ref> getBranchList() {
+        git.branchList().setListMode(ListBranchCommand.ListMode.ALL) .call()
+    }
+
+    @Memoized
+    protected List<Ref> getTagList() {
+        git.tagList().call()
+    }
+
+    protected formatObjectId(ObjectId obj, boolean human) {
+        return human ? obj.name.substring(0,10) : obj
     }
 
     protected String formatRef( Ref ref, String current, String master, boolean tag, int level ) {
@@ -705,7 +715,7 @@ class AssetManager {
             def peel = git.getRepository().peel(ref)
             def obj = peel.getPeeledObjectId() ?: peel.getObjectId()
             result << ' '
-            result << (level == 1 ? obj.name().substring(0,10) : obj.name())
+            result << formatObjectId(obj, level == 1)
         }
 
         result << ' ' << name
@@ -723,6 +733,44 @@ class AssetManager {
             return name.replace('refs/remotes/origin/', '')
 
         return Repository.shortenRefName(name)
+    }
+
+    protected String formatUpdate(Ref remoteRef, int level) {
+
+        def result = new StringBuilder()
+        result << '  '
+        result << formatObjectId(remoteRef.objectId, level<2)
+        result << ' '
+        result << shortenRefName(remoteRef.name)
+
+        return result.toString()
+    }
+
+    protected hasRemoteChange(Ref ref, Map<String,Ref> remote) {
+        if( !remote.containsKey(ref.name) )
+            return false
+        ref.objectId.name != remote[ref.name].objectId.name
+    }
+
+    List<String> getUpdates(int level) {
+
+        def remote = git.lsRemote().callAsMap()
+        List<String> branches = getBranchList()
+                .findAll { it.name.startsWith('refs/heads/') || it.name.startsWith('refs/remotes/origin/') }
+                .unique { shortenRefName(it.name) }
+                .findAll { Ref ref -> hasRemoteChange(ref,remote) }
+                .collect { Ref ref -> formatUpdate(remote.get(ref.name),level) }
+
+        remote = git.lsRemote().setTags(true).callAsMap()
+        List<String> tags = getTagList()
+                .findAll  { it.name.startsWith('refs/tags/') }
+                .findAll { Ref ref -> hasRemoteChange(ref,remote) }
+                .collect { Ref ref -> formatUpdate(remote.get(ref.name),level) }
+
+        def result = new ArrayList<String>(branches.size() + tags.size())
+        result.addAll(branches)
+        result.addAll(tags)
+        return result
     }
 
     /**
@@ -806,6 +854,44 @@ class AssetManager {
         log.debug "Update submodules $updatedList"
     }
 
+    protected String getRemoteCommitId(RevisionInfo rev) {
+        final tag = rev.type == RevisionInfo.Type.TAG
+        final list = git.lsRemote().setTags(tag).call()
+        final ref = list.find { Repository.shortenRefName(it.name) == rev.name }
+        if( !ref ) {
+            log.debug "WARN: Cannot find any Git revision matching: ${rev.name}; ls-remote: $list"
+            return null
+        }
+        return ref.objectId.name
+    }
+
+    protected void checkRemoteStatus0(RevisionInfo rev) {
+
+        final remoteObjectId = getRemoteCommitId(rev)
+
+        if( !remoteObjectId || remoteObjectId == rev.commitId ) {
+            // nothing to do
+            return
+        }
+
+        def local = rev.commitId.substring(0,10)
+        def remote = remoteObjectId.substring(0,10)
+        if( local == remote ) {
+            remote = remoteObjectId
+        }
+
+        log.info "NOTE: Your local project version looks outdated - a different revision is available in the remote repository [$remote]"
+    }
+
+    void checkRemoteStatus(RevisionInfo rev) {
+        try {
+            checkRemoteStatus0(rev)
+        }
+        catch( Exception e ) {
+            log.debug "WARN: Failed to check remote Git revision", e
+        }
+    }
+
     protected String getGitConfigRemoteUrl() {
         if( !localPath ) {
             return null
@@ -870,14 +956,14 @@ class AssetManager {
         String commitId
 
         /**
-         * Git tab or branch name
+         * Git tag or branch name
          */
-        String revision
+        String name
 
         /**
          * The revision type.
          */
-        Type revType
+        Type type
 
         /**
          * @return A formatted string containing the commitId and revision properties
@@ -888,8 +974,8 @@ class AssetManager {
                 return '(unknown)'
             }
 
-            if( revision ) {
-                return "${commitId.substring(0,10)} [${revision}]"
+            if( name ) {
+                return "${commitId.substring(0,10)} [${name}]"
             }
 
             commitId
