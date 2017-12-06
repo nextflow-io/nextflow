@@ -19,8 +19,8 @@
  */
 
 package nextflow.executor
-
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 
 import nextflow.Session
@@ -28,7 +28,6 @@ import nextflow.processor.TaskBean
 import spock.lang.Specification
 import spock.lang.Unroll
 import test.TestHelper
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -73,7 +72,7 @@ class SimpleFileCopyStrategyTest extends Specification {
         lines = script.readLines()
 
         then:
-        lines[0] == "rm -f file.txt; rm -f seq_1.fa; ln -s /data/file file.txt; ln -s /data/seq seq_1.fa; "
+        lines[0] == "rm -f file.txt; rm -f seq_1.fa; ln -s /data/file file.txt; ln -s /data/seq seq_1.fa"
         lines.size() == 1
 
     }
@@ -197,7 +196,7 @@ class SimpleFileCopyStrategyTest extends Specification {
                 ln -s /some/file.txt hello.txt
                 mkdir -p dir/to && ln -s /other/file.txt dir/to/file.txt
                 '''
-                .stripIndent().leftTrim()
+                .stripIndent().trim()
 
     }
 
@@ -217,7 +216,7 @@ class SimpleFileCopyStrategyTest extends Specification {
                 cp -fRL /some/file.txt hello.txt
                 mkdir -p dir/to && cp -fRL /other/file.txt dir/to/file.txt
                 '''
-                .stripIndent().leftTrim()
+                .stripIndent().trim()
 
     }
 
@@ -234,11 +233,12 @@ class SimpleFileCopyStrategyTest extends Specification {
         def script = strategy.getUnstageOutputFilesScript(outputs, target)
         then:
         script == '''
+                # copy output files
                 mkdir -p /target/work\\ dir
                 cp -fRL simple.txt /target/work\\ dir || true
                 mkdir -p /target/work\\ dir/my/path && cp -fRL my/path/file.bam /target/work\\ dir/my/path || true
                 '''
-                .stripIndent().rightTrim()
+                .stripIndent().trim()
 
     }
 
@@ -254,11 +254,12 @@ class SimpleFileCopyStrategyTest extends Specification {
         def script = strategy.getUnstageOutputFilesScript(outputs,target)
         then:
         script == '''
+                # copy output files
                 mkdir -p /target/work\\'s
                 rsync -rRl simple.txt /target/work\\'s || true
                 rsync -rRl my/path/file.bam /target/work\\'s || true
                 '''
-                .stripIndent().rightTrim()
+                .stripIndent().trim()
 
     }
 
@@ -286,5 +287,42 @@ class SimpleFileCopyStrategyTest extends Specification {
         cleanup:
         workDir.deleteDir()
     }
+
+    def 'should return cp script to unstage output files to S3' () {
+
+        given:
+        def outputs =  [ 'simple.txt', 'my/path/file.bam' ]
+        def task = new TaskBean()
+        def target = Mock(Path)
+        def strategy = Spy(SimpleFileCopyStrategy, constructorArgs: [task])
+
+        when:
+        def script = strategy.getUnstageOutputFilesScript(outputs, target)
+        then:
+        1 * strategy.getAwsOptions() >> new AwsOptions()
+        3 * strategy.getPathScheme(target) >> 's3'
+        2 * target.toString() >> '/foo/bar'
+        script == '''
+                # aws helper
+                nxf_s3_upload() {
+                    local pattern=$1
+                    local s3path=$2
+                    for name in $pattern;do
+                      if [[ -d "$name" ]]; then
+                        aws s3 cp $name $s3path/$name --quiet --recursive --storage-class STANDARD
+                      else
+                        aws s3 cp $name $s3path/$name --quiet --storage-class STANDARD
+                      fi
+                  done
+                }
+
+                # copy output files
+                nxf_s3_upload 'simple.txt' s3://foo/bar || true
+                nxf_s3_upload 'my/path/file.bam' s3://foo/bar || true
+                '''
+                .stripIndent().trim()
+
+    }
+
 
 }

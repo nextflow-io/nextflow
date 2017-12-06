@@ -445,6 +445,7 @@ class BashWrapperBuilder {
          */
         def stagingScript = copyStrategy.getStageInputFilesScript(resolvedInputs)
         if( stagingScript ) {
+            wrapper << '# stage input files' << ENDL
             wrapper << stagingScript << ENDL
         }
 

@@ -82,7 +82,7 @@ class AwsBatchScriptLauncherTest extends Specification {
 
                 on_exit() {
                   exit_status=\${ret:=\$?}
-                  printf \$exit_status | /conda/bin/aws s3 cp - s3:/${folder}/.exitcode || true
+                  printf \$exit_status | /conda/bin/aws --region eu-west-1 s3 cp - s3:/${folder}/.exitcode || true
                   set +u
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
@@ -107,24 +107,24 @@ class AwsBatchScriptLauncherTest extends Specification {
                     local s3path=\$2
                     for name in \$pattern;do
                       if [[ -d "\$name" ]]; then
-                        /conda/bin/aws s3 cp \$name \$s3path/\$name --quiet --recursive --storage-class STANDARD
+                        /conda/bin/aws --region eu-west-1 s3 cp \$name \$s3path/\$name --quiet --recursive --storage-class STANDARD
                       else
-                        /conda/bin/aws s3 cp \$name \$s3path/\$name --quiet --storage-class STANDARD
+                        /conda/bin/aws --region eu-west-1 s3 cp \$name \$s3path/\$name --quiet --storage-class STANDARD
                       fi
                   done
                 }
 
-                echo start | /conda/bin/aws s3 cp - s3:/${folder}/.command.begin
+                echo start | /conda/bin/aws --region eu-west-1 s3 cp - s3:/${folder}/.command.begin
                 # task environment
                 export FOO="1"
                 export BAR="any"
 
                 [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
+                # stage input files
                 rm -f .command.sh
                 rm -f .command.in
-                /conda/bin/aws s3 cp --quiet s3:/${folder}/.command.sh .command.sh
-                /conda/bin/aws s3 cp --quiet s3:/${folder}/.command.in .command.in
-
+                /conda/bin/aws --region eu-west-1 s3 cp --quiet s3:/${folder}/.command.sh .command.sh
+                /conda/bin/aws --region eu-west-1 s3 cp --quiet s3:/${folder}/.command.in .command.in
 
                 set +e
                 COUT=\$PWD/.command.po; mkfifo "\$COUT"
@@ -159,7 +159,7 @@ class AwsBatchScriptLauncherTest extends Specification {
          * simple bash run
          */
         when:
-        def opts = Mock(AwsOptions)
+        def opts = new AwsOptions()
         def bash = new AwsBatchScriptLauncher([
                 name: 'Hello 1',
                 workDir: folder,
@@ -257,13 +257,13 @@ class AwsBatchScriptLauncherTest extends Specification {
 
                 echo start | aws s3 cp - s3:/${folder}/.command.begin
                 [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
+                # stage input files
                 rm -f .command.sh
                 rm -f .command.stub
                 rm -f .command.in
                 aws s3 cp --quiet s3:/${folder}/.command.sh .command.sh
                 aws s3 cp --quiet s3:/${folder}/.command.stub .command.stub
                 aws s3 cp --quiet s3:/${folder}/.command.in .command.in
-
 
                 set +e
                 COUT=\$PWD/.command.po; mkfifo "\$COUT"

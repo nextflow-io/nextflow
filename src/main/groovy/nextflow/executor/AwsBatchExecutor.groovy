@@ -25,6 +25,7 @@ import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Nextflow
+import nextflow.Session
 import nextflow.cloud.aws.AmazonCloudDriver
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessUnrecoverableException
@@ -97,7 +98,7 @@ class AwsBatchExecutor extends Executor {
 
     @PackageScope
     Path getRemoteBinDir() {
-            remoteBinDir
+        remoteBinDir
     }
 
     @PackageScope
@@ -447,13 +448,8 @@ class AwsBatchTaskHandler extends TaskHandler {
 
         // the cmd list to launch it
         def opts = getAwsOptions()
-        def aws = opts.cliPath ?: 'aws'
+        def aws = opts.getAwsCli()
         def cmd = "$aws s3 cp s3:/${getWrapperFile()} - | bash 2>&1 | $aws s3 cp - s3:/${getLogFile()}"
-        // prepend with AWS region if required
-        // note: this guarantees that the region is defined before any `aws` command is run and it's inherited by the main script
-        if( opts.region ) {
-            cmd = "export AWS_DEFAULT_REGION='$opts.region'; " + cmd
-        }
         // final launcher command
         def cli = ['bash','-o','pipefail','-c', cmd.toString() ] as List<String>
 
@@ -570,26 +566,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      * etc.
      */
     String getBeforeStartScript() {
-
-        final cli = opts.cliPath ?: 'aws'
-        final storage = opts.storageClass ?: 'STANDARD'
-		final encryption = opts.storageEncryption ? "--sse $opts.storageEncryption " : ''
-
-        """
-        # aws helper
-        nxf_s3_upload() {
-            local pattern=\$1
-            local s3path=\$2
-            for name in \$pattern;do
-              if [[ -d "\$name" ]]; then
-                $cli s3 cp \$name \$s3path/\$name --quiet --recursive $encryption--storage-class $storage
-              else
-                $cli s3 cp \$name \$s3path/\$name --quiet $encryption--storage-class $storage
-              fi
-          done
-        }
-        """.stripIndent()
-
+        S3Helper.getUploaderScript(opts)
     }
 
     /**
@@ -608,7 +585,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
             copy.remove('PATH')
         // when a remote bin directory is provide managed it properly
         if( opts.remoteBinDir ) {
-            result << "${opts.cliPath?:'aws'} s3 cp --recursive --quiet s3:/${opts.remoteBinDir} \$PWD/nextflow-bin\n"
+            result << "${opts.getAwsCli()} s3 cp --recursive --quiet s3:/${opts.remoteBinDir} \$PWD/nextflow-bin\n"
             result << "chmod +x \$PWD/nextflow-bin/*\n"
             result << "export PATH=\$PWD/nextflow-bin:\$PATH\n"
         }
@@ -624,8 +601,8 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String stageInputFile( Path path, String targetName ) {
-        final cli = opts.cliPath ?: 'aws'
-        def op = "$cli s3 cp --quiet "
+        final aws = opts.getAwsCli()
+        def op = "$aws s3 cp --quiet "
         if( path.isDirectory() ) {
             op += "--recursive "
         }
@@ -660,8 +637,8 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String touchFile( Path file ) {
-        final cli = opts.cliPath ?: 'aws'
-        "echo start | $cli s3 cp - s3:/${Escape.path(file)}"
+        final aws = opts.getAwsCli()
+        "echo start | $aws s3 cp - s3:/${Escape.path(file)}"
     }
 
     /**
@@ -684,8 +661,8 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      * {@inheritDoc}
      */
     String exitFile( Path path ) {
-        final cli = opts.cliPath ?: 'aws'
-        "| $cli s3 cp - s3:/${Escape.path(path)} || true"
+        final aws = opts.getAwsCli()
+        "| $aws s3 cp - s3:/${Escape.path(path)} || true"
     }
 
     /**
@@ -716,6 +693,14 @@ class AwsOptions {
 
     String region
 
+    AwsOptions() { }
+
+    AwsOptions(Session session) {
+        storageClass = session.config.navigate('aws.client.uploadStorageClass') as String
+        storageEncryption = session.config.navigate('aws.client.storageEncryption') as String
+        region = session.config.navigate('aws.region') as String
+    }
+
     void setStorageClass(String value) {
         if( value in [null, 'STANDARD', 'REDUCED_REDUNDANCY'])
             this.storageClass = value
@@ -740,4 +725,39 @@ class AwsOptions {
         }
     }
 
+    String getAwsCli() {
+        def result = getCliPath()
+        if( !result ) result = 'aws'
+        if( region ) result += " --region $region"
+        return result
+    }
 }
+
+/**
+ * AWS S3 helper class
+ */
+class S3Helper {
+
+    static String getUploaderScript(AwsOptions opts) {
+        def cli = opts.getAwsCli()
+        def storage = opts.storageClass ?: 'STANDARD'
+        def encryption = opts.storageEncryption ? "--sse $opts.storageEncryption " : ''
+
+        """
+        # aws helper
+        nxf_s3_upload() {
+            local pattern=\$1
+            local s3path=\$2
+            for name in \$pattern;do
+              if [[ -d "\$name" ]]; then
+                $cli s3 cp \$name \$s3path/\$name --quiet --recursive $encryption--storage-class $storage
+              else
+                $cli s3 cp \$name \$s3path/\$name --quiet $encryption--storage-class $storage
+              fi
+          done
+        }
+        """.stripIndent()
+    }
+
+}
+
