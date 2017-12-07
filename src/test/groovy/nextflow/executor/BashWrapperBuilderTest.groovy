@@ -309,10 +309,143 @@ class BashWrapperBuilderTest extends Specification {
                 wait \$tee1 \$tee2
                 cp .command.out ${folder}/.command.out || true
                 cp .command.err ${folder}/.command.err || true
-                # copy output files
-                mkdir -p ${folder}
-                cp -fRL test.bam ${folder} || true
-                cp -fRL test.bai ${folder} || true
+                # copies output files to target
+                if [[ \${ret:=0} == 0 ]]; then
+                  mkdir -p ${folder}
+                  cp -fRL test.bam ${folder} || true
+                  cp -fRL test.bai ${folder} || true
+                fi
+                """
+                        .stripIndent().leftTrim()
+
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+
+    def 'test bash wrapper with inputs and outputs with s3 target' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def target = Mock(Path)
+        target.toString() >> '/some/bucket'
+
+        def bean = new TaskBean([
+                name: 'Hello 1',
+                workDir: folder,
+                targetDir: target,
+                scratch: true,
+                outputFiles: ['test.bam','test.bai'],
+                script: 'echo Hello world!',
+                headerScript: '#BSUB -x 1\n#BSUB -y 2'
+            ])
+
+        def copy = Spy(SimpleFileCopyStrategy, constructorArgs:[bean])
+        copy.getPathScheme(target) >> 's3'
+        copy.getAwsOptions() >> new AwsOptions()
+
+        /*
+         * simple bash run
+         */
+        when:
+        def bash = new BashWrapperBuilder(bean,copy)
+        bash.build()
+
+        then:
+        folder.resolve('.command.run').text ==
+                """
+                #!/bin/bash
+                #BSUB -x 1
+                #BSUB -y 2
+                # NEXTFLOW TASK: Hello 1
+                set -e
+                set -u
+                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 1 ]] && set -x
+
+                nxf_env() {
+                    echo '============= task environment ============='
+                    env | sort | sed "s/\\(.*\\)AWS\\(.*\\)=\\(.\\{6\\}\\).*/\\1AWS\\2=\\3xxxxxxxxxxxxx/"
+                    echo '============= task output =================='
+                }
+
+                nxf_kill() {
+                    declare -a ALL_CHILD
+                    while read P PP;do
+                        ALL_CHILD[\$PP]+=" \$P"
+                    done < <(ps -e -o pid= -o ppid=)
+
+                    walk() {
+                        [[ \$1 != \$\$ ]] && kill \$1 2>/dev/null || true
+                        for i in \${ALL_CHILD[\$1]:=}; do walk \$i; done
+                    }
+
+                    walk \$1
+                }
+
+                nxf_mktemp() {
+                    local base=\${1:-/tmp}
+                    if [[ \$(uname) = Darwin ]]; then mktemp -d \$base/nxf.XXXXXXXXXX
+                    else TMPDIR="\$base" mktemp -d -t nxf.XXXXXXXXXX
+                    fi
+                }
+
+                on_exit() {
+                  exit_status=\${ret:=\$?}
+                  printf \$exit_status > ${folder}/.exitcode
+                  set +u
+                  [[ "\$COUT" ]] && rm -f "\$COUT" || true
+                  [[ "\$CERR" ]] && rm -f "\$CERR" || true
+                  rm -rf \$NXF_SCRATCH || true
+                  exit \$exit_status
+                }
+
+                on_term() {
+                    set +e
+                    [[ "\$pid" ]] && nxf_kill \$pid
+                }
+
+                trap on_exit EXIT
+                trap on_term TERM INT USR1 USR2
+
+                NXF_SCRATCH="\$(set +u; nxf_mktemp \$TMPDIR)"
+                [[ \$NXF_DEBUG > 0 ]] && nxf_env
+                # aws helper
+                nxf_s3_upload() {
+                    local pattern=\$1
+                    local s3path=\$2
+                    for name in \$pattern;do
+                      if [[ -d "\$name" ]]; then
+                        aws s3 cp \$name \$s3path/\$name --quiet --recursive --storage-class STANDARD
+                      else
+                        aws s3 cp \$name \$s3path/\$name --quiet --storage-class STANDARD
+                      fi
+                  done
+                }
+
+                touch ${folder}/.command.begin
+                [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
+
+                set +e
+                COUT=\$PWD/.command.po; mkfifo "\$COUT"
+                CERR=\$PWD/.command.pe; mkfifo "\$CERR"
+                tee .command.out < "\$COUT" &
+                tee1=\$!
+                tee .command.err < "\$CERR" >&2 &
+                tee2=\$!
+                (
+                /bin/bash -ue ${folder}/.command.sh
+                ) >"\$COUT" 2>"\$CERR" &
+                pid=\$!
+                wait \$pid || ret=\$?
+                wait \$tee1 \$tee2
+                cp .command.out ${folder}/.command.out || true
+                cp .command.err ${folder}/.command.err || true
+                # copies output files to target
+                if [[ \${ret:=0} == 0 ]]; then
+                  nxf_s3_upload 'test.bam' s3://some/bucket || true
+                  nxf_s3_upload 'test.bai' s3://some/bucket || true
+                fi
                 """
                         .stripIndent().leftTrim()
 

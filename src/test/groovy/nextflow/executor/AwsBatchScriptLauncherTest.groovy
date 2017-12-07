@@ -280,9 +280,11 @@ class AwsBatchScriptLauncherTest extends Specification {
                 wait \$tee1 \$tee2
                 nxf_s3_upload .command.out s3:/${folder} || true
                 nxf_s3_upload .command.err s3:/${folder} || true
-
-                nxf_s3_upload 'foo.txt' s3:/${folder} || true
-                nxf_s3_upload 'bar.fastq' s3:/${folder} || true
+                # copies output files to target
+                if [[ \${ret:=0} == 0 ]]; then
+                  nxf_s3_upload 'foo.txt' s3:/${folder} || true
+                  nxf_s3_upload 'bar.fastq' s3:/${folder} || true
+                fi
                 nxf_s3_upload .command.trace s3:/${folder} || true
                 """
                         .stripIndent().leftTrim()

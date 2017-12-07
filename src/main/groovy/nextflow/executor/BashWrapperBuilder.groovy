@@ -478,8 +478,12 @@ class BashWrapperBuilder {
         }
 
         def unstagingScript
-        if( (changeDir || workDir != targetDir) && (unstagingScript=copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)) )
-            wrapper << unstagingScript << ENDL
+        if( (changeDir || workDir != targetDir) && (unstagingScript=copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)) ) {
+            wrapper << '# copies output files to target' << ENDL
+            wrapper << 'if [[ ${ret:=0} == 0 ]]; then' << ENDL
+            wrapper << unstagingScript.trim().indent('  ')
+            wrapper << 'fi' << ENDL
+        }
 
         if( changeDir && statsEnabled )
             wrapper << copyFileToWorkDir(TaskRun.CMD_TRACE) << ' || true' << ENDL
