@@ -233,7 +233,6 @@ class SimpleFileCopyStrategyTest extends Specification {
         def script = strategy.getUnstageOutputFilesScript(outputs, target)
         then:
         script == '''
-                # copy output files
                 mkdir -p /target/work\\ dir
                 cp -fRL simple.txt /target/work\\ dir || true
                 mkdir -p /target/work\\ dir/my/path && cp -fRL my/path/file.bam /target/work\\ dir/my/path || true
@@ -254,7 +253,6 @@ class SimpleFileCopyStrategyTest extends Specification {
         def script = strategy.getUnstageOutputFilesScript(outputs,target)
         then:
         script == '''
-                # copy output files
                 mkdir -p /target/work\\'s
                 rsync -rRl simple.txt /target/work\\'s || true
                 rsync -rRl my/path/file.bam /target/work\\'s || true
@@ -299,24 +297,9 @@ class SimpleFileCopyStrategyTest extends Specification {
         when:
         def script = strategy.getUnstageOutputFilesScript(outputs, target)
         then:
-        1 * strategy.getAwsOptions() >> new AwsOptions()
         3 * strategy.getPathScheme(target) >> 's3'
         2 * target.toString() >> '/foo/bar'
         script == '''
-                # aws helper
-                nxf_s3_upload() {
-                    local pattern=$1
-                    local s3path=$2
-                    for name in $pattern;do
-                      if [[ -d "$name" ]]; then
-                        aws s3 cp $name $s3path/$name --quiet --recursive --storage-class STANDARD
-                      else
-                        aws s3 cp $name $s3path/$name --quiet --storage-class STANDARD
-                      fi
-                  done
-                }
-
-                # copy output files
                 nxf_s3_upload 'simple.txt' s3://foo/bar || true
                 nxf_s3_upload 'my/path/file.bam' s3://foo/bar || true
                 '''

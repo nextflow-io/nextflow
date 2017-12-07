@@ -55,6 +55,11 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     String separatorChar = '\n'
 
+    /**
+     * Target output folder
+     */
+    Path targetDir
+
     private FilePorter porter
 
     SimpleFileCopyStrategy() { }
@@ -62,6 +67,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
     SimpleFileCopyStrategy( TaskBean bean ) {
         this.stageinMode = bean.stageInMode
         this.stageoutMode = bean.stageOutMode
+        this.targetDir = bean.targetDir
     }
 
     @Override
@@ -141,7 +147,9 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         // create a bash script that will copy the out file to the working directory
         log.trace "Unstaging file path: $normalized"
         if( normalized ) {
-            result << getUnstagePrefix(targetDir)
+            def prefix = getUnstagePrefix(targetDir)
+            if( prefix )
+                result << prefix
             for( int i=0; i<normalized.size(); i++ ) {
                 final path = normalized[i]
                 final cmd = stageOutCommand(path, targetDir, stageoutMode) + ' || true' // <-- add true to avoid it stops on errors
@@ -171,25 +179,16 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
     }
 
     protected String getPathScheme(Path path) {
-        path.getFileSystem().provider().getScheme()
+        path?.getFileSystem()?.provider()?.getScheme()
     }
 
     protected String getUnstagePrefix(Path targetDir) {
-
         final scheme = getPathScheme(targetDir)
         if( scheme == 'file' ) {
-            def result = "# copy output files\n"
-            result += "mkdir -p ${Escape.path(targetDir)}"
-            return result
+            return "mkdir -p ${Escape.path(targetDir)}"
         }
-        else if( scheme == 's3' ) {
-            def result = S3Helper.getUploaderScript(getAwsOptions()).leftTrim()
-            result += "\n# copy output files"
-            return result
-        }
-        else {
-            throw new IllegalArgumentException("Unsupported target path: ${targetDir.toUriString()}")
-        }
+        else
+            return null
     }
 
     /**
@@ -286,6 +285,9 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
 
     @Override
     String getBeforeStartScript() {
+        if( getPathScheme(targetDir) == 's3' ) {
+            return S3Helper.getUploaderScript(getAwsOptions()).leftTrim()
+        }
         return null
     }
 
