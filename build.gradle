@@ -89,6 +89,7 @@ allprojects {
         testCompile ("org.objenesis:objenesis:1.4")
         testCompile ("org.spockframework:spock-core:1.1-groovy-2.4")
         testCompile 'com.google.jimfs:jimfs:1.0'
+        testCompile 'com.icegreen:greenmail:1.5.5'
         // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sec:module_replacement
         modules {
             module("commons-logging:commons-logging") { replacedBy("org.slf4j:jcl-over-slf4j") }
