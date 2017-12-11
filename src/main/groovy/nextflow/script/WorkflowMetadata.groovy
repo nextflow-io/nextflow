@@ -19,6 +19,7 @@
  */
 
 package nextflow.script
+
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -217,6 +218,7 @@ class WorkflowMetadata {
      */
     void onComplete( Closure action ) {
 
+        //  SendEmail();
         final clone = (Closure)action.clone()
         clone.delegate = owner.session.binding.variables
         clone.resolveStrategy = Closure.DELEGATE_FIRST
