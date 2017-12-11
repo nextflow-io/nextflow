@@ -1,6 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.26.4 - 11 Dec 2017
+ - Fixed GitLab auth token is not applied when user credentials are not provided #542
+
 0.26.3 - 30 Nov 2017
 - Fixed AWS Batch S3 upload function does not work if output is a directory #539 
 - Fixed AWS Batch S3 uploaded function does not resolve glob patterns containing curly brackets #535
