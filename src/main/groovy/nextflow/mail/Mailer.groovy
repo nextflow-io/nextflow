@@ -19,20 +19,26 @@
  */
 
 package nextflow.mail
-import javax.activation.DataHandler
-import javax.activation.FileDataSource
+
 import javax.mail.Message
 import javax.mail.MessagingException
 import javax.mail.Session
+import javax.mail.internet.HeaderTokenizer
 import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeBodyPart
 import javax.mail.internet.MimeMessage
 import javax.mail.internet.MimeMultipart
-import java.nio.file.Path
+import javax.mail.internet.MimeUtility
+import java.nio.charset.Charset
+import java.util.regex.Pattern
 
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.util.Duration
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+import org.jsoup.parser.Parser
+import org.jsoup.safety.Whitelist
 /**
  * This class implements the send mail functionality
  *
@@ -42,7 +48,11 @@ import nextflow.util.Duration
 @Slf4j
 class Mailer {
 
+    private Pattern HTML_TAG = ~/\<[a-zA-Z]+[\S^\>]*\>/
+
     private long SEND_MAIL_TIMEOUT = 15_000
+
+    private static String DEF_CHARSET = Charset.defaultCharset().toString()
 
     private String protocol = 'smtp'
 
@@ -63,88 +73,18 @@ class Mailer {
 
     private Map env = System.getenv()
 
+    private String _sysMailer
+
     Mailer setConfig( Map params ) {
         if( params )
             this.config.putAll(params)
-
-        if( params.attach )
-            setAttachment(params.attach)
-
         return this
     }
 
-    /**
-     * Mail TO recipients (addresses must follow RFC822 syntax).
-     * Multiple addresses can be separated by a comma.
-     */
-    String getTo() { config.to }
-
-    Mailer setTo(String value) {
-        config.to = value
-        return this
-    }
-
-    /**
-     * Mail sender (addresses must follow RFC822 syntax)
-     * Multiple addresses can be separated by a comma
-     */
-    String getFrom() { config.from }
-
-    Mailer setFrom(String value) {
-        config.from = value
-        return this
-    }
-
-    /**
-     * Mail subject
-     */
-    String getSubject() { config.subject }
-
-    Mailer setSubject(String value) {
-        config.subject = value
-        return this
-    }
-
-    /**
-     * Mail content
-     */
-    String getContent() { config.content }
-
-    Mailer setContent(String value) {
-        config.content = value
-        return this
-    }
-
-    /**
-     * Mail content mime-type
-     */
-    String getType() { config.type ?: 'text/plain' }
-
-    Mailer setType(String value) {
-        config.type = value
-        return this
-    }
-
-    /**
-     * Mail CC recipients (addresses must follow RFC822 syntax).
-     * Multiple addresses can be separated by a comma.
-     */
-    String getCc() { config.cc }
-
-    Mailer setCc(String value) {
-        config.cc = value
-        return this
-    }
-
-    /**
-     * Mail CCC recipients (addresses must follow RFC822 syntax).
-     * Multiple addresses can be separated by a comma.
-     */
-    String getBcc() { config.bcc }
-
-    Mailer setBcc(String value) {
-        config.bcc = value
-        return this
+    protected String getSysMailer() {
+        if( !_sysMailer )
+            _sysMailer = findSysMailer()
+        return _sysMailer
     }
 
     @Memoized
@@ -157,7 +97,6 @@ class Mailer {
         else if( runCommand("command -v mail &>/dev/null") == 0  )
             return 'mail'
 
-        log.warn "Missing system mail command -- Make sure to have either `sendmail` or `mail` tool installed otherwise configure your mail server properties in the nextflow config file"
         return null
     }
 
@@ -207,19 +146,31 @@ class Mailer {
         return session
     }
 
-    String getHost() {
+    /**
+     * @return The SMTP host name or IP address
+     */
+    protected String getHost() {
         getConfig('host')
     }
 
+    /**
+     * @return The SMTP host port
+     */
     protected int getPort() {
         def port = getConfig('port')
         port ? port as int : -1
     }
 
+    /**
+     * @return The SMTP user name
+     */
     protected String getUser() {
         getConfig('user')
     }
 
+    /**
+     * @return The SMTP user password
+     */
     protected String getPassword() {
        getConfig('password')
     }
@@ -234,6 +185,11 @@ class Mailer {
         return value
     }
 
+    /**
+     * Send a email message by using the Java API
+     *
+     * @param message A {@link MimeMessage} object representing the email to send
+     */
     protected void sendViaJavaMail(MimeMessage message) {
 
         final transport = getSession().getTransport()
@@ -251,10 +207,15 @@ class Mailer {
         return timeout ? timeout.toMillis() : SEND_MAIL_TIMEOUT
     }
 
-    protected void sendViaSendmail(MimeMessage message) {
-
-        def cmd = ['sendmail','-t']
-        def proc = new ProcessBuilder()
+    /**
+     * Send a email message by using system tool such as `sendmail` or `mail`
+     *
+     * @param message A {@link MimeMessage} object representing the email to send
+     */
+    protected void sendViaSysMail(MimeMessage message) {
+        final mailer = getSysMailer()
+        final cmd = [mailer, '-t']
+        final proc = new ProcessBuilder()
                         .command(cmd)
                         .redirectErrorStream(true)
                         .start()
@@ -268,135 +229,175 @@ class Mailer {
         proc.waitForOrKill(sendTimeout)
         def status = proc.exitValue()
         if( status != 0 ) {
-            throw new MessagingException("Unable to send mail message\n  sendmail exit status: $status\n  reported error: $stdout")
+            throw new MessagingException("Unable to send mail message\n  $mailer exit status: $status\n  reported error: $stdout")
         }
     }
 
     /**
      * @return A multipart mime message representing the mail message to send
      */
-    protected MimeMessage createMimeMessage() {
+    protected MimeMessage createMimeMessage0(Mail mail) {
 
         final msg = new MimeMessage(getSession())
 
-        if( subject )
-            msg.setSubject(subject)
+        if( mail.subject )
+            msg.setSubject(mail.subject)
 
-        if( to )
-            msg.setRecipients(Message.RecipientType.TO, to)
+        if( mail.from )
+            msg.addFrom(InternetAddress.parse(mail.from))
 
-        if( cc )
-            msg.setRecipients(Message.RecipientType.CC, cc)
+        if( mail.to )
+            msg.setRecipients(Message.RecipientType.TO, mail.to)
 
-        if( bcc )
-            msg.setRecipients(Message.RecipientType.BCC, bcc)
+        if( mail.cc )
+            msg.setRecipients(Message.RecipientType.CC, mail.cc)
 
-        if( from )
-            msg.addFrom(InternetAddress.parse(from))
-
-        MimeMultipart multipart = new MimeMultipart()
-
-        if( content ) {
-            def main = new MimeBodyPart()
-            main.setContent( content, type )
-            multipart.addBodyPart(main)
-            msg.setContent(multipart)
-        }
-
-        // -- attachment
-        for( File file : attachments ) {
-            def attach = new MimeBodyPart()
-            def source = new FileDataSource(file)
-            attach.setDataHandler(new DataHandler(source))
-            attach.setFileName(file.getName())
-            multipart.addBodyPart(attach)
-        }
+        if( mail.bcc )
+            msg.setRecipients(Message.RecipientType.BCC, mail.bcc)
 
         return msg
     }
 
-    List<File> getAttachments() { attachments }
 
-    Mailer addAttachment( attach ) {
-        if( attachments==null )
-            attachments = []
+    /**
+     * @return A multipart mime message representing the mail message to send
+     */
+    protected MimeMessage createMimeMessage(Mail mail) {
 
-        if( attach instanceof Collection ) {
-            attach.each { attach0(it) }
+        final result = createMimeMessage0(mail)
+        final multipart = new MimeMultipart("alternative")
+        final charset = mail.charset ?: DEF_CHARSET
+
+        if( mail.text ) {
+            def part = new MimeBodyPart()
+            part.setText(mail.text, charset)
+            multipart.addBodyPart(part)
         }
-        else if( attach instanceof Object[] ) {
-            attach.each { attach0(it) }
-        }
-        else
-            attach0(attach)
 
-        return this
+
+        if( mail.body ) {
+            def part = new MimeBodyPart()
+            def type = mail.type ?: guessMimeType(mail.body)
+            if( !type.contains('charset=') )
+                type = "$type; charset=${MimeUtility.quote(charset, HeaderTokenizer.MIME)}"
+            part.setContent(mail.body, type)
+            multipart.addBodyPart(part)
+        }
+
+        // -- attachment
+        for( File file : mail.attachments ) {
+            if( !file.exists() )
+                throw new MessagingException("The following attachment file does not exist: $file")
+            def attachment = new MimeBodyPart()
+            attachment.attachFile(file)
+            multipart.addBodyPart(attachment)
+        }
+
+        result.setContent(multipart)
+        return result
     }
 
-    Mailer setAttachment( attach ) {
-        attachments = []
-        addAttachment(attach)
+
+    /**
+     * Creates a pure text email message. It cannot contains attachments
+     *
+     * @param mail The {@link Mail} object representing the message to send
+     * @return A {@link MimeMessage} object instance
+     */
+    protected MimeMessage createTextMessage(Mail mail) {
+        final result = createMimeMessage0(mail)
+        final charset = mail.charset ?: DEF_CHARSET
+        final text = mail.text ?: stripHtml(mail.body)
+        result.setText(text, charset)
+        return result
     }
 
     /**
-     * Add a single item to the list of file attachments
-     * @param attach either a {@link File}, {@link Path} or a string file path
+     * Converts an HTML text to a plain text message
+     *
+     * @param html The html string to strip
      */
-    private void attach0( attach ) {
-        if( attach instanceof File ) {
-            attachments.add(attach)
-        }
-        else if( attach instanceof Path ) {
-            attachments.add(attach.toFile())
-        }
-        else if( attach instanceof String || attach instanceof GString ) {
-            attachments.add(new File(attach.toString()))
-        }
-        else if( attach != null )
-            throw new IllegalArgumentException("Invalid attachment argument: $attach [${attach.getClass()}]")
+    protected String stripHtml(String html) {
+        if( !html )
+            return html
+
+        if( !guessHtml(html) )
+            return html
+
+        Document document = Jsoup.parse(html);
+        document.outputSettings(new Document.OutputSettings().prettyPrint(false));//makes html() preserve linebreaks and spacing
+        document.select("br").append("\\n");
+        document.select("p").prepend("\\n");
+        String s = document.html().replaceAll("\\\\n", "\n");
+        def result = Jsoup.clean(s, "", Whitelist.none(), new Document.OutputSettings().prettyPrint(false));
+        Parser.unescapeEntities(result, false)
+    }
+
+    protected boolean guessHtml(String str) {
+        HTML_TAG.matcher(str).find()
+    }
+
+    protected String guessMimeType(String str) {
+        guessHtml(str) ? 'text/html' : 'text/plain'
     }
 
     /**
      * Send the mail given the provided config setting
      */
-    void send() {
-        log.trace "Mailer config: $config"
 
-        def msg = createMimeMessage()
+    void send(Mail mail) {
+        log.trace "Mailer config: $config -- mail: $mail"
 
         // if the user provided required configuration
         // send via Java Mail API
         if( config.containsKey(protocol) ) {
-            log.trace "Mailer send via javamail"
+            log.trace "Mailer send via `javamail`"
+            def msg = createMimeMessage(mail)
             sendViaJavaMail(msg)
+            return
         }
+
+        final mailer = getSysMailer()
         // otherwise fallback on system sendmail
-        else {
-            log.trace "Mailer send via sendmail"
-            sendViaSendmail(msg)
+        if( mailer == 'sendmail' ) {
+            log.trace "Mailer send via `sendmail`"
+            def msg = createMimeMessage(mail)
+            sendViaSysMail(msg)
+            return
         }
+
+        if( mailer == 'mail' ) {
+            log.trace "Mailer send via `mail`"
+            def msg = createTextMessage(mail)
+            sendViaSysMail(msg)
+            return
+        }
+
+        def msg = (mailer
+                ? "Unknown system mail tool: $mailer"
+                : "Cannot send email message -- Make sure you have installed `sendmail` or `mail` program or configure a mail SMTP server in the nextflow config file"
+        )
+        throw new IllegalArgumentException(msg)
     }
 
-
     /**
-     * Send a mail message
+     * Send a mail given a parameter map
      *
      * @param params
-     *      The following named parameter can be specified:
-     *      - from: mail sender address (multiple addresses can be separated by a comma)
-     *      - to: mail TO recipients (multiple addresses can be separated by a comma)
-     *      - cc: mail CC recipients (multiple addresses can be separated by a comma)
-     *      - bcc: mail BCC recipients (multiple addresses can be separated by a comma)
-     *      - content: mail content
-     *      - type: mail content mime-type
-     *      - attach: file attachment (multiple attachments can be specified as a List of file objects)
+     *      The following named parameters are supported
+     *      - from: the email sender address
+     *      - to: the email recipient address
+     *      - cc: the CC recipient address
+     *      - bcc: the BCC recipient address
+     *      - subject: the email subject
+     *      - charset: the email content charset
+     *      - type: the email body mime-type
+     *      - text: the email plain text alternative content
+     *      - body: the email body content (HTML)
+     *      - attach: he email attachment
      */
-    void send( Map params ) {
-        config.putAll(params)
-        if( params.attach )
-            setAttachment(params.attach)
-
-        send()
+    void send(Map params) {
+        send(Mail.of(params))
     }
 
 
@@ -411,7 +412,7 @@ class Mailer {
      *          from 'your@name.com'
      *          attach '/some/file/path'
      *          subject 'Hello'
-     *          content '''
+     *          body '''
      *           Hi there,
      *           Hope this email find you well
      *          '''
@@ -419,12 +420,14 @@ class Mailer {
      *    <code>
      */
     void send( Closure params ) {
-        def wrapper = new MailParams()
-        def copy = (Closure)params.clone();
-        copy.setResolveStrategy(Closure.DELEGATE_ONLY);
-        copy.setDelegate(wrapper);
-        copy.call(wrapper);
-        send( wrapper.delegate )
+        def mail = new Mail()
+        def copy = (Closure)params.clone()
+        copy.setResolveStrategy(Closure.DELEGATE_ONLY)
+        copy.setDelegate(mail)
+        def body = copy.call(mail)
+        if( !mail.body && (body instanceof String || body instanceof GString))
+            mail.body(body)
+        send(mail)
     }
 
 }

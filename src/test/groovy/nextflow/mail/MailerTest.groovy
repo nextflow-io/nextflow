@@ -5,11 +5,11 @@ import javax.mail.internet.MimeMessage
 import javax.mail.internet.MimeMultipart
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 
 import com.icegreen.greenmail.util.GreenMail
 import com.icegreen.greenmail.util.ServerSetupTest
 import spock.lang.Specification
+import spock.lang.Unroll
 
 class MailerTest extends Specification {
 
@@ -49,11 +49,14 @@ class MailerTest extends Specification {
         String CONTENT = "This content should be sent by the user."
 
         when:
-        mailer.to = TO
-        mailer.from = FROM
-        mailer.subject = SUBJECT
-        mailer.content = CONTENT
-        mailer.send()
+        def mail = [
+                to: TO,
+                from: FROM,
+                subject: SUBJECT,
+                body: CONTENT
+        ]
+
+        mailer.send(mail)
 
         then:
         green.receivedMessages.size() == 1
@@ -89,12 +92,15 @@ class MailerTest extends Specification {
         ATTACH.text = 'This is the file attachment content'
 
         when:
-        mailer.from = FROM
-        mailer.to = TO
-        mailer.subject = SUBJECT
-        mailer.content = CONTENT
-        mailer.addAttachment( ATTACH )
-        mailer.send()
+        def mail = [
+                from: FROM,
+                to: TO,
+                subject: SUBJECT,
+                body: CONTENT,
+                attach: ATTACH
+        ]
+
+        mailer.send(mail)
 
         then:
         green.receivedMessages.size() == 1
@@ -116,26 +122,54 @@ class MailerTest extends Specification {
         given:
         def mailer = Spy(Mailer)
         def MSG = Mock(MimeMessage)
+        def mail = new Mail()
 
         when:
         mailer.config = [smtp: [host:'foo.com'] ]
-        mailer.send()
+        mailer.send(mail)
         then:
-        1 * mailer.createMimeMessage() >> MSG
+        0 * mailer.getSysMailer() >> null
+        1 * mailer.createMimeMessage(mail) >> MSG
         1 * mailer.sendViaJavaMail(MSG) >> null
 
     }
 
-    def 'should send with command line' () {
+    def 'should send mail with sendmail command' () {
         given:
         def mailer = Spy(Mailer)
         def MSG = Mock(MimeMessage)
+        def mail = new Mail()
 
         when:
-        mailer.send()
+        mailer.send(mail)
         then:
-        1 * mailer.createMimeMessage() >> MSG
-        1 * mailer.sendViaSendmail(MSG) >> null
+        1 * mailer.getSysMailer() >> 'sendmail'
+        1 * mailer.createMimeMessage(mail) >> MSG
+        1 * mailer.sendViaSysMail(MSG) >> null
+    }
+
+    def 'should throw an exception' () {
+        given:
+        def mailer = Spy(Mailer)
+        def mail = new Mail()
+        when:
+        mailer.send(mail)
+        then:
+        1 * mailer.getSysMailer() >> 'foo'
+        thrown(IllegalArgumentException)
+    }
+
+    def 'should send mail with mail command' () {
+        given:
+        def mailer = Spy(Mailer)
+        def MSG = Mock(MimeMessage)
+        def mail = new Mail()
+        when:
+        mailer.send(mail)
+        then:
+        1 * mailer.getSysMailer() >> 'mail'
+        1 * mailer.createTextMessage(mail) >> MSG
+        1 * mailer.sendViaSysMail(MSG) >> null
     }
 
 
@@ -143,43 +177,49 @@ class MailerTest extends Specification {
 
         given:
         MimeMessage msg
-
+        Mail mail
         when:
-        msg = new Mailer(from:'foo@gmail.com').createMimeMessage()
+        mail = new Mail(from:'foo@gmail.com')
+        msg = new Mailer().createMimeMessage(mail)
         then:
         msg.getFrom().size()==1
         msg.getFrom()[0].toString() == 'foo@gmail.com'
 
         when:
-        msg = new Mailer(from:'one@gmail.com, two@google.com').createMimeMessage()
+        mail = new Mail(from:'one@gmail.com, two@google.com')
+        msg = new Mailer().createMimeMessage(mail)
         then:
         msg.getFrom().size()==2
         msg.getFrom()[0].toString() == 'one@gmail.com'
         msg.getFrom()[1].toString() == 'two@google.com'
 
         when:
-        msg = new Mailer(to:'foo@gmail.com, bar@google.com').createMimeMessage()
+        mail = new Mail(to:'foo@gmail.com, bar@google.com')
+        msg = new Mailer().createMimeMessage(mail)
         then:
         msg.getRecipients(Message.RecipientType.TO).size()==2
         msg.getRecipients(Message.RecipientType.TO)[0].toString() == 'foo@gmail.com'
         msg.getRecipients(Message.RecipientType.TO)[1].toString() == 'bar@google.com'
 
         when:
-        msg = new Mailer(cc:'foo@gmail.com, bar@google.com').createMimeMessage()
+        mail = new Mail(cc:'foo@gmail.com, bar@google.com')
+        msg = new Mailer().createMimeMessage(mail)
         then:
         msg.getRecipients(Message.RecipientType.CC).size()==2
         msg.getRecipients(Message.RecipientType.CC)[0].toString() == 'foo@gmail.com'
         msg.getRecipients(Message.RecipientType.CC)[1].toString() == 'bar@google.com'
 
         when:
-        msg = new Mailer(bcc:'one@gmail.com, two@google.com').createMimeMessage()
+        mail = new Mail(bcc:'one@gmail.com, two@google.com')
+        msg = new Mailer().createMimeMessage(mail)
         then:
         msg.getRecipients(Message.RecipientType.BCC).size()==2
         msg.getRecipients(Message.RecipientType.BCC)[0].toString() == 'one@gmail.com'
         msg.getRecipients(Message.RecipientType.BCC)[1].toString() == 'two@google.com'
 
         when:
-        msg = new Mailer(subject: 'this is a test', content: 'Ciao mondo').createMimeMessage()
+        mail = new Mail(subject: 'this is a test', body: 'Ciao mondo')
+        msg = new Mailer().createMimeMessage(mail)
         then:
         msg.getSubject() == 'this is a test'
         msg.getContent() instanceof MimeMultipart
@@ -187,40 +227,6 @@ class MailerTest extends Specification {
         msg.getContent().getBodyPart(0).getContent() == 'Ciao mondo'
     }
 
-    def 'should add attachments' () {
-        given:
-        Mailer mail
-
-        when:
-        mail = new Mailer().addAttachment('/some/file.txt')
-        then:
-        mail.attachments == [new File('/some/file.txt')]
-
-        when:
-        mail = new Mailer().addAttachment(new File('x.txt'))
-        then:
-        mail.attachments == [new File('x.txt')]
-
-        when:
-        mail = new Mailer().addAttachment(Paths.get('x.txt'))
-        then:
-        mail.attachments == [new File('x.txt')]
-
-        when:
-        mail = new Mailer().addAttachment("file.${1}")
-        then:
-        mail.attachments == [new File('file.1')]
-
-        when:
-        mail = new Mailer().addAttachment(['foo.txt','bar.txt'])
-        then:
-        mail.attachments == [new File('foo.txt'), new File('bar.txt')]
-
-        when:
-        new Mailer().addAttachment(new Object())
-        then:
-        thrown(IllegalArgumentException)
-    }
 
     def 'should fetch config properties' () {
 
@@ -278,8 +284,6 @@ class MailerTest extends Specification {
         mailer.getPort() == 43
         mailer.getHost() == 'foo.com'
 
-        mailer.from == 'paolo@nf.com'
-        mailer.subject == 'nextflow notification'
     }
 
 
@@ -293,13 +297,80 @@ class MailerTest extends Specification {
             to 'paolo@dot.com'
             from 'yo@dot.com'
             subject 'This is a test'
-            content 'Hello there'
+            body 'Hello there'
         }
 
         then:
-        1 * mailer.send( [to: 'paolo@dot.com', from:'yo@dot.com', subject: 'This is a test', content: 'Hello there'] ) >> null
+        1 * mailer.send(Mail.of([to: 'paolo@dot.com', from:'yo@dot.com', subject: 'This is a test', body: 'Hello there'])) >> null
 
     }
 
+
+    def 'should strip html tags'  () {
+
+        given:
+        def mailer = new Mailer()
+
+        expect:
+        mailer.stripHtml('Hello') == 'Hello'
+        mailer.stripHtml('1 < 10 > 5') == '1 < 10 > 5'
+        mailer.stripHtml('<h1>1 < 5</h1>') == '1 < 5'
+        mailer.stripHtml('<h1>Big title</h1><p>Hello <b>world</b></p>') == 'Big title\nHello world'
+    }
+
+
+    def 'should capture multiline body' () {
+
+        given:
+        def mailer = Spy(Mailer)
+        def BODY = '''
+            multiline
+            mail
+            content
+            '''
+
+        when:
+        mailer.send {
+            to 'you@dot.com'
+            subject 'foo'
+            BODY
+        }
+
+        then:
+        1 * mailer.send(Mail.of([to: 'you@dot.com', subject: 'foo', body: BODY])) >> null
+
+    }
+
+    def 'should guess html content' () {
+
+        given:
+        def mailer = new Mailer()
+
+        expect:
+        !mailer.guessHtml('Hello')
+        !mailer.guessHtml('1 < 10 > 5')
+        mailer.guessHtml('<h1>1 < 5</h1>')
+        mailer.guessHtml('1<br>2')
+        mailer.guessHtml('<h1>Big title</h1><p>Hello <b>world</b></p>')
+    }
+
+    @Unroll
+    def 'should guess mime type' () {
+
+        given:
+        def mailer = new Mailer()
+
+        expect:
+        mailer.guessMimeType(str) == type
+
+        where:
+        type            | str
+        'text/plain'    | 'Hello'
+        'text/plain'    | '1 < 10 > 5'
+        'text/html'     | '<h1>1 < 5</h1>'
+        'text/html'     | '1<br>2'
+        'text/html'     | '<h1>Big title</h1><p>Hello <b>world</b></p>'
+
+    }
 
 }
