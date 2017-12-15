@@ -17,7 +17,7 @@ class StatsObserver implements TraceObserver {
 
 
     protected long getCpuTime( TraceRecord record ) {
-        // note: `realtime` field is not available when task metrics are enabled
+        // note: `realtime` field is not available when task metrics are not enabled
         if( !record.containsKey('realtime') )
             return 0
         final time = (long)record.get('realtime')
