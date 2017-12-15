@@ -108,7 +108,7 @@ class AwsBatchExecutor extends Executor {
 
     @Override
     protected TaskMonitor createTaskMonitor() {
-        TaskPollingMonitor.create(session, name, 50, Duration.of('5 sec'))
+        TaskPollingMonitor.create(session, name, 1000, Duration.of('10 sec'))
     }
 
     @Override
