@@ -4,13 +4,17 @@ import java.nio.file.Paths
 import com.amazonaws.services.batch.AWSBatchClient
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsResult
+import com.amazonaws.services.batch.model.DescribeJobsRequest
+import com.amazonaws.services.batch.model.DescribeJobsResult
 import com.amazonaws.services.batch.model.JobDefinition
+import com.amazonaws.services.batch.model.JobDetail
 import com.amazonaws.services.batch.model.KeyValuePair
 import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
 import com.amazonaws.services.batch.model.RegisterJobDefinitionResult
 import com.amazonaws.services.batch.model.RetryStrategy
 import nextflow.Session
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.processor.BatchContext
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
@@ -384,6 +388,82 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.containerProperties.volumes[0].name == 'aws-cli'
 
     }
+
+    def 'should check task status' () {
+
+        given:
+        def JOB_ID = 'job-2'
+        def client = Mock(AWSBatchClient)
+        def handler = Spy(AwsBatchTaskHandler)
+        handler.client = client
+
+        def JOB1 = new JobDetail().withJobId('job-1')
+        def JOB2 = new JobDetail().withJobId('job-2')
+        def JOB3 = new JobDetail().withJobId('job-3')
+        def JOBS = [ JOB1, JOB2, JOB3 ]
+        def resp = Mock(DescribeJobsResult)
+        resp.getJobs() >> JOBS
+
+        when:
+        def result = handler.describeJob(JOB_ID)
+        then:
+        1 * client.describeJobs(new DescribeJobsRequest().withJobs(JOB_ID)) >> resp
+        result == JOB2
+
+    }
+
+    def 'should check task status with empty batch collector' () {
+
+        given:
+        def collector = Mock(BatchContext)
+        def JOB_ID = 'job-1'
+        def client = Mock(AWSBatchClient)
+        def handler = Spy(AwsBatchTaskHandler)
+        handler.client = client
+        handler.jobId = JOB_ID
+        handler.batch(collector)
+
+        def JOB1 = new JobDetail().withJobId('job-1')
+        def JOB2 = new JobDetail().withJobId('job-2')
+        def JOB3 = new JobDetail().withJobId('job-3')
+        def JOBS = [ JOB1, JOB2, JOB3 ]
+        def RESP = Mock(DescribeJobsResult)
+        RESP.getJobs() >> JOBS
+
+        when:
+        def result = handler.describeJob(JOB_ID)
+        then:
+        1 * collector.contains(JOB_ID) >> false
+        1 * collector.getBatchFor(JOB_ID, 100) >> ['job-1','job-2','job-3']
+        1 * client.describeJobs(new DescribeJobsRequest().withJobs(['job-1','job-2','job-3'])) >> RESP
+        result == JOB1
+
+    }
+
+    def 'should check task status with cache batch collector' () {
+
+        given:
+        def collector = Mock(BatchContext)
+        def JOB_ID = 'job-1'
+        def client = Mock(AWSBatchClient)
+        def handler = Spy(AwsBatchTaskHandler)
+        handler.client = client
+        handler.jobId = JOB_ID
+        handler.batch(collector)
+
+        def JOB1 = new JobDetail().withJobId('job-1')
+
+        when:
+        def result = handler.describeJob(JOB_ID)
+        then:
+        1 * collector.contains(JOB_ID) >> true
+        1 * collector.get(JOB_ID) >> JOB1
+        0 * collector.getBatchFor(JOB_ID, 100) >> null
+        0 * client.describeJobs(_) >> null
+        result == JOB1
+
+    }
+
 
 
 }

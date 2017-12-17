@@ -8,9 +8,11 @@ import com.amazonaws.services.batch.model.ContainerOverrides
 import com.amazonaws.services.batch.model.ContainerProperties
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
 import com.amazonaws.services.batch.model.DescribeJobsRequest
+import com.amazonaws.services.batch.model.DescribeJobsResult
 import com.amazonaws.services.batch.model.Host
 import com.amazonaws.services.batch.model.JobDefinition
 import com.amazonaws.services.batch.model.JobDefinitionType
+import com.amazonaws.services.batch.model.JobDetail
 import com.amazonaws.services.batch.model.KeyValuePair
 import com.amazonaws.services.batch.model.MountPoint
 import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
@@ -30,6 +32,8 @@ import nextflow.cloud.aws.AmazonCloudDriver
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.extension.FilesEx
+import nextflow.processor.BatchContext
+import nextflow.processor.BatchHandler
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
@@ -125,7 +129,7 @@ class AwsBatchExecutor extends Executor {
  */
 @Slf4j
 @CompileStatic
-class AwsBatchTaskHandler extends TaskHandler {
+class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,JobDetail> {
 
     private final Path exitFile
 
@@ -157,6 +161,10 @@ class AwsBatchTaskHandler extends TaskHandler {
 
     final static private Map<String,String> jobDefinitions = [:]
 
+    /**
+     * Batch context shared between multiple task handlers
+     */
+    private BatchContext<String,JobDetail> context
 
     /** only for testing purpose -- do not use */
     protected AwsBatchTaskHandler() {}
@@ -205,19 +213,69 @@ class AwsBatchTaskHandler extends TaskHandler {
     }
 
     /**
+     * @param context The {@link BatchContext} object to be used
+     */
+    void batch( BatchContext<String,JobDetail> context ) {
+        if( jobId ) {
+            context.collect(jobId)
+            this.context = context
+        }
+    }
+
+    /**
+     * Retrieve Batch job status information
+     *
+     * @param jobId The Batch job ID
+     * @return The associated {@link JobDetail} object or {@code null} if no information is found
+     */
+    protected JobDetail describeJob(String jobId) {
+
+        Collection batchIds
+        if( context ) {
+            // check if this response is cached in the batch collector
+            if( context.contains(jobId) ) {
+                log.trace "[AWS BATCH] hit cache for describe job=$jobId"
+                return context.get(jobId)
+            }
+            // get next 100 job ids for which it's required to check the status
+            batchIds = context.getBatchFor(jobId, 100)
+        }
+        else {
+            batchIds = [jobId]
+        }
+
+        // retrieve the status for the specified job and along with the next batch
+        log.trace "[AWS BATCH] requesting describe jobs=$batchIds"
+        DescribeJobsResult resp = client.describeJobs(new DescribeJobsRequest().withJobs(batchIds))
+        if( !resp.getJobs() ) {
+            log.debug "[AWS BATCH] cannot retrieve running status for job=$jobId"
+            return null
+        }
+
+        JobDetail result=null
+        for( JobDetail entry : resp.jobs ) {
+            // cache the response in the batch collector
+            context?.put( entry.jobId, entry )
+            // return the job detail for the specified job
+            if( entry.jobId == jobId )
+                result = entry
+        }
+        if( !result ) {
+            log.debug "[AWS BATCH] cannot find running status for job=$jobId"
+        }
+
+        return result
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
     boolean checkIfRunning() {
         if( !jobId )
             return false
-        final resp = client.describeJobs(new DescribeJobsRequest().withJobs(jobId))
-        if( !resp.getJobs() ) {
-            log.debug "[AWS BATCH] cannot retried running status for job=$jobId"
-            return false
-        }
-        final job = resp.getJobs().get(0)
-        return job.status in ['RUNNING', 'SUCCEEDED', 'FAILED']
+        final job = describeJob(jobId)
+        return job?.status in ['RUNNING', 'SUCCEEDED', 'FAILED']
     }
 
     /**
@@ -226,13 +284,8 @@ class AwsBatchTaskHandler extends TaskHandler {
     @Override
     boolean checkIfCompleted() {
         assert jobId
-        final resp = client.describeJobs(new DescribeJobsRequest().withJobs(jobId))
-        if( !resp.getJobs() ) {
-            log.debug "[AWS BATCH] cannot retried completed status for job=$jobId"
-            return false
-        }
-        final job = resp.getJobs().get(0)
-        final done = job.status in ['SUCCEEDED', 'FAILED']
+        final job = describeJob(jobId)
+        final done = job?.status in ['SUCCEEDED', 'FAILED']
         if( done ) {
             // finalize the task
             task.exitStatus = readExitFile()
@@ -278,7 +331,7 @@ class AwsBatchTaskHandler extends TaskHandler {
         launcher.build()
 
         final req = newSubmitRequest(task)
-        log.trace "[AWS BATCH] now job request > $req"
+        log.trace "[AWS BATCH] new job request > $req"
 
         /*
          * submit the task execution
