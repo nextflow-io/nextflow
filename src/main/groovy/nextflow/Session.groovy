@@ -52,9 +52,11 @@ import nextflow.script.ScriptBinding
 import nextflow.trace.ExtraeTraceObserver
 import nextflow.trace.GraphObserver
 import nextflow.trace.ReportObserver
+import nextflow.trace.StatsObserver
 import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceObserver
+import nextflow.trace.WorkflowStats
 import nextflow.util.Barrier
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
@@ -174,6 +176,8 @@ class Session implements ISession {
 
     private boolean statsEnabled
 
+    private WorkflowStats workflowStats
+
     boolean getStatsEnabled() { statsEnabled }
 
     private boolean dumpHashes
@@ -187,6 +191,8 @@ class Session implements ISession {
     TaskFault getFault() { fault }
 
     Throwable getError() { error }
+
+    WorkflowStats getWorkflowStats() { workflowStats }
 
     /**
      * Creates a new session with an 'empty' (default) configuration
@@ -304,7 +310,7 @@ class Session implements ISession {
         }
 
         this.observers = createObservers()
-        this.statsEnabled = observers.size()>0
+        this.statsEnabled = observers.any { it.enableMetrics() }
 
         cache = new CacheDB(uniqueId,runName).open()
     }
@@ -319,6 +325,7 @@ class Session implements ISession {
     Queue createObservers() {
         def result = new ConcurrentLinkedQueue()
 
+        createStatsObserver(result)     // keep as first, because following may depend on it
         createTraceFileObserver(result)
         createReportObserver(result)
         createTimelineObserver(result)
@@ -326,6 +333,12 @@ class Session implements ISession {
         createDagObserver(result)
 
         return result
+    }
+
+    protected void createStatsObserver(Collection<TraceObserver> result) {
+        final observer = new StatsObserver()
+        this.workflowStats = observer.stats
+        result << observer
     }
 
     /**
@@ -609,7 +622,7 @@ class Session implements ISession {
         if( this.fault ) { return }
         this.fault = fault
 
-        if( fault.strategy == ErrorStrategy.FINISH ) {
+        if( fault.task && fault.task.errorAction == ErrorStrategy.FINISH ) {
             cancel(handler)
         }
         else {

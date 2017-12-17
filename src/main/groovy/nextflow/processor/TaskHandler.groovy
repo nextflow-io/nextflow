@@ -131,6 +131,19 @@ public abstract class TaskHandler {
         return "TaskHandler[${builder.toString()}]"
     }
 
+    /**
+     * The task status string. It extends the {@link TaskStatus} semantic adding specific status code string for
+     * failed executions
+     *
+     * @return
+     *      Can be either:
+     *      - NEW: task has just been created and not yet submitted for execution
+     *      - SUBMITTED: task has been submitted for execution
+     *      - RUNNING: task is currently running
+     *      - COMPLETED: task execution successfully completed
+     *      - FAILED: task execution returned an error code
+     *      - ABORTED: task execution was aborted by NF (likely because another task forced the workflow termination)
+     */
     String getStatusString() {
         if( task.failed ) return 'FAILED'
         if( task.aborted ) return 'ABORTED'
@@ -166,6 +179,8 @@ public abstract class TaskHandler {
         record.env = task.getEnvironmentStr()
 
         if( isCompleted() ) {
+            record.error_action = task.errorAction?.toString()
+
             if( completeTimeMillis ) {
                 // completion timestamp
                 record.complete = completeTimeMillis

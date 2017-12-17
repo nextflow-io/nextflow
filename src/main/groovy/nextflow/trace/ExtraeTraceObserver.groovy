@@ -52,6 +52,11 @@ class ExtraeTraceObserver implements TraceObserver {
 
     private Map<Integer,String> tasksMap = [:]
 
+    @Override
+    boolean enableMetrics() {
+        return true
+    }
+
     /**
      * Initialize the Extrae sub-system. It look the Extrae configuration
      * file defined by the variable {@code EXTRAE_CONFIG_FILE}.

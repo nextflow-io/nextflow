@@ -1,7 +1,5 @@
 package nextflow.trace
 
-import java.nio.file.Path
-
 import groovy.json.JsonSlurper
 import spock.lang.Specification
 /**
@@ -75,44 +73,4 @@ class ReportObserverTest extends Specification {
 
     }
 
-    def 'should return compute time string' () {
-
-        given:
-        ReportObserver report
-
-        when:
-        report = new ReportObserver(Mock(Path))
-        report.timeSucceed = 3600
-        then:
-        report.getComputeTime() == '1.0'
-
-        when:
-        report = new ReportObserver(Mock(Path))
-        report.timeSucceed = 10000
-        then:
-        report.getComputeTime() == '2.8'
-
-        when:
-        report = new ReportObserver(Mock(Path))
-        report.timeSucceed = 80_000
-        report.timeCached = 20_000
-        then:
-        report.getComputeTime() == '27.8 (20% cached)'
-
-        when:
-        report = new ReportObserver(Mock(Path))
-        report.timeSucceed = 80_000
-        report.timeFailed = 20_000
-        then:
-        report.getComputeTime() == '27.8 (20% failed)'
-
-        when:
-        report = new ReportObserver(Mock(Path))
-        report.timeSucceed = 80_000
-        report.timeFailed = 5_000
-        report.timeCached = 15_000
-        then:
-        report.getComputeTime() == '27.8 (15% cached, 5% failed)'
-
-    }
 }
