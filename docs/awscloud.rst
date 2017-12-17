@@ -87,7 +87,7 @@ depending the instance type chosen. This storage can be made available by using 
 and ``instanceStorageDevice`` configuration attributes, as shown below::
 
     cloud {
-            imageId = 'xxx'
+            imageId = 'ami-xyz'
             instanceStorageMount = '/mnt/scratch'
             instanceStorageDevice = '/dev/xvdc'
     }
@@ -171,7 +171,7 @@ cluster to adapt dynamically to the actual workload computing resources need as 
 Cluster auto-scaling is enabled by adding the ``autoscale`` option group in the configuration file as shown below::
 
     cloud {
-        imageId = 'xxx'
+        imageId = 'ami-xyz'
         autoscale {
             enabled = true
             maxInstances = 10
