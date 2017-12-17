@@ -113,4 +113,9 @@ class GraphObserver implements TraceObserver {
     void onProcessCached(TaskHandler handler) {
 
     }
+
+    @Override
+    boolean enableMetrics() {
+        return false
+    }
 }

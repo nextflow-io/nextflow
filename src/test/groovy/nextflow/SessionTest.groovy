@@ -24,6 +24,7 @@ import java.nio.file.Paths
 import java.nio.file.attribute.PosixFilePermission
 
 import nextflow.container.ContainerConfig
+import nextflow.trace.StatsObserver
 import nextflow.trace.TraceFileObserver
 import nextflow.util.Duration
 import spock.lang.Specification
@@ -231,15 +232,16 @@ class SessionTest extends Specification {
         session = [:] as Session
         result = session.createObservers()
         then:
-        !result
+        result.size()==1
+        result.any { it instanceof StatsObserver }
 
         when:
         session = [:] as Session
         session.config = [trace: [enabled: true, file:'name.txt']]
         result = session.createObservers()
-        observer = result[0] as TraceFileObserver
+        observer = result[1] as TraceFileObserver
         then:
-        result.size() == 1
+        result.size() == 2
         observer.tracePath == Paths.get('name.txt').complete()
         observer.separator == '\t'
 
@@ -247,9 +249,9 @@ class SessionTest extends Specification {
         session = [:] as Session
         session.config = [trace: [enabled: true, sep: 'x', fields: 'task_id,name,exit', file: 'alpha.txt']]
         result = session.createObservers()
-        observer = result[0] as TraceFileObserver
+        observer = result[1] as TraceFileObserver
         then:
-        result.size() == 1
+        result.size() == 2
         observer.tracePath == Paths.get('alpha.txt').complete()
         observer.separator == 'x'
         observer.fields == ['task_id','name','exit']
@@ -259,15 +261,15 @@ class SessionTest extends Specification {
         session.config = [trace: [sep: 'x', fields: 'task_id,name,exit']]
         result = session.createObservers()
         then:
-        !result
+        !result.any { it instanceof TraceFileObserver }
 
         when:
         session = [:] as Session
         session.config = [trace: [enabled: true, fields: 'task_id,name,exit,vmem']]
         result = session.createObservers()
-        observer = result[0] as TraceFileObserver
+        observer = result[1] as TraceFileObserver
         then:
-        result.size() == 1
+        result.size() == 2
         observer.tracePath == Paths.get('trace.txt').complete()
         observer.separator == '\t'
         observer.fields == ['task_id','name','exit','vmem']

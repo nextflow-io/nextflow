@@ -240,4 +240,9 @@ class TimelineObserver implements TraceObserver {
         }
         writer.toString();
     }
+
+    @Override
+    boolean enableMetrics() {
+        return true
+    }
 }

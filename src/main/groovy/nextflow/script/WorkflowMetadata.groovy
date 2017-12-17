@@ -28,6 +28,7 @@ import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.config.ConfigBuilder
+import nextflow.trace.WorkflowStats
 import nextflow.util.Duration
 import nextflow.util.VersionNumber
 import org.codehaus.groovy.runtime.InvokerHelper
@@ -172,6 +173,11 @@ class WorkflowMetadata {
      */
     List<Path> configFiles
 
+    /*
+     * Workflow execution statistics
+     */
+    WorkflowStats stats
+
     final private ScriptRunner owner
 
     final private List<Closure> onCompleteActions = []
@@ -204,6 +210,7 @@ class WorkflowMetadata {
         this.runName = owner.session.runName
         this.containerEngine = owner.session.containerConfig?.getEngine()
         this.configFiles = owner.session.configFiles?.collect { it.toAbsolutePath() }
+        this.stats = owner.session.workflowStats
 
         // check if there's a onComplete action in the config file
         registerConfigAction(owner.session.config.workflow as Map)

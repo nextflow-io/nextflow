@@ -94,7 +94,8 @@ class TraceRecord implements Serializable {
             memory:     'mem',
             disk:       'mem',
             time:       'time',
-            env:        'str'
+            env:        'str',
+            error_action:'str'
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [

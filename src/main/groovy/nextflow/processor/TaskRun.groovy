@@ -304,7 +304,15 @@ class TaskRun implements Cloneable {
      */
     volatile boolean failed
 
+    /**
+     * Mark the task as aborted
+     */
     volatile boolean aborted
+
+    /**
+     * The action {@link ErrorStrategy} action applied if task has failed
+     */
+    volatile ErrorStrategy errorAction
 
     TaskConfig config
 
