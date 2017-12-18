@@ -358,8 +358,8 @@ class MailerTest extends Specification {
         !mailer.guessHtml('Hello')
         !mailer.guessHtml('1 < 10 > 5')
         mailer.guessHtml('<h1>1 < 5</h1>')
-        mailer.guessHtml('1<br>2')
-        mailer.guessHtml('<h1>Big title</h1><p>Hello <b>world</b></p>')
+        mailer.guessHtml('1<br/>2')
+        mailer.guessHtml('<h1>Big title</h1><p>Hello<br>world</p>')
     }
 
     @Unroll
@@ -376,7 +376,7 @@ class MailerTest extends Specification {
         'text/plain'    | 'Hello'
         'text/plain'    | '1 < 10 > 5'
         'text/html'     | '<h1>1 < 5</h1>'
-        'text/html'     | '1<br>2'
+        'text/html'     | '1<br/>2'
         'text/html'     | '<h1>Big title</h1><p>Hello <b>world</b></p>'
 
     }
