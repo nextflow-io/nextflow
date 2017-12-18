@@ -2,13 +2,17 @@ package nextflow.mail
 
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
 
 /**
  * Helper class modeling mail parameters
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
+@ToString(includeNames = true)
 @EqualsAndHashCode
 class Mail {
 

@@ -19,7 +19,6 @@
  */
 
 package nextflow.mail
-
 import javax.mail.Message
 import javax.mail.MessagingException
 import javax.mail.Session
@@ -32,6 +31,7 @@ import javax.mail.internet.MimeUtility
 import java.nio.charset.Charset
 import java.util.regex.Pattern
 
+import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.util.Duration
@@ -46,6 +46,7 @@ import org.jsoup.safety.Whitelist
  * @author Edgar Garriga <edgano@@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class Mailer {
 
     private Pattern HTML_TAG = ~/\<[a-zA-Z]+[\S^\>]*\>/
@@ -54,12 +55,7 @@ class Mailer {
 
     private static String DEF_CHARSET = Charset.defaultCharset().toString()
 
-    private String protocol = 'smtp'
-
-    /**
-     * Mail attachments
-     */
-    private List<File> attachments
+    private static String PROTOCOL = 'smtp'
 
     /**
      * Mail session object
@@ -73,18 +69,20 @@ class Mailer {
 
     private Map env = System.getenv()
 
-    private String _sysMailer
+    private String fMailer
 
     Mailer setConfig( Map params ) {
-        if( params )
-            this.config.putAll(params)
+        if( params ) {
+            if( config == null ) config = [:]
+            config.putAll(params)
+        }
         return this
     }
 
     protected String getSysMailer() {
-        if( !_sysMailer )
-            _sysMailer = findSysMailer()
-        return _sysMailer
+        if( !fMailer )
+            fMailer = findSysMailer()
+        return fMailer
     }
 
     @Memoized
@@ -150,14 +148,14 @@ class Mailer {
      * @return The SMTP host name or IP address
      */
     protected String getHost() {
-        getConfig('host')
+        config('host')
     }
 
     /**
      * @return The SMTP host port
      */
     protected int getPort() {
-        def port = getConfig('port')
+        def port = config('port')
         port ? port as int : -1
     }
 
@@ -165,18 +163,18 @@ class Mailer {
      * @return The SMTP user name
      */
     protected String getUser() {
-        getConfig('user')
+        config('user')
     }
 
     /**
      * @return The SMTP user password
      */
     protected String getPassword() {
-       getConfig('password')
+       config('password')
     }
 
-    protected getConfig( String name ) {
-        def key = "${protocol}.${name}"
+    protected config( String name ) {
+        def key = "smtp.${name}"
         def value = config.navigate(key)
         if( !value ) {
             // fallback on env properties
@@ -245,6 +243,8 @@ class Mailer {
 
         if( mail.from )
             msg.addFrom(InternetAddress.parse(mail.from))
+        else if( config.from )
+            msg.addFrom(InternetAddress.parse(config.from.toString()))
 
         if( mail.to )
             msg.setRecipients(Message.RecipientType.TO, mail.to)
@@ -277,7 +277,7 @@ class Mailer {
 
         if( mail.body ) {
             def part = new MimeBodyPart()
-            def type = mail.type ?: guessMimeType(mail.body)
+            String type = mail.type ?: guessMimeType(mail.body)
             if( !type.contains('charset=') )
                 type = "$type; charset=${MimeUtility.quote(charset, HeaderTokenizer.MIME)}"
             part.setContent(mail.body, type)
@@ -285,7 +285,8 @@ class Mailer {
         }
 
         // -- attachment
-        for( File file : mail.attachments ) {
+        def allFiles = mail.attachments ?: Collections.<File>emptyList()
+        for( File file : allFiles ) {
             if( !file.exists() )
                 throw new MessagingException("The following attachment file does not exist: $file")
             def attachment = new MimeBodyPart()
@@ -344,13 +345,12 @@ class Mailer {
     /**
      * Send the mail given the provided config setting
      */
-
     void send(Mail mail) {
         log.trace "Mailer config: $config -- mail: $mail"
 
         // if the user provided required configuration
         // send via Java Mail API
-        if( config.containsKey(protocol) ) {
+        if( config.containsKey('smtp') ) {
             log.trace "Mailer send via `javamail`"
             def msg = createMimeMessage(mail)
             sendViaJavaMail(msg)
@@ -373,7 +373,7 @@ class Mailer {
             return
         }
 
-        def msg = (mailer
+        String msg = (mailer
                 ? "Unknown system mail tool: $mailer"
                 : "Cannot send email message -- Make sure you have installed `sendmail` or `mail` program or configure a mail SMTP server in the nextflow config file"
         )
