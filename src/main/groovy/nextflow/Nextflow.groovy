@@ -354,13 +354,10 @@ class Nextflow {
      */
     static void sendMail( Map params ) {
 
-        def mailer = new Mailer()
-        // config the mail with properties from the nextflow config file
-        final config = (Global.session as Session).config
-        if( config.mail instanceof Map )
-            mailer.config = config.mail
-        // send user mail
-        mailer.send(params)
+        new Mailer()
+            .setConfig(Global.session.config.mail as Map)
+            .send(params)
+
     }
 
     /**
@@ -381,13 +378,9 @@ class Nextflow {
      *    <code>
      */
     static void sendMail( Closure params ) {
-        def mailer = new Mailer()
-        // config the mail with properties from the nextflow config file
-        final config = (Global.session as Session).config
-        if( config.mail instanceof Map )
-            mailer.config = config.mail
-        // send user mail
-        mailer.send(params)
+        new Mailer()
+                .setConfig(Global.session.config.mail as Map)
+                .send(params)
     }
 
 }

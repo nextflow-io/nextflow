@@ -178,12 +178,20 @@ class MailerTest extends Specification {
         given:
         MimeMessage msg
         Mail mail
+
         when:
         mail = new Mail(from:'foo@gmail.com')
-        msg = new Mailer().createMimeMessage(mail)
+        msg = new Mailer(config: [from:'fallback@hotmail.com']).createMimeMessage(mail)
         then:
         msg.getFrom().size()==1
         msg.getFrom()[0].toString() == 'foo@gmail.com'
+
+        when:
+        mail = new Mail()
+        msg = new Mailer(config: [from:'fallback@hotmail.com']).createMimeMessage(mail)
+        then:
+        msg.getFrom().size()==1
+        msg.getFrom()[0].toString() == 'fallback@hotmail.com'
 
         when:
         mail = new Mail(from:'one@gmail.com, two@google.com')
