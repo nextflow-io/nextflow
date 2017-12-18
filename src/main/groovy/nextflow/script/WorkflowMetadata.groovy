@@ -32,7 +32,6 @@ import nextflow.trace.WorkflowStats
 import nextflow.util.Duration
 import nextflow.util.VersionNumber
 import org.codehaus.groovy.runtime.InvokerHelper
-
 /**
  * Models workflow metadata properties and notification handler
  *
@@ -219,6 +218,12 @@ class WorkflowMetadata {
     }
 
     /**
+     * Only for testing purpose -- do not use
+     */
+    @PackageScope
+    WorkflowMetadata() {}
+
+    /**
      * Implements the following idiom in the pipeline script:
      * <pre>
      *     workflow.onComplete {
@@ -350,6 +355,9 @@ class WorkflowMetadata {
                 log.error("Failed to invoke `workflow.onComplete` event handler", e)
             }
         }
+
+        // send email notification
+        safeMailNotification()
     }
 
     void invokeOnError(trace) {
@@ -387,36 +395,21 @@ class WorkflowMetadata {
         return result.toString()
     }
 
-//    /**
-//     * Define the {@code onComplete} event handle context. It allows to access metadata properties
-//     * without having to specify the {@code workflow} prefix. If a property name does not exist in
-//     * the {@link WorkflowMetadata} context it fallback on main script binding context
-//     */
-//    @CompileStatic
-//    class EventHandlerContext {
-//
-//        final List<String> properties
-//
-//        EventHandlerContext() {
-//            properties = WorkflowMetadata.this.metaClass.getProperties() *. name
-//        }
-//
-//        Object getProperty(String name) {
-//            try {
-//                if( properties.contains(name) )
-//                    return WorkflowMetadata.this.getProperty(name)
-//                else
-//                    throw new MissingPropertyException(name)
-//            }
-//            catch( MissingPropertyException e1 ) {
-//                try {
-//                    return owner.session.binding.getVariable(name)
-//                }
-//                catch ( MissingPropertyException e2 ) {
-//                    return null
-//                }
-//            }
-//        }
-//
-//    }
+    /**
+     * Tries to send the workflow completion email. Any exception is reported as a warning message.
+     */
+    protected void safeMailNotification() {
+        try {
+            def notifier = new WorkflowNotifier()
+            notifier.workflow = this
+            notifier.config = owner.session.config
+            notifier.variables = owner.session.binding.variables
+            notifier.sendNotification()
+        }
+        catch (Exception e) {
+            log.warn "Failed to deliver notification email -- See the log file for details", e
+        }
+    }
+
+
 }

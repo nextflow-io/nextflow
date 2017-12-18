@@ -32,7 +32,6 @@ import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import spock.lang.Specification
 import test.TestHelper
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -159,9 +158,9 @@ class TraceFileObserverTest extends Specification {
         parts[3] == 'simple_task'                   // process name
         parts[4] == TaskStatus.COMPLETED.toString()
         parts[5] == '127'                           // exist-status
-        TraceRecord.getDateFormat().parse(parts[6]).time == record.submit           // submit time
-        new Duration(parts[7]).toMillis() == record.complete -record.submit         // wall-time
-        new Duration(parts[8]).toMillis() == record.complete -record.start         // run-time
+        parts[6] == TraceRecord.fmtDate(record.submit,null) // submit time
+        parts[7] == new Duration(record.complete -record.submit).toString()         // wall-time
+        parts[8] == new Duration(record.complete -record.start).toString()         // run-time
 
         cleanup:
         testFolder.deleteDir()

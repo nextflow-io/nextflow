@@ -21,11 +21,14 @@
 package nextflow.extension
 
 import java.nio.file.Path
+import java.text.DateFormat
+import java.text.SimpleDateFormat
 import java.util.concurrent.locks.Lock
 import java.util.regex.Pattern
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import nextflow.file.FileHelper
 import nextflow.util.CheckHelper
 import nextflow.util.Duration
@@ -49,9 +52,49 @@ import org.slf4j.Logger
 @CompileStatic
 class Bolts {
 
+    static public final String DATETIME_FORMAT = 'dd-MM-yyyy HH:mm'
+
     static private Pattern PATTERN_RIGHT_TRIM = ~/\s+$/
 
     static private Pattern PATTERN_LEFT_TRIM = ~/^\s+/
+
+    @Memoized
+    static private ThreadLocal<DateFormat> getLocalDateFormat(String fmt, TimeZone tz) {
+
+        return new ThreadLocal<DateFormat>() {
+            @Override
+            protected DateFormat initialValue() {
+                def result = new SimpleDateFormat(fmt)
+                if(tz) result.setTimeZone(tz)
+                return result
+            }
+        }
+    }
+
+    /**
+     * Format a {@link Date} object
+     *
+     * @param self The {@link Date} object to format
+     * @param format The date format to use eg. {@code dd-MM-yyyy HH:mm}.
+     * @param tz The timezone to be used eg. {@code UTC}. If {@code null} the current timezone is used.
+     * @return The date-time formatted as a string
+     */
+    static format(Date self, String format=null, String tz=null) {
+        TimeZone zone = tz ? TimeZone.getTimeZone(tz) : null
+        getLocalDateFormat(format ?: DATETIME_FORMAT, zone).get().format(self)
+    }
+
+    /**
+     * Format a {@link Date} object
+     *
+     * @param self The {@link Date} object to format
+     * @param format The date format to use eg. {@code dd-MM-yyyy HH:mm}
+     * @param tz The timezone to be used. If {@code null} the current timezone is used.
+     * @return The date-time formatted as a string
+     */
+    static format(Date self, String format, TimeZone tz) {
+        getLocalDateFormat(format ?: DATETIME_FORMAT, tz).get().format(self)
+    }
 
     static List pairs(Map self, Map opts=null) {
         def flat = opts?.flat == true
