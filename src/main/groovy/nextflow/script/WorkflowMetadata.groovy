@@ -208,7 +208,7 @@ class WorkflowMetadata {
         this.sessionId = owner.session.uniqueId
         this.resume = owner.session.resumeMode
         this.runName = owner.session.runName
-        this.containerEngine = owner.session.containerConfig?.getEngine()
+        this.containerEngine = owner.session.containerConfig.with { isEnabled() ? getEngine() : null }
         this.configFiles = owner.session.configFiles?.collect { it.toAbsolutePath() }
         this.stats = owner.session.workflowStats
 
