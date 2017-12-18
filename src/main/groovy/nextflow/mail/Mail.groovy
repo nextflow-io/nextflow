@@ -1,10 +1,10 @@
 package nextflow.mail
-
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import nextflow.util.CheckHelper
 
 /**
  * Helper class modeling mail parameters
@@ -15,6 +15,13 @@ import groovy.transform.ToString
 @ToString(includeNames = true)
 @EqualsAndHashCode
 class Mail {
+
+    private static final Map ATTACH_HEADERS = [
+            contentId: String,
+            disposition:String,
+            fileName: String,
+            description: String
+    ]
 
     String from
 
@@ -32,7 +39,7 @@ class Mail {
 
     String text
 
-    List<File> attachments
+    List<Attachment> attachments
 
     String type
 
@@ -161,39 +168,45 @@ class Mail {
     /**
      * Add an email attachment
      *
-     * @param item A attachment file path either as {@link File}, {@code Path} or {@link String}
+     * @param item A attachment file path either as {@link File}, {@code Path} or {@link String} path
      */
     void attach( item ) {
         if( this.attachments == null )
             this.attachments = []
 
-        if( item instanceof Collection ) {
-            item.each { attach0(it) }
+        if( item instanceof Attachment ) {
+            this.attachments << (Attachment)item
+        }
+        else if( item instanceof Collection ) {
+            this.attachments.addAll( item.collect{ new Attachment(it) } )
         }
         else if( item instanceof Object[] ) {
-            item.each { attach0(it) }
+            this.attachments.addAll( item.collect{ new Attachment(it) } )
         }
         else if( item ) {
-            attach0(item)
+            this.attachments << new Attachment(item)
         }
     }
 
     /**
-     * Add a single item to the list of file attachments
-     * @param attach either a {@link File}, {@link java.nio.file.Path} or a string file path
+     * Add an email attachment headers
+     *
+     * @param headers
+     *      Attachment optional content directives. The following parameters are accepted:
+     *      - contentId:  Set the "Content-ID" header field of this body part
+     *      - fileName:  Set the filename associated with this body part, if possible
+     *      - description: Set the "Content-Description" header field for this body part
+     *      - disposition: Set the "Content-Disposition" header field of this body part
+     *
+     * @param item
      */
-    private void attach0( attach ) {
-        if( attach instanceof File ) {
-            this.attachments.add(attach)
-        }
-        else if( attach instanceof Path ) {
-            this.attachments.add(attach.toFile())
-        }
-        else if( attach instanceof String || attach instanceof GString ) {
-            this.attachments.add(new File(attach.toString()))
-        }
-        else if( attach != null )
-            throw new IllegalArgumentException("Invalid attachment argument: $attach [${attach.getClass()}]")
+    void attach( Map headers, item ) {
+        CheckHelper.checkParams('attach', headers, ATTACH_HEADERS)
+
+        if( this.attachments == null )
+            this.attachments = []
+
+        this.attachments << new Attachment(headers, item)
     }
 
 }

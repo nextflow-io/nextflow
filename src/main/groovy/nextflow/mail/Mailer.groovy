@@ -19,6 +19,8 @@
  */
 
 package nextflow.mail
+import javax.activation.DataHandler
+import javax.activation.URLDataSource
 import javax.mail.Message
 import javax.mail.MessagingException
 import javax.mail.Session
@@ -49,13 +51,21 @@ import org.jsoup.safety.Whitelist
 @CompileStatic
 class Mailer {
 
-    private Pattern HTML_TAG = ~/\<[a-zA-Z]+[\S^\>]*\>/
+    // Adapted from post by Phil Haack and modified to match better
+    // See https://stackoverflow.com/a/22581832/395921
+    private final static String TAG_START = "\\<\\w+((\\s+\\w+(\\s*\\=\\s*(?:\".*?\"|'.*?'|[^'\"\\>\\s]+))?)+\\s*|\\s*)\\>"
+
+    private final static String TAG_END = "\\</\\w+\\>"
+
+    private final static String TAG_SELF_CLOSING = "\\<\\w+((\\s+\\w+(\\s*\\=\\s*(?:\".*?\"|'.*?'|[^'\"\\>\\s]+))?)+\\s*|\\s*)/\\>"
+
+    private final static String HTML_ENTITY = "&[a-zA-Z][a-zA-Z0-9]+;"
+
+    private final static Pattern HTML_PATTERN = Pattern.compile("("+TAG_START+".*"+TAG_END+")|("+TAG_SELF_CLOSING+")|("+HTML_ENTITY+")", Pattern.DOTALL )
 
     private long SEND_MAIL_TIMEOUT = 15_000
 
     private static String DEF_CHARSET = Charset.defaultCharset().toString()
-
-    private static String PROTOCOL = 'smtp'
 
     /**
      * Mail session object
@@ -285,19 +295,47 @@ class Mailer {
         }
 
         // -- attachment
-        def allFiles = mail.attachments ?: Collections.<File>emptyList()
-        for( File file : allFiles ) {
-            if( !file.exists() )
-                throw new MessagingException("The following attachment file does not exist: $file")
-            def attachment = new MimeBodyPart()
-            attachment.attachFile(file)
-            multipart.addBodyPart(attachment)
+        def allFiles = mail.attachments ?: Collections.<Attachment>emptyList()
+        for( Attachment item : allFiles ) {
+            multipart.addBodyPart(createAttachment(item))
         }
 
         result.setContent(multipart)
         return result
     }
 
+    protected MimeBodyPart createAttachment(Attachment item) {
+        final result = new MimeBodyPart()
+        if( item.file ) {
+            if( !item.file.exists() )
+                throw new MessagingException("The following attachment file does not exist: $item.file")
+            result.attachFile(item.file)
+        }
+        else if( item.resource ) {
+            def url = this.class.getResource(item.resource)
+            if( !url )
+                throw new MessagingException("The following attachment resource does not exist: $item.resource")
+            def source = new URLDataSource(url)
+            result.setDataHandler(new DataHandler(source))
+        }
+        else {
+            throw new IllegalStateException("Invalid attachment object")
+        }
+
+        if( item.disposition )
+            result.setDisposition(item.disposition)
+
+        if( item.contentId )
+            result.setContentID(item.contentId)
+
+        if( item.fileName )
+            result.setFileName(item.fileName)
+
+        if( item.description )
+            result.setDescription(item.description)
+
+        return result
+    }
 
     /**
      * Creates a pure text email message. It cannot contains attachments
@@ -335,7 +373,7 @@ class Mailer {
     }
 
     protected boolean guessHtml(String str) {
-        HTML_TAG.matcher(str).find()
+        str ? HTML_PATTERN.matcher(str).find() : false
     }
 
     protected String guessMimeType(String str) {

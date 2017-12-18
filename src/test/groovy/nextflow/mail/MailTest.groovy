@@ -38,7 +38,7 @@ class MailTest extends Specification {
         mail.subject ==  'Hi there'
         mail.charset == 'utf-8'
         mail.body == 'Hello world'
-        mail.attachments == [new File('foo.png'), new File('this.txt'), new File('that.txt')]
+        mail.attachments == [new Attachment('foo.png'), new Attachment('this.txt'), new Attachment('that.txt')]
 
     }
 
@@ -51,32 +51,43 @@ class MailTest extends Specification {
         mail = new Mail()
         mail.attach('/some/file.txt')
         then:
-        mail.attachments == [new File('/some/file.txt')]
+        mail.attachments == [new Attachment('/some/file.txt')]
 
         when:
         mail = new Mail()
         mail.attach(new File('x.txt'))
         then:
-        mail.attachments == [new File('x.txt')]
+        mail.attachments == [new Attachment('x.txt')]
 
         when:
         mail = new Mail()
         mail.attach(Paths.get('x.txt'))
         then:
-        mail.attachments == [new File('x.txt')]
+        mail.attachments == [new Attachment('x.txt')]
 
         when:
         mail = new Mail()
         mail.attach("file.${1}")
         then:
-        mail.attachments == [new File('file.1')]
+        mail.attachments == [new Attachment('file.1')]
 
         when:
         mail = new Mail()
         mail.attach(['foo.txt','bar.txt'])
         then:
-        mail.attachments == [new File('foo.txt'), new File('bar.txt')]
+        mail.attachments == [new Attachment('foo.txt'), new Attachment('bar.txt')]
 
+        when:
+        mail = new Mail()
+        mail.attach 'pic.png', contentId: 'my-img'
+        then:
+        mail.attachments == [new Attachment('pic.png', contentId:'my-img')]
+
+        when:
+        mail = new Mail()
+        mail.attach( new Attachment('/file.txt') )
+        then:
+        mail.attachments ==  [new Attachment('/file.txt')]
         when:
         mail = new Mail()
         mail.attach(new Object())
@@ -112,6 +123,6 @@ class MailTest extends Specification {
         mail.type == 'text/html'
         mail.body == 'Hello world'
         mail.text == 'Pura vida'
-        mail.attachments == [new File('/some/file')]
+        mail.attachments == [new Attachment('/some/file')]
     }
 }
