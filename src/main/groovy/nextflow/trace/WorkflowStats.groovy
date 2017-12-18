@@ -27,7 +27,7 @@ class WorkflowStats {
     /**
      * Task successfully completed
      */
-    long completed
+    long succeed
 
     /**
      * Task cached
@@ -50,8 +50,10 @@ class WorkflowStats {
     protected String getComputeTime() {
 
         def fmt = new DecimalFormat("0.#")
-
         def total = (timeSucceed + timeCached + timeFailed)
+        if( total < 180 )
+            return '(a few seconds)'
+
         def result = String.format('%.1f', total/3600)
         if( timeCached || timeFailed ) {
             result += ' ('

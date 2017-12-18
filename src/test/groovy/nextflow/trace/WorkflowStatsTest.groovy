@@ -47,6 +47,18 @@ class WorkflowStatsTest extends Specification {
         then:
         stats.getComputeTime() == '27.8 (15% cached, 5% failed)'
 
+        when:
+        stats = new WorkflowStats()
+        stats.timeSucceed = 180
+        then:
+        stats.getComputeTime() == '0.1'
+
+        when:
+        stats = new WorkflowStats()
+        stats.timeSucceed = 120
+        then:
+        stats.getComputeTime() == '(a few seconds)'
+
     }
 
 }

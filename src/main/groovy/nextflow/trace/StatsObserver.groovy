@@ -56,7 +56,7 @@ class StatsObserver implements TraceObserver {
         final record = handler.getTraceRecord()
         synchronized( stats ) {
             if( record.get('status') == 'COMPLETED' ) {
-                stats.completed++
+                stats.succeed++
                 stats.timeSucceed += getCpuTime(record)
             }
             else {
@@ -78,7 +78,7 @@ class StatsObserver implements TraceObserver {
         final record = handler.getTraceRecord()
         synchronized (stats) {
             stats.timeCached += getCpuTime(record)
-            stats.cached
+            stats.cached++
         }
     }
 
