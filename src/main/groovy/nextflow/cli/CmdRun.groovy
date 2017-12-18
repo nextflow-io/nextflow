@@ -180,6 +180,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-dump-channels'], description = 'Dump channels for debugging purpose')
     String dumpChannels
 
+    @Parameter(names=['-notify'], description = 'Send a notification email on workflow completion to the specified recipients')
+    String notify
+
     @Override
     final String getName() { NAME }
 

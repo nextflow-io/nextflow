@@ -468,6 +468,13 @@ class ConfigBuilder {
             config.extrae.enabled = true
         }
 
+        if( cmdRun.notify ) {
+            if( !(config.notification instanceof Map) )
+                config.notification = [:]
+            config.notification.enabled = true
+            config.notification.to = cmdRun.notify
+        }
+
 
         // -- add the command line parameters to the 'taskConfig' object
         if( cmdRun.params || cmdRun.paramsFile )
