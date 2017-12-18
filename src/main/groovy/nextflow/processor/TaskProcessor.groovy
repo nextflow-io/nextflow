@@ -189,7 +189,6 @@ class TaskProcessor {
     /**
      * Adapter closure to call the {@link #invokeTask(java.lang.Object)} method
      */
-    @CompileStatic
     static class InvokeTaskAdapter extends Closure {
 
         private int numOfParams
