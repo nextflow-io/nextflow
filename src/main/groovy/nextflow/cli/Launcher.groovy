@@ -232,6 +232,10 @@ class Launcher {
                 normalized << '-'
             }
 
+            else if( (current == '-N' || current == '-with-notification') && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << 'true'
+            }
+
             else if( current == '-dump-channels' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << '*'
             }
