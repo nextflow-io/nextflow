@@ -927,5 +927,34 @@ class ConfigBuilderTest extends Specification {
         file2?.delete()
     }
 
+
+    def 'should configure notification' () {
+
+        given:
+        Map config
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun()).build()
+        then:
+        !config.notification
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(withNotification: true)).build()
+        then:
+        config.notification.enabled == true
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(withNotification: false)).build()
+        then:
+        config.notification.enabled == false
+        config.notification.to == null
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(withNotification: 'yo@nextflow.com')).build()
+        then:
+        config.notification.enabled == true
+        config.notification.to == 'yo@nextflow.com'
+    }
+
 }
 

@@ -468,11 +468,16 @@ class ConfigBuilder {
             config.extrae.enabled = true
         }
 
-        if( cmdRun.notify ) {
+        if( cmdRun.withNotification ) {
             if( !(config.notification instanceof Map) )
                 config.notification = [:]
-            config.notification.enabled = true
-            config.notification.to = cmdRun.notify
+            if( cmdRun.withNotification in ['true','false']) {
+                config.notification.enabled = cmdRun.withNotification == 'true'
+            }
+            else {
+                config.notification.enabled = true
+                config.notification.to = cmdRun.withNotification
+            }
         }
 
 
