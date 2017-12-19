@@ -316,9 +316,12 @@ class FileHelper {
     }
 
     /**
+     * NOTE: this cannot be accessed by a remote system
+     *
      * @return The file system defined by the {@code Session#workDir} attribute
      */
     @Memoized
+    @Deprecated
     static FileSystem getWorkDirFileSystem() {
         def result = Global.session?.workDir?.getFileSystem()
         if( !result ) {

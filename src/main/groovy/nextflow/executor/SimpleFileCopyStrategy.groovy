@@ -60,6 +60,11 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     Path targetDir
 
+    /**
+     * Task work directory
+     */
+    Path workDir
+
     private FilePorter porter
 
     SimpleFileCopyStrategy() { }
@@ -68,6 +73,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         this.stageinMode = bean.stageInMode
         this.stageoutMode = bean.stageOutMode
         this.targetDir = bean.targetDir
+        this.workDir = bean.workDir
     }
 
     @Override
@@ -81,7 +87,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
     @Memoized
     private Map<String,Path> resolveForeignFiles0(Map<String,Path> files) {
         if( !porter )
-            porter = new FilePorter()
+            porter = new FilePorter(workDir)
         porter.stageForeignFiles(files)
     }
 

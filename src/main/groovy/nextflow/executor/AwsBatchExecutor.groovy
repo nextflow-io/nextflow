@@ -609,6 +609,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     private Map<String,String> environment
 
     AwsBatchFileCopyStrategy( TaskBean task, AwsOptions opts ) {
+        super(task)
         this.opts = opts
         this.environment = task.environment
     }

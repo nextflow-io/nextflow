@@ -263,15 +263,16 @@ class SimpleFileCopyStrategyTest extends Specification {
 
     def 'should resolve foreign files' () {
         given:
+        new Session()
+        def bean = Mock(TaskBean)
         def workDir = Files.createTempDirectory('test')
-        def session = new Session()
-        session.workDir = workDir
+        bean.getWorkDir() >> workDir
         def INPUTS = [
                 'foo.txt': Paths.get('/some/foo.txt'),
                 'bar.txt': Paths.get('/some/bar.txt'),
                 'hello.txt': TestHelper.createInMemTempFile('any.name','Hello world')
         ]
-        def strategy = new SimpleFileCopyStrategy(Mock(TaskBean))
+        def strategy = new SimpleFileCopyStrategy(bean)
 
         when:
         def result = strategy.resolveForeignFiles(INPUTS)
