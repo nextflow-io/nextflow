@@ -44,15 +44,15 @@ class FilePorterTest extends Specification {
     def 'should copy foreign files' () {
 
         given:
+        new Session()
         def folder = Files.createTempDirectory('test')
-        def session = new Session(); session.workDir = folder
         def foreign1 = TestHelper.createInMemTempFile('hola.txt', 'hola mundo!')
         def foreign2 = TestHelper.createInMemTempFile('ciao.txt', 'ciao mondo!')
         def local = Paths.get('local.txt')
         def files = [foo: local, bar: foreign1, baz: foreign2]
 
         when:
-        def d = new FilePorter()
+        def d = new FilePorter(folder)
         def result = d.stageForeignFiles(files)
         then:
         result.foo ==  Paths.get('local.txt')
