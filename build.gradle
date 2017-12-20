@@ -477,7 +477,7 @@ task installLauncher(type: Copy, dependsOn: ['pack']) {
     into "$homeDir/.nextflow/framework/$version/"
 }
 
-task dockerImage(type: Exec, dependsOn: deploy) {
+task dockerImage(type: Exec) {
 
     def temp = File.createTempFile('upload',null)
     temp.deleteOnExit()
