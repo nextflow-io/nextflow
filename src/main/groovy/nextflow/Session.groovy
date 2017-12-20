@@ -52,9 +52,11 @@ import nextflow.script.ScriptBinding
 import nextflow.trace.ExtraeTraceObserver
 import nextflow.trace.GraphObserver
 import nextflow.trace.ReportObserver
+import nextflow.trace.StatsObserver
 import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceObserver
+import nextflow.trace.WorkflowStats
 import nextflow.util.Barrier
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
@@ -126,6 +128,11 @@ class Session implements ISession {
      */
     List<Path> libDir
 
+    /**
+     * List files that concurrent on the session configuration
+     */
+    List<Path> configFiles
+
     private Path binDir
 
     private Map<String,Path> binEntries = [:]
@@ -169,20 +176,23 @@ class Session implements ISession {
 
     private boolean statsEnabled
 
+    private WorkflowStats workflowStats
+
     boolean getStatsEnabled() { statsEnabled }
 
     private boolean dumpHashes
 
+    private List<String> dumpChannels
+
     boolean getDumpHashes() { dumpHashes }
+
+    List<String> getDumpChannels() { dumpChannels }
 
     TaskFault getFault() { fault }
 
     Throwable getError() { error }
 
-    private ContainerConfig containerConfigCache
-
-    private Integer containerConfigHash
-
+    WorkflowStats getWorkflowStats() { workflowStats }
 
     /**
      * Creates a new session with an 'empty' (default) configuration
@@ -238,6 +248,7 @@ class Session implements ISession {
         this.binding = binding
         this.config = binding.config
         this.dumpHashes = config.dumpHashes
+        this.dumpChannels = (List<String>)config.dumpChannels
 
         // -- poor man session object dependency injection
         Global.setSession(this)
@@ -299,7 +310,7 @@ class Session implements ISession {
         }
 
         this.observers = createObservers()
-        this.statsEnabled = observers.size()>0
+        this.statsEnabled = observers.any { it.enableMetrics() }
 
         cache = new CacheDB(uniqueId,runName).open()
     }
@@ -314,6 +325,7 @@ class Session implements ISession {
     Queue createObservers() {
         def result = new ConcurrentLinkedQueue()
 
+        createStatsObserver(result)     // keep as first, because following may depend on it
         createTraceFileObserver(result)
         createReportObserver(result)
         createTimelineObserver(result)
@@ -323,6 +335,12 @@ class Session implements ISession {
         return result
     }
 
+    protected void createStatsObserver(Collection<TraceObserver> result) {
+        final observer = new StatsObserver()
+        this.workflowStats = observer.stats
+        result << observer
+    }
+
     /**
      * create the Extrae trace observer
      */
@@ -330,6 +348,7 @@ class Session implements ISession {
         Boolean isEnabled = config.navigate('extrae.enabled') as Boolean
         if( isEnabled ) {
             try {
+                log.warn "The support for Extrae profiling has been deprecated and it will be removed in a future release"
                 result << new ExtraeTraceObserver()
             }
             catch( Exception e ) {
@@ -603,7 +622,7 @@ class Session implements ISession {
         if( this.fault ) { return }
         this.fault = fault
 
-        if( fault.strategy == ErrorStrategy.FINISH ) {
+        if( fault.task && fault.task.errorAction == ErrorStrategy.FINISH ) {
             cancel(handler)
         }
         else {

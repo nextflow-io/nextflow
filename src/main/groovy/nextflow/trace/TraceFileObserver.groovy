@@ -291,4 +291,8 @@ class TraceFileObserver implements TraceObserver {
         trace.renderText(fields, formats, separator)
     }
 
+    @Override
+    boolean enableMetrics() {
+        return true
+    }
 }

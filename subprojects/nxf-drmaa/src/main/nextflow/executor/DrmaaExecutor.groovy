@@ -59,6 +59,7 @@ class DrmaaExecutor extends Executor {
      */
     @Override
     void register() {
+        log.warn "DRMAA executor is deprecated and it will be removed in a future release"
         drmaa = SessionFactory.getFactory().getSession()
         drmaa.init('')
         session.onShutdown { drmaa.exit() }

@@ -42,6 +42,7 @@ class ContainerScriptTokens {
      * Parse a shell script retuning a triple which contains the docker image,
      * the line on which the docker image has been defined and any environment variable
      * eventually defined before the image definition
+     *
      * @param str A shell script to parse
      * @return
      */

@@ -26,8 +26,8 @@ package nextflow.processor
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 enum TaskStatus {
-    NEW,
-    SUBMITTED,
-    RUNNING,
-    COMPLETED
+    NEW,        // task has just been created and not yet submitted for execution
+    SUBMITTED,  // task has been submitted for execution
+    RUNNING,    // task is currently running
+    COMPLETED   // task execution completed either successfully or with with an error condition
 }
