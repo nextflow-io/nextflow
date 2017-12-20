@@ -1778,6 +1778,8 @@ for each species specified by an input parameter::
     output the files produced by a process to a specific folder or organise result data in `semantic` directory structure.
     In these cases you may use the `publishDir`_ directive instead.
 
+.. note:: The use of AWS S3 path is supported however it requires the installation of the `AWS CLI tool <https://aws.amazon.com/cli/>`_
+  (ie. ``aws``) in the target computing node.
 
 .. _process-stageInMode:
 
