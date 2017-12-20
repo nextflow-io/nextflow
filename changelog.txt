@@ -1,6 +1,26 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.27.0-RC1 - 20 Dic 2017
+- AWS Batch increased queue to 1000 tasks and poll interval to 10 secs
+- AWS Batch improved executor scalability caching recurrent API call and batching similar requests together
+- Added notification message on workflow completion #554
+- Added Built `sendMail` function #375
+- Added Warning message when a local version on a GH repo is different from remote #376
+- Added keepHeader option to collectFile #479
+- Added Dump operator to enable easier debugging #517
+- Fixed Report an error message when a config file contains an unresolved attribute #525
+- Fixed Session working file system not defined when staging input files with Ignite executor #555
+- Fixed storeDir writes output files even when process fails #227
+- Fixed storeDir does not work with S3 targets #247
+- Fixed Config file available in introspection #264
+- Fixed Enhance container interoperability between Docker and Singularity #503
+- Fixed Process environment is not exported in the container context when a process uses an interpreter other than BASH #495
+- Deprecated support for executable containers #529
+- Deprecated DRMAA executor #488
+- Deprecated Extrae profiling #543
+- Renamed .command.run.1 to .command.stub #523
+
 0.26.4 - 11 Dec 2017
 - Fixed GitLab auth token is not applied when user credentials are not provided #542
 
