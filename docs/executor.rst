@@ -185,6 +185,8 @@ The amount of resources requested by each job submission is defined by the follo
 DRMAA
 =====
 
+.. warning:: This feature has been deprecated and it will be removed in a future release
+
 The `DRMAA` executor allows you to execute a Nextflow pipeline by using a grid engine that implements the
 Java binding for the `DRMAA <http://www.drmaa.org>`_ interface api (version 1).
 

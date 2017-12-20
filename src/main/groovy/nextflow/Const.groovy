@@ -19,10 +19,12 @@
  */
 
 package nextflow
-
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.text.SimpleDateFormat
+
+import static nextflow.extension.Bolts.DATETIME_FORMAT
+
 /**
  * Application main constants
  *
@@ -60,10 +62,6 @@ class Const {
      */
     static public final int APP_BUILDNUM = 4741
 
-    /**
-     * The date time formatter string
-     */
-    static public final String DATETIME_FORMAT = 'dd-MM-yyyy HH:mm'
 
     /**
      * The app build time string relative to UTC timezone

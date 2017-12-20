@@ -71,4 +71,8 @@ interface TraceObserver {
      */
     void onProcessCached(TaskHandler handler)
 
+    /**
+     * @return {@code true} whenever this observer requires to collect task execution metrics
+     */
+    boolean enableMetrics()
 }

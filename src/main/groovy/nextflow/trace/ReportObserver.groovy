@@ -22,11 +22,9 @@ package nextflow.trace
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
-import java.text.DecimalFormat
 
 import groovy.text.GStringTemplateEngine
 import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.processor.TaskHandler
@@ -62,21 +60,6 @@ class ReportObserver implements TraceObserver {
      */
     private Path reportFile
 
-    /**
-     * Overall workflow compute time as CPUs-seconds for task executed successfully
-     */
-    @PackageScope long timeSucceed
-
-    /**
-     * Overall compute time for cached tasks
-     */
-    @PackageScope long timeCached
-
-    /**
-     * Overall compute time for failed tasks
-     */
-    @PackageScope long timeFailed
-
     ReportObserver( Path file ) {
         this.reportFile = file
     }
@@ -88,28 +71,6 @@ class ReportObserver implements TraceObserver {
         session.binding.getVariable('workflow') as WorkflowMetadata
     }
 
-    /**
-     * @return A formatted string representing the overall execution time as CPU-Hours
-     */
-    protected String getComputeTime() {
-
-        def fmt = new DecimalFormat("0.#")
-
-        def total = (timeSucceed + timeCached + timeFailed)
-        def result = String.format('%.1f', total/3600)
-        if( timeCached || timeFailed ) {
-            result += ' ('
-            def items = []
-            if( timeCached )
-                items << fmt.format(timeCached/total*100) + '% cached'
-            if( timeFailed )
-                items << fmt.format(timeFailed/total*100) + '% failed'
-            result += items.join(', ')
-            result += ')'
-        }
-
-        return result
-    }
 
     /**
      * Create the trace file, in file already existing with the same name it is
@@ -177,11 +138,6 @@ class ReportObserver implements TraceObserver {
         // remove the record from the current records
         synchronized (records) {
             records[ record.taskId ] = record
-
-            if( record.get('status') == 'COMPLETED' )
-                timeSucceed += getCpuTime(record)
-            else
-                timeFailed += getCpuTime(record)
         }
     }
 
@@ -193,15 +149,8 @@ class ReportObserver implements TraceObserver {
         // remove the record from the current records
         synchronized (records) {
             records[ record.taskId ] = record
-            timeCached += getCpuTime(record)
         }
 
-    }
-
-    protected long getCpuTime( TraceRecord record ) {
-        final time = (long)record.get('realtime')
-        final cpus = (long)record.get('cpus')
-        return time * cpus / 1000 as long
     }
 
     protected void renderHtml() {
@@ -210,7 +159,6 @@ class ReportObserver implements TraceObserver {
         final tpl_fields = [
             workflow : getWorkflowMetadata(),
             payload : renderJsonData(records.values()),
-            compute_time : getComputeTime(),
             assets_css : [
                 readTemplate('assets/bootstrap.min.css'),
                 readTemplate('assets/datatables.min.css')
@@ -267,5 +215,10 @@ class ReportObserver implements TraceObserver {
             writer.append(ch as char);
         }
         writer.toString();
+    }
+
+    @Override
+    boolean enableMetrics() {
+        return true
     }
 }

@@ -20,11 +20,12 @@ class AwsBatchScriptLauncherTest extends Specification {
          * simple bash run
          */
         when:
-        def opts = Mock(AwsOptions)
+        def opts = new AwsOptions(cliPath:'/conda/bin/aws', region: 'eu-west-1')
         def bash = new AwsBatchScriptLauncher([
                 name: 'Hello 1',
                 workDir: folder,
                 script: 'echo Hello world!',
+                environment: [FOO: 1, BAR:'any'],
                 input: 'Ciao ciao'
         ] as TaskBean, opts)
         bash.build()
@@ -81,7 +82,7 @@ class AwsBatchScriptLauncherTest extends Specification {
 
                 on_exit() {
                   exit_status=\${ret:=\$?}
-                  printf \$exit_status | aws s3 cp - s3:/${folder}/.exitcode || true
+                  printf \$exit_status | /conda/bin/aws --region eu-west-1 s3 cp - s3:/${folder}/.exitcode || true
                   set +u
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
@@ -106,22 +107,24 @@ class AwsBatchScriptLauncherTest extends Specification {
                     local s3path=\$2
                     for name in \$(eval "ls -d \$pattern");do
                       if [[ -d "\$name" ]]; then
-                        aws s3 cp \$name \$s3path/\$name --quiet --recursive --storage-class STANDARD
+                        /conda/bin/aws --region eu-west-1 s3 cp \$name \$s3path/\$name --quiet --recursive --storage-class STANDARD
                       else
-                        aws s3 cp \$name \$s3path/\$name --quiet --storage-class STANDARD
+                        /conda/bin/aws --region eu-west-1 s3 cp \$name \$s3path/\$name --quiet --storage-class STANDARD
                       fi
                   done
                 }
 
+                echo start | /conda/bin/aws --region eu-west-1 s3 cp - s3:/${folder}/.command.begin
+                # task environment
+                export FOO="1"
+                export BAR="any"
 
-                echo start | aws s3 cp - s3:/${folder}/.command.begin
-                [ -f .command.env ] && source .command.env
                 [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
+                # stage input files
                 rm -f .command.sh
                 rm -f .command.in
-                aws s3 cp --quiet s3:/${folder}/.command.sh .command.sh
-                aws s3 cp --quiet s3:/${folder}/.command.in .command.in
-
+                /conda/bin/aws --region eu-west-1 s3 cp --quiet s3:/${folder}/.command.sh .command.sh
+                /conda/bin/aws --region eu-west-1 s3 cp --quiet s3:/${folder}/.command.in .command.in
 
                 set +e
                 COUT=\$PWD/.command.po; mkfifo "\$COUT"
@@ -156,7 +159,7 @@ class AwsBatchScriptLauncherTest extends Specification {
          * simple bash run
          */
         when:
-        def opts = Mock(AwsOptions)
+        def opts = new AwsOptions()
         def bash = new AwsBatchScriptLauncher([
                 name: 'Hello 1',
                 workDir: folder,
@@ -252,17 +255,15 @@ class AwsBatchScriptLauncherTest extends Specification {
                   done
                 }
 
-
                 echo start | aws s3 cp - s3:/${folder}/.command.begin
-                [ -f .command.env ] && source .command.env
                 [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
+                # stage input files
                 rm -f .command.sh
-                rm -f .command.run.1
+                rm -f .command.stub
                 rm -f .command.in
                 aws s3 cp --quiet s3:/${folder}/.command.sh .command.sh
-                aws s3 cp --quiet s3:/${folder}/.command.run.1 .command.run.1
+                aws s3 cp --quiet s3:/${folder}/.command.stub .command.stub
                 aws s3 cp --quiet s3:/${folder}/.command.in .command.in
-
 
                 set +e
                 COUT=\$PWD/.command.po; mkfifo "\$COUT"
@@ -272,16 +273,18 @@ class AwsBatchScriptLauncherTest extends Specification {
                 tee .command.err < "\$CERR" >&2 &
                 tee2=\$!
                 (
-                /bin/bash .command.run.1
+                /bin/bash .command.stub
                 ) >"\$COUT" 2>"\$CERR" &
                 pid=\$!
                 wait \$pid || ret=\$?
                 wait \$tee1 \$tee2
                 nxf_s3_upload .command.out s3:/${folder} || true
                 nxf_s3_upload .command.err s3:/${folder} || true
-
-                nxf_s3_upload 'foo.txt' s3:/${folder} || true
-                nxf_s3_upload 'bar.fastq' s3:/${folder} || true
+                # copies output files to target
+                if [[ \${ret:=0} == 0 ]]; then
+                  nxf_s3_upload 'foo.txt' s3:/${folder} || true
+                  nxf_s3_upload 'bar.fastq' s3:/${folder} || true
+                fi
                 nxf_s3_upload .command.trace s3:/${folder} || true
                 """
                         .stripIndent().leftTrim()

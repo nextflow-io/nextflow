@@ -223,6 +223,7 @@ The DAG produced by Nextflow for the `Shootstrap <https://github.com/cbcrg/shoot
 Extrae integration
 ==================
 
+.. warning:: This feature has been deprecated and it will be removed in a future release
 
 Nextflow integrates the support for `Extrae`_ a library for performance tracing. Trace files
 created by Extrae can be analysed with `Paraver`_, a visual performance analysis tool.

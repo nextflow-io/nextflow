@@ -686,4 +686,28 @@ class TaskProcessorTest extends Specification {
         uuid.toString() == '50608212f83b30ef91169eac359b5e64'
     }
 
+    def 'should export env vars' () {
+
+        given:
+        def env
+
+        when:
+        env = TaskProcessor.bashEnvironmentScript([FOO:'hola',BAR:'ciao mondo'])
+        then:
+        env ==  '''
+                export FOO="hola"
+                export BAR="ciao mondo"
+                '''
+                .stripIndent().leftTrim()
+
+        when:
+        env = TaskProcessor.bashEnvironmentScript([PATH: 'foo:$PATH'], true)
+        then:
+        env == 'export PATH="foo:\\$PATH"\n'
+        env.charAt(16) == ':' as char
+        env.charAt(17) == '\\' as char
+        env.charAt(18) == '$' as char
+
+    }
+
 }

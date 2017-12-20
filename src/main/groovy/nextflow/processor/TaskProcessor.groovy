@@ -189,7 +189,6 @@ class TaskProcessor {
     /**
      * Adapter closure to call the {@link #invokeTask(java.lang.Object)} method
      */
-    @CompileStatic
     static class InvokeTaskAdapter extends Closure {
 
         private int numOfParams
@@ -1048,12 +1047,13 @@ class TaskProcessor {
             if( error instanceof Error ) throw error
 
             // -- retry without increasing the error counts
-            if( error.cause instanceof CloudSpotTerminationException ) {
+            if( task && error.cause instanceof CloudSpotTerminationException ) {
                 log.info "[$task.hashLog] NOTE: ${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
                 final taskCopy = task.makeCopy()
                 taskCopy.runType = RunType.RETRY
                 session.getExecService().submit { checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false ) }
                 task.failed = true
+                task.errorAction = RETRY
                 return RETRY
             }
 
@@ -1075,13 +1075,16 @@ class TaskProcessor {
                     else if( errorStrategy == RETRY ) msg += " -- Execution is retried ($taskErrCount)"
                     log.info msg
                     task.failed = true
+                    task.errorAction = errorStrategy
                     return errorStrategy
                 }
             }
 
             // -- mark the task as failed
-            if( task )
+            if( task ) {
                 task.failed = true
+                task.errorAction = errorStrategy
+            }
 
             // -- make sure the error is showed only the very first time across all processes
             if( errorShown.getAndSet(true) || session.aborted ) {
@@ -1113,25 +1116,25 @@ class TaskProcessor {
             log.error("Execution aborted due to an unexpected error", e )
         }
 
-        return new TaskFault(error: error, task: task, report: message.join('\n'), strategy: errorStrategy)
+        return new TaskFault(error: error, task: task, report: message.join('\n'))
     }
 
     protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, final int taskErrCount, final int procErrCount ) {
 
-        final errorStrategy = task.config.getErrorStrategy()
+        final action = task.config.getErrorStrategy()
 
         // retry is not allowed when the script cannot be compiled or similar errors
         if( error instanceof ProcessUnrecoverableException ) {
-            return !errorStrategy.soft ? errorStrategy : ErrorStrategy.TERMINATE
+            return !action.soft ? action : TERMINATE
         }
 
         // IGNORE strategy -- just continue
-        if( errorStrategy == ErrorStrategy.IGNORE ) {
-            return ErrorStrategy.IGNORE
+        if( action == IGNORE ) {
+            return IGNORE
         }
 
         // RETRY strategy -- check that process do not exceed 'maxError' and the task do not exceed 'maxRetries'
-        if( errorStrategy == ErrorStrategy.RETRY ) {
+        if( action == RETRY ) {
             final int maxErrors = task.config.getMaxErrors()
             final int maxRetries = task.config.getMaxRetries()
 
@@ -1156,7 +1159,7 @@ class TaskProcessor {
             return TERMINATE
         }
 
-        return errorStrategy
+        return action
     }
 
     final protected List<String> formatGuardError( List<String> message, FailedGuardException error, TaskRun task ) {
@@ -1795,12 +1798,12 @@ class TaskProcessor {
      * Given a map holding variables key-value pairs, create a script fragment
      * exporting the required environment variables
      */
-    static String bashEnvironmentScript( Map<String,String> environment ) {
+    static String bashEnvironmentScript( Map<String,String> environment, boolean escape=false ) {
 
         final script = []
         environment.each { name, value ->
             if( name ==~ /[a-zA-Z_]+[a-zA-Z0-9_]*/ ) {
-                script << "export $name=\"$value\""
+                script << "export $name=\"${escape ? value.replace('$','\\$') : value}\""
             }
             else {
                 log.trace "Illegal environment variable name: '${name}'"

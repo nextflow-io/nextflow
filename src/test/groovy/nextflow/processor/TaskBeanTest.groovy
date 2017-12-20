@@ -43,7 +43,6 @@ class TaskBeanTest extends Specification {
 
         def process = Mock(TaskProcessor)
         process.getConfig() >> ([stageInMode: 'link', stageOutMode: 'rsync'] as ProcessConfig)
-        process.getProcessEnvironment() >> [alpha: 'one', beta: 'two']
         process.getSession() >> session
 
         def config = new TaskConfig()
@@ -67,7 +66,7 @@ class TaskBeanTest extends Specification {
         task.getInputFilesMap() >> [file_1: Paths.get('/file/one'), file_2: Paths.get('/file/two')]
         task.getOutputFilesNames() >> [ 'simple.txt', 'my/path/file.bam' ]
         task.getTargetDir() >> Paths.get('/target/work/dir')
-        task.getInputEnvironment() >> [beta: 'xxx', gamma: 'yyy']
+        task.getEnvironment() >> [alpha: 'one', beta: 'xxx', gamma: 'yyy']
         task.getContainer() >> 'busybox:latest'
         task.getContainerConfig() >> [docker: true, registry: 'x']
         task.isContainerExecutable() >> true
@@ -92,7 +91,7 @@ class TaskBeanTest extends Specification {
         bean.containerImage == 'busybox:latest'
         bean.containerConfig == [docker: true, registry: 'x'] as ContainerConfig
         bean.containerMemory == new MemoryUnit('1GB')
-        bean.executable
+        bean.containerExecutable
         bean.statsEnabled
 
         bean.inputFiles == [file_1: Paths.get('/file/one'), file_2: Paths.get('/file/two')]

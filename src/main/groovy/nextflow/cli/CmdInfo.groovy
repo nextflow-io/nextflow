@@ -71,11 +71,11 @@ class CmdInfo extends CmdBase {
         println " local path  : ${manager.localPath}"
         println " main script : ${manager.mainScriptName}"
         if( manager.homePage && manager.homePage != manager.repositoryUrl )
-        println " home page   : ${manager.homePage}"
+            println " home page   : ${manager.homePage}"
         if( manager.description )
-        println " description : ${manager.description}"
+            println " description : ${manager.description}"
         if( manager.author )
-        println " author      : ${manager.author}"
+            println " author      : ${manager.author}"
 
         def revs = manager.getRevisions(level)
         if( revs.size() == 1 )
@@ -84,6 +84,17 @@ class CmdInfo extends CmdBase {
             println " revisions   : "
             revs.each { println " $it" }
         }
+
+        def updates = manager.getUpdates(level)
+        if( updates ) {
+            if( updates.size() == 1 && revs.size() == 1 )
+                println " updates     : ${updates[0]}"
+            else {
+                println " updates     : "
+                updates.each { println " $it" }
+            }
+        }
+
     }
 
     final static private BLANK = '  '

@@ -156,6 +156,7 @@ class DrmaaExecutorTest extends Specification {
         expected.time = null
         expected.memory = null
         expected.disk = null
+        expected.env = null
 
         def task = [:] as TaskRun
         task.id = TaskId.of(30)
@@ -165,6 +166,7 @@ class DrmaaExecutorTest extends Specification {
         task.processor = Mock(TaskProcessor)
         task.processor.getName() >> 'hello'
         task.processor.getSession() >> new nextflow.Session()
+        task.processor.getProcessEnvironment() >> [:]
         task.metaClass.getName = { 'hello (1)' }
         task.metaClass.getHashLog =  {'123abc'}
 

@@ -31,7 +31,9 @@ import nextflow.util.PathTrie
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-abstract class ContainerBuilder {
+abstract class ContainerBuilder<V extends ContainerBuilder> {
+
+    final static String DEFAULT_ENTRY = '/bin/bash'
 
     final protected List env = []
 
@@ -53,23 +55,26 @@ abstract class ContainerBuilder {
 
     protected boolean readOnlyInputs
 
+    protected String entryPoint
 
-    ContainerBuilder addRunOptions(String str) {
+    protected String runCommand
+
+    V addRunOptions(String str) {
         runOptions.add(str)
-        return this
+        return (V)this
     }
 
-    ContainerBuilder addEngineOptions(String str) {
+    V addEngineOptions(String str) {
         engineOptions.add(str)
-        return this
+        return (V)this
     }
 
-    ContainerBuilder setCpus( String value ) {
+    V setCpus( String value ) {
         this.cpus = value
-        return this
+        return (V)this
     }
 
-    ContainerBuilder setMemory( value ) {
+    V setMemory( value ) {
         if( value instanceof MemoryUnit )
             this.memory = "${value.toMega()}m"
 
@@ -79,28 +84,47 @@ abstract class ContainerBuilder {
         else
             throw new IllegalArgumentException("Not a supported memory value")
 
-        return this
+        return (V)this
     }
 
-    ContainerBuilder setWorkDir( Path path ) {
+    V setWorkDir( Path path ) {
         this.workDir = path
-        return this
+        return (V)this
     }
 
-    ContainerBuilder setName(String name) {
-
+    V setName(String name) {
+        return (V)this
     }
 
-    ContainerBuilder setTemp( String value ) {
+    V setTemp( String value ) {
         this.temp = value
-        return this
+        return (V)this
     }
 
-    abstract ContainerBuilder params( Map config )
+    abstract V params( Map config )
 
-    abstract ContainerBuilder build(StringBuilder result)
+    abstract V build(StringBuilder result)
 
-    abstract String getRunCommand()
+    /**
+     * @return The command string to run a container from Docker image
+     */
+    String getRunCommand() {
+        if( !runCommand ) throw new IllegalStateException("Missing `runCommand` -- make sure `build` method has been invoked")
+        runCommand
+    }
+
+    String getRunCommand(String launcher) {
+        def run = getRunCommand()
+        if( !run )
+            throw new IllegalStateException("Missing `runCommand` -- make sure `build` method has been invoked")
+
+        if( launcher ) {
+            def result = run
+            result += entryPoint ? " $entryPoint -c \"$launcher\"" : " $launcher"
+            return result
+        }
+        return run + ' ' + launcher
+    }
 
     String getKillCommand() { return null }
 
@@ -110,29 +134,24 @@ abstract class ContainerBuilder {
         return wrapper
     }
 
-    StringBuilder appendRunCommand( StringBuilder wrapper ) {
-        wrapper << runCommand
-    }
-
-    ContainerBuilder build() {
+    V build() {
         build(new StringBuilder())
     }
 
-    ContainerBuilder addEnv( entry ) {
+    V addEnv( entry ) {
         env.add(entry)
-        return this
+        return (V)this
     }
 
-    ContainerBuilder addMount( Path path ) {
+    V addMount( Path path ) {
         if( path )
             mounts.add(path)
-        return this
+        return (V)this
     }
 
-    ContainerBuilder addMountForInputs( Map<String,Path> inputFiles ) {
-
+    V addMountForInputs( Map<String,Path> inputFiles ) {
         mounts.addAll( inputFilesToPaths(inputFiles) )
-        return this
+        return (V)this
     }
 
     @PackageScope
@@ -146,7 +165,6 @@ abstract class ContainerBuilder {
 
         }
         return files
-
     }
 
     /**
@@ -170,6 +188,13 @@ abstract class ContainerBuilder {
         return result.join('\n')
     }
 
+    protected CharSequence appendEnv( StringBuilder result ) {
+        for( Object e : env ) {
+            makeEnv(e, result) << ' '
+        }
+        return result
+    }
+
     /**
      * Get the env command line option for the give environment definition
      *
@@ -178,14 +203,8 @@ abstract class ContainerBuilder {
      * @return
      */
     protected CharSequence makeEnv( env, StringBuilder result = new StringBuilder() ) {
-        // append the environment configuration
-        if( env instanceof File ) {
-            env = env.toPath()
-        }
-        if( env instanceof Path ) {
-            result << '-e "BASH_ENV=' << Escape.path(env) << '"'
-        }
-        else if( env instanceof Map ) {
+
+        if( env instanceof Map ) {
             short index = 0
             for( Map.Entry entry : env.entrySet() ) {
                 if( index++ ) result << ' '

@@ -230,29 +230,6 @@ class SortFileCollector extends FileCollector implements Closeable {
         return h.hash().asBytes()
     }
 
-    /**
-     * Append the content of a file to the target file having {@code key} as name
-     *
-     * @param key
-     * @param fileToAppend
-     */
-    protected void appendStream( InputStream source, OutputStream target ) {
-        int n
-        byte[] buffer = new byte[10 * 1024]
-
-        try {
-            while( (n=source.read(buffer)) > 0 ) {
-                target.write(buffer,0,n)
-            }
-            // append the new line separator
-            if( newLine )
-                target.write( System.lineSeparator().bytes )
-        }
-        finally {
-            source.closeQuietly()
-        }
-    }
-
     @Override
     protected HashCode makeHash() {
 
@@ -336,6 +313,13 @@ class SortFileCollector extends FileCollector implements Closeable {
             }
 
             /*
+             * fetch the next value from the store (this also may retried the header)
+             */
+            def bytes = (byte[])store.get(bytes(index))
+            def val = KryoHelper.deserialize(bytes)
+            def data = normalizeToStream(val)
+
+            /*
              * check if a new group has been found
              */
             if( last != name ) {
@@ -351,22 +335,15 @@ class SortFileCollector extends FileCollector implements Closeable {
                 output = Files.newOutputStream(target, TRUNCATE)
 
                 /*
-                 * write the 'seed' value
+                 * append the the header
                  */
-                if( seed instanceof Map && ((Map)seed).containsKey(name) ) {
-                    appendStream(normalizeToStream(((Map)seed).get(name)), output)
-                }
-                else if( seed ) {
-                    appendStream(normalizeToStream(seed), output)
-                }
+                appendHeader(data, name, output)
             }
 
             /*
              * append the current item value
              */
-            def bytes = (byte[])store.get(bytes(index))
-            def val = KryoHelper.deserialize(bytes)
-            appendStream(normalizeToStream(val), output)
+            appendStream(data, output)
         }
 
         // close last output stream
