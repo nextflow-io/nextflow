@@ -1977,6 +1977,43 @@ example::
 Other operators
 ========================
 
+* `close`_
+* `dump`_
+* `ifEmpty`_
+* `print`_
+* `println`_
+* `set`_
+* `view`_
+
+.. _operator-dump:
+
+dump
+----
+
+The ``dump`` operator prints the items emitted by the channel to which is applied only when the option
+``-dump-channels`` is specified on the ``run`` command line, otherwise it is ignored.
+
+This is useful to enable the debugging of one or more channel content on-demand by using a command line option
+instead of modifying your script code.
+
+An optional ``tag`` parameter allows you to select which channel to dump. For example::
+
+    Channel
+        .from(1,2,3)
+        .map { it+1 }
+        .dump(tag:'foo')
+
+    Channel
+        .from(1,2,3)
+        .map { it^2 }
+        .dump(tag: 'bar')
+
+
+Then you will be able to specify the tag ``foo`` or ``bar`` as an argument of the ``-dump-channels`` option to print
+either the content of the first or the second channel. Multiple tag names can be specified separating them with a ``,``
+character.
+
+
 .. _operator-set:
 
 set
@@ -2030,7 +2067,7 @@ See also: :ref:`channel-empty` method.
 print
 ------
 
-The ``print`` operator prints the items emitted by a channel to the console standard.
+The ``print`` operator prints the items emitted by a channel to the standard output.
 An optional :ref:`closure <script-closure>` parameter can be specified to customise how items are printed.
 For example::
 
