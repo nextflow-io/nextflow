@@ -9,7 +9,7 @@
     out << """#########################################
 ## Execution completed unsuccessfully! ##
 #########################################
-The exit status of the task that caused the workflow execution to fail was: ${workflow.exitStatus}.
+The exit status of the task that caused the workflow execution to fail was: ${workflow.exitStatus != null ? workflow.exitStatus : '-'}.
 The full error message was:
 
 ${workflow.errorReport ?: 'n/a'}
