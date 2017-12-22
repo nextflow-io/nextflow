@@ -51,6 +51,12 @@ class CliOptions {
     List<String> trace
 
     /**
+     * Enable syslog appender
+     */
+    @Parameter(names = ['-syslog'], description = 'Send logs to syslog' )
+    String syslog
+
+    /**
      * Print out the version number and exit
      */
     @Parameter(names = ['-v','-version'], description = 'Print the program version')
