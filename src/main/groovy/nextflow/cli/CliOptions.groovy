@@ -53,7 +53,7 @@ class CliOptions {
     /**
      * Enable syslog appender
      */
-    @Parameter(names = ['-syslog'], description = 'Send logs to syslog' )
+    @Parameter(names = ['-syslog'], description = 'Send logs to syslog server (eg. localhost:514)' )
     String syslog
 
     /**

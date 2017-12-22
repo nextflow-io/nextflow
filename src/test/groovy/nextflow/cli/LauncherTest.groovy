@@ -228,6 +228,10 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run','-N') == ['run', '-N','true']
         launcher.normalizeArgs('run','-N', '-x') == ['run', '-N','true', '-x']
 
+        launcher.normalizeArgs('run','-syslog', 'host.com') == ['run', '-syslog','host.com']
+        launcher.normalizeArgs('run','-syslog') == ['run', '-syslog','localhost']
+        launcher.normalizeArgs('run','-syslog', '-x') == ['run', '-syslog','localhost', '-x']
+
         launcher.normalizeArgs( script.toAbsolutePath().toString(), '--x=1' ) == ['run', script.toAbsolutePath().toString(), '--x=1']
 
 

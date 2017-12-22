@@ -237,7 +237,7 @@ class Launcher {
             }
 
             else if( current == '-syslog' && (i==args.size() || args[i].startsWith('-') || allCommands.find { it.name == args[i] } )) {
-                normalized << 'localhost:514:LOCAL0'
+                normalized << 'localhost'
             }
 
             else if( current == '-dump-channels' && (i==args.size() || args[i].startsWith('-'))) {

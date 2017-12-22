@@ -72,9 +72,7 @@ class LoggerHelper {
 
     private boolean rolling = false
 
-    private boolean syslog = false
-
-    private String syslogConf = ''
+    private String syslog
 
     private boolean daemon = false
 
@@ -100,7 +98,6 @@ class LoggerHelper {
     LoggerHelper setSyslog( String value ) {
         if(value) {
             this.syslog = true
-            this.syslogConf = value
         }
         return this
     }
@@ -217,19 +214,13 @@ class LoggerHelper {
     }
 
     protected SyslogAppender createSyslogAppender() {
-        List<String> slList =[]
-        if (syslogConf.contains(':')) {
-           // Multiple settings were sent
-           slList.addAll(Arrays.asList(syslogConf.split(':')))
-        } else {
-            // Otherwise its just the hostname
-            slList << syslogConf
-        }
         SyslogAppender result = syslog ? new SyslogAppender() : null
         if( result )  {
-            def sysLogHost = slList[0] ? slList[0] : "127.0.0.1"
-            def sysLogPort = slList[1] ? slList[1].toInteger() : 514
-            def sysLogFacility = slList[2] ? slList[2] : "LOCAL0"
+            // Multiple settings were sent or its just the hostname
+            final conf = syslog.contains(':') ? syslog.tokenize(':') : [syslog]
+            def sysLogHost = conf[0]
+            def sysLogPort = conf[1] ? conf[1].toInteger() : 514
+            def sysLogFacility = conf[2] ? conf[2] : "LOCAL0"
             result.setSyslogHost(sysLogHost)
             result.setPort(sysLogPort)
             result.setFacility(sysLogFacility)
@@ -307,7 +298,7 @@ class LoggerHelper {
         new LoggerHelper(launcher.options)
                 .setDaemon(launcher.isDaemon())
                 .setRolling(true)
-                .setSyslog(launcher.options.getSyslog())
+                .setSyslog(launcher.options.syslog)
                 .setup()
     }
 
@@ -315,7 +306,7 @@ class LoggerHelper {
         new LoggerHelper(opts)
                 .setDaemon(daemon)
                 .setRolling(true)
-                .setSyslog(opts.getSyslog())
+                .setSyslog(opts.syslog)
                 .setup()
     }
 
