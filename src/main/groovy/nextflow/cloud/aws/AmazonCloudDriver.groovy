@@ -318,7 +318,7 @@ class AmazonCloudDriver implements CloudDriver {
             builder << scriptMountEFS(cfg.sharedStorageId, cfg.sharedStorageMount, cfg.userName)
         }
 
-        if( cfg.instanceType?.startsWith('r3.') && cfg.instanceStorageDevice && cfg.instanceStorageMount ) {
+        if( cfg.instanceStorageDevice && cfg.instanceStorageMount && cfg.instanceType ==~ '^(r3|h1)\\..+') {
             builder << scriptMountInstanceStorage(cfg.instanceStorageDevice, cfg.instanceStorageMount, cfg.userName)
         }
 
