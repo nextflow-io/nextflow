@@ -23,9 +23,9 @@
     out << """
     <div style="color: #a94442; background-color: #f2dede; border-color: #ebccd1; padding: 15px; margin-bottom: 20px; border: 1px solid transparent; border-radius: 4px;">
         <h4 style="margin-top:0; color: inherit;">Execution completed unsuccessfully!</h4>
-        <p>The exit status of the task that caused the workflow execution to fail was: <code>${workflow.exitStatus}</code>.</p>
+        <p>The exit status of the task that caused the workflow execution to fail was: <code>${workflow.exitStatus != null ? workflow.exitStatus : '-'}</code>.</p>
         <p>The full error message was:</p>
-        <pre style="white-space: pre-wrap; overflow: visible; margin-bottom: 0;">${workflow.errorReport}</pre>
+        <pre style="white-space: pre-wrap; overflow: visible; margin-bottom: 0;">${workflow.errorReport ?: 'n/a'}</pre>
     </div>
     """
     }
