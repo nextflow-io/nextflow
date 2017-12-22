@@ -236,6 +236,10 @@ class Launcher {
                 normalized << 'true'
             }
 
+            else if( current == '-syslog' && (i==args.size() || args[i].startsWith('-') || allCommands.find { it.name == args[i] } )) {
+                normalized << 'localhost:514:LOCAL0'
+            }
+
             else if( current == '-dump-channels' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << '*'
             }
