@@ -26,9 +26,8 @@ The command used to launch the workflow was as follows:
   Ending time       : ${workflow.complete.format('dd-MMM-yyyy HH:mm:ss')} (duration: ${workflow.duration})
   Total CPU-Hours   : ${workflow.stats?.computeTime ?: '-'}
   Launch directory  : ${workflow.launchDir}
-  Work directory    : ${workflow.workDir}
+  Work directory    : ${workflow.workDir.toUriString()}
   Project directory : ${workflow.projectDir}
-  Script path       : ${workflow.scriptFile ?: '-'}
   Script name       : ${workflow.scriptName ?: '-'}
   Script ID         : ${workflow.scriptId ?: '-'}
   Workflow session  : ${workflow.sessionId}

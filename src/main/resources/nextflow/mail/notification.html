@@ -59,17 +59,12 @@
         
         <tr>
         <td>Work directory</td>
-        <td>${workflow.workDir}</td>
+        <td>${workflow.workDir.toUriString()}</td>
         </tr>
         
         <tr>
         <td>Project directory</td>
         <td>${workflow.projectDir}</td>
-        </tr>
-        
-        <tr>
-        <td>Script path</td>
-        <td>${workflow.scriptFile ?: '-'}</td>
         </tr>
         
         <tr>

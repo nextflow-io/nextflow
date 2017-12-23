@@ -139,17 +139,10 @@
         <dd class="col-sm-9"><samp>${workflow.launchDir}</samp></dd>
 
         <dt class="col-sm-3">Work directory</dt>
-        <dd class="col-sm-9"><samp>${workflow.workDir}</samp></dd>
+        <dd class="col-sm-9"><samp>${workflow.workDir.toUriString()}</samp></dd>
 
         <dt class="col-sm-3">Project directory</dt>
         <dd class="col-sm-9"><samp>${workflow.projectDir}</samp></dd>
-
-        <% if (workflow.scriptFile) {
-          out << """
-          <dt class="col-sm-3">Script path</dt>
-          <dd class="col-sm-9"><samp>${workflow.scriptFile}</samp></dd>
-          """
-        } %>
 
         <% if (workflow.scriptName) {
           out << """
