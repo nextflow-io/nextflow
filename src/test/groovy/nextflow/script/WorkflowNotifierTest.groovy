@@ -8,6 +8,7 @@ import nextflow.mail.Mailer
 import nextflow.trace.WorkflowStats
 import nextflow.util.Duration
 import spock.lang.Specification
+import test.TestHelper
 
 /**
  *
@@ -18,6 +19,7 @@ class WorkflowNotifierTest extends Specification {
     def 'should load notification text template' () {
 
         given:
+        def work = TestHelper.createInMemTempDir()
         def sessionId = UUID.randomUUID()
         def now = new Date(1513285947928)
         def end = new Date( now.time + 150_000 )
@@ -29,7 +31,7 @@ class WorkflowNotifierTest extends Specification {
                 duration: Duration.of( end.time - now.time ),
                 commandLine: 'nextflow run big-workflow',
                 launchDir: Paths.get('/launch/dir'),
-                workDir: Paths.get('/work/dir'),
+                workDir: work,
                 projectDir: Paths.get('/project/dir'),
                 scriptFile: Paths.get('/script/file.nf'),
                 scriptName: 'script.nf',
@@ -69,9 +71,8 @@ class WorkflowNotifierTest extends Specification {
                   Ending time       : ${end.format('dd-MMM-yyyy HH:mm:ss')} (duration: 2m 30s)
                   Total CPU-Hours   : 1.1
                   Launch directory  : /launch/dir
-                  Work directory    : /work/dir
+                  Work directory    : ${work.toUriString()}
                   Project directory : /project/dir
-                  Script path       : /script/file.nf
                   Script name       : script.nf
                   Script ID         : 9ds9ds090
                   Workflow session  : ${sessionId}
@@ -118,9 +119,8 @@ class WorkflowNotifierTest extends Specification {
                   Ending time       : ${end.format('dd-MMM-yyyy HH:mm:ss')} (duration: 2m 30s)
                   Total CPU-Hours   : 1.1
                   Launch directory  : /launch/dir
-                  Work directory    : /work/dir
+                  Work directory    : ${work.toUriString()}
                   Project directory : /project/dir
-                  Script path       : /script/file.nf
                   Script name       : script.nf
                   Script ID         : 9ds9ds090
                   Workflow session  : ${sessionId}
@@ -146,6 +146,7 @@ class WorkflowNotifierTest extends Specification {
         def sessionId = UUID.randomUUID()
         def now = new Date(1513285947928)
         def end = new Date( now.time + 150_000 )
+        def workDir = TestHelper.createInMemTempDir()
 
         def meta = new WorkflowMetadata(
                 runName: 'foo_bartali',
@@ -155,7 +156,7 @@ class WorkflowNotifierTest extends Specification {
                 duration: Duration.of( end.time - now.time ),
                 commandLine: 'nextflow run big-workflow',
                 launchDir: Paths.get('/launch/dir'),
-                workDir: Paths.get('/work/dir'),
+                workDir: workDir,
                 projectDir: Paths.get('/project/dir'),
                 scriptFile: Paths.get('/script/file.nf'),
                 scriptName: 'script.nf',
@@ -179,6 +180,7 @@ class WorkflowNotifierTest extends Specification {
         then:
         template.contains('<h1>Workflow completion notification</h1>')
         template.contains('Execution completed successfully')
+        template.contains(workDir.toUriString())
 
         when:
         meta.success = false
@@ -186,6 +188,7 @@ class WorkflowNotifierTest extends Specification {
         then:
         template.contains('<h1>Workflow completion notification</h1>')
         template.contains('Execution completed unsuccessfully')
+        template.contains(workDir.toUriString())
 
     }
 
