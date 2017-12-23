@@ -49,7 +49,7 @@
         
         <tr>
         <td>Total CPU-Hours</td>
-        <td>${workflow.stats?.computeTime ?: '-'}</td>
+        <td>${workflow.stats.getComputeTimeString() ?: '-'}</td>
         </tr>
         
         <tr>

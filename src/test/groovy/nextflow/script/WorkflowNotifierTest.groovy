@@ -44,7 +44,7 @@ class WorkflowNotifierTest extends Specification {
                 container: 'image/foo:tag',
                 containerEngine: 'docker',
                 nextflow: [version: '0.27.0', build: 333, timestamp: '2017-12-12'],
-                stats: new WorkflowStats(timeSucceed: 4000)
+                stats: new WorkflowStats(succeedMillis: 4_000_000)
         )
 
         def notifier = new WorkflowNotifier(variables: [workflow:meta], config: [:])
@@ -169,7 +169,7 @@ class WorkflowNotifierTest extends Specification {
                 container: 'image/foo:tag',
                 containerEngine: 'docker',
                 nextflow: [version: '0.27.0', build: 333, timestamp: '2017-12-12'],
-                stats: new WorkflowStats(timeSucceed: 4000)
+                stats: new WorkflowStats(succeedMillis: 4000)
         )
 
         def notifier = new WorkflowNotifier(workflow: meta, config: [:], variables: [workflow:meta])
