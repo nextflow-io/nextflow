@@ -24,7 +24,7 @@ The command used to launch the workflow was as follows:
 
   Launch time       : ${workflow.start.format('dd-MMM-yyyy HH:mm:ss')}
   Ending time       : ${workflow.complete.format('dd-MMM-yyyy HH:mm:ss')} (duration: ${workflow.duration})
-  Total CPU-Hours   : ${workflow.stats?.computeTime ?: '-'}
+  Total CPU-Hours   : ${workflow.stats.getComputeTimeString() ?: '-'}
   Launch directory  : ${workflow.launchDir}
   Work directory    : ${workflow.workDir.toUriString()}
   Project directory : ${workflow.projectDir}
