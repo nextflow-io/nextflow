@@ -24,6 +24,7 @@ import groovy.transform.Canonical
 import nextflow.trace.TraceRecord
 
 /**
+ * Model a task entry persisted in the {@link nextflow.CacheDB}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

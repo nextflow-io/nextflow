@@ -25,6 +25,7 @@ import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
 
 /**
+ * Implements a cached {@link TaskHandler}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
