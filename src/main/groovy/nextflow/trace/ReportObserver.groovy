@@ -71,6 +71,7 @@ class ReportObserver implements TraceObserver {
         session.binding.getVariable('workflow') as WorkflowMetadata
     }
 
+    protected Map<TaskId,TraceRecord> getRecords() { records }
 
     /**
      * Create the trace file, in file already existing with the same name it is
@@ -101,7 +102,7 @@ class ReportObserver implements TraceObserver {
      */
     @Override
     void onProcessSubmit(TaskHandler handler) {
-        log.trace "Trace report - submit process > handler"
+        log.trace "Trace report - submit process > $handler"
         final trace = handler.getTraceRecord()
         synchronized (records) {
             records[ trace.taskId ] = trace
@@ -114,7 +115,7 @@ class ReportObserver implements TraceObserver {
      */
     @Override
     void onProcessStart(TaskHandler handler) {
-        log.trace "Trace report - start process > handler"
+        log.trace "Trace report - start process > $handler"
         def trace = handler.getTraceRecord()
         synchronized (records) {
             records[ trace.taskId ] = trace
@@ -127,11 +128,10 @@ class ReportObserver implements TraceObserver {
      */
     @Override
     void onProcessComplete(TaskHandler handler) {
-        log.trace "Trace report - complete process > handler"
-        final taskId = handler.task.id
+        log.trace "Trace report - complete process > $handler"
         final record = handler.getTraceRecord()
         if( !record ) {
-            log.debug "Profile warn: Unable to find record for task_run with id: ${taskId}"
+            log.debug "WARN: Unable to find trace record for task id=${handler.task?.id}"
             return
         }
 
@@ -143,7 +143,7 @@ class ReportObserver implements TraceObserver {
 
     @Override
     void onProcessCached(TaskHandler handler) {
-        log.trace "Trace report - cached process > handler"
+        log.trace "Trace report - cached process > $handler"
         final record = handler.getTraceRecord()
 
         // remove the record from the current records
