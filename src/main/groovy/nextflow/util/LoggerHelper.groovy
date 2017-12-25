@@ -97,7 +97,7 @@ class LoggerHelper {
 
     LoggerHelper setSyslog( String value ) {
         if(value) {
-            this.syslog = true
+            this.syslog = value
         }
         return this
     }
