@@ -19,7 +19,8 @@
  */
 
 package nextflow.cloud.aws
-import java.nio.file.Files
+import javax.mail.internet.MimeMessage
+import javax.mail.internet.MimeMultipart
 
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ec2.model.BlockDeviceMapping
@@ -34,12 +35,10 @@ import nextflow.cloud.CloudConfig
 import nextflow.cloud.LaunchConfig
 import nextflow.cloud.types.CloudInstanceStatus
 import nextflow.cloud.types.CloudInstanceType
-import nextflow.config.ConfigBuilder
 import nextflow.util.MemoryUnit
 import org.apache.commons.lang.SerializationUtils
 import spock.lang.Specification
 import spock.lang.Unroll
-import spock.util.environment.RestoreSystemProperties
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -54,51 +53,25 @@ class AmazonCloudDriverTest extends Specification {
         ]]
     }
 
-    @RestoreSystemProperties
     def 'should create mime-multipart cloud-init' () {
 
         given:
-        def folder = Files.createTempDirectory('test')
-        folder.resolve('.ssh').mkdir()
-        folder.resolve('.ssh/id_rsa.pub').text = 'ssh-rsa fake'
-        System.setProperty('user.home', folder.toString())
-
-        def file = folder.resolve('nextflow.config')
-        file.text = '''
-            aws {
-                accessKey = 'abc'
-                secretKey = 'xxx'
-                region = 'eu-west-1'
-            }
-
-            cloud {
-                imageId = 'ami-s8a9s8'
-                instanceType = 'r3.xlarge'
-
-                bootStorageSize = '10GB'
-
-                instanceStorageDevice = '/dev/xyz'
-                instanceStorageMount = '/scratch'
-
-                sharedStorageId = '78xs8'
-                sharedStorageMount = '/mnt/efs'
-            }
-
-            '''
-
-        def config = new ConfigBuilder().buildConfig([file])
-        def driver = new AmazonCloudDriver(Mock(AmazonEC2Client))
+        def session = javax.mail.Session.getInstance(new Properties());
+        def SCRIPT_INIT = 'cloud-init-script-text'
+        def SCRIPT_BOOT = 'boot-hook-script'
+        def config = Mock(LaunchConfig)
+        def driver = Spy(AmazonCloudDriver)
 
         when:
-        def payload = driver.getUserDataAsString( CloudConfig.create(config).build() )
+        def payload = driver.getUserDataAsString(config)
+        def message = new MimeMessage(session, new ByteArrayInputStream(payload.getBytes()))
+        def parts = (MimeMultipart)message.getContent()
         then:
-        payload.contains('MIME-Version: 1.0')
-        payload.contains('Content-Type: multipart/mixed;')
-        payload.contains('Content-Type: text/x-shellscript; charset=us-ascii')
-        payload.contains('Content-Type: text/cloud-boothook; charset=us-ascii')
-
-        cleanup:
-        folder?.deleteDir()
+        1 * driver.cloudInitScript(config) >> SCRIPT_INIT
+        1 * driver.cloudBootHookScript(config) >> SCRIPT_BOOT
+        parts.getCount() == 2
+        parts.getBodyPart(0).getContent().text == SCRIPT_INIT
+        parts.getBodyPart(1).getContent().text == SCRIPT_BOOT
     }
 
     def 'should create bash profile properly' () {
@@ -360,14 +333,27 @@ class AmazonCloudDriverTest extends Specification {
 
     }
 
-    def 'should create script to mount instance storage' () {
+    def 'should mount instance storage given mount path and device name' () {
 
         given:
-        def driver = [:] as AmazonCloudDriver
-        when:
-        def snippet = driver.scriptMountInstanceStorage('/dev/xyz', '/mnt/scratch', 'ubuntu')
+        def script
+        def driver = Spy(AmazonCloudDriver)
+        def config = Mock(LaunchConfig)
+
+        when: '''
+            It is provided `mount path` and `device name`
+            it should return a script to format and mount that device
+        '''
+        script = driver.scriptMountInstanceStorage(config)
         then:
-        snippet ==  """
+        1 * config.getInstanceStorageMount() >> '/mnt/scratch'
+        1 * config.getInstanceStorageDevice() >> '/dev/xyz'
+        1 * config.getUserName() >> 'ubuntu'
+        0 * driver.instanceStorageDeviceNames(config)
+        script ==  """
+                    # unmount any ephemeral volume
+                    for x in \$(df | grep ephemeral | awk '{print \$1}'); do umount \$x; done
+                    # format and mount storage volume
                     mkfs.ext4 -E nodiscard /dev/xyz
                     mkdir -p /mnt/scratch
                     mount -o discard /dev/xyz /mnt/scratch
@@ -375,7 +361,48 @@ class AmazonCloudDriverTest extends Specification {
                     chmod 775 /mnt/scratch
                     """
                 .stripIndent().leftTrim()
+
     }
+
+
+    def 'should mount lvm volume given mount path' () {
+
+        given:
+        def script
+        def driver = Spy(AmazonCloudDriver)
+        def config = Mock(LaunchConfig)
+
+        when: '''
+            the instanceType has more than one ephemeral instance storage volumes available
+            it creates a LVM volume and mount that volume
+        '''
+        script = driver.scriptMountInstanceStorage(config)
+        then:
+        1 * config.getInstanceStorageMount() >> '/scratch'
+        1 * config.getInstanceStorageDevice() >> null
+        1 * config.getUserName() >> 'foo'
+        1 * driver.instanceStorageDeviceNames(config) >> ['/dev/sdx', '/dev/sdz']
+        script ==  """
+                    # unmount any ephemeral volume
+                    for x in \$(df | grep ephemeral | awk '{print \$1}'); do umount \$x; done
+                    # install LVM2
+                    command -v vgscan >/dev/null 2>&1 || yum install -y lvm2 || apt-get -y install lvm2
+                    # create lvm volume
+                    pvcreate -y /dev/sdx /dev/sdz
+                    vgcreate -y eph /dev/sdx /dev/sdz
+                    vgscan
+                    lvcreate -y -n data -l 100%FREE eph
+                    # format and mount storage volume
+                    mkfs.ext4 -E nodiscard /dev/eph/data
+                    mkdir -p /scratch
+                    mount -o discard /dev/eph/data /scratch
+                    chown -R foo:foo /scratch
+                    chmod 775 /scratch
+                    """
+                .stripIndent().leftTrim()
+
+    }
+
 
     def 'should create script to mount EFS storage' () {
 
@@ -426,9 +453,6 @@ class AmazonCloudDriverTest extends Specification {
 
         given:
         def driver = Spy(AmazonCloudDriver)
-        driver.scriptMountEFS(_,_,_) >> { "mount efs" }
-        driver.scriptCreateUser(_,_) >> { "create user" }
-        driver.scriptMountInstanceStorage(_,_,_) >> { "mount storage" }
 
         when:
         // no user to create
@@ -442,9 +466,9 @@ class AmazonCloudDriverTest extends Specification {
 
         def result1 = driver.cloudBootHookScript(CloudConfig.create(config1).build())
         then:
-        0 * driver.scriptCreateUser(_,_)
-        0 * driver.scriptMountEFS(_, _, _)
-        0 * driver.scriptMountInstanceStorage(_,_,_)
+        0 * driver.scriptCreateUser(_,_) >> null
+        0 * driver.scriptMountEFS(_, _, _) >> null
+        0 * driver.scriptMountInstanceStorage(_) >> null
         result1 == ''
 
 
@@ -455,9 +479,9 @@ class AmazonCloudDriverTest extends Specification {
         def config2 = [cloud: [ userName: 'ubuntu', keyHash: 'ssh-hash 89d98ds090f06da67da', ]]
         driver.cloudBootHookScript(CloudConfig.create(config2).build())
         then:
-        1 * driver.scriptCreateUser("ubuntu","ssh-hash 89d98ds090f06da67da")
-        0 * driver.scriptMountEFS(_, _, _)
-        0 * driver.scriptMountInstanceStorage(_,_,_)
+        1 * driver.scriptCreateUser("ubuntu","ssh-hash 89d98ds090f06da67da") >> null
+        0 * driver.scriptMountEFS(_, _, _) >> null
+        0 * driver.scriptMountInstanceStorage(_) >> null
 
 
         when:
@@ -472,7 +496,7 @@ class AmazonCloudDriverTest extends Specification {
         driver.cloudBootHookScript(CloudConfig.create(config3).build())
         then:
         0 * driver.scriptCreateUser(_,_)
-        0 * driver.scriptMountInstanceStorage(_,_,_)
+        0 * driver.scriptMountInstanceStorage(_)
         1 * driver.scriptMountEFS('fs-213', '/mnt/efs', 'the-user')
 
 
@@ -488,10 +512,117 @@ class AmazonCloudDriverTest extends Specification {
                 instanceStorageMount: '/mnt/scratch']]
         driver.cloudBootHookScript(CloudConfig.create(config4).build())
         then:
-        0 * driver.scriptCreateUser(_,_)
-        1 * driver.scriptMountInstanceStorage('/dev/xyz','/mnt/scratch', 'the-user')
-        0 * driver.scriptMountEFS(_, _, _)
+        0 * driver.scriptCreateUser(_,_) >> null
+        1 * driver.describeInstanceType('r3.small') >> new CloudInstanceType(numOfDisks: 1)
+        1 * driver.scriptMountInstanceStorage(_) >> null
+        0 * driver.scriptMountEFS(_, _, _) >> null
 
+    }
+
+    def 'should return a list of device names' () {
+
+        given:
+        def driver = Spy(AmazonCloudDriver)
+        expect:
+        driver.instanceStorageDeviceNames(1) == ['/dev/sdb']
+        driver.instanceStorageDeviceNames(2) == ['/dev/sdb', '/dev/sdc']
+        driver.instanceStorageDeviceNames(4) == ['/dev/sdb', '/dev/sdc', '/dev/sdd','/dev/sde']
+
+        when:
+        driver.instanceStorageDeviceNames(0)
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def 'should return list of NVMe device names' () {
+        given:
+        def driver = Spy(AmazonCloudDriver)
+        expect:
+        driver.instanceNVMeDeviceNames(1) == ['/dev/nvme0n1']
+        driver.instanceNVMeDeviceNames(2) == ['/dev/nvme0n1', '/dev/nvme1n1']
+        driver.instanceNVMeDeviceNames(4) == ['/dev/nvme0n1', '/dev/nvme1n1', '/dev/nvme2n1','/dev/nvme3n1']
+
+        when:
+        driver.instanceNVMeDeviceNames(0)
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def 'should return list of device given configuration' () {
+
+        given:
+        def driver = Spy(AmazonCloudDriver)
+        def config = Mock(LaunchConfig)
+        List result
+
+        when:
+        result = driver.instanceStorageDeviceNames(config)
+        then:
+        1 * config.getInstanceStorageDevice() >> '/dev/sdx'
+        result == ['/dev/sdx']
+
+        when:
+        result = driver.instanceStorageDeviceNames(config)
+        then:
+        1 * config.getInstanceStorageDevice() >> null
+        1 * config.getInstanceType() >> 'xy.abc'
+        1 * driver.describeInstanceType('xy.abc') >> new CloudInstanceType(numOfDisks: 3)
+        result == ['/dev/sdb', '/dev/sdc', '/dev/sdd']
+
+        when:
+        result = driver.instanceStorageDeviceNames(config)
+        then:
+        1 * config.getInstanceStorageDevice() >> null
+        1 * config.getInstanceType() >> 'f1.xxx'
+        1 * driver.describeInstanceType('f1.xxx') >> new CloudInstanceType(numOfDisks: 4)
+        result == ['/dev/nvme0n1', '/dev/nvme1n1', '/dev/nvme2n1', '/dev/nvme3n1']
+    }
+
+    def 'should check instance storage availability' () {
+        given:
+        def INSTANCE = 'm1.abc'
+        def MOUNT = '/mnt/somewhere'
+        def driver = Spy(AmazonCloudDriver)
+        def config = Mock(LaunchConfig)
+        def result
+
+        when: '''
+        the instance storage mount is not defined (ie. null) by definition => return FALSE
+        '''
+        result = driver.hasInstanceStorage0(config)
+        then:
+        1 * config.getInstanceStorageMount() >> null
+        result == false
+
+        when: '''
+        the storage mount is defined BUT the instance has not ephemeral volumes => return FALSE
+        '''
+        result = driver.hasInstanceStorage0(config)
+        then:
+        1 * config.getInstanceType() >> INSTANCE
+        1 * config.getInstanceStorageMount() >> MOUNT
+        1 * driver.describeInstanceType(INSTANCE) >> new CloudInstanceType()
+        result == false
+
+        when: '''
+        the mount path is defined and at least an ephemeral volume is provided by the instance ==> TRUE
+        '''
+        result = driver.hasInstanceStorage0(config)
+        then:
+        1 * config.getInstanceType() >> INSTANCE
+        1 * config.getInstanceStorageMount() >> MOUNT
+        1 * driver.describeInstanceType(INSTANCE) >> new CloudInstanceType(numOfDisks: 1)
+        result == true
+
+    }
+
+    def 'should check NVMe storage' () {
+        given:
+        def driver = new AmazonCloudDriver()
+        expect:
+        driver.isNVMe('f1.xxx')
+        driver.isNVMe('i3.xxx')
+        !driver.isNVMe('any.other')
     }
 
 
@@ -499,29 +630,30 @@ class AmazonCloudDriverTest extends Specification {
     def 'should get instance type description #type' () {
 
         given:
+        def TYPE = 'm3.2xlarge'
+        def CPUS = 8
+        def MEM = MemoryUnit.of('30 GB')
+        def DISK = MemoryUnit.of('80 GB')
+        def NUM = 2
+        def REGION = 'eu-west-1'
+
+        def reader = Mock(AmazonPriceReader)
         def driver = Spy(AmazonCloudDriver)
-
+        driver.region = REGION
         when:
-        def bean = driver.describeInstanceType(type)
+        def bean = driver.describeInstanceType(TYPE)
         then:
-        bean.cpus == cpus
-        bean.memory.toString() == mem
-        bean.disk.toString() == disk
-        bean.numOfDisks == num
-
-        where:
-        type        | cpus      | mem       | disk      | num
-        't2.nano'   | 1         | '512 MB'  | '0'       | 0
-        'm3.2xlarge'| 8	        | '30 GB'	| '80 GB'   | 2
-        'd2.8xlarge'| 36	    | '244 GB'  | '2 TB'	| 24
-
-
+        1 * driver.createReader(REGION) >> reader
+        1 * reader.getInstanceType(TYPE) >> new CloudInstanceType(cpus: CPUS, memory: MEM, disk: DISK, numOfDisks: NUM)
+        bean.cpus == CPUS
+        bean.memory == MEM
+        bean.disk == DISK
+        bean.numOfDisks == NUM
     }
 
     def 'should invoke the right waiters' () {
 
         given:
-        def config = [aws: [accessKey: 'xxx', secretKey: 'yyy', region:"zzz"]]
         def instanceIds = ['i-111','i-222','i-333']
         def client = Mock(AmazonEC2Client)
         def waiters = Mock(AmazonEC2Waiters)
@@ -634,35 +766,84 @@ class AmazonCloudDriverTest extends Specification {
 
     }
 
-    def 'should create block device mapping list' () {
+    def 'should create an empty block device mapping' () {
+
+        def config = Mock(LaunchConfig)
+        def driver = Spy(AmazonCloudDriver)
+        List<BlockDeviceMapping> mappings
+
+        when:
+        mappings = driver.getBlockDeviceMappings(config)
+        then:
+        1 * config.getBootStorageSize() >> null
+        1 * driver.hasInstanceStorage(config) >> false
+        mappings == null
+
+    }
+
+    def 'should create boot storage mapping' () {
         given:
         final SIZE = MemoryUnit.of('20 GB')
-        final DEVICE = '/dev/xyz'
         final AMI = 'ami-3232'
         final SNAPSHOT = 'snap-2121'
         final BLOCK = new BlockDeviceMapping()
                     .withDeviceName('/root')
                     .withEbs( new EbsBlockDevice().withSnapshotId(SNAPSHOT) )
 
-        def cfg = Mock(LaunchConfig)
-        cfg.getImageId() >> AMI
+        def config = Mock(LaunchConfig)
         def driver = Spy(AmazonCloudDriver)
+        List<BlockDeviceMapping> mappings
 
         when:
-        def maps = driver.getBlockDeviceMappings(cfg)
-
+        mappings = driver.getBlockDeviceMappings(config)
         then:
-        (1.._) * cfg.getInstanceStorageDevice() >> DEVICE
-        (1.._) * cfg.getBootStorageSize() >> SIZE
+        1 * driver.hasInstanceStorage(config) >> false
+        1 * config.getBootStorageSize() >> SIZE
+        1 * config.getImageId() >> AMI
         1 * driver.getRooDeviceMapping(AMI) >> BLOCK
+        mappings.size() == 1
+        mappings[0].deviceName == BLOCK.deviceName
+        mappings[0].ebs.snapshotId == SNAPSHOT
+        mappings[0].ebs.volumeSize == (int)SIZE.toGiga()
 
-        maps.size() == 2
-        maps[0].deviceName == DEVICE
-        maps[0].virtualName== 'ephemeral0'
-        maps[1].deviceName == '/root'
-        maps[1].ebs.snapshotId == SNAPSHOT
-        maps[1].ebs.volumeSize == (int)SIZE.toGiga()
+    }
 
+    def 'should create instance storage mappings' () {
+        given:
+        def config = Mock(LaunchConfig)
+        def driver = Spy(AmazonCloudDriver)
+        List<BlockDeviceMapping> mappings
+
+        when:
+        mappings = driver.getBlockDeviceMappings(config)
+        then:
+        1 * config.getBootStorageSize() >> null
+        1 * config.getInstanceType() >> 'r3.xxx'
+        1 * driver.hasInstanceStorage(config) >> true
+        1 * driver.instanceStorageDeviceNames(config) >> ['/dev/aa', '/dev/bb']
+        then:
+        mappings.size() ==2
+        mappings[0].deviceName == '/dev/aa'
+        mappings[0].virtualName == 'ephemeral0'
+        mappings[1].deviceName == '/dev/bb'
+        mappings[1].virtualName == 'ephemeral1'
+    }
+
+    def 'should not create block mapping for NVMe storage' () {
+
+        given:
+        def config = Mock(LaunchConfig)
+        def driver = Spy(AmazonCloudDriver)
+        List<BlockDeviceMapping> mappings
+
+        when:
+        mappings = driver.getBlockDeviceMappings(config)
+        then:
+        1 * config.getBootStorageSize() >> null
+        1 * driver.hasInstanceStorage(config) >> true
+        1 * driver.isNVMe(_) >> true
+        then:
+        mappings == null
     }
 
     def 'should fetch aws region' () {
@@ -672,7 +853,7 @@ class AmazonCloudDriverTest extends Specification {
         when:
         def result = driver.fetchRegion()
         then:
-        driver.getUrl('http://169.254.169.254/latest/meta-data/placement/availability-zone') >> 'eu-west-1a'
+        1 * driver.getUrl('http://169.254.169.254/latest/meta-data/placement/availability-zone') >> 'eu-west-1a'
         result == 'eu-west-1'
     }
 
@@ -683,7 +864,7 @@ class AmazonCloudDriverTest extends Specification {
         when:
         def result = driver.fetchIamRole()
         then:
-        driver.getUrl('http://169.254.169.254/latest/meta-data/iam/security-credentials/') >> 'iam-role-here'
+        1 * driver.getUrl('http://169.254.169.254/latest/meta-data/iam/security-credentials/') >> 'iam-role-here'
         result == 'iam-role-here'
     }
 

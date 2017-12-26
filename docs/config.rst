@@ -436,8 +436,8 @@ imageId                     Identifier of the virtual machine(s) to launch e.g. 
 instanceRole                IAM role granting required permissions and authorizations in the launched instances.
                             When specifying an IAM role no access/security keys are installed in the cluster deployed in the cloud.
 instanceType                Type of the virtual machine(s) to launch e.g. ``m4.xlarge``.
-instanceStorageMount        Instance ephemeral storage mount path e.g. ``/mnt/scratch``.
-instanceStorageDevice       Instance ephemeral storage device name e.g. ``/dev/xvdc``.
+instanceStorageMount        Ephemeral instance storage mount path e.g. ``/mnt/scratch``.
+instanceStorageDevice       Ephemeral instance storage device name e.g. ``/dev/xvdc`` (optional).
 keyName                     SSH access key name given by the cloud provider.
 keyHash                     SSH access public key hash string.
 keyFile                     SSH access public key file path.
