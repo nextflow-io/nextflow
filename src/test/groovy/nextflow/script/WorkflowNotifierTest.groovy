@@ -273,6 +273,27 @@ class WorkflowNotifierTest extends Specification {
         1 * notifier.createMailer(CONFIG_MAIL) >> MAILER
         1 * MAILER.send(MAIL)
 
+        when: '''
+        `enabled` flag is false, notification is NOT sent
+        '''
+        notifier.config = [notification: [enabled: false, to:'you@dot.com']]
+        notifier.sendNotification()
+        then:
+        0 * notifier.createMail(_) >> null
+        0 * notifier.createMailer(_) >> MAILER
+        0 * MAILER.send(MAIL)
+
+        when: '''
+        notification is implicitly enabled if recipient field is provided
+        '''
+        notifier.config = [notification: [to:'you@dot.com']]
+        notifier.sendNotification()
+        then:
+        0 * notifier.createMail(_) >> null
+        0 * notifier.createMailer(_) >> MAILER
+        0 * MAILER.send(MAIL)
+
+
     }
 
 
