@@ -123,6 +123,11 @@ class Mailer {
             def cfg = [mail: [smtp: config.smtp]] as ConfigObject
             def props = cfg.toProperties()
             props.setProperty('mail.transport.protocol', 'smtp')
+            // -- check proxy configuration
+            if( !props.contains('mail.smtp.proxy.host') && System.getProperty('http.proxyHost') ) {
+                props['mail.smtp.proxy.host'] = System.getProperty('http.proxyHost')
+                props['mail.smtp.proxy.port'] = System.getProperty('http.proxyPort')
+            }
             // -- debug for debugging
             log.trace "Mail session properties:\n${dumpProps(props)}"
             return props
