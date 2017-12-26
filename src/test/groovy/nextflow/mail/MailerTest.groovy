@@ -9,6 +9,7 @@ import java.nio.file.Path
 import org.subethamail.wiser.Wiser
 import spock.lang.Specification
 import spock.lang.Unroll
+import spock.util.environment.RestoreSystemProperties
 
 class MailerTest extends Specification {
 
@@ -26,6 +27,26 @@ class MailerTest extends Specification {
         props.get('mail.smtp.port') == '808'
         !props.containsKey('mail.other')
 
+    }
+
+    @RestoreSystemProperties
+    def 'should configure proxy setting' () {
+
+        given:
+        System.setProperty('http.proxyHost', 'foo.com')
+        System.setProperty('http.proxyPort', '8000')
+
+        def mailer = new Mailer( config: [smtp: [host: 'gmail.com', port: 25, user:'yo']]  )
+
+        when:
+        def props = mailer.createProps()
+        then:
+        props.'mail.smtp.host' == 'gmail.com'
+        props.'mail.smtp.port' == '25'
+        props.'mail.smtp.user' == 'yo'
+        props.'mail.smtp.proxy.host' == 'foo.com'
+        props.'mail.smtp.proxy.port' == '8000'
+        props.'mail.transport.protocol' == 'smtp'
     }
 
 
