@@ -14,7 +14,7 @@ Configuration
 Cloud configuration attributes are provided in the ``nextflow.config`` file as shown in the example below::
 
     cloud {
-        imageId = 'ami-43f49030'
+        imageId = 'ami-4b7daa32'
         instanceType = 'm4.xlarge'
         subnetId = 'subnet-05222a43'
     }
@@ -82,21 +82,26 @@ by specifying the attribute ``bootStorageSize``. For example::
 Instance storage
 ----------------
 
-Amazon instances can provide one or more `ephemeral volume storage <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html>`_,
+Amazon instances can provide one or more `ephemeral storage volumes <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html>`_,
 depending the instance type chosen. This storage can be made available by using the ``instanceStorageMount``
-and ``instanceStorageDevice`` configuration attributes, as shown below::
+configuration attributes, as shown below::
 
     cloud {
-            imageId = 'ami-xyz'
-            instanceStorageMount = '/mnt/scratch'
-            instanceStorageDevice = '/dev/xvdc'
+        imageId = 'ami-xxx'
+        instanceStorageMount = '/mnt/scratch'
     }
 
 
-The mount path can be any of your choice. The storage device name should follow a pattern that may change depending
-the AMI and machine virtualization type. See the `Amazon documentation for details <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html>`_.
+The mount path can be any of your choice.
 
-.. note:: Currently Nextflow can setup only one instance storage volume.
+.. note:: When the selected instance provides more than one ephemeral storage volume, Nextflow automatically groups all
+  of them together in a single logical volume and mounts it to the specified path. Therefore the resulting instance
+  storage size is equals to the sum of the sizes of all ephemeral volumes provided by the actual instance.
+
+If you want to mount a specific instance storage volume, specify the corresponding device name by using
+the ``instanceStorageDevice`` setting in the above configuration. See the Amazon documentation for details on
+`EC2 Instance storage <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/InstanceStorage.html>`_ and
+`devices naming <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html>`_.
 
 
 Shared file system
@@ -171,7 +176,7 @@ cluster to adapt dynamically to the actual workload computing resources need as 
 Cluster auto-scaling is enabled by adding the ``autoscale`` option group in the configuration file as shown below::
 
     cloud {
-        imageId = 'ami-xyz'
+        imageId = 'ami-xxx'
         autoscale {
             enabled = true
             maxInstances = 10
