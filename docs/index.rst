@@ -27,6 +27,7 @@ Contents:
    tracing
    sharing
    metadata
+   mail
    example
    faq
 
