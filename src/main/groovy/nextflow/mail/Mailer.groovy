@@ -465,7 +465,7 @@ class Mailer {
     void send( Closure params ) {
         def mail = new Mail()
         def copy = (Closure)params.clone()
-        copy.setResolveStrategy(Closure.DELEGATE_ONLY)
+        copy.setResolveStrategy(Closure.DELEGATE_FIRST)
         copy.setDelegate(mail)
         def body = copy.call(mail)
         if( !mail.body && (body instanceof String || body instanceof GString))
