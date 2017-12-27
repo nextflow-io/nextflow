@@ -585,6 +585,10 @@ class CmdCloud extends CmdBase implements UsageAware {
             def allPrices = new ArrayList<Map>()
             driver.eachSpotPrice { CloudSpotPrice entry ->
 
+                if( entry.description.contains('Windows') ) {
+                    return  // ignore Windows entries
+                }
+
                 def type = driver.describeInstanceType(entry.type)
                 if( !type ) {
                     log.warn1 "Unknown instance type: ${entry.type}"
