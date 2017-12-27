@@ -365,8 +365,8 @@ class Session implements ISession {
         if( isEnabled ) {
             String fileName = config.navigate('report.file')
             if( !fileName ) fileName = ReportObserver.DEF_FILE_NAME
-            def traceFile = (fileName as Path).complete()
-            def observer = new ReportObserver(traceFile)
+            def report = (fileName as Path).complete()
+            def observer = new ReportObserver(report)
             result << observer
         }
     }
