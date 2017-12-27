@@ -466,6 +466,7 @@ instanceType                Type of the virtual machine(s) to launch when new in
 spotPrice                   Price bid for spot/preemptive instances launched while auto-scaling the cluster.
 =========================== ================
 
+.. _config-timeline:
 
 Scope `timeline`
 ----------------
@@ -540,6 +541,20 @@ The notification message is sent my using the STMP server defined in the configu
 
 If no mail configuration is provided, it tries to send the notification message by using the external mail command
 eventually provided by the underlying system (eg. ``sendmail`` or ``mail``).
+
+.. _config-report:
+
+Scope `report`
+--------------
+
+The ``report`` scope scope allows you to define configuration setting of the workflow :ref:`execution-report`.
+
+================== ================
+Name                Description
+================== ================
+enabled             If ``true`` it create the workflow execution report.
+file                The path of the created execution report file (default: ``report.html``).
+================== ================
 
 
 Config profiles

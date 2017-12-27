@@ -1,4 +1,4 @@
-.. metadata-page:
+.. _metadata-page:
 
 ***********************
 Workflow introspection
@@ -79,6 +79,8 @@ requirement. For example::
     }
 
 
+.. _metadata-completion-handler:
+
 Completion handler
 ------------------
 
@@ -94,6 +96,7 @@ to access the workflow termination status and other useful information. For exam
         println "Execution status: ${ workflow.success ? 'OK' : 'failed' }"
     }
 
+.. _metadata-error-handler:
 
 Error handler
 -------------

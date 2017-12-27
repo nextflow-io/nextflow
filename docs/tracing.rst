@@ -59,6 +59,8 @@ and many other runtime metrics. You can see an example below:
 .. warning:: A common problem when using a third party container image is that it does not ship one or more of the
   above utilities resulting in an empty execution report.
 
+Please read :ref:`Report scope <config-report>` section to learn more about the execution report configuration details.
+
 .. _trace-report:
 
 Trace report
