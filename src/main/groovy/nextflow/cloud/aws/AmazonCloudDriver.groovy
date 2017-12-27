@@ -1164,9 +1164,8 @@ class AmazonCloudDriver implements CloudDriver {
         }
 
         def history = getEc2Client().describeSpotPriceHistory(req).getSpotPriceHistory()
-        history.each { SpotPrice entry ->
-
-            def price = new CloudSpotPrice(
+        for( SpotPrice entry : history ) {
+            final price = new CloudSpotPrice(
                     type: entry.instanceType,
                     price: entry.spotPrice,
                     zone: entry.availabilityZone,
@@ -1174,7 +1173,6 @@ class AmazonCloudDriver implements CloudDriver {
                     timestamp: entry.timestamp
             )
             action.call(price)
-
         }
     }
 
