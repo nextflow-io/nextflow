@@ -481,6 +481,43 @@ enabled             When ``true`` turns on the generation of the timeline report
 file                Timeline file name (default: ``timeline.html``).
 ================== ================
 
+.. _config-mail:
+
+Scope `mail`
+------------
+
+The ``mail`` scope allows you to define the mail server configuration settings needed to send email messages.
+
+================== ================
+Name                Description
+================== ================
+from                Default email sender address.
+smtp.host           Host name of the mail server.
+smtp.port           Port number of the mail server.
+smtp.user           User name to connect to  the mail server.
+smtp.password       User password to connect to the mail server.
+smtp.proxy.host     Host name of an HTTP web proxy server that will be used for connections to the mail server.
+smtp.proxy.port     Port number for the HTTP web proxy server.
+smtp.*              Any SMTP configuration property supported by the Java Mail API (see link below).
+================== ================
+
+.. note:: Nextflow relies on the `Java Mail API <https://javaee.github.io/javamail/>`_ to send email messages.
+  Advanced mail configuration can be provided by using any SMTP configuration property supported by the Java Mail API.
+  See the `table of available properties at this link <https://javaee.github.io/javamail/docs/api/com/sun/mail/smtp/package-summary.html#properties>`_.
+
+For example, the following snippet shows how to configure Nextflow to send emails through the
+`AWS Simple Email Service <https://aws.amazon.com/ses/>`_::
+
+    mail {
+        smtp.host = 'email-smtp.us-east-1.amazonaws.com'
+        smtp.port = 587
+        smtp.user = '<Your AWS SES access key>'
+        smtp.password = '<Your AWS SES secret key>'
+        smtp.auth = true
+        smtp.starttls.enable = true
+        smtp.starttls.required = true
+    }
+
 
 Config profiles
 ===============
