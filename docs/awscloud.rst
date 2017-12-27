@@ -96,7 +96,8 @@ The mount path can be any of your choice.
 
 .. note:: When the selected instance provides more than one ephemeral storage volume, Nextflow automatically groups all
   of them together in a single logical volume and mounts it to the specified path. Therefore the resulting instance
-  storage size is equals to the sum of the sizes of all ephemeral volumes provided by the actual instance.
+  storage size is equals to the sum of the sizes of all ephemeral volumes provided by the actual instance
+  (this feature requires Nextflow version 0.27.0 or higher).
 
 If you want to mount a specific instance storage volume, specify the corresponding device name by using
 the ``instanceStorageDevice`` setting in the above configuration. See the Amazon documentation for details on
