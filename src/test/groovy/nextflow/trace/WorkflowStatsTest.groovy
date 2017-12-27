@@ -48,6 +48,10 @@ class WorkflowStatsTest extends Specification {
         then:
         stats.getComputeTimeString() == '(a few seconds)'
 
+        when:
+        stats = new WorkflowStats(succeedMillis: 120_000_000_000)
+        then:
+        stats.getComputeTimeString() == "33'333.3"
     }
 
     def 'should return cpu time' () {

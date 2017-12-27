@@ -1,5 +1,8 @@
 package nextflow.trace
+
+import java.math.RoundingMode
 import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
@@ -7,7 +10,6 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.processor.ErrorStrategy
 import nextflow.util.Duration
-
 /**
  * Value object representing the workflow execution statistics
  *
@@ -72,20 +74,26 @@ class WorkflowStats {
      */
     String getComputeTimeString() {
 
-        def fmt = new DecimalFormat("0.#")
-        def total = (succeedMillis + cachedMillis + failedMillis) / 1000
+        final total = (succeedMillis + cachedMillis + failedMillis) / 1000
         if( total < 180 )
             return '(a few seconds)'
 
-        def result = String.format('%.1f', total/3600)
+        final formatSymbols = new DecimalFormatSymbols();
+        formatSymbols.setDecimalSeparator('.' as char);
+        formatSymbols.setGroupingSeparator("'" as char);
+        final fmt = new DecimalFormat("#,##0.0", formatSymbols)
+        fmt.setRoundingMode(RoundingMode.HALF_UP)
+
+        def result = fmt.format(total/3600)
         if( cachedMillis || failedMillis ) {
+            final perc = new DecimalFormat("0.#")
             result += ' ('
             def items = []
             if( cachedMillis ) {
-                items << fmt.format(cachedMillis/10/total) + '% cached'
+                items << perc.format(cachedMillis/10/total) + '% cached'
             }
             if( failedMillis ) {
-                items << fmt.format(failedMillis/10/total) + '% failed'
+                items << perc.format(failedMillis/10/total) + '% failed'
             }
             result += items.join(', ')
             result += ')'
