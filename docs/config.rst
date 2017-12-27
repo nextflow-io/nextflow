@@ -518,6 +518,29 @@ For example, the following snippet shows how to configure Nextflow to send email
         smtp.starttls.required = true
     }
 
+.. _config-notification:
+
+Scope `notification`
+--------------------
+
+The ``notification`` scope allows you to define the automatic sending of a notification email message
+when the workflow execution terminates.
+
+================== ================
+Name                Description
+================== ================
+enabled             Enables the sending of a notification message when the workflow execution completes.
+to                  Recipient address for the notification email. Multiple addresses can be specified separating them with a comma.
+from                Sender address for the notification email message.
+template            Path of a template file which provides the content of the notification message.
+binding             An associative array modelling the variables in the template file.
+================== ================
+
+The notification message is sent my using the STMP server defined in the configuration :ref:`mail scope<config-mail>`.
+
+If no mail configuration is provided, it tries to send the notification message by using the external mail command
+eventually provided by the underlying system (eg. ``sendmail`` or ``mail``).
+
 
 Config profiles
 ===============
