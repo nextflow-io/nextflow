@@ -456,9 +456,9 @@ The autoscale configuration group provides the following settings:
 Name                        Description
 =========================== ================
 enabled                     Enable cluster auto-scaling.
-terminateWhenIdle           Enable cluster automatic scale-down i.e. instance terminations when idle.
-idleTimeout                 Amount of time in idle state after which an instance is candidate to be terminated.
-starvingTimeout             Amount of time after which one ore more tasks pending for execution trigger an auto-scale request.
+terminateWhenIdle           Enable cluster automatic scale-down i.e. instance terminations when idle (default: ``false``).
+idleTimeout                 Amount of time in idle state after which an instance is candidate to be terminated (default: ``5 min``).
+starvingTimeout             Amount of time after which one ore more tasks pending for execution trigger an auto-scale request (default: ``5 min``).
 minInstances                Minimum number of instances in the cluster.
 maxInstances                Maximum number of instances in the cluster.
 imageId                     Identifier of the virtual machine(s) to launch when new instances are added to the cluster.
