@@ -1,6 +1,22 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.27.0-RC2 - 29 Dic 2017
+- Fixed Ignore Windows instances from AWS cloud price listing
+- Fixed AWS price reader catching unexpected errors
+- Fixed sendMail access to owner variables
+- Fixed NPE when creating task with ignite executor
+- Fixed null exit status in notification template #554
+- Added XPath serialiser
+- Added mail smtp proxy configuration #375
+- Added built-in notification documentation #554
+- Added built-in mail documentation #375
+- Added support for Syslog logging #330 #557
+- Improved support for AWS EC2 instance storage #558
+- Improved documentation #558
+- Improved config command adding `-flat` and `-properties` formats and using canonical curly brackets format as default
+- Update copyright info
+
 0.27.0-RC1 - 20 Dic 2017
 - AWS Batch increased queue to 1000 tasks and poll interval to 10 secs
 - AWS Batch improved executor scalability caching recurrent API call and batching similar requests together
