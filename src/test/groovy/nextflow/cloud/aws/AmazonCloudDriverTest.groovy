@@ -36,7 +36,6 @@ import nextflow.cloud.LaunchConfig
 import nextflow.cloud.types.CloudInstanceStatus
 import nextflow.cloud.types.CloudInstanceType
 import nextflow.util.MemoryUnit
-import org.apache.commons.lang.SerializationUtils
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -77,18 +76,19 @@ class AmazonCloudDriverTest extends Specification {
     def 'should create bash profile properly' () {
 
         given:
-        def CONFIG = [
-                cloud: [
-                        nextflow: [version: '0.21.0'],
-                ]
-            ]
-        def cloud = new AmazonCloudDriver(Mock(AmazonEC2Client))
+        String bash
+        LaunchConfig config
+        def client = Mock(AmazonEC2Client)
+        def driver = Spy(AmazonCloudDriver, constructorArgs:[client])
 
         when:
-        def cfg = (Map)SerializationUtils.clone(CONFIG)
-        def bash1 = cloud.scriptBashEnv(CloudConfig.create(cfg).setClusterName('cluster-x'))
+        config = Mock(LaunchConfig)
+        config.getNextflow() >> new CloudConfig.Nextflow([version: '0.21.0'])
+        config.getClusterName() >> 'cluster-x'
+
+        bash = driver.scriptBashEnv(config)
         then:
-        bash1 == '''
+        bash == '''
             export NXF_VER='0.21.0'
             export NXF_MODE='ignite'
             export NXF_EXECUTOR='ignite'
@@ -97,11 +97,12 @@ class AmazonCloudDriverTest extends Specification {
             .stripIndent() .leftTrim()
 
         when:
-        cfg = (Map)SerializationUtils.clone(CONFIG)
-        cfg.cloud.nextflow.trace = 'io.nextflow.TaskProcess'
-        def bash2 = cloud.scriptBashEnv(CloudConfig.create(cfg).setClusterName('cluster-x'))
+        config = Mock(LaunchConfig)
+        config.getClusterName() >> 'cluster-x'
+        config.getNextflow() >> new CloudConfig.Nextflow([version: '0.21.0', trace: 'io.nextflow.TaskProcess'])
+        bash = driver.scriptBashEnv(config)
         then:
-        bash2 == '''
+        bash == '''
             export NXF_VER='0.21.0'
             export NXF_MODE='ignite'
             export NXF_EXECUTOR='ignite'
@@ -110,12 +111,14 @@ class AmazonCloudDriverTest extends Specification {
             '''
                 .stripIndent() .leftTrim()
 
+
         when:
-        cfg = (Map)SerializationUtils.clone(CONFIG)
-        cfg.cloud.nextflow.options = '-XX:this-and-that'
-        def bash3 = cloud.scriptBashEnv(CloudConfig.create(cfg).setClusterName('cluster-x'))
+        config = Mock(LaunchConfig)
+        config.getClusterName() >> 'cluster-x'
+        config.getNextflow() >> new CloudConfig.Nextflow([version: '0.21.0', options: '-XX:this-and-that'])
+        bash = driver.scriptBashEnv(config)
         then:
-        bash3 == '''
+        bash == '''
             export NXF_VER='0.21.0'
             export NXF_MODE='ignite'
             export NXF_EXECUTOR='ignite'
@@ -126,13 +129,15 @@ class AmazonCloudDriverTest extends Specification {
 
 
         when:
-        cfg = (Map)SerializationUtils.clone(CONFIG)
-        cfg.cloud.sharedStorageId = 'ef-78289'
-        cfg.cloud.sharedStorageMount = '/mount/my/path'
-        cfg.cloud.userName = 'illo'
-        def bash4 = cloud.scriptBashEnv(CloudConfig.create(cfg).setClusterName('cluster-x'))
+        config = Mock(LaunchConfig)
+        config.getNextflow() >> new CloudConfig.Nextflow([version: '0.21.0'])
+        config.getClusterName() >> 'cluster-x'
+        config.getUserName() >> 'illo'
+        config.getSharedStorageId() >> 'ef-78289'
+        config.getSharedStorageMount() >> '/mount/my/path'
+        bash = driver.scriptBashEnv(config)
         then:
-        bash4 == '''
+        bash == '''
             export NXF_VER='0.21.0'
             export NXF_MODE='ignite'
             export NXF_EXECUTOR='ignite'
@@ -143,12 +148,14 @@ class AmazonCloudDriverTest extends Specification {
                 .stripIndent() .leftTrim()
 
         when:
-        cfg = (Map)SerializationUtils.clone(CONFIG)
-        cfg.cloud.instanceStorageDevice = '/dev/abc'
-        cfg.cloud.instanceStorageMount = '/scratch'
-        def bash5 = cloud.scriptBashEnv(CloudConfig.create(cfg).setClusterName('cluster-x'))
+        config = Mock(LaunchConfig)
+        config.getNextflow() >> new CloudConfig.Nextflow([version: '0.21.0'])
+        config.getClusterName() >> 'cluster-x'
+        config.getInstanceStorageMount() >> '/scratch'
+        bash = driver.scriptBashEnv(config)
         then:
-        bash5 == '''
+        driver.hasInstanceStorage0(_) >> true
+        bash == '''
             export NXF_VER='0.21.0'
             export NXF_MODE='ignite'
             export NXF_EXECUTOR='ignite'
@@ -159,18 +166,21 @@ class AmazonCloudDriverTest extends Specification {
 
 
         when:
-        cloud.accessKey = 'alpha'
-        cloud.secretKey = 'beta'
-        cloud.region = 'region-1'
+        driver.accessKey = 'alpha'
+        driver.secretKey = 'beta'
+        driver.region = 'region-1'
+
+        config = Mock(LaunchConfig)
+        config.getNextflow() >> new CloudConfig.Nextflow([version: '0.21.0'])
+        config.getClusterName() >> 'cluster-x'
+
+        bash = driver.scriptBashEnv(config)
         then:
-        def bash6 = cloud.scriptBashEnv(CloudConfig.create(cfg).setClusterName('cluster-x'))
-        then:
-        bash6 == '''
+        bash == '''
             export NXF_VER='0.21.0'
             export NXF_MODE='ignite'
             export NXF_EXECUTOR='ignite'
             export NXF_CLUSTER_JOIN='cloud:aws:cluster-x'
-            export NXF_TEMP='/scratch'
             export AWS_ACCESS_KEY_ID='alpha'
             export AWS_SECRET_ACCESS_KEY='beta'
             export AWS_DEFAULT_REGION='region-1'
@@ -183,7 +193,7 @@ class AmazonCloudDriverTest extends Specification {
     def 'should fill up the cloud-boot template' () {
 
         given:
-        def config = [
+        def CONFIG = [
                 aws: [accessKey: 'xxx', secretKey: 'yyy', region: 'eu-west-1'],
                 cloud: [
                 imageId: 'ami-123',
@@ -192,7 +202,6 @@ class AmazonCloudDriverTest extends Specification {
                 keyName: 'eurokey',
                 subnetId: 'subnet-05222a43',
                 bootStorageSize: '10GB',
-                instanceStorageDevice: '/dev/abc',
                 instanceStorageMount: '/scratch',
                 sharedStorageId: 'fs-1803efd1',
                 sharedStorageMount: '/mnt/efs',
@@ -202,19 +211,20 @@ class AmazonCloudDriverTest extends Specification {
 
         ]]
 
-        def driver = new AmazonCloudDriver(Mock(AmazonEC2Client))
+        def driver = Spy(AmazonCloudDriver)
         driver.accessKey = 'xxx'
         driver.secretKey = 'yyy'
         driver.region = 'eu-west-1'
 
-        when:
-        def cloud = CloudConfig.create(config)
+        def config = CloudConfig.create(CONFIG)
                         .setRole('master')
                         .setClusterName('my-cluster')
                         .build()
 
-        def script = driver.cloudInitScript(cloud)
+        when:
+        def script = driver.cloudInitScript(config)
         then:
+        1 * driver.hasInstanceStorage(config) >> true
         script ==   '''
                     #!/bin/bash
                     su - ec2-user << 'EndOfScript'
@@ -231,7 +241,6 @@ class AmazonCloudDriverTest extends Specification {
                     \tkeyName='eurokey'
                     \tsubnetId='subnet-05222a43'
                     \tbootStorageSize='10GB'
-                    \tinstanceStorageDevice='/dev/abc'
                     \tinstanceStorageMount='/scratch'
                     \tsharedStorageId='fs-1803efd1'
                     \tsharedStorageMount='/mnt/efs'

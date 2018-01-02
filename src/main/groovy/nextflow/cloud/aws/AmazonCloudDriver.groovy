@@ -412,7 +412,7 @@ class AmazonCloudDriver implements CloudDriver {
         final devicePath = cfg.getInstanceStorageDevice()
         final user = cfg.getUserName()
         assert mountPath,   'Instance storage mount path parameter cannot be empty'
-        assert user,        'Instance storage mount user paramter cannot be empty'
+        assert user,        'Instance storage mount user parameter cannot be empty'
 
         def result = scriptUnmountEphemeralVolume()
         if( devicePath ) {
@@ -546,7 +546,7 @@ class AmazonCloudDriver implements CloudDriver {
             profile += "export NXF_ASSETS='${cfg.sharedStorageMount}/${cfg.userName}/projects'\n"
         }
 
-        if( cfg.instanceStorageDevice && cfg.instanceStorageMount )
+        if( hasInstanceStorage(cfg) )
             profile += "export NXF_TEMP='${cfg.instanceStorageMount}'\n"
 
         // access/secret keys are propagated only if IAM profile is not specified
