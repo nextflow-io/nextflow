@@ -117,8 +117,14 @@ class CmdConfig extends CmdBase {
             final key = keys[i]
             final value = object.get(key)
             if( value instanceof ConfigObject ) {
-                if( value.size()==0 )
-                    continue // skip entry object
+                // skip entry object
+                if( value.size()==0 ) {
+                    continue
+                }
+                // add an extra new-line to separate simple values from a config object
+                if( level==0 && i>0 ) {
+                    writer.write('\n')
+                }
 
                 writer.write(TAB*level)
                 writer.write(key.toString())
@@ -126,8 +132,6 @@ class CmdConfig extends CmdBase {
                 canonicalFormat(writer, value, level+1)
                 writer.write(TAB*level)
                 writer.write('}\n')
-                if( level==0 && i<keys.size()-1 )
-                    writer.write('\n')
 
             }
             else {
