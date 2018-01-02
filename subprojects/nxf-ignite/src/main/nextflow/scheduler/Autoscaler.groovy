@@ -131,7 +131,7 @@ class Autoscaler implements Closeable {
                 throw new IllegalStateException("No cloud driver name has been specified")
 
             driver = CloudDriverFactory.getDriver(driverName)
-            if( !driver ) throw new IllegalStateException('Cannot load cloud driver: `$driverName`')
+            if( !driver ) throw new IllegalStateException("Cannot load cloud driver: `$driverName`")
             driver.validate(scalerConfig)
         }
 
