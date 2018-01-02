@@ -203,7 +203,7 @@ class GridTaskHandler extends TaskHandler {
                 if( !exitFile )
                     log.trace "JobId `$jobId` exit file is null"
                 else
-                    log.trace "JobId `$jobId` exit file: $exitFile - lastModified: ${exitAttrs?.lastModifiedTime()} - size: ${exitAttrs?.size()}"
+                    log.trace "JobId `$jobId` exit file: ${exitFile.toUriString()} - lastModified: ${exitAttrs?.lastModifiedTime()} - size: ${exitAttrs?.size()}"
             }
             // -- fetch the job status before return a result
             final active = executor.checkActiveStatus(jobId, queue)
@@ -253,7 +253,7 @@ class GridTaskHandler extends TaskHandler {
                 return status.toInteger()
             }
             catch( Exception e ) {
-                log.warn "Unable to parse process exit file: $exitFile -- bad value: '$status'"
+                log.warn "Unable to parse process exit file: ${exitFile.toUriString()} -- bad value: '$status'"
             }
         }
 
@@ -278,7 +278,7 @@ class GridTaskHandler extends TaskHandler {
             if( delta < exitStatusReadTimeoutMillis ) {
                 return null
             }
-            log.warn "Unable to read command status from: $exitFile after $delta ms"
+            log.warn "Unable to read command status from: ${exitFile.toUriString()} after $delta ms"
         }
 
         return Integer.MAX_VALUE
