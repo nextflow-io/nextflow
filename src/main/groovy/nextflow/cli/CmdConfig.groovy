@@ -135,6 +135,11 @@ class CmdConfig extends CmdBase {
 
             }
             else {
+                // add a new-line to separate simple values from a previous config object
+                if( level==0 && i>0 && object.get(keys[i-1]) instanceof ConfigObject) {
+                    writer.write('\n')
+                }
+
                 writer.write(TAB*level)
                 writer.write(key.toString())
                 writer.write(' = ')
