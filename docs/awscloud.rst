@@ -23,7 +23,7 @@ The above attributes define the virtual machine ID and type to be used and the V
 in you cluster. Replace these values with the ones of your choice.
 
 Nextflow only requires a Linux image that provides support for `Cloud-init <http://cloudinit.readthedocs.io/>`_
-bootstrapping mechanism and includes a Java runtime (version 7 or 8) and a Docker engine (version 1.11 or higher).
+bootstrapping mechanism and includes a Java runtime (version 8) and a Docker engine (version 1.11 or higher).
 
 For your convenience the following pre-configured Amazon Linux AMI is available in the *EU Ireland* region:
 ``ami-4b7daa32``.
