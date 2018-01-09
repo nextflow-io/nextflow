@@ -301,7 +301,7 @@ class CmdLog extends CmdBase implements CacheBase {
                 def result = new StringBuilder()
                 path.withReader { reader ->
                     String line
-                    while( line=reader.readLine() && c++<MAX_LINES ) {
+                    while( (line=reader.readLine()) && c++<MAX_LINES ) {
                         result << line
                     }
                 }
