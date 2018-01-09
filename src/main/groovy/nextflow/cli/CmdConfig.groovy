@@ -112,15 +112,22 @@ class CmdConfig extends CmdBase {
 
     private void canonicalFormat(Writer writer, ConfigObject object, int level) {
 
-        def keys = object.keySet().sort()
+        final keys = object.keySet().sort()
+
+        // remove all empty config objects
+        final itr = keys.iterator()
+        while( itr.hasNext() ) {
+            final key = itr.next()
+            final value = object.get(key)
+            if( value instanceof ConfigObject && value.size()==0 ) {
+                itr.remove()
+            }
+        }
+
         for( int i=0; i<keys.size(); i++) {
             final key = keys[i]
             final value = object.get(key)
             if( value instanceof ConfigObject ) {
-                // skip entry object
-                if( value.size()==0 ) {
-                    continue
-                }
                 // add an extra new-line to separate simple values from a config object
                 if( level==0 && i>0 ) {
                     writer.write('\n')
