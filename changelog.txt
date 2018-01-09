@@ -1,6 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.27.0 - 9 Jan 2018
+- Fixed Log command prints true instead of actual message #561
+- Fixed NXF_TEMP definition when instanceStorageMount is set
+- Improved S3 exitfile logging
+- Improved cloud config canonical formatting
+
 0.27.0-RC2 - 29 Dic 2017
 - Fixed Ignore Windows instances from AWS cloud price listing
 - Fixed AWS price reader catching unexpected errors
