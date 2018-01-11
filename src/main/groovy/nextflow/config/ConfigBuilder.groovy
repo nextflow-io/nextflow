@@ -322,7 +322,8 @@ class ConfigBuilder {
      * Validate a config object verifying is does not contains unresolved attributes
      *
      * @param config The {@link ConfigObject} to verify
-     * @param file The source config file/snipper
+     * @param file The source config file/snippet
+     *
      * @return
      */
     protected validate(ConfigObject config, file) {
