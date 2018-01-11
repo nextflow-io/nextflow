@@ -229,7 +229,7 @@ More formally, you can create functions that are defined as `first class objects
 
 The curly brackets around the expression ``it * it`` tells the script interpreter to treat this expression as code.
 In this case, the designator ``it`` refers to whatever value is passed to the function when it is called. This compiled function is
-assigned to the variable ``square``, much like varialbe assignments shown previously. Now we can do something like this::
+assigned to the variable ``square``, much like variable assignments shown previously. Now we can do something like this::
 
     println square(9)
 
