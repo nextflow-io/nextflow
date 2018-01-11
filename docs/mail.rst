@@ -63,7 +63,7 @@ An second version of the ``sendMail`` allows a more idiomatic syntax::
         from 'me@gmail.com'
         attach '/some/path/attachment/file.txt'
         attach '/other/path/image.png'
-        subject: 'Catch up'
+        subject 'Catch up'
 
         '''
         Hi there,
@@ -72,10 +72,10 @@ An second version of the ``sendMail`` allows a more idiomatic syntax::
         '''
     }
 
-The same attributes listed in the above table are allowed.
+The same attributes listed in the table in the previous section are allowed.
 
-When it terminates with a string expression it's implicitly interpreted as the mail body content, therefore
-the ``body`` parameter can be omitted as shown above.
+.. note:: When it terminates with a string expression it's implicitly interpreted as the mail body content, therefore
+  the ``body`` parameter can be omitted as shown above.
 
 .. tip:: To send an `alternative` mail message that includes either text and HTML content use both the ``text`` and ``body`` attributes.
   The first must be used for the plain text content, while the second for the rich HTML message.
@@ -123,7 +123,7 @@ If your system does not provide access to none of the above you can configure a 
 For example::
 
     mail {
-        smtp.host = ''
+        smtp.host = 'your.smtp-server.com'
         smtp.port = 475
         smtp.user = 'my-user'
     }
