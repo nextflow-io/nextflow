@@ -171,6 +171,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
 
         def result = null
         BufferedReader reader = wrapReader(targetObject)
+        counter.reset() // <-- make sure to start
 
         try {
             while( true ) {

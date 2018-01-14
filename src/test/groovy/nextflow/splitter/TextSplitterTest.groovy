@@ -300,5 +300,20 @@ class TextSplitterTest extends Specification {
 
     }
 
+    def testSplitLinesByCountMulti () {
+
+        given:
+        def ts = new TextSplitter().options(by: 2)
+
+        when:
+        def lines1 = ts.target('1\n2\n3').list()
+        def lines2 = ts.target('4\n5\n6').list()
+
+        then:
+        lines1 == ['1\n2\n', '3\n']
+        lines2 == ['4\n5\n', '6\n']
+
+    }
+
 
 }
