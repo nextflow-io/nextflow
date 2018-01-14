@@ -416,9 +416,9 @@ class BashWrapperBuilderTest extends Specification {
                     local s3path=\$2
                     for name in \$(eval "ls -d \$pattern");do
                       if [[ -d "\$name" ]]; then
-                        aws s3 cp \$name \$s3path/\$name --quiet --recursive --storage-class STANDARD
+                        aws s3 cp --only-show-errors --recursive --storage-class STANDARD \$name \$s3path/\$name
                       else
-                        aws s3 cp \$name \$s3path/\$name --quiet --storage-class STANDARD
+                        aws s3 cp --only-show-errors --storage-class STANDARD \$name \$s3path/\$name
                       fi
                   done
                 }
