@@ -522,7 +522,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // the cmd list to launch it
         def opts = getAwsOptions()
         def aws = opts.getAwsCli()
-        def cmd = "$aws s3 cp s3:/${getWrapperFile()} - | bash 2>&1 | $aws s3 cp - s3:/${getLogFile()}"
+        def cmd = "$aws s3 cp --only-show-errors s3:/${getWrapperFile()} - | bash 2>&1 | $aws s3 cp --only-show-errors - s3:/${getLogFile()}"
         // final launcher command
         def cli = ['bash','-o','pipefail','-c', cmd.toString() ] as List<String>
 
@@ -659,7 +659,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
             copy.remove('PATH')
         // when a remote bin directory is provide managed it properly
         if( opts.remoteBinDir ) {
-            result << "${opts.getAwsCli()} s3 cp --recursive --quiet s3:/${opts.remoteBinDir} \$PWD/nextflow-bin\n"
+            result << "${opts.getAwsCli()} s3 cp --recursive --only-show-errors s3:/${opts.remoteBinDir} \$PWD/nextflow-bin\n"
             result << "chmod +x \$PWD/nextflow-bin/*\n"
             result << "export PATH=\$PWD/nextflow-bin:\$PATH\n"
         }
@@ -676,7 +676,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     @Override
     String stageInputFile( Path path, String targetName ) {
         final aws = opts.getAwsCli()
-        def op = "$aws s3 cp --quiet "
+        def op = "$aws s3 cp --only-show-errors "
         if( path.isDirectory() ) {
             op += "--recursive "
         }
@@ -712,7 +712,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     @Override
     String touchFile( Path file ) {
         final aws = opts.getAwsCli()
-        "echo start | $aws s3 cp - s3:/${Escape.path(file)}"
+        "echo start | $aws s3 cp --only-show-errors - s3:/${Escape.path(file)}"
     }
 
     /**
@@ -736,7 +736,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     String exitFile( Path path ) {
         final aws = opts.getAwsCli()
-        "| $aws s3 cp - s3:/${Escape.path(path)} || true"
+        "| $aws s3 cp --only-show-errors - s3:/${Escape.path(path)} || true"
     }
 
     /**
@@ -824,9 +824,9 @@ class S3Helper {
             local s3path=\$2
             for name in \$(eval "ls -d \$pattern");do
               if [[ -d "\$name" ]]; then
-                $cli s3 cp \$name \$s3path/\$name --quiet --recursive $encryption--storage-class $storage
+                $cli s3 cp --only-show-errors --recursive $encryption--storage-class $storage \$name \$s3path/\$name
               else
-                $cli s3 cp \$name \$s3path/\$name --quiet $encryption--storage-class $storage
+                $cli s3 cp --only-show-errors $encryption--storage-class $storage \$name \$s3path/\$name
               fi
           done
         }

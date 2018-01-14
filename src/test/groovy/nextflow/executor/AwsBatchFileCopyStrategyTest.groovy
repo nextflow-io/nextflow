@@ -36,11 +36,11 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         def RUN = Paths.get('/some/data/.command.run')
         def copy = new AwsBatchFileCopyStrategy(Mock(TaskBean), new AwsOptions())
         expect:
-        copy.touchFile(RUN) == "echo start | aws s3 cp - s3://some/data/.command.run"
+        copy.touchFile(RUN) == "echo start | aws s3 cp --only-show-errors - s3://some/data/.command.run"
         copy.copyFile("nobel_prize_results.gz",Paths.get("/some/data/nobel_prize_results.gz")) == "nxf_s3_upload nobel_prize_results.gz s3://some/data"
-        copy.exitFile(EXIT) == "| aws s3 cp - s3://some/path/.exitcode || true"
+        copy.exitFile(EXIT) == "| aws s3 cp --only-show-errors - s3://some/path/.exitcode || true"
         copy.getUnstageOutputFilesScript(OUTPUTS,TARGET) == "\nnxf_s3_upload 'outputs_*' s3://data/results || true\nnxf_s3_upload 'final_folder' s3://data/results || true"
-        copy.stageInputFile(FILE, 'foo.txt') == 'aws s3 cp --quiet s3://some/data/nobel_prize_results.gz foo.txt'
+        copy.stageInputFile(FILE, 'foo.txt') == 'aws s3 cp --only-show-errors s3://some/data/nobel_prize_results.gz foo.txt'
     }
 
     def 'should check the beforeScript' () {
@@ -64,9 +64,9 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                         local s3path=$2
                         for name in $(eval "ls -d $pattern");do
                           if [[ -d "$name" ]]; then
-                            aws s3 cp $name $s3path/$name --quiet --recursive --storage-class STANDARD
+                            aws s3 cp --only-show-errors --recursive --storage-class STANDARD $name $s3path/$name
                           else
-                            aws s3 cp $name $s3path/$name --quiet --storage-class STANDARD
+                            aws s3 cp --only-show-errors --storage-class STANDARD $name $s3path/$name
                           fi
                       done
                     }
@@ -86,9 +86,9 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                     local s3path=$2
                     for name in $(eval "ls -d $pattern");do
                       if [[ -d "$name" ]]; then
-                        /foo/aws s3 cp $name $s3path/$name --quiet --recursive --sse AES256 --storage-class REDUCED_REDUNDANCY
+                        /foo/aws s3 cp --only-show-errors --recursive --sse AES256 --storage-class REDUCED_REDUNDANCY $name $s3path/$name
                       else
-                        /foo/aws s3 cp $name $s3path/$name --quiet --sse AES256 --storage-class REDUCED_REDUNDANCY
+                        /foo/aws s3 cp --only-show-errors --sse AES256 --storage-class REDUCED_REDUNDANCY $name $s3path/$name
                       fi
                   done
                 }
@@ -120,7 +120,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         opts.getRemoteBinDir() >> '/foo/bar'
         opts.getAwsCli() >> 'aws'
         script == '''
-            aws s3 cp --recursive --quiet s3://foo/bar $PWD/nextflow-bin
+            aws s3 cp --recursive --only-show-errors s3://foo/bar $PWD/nextflow-bin
             chmod +x $PWD/nextflow-bin/*
             export PATH=$PWD/nextflow-bin:$PATH
             export BAR="world"
@@ -133,7 +133,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         opts.getAwsCli() >> '/conda/bin/aws'
         opts.getRemoteBinDir() >> '/foo/bar'
         script == '''
-            /conda/bin/aws s3 cp --recursive --quiet s3://foo/bar $PWD/nextflow-bin
+            /conda/bin/aws s3 cp --recursive --only-show-errors s3://foo/bar $PWD/nextflow-bin
             chmod +x $PWD/nextflow-bin/*
             export PATH=$PWD/nextflow-bin:$PATH
             export BAR="world"
@@ -147,7 +147,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         opts.getRemoteBinDir() >> '/foo/bar'
         opts.getRegion() >> 'eu-west-1'
         script == '''
-            /conda/bin/aws s3 cp --recursive --quiet s3://foo/bar $PWD/nextflow-bin
+            /conda/bin/aws s3 cp --recursive --only-show-errors s3://foo/bar $PWD/nextflow-bin
             chmod +x $PWD/nextflow-bin/*
             export PATH=$PWD/nextflow-bin:$PATH
             export BAR="world"
@@ -170,20 +170,20 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         def script = copy.stageInputFile( file, 'bar.txt')
         then:
         1 * opts.getCliPath() >> null
-        script == "aws s3 cp --quiet s3:/$file bar.txt" as String
+        script == "aws s3 cp --only-show-errors s3:/$file bar.txt" as String
 
         when:
         script = copy.stageInputFile( folder, 'bar')
         then:
         1 * opts.getCliPath() >> null
-        script == "aws s3 cp --quiet --recursive s3:/$folder bar" as String
+        script == "aws s3 cp --only-show-errors --recursive s3:/$folder bar" as String
 
 
         when:
         script = copy.stageInputFile( folder, 'bar')
         then:
         1 * opts.getCliPath() >> '/home/bin/aws'
-        script == "/home/bin/aws s3 cp --quiet --recursive s3:/$folder bar" as String
+        script == "/home/bin/aws s3 cp --only-show-errors --recursive s3:/$folder bar" as String
     }
     
 }
