@@ -57,6 +57,18 @@ class SplitFastaOperatorTest extends Specification {
             VPRNLLGLYP
             '''
 
+    @Shared
+    def fasta3 = """\
+                >1pzqA
+                GYQYRALYDYKKEREEDIDLHLGDILTVNKGSLVALGFSDGQEARPEEIG
+                WLNGYNETTGERGDFPGTYVEYIGRKKISP
+                >1xdtB
+                KGVIYALWDYEPQNDDELPMKEGDCMTIIHREDEDEIEWWWARLNDKEGY
+                VPRNLLGLYP
+                >1bcdB
+                NLFVALYDFVASGDNTLSITKGEKLRVLGYNHNGEWCEAQTKNGQGWVPS
+                NYITPVN
+                """.stripIndent()
 
     def 'should split fasta in sequences'() {
 
@@ -115,6 +127,40 @@ class SplitFastaOperatorTest extends Specification {
         target.val == [id:'1pht']
         target.val == [id:'alpha123']
         target.val == Channel.STOP
+    }
+
+
+    def 'should apply count on multiple entries'() {
+
+        given:
+        def F1 = '''
+            >1
+            AAA
+            >2
+            BBB
+            >3
+            CCC
+            '''
+                .stripIndent().trim()
+        def F3 = '''
+            >1
+            EEE
+            >2
+            FFF
+            >3
+            GGG
+            '''
+                .stripIndent().trim()
+
+        def target = Channel.create()
+
+        when:
+        Channel.from(F1,F3).splitFasta(by:2, into: target)
+        then:
+        target.val == '>1\nAAA\n>2\nBBB\n'
+        target.val == '>3\nCCC\n'
+        target.val == '>1\nEEE\n>2\nFFF\n'
+        target.val == '>3\nGGG\n'
     }
 
 }
