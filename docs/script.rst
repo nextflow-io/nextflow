@@ -437,11 +437,11 @@ Here are ``file``'s available options:
 =============== ===================
 Name            Description
 =============== ===================
-glob            When ``true`` interpret characters ``*``, ``?``, ``[]`` and ``{}`` as glob wildcards, otherwise handle them as normal characters (default: ``true``)
+glob            When ``true`` interprets characters ``*``, ``?``, ``[]`` and ``{}`` as glob wildcards, otherwise handles them as normal characters (default: ``true``)
 type            Type of paths returned, either ``file``, ``dir`` or ``any`` (default: ``file``)
-hidden          When ``true`` include hidden files in the resulting paths (default: ``false``)
+hidden          When ``true`` includes hidden files in the resulting paths (default: ``false``)
 maxDepth        Maximum number of directory levels to visit (default: `no limit`)
-followLinks     When ``true`` follow symbolic links during directory tree traversal, otherwise treat them as files (default: ``true``)
+followLinks     When ``true`` follows symbolic links during directory tree traversal, otherwise treats them as files (default: ``true``)
 =============== ===================
 
 
@@ -705,8 +705,8 @@ Table of optional parameters:
 ==================  ================
 Name                Description
 ==================  ================
-hard                When ``true`` create a *hard* link, otherwise create a *soft* (aka *symbolic*) link. (default: ``false``)
-overwrite           When ``true`` overwrite any existing file with the same name, otherwise throw a `FileAlreadyExistsException <http://docs.oracle.com/javase/8/docs/api/java/nio/file/FileAlreadyExistsException.html>`_ (default: ``false``)
+hard                When ``true`` creates a *hard* link, otherwise creates a *soft* (aka *symbolic*) link. (default: ``false``)
+overwrite           When ``true`` overwrites any existing file with the same name, otherwise throws a `FileAlreadyExistsException <http://docs.oracle.com/javase/8/docs/api/java/nio/file/FileAlreadyExistsException.html>`_ (default: ``false``)
 ==================  ================
 
 
