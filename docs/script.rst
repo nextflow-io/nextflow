@@ -703,7 +703,7 @@ Given a file, the method ``mklink`` creates a *file system link* for that file u
 Table of optional parameters:
 
 ==================  ================
-Method              Description
+Name                Description
 ==================  ================
 hard                When ``true`` create a *hard* link, otherwise create a *soft* (aka *symbolic*) link. (default: ``false``)
 overwrite           When ``true`` overwrite any existing file with the same name, otherwise throw a `FileAlreadyExistsException <http://docs.oracle.com/javase/8/docs/api/java/nio/file/FileAlreadyExistsException.html>`_ (default: ``false``)
@@ -804,7 +804,7 @@ Check file attributes
 The following methods can be used on a file variable created by using the ``file`` method:
 
 ==================  ================
-Method              Description
+Name                Description
 ==================  ================
 getName             Gets the file name e.g. ``/some/path/file.txt`` -> ``file.txt``
 getBaseName         Gets the file name without its extension e.g. ``/some/path/file.txt`` -> ``file``
