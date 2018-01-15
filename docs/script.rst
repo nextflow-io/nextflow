@@ -706,7 +706,7 @@ Table of optional parameters:
 Method              Description
 ==================  ================
 hard                When ``true`` create a *hard* link, otherwise create a *soft* (aka *symbolic*) link. (default: ``false``)
-overwrite           When ``true`` overwrite any exiting file with the same name, otherwise throw a `FileAlreadyExistsException <http://docs.oracle.com/javase/8/docs/api/java/nio/file/FileAlreadyExistsException.html>`_ (default: ``false``)
+overwrite           When ``true`` overwrite any existing file with the same name, otherwise throw a `FileAlreadyExistsException <http://docs.oracle.com/javase/8/docs/api/java/nio/file/FileAlreadyExistsException.html>`_ (default: ``false``)
 ==================  ================
 
 
