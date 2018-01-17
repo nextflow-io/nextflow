@@ -163,4 +163,44 @@ class SplitFastaOperatorTest extends Specification {
         target.val == '>3\nGGG\n'
     }
 
+    def 'should apply count on multiple entries with a limit'() {
+
+        given:
+        def F1 = '''
+            >1
+            AAA
+            >2
+            BBB
+            >3
+            CCC
+            >4
+            DDD
+            >5
+            XXX
+            '''
+                .stripIndent().trim()
+        def F3 = '''
+            >1
+            EEE
+            >2
+            FFF
+            >3
+            GGG
+            >4
+            HHH
+            >5
+            YYY
+            '''
+                .stripIndent().trim()
+
+        def target = Channel.create()
+
+        when:
+        Channel.from(F1,F3).splitFasta(by:2, limit:4, into: target)
+        then:
+        target.val == '>1\nAAA\n>2\nBBB\n'
+        target.val == '>3\nCCC\n>4\nDDD\n'
+        target.val == '>1\nEEE\n>2\nFFF\n'
+        target.val == '>3\nGGG\n>4\nHHH\n'
+    }
 }
