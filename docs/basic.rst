@@ -4,13 +4,13 @@ Basic concepts
 
 
 `Nextflow` is a reactive workflow framework and a programming `DSL <http://en.wikipedia.org/wiki/Domain-specific_language>`_
-that eases the writing of computational pipelines with complex data.
+that eases writing computational pipelines with complex data.
 
 It is designed around the idea that the Linux platform is the lingua franca of data science. Linux provides many
-simple command line and scripting tools, which by themselves are powerful, but when chained together facilitate complex
+simple but powerful command-line and scripting tools that, when chained together, facilitate complex
 data manipulations.
 
-`Nextflow` extends this approach adding to it the ability to define complex program interactions and an high-level
+`Nextflow` extends this approach, adding the ability to define complex program interactions and a high-level
 parallel computational environment based on the `dataflow` programming model.
 
 
@@ -18,15 +18,15 @@ Processes and channels
 ----------------------
 
 In practice a Nextflow pipeline script is made by joining together many different processes.
-Each process can be written in any scripting language that can be executed by the Linux platform (BASH, Perl, Ruby, Python, etc).
+Each process can be written in any scripting language that can be executed by the Linux platform (Bash, Perl, Ruby, Python, etc.).
 
-Processes are executed independently and are isolated from each other i.e. they do not share a common (writable) state.
-The only way they can communicate is by using asynchronous FIFO queues, called `channels` in the Nextflow lingo.
+Processes are executed independently and are isolated from each other, i.e. they do not share a common (writable) state.
+The only way they can communicate is via asynchronous FIFO queues, called `channels` in the Nextflow lingo.
 
 Any process can define one or more channels as `input` and `output`. The interaction between these processes,
 and ultimately the pipeline execution flow itself, is implicitly defined by these input and output declarations.
 
-A Nextflow script looks like the following example::
+A Nextflow script looks like this::
 
     params.query = "$HOME/sample.fa"
     params.db = "$HOME/tools/blast-db/pdb/pdb"
@@ -62,27 +62,27 @@ A Nextflow script looks like the following example::
 
 
 
-In the above example two processes are defined. The execution order is not set by the fact that ``blastSearch`` process comes
-before the ``extractTopHits`` in the script (it could also be written the other way around) but because the first defines
+The above example defines two processes. Their execution order is not determined by the fact that the ``blastSearch`` process comes
+before the ``extractTopHits`` in the script (it could also be written the other way around), but because the first defines
 the channel ``top_hits`` in its output declarations while the ``extractTopHits`` process defines the same channel in its
-input declaration, and thus establishing a communication link from the `blastSearch` task towards the `extractTopHits` task.
+input declaration, thus establishing a communication link from the `blastSearch` task towards the `extractTopHits` task.
 
 .. TODO describe that both processes are launched at the same time
 
-Read :ref:`Channel <channel-page>` and :ref:`Process <process-page>` sections to learn more about these features.
+Read the :ref:`Channel <channel-page>` and :ref:`Process <process-page>` sections to learn more about these features.
 
 
 Execution abstraction
 ---------------------
 
-While a process defines `what` command or script has to be executed, the `executor` has the role to determine `how`
-that script is actually run in the target system.
+While a process defines `what` command or script has to be executed, the `executor` determines `how`
+that script is actually run on the target system.
 
-If not specified otherwise processes are executed in the local computer. The local executor is very useful for pipeline
-development and test purposes, but for real world computational pipelines, an HPC or cloud platform is required.
+If not otherwise specified, processes are executed on the local computer. The local executor is very useful for pipeline
+development and test purposes, but for real world computational pipelines an HPC or cloud platform is required.
 
 In other words, `Nextflow` provides an abstraction between the pipeline's functional logic and the underlying execution system.
-Thus it is possible to write a pipeline once and have it running on your computer, a grid platform or the cloud seamlessly,
+Thus it is possible to write a pipeline once and to seamlessly run it on your computer, a grid platform, or the cloud,
 without modifying it, by simply defining the target execution platform in the configuration file.
 
 The following HPC and cloud platforms are supported:
@@ -96,20 +96,20 @@ The following HPC and cloud platforms are supported:
 * `HTCondor <https://research.cs.wisc.edu/htcondor/>`_
 
 
-Read :ref:`executor-page` section to learn more about Nextflow executors.
+Read the :ref:`executor-page` section to learn more about Nextflow executors.
 
 
 Scripting language
 ------------------
 
 Although `Nextflow` is designed to be used with a minimal learning curve, without having to study
-a new programming language and using your current skills, it also provides a powerful DSL scripting language.
+a new programming language and using your current skills, it also provides a powerful scripting DSL.
 
-Nextflow scripting is an extension of the `Groovy programming language <http://en.wikipedia.org/wiki/Groovy_(programming_language)>`_
-which in turn is a super-set of the Java programming language, thus if you have some knowledge of these languages,
-or even only some confidence with the `C/C++` syntax, you will be comfortable using it.
+Nextflow scripting is an extension of the `Groovy programming language <http://en.wikipedia.org/wiki/Groovy_(programming_language)>`_,
+which in turn is a super-set of the Java programming language. Thus if you have some knowledge of these languages,
+or even just some confidence with the `C/C++` syntax, you will be comfortable using it.
 
-Read :ref:`pipeline-page` section to learn about Nextflow scripting language.
+Read the :ref:`pipeline-page` section to learn about the Nextflow scripting language.
 
 
 
@@ -124,9 +124,9 @@ Configuration options
 
 Pipeline configuration properties are defined in a file named ``nextflow.config`` in the pipeline execution directory. 
 
-It allows to set what executor to use, the processes environment variables, pipeline parameters etc. 
+This file can be used to define which executor to use, the process's environment variables, pipeline parameters etc. 
 
-A basic configuration file looks like the following example::
+A basic configuration file might look like this::
 
 	process { 
 	  executor='sge'
@@ -137,7 +137,7 @@ A basic configuration file looks like the following example::
 	  PATH="$PWD/bowtie2:$PWD/tophat2:$PATH"
 	}
 
-Read :ref:`config-page` section to learn more about the Nextflow configuration file and settings.
+Read the :ref:`config-page` section to learn more about the Nextflow configuration file and settings.
 
 
 
