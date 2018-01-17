@@ -108,6 +108,8 @@ class BashWrapperBuilder {
           exit_status=${ret:=$?}
           printf $exit_status __EXIT_FILE__
           set +u
+          [[ "$tee1" ]] && kill $tee1 2>/dev/null
+          [[ "$tee2" ]] && kill $tee2 2>/dev/null
           [[ "$COUT" ]] && rm -f "$COUT" || true
           [[ "$CERR" ]] && rm -f "$CERR" || true
           __EXIT_CMD__
