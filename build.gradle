@@ -492,6 +492,38 @@ task dockerImage(type: Exec) {
     commandLine 'bash', '-e', temp.absolutePath
 }
 
+task dockerPack(type: Exec, dependsOn: ['pack']) {
+
+    def source = new File("$releaseDir/nextflow-$version-one.jar")
+    def target = new File("$buildDir/docker/.nextflow/framework/$version/")
+    def dockerBase = new File("$buildDir/docker")
+    if( dockerBase.exists() ) dockerBase.deleteDir()
+    dockerBase.mkdirs()
+    def dockerFile = new File("$buildDir/docker/Dockerfile")
+    dockerFile.text = """
+    FROM openjdk:8-jre-alpine
+    RUN apk update && apk add bash && apk add coreutils && apk add curl
+    COPY .nextflow /.nextflow
+    COPY nextflow /usr/local/bin/nextflow
+    ENV NXF_HOME=/.nextflow
+    ENV NXF_OPTS='-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap'
+    """
+
+    def temp = File.createTempFile('upload',null)
+    temp.deleteOnExit()
+    temp.text =  """\
+    mkdir -p $target
+    cp $source $target
+    cp nextflow $buildDir/docker
+    cd $buildDir/docker
+    chmod +x nextflow
+    NXF_HOME=\$PWD/.nextflow nextflow info
+    docker build -t nextflow/nextflow:$version .
+    """.stripIndent()
+
+    commandLine 'bash', '-e', temp.absolutePath
+}
+
 /*
  * Tag and upload the release
  */
