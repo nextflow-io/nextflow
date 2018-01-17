@@ -76,7 +76,7 @@ class EntryCounter {
      *
      * @return
      */
-    boolean hasNext() {
+    boolean isChunckComplete() {
         current += increment
         current >= size
     }
