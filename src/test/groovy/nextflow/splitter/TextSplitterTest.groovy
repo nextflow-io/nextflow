@@ -47,6 +47,16 @@ class TextSplitterTest extends Specification {
 
     }
 
+    def testTextByLineWithLimitWithMultiTargets() {
+
+        given:
+        def splitter = new TextSplitter(limit: 3)
+        expect:
+        splitter.target("1\n2\n3\n4\n5").list() == ['1\n','2\n','3\n']
+        splitter.target("a\nb\nc\nd\ne").list() == ['a\n','b\n','c\n']
+
+    }
+
     def testSplitLinesByCount () {
 
         expect:

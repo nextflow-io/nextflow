@@ -839,7 +839,7 @@ header      When ``true`` the first line is used as columns names. Alternatively
 charset     Parse the content by using the specified charset e.g. ``UTF-8``
 strip       Removes leading and trailing blanks from values (default: ``false``)
 skip        Number of lines since the file beginning to ignore when parsing the CSV content.
-limit       Limits the number of retrieved records to the specified value.
+limit       Limits the number of retrieved records for each file to the specified value.
 decompress  When ``true`` decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
 elem        The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)
 =========== ============================
@@ -890,7 +890,7 @@ Field       Description
 =========== ============================
 by          Defines the number of sequences in each `chunk` (default: ``1``)
 size        Defines the size in memory units of the expected chunks eg. `1.MB`.
-limit       Limits the number of retrieved sequences to the specified value.
+limit       Limits the number of retrieved sequences for each file to the specified value.
 record      Parse each entry in the FASTA file as record objects (see following table for accepted values)
 charset     Parse the content by using the specified charset e.g. ``UTF-8``
 compress    When ``true`` resulting file chunks are GZIP compressed. The ``.gz`` suffix is automatically added to chunk file names.
@@ -973,7 +973,7 @@ Field       Description
 =========== ============================
 by          Defines the number of *reads* in each `chunk` (default: ``1``)
 pe          When ``true`` splits paired-end read files, therefore items emitted by the source channel must be tuples in which at least two elements are the read-pair files to be splitted.
-limit       Limits the number of retrieved *reads* to the specified value.
+limit       Limits the number of retrieved *reads* for each file to the specified value.
 record      Parse each entry in the FASTQ file as record objects (see following table for accepted values)
 charset     Parse the content by using the specified charset e.g. ``UTF-8``
 compress    When ``true`` resulting file chunks are GZIP compressed. The ``.gz`` suffix is automatically added to chunk file names.
@@ -1040,7 +1040,7 @@ Available parameters:
 Field       Description
 =========== ============================
 by          Defines the number of lines in each `chunk` (default: ``1``)
-limit       Limits the number of retrieved lines to the specified value.
+limit       Limits the number of retrieved lines for each file to the specified value.
 charset     Parse the content by using the specified charset e.g. ``UTF-8``
 compress    When ``true`` resulting file chunks are GZIP compressed. The ``.gz`` suffix is automatically added to chunk file names.
 decompress  When ``true``, decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
