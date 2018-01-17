@@ -168,6 +168,8 @@ class BashWrapperBuilderTest extends Specification {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
                   set +u
+                  [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                  [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
                   exit \$exit_status
@@ -270,6 +272,8 @@ class BashWrapperBuilderTest extends Specification {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
                   set +u
+                  [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                  [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
                   rm -rf \$NXF_SCRATCH || true
@@ -394,6 +398,8 @@ class BashWrapperBuilderTest extends Specification {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
                   set +u
+                  [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                  [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
                   rm -rf \$NXF_SCRATCH || true
@@ -522,6 +528,8 @@ class BashWrapperBuilderTest extends Specification {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
                   set +u
+                  [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                  [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
                   exit \$exit_status
@@ -735,6 +743,8 @@ class BashWrapperBuilderTest extends Specification {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
                   set +u
+                  [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                  [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
                   rm -rf \$NXF_SCRATCH || true
@@ -860,6 +870,8 @@ class BashWrapperBuilderTest extends Specification {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
                   set +u
+                  [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                  [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
                   rm -rf \$NXF_SCRATCH || true
@@ -1078,6 +1090,8 @@ class BashWrapperBuilderTest extends Specification {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
                   set +u
+                  [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                  [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
                   sudo docker rm \$NXF_BOXID &>/dev/null || true
@@ -1189,6 +1203,8 @@ class BashWrapperBuilderTest extends Specification {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
                   set +u
+                  [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                  [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
                   docker rm \$NXF_BOXID &>/dev/null || true
@@ -1303,6 +1319,8 @@ class BashWrapperBuilderTest extends Specification {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
                   set +u
+                  [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                  [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
                   exit \$exit_status
@@ -1413,6 +1431,8 @@ class BashWrapperBuilderTest extends Specification {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
                   set +u
+                  [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                  [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
                   exit \$exit_status
@@ -1527,6 +1547,8 @@ class BashWrapperBuilderTest extends Specification {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
                   set +u
+                  [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                  [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
                   docker rm \$NXF_BOXID &>/dev/null || true
@@ -1639,6 +1661,8 @@ class BashWrapperBuilderTest extends Specification {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
                   set +u
+                  [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                  [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
                   (sudo -n true && sudo rm -rf "\$NXF_SCRATCH" || rm -rf "\$NXF_SCRATCH")&>/dev/null || true
@@ -1782,6 +1806,8 @@ class BashWrapperBuilderTest extends Specification {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
                   set +u
+                  [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                  [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
                   docker rm \$NXF_BOXID &>/dev/null || true
@@ -1896,6 +1922,8 @@ class BashWrapperBuilderTest extends Specification {
                       exit_status=${ret:=$?}
                       printf $exit_status > /my/exit/file\\'s
                       set +u
+                      [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                      [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                       [[ "\$COUT" ]] && rm -f "\$COUT" || true
                       [[ "\$CERR" ]] && rm -f "\$CERR" || true
                       rm -rf $NXF_SCRATCH || true
@@ -1953,6 +1981,8 @@ class BashWrapperBuilderTest extends Specification {
                       exit_status=${ret:=$?}
                       printf $exit_status > /my/exit/xxx
                       set +u
+                      [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                      [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                       [[ "\$COUT" ]] && rm -f "\$COUT" || true
                       [[ "\$CERR" ]] && rm -f "\$CERR" || true
                       docker rm x &>/dev/null || true
@@ -2010,6 +2040,8 @@ class BashWrapperBuilderTest extends Specification {
                       exit_status=${ret:=$?}
                       printf $exit_status > /my/exit/xxx
                       set +u
+                      [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                      [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                       [[ "\$COUT" ]] && rm -f "\$COUT" || true
                       [[ "\$CERR" ]] && rm -f "\$CERR" || true
                       (sudo -n true && sudo rm -rf "$NXF_SCRATCH" || rm -rf "$NXF_SCRATCH")&>/dev/null || true
@@ -2080,6 +2112,8 @@ class BashWrapperBuilderTest extends Specification {
                       exit_status=\${ret:=\$?}
                       printf \$exit_status > ${folder}/.exitcode
                       set +u
+                      [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                      [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                       [[ "\$COUT" ]] && rm -f "\$COUT" || true
                       [[ "\$CERR" ]] && rm -f "\$CERR" || true
                       exit \$exit_status
@@ -2184,6 +2218,8 @@ class BashWrapperBuilderTest extends Specification {
                       exit_status=\${ret:=\$?}
                       printf \$exit_status > ${folder}/.exitcode
                       set +u
+                      [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                      [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                       [[ "\$COUT" ]] && rm -f "\$COUT" || true
                       [[ "\$CERR" ]] && rm -f "\$CERR" || true
                       exit \$exit_status
@@ -2309,6 +2345,8 @@ class BashWrapperBuilderTest extends Specification {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
                   set +u
+                  [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                  [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
                   exit \$exit_status
@@ -2446,6 +2484,8 @@ class BashWrapperBuilderTest extends Specification {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > ${folder}/.exitcode
                   set +u
+                  [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                  [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
                   exit \$exit_status

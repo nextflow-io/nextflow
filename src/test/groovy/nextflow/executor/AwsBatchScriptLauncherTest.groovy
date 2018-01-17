@@ -104,6 +104,8 @@ class AwsBatchScriptLauncherTest extends Specification {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status | /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors - s3:/${folder}/.exitcode || true
                   set +u
+                  [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                  [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
                   rm -rf \$NXF_SCRATCH || true
@@ -245,6 +247,8 @@ class AwsBatchScriptLauncherTest extends Specification {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status | aws s3 cp --only-show-errors - s3:/${folder}/.exitcode || true
                   set +u
+                  [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                  [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
                   rm -rf \$NXF_SCRATCH || true
