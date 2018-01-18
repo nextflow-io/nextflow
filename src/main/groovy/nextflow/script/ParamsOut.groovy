@@ -591,7 +591,7 @@ class SetOutParam extends BaseOutParam implements OptionalParam {
                 create(FileOutParam).bind(item.target)
 
             else
-                throw new IllegalArgumentException("Invalid map output parameter declaration -- item: ${item}")
+                throw new IllegalArgumentException("Invalid `set` output parameter declaration -- item: ${item}")
         }
 
         return this
