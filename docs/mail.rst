@@ -159,7 +159,7 @@ which is the most convenient way to notify the completion of a workflow executio
 section to learn about it.
 
 Workflow notification
-----------------------
+---------------------
 
 Nextflow includes a built-in workflow notification features that automatically sends a notification message
 when a workflow execution terminates.
@@ -172,8 +172,13 @@ It will send a notification mail when the execution completes similar to the one
 
 .. image:: images/workflow-notification-min.png
 
-The message is delivered using the Nextflow built-in mailing function. See the `Mail configuration`_ section to learn
-about the available mail delivery options and configuration settings.
+
+.. warning:: By default the notification message is sent by using the ``sendmail`` system tool which is assumed to be
+    available in the computer where Nextflow is running. Make sure it's properly installed and configured.
+    Alternatively provide the SMTP server configuration settings to use the Nextflow
+    built-in mail support, which doesn't require any external system tool.
+
+See the `Mail configuration`_ section to learn about the available mail delivery options and configuration settings.
 
 Read :ref:`Notification scope <config-notification>` section to learn more about the workflow notification
 configuration details.
