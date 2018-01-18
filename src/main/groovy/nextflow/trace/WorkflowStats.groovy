@@ -130,11 +130,8 @@ class WorkflowStats {
      * @return The CPU-millis used by the specified task
      */
     protected long getCpuTime( TraceRecord record ) {
-        // note: `realtime` field is not available when task metrics are not enabled
-        if( !record.containsKey('realtime') )
-            return 0
-        final time = (long)record.get('realtime')
-        final cpus = (long)record.get('cpus')
+        final time = (long) (record.get('realtime') ?: 0)
+        final cpus = (int) (record.get('cpus') ?: 1)
         return time * cpus
     }
 
