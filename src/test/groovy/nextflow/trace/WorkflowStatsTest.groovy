@@ -163,4 +163,40 @@ class WorkflowStatsTest extends Specification {
         stats.failedDuration.seconds == 20
     }
 
+
+    def 'should get cpu time' () {
+        given:
+        def stats = new WorkflowStats()
+        def record = Mock(TraceRecord)
+        long result
+
+        when:
+        result = stats.getCpuTime(record)
+        then:
+        1 * record.get('realtime') >> 1_000
+        1 * record.get('cpus') >> 1
+        result == 1000
+
+        when:
+        result = stats.getCpuTime(record)
+        then:
+        1 * record.get('realtime') >> 2_000
+        1 * record.get('cpus') >> 4
+        result == 8_000
+
+        when:
+        result = stats.getCpuTime(record)
+        then:
+        1 * record.get('realtime') >> 2_000
+        1 * record.get('cpus') >> null
+        result == 2_000
+
+        when:
+        result = stats.getCpuTime(record)
+        then:
+        1 * record.get('realtime') >> null
+        1 * record.get('cpus') >> null
+        result == 0
+    }
+
 }
