@@ -1,6 +1,14 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.27.1 - 18 Jan 2018 
+- Fixed Invalid cast exception when cpus value is missing #575
+- Fixed Kill the tee commands when the launcher script exit #574
+- Fixed Splitter `limit` option is not honored when splitting more than one file #573
+- Fixed AWS CLI operations with S3 should use the --only-show-errors options #567
+- Fixed Splitter by option is not honored when splitting more than one file #570
+- Documentation editing/improvement
+
 0.27.0 - 9 Jan 2018
 - Fixed Log command prints true instead of actual message #561
 - Fixed NXF_TEMP definition when instanceStorageMount is set
