@@ -890,12 +890,15 @@ class TaskProcessor {
 
 
         try {
+            final exit = task.config.getValidExitStatus()[0]
+            // -- expose task exit status to make accessible as output value
+            task.config.exitStatus = exit
             // -- check if all output resources are available
             collectOutputs(task)
             log.info "[skipping] Stored process > ${task.name}"
 
             // set the exit code in to the task object
-            task.exitStatus = task.config.getValidExitStatus()[0]
+            task.exitStatus = exit
             task.cached = true
 
             // -- now bind the results
@@ -977,6 +980,8 @@ class TaskProcessor {
         }
 
         try {
+            // -- expose task exit status to make accessible as output value
+            task.config.exitStatus = exitCode
             // -- check if all output resources are available
             collectOutputs(task, folder, stdoutFile, task.context)
 
@@ -2074,6 +2079,8 @@ class TaskProcessor {
                     throw new ProcessFailedException("Process `${task.name}` terminated with an error exit status (${task.exitStatus})")
             }
 
+            // -- expose task exit status to make accessible as output value
+            task.config.exitStatus = task.exitStatus
             // -- if it's OK collect results and finalize
             collectOutputs(task)
         }
