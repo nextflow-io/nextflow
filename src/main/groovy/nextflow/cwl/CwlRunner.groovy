@@ -47,7 +47,6 @@ class CwlRunner {
         def cmd = new StringBuilder()
         // -- base command
         if( yaml.baseCommand ) {
-            println(yaml.baseCommand.class)
             if (yaml.baseCommand.class == String)
                 cmd << yaml.baseCommand
             if (yaml.baseCommand.class == ArrayList)
@@ -62,7 +61,10 @@ class CwlRunner {
 
         // collect inputs
         yaml.inputs.each { String name, Map value ->
-            cmd << ' ' << '${' << name << '}'
+            if( value.prefix)
+                cmd << ' ' << value.prefix << ' ' << '${' << name << '}'
+            else
+                cmd << ' ' << '${' << name << '}'
             createInputParam(name, value)
         }
 
@@ -88,6 +90,9 @@ class CwlRunner {
             config._in_file(new TokenVar(name)).from(ch)
         }
         else if ( type.startsWith('string') ) {
+            config._in_val(new TokenVar(name)).from(ch)
+        }
+        else if ( type.startsWith('int') ) {
             config._in_val(new TokenVar(name)).from(ch)
         }
         else {
