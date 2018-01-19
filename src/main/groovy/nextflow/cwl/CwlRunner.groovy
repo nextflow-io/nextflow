@@ -46,11 +46,15 @@ class CwlRunner {
 
         def cmd = new StringBuilder()
         // -- base command
-        if( yaml.baseCommand )
-            cmd << yaml.baseCommand
+        if( yaml.baseCommand ) {
+            println(yaml.baseCommand.class)
+            if (yaml.baseCommand.class == String)
+                cmd << yaml.baseCommand
+            if (yaml.baseCommand.class == ArrayList)
+                cmd << yaml.baseCommand.join(' ')
+        }
         else
             throw new IllegalArgumentException("Not a valid CWL descriptor -- Missing `baseCommand`")
-
         // -- command arguments
         def args = (List)yaml.arguments
         if( args )
