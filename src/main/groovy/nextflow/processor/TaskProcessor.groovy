@@ -32,6 +32,8 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicIntegerArray
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 
 import ch.grengine.Grengine
 import com.google.common.hash.HashCode
@@ -1723,81 +1725,93 @@ class TaskProcessor {
      *
      * @return
      */
+    @CompileStatic
     protected List<FileHolder> expandWildcards( String name, List<FileHolder> files ) {
         assert files != null
 
-        // use an unordered so that cache hash key is not affected by file entries order
-        final result = new ArrayBag()
-        if( files.size()==0 ) { return result }
+        if( files.size()==0 ) {
+            return files
+        }
 
         if( !name || name == '*' ) {
             return files
         }
 
-        if( name.endsWith('/*') ) {
-            final p = name.lastIndexOf('/')
-            final dir = name.substring(0,p)
-            return files.collect { it.withName("${dir}/${it.stageName}") }
-        }
-
-        // no wildcards in the file name
-        else if( !name.contains('*') && !name.contains('?') ) {
+        if( !name.contains('*') && !name.contains('?') && files.size()>1 ) {
             /*
              * The name do not contain any wildcards *BUT* when multiple files are provide
              * it is managed like having a 'star' at the end of the file name
              */
-            if( files.size()>1 ) {
-                name += '*'
-            }
-            else {
-                // just return that name
-                result << files[0].withName(name)
-                return result
-            }
+            name += '*'
         }
 
-        /*
-         * The star wildcard: when a single item is provided, it is simply ignored
-         * When a collection of files is provided, the name is expanded to the index number
-         */
-        if( name.contains('*') ) {
-            if( files.size()>1 ) {
-                def count = 1
-                files.each { FileHolder holder ->
-                    def stageName = name.replace('*', (count++).toString())
-                    result << holder.withName(stageName)
-                }
-            }
-            else {
-                // there's just one value, remove the 'star' wildcards
-                def stageName = name.replace('*','')
-                result << files[0].withName(stageName)
-            }
-        }
+        // use an unordered so that cache hash key is not affected by file entries order
+        final result = new ArrayBag(files.size())
 
-        /*
-         * The question mark wildcards *always* expand to an index number
-         * as long as are the number of question mark characters
-         */
-        else if( name.contains('?') ) {
-            def count = 1
-            files.each { FileHolder holder ->
-                String match = (name =~ /\?+/)[0]
-                def replace = (count++).toString().padLeft(match.size(), '0')
-                def stageName = name.replace(match, replace)
-                result << holder.withName(stageName)
-            }
-
-        }
-
-        // not a valid condition
-        else {
-            throw new IllegalStateException("Invalid file expansion for name: '$name'")
+        for( int i=0; i<files.size(); i++ ) {
+            def holder = files[i]
+            def newName = expandWildcards0(name, holder.stageName, i+1, files.size())
+            result << holder.withName( newName )
         }
 
         return result
     }
 
+    private static Pattern QUESTION_MARK = ~/(\?+)/
+
+    @CompileStatic
+    protected String replaceQuestionMarkWildcards(String name, int index) {
+        def result = new StringBuffer()
+
+        Matcher m = QUESTION_MARK.matcher(name)
+        while( m.find() ) {
+            def match = m.group(1)
+            def repString = String.valueOf(index).padLeft(match.size(), '0')
+            m.appendReplacement(result, repString)
+        }
+        m.appendTail(result)
+        result.toString()
+    }
+
+    @CompileStatic
+    protected String replaceStarWildcards(String name, int index, boolean strip=false) {
+        name.replaceAll(/\*/, strip ? '' : String.valueOf(index))
+    }
+
+    @CompileStatic
+    protected String expandWildcards0( String path, String stageName, int index, int size ) {
+
+        String name
+        String parent
+        int p = path.lastIndexOf('/')
+        if( p == -1 ) {
+            parent = null
+            name = path
+        }
+        else {
+            parent = path.substring(0,p)
+            name = path.substring(p+1)
+        }
+
+        if( name == '*' || !name ) {
+            name = stageName
+        }
+        else {
+            final stripWildcard = size<=1 // <-- string the start wildcard instead of expanding to an index number when the collection contain only one file
+            name = replaceStarWildcards(name, index, stripWildcard)
+            name = replaceQuestionMarkWildcards(name, index)
+        }
+
+        if( parent ) {
+            parent = replaceStarWildcards(parent, index)
+            parent = replaceQuestionMarkWildcards(parent, index)
+            return "$parent/$name"
+        }
+        else {
+            return name
+        }
+
+    }
 
     /**
      * Given a map holding variables key-value pairs, create a script fragment
