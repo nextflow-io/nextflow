@@ -73,4 +73,43 @@ class CwlRunnerTest extends Specification {
         cwl.config.getOutputs().get(0).getFilePattern() == '*.bam'
 
     }
+    def 'parse baseCommand list' () {
+        given:
+        def text = '''
+        cwlVersion: v1.0
+        class: CommandLineTool
+        baseCommand: tar
+        inputs:
+          tarfile:
+            type: File
+            inputBinding:
+              position: 1
+              prefix: xf
+          extractfile:
+            type: string
+            inputBinding:
+              position: 2
+        outputs:
+          example_out:
+            type: File
+            outputBinding:
+              glob: $(inputs.extractfile)
+        '''
+                .stripIndent()
+
+        def INPUTS = [
+                tarfile: Paths.get('/some/path'),
+                extractfile: 'Hello.java'
+        ]
+
+        def cwl = new CwlRunner(Mock(BaseScript), INPUTS)
+
+        when:
+        cwl.parse(text)
+
+        then:
+        // the resulting command
+        cwl.command == 'tar xf ${tarfile} ${extractfile}'
+
+    }
 }

@@ -47,10 +47,13 @@ class CwlRunner {
         def cmd = new StringBuilder()
         // -- base command
         if( yaml.baseCommand ) {
-            if (yaml.baseCommand.class == String)
+            if ( yaml.baseCommand.class == String )
                 cmd << yaml.baseCommand
-            if (yaml.baseCommand.class == ArrayList)
+            else if ( yaml.baseCommand.class == ArrayList )
                 cmd << yaml.baseCommand.join(' ')
+            else
+                throw new IllegalArgumentException("CWL unknown baseCommand format")
+
         }
         else
             throw new IllegalArgumentException("Not a valid CWL descriptor -- Missing `baseCommand`")
@@ -61,11 +64,15 @@ class CwlRunner {
 
         // collect inputs
         yaml.inputs.each { String name, Map value ->
-            if( value.prefix)
-                cmd << ' ' << value.prefix << ' ' << '${' << name << '}'
-            else
-                cmd << ' ' << '${' << name << '}'
-            createInputParam(name, value)
+            // only inputs with inputBinding get added to cmd
+            if( value.inputBinding ){
+                if( value.inputBinding.prefix )
+                    cmd << ' ' << value.inputBinding.prefix << ' ' << '${' << name << '}'
+                else
+                    cmd << ' ' << '${' << name << '}'
+                createInputParam(name, value)
+            }
+
         }
 
         // collect outputs
