@@ -19,6 +19,7 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Path
 import java.util.concurrent.Callable
 import java.util.concurrent.Future
@@ -34,7 +35,6 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.script.ScriptType
 import nextflow.trace.TraceRecord
-import nextflow.util.Escape
 import nextflow.util.PosixProcess
 /**
  * Executes the specified task on the locally exploiting the underlying Java thread pool
@@ -110,25 +110,27 @@ class LocalTaskHandler extends TaskHandler {
         this.session = executor.session
     }
 
-
     @Override
     def void submit() {
         // create the wrapper script
         new BashWrapperBuilder(task) .build()
 
         // the cmd list to launch it
-        def job = new ArrayList(BashWrapperBuilder.BASH) << wrapperFile.getName()
-        // NOTE: the actual command is wrapper by another bash whose stream
-        // are redirected to null. This is important in order to consume the stdout/stderr
-        // of the wrapped job otherwise that output will cause the inner `tee`s hang
-        List cmd = ['/bin/bash','-c', job.join(' ') + " &> ${Escape.path(task.workDir)}/${TaskRun.CMD_LOG}" ]
-        log.trace "Launch cmd line: ${cmd.join(' ')}"
+        def cmd = new ArrayList(BashWrapperBuilder.BASH) << wrapperFile.getName()
+        log.debug "Launch cmd line: ${cmd.join(' ')}"
 
         session.getExecService().submit( {
 
             try {
+                // NOTE: make sure to redirect process output to a file otherwise
+                // execution can hang when stdout/stderr is bigger than 64k
+                final workDir = task.workDir.toFile()
+                final logFile = new File(workDir, TaskRun.CMD_LOG)
+
                 ProcessBuilder builder = new ProcessBuilder()
-                        .directory(task.workDir.toFile())
+                        .redirectErrorStream(true)
+                        .redirectOutput(logFile)
+                        .directory(workDir)
                         .command(cmd)
 
                 // -- start the execution and notify the event to the monitor
@@ -160,7 +162,7 @@ class LocalTaskHandler extends TaskHandler {
     @Override
     boolean checkIfRunning() {
 
-        if( isSubmitted() && process != null ) {
+        if( isSubmitted() && (process || result) ) {
             status = TaskStatus.RUNNING
             return true
         }
@@ -211,9 +213,15 @@ class LocalTaskHandler extends TaskHandler {
      */
     @Override
     void kill() {
+        if( !process ) return
         log.trace("Killing process with pid: ${process.pid}")
-        def pid = process.pid.toString()
-        new ProcessBuilder('bash', '-c', "kill -TERM $pid" ).start().waitFor()
+        def cmd = "kill -TERM $process.pid"
+        def proc = new ProcessBuilder('bash', '-c', cmd ).redirectErrorStream(true).start()
+        def status = proc.waitFor()
+        if( status != 0 ) {
+            def stdout = proc.text
+            log.debug "Unable to kill $task.name -- command: $cmd; exit: $status ${stdout ? "\n${stdout.indent()}":''}"
+        }
     }
 
     /**
@@ -223,10 +231,13 @@ class LocalTaskHandler extends TaskHandler {
 
         if( destroyed ) { return }
 
-        process.getInputStream()?.closeQuietly()
-        process.getOutputStream()?.closeQuietly()
-        process.getErrorStream()?.closeQuietly()
-        process.destroy()
+        if( process ) {
+            process.getInputStream()?.closeQuietly()
+            process.getOutputStream()?.closeQuietly()
+            process.getErrorStream()?.closeQuietly()
+            process.destroy()
+        }
+
         destroyed = true
     }
 
