@@ -76,7 +76,7 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-lib'], description = 'Library extension path')
     String libPath
 
-    @Parameter(names=['-cache'], description = 'enable/disable processes caching', arity = 1)
+    @Parameter(names=['-cache'], description = 'Enable/disable processes caching', arity = 1)
     boolean cacheable = true
 
     @Parameter(names=['-resume'], description = 'Execute the script using the cached results, useful to continue executions that was stopped by an error')
@@ -91,10 +91,10 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-qs','-queue-size'], description = 'Max number of processes that can be executed in parallel by each executor')
     Integer queueSize
 
-    @Parameter(names=['-test'], description = 'Test function with the specified name')
+    @Parameter(names=['-test'], description = 'Test a script function with the name specified')
     String test
 
-    @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate results are stored')
+    @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate result files are stored')
     String workDir
 
     /**
@@ -106,19 +106,19 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names='-params-file', description = 'Load script parameters from a JSON/YAML file')
     String paramsFile
 
-    @DynamicParameter(names = ['-process.'], description = 'Set process default options' )
+    @DynamicParameter(names = ['-process.'], description = 'Set process options' )
     Map<String,String> process = [:]
 
     @DynamicParameter(names = ['-e.'], description = 'Add the specified variable to execution environment')
     Map<String,String> env = [:]
 
-    @Parameter(names = ['-E'], description = 'Exports all the current system environment')
+    @Parameter(names = ['-E'], description = 'Exports all current system environment')
     boolean exportSysEnv
 
-    @DynamicParameter(names = ['-executor.'], description = 'Executor(s) options', hidden = true )
+    @DynamicParameter(names = ['-executor.'], description = 'Set executor options', hidden = true )
     Map<String,String> executorOptions = [:]
 
-    @Parameter(description = 'project name or repository url')
+    @Parameter(description = 'Project name or repository url')
     List<String> args
 
     @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
@@ -168,7 +168,7 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-c','-config'], hidden = true )
     List<String> runConfig
 
-    @DynamicParameter(names = ['-cluster.'], description = 'Define cluster options', hidden = true )
+    @DynamicParameter(names = ['-cluster.'], description = 'Set cluster options', hidden = true )
     Map<String,String> clusterOptions = [:]
 
     @Parameter(names=['-profile'], description = 'Choose a configuration profile')
