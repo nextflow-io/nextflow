@@ -1,6 +1,11 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.27.2 23 Jan 2018
+- Fixed Config property keys may contain invalid characters
+- Fixed Local process kill signal is not propagated to children processes #581
+- Fixed Operator join throws a stack overflow exception when an invalid argument type is specified #582
+
 0.27.1 - 18 Jan 2018 
 - Fixed Invalid cast exception when cpus value is missing #575
 - Fixed Kill the tee commands when the launcher script exit #574
