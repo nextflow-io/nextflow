@@ -34,6 +34,7 @@ import nextflow.Const
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
+import nextflow.k8s.K8sDriverLauncher
 import nextflow.scm.AssetManager
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
@@ -154,6 +155,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names = '-without-docker', description = 'Disable process execution with Docker', arity = 0)
     boolean withoutDocker
 
+    @Parameter(names = ['-with-k8s', '-K'], description = 'Enable execution in a Kubernetes cluster')
+    def withKubernetes
+
     @Parameter(names = '-with-mpi', hidden = true)
     boolean withMpi
 
@@ -188,7 +192,8 @@ class CmdRun extends CmdBase implements HubOptions {
 
     @Override
     void run() {
-        String pipeline = stdin ? '-' : ( args ? args[0] : null )
+        final scriptArgs = (args?.size()>1 ? args[1..-1] : []) as List<String>
+        final pipeline = stdin ? '-' : ( args ? args[0] : null )
         if( !pipeline )
             throw new AbortOperationException("No project name was specified")
 
@@ -197,14 +202,19 @@ class CmdRun extends CmdBase implements HubOptions {
 
         checkRunName()
 
+        if( withKubernetes ) {
+            // that's another story
+            new K8sDriverLauncher(cmd: this, runName: runName).run(pipeline, scriptArgs)
+            return
+        }
+
         log.info "N E X T F L O W  ~  version ${Const.APP_VER}"
 
         // -- specify the arguments
-        def scriptArgs = (args?.size()>1 ? args[1..-1] : []) as List<String>
-        def scriptFile = getScriptFile(pipeline)
+        final scriptFile = getScriptFile(pipeline)
 
         // create the config object
-        def config = new ConfigBuilder()
+        final config = new ConfigBuilder()
                         .setOptions(launcher.options)
                         .setCmdRun(this)
                         .setBaseDir(scriptFile.parent)
@@ -393,4 +403,5 @@ class CmdRun extends CmdBase implements HubOptions {
             throw new AbortOperationException("Cannot parse params file: $file", e)
         }
     }
+
 }
