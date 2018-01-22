@@ -62,6 +62,11 @@ class CwlRunner {
         if( args )
             cmd << ' ' << args.join(' ')
 
+        if( yaml.hints ){
+            if( yaml.hints.DockerRequirement )
+                config.container = yaml.hints.DockerRequirement.dockerPull
+        }
+
         // collect inputs
         yaml.inputs.each { String name, Map value ->
             // only inputs with inputBinding get added to cmd
@@ -102,6 +107,9 @@ class CwlRunner {
         else if ( type.startsWith('int') ) {
             config._in_val(new TokenVar(name)).from(ch)
         }
+        else if ( type.startsWith('directory') ) {
+            config._in_file(new TokenVar(name)).from(ch)
+        }
         else {
             throw new IllegalArgumentException("CWL unknown input type: $type")
         }
@@ -111,6 +119,12 @@ class CwlRunner {
         final type = value.type?.toString()?.toLowerCase()
 
         if( type.startsWith('file') ) {
+            def bind = value.outputBinding
+            def glob = bind instanceof Map ? bind.glob : null
+            if( !glob ) throw new IllegalArgumentException("CWL missing output file glob")
+            config._out_file(glob).into(new TokenVar(name))
+        }
+        else if( type.startsWith('directory') ) {
             def bind = value.outputBinding
             def glob = bind instanceof Map ? bind.glob : null
             if( !glob ) throw new IllegalArgumentException("CWL missing output file glob")
