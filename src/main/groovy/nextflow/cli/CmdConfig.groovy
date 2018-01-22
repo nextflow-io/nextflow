@@ -80,8 +80,7 @@ class CmdConfig extends CmdBase {
                 .setOptions(launcher.options)
                 .setBaseDir(base.complete())
                 .setCmdConfig(this)
-                .build()
-                .toConfigObject()
+                .configObject()
 
         if( printProperties ) {
             printProperties(config, stdout)
