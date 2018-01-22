@@ -19,8 +19,9 @@
  */
 
 package nextflow.extension
-import static DataflowHelper.newOperator
+
 import static DataflowHelper.chainImpl
+import static DataflowHelper.newOperator
 import static DataflowHelper.reduceImpl
 import static DataflowHelper.subscribeImpl
 import static nextflow.util.CheckHelper.checkParams
@@ -1329,13 +1330,17 @@ class DataflowExtensions {
         return target
     }
 
-    static final DataflowReadChannel join( DataflowReadChannel left, DataflowReadChannel right ) {
+    static final DataflowReadChannel join( DataflowReadChannel left, right ) {
+        if( right==null ) throw new IllegalArgumentException("Operator `join` argument cannot be null")
+        if( !(right instanceof DataflowReadChannel) ) throw new IllegalArgumentException("Invalid operator `join` argument [${right.getClass().getName()}] -- it must be a channel type")
         def target = new JoinOp(left,right) .apply()
         NodeMarker.addOperatorNode('join', [left, right], target)
         return target
     }
 
-    static final DataflowReadChannel join( DataflowReadChannel left, Map opts, DataflowReadChannel right ) {
+    static final DataflowReadChannel join( DataflowReadChannel left, Map opts, right ) {
+        if( right==null ) throw new IllegalArgumentException("Operator `join` argument cannot be null")
+        if( !(right instanceof DataflowReadChannel) ) throw new IllegalArgumentException("Invalid operator `join` argument [${right.getClass().getName()}] -- it must be a channel type")
         def target = new JoinOp(left,right,opts) .apply()
         NodeMarker.addOperatorNode('join', [left, right], target)
         return target
