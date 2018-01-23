@@ -561,6 +561,11 @@ class Bolts {
     }
 
 
+    static def navigate(Map self, String key, defValue) {
+        def result = navigate(self,key)
+        return result!=null ? result : defValue
+    }
+
     /**
      * Converts {@code ConfigObject}s to a plain {@code Map}
      *

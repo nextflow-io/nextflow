@@ -228,6 +228,14 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run','-N') == ['run', '-N','true']
         launcher.normalizeArgs('run','-N', '-x') == ['run', '-N','true', '-x']
 
+        launcher.normalizeArgs('run','-K', 'true') == ['run', '-K','true']
+        launcher.normalizeArgs('run','-K') == ['run', '-K','true']
+        launcher.normalizeArgs('run','-K', '-x') == ['run', '-K','true', '-x']
+
+        launcher.normalizeArgs('run','-with-k8s', 'true') == ['run', '-with-k8s','true']
+        launcher.normalizeArgs('run','-with-k8s') == ['run', '-with-k8s','true']
+        launcher.normalizeArgs('run','-with-k8s', '-x') == ['run', '-with-k8s','true', '-x']
+
         launcher.normalizeArgs('run','-syslog', 'host.com') == ['run', '-syslog','host.com']
         launcher.normalizeArgs('run','-syslog') == ['run', '-syslog','localhost']
         launcher.normalizeArgs('run','-syslog', '-x') == ['run', '-syslog','localhost', '-x']

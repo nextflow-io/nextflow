@@ -27,6 +27,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.cli.HubOptions
 import nextflow.config.ComposedConfigSlurper
+import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.script.ScriptFile
 import nextflow.util.IniFile
@@ -338,9 +339,10 @@ class AssetManager {
         return this
     }
 
-    void checkValidRemoteRepo() {
+    AssetManager checkValidRemoteRepo() {
         def scriptName = getMainScriptName()
         provider.validateFor(scriptName)
+        return this
     }
 
     @Memoized
@@ -415,6 +417,25 @@ class AssetManager {
             if( text ) {
                 def config = new ComposedConfigSlurper().setIgnoreIncludes(true).parse(text)
                 result = (ConfigObject)config.manifest
+            }
+        }
+        catch( Exception e ) {
+            log.trace "Cannot read project manifest -- Cause: ${e.message}"
+        }
+        // by default return an empty object
+        return result ?: new ConfigObject()
+    }
+
+    ConfigObject readRemoteConfig(String profile=null) {
+        ConfigObject result = null
+        try {
+            def text = provider.readText(MANIFEST_FILE_NAME)
+            if( text ) {
+                // TODO this must be able to parse remote config includes
+                def slurper = new ComposedConfigSlurper()
+                slurper.setIgnoreIncludes(true)
+                slurper.registerConditionalBlock('profiles', profile ?: ConfigBuilder.DEFAULT_PROFILE)
+                result = slurper.parse(text)
             }
         }
         catch( Exception e ) {

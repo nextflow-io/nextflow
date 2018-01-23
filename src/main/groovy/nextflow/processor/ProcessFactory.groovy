@@ -25,15 +25,15 @@ import nextflow.executor.AwsBatchExecutor
 import nextflow.executor.CondorExecutor
 import nextflow.executor.CrgExecutor
 import nextflow.executor.Executor
-import nextflow.executor.KubernetesExecutor
 import nextflow.executor.LocalExecutor
 import nextflow.executor.LsfExecutor
 import nextflow.executor.NopeExecutor
+import nextflow.executor.NqsiiExecutor
 import nextflow.executor.PbsExecutor
 import nextflow.executor.SgeExecutor
 import nextflow.executor.SlurmExecutor
 import nextflow.executor.SupportedScriptTypes
-import nextflow.executor.NqsiiExecutor
+import nextflow.k8s.K8sExecutor
 import nextflow.script.BaseScript
 import nextflow.script.ScriptType
 import nextflow.script.TaskBody
@@ -64,7 +64,7 @@ class ProcessFactory {
             'crg': CrgExecutor,
             'bsc': LsfExecutor,
             'condor': CondorExecutor,
-            'k8s': KubernetesExecutor,
+            'k8s': K8sExecutor,
             'nqsii': NqsiiExecutor,
             'awsbatch': AwsBatchExecutor
     ]
