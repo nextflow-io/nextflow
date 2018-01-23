@@ -42,7 +42,7 @@ import nextflow.util.HistoryFile
 @Slf4j
 class ConfigBuilder {
 
-    static final public DEFAULT_PROFILE = 'standard'
+    static final public String DEFAULT_PROFILE = 'standard'
 
     CliOptions options
 
@@ -547,13 +547,7 @@ class ConfigBuilder {
         return false
     }
 
-
-
-    /**
-     * @return A the application options hold in a {@code ConfigObject} instance
-     */
-    Map build() {
-
+    ConfigObject configObject() {
         // -- configuration file(s)
         def configFiles = validateConfigFiles(options?.config)
         def config = buildConfig(configFiles)
@@ -561,7 +555,15 @@ class ConfigBuilder {
         if( cmdRun )
             configRunOptions(config, System.getenv(), cmdRun)
 
-        return config.toMap()
+        return config
+    }
+
+
+    /**
+     * @return A the application options hold in a {@code ConfigObject} instance
+     */
+    Map build() {
+        configObject().toMap()
     }
 
 
