@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -44,6 +44,16 @@ class TextSplitterTest extends Specification {
 
         expect:
         new TextSplitter(limit: 3).target("1\n2\n3\n4\n5").list() == ['1\n','2\n','3\n']
+
+    }
+
+    def testTextByLineWithLimitWithMultiTargets() {
+
+        given:
+        def splitter = new TextSplitter(limit: 3)
+        expect:
+        splitter.target("1\n2\n3\n4\n5").list() == ['1\n','2\n','3\n']
+        splitter.target("a\nb\nc\nd\ne").list() == ['a\n','b\n','c\n']
 
     }
 
@@ -297,6 +307,21 @@ class TextSplitterTest extends Specification {
         new TextSplitter().options(record:true)
         then:
         thrown(IllegalArgumentException)
+
+    }
+
+    def testSplitLinesByCountMulti () {
+
+        given:
+        def ts = new TextSplitter().options(by: 2)
+
+        when:
+        def lines1 = ts.target('1\n2\n3').list()
+        def lines2 = ts.target('4\n5\n6').list()
+
+        then:
+        lines1 == ['1\n2\n', '3\n']
+        lines2 == ['4\n5\n', '6\n']
 
     }
 

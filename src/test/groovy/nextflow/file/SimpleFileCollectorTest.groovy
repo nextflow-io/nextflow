@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -123,6 +123,33 @@ class SimpleFileCollectorTest extends Specification {
     }
 
 
+    def testAppenderWithSeedClosure() {
+
+        when:
+        def file1 = Files.createTempFile('noname',null)
+        file1.text = 'Inizio'
+
+        def appender1 = new SimpleFileCollector()
+        appender1.newLine = true
+        appender1.seed = { key -> key == 'ENG' ? 'English' : 'Italian' }
+        appender1.add('ENG', 'Hello')
+        appender1.add('ITA', 'Ciao')
+        appender1.add('ENG', 'world!')
+        appender1.add('ITA', 'mondo')
+        appender1.add('ITA', '!')
+
+        then:
+        appender1.get('ENG').text == 'English\nHello\nworld!\n'
+        appender1.get('ITA').text == 'Italian\nCiao\nmondo\n!\n'
+        appender1.size() == 2
+
+        cleanup:
+        file1?.delete()
+        appender1?.close()
+
+    }
+
+
     def testAppenderWithFile() {
 
         given:
@@ -192,6 +219,68 @@ class SimpleFileCollectorTest extends Specification {
         file1?.delete()
     }
 
+    def 'should append csv chunks with header' () {
+
+        given:
+        def appender = new SimpleFileCollector(keepHeader: true, skipLines: 1)
+
+        when:
+        appender.add('foo', 'COL1,COL2,COL3\naaa,bbb,ccc\nppp,qqq,rrr\n')
+        appender.add('foo', 'COL1,COL2,COL3\nvvv,www,sss\nxxx,yyy,zzz\n')
+        appender.add('foo', 'COL1,COL2,COL3\n111,222,333\n444,555,666\n')
+
+        then:
+        appender.size()==1
+        appender.get('foo').text == '''
+            COL1,COL2,COL3
+            aaa,bbb,ccc
+            ppp,qqq,rrr
+            vvv,www,sss
+            xxx,yyy,zzz
+            111,222,333
+            444,555,666
+            '''
+            .stripIndent().leftTrim()
+
+    }
+
+    def 'should append csv chunks with more headers' () {
+
+        given:
+        def appender = new SimpleFileCollector(keepHeader: true, skipLines: 3)
+
+        when:
+        appender.add('foo', '#\n#\nCOL1,COL2,COL3\naaa,bbb,ccc\nppp,qqq,rrr\n')
+        appender.add('bar', '#\n#\nNUM1,NUM2,NUM3\n111,222,333\n444,555,666\n')
+        appender.add('foo', '#\n#\nCOL1,COL2,COL3\nvvv,www,sss\nxxx,yyy,zzz\n')
+        appender.add('bar', '#\n#\nNUM1,NUM2,NUM3\n777,888,999\n000,111,222\n')
+
+        then:
+        appender.size()==2
+
+        appender.get('foo').text == '''
+            #
+            #
+            COL1,COL2,COL3
+            aaa,bbb,ccc
+            ppp,qqq,rrr
+            vvv,www,sss
+            xxx,yyy,zzz
+            '''
+                .stripIndent().leftTrim()
+
+        appender.get('bar').text == '''
+            #
+            #
+            NUM1,NUM2,NUM3
+            111,222,333
+            444,555,666
+            777,888,999
+            000,111,222
+            '''
+                .stripIndent().leftTrim()
+
+    }
 
 
 }

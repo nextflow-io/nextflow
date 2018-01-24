@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -267,8 +267,93 @@ class TaskProcessorTest extends Specification {
         list1 *. stageName == ['dir/file.fa']
         list2 *. stageName == ['dir/titi.fa', 'dir/toto.fa']
 
+        when:
+        list1 = processor.expandWildcards('dir/*/*', [FileHolder.get('file.fa')])
+        list2 = processor.expandWildcards('dir/*/*', [FileHolder.get('titi.fa'), FileHolder.get('file.fq', 'toto.fa')])
+        then:
+        list1 *. stageName == ['dir/1/file.fa']
+        list2 *. stageName == ['dir/1/titi.fa', 'dir/2/toto.fa']
+
+        when:
+        list1 = processor.expandWildcards('dir/foo*/*', [FileHolder.get('file.fa')])
+        list2 = processor.expandWildcards('dir/foo*/*', [FileHolder.get('titi.fa'), FileHolder.get('file.fq', 'toto.fa')])
+        then:
+        list1 *. stageName == ['dir/foo1/file.fa']
+        list2 *. stageName == ['dir/foo1/titi.fa', 'dir/foo2/toto.fa']
+
+        when:
+        list1 = processor.expandWildcards('dir/??/*', [FileHolder.get('file.fa')])
+        list2 = processor.expandWildcards('dir/??/*', [FileHolder.get('titi.fa'), FileHolder.get('file.fq', 'toto.fa')])
+        then:
+        list1 *. stageName == ['dir/01/file.fa']
+        list2 *. stageName == ['dir/01/titi.fa', 'dir/02/toto.fa']
+
+        when:
+        list1 = processor.expandWildcards('dir/bar??/*', [FileHolder.get('file.fa')])
+        list2 = processor.expandWildcards('dir/bar??/*', [FileHolder.get('titi.fa'), FileHolder.get('file.fq', 'toto.fa')])
+        then:
+        list1 *. stageName == ['dir/bar01/file.fa']
+        list2 *. stageName == ['dir/bar01/titi.fa', 'dir/bar02/toto.fa']
     }
 
+    @Unroll
+    def 'should expand wildcards rule' () {
+
+        given:
+        def processor = [:] as TaskProcessor
+
+        expect:
+        processor.expandWildcards0(pattern, 'stage-name.txt', index, size ) == expected
+
+        where:
+        pattern             | index | size  | expected
+        // just wildcard
+        '*'                 | 1     | 1     | 'stage-name.txt'
+        '*'                 | 1     | 10    | 'stage-name.txt'
+        // wildcard on the file name and single item in the collection
+        'foo.txt'           | 1     | 1     | 'foo.txt'
+        'foo*.fa'           | 1     | 1     | 'foo.fa'
+        'foo?.fa'           | 1     | 1     | 'foo1.fa'
+        'foo??.fa'          | 1     | 1     | 'foo01.fa'
+        // wildcard on the file name and many items in the collection
+        'foo*.fa'           | 1     | 3     | 'foo1.fa'
+        'foo*.fa'           | 3     | 3     | 'foo3.fa'
+        'foo?.fa'           | 1     | 3     | 'foo1.fa'
+        'foo?.fa'           | 3     | 3     | 'foo3.fa'
+        'foo??.fa'          | 1     | 3     | 'foo01.fa'
+        'foo??.fa'          | 3     | 3     | 'foo03.fa'
+        // wildcard on parent path
+        'dir/*/foo.txt'     | 1     | 1     | 'dir/1/foo.txt'
+        'dir/foo*/bar.txt'  | 1     | 1     | 'dir/foo1/bar.txt'
+        'dir/foo?/bar.txt'  | 2     | 2     | 'dir/foo2/bar.txt'
+        'dir/foo??/bar.txt' | 2     | 2     | 'dir/foo02/bar.txt'
+        // wildcard on parent path and name
+        'dir/*/'            | 1     | 1     | 'dir/1/stage-name.txt'
+        'dir/*/*'           | 1     | 1     | 'dir/1/stage-name.txt'
+        'dir/*/*'           | 1     | 10    | 'dir/1/stage-name.txt'
+        'dir/*/foo*.txt'    | 1     | 1     | 'dir/1/foo.txt'
+        'dir/*/foo*.txt'    | 1     | 2     | 'dir/1/foo1.txt'
+        'dir/*/foo?.txt'    | 2     | 2     | 'dir/2/foo2.txt'
+        'dir/???/foo?.txt'  | 5     | 10    | 'dir/005/foo5.txt'
+    }
+
+    @Unroll
+    def 'should replace question marks' () {
+        given:
+        def processor = [:] as TaskProcessor
+
+        expect:
+        processor.replaceQuestionMarkWildcards(pattern, index) == expected
+
+        where:
+        pattern         | index | expected
+        'foo.txt'       | 1     | 'foo.txt'
+        'foo?.txt'      | 1     | 'foo1.txt'
+        'foo???.txt'    | 2     | 'foo002.txt'
+        'foo?_???.txt'  | 3     | 'foo3_003.txt'
+        'foo??.txt'     | 9999  | 'foo9999.txt'
+
+    }
 
     def 'should stage path'() {
 
@@ -684,6 +769,30 @@ class TaskProcessorTest extends Specification {
         1 * task.isContainerEnabled() >> true
         1 * task.getContainer() >> 'foo/bar'
         uuid.toString() == '50608212f83b30ef91169eac359b5e64'
+    }
+
+    def 'should export env vars' () {
+
+        given:
+        def env
+
+        when:
+        env = TaskProcessor.bashEnvironmentScript([FOO:'hola',BAR:'ciao mondo'])
+        then:
+        env ==  '''
+                export FOO="hola"
+                export BAR="ciao mondo"
+                '''
+                .stripIndent().leftTrim()
+
+        when:
+        env = TaskProcessor.bashEnvironmentScript([PATH: 'foo:$PATH'], true)
+        then:
+        env == 'export PATH="foo:\\$PATH"\n'
+        env.charAt(16) == ':' as char
+        env.charAt(17) == '\\' as char
+        env.charAt(18) == '$' as char
+
     }
 
 }

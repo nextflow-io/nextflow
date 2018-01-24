@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -114,6 +114,38 @@ class SortFileCollectorTest extends Specification {
 
     }
 
+
+    def 'test append strings with new-line separator and seed closure'() {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        when:
+        def collector = new SortFileCollector()
+        collector.sort = { it -> it }
+        collector.newLine = true
+        collector.seed = { key -> key=='alpha' ? '000' : (key=='delta' ? '111' : '222') }
+        collector.add('alpha', 'BBB')
+        collector.add('delta', 'qqq')
+        collector.add('alpha', 'ZZZ')
+        collector.add('delta', 'ttt')
+        collector.add('gamma', 'yyy')
+        collector.add('gamma', 'zzz')
+        collector.add('gamma', 'xxx')
+        collector.add('delta', 'ppp')
+        collector.add('alpha', 'AAA')
+        collector.saveTo(folder)
+        then:
+        folder.list().size() == 3
+        folder.resolve('alpha').text == '000\nAAA\nBBB\nZZZ\n'
+        folder.resolve('delta').text == '111\nppp\nqqq\nttt\n'
+        folder.resolve('gamma').text == '222\nxxx\nyyy\nzzz\n'
+
+        cleanup:
+        collector?.close()
+        folder?.deleteDir()
+
+    }
 
     def 'test sort file collect properties'() {
 
@@ -258,5 +290,45 @@ class SortFileCollectorTest extends Specification {
 
     }
 
+    def 'should collect file and keep headers' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def appender = new SortFileCollector(keepHeader: true, skipLines: 1)
+
+        when:
+        appender.add('foo', 'COL1,COL2,COL3\naaa,bbb,ccc\nppp,qqq,rrr\n')
+        appender.add('bar', 'NUM1,NUM2,NUM3\n111,222,333\n444,555,666\n')
+        appender.add('foo', 'COL1,COL2,COL3\nvvv,www,sss\nxxx,yyy,zzz\n')
+        appender.add('bar', 'NUM1,NUM2,NUM3\n777,888,999\n000,111,222\n')
+        appender.saveTo(folder)
+
+        then:
+        folder.list().size()==2
+
+        folder.resolve('foo').text == '''
+            COL1,COL2,COL3
+            aaa,bbb,ccc
+            ppp,qqq,rrr
+            vvv,www,sss
+            xxx,yyy,zzz
+            '''
+                .stripIndent().leftTrim()
+
+        folder.resolve('bar').text == '''
+            NUM1,NUM2,NUM3
+            111,222,333
+            444,555,666
+            777,888,999
+            000,111,222
+            '''
+                .stripIndent().leftTrim()
+
+
+        cleanup:
+        appender?.close()
+        folder?.deleteDir()
+
+    }
 
 }

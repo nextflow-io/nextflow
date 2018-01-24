@@ -67,3 +67,6 @@ close:
 	
 release:
 	./gradlew release	
+	
+dockerPack:
+	./gradlew install dockerPack -Dmaven.repo.local=${PWD}/build/docker/.nextflow/capsule/deps/ -x signArchives	

@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -108,6 +108,8 @@ class BashWrapperBuilder {
           exit_status=${ret:=$?}
           printf $exit_status __EXIT_FILE__
           set +u
+          [[ "$tee1" ]] && kill $tee1 2>/dev/null
+          [[ "$tee2" ]] && kill $tee2 2>/dev/null
           [[ "$COUT" ]] && rm -f "$COUT" || true
           [[ "$CERR" ]] && rm -f "$CERR" || true
           __EXIT_CMD__
@@ -237,6 +239,20 @@ class BashWrapperBuilder {
 
     private boolean runWithContainer
 
+    private ContainerBuilder containerBuilder
+
+    private Path scriptFile
+
+    private Path inputFile
+
+    private Path startedFile
+
+    private Path exitedFile
+
+    private Path wrapperFile
+
+    private Path stubFile
+
     BashWrapperBuilder( TaskRun task ) {
         this(new TaskBean(task))
     }
@@ -245,6 +261,9 @@ class BashWrapperBuilder {
         this.bean = bean
         this.copyStrategy = strategy ?: new SimpleFileCopyStrategy(bean)
     }
+
+    /** only for testing -- do not use */
+    protected BashWrapperBuilder() { }
 
     /**
      * @return The bash script fragment to change to the 'scratch' directory if it has been specified in the task configuration
@@ -277,28 +296,6 @@ class BashWrapperBuilder {
         systemOsName == 'Linux' && containerConfig?.fixOwnership && runWithContainer && containerConfig.engine == 'docker' // <-- note: only for docker (shifter is not affected)
     }
 
-    protected void makeEnvironmentFile(Path environmentFile) {
-
-        /*
-         * add modules to the environment file
-         */
-        if( moduleNames ) {
-            environmentFile << MODULE_LOAD << ENDL << ENDL
-            moduleNames.each {
-                environmentFile << moduleLoad(it) << ENDL
-            }
-        }
-
-        /*
-         * save the environment
-         */
-        if( environment ) {
-            // create the *bash* environment script
-            environmentFile << TaskProcessor.bashEnvironmentScript(environment)
-        }
-
-    }
-
     protected Map<String,Path> getResolvedInputs() {
         copyStrategy.resolveForeignFiles(inputFiles)
     }
@@ -311,14 +308,16 @@ class BashWrapperBuilder {
         assert workDir, "Missing 'workDir' property in BashWrapperBuilder object"
         assert script, "Missing 'script' property in BashWrapperBuilder object"
 
-        final scriptFile = workDir.resolve(TaskRun.CMD_SCRIPT)
-        final inputFile = workDir.resolve(TaskRun.CMD_INFILE)
-        final environmentFile = workDir.resolve(TaskRun.CMD_ENV)
-        final startedFile = workDir.resolve(TaskRun.CMD_START)
-        final exitedFile = workDir.resolve(TaskRun.CMD_EXIT)
-        final wrapperFile = workDir.resolve(TaskRun.CMD_RUN)
-        final stubFile = workDir.resolve(TaskRun.CMD_STUB)
-
+        /* 
+         * initialise command files 
+         */
+        scriptFile = workDir.resolve(TaskRun.CMD_SCRIPT)
+        inputFile = workDir.resolve(TaskRun.CMD_INFILE)
+        startedFile = workDir.resolve(TaskRun.CMD_START)
+        exitedFile = workDir.resolve(TaskRun.CMD_EXIT)
+        wrapperFile = workDir.resolve(TaskRun.CMD_RUN)
+        stubFile = workDir.resolve(TaskRun.CMD_STUB)
+        
         // set true when running with through a container engine
         runWithContainer = containerEnabled && !containerNative
 
@@ -329,8 +328,6 @@ class BashWrapperBuilder {
             inputFile.text = input
         }
 
-        makeEnvironmentFile(environmentFile)
-
         // whenever it has to change to the scratch directory
         final changeDir = getScratchDirectoryCommand()
 
@@ -339,26 +336,33 @@ class BashWrapperBuilder {
          */
         ContainerScriptTokens scriptTokens = null
         def taskScript = TaskProcessor.normalizeScript(script, shell)
-        if( executable ) {
+        if(this.containerExecutable) {
+            log.warn1("Process `$name` uses an executable container -- This feature has been deprecated and will be removed in a future release", firstOnly: true)
             scriptTokens = ContainerScriptTokens.parse(taskScript)
             environment.putAll( scriptTokens.variables )
         }
 
         /*
-         * create the docker command if required
+         * create the container launcher command if needed
          */
-        def containerBuilder = runWithContainer ? createContainerBuilder(environment,changeDir) : null
+        containerBuilder = runWithContainer ? createContainerBuilder(environment,changeDir) : null
 
         /*
-         * save the script file
+         * reformat the task script to include the container launch command when it's a executable container eg:
+          *
+         * `docker/image:tag --do --something`  ==>  `docker run docker/image:tag --do --something`
          */
         if( scriptTokens ) {
             taskScript = containerBuilder.addContainerRunCommand(scriptTokens)
         }
+
+        /*
+         * save the script file
+         */
         scriptFile.text = taskScript
 
         /*
-         * fetch the script interpreter
+         * fetch the script interpreter i.e. BASH, Perl, Python, etc
          */
         final interpreter = TaskProcessor.fetchInterpreter(taskScript)
 
@@ -388,12 +392,12 @@ class BashWrapperBuilder {
         if( runWithContainer ) {
             containerBuilder.appendHelpers(wrapper)
             // append the process - or - container kill command
-            wrapper << scriptCleanUp(exitedFile, changeDir, containerBuilder) << ENDL
+            wrapper << scriptCleanUp(exitedFile, changeDir) << ENDL
             // create a random string id to be used an container name
             wrapper << 'export NXF_BOXID="nxf-$(dd bs=18 count=1 if=/dev/urandom 2>/dev/null | base64 | tr +/ 0A)"' << ENDL
         }
         else {
-            wrapper << scriptCleanUp(exitedFile, changeDir, null) << ENDL
+            wrapper << scriptCleanUp(exitedFile, changeDir) << ENDL
         }
 
         wrapper << ( changeDir ?: "NXF_SCRATCH=''" ) << ENDL
@@ -414,22 +418,42 @@ class BashWrapperBuilder {
             wrapper << beforeScript << ENDL
         }
 
-        // source the environment
-        // note: skip this when it's a containerized task because in that case
-        //  the environment is provided using container specific options
-        if( !runWithContainer ) {
-            wrapper << "[ -f "<< fileStr(environmentFile) << " ]" << " && source " << fileStr(environmentFile) << ENDL
+        /*
+         * add modules to the environment file
+         * note: singularity engine can be loaded by using module
+         */
+        if( moduleNames ) {
+            wrapper << MODULE_LOAD << ENDL << ENDL
+            moduleNames.each {
+                wrapper << moduleLoad(it) << ENDL
+            }
+            wrapper << ENDL
         }
 
+        /*
+         * add the task environment
+         */
+        def envSnippet = createTaskEnvironment(environment)
+        if( envSnippet )
+            wrapper <<  envSnippet << ENDL
+
+        /*
+         * change in the scratch directory
+         */
         wrapper << '[[ $NXF_SCRATCH ]] && echo "nxf-scratch-dir $HOSTNAME:$NXF_SCRATCH" && cd $NXF_SCRATCH' << ENDL
 
-        // staging input files when required
+        /*
+         * staging input files when required
+         */
         def stagingScript = copyStrategy.getStageInputFilesScript(resolvedInputs)
         if( stagingScript ) {
+            wrapper << '# stage input files' << ENDL
             wrapper << stagingScript << ENDL
         }
 
-        // execute the command script
+        /*
+         * execute the command script
+         */
         wrapper << '' << ENDL
         wrapper << 'set +e' << ENDL  // <-- note: use loose error checking so that ops after the script command are executed in all cases
         wrapper << 'COUT=$PWD/.command.po; mkfifo "$COUT"' << ENDL
@@ -440,57 +464,8 @@ class BashWrapperBuilder {
         wrapper << 'tee2=$!' << ENDL
         wrapper << '(' << ENDL
 
-        // execute by invoking the command through a Docker container
-        if( containerBuilder && !executable ) {
-            containerBuilder.appendRunCommand(wrapper) << " -c \""
-            if( containerBuilder instanceof SingularityBuilder ) {
-                wrapper << 'cd $PWD; ' << containerBuilder.getEnvExports()
-            }
-        }
+        wrapper << getLauncherScript(interpreter,envSnippet) << ENDL
 
-        /*
-         * process stats
-         */
-        if( statsEnabled || fixOwnership() ) {
-            final stub = new StringBuilder()
-            stub << '#!/bin/bash' << ENDL
-            stub << 'set -e' << ENDL
-            stub << 'set -u' << ENDL
-            stub << 'NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 2 ]] && set -x' << ENDL << ENDL
-            stub << SCRIPT_TRACE << ENDL
-            stub << 'trap \'exit ${ret:=$?}\' EXIT' << ENDL
-            stub << 'touch ' << TaskRun.CMD_TRACE << ENDL
-            stub << 'start_millis=$(nxf_date)'  << ENDL
-            stub << '(' << ENDL
-            stub << interpreter << " " << fileStr(scriptFile)
-            if( input != null ) stub << pipeInputFile(inputFile)
-            stub << ENDL
-            stub << ') &' << ENDL
-            stub << 'pid=$!' << ENDL                     // get the PID of the main job
-            stub << 'nxf_trace "$pid" ' << TaskRun.CMD_TRACE << ' &' << ENDL
-            stub << 'mon=$!' << ENDL                     // get the pid of the monitor process
-            stub << 'wait $pid || ret=$?' << ENDL        // wait for main job completion and get its exit status
-            stub << 'end_millis=$(nxf_date)' << ENDL    // get the ending time
-            stub << 'nxf_kill $mon || wait $mon' << ENDL     // kill the monitor and wait for its ending
-            stub << 'echo $((end_millis-start_millis)) >> ' << TaskRun.CMD_TRACE << ENDL
-
-            // append to script file chown command to change `root` owner of files created by docker
-            if( this.fixOwnership() )
-                stub << "\n# patch root ownership problem of files created with docker\n[ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*} || true\n"
-
-            // save to file
-            stubFile.text = stub.toString()
-
-            // invoke it from the main script
-            wrapper << "/bin/bash " << fileStr(stubFile)
-            if( containerBuilder && !executable ) wrapper << "\""
-        }
-        else {
-            wrapper << interpreter << " " << fileStr(scriptFile)
-            if( containerBuilder && !executable ) wrapper << "\""
-            if( input != null ) wrapper << pipeInputFile(inputFile)
-        }
-        wrapper << ENDL
         wrapper << ') >"$COUT" 2>"$CERR" &' << ENDL
         wrapper << 'pid=$!' << ENDL
         wrapper << 'wait $pid || ret=$?' << ENDL
@@ -505,8 +480,12 @@ class BashWrapperBuilder {
         }
 
         def unstagingScript
-        if( (changeDir || workDir != targetDir) && (unstagingScript=copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)) )
-            wrapper << unstagingScript << ENDL
+        if( (changeDir || workDir != targetDir) && (unstagingScript=copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)) ) {
+            wrapper << '# copies output files to target' << ENDL
+            wrapper << 'if [[ ${ret:=0} == 0 ]]; then' << ENDL
+            wrapper << unstagingScript.trim().indent('  ')
+            wrapper << 'fi' << ENDL
+        }
 
         if( changeDir && statsEnabled )
             wrapper << copyFileToWorkDir(TaskRun.CMD_TRACE) << ' || true' << ENDL
@@ -520,8 +499,89 @@ class BashWrapperBuilder {
         return wrapperFile
     }
 
+    protected String createTaskEnvironment(Map environment) {
+        def result = ''
+        // when the task needs to be executed by a container
+        // wrap the environment in a variable that is passed to the container run
+        def wrapper = runWithContainer ? 'nxf_taskenv' : null
+        def envSnippet = copyStrategy.getEnvScript(environment, wrapper)
+        if( !envSnippet )
+            return null
+
+        result += '# task environment' + ENDL
+        result += envSnippet
+        return result
+    }
+
+    protected String getLauncherScript(String interpreter, String env) {
+
+        /*
+         * process stats
+         */
+        String launcher
+        final useStubFile = statsEnabled || fixOwnership()
+        if( useStubFile ) {
+            // create the launcher stub
+            createStubScript(interpreter)
+            // executes the stub which in turn executes the target command
+            launcher = "/bin/bash ${fileStr(stubFile)}"
+        }
+        else {
+            launcher = "${interpreter} ${fileStr(scriptFile)}"
+        }
+
+        /*
+         * create the container engine command when needed
+         */
+        if( containerBuilder && !this.containerExecutable) {
+            def cmd = env ? 'eval $(nxf_taskenv); ' + launcher : launcher
+            launcher = containerBuilder.getRunCommand(cmd)
+        }
+
+        /*
+         * pipe the input file on the command standard input
+         */
+        if( !useStubFile && input != null ) {
+            launcher += pipeInputFile(inputFile)
+        }
+
+        return launcher
+    }
+
     private String copyFileToWorkDir(String fileName) {
         copyFile(fileName, workDir.resolve(fileName))
+    }
+
+    private Path createStubScript(String interpreter) {
+        final stub = new StringBuilder()
+        stub << '#!/bin/bash' << ENDL
+        stub << 'set -e' << ENDL
+        stub << 'set -u' << ENDL
+        stub << 'NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 2 ]] && set -x' << ENDL << ENDL
+        stub << SCRIPT_TRACE << ENDL
+        stub << 'trap \'exit ${ret:=$?}\' EXIT' << ENDL
+        stub << 'touch ' << TaskRun.CMD_TRACE << ENDL
+        stub << 'start_millis=$(nxf_date)'  << ENDL
+        stub << '(' << ENDL
+        stub << interpreter << " " << fileStr(scriptFile)
+        if( input != null ) stub << pipeInputFile(inputFile)
+        stub << ENDL
+        stub << ') &' << ENDL
+        stub << 'pid=$!' << ENDL                     // get the PID of the main job
+        stub << 'nxf_trace "$pid" ' << TaskRun.CMD_TRACE << ' &' << ENDL
+        stub << 'mon=$!' << ENDL                     // get the pid of the monitor process
+        stub << 'wait $pid || ret=$?' << ENDL        // wait for main job completion and get its exit status
+        stub << 'end_millis=$(nxf_date)' << ENDL    // get the ending time
+        stub << 'nxf_kill $mon || wait $mon' << ENDL     // kill the monitor and wait for its ending
+        stub << 'echo $((end_millis-start_millis)) >> ' << TaskRun.CMD_TRACE << ENDL
+
+        // append to script file chown command to change `root` owner of files created by docker
+        if( this.fixOwnership() )
+            stub << "\n# patch root ownership problem of files created with docker\n[ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*} || true\n"
+
+        // save to file
+        stubFile.text = stub.toString()
+        return stubFile
     }
 
     /**
@@ -532,18 +592,18 @@ class BashWrapperBuilder {
      * @return The script string to be included the in main launcher script
      */
     @PackageScope
-    String scriptCleanUp( Path file, String scratch, ContainerBuilder builder ) {
+    String scriptCleanUp( Path file, String scratch ) {
 
         final script = []
 
         // -- the kill command
-        final killCommand = builder?.getKillCommand() ?: '[[ "$pid" ]] && nxf_kill $pid'
+        final killCommand = containerBuilder?.getKillCommand() ?: '[[ "$pid" ]] && nxf_kill $pid'
         // -- cleanup the scratch dir
         if( scratch && cleanup != false ) {
-            script << (!builder ? 'rm -rf $NXF_SCRATCH || true' : '(sudo -n true && sudo rm -rf "$NXF_SCRATCH" || rm -rf "$NXF_SCRATCH")&>/dev/null || true')
+            script << (!containerBuilder ? 'rm -rf $NXF_SCRATCH || true' : '(sudo -n true && sudo rm -rf "$NXF_SCRATCH" || rm -rf "$NXF_SCRATCH")&>/dev/null || true')
         }
         // -- remove the container in this way because 'docker run --rm'  fail in some cases -- see https://groups.google.com/d/msg/docker-user/0Ayim0wv2Ls/-mZ-ymGwg8EJ
-        final remove = builder?.getRemoveCommand()
+        final remove = containerBuilder?.getRemoveCommand()
         if( remove ) {
             script << "${remove} &>/dev/null || true"
         }
@@ -585,13 +645,12 @@ class BashWrapperBuilder {
         else
             throw new IllegalArgumentException("Unknown container engine: $engine")
 
-
         /*
          * initialise the builder
          */
         builder.addMountForInputs(resolvedInputs)
 
-        if( !executable )
+        if( !this.containerExecutable)
             builder.addMount(binDir)
 
         if(this.containerMount)
@@ -610,7 +669,7 @@ class BashWrapperBuilder {
             builder.addRunOptions(containerCpuset)
 
         // set the environment
-        if( environment ) {
+        if( this.environment ) {
             // export the nextflow script debug variable
             builder.addEnv( 'NXF_DEBUG=${NXF_DEBUG:=0}')
 
@@ -618,15 +677,16 @@ class BashWrapperBuilder {
             if( containerConfig.fixOwnership )
                 builder.addEnv( 'NXF_OWNER=$(id -u):$(id -g)' )
 
-            if( executable ) {
+            if(this.containerExecutable) {
                 // PATH variable cannot be extended in an executable container
                 // make sure to not include it to avoid to override the container PATH
                 environment.remove('PATH')
+
+                // NOTE: the task environment is added only for executable container
+                // for *plain* container the environment is passed through the special
+                // `nxf_taskenv` bash function wrapper
                 builder.addEnv( environment )
             }
-            else
-                builder.addEnv( workDir.resolve(TaskRun.CMD_ENV) )
-
         }
 
         // set up run docker params
@@ -645,7 +705,7 @@ class BashWrapperBuilder {
             builder.params(readOnlyInputs: true)
 
         // override the docker entry point the image is NOT defined as executable
-        if( !executable )
+        if( !this.containerExecutable)
             builder.params(entry: '/bin/bash')
 
         builder.build()

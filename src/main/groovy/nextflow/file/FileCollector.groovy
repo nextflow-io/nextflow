@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -52,6 +52,8 @@ abstract class FileCollector implements Closeable {
     def seed
 
     Integer skipLines
+
+    boolean keepHeader
 
     boolean deleteTempFilesOnClose = true;
 
@@ -159,8 +161,60 @@ abstract class FileCollector implements Closeable {
 
     protected InputStream normalizeToStream( value ) {
         def result = normalizeToStream0(value)
-        result && skipLines ? new SkipLinesInputStream(result,skipLines) : result
+        if( result && skipLines ) {
+            result = new SkipLinesInputStream(result,skipLines)
+            if( keepHeader )
+                result.consumeHeader()
+        }
+        return result
     }
+
+    protected void appendHeader(InputStream data, Object name, OutputStream target) {
+        assert !(keepHeader && seed), "Argument `keepHeader` and `seed` conflicts"
+
+        def header
+        if( keepHeader && data instanceof SkipLinesInputStream) {
+            header = data.getHeader()
+        }
+        else {
+            header = seed instanceof Closure ? ((Closure)((Closure)seed).clone()).call(name) : seed
+        }
+
+        InputStream result = null
+        if( header instanceof Map && header.get(name) ) {
+            result = normalizeToStream0(header.get(name))
+        }
+        else if ( header )
+            result = normalizeToStream0(header)
+
+        if( result )
+            appendStream(result, target)
+    }
+
+
+    /**
+     * Append the content of a file to the target file
+     *
+     * @param source The source stream representing the data to append to {@code  target}
+     * @param target The target object
+     */
+    protected void appendStream( InputStream source, OutputStream target ) {
+        int n
+        byte[] buffer = new byte[10 * 1024]
+
+        try {
+            while( (n=source.read(buffer)) > 0 ) {
+                target.write(buffer,0,n)
+            }
+            // append the new line separator
+            if( newLine )
+                target.write( System.lineSeparator().bytes )
+        }
+        finally {
+            source.closeQuietly()
+        }
+    }
+
 
     /**
      * Save the entries collected grouping them into files whose name is given by the

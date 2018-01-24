@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -42,6 +42,7 @@ class ContainerScriptTokens {
      * Parse a shell script retuning a triple which contains the docker image,
      * the line on which the docker image has been defined and any environment variable
      * eventually defined before the image definition
+     *
      * @param str A shell script to parse
      * @return
      */

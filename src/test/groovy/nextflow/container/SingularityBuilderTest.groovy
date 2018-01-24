@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -40,11 +40,6 @@ class SingularityBuilderTest extends Specification {
         new SingularityBuilder('busybox')
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec busybox'
-
-        new SingularityBuilder('busybox')
-                .params(entry: '/bin/bash')
-                .build()
-                .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec busybox /bin/bash'
 
         new SingularityBuilder('busybox')
                 .params(engineOptions: '-q -v')
@@ -93,15 +88,28 @@ class SingularityBuilderTest extends Specification {
         new SingularityBuilder('busybox')
                 .addEnv('X=1')
                 .addEnv(ALPHA:'aaa', BETA: 'bbb')
-                .addEnv( new File('/bash/env.txt') )
-                .getEnvExports() == 'export X=1; export ALPHA="aaa";  export BETA="bbb"; export BASH_ENV="/bash/env.txt"; '
+                .build()
+                .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" SINGULARITYENV_X=1 SINGULARITYENV_ALPHA="aaa" SINGULARITYENV_BETA="bbb" singularity exec busybox'
     }
 
-    def 'should normalise container path' () {
-        expect:
-        SingularityBuilder.normalizeImageName(null) == null
-        SingularityBuilder.normalizeImageName('') == null
-        SingularityBuilder.normalizeImageName('/abs/path/bar.img') == '/abs/path/bar.img'
-        SingularityBuilder.normalizeImageName('foo.img') == Paths.get('foo.img').toAbsolutePath().toString()
+
+    def 'should get run command' () {
+
+        when:
+        def cmd = new SingularityBuilder('ubuntu.img').build().getRunCommand()
+        then:
+        cmd == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec ubuntu.img'
+
+        when:
+        cmd = new SingularityBuilder('ubuntu.img').build().getRunCommand('bwa --this --that file.fastq')
+        then:
+        cmd == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec ubuntu.img bwa --this --that file.fastq'
+
+        when:
+        cmd = new SingularityBuilder('ubuntu.img').params(entry:'/bin/sh').build().getRunCommand('bwa --this --that file.fastq')
+        then:
+        cmd == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec ubuntu.img /bin/sh -c "cd $PWD; bwa --this --that file.fastq"'
+
+
     }
 }

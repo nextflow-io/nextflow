@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -156,6 +156,7 @@ class DrmaaExecutorTest extends Specification {
         expected.time = null
         expected.memory = null
         expected.disk = null
+        expected.env = null
 
         def task = [:] as TaskRun
         task.id = TaskId.of(30)
@@ -165,6 +166,7 @@ class DrmaaExecutorTest extends Specification {
         task.processor = Mock(TaskProcessor)
         task.processor.getName() >> 'hello'
         task.processor.getSession() >> new nextflow.Session()
+        task.processor.getProcessEnvironment() >> [:]
         task.metaClass.getName = { 'hello (1)' }
         task.metaClass.getHashLog =  {'123abc'}
 

@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -43,49 +43,29 @@ class SimpleFileCollector extends FileCollector {
 
     }
 
-    protected Path _file( String name ) {
-        (Path)cache.getOrCreate(name) {
-            def result = Files.createFile(getTempDir().resolve(name))
-            if( seed instanceof Map && ((Map)seed).containsKey(name)) {
-                append0(result, normalizeToStream(((Map)seed).get(name)))
-            }
-            else if( seed ) {
-                append0(result, normalizeToStream(seed))
-            }
-            return result
-        }
-    }
-
     @Override
-    SimpleFileCollector add( String key, value ) {
-        append0( _file(key), normalizeToStream(value))
+    SimpleFileCollector add( String name, value ) {
+
+        // -- 1. process the data value, this fetch the header line(s)
+        def data = normalizeToStream(value)
+
+        // -- 2. create the file if missing
+        Path target = cache.get(name)
+        boolean isNew = !target
+        if( isNew ) {
+            target = Files.createFile(getTempDir().resolve(name))
+            cache.put(name, target)
+        }
+
+        // -- 3. add the header if required
+        def output = Files.newOutputStream(target, APPEND)
+        if( isNew )
+            appendHeader(data, name, output)
+
+        // -- 4. finally add the data
+        appendStream(data, output)
+        output.close()
         return this
-    }
-
-
-    /**
-     * Append the content of a file to the target file having {@code key} as name
-     *
-     * @param key
-     * @param fileToAppend
-     */
-    protected void append0( Path source, InputStream stream ) {
-        int n
-        byte[] buffer = new byte[10 * 1024]
-        def output = Files.newOutputStream(source, APPEND)
-
-        try {
-            while( (n=stream.read(buffer)) > 0 ) {
-                output.write(buffer,0,n)
-            }
-            // append the new line separator
-            if( newLine )
-                output.write( System.lineSeparator().bytes )
-        }
-        finally {
-            stream.closeQuietly()
-            output.closeQuietly()
-        }
     }
 
     /**

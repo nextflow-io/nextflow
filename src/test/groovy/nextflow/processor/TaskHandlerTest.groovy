@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -59,6 +59,7 @@ class TaskHandlerTest extends Specification {
         task.processor = Mock(TaskProcessor)
         task.processor.getSession() >> new Session()
         task.processor.getName() >> 'TheProcessName'
+        task.processor.getProcessEnvironment() >> [FOO:'hola', BAR: 'mundo']
         task.context = new TaskContext(Mock(Script), [:], 'none')
 
         def handler = [:] as TaskHandler
@@ -97,6 +98,7 @@ class TaskHandlerTest extends Specification {
         trace.time == Duration.of('1 hour').toMillis()
         trace.memory == MemoryUnit.of('4 GB').toBytes()
         trace.disk == MemoryUnit.of('100 GB').toBytes()
+        trace.env == 'FOO=hola\nBAR=mundo\n'
 
         // check get method
         trace.getFmtStr('%cpu') == '1.0%'

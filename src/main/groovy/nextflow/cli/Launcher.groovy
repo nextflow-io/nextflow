@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -230,6 +230,18 @@ class Launcher {
 
             else if( current == '-with-singularity' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << '-'
+            }
+
+            else if( (current == '-N' || current == '-with-notification') && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << 'true'
+            }
+
+            else if( current == '-syslog' && (i==args.size() || args[i].startsWith('-') || allCommands.find { it.name == args[i] } )) {
+                normalized << 'localhost'
+            }
+
+            else if( current == '-dump-channels' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '*'
             }
 
             else if( current ==~ /^\-\-[a-zA-Z\d].*/ && !current.contains('=') ) {

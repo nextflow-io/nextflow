@@ -1,0 +1,44 @@
+====================================
+ Workflow completion notification
+====================================
+ Run Name: ${workflow.runName}
+
+<% if(workflow.success) {
+    out << "## Execution completed successfully! ##"
+} else {
+    out << """#########################################
+## Execution completed unsuccessfully! ##
+#########################################
+The exit status of the task that caused the workflow execution to fail was: ${workflow.exitStatus != null ? workflow.exitStatus : '-'}.
+The full error message was:
+
+${workflow.errorReport ?: 'n/a'}
+"""
+} %>
+
+The command used to launch the workflow was as follows:
+
+  ${workflow.commandLine}
+
+** Execution summary **
+
+  Launch time       : ${workflow.start.format('dd-MMM-yyyy HH:mm:ss')}
+  Ending time       : ${workflow.complete.format('dd-MMM-yyyy HH:mm:ss')} (duration: ${workflow.duration})
+  Total CPU-Hours   : ${workflow.stats.getComputeTimeString() ?: '-'}
+  Launch directory  : ${workflow.launchDir}
+  Work directory    : ${workflow.workDir.toUriString()}
+  Project directory : ${workflow.projectDir}
+  Script name       : ${workflow.scriptName ?: '-'}
+  Script ID         : ${workflow.scriptId ?: '-'}
+  Workflow session  : ${workflow.sessionId}
+  Workflow repo     : ${workflow.repository ?: '-' }
+  Workflow revision : ${workflow.repository ? "$workflow.revision ($workflow.commitId)" : '-'}
+  Workflow profile  : ${workflow.profile ?: '-'}
+  Workflow container: ${workflow.container ?: '-'}
+  Container engine  : ${workflow.containerEngine?:'-'}
+  Nextflow version  : ${workflow.nextflow.version}, build ${workflow.nextflow.build} (${workflow.nextflow.timestamp})
+
+--
+This email was sent by Nextflow
+cite doi:10.1038/nbt.3820
+http://nextflow.io

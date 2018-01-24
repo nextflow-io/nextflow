@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -28,10 +28,10 @@ import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.config.ConfigBuilder
+import nextflow.trace.WorkflowStats
 import nextflow.util.Duration
 import nextflow.util.VersionNumber
 import org.codehaus.groovy.runtime.InvokerHelper
-
 /**
  * Models workflow metadata properties and notification handler
  *
@@ -167,6 +167,16 @@ class WorkflowMetadata {
      */
     String containerEngine
 
+    /**
+     * The list of files that concurred to create the config object
+     */
+    List<Path> configFiles
+
+    /*
+     * Workflow execution statistics
+     */
+    WorkflowStats stats
+
     final private ScriptRunner owner
 
     final private List<Closure> onCompleteActions = []
@@ -197,13 +207,21 @@ class WorkflowMetadata {
         this.sessionId = owner.session.uniqueId
         this.resume = owner.session.resumeMode
         this.runName = owner.session.runName
-        this.containerEngine = owner.session.containerConfig?.getEngine()
+        this.containerEngine = owner.session.containerConfig.with { isEnabled() ? getEngine() : null }
+        this.configFiles = owner.session.configFiles?.collect { it.toAbsolutePath() }
+        this.stats = owner.session.workflowStats
 
         // check if there's a onComplete action in the config file
         registerConfigAction(owner.session.config.workflow as Map)
         owner.session.onShutdown { invokeOnComplete() }
         owner.session.onError( this.&invokeOnError )
     }
+
+    /**
+     * Only for testing purpose -- do not use
+     */
+    @PackageScope
+    WorkflowMetadata() {}
 
     /**
      * Implements the following idiom in the pipeline script:
@@ -337,6 +355,9 @@ class WorkflowMetadata {
                 log.error("Failed to invoke `workflow.onComplete` event handler", e)
             }
         }
+
+        // send email notification
+        safeMailNotification()
     }
 
     void invokeOnError(trace) {
@@ -374,36 +395,21 @@ class WorkflowMetadata {
         return result.toString()
     }
 
-//    /**
-//     * Define the {@code onComplete} event handle context. It allows to access metadata properties
-//     * without having to specify the {@code workflow} prefix. If a property name does not exist in
-//     * the {@link WorkflowMetadata} context it fallback on main script binding context
-//     */
-//    @CompileStatic
-//    class EventHandlerContext {
-//
-//        final List<String> properties
-//
-//        EventHandlerContext() {
-//            properties = WorkflowMetadata.this.metaClass.getProperties() *. name
-//        }
-//
-//        Object getProperty(String name) {
-//            try {
-//                if( properties.contains(name) )
-//                    return WorkflowMetadata.this.getProperty(name)
-//                else
-//                    throw new MissingPropertyException(name)
-//            }
-//            catch( MissingPropertyException e1 ) {
-//                try {
-//                    return owner.session.binding.getVariable(name)
-//                }
-//                catch ( MissingPropertyException e2 ) {
-//                    return null
-//                }
-//            }
-//        }
-//
-//    }
+    /**
+     * Tries to send the workflow completion email. Any exception is reported as a warning message.
+     */
+    protected void safeMailNotification() {
+        try {
+            def notifier = new WorkflowNotifier()
+            notifier.workflow = this
+            notifier.config = owner.session.config
+            notifier.variables = owner.session.binding.variables
+            notifier.sendNotification()
+        }
+        catch (Exception e) {
+            log.warn "Failed to deliver notification email -- See the log file for details", e
+        }
+    }
+
+
 }

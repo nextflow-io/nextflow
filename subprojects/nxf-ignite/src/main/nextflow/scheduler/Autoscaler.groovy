@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -131,7 +131,7 @@ class Autoscaler implements Closeable {
                 throw new IllegalStateException("No cloud driver name has been specified")
 
             driver = CloudDriverFactory.getDriver(driverName)
-            if( !driver ) throw new IllegalStateException('Cannot load cloud driver: `$driverName`')
+            if( !driver ) throw new IllegalStateException("Cannot load cloud driver: `$driverName`")
             driver.validate(scalerConfig)
         }
 

@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -21,16 +21,41 @@
 package nextflow.extension
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.text.SimpleDateFormat
 
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class BoltsTest extends Specification {
 
+    @Unroll
+    def 'should format a date' () {
+
+        given:
+        def now = new Date(1513285947928)
+
+        when:
+        def formatter = new SimpleDateFormat(fmt)
+        formatter.setTimeZone(TimeZone.getTimeZone(tz))
+        then:
+        Bolts.format(now, fmt, tz) == expected
+        formatter.format(now) == expected
+
+        where:
+        tz      | fmt                       | expected
+        'UTC'   | 'dd-MM-yyyy HH:mm'        | '14-12-2017 21:12'
+        'CET'   | 'dd-MM-yyyy HH:mm'        | '14-12-2017 22:12'
+        'UTC'   | 'dd-MMM-yyyy HH:mm:ss'    | '14-Dec-2017 21:12:27'
+        'CST'   | 'dd-MM-yyyy HH:mm'        | '14-12-2017 15:12'
+        'CST'   | 'dd-MMM-yyyy HH:mm:ss'    | '14-Dec-2017 15:12:27'
+
+    }
 
     def testTrimDotZero() {
 

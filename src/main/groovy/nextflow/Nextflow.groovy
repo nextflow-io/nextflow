@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -19,7 +19,6 @@
  */
 
 package nextflow
-
 import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
@@ -31,6 +30,7 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.StopSplitIterationException
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
+import nextflow.mail.Mailer
 import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.util.ArrayTuple
@@ -340,6 +340,47 @@ class Nextflow {
         return result
     }
 
+    /**
+     * Implements built-in send mail functionality
+     *
+     * @param params
+     *      A map object holding the mail parameters
+     *      - to: String or a List of strings representing the mail recipients
+     *      - cc: String or a List of strings representing the mail recipients in carbon copy
+     *      - from: String representing the mail sender address
+     *      - subject: The mail subject
+     *      - content: The mail content
+     *      - attach: One or more list attachment
+     */
+    static void sendMail( Map params ) {
 
+        new Mailer()
+            .setConfig(Global.session.config.mail as Map)
+            .send(params)
+
+    }
+
+    /**
+     * Implements built-in send mail functionality
+     * @param params
+     *    A closure representing the mail message to send eg
+     *    <code>
+     *        sendMail {
+     *          to 'me@dot.com'
+     *          from 'your@name.com'
+     *          attach '/some/file/path'
+     *          subject 'Hello'
+     *          content '''
+     *           Hi there,
+     *           Hope this email find you well
+     *          '''
+     *        }
+     *    <code>
+     */
+    static void sendMail( Closure params ) {
+        new Mailer()
+                .setConfig(Global.session.config.mail as Map)
+                .send(params)
+    }
 
 }

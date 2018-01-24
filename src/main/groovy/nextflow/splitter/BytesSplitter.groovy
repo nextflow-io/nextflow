@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -47,7 +47,7 @@ class BytesSplitter extends AbstractBinarySplitter {
             while( (item=targetObject.read()) != -1 ) {
                 buffer[c++] = (byte)item
 
-                if ( counter.hasNext() ) {
+                if ( counter.isChunckComplete() ) {
                     result = invokeEachClosure(closure, buffer)
                     buffer = new byte[counter.size]
                     c = 0

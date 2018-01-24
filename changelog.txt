@@ -1,7 +1,66 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-0.26.2  27 Nov 2017
+0.27.1 - 18 Jan 2018 
+- Fixed Invalid cast exception when cpus value is missing #575
+- Fixed Kill the tee commands when the launcher script exit #574
+- Fixed Splitter `limit` option is not honored when splitting more than one file #573
+- Fixed AWS CLI operations with S3 should use the --only-show-errors options #567
+- Fixed Splitter by option is not honored when splitting more than one file #570
+- Documentation editing/improvement
+
+0.27.0 - 9 Jan 2018
+- Fixed Log command prints true instead of actual message #561
+- Fixed NXF_TEMP definition when instanceStorageMount is set
+- Improved S3 exitfile logging
+- Improved cloud config canonical formatting
+
+0.27.0-RC2 - 29 Dic 2017
+- Fixed Ignore Windows instances from AWS cloud price listing
+- Fixed AWS price reader catching unexpected errors
+- Fixed sendMail access to owner variables
+- Fixed NPE when creating task with ignite executor
+- Fixed null exit status in notification template #554
+- Added XPath serialiser
+- Added mail smtp proxy configuration #375
+- Added built-in notification documentation #554
+- Added built-in mail documentation #375
+- Added support for Syslog logging #330 #557
+- Improved support for AWS EC2 instance storage #558
+- Improved documentation #558
+- Improved config command adding `-flat` and `-properties` formats and using canonical curly brackets format as default
+- Update copyright info
+
+0.27.0-RC1 - 20 Dic 2017
+- AWS Batch increased queue to 1000 tasks and poll interval to 10 secs
+- AWS Batch improved executor scalability caching recurrent API call and batching similar requests together
+- Added notification message on workflow completion #554
+- Added Built `sendMail` function #375
+- Added Warning message when a local version on a GH repo is different from remote #376
+- Added keepHeader option to collectFile #479
+- Added Dump operator to enable easier debugging #517
+- Fixed Report an error message when a config file contains an unresolved attribute #525
+- Fixed Session working file system not defined when staging input files with Ignite executor #555
+- Fixed storeDir writes output files even when process fails #227
+- Fixed storeDir does not work with S3 targets #247
+- Fixed Config file available in introspection #264
+- Fixed Enhance container interoperability between Docker and Singularity #503
+- Fixed Process environment is not exported in the container context when a process uses an interpreter other than BASH #495
+- Deprecated support for executable containers #529
+- Deprecated DRMAA executor #488
+- Deprecated Extrae profiling #543
+- Renamed .command.run.1 to .command.stub #523
+
+0.26.4 - 11 Dec 2017
+- Fixed GitLab auth token is not applied when user credentials are not provided #542
+
+0.26.3 - 30 Nov 2017
+- Fixed AWS Batch S3 upload function does not work if output is a directory #539 
+- Fixed AWS Batch S3 uploaded function does not resolve glob patterns containing curly brackets #535
+- Added author field in the config manifest scope #537
+- Upgrading s3fs library to 1.0.2 version supporting `signerOverride` S3 config property.
+
+0.26.2 - 27 Nov 2017
 - Fixed readlink illegal option when installing in macOS #527
 - Fixed Getting not descriptive error when using a when condition and script statement is not explicit #528
 - Fixed Function nxf_module_load matches partial names #530

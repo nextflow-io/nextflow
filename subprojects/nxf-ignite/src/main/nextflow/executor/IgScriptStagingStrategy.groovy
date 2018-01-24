@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -37,8 +37,18 @@ import nextflow.processor.TaskRun
  */
 class IgScriptStagingStrategy extends IgFileStagingStrategy implements ScriptFileCopyStrategy {
 
-    @Delegate
-    ScriptFileCopyStrategy delegate
+    @Delegate(interfaces=false)
+    SimpleFileCopyStrategy delegate
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    String getBeforeStartScript() {
+        // do not use delegate `SimpleFileCopyStrategy#getBeforeStartScript` because
+        // it uses the Global.session which is not accessible from Ignite remote nodes
+        return null
+    }
 
     /**
      * {@inheritDoc}

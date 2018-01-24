@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -26,7 +26,7 @@ import groovy.transform.CompileStatic
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class DockerBuilder extends ContainerBuilder {
+class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
     private boolean sudo
 
@@ -40,11 +40,7 @@ class DockerBuilder extends ContainerBuilder {
 
     private boolean tty
 
-    private String entryPoint
-
     private static final String USER_AND_HOME_EMULATION = '-u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME'
-
-    private String runCommand
 
     private String removeCommand
 
@@ -132,9 +128,7 @@ class DockerBuilder extends ContainerBuilder {
             result << '-t '
 
         // add the environment
-        for( def entry : env ) {
-            result << makeEnv(entry) << ' '
-        }
+        appendEnv(result)
 
         if( temp )
             result << "-v $temp:/tmp "
@@ -184,11 +178,15 @@ class DockerBuilder extends ContainerBuilder {
         return this
     }
 
-
-    /**
-     * @return The command string to run a container from Docker image
-     */
-    String getRunCommand() { runCommand }
+    @Override
+    String getRunCommand(String launcher) {
+        if( launcher ) {
+            def result = getRunCommand()
+            result += entryPoint ? " -c \"$launcher\"" : " $launcher"
+            return result
+        }
+        return getRunCommand() + ' ' + launcher
+    }
 
     /**
      * @return The command string to remove a container
@@ -201,33 +199,5 @@ class DockerBuilder extends ContainerBuilder {
      */
     @Override
     String getKillCommand() { killCommand }
-
-    static boolean isAbsoluteDockerName(String image) {
-        def p = image.indexOf('/')
-        if( p==-1 )
-            return false
-
-        image = image.substring(0,p)
-        image.contains('.') || image.contains(':')
-    }
-
-    static String normalizeImageName( String imageName, Map containerConf ) {
-
-        if( !imageName )
-            return null
-
-        String reg = containerConf?.registry
-        if( !reg )
-            return imageName
-
-        if( isAbsoluteDockerName(imageName) )
-            return imageName
-
-        if( !reg.endsWith('/') )
-            reg += '/'
-
-        return reg + imageName
-    }
-
 
 }

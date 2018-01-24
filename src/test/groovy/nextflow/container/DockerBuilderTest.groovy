@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -55,14 +55,12 @@ class DockerBuilderTest extends Specification {
         expect:
         builder.makeEnv('X=1').toString() == '-e "X=1"'
         builder.makeEnv([VAR_X:1, VAR_Y: 2]).toString() == '-e "VAR_X=1" -e "VAR_Y=2"'
-        builder.makeEnv( Paths.get('/some/file.env') ).toString() == '-e "BASH_ENV=/some/file.env"'
-        builder.makeEnv( new File('/some/file.env') ).toString() == '-e "BASH_ENV=/some/file.env"'
     }
 
     def 'test docker create command line'() {
 
         setup:
-        def envFile = Paths.get('/data/env file')
+        def env = [FOO: 1, BAR: 'hello world']
         def db_file = Paths.get('/home/db')
 
         expect:
@@ -71,9 +69,9 @@ class DockerBuilderTest extends Specification {
                 .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('fedora')
-                .addEnv(envFile)
+                .addEnv(env)
                 .build()
-                .runCommand == 'docker run -i -e "BASH_ENV=/data/env\\ file" -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i -e "FOO=1" -e "BAR=hello world" -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('ubuntu')
                 .params(temp:'/hola')
@@ -111,11 +109,11 @@ class DockerBuilderTest extends Specification {
                 .runCommand == 'docker --tlsverify --tlscert="/path/to/my/cert" run -i -v "$PWD":"$PWD" -w "$PWD" busybox'
 
         new DockerBuilder('fedora')
-                .addEnv(envFile)
+                .addEnv(env)
                 .addMount(db_file)
                 .addMount(db_file)  // <-- add twice the same to prove that the final string won't contain duplicates
                 .build()
-                .runCommand == 'docker run -i -e "BASH_ENV=/data/env\\ file" -v /home/db:/home/db -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i -e "FOO=1" -e "BAR=hello world" -v /home/db:/home/db -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('fedora')
                 .params(readOnlyInputs: true)
@@ -211,35 +209,6 @@ class DockerBuilderTest extends Specification {
 
     }
 
-    def 'test is absolute image name' () {
-
-        expect:
-        !DockerBuilder.isAbsoluteDockerName('hello')
-        !DockerBuilder.isAbsoluteDockerName('image/name')
-        DockerBuilder.isAbsoluteDockerName('registry:5000/image/name')
-        DockerBuilder.isAbsoluteDockerName('d.reg/image/name')
-        DockerBuilder.isAbsoluteDockerName('d.reg/image')
-
-    }
-
-    def 'test normalize docker image name' () {
-
-        expect:
-        DockerBuilder.normalizeImageName(image, [registry: registry]) == expected
-
-        where:
-        image                       | registry  | expected
-        null                        | null      | null
-        null                        | 'd.reg'   | null
-        'hello'                     | null      | 'hello'
-        'cbcrg/hello'               | null      | 'cbcrg/hello'
-        'cbcrg/hello'               | 'd.reg'   | 'd.reg/cbcrg/hello'
-        'cbcrg/hello'               | 'd.reg/'  | 'd.reg/cbcrg/hello'
-        'registry:5000/cbcrg/hello' | 'd.reg'   | 'registry:5000/cbcrg/hello'
-
-    }
-
-
     def 'should add docker run to shell script' () {
 
         when:
@@ -275,6 +244,26 @@ class DockerBuilderTest extends Specification {
             '''
                 .stripIndent().leftTrim()
 
+
+    }
+
+
+    def 'should get run command line' () {
+
+        when:
+        def cli = new DockerBuilder('ubuntu:14').build().getRunCommand()
+        then:
+        cli ==  'docker run -i -v "$PWD":"$PWD" -w "$PWD" ubuntu:14'
+
+        when:
+        cli = new DockerBuilder('ubuntu:14').build().getRunCommand('bwa --this --that file.fasta')
+        then:
+        cli ==  'docker run -i -v "$PWD":"$PWD" -w "$PWD" ubuntu:14 bwa --this --that file.fasta'
+
+        when:
+        cli = new DockerBuilder('ubuntu:14').params(entry:'/bin/bash').build().getRunCommand('bwa --this --that file.fasta')
+        then:
+        cli ==  'docker run -i -v "$PWD":"$PWD" -w "$PWD" --entrypoint /bin/bash ubuntu:14 -c "bwa --this --that file.fasta"'
 
     }
 

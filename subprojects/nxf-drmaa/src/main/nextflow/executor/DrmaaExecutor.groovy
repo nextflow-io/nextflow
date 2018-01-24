@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -59,6 +59,7 @@ class DrmaaExecutor extends Executor {
      */
     @Override
     void register() {
+        log.warn "DRMAA executor is deprecated and it will be removed in a future release"
         drmaa = SessionFactory.getFactory().getSession()
         drmaa.init('')
         session.onShutdown { drmaa.exit() }

@@ -1,3 +1,23 @@
+/*
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ *
+ *   This file is part of 'Nextflow'.
+ *
+ *   Nextflow is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   Nextflow is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package nextflow.executor
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -8,9 +28,11 @@ import com.amazonaws.services.batch.model.ContainerOverrides
 import com.amazonaws.services.batch.model.ContainerProperties
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
 import com.amazonaws.services.batch.model.DescribeJobsRequest
+import com.amazonaws.services.batch.model.DescribeJobsResult
 import com.amazonaws.services.batch.model.Host
 import com.amazonaws.services.batch.model.JobDefinition
 import com.amazonaws.services.batch.model.JobDefinitionType
+import com.amazonaws.services.batch.model.JobDetail
 import com.amazonaws.services.batch.model.KeyValuePair
 import com.amazonaws.services.batch.model.MountPoint
 import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
@@ -25,16 +47,18 @@ import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Nextflow
+import nextflow.Session
 import nextflow.cloud.aws.AmazonCloudDriver
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.extension.FilesEx
+import nextflow.processor.BatchContext
+import nextflow.processor.BatchHandler
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
-import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.util.CacheHelper
@@ -108,7 +132,7 @@ class AwsBatchExecutor extends Executor {
 
     @Override
     protected TaskMonitor createTaskMonitor() {
-        TaskPollingMonitor.create(session, name, 50, Duration.of('5 sec'))
+        TaskPollingMonitor.create(session, name, 1000, Duration.of('10 sec'))
     }
 
     @Override
@@ -125,7 +149,7 @@ class AwsBatchExecutor extends Executor {
  */
 @Slf4j
 @CompileStatic
-class AwsBatchTaskHandler extends TaskHandler {
+class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,JobDetail> {
 
     private final Path exitFile
 
@@ -157,6 +181,10 @@ class AwsBatchTaskHandler extends TaskHandler {
 
     final static private Map<String,String> jobDefinitions = [:]
 
+    /**
+     * Batch context shared between multiple task handlers
+     */
+    private BatchContext<String,JobDetail> context
 
     /** only for testing purpose -- do not use */
     protected AwsBatchTaskHandler() {}
@@ -205,19 +233,69 @@ class AwsBatchTaskHandler extends TaskHandler {
     }
 
     /**
+     * @param context The {@link BatchContext} object to be used
+     */
+    void batch( BatchContext<String,JobDetail> context ) {
+        if( jobId ) {
+            context.collect(jobId)
+            this.context = context
+        }
+    }
+
+    /**
+     * Retrieve Batch job status information
+     *
+     * @param jobId The Batch job ID
+     * @return The associated {@link JobDetail} object or {@code null} if no information is found
+     */
+    protected JobDetail describeJob(String jobId) {
+
+        Collection batchIds
+        if( context ) {
+            // check if this response is cached in the batch collector
+            if( context.contains(jobId) ) {
+                log.trace "[AWS BATCH] hit cache for describe job=$jobId"
+                return context.get(jobId)
+            }
+            // get next 100 job ids for which it's required to check the status
+            batchIds = context.getBatchFor(jobId, 100)
+        }
+        else {
+            batchIds = [jobId]
+        }
+
+        // retrieve the status for the specified job and along with the next batch
+        log.trace "[AWS BATCH] requesting describe jobs=$batchIds"
+        DescribeJobsResult resp = client.describeJobs(new DescribeJobsRequest().withJobs(batchIds))
+        if( !resp.getJobs() ) {
+            log.debug "[AWS BATCH] cannot retrieve running status for job=$jobId"
+            return null
+        }
+
+        JobDetail result=null
+        for( JobDetail entry : resp.jobs ) {
+            // cache the response in the batch collector
+            context?.put( entry.jobId, entry )
+            // return the job detail for the specified job
+            if( entry.jobId == jobId )
+                result = entry
+        }
+        if( !result ) {
+            log.debug "[AWS BATCH] cannot find running status for job=$jobId"
+        }
+
+        return result
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
     boolean checkIfRunning() {
         if( !jobId )
             return false
-        final resp = client.describeJobs(new DescribeJobsRequest().withJobs(jobId))
-        if( !resp.getJobs() ) {
-            log.debug "[AWS BATCH] cannot retried running status for job=$jobId"
-            return false
-        }
-        final job = resp.getJobs().get(0)
-        return job.status in ['RUNNING', 'SUCCEEDED', 'FAILED']
+        final job = describeJob(jobId)
+        return job?.status in ['RUNNING', 'SUCCEEDED', 'FAILED']
     }
 
     /**
@@ -226,13 +304,8 @@ class AwsBatchTaskHandler extends TaskHandler {
     @Override
     boolean checkIfCompleted() {
         assert jobId
-        final resp = client.describeJobs(new DescribeJobsRequest().withJobs(jobId))
-        if( !resp.getJobs() ) {
-            log.debug "[AWS BATCH] cannot retried completed status for job=$jobId"
-            return false
-        }
-        final job = resp.getJobs().get(0)
-        final done = job.status in ['SUCCEEDED', 'FAILED']
+        final job = describeJob(jobId)
+        final done = job?.status in ['SUCCEEDED', 'FAILED']
         if( done ) {
             // finalize the task
             task.exitStatus = readExitFile()
@@ -278,7 +351,7 @@ class AwsBatchTaskHandler extends TaskHandler {
         launcher.build()
 
         final req = newSubmitRequest(task)
-        log.trace "[AWS BATCH] now job request > $req"
+        log.trace "[AWS BATCH] new job request > $req"
 
         /*
          * submit the task execution
@@ -447,8 +520,11 @@ class AwsBatchTaskHandler extends TaskHandler {
     protected SubmitJobRequest newSubmitRequest(TaskRun task) {
 
         // the cmd list to launch it
-        def cli = awsOptions.cliPath ?: 'aws'
-        def cmd = ['bash','-o','pipefail','-c', "$cli s3 cp s3:/${getWrapperFile()} - | bash 2>&1 | $cli s3 cp - s3:/${getLogFile()}".toString() ] as List<String>
+        def opts = getAwsOptions()
+        def aws = opts.getAwsCli()
+        def cmd = "$aws s3 cp --only-show-errors s3:/${getWrapperFile()} - | bash 2>&1 | $aws s3 cp --only-show-errors - s3:/${getLogFile()}"
+        // final launcher command
+        def cli = ['bash','-o','pipefail','-c', cmd.toString() ] as List<String>
 
         /*
          * create the request object
@@ -467,7 +543,7 @@ class AwsBatchTaskHandler extends TaskHandler {
 
         // set the actual command
         def container = new ContainerOverrides()
-        container.command = cmd
+        container.command = cli
         // set the task memory
         if( task.config.getMemory() )
             container.memory = (int)task.config.getMemory().toMega()
@@ -537,11 +613,6 @@ class AwsBatchScriptLauncher extends BashWrapperBuilder {
         }
     }
 
-    protected void makeEnvironmentFile(Path file) {
-        /**
-         * Do nothing here - Environment is managed is built by {@link AwsBatchFileCopyStrategy}
-         */
-    }
 }
 
 /**
@@ -558,6 +629,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     private Map<String,String> environment
 
     AwsBatchFileCopyStrategy( TaskBean task, AwsOptions opts ) {
+        super(task)
         this.opts = opts
         this.environment = task.environment
     }
@@ -568,32 +640,17 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      * etc.
      */
     String getBeforeStartScript() {
-
-        final cli = opts.cliPath ?: 'aws'
-        final storage = opts.storageClass ?: 'STANDARD'
-		final encryption = opts.storageEncryption ? "--sse $opts.storageEncryption " : ''
-
-        def uploader = """
-        # aws helper
-        nxf_s3_upload() {
-            local pattern=\$1
-            local s3path=\$2
-            for name in \$(eval "ls \$pattern");do
-              if [[ -d "\$name" ]]; then
-                $cli s3 cp \$name \$s3path/\$name --quiet --recursive $encryption--storage-class $storage
-              else
-                $cli s3 cp \$name \$s3path/\$name --quiet $encryption--storage-class $storage
-              fi
-          done
-        }
-
-        """.stripIndent()
-
-        def env = getEnvScript()
-        return env ? uploader + env : uploader
+        S3Helper.getUploaderScript(opts)
     }
 
-    protected String getEnvScript() {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    String getEnvScript(Map environment, String handler) {
+        if( handler )
+            throw new IllegalArgumentException("Parameter `wrapHandler` not supported by ${this.class.simpleName}")
+
         final result = new StringBuilder()
         final copy = environment ? new HashMap<String,String>(environment) : Collections.<String,String>emptyMap()
         final path = copy.containsKey('PATH')
@@ -602,16 +659,15 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
             copy.remove('PATH')
         // when a remote bin directory is provide managed it properly
         if( opts.remoteBinDir ) {
-            result << "${opts.cliPath?:'aws'} s3 cp --recursive --quiet s3:/${opts.remoteBinDir} \$PWD/nextflow-bin\n"
+            result << "${opts.getAwsCli()} s3 cp --recursive --only-show-errors s3:/${opts.remoteBinDir} \$PWD/nextflow-bin\n"
             result << "chmod +x \$PWD/nextflow-bin/*\n"
             result << "export PATH=\$PWD/nextflow-bin:\$PATH\n"
         }
-        if (opts.region) {
-            result << "export AWS_DEFAULT_REGION=${opts.region}\n"
-        }
-        result << TaskProcessor.bashEnvironmentScript(copy)
-
-        return result.size() ? "# process environment\n" + result.toString() + '\n' : null
+        // finally render the environment
+        final envSnippet = super.getEnvScript(copy,null)
+        if( envSnippet )
+            result << envSnippet
+        return result.toString()
     }
 
     /**
@@ -619,8 +675,8 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String stageInputFile( Path path, String targetName ) {
-        final cli = opts.cliPath ?: 'aws'
-        def op = "$cli s3 cp --quiet "
+        final aws = opts.getAwsCli()
+        def op = "$aws s3 cp --only-show-errors "
         if( path.isDirectory() ) {
             op += "--recursive "
         }
@@ -655,8 +711,8 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String touchFile( Path file ) {
-        final cli = opts.cliPath ?: 'aws'
-        "echo start | $cli s3 cp - s3:/${Escape.path(file)}"
+        final aws = opts.getAwsCli()
+        "echo start | $aws s3 cp --only-show-errors - s3:/${Escape.path(file)}"
     }
 
     /**
@@ -679,8 +735,8 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      * {@inheritDoc}
      */
     String exitFile( Path path ) {
-        final cli = opts.cliPath ?: 'aws'
-        "| $cli s3 cp - s3:/${Escape.path(path)} || true"
+        final aws = opts.getAwsCli()
+        "| $aws s3 cp --only-show-errors - s3:/${Escape.path(path)} || true"
     }
 
     /**
@@ -711,6 +767,14 @@ class AwsOptions {
 
     String region
 
+    AwsOptions() { }
+
+    AwsOptions(Session session) {
+        storageClass = session.config.navigate('aws.client.uploadStorageClass') as String
+        storageEncryption = session.config.navigate('aws.client.storageEncryption') as String
+        region = session.config.navigate('aws.region') as String
+    }
+
     void setStorageClass(String value) {
         if( value in [null, 'STANDARD', 'REDUCED_REDUNDANCY'])
             this.storageClass = value
@@ -735,4 +799,39 @@ class AwsOptions {
         }
     }
 
+    String getAwsCli() {
+        def result = getCliPath()
+        if( !result ) result = 'aws'
+        if( region ) result += " --region $region"
+        return result
+    }
 }
+
+/**
+ * AWS S3 helper class
+ */
+class S3Helper {
+
+    static String getUploaderScript(AwsOptions opts) {
+        def cli = opts.getAwsCli()
+        def storage = opts.storageClass ?: 'STANDARD'
+        def encryption = opts.storageEncryption ? "--sse $opts.storageEncryption " : ''
+
+        """
+        # aws helper
+        nxf_s3_upload() {
+            local pattern=\$1
+            local s3path=\$2
+            for name in \$(eval "ls -d \$pattern");do
+              if [[ -d "\$name" ]]; then
+                $cli s3 cp --only-show-errors --recursive $encryption--storage-class $storage \$name \$s3path/\$name
+              else
+                $cli s3 cp --only-show-errors $encryption--storage-class $storage \$name \$s3path/\$name
+              fi
+          done
+        }
+        """.stripIndent()
+    }
+
+}
+

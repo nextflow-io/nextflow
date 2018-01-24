@@ -1,16 +1,40 @@
+/*
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ *
+ *   This file is part of 'Nextflow'.
+ *
+ *   Nextflow is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   Nextflow is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package nextflow.executor
 import java.nio.file.Paths
 
 import com.amazonaws.services.batch.AWSBatchClient
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsResult
+import com.amazonaws.services.batch.model.DescribeJobsRequest
+import com.amazonaws.services.batch.model.DescribeJobsResult
 import com.amazonaws.services.batch.model.JobDefinition
+import com.amazonaws.services.batch.model.JobDetail
 import com.amazonaws.services.batch.model.KeyValuePair
 import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
 import com.amazonaws.services.batch.model.RegisterJobDefinitionResult
 import com.amazonaws.services.batch.model.RetryStrategy
 import nextflow.Session
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.processor.BatchContext
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
@@ -109,6 +133,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         task.getConfig() >> new TaskConfig(memory: '8GB', cpus: 4, maxRetries: 2, errorStrategy: 'retry')
 
         def handler = Spy(AwsBatchTaskHandler)
+
         when:
         def req = handler.newSubmitRequest(task)
         then:
@@ -125,8 +150,28 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getContainerOverrides().getVcpus() == 4
         req.getContainerOverrides().getMemory() == 8192
         req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
-        req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "/bin/aws s3 cp s3://bucket/test/.command.run - | bash 2>&1 | /bin/aws s3 cp - s3://bucket/test/.command.log".toString()]
+        req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "/bin/aws s3 cp --only-show-errors s3://bucket/test/.command.run - | bash 2>&1 | /bin/aws s3 cp --only-show-errors - s3://bucket/test/.command.log".toString()]
         req.getRetryStrategy() == null  // <-- retry is managed by NF, hence this must be null
+
+        when:
+        req = handler.newSubmitRequest(task)
+        then:
+        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', region: 'eu-west-1') }
+        1 * handler.getJobQueue(task) >> 'queue1'
+        1 * handler.getJobDefinition(task) >> 'job-def:1'
+        1 * handler.getEnvironmentVars() >> [VAR_FOO, VAR_BAR]
+        1 * handler.wrapperFile >> Paths.get('/bucket/test/.command.run')
+        1 * handler.getLogFile() >> Paths.get('/bucket/test/.command.log')
+
+        req.getJobName() == 'batchtask'
+        req.getJobQueue() == 'queue1'
+        req.getJobDefinition() == 'job-def:1'
+        req.getContainerOverrides().getVcpus() == 4
+        req.getContainerOverrides().getMemory() == 8192
+        req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
+        req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "/bin/aws --region eu-west-1 s3 cp --only-show-errors s3://bucket/test/.command.run - | bash 2>&1 | /bin/aws --region eu-west-1 s3 cp --only-show-errors - s3://bucket/test/.command.log".toString()]
+        req.getRetryStrategy() == null  // <-- retry is managed by NF, hence this must be null
+
     }
 
     def 'should create an aws submit request with retry'() {
@@ -139,6 +184,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         task.getConfig() >> new TaskConfig(memory: '8GB', cpus: 4, maxRetries: 2)
 
         def handler = Spy(AwsBatchTaskHandler)
+
         when:
         def req = handler.newSubmitRequest(task)
         then:
@@ -147,6 +193,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> [VAR_FOO, VAR_BAR]
         1 * handler.wrapperFile >> Paths.get('/bucket/test/.command.run')
+        1 * handler.getLogFile() >> Paths.get('/bucket/test/.command.log')
 
         req.getJobName() == 'batchtask'
         req.getJobQueue() == 'queue1'
@@ -361,6 +408,82 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.containerProperties.volumes[0].name == 'aws-cli'
 
     }
+
+    def 'should check task status' () {
+
+        given:
+        def JOB_ID = 'job-2'
+        def client = Mock(AWSBatchClient)
+        def handler = Spy(AwsBatchTaskHandler)
+        handler.client = client
+
+        def JOB1 = new JobDetail().withJobId('job-1')
+        def JOB2 = new JobDetail().withJobId('job-2')
+        def JOB3 = new JobDetail().withJobId('job-3')
+        def JOBS = [ JOB1, JOB2, JOB3 ]
+        def resp = Mock(DescribeJobsResult)
+        resp.getJobs() >> JOBS
+
+        when:
+        def result = handler.describeJob(JOB_ID)
+        then:
+        1 * client.describeJobs(new DescribeJobsRequest().withJobs(JOB_ID)) >> resp
+        result == JOB2
+
+    }
+
+    def 'should check task status with empty batch collector' () {
+
+        given:
+        def collector = Mock(BatchContext)
+        def JOB_ID = 'job-1'
+        def client = Mock(AWSBatchClient)
+        def handler = Spy(AwsBatchTaskHandler)
+        handler.client = client
+        handler.jobId = JOB_ID
+        handler.batch(collector)
+
+        def JOB1 = new JobDetail().withJobId('job-1')
+        def JOB2 = new JobDetail().withJobId('job-2')
+        def JOB3 = new JobDetail().withJobId('job-3')
+        def JOBS = [ JOB1, JOB2, JOB3 ]
+        def RESP = Mock(DescribeJobsResult)
+        RESP.getJobs() >> JOBS
+
+        when:
+        def result = handler.describeJob(JOB_ID)
+        then:
+        1 * collector.contains(JOB_ID) >> false
+        1 * collector.getBatchFor(JOB_ID, 100) >> ['job-1','job-2','job-3']
+        1 * client.describeJobs(new DescribeJobsRequest().withJobs(['job-1','job-2','job-3'])) >> RESP
+        result == JOB1
+
+    }
+
+    def 'should check task status with cache batch collector' () {
+
+        given:
+        def collector = Mock(BatchContext)
+        def JOB_ID = 'job-1'
+        def client = Mock(AWSBatchClient)
+        def handler = Spy(AwsBatchTaskHandler)
+        handler.client = client
+        handler.jobId = JOB_ID
+        handler.batch(collector)
+
+        def JOB1 = new JobDetail().withJobId('job-1')
+
+        when:
+        def result = handler.describeJob(JOB_ID)
+        then:
+        1 * collector.contains(JOB_ID) >> true
+        1 * collector.get(JOB_ID) >> JOB1
+        0 * collector.getBatchFor(JOB_ID, 100) >> null
+        0 * client.describeJobs(_) >> null
+        result == JOB1
+
+    }
+
 
 
 }

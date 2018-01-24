@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -643,6 +643,56 @@ class TaskRunTest extends Specification {
         _ * task.getContainerConfig() >> new ContainerConfig([enabled: true])
         _ * task.isContainerNative() >> false
         enabled
+
+    }
+
+    def 'should get task environment' () {
+
+        given:
+        def EXPECT = [FOO: 'hola', BAR: 'mundo', OMEGA: 'ooo',_OPTS:'any']
+        def task = Spy(TaskRun);
+        def proc = Mock(TaskProcessor)
+
+        when:
+        def env = task.getEnvironment()
+        then:
+        1 * task.getProcessor() >> proc
+        1 * proc.getProcessEnvironment() >> [FOO: 'hola', BAR: 'world']
+        1 * task.getInputEnvironment() >> [BAR: 'mundo', OMEGA: 'ooo', _OPTS: 'any']
+        env ==  EXPECT   // note: `BAR` in the process config should be overridden by `BAR` in the task input
+        str(env) == str(EXPECT)
+    }
+
+    private String str(Map env) {
+        def result = ''
+        env.each { k, v ->
+            result += "$k=$v\n"
+        }
+        return result
+    }
+
+    def 'should get task env as string' () {
+
+        given:
+        def task = Spy(TaskRun);
+
+        when:
+        def env = task.getEnvironmentStr()
+        then:
+        1 * task.getEnvironment() >> [FOO: 1, BAR: 2, BAZ: 'hello world']
+        env ==  '''
+                FOO=1
+                BAR=2
+                BAZ=hello world
+                '''
+                .stripIndent().leftTrim()
+
+
+        when:
+        env = task.getEnvironmentStr()
+        then:
+        1 * task.getEnvironment() >> [:]
+        env == null
 
     }
 

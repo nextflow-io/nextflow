@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -91,5 +91,11 @@ interface ScriptFileCopyStrategy {
      * @return BASH redirection for the specified file
      */
     String pipeInputFile( Path file )
+
+    /**
+     * @param environment The task environment
+     * @return The environment initialisation snippet
+     */
+    String getEnvScript(Map environment, String wrapName)
 
 }

@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -19,10 +19,12 @@
  */
 
 package nextflow
-
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.text.SimpleDateFormat
+
+import static nextflow.extension.Bolts.DATETIME_FORMAT
+
 /**
  * Application main constants
  *
@@ -48,22 +50,18 @@ class Const {
     /**
      * The application version
      */
-    static public final String APP_VER = "0.26.2"
+    static public final String APP_VER = "0.27.1"
 
     /**
      * The app build time as linux/unix timestamp
      */
-    static public final long APP_TIMESTAMP = 1511781887562
+    static public final long APP_TIMESTAMP = 1516279414811
 
     /**
      * The app build number
      */
-    static public final int APP_BUILDNUM = 4735
+    static public final int APP_BUILDNUM = 4755
 
-    /**
-     * The date time formatter string
-     */
-    static public final String DATETIME_FORMAT = 'dd-MM-yyyy HH:mm'
 
     /**
      * The app build time string relative to UTC timezone

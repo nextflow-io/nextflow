@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -75,7 +75,7 @@ class TaskBean implements Serializable, Cloneable {
 
     String afterScript
 
-    boolean executable
+    boolean containerExecutable
 
     boolean containerNative
 
@@ -113,10 +113,7 @@ class TaskBean implements Serializable, Cloneable {
         this.targetDir = task.targetDir
 
         // set the environment
-        // note: create a copy of the process environment to avoid concurrent
-        // process executions override each others
-        this.environment = new HashMap( task.getProcessor().getProcessEnvironment() )
-        this.environment.putAll( task.getInputEnvironment() )
+        this.environment = task.getEnvironment()
 
         this.moduleNames = task.config.getModule()
         this.shell = task.config.getShell() ?: BashWrapperBuilder.BASH
@@ -129,7 +126,7 @@ class TaskBean implements Serializable, Cloneable {
         this.containerImage = task.getContainer()
         this.containerConfig = task.getContainerConfig()
         this.containerMemory = task.config.getMemory()
-        this.executable = task.isContainerExecutable()
+        this.containerExecutable = task.isContainerExecutable()
         this.containerNative = task.isContainerNative()
         this.containerEnabled = task.isContainerEnabled()
 

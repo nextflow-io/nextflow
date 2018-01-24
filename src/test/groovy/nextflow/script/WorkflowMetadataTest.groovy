@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -21,6 +21,7 @@
 package nextflow.script
 
 import java.nio.file.Files
+import java.nio.file.Paths
 
 import nextflow.Const
 import nextflow.Session
@@ -76,7 +77,7 @@ class WorkflowMetadataTest extends Specification {
          */
         def handlerInvoked
         def session = new Session([workflow: [onComplete: { -> handlerInvoked=workflow.commandLine } ], docker:[enabled:true]  ])
-
+        session.configFiles = [Paths.get('foo'), Paths.get('bar')]
         /*
          * script runner
          */
@@ -109,6 +110,7 @@ class WorkflowMetadataTest extends Specification {
         metadata.sessionId == session.uniqueId
         metadata.runName == session.runName
         metadata.containerEngine == 'docker'
+        metadata.configFiles == [Paths.get('foo').toAbsolutePath(), Paths.get('bar').toAbsolutePath()]
         !metadata.resume
 
         when:

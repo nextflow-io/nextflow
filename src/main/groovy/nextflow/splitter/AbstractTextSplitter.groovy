@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -171,7 +171,8 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
 
         def result = null
         BufferedReader reader = wrapReader(targetObject)
-
+        counter.reset() // <-- make sure to start
+        itemsCount = 0
         try {
             while( true ) {
                 // -- parse a record object
@@ -216,7 +217,7 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
             // -- append to the list buffer
             collector.add(record)
 
-            if( counter.hasNext() ) {
+            if( counter.isChunckComplete() ) {
                 result = invokeEachClosure(closure, collector.nextChunk())
                 counter.reset()
             }

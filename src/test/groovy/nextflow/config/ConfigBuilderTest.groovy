@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -27,6 +27,7 @@ import nextflow.cli.CmdConfig
 import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
+import nextflow.exception.ConfigParseException
 import spock.lang.Specification
 /**
  *
@@ -869,5 +870,91 @@ class ConfigBuilderTest extends Specification {
         then:
         config.params == [foo:'Ciao', bar:20, data: '/some/path']
     }
+
+    def 'should warn about missing attribute' () {
+
+        given:
+        def file = Files.createTempFile('test','config')
+        file.deleteOnExit()
+        file.text =
+                '''
+                params.foo = HOME
+                '''
+
+
+        when:
+        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
+        def cfg = new ConfigBuilder().setOptions(opt).build()
+        then:
+        cfg.params.foo == System.getenv('HOME')
+
+        when:
+        file.text =
+                '''
+                params.foo = bar
+                '''
+        opt = new CliOptions(config: [file.toFile().canonicalPath] )
+        new ConfigBuilder().setOptions(opt).build()
+        then:
+        def e = thrown(ConfigParseException)
+        e.message == "Unknown config attribute: bar -- check config file: ${file.toRealPath()}".toString()
+
+    }
+
+
+    def 'should collect config files' () {
+
+        given:
+        def slurper = new ComposedConfigSlurper()
+        def file1 = Files.createTempFile('test1', null)
+        def file2 = Files.createTempFile('test2', null)
+        def result = new ConfigObject()
+        def builder = new ConfigBuilder()
+
+        file1.text = 'foo = 1'
+        file2.text = 'bar = 2'
+
+        when:
+        builder.merge(result, slurper, file1)
+        builder.merge(result, slurper, file2)
+        then:
+        result.foo == 1
+        result.bar == 2
+        builder.configFiles == [file1, file2]
+
+        cleanup:
+        file1?.delete()
+        file2?.delete()
+    }
+
+
+    def 'should configure notification' () {
+
+        given:
+        Map config
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun()).build()
+        then:
+        !config.notification
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(withNotification: true)).build()
+        then:
+        config.notification.enabled == true
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(withNotification: false)).build()
+        then:
+        config.notification.enabled == false
+        config.notification.to == null
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(withNotification: 'yo@nextflow.com')).build()
+        then:
+        config.notification.enabled == true
+        config.notification.to == 'yo@nextflow.com'
+    }
+
 }
 

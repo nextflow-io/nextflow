@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -1776,6 +1776,22 @@ class DataflowExtensions {
         def result = new TransposeOp(source,params).apply()
         NodeMarker.addOperatorNode('transpose', source, result)
         return result
+    }
+
+    static final DataflowReadChannel dump(final DataflowReadChannel source, Closure closure = null) {
+        dump(source, Collections.emptyMap(), closure)
+    }
+
+    static final DataflowReadChannel dump(final DataflowReadChannel source, Map opts, Closure closure = null) {
+        def op = new DumpOp(source, opts, closure)
+        if( op.isEnabled() ) {
+            def target = op.apply()
+            NodeMarker.addOperatorNode('dump', source, target)
+            return target;
+        }
+        else {
+            return source
+        }
     }
 
 }

@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -19,9 +19,7 @@
  */
 
 package nextflow.container
-
 import groovy.transform.CompileStatic
-
 /**
  * Wrap a task execution in a Udocker container
  *
@@ -30,15 +28,11 @@ import groovy.transform.CompileStatic
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class UdockerBuilder extends ContainerBuilder {
+class UdockerBuilder extends ContainerBuilder<UdockerBuilder> {
 
     private String temp
 
     private boolean remove = true
-
-    private String entryPoint = '/bin/bash'
-
-    private String runCommand
 
     UdockerBuilder( String image ) {
         this.image = image
@@ -47,7 +41,7 @@ class UdockerBuilder extends ContainerBuilder {
     }
 
     @Override
-    ContainerBuilder params(Map params) {
+    UdockerBuilder params(Map params) {
         if( !params ) return this
 
         if( params.containsKey('temp') )
@@ -65,7 +59,6 @@ class UdockerBuilder extends ContainerBuilder {
         return this
     }
 
-
     @Override
     UdockerBuilder build(StringBuilder result) {
         assert image, 'Missing container image'
@@ -82,9 +75,7 @@ class UdockerBuilder extends ContainerBuilder {
         }
 
         // add the environment
-        for( def entry : env ) {
-            result << makeEnv(entry) << ' '
-        }
+        appendEnv(result)
 
         if( temp )
             result << "-v $temp:/tmp "
@@ -98,44 +89,19 @@ class UdockerBuilder extends ContainerBuilder {
             result << runOptions.join(' ') << ' '
 
         // the ID of the container to run
-        result << "\$(udocker.py create \"$image\") "
+        result << "\$(udocker.py create \"$image\")"
 
-        // finally the entry point to execute eg. `/bin/bash`
-        result << entryPoint
-
-        runCommand = result.toString()
+        this.@runCommand = result.toString()
         return this
     }
 
     @Override
-    String getRunCommand() { runCommand }
-
-    @Override
-    StringBuilder appendRunCommand( StringBuilder wrapper ) {
-        wrapper << "((udocker.py images | egrep -o \"^$image\\s\") || udocker.py pull \"$image\")>/dev/null\n"
-        wrapper << "[[ \$? != 0 ]] && echo \"Udocker failed while pulling container \\`$image\\`\" >&2 && exit 1\n"
-        wrapper << runCommand
-        return wrapper
-    }
-
-
-    /**
-     * Normalize Shifter image name adding `docker:` prefix or `:latest`
-     * when required
-     *
-     * @param imageName The container image name
-     * @param shifterConfig Shifter configuration map
-     * @return Image name in Shifter canonical format
-     */
-    static String normalizeImageName( String imageName ) {
-
-        if( !imageName )
-            return null
-
-        if( !imageName.contains(':') )
-            imageName += ':latest'
-
-        return imageName
+    String getRunCommand() {
+        def run = super.getRunCommand()
+        def result = "((udocker.py images | egrep -o \"^$image\\s\") || udocker.py pull \"$image\")>/dev/null\n"
+        result += "[[ \$? != 0 ]] && echo \"Udocker failed while pulling container \\`$image\\`\" >&2 && exit 1\n"
+        result += run
+        return result
     }
 
 }

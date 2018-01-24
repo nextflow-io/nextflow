@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -63,7 +63,7 @@ ext {
 allprojects {
     apply plugin: 'java'
 
-    version = '0.26.2'
+    version = '0.28.0-SNAPSHOT'
     group = 'io.nextflow'
 
     sourceCompatibility = 1.8
@@ -89,6 +89,7 @@ allprojects {
         testCompile ("org.objenesis:objenesis:1.4")
         testCompile ("org.spockframework:spock-core:1.1-groovy-2.4")
         testCompile 'com.google.jimfs:jimfs:1.0'
+        testCompile 'org.subethamail:subethasmtp:3.1.7'
         // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sec:module_replacement
         modules {
             module("commons-logging:commons-logging") { replacedBy("org.slf4j:jcl-over-slf4j") }
@@ -126,10 +127,10 @@ configurations {
 dependencies {
     compile(project(':nxf-commons'))
     compile(project(':nxf-httpfs'))
-    compile "org.codehaus.groovy:groovy:2.4.11"
-    compile "org.codehaus.groovy:groovy-nio:2.4.11"
-    compile "org.codehaus.groovy:groovy-json:2.4.11"
-    compile "org.codehaus.groovy:groovy-templates:2.4.11"
+    compile "org.codehaus.groovy:groovy:2.4.13"
+    compile "org.codehaus.groovy:groovy-nio:2.4.13"
+    compile "org.codehaus.groovy:groovy-json:2.4.13"
+    compile "org.codehaus.groovy:groovy-templates:2.4.13"
     compile "org.slf4j:jcl-over-slf4j:1.7.21"
     compile "org.slf4j:jul-to-slf4j:1.7.21"
     compile "org.slf4j:log4j-over-slf4j:1.7.21"
@@ -142,7 +143,7 @@ dependencies {
     compile("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
     compile('org.iq80.leveldb:leveldb:0.7')
     compile('org.eclipse.jgit:org.eclipse.jgit:4.8.0.201706111038-r')
-    compile('io.nextflow:nxf-s3fs:1.0.1') {
+    compile('io.nextflow:nxf-s3fs:1.0.2') {
         exclude group: 'org.apache.tika', module: 'tika-core'
         exclude group: 'com.amazonaws', module: 'aws-java-sdk-s3'
     }
@@ -151,6 +152,7 @@ dependencies {
     compile ('com.amazonaws:aws-java-sdk-batch:1.11.172')
     compile ('javax.mail:mail:1.4.7')
     compile ('org.yaml:snakeyaml:1.18')
+    compile ('org.jsoup:jsoup:1.11.2')
 
     // include Ivy at runtime in order to have Grape @Grab work correctly
     runtime "org.apache.ivy:ivy:2.3.0"
@@ -176,8 +178,8 @@ dependencies {
 
     // Documentation required libraries
     gdocLibs 'org.fusesource.jansi:jansi:1.11'
-    gdocLibs "org.codehaus.groovy:groovy-groovydoc:2.4.11"
-    gdocLibs "org.codehaus.groovy:groovy-ant:2.4.11"
+    gdocLibs "org.codehaus.groovy:groovy-groovydoc:2.4.13"
+    gdocLibs "org.codehaus.groovy:groovy-ant:2.4.13"
 
 }
 
@@ -422,7 +424,6 @@ task packAll(type: Jar) {
             it << file('nextflow').text.replaceAll(/NXF_PACK\=.*/, 'NXF_PACK=all')
             it << new FileInputStream(source)
         }
-        source.delete()
         // done
         println "+ Nextflow package `ALL` copied to: $releaseDir\n"
     }
@@ -433,7 +434,7 @@ task packAll(type: Jar) {
  * Compile and pack all packages
  */
 task pack( dependsOn: [packOne, packAll]) {
-    "rm $buildDir/libs/*".execute()
+
 }
 
 
@@ -476,7 +477,7 @@ task installLauncher(type: Copy, dependsOn: ['pack']) {
     into "$homeDir/.nextflow/framework/$version/"
 }
 
-task dockerImage(type: Exec, dependsOn: deploy) {
+task dockerImage(type: Exec) {
 
     def temp = File.createTempFile('upload',null)
     temp.deleteOnExit()
@@ -486,6 +487,38 @@ task dockerImage(type: Exec, dependsOn: deploy) {
     docker tag nextflow/nextflow:$version nextflow/nextflow:latest
     docker push nextflow/nextflow:$version
     docker push nextflow/nextflow:latest
+    """.stripIndent()
+
+    commandLine 'bash', '-e', temp.absolutePath
+}
+
+task dockerPack(type: Exec, dependsOn: ['pack']) {
+
+    def source = new File("$releaseDir/nextflow-$version-one.jar")
+    def target = new File("$buildDir/docker/.nextflow/framework/$version/")
+    def dockerBase = new File("$buildDir/docker")
+    if( dockerBase.exists() ) dockerBase.deleteDir()
+    dockerBase.mkdirs()
+    def dockerFile = new File("$buildDir/docker/Dockerfile")
+    dockerFile.text = """
+    FROM openjdk:8-jre-alpine
+    RUN apk update && apk add bash && apk add coreutils && apk add curl
+    COPY .nextflow /.nextflow
+    COPY nextflow /usr/local/bin/nextflow
+    ENV NXF_HOME=/.nextflow
+    ENV NXF_OPTS='-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap'
+    """
+
+    def temp = File.createTempFile('upload',null)
+    temp.deleteOnExit()
+    temp.text =  """\
+    mkdir -p $target
+    cp $source $target
+    cp nextflow $buildDir/docker
+    cd $buildDir/docker
+    chmod +x nextflow
+    NXF_HOME=\$PWD/.nextflow nextflow info
+    docker build -t nextflow/nextflow:$version .
     """.stripIndent()
 
     commandLine 'bash', '-e', temp.absolutePath

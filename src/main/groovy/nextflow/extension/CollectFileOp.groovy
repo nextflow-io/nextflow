@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -52,7 +52,8 @@ class CollectFileOp {
             sliceMaxItems: Integer,
             deleteTempFilesOnClose: Boolean,
             cache: [Boolean, String],
-            skip: Integer
+            skip: Integer,
+            keepHeader: Boolean
     ]
 
     private final Map params
@@ -68,7 +69,6 @@ class CollectFileOp {
     private Path storeDir
 
     private String fileName
-
 
     CollectFileOp( final DataflowReadChannel channel, Map params, final Closure closure = null ) {
 
@@ -87,6 +87,10 @@ class CollectFileOp {
             collector.safeClose()
         }
 
+    }
+
+    protected FileCollector getCollector() {
+        collector
     }
 
     protected defineHashingParams() {
@@ -248,7 +252,18 @@ class CollectFileOp {
             collector.deleteTempFilesOnClose = params.deleteTempFilesOnClose as boolean
         if( params?.skip )
             collector.skipLines = params?.skip
-
+        if( params?.keepHeader != null )
+            collector.keepHeader = params.keepHeader as boolean
+        if( collector.keepHeader ) {
+            // validate `seed` parameter
+            if( collector.seed != null )
+                throw new IllegalArgumentException("Parameter `keepHeader` and `seed` conflict -- check operator `collectFile`")
+            // validate `skip` parameter
+            if( params?.skip == null )
+                collector.skipLines = 1
+            else if( collector.skipLines < 1 )
+                throw new IllegalArgumentException("Parameter `skip` must be greater than zero when `keepHeader` is specified -- check operator `collectFile`")
+        }
         return collector
     }
 

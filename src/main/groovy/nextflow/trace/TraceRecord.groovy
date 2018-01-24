@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -19,16 +19,14 @@
  */
 
 package nextflow.trace
-
 import java.nio.file.Path
-import java.text.DateFormat
-import java.text.SimpleDateFormat
 
 import groovy.json.StringEscapeUtils
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.extension.Bolts
 import nextflow.processor.TaskId
 import nextflow.util.Duration
 import nextflow.util.KryoHelper
@@ -93,7 +91,9 @@ class TraceRecord implements Serializable {
             cpus:       'num',
             memory:     'mem',
             disk:       'mem',
-            time:       'time'
+            time:       'time',
+            env:        'str',
+            error_action:'str'
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [
@@ -107,26 +107,6 @@ class TraceRecord implements Serializable {
 
     @PackageScope
     static TimeZone TIMEZONE = null
-
-    @Memoized
-    static private ThreadLocal<DateFormat> getLocalDateFormat(String fmt) {
-        final tz = TIMEZONE
-        return new ThreadLocal<DateFormat>() {
-            @Override
-            protected DateFormat initialValue() {
-                def result = new SimpleDateFormat(fmt)
-                if(tz) result.setTimeZone(tz)
-                return result
-            }
-        }
-    }
-
-    @PackageScope
-    static DateFormat getDateFormat(String fmt = null) {
-        if( !fmt )
-            fmt = DEFAULT_DATE_FORMAT
-        getLocalDateFormat(fmt).get()
-    }
 
 
     /**
@@ -180,7 +160,9 @@ class TraceRecord implements Serializable {
     @PackageScope
     static String fmtDate(def value, String fmt) {
         if( !value ) return NA
-        getDateFormat(fmt).format(new Date(value as long))
+        if( !fmt )
+            fmt = DEFAULT_DATE_FORMAT
+        Bolts.format(new Date(value as long), fmt, TIMEZONE)
     }
 
     /**

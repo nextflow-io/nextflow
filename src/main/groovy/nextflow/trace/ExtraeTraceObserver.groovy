@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -51,6 +51,11 @@ class ExtraeTraceObserver implements TraceObserver {
     private Session session
 
     private Map<Integer,String> tasksMap = [:]
+
+    @Override
+    boolean enableMetrics() {
+        return true
+    }
 
     /**
      * Initialize the Extrae sub-system. It look the Extrae configuration

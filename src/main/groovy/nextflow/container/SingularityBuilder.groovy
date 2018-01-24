@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -19,11 +19,8 @@
  */
 
 package nextflow.container
-import java.nio.file.Path
-import java.nio.file.Paths
-
 import groovy.transform.CompileStatic
-import nextflow.util.Escape
+import groovy.util.logging.Slf4j
 /**
  * Implements a builder for Singularity containerisation
  *
@@ -32,11 +29,8 @@ import nextflow.util.Escape
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class SingularityBuilder extends ContainerBuilder {
-
-    private String entryPoint
-
-    private String runCommand
+@Slf4j
+class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
     private boolean autoMounts
 
@@ -76,7 +70,9 @@ class SingularityBuilder extends ContainerBuilder {
     @Override
     SingularityBuilder build(StringBuilder result) {
 
-        result << 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" '
+        result << 'set +u; env - PATH="$PATH" '
+
+        appendEnv(result)
 
         result << 'singularity '
 
@@ -95,9 +91,6 @@ class SingularityBuilder extends ContainerBuilder {
 
         result << image
 
-        if( entryPoint )
-            result  << ' ' << entryPoint
-
         runCommand = result.toString()
 
         return this
@@ -111,23 +104,23 @@ class SingularityBuilder extends ContainerBuilder {
     }
 
     @Override
+    protected CharSequence appendEnv(StringBuilder result) {
+        result << 'SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" '
+        super.appendEnv(result)
+    }
+
+    @Override
     protected CharSequence makeEnv( env, StringBuilder result = new StringBuilder() ) {
-        // append the environment configuration
-        if( env instanceof File ) {
-            env = env.toPath()
-        }
-        if( env instanceof Path ) {
-            result << 'export BASH_ENV="' << Escape.path(env) << '"; '
-        }
-        else if( env instanceof Map ) {
-            short index = 0
+
+        if( env instanceof Map ) {
+            int index=0
             for( Map.Entry entry : env.entrySet() ) {
                 if( index++ ) result << ' '
-                result << "export ${entry.key}=\"${entry.value}\"; "
+                result << "SINGULARITYENV_${entry.key}=\"${entry.value}\""
             }
         }
         else if( env instanceof String && env.contains('=') ) {
-            result << 'export ' << env << '; '
+            result << 'SINGULARITYENV_' << env
         }
         else if( env ) {
             throw new IllegalArgumentException("Not a valid environment value: $env [${env.class.name}]")
@@ -145,12 +138,16 @@ class SingularityBuilder extends ContainerBuilder {
     }
 
     @Override
-    String getRunCommand() {
-        return runCommand
+    String getRunCommand(String launcher) {
+        if( !runCommand )
+            throw new IllegalStateException("Missing `runCommand` -- make sure `build` method has been invoked")
+
+        if( launcher ) {
+            def result = getRunCommand()
+            result += entryPoint ? " $entryPoint -c \"cd \$PWD; $launcher\"" : " $launcher"
+            return result
+        }
+        return getRunCommand() + ' ' + launcher
     }
 
-    static String normalizeImageName(String img) {
-        if( !img ) return null
-        img.startsWith("/") ? img : Paths.get(img).toAbsolutePath().toString()
-    }
 }

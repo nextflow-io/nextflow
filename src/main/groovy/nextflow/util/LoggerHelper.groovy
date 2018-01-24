@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -31,6 +31,7 @@ import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.classic.spi.ThrowableProxy
+import ch.qos.logback.classic.net.SyslogAppender
 import ch.qos.logback.core.ConsoleAppender
 import ch.qos.logback.core.CoreConstants
 import ch.qos.logback.core.FileAppender
@@ -71,6 +72,8 @@ class LoggerHelper {
 
     private boolean rolling = false
 
+    private String syslog
+
     private boolean daemon = false
 
     private int minIndex = 1
@@ -83,10 +86,19 @@ class LoggerHelper {
 
     private ConsoleAppender consoleAppender
 
+    private SyslogAppender syslogAppender
+
     private FileAppender fileAppender
 
     LoggerHelper setRolling( boolean value ) {
         this.rolling = value
+        return this
+    }
+
+    LoggerHelper setSyslog( String value ) {
+        if(value) {
+            this.syslog = value
+        }
         return this
     }
 
@@ -135,6 +147,9 @@ class LoggerHelper {
         // -- the console appender
         this.consoleAppender = createConsoleAppender()
 
+        // -- the syslog appender
+        this.syslogAppender = createSyslogAppender()
+
         // -- the file appender
         this.fileAppender = rolling ? createRollingAppender() : createFileAppender()
 
@@ -144,6 +159,8 @@ class LoggerHelper {
             root.addAppender(fileAppender)
         if( consoleAppender )
             root.addAppender(consoleAppender)
+        if( syslogAppender )
+            root.addAppender(syslogAppender)
 
         // -- main package logger
         def mainLevel = packages[MAIN_PACKAGE] == Level.TRACE ? Level.TRACE : Level.DEBUG
@@ -172,6 +189,8 @@ class LoggerHelper {
             logger.addAppender(fileAppender)
         if( consoleAppender )
             logger.addAppender(consoleAppender)
+        if( syslogAppender )
+            logger.addAppender(syslogAppender)
 
         return logger
     }
@@ -188,6 +207,27 @@ class LoggerHelper {
             result.setContext(loggerContext)
             result.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
             result.addFilter(filter)
+            result.start()
+        }
+
+        return result
+    }
+
+    protected SyslogAppender createSyslogAppender() {
+        SyslogAppender result = syslog ? new SyslogAppender() : null
+        if( result )  {
+            // Multiple settings were sent or its just the hostname
+            final conf = syslog.contains(':') ? syslog.tokenize(':') : [syslog]
+            def sysLogHost = conf[0]
+            def sysLogPort = conf[1] ? conf[1].toInteger() : 514
+            def sysLogFacility = conf[2] ? conf[2] : "LOCAL0"
+            result.setSyslogHost(sysLogHost)
+            result.setPort(sysLogPort)
+            result.setFacility(sysLogFacility)
+            result.setSuffixPattern("nextflow: %-5level [%thread] %logger{0} - %msg")
+            result.setContext(loggerContext)
+            result.setThrowableExcluded(false)
+            result.setStackTracePattern('\t')
             result.start()
         }
 
@@ -258,6 +298,7 @@ class LoggerHelper {
         new LoggerHelper(launcher.options)
                 .setDaemon(launcher.isDaemon())
                 .setRolling(true)
+                .setSyslog(launcher.options.syslog)
                 .setup()
     }
 
@@ -265,6 +306,7 @@ class LoggerHelper {
         new LoggerHelper(opts)
                 .setDaemon(daemon)
                 .setRolling(true)
+                .setSyslog(opts.syslog)
                 .setup()
     }
 

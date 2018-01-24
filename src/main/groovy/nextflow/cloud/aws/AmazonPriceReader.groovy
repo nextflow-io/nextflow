@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -175,6 +175,7 @@ class AmazonPriceReader {
      */
     Map<String,CloudInstanceType> parse(String endpoint) {
 
+        int error = 0
         final location = REGIONS[ region ]
         final map = new HashMap<>()
         // data starts at 7th row
@@ -183,46 +184,60 @@ class AmazonPriceReader {
             int c=0
             String line
             while( (line=reader.readLine()) != null ) {
-                c++
-                if( c < 7 ) {
-                    if( c==6 ) parseCsvHeader(line)
-                    continue
+                try {
+                    c++
+                    if (c < 7) {
+                        if (c == 6) parseCsvHeader(line)
+                        continue
+                    }
+
+                    def tkns = parseCsvLine(line)
+                    if (tkns.size() < 64) continue
+                    if (tkns[colProdFamily] != 'Compute Instance') continue
+                    if (tkns[colServiceCode] != "AmazonEC2") continue
+                    if (tkns[colLocation] != location) continue
+                    if (tkns[colOS] != 'Linux') continue
+                    List storage = parseStorage(tkns[colStorage])
+
+                    final instanceType = tkns[colInstanceType]
+                    if (map.get(instanceType))
+                        continue
+
+                    if (!tkns[colCpu]) {
+                        log.debug "Missing cpu number for instance type: $instanceType -- offending entry: $line"
+                        error++
+                        continue
+                    }
+
+                    if (!tkns[colMem]) {
+                        log.debug "Missing memory value for instance type: $instanceType -- offending entry: $line"
+                        error++
+                        continue
+                    }
+
+                    def entry = new CloudInstanceType(
+                            id: instanceType,
+                            cpus: tkns[colCpu] as int,
+                            memory: parseMem(tkns[colMem]),
+                            disk: storage[0],
+                            numOfDisks: storage[1]
+                    )
+
+                    map.put(entry.id, entry)
+                    log.debug "map store >> entry=$entry"
                 }
-                def tkns = parseCsvLine(line)
-                if( tkns.size() < 64 ) continue
-                if( tkns[colProdFamily] != 'Compute Instance') continue
-                if( tkns[colServiceCode] != "AmazonEC2" ) continue
-                if( tkns[colLocation] != location) continue
-                if( tkns[colOS] != 'Linux' ) continue
-                List storage = parseStorage(tkns[colStorage])
-
-                final instanceType = tkns[colInstanceType]
-                if( map.get(instanceType) )
-                    continue
-
-                if( !tkns[colCpu] ) {
-                    log.debug "Missing cpu number for instance type: $instanceType -- offending entry: $line"
-                    continue
+                catch( Exception e ) {
+                    log.debug "Unexptected AWS price entry -- offending line: $line"
+                    error++
                 }
-
-                if( !tkns[colMem] ) {
-                    log.debug "Missing memory value for instance type: $instanceType -- offending entry: $line"
-                    continue
-                }
-
-                def entry = new CloudInstanceType(
-                        id: instanceType,
-                        cpus: tkns[colCpu] as int,
-                        memory: parseMem(tkns[colMem]),
-                        disk: storage[0],
-                        numOfDisks: storage[1]
-                )
-
-                map.put(entry.id, entry)
             }
         }
         finally {
             reader.close()
+        }
+
+        if( error ) {
+            log.warn "One or more errors have been detected parsing EC2 prices -- See log file for details"
         }
 
         return map
@@ -240,7 +255,7 @@ class AmazonPriceReader {
         colStorage      = ndx(header,"Storage", COL_STORAGE)
         colOS           = ndx(header,"Operating System",COL_OS)
 
-        log.debug "AWS csv field: ProductFamily=$colProdFamily; ServiceCode=$colServiceCode; Location=$colLocation; InstanceType=$colInstanceType; Cpu=$colCpu; Mem=$colMem; Storage=$colStorage; OS=$colOS"
+        log.debug "AWS csv fields format: ProductFamily=$colProdFamily; ServiceCode=$colServiceCode; Location=$colLocation; InstanceType=$colInstanceType; Cpu=$colCpu; Mem=$colMem; Storage=$colStorage; OS=$colOS"
     }
 
     private int ndx(List<String> header, String field, int defValue) {

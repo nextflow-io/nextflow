@@ -109,12 +109,27 @@ or any Docker compatible registry.
 
 .. note:: This feature requires you have installed Singularity 2.3.x or higher
 
-Remote container images can specified in your Nextflow script or configuration file by simply prefixing the image name
-with the ``shub://`` or ``docker://`` pseudo-protocol as required by the Singularity tool. For example::
+By default when a container name is specified, Nextflow checks if an image file with that name exists in the local file
+system. If that image file exists, it's used to execute the container. If a matching file does not exist,
+Nextflow automatically tries to pull an image with the specified name from the Docker Hub.
 
-    process.container = 'docker://debian:wheezy'
+If you want Nextflow to check only for local file images, prefix the container name with the ``file://`` pseudo-protocol.
+For example::
+
+    process.container = 'file:///path/to/singularity.img'
     singularity.enabled = true
 
+.. warning:: Note the use of triple ``/`` to specify an **absolute** file path, otherwise the path is interpreted as
+ relative to the workflow launching directory.
+
+To pull images from the Singularity Hub or a third party Docker registry simply prefix the image name
+with the ``shub://`` or ``docker://`` pseudo-protocol as required by the Singularity tool. For example::
+
+    process.container = 'docker://quay.io/biocontainers/multiqc:1.3--py35_2'
+    singularity.enabled = true
+
+.. note:: This feature requires the availability of the ``singularity`` tool in the computer
+  where the workflow execution is launched (other than the computing nodes).
 
 Nextflow caches those images in the ``singularity`` directory in the pipeline work directory by default. However it is
 suggest to provide a centralised caching directory by using either the ``NXF_SINGULARITY_CACHEDIR`` environment variable

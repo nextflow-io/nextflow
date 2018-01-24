@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -23,6 +23,7 @@ package nextflow.extension
 import java.nio.file.Files
 import java.nio.file.Path
 
+import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Channel
 import nextflow.Session
 import spock.lang.Shared
@@ -277,4 +278,69 @@ class CollectFileOperatorTest extends Specification {
 
     }
 
+    def 'should collect file and keep header line' () {
+
+        given:
+        def file1 = Files.createTempDirectory('temp').resolve('A')
+        file1.deleteOnExit()
+        file1.text = 'HEADER\nalpha\nbeta\n'
+
+        def file2 = Files.createTempDirectory('temp').resolve('B')
+        file2.deleteOnExit()
+        file2.text = '## HEAD ##\nHello\nworld\n'
+
+        def file3 = Files.createTempDirectory('temp').resolve('A')
+        file3.deleteOnExit()
+        file3.text = 'HEADER\nxxx\nyyy\nzzz\n'
+
+
+        when:
+        def files = Channel
+                .from(file1,file2,file3)
+                .collectFile(keepHeader:true, sort: 'index')
+                .toList()
+                .getVal()
+
+        def result = [:]; files.each{ result[it.name]=it }
+        then:
+        result.A.name == 'A'
+        result.A.text == 'HEADER\nalpha\nbeta\nxxx\nyyy\nzzz\n'
+
+        result.B.name == 'B'
+        result.B.text == '## HEAD ##\nHello\nworld\n'
+
+    }
+
+    def 'check invalid options' () {
+        given:
+        CollectFileOp op
+
+        when:
+        op = new CollectFileOp(Mock(DataflowReadChannel), [seed: 'foo'])
+        then:
+        op.collector.seed == 'foo'
+
+        when:
+        op = new CollectFileOp(Mock(DataflowReadChannel), [skip: 20])
+        then:
+        op.collector.skipLines == 20
+
+        when:
+        op = new CollectFileOp(Mock(DataflowReadChannel), [keepHeader: true])
+        then:
+        op.collector.keepHeader
+        op.collector.skipLines == 1
+
+        when:
+        op = new CollectFileOp(Mock(DataflowReadChannel), [keepHeader: true, skip: 10])
+        then:
+        op.collector.keepHeader
+        op.collector.skipLines == 10
+
+        when:
+        new CollectFileOp(Mock(DataflowReadChannel), [seed: 'foo', keepHeader: true])
+        then:
+        thrown(IllegalArgumentException)
+
+    }
 }

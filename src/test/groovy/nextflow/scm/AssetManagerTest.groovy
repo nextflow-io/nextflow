@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -352,6 +352,7 @@ class AssetManagerTest extends Specification {
                     mainScript = 'hello.nf'
                     defaultBranch = 'super-stuff'
                     description = 'This pipeline do this and that'
+                    author = 'Hi Dude'
                 }
                 '''
         def dir = tempDir.getRoot()
@@ -368,6 +369,7 @@ class AssetManagerTest extends Specification {
         holder.getDefaultBranch() == 'super-stuff'
         holder.getHomePage() == 'http://foo.com'
         holder.getDescription() == 'This pipeline do this and that'
+        holder.getAuthor() == 'Hi Dude'
 
     }
 

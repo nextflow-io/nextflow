@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -25,6 +25,7 @@ import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
 
 /**
+ * Implements a cached {@link TaskHandler}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

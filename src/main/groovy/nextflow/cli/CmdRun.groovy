@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -177,6 +177,12 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-dump-hashes'], description = 'Dump task hash keys for debugging purpose')
     boolean dumpHashes
 
+    @Parameter(names=['-dump-channels'], description = 'Dump channels for debugging purpose')
+    String dumpChannels
+
+    @Parameter(names=['-N','-with-notification'], description = 'Send a notification email on workflow completion to the specified recipients')
+    String withNotification
+
     @Override
     final String getName() { NAME }
 
@@ -202,7 +208,6 @@ class CmdRun extends CmdBase implements HubOptions {
                         .setOptions(launcher.options)
                         .setCmdRun(this)
                         .setBaseDir(scriptFile.parent)
-                        .build()
 
         // -- create a new runner instance
         final runner = new ScriptRunner(config)
@@ -276,11 +281,13 @@ class CmdRun extends CmdBase implements HubOptions {
         def manager = new AssetManager(pipelineName, this)
         def repo = manager.getProject()
 
+        boolean checkForUpdate = true
         if( !manager.isRunnable() || latest ) {
             log.info "Pulling $repo ..."
             def result = manager.download()
             if( result )
                 log.info " $result"
+            checkForUpdate = false
         }
         // checkout requested revision
         try {
@@ -288,6 +295,8 @@ class CmdRun extends CmdBase implements HubOptions {
             manager.updateModules()
             def scriptFile = manager.getScriptFile()
             log.info "Launching `$repo` [$runName] - revision: ${scriptFile.revisionInfo}"
+            if( checkForUpdate )
+                manager.checkRemoteStatus(scriptFile.revisionInfo)
             // return the script file
             return scriptFile
         }

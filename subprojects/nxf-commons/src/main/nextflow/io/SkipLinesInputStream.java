@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -41,6 +41,8 @@ public class SkipLinesInputStream extends InputStream {
 
     private int count;
 
+    private StringBuilder header;
+
     /**
      * Creates a <code>FilterInputStream</code>
      * by assigning the  argument <code>in</code>
@@ -55,6 +57,11 @@ public class SkipLinesInputStream extends InputStream {
         this.skip = skip;
     }
 
+    @Override
+    public void close() throws IOException {
+        target.close();
+    }
+
     public long skip(long n) throws IOException {
         throw new UnsupportedOperationException("Skip operation is not supported by " + this.getClass().getName());
     }
@@ -63,7 +70,7 @@ public class SkipLinesInputStream extends InputStream {
     public int read() throws IOException {
 
         while( count < skip ) {
-            int ch  = read0();
+            int ch = read0();
             if( ch == -1 )
                 return -1;
         }
@@ -84,16 +91,37 @@ public class SkipLinesInputStream extends InputStream {
             return result;
         }
 
-        int result = target.read();
-        if( result == LF ) {
+        int ch = target.read();
+        if( header!=null && count<skip && ch!=-1 )
+            header.append((char)ch);
+
+        if( ch == LF ) {
             count++;
         }
-        if( result == CR ) {
+        else if( ch == CR ) {
             count++;
             int next = target.read();
-            if( next != LF )
+            if( next == LF ) {
+                if( header!=null )
+                    header.append((char)next);
+            }
+            else {
                 buffer = next;
+                if( header!=null && count<skip && next!=-1 )
+                    header.append((char)next);
+            }
+
         }
-        return result;
+        return ch;
+    }
+
+    public String consumeHeader() throws IOException {
+        header = new StringBuilder();
+        while( count<skip && read0()!=-1 ) ;
+        return header.toString();
+    }
+
+    public String getHeader() {
+        return header != null ? header.toString() : null;
     }
 }

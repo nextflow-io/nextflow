@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -19,6 +19,9 @@
  */
 
 package nextflow.processor
+
+import nextflow.container.ContainerHandler
+
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -28,11 +31,6 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.container.ContainerConfig
 import nextflow.container.ContainerScriptTokens
-import nextflow.container.DockerBuilder
-import nextflow.container.ShifterBuilder
-import nextflow.container.SingularityBuilder
-import nextflow.container.SingularityCache
-import nextflow.container.UdockerBuilder
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessTemplateException
 import nextflow.exception.ProcessUnrecoverableException
@@ -306,7 +304,15 @@ class TaskRun implements Cloneable {
      */
     volatile boolean failed
 
+    /**
+     * Mark the task as aborted
+     */
     volatile boolean aborted
+
+    /**
+     * The action {@link ErrorStrategy} action applied if task has failed
+     */
+    volatile ErrorStrategy errorAction
 
     TaskConfig config
 
@@ -455,7 +461,7 @@ class TaskRun implements Cloneable {
     /**
      * @return A map containing the task environment defined as input declaration by this task
      */
-    Map<String,String> getInputEnvironment() {
+    protected Map<String,String> getInputEnvironment() {
         final Map<String,String> environment = [:]
         getInputsByType( EnvInParam ).each { param, value ->
             environment.put( param.name, value?.toString() )
@@ -463,6 +469,26 @@ class TaskRun implements Cloneable {
         return environment
     }
 
+    /**
+     * @return A map representing the task execution environment
+     */
+    Map<String,String> getEnvironment() {
+        // note: create a copy of the process environment to avoid concurrent
+        // process executions override each others
+        // IMPORTANT: when copying the environment map a LinkedHashMap must be used to preserve
+        // the insertion order of the env entries (ie. export FOO=1; export BAR=$FOO)
+        final result = new LinkedHashMap( getProcessor().getProcessEnvironment() )
+        result.putAll( getInputEnvironment() )
+        return result
+    }
+
+    String getEnvironmentStr() {
+        def env = getEnvironment()
+        if( !env ) return null
+        def result = new StringBuilder()
+        env.each { k,v -> result.append(k).append('=').append(v).append('\n') }
+        result.toString()
+    }
 
     Path getTargetDir() {
         config.getStoreDir() ?: workDir
@@ -479,7 +505,6 @@ class TaskRun implements Cloneable {
     }
 
     static final public String CMD_LOG = '.command.log'
-    static final public String CMD_ENV = '.command.env'
     static final public String CMD_SCRIPT = '.command.sh'
     static final public String CMD_INFILE = '.command.in'
     static final public String CMD_OUTFILE = '.command.out'
@@ -487,7 +512,7 @@ class TaskRun implements Cloneable {
     static final public String CMD_EXIT = '.exitcode'
     static final public String CMD_START = '.command.begin'
     static final public String CMD_RUN = '.command.run'
-    static final public String CMD_STUB = '.command.run.1'
+    static final public String CMD_STUB = '.command.stub'
     static final public String CMD_TRACE = '.command.trace'
 
 
@@ -533,24 +558,8 @@ class TaskRun implements Cloneable {
         }
 
         final cfg = getContainerConfig()
-        final engine = cfg.getEngine()
-        if( engine == 'shifter' ) {
-            ShifterBuilder.normalizeImageName(imageName, cfg)
-        }
-        else if( engine == 'udocker' ) {
-            UdockerBuilder.normalizeImageName(imageName)
-        }
-        else if( engine == 'singularity' ) {
-            if( !imageName )
-                return null
-            if( imageName.startsWith('docker://') || imageName.startsWith('shub://'))
-                return new SingularityCache(cfg) .getCachePathFor(imageName) .toString()
-            else
-                return SingularityBuilder.normalizeImageName(imageName)
-        }
-        else {
-            DockerBuilder.normalizeImageName(imageName, cfg)
-        }
+        final handler = new ContainerHandler(cfg)
+        handler.normalizeImageName(imageName)
     }
 
     /**

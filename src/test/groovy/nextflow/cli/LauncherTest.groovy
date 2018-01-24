@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -215,6 +215,22 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run','-with-singularity') == ['run', '-with-singularity','-']
         launcher.normalizeArgs('run','-with-singularity', '-x') == ['run', '-with-singularity','-', '-x']
         launcher.normalizeArgs('run','-with-singularity', 'busybox') == ['run', '-with-singularity','busybox']
+
+        launcher.normalizeArgs('run','-dump-channels') == ['run', '-dump-channels','*']
+        launcher.normalizeArgs('run','-dump-channels', '-x') == ['run', '-dump-channels','*', '-x']
+        launcher.normalizeArgs('run','-dump-channels', 'foo,bar') == ['run', '-dump-channels','foo,bar']
+
+        launcher.normalizeArgs('run','-with-notification', 'paolo@yo.com') == ['run', '-with-notification','paolo@yo.com']
+        launcher.normalizeArgs('run','-with-notification') == ['run', '-with-notification','true']
+        launcher.normalizeArgs('run','-with-notification', '-x') == ['run', '-with-notification','true', '-x']
+
+        launcher.normalizeArgs('run','-N', 'paolo@yo.com') == ['run', '-N','paolo@yo.com']
+        launcher.normalizeArgs('run','-N') == ['run', '-N','true']
+        launcher.normalizeArgs('run','-N', '-x') == ['run', '-N','true', '-x']
+
+        launcher.normalizeArgs('run','-syslog', 'host.com') == ['run', '-syslog','host.com']
+        launcher.normalizeArgs('run','-syslog') == ['run', '-syslog','localhost']
+        launcher.normalizeArgs('run','-syslog', '-x') == ['run', '-syslog','localhost', '-x']
 
         launcher.normalizeArgs( script.toAbsolutePath().toString(), '--x=1' ) == ['run', script.toAbsolutePath().toString(), '--x=1']
 

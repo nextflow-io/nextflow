@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -26,8 +26,8 @@ package nextflow.processor
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 enum TaskStatus {
-    NEW,
-    SUBMITTED,
-    RUNNING,
-    COMPLETED
+    NEW,        // task has just been created and not yet submitted for execution
+    SUBMITTED,  // task has been submitted for execution
+    RUNNING,    // task is currently running
+    COMPLETED   // task execution completed either successfully or with with an error condition
 }

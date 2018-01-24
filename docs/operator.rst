@@ -839,7 +839,7 @@ header      When ``true`` the first line is used as columns names. Alternatively
 charset     Parse the content by using the specified charset e.g. ``UTF-8``
 strip       Removes leading and trailing blanks from values (default: ``false``)
 skip        Number of lines since the file beginning to ignore when parsing the CSV content.
-limit       Limits the number of retrieved records to the specified value.
+limit       Limits the number of retrieved records for each file to the specified value.
 decompress  When ``true`` decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
 elem        The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)
 =========== ============================
@@ -890,7 +890,7 @@ Field       Description
 =========== ============================
 by          Defines the number of sequences in each `chunk` (default: ``1``)
 size        Defines the size in memory units of the expected chunks eg. `1.MB`.
-limit       Limits the number of retrieved sequences to the specified value.
+limit       Limits the number of retrieved sequences for each file to the specified value.
 record      Parse each entry in the FASTA file as record objects (see following table for accepted values)
 charset     Parse the content by using the specified charset e.g. ``UTF-8``
 compress    When ``true`` resulting file chunks are GZIP compressed. The ``.gz`` suffix is automatically added to chunk file names.
@@ -973,7 +973,7 @@ Field       Description
 =========== ============================
 by          Defines the number of *reads* in each `chunk` (default: ``1``)
 pe          When ``true`` splits paired-end read files, therefore items emitted by the source channel must be tuples in which at least two elements are the read-pair files to be splitted.
-limit       Limits the number of retrieved *reads* to the specified value.
+limit       Limits the number of retrieved *reads* for each file to the specified value.
 record      Parse each entry in the FASTQ file as record objects (see following table for accepted values)
 charset     Parse the content by using the specified charset e.g. ``UTF-8``
 compress    When ``true`` resulting file chunks are GZIP compressed. The ``.gz`` suffix is automatically added to chunk file names.
@@ -1040,7 +1040,7 @@ Available parameters:
 Field       Description
 =========== ============================
 by          Defines the number of lines in each `chunk` (default: ``1``)
-limit       Limits the number of retrieved lines to the specified value.
+limit       Limits the number of retrieved lines for each file to the specified value.
 charset     Parse the content by using the specified charset e.g. ``UTF-8``
 compress    When ``true`` resulting file chunks are GZIP compressed. The ``.gz`` suffix is automatically added to chunk file names.
 decompress  When ``true``, decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
@@ -1382,7 +1382,7 @@ Optionally, a mapping function can be specified in order to provide a custom rul
 in a similar manner as shown for the `phase`_ operator.
 
 collectFile
-------------
+-----------
 
 The ``collectFile`` operator allows you to gather the items emitted by a channel and save them to one or more files.
 The operator returns a new channel that emits the collected file(s).
@@ -1437,6 +1437,7 @@ The following parameters can be used with the ``collectFile`` operator:
 =============== ========================
 Name            Description
 =============== ========================
+keepHeader      Prepend the resulting file with the header fetched in the first collected file. The header size (ie. lines) can be specified by using the ``size`` parameter (default: ``false``).
 name            Name of the file where all received values are stored.
 newLine         Appends a ``newline`` character automatically after each entry (default: ``false``).
 seed            A value or a map of values used to initialise the files content.
@@ -1976,6 +1977,43 @@ example::
 Other operators
 ========================
 
+* `close`_
+* `dump`_
+* `ifEmpty`_
+* `print`_
+* `println`_
+* `set`_
+* `view`_
+
+.. _operator-dump:
+
+dump
+----
+
+The ``dump`` operator prints the items emitted by the channel to which is applied only when the option
+``-dump-channels`` is specified on the ``run`` command line, otherwise it is ignored.
+
+This is useful to enable the debugging of one or more channel content on-demand by using a command line option
+instead of modifying your script code.
+
+An optional ``tag`` parameter allows you to select which channel to dump. For example::
+
+    Channel
+        .from(1,2,3)
+        .map { it+1 }
+        .dump(tag:'foo')
+
+    Channel
+        .from(1,2,3)
+        .map { it^2 }
+        .dump(tag: 'bar')
+
+
+Then you will be able to specify the tag ``foo`` or ``bar`` as an argument of the ``-dump-channels`` option to print
+either the content of the first or the second channel. Multiple tag names can be specified separating them with a ``,``
+character.
+
+
 .. _operator-set:
 
 set
@@ -2029,7 +2067,7 @@ See also: :ref:`channel-empty` method.
 print
 ------
 
-The ``print`` operator prints the items emitted by a channel to the console standard.
+The ``print`` operator prints the items emitted by a channel to the standard output.
 An optional :ref:`closure <script-closure>` parameter can be specified to customise how items are printed.
 For example::
 

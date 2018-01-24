@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -39,8 +39,6 @@ class UdockerBuilderTest extends Specification {
         expect:
         builder.makeEnv('X=1').toString() == '-e "X=1"'
         builder.makeEnv([VAR_X:1, VAR_Y: 2]).toString() == '-e "VAR_X=1" -e "VAR_Y=2"'
-        builder.makeEnv( Paths.get('/some/file.env') ).toString() == '-e "BASH_ENV=/some/file.env"'
-        builder.makeEnv( new File('/some/file.env') ).toString() == '-e "BASH_ENV=/some/file.env"'
     }
 
 
@@ -63,63 +61,93 @@ class UdockerBuilderTest extends Specification {
     def 'should get run cmd line' () {
 
         given:
-        def envFile = Paths.get('/data/env.file')
+        def env = [FOO:1, BAR:'hello world']
         def db_file = Paths.get('/home/db')
 
         expect:
         new UdockerBuilder('fedora')
                 .build()
-                .runCommand == 'udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest") /bin/bash'
+                .@runCommand == 'udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest")'
 
         new UdockerBuilder('fedora')
-                .addEnv(envFile)
+                .addEnv(env)
                 .build()
-                .runCommand == 'udocker.py run --rm -e "BASH_ENV=/data/env.file" -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest") /bin/bash'
+                .@runCommand == 'udocker.py run --rm -e "FOO=1" -e "BAR=hello world" -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest")'
 
         new UdockerBuilder('fedora')
                 .setCpus('1,2')
                 .build()
-                .runCommand == 'udocker.py run --rm --cpuset-cpus=1,2 -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest") /bin/bash'
+                .@runCommand == 'udocker.py run --rm --cpuset-cpus=1,2 -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest")'
 
         new UdockerBuilder('fedora')
                 .addMount(db_file)
-                .addEnv(envFile)
+                .addEnv(env)
                 .build()
-                .runCommand == 'udocker.py run --rm -e "BASH_ENV=/data/env.file" -v /home/db:/home/db -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest") /bin/bash'
+                .@runCommand == 'udocker.py run --rm -e "FOO=1" -e "BAR=hello world" -v /home/db:/home/db -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest")'
 
         new UdockerBuilder('busybox')
                 .params(remove: false)
                 .build()
-                .runCommand == 'udocker.py run -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "busybox:latest") /bin/bash'
+                .@runCommand == 'udocker.py run -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "busybox:latest")'
 
         new UdockerBuilder('busybox')
                 .params(runOptions: '-x --zeta')
                 .build()
-                .runCommand == 'udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome -x --zeta $(udocker.py create "busybox:latest") /bin/bash'
+                .@runCommand == 'udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome -x --zeta $(udocker.py create "busybox:latest")'
 
         new UdockerBuilder('busybox')
                 .params(entry: '/bin/blah')
                 .build()
-                .runCommand == 'udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "busybox:latest") /bin/blah'
+                .@runCommand == 'udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "busybox:latest")'
 
     }
 
     def 'should append the run command line' () {
 
         given:
-        def script = new StringBuilder()
+        def builder = new UdockerBuilder('ubuntu:latest')
+
+        when:
+        def result = builder.build().getRunCommand()
+        then:
+        result == '''
+            ((udocker.py images | egrep -o "^ubuntu:latest\\s") || udocker.py pull "ubuntu:latest")>/dev/null
+            [[ $? != 0 ]] && echo "Udocker failed while pulling container \\`ubuntu:latest\\`" >&2 && exit 1
+            udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "ubuntu:latest")
+            '''
+            .stripIndent().trim()
+
+        builder.getRemoveCommand() == null
+        builder.getKillCommand() == null
+    }
+
+    def 'should append the run command line with launcher' () {
 
         when:
         def builder = new UdockerBuilder('ubuntu:latest')
-        builder.build()
-        builder.appendRunCommand(script)
+        def result = builder.build().getRunCommand('bwa --this --that')
         then:
-        script.toString() == '''
+        result == '''
             ((udocker.py images | egrep -o "^ubuntu:latest\\s") || udocker.py pull "ubuntu:latest")>/dev/null
             [[ $? != 0 ]] && echo "Udocker failed while pulling container \\`ubuntu:latest\\`" >&2 && exit 1
-            udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "ubuntu:latest") /bin/bash
+            udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "ubuntu:latest") bwa --this --that
             '''
-            .stripIndent().trim()
+                .stripIndent().trim()
+
+        builder.getRemoveCommand() == null
+        builder.getKillCommand() == null
+
+
+        when:
+        builder = new UdockerBuilder('ubuntu:latest').params(entry:'/bin/bash')
+        result = builder.build().getRunCommand('bwa --this --that')
+        then:
+        result == '''
+            ((udocker.py images | egrep -o "^ubuntu:latest\\s") || udocker.py pull "ubuntu:latest")>/dev/null
+            [[ $? != 0 ]] && echo "Udocker failed while pulling container \\`ubuntu:latest\\`" >&2 && exit 1
+            udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "ubuntu:latest") /bin/bash -c "bwa --this --that"
+            '''
+                .stripIndent().trim()
 
         builder.getRemoveCommand() == null
         builder.getKillCommand() == null

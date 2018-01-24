@@ -1,5 +1,24 @@
-package nextflow.file
+/*
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ *
+ *   This file is part of 'Nextflow'.
+ *
+ *   Nextflow is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   Nextflow is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
+package nextflow.file
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.Callable
@@ -16,7 +35,6 @@ import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Global
-import nextflow.Nextflow
 import nextflow.Session
 import nextflow.exception.ProcessStageException
 /**
@@ -31,6 +49,13 @@ class FilePorter {
     static protected ExecutorService executor
 
     static Random rnd = Random.newInstance()
+
+    private Path stagingDir
+
+    FilePorter( Path stagingDir) {
+        assert stagingDir, "Argument stagingDir cannot be null"
+        this.stagingDir = stagingDir
+    }
 
     /**
      * Given a map of files, copies all the ones stored in a foreign file system
@@ -47,7 +72,7 @@ class FilePorter {
         for( Map.Entry<String,Path> entry : filesMap ) {
             def name = entry.getKey()
             def path = entry.getValue()
-            if( path.fileSystem == FileHelper.workDirFileSystem )
+            if( path.fileSystem == stagingDir.fileSystem )
                 continue
             // copy the path with a thread pool
             actions << { new NamePathPair(name, stageForeignFile(path)) } as Callable<NamePathPair>
@@ -113,7 +138,9 @@ class FilePorter {
     }
 
     private Path stageForeignFile0(Path source) {
-        final target = Nextflow.tempDir().resolve(source.getName())
+        // create temp directory
+        final tempDir = FileHelper.createTempFolder(stagingDir)
+        final target = tempDir.resolve(source.getName())
         log.debug "Copying foreign file ${source.toUriString()} to work dir: ${target.toUriString()}"
         return FileHelper.copyPath(source, target)
     }

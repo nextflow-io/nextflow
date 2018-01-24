@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -35,6 +35,7 @@ import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.file.FileHelper
+import nextflow.file.http.XPath
 import org.codehaus.groovy.runtime.GStringImpl
 import org.objenesis.instantiator.ObjectInstantiator
 
@@ -56,6 +57,7 @@ class KryoHelper {
         serializers.put( UUID, UUIDSerializer )
         serializers.put( File, FileSerializer )
         serializers.put( S3Path, PathSerializer )
+        serializers.put( XPath, XPathSerializer )
         serializers.put( Pattern, PatternSerializer )
         serializers.put( ArrayTuple, ArrayTupleSerializer )
 
@@ -268,6 +270,25 @@ class PathSerializer extends Serializer<Path> {
         def fs = FileHelper.getOrCreateFileSystemFor(uri)
         return fs.provider().getPath(uri)
 
+    }
+}
+
+@Slf4j
+@CompileStatic
+class XPathSerializer extends Serializer<Path> {
+
+    @Override
+    void write(Kryo kryo, Output output, Path target) {
+        final uri = target.toUri().toString()
+        log.trace "XPath serialization > uri=$uri"
+        output.writeString(uri)
+    }
+
+    @Override
+    Path read(Kryo kryo, Input input, Class<Path> type) {
+        final uri = input.readString()
+        log.trace "Path de-serialization > uri=$uri"
+        FileHelper.asPath(new URI(uri))
     }
 }
 

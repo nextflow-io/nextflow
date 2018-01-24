@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -19,8 +19,8 @@
  */
 
 package nextflow.util
-
 import nextflow.container.ContainerConfig
+import nextflow.file.FileHelper
 import spock.lang.Specification
 /**
  *
@@ -155,6 +155,15 @@ class KryoHelperTest extends  Specification {
         KryoHelper.deserialize(buffer) instanceof Map.Entry
         KryoHelper.deserialize(buffer) == entry
 
+    }
+
+    def 'should serialise xpath' () {
+        when:
+        def file = FileHelper.asPath('http://host.com/foo.txt')
+        def buffer = KryoHelper.serialize(file)
+        then:
+        KryoHelper.deserialize(buffer).getClass().getName() == 'nextflow.file.http.XPath'
+        KryoHelper.deserialize(buffer).toUri() == new URI('http://host.com/foo.txt')
     }
 
 

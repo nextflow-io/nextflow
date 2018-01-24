@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -24,8 +24,11 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.Global
+import nextflow.Session
 import nextflow.file.FilePorter
 import nextflow.processor.TaskBean
+import nextflow.processor.TaskProcessor
 import nextflow.util.Escape
 /**
  * Simple file strategy that stages input files creating symlinks
@@ -52,6 +55,16 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     String separatorChar = '\n'
 
+    /**
+     * Target output folder
+     */
+    Path targetDir
+
+    /**
+     * Task work directory
+     */
+    Path workDir
+
     private FilePorter porter
 
     SimpleFileCopyStrategy() { }
@@ -59,6 +72,8 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
     SimpleFileCopyStrategy( TaskBean bean ) {
         this.stageinMode = bean.stageInMode
         this.stageoutMode = bean.stageOutMode
+        this.targetDir = bean.targetDir
+        this.workDir = bean.workDir
     }
 
     @Override
@@ -72,7 +87,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
     @Memoized
     private Map<String,Path> resolveForeignFiles0(Map<String,Path> files) {
         if( !porter )
-            porter = new FilePorter()
+            porter = new FilePorter(workDir)
         porter.stageForeignFiles(files)
     }
 
@@ -97,7 +112,6 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
             links << stageInputFile( storePath, stageName )
 
         }
-        links << '' // just to have new-line at the end of the script
 
         // return a big string containing the command
         return (delete + links).join(separatorChar)
@@ -139,11 +153,12 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         // create a bash script that will copy the out file to the working directory
         log.trace "Unstaging file path: $normalized"
         if( normalized ) {
-            result << ""
-            result << "mkdir -p ${Escape.path(targetDir)}"
+            def prefix = getUnstagePrefix(targetDir)
+            if( prefix )
+                result << prefix
             for( int i=0; i<normalized.size(); i++ ) {
                 final path = normalized[i]
-                final cmd = stageOutCommand(path, targetDir.toString(), stageoutMode) + ' || true' // <-- add true to avoid it stops on errors
+                final cmd = stageOutCommand(path, targetDir, stageoutMode) + ' || true' // <-- add true to avoid it stops on errors
                 result << cmd
             }
         }
@@ -165,14 +180,43 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         throw new IllegalArgumentException("Unknown stage-in strategy: $mode")
     }
 
+    protected AwsOptions getAwsOptions() {
+        new AwsOptions(Global.session as Session)
+    }
+
+    protected String getPathScheme(Path path) {
+        path?.getFileSystem()?.provider()?.getScheme()
+    }
+
+    protected String getUnstagePrefix(Path targetDir) {
+        final scheme = getPathScheme(targetDir)
+        if( scheme == 'file' ) {
+            return "mkdir -p ${Escape.path(targetDir)}"
+        }
+        else
+            return null
+    }
+
     /**
      * Compose a `cp` or `mv` command given the source and target paths
      *
      * @param source
-     * @param target
+     * @param targetDir
      * @param move When {@code true} use unix {@code mv} instead of {@code cp}
      * @return A shell copy or move command string
      */
+
+    protected String stageOutCommand( String source, Path targetDir, String mode = null) {
+        def scheme = getPathScheme(targetDir)
+        if( scheme == 'file' )
+            return stageOutCommand(source, targetDir.toString(), mode)
+
+        if( scheme == 's3' )
+            return "nxf_s3_upload '$source' s3:/$targetDir"
+
+        throw new IllegalArgumentException("Unsupported target path: ${targetDir.toUriString()}")
+    }
+
     protected String stageOutCommand( String source, String target, String mode = null) {
 
         def cmd
@@ -247,6 +291,9 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
 
     @Override
     String getBeforeStartScript() {
+        if( getPathScheme(targetDir) == 's3' ) {
+            return S3Helper.getUploaderScript(getAwsOptions()).leftTrim()
+        }
         return null
     }
 
@@ -288,6 +335,28 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
     @Override
     String pipeInputFile(Path file) {
         " < ${Escape.path(file)}"
+    }
+
+    @Override
+    String getEnvScript(Map environment, String handler=null) {
+
+        if( !environment )
+            return null
+
+        // create the *bash* environment script
+        def wrapper = new StringBuilder()
+        if( !handler ) {
+            wrapper << TaskProcessor.bashEnvironmentScript(environment)
+        }
+        else {
+            wrapper << "${handler}() {\n"
+            wrapper << 'cat << EOF\n'
+            wrapper << TaskProcessor.bashEnvironmentScript(environment, true)
+            wrapper << 'EOF\n'
+            wrapper << '}\n'
+        }
+
+        return wrapper.toString()
     }
 
 }

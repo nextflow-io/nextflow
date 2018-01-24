@@ -311,6 +311,7 @@ The following settings are available:
 ================== ================
 Name                Description
 ================== ================
+author              Project author name (use a comma to separate multiple names).
 homePage            Project home page URL
 description         Free text describing the pipeline project
 mainScript          Pipeline main script (default: ``main.nf``)
@@ -392,6 +393,7 @@ proxyHost                   The proxy host to connect through.
 proxyPort                   The port on the proxy host to connect through.
 proxyUsername               The user name to use when connecting through a proxy.
 proxyPassword               The password to use when connecting through a proxy.
+signerOverride              The name of the signature algorithm to use for signing requests made by the client.
 socketSendBufferSizeHint    The Size hint (in bytes) for the low level TCP send buffer.
 socketRecvBufferSizeHint    The Size hint (in bytes) for the low level TCP receive buffer.
 socketTimeout               The amount of time to wait (in milliseconds) for data to be transferred over an established, open connection before the connection is timed out.
@@ -434,8 +436,8 @@ imageId                     Identifier of the virtual machine(s) to launch e.g. 
 instanceRole                IAM role granting required permissions and authorizations in the launched instances.
                             When specifying an IAM role no access/security keys are installed in the cluster deployed in the cloud.
 instanceType                Type of the virtual machine(s) to launch e.g. ``m4.xlarge``.
-instanceStorageMount        Instance ephemeral storage mount path e.g. ``/mnt/scratch``.
-instanceStorageDevice       Instance ephemeral storage device name e.g. ``/dev/xvdc``.
+instanceStorageMount        Ephemeral instance storage mount path e.g. ``/mnt/scratch``.
+instanceStorageDevice       Ephemeral instance storage device name e.g. ``/dev/xvdc`` (optional).
 keyName                     SSH access key name given by the cloud provider.
 keyHash                     SSH access public key hash string.
 keyFile                     SSH access public key file path.
@@ -454,9 +456,9 @@ The autoscale configuration group provides the following settings:
 Name                        Description
 =========================== ================
 enabled                     Enable cluster auto-scaling.
-terminateWhenIdle           Enable cluster automatic scale-down i.e. instance terminations when idle.
-idleTimeout                 Amount of time in idle state after which an instance is candidate to be terminated.
-starvingTimeout             Amount of time after which one ore more tasks pending for execution trigger an auto-scale request.
+terminateWhenIdle           Enable cluster automatic scale-down i.e. instance terminations when idle (default: ``false``).
+idleTimeout                 Amount of time in idle state after which an instance is candidate to be terminated (default: ``5 min``).
+starvingTimeout             Amount of time after which one ore more tasks pending for execution trigger an auto-scale request (default: ``5 min``).
 minInstances                Minimum number of instances in the cluster.
 maxInstances                Maximum number of instances in the cluster.
 imageId                     Identifier of the virtual machine(s) to launch when new instances are added to the cluster.
@@ -464,6 +466,7 @@ instanceType                Type of the virtual machine(s) to launch when new in
 spotPrice                   Price bid for spot/preemptive instances launched while auto-scaling the cluster.
 =========================== ================
 
+.. _config-timeline:
 
 Scope `timeline`
 ----------------
@@ -477,6 +480,80 @@ Name                Description
 ================== ================
 enabled             When ``true`` turns on the generation of the timeline report file (default: ``false``).
 file                Timeline file name (default: ``timeline.html``).
+================== ================
+
+.. _config-mail:
+
+Scope `mail`
+------------
+
+The ``mail`` scope allows you to define the mail server configuration settings needed to send email messages.
+
+================== ================
+Name                Description
+================== ================
+from                Default email sender address.
+smtp.host           Host name of the mail server.
+smtp.port           Port number of the mail server.
+smtp.user           User name to connect to  the mail server.
+smtp.password       User password to connect to the mail server.
+smtp.proxy.host     Host name of an HTTP web proxy server that will be used for connections to the mail server.
+smtp.proxy.port     Port number for the HTTP web proxy server.
+smtp.*              Any SMTP configuration property supported by the Java Mail API (see link below).
+================== ================
+
+.. note:: Nextflow relies on the `Java Mail API <https://javaee.github.io/javamail/>`_ to send email messages.
+  Advanced mail configuration can be provided by using any SMTP configuration property supported by the Java Mail API.
+  See the `table of available properties at this link <https://javaee.github.io/javamail/docs/api/com/sun/mail/smtp/package-summary.html#properties>`_.
+
+For example, the following snippet shows how to configure Nextflow to send emails through the
+`AWS Simple Email Service <https://aws.amazon.com/ses/>`_::
+
+    mail {
+        smtp.host = 'email-smtp.us-east-1.amazonaws.com'
+        smtp.port = 587
+        smtp.user = '<Your AWS SES access key>'
+        smtp.password = '<Your AWS SES secret key>'
+        smtp.auth = true
+        smtp.starttls.enable = true
+        smtp.starttls.required = true
+    }
+
+.. _config-notification:
+
+Scope `notification`
+--------------------
+
+The ``notification`` scope allows you to define the automatic sending of a notification email message
+when the workflow execution terminates.
+
+================== ================
+Name                Description
+================== ================
+enabled             Enables the sending of a notification message when the workflow execution completes.
+to                  Recipient address for the notification email. Multiple addresses can be specified separating them with a comma.
+from                Sender address for the notification email message.
+template            Path of a template file which provides the content of the notification message.
+binding             An associative array modelling the variables in the template file.
+================== ================
+
+The notification message is sent my using the STMP server defined in the configuration :ref:`mail scope<config-mail>`.
+
+If no mail configuration is provided, it tries to send the notification message by using the external mail command
+eventually provided by the underlying system (eg. ``sendmail`` or ``mail``).
+
+.. _config-report:
+
+Scope `report`
+--------------
+
+The ``report`` scope scope allows you to define configuration setting of the workflow :ref:`execution-report`.
+
+================== ================
+Name                Description
+================== ================
+enabled             If ``true`` it create the workflow execution report.
+file                The path of the created execution report file (default: ``report.html``).
 ================== ================
 
 

@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -423,12 +423,32 @@ class TaskPollingMonitor implements TaskMonitor {
         }
     }
 
+    protected void setupBatchCollector() {
+        Map<Class,BatchContext> collectors
+        for( TaskHandler handler : runningQueue ) {
+            // ignore tasks but BatchHandler
+            if( handler instanceof BatchHandler ) {
+                // create the main collectors map
+                if( collectors == null )
+                    collectors = new LinkedHashMap<>()
+                // create a collector instance for all task of the same class
+                BatchContext c = collectors.getOrCreate(handler.getClass()) { new BatchContext() }
+                // set the collector in the handler instance
+                handler.batch(c)
+            }
+        }
+    }
 
     /**
      * Check and update the status of queued tasks
      */
     protected void checkAllTasks() {
 
+        // -- find all task handlers that are *batch* aware
+        //    this allows to group multiple calls to a remote system together
+        setupBatchCollector()
+
+        // -- iterate over the task and check the status
         for( TaskHandler handler : runningQueue ) {
             try {
                 checkTaskStatus(handler)

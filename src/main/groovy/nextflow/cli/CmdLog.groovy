@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -59,7 +59,6 @@ class CmdLog extends CmdBase implements CacheBase {
         ALL_FIELDS << 'stdout'
         ALL_FIELDS << 'stderr'
         ALL_FIELDS << 'log'
-        ALL_FIELDS << 'env'
         ALL_FIELDS.sort(true)
     }
 
@@ -259,10 +258,6 @@ class CmdLog extends CmdBase implements CacheBase {
                 return fetch(getWorkDir().resolve(TaskRun.CMD_LOG))
             }
 
-            if( key == 'env' ) {
-                return fetch(getWorkDir().resolve(TaskRun.CMD_ENV))
-            }
-
             if( key == 'pcpu' )
                 return record.getFmtStr('%cpu')
 
@@ -306,7 +301,7 @@ class CmdLog extends CmdBase implements CacheBase {
                 def result = new StringBuilder()
                 path.withReader { reader ->
                     String line
-                    while( line=reader.readLine() && c++<MAX_LINES ) {
+                    while( (line=reader.readLine()) && c++<MAX_LINES ) {
                         result << line
                     }
                 }

@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -19,34 +19,12 @@
  */
 
 package nextflow.container
-
 import spock.lang.Specification
-
-import java.nio.file.Paths
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ShifterBuilderTest extends Specification {
-
-    def 'should return docker prefix' () {
-
-        expect:
-        ShifterBuilder.normalizeImageName(null, null) == null
-
-        ShifterBuilder.normalizeImageName('busybox', [:]) == 'docker:busybox:latest'
-        ShifterBuilder.normalizeImageName('busybox:latest', [:]) == 'docker:busybox:latest'
-        ShifterBuilder.normalizeImageName('busybox:1.0', [:]) == 'docker:busybox:1.0'
-        ShifterBuilder.normalizeImageName('docker:busybox:1.0', [:]) == 'docker:busybox:1.0'
-
-        ShifterBuilder.normalizeImageName('hello/world', [:]) == 'docker:hello/world:latest'
-        ShifterBuilder.normalizeImageName('hello/world:tag-name', [:]) == 'docker:hello/world:tag-name'
-        ShifterBuilder.normalizeImageName('docker:hello/world:tag-name', [:]) == 'docker:hello/world:tag-name'
-
-        ShifterBuilder.normalizeImageName('docker:busybox', [:]) == 'docker:busybox:latest'
-    }
-
 
     def 'test shifter env'() {
 
@@ -55,9 +33,7 @@ class ShifterBuilderTest extends Specification {
 
         expect:
         builder.makeEnv('X=1').toString() == 'X=1'
-        builder.makeEnv([VAR_X:1, VAR_Y: 2]).toString() == 'VAR_X=1 VAR_Y=2'
-        builder.makeEnv( Paths.get('/some/file.env') ).toString() == 'BASH_ENV="/some/file.env"'
-        builder.makeEnv( new File('/some/file.env') ).toString() == 'BASH_ENV="/some/file.env"'
+        builder.makeEnv([VAR_X:1, VAR_Y: 2]).toString() == 'VAR_X="1" VAR_Y="2"'
     }
 
     def 'should build the shifter run command' () {
@@ -65,32 +41,52 @@ class ShifterBuilderTest extends Specification {
         expect:
         new ShifterBuilder('busybox')
                 .build()
-                .runCommand == 'shifter --image busybox'
+                .@runCommand == 'shifter --image busybox'
 
         new ShifterBuilder('busybox')
                 .params(verbose: true)
                 .build()
-                .runCommand == 'shifter --verbose --image busybox'
-
-        new ShifterBuilder('ubuntu:latest')
-                .params(entry: '/bin/bash')
-                .build()
-                .runCommand == 'shifter --image ubuntu:latest /bin/bash'
-
-        new ShifterBuilder('ubuntu')
-                .params(entry: '/bin/bash')
-                .addEnv(Paths.get("/data/env_file"))
-                .build()
-                .runCommand == 'BASH_ENV="/data/env_file" shifter --image ubuntu /bin/bash'
+                .@runCommand == 'shifter --verbose --image busybox'
 
         new ShifterBuilder('fedora')
-                .params(entry: '/bin/bash')
                 .addEnv([VAR_X:1, VAR_Y:2])
                 .addEnv("VAR_Z=3")
                 .build()
-                .runCommand == 'VAR_X=1 VAR_Y=2 VAR_Z=3 shifter --image fedora /bin/bash'
+                .@runCommand == 'VAR_X="1" VAR_Y="2" VAR_Z=3 shifter --image fedora'
 
     }
+
+    def 'should get run command line' () {
+
+        when:
+        def cli = new ShifterBuilder('ubuntu:14').build().getRunCommand()
+        then:
+        cli ==  '''
+                shifter_pull ubuntu:14
+                shifter --image ubuntu:14
+                '''
+                .stripIndent().trim()
+
+        when:
+        cli = new ShifterBuilder('ubuntu:14').build().getRunCommand('bwa --this --that file.fasta')
+        then:
+        cli ==  '''
+                shifter_pull ubuntu:14
+                shifter --image ubuntu:14 bwa --this --that file.fasta
+                '''
+                .stripIndent().trim()
+
+        when:
+        cli = new ShifterBuilder('ubuntu:14').params(entry:'/bin/bash').build().getRunCommand('bwa --this --that file.fasta')
+        then:
+        cli ==  '''
+                shifter_pull ubuntu:14
+                shifter --image ubuntu:14 /bin/bash -c "bwa --this --that file.fasta"
+                '''
+                .stripIndent().trim()
+
+    }
+
 
 
 }

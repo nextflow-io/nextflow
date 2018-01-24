@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
-  ~ Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
-  ~ Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+  ~ Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+  ~ Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
   ~
   ~   This file is part of 'Nextflow'.
   ~
@@ -133,23 +133,16 @@
 
       <dl class="row small">
         <dt class="col-sm-3">CPU-Hours</dt>
-        <dd class="col-sm-9"><samp>${compute_time}</samp></dd>
+        <dd class="col-sm-9"><samp>${workflow.stats.getComputeTimeString()}</samp></dd>
 
         <dt class="col-sm-3">Launch directory</dt>
         <dd class="col-sm-9"><samp>${workflow.launchDir}</samp></dd>
 
         <dt class="col-sm-3">Work directory</dt>
-        <dd class="col-sm-9"><samp>${workflow.workDir}</samp></dd>
+        <dd class="col-sm-9"><samp>${workflow.workDir.toUriString()}</samp></dd>
 
         <dt class="col-sm-3">Project directory</dt>
         <dd class="col-sm-9"><samp>${workflow.projectDir}</samp></dd>
-
-        <% if (workflow.scriptFile) {
-          out << """
-          <dt class="col-sm-3">Script path</dt>
-          <dd class="col-sm-9"><samp>${workflow.scriptFile}</samp></dd>
-          """
-        } %>
 
         <% if (workflow.scriptName) {
           out << """

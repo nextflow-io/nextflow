@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -609,14 +609,53 @@ public class NextflowDSLImpl implements ASTTransformation {
         withinEachMethod = name == '_in_each'
 
         try {
-            varToConst(methodCall.getArguments())
+            if( isOutputValWithPropertyExpression(methodCall) )
+                // transform an output value declaration such
+                //   output: val( obj.foo )
+                // to
+                //   output: val({ obj.foo })
+                wrapPropertyToClosure((ArgumentListExpression)methodCall.getArguments())
+            else
+                varToConst(methodCall.getArguments())
 
         } finally {
             withinSetMethod = false
             withinFileMethod = false
             withinEachMethod = false
         }
+    }
 
+    protected boolean isOutputValWithPropertyExpression(MethodCallExpression methodCall) {
+        if( methodCall.methodAsString != '_out_val' )
+            return false
+        if( methodCall.getArguments() instanceof ArgumentListExpression ) {
+            def args = (ArgumentListExpression)methodCall.getArguments()
+            if( args.size() != 1 )
+                return false
+
+            return args.getExpression(0) instanceof PropertyExpression
+        }
+
+        return false
+    }
+
+    protected void wrapPropertyToClosure(ArgumentListExpression expr) {
+        def args = expr as ArgumentListExpression
+        def property = (PropertyExpression) args.getExpression(0)
+
+        def closure = wrapPropertyToClosure(property)
+
+        args.getExpressions().set(0, closure)
+    }
+
+    protected ClosureExpression wrapPropertyToClosure(PropertyExpression property)  {
+        def block = new BlockStatement()
+        block.addStatement( new ExpressionStatement(property) )
+
+        def closure = new ClosureExpression( Parameter.EMPTY_ARRAY, block )
+        closure.variableScope = new VariableScope(block.variableScope)
+
+        return closure
     }
 
 
@@ -624,6 +663,13 @@ public class NextflowDSLImpl implements ASTTransformation {
         if( expr instanceof VariableExpression ) {
             def name = ((VariableExpression) expr).getName()
             return newObj( TokenVar, new ConstantExpression(name) )
+        }
+        else if( expr instanceof PropertyExpression ) {
+            // transform an output declaration such
+            // output: set val( obj.foo )
+            //  to
+            // output: set val({ obj.foo })
+            return wrapPropertyToClosure(expr)
         }
 
         if( expr instanceof TupleExpression )  {
@@ -691,7 +737,7 @@ public class NextflowDSLImpl implements ASTTransformation {
 
             /*
              * input:
-             *   set( val(x) ) from q
+             *   set val(x), .. from q
              */
             if( methodCall.methodAsString == 'val' && withinSetMethod ) {
                 def args = (TupleExpression) varToStr(methodCall.arguments)

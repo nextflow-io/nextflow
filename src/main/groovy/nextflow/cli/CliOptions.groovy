@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -49,6 +49,12 @@ class CliOptions {
      */
     @Parameter(names='-trace', hidden = true)
     List<String> trace
+
+    /**
+     * Enable syslog appender
+     */
+    @Parameter(names = ['-syslog'], description = 'Send logs to syslog server (eg. localhost:514)' )
+    String syslog
 
     /**
      * Print out the version number and exit

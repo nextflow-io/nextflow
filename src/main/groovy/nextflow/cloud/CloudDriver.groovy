@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2013-2017, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2017, Paolo Di Tommaso and the respective authors.
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
  *   This file is part of 'Nextflow'.
  *
@@ -58,10 +58,10 @@ trait CloudDriver {
     abstract void waitInstanceStatus( Collection<String> instanceIds, CloudInstanceStatus status )
 
     /**
-     * Tag the specified instance s
+     * Tag one or more instances with the specified key=value pairs
      *
-     * @param instanceIds
-     * @param tags
+     * @param instanceIds A list of instance IDs
+     * @param tags A mpa of tags to be associated to the specified instances
      */
     abstract void tagInstances( Collection<String> instanceIds, Map<String,String> tags )
 
@@ -122,7 +122,7 @@ trait CloudDriver {
             @ClosureParams(value=SimpleType, options = ['nextflow.cloud.types.CloudInstance']) Closure callback )
 
     /**
-     * Iterate over the list of instances for the instance IDs
+     * Iterate over the list of instances for the given instance IDs
      *
      * @param instanceIds
      *      One or more instance IDs
@@ -149,10 +149,10 @@ trait CloudDriver {
             @ClosureParams(value=SimpleType, options = ['nextflow.cloud.types.CloudInstance']) Closure callback )
 
     /**
-     * Retrieve the private IPs of all node in the cluster with the specified name
+     * Retrieve the private IPs of all nodes in the cluster with the specified name
      *
-     * @param clusterName The
-     * @return
+     * @param clusterName The name of the cluster for which retrieve the list of IPs
+     * @return The list of node IPs in the specified cluster
      */
     abstract List<String> listPrivateIPs( String clusterName )
 
