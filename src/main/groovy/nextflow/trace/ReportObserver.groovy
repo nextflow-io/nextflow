@@ -22,7 +22,11 @@ package nextflow.trace
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.Callable
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Future
 
+import groovy.json.JsonOutput
 import groovy.text.GStringTemplateEngine
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -44,11 +48,17 @@ class ReportObserver implements TraceObserver {
 
     static final String DEF_FILE_NAME = 'report.html'
 
+    static final int DEF_MAX_TASKS = 10_000
 
     /**
      * Holds the the start time for tasks started/submitted but not yet completed
      */
     final private Map<TaskId,TraceRecord> records = new LinkedHashMap<>()
+
+    /**
+     * Holds a report summary instance for each process group
+     */
+    final private Map<String,ReportSummary> summaries = new HashMap<>()
 
     /**
      * Holds workflow session
@@ -60,8 +70,34 @@ class ReportObserver implements TraceObserver {
      */
     private Path reportFile
 
+    /**
+     * Max number of tasks allowed in the report, when they exceed this
+     * number the tasks table is omitted
+     */
+    private int maxTasks = DEF_MAX_TASKS
+
+    /**
+     * Executor service used to compute report summary stats
+     */
+    private ExecutorService executor
+
+    /**
+     * Creates a report observer
+     *
+     * @param file The file path where to store the resulting HTML report document
+     */
     ReportObserver( Path file ) {
         this.reportFile = file
+    }
+
+    /**
+     * Enables the collection of the task executions metrics in order to be reported in the HTML report
+     *
+     * @return {@code true}
+     */
+    @Override
+    boolean enableMetrics() {
+        return true
     }
 
     /**
@@ -71,7 +107,24 @@ class ReportObserver implements TraceObserver {
         session.binding.getVariable('workflow') as WorkflowMetadata
     }
 
-    protected Map<TaskId,TraceRecord> getRecords() { records }
+    /**
+     * @return The map of collected {@link TraceRecord}s
+     */
+    protected Map<TaskId,TraceRecord> getRecords() {
+        records
+    }
+
+    /**
+     * Set the number max allowed tasks. If this number is exceed the the tasks
+     * json in not included in the final report
+     *
+     * @param value The number of max task record allowed to be included in the HTML report
+     * @return The {@link ReportObserver} itself
+     */
+    ReportObserver setMaxTasks( int value ) {
+        this.maxTasks = value
+        return this
+    }
 
     /**
      * Create the trace file, in file already existing with the same name it is
@@ -80,6 +133,7 @@ class ReportObserver implements TraceObserver {
     @Override
     void onFlowStart(Session session) {
         this.session = session
+        this.executor = session.getExecService()
     }
 
     /**
@@ -91,14 +145,19 @@ class ReportObserver implements TraceObserver {
         renderHtml()
     }
 
-
+    /**
+     * This method is invoked when a process is created
+     *
+     * @param process A {@link TaskProcessor} object representing the process created
+     */
     @Override
     void onProcessCreate(TaskProcessor process) { }
 
 
     /**
      * This method is invoked before a process run is going to be submitted
-     * @param handler
+     *
+     * @param handler A {@link TaskHandler} object representing the task submitted
      */
     @Override
     void onProcessSubmit(TaskHandler handler) {
@@ -111,7 +170,8 @@ class ReportObserver implements TraceObserver {
 
     /**
      * This method is invoked when a process run is going to start
-     * @param handler
+     *
+     * @param handler  A {@link TaskHandler} object representing the task started
      */
     @Override
     void onProcessStart(TaskHandler handler) {
@@ -124,7 +184,8 @@ class ReportObserver implements TraceObserver {
 
     /**
      * This method is invoked when a process run completes
-     * @param handler
+     *
+     * @param handler A {@link TaskHandler} object representing the task completed
      */
     @Override
     void onProcessComplete(TaskHandler handler) {
@@ -135,12 +196,17 @@ class ReportObserver implements TraceObserver {
             return
         }
 
-        // remove the record from the current records
         synchronized (records) {
             records[ record.taskId ] = record
+            aggregate(record)
         }
     }
 
+    /**
+     * This method is invoked when a process run cache is hit
+     *
+     * @param handler A {@link TaskHandler} object representing the task cached
+     */
     @Override
     void onProcessCached(TaskHandler handler) {
         log.trace "Trace report - cached process > $handler"
@@ -149,16 +215,85 @@ class ReportObserver implements TraceObserver {
         // remove the record from the current records
         synchronized (records) {
             records[ record.taskId ] = record
+            aggregate(record)
         }
-
     }
 
+    /**
+     * Aggregates task record for each process in order to render the
+     * final execution stats
+     *
+     * @param record A {@link TraceRecord} object representing a task executed
+     */
+    protected void aggregate(TraceRecord record) {
+        def process = record.get('process') as String
+        def summary = summaries.get(process)
+        if( !summary ) {
+            summaries.put(process, summary=new ReportSummary())
+        }
+        summary.add(record)
+    }
+
+    /**
+     * @return The tasks json payload
+     */
+    protected String renderTasksJson() {
+        final r = getRecords()
+        r.size()<=maxTasks ? renderJsonData(r.values()) : '{ "trace":[] }'
+    }
+
+    /**
+     * @return The execution summary json
+     */
+    protected String renderSummaryJson() {
+        return JsonOutput.toJson( computeSummary() )
+    }
+
+    /**
+     * Compute the workflow process summary stats
+     *
+     * @return A {@link Map} holding the summary stats for each process
+     */
+    protected Map computeSummary() {
+
+        // summary stats can be expensive on big workflow
+        // speed-up the computation using a parallel
+        List<Callable<List>> tasks = []
+        summaries.keySet().each  { String process ->
+            final summary = summaries[process]
+            summary.names.each { String series ->
+                // the task execution turn a triple
+                tasks << { return [ process, series, summary.compute(series)] } as Callable<List>
+            }
+        }
+
+        // submit the parallel execution
+        final allResults = executor.invokeAll(tasks)
+
+        // compose the final result
+        def result = new HashMap(summaries.size())
+        allResults.each { Future<List> future ->
+            final triple = future.get()
+            final name = triple[0]      // the process name
+            final series = triple[1]    // the series name eg. `cpu`, `time`, etc
+            final summary = triple[2]   // the computed summary
+            final process = (Map)result.getOrCreate(name, [:])
+            process[series] = summary
+        }
+
+        return result
+    }
+
+    /**
+     * Render the report HTML document
+     */
     protected void renderHtml() {
 
         // render HTML report template
         final tpl_fields = [
             workflow : getWorkflowMetadata(),
-            payload : renderJsonData(records.values()),
+            payload : renderTasksJson(),
+            summary : renderSummaryJson(),
             assets_css : [
                 readTemplate('assets/bootstrap.min.css'),
                 readTemplate('assets/datatables.min.css')
@@ -191,6 +326,12 @@ class ReportObserver implements TraceObserver {
         writer.close()
     }
 
+    /**
+     * Render the executed tasks json payload
+     *
+     * @param data A collection of {@link TraceRecord}s representing the tasks executed
+     * @return The rendered json payload
+     */
     protected String renderJsonData(Collection<TraceRecord> data) {
         def List<String> formats = null
         def List<String> fields = null
@@ -207,7 +348,13 @@ class ReportObserver implements TraceObserver {
         return result.toString()
     }
 
-    protected String readTemplate( String path ) {
+    /**
+     * Read the document HTML template from the application classpath
+     *
+     * @param path A resource path location
+     * @return The loaded template as a string
+     */
+    private String readTemplate( String path ) {
         StringWriter writer = new StringWriter();
         def res =  this.class.getResourceAsStream( path )
         int ch
@@ -217,8 +364,5 @@ class ReportObserver implements TraceObserver {
         writer.toString();
     }
 
-    @Override
-    boolean enableMetrics() {
-        return true
-    }
+
 }

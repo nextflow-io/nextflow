@@ -364,9 +364,12 @@ class Session implements ISession {
         Boolean isEnabled = config.navigate('report.enabled') as Boolean
         if( isEnabled ) {
             String fileName = config.navigate('report.file')
+            def maxTasks = config.navigate('report.maxTasks', ReportObserver.DEF_MAX_TASKS) as int
             if( !fileName ) fileName = ReportObserver.DEF_FILE_NAME
             def report = (fileName as Path).complete()
             def observer = new ReportObserver(report)
+            observer.maxTasks = maxTasks
+
             result << observer
         }
     }

@@ -21,6 +21,7 @@
 package nextflow.trace
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.util.concurrent.Executors
 
 import groovy.json.JsonSlurper
 import nextflow.processor.TaskHandler
@@ -116,6 +117,8 @@ class ReportObserverTest extends Specification {
         observer.renderHtml()
         then:
         1 * observer.getWorkflowMetadata() >> workflow
+        1 * observer.renderSummaryJson() >> '{ }'
+        1 * observer.renderTasksJson() >> '{ }'
         Files.exists(file)
         file.text.contains('Nextflow Report')
         file.text.contains( workDir.toUriString() )
@@ -169,5 +172,127 @@ class ReportObserverTest extends Specification {
         then:
         1 * HANDLER3.getTraceRecord() >> RECORD3
         observer.records[TASKID3] == RECORD3
+    }
+
+    def 'should render not tasks payload' () {
+
+        given:
+        def observer = Spy(ReportObserver)
+        def BIG = Mock(Map)
+        BIG.size() >> ReportObserver.DEF_MAX_TASKS+1
+
+        when:
+        def result = observer.renderTasksJson()
+        then:
+        1 * observer.getRecords() >> BIG
+        result == '{ "trace":[] }'
+    }
+
+    def 'should render tasks payload' () {
+        given:
+        def observer = Spy(ReportObserver)
+
+        def TASKID1 = TaskId.of(10)
+        def TASKID2 = TaskId.of(20)
+        def TASKID3 = TaskId.of(30)
+
+        def RECORD1 = new TraceRecord([task_id: TASKID1, process: 'fastqc',  name:'fastqc-1', realtime: 100, '%cpu': 200, read_bytes: 300, write_bytes: 400])
+        def RECORD2 = new TraceRecord([task_id: TASKID2, process: 'fastqc',  name:'fastqc-2', realtime: 500, '%cpu': 600, read_bytes: 700, write_bytes: 800])
+        def RECORD3 = new TraceRecord([task_id: TASKID3, process: 'multiqc', name:'multiqc-1', realtime: 900, '%cpu': 100, read_bytes: 200, write_bytes: 300])
+
+        def records = [
+                (TASKID1): RECORD1,
+                (TASKID2): RECORD2,
+                (TASKID3): RECORD3
+        ]
+
+
+        when:
+        def json = observer.renderTasksJson()
+        def resp = new JsonSlurper().parseText(json)
+        then:
+        1 * observer.getRecords() >> records
+        resp.trace instanceof List
+        resp.trace.size() == 3
+        resp.trace[0].'task_id' == '10'
+        resp.trace[0].'process' == 'fastqc'
+        resp.trace[0].'name' == 'fastqc-1'
+        resp.trace[0].'realtime' == '100'
+        resp.trace[0].'%cpu' == '200'
+        resp.trace[0].'read_bytes' == '300'
+        resp.trace[0].'write_bytes' == '400'
+
+        resp.trace[1].'task_id' == '20'
+        resp.trace[1].'process' == 'fastqc'
+        resp.trace[1].'name' == 'fastqc-2'
+        resp.trace[1].'realtime' == '500'
+        resp.trace[1].'%cpu' == '600'
+        resp.trace[1].'read_bytes' == '700'
+        resp.trace[1].'write_bytes' == '800'
+
+        resp.trace[2].'task_id' == '30'
+        resp.trace[2].'process' == 'multiqc'
+        resp.trace[2].'name' == 'multiqc-1'
+        resp.trace[2].'realtime' == '900'
+        resp.trace[2].'%cpu' == '100'
+        resp.trace[2].'read_bytes' == '200'
+        resp.trace[2].'write_bytes' == '300'
+    }
+
+    def 'should render summary json' () {
+        given:
+        def observer = [:] as ReportObserver
+        observer.executor = Executors.newCachedThreadPool()
+        def r1 = new TraceRecord([process: 'bwa-mem', name: 'bwa-mem-1', '%cpu':1_000, vmem:2_000, realtime:3_000, read_bytes:4_000, write_bytes:5_000 ])
+        def r2 = new TraceRecord([process: 'bwa-mem', name: 'bwa-mem-2', '%cpu':6_000, vmem:7_000, realtime:8_000, read_bytes:9_000, write_bytes:10_000 ])
+        def r3 = new TraceRecord([process: 'bwa-mem', name: 'bwa-mem-3', '%cpu':11_000, vmem:12_000, realtime:13_000, read_bytes:14_000, write_bytes:15_000 ])
+        def r4 = new TraceRecord([process: 'multiqc', name: 'multiqc-1', '%cpu':16_000, vmem:17_000, realtime:18_000, read_bytes:19_000, write_bytes:20_000 ])
+        def r5 = new TraceRecord([process: 'multiqc', name: 'multiqc-2', '%cpu':21_000, vmem:22_000, realtime:23_000, read_bytes:24_000, write_bytes:25_000 ])
+
+        observer.aggregate(r1)
+        observer.aggregate(r2)
+        observer.aggregate(r3)
+        observer.aggregate(r4)
+        observer.aggregate(r5)
+
+        when:
+        def json = observer.renderSummaryJson()
+        def result = new JsonSlurper().parseText(json)
+        then:
+        result.size() == 2
+        result.'bwa-mem' instanceof Map
+        result.'bwa-mem'.cpu instanceof Map
+        result.'bwa-mem'.mem instanceof Map
+        result.'bwa-mem'.time instanceof Map
+        result.'bwa-mem'.reads instanceof Map
+        result.'bwa-mem'.writes instanceof Map
+
+        result.'multiqc' instanceof Map
+        result.'multiqc'.cpu instanceof Map
+        result.'multiqc'.mem instanceof Map
+        result.'multiqc'.time instanceof Map
+        result.'multiqc'.reads instanceof Map
+        result.'multiqc'.writes instanceof Map
+
+        result.'bwa-mem'.cpu."min" == 1000
+        result.'bwa-mem'.cpu."minLabel" == 'bwa-mem-1'
+        result.'bwa-mem'.cpu."max" == 11000.0
+        result.'bwa-mem'.cpu."maxLabel" == "bwa-mem-3"
+        result.'bwa-mem'.cpu."q1" == 3500.0
+        result.'bwa-mem'.cpu."q2" == 6000.0
+        result.'bwa-mem'.cpu."q3" == 8500.0
+        result.'bwa-mem'.cpu."mean" == 6000.0
+
+        result.'multiqc'.mem."min" == 17000.0
+        result.'multiqc'.mem."minLabel" == "multiqc-1"
+        result.'multiqc'.mem."max" == 22000.0
+        result.'multiqc'.mem."maxLabel" == "multiqc-2"
+        result.'multiqc'.mem."q1" == 18250.0
+        result.'multiqc'.mem."q2" == 19500.0
+        result.'multiqc'.mem."q3" == 20750.0
+        result.'multiqc'.mem."mean" == 19500.0
+
+        cleanup:
+        observer?.executor?.shutdown()
     }
 }
