@@ -1151,7 +1151,6 @@ class TaskProcessor {
                     try {
                         taskCopy.config.attempt = taskErrCount+1
                         taskCopy.runType = RunType.RETRY
-                        taskCopy.error = null
                         taskCopy.resolve(taskBody)
                         checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
                     }
