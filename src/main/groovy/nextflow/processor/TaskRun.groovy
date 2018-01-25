@@ -332,6 +332,7 @@ class TaskRun implements Cloneable {
         def copy = this.clone()
         // -- reset the error condition (if any)
         copy.id = TaskId.next()
+        copy.name = null // <-- force to re-evaluate the name that can include a dynamic tag
         copy.error = null
         copy.exitStatus = Integer.MAX_VALUE
         return copy
