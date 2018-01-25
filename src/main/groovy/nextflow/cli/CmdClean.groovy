@@ -35,6 +35,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.trace.TraceRecord
 import nextflow.util.HistoryFile.Record
+import picocli.CommandLine
 
 /**
  * Implements cache clean up command
@@ -44,6 +45,7 @@ import nextflow.util.HistoryFile.Record
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Clean up project cache and work directories")
+@CommandLine.Command
 class CmdClean extends CmdBase implements CacheBase {
 
     static final public NAME = 'clean'

@@ -30,6 +30,8 @@ import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.scm.AssetManager
 import nextflow.util.ConfigHelper
+import picocli.CommandLine
+
 /**
  *  Prints the pipeline configuration
  *
@@ -38,6 +40,7 @@ import nextflow.util.ConfigHelper
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Print a project configuration")
+@CommandLine.Command
 class CmdConfig extends CmdBase {
 
     static final public NAME = 'config'

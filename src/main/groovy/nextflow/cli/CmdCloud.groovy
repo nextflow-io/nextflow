@@ -43,6 +43,8 @@ import nextflow.exception.AbortOperationException
 import nextflow.ui.TableBuilder
 import nextflow.ui.TextLabel
 import nextflow.util.SysHelper
+import picocli.CommandLine
+
 /**
  * Implements the `cloud` command
  *
@@ -51,6 +53,7 @@ import nextflow.util.SysHelper
 @Slf4j
 //@CompileStatic -- Don't use. It causes a weird exception: CmdCloud$LaunchMaster cannot be cast to nextflow.cli.CmdCloud
 @Parameters(commandDescription = "Manage Nextflow clusters in the cloud")
+@CommandLine.Command
 class CmdCloud extends CmdBase implements UsageAware {
 
     interface SubCmd {

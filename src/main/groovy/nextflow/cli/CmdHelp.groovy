@@ -22,6 +22,8 @@ package nextflow.cli
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
+import picocli.CommandLine
+
 /**
  * CLI sub-command HELP
  *
@@ -29,6 +31,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 @Parameters(commandDescription = "Print the usage help for a command")
+@CommandLine.Command
 class CmdHelp extends CmdBase {
 
     static final public NAME = 'help'

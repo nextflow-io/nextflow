@@ -42,6 +42,8 @@ import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import org.yaml.snakeyaml.Yaml
+import picocli.CommandLine
+
 /**
  * CLI sub-command RUN
  *
@@ -50,6 +52,7 @@ import org.yaml.snakeyaml.Yaml
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Execute a pipeline project")
+@CommandLine.Command
 class CmdRun extends CmdBase implements HubOptions {
 
 
