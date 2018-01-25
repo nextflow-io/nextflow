@@ -33,12 +33,50 @@ class ReportSummaryTest extends Specification {
     }
 
     private quantile( List items, int q0 ) {
-        def stats = new ReportSummary.Summary({ it as Double })
-        round(stats.quantile(items.sort(), q0))
+        def stats = new ReportSummary.Summary({ it as Double})
+        round(stats.quantile(items.findAll{ it!=null } .sort(), q0))
     }
 
     private mean( List items ) {
-        round(items.sum() / items.size())
+        def notNull = items.findAll{ it!=null }
+        round(notNull.sum() / notNull.size())
+    }
+
+    def 'should compute summary data' () {
+        given:
+        def summary = new ReportSummary.Summary({ it.get('%cpu') as Double })
+
+        def values = [10,77,33,98,12,87,23,12,76,21]
+        values.eachWithIndex { v, i ->
+            def t = new TraceRecord('%cpu': v, name: "task-$i")
+            summary.add(t)
+        }
+
+        when:
+        def result = summary.compute()
+        then:
+        result == [
+                mean: 44.9,
+                min:10,
+                q1: 14.25,
+                q2: 28.0,
+                q3: 76.75,
+                max: 98,
+                minLabel: 'task-0',
+                maxLabel: 'task-3',
+                q1Label: 'task-7',
+                q2Label: 'task-6',
+                q3Label: 'task-8'
+        ]
+    }
+
+    def 'should compute empty summary' () {
+        given:
+        def summary = new ReportSummary.Summary({ it as Double })
+        when:
+        def result = summary.compute()
+        then:
+        result == null
     }
 
     def 'should get report summary stats' () {
@@ -47,7 +85,7 @@ class ReportSummaryTest extends Specification {
         def MEM = [65,34,23,65,11,54,78,87,32,21]
         def TIME = [22,21,76,78,07,32,99,32,11,12]
         def READS = [87,32,65,87,23,11,19,87,29,33]
-        def WRITES = [83,88,99,32,65,89,32,87,87,43]
+        def WRITES = [83,88,99,32,65,null,32,null,87,43]
         def data = [
             '%cpu': CPU,
             'vmem': MEM,
