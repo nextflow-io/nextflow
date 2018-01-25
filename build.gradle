@@ -63,7 +63,7 @@ ext {
 allprojects {
     apply plugin: 'java'
 
-    version = '0.27.2'
+    version = '0.27.3-SNAPSHOT'
     group = 'io.nextflow'
 
     sourceCompatibility = 1.8
@@ -143,7 +143,7 @@ dependencies {
     compile("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
     compile('org.iq80.leveldb:leveldb:0.7')
     compile('org.eclipse.jgit:org.eclipse.jgit:4.8.0.201706111038-r')
-    compile('io.nextflow:nxf-s3fs:1.0.2') {
+    compile('io.nextflow:nxf-s3fs:1.0.3-SNAPSHOT') {
         exclude group: 'org.apache.tika', module: 'tika-core'
         exclude group: 'com.amazonaws', module: 'aws-java-sdk-s3'
     }
