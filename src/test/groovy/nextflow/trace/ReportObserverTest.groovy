@@ -73,31 +73,44 @@ class ReportObserverTest extends Specification {
 
         when:
         def str = observer.renderJsonData(data)
-        def json = new JsonSlurper().parseText(str)
+        def trace = new JsonSlurper().parseText(str) as List
 
         then:
-        json.trace[0].task_id == '1'
-        json.trace[0].name == 'foo'
-        json.trace[0].process == 'alpha'
+        trace[0].task_id == '1'
+        trace[0].name == 'foo'
+        trace[0].process == 'alpha'
 
-        json.trace[1].task_id == '2'
-        json.trace[1].name == 'bar'
-        json.trace[1].submit == '1429821425141'
-        json.trace[1].start == '1429821425241'
-        json.trace[1].complete == '1429821425641'
-        json.trace[1].realtime == '400'
-        json.trace[1].duration == '500'
-        json.trace[1].process == 'alpha'
+        trace[1].task_id == '2'
+        trace[1].name == 'bar'
+        trace[1].submit == '1429821425141'
+        trace[1].start == '1429821425241'
+        trace[1].complete == '1429821425641'
+        trace[1].realtime == '400'
+        trace[1].duration == '500'
+        trace[1].process == 'alpha'
 
-        json.trace[2].task_id == '3'
-        json.trace[2].name == 'baz'
-        json.trace[2].submit == '1429821425141'
-        json.trace[2].start == '1429821425341'
-        json.trace[2].complete == '1429821425841'
-        json.trace[2].realtime == '500'
-        json.trace[2].duration == '700'
-        json.trace[2].process == 'beta'
+        trace[2].task_id == '3'
+        trace[2].name == 'baz'
+        trace[2].submit == '1429821425141'
+        trace[2].start == '1429821425341'
+        trace[2].complete == '1429821425841'
+        trace[2].realtime == '500'
+        trace[2].duration == '700'
+        trace[2].process == 'beta'
 
+    }
+
+    def 'should render json payload' () {
+        given:
+        def report = Spy(ReportObserver)
+
+        when:
+        def result = report.renderPayloadJson()
+        then:
+        1 * report.renderTasksJson() >> '[1,2,3]'
+        1 * report.renderSummaryJson() >> '{foo: 1}'
+
+        result == '{ "trace":[1,2,3], "summary":{foo: 1} }'
     }
 
     def 'should render html template' () {
@@ -185,7 +198,7 @@ class ReportObserverTest extends Specification {
         def result = observer.renderTasksJson()
         then:
         1 * observer.getRecords() >> BIG
-        result == '{ "trace":[] }'
+        result == '[]'
     }
 
     def 'should render tasks payload' () {
@@ -209,34 +222,34 @@ class ReportObserverTest extends Specification {
 
         when:
         def json = observer.renderTasksJson()
-        def resp = new JsonSlurper().parseText(json)
+        def trace = new JsonSlurper().parseText(json) as List
         then:
         1 * observer.getRecords() >> records
-        resp.trace instanceof List
-        resp.trace.size() == 3
-        resp.trace[0].'task_id' == '10'
-        resp.trace[0].'process' == 'fastqc'
-        resp.trace[0].'name' == 'fastqc-1'
-        resp.trace[0].'realtime' == '100'
-        resp.trace[0].'%cpu' == '200'
-        resp.trace[0].'read_bytes' == '300'
-        resp.trace[0].'write_bytes' == '400'
+        trace instanceof List
+        trace.size() == 3
+        trace[0].'task_id' == '10'
+        trace[0].'process' == 'fastqc'
+        trace[0].'name' == 'fastqc-1'
+        trace[0].'realtime' == '100'
+        trace[0].'%cpu' == '200'
+        trace[0].'read_bytes' == '300'
+        trace[0].'write_bytes' == '400'
 
-        resp.trace[1].'task_id' == '20'
-        resp.trace[1].'process' == 'fastqc'
-        resp.trace[1].'name' == 'fastqc-2'
-        resp.trace[1].'realtime' == '500'
-        resp.trace[1].'%cpu' == '600'
-        resp.trace[1].'read_bytes' == '700'
-        resp.trace[1].'write_bytes' == '800'
+        trace[1].'task_id' == '20'
+        trace[1].'process' == 'fastqc'
+        trace[1].'name' == 'fastqc-2'
+        trace[1].'realtime' == '500'
+        trace[1].'%cpu' == '600'
+        trace[1].'read_bytes' == '700'
+        trace[1].'write_bytes' == '800'
 
-        resp.trace[2].'task_id' == '30'
-        resp.trace[2].'process' == 'multiqc'
-        resp.trace[2].'name' == 'multiqc-1'
-        resp.trace[2].'realtime' == '900'
-        resp.trace[2].'%cpu' == '100'
-        resp.trace[2].'read_bytes' == '200'
-        resp.trace[2].'write_bytes' == '300'
+        trace[2].'task_id' == '30'
+        trace[2].'process' == 'multiqc'
+        trace[2].'name' == 'multiqc-1'
+        trace[2].'realtime' == '900'
+        trace[2].'%cpu' == '100'
+        trace[2].'read_bytes' == '200'
+        trace[2].'write_bytes' == '300'
     }
 
     def 'should render summary json' () {

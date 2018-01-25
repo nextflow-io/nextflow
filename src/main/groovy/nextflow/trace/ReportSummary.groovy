@@ -196,6 +196,9 @@ class ReportSummary {
          *      - maxLabel: label fot the task reporting the max value
          */
         Map<String,Double> compute() {
+            if( count==0 )
+                return null
+
             final result = [:]
             final sorted = tasks.sort( false, { TraceRecord record -> metric(record) } )
 
@@ -210,7 +213,6 @@ class ReportSummary {
             result.q1Label = q1Label
             result.q2Label = q2Label
             result.q3Label = q3Label
-
             return result
         }
 

@@ -239,14 +239,17 @@ class ReportObserver implements TraceObserver {
      */
     protected String renderTasksJson() {
         final r = getRecords()
-        r.size()<=maxTasks ? renderJsonData(r.values()) : '{ "trace":[] }'
+        r.size()<=maxTasks ? renderJsonData(r.values()) : '[]'
     }
 
     /**
      * @return The execution summary json
      */
     protected String renderSummaryJson() {
-        return JsonOutput.toJson( computeSummary() )
+        final summary = computeSummary()
+        final result = JsonOutput.toJson(summary)
+        log.debug "Execution report summary data:\n${JsonOutput.prettyPrint(result).indent()}"
+        return result
     }
 
     /**
@@ -284,6 +287,10 @@ class ReportObserver implements TraceObserver {
         return result
     }
 
+    protected String renderPayloadJson() {
+        "{ \"trace\":${renderTasksJson()}, \"summary\":${renderSummaryJson()} }"
+    }
+
     /**
      * Render the report HTML document
      */
@@ -292,8 +299,7 @@ class ReportObserver implements TraceObserver {
         // render HTML report template
         final tpl_fields = [
             workflow : getWorkflowMetadata(),
-            payload : renderTasksJson(),
-            summary : renderSummaryJson(),
+            payload : renderPayloadJson(),
             assets_css : [
                 readTemplate('assets/bootstrap.min.css'),
                 readTemplate('assets/datatables.min.css')
@@ -336,7 +342,7 @@ class ReportObserver implements TraceObserver {
         def List<String> formats = null
         def List<String> fields = null
         def result = new StringBuilder()
-        result << '{ "trace": [\n'
+        result << '[\n'
         int i=0
         for( TraceRecord record : data ) {
             if( i++ ) result << ','
@@ -344,7 +350,7 @@ class ReportObserver implements TraceObserver {
             if( !fields ) fields = TraceRecord.FIELDS.keySet() as List
             record.renderJson(result,fields,formats)
         }
-        result << ']}'
+        result << ']'
         return result.toString()
     }
 
