@@ -40,24 +40,29 @@ import picocli.CommandLine
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Print a project configuration")
-@CommandLine.Command
+@CommandLine.Command(name = "Config", description ="Print a project configuration")
 class CmdConfig extends CmdBase {
 
     static final public NAME = 'config'
 
     @Parameter(description = 'project name')
+    @CommandLine.Parameters(description = "Project name")    //TODO is it mandatory?
     List<String> args = []
 
     @Parameter(names=['-a','-show-profiles'], description = 'Show all configuration profiles')
+    @CommandLine.Option(names=['-a','--show-profiles'], description = 'Show all configuration profiles')
     boolean showAllProfiles
 
     @Parameter(names=['-profile'], description = 'Choose a configuration profile')
+    @CommandLine.Option(names=['--profile'], description = 'Choose a configuration profile')
     String profile
 
     @Parameter(names = '-properties', description = 'Prints config using Java properties notation')
+    @CommandLine.Option(names =['--properties'], description = 'Prints config using Java properties notation')
     boolean printProperties
 
     @Parameter(names = '-flat', description = 'Print config using flat notation')
+    @CommandLine.Option(names =['--flat'], description = 'Print config using flat notation')
     boolean printFlatten
 
 
@@ -73,11 +78,11 @@ class CmdConfig extends CmdBase {
         if( !base ) base = Paths.get('.')
 
         if( profile && showAllProfiles ) {
-            throw new AbortOperationException("Option `-profile` conflicts with option `-show-profiles`")
+            throw new AbortOperationException("Option `--profile` conflicts with option `--show-profiles`")
         }
 
         if( printProperties && printFlatten )
-            throw new AbortOperationException("Option `-flat` and `-properties` conflicts")
+            throw new AbortOperationException("Option `--flat` and `--properties` conflicts")
 
         def config = new ConfigBuilder()
                 .setOptions(launcher.options)

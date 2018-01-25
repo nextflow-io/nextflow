@@ -52,8 +52,8 @@ import picocli.CommandLine
  */
 @Slf4j
 //@CompileStatic -- Don't use. It causes a weird exception: CmdCloud$LaunchMaster cannot be cast to nextflow.cli.CmdCloud
-@Parameters(commandDescription = "Manage Nextflow clusters in the cloud")
-@CommandLine.Command
+//@Parameters(commandDescription = "Manage Nextflow clusters in the cloud")
+@CommandLine.Command (name = "Cloud", description ="Manage Nextflow clusters in the cloud")
 class CmdCloud extends CmdBase implements UsageAware {
 
     interface SubCmd {
@@ -67,43 +67,56 @@ class CmdCloud extends CmdBase implements UsageAware {
 
     private List<SubCmd> commands = []
 
-    @Parameter(names=['-driver'], description = 'The name of a cloud driver')
+    //@Parameter(names=['-driver'], description = 'The name of a cloud driver')
+    @CommandLine.Option(names=['--driver'], description = 'The name of a cloud driver')
     String driverName
 
-    @Parameter(names=['-t','-instance-type'], description = 'Instance type')
+    //@Parameter(names=['-t','-instance-type'], description = 'Instance type')
+    @CommandLine.Option(names=['-t','--instance-type'], description = 'Instance type')
     String instanceType
 
-    @Parameter(names=['-i','-image-id'], description = 'Image ID')
+    //@Parameter(names=['-i','-image-id'], description = 'Image ID')
+    @CommandLine.Option(names=['-i','--image-id'], description = 'Image ID')
     String imageId
 
-    @Parameter(names=['-c', '-instance-count'], description = 'Instances count')
+    //@Parameter(names=['-c', '-instance-count'], description = 'Instances count')
+    @CommandLine.Option(names=['-c', '--instance-count'], description = 'Instances count')
     int instanceCount
 
-    @Parameter(names='-spot-price', description = 'Price for spot/preemptive instances')
+    //@Parameter(names='-spot-price', description = 'Price for spot/preemptive instances')
+    @CommandLine.Option(names='--spot-price', description = 'Price for spot/preemptive instances')
     String spotPrice
 
-    @Parameter(names=['-p','-profile'], description='Configuration profile')
+    //@Parameter(names=['-p','-profile'], description='Configuration profile')
+    @CommandLine.Option(names=['-p','--profile'], description='Configuration profile')
     String profile
 
-    @Parameter(names=['-sort'], description = 'Sort price history by the specified field: type, price, zone, description')
+    //@Parameter(names=['-sort'], description = 'Sort price history by the specified field: type, price, zone, description')
+    @CommandLine.Option(names=['--sort'], description = 'Sort price history by the specified field: type, price, zone, description')
     String sort
 
-    @Parameter(names=['-F','-filter'], description = 'Filter price history by the specified field: type, price, zone, description')
+    //@Parameter(names=['-F','-filter'], description = 'Filter price history by the specified field: type, price, zone, description')
+    @CommandLine.Option(names=['-F','--filter'], description = 'Filter price history by the specified field: type, price, zone, description')
     String filter
 
-    @Parameter(names='-history', description = 'Print price history for the specified instance type')
+    //@Parameter(names='-history', description = 'Print price history for the specified instance type')
+    @CommandLine.Option(names=['-h','--history'], description = 'Print price history for the specified instance type')
     String history
 
-    @Parameter(names='-all', description = 'Print all prices and availability zones', arity = 0)
+    //@Parameter(names='-all', description = 'Print all prices and availability zones', arity = 0)
+    @CommandLine.Option(names=['--all'], description = 'Print all prices and availability zones', arity = '0')
     boolean all
 
-    @Parameter(names=['-r','-region'], description = 'The region to use. Overrides config/env settings.')
+    //@Parameter(names=['-r','-region'], description = 'The region to use. Overrides config/env settings.')
+    @CommandLine.Option(names=['-r','--region'], description = 'The region to use. Overrides config/env settings.')
     String region
 
-    @Parameter(names='-y', description = 'Skip launch confirmation')
+    //@Parameter(names='-y', description = 'Skip launch confirmation')
+    @CommandLine.Option(names=['-y'], description = 'Skip launch confirmation')
     boolean yes
 
-    @Parameter
+    //@Parameter
+    @CommandLine.Parameters( description = "")    //TODO mandatory? deescription?
     List<String> args
 
     private CloudDriver driver

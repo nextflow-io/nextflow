@@ -21,12 +21,14 @@
 package nextflow.cli
 
 import com.beust.jcommander.Parameter
+import picocli.CommandLine
 
 /**
  * Implement command shared methods
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CommandLine.Command (name = "Base")
 abstract class CmdBase implements Runnable {
 
     private Launcher launcher
@@ -37,6 +39,7 @@ abstract class CmdBase implements Runnable {
 
     void setLauncher( Launcher value ) { this.launcher = value }
 
-    @Parameter(names=['-h','-help'], description = 'Print the command usage', arity = 0, help = true)
+    //@Parameter(names=['-h','-help'], description = 'Print the command usage', arity = 0, help = true)
+    @CommandLine.Option(names=['-h','--help'], description = 'Print the command usage', usageHelp = true, arity = '0', help = true)
     boolean help
 }

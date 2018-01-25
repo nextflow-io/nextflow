@@ -38,22 +38,22 @@ import picocli.CommandLine.Option
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-@Parameters(commandDescription = "Print project and system runtime information")
-@CommandLine.Command
+//@Parameters(commandDescription = "Print project and system runtime information")
+@CommandLine.Command (name = "Info", description ="Print project and system runtime information")
 class CmdInfo extends CmdBase {
 
     static final public NAME = 'info'
 
-    @Parameter(description = 'project name')
+    //@Parameter(description = 'project name')
     @CommandLine.Parameters(description = 'Project name', arity = '0..1')
     List<String> args
 
-    @Parameter(names='-d',description = 'Show detailed information', arity = 0)
-    @Option(names=['-d'], description = 'Show detailed information', arity = '0..1')
+    //@Parameter(names='-d',description = 'Show detailed information', arity = 0)
+    @Option(names=['-d'], description = 'Show detailed information', arity = '0')
     boolean detailed
 
-    @Parameter(names='-dd', hidden = true, arity = 0)
-    @Option(names=['-dd'], description = 'Show more detailed information', arity = '0..1')
+    //@Parameter(names='-dd', hidden = true, arity = 0)
+    @Option(names=['-dd'], description = 'Show more detailed information',hidden = true, arity = '0')
     boolean moreDetailed
 
     @Override

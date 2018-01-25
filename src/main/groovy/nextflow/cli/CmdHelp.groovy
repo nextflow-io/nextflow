@@ -30,8 +30,8 @@ import picocli.CommandLine
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-@Parameters(commandDescription = "Print the usage help for a command")
-@CommandLine.Command
+//@Parameters(commandDescription = "Print the usage help for a command")
+@CommandLine.Command(name = "Help", description ="Print the usage help for a command")
 class CmdHelp extends CmdBase {
 
     static final public NAME = 'help'
@@ -39,7 +39,8 @@ class CmdHelp extends CmdBase {
     @Override
     final String getName() { NAME }
 
-    @Parameter(description = 'command name', arity = 1)
+    //@Parameter(description = 'command name', arity = 1)
+    @CommandLine.Parameters(arity = "1", description = "Command name")
     List<String> args
 
     private UsageAware getUsage( List<String> args ) {

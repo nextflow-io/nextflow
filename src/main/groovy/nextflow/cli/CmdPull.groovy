@@ -34,21 +34,23 @@ import picocli.CommandLine
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Download or update a project")
-@CommandLine.Command
+//@Parameters(commandDescription = "Download or update a project")
+@CommandLine.Command(name = "Pull", description ="Download or update a project")
 class CmdPull extends CmdBase implements HubOptions {
 
     static final public NAME = 'pull'
 
-    @Parameter(description = 'project name or repository url to pull', arity = 1)
+    //@Parameter(description = 'project name or repository url to pull', arity = 1)
+    @CommandLine.Parameters(description = 'project name or repository url to pull', arity = '1')
     List<String> args
 
-    @Parameter(names='-all', description = 'Update all downloaded projects', arity = 0)
+    //@Parameter(names='-all', description = 'Update all downloaded projects', arity = 0)
+    @CommandLine.Option(names=['--all'], description = 'Update all downloaded projects', arity = '0')
     boolean all
 
-    @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
+    //@Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
+    @CommandLine.Option(names=['-r','--revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
     String revision
-
 
 
     @Override
