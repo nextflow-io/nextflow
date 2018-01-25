@@ -18,43 +18,41 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.cli
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
+package nextflow.k8s.client
+
 import groovy.transform.CompileStatic
-import picocli.CommandLine
 
 /**
- * CLI sub-command HELP
+ * Model a Kubernetes API response
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-@Parameters(commandDescription = "Print the usage help for a command")
-@CommandLine.Command
-class CmdHelp extends CmdBase {
+class K8sResponseApi {
 
-    static final public NAME = 'help'
+    private int code
 
-    @Override
-    final String getName() { NAME }
+    private InputStream stream
 
-    @Parameter(description = 'command name', arity = 1)
-    List<String> args
+    private String text
 
-    private UsageAware getUsage( List<String> args ) {
-        def result = args ? launcher.findCommand(args[0]) : null
-        result instanceof UsageAware ? result as UsageAware: null
+    K8sResponseApi(int code, InputStream stream) {
+        this.code = code
+        this.stream = stream
     }
 
-    @Override
-    void run() {
-        def cmd = getUsage(args)
-        if( cmd ) {
-            cmd.usage(args.size()>1 ? args[1..-1] : Collections.<String>emptyList())
+    String toString() {
+        "code=$code; stream=$stream"
+    }
+
+    int getCode() { code }
+
+    InputStream getStream() { stream }
+
+    String getText() {
+        if( text == null ) {
+            text = stream?.text
         }
-        else {
-            launcher.usage(args ? args[0] : null)
-        }
+        return text
     }
 }

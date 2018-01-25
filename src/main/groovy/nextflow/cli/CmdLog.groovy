@@ -37,6 +37,8 @@ import nextflow.ui.TableBuilder
 
 import static nextflow.cli.CmdHelper.fixEqualsOp
 
+import picocli.CommandLine
+
 /**
  * Implements the `log` command to print tasks runtime information of an execute pipeline
  *
@@ -45,6 +47,7 @@ import static nextflow.cli.CmdHelper.fixEqualsOp
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Print executions log and runtime info")
+@CommandLine.Command
 class CmdLog extends CmdBase implements CacheBase {
 
     static private int MAX_LINES = 100

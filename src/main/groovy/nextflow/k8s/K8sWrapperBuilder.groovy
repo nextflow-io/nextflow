@@ -18,43 +18,38 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.cli
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
-import groovy.transform.CompileStatic
-import picocli.CommandLine
+package nextflow.k8s
+import java.nio.file.Path
 
+import groovy.transform.CompileStatic
+import nextflow.executor.BashWrapperBuilder
+import nextflow.processor.TaskRun
 /**
- * CLI sub-command HELP
+ * Implements a BASH wrapper for tasks executed by kubernetes cluster
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-@Parameters(commandDescription = "Print the usage help for a command")
-@CommandLine.Command
-class CmdHelp extends CmdBase {
+class K8sWrapperBuilder extends BashWrapperBuilder {
 
-    static final public NAME = 'help'
+    K8sWrapperBuilder(TaskRun task) {
+        super(task)
+    }
+
+    /**
+     * only for testing purpose -- do not use
+     */
+    protected K8sWrapperBuilder() {}
 
     @Override
-    final String getName() { NAME }
-
-    @Parameter(description = 'command name', arity = 1)
-    List<String> args
-
-    private UsageAware getUsage( List<String> args ) {
-        def result = args ? launcher.findCommand(args[0]) : null
-        result instanceof UsageAware ? result as UsageAware: null
+    boolean fixOwnership() {
+        containerConfig.fixOwnership
     }
 
     @Override
-    void run() {
-        def cmd = getUsage(args)
-        if( cmd ) {
-            cmd.usage(args.size()>1 ? args[1..-1] : Collections.<String>emptyList())
-        }
-        else {
-            launcher.usage(args ? args[0] : null)
-        }
+    Map<String,Path> getResolvedInputs() {
+        super.getResolvedInputs()
     }
+
+
 }

@@ -21,7 +21,6 @@
 package nextflow.cli
 
 import spock.lang.Specification
-import nextflow.cli.CmdConfig.OrderedProperties
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -162,45 +161,5 @@ class CmdConfigTest extends Specification {
 
     }
 
-
-    def 'should sort property keys' () {
-
-        given:
-        def props = new OrderedProperties()
-        props.setProperty('omega', '1')
-        props.setProperty('beta',  '3')
-        props.setProperty('delta', '2')
-        props.setProperty('alpha', '4')
-
-
-        when:
-        def e = props.keys()
-        then:
-        e.nextElement() == 'alpha'
-        e.nextElement() == 'beta'
-        e.nextElement() == 'delta'
-        e.nextElement() == 'omega'
-
-    }
-
-
-    def 'should create from a properties object' () {
-
-        given:
-        def config = new Properties()
-        config.'omega' = 1
-        config.'alpha' = 4
-        config.'delta.y' = 'Hello'
-        config.'delta.z' = 'world'
-
-        when:
-        def props = new OrderedProperties(config)
-        then:
-        props.'omega' == 1
-        props.'alpha' == 4
-        props.'delta.y' == 'Hello'
-        props.'delta.z' == 'world'
-        props.keys().toSet() == ['alpha', 'delta.y', 'delta.z','omega'] as Set
-    }
 
 }

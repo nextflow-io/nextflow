@@ -18,40 +18,57 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.cli
+package nextflow.k8s.client
 
-import com.beust.jcommander.Parameters
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.scm.AssetManager
-import picocli.CommandLine
 
 /**
- * CLI sub-command LIST. Prints a list of locally installed pipelines
+ * Model the response of a kubernetes api request
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "List all downloaded projects")
-@CommandLine.Command
-class CmdList extends CmdBase {
+class K8sResponseJson implements Map {
 
-    static final public NAME = 'list'
+    @Delegate
+    private Map response
 
-    @Override
-    final String getName() { NAME }
+    private String rawText
 
-    @Override
-    void run() {
+    K8sResponseJson(Map response) {
+        this.response = response
+    }
 
-        def all = AssetManager.list()
-        if( !all ) {
-            log.info '(none)'
-            return
+    K8sResponseJson(String response) {
+        this.response = toJson(response)
+        this.rawText = response
+    }
+
+    static private Map toJson(String raw) {
+        try {
+            return (Map)new JsonSlurper().parseText(raw)
         }
+        catch( Exception e ) {
+            log.debug "[K8s] cannot parse response to json -- raw: ${raw? '\n'+raw.indent('  ') :'null'}"
+            return Collections.emptyMap()
+        }
+    }
 
-        all.each { println it }
+    static private String prettyPrint(String json) {
+        try {
+            JsonOutput.prettyPrint(json)
+        }
+        catch( Exception e ) {
+            return json
+        }
+    }
+
+    String toString() {
+        rawText ? prettyPrint(rawText) : response?.toString()
     }
 
 }

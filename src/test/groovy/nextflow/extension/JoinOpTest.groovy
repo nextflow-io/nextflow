@@ -123,5 +123,20 @@ class JoinOpTest extends Specification {
         result == [1, 2, 3, 0, 0, 7, 8, 9]
     }
 
+    def 'should join a singleton value' () {
+
+        when:
+        given:
+        def ch1 = Channel.from( 1,2,3 )
+        def ch2 = Channel.value(1)
+
+        when:
+        def op = new JoinOp(ch1, ch2)
+        def result = op.apply().toList().getVal()
+        then:
+        result == [1]
+    }
+
+
 
 }

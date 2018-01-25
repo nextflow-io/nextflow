@@ -25,6 +25,8 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.scm.AssetManager
+import picocli.CommandLine
+
 /**
  * CLI sub-command PULL
  *
@@ -33,6 +35,7 @@ import nextflow.scm.AssetManager
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Download or update a project")
+@CommandLine.Command
 class CmdPull extends CmdBase implements HubOptions {
 
     static final public NAME = 'pull'

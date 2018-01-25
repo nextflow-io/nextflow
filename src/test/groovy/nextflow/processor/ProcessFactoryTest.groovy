@@ -23,13 +23,13 @@ import nextflow.Session
 import nextflow.executor.AwsBatchExecutor
 import nextflow.executor.CondorExecutor
 import nextflow.executor.Executor
-import nextflow.executor.KubernetesExecutor
 import nextflow.executor.LocalExecutor
 import nextflow.executor.LsfExecutor
 import nextflow.executor.NopeExecutor
 import nextflow.executor.PbsExecutor
 import nextflow.executor.SgeExecutor
 import nextflow.executor.SlurmExecutor
+import nextflow.k8s.K8sExecutor
 import nextflow.script.BaseScript
 import nextflow.script.ScriptType
 import nextflow.util.ServiceName
@@ -56,7 +56,7 @@ class ProcessFactoryTest extends Specification {
         factory.loadExecutorClass('pbs') == PbsExecutor
         factory.loadExecutorClass('slurm') == SlurmExecutor
         factory.loadExecutorClass('condor') == CondorExecutor
-        factory.loadExecutorClass('k8s') == KubernetesExecutor
+        factory.loadExecutorClass('k8s') == K8sExecutor
         factory.loadExecutorClass('awsbatch') == AwsBatchExecutor
         factory.loadExecutorClass('AwsBatch') == AwsBatchExecutor
         factory.loadExecutorClass('aws-batch') == AwsBatchExecutor

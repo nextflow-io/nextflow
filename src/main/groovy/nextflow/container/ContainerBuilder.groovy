@@ -19,10 +19,8 @@
  */
 
 package nextflow.container
-
 import java.nio.file.Path
 
-import groovy.transform.PackageScope
 import nextflow.util.Escape
 import nextflow.util.MemoryUnit
 import nextflow.util.PathTrie
@@ -154,7 +152,6 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
         return (V)this
     }
 
-    @PackageScope
     static List<Path> inputFilesToPaths( Map<String,Path> inputFiles ) {
 
         def List<Path> files = []

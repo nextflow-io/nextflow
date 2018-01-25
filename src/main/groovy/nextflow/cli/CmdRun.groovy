@@ -34,6 +34,7 @@ import nextflow.Const
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
+import nextflow.k8s.K8sDriverLauncher
 import nextflow.scm.AssetManager
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
@@ -41,6 +42,8 @@ import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import org.yaml.snakeyaml.Yaml
+import picocli.CommandLine
+
 /**
  * CLI sub-command RUN
  *
@@ -49,6 +52,7 @@ import org.yaml.snakeyaml.Yaml
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Execute a pipeline project")
+@CommandLine.Command
 class CmdRun extends CmdBase implements HubOptions {
 
 
@@ -76,7 +80,7 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-lib'], description = 'Library extension path')
     String libPath
 
-    @Parameter(names=['-cache'], description = 'enable/disable processes caching', arity = 1)
+    @Parameter(names=['-cache'], description = 'Enable/disable processes caching', arity = 1)
     boolean cacheable = true
 
     @Parameter(names=['-resume'], description = 'Execute the script using the cached results, useful to continue executions that was stopped by an error')
@@ -91,10 +95,10 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-qs','-queue-size'], description = 'Max number of processes that can be executed in parallel by each executor')
     Integer queueSize
 
-    @Parameter(names=['-test'], description = 'Test function with the specified name')
+    @Parameter(names=['-test'], description = 'Test a script function with the name specified')
     String test
 
-    @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate results are stored')
+    @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate result files are stored')
     String workDir
 
     /**
@@ -106,19 +110,19 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names='-params-file', description = 'Load script parameters from a JSON/YAML file')
     String paramsFile
 
-    @DynamicParameter(names = ['-process.'], description = 'Set process default options' )
+    @DynamicParameter(names = ['-process.'], description = 'Set process options' )
     Map<String,String> process = [:]
 
     @DynamicParameter(names = ['-e.'], description = 'Add the specified variable to execution environment')
     Map<String,String> env = [:]
 
-    @Parameter(names = ['-E'], description = 'Exports all the current system environment')
+    @Parameter(names = ['-E'], description = 'Exports all current system environment')
     boolean exportSysEnv
 
-    @DynamicParameter(names = ['-executor.'], description = 'Executor(s) options', hidden = true )
+    @DynamicParameter(names = ['-executor.'], description = 'Set executor options', hidden = true )
     Map<String,String> executorOptions = [:]
 
-    @Parameter(description = 'project name or repository url')
+    @Parameter(description = 'Project name or repository url')
     List<String> args
 
     @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
@@ -154,6 +158,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names = '-without-docker', description = 'Disable process execution with Docker', arity = 0)
     boolean withoutDocker
 
+    @Parameter(names = ['-with-k8s', '-K'], description = 'Enable execution in a Kubernetes cluster')
+    def withKubernetes
+
     @Parameter(names = '-with-mpi', hidden = true)
     boolean withMpi
 
@@ -168,7 +175,7 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-c','-config'], hidden = true )
     List<String> runConfig
 
-    @DynamicParameter(names = ['-cluster.'], description = 'Define cluster options', hidden = true )
+    @DynamicParameter(names = ['-cluster.'], description = 'Set cluster options', hidden = true )
     Map<String,String> clusterOptions = [:]
 
     @Parameter(names=['-profile'], description = 'Choose a configuration profile')
@@ -188,7 +195,8 @@ class CmdRun extends CmdBase implements HubOptions {
 
     @Override
     void run() {
-        String pipeline = stdin ? '-' : ( args ? args[0] : null )
+        final scriptArgs = (args?.size()>1 ? args[1..-1] : []) as List<String>
+        final pipeline = stdin ? '-' : ( args ? args[0] : null )
         if( !pipeline )
             throw new AbortOperationException("No project name was specified")
 
@@ -197,14 +205,19 @@ class CmdRun extends CmdBase implements HubOptions {
 
         checkRunName()
 
+        if( withKubernetes ) {
+            // that's another story
+            new K8sDriverLauncher(cmd: this, runName: runName).run(pipeline, scriptArgs)
+            return
+        }
+
         log.info "N E X T F L O W  ~  version ${Const.APP_VER}"
 
         // -- specify the arguments
-        def scriptArgs = (args?.size()>1 ? args[1..-1] : []) as List<String>
-        def scriptFile = getScriptFile(pipeline)
+        final scriptFile = getScriptFile(pipeline)
 
         // create the config object
-        def config = new ConfigBuilder()
+        final config = new ConfigBuilder()
                         .setOptions(launcher.options)
                         .setCmdRun(this)
                         .setBaseDir(scriptFile.parent)
@@ -393,4 +406,5 @@ class CmdRun extends CmdBase implements HubOptions {
             throw new AbortOperationException("Cannot parse params file: $file", e)
         }
     }
+
 }

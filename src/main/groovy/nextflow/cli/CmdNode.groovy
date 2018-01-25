@@ -28,6 +28,8 @@ import nextflow.config.ConfigBuilder
 import nextflow.daemon.DaemonLauncher
 import nextflow.util.ServiceName
 import nextflow.util.ServiceDiscover
+import picocli.CommandLine
+
 /**
  * CLI-command NODE
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -35,6 +37,7 @@ import nextflow.util.ServiceDiscover
 @Slf4j
 @CompileStatic
 @Parameters
+@CommandLine.Command
 class CmdNode extends CmdBase {
 
     static final public NAME = 'node'

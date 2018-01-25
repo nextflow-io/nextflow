@@ -26,6 +26,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.scm.AssetManager
+import picocli.CommandLine
 
 /**
  * CLI sub-command DROP
@@ -35,6 +36,7 @@ import nextflow.scm.AssetManager
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Delete the local copy of a project")
+@CommandLine.Command
 class CmdDrop extends CmdBase {
 
     static final public NAME = 'drop'

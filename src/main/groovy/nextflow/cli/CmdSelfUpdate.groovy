@@ -21,6 +21,7 @@
 package nextflow.cli
 
 import com.beust.jcommander.Parameters
+import picocli.CommandLine
 
 /**
  * Self-update command
@@ -28,6 +29,7 @@ import com.beust.jcommander.Parameters
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Parameters(commandDescription = "Update nextflow runtime to the latest available version")
+@CommandLine.Command
 class CmdSelfUpdate extends CmdBase {
     @Override
     String getName() { 'self-update' }

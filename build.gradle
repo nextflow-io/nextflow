@@ -140,6 +140,7 @@ dependencies {
     compile("ch.grengine:grengine:1.2.1") { exclude group: 'org.codehaus.groovy', module: 'groovy-all' }
     compile "commons-lang:commons-lang:2.6"
     compile "com.beust:jcommander:1.35"
+    compile('info.picocli:picocli:2.2.1')
     compile("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
     compile('org.iq80.leveldb:leveldb:0.7')
     compile('org.eclipse.jgit:org.eclipse.jgit:4.8.0.201706111038-r')
