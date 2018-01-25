@@ -30,6 +30,7 @@ import nextflow.k8s.client.K8sResponseException
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.trace.TraceRecord
 import nextflow.util.PathTrie
 /**
  * Implements the {@link TaskHandler} interface for kubenetes jobs
@@ -258,6 +259,12 @@ class K8sTaskHandler extends TaskHandler {
         else {
             log.debug "[K8s] Oops.. invalid delete action"
         }
+    }
+
+    TraceRecord getTraceRecord() {
+        final result = super.getTraceRecord()
+        result.put('native_id', podName)
+        return result
     }
 
 }

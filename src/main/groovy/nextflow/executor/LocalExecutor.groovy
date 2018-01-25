@@ -248,7 +248,7 @@ class LocalTaskHandler extends TaskHandler {
     @Override
     TraceRecord getTraceRecord() {
         def result = super.getTraceRecord()
-        result.native_id = this.process?.pid
+        result.put('native_id', this.process?.pid)
         return result
     }
 

@@ -61,6 +61,7 @@ import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import nextflow.util.Escape
@@ -588,6 +589,12 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      */
     protected String normalizeJobName(String name) {
         name.replaceAll(' ','_').replaceAll(/[^a-zA-Z0-9_]/,'')
+    }
+
+    TraceRecord getTraceRecord() {
+        def result = super.getTraceRecord()
+        result.put('native_id', jobId)
+        return result
     }
 }
 
