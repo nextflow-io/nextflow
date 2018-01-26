@@ -62,12 +62,17 @@ ext {
 
 allprojects {
     apply plugin: 'java'
+    apply plugin: 'idea'
 
     version = '0.28.0-SNAPSHOT'
     group = 'io.nextflow'
 
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
+
+    idea {
+        module.inheritOutputDirs = true
+    }
 
     repositories {
         jcenter()
