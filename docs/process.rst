@@ -498,7 +498,7 @@ usual square brackets notation.
 When a target file name is defined in the input parameter and a collection of files is received by the process,
 the file name will be appended by a numerical suffix representing its ordinal position in the list. For example::
 
-    fasta = Channel.fromPath( "/some/path/*.fa" ).buffer(count:3)
+    fasta = Channel.fromPath( "/some/path/*.fa" ).buffer(size:3)
 
     process blastThemAll {
         input:
@@ -533,7 +533,7 @@ Cardinality   Name pattern     Staged file names
 The following fragment shows how a wildcard can be used in the input file declaration::
 
 
-    fasta = Channel.fromPath( "/some/path/*.fa" ).buffer(count:3)
+    fasta = Channel.fromPath( "/some/path/*.fa" ).buffer(size:3)
 
     process blastThemAll {
         input:
