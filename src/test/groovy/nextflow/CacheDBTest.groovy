@@ -73,7 +73,7 @@ class CacheDBTest extends Specification {
         when:
         def trace = new TraceRecord([task_id: 1, process: 'foo', exit: 0])
         def handler = new CachedTaskHandler(task, trace)
-        cache.writeTaskEntry0( handler )
+        cache.writeTaskEntry0( handler, trace )
         then:
         1 * proc.isCacheable() >> true
         1 * task.hasCacheableValues() >> true
@@ -129,20 +129,21 @@ class CacheDBTest extends Specification {
         def hash2 = CacheHelper.hasher('x').hash()
         def hash3 = CacheHelper.hasher('x').hash()
         def runName = 'test_1'
+        def trace = Mock(TraceRecord)
 
         when:
         def cache = new CacheDB(uuid, runName, folder).open()
 
         def h1 = makeTaskHandler(hash1, [task_id: 1, process: 'foo', exit: 0])
-        cache.writeTaskEntry0(h1)
+        cache.writeTaskEntry0(h1, h1.traceRecord)
         cache.writeTaskIndex0(h1)
 
         def h2 = makeTaskHandler(hash2, [task_id: 2, process: 'bar', exit: 0])
-        cache.writeTaskEntry0(h2)
+        cache.writeTaskEntry0(h2, h1.traceRecord)
         cache.writeTaskIndex0(h2)
 
         def h3 = makeTaskHandler(hash3, [task_id: 3, process: 'baz', exit: 1])
-        cache.writeTaskEntry0(h3)
+        cache.writeTaskEntry0(h3, h1.traceRecord)
         cache.writeTaskIndex0(h3)
 
         // done

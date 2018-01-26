@@ -189,7 +189,7 @@ class CacheDB implements Closeable {
         def payload = db.get(key)
         if( !payload ) {
             log.debug "Can't increment reference for cached task with key: $hash"
-            return
+            return false
         }
 
         final record = (List)KryoHelper.deserialize(payload)
@@ -213,13 +213,12 @@ class CacheDB implements Closeable {
      * @param handler A {@link TaskHandler} instance
      */
     @PackageScope
-    void writeTaskEntry0( TaskHandler handler ) {
+    void writeTaskEntry0( TaskHandler handler, TraceRecord trace ) {
 
         final task = handler.task
         final proc = task.processor
         final key = task.hash.asBytes()
 
-        final trace = handler.getTraceRecord()
         // save the context map for caching purpose
         // only the 'cache' is active and
         TaskContext ctx = proc.isCacheable() && task.hasCacheableValues() ? task.context : null
@@ -234,8 +233,8 @@ class CacheDB implements Closeable {
 
     }
 
-    void putTaskAsync( TaskHandler handler ) {
-        writer.send { writeTaskEntry0(handler) }
+    void putTaskAsync( TaskHandler handler, TraceRecord trace ) {
+        writer.send { writeTaskEntry0(handler, trace) }
     }
 
     void cacheTaskAsync( TaskHandler handler ) {

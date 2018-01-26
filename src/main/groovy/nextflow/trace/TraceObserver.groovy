@@ -51,25 +51,25 @@ interface TraceObserver {
      * This method is invoked before a process run is going to be submitted
      * @param handler
      */
-    void onProcessSubmit(TaskHandler handler)
+    void onProcessSubmit(TaskHandler handler, TraceRecord trace)
 
     /**
      * This method is invoked when a process run is going to start
      * @param handler
      */
-    void onProcessStart(TaskHandler handler)
+    void onProcessStart(TaskHandler handler, TraceRecord trace)
 
     /**
      * This method is invoked when a process run completes
      * @param handler
      */
-    void onProcessComplete(TaskHandler handler)
+    void onProcessComplete(TaskHandler handler, TraceRecord trace)
 
     /**
      * method invoked when a task execution is skipped because a cached result is found
      * @param handler
      */
-    void onProcessCached(TaskHandler handler)
+    void onProcessCached(TaskHandler handler, TraceRecord trace)
 
     /**
      * @return {@code true} whenever this observer requires to collect task execution metrics

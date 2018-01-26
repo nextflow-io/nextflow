@@ -160,9 +160,8 @@ class ReportObserver implements TraceObserver {
      * @param handler A {@link TaskHandler} object representing the task submitted
      */
     @Override
-    void onProcessSubmit(TaskHandler handler) {
+    void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
         log.trace "Trace report - submit process > $handler"
-        final trace = handler.getTraceRecord()
         synchronized (records) {
             records[ trace.taskId ] = trace
         }
@@ -174,9 +173,8 @@ class ReportObserver implements TraceObserver {
      * @param handler  A {@link TaskHandler} object representing the task started
      */
     @Override
-    void onProcessStart(TaskHandler handler) {
+    void onProcessStart(TaskHandler handler, TraceRecord trace) {
         log.trace "Trace report - start process > $handler"
-        def trace = handler.getTraceRecord()
         synchronized (records) {
             records[ trace.taskId ] = trace
         }
@@ -188,17 +186,16 @@ class ReportObserver implements TraceObserver {
      * @param handler A {@link TaskHandler} object representing the task completed
      */
     @Override
-    void onProcessComplete(TaskHandler handler) {
+    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
         log.trace "Trace report - complete process > $handler"
-        final record = handler.getTraceRecord()
-        if( !record ) {
+        if( !trace ) {
             log.debug "WARN: Unable to find trace record for task id=${handler.task?.id}"
             return
         }
 
         synchronized (records) {
-            records[ record.taskId ] = record
-            aggregate(record)
+            records[ trace.taskId ] = trace
+            aggregate(trace)
         }
     }
 
@@ -208,14 +205,13 @@ class ReportObserver implements TraceObserver {
      * @param handler A {@link TaskHandler} object representing the task cached
      */
     @Override
-    void onProcessCached(TaskHandler handler) {
+    void onProcessCached(TaskHandler handler, TraceRecord trace) {
         log.trace "Trace report - cached process > $handler"
-        final record = handler.getTraceRecord()
 
         // remove the record from the current records
         synchronized (records) {
-            records[ record.taskId ] = record
-            aggregate(record)
+            records[ trace.taskId ] = trace
+            aggregate(trace)
         }
     }
 

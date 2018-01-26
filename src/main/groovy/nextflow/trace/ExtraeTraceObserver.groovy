@@ -120,12 +120,12 @@ class ExtraeTraceObserver implements TraceObserver {
 
 
     @Override
-    void onProcessSubmit(TaskHandler handler) {
+    void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
 
     }
 
     @Override
-    void onProcessStart( TaskHandler handler ) {
+    void onProcessStart( TaskHandler handler, TraceRecord trace ) {
 
         long taskId = handler.getTask().id as long
         long procId = handler.getTask().processor.id
@@ -146,28 +146,27 @@ class ExtraeTraceObserver implements TraceObserver {
     }
 
     @Override
-    void onProcessComplete( TaskHandler handler ) {
+    void onProcessComplete( TaskHandler handler, TraceRecord trace) {
 
         final taskId = handler.getTask().id as long
-        final record = handler.getTraceRecord()
 
         Wrapper.resumeVirtualThread( taskId+1 )
         Wrapper.Event(1001, 0)
         Wrapper.Event(1002, 0)
-        Wrapper.Event(1003, (record.get('%cpu') as Float ?: 0f) * 10L as long)      // note: since the cpu usage percentage can contain a decimal digit, the value is multiply by 10
-        Wrapper.Event(1004, (record.get('rss') ?: 0) as long)                       // rss (bytes)
-        Wrapper.Event(1005, (record.get('vmem') ?: 0) as long)                      // virtual memory (bytes)
-        Wrapper.Event(1006, (record.get('rchar') ?: 0) as long)                     // read chars (bytes)
-        Wrapper.Event(1007, (record.get('wchar') ?: 0) as long)                     // write chars (bytes)
-        Wrapper.Event(1008, (record.get('syscr') ?: 0) as long)                     // number of read ops
-        Wrapper.Event(1009, (record.get('syscw') ?: 0) as long)                     // number of write ops
+        Wrapper.Event(1003, (trace.get('%cpu') as Float ?: 0f) * 10L as long)      // note: since the cpu usage percentage can contain a decimal digit, the value is multiply by 10
+        Wrapper.Event(1004, (trace.get('rss') ?: 0) as long)                       // rss (bytes)
+        Wrapper.Event(1005, (trace.get('vmem') ?: 0) as long)                      // virtual memory (bytes)
+        Wrapper.Event(1006, (trace.get('rchar') ?: 0) as long)                     // read chars (bytes)
+        Wrapper.Event(1007, (trace.get('wchar') ?: 0) as long)                     // write chars (bytes)
+        Wrapper.Event(1008, (trace.get('syscr') ?: 0) as long)                     // number of read ops
+        Wrapper.Event(1009, (trace.get('syscw') ?: 0) as long)                     // number of write ops
 
         Wrapper.suspendVirtualThread()
 
     }
 
-    void onProcessCached( TaskHandler handler ) {
-        //onProcessComplete(handler)
+    void onProcessCached( TaskHandler handler, TraceRecord trace ) {
+
     }
 
     /**

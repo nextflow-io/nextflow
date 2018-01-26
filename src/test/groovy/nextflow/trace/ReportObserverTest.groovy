@@ -164,26 +164,24 @@ class ReportObserverTest extends Specification {
         def HANDLER3 = Mock(TaskHandler)
 
         when:
-        observer.onProcessStart(HANDLER1)
+        observer.onProcessStart(HANDLER1, RECORD1)
         then:
-        1 * HANDLER1.getTraceRecord() >> RECORD1
         observer.records[TASKID1] == RECORD1
 
         when:
-        observer.onProcessComplete(HANDLER1)
+        observer.onProcessComplete(HANDLER1, RECORD1)
         then:
-        1 * HANDLER1.getTraceRecord() >> RECORD1
+        1 * observer.aggregate(RECORD1) >> null
 
         when:
-        observer.onProcessCached(HANDLER2)
+        observer.onProcessCached(HANDLER2, RECORD2)
         then:
-        1 * HANDLER2.getTraceRecord() >> RECORD2
+        1 * observer.aggregate(RECORD2) >> null
         observer.records[TASKID2] == RECORD2
 
         when:
-        observer.onProcessStart(HANDLER3)
+        observer.onProcessStart(HANDLER3, RECORD3)
         then:
-        1 * HANDLER3.getTraceRecord() >> RECORD3
         observer.records[TASKID3] == RECORD3
     }
 

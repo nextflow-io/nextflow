@@ -95,22 +95,22 @@ class GraphObserver implements TraceObserver {
 
 
     @Override
-    void onProcessSubmit(TaskHandler handler) {
+    void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
 
     }
 
     @Override
-    void onProcessStart(TaskHandler handler) {
+    void onProcessStart(TaskHandler handler, TraceRecord trace) {
 
     }
 
     @Override
-    void onProcessComplete(TaskHandler handler) {
+    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
 
     }
 
     @Override
-    void onProcessCached(TaskHandler handler) {
+    void onProcessCached(TaskHandler handler, TraceRecord trace) {
 
     }
 

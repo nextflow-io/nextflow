@@ -239,8 +239,7 @@ class TraceFileObserver implements TraceObserver {
      * @param handler
      */
     @Override
-    void onProcessSubmit(TaskHandler handler) {
-        def trace = handler.getTraceRecord()
+    void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
         current[ trace.taskId ] = trace
     }
 
@@ -249,8 +248,7 @@ class TraceFileObserver implements TraceObserver {
      * @param handler
      */
     @Override
-    void onProcessStart(TaskHandler handler) {
-        def trace = handler.getTraceRecord()
+    void onProcessStart(TaskHandler handler, TraceRecord trace) {
         current[ trace.taskId ] = trace
     }
 
@@ -259,10 +257,9 @@ class TraceFileObserver implements TraceObserver {
      * @param handler
      */
     @Override
-    void onProcessComplete(TaskHandler handler) {
+    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
         final taskId = handler.task.id
-        final record = handler.getTraceRecord()
-        if( !record ) {
+        if( !trace ) {
             log.debug "Profile warn: Unable to find record for task_run with id: ${taskId}"
             return
         }
@@ -271,13 +268,13 @@ class TraceFileObserver implements TraceObserver {
         current.remove(taskId)
 
         // save to the file
-        writer.send { PrintWriter it -> it.println(render(record)); it.flush() }
+        writer.send { PrintWriter it -> it.println(render(trace)); it.flush() }
     }
 
     @Override
-    void onProcessCached(TaskHandler handler) {
+    void onProcessCached(TaskHandler handler, TraceRecord trace) {
         // save to the file
-        writer.send { PrintWriter it -> it.println(render( handler.getTraceRecord() )); it.flush() }
+        writer.send { PrintWriter it -> it.println(render( trace )); it.flush() }
     }
 
     /**
