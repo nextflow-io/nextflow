@@ -1215,8 +1215,8 @@ You can use it to request non-standard resources or use settings that are specif
 out of the box by Nextflow.
 
 .. note:: This directive is taken in account only when using a grid based executor:
-  :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor`,
-  :ref:`condor-executor` and :ref:`drmaa-executor` executors.
+  :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor` and
+  :ref:`condor-executor` executors.
 
 .. _process-disk:
 
@@ -1674,7 +1674,7 @@ Multiple queues can be specified by separating their names with a comma for exam
 
 
 .. note:: This directive is taken in account only by the following executors: :ref:`sge-executor`, :ref:`lsf-executor`,
-  :ref:`slurm-executor`, :ref:`pbs-executor` and :ref:`drmaa-executor` executors.
+  :ref:`slurm-executor` and :ref:`pbs-executor` executors.
 
 .. _process-scratch:
 
@@ -1876,8 +1876,8 @@ d       Days
 ======= =============
 
 .. note:: This directive is taken in account only when using one of the following grid based executors:
-  :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor`,
-  :ref:`condor-executor` and :ref:`drmaa-executor` executors.
+  :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor` and
+  :ref:`condor-executor` executors.
 
 See also: `cpus`_, `memory`_, `queue`_ and `Dynamic computing resources`_.
 
