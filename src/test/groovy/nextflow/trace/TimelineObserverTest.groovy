@@ -140,9 +140,9 @@ class TimelineObserverTest extends Specification {
 
         when:
         def observer = new TimelineObserver(Mock(Path))
-        observer.onProcessComplete(h1)
-        observer.onProcessComplete(h2)
-        observer.onProcessComplete(h3)
+        observer.onProcessComplete(h1, h1.getTraceRecord())
+        observer.onProcessComplete(h2, h2.getTraceRecord())
+        observer.onProcessComplete(h3, h3.getTraceRecord())
         then:
         observer.records[TaskId.of(1)] == r1
         observer.records[TaskId.of(2)] == r2

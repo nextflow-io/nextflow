@@ -53,20 +53,19 @@ class StatsObserver implements TraceObserver {
     }
 
     @Override
-    void onProcessSubmit(TaskHandler handler) {
+    void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
 
     }
 
     @Override
-    void onProcessStart(TaskHandler handler) {
+    void onProcessStart(TaskHandler handler, TraceRecord trace) {
 
     }
 
     @Override
-    void onProcessComplete(TaskHandler handler) {
-        final record = handler.getTraceRecord()
-        if( record ) {
-            stats.updateTasksCompleted(record)
+    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
+        if( trace ) {
+            stats.updateTasksCompleted(trace)
         }
         else {
             log.debug "WARN: Unable to find trace record for task id=${handler.task?.id}"
@@ -74,10 +73,9 @@ class StatsObserver implements TraceObserver {
     }
 
     @Override
-    void onProcessCached(TaskHandler handler) {
-        final record = handler.getTraceRecord()
-        if( record ) {
-            stats.updateTasksCached(record)
+    void onProcessCached(TaskHandler handler, TraceRecord trace) {
+        if( trace ) {
+            stats.updateTasksCached(trace)
         }
         else {
             log.debug "WARN: Unable to find trace record for task id=${handler.task?.id}"

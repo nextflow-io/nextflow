@@ -82,15 +82,15 @@ class CmdLogTest extends Specification {
         cache.open()
         def h1 = new CachedTaskHandler(task1, new TraceRecord([task_id: 1, process: 'foo', exit: 0, workdir:"$folder/aaa"]))
         cache.writeTaskIndex0(h1)
-        cache.writeTaskEntry0(h1)
+        cache.writeTaskEntry0(h1, h1.getTraceRecord())
 
         def h2 = new CachedTaskHandler(task2, new TraceRecord([task_id: 2, process: 'foo', exit: 1, workdir:"$folder/bbb"]))
         cache.writeTaskIndex0(h2)
-        cache.writeTaskEntry0(h2)
+        cache.writeTaskEntry0(h2, h2.getTraceRecord())
 
         def h3 = new CachedTaskHandler(task3, new TraceRecord([task_id: 3, process: 'bar', exit: 0, workdir:"$folder/ccc"]))
         cache.writeTaskIndex0(h3)
-        cache.writeTaskEntry0(h3)
+        cache.writeTaskEntry0(h3, h3.getTraceRecord())
         cache.close()
 
         def history = new HistoryFile(folder.resolve(HistoryFile.FILE_NAME))
@@ -149,15 +149,15 @@ class CmdLogTest extends Specification {
         cache.open()
         def h1 = new CachedTaskHandler(task1, new TraceRecord([task_id: 1, process: 'foo', exit: 0, workdir:"$folder/aaa"]))
         cache.writeTaskIndex0(h1)
-        cache.writeTaskEntry0(h1)
+        cache.writeTaskEntry0(h1, h1.getTraceRecord())
 
         def h2 = new CachedTaskHandler(task2, new TraceRecord([task_id: 2, process: 'foo', exit: 1, workdir:"$folder/bbb"]))
         cache.writeTaskIndex0(h2)
-        cache.writeTaskEntry0(h2)
+        cache.writeTaskEntry0(h2, h2.getTraceRecord())
 
         def h3 = new CachedTaskHandler(task3, new TraceRecord([task_id: 3, process: 'bar', exit: 0, workdir:"$folder/ccc"]))
         cache.writeTaskIndex0(h3)
-        cache.writeTaskEntry0(h3)
+        cache.writeTaskEntry0(h3, h3.getTraceRecord())
         cache.close()
 
         def history = new HistoryFile(folder.resolve(HistoryFile.FILE_NAME))

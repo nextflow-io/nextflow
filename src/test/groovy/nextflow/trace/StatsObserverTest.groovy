@@ -39,15 +39,13 @@ class StatsObserverTest extends Specification {
         def HANDLER2 = Mock(TaskHandler)
 
         when:
-        observer.onProcessComplete(HANDLER1)
+        observer.onProcessComplete(HANDLER1, RECORD1)
         then:
-        1 * HANDLER1.getTraceRecord() >> RECORD1
         1 * stats.updateTasksCompleted(RECORD1) >> null
 
         when:
-        observer.onProcessCached(HANDLER2)
+        observer.onProcessCached(HANDLER2, RECORD2)
         then:
-        1 * HANDLER2.getTraceRecord() >> RECORD2
         1 * stats.updateTasksCached(RECORD2) >> null
     }
 

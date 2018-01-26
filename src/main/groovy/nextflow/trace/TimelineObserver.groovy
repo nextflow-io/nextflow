@@ -94,8 +94,7 @@ class TimelineObserver implements TraceObserver {
      * @param handler
      */
     @Override
-    void onProcessSubmit(TaskHandler handler) {
-        final trace = handler.getTraceRecord()
+    void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
         synchronized (records) {
             records[ trace.taskId ] = trace
         }
@@ -106,8 +105,7 @@ class TimelineObserver implements TraceObserver {
      * @param handler
      */
     @Override
-    void onProcessStart(TaskHandler handler) {
-        def trace = handler.getTraceRecord()
+    void onProcessStart(TaskHandler handler, TraceRecord trace) {
         synchronized (records) {
             records[ trace.taskId ] = trace
         }
@@ -118,31 +116,28 @@ class TimelineObserver implements TraceObserver {
      * @param handler
      */
     @Override
-    void onProcessComplete(TaskHandler handler) {
+    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
         final taskId = handler.task.id
-        final record = handler.getTraceRecord()
-        if( !record ) {
+        if( !trace ) {
             log.debug "Profile warn: Unable to find record for task_run with id: ${taskId}"
             return
         }
 
         // remove the record from the current records
         synchronized (records) {
-            records[ record.taskId ] = record
+            records[ trace.taskId ] = trace
         }
     }
 
     @Override
-    void onProcessCached(TaskHandler handler) {
-
-        final record = handler.getTraceRecord()
+    void onProcessCached(TaskHandler handler, TraceRecord trace) {
 
         // remove the record from the current records
         synchronized (records) {
-            records[ record.taskId ] = record
+            records[ trace.taskId ] = trace
         }
 
-        beginMillis = Math.min( beginMillis, record.get('submit') as long )
+        beginMillis = Math.min( beginMillis, trace.get('submit') as long )
     }
 
 
