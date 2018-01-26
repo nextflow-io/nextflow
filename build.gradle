@@ -117,7 +117,6 @@ allprojects {
 configurations {
     capsule
     //provided
-    drmaa.extendsFrom runtime
     ignite.extendsFrom runtime
     console.extendsFrom runtime
     gdocLibs.extendsFrom runtime
@@ -158,8 +157,6 @@ dependencies {
     runtime "org.apache.ivy:ivy:2.3.0"
 
     // library used to compile but not included in the final jar
-    //provided 'us.levk:drmaa-common:1.0'
-    //testCompile 'us.levk:drmaa-common:1.0'
 
     // Capsule manages the fat jar building process
     capsule(project(':my-capsule'))
@@ -169,10 +166,6 @@ dependencies {
     }
 
     console(project(':nxf-console')) {
-        exclude module: 'nextflow'
-    }
-
-    drmaa(project(':nxf-drmaa')) {
         exclude module: 'nextflow'
     }
 
@@ -302,7 +295,6 @@ ext.deployable << project(':')
 ext.deployable << project(':nxf-commons')
 ext.deployable << project(':nxf-ignite')
 ext.deployable << project(':nxf-console')
-ext.deployable << project(':nxf-drmaa')
 ext.deployable << project(':nxf-httpfs')
 
 protected error(String message) {
@@ -383,12 +375,6 @@ task packOne(type: Jar) {
      */
     deps = resolveDeps('ignite')
     manifest.attributes('Dependencies': deps, 'ignite')
-
-    /*
-     * `drmaa` dependencies
-     */
-    deps = resolveDeps('drmaa')
-    manifest.attributes('Dependencies': deps, 'drmaa')
 
     doLast {
         ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: releaseDir, overwrite: true)

@@ -180,48 +180,6 @@ The amount of resources requested by each job submission is defined by the follo
 * :ref:`process-clusterOptions`
 
 
-.. _drmaa-executor:
-
-DRMAA
-=====
-
-.. warning:: This feature has been deprecated and it will be removed in a future release
-
-The `DRMAA` executor allows you to execute a Nextflow pipeline by using a grid engine that implements the
-Java binding for the `DRMAA <http://www.drmaa.org>`_ interface api (version 1).
-
-.. warning:: This is an incubating feature. It may change in future Nextflow releases.
-
-In order to be able to use this executor you will need to access the DRMAA libraries provided by your cluster vendor.
-Commonly these files are named ``drmaa.jar`` and ``libdrmaa.so`` and they are located in the cluster installation lib folder.
-Ask to your IT administrator how to find these files.
-
-To enable the PBS executor you will need to set the property ``process.executor='drmaa'`` in the ``nextflow.config`` file,
-moreover you will need to specify the ``drmaa.jar`` library path on the Nextflow command line by using the ``-with-drmaa``
-option. For example::
-
-  nextflow run <your pipeline> -with-drmaa /some/path/drmaa.jar
-
-
-Alternatively, instead of specifying the DRMAA library on the command line, you may want to use the environment variable
-``NXF_DRMAA`` to define it.
-
-.. tip:: If you get the following error message::
-
-      ERROR: java.lang.UnsatisfiedLinkError: no drmaa in java.library.path
-
-    It means that Nextflow is unable to find ``libdrmaa.so`` file. The most common solution is
-    to include the path where this file is located in the ``LD_LIBRARY_PATH`` environment variable.
-
-
-The amount of resources requested by each job submission is defined by the following process directives:
-
-* :ref:`process-cpus`
-* :ref:`process-queue`
-* :ref:`process-time`
-* :ref:`process-memory`
-* :ref:`process-clusterOptions`
-
 .. _ignite-executor:
 
 Ignite
