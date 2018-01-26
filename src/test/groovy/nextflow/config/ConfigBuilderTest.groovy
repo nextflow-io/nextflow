@@ -587,20 +587,6 @@ class ConfigBuilderTest extends Specification {
 
     }
 
-    def 'should set session extrae enabled'  () {
-
-        given:
-        def env = [:]
-        def config = new ConfigObject()
-        def builder = [:] as ConfigBuilder
-
-        when:
-        builder.configRunOptions(config, env, new CmdRun(withExtrae: 'true'))
-        then:
-        config.extrae instanceof Map
-        config.extrae.enabled
-
-    }
 
     def 'SHOULD SET `RESUME` OPTION'() {
 
