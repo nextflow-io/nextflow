@@ -49,7 +49,6 @@ import nextflow.processor.TaskFault
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
 import nextflow.script.ScriptBinding
-import nextflow.trace.ExtraeTraceObserver
 import nextflow.trace.GraphObserver
 import nextflow.trace.ReportObserver
 import nextflow.trace.StatsObserver
@@ -329,7 +328,6 @@ class Session implements ISession {
         createTraceFileObserver(result)
         createReportObserver(result)
         createTimelineObserver(result)
-        createExtraeObserver(result)
         createDagObserver(result)
 
         return result
@@ -341,21 +339,6 @@ class Session implements ISession {
         result << observer
     }
 
-    /**
-     * create the Extrae trace observer
-     */
-    protected void createExtraeObserver(Collection<TraceObserver> result) {
-        Boolean isEnabled = config.navigate('extrae.enabled') as Boolean
-        if( isEnabled ) {
-            try {
-                log.warn "The support for Extrae profiling has been deprecated and it will be removed in a future release"
-                result << new ExtraeTraceObserver()
-            }
-            catch( Exception e ) {
-                log.warn("Unable to load Extrae profiler",e)
-            }
-        }
-    }
 
     /**
      * Create workflow report file observer

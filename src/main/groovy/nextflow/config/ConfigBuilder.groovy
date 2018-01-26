@@ -462,13 +462,6 @@ class ConfigBuilder {
                 config.dag.file = cmdRun.withDag
         }
 
-        // -- sets extrae profiling options
-        if( cmdRun.withExtrae ) {
-            if( !(config.extrae instanceof Map) )
-                config.extrae = [:]
-            config.extrae.enabled = true
-        }
-
         if( cmdRun.withNotification ) {
             if( !(config.notification instanceof Map) )
                 config.notification = [:]

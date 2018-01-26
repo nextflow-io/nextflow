@@ -131,9 +131,6 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names='-stdin', hidden = true)
     boolean stdin
 
-    @Parameter(names = ['-with-extrae'], description = 'Trace execution by using BSC Extrae', arity = 0, hidden = true)
-    boolean withExtrae
-
     @Parameter(names = ['-with-drmaa'], description = 'Enable DRMAA binding')
     String withDrmaa
 
