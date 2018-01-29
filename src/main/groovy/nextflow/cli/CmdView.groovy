@@ -35,7 +35,7 @@ import picocli.CommandLine
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "View project script file(s)")
+//@Parameters(commandDescription = "View project script file(s)")
 @CommandLine.Command(name = "View", description ="View project script file(s)")
 class CmdView extends CmdBase {
 

@@ -39,7 +39,7 @@ import picocli.CommandLine
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Print a project configuration")
+//@Parameters(commandDescription = "Print a project configuration")
 @CommandLine.Command(name = "Config", description ="Print a project configuration")
 class CmdConfig extends CmdBase {
 

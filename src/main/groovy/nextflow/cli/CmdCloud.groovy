@@ -100,7 +100,7 @@ class CmdCloud extends CmdBase implements UsageAware {
     String filter
 
     //@Parameter(names='-history', description = 'Print price history for the specified instance type')
-    @CommandLine.Option(names=['-h','--history'], description = 'Print price history for the specified instance type')
+    @CommandLine.Option(names=['--history'], description = 'Print price history for the specified instance type')
     String history
 
     //@Parameter(names='-all', description = 'Print all prices and availability zones', arity = 0)
