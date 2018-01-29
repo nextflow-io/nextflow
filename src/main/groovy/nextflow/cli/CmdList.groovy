@@ -33,8 +33,8 @@ import picocli.CommandLine
  */
 @Slf4j
 @CompileStatic
-//@Parameters(commandDescription = "List all downloaded projects")
-@CommandLine.Command(name = "List", description ="List all downloaded projects")
+@Parameters(commandDescription = "List all downloaded projects")
+@CommandLine.Command
 class CmdList extends CmdBase {
 
     static final public NAME = 'list'

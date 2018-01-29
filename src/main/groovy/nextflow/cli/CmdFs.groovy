@@ -35,7 +35,7 @@ import picocli.CommandLine
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CommandLine.Command(name = "Fs", description ="") //TODO description?
+@CommandLine.Command
 class CmdFs extends CmdBase implements UsageAware {
 
     static final public NAME = 'fs'
@@ -155,8 +155,7 @@ class CmdFs extends CmdBase implements UsageAware {
     }
 
 
-    //@Parameter
-    @CommandLine.Parameters(description = "")    //TODO mandatory? description?
+    @Parameter
     List<String> args
 
     @Override

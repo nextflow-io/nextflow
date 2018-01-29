@@ -35,8 +35,8 @@ import picocli.CommandLine
  */
 @Slf4j
 @CompileStatic
-//@Parameters(commandDescription = "View project script file(s)")
-@CommandLine.Command(name = "View", description ="View project script file(s)")
+@Parameters(commandDescription = "View project script file(s)")
+@CommandLine.Command
 class CmdView extends CmdBase {
 
     static final public NAME = 'view'
@@ -44,16 +44,13 @@ class CmdView extends CmdBase {
     @Override
     String getName() { NAME }
 
-    //@Parameter(description = 'project name', required = true)
-    @CommandLine.Parameters(description = 'project name', arity = '1..*')
+    @Parameter(description = 'project name', required = true)
     List<String> args = []
 
-    //@Parameter(names = '-q', description = 'Hide header line', arity = 0)
-    @CommandLine.Option(names = ['-q'], description = 'Hide header line', arity = '0')
+    @Parameter(names = '-q', description = 'Hide header line', arity = 0)
     boolean quiet
 
-    //@Parameter(names = '-l', description = 'List repository content', arity = 0)
-    @CommandLine.Option(names = ['-l'], description = 'List repository content', arity = '0')
+    @Parameter(names = '-l', description = 'List repository content', arity = 0)
     boolean all
 
     @Override
