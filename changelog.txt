@@ -1,7 +1,18 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-0.27.1 - 18 Jan 2018 
+0.27.3 - 29 Jan 2018
+- Fixed publishDir directive fails on S3 when attempting to copy objects larger than 5 GB #585
+- Process name does not reflect dynamic tag declaration when a task execution is retried #586
+- Fixed examples in the documentation
+- Update to Gradle 4.5
+
+0.27.2 - 23 Jan 2018
+- Fixed Config property keys may contain invalid characters
+- Fixed Local process kill signal is not propagated to children processes #581
+- Fixed Operator join throws a stack overflow exception when an invalid argument type is specified #582
+
+0.27.1 - 18 Jan 2018
 - Fixed Invalid cast exception when cpus value is missing #575
 - Fixed Kill the tee commands when the launcher script exit #574
 - Fixed Splitter `limit` option is not honored when splitting more than one file #573
@@ -55,7 +66,7 @@ NEXTFLOW CHANGE-LOG
 - Fixed GitLab auth token is not applied when user credentials are not provided #542
 
 0.26.3 - 30 Nov 2017
-- Fixed AWS Batch S3 upload function does not work if output is a directory #539 
+- Fixed AWS Batch S3 upload function does not work if output is a directory #539
 - Fixed AWS Batch S3 uploaded function does not resolve glob patterns containing curly brackets #535
 - Added author field in the config manifest scope #537
 - Upgrading s3fs library to 1.0.2 version supporting `signerOverride` S3 config property.
@@ -74,7 +85,7 @@ NEXTFLOW CHANGE-LOG
 0.26.0 - 8 Nov 2017
 - Fixed file method does not interpret correctly S3 path with globs #509
 - Fixed Execution hangs when the amount of requested resources exceed the available ones #502
-- Minor change in the execution report #507 #508 
+- Minor change in the execution report #507 #508
 - Make AWS clustering compliant with billing by seconds
 - Refactored `nf-token` AWS job definition parameter #475
 - Run Batch task in a scratch directory to avoid undefined execution folder #475
@@ -103,7 +114,7 @@ NEXTFLOW CHANGE-LOG
 - Improved merge operator #458
 - Improved value channel handling for reduce, filter, first, take and randomSample operators
 - Prints a warning message when the config file defines setting not matching any process definition
-- Fixed HEAD is detached error #389 
+- Fixed HEAD is detached error #389
 - Fixed Include container name when calculating cache key #443
 - Fixed Invalidate process cache when a referenced external script is modified #413
 - Fixed Execution failure is not reported in the trace file when retry error strategy is used #404
@@ -125,7 +136,7 @@ NEXTFLOW CHANGE-LOG
 - Fixed Unable to parse the AWS price list API #444
 - Added seed parameter to `randomSample` operator #410
 
-0.25.6 - 13 Aug 2017 
+0.25.6 - 13 Aug 2017
 - Fixed Empty channel waiting forever when viewed and mixed #428
 - Fixed Error Channels cannot be used as input in more than one process or operator #429
 - Fixed Script body is resolved even if the `when` guard evaluate to false
@@ -135,10 +146,10 @@ NEXTFLOW CHANGE-LOG
 - Fixed NF fails to pull images hosted in the Singularity Hub #414
 - Added `-y` to cloud create command to skip confirmation request
 
-0.25.4 - 31 Jul 2017 
-- Removed invalid debug information 
+0.25.4 - 31 Jul 2017
+- Removed invalid debug information
 
-0.25.3 - 31 Jul 2017 
+0.25.3 - 31 Jul 2017
 - Fixed NPE when parsing AWS price file #408
 - Fixed Grid queue status return wrong data when a process change the submission queue dynamically #412
 - Fixed MPI-like execution for SLURM batch scheduler
@@ -160,7 +171,7 @@ NEXTFLOW CHANGE-LOG
 - Duplicate mount point docker error #384
 - Disable Docker read-only mounts by default
 
-0.25.0 - 26 Jun 2017 
+0.25.0 - 26 Jun 2017
 - Fixed Dataflow threads pool get exhausted with a large number of tasks #92
 - Fixed Custom function cannot be invoked in the workflow completion handler #374
 - Fixed Runtime errors are not reported in the `workflow.errorMessage` property #369
@@ -191,7 +202,7 @@ NEXTFLOW CHANGE-LOG
 - Change `maxErrors` default to -1
 - Deprecated identifier `channel` as variable name
 
-0.24.4 - 19 May 2017 
+0.24.4 - 19 May 2017
 - Fixed PublishDir creates nested directory structures when a folder already exists #342
 - Fixed NoSuchFileException is thrown when trace file path does not exist #334
 - Fixed watchPath glob directory not working #335
@@ -199,7 +210,7 @@ NEXTFLOW CHANGE-LOG
 - Added executor for NQSII, queuing system used on NEC clusters.
 - Added `relative` option to `fromPath` channel factory
 
-0.24.3 - 24 Apr 2017 
+0.24.3 - 24 Apr 2017
 - Fixed Process execution fails with not GNU version of sleep and date tools #321
 - Fixed Pending processes are not cleaned up properly #322
 - Fixed NPE is thrown when Singularity is enabled and a process uses no container #324
@@ -207,7 +218,7 @@ NEXTFLOW CHANGE-LOG
 - Added MD5 digest file upload
 - Updated docs
 
-0.24.2 - 5 Apr 2017 
+0.24.2 - 5 Apr 2017
 - Fixed Tuple array object deserialisation fails #317
 - Use SLURM squeue —-noheader instead -h command line option to support not standard implementation #316
 - Fixed Execution time is incorrect for the local executor #313
@@ -232,15 +243,15 @@ NEXTFLOW CHANGE-LOG
 - Added experimental `fs` command
 - Improved file staging error reports #295
 - Upgraded Groovy to version 2.4.10
- 
-0.23.4 - 24 Feb 2017 
+
+0.23.4 - 24 Feb 2017
 - Fixed Show a warning message when accessing undefined parameters #293
 - Fixed Staging input files in a subfolder changes their names when they are symlinks #292
-- Fixed NPE accessing foreign files 
+- Fixed NPE accessing foreign files
 - Added column char to list of path escaped chars
 - Fixed Boothook script fails on Ubuntu 16.04
 
-0.23.3 - 9 Feb 2017 
+0.23.3 - 9 Feb 2017
 - Fixed Job termination is not recognised if the starter file is not created #268
 - Fixed Allow NF console to resume process executions (second take) #280
 - Fixed PublishDir may throw a FileAlredyExistsException #283
@@ -249,7 +260,7 @@ NEXTFLOW CHANGE-LOG
 - Updated copyright info
 - Fixed NXF_DEBUG level
 
-0.23.2 - 2 Feb 2017 
+0.23.2 - 2 Feb 2017
 - Improved history lock error message
 - Fixed typo in warning message
 - Added `cleanup` to list of accepted directives
@@ -266,7 +277,7 @@ NEXTFLOW CHANGE-LOG
 - Fixed Merge process specific extended properties with the ones defined in the default scope #273
 - Fixed Using storeDir and publishDir in the same process yields unexpected results #266
 
-0.23.0 - 13 Dec 2016 
+0.23.0 - 13 Dec 2016
 - Added support for Singularity containers #252
 - Added support for HTTP/S and FTP files (read-only)
 - Fixed stream close leak while copy foreign file to local file system
@@ -276,7 +287,7 @@ NEXTFLOW CHANGE-LOG
 - Added `uri` property to Path and File objects
 - Made NXF_SCRATCH variable accessible to `beforeScript` handler
 
-0.22.6 - 4 Dec 2016 
+0.22.6 - 4 Dec 2016
 - Fixed Script execution terminates before all operators complete #259
 - Fixed A script variable with the same name of a global variable invalidate process resume #254
 - Fixed `when` is not recognised when used before an `input` and `script` is not declared
@@ -293,35 +304,35 @@ NEXTFLOW CHANGE-LOG
 - Fixed Execution hang when an operator invokes the `exit` function and no processes have run
 - Fixed fromFilePairs does not match patterns containing curly brackets w/o a star wild character
 - Added `-dump-hashes` command line option to print task key hash keys #211
-- Improved logging 
+- Improved logging
 
-0.22.4 - 4 Nov 2016 
-- Added `—no-requeue` flag to SLURM job submission 
+0.22.4 - 4 Nov 2016
+- Added `—no-requeue` flag to SLURM job submission
 - Report log content when a wrapper script execution fail #213
 - Improved error message when cache DB cannot be created
 - Logging error track trace on task re-submit failure
 - Fixed Channel.fromPath throws an exception when the argument is a S3 path
 - Modified `make_temp` so that uses `NXF_TEMP` when defined
 
-0.22.3 - 12 Oct 2016 
+0.22.3 - 12 Oct 2016
 - Fixed PBS qsub fails when the job name is longer than 15 chars #228
-- Fixed Spread operator doesn't connect channels in DAG #231 
+- Fixed Spread operator doesn't connect channels in DAG #231
 - Fixed amazon prices file format parser
 - Added Cleanup scratch dir upon process completion #230
 - Added `optional` flag to output file declaration
 - Added `region` option to `cloud` command
-- Added Check for missing instance type description 
+- Added Check for missing instance type description
 
-0.22.2 - 3 Oct 2016 
+0.22.2 - 3 Oct 2016
 - Fixed Copy input files to scratch directory #197
 - Fixed PBS qsub fails when the job name starts with a dot #228
 - Fixed issue when staging-out a symlink output file
 - Fixed log warning when running a script in the console
 
-0.22.1 - 26 Sep 2016 
+0.22.1 - 26 Sep 2016
 - Fixed Nested symlinks are not resolved by Docker container mounts #222
 - Fixed Nextflow execution log fail to get field starting with '%' #223
-- Fixed Nextflow console launcher 
+- Fixed Nextflow console launcher
 - Added `ContainerCreation` status to K8S executor
 - Expand `=` to `==` in filter expressions to avoid misleading results
 
@@ -330,11 +341,11 @@ NEXTFLOW CHANGE-LOG
 - Fixed Kubernetes pod id parse issue
 - Move `.nextflow.history` and `.cache` files under `.nextflow` directory
 
-0.22.0.RC2 - 12 Sep 2016 
+0.22.0.RC2 - 12 Sep 2016
 - Fixed File name containing glob wildcards cannot be captured in the process output #219
 - Fixed Work dir containing glob wildcards are not supported #194
 - Added `revision id` to execution log
-- Added `scriptId`, `scriptFile` and `scriptName` attributes to workflow metadata object 
+- Added `scriptId`, `scriptFile` and `scriptName` attributes to workflow metadata object
 - Added time delay penalty on error burst to prevent failing node to drain all pending jobs
 - Load classes without creating an instance of each cloud driver
 - Improved AWS driver missing credentials error report
@@ -343,30 +354,30 @@ NEXTFLOW CHANGE-LOG
 - Added EFS default mount path
 - Refactored daemon shutdown
 
-0.22.0.RC1 - 1 Sep 2016 
+0.22.0.RC1 - 1 Sep 2016
 - Fixed Implement clean up command #19
 - Fixed Trace file should include cached tasks #114
 - Added ability to log each command run #108
-- Added new `cloud` command 
-- Added AWS EFS support 
-- Added AWS Spot instance error fail-over 
-- Added support cloud auto scaling  
-- Added Ignite job-stealing distributed scheduler 
+- Added new `cloud` command
+- Added AWS EFS support
+- Added AWS Spot instance error fail-over
+- Added support cloud auto scaling
+- Added Ignite job-stealing distributed scheduler
 
-0.21.3 - 26 Aug 2016 
+0.21.3 - 26 Aug 2016
 - Fixed Spaces in work directory path stops slurm from accepting the job #218
 
-0.21.2 - 12 Aug 2016 
+0.21.2 - 12 Aug 2016
 - Fixed PBS professional batch scheduler submission error #209
 - Fixed Reference to a collection of files is not resolved properly in the output section #214
 - Improved failed and ignored processes reporting
 - Fixed null workflow.projectDir when launching a script file
 - Do no output link file when `followLinks` option is disabled
 
-0.21.1 - 29 July 2016 
-- Fixed NFS work dir is not detected correctly #206 
+0.21.1 - 29 July 2016
+- Fixed NFS work dir is not detected correctly #206
 - Fixed `splitFasta` operator with the file parameter will not split into single fasta files #181
-- Enable log file for commands when debug or trace option is specified 
+- Enable log file for commands when debug or trace option is specified
 - Added validation checks to `fromPath` and `fromFilePairs` methods
 
 0.21.0 - 20 July 2016
@@ -376,9 +387,9 @@ NEXTFLOW CHANGE-LOG
 - Fixed Ability to customize job name submitted to the scheduler #140
 - Fixed Duplicate output error when no channel specified #182
 - Fixed File paths containing a timestamp are parsed as a Duration object #185
-- Fixed ClosedByInterruptException is thrown randomly #188 
+- Fixed ClosedByInterruptException is thrown randomly #188
 - Fixed Pipeline hangs when `Channel.from` argument is an empty list #189
-- Fixed Handle customised sbatch returning the jobid by itself #190 
+- Fixed Handle customised sbatch returning the jobid by itself #190
 - Fixed LocalExecutor can randomly hang with no running task #191
 - Fixed Missing flag in SLURM `squeue` call #193
 - Fixed Process script declaring a regexp expression results in a IllegalAccessException #199
@@ -388,14 +399,14 @@ NEXTFLOW CHANGE-LOG
 - Improved logging information
 - Upgrade to Gradle 2.14
 
-0.20.1 - 18 Jun 2016 
+0.20.1 - 18 Jun 2016
 - Fixed Directives do not accept a negative numeric value #180
 - Fixed Dynamic errorStrategy is not evaluated correctly #183
 - Fixed Pipeline hangs when error strategy is used and an upstream process fail
 - Added environment to ContainerBuilder and implement environment export for Shifter containers
 - Updated Groovy runtime to version 2.4.7
 
-0.20.0 - 8 Jun 2016 
+0.20.0 - 8 Jun 2016
 - Added fromFilePairs channel factory method
 - Added `finish` error strategy #158
 - Added ability to change the name and the save path of published files #178
@@ -418,13 +429,13 @@ NEXTFLOW CHANGE-LOG
 - Fixed Implement resource accounting for local executor #162
 - Fixed PublishDir fail to move the output directory when the target is a S3 path #160
 
-0.19.1 - 19 May 2016 
+0.19.1 - 19 May 2016
 - Fixed Spread operator is using deprecated `just` operator #159
 - Fixed Invalid call to `notifyError` method
-- Fixed Invalid URL in citoscape.js DAG template 
+- Fixed Invalid URL in citoscape.js DAG template
 - Improved documentation
 
-0.19.0 - 18 May 2016 
+0.19.0 - 18 May 2016
 - Added Pipeline execution DAG #147
 - Added support for OpenLava batch scheduler #152
 - Added `-revision` option to `pull` command #110
@@ -440,14 +451,14 @@ NEXTFLOW CHANGE-LOG
 - Fixed Invalid or corrupt jarfile if your CTRL-C initial run of nextflow #145
 - Fixed Pipeline execution hangs when the into declaration is not provided #146
 
-0.18.2 - 3 May 2016 
+0.18.2 - 3 May 2016
 - Fixed Variable task.exitStatus throws an exception when comparing it to an integer value #142
 - Fixed PublishDir does not handle hard linking of directories #126
 - Added `index` implicit variable to the `task` execution context #139
 - Improved installer messages
 - Updated Gradle runtime to version 2.13
 
-0.18.1 - 26 Apr 2016 
+0.18.1 - 26 Apr 2016
 - Fixed Input files containing a parenthesis in the path are not staged properly #133.
 - Fixed Process execution hangs when using Ignite executor with a foreign work path #136.
 - Fixed Sort output files in lexicographical order #137.
@@ -478,13 +489,13 @@ NEXTFLOW CHANGE-LOG
 - Updated Slf4j to version 1.7.21
 - Updated JGit to version 4.3.0.201604071810-r
 
-0.17.3 - 18 Feb 2016 
+0.17.3 - 18 Feb 2016
 - Fixed task status in the trace file when execution is retried #107
 - Improved Ignite scheduling and node resources allocation
-- Upgraded Logback to version 1.1.5 
+- Upgraded Logback to version 1.1.5
 - Upgraded Slf4j to version 1.7.16
 
-0.17.2 - 2 Feb 2016 
+0.17.2 - 2 Feb 2016
 - Fixed Channel.subscribe is invoked after the Workflow.onComplete handler #105
 - Changed default trace file name to `trace.txt` #106
 - Changed launcher classpath cache file under user home
@@ -520,13 +531,13 @@ NEXTFLOW CHANGE-LOG
 - Added support for Git Large File Storage (LFS) extension #82
 - Added configurable thread pool factory #92
 
-0.16.3 - 30 Nov 2015 
+0.16.3 - 30 Nov 2015
 - Fixed #90. System `user.dir` property is cached causing unexpected behaviour.
 - Allow directories in a process input file name declaration. See #91.
 - Improved build script for local snapshot deployment.
 - Updated cli-args test.
 
-0.16.2 - 14 Nov 2015 
+0.16.2 - 14 Nov 2015
 - Fixed #87. Include current configuration profile option in the workflow metadata.
 - Fixed #86. Failure if work dir contains one or more blank characters.
 - Fixed #76. Include process name and tag information in process wrapper script.
@@ -551,7 +562,7 @@ NEXTFLOW CHANGE-LOG
 - Fixed #78. Command line parsing of parameters does not handle some strings properly.
 - Fixed #80. Command line argument containing a glob pattern is expanded even when escaped or enclosed in quote characters.
 
-0.15.5 - 28 Sep 2015 
+0.15.5 - 28 Sep 2015
 - Fixed #74. Operator "spread" hangs when it is applied to a singleton channel.
 
 0.15.4 - 22 Sep 2015
@@ -584,7 +595,7 @@ NEXTFLOW CHANGE-LOG
 - Fixed an exception when output file is specified with variable identifier e.g. output: file(x) into channel
 
 0.15.0 - 27 Jul 2015
-- Issue #56 - Added method `all()` to params object 
+- Issue #56 - Added method `all()` to params object
 - Issue #57 - Processes having identical commands and inputs are given the same hash key
 - Issue #59 - Enhanced output `val` declaration adding support for value literals and value expressions
 - Fixed minor issue when deleting pipeline repo with `drop` command
@@ -595,7 +606,7 @@ NEXTFLOW CHANGE-LOG
 - Fixed issue #54 - Nextflow installer does not work when running behind a proxy server
 - Upgraded Capsule package manager to version 1.0-rc2
 
-0.14.3 - 3 Jul 2015 
+0.14.3 - 3 Jul 2015
 - Fixed issue #53 - Cannot access files list entry by using square bracket syntax
 
 0.14.2 - 25 Jun 2015
@@ -636,11 +647,11 @@ NEXTFLOW CHANGE-LOG
 - Updated JGit to version 3.7.1
 - Updated Slf4j to version 1.7.12
 
-0.13.5 - 7 May 2015 
+0.13.5 - 7 May 2015
 - Fixed issue #44 - Pipeline hangs when `map` operator is applied to a dataflow variable
 
 0.13.4 - 4 May 2015
-- Added html processes execution time report 
+- Added html processes execution time report
 - Added support for Docker executable containers - Feature #33
 - Added support for missing number types to CacheHelper
 - Added warning message when using a deprecated input/output shared parameter
@@ -656,7 +667,7 @@ NEXTFLOW CHANGE-LOG
 - Read trace file w/o checking existence in order to reduce round-trip on remote storage
 - Workaround for Groovy compiler issue GROOVY-7409
 
-0.13.3 - 19 Apr 2015 
+0.13.3 - 19 Apr 2015
 - Fixed issue when staging file when using a non local pipeline workdir
 - Fixed invalid values in the trace file returned by `awk`
 - Removed unnecessary `S3Path` serialiser registration on DnaNexus executor initialisation
@@ -703,7 +714,7 @@ NEXTFLOW CHANGE-LOG
 - Improved log messages
 - Upgraded Spock testing library to version 1.0
 
-0.12.4 - 4 Mar 2015 
+0.12.4 - 4 Mar 2015
 - Added suspended job status handling to SLURM executor -- Issue #36
 - Added `print` and `println` operators plus tests and updated docs
 - Fixed issue on `view` operator when specifying a closure
@@ -736,8 +747,8 @@ NEXTFLOW CHANGE-LOG
 0.12.0 - 5 Jan 2015
 - Added afterScript/beforeScript directives
 - Added tag directive to label task executions with a custom identifier
-- Added dynamic directives evaluation 
-- Added support for dynamic input/output file names with closures 
+- Added dynamic directives evaluation
+- Added support for dynamic input/output file names with closures
 - Added `ifEmpty` operator
 - Added `view` operator
 - Added `remainder` optional parameter to `phase` operator
@@ -749,14 +760,14 @@ NEXTFLOW CHANGE-LOG
 - Print pid/hostname in the status log
 - Upgraded to Groovy 2.3.9 and Slf4j 1.7.8
 
-0.11.4 - 3 Dec 2014 
+0.11.4 - 3 Dec 2014
 - Fixed issue in TextFileCollector empty condition that was creating an empty split file
   when the split size was equals to the number or records
 - Fixed bug that prevents a job is added to the polling queue when submit operation fails
 - Added more strict checks on $JAVA_CMD executable and $JAVA_HOME folder
 - Refactored 'sge' and 'crg' executors so that qsub directives are provided on top of job wrapper script
 - Added BSC specific executor
-- Upgraded to Groovy 2.3.8 
+- Upgraded to Groovy 2.3.8
 
 0.11.3 - 27 Nov 2014
 - Added to splitters ability to save chunks to files
@@ -797,17 +808,17 @@ NEXTFLOW CHANGE-LOG
 - Added NXF_TEMP environment variable to define local temporary path
 
 0.10.3 - 3 Oct 2014
-- Fixed bug when composing SLURM 'squeue' command line which was containing 
-  unnecessary quote characters thus invalidating the jobs status check mechanism  
+- Fixed bug when composing SLURM 'squeue' command line which was containing
+  unnecessary quote characters thus invalidating the jobs status check mechanism
 
 0.10.2 - 1 Oct 2014
 - Fixed bug while submitting a job to SLURM scheduler due to special characters in job name
-- Fixed bug in TaskConfig#toBool() method 
+- Fixed bug in TaskConfig#toBool() method
 - Fixed bug resolving configuration file when pipeline script is a symlink
 - Fixed bug while setting 'workDir' attribute on PBS job executor
 - Improved error message when the name of a process is missing
 - Removed TaskConfig#getMerge() method
-- Updated method Channel.fromPath(String) so that it returns normalised absolute paths  
+- Updated method Channel.fromPath(String) so that it returns normalised absolute paths
 - Updated Capsule to version 0.9.0 stable
 - Fixed typos in documentation
 
@@ -819,41 +830,41 @@ NEXTFLOW CHANGE-LOG
 - Fixed issue #13 - Show a detailed error message when hitting GitHub rate limits
 
 0.10.0 - 8 Sep 2014
-- Added DRMAA executor 
+- Added DRMAA executor
 - Added PBS/Torque executor
-- Added processes execution report 
+- Added processes execution report
 - Added Extrae tracing support
 - Added support for GitHub private repositories
 - Added integration for BitBucket hosted repositories (Git vcs only)
 - Added native integration AWS S3 file system
-- Improved Docker support and configuration 
-- Improved GridGain cluster integration  
-- Removed Hazelcast integration 
-- Added Capsule based application packaging 
-- Added commands 
+- Improved Docker support and configuration
+- Improved GridGain cluster integration
+- Removed Hazelcast integration
+- Added Capsule based application packaging
+- Added commands
         view: that prints the content a pipeline repository
         config: shows pipeline configuration
 - Fixed issue #12 - Error resuming process with command defined on multiple lines
-        
-0.9.0 - 11 Aug 2014 
-- Added GitHub/Git support. It allows one to pull and run pipelines published on a 
-  remote GitHub repository 
-- Changed command line structure. Since this version it is organised in sub-commands. 
+
+0.9.0 - 11 Aug 2014
+- Added GitHub/Git support. It allows one to pull and run pipelines published on a
+  remote GitHub repository
+- Changed command line structure. Since this version it is organised in sub-commands.
   The following sub-commands are available:
-      ls: list all downloaded pipelines; 
+      ls: list all downloaded pipelines;
       run: launch a pipeline execution;
       pull: download or update a pipeline hosted on GitHub;
-      info: show pipeline information; 
-      drop: remote a locally stored pipeline; 
-      clone: copy a pipeline to a directory specified;  
-      history: list all pipeline runs;  
+      info: show pipeline information;
+      drop: remote a locally stored pipeline;
+      clone: copy a pipeline to a directory specified;
+      history: list all pipeline runs;
       help: show program help.
 - Added 'baseDir' and 'workDir' script variables
 - Removed Merge processor
 
 
-0.8.5 - 3 Aug 2014 
-- Upgraded to Groovy 2.3.6 
+0.8.5 - 3 Aug 2014
+- Upgraded to Groovy 2.3.6
 - Added '-noverify' to JVM launcher options as workaround for Java bug JDK-8051012
 
 0.8.4 - 20 Jul 2014
@@ -861,15 +872,15 @@ NEXTFLOW CHANGE-LOG
 - Fixed method Path.list()
 - Added '-notify' option to SGE qsub command to handle killed jobs correctly
 
-0.8.3 - 27 Jun 2014 
+0.8.3 - 27 Jun 2014
 - Added support for Modules package maages
 - Fixed issue #1 - process hung when only a parameter of type 'each' is defined
 - Fixed issue #6 -- exception while resuming a process that declares a parametric file output name
 - Fixed support for curly brackets glob path matching in Channel.fromPath
-- Updated Groovy runtime to 2.3.3 
+- Updated Groovy runtime to 2.3.3
 - Updated to Groovy-nio module in place of 'native' implementation
 
-0.8.2 - 18 Jun 2014 
+0.8.2 - 18 Jun 2014
 - Fixed issue #7 - NoClassDefFoundError HashMap$Entry exception with Java 8
 - Enhanced launch script: removed '-Xms' Java option; verify the Java version coherent with JAVA_HOME definition; improved error messages.
 
@@ -958,18 +969,18 @@ NEXTFLOW CHANGE-LOG
 - New reactive operators on channel objects (similar to RxJava)
 - New shared parameters
 - New input/output set parameters
-- New conditional scripts using 
-- New groovy native processes   
+- New conditional scripts using
+- New groovy native processes
 
 0.5.4 - 10 Dec 2013
 - Fixed an issue while checking an - empty - process exit file
 - Fixed a race condition while resuming cached tasks
 
-0.5.3 - 9 Dec 2013 
+0.5.3 - 9 Dec 2013
 - Fixed file close leaks
 - Fixed DirectoryStream close leaks
 - Enhanced process executor, supporting multiple executors in the same pipeline
- 
+
 0.5.2 - 28 Nov 2013
 - Changed caching hash function to murmur3_128 to avoid cache collision
 - Fixed issue on process termination when resuming pipeline execution
@@ -984,10 +995,10 @@ NEXTFLOW CHANGE-LOG
 - Slim self-contained executable package
 
 0.3.4 - 24 Aug 2012
-- Extending semantic for method File.copyTo(source,target) so that when 'target' argument 
+- Extending semantic for method File.copyTo(source,target) so that when 'target' argument
   is a directory, it copies the 'source' file to that folder, with the same name as the original file.
 - Bug: Fixed a ClassCastEx exception when the 'bin' folder is added to the PATH
-- Bug: Fixed an issue that raised an error "error=26 Text file busy" on some platforms (CentOS)  
+- Bug: Fixed an issue that raised an error "error=26 Text file busy" on some platforms (CentOS)
 
 0.3.3 - 8 Aug 2013
 - Added optional parameters to 'chunkLines' and 'chunkFasta' methods
@@ -1009,10 +1020,10 @@ NEXTFLOW CHANGE-LOG
 
 0.3.1 - 18 Jul 2013
 - Added command line parameter 'echo' to enable default tasks output
-- Fixed an issue on merge task, when it doesn't collect any data the execution is skipped  
+- Fixed an issue on merge task, when it doesn't collect any data the execution is skipped
 
 0.3.0 - 11 Jul 2013
-- Decoupled the processing policy by the execution strategy classes 
+- Decoupled the processing policy by the execution strategy classes
 - Normalised script level arguments so that a blank char may be used in place of the equals char
 - Added a new configuration option named 'clusterOptions' where specify grid native configuration parameters
 - Added a new configuration option named 'scratch' which enable/disable usage of scratch temporary folder when using cluster executors
@@ -1028,7 +1039,7 @@ NEXTFLOW CHANGE-LOG
 - Removed SGE output file
 - Initial SLURM support
 
-0.2.9 
+0.2.9
 - Adding 'test' feature
 
 0.2.8 - 30 Apr 2013
