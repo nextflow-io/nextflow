@@ -1,7 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-0.27.2 23 Jan 2018
+0.27.3 - 29 Jan 2018
+- Fixed publishDir directive fails on S3 when attempting to copy objects larger than 5 GB #585
+- Process name does not reflect dynamic tag declaration when a task execution is retried #586
+- Fixed examples in the documentation
+- Update to Gradle 4.5
+
+0.27.2 - 23 Jan 2018
 - Fixed Config property keys may contain invalid characters
 - Fixed Local process kill signal is not propagated to children processes #581
 - Fixed Operator join throws a stack overflow exception when an invalid argument type is specified #582
