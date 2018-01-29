@@ -51,10 +51,9 @@ import picocli.CommandLine
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Execute a pipeline project")
-@CommandLine.Command
+//@Parameters(commandDescription = "Execute a pipeline project")
+@CommandLine.Command(name = "Run", description ="Execute a pipeline project")
 class CmdRun extends CmdBase implements HubOptions {
-
 
     static List<String> VALID_PARAMS_FILE = ['json', 'yml', 'yaml']
 
@@ -63,7 +62,7 @@ class CmdRun extends CmdBase implements HubOptions {
         GParsConfig.poolFactory = new CustomPoolFactory()
     }
 
-    static class DurationConverter implements IStringConverter<Long> {
+    static class DurationConverter implements CommandLine.ITypeConverter<Long> {
         @Override
         Long convert(String value) {
             if( !value ) throw new IllegalArgumentException()
@@ -74,120 +73,157 @@ class CmdRun extends CmdBase implements HubOptions {
 
     static final public NAME = 'run'
 
-    @Parameter(names=['-name'], description = 'Assign a mnemonic name to the a pipeline run')
+    //@Parameter(names=['-name'], description = 'Assign a mnemonic name to the a pipeline run')
+    @CommandLine.Option(names=['--name'], description = 'Assign a mnemonic name to the a pipeline run')
     String runName
 
-    @Parameter(names=['-lib'], description = 'Library extension path')
+    //@Parameter(names=['-lib'], description = 'Library extension path')
+    @CommandLine.Option(names=['--lib'], description = 'Library extension path')
     String libPath
 
-    @Parameter(names=['-cache'], description = 'Enable/disable processes caching', arity = 1)
+    //@Parameter(names=['-cache'], description = 'Enable/disable processes caching', arity = 1)
+    @CommandLine.Option(names=['--cache'], description = 'Enable/disable processes caching', arity = '1')
     boolean cacheable = true
 
-    @Parameter(names=['-resume'], description = 'Execute the script using the cached results, useful to continue executions that was stopped by an error')
+    //@Parameter(names=['-resume'], description = 'Execute the script using the cached results, useful to continue executions that was stopped by an error')
+    @CommandLine.Option(names=['--resume'], description = 'Execute the script using the cached results, useful to continue executions that was stopped by an error')
     String resume
 
-    @Parameter(names=['-ps','-pool-size'], description = 'Number of threads in the execution pool', hidden = true)
+    //@Parameter(names=['-ps','-pool-size'], description = 'Number of threads in the execution pool', hidden = true)
+    @CommandLine.Option(names=['-ps','--pool-size'], description = 'Number of threads in the execution pool', hidden = true)
     Integer poolSize
 
-    @Parameter(names=['-pi','-poll-interval'], description = 'Executor poll interval (duration string ending with ms|s|m)', converter = DurationConverter, hidden = true)
+    //@Parameter(names=['-pi','-poll-interval'], description = 'Executor poll interval (duration string ending with ms|s|m)', converter = DurationConverter, hidden = true)
+    @CommandLine.Option(names=['-pi','--poll-interval'], description = 'Executor poll interval (duration string ending with ms|s|m)', converter = [DurationConverter], hidden = true)
     long pollInterval
 
-    @Parameter(names=['-qs','-queue-size'], description = 'Max number of processes that can be executed in parallel by each executor')
+    //@Parameter(names=['-qs','-queue-size'], description = 'Max number of processes that can be executed in parallel by each executor')
+    @CommandLine.Option(names=['-qs','--queue-size'], description = 'Max number of processes that can be executed in parallel by each executor')
     Integer queueSize
 
-    @Parameter(names=['-test'], description = 'Test a script function with the name specified')
+    //@Parameter(names=['-test'], description = 'Test a script function with the name specified')
+    @CommandLine.Option(names=['--test'], description = 'Test a script function with the name specified')
     String test
 
-    @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate result files are stored')
+    //@Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate result files are stored')
+    @CommandLine.Option(names=['-w', '--work-dir'], description = 'Directory where intermediate result files are stored')
     String workDir
 
     /**
      * Defines the parameters to be passed to the pipeline script
      */
-    @DynamicParameter(names = '--', description = 'Set a parameter used by the pipeline', hidden = true)
+    //@DynamicParameter(names = '--', description = 'Set a parameter used by the pipeline', hidden = true)
+    @CommandLine.Option(names = ['--'], description = 'Set a parameter used by the pipeline', hidden = true) //TODO really?? just '--'?
     Map<String,String> params = new LinkedHashMap<>()
 
-    @Parameter(names='-params-file', description = 'Load script parameters from a JSON/YAML file')
+    //@Parameter(names='-params-file', description = 'Load script parameters from a JSON/YAML file')
+    @CommandLine.Option(names=['--params-file'], description = 'Load script parameters from a JSON/YAML file')
     String paramsFile
 
-    @DynamicParameter(names = ['-process.'], description = 'Set process options' )
+    //@DynamicParameter(names = ['-process.'], description = 'Set process options' )
+    @CommandLine.Option(names = ['--process'], description = 'Set process options' )
     Map<String,String> process = [:]
 
-    @DynamicParameter(names = ['-e.'], description = 'Add the specified variable to execution environment')
+    //@DynamicParameter(names = ['-e.'], description = 'Add the specified variable to execution environment')
+    @CommandLine.Option(names = ['-e'], description = 'Add the specified variable to execution environment')
     Map<String,String> env = [:]
 
-    @Parameter(names = ['-E'], description = 'Exports all current system environment')
+    //@Parameter(names = ['-E'], description = 'Exports all current system environment')
+    @CommandLine.Option(names = ['-E'], description = 'Exports all current system environment')
     boolean exportSysEnv
 
-    @DynamicParameter(names = ['-executor.'], description = 'Set executor options', hidden = true )
+    //@DynamicParameter(names = ['-executor.'], description = 'Set executor options', hidden = true )
+    @CommandLine.Option(names = ['--executor'], description = 'Set executor options', hidden = true )
     Map<String,String> executorOptions = [:]
 
-    @Parameter(description = 'Project name or repository url')
+    //@Parameter(description = 'Project name or repository url')
+    @CommandLine.Parameters(description = 'Project name or repository url')
     List<String> args
 
-    @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
+    //@Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
+    @CommandLine.Option(names=['-r','--revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
     String revision
 
-    @Parameter(names=['-latest'], description = 'Pull latest changes before run')
+    //@Parameter(names=['-latest'], description = 'Pull latest changes before run')
+    @CommandLine.Option(names=['--latest'], description = 'Pull latest changes before run')
     boolean latest
 
-    @Parameter(names='-stdin', hidden = true)
+    //@Parameter(names='-stdin', hidden = true)
+    @CommandLine.Option(names=['--stdin'], hidden = true)
     boolean stdin
 
-    @Parameter(names = ['-with-extrae'], description = 'Trace execution by using BSC Extrae', arity = 0, hidden = true)
+    //@Parameter(names = ['-with-extrae'], description = 'Trace execution by using BSC Extrae', arity = 0, hidden = true)
+    @CommandLine.Option(names = ['--with-extrae'], description = 'Trace execution by using BSC Extrae', arity = '0', hidden = true)
     boolean withExtrae
 
-    @Parameter(names = ['-with-drmaa'], description = 'Enable DRMAA binding')
+    //@Parameter(names = ['-with-drmaa'], description = 'Enable DRMAA binding')
+    @CommandLine.Option(names = ['--with-drmaa'], description = 'Enable DRMAA binding')
     String withDrmaa
 
-    @Parameter(names = ['-with-trace'], description = 'Create processes execution tracing file')
+    //@Parameter(names = ['-with-trace'], description = 'Create processes execution tracing file')
+    @CommandLine.Option(names = ['--with-trace'], description = 'Create processes execution tracing file')
     String withTrace
 
-    @Parameter(names = ['-with-report'], description = 'Create processes execution html report')
+    //@Parameter(names = ['-with-report'], description = 'Create processes execution html report')
+    @CommandLine.Option(names = ['--with-report'], description = 'Create processes execution html report')
     String withReport
 
-    @Parameter(names = ['-with-timeline'], description = 'Create processes execution timeline file')
+    //@Parameter(names = ['-with-timeline'], description = 'Create processes execution timeline file')
+    @CommandLine.Option(names = ['--with-timeline'], description = 'Create processes execution timeline file')
     String withTimeline
 
-    @Parameter(names = '-with-singularity', description = 'Enable process execution in a Singularity container')
+    //@Parameter(names = '-with-singularity', description = 'Enable process execution in a Singularity container')
+    @CommandLine.Option(names = ['--with-singularity'], description = 'Enable process execution in a Singularity container')
     def withSingularity
 
-    @Parameter(names = '-with-docker', description = 'Enable process execution in a Docker container')
+    //@Parameter(names = '-with-docker', description = 'Enable process execution in a Docker container')
+    @CommandLine.Option(names = ['--with-docker'], description = 'Enable process execution in a Docker container')
     def withDocker
 
-    @Parameter(names = '-without-docker', description = 'Disable process execution with Docker', arity = 0)
+    //@Parameter(names = '-without-docker', description = 'Disable process execution with Docker', arity = 0)
+    @CommandLine.Option(names = ['--without-docker'], description = 'Disable process execution with Docker', arity = '0')
     boolean withoutDocker
 
-    @Parameter(names = ['-with-k8s', '-K'], description = 'Enable execution in a Kubernetes cluster')
+    //@Parameter(names = ['-with-k8s', '-K'], description = 'Enable execution in a Kubernetes cluster')
+    @CommandLine.Option(names = ['--with-k8s', '-K'], description = 'Enable execution in a Kubernetes cluster')
     def withKubernetes
 
-    @Parameter(names = '-with-mpi', hidden = true)
+    //@Parameter(names = '-with-mpi', hidden = true)
+    @CommandLine.Option(names = ['--with-mpi'], hidden = true)
     boolean withMpi
 
-    @Parameter(names = '-with-dag', description = 'Create pipeline DAG file')
+    //@Parameter(names = '-with-dag', description = 'Create pipeline DAG file')
+    @CommandLine.Option(names = ['--with-dag'], description = 'Create pipeline DAG file')
     String withDag
 
     @Parameter(names = ['-bg'], arity = 0, hidden = true)
+    //TODO
     void setBackground(boolean value) {
         launcher.options.background = value
     }
 
-    @Parameter(names=['-c','-config'], hidden = true )
+    //@Parameter(names=['-c','-config'], hidden = true )
+    @CommandLine.Option(names=['-c','--config'], hidden = true )
     List<String> runConfig
 
-    @DynamicParameter(names = ['-cluster.'], description = 'Set cluster options', hidden = true )
+    //@DynamicParameter(names = ['-cluster.'], description = 'Set cluster options', hidden = true )
+    @CommandLine.Option(names = ['--cluster'], description = 'Set cluster options', hidden = true )
     Map<String,String> clusterOptions = [:]
 
-    @Parameter(names=['-profile'], description = 'Choose a configuration profile')
+    //@Parameter(names=['-profile'], description = 'Choose a configuration profile')
+    @CommandLine.Option(names=['--profile'], description = 'Choose a configuration profile')
     String profile
 
-    @Parameter(names=['-dump-hashes'], description = 'Dump task hash keys for debugging purpose')
+    //@Parameter(names=['-dump-hashes'], description = 'Dump task hash keys for debugging purpose')
+    @CommandLine.Option(names=['--dump-hashes'], description = 'Dump task hash keys for debugging purpose')
     boolean dumpHashes
 
-    @Parameter(names=['-dump-channels'], description = 'Dump channels for debugging purpose')
+    //@Parameter(names=['-dump-channels'], description = 'Dump channels for debugging purpose')
+    @CommandLine.Option(names=['--dump-channels'], description = 'Dump channels for debugging purpose')
     String dumpChannels
 
-    @Parameter(names=['-N','-with-notification'], description = 'Send a notification email on workflow completion to the specified recipients')
+    //@Parameter(names=['-N','-with-notification'], description = 'Send a notification email on workflow completion to the specified recipients')
+    @CommandLine.Option(names=['-N','--with-notification'], description = 'Send a notification email on workflow completion to the specified recipients')
     String withNotification
 
     @Override

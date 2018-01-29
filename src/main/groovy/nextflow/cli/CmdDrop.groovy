@@ -35,16 +35,18 @@ import picocli.CommandLine
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Delete the local copy of a project")
-@CommandLine.Command
+//@Parameters(commandDescription = "Delete the local copy of a project")
+@CommandLine.Command(name = "Drop", description ="Delete the local copy of a project")
 class CmdDrop extends CmdBase {
 
     static final public NAME = 'drop'
 
-    @Parameter(required=true, description = 'name of the project to drop')
+    //@Parameter(required=true, description = 'name of the project to drop')
+    @CommandLine.Parameters(arity = "1..*", description = "name of the project to drop")    //TODO ??
     List<String> args
 
-    @Parameter(names='-f', description = 'Delete the repository without taking care of local changes')
+    //@Parameter(names='-f', description = 'Delete the repository without taking care of local changes')
+    @CommandLine.Option(names=['-f'], description = 'Delete the repository without taking care of local changes')
     boolean force
 
     @Override

@@ -28,8 +28,8 @@ import picocli.CommandLine
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Parameters(commandDescription = "Update nextflow runtime to the latest available version")
-@CommandLine.Command
+//@Parameters(commandDescription = "Update nextflow runtime to the latest available version")
+@CommandLine.Command(name = "Self-update", description ="Update nextflow runtime to the latest available version")
 class CmdSelfUpdate extends CmdBase {
     @Override
     String getName() { 'self-update' }

@@ -63,7 +63,7 @@ class Launcher {
      * @return An instance of {@code CliBuilder}
      */
 
-    private JCommander jcommander
+    private CommandLine commandLine
 
     private CliOptions options
 
@@ -73,7 +73,7 @@ class Launcher {
 
     private String cliString
 
-    private List<CmdBase> allCommands
+    //private List<CmdBase> allCommands
 
     private List<String> normalizedArgs
 
@@ -91,39 +91,30 @@ class Launcher {
     }
 
     protected void init() {
-        allCommands = (List<CmdBase>)[
-                new CmdClean(),
-                new CmdClone(),
-                new CmdCloud(),
-                new CmdFs(),
-                new CmdInfo(),
-                new CmdList(),
-                new CmdLog(),
-                new CmdPull(),
-                new CmdRun(),
-                new CmdDrop(),
-                new CmdConfig(),
-                new CmdNode(),
-                new CmdView(),
-                new CmdHelp(),
-                new CmdSelfUpdate()
-        ]
+        commandLine = new CommandLine(new CliOptions())
+                .addSubcommand("clean",   new CmdClean(launcher:this))
+                .addSubcommand("clone",   new CmdClone(launcher:this))
+                .addSubcommand("cloud",   new CmdCloud(launcher:this))
+                .addSubcommand("fs",   new CmdFs(launcher:this))
+                .addSubcommand("info",   new CmdInfo(launcher:this))
+                .addSubcommand("list",   new CmdList(launcher:this))
+                .addSubcommand("log",   new CmdLog(launcher:this))
+                .addSubcommand("pull",   new CmdPull(launcher:this))
+                .addSubcommand("run",   new CmdRun(launcher:this))
+                .addSubcommand("drop",   new CmdDrop(launcher:this))
+                .addSubcommand("config",   new CmdConfig(launcher:this))
+                .addSubcommand("node",   new CmdNode(launcher:this))
+                .addSubcommand("view",   new CmdView(launcher:this))
+                .addSubcommand("help",   new CmdHelp(launcher:this))
+                .addSubcommand("update",   new CmdSelfUpdate(launcher:this))
 
-        options = new CliOptions()
-        jcommander = new JCommander(options)
-        allCommands.each { cmd ->
-            cmd.launcher = this;
-            jcommander.addCommand(cmd.name, cmd)
-        }
-        jcommander.setProgramName( APP_NAME )
     }
-
     /**
      * Create the Jcommander 'interpreter' and parse the command line arguments
      */
-    @Deprecated
-    @PackageScope
-    Launcher parseMainArgs(String... args) {
+    //@Deprecated
+   // @PackageScope
+    /*uncher parseMainArgs(String... args) {
         this.cliString = System.getenv('NXF_CLI')
         this.colsString = System.getenv('COLUMNS')
 
@@ -141,7 +132,7 @@ class Launcher {
         checkLogFileName()
 
         return this
-    }
+    }*/
 
     private void checkLogFileName() {
         if( !options.logFile ) {
@@ -189,7 +180,7 @@ class Launcher {
             normalized << current
 
             // when the first argument is a file, it's supposed to be a script to be executed
-            if( i==1 && !allCommands.find { it.name == current } && new File(current).isFile()  ) {
+            if( i==1 && !commandLine.subcommands.keySet().find { it==current } && new File(current).isFile()  ) {
                 normalized.add(0,CmdRun.NAME)
             }
 
@@ -241,7 +232,7 @@ class Launcher {
                 normalized << 'true'
             }
 
-            else if( current == '-syslog' && (i==args.size() || args[i].startsWith('-') || allCommands.find { it.name == args[i] } )) {
+            else if( current == '-syslog' && (i==args.size() || args[i].startsWith('-') || commandLine.subcommands.keySet().find { it == args[i] } )) {
                 normalized << 'localhost'
             }
 
@@ -288,8 +279,9 @@ class Launcher {
         !x.startsWith('-') || x.isNumber()      // if not start with `-` or is a number -> value true
     }
 
-    CmdBase findCommand( String cmdName ) {
-        allCommands.find { it.name == cmdName }
+    CommandLine findCommand( String cmdName ) {
+        commandLine.subcommands.get(cmdName)
+
     }
 
     /**
@@ -302,13 +294,13 @@ class Launcher {
     void usage(String command = null ) {
 
         if( command ) {
-            def exists = allCommands.find { it.name == command } != null
+            def exists = commandLine.subcommands.keySet().find { it == command } != null
             if( !exists ) {
                 println "Asking help for unknown command: $command"
                 return
             }
-
-            jcommander.usage(command)
+            commandLine.usage(command as PrintStream)
+            //ommander.usage(command)
             return
         }
 
@@ -339,11 +331,14 @@ class Launcher {
         }
     }
 
-    protected void printCommands(List<CmdBase> commands) {
+    protected void printCommands(CommandLine commands) {
         println "\nCommands:"
 
         int len = 0
         def all = new TreeMap<String,String>()
+        Map<String, CommandLine> subcomands = commands.getSubcommands()
+
+
         new ArrayList<CmdBase>(commands).each {
             def description = it.getClass().getAnnotation(Parameters)?.commandDescription()
             if( description ) {

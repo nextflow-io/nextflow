@@ -46,8 +46,8 @@ import picocli.CommandLine
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Print executions log and runtime info")
-@CommandLine.Command
+//@Parameters(commandDescription = "Print executions log and runtime info")
+@CommandLine.Command(name = "Log", description ="Print executions log and runtime info")
 class CmdLog extends CmdBase implements CacheBase {
 
     static private int MAX_LINES = 100
@@ -67,34 +67,44 @@ class CmdLog extends CmdBase implements CacheBase {
 
     static final public NAME = 'log'
 
-    @Parameter(names = ['-s'], description='Character used to separate column values')
+   // @Parameter(names = ['-s'], description='Character used to separate column values')
+    @CommandLine.Option(names = ['-s'], description='Character used to separate column values')
     String sep = '\t'
 
-    @Parameter(names=['-f','-fields'], description = 'Comma separated list of fields to include in the printed log -- Use the `-l` option to show the list of available fields')
+    //@Parameter(names=['-f','-fields'], description = 'Comma separated list of fields to include in the printed log -- Use the `-l` option to show the list of available fields')
+    @CommandLine.Option(names=['-f','--fields'], description = 'Comma separated list of fields to include in the printed log -- Use the `-l` option to show the list of available fields')
     String fields
 
-    @Parameter(names = ['-t','-template'], description = 'Text template used to each record in the log ')
+    //@Parameter(names = ['-t','-template'], description = 'Text template used to each record in the log ')
+    @CommandLine.Option(names = ['-t','--template'], description = 'Text template used to each record in the log ')
     String templateStr
 
-    @Parameter(names=['-l','-list-fields'], description = 'Show all available fields', arity = 0)
+    //@Parameter(names=['-l','-list-fields'], description = 'Show all available fields', arity = 0)
+    @CommandLine.Option(names=['-l','--list-fields'], description = 'Show all available fields', arity = '0')
     boolean listFields
 
-    @Parameter(names=['-F','-filter'], description = "Filter log entries by a custom expression e.g. process =~ /foo.*/ && status == 'COMPLETED'")
-    String filterStr
+    //@Parameter(names=['-F','-filter'], description = "Filter log entries by a custom expression e.g. process =~ /foo.*/ && status == 'COMPLETED'")
+    @CommandLine.Option(names=['-F','--filter'], description = "Filter log entries by a custom expression e.g. process =~ /foo.*/ && status == 'COMPLETED'")
+    String filterStr //TODO we have -f for fields and -F for filter... do we want it?
 
-    @Parameter(names='-after', description = 'Show log entries for runs executed after the specified one')
+    //@Parameter(names='-after', description = 'Show log entries for runs executed after the specified one')
+    @CommandLine.Option(names=['--after'], description = 'Show log entries for runs executed after the specified one')
     String after
 
-    @Parameter(names='-before', description = 'Show log entries for runs executed before the specified one')
+    //@Parameter(names='-before', description = 'Show log entries for runs executed before the specified one')
+    @CommandLine.Option(names=['--before'], description = 'Show log entries for runs executed before the specified one')
     String before
 
-    @Parameter(names='-but', description = 'Show log entries of all runs except the specified one')
+    //@Parameter(names='-but', description = 'Show log entries of all runs except the specified one')
+    @CommandLine.Option(names=['--but'], description = 'Show log entries of all runs except the specified one')
     String but
 
-    @Parameter(names=['-q','-quiet'], description = 'Show only run names', arity = 0)
+    //@Parameter(names=['-q','-quiet'], description = 'Show only run names', arity = 0)
+    @CommandLine.Option(names=['-q','--quiet'], description = 'Show only run names', arity = '0')
     boolean quiet
 
-    @Parameter
+    //@Parameter
+    @CommandLine.Parameters(description = "") //TODO description, arity?
     List<String> args
 
     private Script filterScript

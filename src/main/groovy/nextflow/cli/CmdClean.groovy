@@ -44,31 +44,38 @@ import picocli.CommandLine
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Clean up project cache and work directories")
-@CommandLine.Command
+//@Parameters(commandDescription = "Clean up project cache and work directories")
+@CommandLine.Command (name = "Clean", description ="Clean up project cache and work directories")
 class CmdClean extends CmdBase implements CacheBase {
 
     static final public NAME = 'clean'
 
-    @Parameter(names=['-q', '-quiet'], description = 'Do not print names of files removed', arity = 0)
+    //@Parameter(names=['-q', '-quiet'], description = 'Do not print names of files removed', arity = 0)
+    @CommandLine.Option(names=['-q', '--quiet'], description = 'Do not print names of files removed', arity = '0')
     boolean quiet
 
-    @Parameter(names=['-f', '-force'], description = 'Force clean command', arity = 0)
+    //@Parameter(names=['-f', '-force'], description = 'Force clean command', arity = 0)
+    @CommandLine.Option(names=['-f', '--force'], description = 'Force clean command', arity = '0')
     boolean force
 
-    @Parameter(names=['-n', '-dry-run'], description = 'Print names of file to be removed without deleting them' , arity = 0)
+    //@Parameter(names=['-n', '-dry-run'], description = 'Print names of file to be removed without deleting them' , arity = 0)
+    @CommandLine.Option(names=['-n', '--dry-run'], description = 'Print names of file to be removed without deleting them' , arity = '0')
     boolean dryRun
 
-    @Parameter(names='-after', description = 'Clean up runs executed after the specified one')
+    //@Parameter(names='-after', description = 'Clean up runs executed after the specified one')
+    @CommandLine.Option(names='--after', description = 'Clean up runs executed after the specified one')
     String after
 
-    @Parameter(names='-before', description = 'Clean up runs executed before the specified one')
+    //@Parameter(names='-before', description = 'Clean up runs executed before the specified one')
+    @CommandLine.Option(names='--before', description = 'Clean up runs executed before the specified one')
     String before
 
-    @Parameter(names='-but', description = 'Clean up all runs except the specified one')
+    //@Parameter(names='-but', description = 'Clean up all runs except the specified one')
+    @CommandLine.Option(names='--but', description = 'Clean up all runs except the specified one')
     String but
 
-    @Parameter
+    //@Parameter
+    @CommandLine.Parameters(description = "")    //TODO is it mandatory?
     List<String> args
 
     private CacheDB currentCacheDb
