@@ -793,6 +793,11 @@ class TaskProcessorTest extends Specification {
         env.charAt(17) == '\\' as char
         env.charAt(18) == '$' as char
 
+        when:
+        env = TaskProcessor.bashEnvironmentScript([FOO:null, BAR:''])
+        then:
+        env == "export FOO=''\nexport BAR=''\n"
+
     }
 
 }

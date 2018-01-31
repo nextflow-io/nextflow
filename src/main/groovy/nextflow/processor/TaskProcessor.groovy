@@ -245,6 +245,10 @@ class TaskProcessor {
 
     static final public String TASK_CONTEXT_PROPERTY_NAME = 'task'
 
+    final private static Pattern ENV_VAR_NAME = ~/[a-zA-Z_]+[a-zA-Z0-9_]*/
+
+    final private static Pattern QUESTION_MARK = ~/(\?+)/
+
     /**
      * Keeps track of the task instance executed by the current thread
      */
@@ -1756,8 +1760,6 @@ class TaskProcessor {
         return result
     }
 
-    private static Pattern QUESTION_MARK = ~/(\?+)/
-
     @CompileStatic
     protected String replaceQuestionMarkWildcards(String name, int index) {
         def result = new StringBuffer()
@@ -1817,15 +1819,19 @@ class TaskProcessor {
      * exporting the required environment variables
      */
     static String bashEnvironmentScript( Map<String,String> environment, boolean escape=false ) {
+        if( !environment )
+            return null
 
-        final script = []
+        final List script = []
         environment.each { name, value ->
-            if( name ==~ /[a-zA-Z_]+[a-zA-Z0-9_]*/ ) {
+            if( !ENV_VAR_NAME.matcher(name).matches() )
+                log.trace "Illegal environment variable name: '${name}' -- This variable definition is ignored"
+            else if( !value ) {
+                log.warn "Environment variable `$name` evaluates to an empty value"
+                script << "export $name=''"
+            }
+            else
                 script << "export $name=\"${escape ? value.replace('$','\\$') : value}\""
-            }
-            else {
-                log.trace "Illegal environment variable name: '${name}'"
-            }
         }
         script << ''
 
