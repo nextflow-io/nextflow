@@ -21,6 +21,7 @@
 package nextflow.ast
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.script.BaseScript
 import nextflow.script.TaskBody
 import nextflow.script.TaskClosure
 import nextflow.script.TokenEnvCall
@@ -137,7 +138,9 @@ public class NextflowDSLImpl implements ASTTransformation {
             }
 
             protected void visitObjectInitializerStatements(ClassNode node) {
-                injectMetadata(node)
+                if( node.getSuperClass().getName() == BaseScript.getName() ) {
+                    injectMetadata(node)
+                }
                 super.visitObjectInitializerStatements(node)
             }
 
