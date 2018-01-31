@@ -671,7 +671,7 @@ class Session implements ISession {
     }
 
     private void operatorsForceTermination() {
-        def operators = (DataflowProcessor[])allOperators.toArray()
+        def operators = allOperators.toArray() as DataflowProcessor[]
         for( int i=0; i<operators.size(); i++ ) {
             operators[i].terminate()
         }
