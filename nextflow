@@ -62,16 +62,16 @@ function get_abs_filename() {
 
 function get() {
     if command -v curl &>/dev/null; then
-        GET="curl -fsSL $1 -o $2"
+        GET="curl -fsSL '$1' -o '$2'"
     elif command -v wget &>/dev/null; then
-        GET="wget -q $1 -O $2"
+        GET="wget -q '$1' -O '$2'"
     else
         echo_red "ERROR: Cannot find 'curl' nor 'wget' utility --  please install one of them"
         exit 1
     fi
 
     printf "Downloading nextflow dependencies. It may require a few seconds, please wait .. "
-    $GET; status=$?
+    eval $GET; status=$?
     printf "\r\033[K"
     if [ $status -ne 0 ]; then
         echo_red "ERROR: Cannot download nextflow required file -- make sure you can connect to the internet"
@@ -96,7 +96,7 @@ function make_temp() {
 function resolve_link() {
     [[ ! -f $1 ]] && exit 1
     if command -v realpath &>/dev/null; then
-      realpath $1
+      realpath "$1"
     elif command -v readlink &>/dev/null; then
       local target="$1"
       while [ -L "$target" ]; do
