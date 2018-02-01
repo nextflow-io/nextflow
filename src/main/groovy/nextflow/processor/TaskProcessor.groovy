@@ -825,11 +825,9 @@ class TaskProcessor {
 
     final protected boolean checkCachedOrLaunchTask( TaskRun task, HashCode hash, boolean shouldTryCache ) {
 
-        int tries = 0
+        int tries = task.failCount +1
         while( true ) {
-            if( tries++ ) {
-                hash = CacheHelper.defaultHasher().newHasher().putBytes(hash.asBytes()).putInt(tries).hash()
-            }
+            hash = CacheHelper.defaultHasher().newHasher().putBytes(hash.asBytes()).putInt(tries).hash()
 
             boolean exists=false
             final folder = FileHelper.getWorkFolder(session.workDir, hash)
@@ -837,19 +835,21 @@ class TaskProcessor {
             try {
                 exists = folder.exists()
                 if( !exists && !folder.mkdirs() )
-                    throw new IOException("Unable to create folder: $folder -- check file system permission")
+                    throw new IOException("Unable to create folder=$folder -- check file system permission")
             }
             finally {
                 lockWorkDirCreation.unlock()
             }
 
-            log.trace "[${task.name}] Cacheable folder: $folder -- exists: $exists; try: $tries"
+            log.trace "[${task.name}] Cacheable folder=$folder -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache"
             def cached = shouldTryCache && exists && checkCachedOutput(task.clone(), folder, hash)
             if( cached )
                 return false
 
-            if( exists )
+            if( exists ) {
+                tries++
                 continue
+            }
 
             // submit task for execution
             submitTask( task, hash, folder )
@@ -1060,6 +1060,7 @@ class TaskProcessor {
             // -- retry without increasing the error counts
             if( task && error.cause instanceof CloudSpotTerminationException ) {
                 log.info "[$task.hashLog] NOTE: ${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
+                task.failCount+=1
                 final taskCopy = task.makeCopy()
                 taskCopy.runType = RunType.RETRY
                 session.getExecService().submit { checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false ) }
