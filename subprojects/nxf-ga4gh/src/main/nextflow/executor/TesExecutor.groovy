@@ -24,7 +24,7 @@ class TesExecutor extends Executor {
      *
      * @return
      */
-    def TaskMonitor createTaskMonitor() {
+    TaskMonitor createTaskMonitor() {
         return TaskPollingMonitor.create(session, name, 50, Duration.of('1 sec'))
     }
 

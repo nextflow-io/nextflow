@@ -1,10 +1,8 @@
 package nextflow.executor
 
-import static nextflow.processor.TaskStatus.COMPLETED
-import static nextflow.processor.TaskStatus.RUNNING
+import static nextflow.processor.TaskStatus.*
 
 import java.nio.file.Path
-import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -21,7 +19,7 @@ import nextflow.processor.TaskStatus
 @CompileStatic
 class TesTaskHandler extends TaskHandler {
 
-    static final Path containerWorkDir = Paths.get('/work')
+    static final String containerWorkDir = '/work'
 
     final List<OUTPUTONLYTasks.StateEnum> COMPLETE_STATUSES = [OUTPUTONLYTasks.StateEnum.COMPLETE, OUTPUTONLYTasks.StateEnum.ERROR, OUTPUTONLYTasks.StateEnum.SYSTEM_ERROR, OUTPUTONLYTasks.StateEnum.CANCELED]
 
@@ -179,14 +177,14 @@ class TesTaskHandler extends TaskHandler {
     private OUTPUTONLYInputs inItem( Path realPath, String fileName = null) {
         def result = new OUTPUTONLYInputs()
         result.url = realPath.toUri().toString()
-        result.path = fileName ? containerWorkDir.resolve(fileName) : containerWorkDir.resolve(realPath.getName())
+        result.path = fileName ? "$containerWorkDir/$fileName" : "$containerWorkDir/${realPath.getName()}"
         log.debug "Adding INPUT file: $result"
         return result
     }
 
     private OUTPUTONLYInputs outItem( String fileName ) {
         def result = new OUTPUTONLYInputs()
-        result.path = containerWorkDir.resolve(fileName)
+        result.path = "$containerWorkDir/$fileName"
         result.url = task.workDir.resolve(fileName).uri.toString()
         log.debug "Adding OUTPUT file: $result"
         return result

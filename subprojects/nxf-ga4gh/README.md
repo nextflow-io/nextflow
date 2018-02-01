@@ -20,6 +20,24 @@ https://github.com/ga4gh/workflow-execution-schemas
 
 https://github.com/common-workflow-language/workflow-service/tree/ga4gh-wes
 
+### Funnel backend
+
+ - Tested with release [0.2.0](https://github.com/ohsu-comp-bio/funnel/releases/tag/0.2.0)
+
+ Funnel configuration file:
+
+ ```
+ Storage:
+   Local:
+     AllowedDirs:
+       - /Users
+ ```
+
+ Funnel launch command line:
+
+ ```
+ ./funnel-darwin-amd64 server -c funnel.yml --http-port 8000
+ ```
 
 ### Other 
 
