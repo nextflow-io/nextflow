@@ -7,10 +7,11 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.ga4gh.tes.client.api.TaskServiceApi
-import nextflow.ga4gh.tes.client.model.Body
-import nextflow.ga4gh.tes.client.model.OUTPUTONLYExecutors
-import nextflow.ga4gh.tes.client.model.OUTPUTONLYInputs
-import nextflow.ga4gh.tes.client.model.OUTPUTONLYTasks
+import nextflow.ga4gh.tes.client.model.TesState
+import nextflow.ga4gh.tes.client.model.TesExecutor as TesExecutorModel
+import nextflow.ga4gh.tes.client.model.TesTask
+import nextflow.ga4gh.tes.client.model.TesInput
+import nextflow.ga4gh.tes.client.model.TesOutput
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -21,9 +22,9 @@ class TesTaskHandler extends TaskHandler {
 
     static final String containerWorkDir = '/work'
 
-    final List<OUTPUTONLYTasks.StateEnum> COMPLETE_STATUSES = [OUTPUTONLYTasks.StateEnum.COMPLETE, OUTPUTONLYTasks.StateEnum.ERROR, OUTPUTONLYTasks.StateEnum.SYSTEM_ERROR, OUTPUTONLYTasks.StateEnum.CANCELED]
+    final List<TesState> COMPLETE_STATUSES = [TesState.COMPLETE, TesState.EXECUTOR_ERROR, TesState.SYSTEM_ERROR, TesState.CANCELED]
 
-    final List<OUTPUTONLYTasks.StateEnum> STARTED_STATUSES = [OUTPUTONLYTasks.StateEnum.RUNNING, OUTPUTONLYTasks.StateEnum.PAUSED] + COMPLETE_STATUSES
+    final List<TesState> STARTED_STATUSES = [TesState.INITIALIZING, TesState.RUNNING, TesState.PAUSED] + COMPLETE_STATUSES
 
     final TesExecutor executor
 
@@ -55,6 +56,7 @@ class TesTaskHandler extends TaskHandler {
         super(task)
         this.executor = executor
         this.api = new TaskServiceApi()
+        this.api.apiClient.basePath = "http://localhost:8000"
 
         this.logFile = task.workDir.resolve(TaskRun.CMD_LOG)
         this.envFile = task.workDir.resolve(TaskRun.CMD_ENV)
@@ -134,12 +136,12 @@ class TesTaskHandler extends TaskHandler {
         def job = new ArrayList(BashWrapperBuilder.BASH) << wrapperFile.getName()
         List cmd = ['/bin/bash','-c', job.join(' ') + " &> $TaskRun.CMD_LOG" ]
 
-        def exec = new OUTPUTONLYExecutors()
-        exec.cmd = cmd
-        exec.imageName = task.container
+        def exec = new TesExecutorModel()
+        exec.command = cmd
+        exec.image = task.container
         exec.workdir = containerWorkDir
 
-        final body = new Body()
+        final body = new TesTask()
 
         // add task control files
         body.addInputsItem(inItem(scriptFile))
@@ -174,16 +176,16 @@ class TesTaskHandler extends TaskHandler {
     }
 
 
-    private OUTPUTONLYInputs inItem( Path realPath, String fileName = null) {
-        def result = new OUTPUTONLYInputs()
+    private TesInput inItem( Path realPath, String fileName = null) {
+        def result = new TesInput()
         result.url = realPath.toUri().toString()
         result.path = fileName ? "$containerWorkDir/$fileName" : "$containerWorkDir/${realPath.getName()}"
         log.debug "Adding INPUT file: $result"
         return result
     }
 
-    private OUTPUTONLYInputs outItem( String fileName ) {
-        def result = new OUTPUTONLYInputs()
+    private TesOutput outItem( String fileName ) {
+        def result = new TesOutput()
         result.path = "$containerWorkDir/$fileName"
         result.url = task.workDir.resolve(fileName).uri.toString()
         log.debug "Adding OUTPUT file: $result"
