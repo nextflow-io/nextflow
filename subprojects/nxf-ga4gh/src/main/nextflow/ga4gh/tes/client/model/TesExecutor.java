@@ -25,16 +25,16 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Executor describes a command to run, and its environment.
+ * Executor describes a command to be executed, and its environment.
  */
-@ApiModel(description = "Executor describes a command to run, and its environment.")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaClientCodegen", date = "2017-07-21T14:19:55.302Z")
+@ApiModel(description = "Executor describes a command to be executed, and its environment.")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaClientCodegen", date = "2018-02-01T15:43:49.638Z")
 public class TesExecutor {
-  @SerializedName("image_name")
-  private String imageName = null;
+  @SerializedName("image")
+  private String image = null;
 
-  @SerializedName("cmd")
-  private List<String> cmd = null;
+  @SerializedName("command")
+  private List<String> command = null;
 
   @SerializedName("workdir")
   private String workdir = null;
@@ -48,54 +48,51 @@ public class TesExecutor {
   @SerializedName("stderr")
   private String stderr = null;
 
-  @SerializedName("ports")
-  private List<OUTPUTONLYPorts> ports = null;
+  @SerializedName("env")
+  private Map<String, String> env = null;
 
-  @SerializedName("environ")
-  private Map<String, String> environ = null;
-
-  public TesExecutor imageName(String imageName) {
-    this.imageName = imageName;
+  public TesExecutor image(String image) {
+    this.image = image;
     return this;
   }
 
    /**
    * Name of the container image, for example: ubuntu quay.io/aptible/ubuntu gcr.io/my-org/my-image etc...
-   * @return imageName
+   * @return image
   **/
   @ApiModelProperty(value = "Name of the container image, for example: ubuntu quay.io/aptible/ubuntu gcr.io/my-org/my-image etc...")
-  public String getImageName() {
-    return imageName;
+  public String getImage() {
+    return image;
   }
 
-  public void setImageName(String imageName) {
-    this.imageName = imageName;
+  public void setImage(String image) {
+    this.image = image;
   }
 
-  public TesExecutor cmd(List<String> cmd) {
-    this.cmd = cmd;
+  public TesExecutor command(List<String> command) {
+    this.command = command;
     return this;
   }
 
-  public TesExecutor addCmdItem(String cmdItem) {
-    if (this.cmd == null) {
-      this.cmd = new ArrayList<String>();
+  public TesExecutor addCommandItem(String commandItem) {
+    if (this.command == null) {
+      this.command = new ArrayList<String>();
     }
-    this.cmd.add(cmdItem);
+    this.command.add(commandItem);
     return this;
   }
 
    /**
-   * The command to be executed.
-   * @return cmd
+   * A sequence of program arguments to execute, where the first argument is the program to execute (i.e. argv).
+   * @return command
   **/
-  @ApiModelProperty(value = "The command to be executed.")
-  public List<String> getCmd() {
-    return cmd;
+  @ApiModelProperty(value = "A sequence of program arguments to execute, where the first argument is the program to execute (i.e. argv).")
+  public List<String> getCommand() {
+    return command;
   }
 
-  public void setCmd(List<String> cmd) {
-    this.cmd = cmd;
+  public void setCommand(List<String> command) {
+    this.command = command;
   }
 
   public TesExecutor workdir(String workdir) {
@@ -122,10 +119,10 @@ public class TesExecutor {
   }
 
    /**
-   * Path inside the container to a file which will be piped to the command&#39;s stdin.
+   * Path inside the container to a file which will be piped to the executor&#39;s stdin. Must be an absolute path.
    * @return stdin
   **/
-  @ApiModelProperty(value = "Path inside the container to a file which will be piped to the command's stdin.")
+  @ApiModelProperty(value = "Path inside the container to a file which will be piped to the executor's stdin. Must be an absolute path.")
   public String getStdin() {
     return stdin;
   }
@@ -140,10 +137,10 @@ public class TesExecutor {
   }
 
    /**
-   * Path inside the container to a file where the command&#39;s stdout will be written to.
+   * Path inside the container to a file where the executor&#39;s stdout will be written to. Must be an absolute path.
    * @return stdout
   **/
-  @ApiModelProperty(value = "Path inside the container to a file where the command's stdout will be written to.")
+  @ApiModelProperty(value = "Path inside the container to a file where the executor's stdout will be written to. Must be an absolute path.")
   public String getStdout() {
     return stdout;
   }
@@ -158,10 +155,10 @@ public class TesExecutor {
   }
 
    /**
-   * Path inside the container to a file where the command&#39;s stderr will be written to.
+   * Path inside the container to a file where the executor&#39;s stderr will be written to. Must be an absolute path.
    * @return stderr
   **/
-  @ApiModelProperty(value = "Path inside the container to a file where the command's stderr will be written to.")
+  @ApiModelProperty(value = "Path inside the container to a file where the executor's stderr will be written to. Must be an absolute path.")
   public String getStderr() {
     return stderr;
   }
@@ -170,56 +167,30 @@ public class TesExecutor {
     this.stderr = stderr;
   }
 
-  public TesExecutor ports(List<OUTPUTONLYPorts> ports) {
-    this.ports = ports;
+  public TesExecutor env(Map<String, String> env) {
+    this.env = env;
     return this;
   }
 
-  public TesExecutor addPortsItem(OUTPUTONLYPorts portsItem) {
-    if (this.ports == null) {
-      this.ports = new ArrayList<OUTPUTONLYPorts>();
+  public TesExecutor putEnvItem(String key, String envItem) {
+    if (this.env == null) {
+      this.env = new HashMap<String, String>();
     }
-    this.ports.add(portsItem);
-    return this;
-  }
-
-   /**
-   * Port to expose from within the container, blank if none.
-   * @return ports
-  **/
-  @ApiModelProperty(value = "Port to expose from within the container, blank if none.")
-  public List<OUTPUTONLYPorts> getPorts() {
-    return ports;
-  }
-
-  public void setPorts(List<OUTPUTONLYPorts> ports) {
-    this.ports = ports;
-  }
-
-  public TesExecutor environ(Map<String, String> environ) {
-    this.environ = environ;
-    return this;
-  }
-
-  public TesExecutor putEnvironItem(String key, String environItem) {
-    if (this.environ == null) {
-      this.environ = new HashMap<String, String>();
-    }
-    this.environ.put(key, environItem);
+    this.env.put(key, envItem);
     return this;
   }
 
    /**
    * Enviromental variables to set within the container.
-   * @return environ
+   * @return env
   **/
   @ApiModelProperty(value = "Enviromental variables to set within the container.")
-  public Map<String, String> getEnviron() {
-    return environ;
+  public Map<String, String> getEnv() {
+    return env;
   }
 
-  public void setEnviron(Map<String, String> environ) {
-    this.environ = environ;
+  public void setEnv(Map<String, String> env) {
+    this.env = env;
   }
 
 
@@ -232,19 +203,18 @@ public class TesExecutor {
       return false;
     }
     TesExecutor tesExecutor = (TesExecutor) o;
-    return Objects.equals(this.imageName, tesExecutor.imageName) &&
-        Objects.equals(this.cmd, tesExecutor.cmd) &&
+    return Objects.equals(this.image, tesExecutor.image) &&
+        Objects.equals(this.command, tesExecutor.command) &&
         Objects.equals(this.workdir, tesExecutor.workdir) &&
         Objects.equals(this.stdin, tesExecutor.stdin) &&
         Objects.equals(this.stdout, tesExecutor.stdout) &&
         Objects.equals(this.stderr, tesExecutor.stderr) &&
-        Objects.equals(this.ports, tesExecutor.ports) &&
-        Objects.equals(this.environ, tesExecutor.environ);
+        Objects.equals(this.env, tesExecutor.env);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(imageName, cmd, workdir, stdin, stdout, stderr, ports, environ);
+    return Objects.hash(image, command, workdir, stdin, stdout, stderr, env);
   }
 
 
@@ -253,14 +223,13 @@ public class TesExecutor {
     StringBuilder sb = new StringBuilder();
     sb.append("class TesExecutor {\n");
     
-    sb.append("    imageName: ").append(toIndentedString(imageName)).append("\n");
-    sb.append("    cmd: ").append(toIndentedString(cmd)).append("\n");
+    sb.append("    image: ").append(toIndentedString(image)).append("\n");
+    sb.append("    command: ").append(toIndentedString(command)).append("\n");
     sb.append("    workdir: ").append(toIndentedString(workdir)).append("\n");
     sb.append("    stdin: ").append(toIndentedString(stdin)).append("\n");
     sb.append("    stdout: ").append(toIndentedString(stdout)).append("\n");
     sb.append("    stderr: ").append(toIndentedString(stderr)).append("\n");
-    sb.append("    ports: ").append(toIndentedString(ports)).append("\n");
-    sb.append("    environ: ").append(toIndentedString(environ)).append("\n");
+    sb.append("    env: ").append(toIndentedString(env)).append("\n");
     sb.append("}");
     return sb.toString();
   }

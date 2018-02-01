@@ -19,14 +19,11 @@ import com.google.gson.annotations.SerializedName;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * ExecutorLog describes logging information related to an Executor.
  */
 @ApiModel(description = "ExecutorLog describes logging information related to an Executor.")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaClientCodegen", date = "2017-07-21T14:19:55.302Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaClientCodegen", date = "2018-02-01T15:43:49.638Z")
 public class TesExecutorLog {
   @SerializedName("start_time")
   private String startTime = null;
@@ -42,12 +39,6 @@ public class TesExecutorLog {
 
   @SerializedName("exit_code")
   private Integer exitCode = null;
-
-  @SerializedName("host_ip")
-  private String hostIp = null;
-
-  @SerializedName("ports")
-  private List<OUTPUTONLYPorts> ports = null;
 
   public TesExecutorLog startTime(String startTime) {
     this.startTime = startTime;
@@ -91,10 +82,10 @@ public class TesExecutorLog {
   }
 
    /**
-   * Stdout tail. This is not guaranteed to be the entire log. Implementations determine the maximum size.
+   * Stdout content.  This is meant for convenience. No guarantees are made about the content. Implementations may chose different approaches: only the head, only the tail, a URL reference only, etc.  In order to capture the full stdout users should set Executor.stdout to a container file path, and use Task.outputs to upload that file to permanent storage.
    * @return stdout
   **/
-  @ApiModelProperty(value = "Stdout tail. This is not guaranteed to be the entire log. Implementations determine the maximum size.")
+  @ApiModelProperty(value = "Stdout content.  This is meant for convenience. No guarantees are made about the content. Implementations may chose different approaches: only the head, only the tail, a URL reference only, etc.  In order to capture the full stdout users should set Executor.stdout to a container file path, and use Task.outputs to upload that file to permanent storage.")
   public String getStdout() {
     return stdout;
   }
@@ -109,10 +100,10 @@ public class TesExecutorLog {
   }
 
    /**
-   * Stderr tail. This is not guaranteed to be the entire log. Implementations determine the maximum size.
+   * Stderr content.  This is meant for convenience. No guarantees are made about the content. Implementations may chose different approaches: only the head, only the tail, a URL reference only, etc.  In order to capture the full stderr users should set Executor.stderr to a container file path, and use Task.outputs to upload that file to permanent storage.
    * @return stderr
   **/
-  @ApiModelProperty(value = "Stderr tail. This is not guaranteed to be the entire log. Implementations determine the maximum size.")
+  @ApiModelProperty(value = "Stderr content.  This is meant for convenience. No guarantees are made about the content. Implementations may chose different approaches: only the head, only the tail, a URL reference only, etc.  In order to capture the full stderr users should set Executor.stderr to a container file path, and use Task.outputs to upload that file to permanent storage.")
   public String getStderr() {
     return stderr;
   }
@@ -139,50 +130,6 @@ public class TesExecutorLog {
     this.exitCode = exitCode;
   }
 
-  public TesExecutorLog hostIp(String hostIp) {
-    this.hostIp = hostIp;
-    return this;
-  }
-
-   /**
-   * IP address of host.
-   * @return hostIp
-  **/
-  @ApiModelProperty(value = "IP address of host.")
-  public String getHostIp() {
-    return hostIp;
-  }
-
-  public void setHostIp(String hostIp) {
-    this.hostIp = hostIp;
-  }
-
-  public TesExecutorLog ports(List<OUTPUTONLYPorts> ports) {
-    this.ports = ports;
-    return this;
-  }
-
-  public TesExecutorLog addPortsItem(OUTPUTONLYPorts portsItem) {
-    if (this.ports == null) {
-      this.ports = new ArrayList<OUTPUTONLYPorts>();
-    }
-    this.ports.add(portsItem);
-    return this;
-  }
-
-   /**
-   * Ports mapped between the container and host.
-   * @return ports
-  **/
-  @ApiModelProperty(value = "Ports mapped between the container and host.")
-  public List<OUTPUTONLYPorts> getPorts() {
-    return ports;
-  }
-
-  public void setPorts(List<OUTPUTONLYPorts> ports) {
-    this.ports = ports;
-  }
-
 
   @Override
   public boolean equals(java.lang.Object o) {
@@ -197,14 +144,12 @@ public class TesExecutorLog {
         Objects.equals(this.endTime, tesExecutorLog.endTime) &&
         Objects.equals(this.stdout, tesExecutorLog.stdout) &&
         Objects.equals(this.stderr, tesExecutorLog.stderr) &&
-        Objects.equals(this.exitCode, tesExecutorLog.exitCode) &&
-        Objects.equals(this.hostIp, tesExecutorLog.hostIp) &&
-        Objects.equals(this.ports, tesExecutorLog.ports);
+        Objects.equals(this.exitCode, tesExecutorLog.exitCode);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(startTime, endTime, stdout, stderr, exitCode, hostIp, ports);
+    return Objects.hash(startTime, endTime, stdout, stderr, exitCode);
   }
 
 
@@ -218,8 +163,6 @@ public class TesExecutorLog {
     sb.append("    stdout: ").append(toIndentedString(stdout)).append("\n");
     sb.append("    stderr: ").append(toIndentedString(stderr)).append("\n");
     sb.append("    exitCode: ").append(toIndentedString(exitCode)).append("\n");
-    sb.append("    hostIp: ").append(toIndentedString(hostIp)).append("\n");
-    sb.append("    ports: ").append(toIndentedString(ports)).append("\n");
     sb.append("}");
     return sb.toString();
   }

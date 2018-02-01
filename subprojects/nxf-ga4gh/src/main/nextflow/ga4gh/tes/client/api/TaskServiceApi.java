@@ -13,27 +13,31 @@
 
 package nextflow.ga4gh.tes.client.api;
 
+import nextflow.ga4gh.tes.client.ApiCallback;
+import nextflow.ga4gh.tes.client.ApiClient;
+import nextflow.ga4gh.tes.client.ApiException;
+import nextflow.ga4gh.tes.client.ApiResponse;
+import nextflow.ga4gh.tes.client.Configuration;
+import nextflow.ga4gh.tes.client.Pair;
+import nextflow.ga4gh.tes.client.ProgressRequestBody;
+import nextflow.ga4gh.tes.client.ProgressResponseBody;
+
+import com.google.gson.reflect.TypeToken;
+
 import java.io.IOException;
+
+
+import nextflow.ga4gh.tes.client.model.TesCancelTaskResponse;
+import nextflow.ga4gh.tes.client.model.TesCreateTaskResponse;
+import nextflow.ga4gh.tes.client.model.TesListTasksResponse;
+import nextflow.ga4gh.tes.client.model.TesServiceInfo;
+import nextflow.ga4gh.tes.client.model.TesTask;
+
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import com.google.gson.reflect.TypeToken;
-import nextflow.ga4gh.tes.client.ApiResponse;
-import nextflow.ga4gh.tes.client.model.OUTPUTONLY4;
-import nextflow.ga4gh.tes.client.ApiCallback;
-import nextflow.ga4gh.tes.client.ApiClient;
-import nextflow.ga4gh.tes.client.ApiException;
-import nextflow.ga4gh.tes.client.Configuration;
-import nextflow.ga4gh.tes.client.Pair;
-import nextflow.ga4gh.tes.client.ProgressRequestBody;
-import nextflow.ga4gh.tes.client.ProgressResponseBody;
-import nextflow.ga4gh.tes.client.model.Body;
-import nextflow.ga4gh.tes.client.model.OUTPUTONLY;
-import nextflow.ga4gh.tes.client.model.OUTPUTONLY3;
-import nextflow.ga4gh.tes.client.model.OUTPUTONLYTasks;
 
 public class TaskServiceApi {
     private ApiClient apiClient;
@@ -44,7 +48,6 @@ public class TaskServiceApi {
 
     public TaskServiceApi(ApiClient apiClient) {
         this.apiClient = apiClient;
-        apiClient.setBasePath("http://localhost:8000");
     }
 
     public ApiClient getApiClient() {
@@ -126,11 +129,11 @@ public class TaskServiceApi {
      * Cancel a task.
      * 
      * @param id  (required)
-     * @return Object
+     * @return TesCancelTaskResponse
      * @throws ApiException If fail to call the API, e.g. server error or cannot deserialize the response body
      */
-    public Object cancelTask(String id) throws ApiException {
-        ApiResponse<Object> resp = cancelTaskWithHttpInfo(id);
+    public TesCancelTaskResponse cancelTask(String id) throws ApiException {
+        ApiResponse<TesCancelTaskResponse> resp = cancelTaskWithHttpInfo(id);
         return resp.getData();
     }
 
@@ -138,12 +141,12 @@ public class TaskServiceApi {
      * Cancel a task.
      * 
      * @param id  (required)
-     * @return ApiResponse&lt;Object&gt;
+     * @return ApiResponse&lt;TesCancelTaskResponse&gt;
      * @throws ApiException If fail to call the API, e.g. server error or cannot deserialize the response body
      */
-    public ApiResponse<Object> cancelTaskWithHttpInfo(String id) throws ApiException {
+    public ApiResponse<TesCancelTaskResponse> cancelTaskWithHttpInfo(String id) throws ApiException {
         com.squareup.okhttp.Call call = cancelTaskValidateBeforeCall(id, null, null);
-        Type localVarReturnType = new TypeToken<Object>(){}.getType();
+        Type localVarReturnType = new TypeToken<TesCancelTaskResponse>(){}.getType();
         return apiClient.execute(call, localVarReturnType);
     }
 
@@ -155,7 +158,7 @@ public class TaskServiceApi {
      * @return The request call
      * @throws ApiException If fail to process the API call, e.g. serializing the request body object
      */
-    public com.squareup.okhttp.Call cancelTaskAsync(String id, final ApiCallback<Object> callback) throws ApiException {
+    public com.squareup.okhttp.Call cancelTaskAsync(String id, final ApiCallback<TesCancelTaskResponse> callback) throws ApiException {
 
         ProgressResponseBody.ProgressListener progressListener = null;
         ProgressRequestBody.ProgressRequestListener progressRequestListener = null;
@@ -177,7 +180,7 @@ public class TaskServiceApi {
         }
 
         com.squareup.okhttp.Call call = cancelTaskValidateBeforeCall(id, progressListener, progressRequestListener);
-        Type localVarReturnType = new TypeToken<Object>(){}.getType();
+        Type localVarReturnType = new TypeToken<TesCancelTaskResponse>(){}.getType();
         apiClient.executeAsync(call, localVarReturnType, callback);
         return call;
     }
@@ -189,7 +192,7 @@ public class TaskServiceApi {
      * @return Call to execute
      * @throws ApiException If fail to serialize the request body object
      */
-    public com.squareup.okhttp.Call createTaskCall(Body body, final ProgressResponseBody.ProgressListener progressListener, final ProgressRequestBody.ProgressRequestListener progressRequestListener) throws ApiException {
+    public com.squareup.okhttp.Call createTaskCall(TesTask body, final ProgressResponseBody.ProgressListener progressListener, final ProgressRequestBody.ProgressRequestListener progressRequestListener) throws ApiException {
         Object localVarPostBody = body;
         
         // create path and map variables
@@ -230,7 +233,7 @@ public class TaskServiceApi {
     }
     
     @SuppressWarnings("rawtypes")
-    private com.squareup.okhttp.Call createTaskValidateBeforeCall(Body body, final ProgressResponseBody.ProgressListener progressListener, final ProgressRequestBody.ProgressRequestListener progressRequestListener) throws ApiException {
+    private com.squareup.okhttp.Call createTaskValidateBeforeCall(TesTask body, final ProgressResponseBody.ProgressListener progressListener, final ProgressRequestBody.ProgressRequestListener progressRequestListener) throws ApiException {
         
         // verify the required parameter 'body' is set
         if (body == null) {
@@ -251,11 +254,11 @@ public class TaskServiceApi {
      * Create a new task.
      * 
      * @param body  (required)
-     * @return OUTPUTONLY3
+     * @return TesCreateTaskResponse
      * @throws ApiException If fail to call the API, e.g. server error or cannot deserialize the response body
      */
-    public OUTPUTONLY3 createTask(Body body) throws ApiException {
-        ApiResponse<OUTPUTONLY3> resp = createTaskWithHttpInfo(body);
+    public TesCreateTaskResponse createTask(TesTask body) throws ApiException {
+        ApiResponse<TesCreateTaskResponse> resp = createTaskWithHttpInfo(body);
         return resp.getData();
     }
 
@@ -263,12 +266,12 @@ public class TaskServiceApi {
      * Create a new task.
      * 
      * @param body  (required)
-     * @return ApiResponse&lt;OUTPUTONLY3&gt;
+     * @return ApiResponse&lt;TesCreateTaskResponse&gt;
      * @throws ApiException If fail to call the API, e.g. server error or cannot deserialize the response body
      */
-    public ApiResponse<OUTPUTONLY3> createTaskWithHttpInfo(Body body) throws ApiException {
+    public ApiResponse<TesCreateTaskResponse> createTaskWithHttpInfo(TesTask body) throws ApiException {
         com.squareup.okhttp.Call call = createTaskValidateBeforeCall(body, null, null);
-        Type localVarReturnType = new TypeToken<OUTPUTONLY3>(){}.getType();
+        Type localVarReturnType = new TypeToken<TesCreateTaskResponse>(){}.getType();
         return apiClient.execute(call, localVarReturnType);
     }
 
@@ -280,7 +283,7 @@ public class TaskServiceApi {
      * @return The request call
      * @throws ApiException If fail to process the API call, e.g. serializing the request body object
      */
-    public com.squareup.okhttp.Call createTaskAsync(Body body, final ApiCallback<OUTPUTONLY3> callback) throws ApiException {
+    public com.squareup.okhttp.Call createTaskAsync(TesTask body, final ApiCallback<TesCreateTaskResponse> callback) throws ApiException {
 
         ProgressResponseBody.ProgressListener progressListener = null;
         ProgressRequestBody.ProgressRequestListener progressRequestListener = null;
@@ -302,7 +305,7 @@ public class TaskServiceApi {
         }
 
         com.squareup.okhttp.Call call = createTaskValidateBeforeCall(body, progressListener, progressRequestListener);
-        Type localVarReturnType = new TypeToken<OUTPUTONLY3>(){}.getType();
+        Type localVarReturnType = new TypeToken<TesCreateTaskResponse>(){}.getType();
         apiClient.executeAsync(call, localVarReturnType, callback);
         return call;
     }
@@ -369,23 +372,23 @@ public class TaskServiceApi {
     /**
      * GetServiceInfo provides information about the service, such as storage details, resource availability, and  other documentation.
      * 
-     * @return OUTPUTONLY4
+     * @return TesServiceInfo
      * @throws ApiException If fail to call the API, e.g. server error or cannot deserialize the response body
      */
-    public OUTPUTONLY4 getServiceInfo() throws ApiException {
-        ApiResponse<OUTPUTONLY4> resp = getServiceInfoWithHttpInfo();
+    public TesServiceInfo getServiceInfo() throws ApiException {
+        ApiResponse<TesServiceInfo> resp = getServiceInfoWithHttpInfo();
         return resp.getData();
     }
 
     /**
      * GetServiceInfo provides information about the service, such as storage details, resource availability, and  other documentation.
      * 
-     * @return ApiResponse&lt;OUTPUTONLY4&gt;
+     * @return ApiResponse&lt;TesServiceInfo&gt;
      * @throws ApiException If fail to call the API, e.g. server error or cannot deserialize the response body
      */
-    public ApiResponse<OUTPUTONLY4> getServiceInfoWithHttpInfo() throws ApiException {
+    public ApiResponse<TesServiceInfo> getServiceInfoWithHttpInfo() throws ApiException {
         com.squareup.okhttp.Call call = getServiceInfoValidateBeforeCall(null, null);
-        Type localVarReturnType = new TypeToken<OUTPUTONLY4>(){}.getType();
+        Type localVarReturnType = new TypeToken<TesServiceInfo>(){}.getType();
         return apiClient.execute(call, localVarReturnType);
     }
 
@@ -396,7 +399,7 @@ public class TaskServiceApi {
      * @return The request call
      * @throws ApiException If fail to process the API call, e.g. serializing the request body object
      */
-    public com.squareup.okhttp.Call getServiceInfoAsync(final ApiCallback<OUTPUTONLY4> callback) throws ApiException {
+    public com.squareup.okhttp.Call getServiceInfoAsync(final ApiCallback<TesServiceInfo> callback) throws ApiException {
 
         ProgressResponseBody.ProgressListener progressListener = null;
         ProgressRequestBody.ProgressRequestListener progressRequestListener = null;
@@ -418,14 +421,14 @@ public class TaskServiceApi {
         }
 
         com.squareup.okhttp.Call call = getServiceInfoValidateBeforeCall(progressListener, progressRequestListener);
-        Type localVarReturnType = new TypeToken<OUTPUTONLY4>(){}.getType();
+        Type localVarReturnType = new TypeToken<TesServiceInfo>(){}.getType();
         apiClient.executeAsync(call, localVarReturnType, callback);
         return call;
     }
     /**
      * Build call for getTask
      * @param id  (required)
-     * @param view OPTIONAL. Affects the fields included in the returned Task messages. See TaskView below.   - MINIMAL: Task message will include ONLY the fields:   Task.Id   Task.State  - BASIC: Task message will include all fields EXCEPT:   Task.ExecutorLog.stdout   Task.ExecutorLog.stderr   TaskParameter.Contents in Task.Inputs  - FULL: Task message includes all fields. (optional, default to MINIMAL)
+     * @param view OPTIONAL. Affects the fields included in the returned Task messages. See TaskView below.   - MINIMAL: Task message will include ONLY the fields:   Task.Id   Task.State  - BASIC: Task message will include all fields EXCEPT:   Task.ExecutorLog.stdout   Task.ExecutorLog.stderr   Input.content   TaskLog.system_logs  - FULL: Task message includes all fields. (optional, default to MINIMAL)
      * @param progressListener Progress listener
      * @param progressRequestListener Progress request listener
      * @return Call to execute
@@ -496,12 +499,12 @@ public class TaskServiceApi {
      * Get a task. TaskView is requested as such: \&quot;v1/tasks/{id}?view&#x3D;FULL\&quot;
      * 
      * @param id  (required)
-     * @param view OPTIONAL. Affects the fields included in the returned Task messages. See TaskView below.   - MINIMAL: Task message will include ONLY the fields:   Task.Id   Task.State  - BASIC: Task message will include all fields EXCEPT:   Task.ExecutorLog.stdout   Task.ExecutorLog.stderr   TaskParameter.Contents in Task.Inputs  - FULL: Task message includes all fields. (optional, default to MINIMAL)
-     * @return OUTPUTONLYTasks
+     * @param view OPTIONAL. Affects the fields included in the returned Task messages. See TaskView below.   - MINIMAL: Task message will include ONLY the fields:   Task.Id   Task.State  - BASIC: Task message will include all fields EXCEPT:   Task.ExecutorLog.stdout   Task.ExecutorLog.stderr   Input.content   TaskLog.system_logs  - FULL: Task message includes all fields. (optional, default to MINIMAL)
+     * @return TesTask
      * @throws ApiException If fail to call the API, e.g. server error or cannot deserialize the response body
      */
-    public OUTPUTONLYTasks getTask(String id, String view) throws ApiException {
-        ApiResponse<OUTPUTONLYTasks> resp = getTaskWithHttpInfo(id, view);
+    public TesTask getTask(String id, String view) throws ApiException {
+        ApiResponse<TesTask> resp = getTaskWithHttpInfo(id, view);
         return resp.getData();
     }
 
@@ -509,13 +512,13 @@ public class TaskServiceApi {
      * Get a task. TaskView is requested as such: \&quot;v1/tasks/{id}?view&#x3D;FULL\&quot;
      * 
      * @param id  (required)
-     * @param view OPTIONAL. Affects the fields included in the returned Task messages. See TaskView below.   - MINIMAL: Task message will include ONLY the fields:   Task.Id   Task.State  - BASIC: Task message will include all fields EXCEPT:   Task.ExecutorLog.stdout   Task.ExecutorLog.stderr   TaskParameter.Contents in Task.Inputs  - FULL: Task message includes all fields. (optional, default to MINIMAL)
-     * @return ApiResponse&lt;OUTPUTONLYTasks&gt;
+     * @param view OPTIONAL. Affects the fields included in the returned Task messages. See TaskView below.   - MINIMAL: Task message will include ONLY the fields:   Task.Id   Task.State  - BASIC: Task message will include all fields EXCEPT:   Task.ExecutorLog.stdout   Task.ExecutorLog.stderr   Input.content   TaskLog.system_logs  - FULL: Task message includes all fields. (optional, default to MINIMAL)
+     * @return ApiResponse&lt;TesTask&gt;
      * @throws ApiException If fail to call the API, e.g. server error or cannot deserialize the response body
      */
-    public ApiResponse<OUTPUTONLYTasks> getTaskWithHttpInfo(String id, String view) throws ApiException {
+    public ApiResponse<TesTask> getTaskWithHttpInfo(String id, String view) throws ApiException {
         com.squareup.okhttp.Call call = getTaskValidateBeforeCall(id, view, null, null);
-        Type localVarReturnType = new TypeToken<OUTPUTONLYTasks>(){}.getType();
+        Type localVarReturnType = new TypeToken<TesTask>(){}.getType();
         return apiClient.execute(call, localVarReturnType);
     }
 
@@ -523,12 +526,12 @@ public class TaskServiceApi {
      * Get a task. TaskView is requested as such: \&quot;v1/tasks/{id}?view&#x3D;FULL\&quot; (asynchronously)
      * 
      * @param id  (required)
-     * @param view OPTIONAL. Affects the fields included in the returned Task messages. See TaskView below.   - MINIMAL: Task message will include ONLY the fields:   Task.Id   Task.State  - BASIC: Task message will include all fields EXCEPT:   Task.ExecutorLog.stdout   Task.ExecutorLog.stderr   TaskParameter.Contents in Task.Inputs  - FULL: Task message includes all fields. (optional, default to MINIMAL)
+     * @param view OPTIONAL. Affects the fields included in the returned Task messages. See TaskView below.   - MINIMAL: Task message will include ONLY the fields:   Task.Id   Task.State  - BASIC: Task message will include all fields EXCEPT:   Task.ExecutorLog.stdout   Task.ExecutorLog.stderr   Input.content   TaskLog.system_logs  - FULL: Task message includes all fields. (optional, default to MINIMAL)
      * @param callback The callback to be executed when the API call finishes
      * @return The request call
      * @throws ApiException If fail to process the API call, e.g. serializing the request body object
      */
-    public com.squareup.okhttp.Call getTaskAsync(String id, String view, final ApiCallback<OUTPUTONLYTasks> callback) throws ApiException {
+    public com.squareup.okhttp.Call getTaskAsync(String id, String view, final ApiCallback<TesTask> callback) throws ApiException {
 
         ProgressResponseBody.ProgressListener progressListener = null;
         ProgressRequestBody.ProgressRequestListener progressRequestListener = null;
@@ -550,31 +553,28 @@ public class TaskServiceApi {
         }
 
         com.squareup.okhttp.Call call = getTaskValidateBeforeCall(id, view, progressListener, progressRequestListener);
-        Type localVarReturnType = new TypeToken<OUTPUTONLYTasks>(){}.getType();
+        Type localVarReturnType = new TypeToken<TesTask>(){}.getType();
         apiClient.executeAsync(call, localVarReturnType, callback);
         return call;
     }
     /**
      * Build call for listTasks
-     * @param project OPTIONAL. Filter the task list to include tasks in this project. (optional)
      * @param namePrefix OPTIONAL. Filter the list to include tasks where the name matches this prefix. If unspecified, no task name filtering is done. (optional)
      * @param pageSize OPTIONAL. Number of tasks to return in one page. Must be less than 2048. Defaults to 256. (optional)
      * @param pageToken OPTIONAL. Page token is used to retrieve the next page of results. If unspecified, returns the first page of results. See ListTasksResponse.next_page_token (optional)
-     * @param view OPTIONAL. Affects the fields included in the returned Task messages. See TaskView below.   - MINIMAL: Task message will include ONLY the fields:   Task.Id   Task.State  - BASIC: Task message will include all fields EXCEPT:   Task.ExecutorLog.stdout   Task.ExecutorLog.stderr   TaskParameter.Contents in Task.Inputs  - FULL: Task message includes all fields. (optional, default to MINIMAL)
+     * @param view OPTIONAL. Affects the fields included in the returned Task messages. See TaskView below.   - MINIMAL: Task message will include ONLY the fields:   Task.Id   Task.State  - BASIC: Task message will include all fields EXCEPT:   Task.ExecutorLog.stdout   Task.ExecutorLog.stderr   Input.content   TaskLog.system_logs  - FULL: Task message includes all fields. (optional, default to MINIMAL)
      * @param progressListener Progress listener
      * @param progressRequestListener Progress request listener
      * @return Call to execute
      * @throws ApiException If fail to serialize the request body object
      */
-    public com.squareup.okhttp.Call listTasksCall(String project, String namePrefix, Long pageSize, String pageToken, String view, final ProgressResponseBody.ProgressListener progressListener, final ProgressRequestBody.ProgressRequestListener progressRequestListener) throws ApiException {
+    public com.squareup.okhttp.Call listTasksCall(String namePrefix, Long pageSize, String pageToken, String view, final ProgressResponseBody.ProgressListener progressListener, final ProgressRequestBody.ProgressRequestListener progressRequestListener) throws ApiException {
         Object localVarPostBody = null;
         
         // create path and map variables
         String localVarPath = "/v1/tasks";
 
         List<Pair> localVarQueryParams = new ArrayList<Pair>();
-        if (project != null)
-        localVarQueryParams.addAll(apiClient.parameterToPairs("", "project", project));
         if (namePrefix != null)
         localVarQueryParams.addAll(apiClient.parameterToPairs("", "name_prefix", namePrefix));
         if (pageSize != null)
@@ -617,10 +617,10 @@ public class TaskServiceApi {
     }
     
     @SuppressWarnings("rawtypes")
-    private com.squareup.okhttp.Call listTasksValidateBeforeCall(String project, String namePrefix, Long pageSize, String pageToken, String view, final ProgressResponseBody.ProgressListener progressListener, final ProgressRequestBody.ProgressRequestListener progressRequestListener) throws ApiException {
+    private com.squareup.okhttp.Call listTasksValidateBeforeCall(String namePrefix, Long pageSize, String pageToken, String view, final ProgressResponseBody.ProgressListener progressListener, final ProgressRequestBody.ProgressRequestListener progressRequestListener) throws ApiException {
         
         
-        com.squareup.okhttp.Call call = listTasksCall(project, namePrefix, pageSize, pageToken, view, progressListener, progressRequestListener);
+        com.squareup.okhttp.Call call = listTasksCall(namePrefix, pageSize, pageToken, view, progressListener, progressRequestListener);
         return call;
 
         
@@ -632,49 +632,46 @@ public class TaskServiceApi {
     /**
      * List tasks. TaskView is requested as such: \&quot;v1/tasks?view&#x3D;BASIC\&quot;
      * 
-     * @param project OPTIONAL. Filter the task list to include tasks in this project. (optional)
      * @param namePrefix OPTIONAL. Filter the list to include tasks where the name matches this prefix. If unspecified, no task name filtering is done. (optional)
      * @param pageSize OPTIONAL. Number of tasks to return in one page. Must be less than 2048. Defaults to 256. (optional)
      * @param pageToken OPTIONAL. Page token is used to retrieve the next page of results. If unspecified, returns the first page of results. See ListTasksResponse.next_page_token (optional)
-     * @param view OPTIONAL. Affects the fields included in the returned Task messages. See TaskView below.   - MINIMAL: Task message will include ONLY the fields:   Task.Id   Task.State  - BASIC: Task message will include all fields EXCEPT:   Task.ExecutorLog.stdout   Task.ExecutorLog.stderr   TaskParameter.Contents in Task.Inputs  - FULL: Task message includes all fields. (optional, default to MINIMAL)
-     * @return OUTPUTONLY
+     * @param view OPTIONAL. Affects the fields included in the returned Task messages. See TaskView below.   - MINIMAL: Task message will include ONLY the fields:   Task.Id   Task.State  - BASIC: Task message will include all fields EXCEPT:   Task.ExecutorLog.stdout   Task.ExecutorLog.stderr   Input.content   TaskLog.system_logs  - FULL: Task message includes all fields. (optional, default to MINIMAL)
+     * @return TesListTasksResponse
      * @throws ApiException If fail to call the API, e.g. server error or cannot deserialize the response body
      */
-    public OUTPUTONLY listTasks(String project, String namePrefix, Long pageSize, String pageToken, String view) throws ApiException {
-        ApiResponse<OUTPUTONLY> resp = listTasksWithHttpInfo(project, namePrefix, pageSize, pageToken, view);
+    public TesListTasksResponse listTasks(String namePrefix, Long pageSize, String pageToken, String view) throws ApiException {
+        ApiResponse<TesListTasksResponse> resp = listTasksWithHttpInfo(namePrefix, pageSize, pageToken, view);
         return resp.getData();
     }
 
     /**
      * List tasks. TaskView is requested as such: \&quot;v1/tasks?view&#x3D;BASIC\&quot;
      * 
-     * @param project OPTIONAL. Filter the task list to include tasks in this project. (optional)
      * @param namePrefix OPTIONAL. Filter the list to include tasks where the name matches this prefix. If unspecified, no task name filtering is done. (optional)
      * @param pageSize OPTIONAL. Number of tasks to return in one page. Must be less than 2048. Defaults to 256. (optional)
      * @param pageToken OPTIONAL. Page token is used to retrieve the next page of results. If unspecified, returns the first page of results. See ListTasksResponse.next_page_token (optional)
-     * @param view OPTIONAL. Affects the fields included in the returned Task messages. See TaskView below.   - MINIMAL: Task message will include ONLY the fields:   Task.Id   Task.State  - BASIC: Task message will include all fields EXCEPT:   Task.ExecutorLog.stdout   Task.ExecutorLog.stderr   TaskParameter.Contents in Task.Inputs  - FULL: Task message includes all fields. (optional, default to MINIMAL)
-     * @return ApiResponse&lt;OUTPUTONLY&gt;
+     * @param view OPTIONAL. Affects the fields included in the returned Task messages. See TaskView below.   - MINIMAL: Task message will include ONLY the fields:   Task.Id   Task.State  - BASIC: Task message will include all fields EXCEPT:   Task.ExecutorLog.stdout   Task.ExecutorLog.stderr   Input.content   TaskLog.system_logs  - FULL: Task message includes all fields. (optional, default to MINIMAL)
+     * @return ApiResponse&lt;TesListTasksResponse&gt;
      * @throws ApiException If fail to call the API, e.g. server error or cannot deserialize the response body
      */
-    public ApiResponse<OUTPUTONLY> listTasksWithHttpInfo(String project, String namePrefix, Long pageSize, String pageToken, String view) throws ApiException {
-        com.squareup.okhttp.Call call = listTasksValidateBeforeCall(project, namePrefix, pageSize, pageToken, view, null, null);
-        Type localVarReturnType = new TypeToken<OUTPUTONLY>(){}.getType();
+    public ApiResponse<TesListTasksResponse> listTasksWithHttpInfo(String namePrefix, Long pageSize, String pageToken, String view) throws ApiException {
+        com.squareup.okhttp.Call call = listTasksValidateBeforeCall(namePrefix, pageSize, pageToken, view, null, null);
+        Type localVarReturnType = new TypeToken<TesListTasksResponse>(){}.getType();
         return apiClient.execute(call, localVarReturnType);
     }
 
     /**
      * List tasks. TaskView is requested as such: \&quot;v1/tasks?view&#x3D;BASIC\&quot; (asynchronously)
      * 
-     * @param project OPTIONAL. Filter the task list to include tasks in this project. (optional)
      * @param namePrefix OPTIONAL. Filter the list to include tasks where the name matches this prefix. If unspecified, no task name filtering is done. (optional)
      * @param pageSize OPTIONAL. Number of tasks to return in one page. Must be less than 2048. Defaults to 256. (optional)
      * @param pageToken OPTIONAL. Page token is used to retrieve the next page of results. If unspecified, returns the first page of results. See ListTasksResponse.next_page_token (optional)
-     * @param view OPTIONAL. Affects the fields included in the returned Task messages. See TaskView below.   - MINIMAL: Task message will include ONLY the fields:   Task.Id   Task.State  - BASIC: Task message will include all fields EXCEPT:   Task.ExecutorLog.stdout   Task.ExecutorLog.stderr   TaskParameter.Contents in Task.Inputs  - FULL: Task message includes all fields. (optional, default to MINIMAL)
+     * @param view OPTIONAL. Affects the fields included in the returned Task messages. See TaskView below.   - MINIMAL: Task message will include ONLY the fields:   Task.Id   Task.State  - BASIC: Task message will include all fields EXCEPT:   Task.ExecutorLog.stdout   Task.ExecutorLog.stderr   Input.content   TaskLog.system_logs  - FULL: Task message includes all fields. (optional, default to MINIMAL)
      * @param callback The callback to be executed when the API call finishes
      * @return The request call
      * @throws ApiException If fail to process the API call, e.g. serializing the request body object
      */
-    public com.squareup.okhttp.Call listTasksAsync(String project, String namePrefix, Long pageSize, String pageToken, String view, final ApiCallback<OUTPUTONLY> callback) throws ApiException {
+    public com.squareup.okhttp.Call listTasksAsync(String namePrefix, Long pageSize, String pageToken, String view, final ApiCallback<TesListTasksResponse> callback) throws ApiException {
 
         ProgressResponseBody.ProgressListener progressListener = null;
         ProgressRequestBody.ProgressRequestListener progressRequestListener = null;
@@ -695,8 +692,8 @@ public class TaskServiceApi {
             };
         }
 
-        com.squareup.okhttp.Call call = listTasksValidateBeforeCall(project, namePrefix, pageSize, pageToken, view, progressListener, progressRequestListener);
-        Type localVarReturnType = new TypeToken<OUTPUTONLY>(){}.getType();
+        com.squareup.okhttp.Call call = listTasksValidateBeforeCall(namePrefix, pageSize, pageToken, view, progressListener, progressRequestListener);
+        Type localVarReturnType = new TypeToken<TesListTasksResponse>(){}.getType();
         apiClient.executeAsync(call, localVarReturnType, callback);
         return call;
     }

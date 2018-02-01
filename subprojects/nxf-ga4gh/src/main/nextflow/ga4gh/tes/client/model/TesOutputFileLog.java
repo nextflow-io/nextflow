@@ -23,7 +23,7 @@ import io.swagger.annotations.ApiModelProperty;
  * OutputFileLog describes a single output file. This describes file details after the task has completed successfully, for logging purposes.
  */
 @ApiModel(description = "OutputFileLog describes a single output file. This describes file details after the task has completed successfully, for logging purposes.")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaClientCodegen", date = "2017-07-21T14:19:55.302Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaClientCodegen", date = "2018-02-01T15:43:49.638Z")
 public class TesOutputFileLog {
   @SerializedName("url")
   private String url = null;
@@ -58,10 +58,10 @@ public class TesOutputFileLog {
   }
 
    /**
-   * Path of the file inside the container.
+   * Path of the file inside the container. Must be an absolute path.
    * @return path
   **/
-  @ApiModelProperty(value = "Path of the file inside the container.")
+  @ApiModelProperty(value = "Path of the file inside the container. Must be an absolute path.")
   public String getPath() {
     return path;
   }

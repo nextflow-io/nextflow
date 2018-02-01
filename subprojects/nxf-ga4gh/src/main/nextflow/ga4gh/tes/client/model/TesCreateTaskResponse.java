@@ -23,7 +23,7 @@ import io.swagger.annotations.ApiModelProperty;
  * CreateTaskResponse describes a response from the CreateTask endpoint.
  */
 @ApiModel(description = "CreateTaskResponse describes a response from the CreateTask endpoint.")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaClientCodegen", date = "2017-07-21T14:19:55.302Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaClientCodegen", date = "2018-02-01T15:43:49.638Z")
 public class TesCreateTaskResponse {
   @SerializedName("id")
   private String id = null;

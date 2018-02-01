@@ -26,37 +26,37 @@ import java.util.List;
  * ListTasksResponse describes a response from the ListTasks endpoint.
  */
 @ApiModel(description = "ListTasksResponse describes a response from the ListTasks endpoint.")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaClientCodegen", date = "2017-07-21T14:19:55.302Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaClientCodegen", date = "2018-02-01T15:43:49.638Z")
 public class TesListTasksResponse {
   @SerializedName("tasks")
-  private List<OUTPUTONLYTasks> tasks = null;
+  private List<TesTask> tasks = null;
 
   @SerializedName("next_page_token")
   private String nextPageToken = null;
 
-  public TesListTasksResponse tasks(List<OUTPUTONLYTasks> tasks) {
+  public TesListTasksResponse tasks(List<TesTask> tasks) {
     this.tasks = tasks;
     return this;
   }
 
-  public TesListTasksResponse addTasksItem(OUTPUTONLYTasks tasksItem) {
+  public TesListTasksResponse addTasksItem(TesTask tasksItem) {
     if (this.tasks == null) {
-      this.tasks = new ArrayList<OUTPUTONLYTasks>();
+      this.tasks = new ArrayList<TesTask>();
     }
     this.tasks.add(tasksItem);
     return this;
   }
 
    /**
-   * List of lightweight task descriptions.
+   * List of tasks.
    * @return tasks
   **/
-  @ApiModelProperty(value = "List of lightweight task descriptions.")
-  public List<OUTPUTONLYTasks> getTasks() {
+  @ApiModelProperty(value = "List of tasks.")
+  public List<TesTask> getTasks() {
     return tasks;
   }
 
-  public void setTasks(List<OUTPUTONLYTasks> tasks) {
+  public void setTasks(List<TesTask> tasks) {
     this.tasks = tasks;
   }
 

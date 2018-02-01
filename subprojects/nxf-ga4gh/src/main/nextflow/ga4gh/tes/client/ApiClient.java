@@ -70,12 +70,13 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
-import nextflow.ga4gh.tes.client.auth.ApiKeyAuth;
-import nextflow.ga4gh.tes.client.auth.Authentication;
-import nextflow.ga4gh.tes.client.auth.HttpBasicAuth;
-import nextflow.ga4gh.tes.client.auth.OAuth;
 import okio.BufferedSink;
 import okio.Okio;
+
+import nextflow.ga4gh.tes.client.auth.Authentication;
+import nextflow.ga4gh.tes.client.auth.HttpBasicAuth;
+import nextflow.ga4gh.tes.client.auth.ApiKeyAuth;
+import nextflow.ga4gh.tes.client.auth.OAuth;
 
 public class ApiClient {
     public static final double JAVA_VERSION;

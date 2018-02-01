@@ -14,15 +14,11 @@
 package nextflow.ga4gh.tes.client.model;
 
 import java.util.Objects;
-import com.google.gson.TypeAdapter;
-import com.google.gson.annotations.JsonAdapter;
+
 import com.google.gson.annotations.SerializedName;
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonWriter;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,95 +28,31 @@ import java.util.Map;
  * Task describes an instance of a task.
  */
 @ApiModel(description = "Task describes an instance of a task.")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaClientCodegen", date = "2017-07-21T14:19:55.302Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaClientCodegen", date = "2018-02-01T15:43:49.638Z")
 public class TesTask {
   @SerializedName("id")
   private String id = null;
 
-  /**
-   * Task states.   - PAUSED: An implementation *may* have the ability to pause a task, but this is not required.
-   */
-  @JsonAdapter(StateEnum.Adapter.class)
-  public enum StateEnum {
-    UNKNOWN("UNKNOWN"),
-    
-    QUEUED("QUEUED"),
-    
-    INITIALIZING("INITIALIZING"),
-    
-    RUNNING("RUNNING"),
-    
-    PAUSED("PAUSED"),
-    
-    COMPLETE("COMPLETE"),
-    
-    ERROR("ERROR"),
-    
-    SYSTEM_ERROR("SYSTEM_ERROR"),
-    
-    CANCELED("CANCELED");
-
-    private String value;
-
-    StateEnum(String value) {
-      this.value = value;
-    }
-
-    public String getValue() {
-      return value;
-    }
-
-    @Override
-    public String toString() {
-      return String.valueOf(value);
-    }
-
-    public static StateEnum fromValue(String text) {
-      for (StateEnum b : StateEnum.values()) {
-        if (String.valueOf(b.value).equals(text)) {
-          return b;
-        }
-      }
-      return null;
-    }
-
-    public static class Adapter extends TypeAdapter<StateEnum> {
-      @Override
-      public void write(final JsonWriter jsonWriter, final StateEnum enumeration) throws IOException {
-        jsonWriter.value(enumeration.getValue());
-      }
-
-      @Override
-      public StateEnum read(final JsonReader jsonReader) throws IOException {
-        String value = jsonReader.nextString();
-        return StateEnum.fromValue(String.valueOf(value));
-      }
-    }
-  }
-
   @SerializedName("state")
-  private StateEnum state = StateEnum.UNKNOWN;
+  private TesState state = null;
 
   @SerializedName("name")
   private String name = null;
-
-  @SerializedName("project")
-  private String project = null;
 
   @SerializedName("description")
   private String description = null;
 
   @SerializedName("inputs")
-  private List<OUTPUTONLYInputs> inputs = null;
+  private List<TesInput> inputs = null;
 
   @SerializedName("outputs")
-  private List<OUTPUTONLYInputs> outputs = null;
+  private List<TesOutput> outputs = null;
 
   @SerializedName("resources")
-  private OUTPUTONLYResources resources = null;
+  private TesResources resources = null;
 
   @SerializedName("executors")
-  private List<OUTPUTONLYExecutors> executors = null;
+  private List<TesExecutor> executors = null;
 
   @SerializedName("volumes")
   private List<String> volumes = null;
@@ -129,7 +61,10 @@ public class TesTask {
   private Map<String, String> tags = null;
 
   @SerializedName("logs")
-  private List<OUTPUTONLY2> logs = null;
+  private List<TesTaskLog> logs = null;
+
+  @SerializedName("creation_time")
+  private String creationTime = null;
 
   public TesTask id(String id) {
     this.id = id;
@@ -149,21 +84,21 @@ public class TesTask {
     this.id = id;
   }
 
-  public TesTask state(StateEnum state) {
+  public TesTask state(TesState state) {
     this.state = state;
     return this;
   }
 
    /**
-   * Task states.   - PAUSED: An implementation *may* have the ability to pause a task, but this is not required.
+   * Get state
    * @return state
   **/
-  @ApiModelProperty(value = "Task states.   - PAUSED: An implementation *may* have the ability to pause a task, but this is not required.")
-  public StateEnum getState() {
+  @ApiModelProperty(value = "")
+  public TesState getState() {
     return state;
   }
 
-  public void setState(StateEnum state) {
+  public void setState(TesState state) {
     this.state = state;
   }
 
@@ -185,24 +120,6 @@ public class TesTask {
     this.name = name;
   }
 
-  public TesTask project(String project) {
-    this.project = project;
-    return this;
-  }
-
-   /**
-   * Describes the project this task is associated with. Commonly used for billing on cloud providers (AWS, Google Cloud, etc).
-   * @return project
-  **/
-  @ApiModelProperty(value = "Describes the project this task is associated with. Commonly used for billing on cloud providers (AWS, Google Cloud, etc).")
-  public String getProject() {
-    return project;
-  }
-
-  public void setProject(String project) {
-    this.project = project;
-  }
-
   public TesTask description(String description) {
     this.description = description;
     return this;
@@ -221,14 +138,14 @@ public class TesTask {
     this.description = description;
   }
 
-  public TesTask inputs(List<OUTPUTONLYInputs> inputs) {
+  public TesTask inputs(List<TesInput> inputs) {
     this.inputs = inputs;
     return this;
   }
 
-  public TesTask addInputsItem(OUTPUTONLYInputs inputsItem) {
+  public TesTask addInputsItem(TesInput inputsItem) {
     if (this.inputs == null) {
-      this.inputs = new ArrayList<OUTPUTONLYInputs>();
+      this.inputs = new ArrayList<TesInput>();
     }
     this.inputs.add(inputsItem);
     return this;
@@ -239,22 +156,22 @@ public class TesTask {
    * @return inputs
   **/
   @ApiModelProperty(value = "Input files. Inputs will be downloaded and mounted into the executor container.")
-  public List<OUTPUTONLYInputs> getInputs() {
+  public List<TesInput> getInputs() {
     return inputs;
   }
 
-  public void setInputs(List<OUTPUTONLYInputs> inputs) {
+  public void setInputs(List<TesInput> inputs) {
     this.inputs = inputs;
   }
 
-  public TesTask outputs(List<OUTPUTONLYInputs> outputs) {
+  public TesTask outputs(List<TesOutput> outputs) {
     this.outputs = outputs;
     return this;
   }
 
-  public TesTask addOutputsItem(OUTPUTONLYInputs outputsItem) {
+  public TesTask addOutputsItem(TesOutput outputsItem) {
     if (this.outputs == null) {
-      this.outputs = new ArrayList<OUTPUTONLYInputs>();
+      this.outputs = new ArrayList<TesOutput>();
     }
     this.outputs.add(outputsItem);
     return this;
@@ -265,55 +182,55 @@ public class TesTask {
    * @return outputs
   **/
   @ApiModelProperty(value = "Output files. Outputs will be uploaded from the executor container to long-term storage.")
-  public List<OUTPUTONLYInputs> getOutputs() {
+  public List<TesOutput> getOutputs() {
     return outputs;
   }
 
-  public void setOutputs(List<OUTPUTONLYInputs> outputs) {
+  public void setOutputs(List<TesOutput> outputs) {
     this.outputs = outputs;
   }
 
-  public TesTask resources(OUTPUTONLYResources resources) {
+  public TesTask resources(TesResources resources) {
     this.resources = resources;
     return this;
   }
 
    /**
-   * Get resources
+   * Request that the task be run with these resources.
    * @return resources
   **/
-  @ApiModelProperty(value = "")
-  public OUTPUTONLYResources getResources() {
+  @ApiModelProperty(value = "Request that the task be run with these resources.")
+  public TesResources getResources() {
     return resources;
   }
 
-  public void setResources(OUTPUTONLYResources resources) {
+  public void setResources(TesResources resources) {
     this.resources = resources;
   }
 
-  public TesTask executors(List<OUTPUTONLYExecutors> executors) {
+  public TesTask executors(List<TesExecutor> executors) {
     this.executors = executors;
     return this;
   }
 
-  public TesTask addExecutorsItem(OUTPUTONLYExecutors executorsItem) {
+  public TesTask addExecutorsItem(TesExecutor executorsItem) {
     if (this.executors == null) {
-      this.executors = new ArrayList<OUTPUTONLYExecutors>();
+      this.executors = new ArrayList<TesExecutor>();
     }
     this.executors.add(executorsItem);
     return this;
   }
 
    /**
-   * A list of executors to be run, sequentially.
+   * A list of executors to be run, sequentially. Execution stops on the first error.
    * @return executors
   **/
-  @ApiModelProperty(value = "A list of executors to be run, sequentially.")
-  public List<OUTPUTONLYExecutors> getExecutors() {
+  @ApiModelProperty(value = "A list of executors to be run, sequentially. Execution stops on the first error.")
+  public List<TesExecutor> getExecutors() {
     return executors;
   }
 
-  public void setExecutors(List<OUTPUTONLYExecutors> executors) {
+  public void setExecutors(List<TesExecutor> executors) {
     this.executors = executors;
   }
 
@@ -331,10 +248,10 @@ public class TesTask {
   }
 
    /**
-   * Declared volumes. Volumes are shared between executors. Volumes for inputs and outputs are  inferred and should not be delcared here.
+   * Volumes are directories which may be used to share data between Executors. Volumes are initialized as empty directories by the system when the task starts and are mounted at the same path in each Executor.  For example, given a volume defined at \&quot;/vol/A\&quot;, executor 1 may write a file to \&quot;/vol/A/exec1.out.txt\&quot;, then executor 2 may read from that file.  (Essentially, this translates to a &#x60;docker run -v&#x60; flag where the container path is the same for each executor).
    * @return volumes
   **/
-  @ApiModelProperty(value = "Declared volumes. Volumes are shared between executors. Volumes for inputs and outputs are  inferred and should not be delcared here.")
+  @ApiModelProperty(value = "Volumes are directories which may be used to share data between Executors. Volumes are initialized as empty directories by the system when the task starts and are mounted at the same path in each Executor.  For example, given a volume defined at \"/vol/A\", executor 1 may write a file to \"/vol/A/exec1.out.txt\", then executor 2 may read from that file.  (Essentially, this translates to a `docker run -v` flag where the container path is the same for each executor).")
   public List<String> getVolumes() {
     return volumes;
   }
@@ -369,14 +286,14 @@ public class TesTask {
     this.tags = tags;
   }
 
-  public TesTask logs(List<OUTPUTONLY2> logs) {
+  public TesTask logs(List<TesTaskLog> logs) {
     this.logs = logs;
     return this;
   }
 
-  public TesTask addLogsItem(OUTPUTONLY2 logsItem) {
+  public TesTask addLogsItem(TesTaskLog logsItem) {
     if (this.logs == null) {
-      this.logs = new ArrayList<OUTPUTONLY2>();
+      this.logs = new ArrayList<TesTaskLog>();
     }
     this.logs.add(logsItem);
     return this;
@@ -387,12 +304,30 @@ public class TesTask {
    * @return logs
   **/
   @ApiModelProperty(value = "Task logging information. Normally, this will contain only one entry, but in the case where a task fails and is retried, an entry will be appended to this list.")
-  public List<OUTPUTONLY2> getLogs() {
+  public List<TesTaskLog> getLogs() {
     return logs;
   }
 
-  public void setLogs(List<OUTPUTONLY2> logs) {
+  public void setLogs(List<TesTaskLog> logs) {
     this.logs = logs;
+  }
+
+  public TesTask creationTime(String creationTime) {
+    this.creationTime = creationTime;
+    return this;
+  }
+
+   /**
+   * Date + time the task was created, in RFC 3339 format. This is set by the system, not the client.
+   * @return creationTime
+  **/
+  @ApiModelProperty(value = "Date + time the task was created, in RFC 3339 format. This is set by the system, not the client.")
+  public String getCreationTime() {
+    return creationTime;
+  }
+
+  public void setCreationTime(String creationTime) {
+    this.creationTime = creationTime;
   }
 
 
@@ -408,7 +343,6 @@ public class TesTask {
     return Objects.equals(this.id, tesTask.id) &&
         Objects.equals(this.state, tesTask.state) &&
         Objects.equals(this.name, tesTask.name) &&
-        Objects.equals(this.project, tesTask.project) &&
         Objects.equals(this.description, tesTask.description) &&
         Objects.equals(this.inputs, tesTask.inputs) &&
         Objects.equals(this.outputs, tesTask.outputs) &&
@@ -416,12 +350,13 @@ public class TesTask {
         Objects.equals(this.executors, tesTask.executors) &&
         Objects.equals(this.volumes, tesTask.volumes) &&
         Objects.equals(this.tags, tesTask.tags) &&
-        Objects.equals(this.logs, tesTask.logs);
+        Objects.equals(this.logs, tesTask.logs) &&
+        Objects.equals(this.creationTime, tesTask.creationTime);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, state, name, project, description, inputs, outputs, resources, executors, volumes, tags, logs);
+    return Objects.hash(id, state, name, description, inputs, outputs, resources, executors, volumes, tags, logs, creationTime);
   }
 
 
@@ -433,7 +368,6 @@ public class TesTask {
     sb.append("    id: ").append(toIndentedString(id)).append("\n");
     sb.append("    state: ").append(toIndentedString(state)).append("\n");
     sb.append("    name: ").append(toIndentedString(name)).append("\n");
-    sb.append("    project: ").append(toIndentedString(project)).append("\n");
     sb.append("    description: ").append(toIndentedString(description)).append("\n");
     sb.append("    inputs: ").append(toIndentedString(inputs)).append("\n");
     sb.append("    outputs: ").append(toIndentedString(outputs)).append("\n");
@@ -442,6 +376,7 @@ public class TesTask {
     sb.append("    volumes: ").append(toIndentedString(volumes)).append("\n");
     sb.append("    tags: ").append(toIndentedString(tags)).append("\n");
     sb.append("    logs: ").append(toIndentedString(logs)).append("\n");
+    sb.append("    creationTime: ").append(toIndentedString(creationTime)).append("\n");
     sb.append("}");
     return sb.toString();
   }

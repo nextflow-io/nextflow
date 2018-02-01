@@ -28,10 +28,10 @@ import java.util.Map;
  * TaskLog describes logging information related to a Task.
  */
 @ApiModel(description = "TaskLog describes logging information related to a Task.")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaClientCodegen", date = "2017-07-21T14:19:55.302Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaClientCodegen", date = "2018-02-01T15:43:49.638Z")
 public class TesTaskLog {
   @SerializedName("logs")
-  private List<OUTPUTONLY> logs = null;
+  private List<TesExecutorLog> logs = null;
 
   @SerializedName("metadata")
   private Map<String, String> metadata = null;
@@ -43,16 +43,19 @@ public class TesTaskLog {
   private String endTime = null;
 
   @SerializedName("outputs")
-  private List<OUTPUTONLY1> outputs = null;
+  private List<TesOutputFileLog> outputs = null;
 
-  public TesTaskLog logs(List<OUTPUTONLY> logs) {
+  @SerializedName("system_logs")
+  private List<String> systemLogs = null;
+
+  public TesTaskLog logs(List<TesExecutorLog> logs) {
     this.logs = logs;
     return this;
   }
 
-  public TesTaskLog addLogsItem(OUTPUTONLY logsItem) {
+  public TesTaskLog addLogsItem(TesExecutorLog logsItem) {
     if (this.logs == null) {
-      this.logs = new ArrayList<OUTPUTONLY>();
+      this.logs = new ArrayList<TesExecutorLog>();
     }
     this.logs.add(logsItem);
     return this;
@@ -63,11 +66,11 @@ public class TesTaskLog {
    * @return logs
   **/
   @ApiModelProperty(value = "Logs for each executor")
-  public List<OUTPUTONLY> getLogs() {
+  public List<TesExecutorLog> getLogs() {
     return logs;
   }
 
-  public void setLogs(List<OUTPUTONLY> logs) {
+  public void setLogs(List<TesExecutorLog> logs) {
     this.logs = logs;
   }
 
@@ -133,14 +136,14 @@ public class TesTaskLog {
     this.endTime = endTime;
   }
 
-  public TesTaskLog outputs(List<OUTPUTONLY1> outputs) {
+  public TesTaskLog outputs(List<TesOutputFileLog> outputs) {
     this.outputs = outputs;
     return this;
   }
 
-  public TesTaskLog addOutputsItem(OUTPUTONLY1 outputsItem) {
+  public TesTaskLog addOutputsItem(TesOutputFileLog outputsItem) {
     if (this.outputs == null) {
-      this.outputs = new ArrayList<OUTPUTONLY1>();
+      this.outputs = new ArrayList<TesOutputFileLog>();
     }
     this.outputs.add(outputsItem);
     return this;
@@ -151,12 +154,38 @@ public class TesTaskLog {
    * @return outputs
   **/
   @ApiModelProperty(value = "Information about all output files. Directory outputs are flattened into separate items.")
-  public List<OUTPUTONLY1> getOutputs() {
+  public List<TesOutputFileLog> getOutputs() {
     return outputs;
   }
 
-  public void setOutputs(List<OUTPUTONLY1> outputs) {
+  public void setOutputs(List<TesOutputFileLog> outputs) {
     this.outputs = outputs;
+  }
+
+  public TesTaskLog systemLogs(List<String> systemLogs) {
+    this.systemLogs = systemLogs;
+    return this;
+  }
+
+  public TesTaskLog addSystemLogsItem(String systemLogsItem) {
+    if (this.systemLogs == null) {
+      this.systemLogs = new ArrayList<String>();
+    }
+    this.systemLogs.add(systemLogsItem);
+    return this;
+  }
+
+   /**
+   * System logs are any logs the system decides are relevant, which are not tied directly to an Executor process. Content is implementation specific: format, size, etc.  System logs may be collected here to provide convenient access.  For example, the system may include the name of the host where the task is executing, an error message that caused a SYSTEM_ERROR state (e.g. disk is full), etc.  System logs are only included in the FULL task view.
+   * @return systemLogs
+  **/
+  @ApiModelProperty(value = "System logs are any logs the system decides are relevant, which are not tied directly to an Executor process. Content is implementation specific: format, size, etc.  System logs may be collected here to provide convenient access.  For example, the system may include the name of the host where the task is executing, an error message that caused a SYSTEM_ERROR state (e.g. disk is full), etc.  System logs are only included in the FULL task view.")
+  public List<String> getSystemLogs() {
+    return systemLogs;
+  }
+
+  public void setSystemLogs(List<String> systemLogs) {
+    this.systemLogs = systemLogs;
   }
 
 
@@ -173,12 +202,13 @@ public class TesTaskLog {
         Objects.equals(this.metadata, tesTaskLog.metadata) &&
         Objects.equals(this.startTime, tesTaskLog.startTime) &&
         Objects.equals(this.endTime, tesTaskLog.endTime) &&
-        Objects.equals(this.outputs, tesTaskLog.outputs);
+        Objects.equals(this.outputs, tesTaskLog.outputs) &&
+        Objects.equals(this.systemLogs, tesTaskLog.systemLogs);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(logs, metadata, startTime, endTime, outputs);
+    return Objects.hash(logs, metadata, startTime, endTime, outputs, systemLogs);
   }
 
 
@@ -192,6 +222,7 @@ public class TesTaskLog {
     sb.append("    startTime: ").append(toIndentedString(startTime)).append("\n");
     sb.append("    endTime: ").append(toIndentedString(endTime)).append("\n");
     sb.append("    outputs: ").append(toIndentedString(outputs)).append("\n");
+    sb.append("    systemLogs: ").append(toIndentedString(systemLogs)).append("\n");
     sb.append("}");
     return sb.toString();
   }
