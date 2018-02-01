@@ -1,6 +1,11 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.27.4 - 2 Feb 2018
+- Fixed Resume does not work for tasks successfully executed in a re-submit attempt #591
+- Fixed Launcher error when download target path contains a blank character
+- Fixed An error is reported when a NF script contains a class definition #594
+
 0.27.3 - 29 Jan 2018
 - Fixed publishDir directive fails on S3 when attempting to copy objects larger than 5 GB #585
 - Process name does not reflect dynamic tag declaration when a task execution is retried #586

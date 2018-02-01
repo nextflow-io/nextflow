@@ -8,7 +8,7 @@ MAINTAINER Paolo Di Tommaso <paolo.ditommaso@gmail.com>
 RUN apk update && apk add bash && apk add coreutils && apk add curl
 
 # download runtime
-RUN curl https://www.nextflow.io/releases/v0.27.3/nextflow > /usr/local/bin/nextflow \
+RUN curl https://www.nextflow.io/releases/v0.27.4-SNAPSHOT/nextflow > /usr/local/bin/nextflow \
   && chmod 755 /usr/local/bin/nextflow \
   && sync \
   && nextflow -download
