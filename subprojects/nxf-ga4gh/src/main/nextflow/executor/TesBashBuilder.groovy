@@ -19,5 +19,4 @@ class TesBashBuilder extends BashWrapperBuilder {
         super(task, new TesFileCopyStrategy())
     }
 
-    protected boolean containerInit() { false }
 }

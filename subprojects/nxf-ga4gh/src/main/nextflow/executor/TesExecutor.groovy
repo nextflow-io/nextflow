@@ -20,6 +20,13 @@ import nextflow.util.ServiceName
 class TesExecutor extends Executor {
 
     /**
+     * @return {@code true} whenever the containerization is managed by the executor itself
+     */
+    boolean isContainerNative() {
+        return true
+    }
+
+    /**
      * Create a a queue holder for this executor
      *
      * @return

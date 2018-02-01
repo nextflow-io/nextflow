@@ -20,7 +20,7 @@ import nextflow.processor.TaskStatus
 @CompileStatic
 class TesTaskHandler extends TaskHandler {
 
-    static final String containerWorkDir = '/work'
+    static final private String WORK_DIR = '/work'
 
     final List<TesState> COMPLETE_STATUSES = [TesState.COMPLETE, TesState.EXECUTOR_ERROR, TesState.SYSTEM_ERROR, TesState.CANCELED]
 
@@ -37,8 +37,6 @@ class TesTaskHandler extends TaskHandler {
     private final Path errorFile
 
     private final Path logFile
-
-    private final Path envFile
 
     private final Path scriptFile
 
@@ -59,7 +57,6 @@ class TesTaskHandler extends TaskHandler {
         this.api.apiClient.basePath = "http://localhost:8000"
 
         this.logFile = task.workDir.resolve(TaskRun.CMD_LOG)
-        this.envFile = task.workDir.resolve(TaskRun.CMD_ENV)
         this.scriptFile = task.workDir.resolve(TaskRun.CMD_SCRIPT)
         this.inputFile =  task.workDir.resolve(TaskRun.CMD_INFILE)
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
@@ -139,7 +136,7 @@ class TesTaskHandler extends TaskHandler {
         def exec = new TesExecutorModel()
         exec.command = cmd
         exec.image = task.container
-        exec.workdir = containerWorkDir
+        exec.workdir = WORK_DIR
 
         final body = new TesTask()
 
@@ -148,7 +145,6 @@ class TesTaskHandler extends TaskHandler {
         body.addInputsItem(inItem(wrapperFile))
 
         // add task input files
-        if(envFile.exists()) body.addInputsItem(inItem(envFile))
         if(inputFile.exists()) body.addInputsItem(inItem(inputFile))
         if(stubFile.exists()) body.addInputsItem(inItem(stubFile))
 
@@ -179,14 +175,14 @@ class TesTaskHandler extends TaskHandler {
     private TesInput inItem( Path realPath, String fileName = null) {
         def result = new TesInput()
         result.url = realPath.toUri().toString()
-        result.path = fileName ? "$containerWorkDir/$fileName" : "$containerWorkDir/${realPath.getName()}"
+        result.path = fileName ? "$WORK_DIR/$fileName" : "$WORK_DIR/${realPath.getName()}"
         log.debug "Adding INPUT file: $result"
         return result
     }
 
     private TesOutput outItem( String fileName ) {
         def result = new TesOutput()
-        result.path = "$containerWorkDir/$fileName"
+        result.path = "$WORK_DIR/$fileName"
         result.url = task.workDir.resolve(fileName).uri.toString()
         log.debug "Adding OUTPUT file: $result"
         return result

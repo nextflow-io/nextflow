@@ -10,17 +10,22 @@ class TesFileCopyStrategy implements ScriptFileCopyStrategy {
 
     @Override
     String getBeforeStartScript() {
-        return ''
+        return null
     }
 
     @Override
-    String getStageInputFilesScript() {
-        return ''
+    Map<String, Path> resolveForeignFiles(Map<String, Path> inputFile) {
+        return inputFile
     }
 
     @Override
-    String getUnstageOutputFilesScript() {
-        return ''
+    String getStageInputFilesScript(Map<String, Path> inputFiles) {
+        return null
+    }
+
+    @Override
+    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
+        return null
     }
 
     @Override
@@ -38,8 +43,25 @@ class TesFileCopyStrategy implements ScriptFileCopyStrategy {
         return 'true'
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     String exitFile(Path file) {
-        Escape.path(file.getFileName())
+        "> ${Escape.path(file.getName())}"
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    String pipeInputFile(Path file) {
+        " < ${Escape.path(file.getName())}"
+    }
+
+    @Override
+    String getEnvScript(Map environment, String wrapName) {
+        // TODO this must be implement as SimpleFileCopyStrategy#getEnvScript
+        return null
     }
 }
