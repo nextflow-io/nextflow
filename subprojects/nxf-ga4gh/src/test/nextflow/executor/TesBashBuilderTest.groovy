@@ -82,6 +82,8 @@ class TesBashBuilderTest extends Specification {
                   exit_status=\${ret:=\$?}
                   printf \$exit_status > .exitcode
                   set +u
+                  [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                  [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
                   [[ "\$COUT" ]] && rm -f "\$COUT" || true
                   [[ "\$CERR" ]] && rm -f "\$CERR" || true
                   exit \$exit_status
@@ -98,7 +100,6 @@ class TesBashBuilderTest extends Specification {
                 NXF_SCRATCH=''
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
 
-                [ -f .command.env ] && source .command.env
                 [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
                 set +e
