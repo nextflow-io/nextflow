@@ -1,5 +1,10 @@
 package nextflow.executor
 
+import nextflow.cloud.LaunchConfig
+import nextflow.ga4gh.tes.client.ApiClient
+import nextflow.ga4gh.tes.client.model.TesResources
+import nextflow.processor.TaskConfig
+
 import static nextflow.processor.TaskStatus.*
 
 import java.nio.file.Path
@@ -53,8 +58,9 @@ class TesTaskHandler extends TaskHandler {
     TesTaskHandler(TaskRun task, TesExecutor executor) {
         super(task)
         this.executor = executor
-        this.api = new TaskServiceApi()
-        this.api.apiClient.basePath = "http://localhost:8000"
+        this.api = new TaskServiceApi(
+                new ApiClient(basePath: "http://localhost:8000")
+        )
 
         this.logFile = task.workDir.resolve(TaskRun.CMD_LOG)
         this.scriptFile = task.workDir.resolve(TaskRun.CMD_SCRIPT)
@@ -129,6 +135,16 @@ class TesTaskHandler extends TaskHandler {
         final bash = new TesBashBuilder(task)
         bash.build()
 
+        final body = newTesTask()
+
+
+        // submit the task
+        final task = api.createTask(body)
+        requestId = task.id
+        status = TaskStatus.SUBMITTED
+    }
+
+    protected final TesTask newTesTask() {
         // the cmd list to launch it
         def job = new ArrayList(BashWrapperBuilder.BASH) << wrapperFile.getName()
         List cmd = ['/bin/bash','-c', job.join(' ') + " &> $TaskRun.CMD_LOG" ]
@@ -138,7 +154,8 @@ class TesTaskHandler extends TaskHandler {
         exec.image = task.container
         exec.workdir = WORK_DIR
 
-        final body = new TesTask()
+        def body = new TesTask()
+
 
         // add task control files
         body.addInputsItem(inItem(scriptFile))
@@ -148,7 +165,7 @@ class TesTaskHandler extends TaskHandler {
         if(inputFile.exists()) body.addInputsItem(inItem(inputFile))
         if(stubFile.exists()) body.addInputsItem(inItem(stubFile))
 
-        task.getInputFilesMap().each { String name, Path path ->
+        task.getInputFilesMap()?.each { String name, Path path ->
             body.addInputsItem(inItem(path,name))
         }
 
@@ -158,17 +175,28 @@ class TesTaskHandler extends TaskHandler {
         body.addOutputsItem(outItem(logFile.name))
         body.addOutputsItem(outItem(exitFile.name))
 
-        task.outputFilesNames.each { fileName ->
+        // set requested resources
+        body.setResources(getResources(task.config))
+
+        task.outputFilesNames?.each { fileName ->
             body.addOutputsItem(outItem(fileName))
         }
 
         // add the executor
         body.executors = [exec]
 
-        // submit the task
-        final task = api.createTask(body)
-        requestId = task.id
-        status = TaskStatus.SUBMITTED
+        return body
+    }
+
+    private TesResources getResources(TaskConfig cfg) {
+        def res = new TesResources()
+        res.cpuCores(cfg.getCpus())
+            .ramGb(cfg.getMemory()?.toGiga()) // @TODO only works for >= 1.GB
+            .diskGb(cfg.getDisk()?.toGiga())
+        log.debug("Adding resource request: $res")
+        // @TODO preemptible
+        // @TODO zones
+        return res
     }
 
 
