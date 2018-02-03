@@ -25,6 +25,12 @@
 
 config ?= compile
 
+ifdef module 
+mm = :${module}:
+else 
+mm = 
+endif 
+
 compile:
 	./gradlew compile exportClasspath
 
@@ -41,7 +47,7 @@ install:
 	./gradlew installLauncher install -Dmaven.repo.local=${HOME}/.nextflow/capsule/deps/ -x signArchives
 
 deps:
-	./gradlew -q ${module}:dependencies --configuration ${config}
+	./gradlew -q ${mm}dependencies --configuration ${config}
 
 deps-all:
 	./gradlew -q dependencyInsight --configuration ${config} --dependency ${module}
@@ -51,9 +57,9 @@ refresh:
 
 test:
 ifndef class
-	./gradlew ${module}:test
+	./gradlew ${mm}test
 else
-	./gradlew ${module}:test --tests ${class}
+	./gradlew ${mm}test --tests ${class}
 endif
 
 pack:
