@@ -283,7 +283,7 @@ class SortFileCollector extends FileCollector implements Closeable {
          */
         trail.flip()
 
-        long index
+        long index = -1
         def last = null
         def name = null
         OutputStream output = null
