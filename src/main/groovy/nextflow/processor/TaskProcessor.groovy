@@ -18,10 +18,8 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 package nextflow.processor
-import static nextflow.processor.ErrorStrategy.FINISH
-import static nextflow.processor.ErrorStrategy.IGNORE
-import static nextflow.processor.ErrorStrategy.RETRY
-import static nextflow.processor.ErrorStrategy.TERMINATE
+
+import static nextflow.processor.ErrorStrategy.*
 
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
@@ -62,8 +60,8 @@ import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
-import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.ProcessStageException
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
 import nextflow.extension.DataflowHelper
@@ -92,7 +90,6 @@ import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.CollectionHelper
-import nextflow.util.Escape
 /**
  * Implement nextflow process execution logic
  *
@@ -1648,10 +1645,12 @@ class TaskProcessor {
         // pre-pend the 'bin' folder to the task environment
         if( session.binDir ) {
             if( result.containsKey('PATH') ) {
-                result['PATH'] =  "${Escape.path(session.binDir)}:${result['PATH']}".toString()
+                // note: do not escape potential blanks in the bin path because the PATH
+                // variable is enclosed in `"` when in rendered in the launcher script -- see #630
+                result['PATH'] =  "${session.binDir}:${result['PATH']}".toString()
             }
             else {
-                result['PATH'] = "${Escape.path(session.binDir)}:\$PATH".toString()
+                result['PATH'] = "${session.binDir}:\$PATH".toString()
             }
         }
 
