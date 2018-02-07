@@ -204,10 +204,6 @@ class Launcher {
                 normalized << '%all'
             }
 
-            else if( current == '-with-drmaa' && (i==args.size() || args[i].startsWith('-'))) {
-                normalized << '-'
-            }
-
             else if( current == '-with-trace' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << TraceFileObserver.DEF_FILE_NAME
             }

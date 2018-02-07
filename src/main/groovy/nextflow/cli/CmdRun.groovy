@@ -131,9 +131,6 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names='-stdin', hidden = true)
     boolean stdin
 
-    @Parameter(names = ['-with-drmaa'], description = 'Enable DRMAA binding')
-    String withDrmaa
-
     @Parameter(names = ['-with-trace'], description = 'Create processes execution tracing file')
     String withTrace
 

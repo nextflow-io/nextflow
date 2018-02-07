@@ -330,7 +330,6 @@ class K8sDriverLauncher {
                 cmd.&test,
                 cmd.&executorOptions,
                 cmd.&stdin,
-                cmd.&withDrmaa,
                 cmd.&withSingularity,
                 cmd.&withDocker,
                 cmd.&withoutDocker,
