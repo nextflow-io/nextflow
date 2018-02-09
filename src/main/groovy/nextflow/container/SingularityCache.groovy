@@ -226,8 +226,8 @@ class SingularityCache {
         proc.waitForOrKill(max)
         def status = proc.exitValue()
         if( status != 0 ) {
-            def msg = "Failed to pull singularity image\n  command: $cmd\n  message:\n"
-            msg += err.toString().trim().indent('  ')
+            def msg = "Failed to pull singularity image\n  command: $cmd\n  status : $status\n  message:\n"
+            msg += err.toString().trim().indent('    ')
             throw new IllegalStateException(msg)
         }
         return status
