@@ -19,11 +19,13 @@
  */
 
 package nextflow.config
+
 import ch.grengine.Grengine
 import com.google.common.hash.Hashing
 import groovy.transform.PackageScope
 import nextflow.file.FileHelper
 import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.runtime.InvokerHelper
 /*
  * Copyright 2003-2013 the original author or authors.
@@ -96,6 +98,10 @@ class ComposedConfigSlurper {
 
     private boolean ignoreIncludes
 
+    private boolean renderClosureAsString
+
+    private Grengine grengine
+
     ComposedConfigSlurper() {
         this('')
     }
@@ -106,10 +112,6 @@ class ComposedConfigSlurper {
      */
     ComposedConfigSlurper(String env) {
         conditionValues[ENVIRONMENTS_METHOD] = env
-        // set the required base script
-        def config = new CompilerConfiguration()
-        config.scriptBaseClass = ComposedConfigScript.class.name
-        grengine = new Grengine(config)
     }
 
     ComposedConfigSlurper registerConditionalBlock(String blockName, String blockValue) {
@@ -144,6 +146,24 @@ class ComposedConfigSlurper {
         conditionValues[ENVIRONMENTS_METHOD] = environment
     }
 
+    private Grengine getGrengine() {
+        if( grengine ) {
+            return grengine
+        }
+
+        // set the required base script
+        def config = new CompilerConfiguration()
+        config.scriptBaseClass = ComposedConfigScript.class.name
+        if( renderClosureAsString )
+            config.addCompilationCustomizers(new ASTTransformationCustomizer(ConfigTransform))
+        grengine = new Grengine(config)
+    }
+
+    ComposedConfigSlurper setRenderClosureAsString(boolean value) {
+        this.renderClosureAsString = value
+        return this
+    }
+
     /**
      * Sets any additional variables that should be placed into the binding when evaluating Config scripts
      */
@@ -175,7 +195,7 @@ class ComposedConfigSlurper {
     }
 
     private Script loadScript(String text)  {
-        (Script)grengine.load(text, createUniqueName(text)).newInstance()
+        (Script)getGrengine().load(text, createUniqueName(text)).newInstance()
     }
 
     /**
@@ -378,6 +398,7 @@ class ComposedConfigSlurper {
 
         // disable include parsing when required
         script.setIgnoreIncludes(ignoreIncludes)
+        script.setRenderClosureAsString(renderClosureAsString)
 
         // -- set the binding and run
         script.binding = binding

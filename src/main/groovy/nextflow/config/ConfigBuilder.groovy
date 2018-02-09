@@ -60,6 +60,13 @@ class ConfigBuilder {
 
     List<Path> configFiles = []
 
+    boolean showClosures
+
+    ConfigBuilder setShowClosures(boolean value) {
+        this.showClosures = value
+        return this
+    }
+
     ConfigBuilder setOptions( CliOptions options ) {
         this.options = options
         return this
@@ -240,8 +247,8 @@ class ConfigBuilder {
     protected ConfigObject buildConfig0( Map env, List configEntries )  {
         assert env != null
 
-        final slurper = new ComposedConfigSlurper()
-        ConfigObject result = slurper.parse('env{}; session{}; params{}; process{}; executor{} ')
+        final slurper = new ComposedConfigSlurper().setRenderClosureAsString(showClosures)
+        ConfigObject result = new ConfigObject()
 
         if( cmdRun?.params )
             slurper.setParams(cmdRun.parsedParams)
@@ -283,6 +290,11 @@ class ConfigBuilder {
 
             if( validateProfile )
                 checkValidProfile(slurper.getConditionalBlockNames())
+        }
+
+        // guarantee top scopes
+        for( String name : ['env','session','params','process','executor']) {
+            if( !result.isSet(name) ) result.put(name, new ConfigObject())
         }
 
         return result

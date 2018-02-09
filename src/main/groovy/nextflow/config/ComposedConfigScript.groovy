@@ -25,6 +25,7 @@ import java.nio.file.Path
 import ch.grengine.Grengine
 import nextflow.file.FileHelper
 import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
@@ -47,8 +48,14 @@ abstract class ComposedConfigScript extends Script {
 
     private boolean ignoreIncludes
 
+    private boolean renderClosureAsString
+
     protected void setIgnoreIncludes( boolean value ) {
         this.ignoreIncludes = value
+    }
+
+    protected void setRenderClosureAsString( boolean value ) {
+        this.renderClosureAsString = value
     }
 
     protected void setConfigPath(Path path) {
@@ -87,6 +94,8 @@ abstract class ComposedConfigScript extends Script {
         // -- set the required base script
         def config = new CompilerConfiguration()
         config.scriptBaseClass = ComposedConfigScript.class.name
+        if( renderClosureAsString )
+            config.addCompilationCustomizers(new ASTTransformationCustomizer(ConfigTransform))
 
         // -- setup the grengine instance
         def engine = new Grengine(this.class.classLoader,config)

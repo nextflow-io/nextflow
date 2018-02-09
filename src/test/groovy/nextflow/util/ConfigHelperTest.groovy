@@ -87,10 +87,10 @@ class ConfigHelperTest extends Specification {
         given:
         def mem = { return 0 }
         def config = new ConfigObject()
+        config.docker.enabled = true
         config.process.executor = 'slurm'
         config.process.queue = 'long'
         config.process.memory = mem
-        config.docker.enabled = true
         config.process.omega = "Hi' there"
 
         when:
@@ -99,10 +99,10 @@ class ConfigHelperTest extends Specification {
         then:
         result == """
                 docker.enabled=true
-                process.executor=slurm
-                process.memory=${mem.toString()}
                 process.omega=Hi' there
                 process.queue=long
+                process.memory=${mem.toString()}
+                process.executor=slurm
                 """
                 .stripIndent().leftTrim()
 
@@ -116,18 +116,43 @@ class ConfigHelperTest extends Specification {
         config.docker.enabled = true
         config.dummy = new ConfigObject() // <-- empty config object should not be print
         config.mail.from = 'yo@mail.com'
-        config.mail.smtp.host = 'mail.com'
         config.mail.smtp.port = 25
         config.mail.smtp.user = 'yo'
+        config.mail.smtp.host = 'mail.com'
 
         when:
         def result = ConfigHelper.toCanonicalString(config)
         then:
         result == '''
+                    process {
+                       executor = 'slurm'
+                       queue = 'long'
+                    }
+                    
                     docker {
                        enabled = true
                     }
 
+                    mail {
+                       from = 'yo@mail.com'
+                       smtp {
+                          port = 25
+                          user = 'yo'
+                          host = 'mail.com'
+                       }
+                    }
+                    '''
+                .stripIndent().leftTrim()
+
+
+        when:
+        result = ConfigHelper.toCanonicalString(config, true)
+        then:
+        result == '''
+                    docker {
+                       enabled = true
+                    }
+                    
                     mail {
                        from = 'yo@mail.com'
                        smtp {
@@ -172,13 +197,24 @@ class ConfigHelperTest extends Specification {
 
         given:
         def config = new ConfigObject()
-        config.process.executor = 'slurm'
         config.process.queue = 'long'
+        config.process.executor = 'slurm'
         config.docker.enabled = true
         config.zeta.'quoted-attribute'.foo = 1
 
         when:
         def result = ConfigHelper.toFlattenString(config)
+        then:
+        result == '''
+                process.queue = 'long'
+                process.executor = 'slurm'
+                docker.enabled = true
+                zeta.'quoted-attribute'.foo = 1
+                '''
+                .stripIndent().leftTrim()
+
+        when:
+        result = ConfigHelper.toFlattenString(config, true)
         then:
         result == '''
                 docker.enabled = true
@@ -248,7 +284,6 @@ class ConfigHelperTest extends Specification {
         !ConfigHelper.isValidIdentifier('foo+bar')
         !ConfigHelper.isValidIdentifier('0foo')
     }
-
 
 
 }
