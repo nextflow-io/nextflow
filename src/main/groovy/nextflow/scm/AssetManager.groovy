@@ -969,7 +969,7 @@ class AssetManager {
      */
     @Canonical
     static class RevisionInfo {
-        public enum Type {
+        static enum Type {
             TAG,
             COMMIT,
             BRANCH
