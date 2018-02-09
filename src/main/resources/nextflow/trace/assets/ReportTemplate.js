@@ -98,6 +98,20 @@ $(function() {
      }
   });
 
+  // Humanize duration
+  function humanize(duration){
+    if (duration.days() > 0) {
+      return duration.days() + "d " + duration.hours() + "h"
+    }
+    if (duration.hours() > 0) {
+      return duration.hours() + "h " + duration.minutes() + "m"
+    }
+    if (duration.minutes() > 0) {
+      return duration.minutes() + "m " + duration.seconds() + "s"
+    }
+    return duration.asSeconds().toFixed(1) + "s"
+  }
+
   // Build the trace table
   function make_duration(ms){
     if($('#nf-table-humanreadable').val() == 'false'){
@@ -106,7 +120,7 @@ $(function() {
     if (ms == '-' || ms == 0){
       return ms;
     }
-    return moment.duration( parseInt(ms) ).asMinutes().toFixed(2);
+    return humanize(moment.duration( parseInt(ms) ));
   }
   function make_date(ms){
     if($('#nf-table-humanreadable').val() == 'false'){
