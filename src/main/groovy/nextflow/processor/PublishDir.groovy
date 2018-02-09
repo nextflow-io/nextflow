@@ -19,9 +19,11 @@
  */
 
 package nextflow.processor
+
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.util.concurrent.ExecutorService
@@ -49,7 +51,7 @@ import nextflow.file.FileHelper
 @EqualsAndHashCode
 class PublishDir {
 
-    enum Mode { SYMLINK, LINK, COPY, MOVE }
+    enum Mode { SYMLINK, LINK, COPY, MOVE, COPY_NO_FOLLOW }
 
     private Map<Path,Boolean> makeCache = new HashMap<>()
 
@@ -101,7 +103,7 @@ class PublishDir {
     }
 
     void setMode( String str ) {
-        this.mode = str.toUpperCase() as Mode
+        this.mode = str == 'copyNoFollow' ? Mode.COPY_NO_FOLLOW : str.toUpperCase() as Mode
     }
 
     void setMode( Mode mode )  {
@@ -304,6 +306,9 @@ class PublishDir {
         }
         else if( mode == Mode.COPY ) {
             FileHelper.copyPath(source, destination)
+        }
+        else if( mode == Mode.COPY_NO_FOLLOW ) {
+            FileHelper.copyPath(source, destination, LinkOption.NOFOLLOW_LINKS)
         }
         else {
             throw new IllegalArgumentException("Unknown file publish mode: ${mode}")
