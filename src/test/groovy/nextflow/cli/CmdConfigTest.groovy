@@ -20,6 +20,8 @@
 
 package nextflow.cli
 
+import java.nio.file.Files
+
 import spock.lang.Specification
 /**
  *
@@ -73,10 +75,10 @@ class CmdConfigTest extends Specification {
         then:
         buffer.toString() == """
                 docker.enabled=true
-                process.executor=slurm
-                process.memory=${mem.toString()}
                 process.omega=Hi' there
                 process.queue=long
+                process.memory=${mem.toString()}
+                process.executor=slurm
                 """
                 .stripIndent().leftTrim()
 
@@ -104,6 +106,11 @@ class CmdConfigTest extends Specification {
         cmd.printCanonical(config, buffer)
         then:
         buffer.toString() == '''
+                    process {
+                       executor = 'slurm'
+                       queue = 'long'
+                    }
+                    
                     docker {
                        enabled = true
                     }
@@ -115,11 +122,6 @@ class CmdConfigTest extends Specification {
                           port = 25
                           user = 'yo'
                        }
-                    }
-
-                    process {
-                       executor = 'slurm'
-                       queue = 'long'
                     }
                     '''
                     .stripIndent().leftTrim()
@@ -143,9 +145,9 @@ class CmdConfigTest extends Specification {
 
         then:
         buffer.toString() == '''
-                docker.enabled = true
                 process.executor = 'slurm'
                 process.queue = 'long'
+                docker.enabled = true
                 '''
                 .stripIndent().leftTrim()
 
@@ -158,7 +160,59 @@ class CmdConfigTest extends Specification {
         then:
         buffer.toString() == "foo = 'Hi\\' there'\n"
 
+    }
 
+
+    def 'should parse config file' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def CONFIG = folder.resolve('nextflow.config')
+
+        CONFIG.text = '''
+        manifest {
+            author = 'me'
+            mainScript = 'foo.nf'
+        }
+        
+        process {
+          queue = 'cn-el7'
+          cpus = 4 
+          memory = 10.GB
+          time = 5.h
+          ext.other = { 10.GB * task.attempt }
+        }
+        '''
+        def buffer = new ByteArrayOutputStream()
+        // command definition 
+        def cmd = new CmdConfig()
+        cmd.launcher = Mock(Launcher)
+        cmd.stdout = buffer
+        cmd.args = [ CONFIG.toString() ]
+
+        when:
+        cmd.run()
+        
+        then:
+        buffer.toString() == '''
+        manifest {
+           author = 'me'
+           mainScript = 'foo.nf'
+        }
+        
+        process {
+           queue = 'cn-el7'
+           cpus = 4
+           memory = '10 GB'
+           time = '5h'
+           ext {
+              other = { 10.GB * task.attempt }
+           }
+        }
+        '''
+        .stripIndent().leftTrim()
+
+        cleanup:
+        folder.deleteDir()
     }
 
 

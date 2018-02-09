@@ -112,9 +112,9 @@ class ConfigHelper {
 
     static private final String TAB = '   '
 
-    static private void canonicalFormat(StringBuilder writer, ConfigObject object, int level) {
+    static private void canonicalFormat(StringBuilder writer, ConfigObject object, int level, boolean sort) {
 
-        final keys = object.keySet().sort()
+        final keys = sort ? object.keySet().sort() : new ArrayList<>(object.keySet())
 
         // remove all empty config objects
         final itr = keys.iterator()
@@ -138,7 +138,7 @@ class ConfigHelper {
                 writer.append(TAB*level)
                 writer.append(wrap0(key))
                 writer.append(' {\n')
-                canonicalFormat(writer, value, level+1)
+                canonicalFormat(writer, value, level+1,sort)
                 writer.append(TAB*level)
                 writer.append('}\n')
             }
@@ -151,7 +151,7 @@ class ConfigHelper {
                 writer.append(TAB*level)
                 writer.append(wrap0(key))
                 writer.append(' = ')
-                writer.append( InvokerHelper.inspect(value) )
+                writer.append( render0(value) )
                 writer.append('\n')
             }
         }
@@ -175,64 +175,69 @@ class ConfigHelper {
         result.toString()
     }
 
-    static private String flattenFormat(ConfigObject config) {
+    static private String flattenFormat(ConfigObject config,boolean sort) {
         def result = new StringBuilder()
-        flattenFormat(config, [], result)
+        flattenFormat(config, [], result, sort)
         result.toString()
-//        final props = new Properties()
-//        config.flatten(props)
-//        final ordered = new OrderedProperties(props)
-//        final result = new StringBuilder()
-//        for( String name : ordered.keys() ) {
-//            result << name << ' = ' << InvokerHelper.inspect(ordered.get(name))  << '\n'
-//        }
-//        result.toString()
     }
 
-    static private void flattenFormat(ConfigObject config, List<String> stack, StringBuilder result) {
-        final keys = config.keySet().sort()
+    static private void flattenFormat(ConfigObject config, List<String> stack, StringBuilder result, boolean sort) {
+        final keys = sort ? config.keySet().sort() : new ArrayList<>(config.keySet())
 
         for( int i=0; i<keys.size(); i++) {
             final key = keys.get(i)
             final val = config.get(key)
             stack.push(wrap0(key))
             if( val instanceof ConfigObject ) {
-                flattenFormat(val, stack, result)
+                flattenFormat(val, stack, result, sort)
             }
             else {
                 final name = stack.join('.')
-                result << name << ' = ' << InvokerHelper.inspect(val)  << '\n'
+                result << name << ' = ' << render0(val) << '\n'
             }
             stack.pop()
         }
 
     }
 
+    private static String render0( val ) {
+        if( val == null )
+            return 'null'
+        if( val instanceof GString )
+            return "'$val'"
+        if( val instanceof MemoryUnit )
+            return "'$val'"
+        if( val instanceof Duration )
+            return "'$val'"
 
-    static String toCanonicalString(ConfigObject object) {
+        InvokerHelper.inspect(val)
+    }
+
+    static String toCanonicalString(ConfigObject object, boolean sort=false) {
         def result = new StringBuilder()
-        canonicalFormat(result,object,0)
+        canonicalFormat(result,object,0,sort)
         result.toString()
     }
 
-    static String toCanonicalString(Map map) {
-        toCanonicalString(map.toConfigObject())
+    static String toCanonicalString(Map map, boolean sort=false) {
+        toCanonicalString(map.toConfigObject(), sort)
     }
 
-    static String toPropertiesString(ConfigObject config) {
-        propertiesFormat(new OrderedProperties(config.toProperties()))
+    static String toPropertiesString(ConfigObject config, boolean sort=false) {
+        def p = sort ? new OrderedProperties(config.toProperties()) : config.toProperties()
+        propertiesFormat(p)
     }
 
-    static String toPropertiesString(Map map) {
-        toPropertiesString(map.toConfigObject())
+    static String toPropertiesString(Map map, boolean sort=false) {
+        toPropertiesString(map.toConfigObject(), sort)
     }
 
-    static String toFlattenString(ConfigObject object) {
-        flattenFormat(object)
+    static String toFlattenString(ConfigObject object, boolean sort=false) {
+        flattenFormat(object, sort)
     }
 
-    static String toFlattenString(Map map) {
-        flattenFormat(map.toConfigObject())
+    static String toFlattenString(Map map, boolean sort=false) {
+        flattenFormat(map.toConfigObject(), sort)
     }
 
     public static boolean isValidIdentifier(String s) {

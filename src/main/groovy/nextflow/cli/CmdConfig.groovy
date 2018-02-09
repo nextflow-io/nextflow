@@ -57,6 +57,9 @@ class CmdConfig extends CmdBase {
     @Parameter(names = '-flat', description = 'Print config using flat notation')
     boolean printFlatten
 
+    @Parameter(names = '-sort', description = 'Sort config attributes')
+    boolean sort
+
 
     @Override
     String getName() { NAME }
@@ -77,6 +80,7 @@ class CmdConfig extends CmdBase {
             throw new AbortOperationException("Option `-flat` and `-properties` conflicts")
 
         def config = new ConfigBuilder()
+                .setShowClosures(true)
                 .setOptions(launcher.options)
                 .setBaseDir(base.complete())
                 .setCmdConfig(this)
@@ -101,7 +105,7 @@ class CmdConfig extends CmdBase {
      * @param output The stream where output the formatted configuration notation
      */
     protected void printCanonical(ConfigObject config, OutputStream output) {
-        output << ConfigHelper.toCanonicalString(config)
+        output << ConfigHelper.toCanonicalString(config, sort)
     }
 
     /**
@@ -111,7 +115,7 @@ class CmdConfig extends CmdBase {
      * @param output The stream where output the formatted configuration notation
      */
     protected void printProperties(ConfigObject config, OutputStream output) {
-        output << ConfigHelper.toPropertiesString(config)
+        output << ConfigHelper.toPropertiesString(config, sort)
     }
 
     /**
@@ -122,7 +126,7 @@ class CmdConfig extends CmdBase {
      * @param output The stream where output the formatted configuration notation
     */
     protected void printFlatten(ConfigObject config, OutputStream output) {
-        output << ConfigHelper.toFlattenString(config)
+        output << ConfigHelper.toFlattenString(config, sort)
     }
 
     /**
@@ -151,7 +155,5 @@ class CmdConfig extends CmdBase {
         manager.isLocal() ? manager.localPath.toPath() : null
 
     }
-
-
 
 }
