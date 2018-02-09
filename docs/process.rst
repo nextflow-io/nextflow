@@ -1615,6 +1615,7 @@ Table of publish modes:
 symlink         Creates a `symbolic link` in the published directory for each process output file (default).
 link            Creates a `hard link` in the published directory for each process output file.
 copy            Copies the output files into the published directory.
+copyNoFollow    Copies the output files into the published directory without following symlinks ie. copies the links themselves. 
 move            Moves the output files into the published directory. **Note**: this is only supposed to be used for a `terminating` process i.e. a process whose output is not consumed by any other downstream process.
 =============== =================
 

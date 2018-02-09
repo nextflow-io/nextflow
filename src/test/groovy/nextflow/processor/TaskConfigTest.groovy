@@ -467,6 +467,13 @@ class TaskConfigTest extends Specification {
         publish.overwrite == false
         publish.mode == PublishDir.Mode.COPY
 
+        when:
+        process.publishDir '/my/data', mode: 'copyNoFollow'
+        publish = process.createTaskConfig().getPublishDir()
+        then:
+        publish.path == Paths.get('//my/data').complete()
+        publish.mode == PublishDir.Mode.COPY_NO_FOLLOW
+
     }
 
     def 'should create publishDir with local variables' () {
