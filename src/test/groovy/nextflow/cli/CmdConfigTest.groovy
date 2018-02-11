@@ -185,9 +185,9 @@ class CmdConfigTest extends Specification {
         def buffer = new ByteArrayOutputStream()
         // command definition 
         def cmd = new CmdConfig()
-        cmd.launcher = Mock(Launcher)
+        cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
         cmd.stdout = buffer
-        cmd.args = [ CONFIG.toString() ]
+        cmd.args = [ '.' ]
 
         when:
         cmd.run()
