@@ -108,10 +108,6 @@ class BashWrapperBuilder {
           exit_status=${ret:=$?}
           printf $exit_status __EXIT_FILE__
           set +u
-          [[ "$tee1" ]] && kill $tee1 2>/dev/null
-          [[ "$tee2" ]] && kill $tee2 2>/dev/null
-          [[ "$COUT" ]] && rm -f "$COUT" || true
-          [[ "$CERR" ]] && rm -f "$CERR" || true
           __EXIT_CMD__
         }
 
@@ -456,20 +452,13 @@ class BashWrapperBuilder {
          */
         wrapper << '' << ENDL
         wrapper << 'set +e' << ENDL  // <-- note: use loose error checking so that ops after the script command are executed in all cases
-        wrapper << 'COUT=$PWD/.command.po; mkfifo "$COUT"' << ENDL
-        wrapper << 'CERR=$PWD/.command.pe; mkfifo "$CERR"' << ENDL
-        wrapper << 'tee '<< TaskRun.CMD_OUTFILE <<' < "$COUT" &' << ENDL
-        wrapper << 'tee1=$!' << ENDL
-        wrapper << 'tee '<< TaskRun.CMD_ERRFILE <<' < "$CERR" >&2 &' << ENDL
-        wrapper << 'tee2=$!' << ENDL
         wrapper << '(' << ENDL
 
         wrapper << getLauncherScript(interpreter,envSnippet) << ENDL
 
-        wrapper << ') >"$COUT" 2>"$CERR" &' << ENDL
+        wrapper << ") > >(cat | tee $TaskRun.CMD_OUTFILE) 2> >(cat | tee $TaskRun.CMD_ERRFILE >&2) &" << ENDL
         wrapper << 'pid=$!' << ENDL
         wrapper << 'wait $pid || ret=$?' << ENDL
-        wrapper << 'wait $tee1 $tee2' << ENDL
 
         /*
          * un-stage output files
