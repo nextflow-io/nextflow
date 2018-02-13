@@ -261,6 +261,8 @@ if [[ $NXF_PACK = all ]]; then
 fi
 
 # Determine the Java command to use to start the JVM.
+JAVA_CMD=${NXF_JAVA_CMD:-$JAVA_CMD}
+JAVA_HOME=${NXF_JAVA_HOME:-$JAVA_HOME}
 if [ ! -x "$JAVA_CMD" ] ; then
     if [ -d "$JAVA_HOME" ] ; then
         if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
@@ -272,7 +274,7 @@ if [ ! -x "$JAVA_CMD" ] ; then
     elif [ -x /usr/libexec/java_home ]; then
         JAVA_CMD="$(/usr/libexec/java_home -v 1.7+)/bin/java"
     else
-        JAVA_CMD="$(which java)"
+        JAVA_CMD="$(which java)" || JAVA_CMD=java
     fi
 fi
 
