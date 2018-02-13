@@ -280,7 +280,7 @@ class Mailer {
     protected MimeMessage createMimeMessage(Mail mail) {
 
         final result = createMimeMessage0(mail)
-        final multipart = new MimeMultipart("alternative")
+        final multipart = new MimeMultipart("mixed")
         final charset = mail.charset ?: DEF_CHARSET
 
         if( mail.text ) {
