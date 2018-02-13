@@ -161,6 +161,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                 ) >\$cout 2>\$cerr &
                 pid=\$!
                 wait \$pid || ret=\$?
+                wait \$tee1 \$tee2
                 nxf_s3_upload .command.out s3:/${folder} || true
                 nxf_s3_upload .command.err s3:/${folder} || true
                 """
@@ -302,6 +303,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                 ) >\$cout 2>\$cerr &
                 pid=\$!
                 wait \$pid || ret=\$?
+                wait \$tee1 \$tee2
                 nxf_s3_upload .command.out s3:/${folder} || true
                 nxf_s3_upload .command.err s3:/${folder} || true
                 # copies output files to target
