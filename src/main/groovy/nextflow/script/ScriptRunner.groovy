@@ -386,7 +386,7 @@ class ScriptRunner {
              */
             session.config.process.each { String name, value ->
                 if( name.startsWith('$') && value instanceof Map && value.container ) {
-                    result[name]=value.container
+                    result[name] = resolveClosure(value.container)
                 }
             }
 
@@ -396,16 +396,36 @@ class ScriptRunner {
             def container = session.config.process.container
             if( container ) {
                 if( result ) {
-                    result['default'] = container
+                    result['default'] = resolveClosure(container)
                 }
                 else {
-                    result = container
+                    result = resolveClosure(container)
                 }
             }
 
         }
 
         return result
+    }
+
+    /**
+     * Resolve dynamically defined attributes to the actual value
+     *
+     * @param val A process container definition either a plain string or a closure
+     * @return The actual container value
+     */
+    protected String resolveClosure( val ) {
+        if( val instanceof Closure ) {
+            try {
+                return val.cloneWith(session.binding).call()
+            }
+            catch( Exception e ) {
+                log.debug "Unable to resolve dynamic `container` directive -- cause: ${e.message ?: e}"
+                return "(dynamic resolved)"
+            }
+        }
+
+        return String.valueOf(val)
     }
 
     /**
