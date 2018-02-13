@@ -470,6 +470,7 @@ class BashWrapperBuilder {
         wrapper << ') >$cout 2>$cerr &' << ENDL
         wrapper << 'pid=$!' << ENDL
         wrapper << 'wait $pid || ret=$?' << ENDL
+        wrapper << 'wait $tee1 $tee2' << ENDL
 
         /*
          * un-stage output files
