@@ -19,6 +19,7 @@
  */
 
 package nextflow.mail
+
 import javax.mail.Message
 import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
@@ -104,7 +105,7 @@ class MailerTest extends Specification {
         message.allRecipients.contains(new InternetAddress(TO))
         message.subject == SUBJECT
         message.getContent() instanceof MimeMultipart
-        (message.getContent() as MimeMultipart).getBodyPart(0).content == CONTENT
+        (message.getContent() as MimeMultipart).getContentType().startsWith('multipart/related')
 
         cleanup:
         server?.stop()
@@ -269,7 +270,10 @@ class MailerTest extends Specification {
         msg.getSubject() == 'this is a test'
         msg.getContent() instanceof MimeMultipart
         msg.getContent().getCount() == 1
-        msg.getContent().getBodyPart(0).getContent() == 'Ciao mondo'
+        msg.getContentType().startsWith('text/plain')
+        msg.getContent().getBodyPart(0).getContent().getCount() == 1
+        msg.getContent().getBodyPart(0).getContent().getBodyPart(0).getContent() == 'Ciao mondo'
+
     }
 
 

@@ -279,16 +279,17 @@ class Mailer {
      */
     protected MimeMessage createMimeMessage(Mail mail) {
 
-        final result = createMimeMessage0(mail)
-        final multipart = new MimeMultipart("mixed")
+        final message = createMimeMessage0(mail)
+
+        final wrap = new MimeBodyPart();
+        final cover = new MimeMultipart("alternative")
         final charset = mail.charset ?: DEF_CHARSET
 
         if( mail.text ) {
             def part = new MimeBodyPart()
             part.setText(mail.text, charset)
-            multipart.addBodyPart(part)
+            cover.addBodyPart(part)
         }
-
 
         if( mail.body ) {
             def part = new MimeBodyPart()
@@ -296,17 +297,22 @@ class Mailer {
             if( !type.contains('charset=') )
                 type = "$type; charset=${MimeUtility.quote(charset, HeaderTokenizer.MIME)}"
             part.setContent(mail.body, type)
-            multipart.addBodyPart(part)
+            cover.addBodyPart(part)
         }
+        wrap.setContent(cover)
+
+        // use a separate multipart for body + attachment
+        final content = new MimeMultipart("related");
+        content.addBodyPart(wrap);
 
         // -- attachment
         def allFiles = mail.attachments ?: Collections.<Attachment>emptyList()
         for( Attachment item : allFiles ) {
-            multipart.addBodyPart(createAttachment(item))
+            content.addBodyPart(createAttachment(item))
         }
 
-        result.setContent(multipart)
-        return result
+        message.setContent(content);
+        return message
     }
 
     protected MimeBodyPart createAttachment(Attachment item) {
