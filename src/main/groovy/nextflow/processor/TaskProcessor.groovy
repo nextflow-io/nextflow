@@ -1726,13 +1726,17 @@ class TaskProcessor {
         if( files.size()==0 ) { return result }
 
         if( !name || name == '*' ) {
-            return files
+            result.addAll(files)
+            return result
         }
 
         if( name.endsWith('/*') ) {
             final p = name.lastIndexOf('/')
             final dir = name.substring(0,p)
-            return files.collect { it.withName("${dir}/${it.stageName}") }
+            for( def it : files ) {
+                result.add( it.withName("${dir}/${it.stageName}")  )
+            }
+            return result
         }
 
         // no wildcards in the file name
