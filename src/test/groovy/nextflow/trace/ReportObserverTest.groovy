@@ -196,7 +196,7 @@ class ReportObserverTest extends Specification {
         def result = observer.renderTasksJson()
         then:
         1 * observer.getRecords() >> BIG
-        result == '[]'
+        result == 'null'
     }
 
     def 'should render tasks payload' () {
@@ -254,11 +254,11 @@ class ReportObserverTest extends Specification {
         given:
         def observer = [:] as ReportObserver
         observer.executor = Executors.newCachedThreadPool()
-        def r1 = new TraceRecord([process: 'bwa-mem', name: 'bwa-mem-1', '%cpu':1_000, vmem:2_000, realtime:3_000, read_bytes:4_000, write_bytes:5_000 ])
-        def r2 = new TraceRecord([process: 'bwa-mem', name: 'bwa-mem-2', '%cpu':6_000, vmem:7_000, realtime:8_000, read_bytes:9_000, write_bytes:10_000 ])
-        def r3 = new TraceRecord([process: 'bwa-mem', name: 'bwa-mem-3', '%cpu':11_000, vmem:12_000, realtime:13_000, read_bytes:14_000, write_bytes:15_000 ])
-        def r4 = new TraceRecord([process: 'multiqc', name: 'multiqc-1', '%cpu':16_000, vmem:17_000, realtime:18_000, read_bytes:19_000, write_bytes:20_000 ])
-        def r5 = new TraceRecord([process: 'multiqc', name: 'multiqc-2', '%cpu':21_000, vmem:22_000, realtime:23_000, read_bytes:24_000, write_bytes:25_000 ])
+        def r1 = new TraceRecord([process: 'bwa-mem', name: 'bwa-mem-1',          '%cpu':1_000, vmem:2_000,                   realtime:3_000,  time: 5_000,  read_bytes:4_000, write_bytes:5_000 ])
+        def r2 = new TraceRecord([process: 'bwa-mem', name: 'bwa-mem-2',          '%cpu':6_000, vmem:7_000,   memory: 10_000, realtime:8_000,  time: 10_000, read_bytes:9_000, write_bytes:10_000 ])
+        def r3 = new TraceRecord([process: 'bwa-mem', name: 'bwa-mem-3', cpus: 2, '%cpu':10_000, vmem:12_000, memory: 10_000, realtime:13_000, time: 10_000, read_bytes:14_000, write_bytes:15_000 ])
+        def r4 = new TraceRecord([process: 'multiqc', name: 'multiqc-1',          '%cpu':16_000, vmem:17_000, memory: 20_000, realtime:18_000, time: 20_000, read_bytes:19_000, write_bytes:20_000 ])
+        def r5 = new TraceRecord([process: 'multiqc', name: 'multiqc-2', cpus: 2, '%cpu':21_000, vmem:22_000, memory: 20_000, realtime:23_000, time: 20_000, read_bytes:24_000, write_bytes:25_000 ])
 
         observer.aggregate(r1)
         observer.aggregate(r2)
@@ -285,14 +285,38 @@ class ReportObserverTest extends Specification {
         result.'multiqc'.reads instanceof Map
         result.'multiqc'.writes instanceof Map
 
+        result.'bwa-mem'.time.min == 3000
+        result.'bwa-mem'.time.max == 13000
+        result.'bwa-mem'.time.q1 == 5500
+        result.'bwa-mem'.time.q2 == 8000
+        result.'bwa-mem'.time.q3 == 10500
+        result.'bwa-mem'.time.mean == 8000
+
+        result.'bwa-mem'.timeUsage.min == 60
+        result.'bwa-mem'.timeUsage.max == 130
+        result.'bwa-mem'.timeUsage.q1 == 70
+        result.'bwa-mem'.timeUsage.q2 == 80
+        result.'bwa-mem'.timeUsage.q3 == 105
+        result.'bwa-mem'.timeUsage.mean == 90
+
+
         result.'bwa-mem'.cpu."min" == 1000
         result.'bwa-mem'.cpu."minLabel" == 'bwa-mem-1'
-        result.'bwa-mem'.cpu."max" == 11000.0
+        result.'bwa-mem'.cpu."max" == 10000
         result.'bwa-mem'.cpu."maxLabel" == "bwa-mem-3"
-        result.'bwa-mem'.cpu."q1" == 3500.0
-        result.'bwa-mem'.cpu."q2" == 6000.0
-        result.'bwa-mem'.cpu."q3" == 8500.0
-        result.'bwa-mem'.cpu."mean" == 6000.0
+        result.'bwa-mem'.cpu."q1" == 3500
+        result.'bwa-mem'.cpu."q2" == 6000
+        result.'bwa-mem'.cpu."q3" == 8000
+        result.'bwa-mem'.cpu."mean" == 5666.67
+
+        result.'bwa-mem'.cpuUsage."min" == 1000
+        result.'bwa-mem'.cpuUsage."minLabel" == 'bwa-mem-1'
+        result.'bwa-mem'.cpuUsage."max" == 6000
+        result.'bwa-mem'.cpuUsage."maxLabel" == "bwa-mem-2"
+        result.'bwa-mem'.cpuUsage."q1" == 3000
+        result.'bwa-mem'.cpuUsage."q2" == 5000
+        result.'bwa-mem'.cpuUsage."q3" == 5500
+        result.'bwa-mem'.cpuUsage."mean" == 4000
 
         result.'multiqc'.mem."min" == 17000.0
         result.'multiqc'.mem."minLabel" == "multiqc-1"
@@ -303,6 +327,29 @@ class ReportObserverTest extends Specification {
         result.'multiqc'.mem."q3" == 20750.0
         result.'multiqc'.mem."mean" == 19500.0
 
+        result.'multiqc'.memUsage."min" == 85
+        result.'multiqc'.memUsage."minLabel" == "multiqc-1"
+        result.'multiqc'.memUsage."max" == 110
+        result.'multiqc'.memUsage."maxLabel" == "multiqc-2"
+        result.'multiqc'.memUsage."q1" == 91.25
+        result.'multiqc'.memUsage."q2" == 97.50
+        result.'multiqc'.memUsage."q3" == 103.75
+        result.'multiqc'.memUsage."mean" == 97.50
+
+        result.'multiqc'.time.min == 18000
+        result.'multiqc'.time.max == 23000
+        result.'multiqc'.time.q1 == 19250
+        result.'multiqc'.time.q2 == 20500
+        result.'multiqc'.time.q3 == 21750
+        result.'multiqc'.time.mean == 20500
+
+        result.'multiqc'.timeUsage.min == 90
+        result.'multiqc'.timeUsage.max == 115
+        result.'multiqc'.timeUsage.q1 == 96.25
+        result.'multiqc'.timeUsage.q2 == 102.50
+        result.'multiqc'.timeUsage.q3 == 108.75
+        result.'multiqc'.timeUsage.mean == 102.50
+        
         cleanup:
         observer?.executor?.shutdown()
     }
