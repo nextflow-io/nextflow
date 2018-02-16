@@ -115,23 +115,22 @@
       <h1 class="display-3">Nextflow workflow report</h1>
       <h2 class="text-muted mb-4"><samp>[${workflow.runName}]</samp> ${workflow.resume ? '<em>(resumed run)</em>' : ''}</h2>
 
-      <% if (workflow.success){
-          out << """
+      <% if (workflow.success && workflow.stats.ignoredCount ){ %>
+          <div class="alert alert-warning mb-4">
+              Workflow execution completed successfully. One or more tasks reported an error condition.
+          </div>
+      <% } else if (workflow.success ) { %>
           <div class="alert alert-success mb-4">
               Workflow execution completed successfully!
           </div>
-          """
-      } else {
-          out << """
+      <% } else { %>
           <div class="alert alert-danger mb-4">
               <h4>Workflow execution completed unsuccessfully!</h4>
               <p>The exit status of the task that caused the workflow execution to fail was: <code>${workflow.exitStatus}</code>.</p>
               <p>The full error message was:</p>
               <pre>${workflow.errorReport}</pre>
           </div>
-          """
-      }
-      %>
+      <% } %>
 
       <dl>
         <dt>Run times</dt>
@@ -145,9 +144,6 @@
       </dl>
 
       <dl class="row small">
-        <dt class="col-sm-3">CPU-Hours</dt>
-        <dd class="col-sm-9"><samp>${workflow.stats.getComputeTimeString()}</samp></dd>
-
         <dt class="col-sm-3">Launch directory</dt>
         <dd class="col-sm-9"><samp>${workflow.launchDir}</samp></dd>
 
@@ -157,45 +153,48 @@
         <dt class="col-sm-3">Project directory</dt>
         <dd class="col-sm-9"><samp>${workflow.projectDir}</samp></dd>
 
-        <% if (workflow.scriptName) {
-          out << """
+        <% if (workflow.scriptName) { %>
           <dt class="col-sm-3">Script name</dt>
           <dd class="col-sm-9"><samp>${workflow.scriptName}</samp></dd>
-          """
-        } %>
+        <% } %>
 
-        <% if (workflow.scriptId) {
-          out << """
+        <% if (workflow.scriptId) { %>
           <dt class="col-sm-3">Script ID</dt>
           <dd class="col-sm-9"><code>${workflow.scriptId}</code></dd>
-          """
-        } %>
+        <% } %>
 
-        <% if (workflow.repository) {
-          out << """
+        <% if (workflow.repository) { %>
           <dt class="col-sm-3">Workflow repository</dt>
           <dd class="col-sm-9"><code>${workflow.repository}</code>, revision <code>${workflow.revision}</code> (commit hash <code>${workflow.commitId}</code>)</dd>
-          """
-        } %>
+        <% } %>
 
         <dt class="col-sm-3">Workflow profile</dt>
         <dd class="col-sm-9">${workflow.profile}</dd>
 
-        <% if (workflow.container) {
-        out << """
+        <% if (workflow.container) { %>
         <dt class="col-sm-3">Workflow container</dt>
         <dd class="col-sm-9"><samp>${workflow.container}</samp></dd>
 
         <dt class="col-sm-3">Container engine</dt>
         <dd class="col-sm-9"><samp>${workflow.containerEngine?:'-'}</samp></dd>
-        """
-        } %>
+        <% } %>
 
         <dt class="col-sm-3">Nextflow version</dt>
         <dd class="col-sm-9">version ${workflow.nextflow.version}, build ${workflow.nextflow.build} (${workflow.nextflow.timestamp})</dd>
 
         <dt class="col-sm-3">Session ID</dt>
         <dd class="col-sm-9"><code>${workflow.sessionId}</code></dd>
+
+        <dt class="col-sm-3">Tasks stats</dt>
+        <dd class="col-sm-9">
+          <samp>succeed: ${workflow.stats.succeedCount}; </samp>
+          <samp>cached: ${workflow.stats.cachedCount}; </samp>
+          <samp>failed: ${workflow.stats.failedCount}; </samp>
+          <samp>ignored: ${workflow.stats.ignoredCount} </samp>
+        </dd>
+
+        <dt class="col-sm-3">CPU-Hours</dt>
+        <dd class="col-sm-9"><samp>${workflow.stats.getComputeTimeString()}</samp></dd>
 
       </dl>
     </div>
