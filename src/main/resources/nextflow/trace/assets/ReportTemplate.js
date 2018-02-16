@@ -1,12 +1,7 @@
 // JavaScript used to power the Nextflow Report Template output.
 window.data_byprocess = {};
 
-function xround(n) {
-  return Math.round(n*10)/10;
-}
-
 $(function() {
-
   // Script block clicked
   $('#tasks_table').on('click', '.script_block', function(e){
     e.preventDefault();
@@ -19,83 +14,86 @@ $(function() {
     $('#completed_fromnow').html('completed ' + completed_date.fromNow() + ', ');
   }
 
-  // Collect stats by process
-  for(i=0; i<window.data['trace'].length; i++){
-    var proc = window.data['trace'][i]['process']
+  // Collect metrics by process
+  for(proc in window.data.summary){
     if(!window.data_byprocess.hasOwnProperty(proc)){
-      window.data_byprocess[proc] = [];
+      window.data_byprocess[proc] = {};
     }
-    window.data_byprocess[proc].push(window.data['trace'][i]);
+    var metrics = window.data.summary[proc];
+    for (metric in metrics) {
+      if (metrics[metric] != null) {
+        window.data_byprocess[proc][metric] = [];
+        if( metrics[metric].min == metrics[metric].max ) {
+            // min equals max ==> show just a value
+            window.data_byprocess[proc][metric].push(metrics[metric].min);
+        }
+        else {
+            // otherwise show all values
+            window.data_byprocess[proc][metric].push(metrics[metric].min);
+            window.data_byprocess[proc][metric].push(metrics[metric].q1);
+            window.data_byprocess[proc][metric].push(metrics[metric].q1);
+            window.data_byprocess[proc][metric].push(metrics[metric].q2);
+            window.data_byprocess[proc][metric].push(metrics[metric].q3);
+            window.data_byprocess[proc][metric].push(metrics[metric].q3);
+            window.data_byprocess[proc][metric].push(metrics[metric].max);
+        }
+        if (metric == "time") {
+            window.data_byprocess[proc][metric] = window.data_byprocess[proc][metric].map(function(d,i){
+            return moment.duration(d).asMinutes().toFixed(1);
+          });
+        }
+      }
+    }
   }
 
   // Plot histograms of resource usage
-  var cpu_data = [];
-  var pct_cpu_used_data = [];
-  var mem_data = [];
-  var pct_mem_used_data = [];
-  var time_data = [];
-  var pct_time_used_data = [];
-  var readwrite_data = [];
-  var time_alloc_hasdata = false;
-  var readwrite_hasdata = false;
+  var cpu_raw_data = [];
+  var cpu_usage_data = [];
+  var mem_raw_data = [];
+  var mem_usage_data = [];
+  var time_raw_data = [];
+  var time_usage_data = [];
+  var reads_raw_data = [];
+  var writes_raw_data = [];
   for(var pname in window.data_byprocess){
-    if (window.data_byprocess.hasOwnProperty(pname)) {
-      var rc = [];
-      var pc = [];
-      var rm = [];
-      var pm = [];
-      var rt = [];
-      var pt = [];
-      var rd = [];
-      for (var i = 0; i < window.data_byprocess[pname].length; i ++) {
-        rc[i] = xround(parseInt(window.data_byprocess[pname][i]['%cpu']));
-        pc[i] = xround((parseInt(window.data_byprocess[pname][i]['%cpu']) / (parseInt(window.data_byprocess[pname][i]['cpus']) * 100)) * 100);
-        rm[i] = xround(parseInt(window.data_byprocess[pname][i]['vmem']) / 1000000000);
-        pm[i] = xround((parseInt(window.data_byprocess[pname][i]['vmem']) / parseInt(window.data_byprocess[pname][i]['memory'])) * 100)
-        rt[i] = xround(moment.duration( parseInt(window.data_byprocess[pname][i]['realtime']) ).asMinutes());
-        pt[i] = xround((parseInt(window.data_byprocess[pname][i]['realtime']) / parseInt(window.data_byprocess[pname][i]['time'])) * 100)
-        rd[i] = xround((parseInt(window.data_byprocess[pname][i]['read_bytes']) + parseInt(window.data_byprocess[pname][i]['write_bytes'])) / 1000000000);
-        if (parseInt(window.data_byprocess[pname][i]['time']) > 0){ time_alloc_hasdata = true; }
-        if (rd[i] > 0){ readwrite_hasdata = true; }
-      }
-      cpu_data.push({y: rc, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
-      pct_cpu_used_data.push({y: pc, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
-      mem_data.push({y: rm, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
-      pct_mem_used_data.push({y: pm, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
-      time_data.push({y: rt, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
-      pct_time_used_data.push({y: pt, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
-      readwrite_data.push({y: rd, name: pname, type:'box', boxpoints: 'all', jitter: 0.3});
-    }
+    if( !window.data_byprocess.hasOwnProperty(pname) )
+        continue;
+    var smry = window.data_byprocess[pname];
+    cpu_raw_data.push({y: smry.cpu, name: pname, type:'box', boxmean: true, boxpoints: false});
+    cpu_usage_data.push({y: smry.cpuUsage, name: pname, type:'box', boxmean: true, boxpoints: false});
+    mem_raw_data.push({y: smry.mem, name: pname, type:'box', boxmean: true, boxpoints: false});
+    mem_usage_data.push({y: smry.memUsage, name: pname, type:'box', boxmean: true, boxpoints: false});
+    time_raw_data.push({y: smry.time, name: pname, type:'box', boxmean: true, boxpoints: false});
+    time_usage_data.push({y: smry.timeUsage, name: pname, type:'box', boxmean: true, boxpoints: false});
+    reads_raw_data.push({y: smry.reads, name: pname, type:'box', boxmean: true, boxpoints: false});
+    writes_raw_data.push({y: smry.writes, name: pname, type:'box', boxmean: true, boxpoints: false});
   }
-  Plotly.newPlot('pctcpuplot', pct_cpu_used_data, { title: '% Requested CPU Used', yaxis: {title: '% Allocated CPUs Used', range: [0, 100]} });
-  Plotly.newPlot('pctmemplot', pct_mem_used_data, { title: '% Requested Memory Used', yaxis: {title: '% Allocated Memory Used', range: [0, 100]} });
-  if(time_alloc_hasdata){
-    Plotly.newPlot('pcttimeplot', pct_time_used_data, { title: '% Requested Time Used', yaxis: {title: '% Allocated Time Used', range: [0, 100]} });
-  } else {
-    $('#timeplot_tabs, #timeplot_tabcontent').remove();
-    $('#timeplot_header').after('<div id="timeplot"></div>');
-    Plotly.newPlot('timeplot', time_data, { title: 'Task execution real-time', yaxis: {title: 'Execution time (minutes)'} });
-  }
-  if(readwrite_hasdata){
-    Plotly.newPlot('readwriteplot', readwrite_data, { title: 'Disk Read+Write', yaxis: {title: 'Read bytes + write (gb)'} });
-  } else {
-    $('#readwriteplot_div').hide();
-  }
+
+  Plotly.newPlot('cpuplot', cpu_raw_data, { title: 'CPU Usage', yaxis: {title: '% single core CPU usage', tickformat: '.1f', rangemode: 'tozero'} });
+  Plotly.newPlot('memplot', mem_raw_data, { title: 'Memory Usage', yaxis: {title: 'Memory', tickformat: '.4s', rangemode: 'tozero'} });
+  Plotly.newPlot('timeplot', time_raw_data, { title: 'Task execution real-time', yaxis: {title: 'Execution time (minutes)', tickformat: '.1f', rangemode: 'tozero'} });
+  Plotly.newPlot('readplot', reads_raw_data, { title: 'Number of bytes read from disk', yaxis: {title: 'Read bytes', tickformat: '.4s', rangemode: 'tozero'} });
+
   // Only plot tabbed plots when shown
-  $('#cpuplot_tablink').on('shown.bs.tab', function (e) {
-    if($('#cpuplot').is(':empty')){
-      Plotly.newPlot('cpuplot', cpu_data, { title: 'CPU Usage', yaxis: {title: '% single core CPU usage'} });
+  $('#pctcpuplot_tablink').on('shown.bs.tab', function (e) {
+    if($('#pctcpuplot').is(':empty')){
+      Plotly.newPlot('pctcpuplot', cpu_usage_data, { title: '% Requested CPU Used', yaxis: {title: '% Allocated CPUs Used', tickformat: '.1f', rangemode: 'tozero'} });
     }
   });
-  $('#memplotlot_tablink').on('shown.bs.tab', function (e) {
-     if($('#memplot').is(':empty')){
-       Plotly.newPlot('memplot', mem_data, { title: 'Memory Usage', yaxis: {title: 'Memory (gb)'} });
-     }
+  $('#pctmemplot_tablink').on('shown.bs.tab', function (e) {
+    if($('#pctmemplot').is(':empty')){
+        Plotly.newPlot('pctmemplot', mem_usage_data, { title: '% Requested Memory Used', yaxis: {title: '% Allocated Memory Used', tickformat: '.1f', rangemode: 'tozero'} });
+    }
   });
-  $('#timeplot_tablink').on('shown.bs.tab', function (e) {
-     if($('#timeplot').is(':empty')){
-       Plotly.newPlot('timeplot', time_data, { title: 'Task execution real-time', yaxis: {title: 'Execution time (minutes)'} });
-     }
+  $('#pcttimeplot_tablink').on('shown.bs.tab', function (e) {
+    if($('#pcttimeplot').is(':empty')){
+        Plotly.newPlot('pcttimeplot', time_usage_data, { title: '% Requested Time Used', yaxis: {title: '% Allocated Time Used', tickformat: '.1f', rangemode: 'tozero'} });
+    }
+  });
+  $('#writeplot_tablink').on('shown.bs.tab', function (e) {
+    if($('#writeplot').is(':empty')){
+        Plotly.newPlot('writeplot', writes_raw_data, { title: 'Number of bytes written to disk', yaxis: {title: 'Written bytes', tickformat: '.4s', rangemode: 'tozero'}});
+    }
   });
 
   // Humanize duration
@@ -153,119 +151,142 @@ $(function() {
   }
   function make_tasks_table(){
     // reset
-    if ( $.fn.dataTable.isDataTable( '#tasks_table' ) ) {
-      $('#tasks_table').DataTable().destroy();
-    }
-    $('#tasks_table tbody').html('');
-    // Add rows
-    for(i=0; i<window.data['trace'].length; i++){
-      // Use a nice label for the status
-      var status = window.data['trace'][i]['status'];
-      if(status == 'COMPLETED'){ status = '<span class="badge badge-success">COMPLETED</span>'; }
-      if(status == 'CACHED'){ status = '<span class="badge badge-secondary">CACHED</span>'; }
-      if(status == 'ABORTED'){ status = '<span class="badge badge-danger">ABORTED</span>'; }
-      if(status == 'FAILED'){ status = '<span class="badge badge-danger">FAILED</span>'; }
-      // Trim whitespace properly from the script
-      var script = '';
-      var lines = window.data['trace'][i]['script'].split("\n");
-      var ws_re = /^(\s+)/g;
-      var flws_match = ws_re.exec(lines[1]);
-      if(flws_match == null){
-        script = window.data['trace'][i]['script'];
-      } else {
-        for(var j=0; j<lines.length; j++){
-          script += lines[j].replace(new RegExp('^'+flws_match[1]), '').replace(/\s+$/,'') + "\n";
-        }
+      if ( $.fn.dataTable.isDataTable( '#tasks_table' ) ) {
+        $('#tasks_table').DataTable().destroy();
       }
-      $('#tasks_table tbody').append('<tr>'+
-        '<td>' + window.data['trace'][i]['task_id'] + '</td>'+
-        '<td>' + window.data['trace'][i]['process'] + '</td>'+
-        '<td>' + window.data['trace'][i]['tag'] + '</td>'+
-        '<td>' + status + '</td>'+
-        '<td><code>' + window.data['trace'][i]['hash'] + '</code></td>'+
-        '<td>' + window.data['trace'][i]['cpus'] + '</td>'+
-        '<td>' + window.data['trace'][i]['%cpu'] + '</td>'+
-        '<td>' + make_memory(window.data['trace'][i]['memory']) + '</td>'+
-        '<td>' + window.data['trace'][i]['%mem'] + '</td>'+
-        '<td>' + make_memory(window.data['trace'][i]['vmem']) + '</td>'+
-        '<td>' + make_memory(window.data['trace'][i]['rss']) + '</td>'+
-        '<td>' + make_memory(window.data['trace'][i]['peak_vmem']) + '</td>'+
-        '<td>' + make_memory(window.data['trace'][i]['peak_rss']) + '</td>'+
-        '<td>' + make_duration(window.data['trace'][i]['time']) + '</td>'+
-        '<td>' + make_duration(window.data['trace'][i]['duration']) + '</td>'+
-        '<td>' + make_duration(window.data['trace'][i]['realtime']) + '</td>'+
-        '<td><pre class="script_block short"><code>' + script.trim() + '</code></pre></td>'+
-        '<td>' + window.data['trace'][i]['exit'] + '</td>'+
-        '<td>' + make_date(window.data['trace'][i]['submit']) + '</td>'+
-        '<td>' + make_date(window.data['trace'][i]['start']) + '</td>'+
-        '<td>' + make_date(window.data['trace'][i]['complete']) + '</td>'+
-        '<td>' + make_memory(window.data['trace'][i]['rchar']) + '</td>'+
-        '<td>' + make_memory(window.data['trace'][i]['wchar']) + '</td>'+
-        '<td>' + make_memory(window.data['trace'][i]['syscr']) + '</td>'+
-        '<td>' + make_memory(window.data['trace'][i]['syscw']) + '</td>'+
-        '<td>' + make_memory(window.data['trace'][i]['read_bytes']) + '</td>'+
-        '<td>' + make_memory(window.data['trace'][i]['write_bytes']) + '</td>'+
-        '<td>' + window.data['trace'][i]['native_id'] + '</td>'+
-        '<td>' + window.data['trace'][i]['name'] + '</td>'+
-        '<td>' + window.data['trace'][i]['module'] + '</td>'+
-        '<td>' + window.data['trace'][i]['container'] + '</td>'+
-        '<td>' + window.data['trace'][i]['disk'] + '</td>'+
-        '<td>' + window.data['trace'][i]['attempt'] + '</td>'+
-        '<td><samp>' + window.data['trace'][i]['scratch'] + '</samp></td>'+
-        '<td><samp>' + window.data['trace'][i]['workdir'] + '</samp></td>'+
-      +'</tr>');
+      var table = $('#tasks_table').DataTable({
+        data: window.data.trace,
+        columns: [
+          { title: 'task_id', data: 'task_id' },
+          { title: 'process', data: 'process' },
+          { title: 'tag', data: 'tag' },
+          { title: 'status', data: 'status', render: function(data, type, row){
+              var s = {
+                COMPLETED: 'success',
+                CACHED: 'secondary',
+                ABORTED: 'danger',
+                FAILED: 'danger'
+              }
+              return '<span class="badge badge-'+s[data]+'">'+data+'</span>';
+            }
+          },
+          { title: 'hash', data: 'hash', render:  function(data, type, row){
+              var script = '';
+              var lines = data.split("\n");
+              var ws_re = /^(\s+)/g;
+              var flws_match = ws_re.exec(lines[1]);
+              if(flws_match == null){
+                script = data;
+              } else {
+                for(var j=0; j<lines.length; j++){
+                  script += lines[j].replace(new RegExp('^'+flws_match[1]), '').replace(/\s+$/,'') + "\n";
+                }
+              }
+              return '<code>'+script+'</code>';
+            }
+          },
+          { title: 'allocated cpus', data: 'cpus' },
+          { title: '%cpu', data: '%cpu' },
+          { title: 'allocated memory', data: 'memory', render: make_memory },
+          { title: '%mem', data: '%mem' },
+          { title: 'vmem', data: 'vmem', render: make_memory },
+          { title: 'rss', data: 'rss', render: make_memory },
+          { title: 'peak_vmem', data: 'peak_vmem', render: make_memory },
+          { title: 'peak_rss', data: 'peak_rss', render: make_memory },
+          { title: 'allocated time', data: 'time', render: make_duration },
+          { title: 'duration', data: 'duration', render: make_duration },
+          { title: 'realtime', data: 'realtime', render: make_duration },
+          { title: 'script', data: 'script', render: function(data) {
+              return '<pre class="script_block short"><code>' + data.trim() + '</code></pre>';
+            }
+          },
+          { title: 'exit', data: 'exit' },
+          { title: 'submit', data: 'submit', render: make_date },
+          { title: 'start', data: 'start', render: make_date },
+          { title: 'complete', data: 'complete', render: make_date },
+          { title: 'rchar', data: 'rchar', render: make_memory },
+          { title: 'wchar', data: 'wchar', render: make_memory },
+          { title: 'syscr', data: 'syscr', render: make_memory },
+          { title: 'syscw', data: 'syscw', render: make_memory },
+          { title: 'read_bytes', data: 'read_bytes', render: make_memory },
+          { title: 'write_bytes', data: 'write_bytes', render: make_memory },
+          { title: 'native_id', data: 'native_id' },
+          { title: 'name', data: 'name' },
+          { title: 'module', data: 'module' },
+          { title: 'container', data: 'container', render: function(data) {
+              return '<samp>'+data+'</samp>';
+            }
+          },
+          { title: 'disk', data: 'disk' },
+          { title: 'attempt', data: 'attempt' },
+          { title: 'scratch', data: 'scratch', render: function(data) {
+              return '<samp>'+data+'</samp>';
+            }
+          },
+          { title: 'workdir', data: 'workdir', render: function(data) {
+              return '<samp>'+data+'</samp>';
+            }
+          }
+        ],
+        "deferRender": true,
+        "lengthMenu": [[25, 50, 100, -1], [25, 50, 100, "All"]],
+        "scrollX": true,
+        "colReorder": true,
+        "columnDefs": [
+          { className: "id", "targets": [ 0,1,2,3 ] },
+          { className: "meta", "targets": [ 4,13,16,17,18,19,20,27,28,29,30,31,32,33,34 ] },
+          { className: "metrics", "targets": [ 5,6,7,8,9,10,11,12,14,15,21,22,23,24,25,26 ] }
+        ],
+        "buttons": [
+          {
+            extend: 'colvisGroup',
+            text: 'Metrics',
+            show: [ '.id', '.metrics' ],
+            hide: [ '.meta' ],
+          },
+          {
+            extend: 'colvisGroup',
+            text: 'Metadata',
+            show: [ '.id', '.meta'],
+            hide: [ '.metrics' ],
+          },
+          {
+            extend: 'colvisGroup',
+            text: 'All',
+            show: ':hidden',
+          },
+        ]
+      });
+
+      // Insert column filter button group
+      table.buttons().container()
+         .prependTo( $('#tasks_table_filter') );
+
+      // Column filter button group onClick event to highlight active filter
+      $('.buttons-colvisGroup').click(function(){
+        var def = 'btn-secondary';
+        var sel = 'btn-primary';
+        $('.buttons-colvisGroup').removeClass(sel).addClass(def);
+        $(this).addClass(sel).removeClass(def);
+      });
+
+      // Default filter highlight
+      $(".buttons-colvisGroup:contains('All')").click();
     }
-    var table = $('#tasks_table').removeAttr('width').DataTable({
-      "lengthMenu": [[25, 50, 100, -1], [25, 50, 100, "All"]],
-      "scrollX": true,
-      "colReorder": true,
-      "columnDefs": [
-        { className: "id", "targets": [ 0,1,2,3 ] },
-        { className: "meta", "targets": [ 4,13,16,17,18,19,20,27,28,29,30,31,32,33,34 ] },
-        { className: "metrics", "targets": [ 5,6,7,8,9,10,11,12,14,15,21,22,23,24,25,26 ] }
-      ],
-      "buttons": [
-        {
-          extend: 'colvisGroup',
-          text: 'Metrics',
-          show: [ '.id', '.metrics' ],
-          hide: [ '.meta' ],
-        },
-        {
-          extend: 'colvisGroup',
-          text: 'Metadata',
-          show: [ '.id', '.meta'],
-          hide: [ '.metrics' ],
-        },
-        {
-          extend: 'colvisGroup',
-          text: 'All',
-          show: ':hidden',
-        },
-      ]
-    });
 
-    // Insert column filter button group
-    table.buttons().container()
-       .prependTo( $('#tasks_table_filter') );
-
-    // Column filter button group onClick event to highlight active filter
-    $('.buttons-colvisGroup').click(function(){
-      var def = 'btn-secondary';
-      var sel = 'btn-primary';
-      $('.buttons-colvisGroup').removeClass(sel).addClass(def);
-      $(this).addClass(sel).removeClass(def);
-    });
-
-    // Default filter highlight
-    $(".buttons-colvisGroup:contains('All')").click();
+  if( window.data.trace==null ) {
+      // nascondere
+      $('#table-container').remove()
+  }
+  else {
+      $('#no-table-container').remove()
+      // Dropdown changed about raw / human readable values in table
+      $('#nf-table-humanreadable').change(function(){
+        make_tasks_table();
+      });
+      // Make the table on page load
+      make_tasks_table();
   }
 
-  // Dropdown changed about raw / human readable values in table
-  $('#nf-table-humanreadable').change(function(){
-    make_tasks_table();
-  });
-  // Make the table on page load
-  make_tasks_table();
 
 });

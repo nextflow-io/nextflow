@@ -41,7 +41,34 @@ class ReportSummary {
         mappers.time = { TraceRecord record -> record.get('realtime') as Double }
         mappers.reads = { TraceRecord record -> record.get('read_bytes') as Double }
         mappers.writes = { TraceRecord record -> record.get('write_bytes') as Double}
+
+        mappers.cpuUsage = { TraceRecord record ->
+            final Double pcpu = record.get('%cpu') as Double
+            final int ncpu = (record.get('cpus') ?: 1) as int
+            if( !pcpu )
+                return null
+            return pcpu / ncpu as Double
+        }
+
+        mappers.memUsage = { TraceRecord record ->
+            final vmem = record.get('vmem') as Double
+            final request = record.get('memory') as Long
+            if( !vmem ) return null
+            if( !request ) return null
+            return vmem / request * 100 as Double
+        }
+
+
+        mappers.timeUsage = { TraceRecord record ->
+            final realtime = record.get('realtime') as Long
+            final request = record.get('time') as Long
+            if( !realtime ) return null
+            if( !request ) return null
+            return realtime / request * 100 as Double
+        }
     }
+
+
 
     /**
      * Hold the summary for each series ie. cpu, memory, time, disk reads, disk writes
@@ -118,8 +145,6 @@ class ReportSummary {
 
         private int count
 
-        private Integer digits = 2
-
         @PackageScope Double min
 
         @PackageScope Double max
@@ -154,11 +179,8 @@ class ReportSummary {
             }
         }
 
-        private double round( double value ) {
-            if( digits == null )
-                return value
-            final x = Math.pow(10,digits)
-            Math.round( value * x ) / x
+        private BigDecimal round( double value ) {
+            Math.round( value * 100 ) / 100
         }
 
         void add( TraceRecord record ) {
@@ -208,11 +230,16 @@ class ReportSummary {
             result.q2 = round(quantile(sorted, 50))
             result.q3 = round(quantile(sorted, 75))
             result.max = round(quantile(sorted, 100))
+            // discard entry with all zero 
+            if( result.min == 0 && result.min == result.max  )
+                return null
+
             result.minLabel = minLabel
             result.maxLabel = maxLabel
             result.q1Label = q1Label
             result.q2Label = q2Label
             result.q3Label = q3Label
+
             return result
         }
 

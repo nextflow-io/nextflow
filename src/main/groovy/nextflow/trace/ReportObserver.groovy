@@ -235,7 +235,7 @@ class ReportObserver implements TraceObserver {
      */
     protected String renderTasksJson() {
         final r = getRecords()
-        r.size()<=maxTasks ? renderJsonData(r.values()) : '[]'
+        r.size()<=maxTasks ? renderJsonData(r.values()) : 'null'
     }
 
     /**
