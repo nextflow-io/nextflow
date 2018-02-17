@@ -23,6 +23,7 @@ package nextflow.extension
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
+import groovyx.gpars.dataflow.expression.DataflowExpression
 
 /**
  * Implements {@link DataflowExtensions#toList(groovyx.gpars.dataflow.DataflowReadChannel)}  operator
@@ -34,15 +35,40 @@ class ToListOp {
 
     private DataflowReadChannel source
 
-    ToListOp( DataflowReadChannel source ) {
+    private ordering
+
+    /**
+     * Implements both `toList` and `toSortedList`
+     *
+     * @param source The source channel
+     * @param order Order the resulting channel, either boolean {@code true} or a comparing {@link Closure}
+     */
+    ToListOp( DataflowReadChannel source, order=null ) {
         this.source = source
+        this.ordering = order
     }
 
     DataflowVariable apply() {
         assert source != null
+
         final target = new DataflowVariable()
+        if( source instanceof DataflowExpression ) {
+            final result = new ArrayList(1)
+            Map<String,Closure> events = [:]
+            events.onNext = { result.add(it) }
+            events.onComplete = { target.bind(result) }
+            DataflowHelper.subscribeImpl(source, events )
+            return target
+        }
+
         DataflowHelper.reduceImpl(source, target, []) { List list, item -> list << item }
-        return target
+        if( ordering ) {
+            final sort = { List list -> ordering instanceof Closure ? list.sort((Closure) ordering) : list.sort() }
+            return (DataflowVariable)target.then(sort)
+        }
+        else {
+            return target
+        }
     }
 
     static DataflowVariable apply( DataflowReadChannel source ) {
