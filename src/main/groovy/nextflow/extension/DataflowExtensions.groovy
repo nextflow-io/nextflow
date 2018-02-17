@@ -629,11 +629,7 @@ class DataflowExtensions {
      * @return A list holding all the items send over the channel
      */
     static final <V> DataflowReadChannel<V> toSortedList(final DataflowReadChannel<V> source, Closure closure = null) {
-        final reduced = new DataflowVariable()
-        reduceImpl(source, reduced, []) { list, item -> list << item }
-        final target = reduced.then { List list ->
-            closure ? list.sort(closure) : list.sort()
-        }
+        final target = new ToListOp(source, closure ?: true).apply()
         NodeMarker.addOperatorNode('toSortedList', source, target)
         return target as DataflowVariable
     }

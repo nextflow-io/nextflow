@@ -529,6 +529,15 @@ class DataflowExtensionsTest extends Specification {
         then:
         channel.toList().val == []
 
+        when:
+        channel = Channel.value(1)
+        then:
+        channel.toList().val == [1]
+
+        when:
+        channel = Channel.value().close()
+        then:
+        channel.toList().val == []
     }
 
     def testToSortedList() {
@@ -548,6 +557,16 @@ class DataflowExtensionsTest extends Specification {
         channel = Channel.from([1,'zeta'], [2,'gamma'], [3,'alpaha'], [4,'delta'])
         then:
         channel.toSortedList { it[1] } .val == [[3,'alpaha'], [4,'delta'], [2,'gamma'], [1,'zeta'] ]
+
+        when:
+        channel = Channel.value(1)
+        then:
+        channel.toSortedList().val == [1]
+
+        when:
+        channel = Channel.value().close()
+        then:
+        channel.toSortedList().val == []
 
     }
 
