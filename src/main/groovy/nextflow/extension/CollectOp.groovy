@@ -57,10 +57,11 @@ class CollectOp {
         final result = []
         final target = new DataflowVariable()
 
-        def next = { append(result, it) }
-        def done = { target << ( result ? new ArrayBag(normalise(result)) : Channel.STOP )  }
+        Map<String,Closure> events = [:]
+        events.onNext = { append(result, it) }
+        events.onComplete = { target << ( result ? new ArrayBag(normalise(result)) : Channel.STOP )  }
 
-        DataflowHelper.subscribeImpl(source, [onNext:next, onComplete:done])
+        DataflowHelper.subscribeImpl(source, events)
         return target
     }
 
