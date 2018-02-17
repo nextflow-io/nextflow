@@ -21,7 +21,7 @@ option ``-c <config file>``.
   ignored and they are merged as explained above.
 
 .. tip:: If you want to ignore any default configuration files and use only the custom one use the command line option
-  ``-C <config file>``.
+  ``-c <config file>``.
 
 Config syntax
 --------------
