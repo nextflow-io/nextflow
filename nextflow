@@ -112,7 +112,8 @@ function resolve_link() {
 function install() {
     local tmpfile=$(make_temp)
     local version=$(set +u; [[ $NXF_VER ]] && printf "v$NXF_VER" || printf 'latest')
-    get "$NXF_BASE/$version/nextflow" "$tmpfile" "$1" || exit $?
+    local action="a=${2:-default}"
+    get "$NXF_BASE/$version/nextflow?$action" "$tmpfile" "$1" || exit $?
     mv "$tmpfile" "$1" || exit $?
     chmod +x "$1" || exit $?
     bash "$1" -download || exit $?
@@ -175,7 +176,7 @@ if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then
         echo ''
         exit 1
     fi
-    install "$PWD/nextflow"
+    install "$PWD/nextflow" install
     exit 0
 fi
 
@@ -206,7 +207,7 @@ while [[ $# != 0 ]]; do
     -self-update|self-update)
       if [[ ! "$cmd" ]]; then
       unset NXF_VER
-      install "$0";
+      install "$0" update
       exit 0
       fi
       ;;
