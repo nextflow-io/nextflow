@@ -22,7 +22,7 @@ package nextflow.scm
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.Const
-import nextflow.config.ComposedConfigSlurper
+import nextflow.config.ConfigParser
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 /**
@@ -197,7 +197,7 @@ class ProviderConfig {
 
     @PackageScope
     static Map parse(String text) {
-        def slurper = new ComposedConfigSlurper()
+        def slurper = new ConfigParser()
         def env = new HashMap( System.getenv() )
         slurper.setBinding(env)
         return slurper.parse(text)

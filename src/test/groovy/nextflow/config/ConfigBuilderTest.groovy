@@ -242,7 +242,7 @@ class ConfigBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
-    def 'CLI params should overrides the ones in one or more profiles ' () {
+    def 'CLI params should overrides the ones in one or more profiles' () {
 
         setup:
         def file = Files.createTempFile('test',null)
@@ -453,7 +453,7 @@ class ConfigBuilderTest extends Specification {
         when:
         opt = new CliOptions()
         run = new CmdRun(withDocker: '-')
-        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         def e = thrown(AbortOperationException)
         e.message == 'You have requested to run with Docker but no image were specified'
@@ -465,7 +465,7 @@ class ConfigBuilderTest extends Specification {
                 '''
         opt = new CliOptions(config: [file.toFile().canonicalPath])
         run = new CmdRun(withDocker: '-')
-        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         e = thrown(AbortOperationException)
         e.message == 'You have requested to run with Docker but no image were specified'
@@ -721,6 +721,19 @@ class ConfigBuilderTest extends Specification {
         then:
         true
 
+        when:
+        builder.profile = 'delta,omega'
+        builder.checkValidProfile(['alpha','delta','omega'])
+        then:
+        true
+
+        when:
+        builder.profile = 'delta,bravo'
+        builder.checkValidProfile(['alpha','delta','omega'])
+        then:
+        ex = thrown(AbortOperationException)
+        ex.message == "Unknown configuration profile: 'bravo'"
+
     }
 
     def 'should set profile options' () {
@@ -887,11 +900,10 @@ class ConfigBuilderTest extends Specification {
 
     }
 
-
     def 'should collect config files' () {
 
         given:
-        def slurper = new ComposedConfigSlurper()
+        def slurper = new ConfigParser()
         def file1 = Files.createTempFile('test1', null)
         def file2 = Files.createTempFile('test2', null)
         def result = new ConfigObject()
@@ -901,8 +913,8 @@ class ConfigBuilderTest extends Specification {
         file2.text = 'bar = 2'
 
         when:
-        builder.merge(result, slurper, file1)
-        builder.merge(result, slurper, file2)
+        builder.merge0(result, slurper, file1)
+        builder.merge0(result, slurper, file2)
         then:
         result.foo == 1
         result.bar == 2
@@ -940,6 +952,140 @@ class ConfigBuilderTest extends Specification {
         then:
         config.notification.enabled == true
         config.notification.to == 'yo@nextflow.com'
+    }
+    
+    def 'should merge profiles' () {
+        given:
+        def ENV = [:]
+        def result
+        def builder = new ConfigBuilder()
+
+        def CONFIG = '''
+                process.container = 'base'
+                process.executor = 'local'
+                
+                profiles {
+                    cfg1 {
+                      process.executor = 'sge'
+                      process.queue = 'short'
+                    }
+
+                    cfg2 {
+                        process.executor = 'batch'
+                        process.queue = 'long'
+                    }
+
+                    docker {
+                        docker.enabled = true
+                        process.container = 'foo/1'
+                    }
+
+                    singularity {
+                        singularity.enabled = true
+                        process.queue = 'cn-el7'
+                        process.container = 'bar-2.img'
+                    }
+                }
+                '''
+
+        when:
+        builder.profile = 'cfg1'
+        result = builder.buildConfig0(ENV, [CONFIG])
+        then:
+        result.process.container == 'base'
+        result.process.executor == 'sge'
+        result.process.queue == 'short'
+
+        when:
+        builder.profile = 'cfg2'
+        result = builder.buildConfig0(ENV, [CONFIG])
+        then:
+        result.process.container == 'base'
+        result.process.executor == 'batch'
+        result.process.queue == 'long'
+
+        when:
+        builder.profile = 'cfg1,docker'
+        result = builder.buildConfig0(ENV, [CONFIG])
+        then:
+        result.process.container ==  'foo/1'
+        result.process.executor == 'sge'
+        result.process.queue == 'short'
+        result.docker.enabled
+        !result.isSet('singularity')
+
+        when:
+        builder.profile = 'cfg1,singularity'
+        result = builder.buildConfig0(ENV, [CONFIG])
+        then:
+        result.process.container ==  'bar-2.img'
+        result.process.executor == 'sge'
+        result.process.queue == 'cn-el7'
+        result.singularity.enabled
+        !result.isSet('docker')
+
+        when:
+        builder.profile = 'cfg2,singularity'
+        result = builder.buildConfig0(ENV, [CONFIG])
+        then:
+        result.process.container ==  'bar-2.img'
+        result.process.executor == 'batch'
+        result.process.queue == 'cn-el7'
+        result.singularity.enabled
+        !result.isSet('docker')
+
+        when:
+        builder.profile = 'missing'
+        builder.buildConfig0(ENV, [CONFIG])
+        then:
+        thrown(AbortOperationException)
+    }
+
+    def 'should return all profiles' () {
+        given:
+        def ENV = [:]
+        def result
+        def builder = new ConfigBuilder()
+
+        def CONFIG = '''
+
+                profiles {
+                    cfg1 {
+                      process.executor = 'sge'
+                      process.queue = 'short'
+                    }
+
+                    cfg2 {
+                        process.executor = 'batch'
+                        process.queue = 'long'
+                    }
+
+                    docker {
+                        docker.enabled = true
+                        process.container = 'foo/1'
+                    }
+
+                    singularity {
+                        singularity.enabled = true
+                        process.queue = 'cn-el7'
+                        process.container = 'bar-2.img'
+                    }
+                }
+                '''
+
+        when:
+        builder.showAllProfiles = true
+        result = builder.buildConfig0(ENV, [CONFIG])
+        then:
+        result.profiles.cfg1.process.executor == 'sge'
+        result.profiles.cfg1.process.queue == 'short'
+        result.profiles.cfg2.process.executor == 'batch'
+        result.profiles.cfg2.process.queue == 'long'
+        result.profiles.docker.docker.enabled
+        result.profiles.docker.process.container == 'foo/1'
+        result.profiles.singularity.singularity.enabled
+        result.profiles.singularity.process.queue == 'cn-el7'
+        result.profiles.singularity.process.container == 'bar-2.img'
     }
 
 }

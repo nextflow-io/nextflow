@@ -86,13 +86,13 @@ import org.codehaus.groovy.runtime.InvokerHelper
  * @author Andres Almiray
  * @since 1.5
  */
-class ComposedConfigSlurper {
+class ConfigParser {
     private static final ENVIRONMENTS_METHOD = 'environments'
-    Grengine grengine
+
     private Map bindingVars = [:]
     private Map paramVars = [:]
 
-    private final Map<String, String> conditionValues = [:]
+    private final Map<String, List<String>> conditionValues = [:]
     private final Stack<Map<String, ConfigObject>> conditionalBlocks = new Stack<Map<String,ConfigObject>>()
     private final Set<String> conditionalNames = new HashSet<>()
 
@@ -102,7 +102,7 @@ class ComposedConfigSlurper {
 
     private Grengine grengine
 
-    ComposedConfigSlurper() {
+    ConfigParser() {
         this('')
     }
 
@@ -110,16 +110,29 @@ class ComposedConfigSlurper {
      * Constructs a new IncludeConfigSlurper instance using the given environment
      * @param env The Environment to use
      */
-    ComposedConfigSlurper(String env) {
-        conditionValues[ENVIRONMENTS_METHOD] = env
+    ConfigParser(String env) {
+        conditionValues[ENVIRONMENTS_METHOD] = [env]
     }
 
-    ComposedConfigSlurper registerConditionalBlock(String blockName, String blockValue) {
+    ConfigParser registerConditionalBlock(String blockName, String blockValue) {
         if (blockName) {
             if (!blockValue) {
                 conditionValues.remove(blockName)
-            } else {
-                conditionValues[blockName] = blockValue
+            }
+            else {
+                conditionValues[blockName] = [blockValue]
+            }
+        }
+        return this
+    }
+
+    ConfigParser registerConditionalBlock(String blockName, List<String> blockValues) {
+        if (blockName) {
+            if (!blockValues) {
+                conditionValues.remove(blockName)
+            }
+            else {
+                conditionValues[blockName] = blockValues
             }
         }
         return this
@@ -134,17 +147,6 @@ class ComposedConfigSlurper {
         Collections.unmodifiableSet(conditionalNames)
     }
 
-    Map<String, String> getConditionalBlockValues() {
-        Collections.unmodifiableMap(conditionValues)
-    }
-
-    String getEnvironment() {
-        return conditionValues[ENVIRONMENTS_METHOD]
-    }
-
-    void setEnvironment(String environment) {
-        conditionValues[ENVIRONMENTS_METHOD] = environment
-    }
 
     private Grengine getGrengine() {
         if( grengine ) {
@@ -153,13 +155,13 @@ class ComposedConfigSlurper {
 
         // set the required base script
         def config = new CompilerConfiguration()
-        config.scriptBaseClass = ComposedConfigScript.class.name
+        config.scriptBaseClass = ConfigBase.class.name
         if( renderClosureAsString )
             config.addCompilationCustomizers(new ASTTransformationCustomizer(ConfigTransform))
         grengine = new Grengine(config)
     }
 
-    ComposedConfigSlurper setRenderClosureAsString(boolean value) {
+    ConfigParser setRenderClosureAsString(boolean value) {
         this.renderClosureAsString = value
         return this
     }
@@ -167,12 +169,12 @@ class ComposedConfigSlurper {
     /**
      * Sets any additional variables that should be placed into the binding when evaluating Config scripts
      */
-    ComposedConfigSlurper setBinding(Map vars) {
+    ConfigParser setBinding(Map vars) {
         this.bindingVars = vars
         return this
     }
 
-    ComposedConfigSlurper setParams(Map vars) {
+    ConfigParser setParams(Map vars) {
         this.paramVars = vars
         return this
     }
@@ -243,7 +245,7 @@ class ComposedConfigSlurper {
     /**
      * Parse the given script as a string and return the configuration object
      *
-     * @see ComposedConfigSlurper#parse(groovy.lang.Script)
+     * @see ConfigParser#parse(groovy.lang.Script)
      */
     ConfigObject parse(String text) {
         return parse(loadScript(text))
@@ -282,7 +284,7 @@ class ComposedConfigSlurper {
      * @return The ConfigObject instance
      */
     ConfigObject parse(Script _script, URL location) {
-        final script = (ComposedConfigScript)_script
+        final script = (ConfigBase)_script
         Stack<String> currentConditionalBlock = new Stack<String>()
         def config = location ? new ConfigObject(location) : new ConfigObject()
         GroovySystem.metaClassRegistry.removeMetaClass(script.class)
@@ -338,9 +340,12 @@ class ComposedConfigSlurper {
                 } else if (currentConditionalBlock.size() > 0) {
                     String conditionalBlockKey = currentConditionalBlock.peek()
                     conditionalNames.add(name)
-                    if (name == conditionValues[conditionalBlockKey]) {
-                        def co = new ConfigObject()
-                        conditionalBlocks.peek()[conditionalBlockKey] = co
+                    if (name in conditionValues[conditionalBlockKey]) {
+                        def co = conditionalBlocks.peek()[conditionalBlockKey]
+                        if( co == null ) {
+                            co = new ConfigObject()
+                            conditionalBlocks.peek()[conditionalBlockKey] = co
+                        }
 
                         pushStack.call(co)
                         try {
@@ -412,9 +417,9 @@ class ComposedConfigSlurper {
      * Disable parsing of {@code includeConfig} directive
      *
      * @param value A boolean value, when {@code true} includes are disabled
-     * @return The {@link ComposedConfigSlurper} object itself
+     * @return The {@link ConfigParser} object itself
      */
-    ComposedConfigSlurper setIgnoreIncludes( boolean value ) {
+    ConfigParser setIgnoreIncludes(boolean value ) {
         this.ignoreIncludes = value
         return this
     }

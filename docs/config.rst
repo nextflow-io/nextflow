@@ -591,6 +591,12 @@ This configuration defines three different profiles: ``standard``, ``cluster`` a
 configuration strategies depending on the target runtime platform. By convention the ``standard`` profile is implicitly used
 when no other profile is specified by the user.
 
+.. tip:: Two or more configuration profiles can be specified by separating the profile names
+    with a comma character, for example::
+
+        nextflow run <your script> -profile standard,cloud
+
+The above feature requires version 0.28.x or higher. 
 
 Environment variables
 =====================
