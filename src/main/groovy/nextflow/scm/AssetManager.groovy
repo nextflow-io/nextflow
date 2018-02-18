@@ -26,7 +26,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.cli.HubOptions
-import nextflow.config.ComposedConfigSlurper
+import nextflow.config.ConfigParser
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.script.ScriptFile
@@ -415,7 +415,7 @@ class AssetManager {
         try {
             def text = localPath.exists() ? new File(localPath, MANIFEST_FILE_NAME).text : provider.readText(MANIFEST_FILE_NAME)
             if( text ) {
-                def config = new ComposedConfigSlurper().setIgnoreIncludes(true).parse(text)
+                def config = new ConfigParser().setIgnoreIncludes(true).parse(text)
                 result = (ConfigObject)config.manifest
             }
         }
@@ -432,7 +432,7 @@ class AssetManager {
             def text = provider.readText(MANIFEST_FILE_NAME)
             if( text ) {
                 // TODO this must be able to parse remote config includes
-                def slurper = new ComposedConfigSlurper()
+                def slurper = new ConfigParser()
                 slurper.setIgnoreIncludes(true)
                 slurper.registerConditionalBlock('profiles', profile ?: ConfigBuilder.DEFAULT_PROFILE)
                 result = slurper.parse(text)

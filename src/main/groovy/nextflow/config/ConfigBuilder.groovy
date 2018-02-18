@@ -54,7 +54,7 @@ class ConfigBuilder {
 
     boolean showAllProfiles
 
-    String profile
+    String profile = DEFAULT_PROFILE
 
     boolean validateProfile
 
@@ -188,7 +188,7 @@ class ConfigBuilder {
         return result
     }
 
-    def ConfigObject buildConfig( List<Path> files ) {
+    ConfigObject buildConfig( List<Path> files ) {
 
         final Map<String,String> vars = cmdRun?.env
         final boolean exportSysEnv = cmdRun?.exportSysEnv
@@ -244,10 +244,10 @@ class ConfigBuilder {
     }
 
 
-    protected ConfigObject buildConfig0( Map env, List configEntries )  {
+    ConfigObject buildConfig0( Map env, List configEntries )  {
         assert env != null
 
-        final slurper = new ComposedConfigSlurper().setRenderClosureAsString(showClosures)
+        final slurper = new ConfigParser().setRenderClosureAsString(showClosures)
         ConfigObject result = new ConfigObject()
 
         if( cmdRun?.params )
@@ -266,30 +266,26 @@ class ConfigBuilder {
 
             slurper.setBinding(binding)
 
-            // select the profile
-            if( !showAllProfiles ) {
-                log.debug "Setting config profile: '${profile}'"
-                slurper.registerConditionalBlock('profiles', profile)
-            }
-
             // merge of the provided configuration files
-            configEntries.each { entry ->
+            for( def entry : configEntries ) {
 
                 try {
-                    merge(result, slurper, entry )
+                    merge0(result, slurper, entry)
                 }
                 catch( ConfigParseException e ) {
                     throw e
                 }
                 catch( Exception e ) {
-                    def message = (entry instanceof Path ? "Unable to parse config file: '$entry' " : "Unable to parse configuration ")
+                    def message = (entry instanceof Path ? "Unable to parse config file: '$entry'" : "Unable to parse configuration ")
                     throw new ConfigParseException(message,e)
                 }
-
             }
 
-            if( validateProfile )
+            log.trace "Resolved config object:\n${result.prettyPrint().indent('  ')}"
+            if( validateProfile ) {
                 checkValidProfile(slurper.getConditionalBlockNames())
+            }
+
         }
 
         // guarantee top scopes
@@ -308,26 +304,39 @@ class ConfigBuilder {
      * @param entry The next config snippet/file to be parsed
      * @return
      */
-    protected void merge(ConfigObject result, ComposedConfigSlurper slurper, entry ) {
+    protected void merge0(ConfigObject result, ConfigParser slurper, entry) {
         if( !entry )
             return
 
-        ConfigObject config
-        if( entry instanceof File ) {
-            configFiles << entry.toPath()
-            config = slurper.parse(entry)
+        // select the profile
+        if( showAllProfiles ) {
+            def config = parse0(slurper,entry)
+            validate(config,entry)
+            result.merge(config)
+            return
         }
 
-        else if( entry instanceof Path ) {
-            configFiles << entry
-            config = slurper.parse(entry.toFile())
-        }
+        log.debug "Applying config profile: `${profile}`"
+        def allNames = profile.tokenize(',')
+        slurper.registerConditionalBlock('profiles', allNames)
 
-        else
-            config = slurper.parse(entry.toString())
-
+        def config = parse0(slurper,entry)
         validate(config,entry)
         result.merge(config)
+    }
+
+    protected ConfigObject parse0(ConfigParser slurper, entry) {
+        if( entry instanceof File ) {
+            configFiles << entry.toPath()
+            return slurper.parse(entry)
+        }
+
+        if( entry instanceof Path ) {
+            configFiles << entry
+            return slurper.parse(entry.toFile())
+        }
+
+        return slurper.parse(entry.toString())
     }
 
     /**
@@ -335,37 +344,40 @@ class ConfigBuilder {
      *
      * @param config The {@link ConfigObject} to verify
      * @param file The source config file/snippet
-     *
      * @return
      */
     protected validate(ConfigObject config, file) {
         config.each { k, v ->
             if( v instanceof ConfigObject ) {
-                if( v.isEmpty() ) throw new ConfigParseException("Unknown config attribute: $k -- check config file: $file")
+                if( v.isEmpty() ) {
+                    log.debug "In the following config object the attribute `$k` is empty:\n${config.prettyPrint().indent('  ')}"
+                    throw new ConfigParseException("Unknown config attribute: $k -- check config file: $file")
+                }
                 validate(v,file)
             }
         }
     }
 
-    protected checkValidProfile(Collection<String> names) {
-
-        if( !profile ) {
+    protected void checkValidProfile(Collection<String> validNames) {
+        if( !profile || profile == DEFAULT_PROFILE ) {
             return
         }
 
-        if( names.contains(profile) ) { // OK !
-            return
-        }
+        log.debug "Available config profiles: $validNames"
+        for( String name : profile.tokenize(',') ) {
+            if( name in validNames )
+                continue
 
-        def message = "Unknown configuration profile: '${profile}'"
-        def choices = names.closest(profile)
-        if( choices ) {
-            message += "\n\nDid you mean one of these?\n"
-            choices.each { message += "    ${it}\n" }
-            message += '\n'
-        }
+            def message = "Unknown configuration profile: '${name}'"
+            def choices = validNames.closest(name)
+            if( choices ) {
+                message += "\n\nDid you mean one of these?\n"
+                choices.each { message += "    ${it}\n" }
+                message += '\n'
+            }
 
-        throw new AbortOperationException(message)
+            throw new AbortOperationException(message)
+        }
     }
 
     private String normalizeResumeId( String uniqueId ) {

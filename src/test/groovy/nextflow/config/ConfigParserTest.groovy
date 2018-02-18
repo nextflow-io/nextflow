@@ -27,7 +27,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ComposedConfigSlurperTest extends Specification {
+class ConfigParserTest extends Specification {
 
     def 'should parse composed config files' () {
 
@@ -61,7 +61,7 @@ class ComposedConfigSlurperTest extends Specification {
         '''
 
         when:
-        def config = new ComposedConfigSlurper().parse(text)
+        def config = new ConfigParser().parse(text)
         then:
         config.process.name == 'alpha'
         config.process.resources.cpus == 4
@@ -125,7 +125,7 @@ class ComposedConfigSlurperTest extends Specification {
         '''
 
         when:
-        def config = new ComposedConfigSlurper().setBinding().parse(text)
+        def config = new ConfigParser().setBinding().parse(text)
         then:
         config.params.xxx == 'x'
         config.params.yyy == 'y'
@@ -183,7 +183,7 @@ class ComposedConfigSlurperTest extends Specification {
         '''
 
         when:
-        def config = new ComposedConfigSlurper().setBinding([MIN: 1, MAX: 32]).parse(main)
+        def config = new ConfigParser().setBinding([MIN: 1, MAX: 32]).parse(main)
         then:
         config.profiles.proc1.cpus == 4
         config.profiles.proc1.memory == '8GB'
@@ -240,7 +240,7 @@ class ComposedConfigSlurperTest extends Specification {
         '''
 
         when:
-        def config = new ComposedConfigSlurper().parse(main)
+        def config = new ConfigParser().parse(main)
         then:
         config.process.name == 'foo'
         config.process.resources.cpus == 4
@@ -304,7 +304,7 @@ class ComposedConfigSlurperTest extends Specification {
         """
 
         when:
-        def config1 = new ComposedConfigSlurper()
+        def config1 = new ConfigParser()
                         .registerConditionalBlock('profiles','slow')
                         .parse(configText)
         then:
@@ -314,7 +314,7 @@ class ComposedConfigSlurperTest extends Specification {
         config1.process.disk == '100GB'
 
         when:
-        def config2 = new ComposedConfigSlurper()
+        def config2 = new ConfigParser()
                         .registerConditionalBlock('profiles','fast')
                         .parse(configText)
         then:
@@ -356,25 +356,25 @@ class ComposedConfigSlurperTest extends Specification {
         '''
 
         when:
-        def slurper = new ComposedConfigSlurper().registerConditionalBlock('profiles','alpha')
+        def slurper = new ConfigParser().registerConditionalBlock('profiles','alpha')
         slurper.parse(text)
         then:
         slurper.getConditionalBlockNames() == ['alpha','beta'] as Set
 
         when:
-        slurper = new ComposedConfigSlurper().registerConditionalBlock('profiles','omega')
+        slurper = new ConfigParser().registerConditionalBlock('profiles','omega')
         slurper.parse(text)
         then:
         slurper.getConditionalBlockNames() == ['alpha','beta'] as Set
 
         when:
-        slurper = new ComposedConfigSlurper().registerConditionalBlock('servers','xxx')
+        slurper = new ConfigParser().registerConditionalBlock('servers','xxx')
         slurper.parse(text)
         then:
         slurper.getConditionalBlockNames() == ['local','test','prod'] as Set
 
         when:
-        slurper = new ComposedConfigSlurper().registerConditionalBlock('foo','bar')
+        slurper = new ConfigParser().registerConditionalBlock('foo','bar')
         slurper.parse(text)
         then:
         slurper.getConditionalBlockNames() == [] as Set
@@ -392,12 +392,12 @@ class ComposedConfigSlurperTest extends Specification {
         '''
 
         when:
-        def config = new ComposedConfigSlurper().setIgnoreIncludes(true).parse(text)
+        def config = new ConfigParser().setIgnoreIncludes(true).parse(text)
         then:
         config.manifest.description == 'some text ..'
 
         when:
-        new ComposedConfigSlurper().parse(text)
+        new ConfigParser().parse(text)
         then:
         thrown(NoSuchFileException)
 
@@ -410,7 +410,7 @@ class ComposedConfigSlurperTest extends Specification {
         configFile.text = 'XXX.enabled = true'
 
         when:
-        new ComposedConfigSlurper().parse(configFile)
+        new ConfigParser().parse(configFile)
         then:
         noExceptionThrown()
 
@@ -431,7 +431,7 @@ class ComposedConfigSlurperTest extends Specification {
            '''
 
         when:
-        result = new ComposedConfigSlurper()
+        result = new ConfigParser()
                 .parse(CONFIG)
         then:
         result.str1 instanceof String
@@ -440,7 +440,7 @@ class ComposedConfigSlurperTest extends Specification {
         result.map1.bar instanceof Closure
 
         when:
-        result = new ComposedConfigSlurper()
+        result = new ConfigParser()
                 .setRenderClosureAsString(false)
                 .parse(CONFIG)
         then:
@@ -450,7 +450,7 @@ class ComposedConfigSlurperTest extends Specification {
         result.map1.bar instanceof Closure
 
         when:
-        result = new ComposedConfigSlurper()
+        result = new ConfigParser()
                     .setRenderClosureAsString(true)
                     .parse(CONFIG)
         then:
