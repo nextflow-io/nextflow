@@ -1,6 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.27.6 - 19 Feb 2018
+- Fixed Operator toList hangs when applied to a value channel #612
+- Allow launcher to track installation verb
+
 0.27.5 - 15 Feb 2018
 - Fixed dir/* input file pattern invalidate cached processes #610
 - Fixed Mail attachment are not correctly recognised by the email client #609
