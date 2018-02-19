@@ -1,6 +1,15 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.27.6 - 19 Feb 2018
+- Fixed Operator toList hangs when applied to a value channel #612
+- Allow launcher to track installation verb
+
+0.27.5 - 15 Feb 2018
+- Fixed dir/* input file pattern invalidate cached processes #610
+- Fixed Mail attachment are not correctly recognised by the email client #609
+- Fixed Workflow metadata container attribute is not resolved when it's defined dynamically #602
+
 0.27.4 - 5 Feb 2018
 - Fixed Resume does not work for tasks successfully executed in a re-submit attempt #591
 - Fixed An error is reported when a NF script contains a class definition #594
