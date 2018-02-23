@@ -150,7 +150,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getContainerOverrides().getVcpus() == 4
         req.getContainerOverrides().getMemory() == 8192
         req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
-        req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "/bin/aws s3 cp --only-show-errors s3://bucket/test/.command.run - | bash 2>&1 | /bin/aws s3 cp --only-show-errors - s3://bucket/test/.command.log".toString()]
+        req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "trap \"{ ret=\$?; /bin/aws s3 cp --only-show-errors .command.log s3://bucket/test/.command.log||true; exit \$ret; }\" EXIT; /bin/aws s3 cp --only-show-errors s3://bucket/test/.command.run - | bash 2>&1 | tee .command.log".toString()]
         req.getRetryStrategy() == null  // <-- retry is managed by NF, hence this must be null
 
         when:
@@ -169,7 +169,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getContainerOverrides().getVcpus() == 4
         req.getContainerOverrides().getMemory() == 8192
         req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
-        req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "/bin/aws --region eu-west-1 s3 cp --only-show-errors s3://bucket/test/.command.run - | bash 2>&1 | /bin/aws --region eu-west-1 s3 cp --only-show-errors - s3://bucket/test/.command.log".toString()]
+        req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "trap \"{ ret=\$?; /bin/aws --region eu-west-1 s3 cp --only-show-errors .command.log s3://bucket/test/.command.log||true; exit \$ret; }\" EXIT; /bin/aws --region eu-west-1 s3 cp --only-show-errors s3://bucket/test/.command.run - | bash 2>&1 | tee .command.log".toString()]
         req.getRetryStrategy() == null  // <-- retry is managed by NF, hence this must be null
 
     }
