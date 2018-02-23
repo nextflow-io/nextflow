@@ -523,7 +523,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // the cmd list to launch it
         def opts = getAwsOptions()
         def aws = opts.getAwsCli()
-        def cmd = "$aws s3 cp --only-show-errors s3:/${getWrapperFile()} - | bash 2>&1 | $aws s3 cp --only-show-errors - s3:/${getLogFile()}"
+        def cmd = "trap \"{ ret=\$?; $aws s3 cp --only-show-errors ${TaskRun.CMD_LOG} s3:/${getLogFile()}||true; exit \$ret; }\" EXIT; $aws s3 cp --only-show-errors s3:/${getWrapperFile()} - | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
         // final launcher command
         def cli = ['bash','-o','pipefail','-c', cmd.toString() ] as List<String>
 
