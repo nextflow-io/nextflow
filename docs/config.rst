@@ -500,6 +500,7 @@ smtp.password       User password to connect to the mail server.
 smtp.proxy.host     Host name of an HTTP web proxy server that will be used for connections to the mail server.
 smtp.proxy.port     Port number for the HTTP web proxy server.
 smtp.*              Any SMTP configuration property supported by the Java Mail API (see link below).
+debug               When ``true`` enables Java Mail logging for debugging purpose.
 ================== ================
 
 .. note:: Nextflow relies on the `Java Mail API <https://javaee.github.io/javamail/>`_ to send email messages.
