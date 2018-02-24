@@ -33,9 +33,11 @@ import javax.mail.internet.MimeUtility
 import java.nio.charset.Charset
 import java.util.regex.Pattern
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.io.LogOutputStream
 import nextflow.util.Duration
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
@@ -117,19 +119,25 @@ class Mailer {
     /**
      * Get the properties of the system and insert the properties needed to the mailing procedure
      */
+    @CompileDynamic
     protected Properties createProps() {
 
         if( config.smtp instanceof Map ) {
             def cfg = [mail: [smtp: config.smtp]] as ConfigObject
             def props = cfg.toProperties()
-            props.setProperty('mail.transport.protocol', 'smtp')
+            props.setProperty('mail.transport.protocol', config.transport?.protocol  ?: 'smtp')
             // -- check proxy configuration
             if( !props.contains('mail.smtp.proxy.host') && System.getProperty('http.proxyHost') ) {
                 props['mail.smtp.proxy.host'] = System.getProperty('http.proxyHost')
                 props['mail.smtp.proxy.port'] = System.getProperty('http.proxyPort')
             }
+
             // -- debug for debugging
-            log.trace "Mail session properties:\n${dumpProps(props)}"
+            if( config.debug == true ) {
+                log.debug "Mail session properties:\n${dumpProps(props)}"
+            }
+            else
+                log.trace "Mail session properties:\n${dumpProps(props)}"
             return props
         }
 
@@ -154,6 +162,14 @@ class Mailer {
     protected Session getSession() {
         if( !session ) {
             session = Session.getInstance(createProps())
+            if( config.debug != true ) return session
+
+            session.setDebugOut(new PrintStream( new LogOutputStream() {
+                @Override protected void processLine(String line, int logLevel) {
+                    log.debug(line)
+                }
+            } ))
+            session.setDebug(true)
         }
 
         return session
@@ -207,6 +223,7 @@ class Mailer {
 
         final transport = getSession().getTransport()
         transport.connect(host, port as int, user, password)
+        log.trace("Connected to host=$host port=$port")
         try {
             transport.sendMessage(message, message.getAllRecipients())
         }
