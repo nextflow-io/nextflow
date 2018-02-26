@@ -26,6 +26,7 @@ import javax.net.ssl.SSLSession
 import javax.net.ssl.TrustManager
 import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
+import java.nio.file.Path
 import java.security.KeyStore
 import java.security.SecureRandom
 import java.security.cert.CertificateFactory
@@ -35,6 +36,8 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import org.yaml.snakeyaml.Yaml
+
 /**
  * Kubernetes API client
  *
@@ -115,6 +118,21 @@ class K8sClient {
         }
     }
 
+    K8sResponseJson secretesList() {
+        final action = "/api/v1/namespaces/$config.namespace/secrets"
+        final resp = get(action)
+        trace('GET', action, resp.text)
+        new K8sResponseJson(resp.text)
+    }
+
+    K8sResponseJson secretDescribe(String name) {
+        assert name
+        final action = "/api/v1/namespaces/$config.namespace/secrets/$name"
+        final resp = get(action)
+        trace('GET', action, resp.text)
+        new K8sResponseJson(resp.text)
+    }
+
     /**
      * Create a pod
      *
@@ -133,7 +151,15 @@ class K8sClient {
         return new K8sResponseJson(resp.text)
     }
 
-    K8sResponseJson podCreate(Map req) {
+    K8sResponseJson podCreate(Map req, Path saveYamlPath=null) {
+
+        if( saveYamlPath ) try {
+            saveYamlPath.text = new Yaml().dump(req).toString()
+        }
+        catch( Exception e ) {
+            log.debug "WARN: unable to save request yaml -- cause: ${e.message ?: e}"
+        }
+
         podCreate(JsonOutput.toJson(req))
     }
 
@@ -269,15 +295,16 @@ class K8sClient {
      *      A two elements list in which the first entry is an integer representing the HTTP response code,
      *      the second element is the text (json) response
      */
-    protected K8sResponseApi makeRequest(String method, String path, String body=null) {
+    protected K8sResponseApi makeRequest(String method, String path, String body=null) throws K8sResponseException {
         assert config.server, 'Missing Kubernetes server name'
-        assert config.token, 'Missing Kubernetes auth token'
         assert path.startsWith('/'), 'Kubernetes API request path must starts with a `/` character'
 
         final prefix = config.server.contains("://") ? config.server : "https://$config.server"
         final conn = createConnection0(prefix + path)
-        conn.setRequestProperty("Authorization", "Bearer $config.token")
         conn.setRequestProperty("Content-Type", "application/json")
+        if( config.token ) {
+            conn.setRequestProperty("Authorization", "Bearer $config.token")
+        }
 
         if( conn instanceof HttpsURLConnection ) {
             setupHttpsConn(conn)
@@ -355,20 +382,11 @@ class K8sClient {
     }
 
 
-    @CompileDynamic
-    static void main(String[] args) {
-
-
-        def config = new ConfigDiscovery().discover()
-        def client = new K8sClient(config)
-
-        try {
-            def result = client.configCreate('data1', [:])
-        }
-        catch ( K8sResponseException e ) {
-            assert e.response.reason == 'AlreadyExists'
-        }
-        //println result//.status.containerStatuses[0].state.toConfigObject().prettyPrint()
+    K8sResponseJson volumeClaimRead(String name) {
+        final action = "/api/v1/namespaces/${config.namespace}/persistentvolumeclaims/${name}"
+        def resp = get(action)
+        trace('GET', action, resp.text)
+        return new K8sResponseJson(resp.text)
     }
 
 

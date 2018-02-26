@@ -21,15 +21,19 @@
 package nextflow.k8s
 import java.nio.file.Paths
 
+import nextflow.Session
 import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.client.K8sResponseJson
 import nextflow.processor.TaskConfig
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -52,10 +56,10 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.getRunName() >> 'majestic-sun'
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getAutoMountHostPaths() >> false
         1 * handler.getVolumeClaims() >> [:]
+        1 * handler.getLabels(task) >> [foo: 'bar', hello: 'world']
         0 * handler.getContainerMounts() >> null
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
@@ -65,7 +69,10 @@ class K8sTaskHandlerTest extends Specification {
         1 * client.getConfig() >> new ClientConfig()
         result == [ apiVersion: 'v1',
                     kind: 'Pod',
-                    metadata: [name:'nf-123', namespace:'default', labels:[app:'nextflow', runName: 'majestic-sun']],
+                    metadata: [
+                            name:'nf-123',
+                            namespace:'default',
+                            labels:[ foo:'bar', hello: 'world'] ],
                     spec: [
                             restartPolicy:'Never',
                             containers:[
@@ -80,10 +87,10 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.getRunName() >> 'bored-moon'
         1 * handler.getSyntheticPodName(task) >> 'nf-foo'
         1 * handler.getAutoMountHostPaths() >> false
         1 * handler.getVolumeClaims() >> null
+        1 * handler.getLabels(task) >> [sessionId:'xxx']
         0 * handler.getContainerMounts() >> null
         1 * builder.fixOwnership() >> true
         1 * handler.getOwner() >> '501:502'
@@ -95,7 +102,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * client.getConfig() >> new ClientConfig()
         result == [ apiVersion: 'v1',
                     kind: 'Pod',
-                    metadata: [name:'nf-foo', namespace:'default', labels:[app:'nextflow', runName: 'bored-moon']],
+                    metadata: [name:'nf-foo', namespace:'default', labels: [sessionId: 'xxx']],
                     spec: [
                             restartPolicy:'Never',
                             containers:[
@@ -113,8 +120,8 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.getRunName() >> 'atrophic-cat'
         1 * handler.getSyntheticPodName(task) >> 'nf-abc'
+        1 * handler.getLabels(task) >> null
         1 * handler.getAutoMountHostPaths() >> false
         1 * handler.getVolumeClaims() >> null
         0 * handler.getContainerMounts() >> null
@@ -126,7 +133,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * client.getConfig() >> new ClientConfig(namespace: 'namespace-x')
         result == [ apiVersion: 'v1',
                     kind: 'Pod',
-                    metadata: [name:'nf-abc', namespace:'namespace-x', labels:[app:'nextflow', runName: 'atrophic-cat']],
+                    metadata: [name:'nf-abc', namespace:'namespace-x' ],
                     spec: [
                             restartPolicy:'Never',
                             containers:[
@@ -134,11 +141,53 @@ class K8sTaskHandlerTest extends Specification {
                                      image:'user/alpine:1.0',
                                      command:['/bin/bash', '-ue', '.command.run'],
                                      workingDir:'/some/work/dir',
-                                     resources:[
-                                             limits:[cpu:4, memory:'16384Mi'],
-                                             requests:[cpu:4, memory:'16384Mi']
-                                            ]
+                                     resources:[ limits:[cpu:4, memory:'16384Mi'] ]
                                     ]
+                            ]
+                    ]
+        ]
+
+    }
+
+    def 'should create a pod with specified client configs' () {
+
+        given:
+        def WORK_DIR = Paths.get('/some/work/dir')
+        def task = Mock(TaskRun)
+        def client = Mock(K8sClient)
+        def builder = Mock(K8sWrapperBuilder)
+        def handler = Spy(K8sTaskHandler)
+        def config = Mock(ClientConfig)
+        handler.builder = builder
+        handler.client = client
+        Map result
+
+        when:
+        result = handler.newSubmitRequest(task)
+        then:
+        1 * handler.getSyntheticPodName(task) >> 'nf-123'
+        1 * handler.getAutoMountHostPaths() >> false
+        1 * handler.getVolumeClaims() >> [:]
+        1 * handler.getLabels(task) >> [:]
+        0 * handler.getContainerMounts() >> null
+        1 * task.getContainer() >> 'debian:latest'
+        1 * task.getWorkDir() >> WORK_DIR
+        1 * task.getConfig() >> new TaskConfig()
+        1 * client.getConfig() >> config
+        1 * config.getNamespace() >> 'just-a-namespace'
+        1 * config.getServiceAccount() >> 'pedantic-kallisto'
+
+        result == [ apiVersion: 'v1',
+                    kind: 'Pod',
+                    metadata: [name:'nf-123', namespace:'just-a-namespace' ],
+                    spec: [
+                            serviceAccountName: 'pedantic-kallisto',
+                            restartPolicy:'Never',
+                            containers:[
+                                    [name:'nf-123',
+                                     image:'debian:latest',
+                                     command:['/bin/bash', '-ue','.command.run'],
+                                     workingDir:'/some/work/dir']
                             ]
                     ]
         ]
@@ -159,16 +208,15 @@ class K8sTaskHandlerTest extends Specification {
         Map result
 
         def CLAIMS = [ 'first': [mountPath: '/work'], second: [mountPath: '/data'] ]
-        def MOUNTS = [ '/tmp' ]
 
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.getRunName() >> 'pedantic-joe'
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getVolumeClaims() >> CLAIMS
         1 * handler.getAutoMountHostPaths() >> false
         0 * handler.getContainerMounts() >> null
+        1 * handler.getLabels(task) >> null
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
@@ -178,7 +226,7 @@ class K8sTaskHandlerTest extends Specification {
 
         result == [ apiVersion: 'v1',
                     kind: 'Pod',
-                    metadata: [name:'nf-123', namespace:'default', labels:[app:'nextflow', runName: 'pedantic-joe']],
+                    metadata: [name:'nf-123', namespace:'default' ],
                     spec: [
                             restartPolicy:'Never',
                             containers:[
@@ -200,11 +248,11 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.getRunName() >> 'pedantic-joe'
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getVolumeClaims() >> null
         1 * handler.getAutoMountHostPaths() >> true
         1 * handler.getContainerMounts() >> ['/tmp', '/data']
+        1 * handler.getLabels(task) >> null
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
@@ -214,7 +262,7 @@ class K8sTaskHandlerTest extends Specification {
 
         result == [ apiVersion: 'v1',
                     kind: 'Pod',
-                    metadata: [name:'nf-123', namespace:'default', labels:[app:'nextflow', runName: 'pedantic-joe']],
+                    metadata: [name:'nf-123', namespace:'default' ],
                     spec: [
                             restartPolicy:'Never',
                             containers:[
@@ -247,14 +295,15 @@ class K8sTaskHandlerTest extends Specification {
         final POD_NAME = 'new-pod-id'
         final REQUEST =  [foo: 'bar']
         final RESPONSE = new K8sResponseJson([metadata: [name:POD_NAME]])
-
+        final YAML = Paths.get('file.yaml')
         when:
         handler.submit()
         then:
         1 * handler.createBashWrapper(task) >> builder
         1 * builder.build() >> null
+        1 * handler.yamlDebugPath() >> YAML
         1 * handler.newSubmitRequest(task) >> REQUEST
-        1 * client.podCreate(REQUEST) >> RESPONSE
+        1 * client.podCreate(REQUEST,YAML) >> RESPONSE
         handler.podName == POD_NAME
         handler.status == TaskStatus.SUBMITTED
 
@@ -263,8 +312,9 @@ class K8sTaskHandlerTest extends Specification {
         then:
         1 * handler.createBashWrapper(task) >> builder
         1 * builder.build() >> null
+        1 * handler.yamlDebugPath() >> YAML
         1 * handler.newSubmitRequest(task) >> REQUEST
-        1 * client.podCreate(REQUEST) >> new K8sResponseJson([missing: 'meta'])
+        1 * client.podCreate(REQUEST,YAML) >> new K8sResponseJson([missing: 'meta'])
         then:
         thrown(K8sResponseException)
     }
@@ -319,6 +369,7 @@ class K8sTaskHandlerTest extends Specification {
         then:
         1 * handler.getState() >> [terminated: ["reason": "Completed", "finishedAt": "2018-01-13T10:19:36Z", exitCode: 0]]
         1 * handler.readExitFile() >> EXIT_STATUS
+        1 * handler.deletePodIfSuccessful(task) >> null
         handler.task.exitStatus == EXIT_STATUS
         handler.task.@stdout == OUT_FILE
         handler.task.@stderr == ERR_FILE
@@ -385,6 +436,97 @@ class K8sTaskHandlerTest extends Specification {
         1 * wrapper.getBinDir() >> Paths.get('/user/bin')
         1 * wrapper.getWorkDir() >> Paths.get('/work/dir')
         mounts == ['/base_path', '/user/bin', '/work/dir']
+
+    }
+
+    def 'should return labels map' () {
+        given:
+        def uuid = UUID.randomUUID()
+        def task = Mock(TaskRun)
+        def exec = Mock(K8sExecutor)
+        def proc = Mock(TaskProcessor)
+        def sess = Mock(Session)
+        def handler = Spy(K8sTaskHandler)
+        handler.executor = exec
+
+        when:
+        def labels = handler.getLabels(task)
+        then:
+        handler.getRunName() >> 'pedantic-joe'
+        task.getName() >> 'hello-world-1'
+        task.getProcessor() >> proc 
+        proc.getName() >> 'hello-proc'
+        exec.getSession() >> sess
+        sess.getUniqueId() >> uuid
+        exec.getK8sConfig() >> [labels: [foo:'bar', app: 'snakemake', x:'hello world', y:null ]]
+
+        labels.app == 'nextflow'
+        labels.foo == 'bar'
+        labels.x == 'hello_world'    
+        labels.y == 'null'
+        labels.processName == 'hello-proc'
+        labels.taskName ==  'hello-world-1'
+        labels.sessionId instanceof String 
+        labels.sessionId == "uuid-${uuid.toString()}".toString()
+    }
+
+    @Unroll
+    def 'should sanitize k8s label: #label' () {
+
+        given:
+        def handler = new K8sTaskHandler()
+
+        expect:
+        handler.sanitize0(label) == str
+
+        where:
+        label           | str
+        null            | 'null'
+        'hello'         | 'hello'
+        'hello world'   | 'hello_world'
+        'hello  world'  | 'hello_world'
+        'hello.world'   | 'hello.world'
+        'hello-world'   | 'hello-world'
+        'hello_world'   | 'hello_world'
+        'hello_world-'  | 'hello_world'
+        'hello_world_'  | 'hello_world'
+        'hello_world.'  | 'hello_world'
+        'hello_123'     | 'hello_123'
+        'HELLO 123'     | 'HELLO_123'
+        '123hello'      | 'hello'
+    }
+
+    def 'should delete pod if complete' () {
+
+        given:
+        def POD_NAME = 'the-pod-name'
+        def executor = Mock(K8sExecutor)
+        def client = Mock(K8sClient)
+        def handler = Spy(K8sTaskHandler)
+        handler.podName = POD_NAME
+        handler.executor = executor
+        handler.client = client
+        def TASK_OK = Mock(TaskRun); TASK_OK.isSuccess() >> true
+        def TASK_FAIL = Mock(TaskRun); TASK_FAIL.isSuccess() >> false
+
+        when:
+        handler.deletePodIfSuccessful(TASK_OK)
+        then:
+        1 * executor.getK8sConfig() >> [cleanup: true]
+        1 * client.podDelete(POD_NAME) >> null
+
+        when:
+        handler.deletePodIfSuccessful(TASK_OK)
+        then:
+        1 * executor.getK8sConfig() >> [cleanup: false]
+        0 * client.podDelete(POD_NAME) >> null
+
+
+        when:
+        handler.deletePodIfSuccessful(TASK_FAIL)
+        then:
+        1 * executor.getK8sConfig() >> [cleanup: true]
+        0 * client.podDelete(POD_NAME) >> null
 
     }
 }

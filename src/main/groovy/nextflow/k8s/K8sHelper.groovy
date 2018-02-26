@@ -49,12 +49,12 @@ class K8sHelper {
      *      volumeClaims (Map of volume claims)
      *      configMounts (Map of config mounts)
      *      hostMounts (Map of hostPath mounts)
+     *      serviceAccount
      * @return
      */
     static Map createPodSpec( Map params ) {
         assert params.podName, 'Missing K8s podName parameter'
         assert params.imageName, 'Missing K8s imageName parameter'
-        assert params.workDir, 'Missing K8s workDir parameter'
         assert params.command instanceof List || params.command instanceof CharSequence, "Missing or invalid K8s command parameter: $params.command"
 
         final namespace = params.namespace ?: 'default'
@@ -76,9 +76,18 @@ class K8sHelper {
         final container = [
                 name: params.podName,
                 image: params.imageName,
-                command: cmd,
-                workingDir: params.workDir.toString(),
+                command: cmd
         ]
+        if( params.workDir )
+            container.workingDir = params.workDir.toString()
+
+        final spec = [
+                restartPolicy: restart,
+                containers: [ container ],
+        ]
+
+        if( params.serviceAccount )
+            spec.serviceAccountName = params.serviceAccount
 
         final pod = [
                 apiVersion: 'v1',
@@ -87,10 +96,7 @@ class K8sHelper {
                         name: params.podName,
                         namespace: namespace
                 ],
-                spec: [
-                        restartPolicy: restart,
-                        containers: [ container ],
-                ]
+                spec: spec
         ]
 
         // add environment
@@ -99,8 +105,7 @@ class K8sHelper {
 
         // add resources
         if( res ) {
-            def x = [limits: res, requests:res]
-            container.resources = x
+            container.resources = [limits: res]
         }
 
         // add labels

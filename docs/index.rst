@@ -24,6 +24,7 @@ Contents:
    docker
    singularity
    ignite
+   kubernetes
    tracing
    sharing
    metadata

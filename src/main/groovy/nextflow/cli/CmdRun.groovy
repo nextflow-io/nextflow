@@ -34,7 +34,6 @@ import nextflow.Const
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
-import nextflow.k8s.K8sDriverLauncher
 import nextflow.scm.AssetManager
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
@@ -149,9 +148,6 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names = '-without-docker', description = 'Disable process execution with Docker', arity = 0)
     boolean withoutDocker
 
-    @Parameter(names = ['-with-k8s', '-K'], description = 'Enable execution in a Kubernetes cluster')
-    def withKubernetes
-
     @Parameter(names = '-with-mpi', hidden = true)
     boolean withMpi
 
@@ -182,7 +178,7 @@ class CmdRun extends CmdBase implements HubOptions {
     String withNotification
 
     @Override
-    final String getName() { NAME }
+    String getName() { NAME }
 
     @Override
     void run() {
@@ -195,12 +191,6 @@ class CmdRun extends CmdBase implements HubOptions {
             throw new AbortOperationException("Command line options `-with-docker` and `-without-docker` cannot be specified at the same time")
 
         checkRunName()
-
-        if( withKubernetes ) {
-            // that's another story
-            new K8sDriverLauncher(cmd: this, runName: runName).run(pipeline, scriptArgs)
-            return
-        }
 
         log.info "N E X T F L O W  ~  version ${Const.APP_VER}"
 
@@ -233,7 +223,7 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.execute(scriptArgs)
     }
 
-    private void checkRunName() {
+    protected void checkRunName() {
         if( runName == 'last' )
             throw new AbortOperationException("Not a valid run name: `last`")
 

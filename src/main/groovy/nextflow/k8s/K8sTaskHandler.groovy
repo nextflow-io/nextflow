@@ -19,6 +19,7 @@
  */
 
 package nextflow.k8s
+
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -141,10 +142,6 @@ class K8sTaskHandler extends TaskHandler {
         "nf-${task.hash}"
     }
 
-    protected String nextVolName() {
-        "vol-${VOLUMES.incrementAndGet()}".toString()
-    }
-
     protected String getOwner() { OWNER }
 
     /**
@@ -158,19 +155,21 @@ class K8sTaskHandler extends TaskHandler {
         final fixOwnership = builder.fixOwnership()
         final cmd = new ArrayList(new ArrayList(BashWrapperBuilder.BASH)) << TaskRun.CMD_RUN
 
+        final clientConfig = client.config
         final req = [:]
         req.podName = getSyntheticPodName(task)
-        req.namespace = client.config.namespace
+        req.namespace = clientConfig.namespace
+        req.serviceAccount = clientConfig.serviceAccount
         req.imageName = task.container
         req.command = cmd
         req.workDir = task.workDir.toString()
-        req.labels = [app: 'nextflow', runName: getRunName()]
+        req.labels = getLabels(task)
         req.env = fixOwnership ? [NXF_OWNER: getOwner()] : Collections.emptyMap()
 
         // add computing resources
-        final cfg = task.getConfig()
-        final cpus = cfg.getCpus()
-        final mem = cfg.getMemory()
+        final taskCfg = task.getConfig()
+        final cpus = taskCfg.getCpus()
+        final mem = taskCfg.getMemory()
         if( cpus > 1 ) req.cpus = cpus
         if( mem ) req.memory = "${mem.toMega()}Mi"
 
@@ -188,6 +187,35 @@ class K8sTaskHandler extends TaskHandler {
         K8sHelper.createPodSpec( req )
     }
 
+    protected Map getLabels(TaskRun task) {
+        Map result = [:]
+        if( executor.getK8sConfig().labels instanceof Map ) {
+            executor.getK8sConfig().labels.each { k,v -> result.put(k,sanitize0(v)) }
+        }
+        result.app = 'nextflow'
+        result.runName = sanitize0(getRunName())
+        result.taskName = sanitize0(task.getName())
+        result.processName = sanitize0(task.getProcessor().getName())
+        result.sessionId = sanitize0("uuid-${executor.getSession().uniqueId}")
+        return result
+    }
+
+    /**
+     * Valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.',
+     * and must start and end with an alphanumeric character.
+     *
+     * @param value
+     * @return
+     */
+
+    protected String sanitize0( value ) {
+        def str = String.valueOf(value)
+        str = str.replaceAll(/[^a-zA-Z0-9\.\_\-]+/, '_')
+        str = str.replaceAll(/^[^a-zA-Z]+/, '')
+        str = str.replaceAll(/[^a-zA-Z0-9]+$/, '')
+        return str
+    }
+
     /**
      * Creates a new K8s pod executing the associated task
      */
@@ -197,12 +225,17 @@ class K8sTaskHandler extends TaskHandler {
         builder.build()
 
         final req = newSubmitRequest(task)
-        final resp = client.podCreate(req)
+        final resp = client.podCreate(req, yamlDebugPath())
 
         if( !resp.metadata?.name )
             throw new K8sResponseException("Missing created pod name", resp)
         this.podName = resp.metadata.name
         this.status = TaskStatus.SUBMITTED
+    }
+
+    protected Path yamlDebugPath() {
+        boolean debug = executor.getK8sConfig()?.debug?.yaml?.toString() == 'true'
+        return debug ? task.workDir.resolve('.command.yaml') : null
     }
 
     /**
@@ -231,6 +264,7 @@ class K8sTaskHandler extends TaskHandler {
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
+            deletePodIfSuccessful(task)
             return true
         }
 
@@ -260,6 +294,27 @@ class K8sTaskHandler extends TaskHandler {
             log.debug "[K8s] Oops.. invalid delete action"
         }
     }
+
+    protected void deletePodIfSuccessful(TaskRun task) {
+        if( !podName )
+            return
+
+        if( executor.getK8sConfig().cleanup == false )
+            return
+
+        if( !task.isSuccess() ) {
+            // do not delete successfully executed pods for debugging purpose
+            return
+        }
+
+        try {
+            client.podDelete(podName)
+        }
+        catch( Exception e ) {
+            log.warn "Unable to cleanup pod: $podName -- see the log file for details", e
+        }
+    }
+
 
     TraceRecord getTraceRecord() {
         final result = super.getTraceRecord()

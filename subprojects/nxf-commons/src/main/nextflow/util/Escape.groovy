@@ -34,16 +34,26 @@ class Escape {
 
     private static List<String> SPECIAL_CHARS = ["'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':']
 
-    static String path(String val) {
-        def copy = new StringBuilder(val.size() +10)
-        for( int i=0; i<val.size(); i++) {
-            def p = SPECIAL_CHARS.indexOf(val[i])
+    private static List<String> WILDCARDS = ["*", "?", "{", "}", "[", "]", "'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':']
+
+    private static String replace(List<String> special, String str) {
+        def copy = new StringBuilder(str.size() +10)
+        for( int i=0; i<str.size(); i++) {
+            def p = special.indexOf(str[i])
             if( p != -1 ) {
                 copy.append('\\')
             }
-            copy.append(val[i])
+            copy.append(str[i])
         }
         return copy.toString()
+    }
+
+    static String wildcards(String str) {
+        replace(WILDCARDS, str)
+    }
+
+    static String path(String val) {
+        replace(SPECIAL_CHARS, val)
     }
 
     static String path(Path val) {

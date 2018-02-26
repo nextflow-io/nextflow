@@ -211,8 +211,7 @@ class K8sHelperTest extends Specification {
                                       [name:'ALPHA', value:'hello'],
                                       [name:'DELTA', value:'world']
                                     ],
-                                    resources:[limits:[cpu:8, memory:'100Gi'],
-                                               requests:[cpu:8, memory:'100Gi']]
+                                    resources:[limits:[cpu:8, memory:'100Gi'] ]
                                    ]
                            ]
                    ]

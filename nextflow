@@ -19,7 +19,7 @@
 #  along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'0.27.1'}
+NXF_VER=${NXF_VER:-'0.28.0-SNAPSHOT'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -183,9 +183,10 @@ fi
 
 # parse the command line
 bg=''
+dockerize=''
 declare -a jvmopts=()
 declare -a args=("$@")
-declare -a cli=(clone config drop help history info ls pull run view node console)
+declare -a commands=(clone config drop help history info ls pull run view node console kube-run)
 cmd=''
 while [[ $# != 0 ]]; do
     case $1 in
@@ -194,8 +195,15 @@ while [[ $# != 0 ]]; do
       jvmopts+=("$1")
       fi
       ;;
+    -d|-dockerize)
+      if [[ ! "$cmd" && ! -f /.nextflow/dockerized ]]; then
+      dockerize=1
+      fi
+      ;;
     -bg)
+      if [[ ! -f /.nextflow/dockerized ]]; then
       bg=1
+      fi
       ;;
     -download)
       if [[ ! "$cmd" ]]; then
@@ -226,11 +234,24 @@ while [[ $# != 0 ]]; do
       NXF_MPIRUN='true'
       ;;
     *)
-      [[ $1 && $1 != -* && ! "$cmd" && ${cli[*]} =~ $1 ]] && cmd=$1
+      [[ $1 && $1 != -* && ! "$cmd" && ${commands[*]} =~ $1 ]] && cmd=$1
       ;;
     esac
     shift
 done
+
+NXF_DOCKER_OPTS=${NXF_DOCKER_OPTS:=''}
+if [[ "$dockerize" ]]; then
+  if [[ "$bg" ]]; then detach='--detach '; else detach=''; fi
+  NXF_ASSETS=${NXF_ASSETS:-${NXF_HOME:-$HOME/.nextflow}/assets}
+  mkdir -p "$NXF_ASSETS"
+  exec docker run $detach --rm --net host \
+   -e USER -e HOME -e NXF_ASSETS=$NXF_ASSETS -e NXF_USRMAP=$(id -u) -e NXF_DOCKER_OPTS='-u $(id -u)' \
+   -v /var/run/docker.sock:/var/run/docker.sock \
+   -v $HOME:$HOME:ro,Z -v $NXF_ASSETS:$NXF_ASSETS:Z -v $PWD:$PWD:Z -w $PWD $NXF_DOCKER_OPTS \
+   nextflow/nextflow:$NXF_VER nextflow "${args[@]}"
+  exit 1
+fi
 
 CAPSULE_LOG=${CAPSULE_LOG:=''}
 CAPSULE_RESET=${CAPSULE_RESET:=''}
@@ -382,7 +403,11 @@ EOF
 }
 
 # checked if a cached classpath file exists and it newer that the nextflow boot jar file
-LAUNCH_FILE="${NXF_LAUNCHER}/classpath-$(env_md5)"
+if [[ -f /.nextflow/dockerized ]]; then
+  LAUNCH_FILE=/.nextflow/launch-classpath
+else
+  LAUNCH_FILE="${NXF_LAUNCHER}/classpath-$(env_md5)"
+fi
 if [ -s "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ]; then
     launcher=($(cat "$LAUNCH_FILE"))
 else
