@@ -21,7 +21,17 @@
 package nextflow.k8s
 
 /**
+ * Model a kubernetes volumes claims eg
  *
+ *   [
+ *      volumeClaimName1: [
+ *                  mountPath: '/the/mounting/dir'
+ *              ],
+ *
+ *      volumeClaimName2: [
+ *                  mountPath: '/the/mounting/dir'
+ *              ]
+ *   ]
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class VolumeClaims {
@@ -30,9 +40,10 @@ class VolumeClaims {
     private Map<String,Map<String,String>> target
 
     VolumeClaims(obj) {
-        target = obj instanceof Map ? (Map)obj : Collections.emptyMap()
-        // remove trailing slashes
-        target.each { k, v -> v.mountPath = sanitize(v.mountPath) }
+        this.target = new LinkedHashMap<>()
+        if( obj instanceof Map ) {
+            addAllSkipExisting(obj)
+        }
     }
 
     static VolumeClaims empty() { new VolumeClaims(Collections.emptyMap()) }
@@ -41,12 +52,67 @@ class VolumeClaims {
         target.find { k, v -> path.startsWith(v.mountPath?.toString()) }?.getKey()
     }
 
+    /**
+     * @return A collection of all mount paths
+     */
     Collection<String> getMountPaths() {
         target.values().collect { it.mountPath }
     }
 
+    /**
+     * @return The mount path of the first volume claim entry
+     */
     String getFirstMount() {
         target.values().iterator().next().mountPath
+    }
+
+    /**
+     * @return Collection of all defined volume claim names
+     */
+    Collection<String> getClaimNames() {
+        target.keySet()
+    }
+
+    /**
+     * Add a volume claim entry
+     *
+     * @param name The volume claim name
+     * @param mount The volume claim mount path
+     * @return The object itself
+     */
+    VolumeClaims add( String name, String mount ) {
+        target.put( name, [mountPath: sanitize(mount)] )
+        return this
+    }
+
+    /**
+     * Add a volume claim entry
+     *
+     * @param nameAndMount A string representing a claim name and mounth path separated by a `:` character
+     * @return The object itself
+     */
+    VolumeClaims add( String nameAndMount ) {
+        def (String name, String mount) = nameAndMount.tokenize(':')
+        if( !name ) throw new IllegalArgumentException("Missing volume claim name")
+        if( !mount ) throw new IllegalArgumentException("Missing volume claim mount path")
+        add( name, mount )
+    }
+
+    /**
+     * Add all volume entries skipping the claim names already defined
+     *
+     * @param volumes A map of volume claims eg {@code [claim-name1: [mountPath:'/this'], claim-name2: [mountPath: '/that']]}
+     * @return The object itself
+     */
+    VolumeClaims addAllSkipExisting(Map<String,Map> volumes ) {
+        for(Map.Entry<String,Map> entry : volumes ) {
+            if( target.containsKey(entry.key))
+                continue
+            target.put(entry.key, entry.value)
+            // remove trailing slashes
+            entry.value.mountPath = sanitize(entry.value.mountPath)
+        }
+        return this
     }
 
     static private String sanitize(path) {

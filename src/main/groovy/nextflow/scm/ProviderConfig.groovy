@@ -242,7 +242,6 @@ class ProviderConfig {
         }
     }
 
-    @PackageScope
     static Map getDefault() {
         def file = SCM_FILE
         return file.exists() ? getFromFile(file) : [:]

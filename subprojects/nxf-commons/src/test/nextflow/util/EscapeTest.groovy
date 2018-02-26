@@ -59,4 +59,12 @@ class EscapeTest extends Specification {
 
     }
 
+    def 'should escape wildcards' () {
+
+        expect: 
+        Escape.wildcards('file_*') == 'file_\\*'
+        Escape.wildcards('file_??') == 'file_\\?\\?'
+        Escape.wildcards('file_{a,b}') == 'file_\\{a,b\\}'
+    }
+
 }

@@ -20,6 +20,8 @@
 
 package nextflow.k8s.client
 
+import java.nio.file.Files
+
 import spock.lang.Specification
 /**
  *
@@ -42,6 +44,67 @@ class ClientConfigTest extends Specification {
         then:
         noExceptionThrown()
 
+    }
+
+    def 'should create a client config from a map' () {
+
+        given:
+        def MAP = [
+                server:'foo.com',
+                token: 'blah-blah',
+                namespace: 'my-namespace',
+                verifySsl: true,
+                sslCert: 'fizzbuzz'.bytes.encodeBase64().toString(),
+                clientCert: 'hello'.bytes.encodeBase64().toString(),
+                clientKey: 'world'.bytes.encodeBase64().toString() ]
+
+        when:
+        def result = ClientConfig.fromMap(MAP)
+
+        then:
+        result.server == 'foo.com'
+        result.token == 'blah-blah'
+        result.namespace == 'my-namespace'
+        result.verifySsl
+        result.clientCert == 'hello'.bytes
+        result.clientKey == 'world'.bytes
+        result.sslCert == 'fizzbuzz'.bytes
+    }
+
+    def 'should create a client config from a map with files' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def file1 = folder.resolve('file1')
+        def file2 = folder.resolve('file2')
+        def file3 = folder.resolve('file3')
+        file1.text = 'fizzbuzz'.bytes.encodeBase64().toString()
+        file2.text = 'hello'.bytes.encodeBase64().toString()
+        file3.text = 'world'.bytes.encodeBase64().toString()
+
+        def MAP = [
+                server:'foo.com',
+                token: 'blah-blah',
+                namespace: 'my-namespace',
+                verifySsl: false,
+                sslCertFile: file1,
+                clientCertFile: file2,
+                clientKeyFile: file3 ]
+
+        when:
+        def result = ClientConfig.fromMap(MAP)
+
+        then:
+        result.server == 'foo.com'
+        result.token == 'blah-blah'
+        result.namespace == 'my-namespace'
+        !result.verifySsl
+        result.sslCert == file1.text.bytes
+        result.clientCert == file2.text.bytes
+        result.clientKey == file3.text.bytes
+
+        cleanup:
+        folder?.deleteDir()
     }
 
 }

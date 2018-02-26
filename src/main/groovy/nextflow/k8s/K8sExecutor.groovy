@@ -69,7 +69,7 @@ class K8sExecutor extends Executor {
     }
 
     /**
-     * @return {@code true} since containeraised execution is managed by Kubernetes
+     * @return {@code true} since containerised execution is managed by Kubernetes
      */
     boolean isContainerNative() {
         return true

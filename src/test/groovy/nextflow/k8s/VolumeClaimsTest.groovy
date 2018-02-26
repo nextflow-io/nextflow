@@ -36,7 +36,6 @@ class VolumeClaimsTest extends Specification {
         volumes.findVolumeByPath('/data/work') == 'foo'
         volumes.findVolumeByPath('/other/path') == 'bar'
         volumes.findVolumeByPath('/data') == null
-
     }
 
     def 'should collect mount paths' () {
@@ -61,5 +60,41 @@ class VolumeClaimsTest extends Specification {
         VOLS.vol1.mountPath == '/data/work'
         VOLS.vol2.mountPath == '/'
         VOLS.vol3.mountPath == '/data'
+    }
+
+    def 'should add a new volume' () {
+
+        given:
+        def volClaims = new VolumeClaims()
+
+        when:
+        volClaims.add('vol1', '/some/path/')
+        then:
+        volClaims.get('vol1').mountPath == '/some/path'
+
+        when:
+        volClaims.add('vol2', '/other/path')
+        then:
+        volClaims.get('vol2').mountPath == '/other/path'
+        volClaims.getFirstMount() == '/some/path'
+
+        when:
+        volClaims.add('vol3:/this/that')
+        then:
+        volClaims.get('vol3').mountPath == '/this/that'
+    }
+
+    def 'should add a volumes only if not exists' () {
+        given:
+        def volClaims = new VolumeClaims()
+        volClaims.add('vol1', '/some/path/')
+
+        when:
+        volClaims.addAllSkipExisting( [vol1: [mountPath: '/foo'], vol2: [mountPath:'/bar']] )
+
+        then:
+        volClaims.size() == 2 
+        volClaims.vol1.mountPath == '/some/path'
+        volClaims.vol2.mountPath == '/bar'
     }
 }

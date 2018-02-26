@@ -468,21 +468,25 @@ task installLauncher(type: Copy, dependsOn: ['pack']) {
     into "$homeDir/.nextflow/framework/$version/"
 }
 
+/*
+ * build, tag and publish a and new docker packaged nextflow release
+ */
 task dockerImage(type: Exec) {
 
     def temp = File.createTempFile('upload',null)
     temp.deleteOnExit()
     temp.text =  """\
     cd docker
-    docker build -t nextflow/nextflow:$version .
-    docker tag nextflow/nextflow:$version nextflow/nextflow:latest
-    docker push nextflow/nextflow:$version
-    docker push nextflow/nextflow:latest
+    make release version=$version
     """.stripIndent()
 
     commandLine 'bash', '-e', temp.absolutePath
 }
 
+/*
+ * Build a docker container image with the current snapshot
+ * DO NOT CALL IT DIRECTLY! Use the `make dockerPack` command instead
+ */
 task dockerPack(type: Exec, dependsOn: ['pack']) {
 
     def source = new File("$releaseDir/nextflow-$version-one.jar")
@@ -496,8 +500,14 @@ task dockerPack(type: Exec, dependsOn: ['pack']) {
     RUN apk update && apk add bash && apk add coreutils && apk add curl
     COPY .nextflow /.nextflow
     COPY nextflow /usr/local/bin/nextflow
+    COPY entry.sh /usr/local/bin/entry.sh
+    COPY dist/docker /usr/local/bin/docker
     ENV NXF_HOME=/.nextflow
     ENV NXF_OPTS='-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap'
+    RUN touch /.nextflow/dockerized && rm -rf /.nextflow/launch-classpath
+    RUN chmod +x /usr/local/bin/nextflow /usr/local/bin/entry.sh
+    RUN nextflow info
+    ENTRYPOINT ["/usr/local/bin/entry.sh"]
     """
 
     def temp = File.createTempFile('upload',null)
@@ -506,8 +516,10 @@ task dockerPack(type: Exec, dependsOn: ['pack']) {
     mkdir -p $target
     cp $source $target
     cp nextflow $buildDir/docker
-    cd $buildDir/docker
-    chmod +x nextflow
+    cp docker/entry.sh $buildDir/docker
+    cd $buildDir/docker  
+    mkdir -p dist
+    curl -fsSLO https://get.docker.com/builds/Linux/x86_64/docker-17.03.1-ce.tgz && tar --strip-components=1 -xvzf docker-17.03.1-ce.tgz -C dist
     NXF_HOME=\$PWD/.nextflow nextflow info
     docker build -t nextflow/nextflow:$version .
     """.stripIndent()

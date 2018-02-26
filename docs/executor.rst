@@ -207,20 +207,13 @@ Kubernetes
 Nextflow provides an experimental support for `Kubernetes <http://kubernetes.io/>`_ clustering technology. It allows
 you to deploy and transparently run a Nextflow pipeline in a Kubernetes cluster.
 
-Nextflow manages each process as a separate `pod` that is submitted to the cluster by using the ``kubectl`` command.
-Being so, the pipeline must be launched from a node where the ``kubectl`` command is available.
-
-The pipeline processes must specify the Docker image to use by defining the ``container`` directive, either in the pipeline
-script or the ``nextflow.config`` file. Moreover the pipeline must be executed in a shared file system folder
-accessible by all Kubernetes cluster nodes.
-
-To enable this executor set the property ``process.executor = 'k8s'`` in the ``nextflow.config`` file.
-
 The following directives can be used to define the amount of computing resources needed and the container(s) to use:
 
 * :ref:`process-cpus`
 * :ref:`process-memory`
 * :ref:`process-container`
+
+See the :ref:`Kubernetes documentation <k8s-page>` to learn how to deploy a workflow execution in a Kubernetes cluster.
 
 .. _awsbatch-executor:
 

@@ -651,7 +651,7 @@ class BashWrapperBuilder {
          */
         builder.addMountForInputs(resolvedInputs)
 
-        if( !this.containerExecutable)
+        if( !this.containerExecutable )
             builder.addMount(binDir)
 
         if(this.containerMount)
@@ -663,10 +663,10 @@ class BashWrapperBuilder {
         // set the name
         builder.setName('$NXF_BOXID')
 
-        if(this.containerMemory)
+        if( this.containerMemory )
             builder.setMemory(containerMemory)
 
-        if(this.containerCpuset)
+        if( this.containerCpuset )
             builder.addRunOptions(containerCpuset)
 
         // set the environment
@@ -678,7 +678,7 @@ class BashWrapperBuilder {
             if( containerConfig.fixOwnership )
                 builder.addEnv( 'NXF_OWNER=$(id -u):$(id -g)' )
 
-            if(this.containerExecutable) {
+            if( this.containerExecutable ) {
                 // PATH variable cannot be extended in an executable container
                 // make sure to not include it to avoid to override the container PATH
                 environment.remove('PATH')
@@ -688,6 +688,10 @@ class BashWrapperBuilder {
                 // `nxf_taskenv` bash function wrapper
                 builder.addEnv( environment )
             }
+        }
+
+        if( engine=='docker' && System.getenv('NXF_DOCKER_OPTS') ) {
+            builder.addRunOptions(System.getenv('NXF_DOCKER_OPTS'))
         }
 
         // set up run docker params
@@ -706,7 +710,7 @@ class BashWrapperBuilder {
             builder.params(readOnlyInputs: true)
 
         // override the docker entry point the image is NOT defined as executable
-        if( !this.containerExecutable)
+        if( !this.containerExecutable )
             builder.params(entry: '/bin/bash')
 
         builder.build()

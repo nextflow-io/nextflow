@@ -147,6 +147,48 @@ class K8sClientTest extends Specification {
         result.response == 'hello'
     }
 
+    def 'should list secrets' () {
+        given:
+        K8sResponseJson result
+        def client = Spy(K8sClient)
+        def RESP = Mock(K8sResponseApi)
+        RESP.getText() >> '{"response":"hello"}'
+
+        when:
+        result = client.secretesList()
+        then:
+        1 * client.get("/api/v1/namespaces/default/secrets") >> RESP
+        result.response == 'hello'
+
+        when:
+        client.config.namespace = 'pippo'
+        result = client.podList()
+        then:
+        1 * client.get('/api/v1/namespaces/pippo/pods') >> RESP
+        result.response == 'hello'
+
+    }
+
+    def 'should describe secret' () {
+        given:
+        K8sResponseJson result
+        def client = Spy(K8sClient)
+        def RESP = Mock(K8sResponseApi)
+        RESP.getText() >> '{"response":"hello"}'
+
+        when:
+        result = client.secretDescribe('my-secret')
+        then:
+        1 * client.get("/api/v1/namespaces/default/secrets/my-secret") >> RESP
+        result.response == 'hello'
+
+        when:
+        client.config.namespace = 'paperino'
+        result = client.secretDescribe('pluto')
+        then:
+        1 * client.get('/api/v1/namespaces/paperino/secrets/pluto') >> RESP
+        result.response == 'hello'
+    }
 
     def 'should log pod' () {
 

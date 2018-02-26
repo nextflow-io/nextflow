@@ -32,6 +32,8 @@ misc/
 logo/
 cloud/my-*
 docker-test
+docker/dist
+docker/nextflow
 temp
 gradle.properties
 .dockerignore

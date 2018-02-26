@@ -40,6 +40,8 @@ class ConfigDiscovery {
 
     private ClientConfig config
 
+    private String context
+
     /**
      * Discover Kubernetes service from current environment settings
      */
@@ -47,16 +49,24 @@ class ConfigDiscovery {
 
         config = new ClientConfig()
 
-        def home = System.getProperty('user.home')
+        // Note: System.getProperty('user.home') may not report the correct home path when
+        // running in a container. Use env HOME instead.
+        def home = System.getenv('HOME')
         def kubeConfig = env.get('KUBECONFIG') ? env.get('KUBECONFIG') : "$home/.kube/config"
         def configFile = Paths.get(kubeConfig)
 
         if( configFile.exists() ) {
             return fromConfig(configFile)
         }
+        else {
+            log.debug "K8s config file does not exist: $configFile"
+        }
 
         if( env.get('KUBERNETES_SERVICE_HOST') ) {
             return fromCluster(env)
+        }
+        else {
+            log.debug "K8s env variable KUBERNETES_SERVICE_HOST is not defined"
         }
 
         throw new IllegalStateException("Unable to lookup Kubernetes cluster configuration")
@@ -83,24 +93,29 @@ class ConfigDiscovery {
     protected ClientConfig fromConfig(Path path) {
         def yaml = (Map)new Yaml().load(Files.newInputStream(path))
 
-        final contextName = yaml."current-context" as String
+        final contextName = context ?: yaml."current-context" as String
         final allContext = yaml.contexts as List
         final allClusters = yaml.clusters as List
         final allUsers = yaml.users as List
         final context = allContext.find { Map it -> it.name == contextName } ?.context
+        if( !context )
+            throw new IllegalArgumentException("Unknown Kubernetes context: $contextName -- check config file: $path")
         final userName = context?.user
         final clusterName = context?.cluster
         final user = allUsers.find{ Map it -> it.name == userName } ?.user ?: [:]
         final cluster = allClusters.find{ Map it -> it.name == clusterName } ?.cluster ?: [:]
 
-        if( !user.token && !user.tokenFile ) {
-            user.token = discoverAuthToken()
-        }
+        def config = ClientConfig.fromUserAndCluster(user, cluster, path)
 
-        def config = ClientConfig.fromUserAndCluster(user, cluster)
+        if( context?.namespace ) {
+            config.namespace = context?.namespace
+        }
 
         if( config.clientCert && config.clientKey ) {
             config.keyManagers = createKeyManagers(config.clientCert, config.clientKey)
+        }
+        else if( !config.token ) {
+            config.token = discoverAuthToken()
         }
 
         return config

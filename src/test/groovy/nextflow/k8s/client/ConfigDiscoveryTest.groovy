@@ -69,10 +69,10 @@ class ConfigDiscoveryTest extends Specification {
         when:
         def config = discovery.fromConfig(CONFIG)
         then:
-        1 * discovery.discoverAuthToken() >> 'secret-token'
+        0 * discovery.discoverAuthToken() >> 'secret-token'
         1 * discovery.createKeyManagers(CLIENT_CERT.decodeBase64(), CLIENT_KEY.decodeBase64()) >>  KEY_MANAGERS
         config.server == 'https://localhost:6443'
-        config.token == 'secret-token'
+        config.token == null
         config.namespace == 'default'
         config.clientCert == CLIENT_CERT.decodeBase64()
         config.clientKey == CLIENT_KEY.decodeBase64()
@@ -122,10 +122,9 @@ class ConfigDiscoveryTest extends Specification {
         when:
         def config = discovery.fromConfig(CONFIG)
         then:
-        1 * discovery.discoverAuthToken() >> 'secret-token'
         1 * discovery.createKeyManagers( CLIENT_CERT_FILE.bytes, CLIENT_KEY_FILE.bytes ) >> KEY_MANAGERS
         config.server == 'https://localhost:6443'
-        config.token == 'secret-token'
+        config.token == null
         config.namespace == 'default'
         config.clientCert == CLIENT_CERT_FILE.bytes
         config.clientKey == CLIENT_KEY_FILE.bytes
@@ -138,6 +137,180 @@ class ConfigDiscoveryTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should read config and use token' () {
+
+        given:
+        def folder = Files.createTempDirectory(null)
+        def CONFIG = folder.resolve('config')
+
+        CONFIG.text = """
+            apiVersion: v1
+            clusters:
+            - cluster:
+                insecure-skip-tls-verify: true
+                server: https://localhost:6443
+              name: docker-for-desktop-cluster
+            contexts:
+            - context:
+                cluster: docker-for-desktop-cluster
+                user: docker-for-desktop
+              name: docker-for-desktop
+            current-context: docker-for-desktop
+            kind: Config
+            preferences: {}
+            users:
+            - name: docker-for-desktop
+              user:
+                token: 90s090s98s7f8s
+            """
+                .stripIndent()
+
+        def discovery = Spy(ConfigDiscovery)
+
+        when:
+        def config = discovery.fromConfig(CONFIG)
+        then:
+        0 * discovery.discoverAuthToken() >> 'secret-token'
+        0 * discovery.createKeyManagers( _, _ ) >> null
+        config.server == 'https://localhost:6443'
+        config.token == '90s090s98s7f8s'
+        config.namespace == 'default'
+        !config.verifySsl
+        !config.isFromCluster
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should read config and discover token' () {
+
+        given:
+        def folder = Files.createTempDirectory(null)
+        def CONFIG = folder.resolve('config')
+
+        CONFIG.text = """
+            apiVersion: v1
+            clusters:
+            - cluster:
+                insecure-skip-tls-verify: true
+                server: https://localhost:6443
+              name: docker-for-desktop-cluster
+            contexts:
+            - context:
+                cluster: docker-for-desktop-cluster
+                user: docker-for-desktop
+              name: docker-for-desktop
+            current-context: docker-for-desktop
+            kind: Config
+            preferences: {}
+            users:
+            - name: docker-for-desktop
+              user:
+                foo: bar
+            """
+                .stripIndent()
+
+        def discovery = Spy(ConfigDiscovery)
+
+        when:
+        def config = discovery.fromConfig(CONFIG)
+        then:
+        1 * discovery.discoverAuthToken() >> 'secret-token'
+        0 * discovery.createKeyManagers( _, _ ) >> null
+        config.server == 'https://localhost:6443'
+        config.token == 'secret-token'
+        config.namespace == 'default'
+        !config.verifySsl
+        !config.isFromCluster
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should read config from given context' () {
+
+        given:
+        def folder = Files.createTempDirectory(null)
+        folder.resolve('fake-cert-file').text = 'fake-cert-content'
+        folder.resolve('fake-key-file').text = 'fake-key-content'
+        folder.resolve('fake-ca-file').text = 'fake-ca-content'
+
+        def CONFIG = folder.resolve('config')
+        CONFIG.text = '''
+                apiVersion: v1
+                clusters:
+                - cluster:
+                    certificate-authority: fake-ca-file
+                    server: https://1.2.3.4
+                  name: development
+                - cluster:
+                    insecure-skip-tls-verify: true
+                    server: https://5.6.7.8
+                  name: scratch
+                contexts:
+                - context:
+                    cluster: development
+                    namespace: frontend
+                    user: developer
+                  name: dev-frontend
+                - context:
+                    cluster: development
+                    namespace: storage
+                    user: developer
+                  name: dev-storage
+                - context:
+                    cluster: scratch
+                    namespace: default
+                    user: experimenter
+                  name: exp-scratch
+                current-context: ""
+                kind: Config
+                preferences: {}
+                users:
+                - name: developer
+                  user:
+                    client-certificate: fake-cert-file
+                - name: experimenter
+                  user:
+                    password: some-password
+                    username: exp        
+        '''.stripIndent()
+
+        when:
+        def cfg1 = new ConfigDiscovery(context: 'dev-frontend').fromConfig(CONFIG)
+        then:
+        cfg1.server == 'https://1.2.3.4'
+        cfg1.sslCert == 'fake-ca-content'.bytes
+        cfg1.isVerifySsl()
+        cfg1.namespace == 'frontend'
+        cfg1.clientCert == 'fake-cert-content'.bytes
+
+        when:
+        def cfg2 = new ConfigDiscovery(context: 'dev-storage').fromConfig(CONFIG)
+        then:
+        cfg2.server == 'https://1.2.3.4'
+        cfg2.sslCert == 'fake-ca-content'.bytes
+        cfg2.isVerifySsl()
+        cfg2.namespace == 'storage'
+        cfg2.clientCert == 'fake-cert-content'.bytes
+
+        when:
+        def cfg3 = new ConfigDiscovery(context: 'exp-scratch').fromConfig(CONFIG)
+        then:
+        cfg3.server == 'https://5.6.7.8'
+        cfg3.sslCert == null
+        !cfg3.isVerifySsl()
+        cfg3.namespace == 'default'
+
+        when:
+        new ConfigDiscovery(context: 'foo').fromConfig(CONFIG)
+        then:
+        thrown(IllegalArgumentException)
+
+        true
+        cleanup:
+        folder.deleteDir()
+    }
 
     def 'should load from cluster env' () {
         given:
