@@ -20,9 +20,23 @@
 
 package nextflow.container
 
+import spock.lang.Specification
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ContainerBuilderTest {
+class ContainerBuilderTest extends Specification {
+
+    def 'should return mount flags'() {
+
+        given:
+        def builder = Spy(ContainerBuilder)
+
+        expect:
+        builder.mountFlags(false) == ''
+        builder.mountFlags(true) == ':ro'
+
+    }
+
 }

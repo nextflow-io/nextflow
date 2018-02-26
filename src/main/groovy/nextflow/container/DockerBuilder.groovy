@@ -50,6 +50,8 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
     private boolean legacy
 
+    private String mountFlags0
+
     DockerBuilder( String name ) {
         this.image = name
     }
@@ -90,6 +92,9 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
         if( params.containsKey('readOnlyInputs') )
             this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
+
+        if( params.containsKey('mountFlags') )
+            this.mountFlags0 = params.mountFlags
 
         return this
     }
@@ -174,8 +179,15 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
             if( sudo ) killCommand = 'sudo ' + killCommand
         }
 
-
         return this
+    }
+
+    protected String mountFlags(boolean readOnly) {
+        def result = super.mountFlags(readOnly)
+        if( !mountFlags0 )
+            return result
+
+        result ? "${result},${mountFlags0.trim()}" : ":${mountFlags0.trim()}"
     }
 
     @Override
