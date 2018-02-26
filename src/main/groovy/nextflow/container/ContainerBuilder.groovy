@@ -31,8 +31,6 @@ import nextflow.util.PathTrie
  */
 abstract class ContainerBuilder<V extends ContainerBuilder> {
 
-    final static String DEFAULT_ENTRY = '/bin/bash'
-
     final protected List env = []
 
     final protected List<Path> mounts = []
@@ -264,14 +262,14 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
     }
 
     protected String composeVolumePath( String path, boolean readOnly = false ) {
-        def result = "-v ${escape(path)}:${escape(path)}"
-        if( readOnly )
-            result += ':ro'
-        return result
+        return "-v ${escape(path)}:${escape(path)}${mountFlags(readOnly)}"
     }
 
     protected String escape(String path) {
         path.startsWith('$') ? "\"$path\"" : Escape.path(path)
     }
 
+    protected String mountFlags(boolean readOnly) {
+        readOnly ? ":ro" : ''
+    }
 }

@@ -19,6 +19,7 @@
  */
 
 package nextflow.container
+
 import java.nio.file.Paths
 
 import nextflow.util.MemoryUnit
@@ -122,6 +123,11 @@ class DockerBuilderTest extends Specification {
                 .runCommand == 'docker run -i -v /home/db:/home/db:ro -v "$PWD":"$PWD" -w "$PWD" fedora'
 
 
+        new DockerBuilder('fedora')
+                .params(mountFlags: 'Z')
+                .addMount(db_file)
+                .build()
+                .runCommand == 'docker run -i -v /home/db:/home/db:Z -v "$PWD":"$PWD":Z -w "$PWD" fedora'
     }
 
     def 'test memory and cpuset' () {
@@ -265,6 +271,24 @@ class DockerBuilderTest extends Specification {
         then:
         cli ==  'docker run -i -v "$PWD":"$PWD" -w "$PWD" --entrypoint /bin/bash ubuntu:14 -c "bwa --this --that file.fasta"'
 
+    }
+
+    def 'should return mount flags'() {
+
+        given:
+        def builder = new DockerBuilder().params(mountFlags: flags)
+
+        expect:
+        builder.mountFlags(readOnly) == expected
+
+        where:
+        readOnly | flags    | expected
+        false    | null     | ''
+        false    | "Z"      | ':Z'
+        false    | "z,Z "   | ':z,Z'
+        true     | null     | ':ro'
+        true     | ''       | ':ro'
+        true     | 'Z'      | ':ro,Z'
     }
 
 
