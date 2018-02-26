@@ -283,8 +283,8 @@ if [[ $NXF_PACK = all ]]; then
 fi
 
 # Determine the Java command to use to start the JVM.
-JAVA_CMD=${NXF_JAVA_CMD:-$JAVA_CMD}
-JAVA_HOME=${NXF_JAVA_HOME:-$JAVA_HOME}
+JAVA_CMD="${NXF_JAVA_CMD:-$JAVA_CMD}"
+JAVA_HOME="${NXF_JAVA_HOME:-$JAVA_HOME}"
 if [ ! -x "$JAVA_CMD" ] ; then
     if [ -d "$JAVA_HOME" ] ; then
         if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
@@ -301,11 +301,11 @@ if [ ! -x "$JAVA_CMD" ] ; then
 fi
 
 # Retrieve the java version from a NF local file
-JAVA_KEY="$NXF_HOME/tmp/ver/$(resolve_link $JAVA_CMD | sed 's@/@.@g')"
-if [ -f $JAVA_KEY ]; then
-  JAVA_VER="$(cat $JAVA_KEY)"
+JAVA_KEY="$NXF_HOME/tmp/ver/$(resolve_link "$JAVA_CMD" | sed 's@/@.@g')"
+if [ -f "$JAVA_KEY" ]; then
+  JAVA_VER="$(cat "$JAVA_KEY")"
 else
-  JAVA_VER="$($JAVA_CMD $NXF_OPTS -version 2>&1)"
+  JAVA_VER="$("$JAVA_CMD" $NXF_OPTS -version 2>&1)"
   if [ $? -ne 0 ]; then
       echo_red "${JAVA_VER:-Failed to launch the Java virtual machine}"
       echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n NXF_OPTS: $NXF_OPTS\n"
@@ -331,8 +331,8 @@ else
       echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n JAVA_HOME: $JAVA_HOME\n"
       exit 1
   fi
-  mkdir -p $(dirname $JAVA_KEY)
-  [[ -f $JAVA_VER ]] && echo $JAVA_VER > $JAVA_KEY
+  mkdir -p $(dirname "$JAVA_KEY")
+  [[ -f $JAVA_VER ]] && echo $JAVA_VER > "$JAVA_KEY"
 fi
 if [[ "$JAVA_VER" =~ ^9 ]]; then
   echo_yellow "WARN: Nextflow support for Java 9 is still in beta stage and some advanced features are not supported"
@@ -352,22 +352,23 @@ fi
 [[ "$cmd" == "node" && ! "$NXF_MODE" ]] && NXF_MODE='ignite'
 
 COLUMNS=${COLUMNS:-`tty -s && tput cols 2>/dev/null || true`}
-JAVA_OPTS="-Dfile.encoding=UTF-8 -noverify -Dcapsule.trampoline -Dcapsule.java.cmd=$JAVA_CMD"
+declare -a JAVA_OPTS=()
+JAVA_OPTS+=(-Dfile.encoding=UTF-8 -noverify -Dcapsule.trampoline -Dcapsule.java.cmd="$JAVA_CMD")
 if [[ $cmd == console ]]; then bg=1;
-else JAVA_OPTS+=" -Djava.awt.headless=true"
+else JAVA_OPTS+=(-Djava.awt.headless=true)
 fi
 
-[[ "$NXF_MODE" ]] && JAVA_OPTS+=" -Dcapsule.mode=$NXF_MODE"
-[[ "$JAVA_HOME" ]] && JAVA_OPTS+=" -Dcapsule.java.home=$JAVA_HOME"
-[[ "$CAPSULE_LOG" ]] && JAVA_OPTS+=" -Dcapsule.log=$CAPSULE_LOG"
-[[ "$CAPSULE_RESET" ]] && JAVA_OPTS+=" -Dcapsule.reset=true"
-[[ "$cmd" != "run" && "$cmd" != "node" ]] && JAVA_OPTS+=" -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
-[[ "$NXF_OPTS" ]] && JAVA_OPTS+=" $NXF_OPTS"
+[[ "$NXF_MODE" ]] && JAVA_OPTS+=(-Dcapsule.mode=$NXF_MODE)
+[[ "$JAVA_HOME" ]] && JAVA_OPTS+=(-Dcapsule.java.home="$JAVA_HOME")
+[[ "$CAPSULE_LOG" ]] && JAVA_OPTS+=(-Dcapsule.log=$CAPSULE_LOG)
+[[ "$CAPSULE_RESET" ]] && JAVA_OPTS+=(-Dcapsule.reset=true)
+[[ "$cmd" != "run" && "$cmd" != "node" ]] && JAVA_OPTS+=(-XX:+TieredCompilation -XX:TieredStopAtLevel=1)
+[[ "$NXF_OPTS" ]] && JAVA_OPTS+=($NXF_OPTS)
 [[ "$NXF_CLASSPATH" ]] && export NXF_CLASSPATH
 [[ "$NXF_GRAB" ]] && export NXF_GRAB
 [[ "$COLUMNS" ]] && export COLUMNS
-[[ "$NXF_TEMP" ]] && JAVA_OPTS+=" -Djava.io.tmpdir=$NXF_TEMP"
-[[ "${jvmopts[@]}" ]] && JAVA_OPTS+=" ${jvmopts[@]}"
+[[ "$NXF_TEMP" ]] && JAVA_OPTS+=(-Djava.io.tmpdir="$NXF_TEMP")
+[[ "${jvmopts[@]}" ]] && JAVA_OPTS+=("${jvmopts[@]}")
 # use drip to speedup startup time -- https://github.com/ninjudd/drip
 [[ "$NXF_DRIP" ]] && export DRIP_INIT='' && export DRIP_INIT_CLASS='nextflow.cli.DripMain'
 export JAVA_CMD
@@ -382,7 +383,7 @@ fi
 
 # when no md5 command is available fallback on default execution
 if [ ! "$MD5" ] || [ "$CAPSULE_RESET" ]; then
-    launcher=($("$JAVA_CMD" $JAVA_OPTS -jar "$NXF_BIN"))
+    launcher=($("$JAVA_CMD" "${JAVA_OPTS[@]}" -jar "$NXF_BIN"))
     launch_nextflow
     exit 1
 fi
@@ -392,7 +393,7 @@ env_md5() {
 cat <<EOF | $MD5 | cut -f1 -d' '
 $JAVA_CMD
 $JAVA_VER
-$JAVA_OPTS
+${JAVA_OPTS[@]}
 $NXF_HOME
 $NXF_VER
 $NXF_OPTS
@@ -412,7 +413,7 @@ if [ -s "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ]; then
     launcher=($(cat "$LAUNCH_FILE"))
 else
     # otherwise run the capsule and get the result classpath in the 'launcher' and save it to a file
-    cli=($("$JAVA_CMD" $JAVA_OPTS -jar "$NXF_BIN"))
+    cli=($("$JAVA_CMD" "${JAVA_OPTS[@]}" -jar "$NXF_BIN"))
     [[ $? -ne 0 ]] && echo_red 'Unable to initialize nextflow environment' && exit $?
 
     if [[ "$JAVA_VER" =~ ^9 ]]; then
