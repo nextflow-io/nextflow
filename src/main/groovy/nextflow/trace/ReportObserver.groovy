@@ -244,7 +244,7 @@ class ReportObserver implements TraceObserver {
     protected String renderSummaryJson() {
         final summary = computeSummary()
         final result = JsonOutput.toJson(summary)
-        log.debug "Execution report summary data:\n${JsonOutput.prettyPrint(result).indent()}"
+        log.debug "Execution report summary data:\n  ${result}"
         return result
     }
 
