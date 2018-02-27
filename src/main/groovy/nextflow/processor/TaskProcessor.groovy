@@ -1732,12 +1732,13 @@ class TaskProcessor {
     protected List<FileHolder> expandWildcards( String name, List<FileHolder> files ) {
         assert files != null
 
-        if( files.size()==0 ) {
-            return files
-        }
+        // use an unordered so that cache hash key is not affected by file entries order
+        final result = new ArrayBag(files.size())
+        if( files.size()==0 ) { return result }
 
         if( !name || name == '*' ) {
-            return files
+            result.addAll(files)
+            return result
         }
 
         if( !name.contains('*') && !name.contains('?') && files.size()>1 ) {
@@ -1747,9 +1748,6 @@ class TaskProcessor {
              */
             name += '*'
         }
-
-        // use an unordered so that cache hash key is not affected by file entries order
-        final result = new ArrayBag(files.size())
 
         for( int i=0; i<files.size(); i++ ) {
             def holder = files[i]
