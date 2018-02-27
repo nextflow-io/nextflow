@@ -36,42 +36,42 @@ class WorkflowStatsTest extends Specification {
         when:
         stats = new WorkflowStats(succeedMillis: 3_600_000)
         then:
-        stats.getComputeTimeString() == '1.0'
+        stats.getComputeTimeFmt() == '1.0'
 
         when:
         stats = new WorkflowStats(succeedMillis: 10_000_000)
         then:
-        stats.getComputeTimeString() == '2.8'
+        stats.getComputeTimeFmt() == '2.8'
 
         when:
         stats = new WorkflowStats(succeedMillis: 80_000_000, cachedMillis: 20_000_000)
         then:
-        stats.getComputeTimeString() == '27.8 (20% cached)'
+        stats.getComputeTimeFmt() == '27.8 (20% cached)'
 
         when:
         stats = new WorkflowStats(succeedMillis: 80_000_000, failedMillis: 20_000_000)
         then:
-        stats.getComputeTimeString() == '27.8 (20% failed)'
+        stats.getComputeTimeFmt() == '27.8 (20% failed)'
 
         when:
         stats = new WorkflowStats(succeedMillis: 80_000_000, failedMillis: 5_000_000, cachedMillis: 15_000_000)
         then:
-        stats.getComputeTimeString() == '27.8 (15% cached, 5% failed)'
+        stats.getComputeTimeFmt() == '27.8 (15% cached, 5% failed)'
 
         when:
         stats = new WorkflowStats(succeedMillis: 180_000)
         then:
-        stats.getComputeTimeString() == '0.1'
+        stats.getComputeTimeFmt() == '0.1'
 
         when:
         stats = new WorkflowStats(succeedMillis: 120_000)
         then:
-        stats.getComputeTimeString() == '(a few seconds)'
+        stats.getComputeTimeFmt() == '(a few seconds)'
 
         when:
         stats = new WorkflowStats(succeedMillis: 120_000_000_000)
         then:
-        stats.getComputeTimeString() == "33'333.3"
+        stats.getComputeTimeFmt() == "33'333.3"
     }
 
     def 'should return cpu time' () {
@@ -197,6 +197,36 @@ class WorkflowStatsTest extends Specification {
         1 * record.get('realtime') >> null
         1 * record.get('cpus') >> null
         result == 0
+    }
+
+    def 'should return formatted counts' () {
+
+        given:
+        def stats = new WorkflowStats()
+
+        when:
+        stats.succeedCount = 12345
+        then:
+        stats.succeedCount == 12345
+        stats.succeedCountFmt == "12'345"
+
+        when:
+        stats.cachedCount = 88774411
+        then:
+        stats.cachedCount == 88774411
+        stats.cachedCountFmt == "88'774'411"
+
+        when:
+        stats.ignoredCount = 66332211
+        then:
+        stats.ignoredCount == 66332211
+        stats.ignoredCountFmt == "66'332'211"
+
+        when:
+        stats.failedCount = 33776644
+        then:
+        stats.failedCount == 33776644
+        stats.failedCountFmt == "33'776'644"
     }
 
 }

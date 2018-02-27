@@ -2,20 +2,20 @@
  Workflow completion notification
 ====================================
  Run Name: ${workflow.runName}
-
-<% if(workflow.success) {
-    out << "## Execution completed successfully! ##"
-} else {
-    out << """#########################################
+<% if( workflow.success && workflow.stats.ignoredCount ) { %>
+## Execution completed successfully. One or more tasks reported an error condition ##
+<% } else if(workflow.success) { %>
+## Execution completed successfully! ##
+<% } else { %>
+#########################################
 ## Execution completed unsuccessfully! ##
 #########################################
 The exit status of the task that caused the workflow execution to fail was: ${workflow.exitStatus != null ? workflow.exitStatus : '-'}.
 The full error message was:
 
 ${workflow.errorReport ?: 'n/a'}
-"""
-} %>
 
+<% } %>
 The command used to launch the workflow was as follows:
 
   ${workflow.commandLine}
@@ -24,7 +24,8 @@ The command used to launch the workflow was as follows:
 
   Launch time       : ${workflow.start.format('dd-MMM-yyyy HH:mm:ss')}
   Ending time       : ${workflow.complete.format('dd-MMM-yyyy HH:mm:ss')} (duration: ${workflow.duration})
-  Total CPU-Hours   : ${workflow.stats.getComputeTimeString() ?: '-'}
+  Total CPU-Hours   : ${workflow.stats.computeTimeFmt ?: '-'}
+  Tasks stats       : Succeeded ${workflow.stats.succeedCountFmt}; Cached ${workflow.stats.cachedCountFmt}; Ignored ${workflow.stats.ignoredCountFmt}; Failed ${workflow.stats.failedCountFmt}
   Launch directory  : ${workflow.launchDir}
   Work directory    : ${workflow.workDir.toUriString()}
   Project directory : ${workflow.projectDir}

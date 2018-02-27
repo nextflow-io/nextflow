@@ -40,6 +40,22 @@ import nextflow.util.Duration
 @CompileStatic
 class WorkflowStats {
 
+    static private final DecimalFormat DECIMAL_FMT
+
+    static private final DecimalFormat INTEGER_FMT
+
+    static {
+        final formatSymbols = new DecimalFormatSymbols()
+        formatSymbols.setDecimalSeparator('.' as char)
+        formatSymbols.setGroupingSeparator("'" as char)
+
+        DECIMAL_FMT = new DecimalFormat("#,##0.0", formatSymbols)
+        DECIMAL_FMT.setRoundingMode(RoundingMode.HALF_UP)
+
+        INTEGER_FMT = new DecimalFormat("#,##0", formatSymbols)
+        INTEGER_FMT.setRoundingMode(RoundingMode.HALF_UP)
+    }
+
     private long succeedMillis
 
     private long cachedMillis
@@ -53,6 +69,22 @@ class WorkflowStats {
     private int failedCount
 
     private int ignoredCount
+
+    String getSucceedCountFmt() {
+        INTEGER_FMT.format(succeedCount)
+    }
+
+    String getCachedCountFmt() {
+        INTEGER_FMT.format(cachedCount)
+    }
+
+    String getFailedCountFmt() {
+        INTEGER_FMT.format(failedCount)
+    }
+
+    String getIgnoredCountFmt() {
+        INTEGER_FMT.format(ignoredCount)
+    }
 
     /**
      * @return Overall workflow compute time (CPUs-seconds) for task executed successfully
@@ -92,19 +124,14 @@ class WorkflowStats {
     /**
      * @return A formatted string representing the overall execution time as CPU-Hours
      */
-    String getComputeTimeString() {
+    String getComputeTimeFmt() {
 
         final total = (succeedMillis + cachedMillis + failedMillis) / 1000
         if( total < 180 )
             return '(a few seconds)'
 
-        final formatSymbols = new DecimalFormatSymbols();
-        formatSymbols.setDecimalSeparator('.' as char);
-        formatSymbols.setGroupingSeparator("'" as char);
-        final fmt = new DecimalFormat("#,##0.0", formatSymbols)
-        fmt.setRoundingMode(RoundingMode.HALF_UP)
 
-        def result = fmt.format(total/3600)
+        def result = DECIMAL_FMT.format(total/3600)
         if( cachedMillis || failedMillis ) {
             final perc = new DecimalFormat("0.#")
             result += ' ('

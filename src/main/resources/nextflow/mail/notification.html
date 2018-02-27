@@ -13,23 +13,22 @@
     <h1>Workflow completion notification</h1>
     <h2>Run Name: ${workflow.runName}</h2>
 
-    <% if (workflow.success) {
-    out << """
+    <% if ( workflow.success && workflow.stats.ignoredCount ){ %>
+    <div style="color: #856404; background-color: #fff3cd; border-color: #ffeeba; padding: 15px; margin-bottom: 20px; border: 1px solid transparent; border-radius: 4px;">
+        Workflow execution completed successfully. One or more tasks reported an error condition.
+    </div>
+    <% } else if (workflow.success) { %>
     <div style="color: #3c763d; background-color: #dff0d8; border-color: #d6e9c6; padding: 15px; margin-bottom: 20px; border: 1px solid transparent; border-radius: 4px;">
         Execution completed successfully!
     </div>
-    """
-    } else {
-    out << """
+    <% } else { %>
     <div style="color: #a94442; background-color: #f2dede; border-color: #ebccd1; padding: 15px; margin-bottom: 20px; border: 1px solid transparent; border-radius: 4px;">
         <h4 style="margin-top:0; color: inherit;">Execution completed unsuccessfully!</h4>
         <p>The exit status of the task that caused the workflow execution to fail was: <code>${workflow.exitStatus != null ? workflow.exitStatus : '-'}</code>.</p>
         <p>The full error message was:</p>
         <pre style="white-space: pre-wrap; overflow: visible; margin-bottom: 0;">${workflow.errorReport ?: 'n/a'}</pre>
     </div>
-    """
-    }
-    %>
+    <% } %>
 
     <p>The command used to launch the workflow was as follows:</p>
     <pre style="white-space: pre-wrap; overflow: visible; background-color: #ededed; padding: 15px; border-radius: 4px; margin-bottom:30px;">${workflow.commandLine}</pre>
@@ -49,9 +48,19 @@
         
         <tr>
         <td>Total CPU-Hours</td>
-        <td>${workflow.stats.getComputeTimeString() ?: '-'}</td>
+        <td>${workflow.stats.computeTimeFmt ?: '-'}</td>
         </tr>
         
+        <tr>
+            <td>Tasks stats</td>
+            <td>
+                Succeeded: ${workflow.stats.succeedCountFmt}&nbsp;&nbsp;
+                Cached: ${workflow.stats.cachedCountFmt}&nbsp;&nbsp;
+                Ignored: ${workflow.stats.ignoredCountFmt}&nbsp;&nbsp;
+                Failed: ${workflow.stats.failedCountFmt}
+            </td>
+        </tr>
+
         <tr>
         <td>Launch directory</td>
         <td>${workflow.launchDir}</td>
