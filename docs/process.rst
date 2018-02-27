@@ -521,13 +521,16 @@ replaced depending on the cardinality of the received input collection.
 ============ ============== ==================================================
 Cardinality   Name pattern     Staged file names
 ============ ============== ==================================================
- any         ``*``           (named as source)
+ any         ``*``           named as the source file
  1           ``file*.ext``   ``file.ext``
  1           ``file?.ext``   ``file1.ext``
  1           ``file??.ext``  ``file01.ext``
  many        ``file*.ext``   ``file1.ext``, ``file2.ext``, ``file3.ext``, ..
  many        ``file?.ext``   ``file1.ext``, ``file2.ext``, ``file3.ext``, ..
  many        ``file??.ext``  ``file01.ext``, ``file02.ext``, ``file03.ext``, ..
+ many        ``dir/*``       named as the source file, created in ``dir`` subdirectory
+ many        ``dir??/*``     named as the source file, created in a progressively indexed subdirectory e.g. ``dir01/``, ``dir02/`, etc.
+ many        ``dir*/*``      (as above)
 ============ ============== ==================================================
 
 The following fragment shows how a wildcard can be used in the input file declaration::
