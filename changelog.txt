@@ -1,6 +1,28 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.28.0-RC1 - 27 Feb 2018
+- Added support for directory wildcards in input file declarations #568
+- Added ability to access task existStatus value as an output value #577
+- Added ability to use property syntax in the declaration of output values #578
+- Added NXF_JAVA_HOME variable to specify nextflow nextflow JVM #607
+- Added support for docker mount flags #572
+- Added ability to select multiple configuration profiles #370
+- Added ability to copy symlinks to publishDir directive #592
+- Added missing native_id TraceRecord field to K8s and AWS Batch task handlers
+- Enhanced support for Kubernetes #468
+- Fixed Launcher breaks when JAVA_HOME path contains a blank char #616
+- Fixed Operator toList hangs when applied to a value channel #612
+- Workflow report should warn if some task executions were ignored #534 
+- Enable support for large execution reports #547
+- Replaced the use of named pipes with anonymous pipes #606
+- Enhance the config command show dynamic attributes #604
+- Fixed bin path is not recognised when contains a blank char #603 
+- Fixed A NPE exception is thrown when a env variable is assigned to an null value #593
+- Fixed summary stats when for empty series #547
+- Removed support for Extrae #588 
+- Removed support for DRMAA #587
+
 0.27.6 - 19 Feb 2018
 - Fixed Operator toList hangs when applied to a value channel #612
 - Allow launcher to track installation verb
