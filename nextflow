@@ -282,9 +282,12 @@ if [[ $NXF_PACK = all ]]; then
     [ $? -gt 0 -a -f "$0" ] && NXF_BIN="./$0"
 fi
 
+# use nextflow custom java home path 
+if [[ "$NXF_JAVA_HOME" ]]; then
+  JAVA_HOME="$NXF_JAVA_HOME"
+  unset JAVA_CMD
+fi
 # Determine the Java command to use to start the JVM.
-JAVA_CMD="${NXF_JAVA_CMD:-$JAVA_CMD}"
-JAVA_HOME="${NXF_JAVA_HOME:-$JAVA_HOME}"
 if [ ! -x "$JAVA_CMD" ] ; then
     if [ -d "$JAVA_HOME" ] ; then
         if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
@@ -328,7 +331,11 @@ else
   fi
   if [[ ! $JAVA_VER =~ $version_check ]]; then
       echo_red "ERROR: Cannot find Java or it's a wrong version -- please make sure that $version_message is installed"
+      if [[ "$NXF_JAVA_HOME" ]]; then
+      echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n NXF_JAVA_HOME: $NXF_JAVA_HOME\n"
+      else
       echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n JAVA_HOME: $JAVA_HOME\n"
+      fi
       exit 1
   fi
   mkdir -p $(dirname "$JAVA_KEY")
