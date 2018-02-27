@@ -24,6 +24,7 @@ NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
 NXF_BASE=${NXF_BASE:-$NXF_PROT://www.nextflow.io/releases}
+NXF_TEMP=${NXF_TEMP:-$TMPDIR}
 NXF_CLI="$0 $@"
 
 export NXF_CLI
