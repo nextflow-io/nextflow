@@ -64,7 +64,7 @@ class WorkflowNotifierTest extends Specification {
                 container: 'image/foo:tag',
                 containerEngine: 'docker',
                 nextflow: [version: '0.27.0', build: 333, timestamp: '2017-12-12'],
-                stats: new WorkflowStats(succeedMillis: 4_000_000)
+                stats: new WorkflowStats(succeedMillis: 4_000_000, succeedCount: 10, failedCount: 20, cachedCount: 30, ignoredCount: 0)
         )
 
         def notifier = new WorkflowNotifier(variables: [workflow:meta], config: [:])
@@ -90,6 +90,7 @@ class WorkflowNotifierTest extends Specification {
                   Launch time       : ${now.format('dd-MMM-yyyy HH:mm:ss')}
                   Ending time       : ${end.format('dd-MMM-yyyy HH:mm:ss')} (duration: 2m 30s)
                   Total CPU-Hours   : 1.1
+                  Tasks stats       : Succeeded 10; Cached 30; Ignored 0; Failed 20
                   Launch directory  : /launch/dir
                   Work directory    : ${work.toUriString()}
                   Project directory : /project/dir
@@ -138,6 +139,7 @@ class WorkflowNotifierTest extends Specification {
                   Launch time       : ${now.format('dd-MMM-yyyy HH:mm:ss')}
                   Ending time       : ${end.format('dd-MMM-yyyy HH:mm:ss')} (duration: 2m 30s)
                   Total CPU-Hours   : 1.1
+                  Tasks stats       : Succeeded 10; Cached 30; Ignored 0; Failed 20
                   Launch directory  : /launch/dir
                   Work directory    : ${work.toUriString()}
                   Project directory : /project/dir

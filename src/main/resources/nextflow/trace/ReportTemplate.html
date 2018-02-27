@@ -115,11 +115,11 @@
       <h1 class="display-3">Nextflow workflow report</h1>
       <h2 class="text-muted mb-4"><samp>[${workflow.runName}]</samp> ${workflow.resume ? '<em>(resumed run)</em>' : ''}</h2>
 
-      <% if (workflow.success && workflow.stats.ignoredCount ){ %>
+      <% if ( workflow.success && workflow.stats.ignoredCount ){ %>
           <div class="alert alert-warning mb-4">
               Workflow execution completed successfully. One or more tasks reported an error condition.
           </div>
-      <% } else if (workflow.success ) { %>
+      <% } else if ( workflow.success ) { %>
           <div class="alert alert-success mb-4">
               Workflow execution completed successfully!
           </div>
@@ -144,6 +144,21 @@
       </dl>
 
       <dl class="row small">
+        <dt class="col-sm-3">CPU-Hours</dt>
+        <dd class="col-sm-9"><samp>${workflow.stats.computeTimeFmt}</samp></dd>
+
+        <dt class="col-sm-3">Tasks stats</dt>
+        <dd class="col-sm-9">
+          Succeeded: ${workflow.stats.succeedCountFmt}&nbsp;&nbsp;
+          Cached: ${workflow.stats.cachedCountFmt}&nbsp;&nbsp;
+          Ignored: ${workflow.stats.ignoredCountFmt}&nbsp;&nbsp;
+          <% if (workflow.stats.failedCount) { %>
+          Failed: <span class="badge badge-danger">${workflow.stats.failedCountFmt}</span>
+          <% } else { %>
+          Failed: ${workflow.stats.failedCountFmt}
+          <% } %>
+        </dd>
+
         <dt class="col-sm-3">Launch directory</dt>
         <dd class="col-sm-9"><samp>${workflow.launchDir}</samp></dd>
 
@@ -184,18 +199,6 @@
 
         <dt class="col-sm-3">Session ID</dt>
         <dd class="col-sm-9"><code>${workflow.sessionId}</code></dd>
-
-        <dt class="col-sm-3">Tasks stats</dt>
-        <dd class="col-sm-9">
-          <samp>succeed: ${workflow.stats.succeedCount}; </samp>
-          <samp>cached: ${workflow.stats.cachedCount}; </samp>
-          <samp>failed: ${workflow.stats.failedCount}; </samp>
-          <samp>ignored: ${workflow.stats.ignoredCount} </samp>
-        </dd>
-
-        <dt class="col-sm-3">CPU-Hours</dt>
-        <dd class="col-sm-9"><samp>${workflow.stats.getComputeTimeString()}</samp></dd>
-
       </dl>
     </div>
   </div>
