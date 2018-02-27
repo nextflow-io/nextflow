@@ -73,6 +73,17 @@ class MemoryUnitTest extends Specification {
         new MemoryUnit('2 PB').toBytes() == 2 * 1024 * 1024 * 1024L* 1024L* 1024L
         new MemoryUnit('3.5 PB').toBytes() == 3.5 * 1024 * 1024 * 1024L* 1024L* 1024L
         new MemoryUnit('35 P').toBytes() == 35 * 1024 * 1024 * 1024L* 1024L* 1024L
+
+    }
+
+    def 'test getters' () {
+        
+        expect:
+        new MemoryUnit('3.5 PB').bytes == 3.5 * 1024 * 1024 * 1024L* 1024L* 1024L
+        new MemoryUnit('3.5 PB').kilo == 3.5 * 1024 * 1024 * 1024L* 1024L
+        new MemoryUnit('3.5 PB').mega == 3.5 * 1024 * 1024 * 1024L
+        new MemoryUnit('3.5 PB').giga == 3.5 * 1024 * 1024
+
     }
 
     def 'test equals and compare' () {
