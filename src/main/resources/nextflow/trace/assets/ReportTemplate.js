@@ -8,6 +8,10 @@ $(function() {
     $(this).toggleClass('short');
   });
 
+  $(function() {
+    $('[data-toggle="tooltip"]').tooltip()
+  })
+
   // Completed date from now
   var completed_date = moment( $('#workflow_complete').text(), "ddd MMM DD HH:mm:ss .* YYYY" );
   if(completed_date.isValid()){

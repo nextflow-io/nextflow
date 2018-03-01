@@ -142,7 +142,12 @@ class ReportObserver implements TraceObserver {
     @Override
     void onFlowComplete() {
         log.debug "Flow completing -- rendering html report"
-        renderHtml()
+        try {
+            renderHtml()
+        }
+        catch (Exception e) {
+            log.warn "Failed to render execution report -- see the log file for details", e
+        }
     }
 
     /**
