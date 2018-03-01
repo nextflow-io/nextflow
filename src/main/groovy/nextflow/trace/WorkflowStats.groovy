@@ -88,19 +88,23 @@ class WorkflowStats {
 
 
     float getSucceedPct() {
-        Math.round(succeedCount / (succeedCount + cachedCount + ignoredCount + failedCount) * 10000.0 as double) / 100.0
+        int tot = succeedCount + cachedCount + ignoredCount + failedCount
+        tot ? Math.round(succeedCount / tot * 10000.0 as float) / 100.0 as float : 0
     }
 
     float getCachedPct() {
-        Math.round(cachedCount / (succeedCount + cachedCount + ignoredCount + failedCount) * 10000.0 as double) / 100.0
+        def tot = succeedCount + cachedCount + ignoredCount + failedCount
+        tot ? Math.round(cachedCount / tot * 10000.0 as float) / 100.0 as float : 0
     }
 
     float getIgnoredPct() {
-        Math.round(ignoredCount / (succeedCount + cachedCount + ignoredCount + failedCount) * 10000.0 as double) / 100.0
+        def tot = succeedCount + cachedCount + ignoredCount + failedCount
+        tot ? Math.round(ignoredCount / tot * 10000.0 as float) / 100.0 as float : 0
     }
 
     float getFailedPct() {
-        Math.round(failedCount / (succeedCount + cachedCount + ignoredCount + failedCount) * 10000.0 as double) / 100.0
+        def tot = succeedCount + cachedCount + ignoredCount + failedCount
+        tot ? Math.round(failedCount / tot * 10000.0 as float) / 100.0 as float : 0
     }
 
     /**
