@@ -139,6 +139,15 @@
           (<span id="completed_fromnow"></span>duration: <strong>${workflow.duration}</strong>)
         </dd>
 
+        <dl>
+          <div class="progress" style="height: 1.6rem; margin: 1.2rem auto; border-radius: 0.20rem;">
+            <div style="width: ${workflow.stats.succeedPct}%" class="progress-bar bg-success text-truncate" data-toggle="tooltip" data-placement="top" title="$workflow.stats.succeedCount tasks succeeded">$workflow.stats.succeedCount succeeded</div>
+            <div style="width: ${workflow.stats.cachedPct}%" class="progress-bar bg-secondary text-truncate" data-toggle="tooltip" data-placement="top" title="$workflow.stats.cachedCount tasks were cached">$workflow.stats.cachedCount cached</div>
+            <div style="width: ${workflow.stats.ignoredPct}%" class="progress-bar bg-warning text-truncate" data-toggle="tooltip" data-placement="top" title="$workflow.stats.ignoredCount tasks reported and error and were ignored">$workflow.stats.ignoredCount ignored</div>
+            <div style="width: ${workflow.stats.failedPct}%" class="progress-bar bg-danger text-truncate" data-toggle="tooltip" data-placement="top" title="$workflow.stats.failedCount tasks failed">$workflow.stats.failedCount failed</div>
+          </div>
+        </dl>
+
         <dt>Nextflow command</dt>
         <dd><pre class="nfcommand"><code>${workflow.commandLine}</code></pre></dd>
       </dl>
@@ -146,18 +155,6 @@
       <dl class="row small">
         <dt class="col-sm-3">CPU-Hours</dt>
         <dd class="col-sm-9"><samp>${workflow.stats.computeTimeFmt}</samp></dd>
-
-        <dt class="col-sm-3">Tasks stats</dt>
-        <dd class="col-sm-9">
-          Succeeded: ${workflow.stats.succeedCountFmt}&nbsp;&nbsp;
-          Cached: ${workflow.stats.cachedCountFmt}&nbsp;&nbsp;
-          Ignored: ${workflow.stats.ignoredCountFmt}&nbsp;&nbsp;
-          <% if (workflow.stats.failedCount) { %>
-          Failed: <span class="badge badge-danger">${workflow.stats.failedCountFmt}</span>
-          <% } else { %>
-          Failed: ${workflow.stats.failedCountFmt}
-          <% } %>
-        </dd>
 
         <dt class="col-sm-3">Launch directory</dt>
         <dd class="col-sm-9"><samp>${workflow.launchDir}</samp></dd>
@@ -178,6 +175,9 @@
           <dd class="col-sm-9"><code>${workflow.scriptId}</code></dd>
         <% } %>
 
+        <dt class="col-sm-3">Workflow session</dt>
+        <dd class="col-sm-9"><code>${workflow.sessionId}</code></dd>
+
         <% if (workflow.repository) { %>
           <dt class="col-sm-3">Workflow repository</dt>
           <dd class="col-sm-9"><code>${workflow.repository}</code>, revision <code>${workflow.revision}</code> (commit hash <code>${workflow.commitId}</code>)</dd>
@@ -196,9 +196,6 @@
 
         <dt class="col-sm-3">Nextflow version</dt>
         <dd class="col-sm-9">version ${workflow.nextflow.version}, build ${workflow.nextflow.build} (${workflow.nextflow.timestamp})</dd>
-
-        <dt class="col-sm-3">Session ID</dt>
-        <dd class="col-sm-9"><code>${workflow.sessionId}</code></dd>
       </dl>
     </div>
   </div>

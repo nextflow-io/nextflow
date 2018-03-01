@@ -86,6 +86,23 @@ class WorkflowStats {
         INTEGER_FMT.format(ignoredCount)
     }
 
+
+    float getSucceedPct() {
+        Math.round(succeedCount / (succeedCount + cachedCount + ignoredCount + failedCount) * 10000.0 as double) / 100.0
+    }
+
+    float getCachedPct() {
+        Math.round(cachedCount / (succeedCount + cachedCount + ignoredCount + failedCount) * 10000.0 as double) / 100.0
+    }
+
+    float getIgnoredPct() {
+        Math.round(ignoredCount / (succeedCount + cachedCount + ignoredCount + failedCount) * 10000.0 as double) / 100.0
+    }
+
+    float getFailedPct() {
+        Math.round(failedCount / (succeedCount + cachedCount + ignoredCount + failedCount) * 10000.0 as double) / 100.0
+    }
+
     /**
      * @return Overall workflow compute time (CPUs-seconds) for task executed successfully
      */

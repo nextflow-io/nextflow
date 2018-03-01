@@ -229,4 +229,17 @@ class WorkflowStatsTest extends Specification {
         stats.failedCountFmt == "33'776'644"
     }
 
+
+    def 'should return task percents' () {
+        given:
+        def stats = new WorkflowStats(succeedCount: 20, cachedCount: 40, ignoredCount: 60, failedCount: 80)
+
+        expect: 
+        stats.getSucceedPct() == 10.0f
+        stats.getCachedPct() == 20.0f
+        stats.getIgnoredPct() == 30.0f
+        stats.getFailedPct() == 40.0f
+
+    }
+
 }
