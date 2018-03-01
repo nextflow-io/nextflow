@@ -554,6 +554,9 @@ class TaskRun implements Cloneable {
         if( isContainerExecutable() ) {
             imageName = ContainerScriptTokens.parse(script.toString()).image
         }
+        else if( !config.container ) {
+            return null
+        }
         else {
             imageName = config.container as String
         }

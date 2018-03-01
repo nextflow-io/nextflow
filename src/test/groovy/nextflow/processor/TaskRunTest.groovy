@@ -362,6 +362,30 @@ class TaskRunTest extends Specification {
         'shifter'   | 'docker:busybox:latest'   | [enabled: true, x:'delta', y: 'gamma']
     }
 
+    def 'should return container image name' () {
+
+        given:
+        def task = Spy(TaskRun)
+        task.processor = Mock(TaskProcessor)
+
+        when:
+        task.script = 'bwa-mem --this'
+        task.config = new TaskConfig([container: CONTAINER])
+        def image = task.getContainer()
+        then:
+        task.isContainerExecutable() >> EXECUTABLE
+        task.getContainerConfig() >> [docker:[enabled: true]]
+        image == EXPECTED
+
+        where:
+        EXECUTABLE  | CONTAINER         | EXPECTED
+        false       | null              | null
+        false       | false             | null
+        false       | 'debian:latest'   | 'debian:latest'
+        true        | 'xxx'             | 'bwa-mem'
+
+    }
+
     def 'should return the container name defined in the script block' () {
 
         given:
