@@ -19,9 +19,11 @@
  */
 
 package nextflow.daemon
-import static nextflow.Const.ROLE_WORKER
+
+import static nextflow.Const.*
 
 import groovy.util.logging.Slf4j
+import nextflow.cli.CmdInfo
 import nextflow.file.FileHelper
 import nextflow.file.igfs.IgFileSystemProvider
 import nextflow.file.igfs.IgPath
@@ -31,7 +33,6 @@ import nextflow.util.PathSerializer
 import nextflow.util.ServiceName
 import sun.misc.Signal
 import sun.misc.SignalHandler
-
 /**
  * Launch the Ignite daemon
  *
@@ -45,7 +46,9 @@ class IgDaemon implements DaemonLauncher {
     @Override
     void launch(Map config) {
         log.info "Configuring Apache Ignite cluster daemon"
-
+        def info = CmdInfo.status( log.isTraceEnabled() )
+        log.debug( '\n'+info )
+        
         /*
          * register path serializer
          */
