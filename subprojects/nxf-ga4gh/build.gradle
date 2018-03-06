@@ -44,4 +44,13 @@ dependencies {
 }
 
 
-mainClassName = 'nextflow.ga4gh.tes.server.MainApiVerticle'
+
+mainClassName = 'io.vertx.core.Launcher'
+
+run {
+    args = ['run',
+            'nextflow.ga4gh.tes.server.MainApiVerticle',
+            "--launcher-class=io.vertx.core.Launcher",
+            "--redeploy=**/*.class"
+            ]
+}
