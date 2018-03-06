@@ -1,22 +1,20 @@
 package nextflow.executor
 
-import nextflow.cloud.LaunchConfig
-import nextflow.ga4gh.tes.client.ApiClient
-import nextflow.ga4gh.tes.client.model.TesResources
-import nextflow.processor.TaskConfig
-
 import static nextflow.processor.TaskStatus.*
 
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.ga4gh.tes.client.ApiClient
 import nextflow.ga4gh.tes.client.api.TaskServiceApi
-import nextflow.ga4gh.tes.client.model.TesState
 import nextflow.ga4gh.tes.client.model.TesExecutor as TesExecutorModel
-import nextflow.ga4gh.tes.client.model.TesTask
 import nextflow.ga4gh.tes.client.model.TesInput
 import nextflow.ga4gh.tes.client.model.TesOutput
+import nextflow.ga4gh.tes.client.model.TesResources
+import nextflow.ga4gh.tes.client.model.TesState
+import nextflow.ga4gh.tes.client.model.TesTask
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -59,7 +57,7 @@ class TesTaskHandler extends TaskHandler {
         super(task)
         this.executor = executor
         this.api = new TaskServiceApi(
-                new ApiClient(basePath: "http://localhost:8000")
+                new ApiClient(basePath: "http://localhost:8080")
         )
 
         this.logFile = task.workDir.resolve(TaskRun.CMD_LOG)

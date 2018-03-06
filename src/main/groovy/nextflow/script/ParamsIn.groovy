@@ -249,7 +249,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
     /**
      * @return The parameter name
      */
-    def String getName() {
+    String getName() {
         if( bindObject instanceof TokenVar )
             return bindObject.name
 

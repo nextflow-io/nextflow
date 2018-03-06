@@ -514,7 +514,7 @@ class Session implements ISession {
         }
     }
 
-    def List<Path> getLibDir() {
+    List<Path> getLibDir() {
         if( libDir )
             return libDir
 

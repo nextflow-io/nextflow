@@ -238,7 +238,6 @@ class ProcessConfig implements Map<String,Object> {
     @PackageScope
     BaseScript getOwnerScript() { ownerScript }
 
-    @PackageScope
     TaskConfig createTaskConfig() {
         new TaskConfig(configProperties)
     }

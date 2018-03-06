@@ -3,20 +3,11 @@ package nextflow.ga4gh.tes.server.verticle;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-
 import nextflow.ga4gh.tes.server.MainApiException;
-import nextflow.ga4gh.tes.server.model.TesCancelTaskResponse;
-import nextflow.ga4gh.tes.server.model.TesCreateTaskResponse;
-import nextflow.ga4gh.tes.server.model.TesListTasksResponse;
-import nextflow.ga4gh.tes.server.model.TesServiceInfo;
 import nextflow.ga4gh.tes.server.model.TesTask;
-
-import java.util.List;
-import java.util.Map;
 
 public class TaskServiceApiVerticle extends AbstractVerticle {
     final static Logger LOGGER = LoggerFactory.getLogger(TaskServiceApiVerticle.class); 
@@ -27,7 +18,6 @@ public class TaskServiceApiVerticle extends AbstractVerticle {
     final static String GETTASK_SERVICE_ID = "GetTask";
     final static String LISTTASKS_SERVICE_ID = "ListTasks";
     
-    //TODO : create Implementation
     TaskServiceApi service = new TaskServiceApiImpl();
 
     @Override

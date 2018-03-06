@@ -2081,8 +2081,7 @@ class TaskProcessor {
      *
      * @param task The {@code TaskRun} instance to finalize
      */
-    @PackageScope
-    final finalizeTask( TaskRun task ) {
+    protected finalizeTask( TaskRun task ) {
         log.trace "finalizing process > ${task.name} -- $task"
 
         def fault = null
