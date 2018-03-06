@@ -34,7 +34,7 @@ apply plugin: 'io.codearte.nexus-staging'   // See https://github.com/Codearte/g
 
 // Add ability to test with upcoming versions of Groovy
 def groovyVer = System.getenv('CI_GROOVY_VERSION')
-if (groovyVer?.endsWith('-SNAPSHOT')) {
+if (groovyVer) {
     logger.lifecycle "Overriden Groovy dependency to use $groovyVer"
     allprojects {
         repositories {
