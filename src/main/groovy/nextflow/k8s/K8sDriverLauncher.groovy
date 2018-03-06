@@ -163,7 +163,7 @@ class K8sDriverLauncher {
             }
             catch (K8sResponseException e) {
                 if( e.response.code == 404 ) {
-                    throw new AbortOperationException("Unknown volume claim: $name -- make sure a persistent volume claim is defined in your K8s cluster")
+                    throw new AbortOperationException("Unknown volume claim: $name -- make sure a persistent volume claim with the specified name is defined in your K8s cluster")
                 }
                 else throw e
             }
@@ -282,6 +282,9 @@ class K8sDriverLauncher {
 
         if( config.k8s?.namespace ) {
             k8sConfig.namespace = config.k8s.namespace
+        }
+        if( cmd.namespace ) {
+            k8sConfig.namespace = cmd.namespace
         }
 
         if( config.k8s?.serviceAccount ) {
@@ -545,7 +548,7 @@ class K8sDriverLauncher {
     }
 
     protected void launchLogin() {
-        def cmd = "kubectl exec -it $runName -- /bin/bash --login"
+        def cmd = "kubectl -n ${client.config.namespace} exec -it $runName -- /bin/bash --login"
         def proc = new ProcessBuilder().command('bash','-c',cmd).inheritIO().start()
         proc.waitFor()
         client.podDelete(runName)

@@ -44,6 +44,9 @@ class CmdKubeRun extends CmdRun {
     @Parameter(names = ['-v','-volume-mount'], description = 'Volume claim mounts eg. my-pvc:/mnt/path')
     List<String> volMounts
 
+    @Parameter(names = ['-n','-namespace'], description = 'Specify the K8s namespace to use')
+    String namespace
+
     @Override
     String getName() { 'kuberun' }
 
