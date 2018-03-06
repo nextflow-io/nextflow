@@ -1,0 +1,558 @@
+{
+  "swagger" : "2.0",
+  "info" : {
+    "version" : "version not set",
+    "title" : "task_execution.proto"
+  },
+  "schemes" : [ "http", "https" ],
+  "consumes" : [ "application/json" ],
+  "produces" : [ "application/json" ],
+  "paths" : {
+    "/v1/tasks" : {
+      "get" : {
+        "tags" : [ "TaskService" ],
+        "summary" : "List tasks.\nTaskView is requested as such: \"v1/tasks?view=BASIC\"",
+        "operationId" : "ListTasks",
+        "parameters" : [ {
+          "name" : "name_prefix",
+          "in" : "query",
+          "description" : "OPTIONAL. Filter the list to include tasks where the name matches this prefix.\nIf unspecified, no task name filtering is done.",
+          "required" : false,
+          "type" : "string"
+        }, {
+          "name" : "page_size",
+          "in" : "query",
+          "description" : "OPTIONAL. Number of tasks to return in one page.\nMust be less than 2048. Defaults to 256.",
+          "required" : false,
+          "type" : "integer",
+          "format" : "int64"
+        }, {
+          "name" : "page_token",
+          "in" : "query",
+          "description" : "OPTIONAL. Page token is used to retrieve the next page of results.\nIf unspecified, returns the first page of results.\nSee ListTasksResponse.next_page_token",
+          "required" : false,
+          "type" : "string"
+        }, {
+          "name" : "view",
+          "in" : "query",
+          "description" : "OPTIONAL. Affects the fields included in the returned Task messages.\nSee TaskView below.\n\n - MINIMAL: Task message will include ONLY the fields:\n  Task.Id\n  Task.State\n - BASIC: Task message will include all fields EXCEPT:\n  Task.ExecutorLog.stdout\n  Task.ExecutorLog.stderr\n  Input.content\n  TaskLog.system_logs\n - FULL: Task message includes all fields.",
+          "required" : false,
+          "type" : "string",
+          "default" : "MINIMAL",
+          "enum" : [ "MINIMAL", "BASIC", "FULL" ]
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "schema" : {
+              "$ref" : "#/definitions/tesListTasksResponse"
+            }
+          }
+        },
+        "x-contentType" : "application/json",
+        "x-accepts" : "application/json"
+      },
+      "post" : {
+        "tags" : [ "TaskService" ],
+        "summary" : "Create a new task.",
+        "operationId" : "CreateTask",
+        "parameters" : [ {
+          "in" : "body",
+          "name" : "body",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/definitions/tesTask"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "schema" : {
+              "$ref" : "#/definitions/tesCreateTaskResponse"
+            }
+          }
+        },
+        "x-contentType" : "application/json",
+        "x-accepts" : "application/json"
+      }
+    },
+    "/v1/tasks/service-info" : {
+      "get" : {
+        "tags" : [ "TaskService" ],
+        "summary" : "GetServiceInfo provides information about the service,\nsuch as storage details, resource availability, and \nother documentation.",
+        "operationId" : "GetServiceInfo",
+        "parameters" : [ ],
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "schema" : {
+              "$ref" : "#/definitions/tesServiceInfo"
+            }
+          }
+        },
+        "x-contentType" : "application/json",
+        "x-accepts" : "application/json"
+      }
+    },
+    "/v1/tasks/{id}" : {
+      "get" : {
+        "tags" : [ "TaskService" ],
+        "summary" : "Get a task.\nTaskView is requested as such: \"v1/tasks/{id}?view=FULL\"",
+        "operationId" : "GetTask",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "type" : "string"
+        }, {
+          "name" : "view",
+          "in" : "query",
+          "description" : "OPTIONAL. Affects the fields included in the returned Task messages.\nSee TaskView below.\n\n - MINIMAL: Task message will include ONLY the fields:\n  Task.Id\n  Task.State\n - BASIC: Task message will include all fields EXCEPT:\n  Task.ExecutorLog.stdout\n  Task.ExecutorLog.stderr\n  Input.content\n  TaskLog.system_logs\n - FULL: Task message includes all fields.",
+          "required" : false,
+          "type" : "string",
+          "default" : "MINIMAL",
+          "enum" : [ "MINIMAL", "BASIC", "FULL" ]
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "schema" : {
+              "$ref" : "#/definitions/tesTask"
+            }
+          }
+        },
+        "x-contentType" : "application/json",
+        "x-accepts" : "application/json"
+      }
+    },
+    "/v1/tasks/{id}:cancel" : {
+      "post" : {
+        "tags" : [ "TaskService" ],
+        "summary" : "Cancel a task.",
+        "operationId" : "CancelTask",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "type" : "string"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "schema" : {
+              "$ref" : "#/definitions/tesCancelTaskResponse"
+            }
+          }
+        },
+        "x-contentType" : "application/json",
+        "x-accepts" : "application/json"
+      }
+    }
+  },
+  "definitions" : {
+    "tesCancelTaskResponse" : {
+      "type" : "object",
+      "title" : "OUTPUT ONLY",
+      "description" : "CancelTaskResponse describes a response from the CancelTask endpoint."
+    },
+    "tesCreateTaskResponse" : {
+      "type" : "object",
+      "properties" : {
+        "id" : {
+          "type" : "string",
+          "description" : "Task identifier assigned by the server.",
+          "title" : "REQUIRED"
+        }
+      },
+      "title" : "OUTPUT ONLY",
+      "description" : "CreateTaskResponse describes a response from the CreateTask endpoint."
+    },
+    "tesExecutor" : {
+      "type" : "object",
+      "properties" : {
+        "image" : {
+          "type" : "string",
+          "description" : "Name of the container image, for example:\nubuntu\nquay.io/aptible/ubuntu\ngcr.io/my-org/my-image\netc...",
+          "title" : "REQUIRED"
+        },
+        "command" : {
+          "type" : "array",
+          "description" : "A sequence of program arguments to execute, where the first argument\nis the program to execute (i.e. argv).",
+          "title" : "REQUIRED",
+          "items" : {
+            "type" : "string"
+          }
+        },
+        "workdir" : {
+          "type" : "string",
+          "description" : "The working directory that the command will be executed in.\nDefaults to the directory set by the container image.",
+          "title" : "OPTIONAL"
+        },
+        "stdin" : {
+          "type" : "string",
+          "description" : "Path inside the container to a file which will be piped\nto the executor's stdin. Must be an absolute path.",
+          "title" : "OPTIONAL"
+        },
+        "stdout" : {
+          "type" : "string",
+          "description" : "Path inside the container to a file where the executor's\nstdout will be written to. Must be an absolute path.",
+          "title" : "OPTIONAL"
+        },
+        "stderr" : {
+          "type" : "string",
+          "description" : "Path inside the container to a file where the executor's\nstderr will be written to. Must be an absolute path.",
+          "title" : "OPTIONAL"
+        },
+        "env" : {
+          "type" : "object",
+          "description" : "Enviromental variables to set within the container.",
+          "title" : "OPTIONAL",
+          "additionalProperties" : {
+            "type" : "string"
+          }
+        }
+      },
+      "description" : "Executor describes a command to be executed, and its environment."
+    },
+    "tesExecutorLog" : {
+      "type" : "object",
+      "properties" : {
+        "start_time" : {
+          "type" : "string",
+          "description" : "Time the executor started, in RFC 3339 format.",
+          "title" : "OPTIONAL"
+        },
+        "end_time" : {
+          "type" : "string",
+          "description" : "Time the executor ended, in RFC 3339 format.",
+          "title" : "OPTIONAL"
+        },
+        "stdout" : {
+          "type" : "string",
+          "description" : "Stdout content.\n\nThis is meant for convenience. No guarantees are made about the content.\nImplementations may chose different approaches: only the head, only the tail,\na URL reference only, etc.\n\nIn order to capture the full stdout users should set Executor.stdout\nto a container file path, and use Task.outputs to upload that file\nto permanent storage.",
+          "title" : "OPTIONAL"
+        },
+        "stderr" : {
+          "type" : "string",
+          "description" : "Stderr content.\n\nThis is meant for convenience. No guarantees are made about the content.\nImplementations may chose different approaches: only the head, only the tail,\na URL reference only, etc.\n\nIn order to capture the full stderr users should set Executor.stderr\nto a container file path, and use Task.outputs to upload that file\nto permanent storage.",
+          "title" : "OPTIONAL"
+        },
+        "exit_code" : {
+          "type" : "integer",
+          "format" : "int32",
+          "description" : "Exit code.",
+          "title" : "REQUIRED"
+        }
+      },
+      "title" : "OUTPUT ONLY",
+      "description" : "ExecutorLog describes logging information related to an Executor."
+    },
+    "tesFileType" : {
+      "type" : "string",
+      "enum" : [ "FILE", "DIRECTORY" ],
+      "default" : "FILE"
+    },
+    "tesInput" : {
+      "type" : "object",
+      "properties" : {
+        "name" : {
+          "type" : "string",
+          "title" : "OPTIONAL"
+        },
+        "description" : {
+          "type" : "string",
+          "title" : "OPTIONAL"
+        },
+        "url" : {
+          "type" : "string",
+          "description" : "REQUIRED, unless \"content\" is set.\n\nURL in long term storage, for example:\ns3://my-object-store/file1\ngs://my-bucket/file2\nfile:///path/to/my/file\n/path/to/my/file\netc..."
+        },
+        "path" : {
+          "type" : "string",
+          "description" : "Path of the file inside the container.\nMust be an absolute path.",
+          "title" : "REQUIRED"
+        },
+        "type" : {
+          "description" : "Type of the file, FILE or DIRECTORY",
+          "title" : "REQUIRED",
+          "$ref" : "#/definitions/tesFileType"
+        },
+        "content" : {
+          "type" : "string",
+          "description" : "File content literal. \nImplementations should support a minimum of 128 KiB in this field and may define its own maximum.\nUTF-8 encoded\n\nIf content is not empty, \"url\" must be ignored.",
+          "title" : "OPTIONAL"
+        }
+      },
+      "description" : "Input describes Task input files."
+    },
+    "tesListTasksResponse" : {
+      "type" : "object",
+      "properties" : {
+        "tasks" : {
+          "type" : "array",
+          "description" : "List of tasks.",
+          "title" : "REQUIRED",
+          "items" : {
+            "$ref" : "#/definitions/tesTask"
+          }
+        },
+        "next_page_token" : {
+          "type" : "string",
+          "description" : "Token used to return the next page of results.\nSee TaskListRequest.next_page_token",
+          "title" : "OPTIONAL"
+        }
+      },
+      "title" : "OUTPUT ONLY",
+      "description" : "ListTasksResponse describes a response from the ListTasks endpoint."
+    },
+    "tesOutput" : {
+      "type" : "object",
+      "properties" : {
+        "name" : {
+          "type" : "string",
+          "title" : "OPTIONAL"
+        },
+        "description" : {
+          "type" : "string",
+          "title" : "OPTIONAL"
+        },
+        "url" : {
+          "type" : "string",
+          "description" : "URL in long term storage, for example:\ns3://my-object-store/file1\ngs://my-bucket/file2\nfile:///path/to/my/file\n/path/to/my/file\netc...",
+          "title" : "REQUIRED"
+        },
+        "path" : {
+          "type" : "string",
+          "description" : "Path of the file inside the container.\nMust be an absolute path.",
+          "title" : "REQUIRED"
+        },
+        "type" : {
+          "description" : "Type of the file, FILE or DIRECTORY",
+          "title" : "REQUIRED",
+          "$ref" : "#/definitions/tesFileType"
+        }
+      },
+      "description" : "Output describes Task output files."
+    },
+    "tesOutputFileLog" : {
+      "type" : "object",
+      "properties" : {
+        "url" : {
+          "type" : "string",
+          "description" : "URL of the file in storage, e.g. s3://bucket/file.txt",
+          "title" : "REQUIRED"
+        },
+        "path" : {
+          "type" : "string",
+          "description" : "Path of the file inside the container. Must be an absolute path.",
+          "title" : "REQUIRED"
+        },
+        "size_bytes" : {
+          "type" : "string",
+          "format" : "int64",
+          "description" : "Size of the file in bytes.",
+          "title" : "REQUIRED"
+        }
+      },
+      "title" : "OUTPUT ONLY",
+      "description" : "OutputFileLog describes a single output file. This describes\nfile details after the task has completed successfully,\nfor logging purposes."
+    },
+    "tesResources" : {
+      "type" : "object",
+      "properties" : {
+        "cpu_cores" : {
+          "type" : "integer",
+          "format" : "int64",
+          "description" : "Requested number of CPUs",
+          "title" : "OPTIONAL"
+        },
+        "preemptible" : {
+          "type" : "boolean",
+          "format" : "boolean",
+          "description" : "Is the task allowed to run on preemptible compute instances (e.g. AWS Spot)?",
+          "title" : "OPTIONAL"
+        },
+        "ram_gb" : {
+          "type" : "number",
+          "format" : "double",
+          "description" : "Requested RAM required in gigabytes (GB)",
+          "title" : "OPTIONAL"
+        },
+        "disk_gb" : {
+          "type" : "number",
+          "format" : "double",
+          "description" : "Requested disk size in gigabytes (GB)",
+          "title" : "OPTIONAL"
+        },
+        "zones" : {
+          "type" : "array",
+          "description" : "Request that the task be run in these compute zones.",
+          "title" : "OPTIONAL",
+          "items" : {
+            "type" : "string"
+          }
+        }
+      },
+      "description" : "Resources describes the resources requested by a task."
+    },
+    "tesServiceInfo" : {
+      "type" : "object",
+      "properties" : {
+        "name" : {
+          "type" : "string",
+          "description" : "Returns the name of the service, e.g. \"ohsu-compbio-funnel\"."
+        },
+        "doc" : {
+          "type" : "string",
+          "description" : "Returns a documentation string, e.g. \"Hey, we're OHSU Comp. Bio!\"."
+        },
+        "storage" : {
+          "type" : "array",
+          "description" : "Lists some, but not necessarily all, storage locations supported by the service.\n\nMust be in a valid URL format.\ne.g. \nfile:///path/to/local/funnel-storage\ns3://ohsu-compbio-funnel/storage\netc.",
+          "items" : {
+            "type" : "string"
+          }
+        }
+      },
+      "title" : "OUTPUT ONLY",
+      "description" : "ServiceInfo describes information about the service,\nsuch as storage details, resource availability,\nand other documentation."
+    },
+    "tesState" : {
+      "type" : "string",
+      "title" : "OUTPUT ONLY",
+      "description" : "Task states.\n\n - UNKNOWN: The state of the task is unknown.\n\nThis provides a safe default for messages where this field is missing,\nfor example, so that a missing field does not accidentally imply that\nthe state is QUEUED.\n - QUEUED: The task is queued.\n - INITIALIZING: The task has been assigned to a worker and is currently preparing to run.\nFor example, the worker may be turning on, downloading input files, etc.\n - RUNNING: The task is running. Input files are downloaded and the first Executor\nhas been started.\n - PAUSED: The task is paused.\n\nAn implementation may have the ability to pause a task, but this is not required.\n - COMPLETE: The task has completed running. Executors have exited without error\nand output files have been successfully uploaded.\n - EXECUTOR_ERROR: The task encountered an error in one of the Executor processes. Generally,\nthis means that an Executor exited with a non-zero exit code.\n - SYSTEM_ERROR: The task was stopped due to a system error, but not from an Executor,\nfor example an upload failed due to network issues, the worker's ran out\nof disk space, etc.\n - CANCELED: The task was canceled by the user.",
+      "enum" : [ "UNKNOWN", "QUEUED", "INITIALIZING", "RUNNING", "PAUSED", "COMPLETE", "EXECUTOR_ERROR", "SYSTEM_ERROR", "CANCELED" ],
+      "default" : "UNKNOWN"
+    },
+    "tesTask" : {
+      "type" : "object",
+      "properties" : {
+        "id" : {
+          "type" : "string",
+          "description" : "Task identifier assigned by the server.",
+          "title" : "OUTPUT ONLY"
+        },
+        "state" : {
+          "title" : "OUTPUT ONLY",
+          "$ref" : "#/definitions/tesState"
+        },
+        "name" : {
+          "type" : "string",
+          "title" : "OPTIONAL"
+        },
+        "description" : {
+          "type" : "string",
+          "title" : "OPTIONAL"
+        },
+        "inputs" : {
+          "type" : "array",
+          "description" : "Input files.\nInputs will be downloaded and mounted into the executor container.",
+          "title" : "OPTIONAL",
+          "items" : {
+            "$ref" : "#/definitions/tesInput"
+          }
+        },
+        "outputs" : {
+          "type" : "array",
+          "description" : "Output files.\nOutputs will be uploaded from the executor container to long-term storage.",
+          "title" : "OPTIONAL",
+          "items" : {
+            "$ref" : "#/definitions/tesOutput"
+          }
+        },
+        "resources" : {
+          "description" : "Request that the task be run with these resources.",
+          "title" : "OPTIONAL",
+          "$ref" : "#/definitions/tesResources"
+        },
+        "executors" : {
+          "type" : "array",
+          "description" : "A list of executors to be run, sequentially. Execution stops\non the first error.",
+          "title" : "REQUIRED",
+          "items" : {
+            "$ref" : "#/definitions/tesExecutor"
+          }
+        },
+        "volumes" : {
+          "type" : "array",
+          "description" : "Volumes are directories which may be used to share data between\nExecutors. Volumes are initialized as empty directories by the\nsystem when the task starts and are mounted at the same path\nin each Executor.\n\nFor example, given a volume defined at \"/vol/A\",\nexecutor 1 may write a file to \"/vol/A/exec1.out.txt\", then\nexecutor 2 may read from that file.\n\n(Essentially, this translates to a `docker run -v` flag where\nthe container path is the same for each executor).",
+          "title" : "OPTIONAL",
+          "items" : {
+            "type" : "string"
+          }
+        },
+        "tags" : {
+          "type" : "object",
+          "description" : "A key-value map of arbitrary tags.",
+          "title" : "OPTIONAL",
+          "additionalProperties" : {
+            "type" : "string"
+          }
+        },
+        "logs" : {
+          "type" : "array",
+          "description" : "Task logging information.\nNormally, this will contain only one entry, but in the case where\na task fails and is retried, an entry will be appended to this list.",
+          "title" : "OUTPUT ONLY",
+          "items" : {
+            "$ref" : "#/definitions/tesTaskLog"
+          }
+        },
+        "creation_time" : {
+          "type" : "string",
+          "description" : "Date + time the task was created, in RFC 3339 format.\nThis is set by the system, not the client.",
+          "title" : "OUTPUT ONLY, REQUIRED"
+        }
+      },
+      "description" : "Task describes an instance of a task."
+    },
+    "tesTaskLog" : {
+      "type" : "object",
+      "properties" : {
+        "logs" : {
+          "type" : "array",
+          "description" : "Logs for each executor",
+          "title" : "REQUIRED",
+          "items" : {
+            "$ref" : "#/definitions/tesExecutorLog"
+          }
+        },
+        "metadata" : {
+          "type" : "object",
+          "description" : "Arbitrary logging metadata included by the implementation.",
+          "title" : "OPTIONAL",
+          "additionalProperties" : {
+            "type" : "string"
+          }
+        },
+        "start_time" : {
+          "type" : "string",
+          "description" : "When the task started, in RFC 3339 format.",
+          "title" : "OPTIONAL"
+        },
+        "end_time" : {
+          "type" : "string",
+          "description" : "When the task ended, in RFC 3339 format.",
+          "title" : "OPTIONAL"
+        },
+        "outputs" : {
+          "type" : "array",
+          "description" : "Information about all output files. Directory outputs are\nflattened into separate items.",
+          "title" : "REQUIRED",
+          "items" : {
+            "$ref" : "#/definitions/tesOutputFileLog"
+          }
+        },
+        "system_logs" : {
+          "type" : "array",
+          "description" : "System logs are any logs the system decides are relevant,\nwhich are not tied directly to an Executor process.\nContent is implementation specific: format, size, etc.\n\nSystem logs may be collected here to provide convenient access.\n\nFor example, the system may include the name of the host\nwhere the task is executing, an error message that caused\na SYSTEM_ERROR state (e.g. disk is full), etc.\n\nSystem logs are only included in the FULL task view.",
+          "title" : "OPTIONAL",
+          "items" : {
+            "type" : "string"
+          }
+        }
+      },
+      "title" : "OUTPUT ONLY",
+      "description" : "TaskLog describes logging information related to a Task."
+    }
+  }
+}

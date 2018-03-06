@@ -18,6 +18,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 apply plugin: 'groovy'
+apply plugin: 'application'
 
 sourceSets {
     main.java.srcDirs = []
@@ -35,4 +36,12 @@ dependencies {
     compile 'com.squareup.okhttp:logging-interceptor:2.7.5'
     compile 'com.google.code.gson:gson:2.8.1'
     compile 'joda-time:joda-time:2.9.9'
+
+    // test API server
+    compile 'com.github.phiz71:vertx-swagger-router:1.6.0'
+    compile 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.7.4'
+    compile 'io.vertx:vertx-core:3.5.1'
 }
+
+
+mainClassName = 'nextflow.ga4gh.tes.server.MainApiVerticle'
