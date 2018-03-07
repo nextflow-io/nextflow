@@ -1620,7 +1620,7 @@ class TaskProcessor {
     List<Path> filterByRemovingStagedInputs( TaskRun task, List<Path> files ) {
 
         // get the list of input files
-        def List<String> allStaged = task.getStagedInputs()
+        List<String> allStaged = task.getStagedInputs()
         files.findAll { !allStaged.contains(it.getName()) }
 
     }

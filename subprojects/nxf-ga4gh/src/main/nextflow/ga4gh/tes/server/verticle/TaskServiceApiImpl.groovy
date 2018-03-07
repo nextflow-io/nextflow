@@ -1,7 +1,6 @@
 package nextflow.ga4gh.tes.server.verticle
 
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
@@ -15,7 +14,6 @@ import nextflow.Session
 import nextflow.executor.Executor
 import nextflow.executor.LocalExecutor
 import nextflow.file.FileHelper
-import nextflow.file.FileHolder
 import nextflow.ga4gh.tes.server.model.TesCancelTaskResponse
 import nextflow.ga4gh.tes.server.model.TesCreateTaskResponse
 import nextflow.ga4gh.tes.server.model.TesExecutor
@@ -29,7 +27,6 @@ import nextflow.ga4gh.tes.server.model.TesTask
 import nextflow.ga4gh.tes.server.model.TesTaskLog
 import nextflow.processor.TaskContext
 import nextflow.processor.TaskId
-import nextflow.processor.TaskRun
 import nextflow.script.ScriptType
 import nextflow.util.CacheHelper
 /**
@@ -143,13 +140,25 @@ class TaskServiceApiImpl implements TaskServiceApi {
 
     }
 
-    protected HashCode getTaskHash(TaskRun task) {
-        List keys = [ session.uniqueId, task.name, task.source, task.container ] as List<Object>
+    protected HashCode getTaskHash(TesTask task) {
+        List keys = [ session.uniqueId, task.name ] as List<Object>
+
+        for( TesExecutor exec : task.executors ) {
+            for( String cmd : exec.command ) {
+                keys.add( cmd )
+            }
+            keys.add(exec.image)
+            keys.add(exec.workdir)
+            keys.add(exec.stdin)
+            keys.add(exec.stdout)
+            keys.add(exec.stderr)
+        }
 
         // add all the input name-value pairs to the key generator
-        task.inputs.each {
-            keys.add( it.key.name )
-            keys.add( it.value )
+        for( TesInput input : task.inputs ) {
+            keys.add(input.path)
+            keys.add(input.url)
+            keys.add(input.content)
         }
 
         CacheHelper.hasher(keys).hash()
@@ -162,7 +171,7 @@ class TaskServiceApiImpl implements TaskServiceApi {
 
         def proc = new TesTaskProcessorAdaptor(session,executor)
         def config = proc.config.createTaskConfig()
-        def task = new TaskRun(
+        def task = new TesTaskRunAdaptor(
                 id: TaskId.next(),
                 index: indexCount.incrementAndGet(),
                 processor: proc,
@@ -171,12 +180,6 @@ class TaskServiceApiImpl implements TaskServiceApi {
                 context: new TaskContext(proc)
         )
 
-        int count=0
-        for( TesInput input : req.inputs ) {
-            final url = FileHelper.asPath( input.getUrl() )
-            final path = Paths.get( input.getPath() )
-            task.setInput( new TesFileInputParamAdaptor("in-file-${++count}"), new FileHolder(url).withName(path) )
-        }
 
         TesExecutor exec = req.executors.get(0)
         if( !exec.image )
@@ -184,12 +187,13 @@ class TaskServiceApiImpl implements TaskServiceApi {
         if( !exec.command?.size() )
             throw new TaskServiceApiException(400, "Malformed TES request -- Missing task command")
 
-        config.container = exec.image
+        task.image = exec.image
+        task.hash = getTaskHash(req)
         task.name = req.name ?: "tes-task-${indexCount.get()}"
         task.script = exec.command.get(0)
         task.source = exec.command.get(0)
-        task.hash = getTaskHash(task)
         task.workDir = createPath(task.hash)
+        task.addInputFiles(req.inputs)
 
         // -- submit the task execution
         session.dispatcher.submit( task, false )
