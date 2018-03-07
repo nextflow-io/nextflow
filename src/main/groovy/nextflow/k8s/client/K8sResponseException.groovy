@@ -55,7 +55,13 @@ class K8sResponseException extends Exception {
     }
 
     String getMessage() {
-        response ? "${super.message}\n${response.toString().indent()}" : super.getMessage()
+        def result = super.getMessage()
+
+        if( response == null )
+            return result
+
+        final prefix = response.isRawText() ? '> ' : ' '
+        "$result\n${response.toString().indent(prefix)}"
     }
 
 }
