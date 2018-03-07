@@ -48,6 +48,8 @@ class K8sResponseJson implements Map {
         this.rawText = response
     }
 
+    boolean isRawText() { !response }
+
     static private Map toJson(String raw) {
         try {
             return (Map)new JsonSlurper().parseText(raw)
@@ -68,7 +70,7 @@ class K8sResponseJson implements Map {
     }
 
     String toString() {
-        rawText ? prettyPrint(rawText) : response?.toString()
+        response ? prettyPrint(JsonOutput.toJson(response)) : rawText
     }
 
 }
