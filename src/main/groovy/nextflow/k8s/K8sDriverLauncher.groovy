@@ -283,7 +283,7 @@ class K8sDriverLauncher {
         if( config.k8s?.namespace ) {
             k8sConfig.namespace = config.k8s.namespace
         }
-        if( cmd.namespace ) {
+        if( cmd?.namespace ) {
             k8sConfig.namespace = cmd.namespace
         }
 

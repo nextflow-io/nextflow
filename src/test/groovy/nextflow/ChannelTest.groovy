@@ -23,16 +23,19 @@ package nextflow
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.TimeUnit
 
 import groovyx.gpars.dataflow.DataflowQueue
 import org.junit.Rule
 import spock.lang.Specification
+import spock.lang.Timeout
 import test.TemporaryPath
 import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(value = 1, unit = TimeUnit.MINUTES)
 class ChannelTest extends Specification {
 
     def setupSpec() {
