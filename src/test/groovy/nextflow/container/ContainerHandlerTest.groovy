@@ -179,18 +179,19 @@ class ContainerHandlerTest extends Specification {
 
     def 'test normalize method for singularity' () {
         given:
-        def n = Spy(ContainerHandler,constructorArgs:[[engine: 'singularity', enabled: true]])
+        def handler = Spy(ContainerHandler,constructorArgs:[[engine: 'singularity', enabled: true]])
 
         when:
-        def result = n.normalizeImageName(image)
+        handler.baseDir = Paths.get('/abs/path/')
+        def result = handler.normalizeImageName(image)
 
         then:
-        1 * n.normalizeSingularityImageName(image) >> normalized
-        intExpected * n.createCache(n.config, normalized) >> expected
+        1 * handler.normalizeSingularityImageName(image) >> normalized
+        X * handler.createCache(handler.config, normalized) >> expected
         result == expected
 
         where:
-        image                      | normalized                                       | intExpected | expected
+        image                      | normalized                                       | X           | expected
         null                       | null                                             |           0 | null
         ''                         | null                                             |           0 | null
         '/abs/path/bar.img'        | '/abs/path/bar.img'                              |           0 | '/abs/path/bar.img'
@@ -199,5 +200,27 @@ class ContainerHandlerTest extends Specification {
         'shub://busybox'           | 'shub://busybox'                                 |           1 | '/path/to/busybox'
         'docker://library/busybox' | 'docker://library/busybox'                       |           1 | '/path/to/busybox'
         'foo'                      | 'docker://foo'                                   |           1 | '/path/to/foo'
+    }
+
+    def 'should not invoke caching when engine is disabled' () {
+        given:
+        final handler = Spy(ContainerHandler,constructorArgs:[[engine: 'singularity']])
+        final IMAGE = 'docker://foo.img'
+
+        when:
+        handler.config.enabled = false
+        def result = handler.normalizeImageName(IMAGE)
+        then:
+        1 * handler.normalizeSingularityImageName(IMAGE) >> IMAGE
+        0 * handler.createCache(_,_) >> null
+        result == IMAGE
+
+        when:
+        handler.config.enabled = true
+        result = handler.normalizeImageName(IMAGE)
+        then:
+        1 * handler.normalizeSingularityImageName(IMAGE) >> IMAGE
+        1 * handler.createCache(_,IMAGE) >> '/some/path/foo.img'
+        result == '/some/path/foo.img'
     }
 }

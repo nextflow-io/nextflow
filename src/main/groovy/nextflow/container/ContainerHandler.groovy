@@ -34,9 +34,9 @@ class ContainerHandler {
 
     final private static Path CWD = Paths.get('.').toAbsolutePath()
 
-    private ContainerConfig config
+    @PackageScope ContainerConfig config
 
-    private Path baseDir
+    @PackageScope Path baseDir
 
     ContainerHandler(Map containerConfig) {
         this(containerConfig, CWD)
@@ -56,11 +56,11 @@ class ContainerHandler {
             normalizeUdockerImageName(imageName)
         }
         else if( engine == 'singularity' ) {
-            def normalizedImageName = normalizeSingularityImageName(imageName)
-            if (normalizedImageName && (normalizedImageName.startsWith("docker://") || normalizedImageName.startsWith("shub://"))) {
-                return createCache(this.config, normalizedImageName)
-            }
-            return normalizedImageName
+            final normalizedImageName = normalizeSingularityImageName(imageName)
+            if( !config.isEnabled() || !normalizedImageName )
+                return normalizedImageName
+            final requiresCaching = normalizedImageName.startsWith("docker://") || normalizedImageName.startsWith("shub://")
+            return requiresCaching ? createCache(this.config, normalizedImageName) : normalizedImageName
         }
         else {
             normalizeDockerImageName(imageName)
