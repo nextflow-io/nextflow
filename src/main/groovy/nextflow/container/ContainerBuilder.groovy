@@ -37,6 +37,8 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
     final protected List<Path> mounts = []
 
+    final protected Map<Path,String> volumes = [:]
+
     protected List<String> runOptions = []
 
     protected List<String> engineOptions = []
@@ -218,6 +220,19 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
         return result
     }
 
+    protected CharSequence makeVolumes( StringBuilder result = new StringBuilder() ) {
+        if (volumes) {
+            volumes.eachWithIndex { it, i ->
+                if ( i > 0) {
+                    result << ' '
+                }
+                result << composeVolumePath(it.key.toString(), it.value, readOnlyInputs)
+            }
+            return result
+        }
+        return makeVolumes0(mounts, result)
+    }
+
 
     /**
      * Get the volumes command line options for the given list of input files
@@ -227,7 +242,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
      * @param result
      * @return
      */
-    protected CharSequence makeVolumes(List<Path> mountPaths, StringBuilder result = new StringBuilder() ) {
+    protected CharSequence makeVolumes0(List<Path> mountPaths, StringBuilder result = new StringBuilder() ) {
 
         // add the work-dir to the list of container mounts
         final workDirStr = workDir?.toString()
@@ -246,7 +261,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
         paths.each {
             if(it) {
-                result << composeVolumePath(it,readOnlyInputs)
+                result << composeVolumePath(it, null, readOnlyInputs)
                 result << ' '
             }
         }
@@ -263,12 +278,19 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
         return result
     }
 
-    protected String composeVolumePath( String path, boolean readOnly = false ) {
-        def result = "-v ${escape(path)}:${escape(path)}"
+    protected String composeVolumePath( String path, String mount = null, boolean readOnly = false ) {
+        if (! mount) {
+            mount = path
+        }
+        def result = "-v ${escape(path)}:${escape(mount)}"
         if( readOnly )
             result += ':ro'
         return result
     }
+
+//    protected String composeVolumePath( String path, boolean readOnly = false ) {
+//        composeVolumePath(path, null, readOnly)
+//    }
 
     protected String escape(String path) {
         path.startsWith('$') ? "\"$path\"" : Escape.path(path)

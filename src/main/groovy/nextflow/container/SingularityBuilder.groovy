@@ -82,7 +82,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         result << 'exec '
 
         if( autoMounts ) {
-            makeVolumes(mounts, result)
+            makeVolumes(result)
             result << ' '
         }
 
@@ -96,8 +96,9 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         return this
     }
 
-    protected String composeVolumePath( String path, boolean readOnly = false ) {
-        def result = "-B ${escape(path)}"
+    @Override
+    protected String composeVolumePath( String path, String mount = null, boolean readOnly = false ) {
+        def result = mount ? "-B ${escape(path)}:${escape(mount)}" :"-B ${escape(path)}"
         if( readOnly )
             result += ":${escape(path)}:ro"
         return result

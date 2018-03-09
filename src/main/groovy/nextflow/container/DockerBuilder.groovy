@@ -137,7 +137,7 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
             result << USER_AND_HOME_EMULATION << ' '
 
         // mount the input folders
-        result << makeVolumes(mounts)
+        makeVolumes(result)
         result << ' -w "$PWD" '
 
         if( entryPoint )

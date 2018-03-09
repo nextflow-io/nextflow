@@ -39,10 +39,23 @@ class DockerBuilderTest extends Specification {
         def quotes =  [ Paths.get('/folder with blanks/A'), Paths.get('/folder with blanks/B') ]
 
         expect:
-        builder.makeVolumes([]).toString() == '-v "$PWD":"$PWD"'
-        builder.makeVolumes(files).toString() == '-v /folder:/folder -v "$PWD":"$PWD"'
-        builder.makeVolumes(real).toString()  == '-v /user/yo/nextflow:/user/yo/nextflow -v /db/pdb/local/data:/db/pdb/local/data -v "$PWD":"$PWD"'
-        builder.makeVolumes(quotes).toString() == '-v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v "$PWD":"$PWD"'
+        builder.makeVolumes0([]).toString() == '-v "$PWD":"$PWD"'
+        builder.makeVolumes0(files).toString() == '-v /folder:/folder -v "$PWD":"$PWD"'
+        builder.makeVolumes0(real).toString()  == '-v /user/yo/nextflow:/user/yo/nextflow -v /db/pdb/local/data:/db/pdb/local/data -v "$PWD":"$PWD"'
+        builder.makeVolumes0(quotes).toString() == '-v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v "$PWD":"$PWD"'
+
+    }
+
+    def 'test docker volumes'() {
+
+        given:
+        def builder = [:] as DockerBuilder
+        builder.volumes.put(Paths.get('/folder/data'),'/data')
+        builder.volumes.put(Paths.get('/folder/db'), '/db')
+
+
+        expect:
+        builder.makeVolumes().toString() == '-v /folder/data:/data -v /folder/db:/db'
 
     }
 
