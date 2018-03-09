@@ -82,7 +82,7 @@ class UdockerBuilder extends ContainerBuilder<UdockerBuilder> {
 
         // mount the input folders
         makeVolumes(result)
-        result << ' -w "$PWD" --bindhome '
+        result << " ${makeWorkdir()} --bindhome "
 
 
         if( runOptions )

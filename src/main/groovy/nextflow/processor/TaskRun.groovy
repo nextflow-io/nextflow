@@ -88,7 +88,6 @@ class TaskRun implements Cloneable {
      */
     Map<OutParam,Object> outputs = [:]
 
-
     void setInput( InParam param, Object value = null ) {
         assert param
 
@@ -136,6 +135,13 @@ class TaskRun implements Cloneable {
      * Task produced standard error
      */
     def stderr
+
+    /**
+     * Volumes definition for TES
+     */
+    boolean hasVolumes() {
+        return false
+    }
 
     /**
      * @return The task produced stdout result as string

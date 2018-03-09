@@ -138,7 +138,7 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
         // mount the input folders
         makeVolumes(result)
-        result << ' -w "$PWD" '
+        result << " ${makeWorkdir()} "
 
         if( entryPoint )
             result << '--entrypoint ' << entryPoint << ' '

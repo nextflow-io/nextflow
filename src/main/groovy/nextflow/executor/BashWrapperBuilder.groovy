@@ -32,6 +32,9 @@ import nextflow.container.UdockerBuilder
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+
+import java.nio.file.Paths
+
 /**
  * Builder to create the BASH script which is used to
  * wrap and launch the user task
@@ -648,10 +651,15 @@ class BashWrapperBuilder {
         /*
          * initialise the builder
          */
-        builder.addMountForInputs(resolvedInputs)
-
-        if( !this.containerExecutable)
-            builder.addMount(binDir)
+        if (hasVolumes) {
+            resolvedInputs.each {
+                builder.addVolume(Paths.get(it.key), "/${workDir.relativize(Paths.get(it.key))}")
+            }
+        } else {
+            builder.addMountForInputs(resolvedInputs)
+            if( !this.containerExecutable)
+                builder.addMount(binDir)
+        }
 
         if(this.containerMount)
             builder.addMount(containerMount)

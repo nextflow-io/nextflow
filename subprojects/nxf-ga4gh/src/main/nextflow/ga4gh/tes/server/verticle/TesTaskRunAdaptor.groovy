@@ -69,6 +69,11 @@ class TesTaskRunAdaptor extends TaskRun {
     }
 
     @Override
+    boolean hasVolumes() {
+        return true
+    }
+
+    @Override
     String getContainer() {
         image
     }

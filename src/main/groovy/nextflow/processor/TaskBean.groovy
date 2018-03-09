@@ -95,6 +95,8 @@ class TaskBean implements Serializable, Cloneable {
 
     def cleanup
 
+    boolean hasVolumes
+
     @PackageScope
     TaskBean() {
         shell = BashWrapperBuilder.BASH
@@ -129,6 +131,7 @@ class TaskBean implements Serializable, Cloneable {
         this.containerExecutable = task.isContainerExecutable()
         this.containerNative = task.isContainerNative()
         this.containerEnabled = task.isContainerEnabled()
+        this.hasVolumes = task.hasVolumes()
 
         // stats
         this.statsEnabled = task.getProcessor().getSession().statsEnabled

@@ -59,6 +59,10 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
     protected String runCommand
 
+    def addVolume(Path path, String s) {
+        volumes.put(path, s)
+    }
+
     V addRunOptions(String str) {
         runOptions.add(str)
         return (V)this
@@ -152,6 +156,13 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
     V addMountForInputs( Map<String,Path> inputFiles ) {
         mounts.addAll( inputFilesToPaths(inputFiles) )
         return (V)this
+    }
+
+    String makeWorkdir() {
+        if (volumes) {
+            return "-w ${workDir}"
+        }
+        return '-w "$PWD"'
     }
 
     static List<Path> inputFilesToPaths( Map<String,Path> inputFiles ) {
@@ -295,5 +306,4 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
     protected String escape(String path) {
         path.startsWith('$') ? "\"$path\"" : Escape.path(path)
     }
-
 }
