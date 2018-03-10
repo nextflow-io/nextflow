@@ -1,6 +1,16 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.28.0 - 10 Mar 2018
+- Fixed Singularity pull is executed even when container execution is disabled #628
+- Fixed issue when setting container attribute to `false` [9de636c5]
+- Added MemoryUnit getters [f99d2dc9]
+- Added default NXF_TEMP variable [d36ac4dd]
+- Added progress stacked bars to workflow report #534 [455fcb4f]
+- Added namespace option to `kuberun` command [50154ec5]
+- Improved workflow stats and warn report [e795b134]
+- Improved K8s error reporting [86f172eb]
+
 0.28.0-RC1 - 27 Feb 2018
 - Added support for directory wildcards in input file declarations #568
 - Added ability to access task existStatus value as an output value #577
