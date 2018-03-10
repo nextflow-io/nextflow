@@ -75,4 +75,8 @@ release:
 	./gradlew release	
 	
 dockerPack:
-	./gradlew install dockerPack -Dmaven.repo.local=${PWD}/build/docker/.nextflow/capsule/deps/ -x signArchives	
+	./gradlew install dockerPack -Dmaven.repo.local=${PWD}/build/docker/.nextflow/capsule/deps/ -x signArchives
+
+dag:
+	@./gradlew -q generateDependencyGraph
+	@echo "Check out the DAG at this file: dependency-graph.png"
