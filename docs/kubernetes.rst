@@ -30,6 +30,8 @@ When using the ``k8s`` executor Nextflow deploys the workflow execution as a Kub
 the workflow execution and submits a separate pod execution for each job that need to be carried out by the workflow
 application.
 
+.. image:: images/nextflow-k8s-min.png
+
 
 Requirements
 ============
