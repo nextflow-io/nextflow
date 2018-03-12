@@ -45,6 +45,9 @@ import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
 import nextflow.util.Duration
 import org.codehaus.groovy.runtime.NullObject
+
+import static nextflow.file.FileHelper.isGlobAllowed
+
 /**
  * Channel factory object
  *
@@ -202,12 +205,9 @@ class Channel  {
 
     static private DataflowChannel<Path> fromPathWithMap( Map opts = null, Path filePattern ) {
 
-        def glob = opts?.containsKey('glob') ? opts.glob as boolean : true
+        final glob = opts?.containsKey('glob') ? opts.glob as boolean : isGlobAllowed(filePattern)
         if( !glob ) {
-            def result = ( filePattern instanceof Path
-                    ? filePattern.complete()
-                    : FileHelper.asPath(filePattern.toString()).complete())
-            return Nextflow.channel(result)
+            return Nextflow.channel(filePattern.complete())
         }
 
         final fs = filePattern.getFileSystem()

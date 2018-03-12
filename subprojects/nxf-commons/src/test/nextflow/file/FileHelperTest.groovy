@@ -20,12 +20,14 @@
 
 package nextflow.file
 import java.nio.file.FileAlreadyExistsException
+import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
+import java.nio.file.spi.FileSystemProvider
 
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
@@ -829,6 +831,31 @@ class FileHelperTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+    }
+
+    def 'should check if glob is allowed' () {
+
+        given:
+        def FS = Mock(FileSystem)
+        def PROVIDER = Mock(FileSystemProvider)
+        def PATH = Mock(Path)
+
+        when:
+        def result = FileHelper.isGlobAllowed(PATH)
+        then:
+        PATH.getFileSystem() >> FS
+        FS.provider() >> PROVIDER
+        PROVIDER.getScheme() >> SCHEME
+        result == EXPECTED
+        
+        where:
+        SCHEME      | EXPECTED
+         'file'     |  true
+         's3'       |  true
+         'http'     |  false
+         'https'    |  false
+         'ftp'      |  false
+         'ftps'     |  false
     }
 
 }
