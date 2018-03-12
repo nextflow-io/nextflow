@@ -19,6 +19,7 @@
  */
 
 package nextflow
+
 import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
@@ -37,6 +38,9 @@ import nextflow.util.ArrayTuple
 import nextflow.util.CacheHelper
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+
+import static nextflow.file.FileHelper.isGlobAllowed
+
 /**
  * Defines the main methods imported by default in the script scope
  *
@@ -141,8 +145,8 @@ class Nextflow {
         if( filePattern == null )
             return null
 
-        def path = filePattern as Path
-        def glob = options?.containsKey('glob') ? options.glob as boolean : true
+        final path = filePattern as Path
+        final glob = options?.containsKey('glob') ? options.glob as boolean : isGlobAllowed(path)
         if( !glob ) {
             return path.complete()
         }
