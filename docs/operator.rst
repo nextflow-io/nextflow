@@ -736,7 +736,7 @@ See also: `collect`_ operator.
 transpose
 ---------
 
-The ``traspose`` operator transforms a channel in such a way that the emitted items are the result of a transposition
+The ``transpose`` operator transforms a channel in such a way that the emitted items are the result of a transposition
 of all tuple elements in each item. For example::
 
     Channel.from([
