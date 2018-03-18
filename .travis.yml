@@ -13,4 +13,4 @@ env:
 script:
 - make test
 after_script:
-- bash pub-tests.sh build/reports/tests/ travis
+- bash pub-tests.sh travis
