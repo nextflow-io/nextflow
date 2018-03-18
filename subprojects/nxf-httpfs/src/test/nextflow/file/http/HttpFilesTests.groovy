@@ -19,6 +19,7 @@
  */
 
 package nextflow.file.http
+
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.file.Files
@@ -27,6 +28,7 @@ import java.nio.file.Paths
 import com.github.tomakehurst.wiremock.junit.WireMockRule
 import com.github.tomjankes.wiremock.WireMockGroovy
 import org.junit.Rule
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 /**
  *
@@ -113,6 +115,7 @@ class HttpFilesTests extends Specification {
 
     }
 
+    @IgnoreIf({ env['TRAVIS'] })
     def 'should read FTP file' () {
         when:
         def lines = Paths.get(new URI('ftp://ftp.ebi.ac.uk/robots.txt')).text.readLines()
@@ -156,6 +159,7 @@ class HttpFilesTests extends Specification {
 
     }
 
+    @IgnoreIf({ env['TRAVIS'] })
     def 'should read lines' () {
         given:
         def path = Paths.get(new URI('ftp://ftp.ebi.ac.uk/robots.txt'))
@@ -167,6 +171,7 @@ class HttpFilesTests extends Specification {
         lines[1] == 'Disallow: /'
     }
 
+    @IgnoreIf({ env['TRAVIS'] })
     def 'should read all bytes' ( ) {
         given:
         def path = Paths.get(new URI('ftp://ftp.ebi.ac.uk/robots.txt'))
