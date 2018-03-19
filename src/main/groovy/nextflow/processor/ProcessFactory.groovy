@@ -19,8 +19,10 @@
  */
 
 package nextflow.processor
+
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.exception.ConfigParseException
 import nextflow.executor.AwsBatchExecutor
 import nextflow.executor.CondorExecutor
 import nextflow.executor.CrgExecutor
@@ -39,6 +41,7 @@ import nextflow.script.ScriptType
 import nextflow.script.TaskBody
 import nextflow.util.ServiceDiscover
 import nextflow.util.ServiceName
+
 /**
  *  Factory class for {@TaskProcessor} instances
  *
@@ -184,6 +187,7 @@ class ProcessFactory {
      */
     TaskProcessor createProcessor( String name, Closure body, Map options = null ) {
         assert body
+        assert config.process instanceof Map
 
         /*
          * check if exists 'attributes' defined in the 'process' scope for this process, e.g.
@@ -191,36 +195,19 @@ class ProcessFactory {
          * process.$name.attribute1 = xxx
          * process.$name.attribute2 = yyy
          *
+         * NOTE: THIS HAS BEEN DEPRECATED AND WILL BE REMOVED
          */
-        Map importantAttributes = null
-        if( config.process instanceof Map && config.process['$'+name] instanceof Map ) {
-            importantAttributes = (Map)config.process['$'+name]
+        Map legacySettings = null
+        if( config.process['$'+name] instanceof Map ) {
+            legacySettings = (Map)config.process['$'+name]
+            log.warn "Process configuration syntax \$<process-name> has been deprecated -- Replace `process.\$$name = .. ` with a configuration label annotation"
         }
 
         // -- the config object
-        def processConfig = new ProcessConfig(owner, importantAttributes)
+        final processConfig = new ProcessConfig(owner)
 
         // -- set 'default' properties defined in the configuration file in the 'process' section
-        if( config.process instanceof Map ) {
-            config.process .each { String key, value ->
-                if( key.startsWith('$'))
-                    return
-                if( !ProcessConfig.DIRECTIVES.contains(key) )
-                    log.warn "Unknown directive `$key` for process `$name`"
-                if( key == 'params' ) // <-- patch issue #242
-                    return
-                if( key == 'ext' && processConfig.getProperty('ext') instanceof Map ) {
-                    // update missing 'ext' properties found in 'process' scope
-                    def ext = processConfig.getProperty('ext') as Map
-                    value.each { String k, v ->
-                        if( !ext.containsKey(k) )
-                            ext[k] = v
-                    }
-                    return
-                }
-                processConfig.put(key,value)
-            }
-        }
+        applyConfigSettings(config.process as Map, processConfig, name)
 
         /*
          * options that may be passed along the process declaration e.g.
@@ -237,16 +224,30 @@ class ProcessFactory {
         // Note: the config object is wrapped by a TaskConfigWrapper because it is needed
         // to raise a MissingPropertyException when some values are missing, thus the closure
         // will try to fallback on the owner object
-        processConfig.throwExceptionOnMissingProperty(true)
-        def copy = (Closure)body.clone()
+        processConfig.enterCaptureMode(true)
+        final copy = (Closure)body.clone()
         copy.setResolveStrategy(Closure.DELEGATE_FIRST);
         copy.setDelegate(processConfig);
-        def script = copy.call() as TaskBody
-        processConfig.throwExceptionOnMissingProperty(false)
+        final script = copy.call() as TaskBody
+        processConfig.enterCaptureMode(false)
         if ( !script )
             throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
 
-        // load the executor to be used
+        // -- Apply the directives defined in the config object using the`withLabel:` syntax
+        for( String lbl : processConfig.getLabels() ) {
+            applyConfigForLabel("withLabel:$lbl", config.process as Map, processConfig, name)
+        }
+
+        // -- apply setting for name
+        applyConfigForLabel("withName:$name", config.process as Map, processConfig, name)
+
+        // -- Apply process specific setting defined using `process.$name` syntax
+        //    NOTE: this is deprecated and will be removed
+        if( legacySettings ) {
+            applyConfigSettings(legacySettings, processConfig, name)
+        }
+
+        // -- load the executor to be used
         def execName = getExecutorName(processConfig) ?: DEFAULT_EXECUTOR
         def execClass = loadExecutorClass(execName)
 
@@ -257,13 +258,87 @@ class ProcessFactory {
         }
 
         def execObj = execClass.newInstance()
-        // inject the task configuration into the executor instance
+        // -- inject the task configuration into the executor instance
         execObj.session = session
         execObj.name = execName
         execObj.init()
 
-        // create processor class
+        // -- create processor class
         newTaskProcessor( name, execObj, session, owner, processConfig, script )
+    }
+
+    /**
+     * Apply the settings defined in the configuration file for the given annotation label, for example:
+     *
+     * ```
+     * process {
+     *     label: foo {
+     *         cpus = 1
+     *         memory = 2.gb
+     *     }
+     * }
+     * ```
+     *
+     * @param lbl
+     *      A specific label name representing the object holding the configuration setting to apply
+     * @param settings
+     *      A map object modelling the setting defined defined by the user in the nextflow configuration file
+     * @param processConfig
+     *      A {@link ProcessConfig} object modelling the a process configuration
+     * @param processName
+     *      The name of the process to which application the configuration settings
+     */
+    protected void applyConfigForLabel( String lbl, Map<String,?> configDirectives, ProcessConfig processConfig, String processName ) {
+        def settings = configDirectives.get(lbl)
+        if( settings instanceof Map ) {
+            applyConfigSettings(settings, processConfig, processName)
+        }
+        else if( settings != null ) {
+            throw new ConfigParseException("Unknown config settings for label `$lbl` -- settings=$settings ")
+        }
+    }
+
+    /**
+     * Apply the settings defined in the configuration file to the actual process configuration object
+     *
+     * @param settings
+     *      A map object modelling the setting defined defined by the user in the nextflow configuration file
+     * @param processConfig
+     *      A {@link ProcessConfig} object modelling the a process configuration
+     * @param processName
+     *      The name of the process to which application the configuration settings
+     */
+    protected void applyConfigSettings(Map<String,?> settings, ProcessConfig processConfig, String processName) {
+        if( !settings )
+            return
+
+        for( Map.Entry<String,?> entry: settings ) {
+            if( entry.key.startsWith('$'))
+                continue
+
+            if( entry.key.startsWith("withLabel:") || entry.key.startsWith("withName:"))
+                continue
+
+            if( !ProcessConfig.DIRECTIVES.contains(entry.key) )
+                log.warn "Unknown directive `$entry.key` for process `$processName`"
+
+            if( entry.key == 'params' ) // <-- patch issue #242
+                continue
+
+            if( entry.key == 'ext' && processConfig.getProperty('ext') instanceof Map ) {
+                // update missing 'ext' properties found in 'process' scope
+                def ext = processConfig.getProperty('ext') as Map
+                entry.value.each { String k, v -> ext[k] = v }
+                continue
+            }
+
+            if( entry.key == 'module') {
+                processConfig.module(entry.value)
+                continue
+            }
+
+            processConfig.put(entry.key,entry.value)
+        }
     }
 
     /**

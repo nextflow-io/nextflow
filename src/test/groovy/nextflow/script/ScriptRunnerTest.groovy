@@ -394,7 +394,7 @@ class ScriptRunnerTest extends Specification {
               module 'c/3'
 
               'echo 1'
-            }
+            }               
             '''
 
         def session = new Session(new ConfigSlurper().parse(config))
@@ -466,7 +466,7 @@ class ScriptRunnerTest extends Specification {
 
         then:
         process.config instanceof ProcessConfig
-        process.config.module == 'a/1'
+        process.config.module == ['a/1']
         process.config.createTaskConfig().module ==  ['a/1']
         process.config.createTaskConfig().getModule() ==  ['a/1']
 
