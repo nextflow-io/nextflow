@@ -1944,6 +1944,11 @@ class TaskProcessor {
             keys.addAll(binEntries)
         }
 
+        final modules = task.getConfig().getModule()
+        if( modules ) {
+            keys.addAll(modules)
+        }
+
         final mode = config.getHashMode()
         final hash = CacheHelper.hasher(keys, mode).hash()
         if( session.dumpHashes ) {

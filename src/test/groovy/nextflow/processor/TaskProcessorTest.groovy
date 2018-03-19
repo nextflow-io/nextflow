@@ -741,6 +741,7 @@ class TaskProcessorTest extends Specification {
     def 'should make task unique id' () {
 
         given:
+        def config = Mock(TaskConfig)
         def task = Mock(TaskRun)
         def session = Mock(Session)
         session.getBinEntries() >> ['foo.sh': Paths.get('/some/path/foo.sh'), 'bar.sh': Paths.get('/some/path/bar.sh')]
@@ -756,6 +757,8 @@ class TaskProcessorTest extends Specification {
         1 * processor.getTaskGlobalVars(task) >> [:]
         1 * task.isContainerEnabled() >> false
         0 * task.getContainer()
+        1 * task.getConfig() >> config
+        1 * config.getModule() >> null
         uuid.toString() == '14cc05f32bc37f2d1a370871b1f5be4f'
 
         when:
@@ -766,7 +769,9 @@ class TaskProcessorTest extends Specification {
         1 * processor.getTaskGlobalVars(task) >> [:]
         1 * task.isContainerEnabled() >> true
         1 * task.getContainer() >> 'foo/bar'
-        uuid.toString() == '50608212f83b30ef91169eac359b5e64'
+        1 * task.getConfig() >> config
+        1 * config.getModule() >> ['bar/1.0']
+        uuid.toString() == 'f9595fcfaac36a9ffbeddbbdc9d8e72d'
     }
 
     def 'should export env vars' () {
