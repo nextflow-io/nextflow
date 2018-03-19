@@ -19,7 +19,8 @@
  */
 
 package nextflow.processor
-import static nextflow.util.CacheHelper.HashMode
+
+import static nextflow.util.CacheHelper.*
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -42,7 +43,6 @@ import nextflow.script.StdInParam
 import nextflow.script.StdOutParam
 import nextflow.script.ValueInParam
 import nextflow.script.ValueOutParam
-import nextflow.util.ReadOnlyMap
 /**
  * Holds the process configuration properties
  *
@@ -71,6 +71,7 @@ class ProcessConfig implements Map<String,Object> {
             'ext',
             'instanceType',
             'queue',
+            'label',
             'maxErrors',
             'maxForks',
             'maxRetries',
@@ -99,9 +100,13 @@ class ProcessConfig implements Map<String,Object> {
     @Delegate
     protected final Map<String,Object> configProperties
 
-    private final BaseScript ownerScript
+    private BaseScript ownerScript
 
     private boolean throwExceptionOnMissingProperty
+
+    private boolean allowMultipleModules
+
+    private int moduleInvocationCount
 
     private inputs = new InputsList()
 
@@ -114,16 +119,11 @@ class ProcessConfig implements Map<String,Object> {
      * @param important The values specified by this map won't be overridden by attributes
      *      having the same name defined at the task level
      */
-    ProcessConfig( BaseScript script, Map important = null ) {
+    ProcessConfig( BaseScript script ) {
 
         ownerScript = script
 
-        // parse the attribute as List before adding it to the read-only list
-        if( important?.containsKey('module') ) {
-            important.module = parseModule(important.module)
-        }
-
-        configProperties = important ? new ReadOnlyMap(important) : new LinkedHashMap()
+        configProperties = new LinkedHashMap()
         configProperties.echo = false
         configProperties.cacheable = true
         configProperties.shell = BashWrapperBuilder.BASH
@@ -153,9 +153,17 @@ class ProcessConfig implements Map<String,Object> {
         return value != null && value.toString().toLowerCase() in BOOL_YES
     }
 
+    /**
+     * Enable special behavior to allow the configuration object
+     * invoking directive method from the process DSL
+     *
+     * @param value {@code true} enable capture mode, {@code false} otherwise
+     * @return The object itself
+     */
     @PackageScope
-    ProcessConfig throwExceptionOnMissingProperty( boolean value ) {
+    ProcessConfig enterCaptureMode(boolean value ) {
         this.throwExceptionOnMissingProperty = value
+        this.allowMultipleModules = value
         return this
     }
 
@@ -326,11 +334,11 @@ class ProcessConfig implements Map<String,Object> {
      * Defines a special *dummy* input parameter, when no inputs are
      * provided by the user for the current task
      */
-    def void fakeInput() {
+    void fakeInput() {
         new DefaultInParam(this)
     }
 
-    def void fakeOutput() {
+    void fakeOutput() {
         new DefaultOutParam(this)
     }
 
@@ -353,18 +361,34 @@ class ProcessConfig implements Map<String,Object> {
         configProperties.cache == 'deep' ? HashMode.DEEP : HashMode.STANDARD
     }
 
+    ProcessConfig label(String lbl) {
+        if( !lbl ) return this
+        def allLabels = configProperties.get('label')
+        if( !allLabels ) {
+            allLabels = []
+            configProperties.put('label', allLabels)
+        }
+        allLabels << lbl
+        return this
+    }
+
+    List<String> getLabels() {
+        (List<String>) configProperties.get('label') ?: Collections.emptyList()
+    }
+
     ProcessConfig module( moduleName ) {
         // when no name is provided, just exit
         if( !moduleName )
             return this
 
-        def list = parseModule(moduleName, configProperties.module)
-        configProperties.put('module', list)
+        final current = allowMultipleModules && moduleInvocationCount++ ? configProperties.module : null
+        final result = parseModule(moduleName, current)
+        configProperties.put('module', result)
         return this
     }
 
     @PackageScope
-    static List parseModule( value, current = null) {
+    static List parseModule( value, current = null ) {
 
         // if no modules list exist create it
         List copy

@@ -102,11 +102,14 @@ class TaskConfigTest extends Specification {
 
     def testModules() {
 
+        given:
         def config
         def local
 
         when:
         config = new ProcessConfig([:])
+        config.enterCaptureMode(true)
+        
         config.module 't_coffee/10'
         config.module( [ 'blast/2.2.1', 'clustalw/2'] )
         local = config.createTaskConfig()
@@ -117,6 +120,8 @@ class TaskConfigTest extends Specification {
 
         when:
         config = new ProcessConfig([:])
+        config.enterCaptureMode(true)
+
         config.module 'a/1'
         config.module 'b/2:c/3'
         local = config.createTaskConfig()
@@ -126,6 +131,8 @@ class TaskConfigTest extends Specification {
 
         when:
         config = new ProcessConfig([:])
+        config.enterCaptureMode(true)
+
         config.module { 'a/1' }
         config.module { 'b/2:c/3' }
         config.module 'd/4'
@@ -134,9 +141,10 @@ class TaskConfigTest extends Specification {
         then:
         local.module == ['a/1','b/2','c/3', 'd/4']
 
-
         when:
         config = new ProcessConfig([:])
+        config.enterCaptureMode(true)
+
         config.module = 'b/2:c/3'
         local = config.createTaskConfig()
 

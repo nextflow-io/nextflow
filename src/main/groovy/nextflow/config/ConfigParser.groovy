@@ -156,8 +156,10 @@ class ConfigParser {
         // set the required base script
         def config = new CompilerConfiguration()
         config.scriptBaseClass = ConfigBase.class.name
+        def params = [:]
         if( renderClosureAsString )
-            config.addCompilationCustomizers(new ASTTransformationCustomizer(ConfigTransform))
+            params.put('renderClosureAsString', true)
+        config.addCompilationCustomizers(new ASTTransformationCustomizer(params, ConfigTransform))
         grengine = new Grengine(config)
     }
 

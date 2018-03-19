@@ -131,7 +131,7 @@ class ProcessConfigTest extends Specification {
     def 'should throw MissingPropertyException' () {
         when:
         def script = Mock(BaseScript)
-        def config = new ProcessConfig(script).throwExceptionOnMissingProperty(true)
+        def config = new ProcessConfig(script).enterCaptureMode(true)
         def x = config.hola
 
         then:
@@ -298,6 +298,24 @@ class ProcessConfigTest extends Specification {
                         shell
                 '''
                 .stripIndent().trim()
+    }
+
+
+    def 'should set process labels'() {
+        when:
+        def config = new ProcessConfig([:])
+        then:
+        config.getLabels() == []
+
+        when:
+        config.label('foo')
+        then:
+        config.getLabels() == ['foo']
+
+        when:
+        config.label('bar')
+        then:
+        config.getLabels() == ['foo','bar']
     }
 
 }

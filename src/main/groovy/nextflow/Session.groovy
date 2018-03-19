@@ -716,21 +716,39 @@ class Session implements ISession {
         // verifies that all process config names have a match with a defined process
         def keys = (config.process as Map).keySet()
         for(String key : keys) {
-            if( !key.startsWith('$') )
-                continue
-            def name = key.substring(1)
-            if( !processNames.contains(name) ) {
-                def suggestion = processNames.closest(name)
-                def message = "The config file defines settings for an unknown process: $name"
-                if( suggestion )
-                    message += " -- Did you mean: ${suggestion.first()}?"
-                result << message
+            String name = null
+            if( key.startsWith('$') ) {
+                name = key.substring(1)
             }
+            else if( key.startsWith('withName:') ) {
+                name = key.substring('withName:'.length())
+            }
+            if( name && !isValidProcessName(name, processNames, result) )
+                break
         }
 
         return result
     }
 
+    /**
+     * Check that the specified name belongs to the list of existing process names
+     *
+     * @param name The process name to check
+     * @param processNames The list of processes declared in the workflow script
+     * @param errorMessage A list of strings used to return the error message to the caller
+     * @return {@code true} if the name specified belongs to the list of process names or {@code false} otherwise
+     */
+    protected boolean isValidProcessName(String name, Collection<String> processNames, List<String> errorMessage)  {
+        if( !processNames.contains(name) ) {
+            def suggestion = processNames.closest(name)
+            def message = "The config file defines settings for an unknown process: $name"
+            if( suggestion )
+                message += " -- Did you mean: ${suggestion.first()}?"
+            errorMessage << message.toString()
+            return false
+        }
+        return true
+    }
     /**
      * Register a shutdown hook to close services when the session terminates
      * @param Closure

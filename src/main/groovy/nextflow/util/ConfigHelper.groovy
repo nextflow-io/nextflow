@@ -19,9 +19,11 @@
  */
 
 package nextflow.util
+
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
@@ -157,7 +159,20 @@ class ConfigHelper {
         }
     }
 
-    static private String wrap0( param ) {
+    static @PackageScope String wrap0(param) {
+        final key = param.toString()
+        if( key.startsWith('withLabel:') )  {
+            return 'withLabel:' + wrap1(key.substring('withLabel:'.length()))
+        }
+        else if( key.startsWith('withName:') )  {
+            return 'withName:' + wrap1(key.substring('withName:'.length()))
+        }
+        else {
+            return wrap1(key)
+        }
+    }
+
+    static @PackageScope String wrap1( param ) {
         def key = param.toString()
         isValidIdentifier(key) ? key : "'$key'"
     }
@@ -240,7 +255,7 @@ class ConfigHelper {
         flattenFormat(map.toConfigObject(), sort)
     }
 
-    public static boolean isValidIdentifier(String s) {
+    static boolean isValidIdentifier(String s) {
         // an empty or null string cannot be a valid identifier
         if (s == null || s.length() == 0) {
             return false;

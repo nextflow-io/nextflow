@@ -285,5 +285,21 @@ class ConfigHelperTest extends Specification {
         !ConfigHelper.isValidIdentifier('0foo')
     }
 
+    def 'should wrap key names' () {
+        expect:
+        ConfigHelper.wrap0(str) == expected
+
+        where:
+        str                 | expected
+        "foo"               | "foo"
+        "foo-1"             | "'foo-1'"
+
+        "withLabel:foo"     | "withLabel:foo"
+        "withLabel:1foo"    | "withLabel:'1foo'"
+
+        "withName:foo"     | "withName:foo"
+        "withName:2foo"    | "withName:'2foo'"
+    }
+
 
 }

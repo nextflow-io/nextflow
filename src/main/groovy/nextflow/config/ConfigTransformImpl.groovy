@@ -23,6 +23,7 @@ package nextflow.config
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.codehaus.groovy.ast.ASTNode
+import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
@@ -33,6 +34,7 @@ import org.codehaus.groovy.ast.expr.ConstructorCallExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.MapEntryExpression
 import org.codehaus.groovy.ast.expr.MapExpression
+import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.stmt.ExpressionStatement
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
@@ -48,22 +50,64 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
 @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
 class ConfigTransformImpl implements ASTTransformation {
 
+    private boolean renderClosureAsString
+
     @Override
     void visit(ASTNode[] astNodes, SourceUnit unit) {
-        createVisitor(unit).visitClass((ClassNode)astNodes[1])
+        final annot = (AnnotationNode)astNodes[0]
+        final clazz = (ClassNode)astNodes[1]
+        // the following line is mostly an hack to pass a parameter to this xform instance
+        this.renderClosureAsString = annot.getMember('renderClosureAsString') != null
+        createVisitor(unit).visitClass(clazz)
     }
 
     protected ClassCodeVisitorSupport createVisitor(SourceUnit unit) {
-        new MyClassCodeVisitorSupport(unit: unit)
+        return (renderClosureAsString
+                ? new RetainClosureSourceCodeVisitorSupport(unit: unit)
+                : new DefaultConfigCodeVisitor(unit: unit) )
     }
 
-
+    /**
+     * Nextflow config file visitor support class. Apply default transformations to
+     * the config object to implements config syntax sugars
+     */
     @CompileStatic
-    static class MyClassCodeVisitorSupport extends ClassCodeVisitorSupport {
+    static class DefaultConfigCodeVisitor extends ClassCodeVisitorSupport {
 
         protected SourceUnit unit
 
+        @Override
         protected SourceUnit getSourceUnit() { unit }
+
+        @Override
+        void visitExpressionStatement(ExpressionStatement stm) {
+            if( stm.expression instanceof MethodCallExpression && stm.getStatementLabel() == 'withLabel' ) {
+                replaceMethodName( stm.expression as MethodCallExpression, 'withLabel' )
+            }
+            else if( stm.expression instanceof MethodCallExpression && stm.getStatementLabel() == 'withName' ) {
+                replaceMethodName( stm.expression as MethodCallExpression, 'withName' )
+            }
+            super.visitExpressionStatement(stm)
+        }
+
+        /**
+         * Replace the name of the invoked method pre-pending with the specified string
+         *
+         * @param call A object representing a method call expression
+         * @param prefix A string to prepend to the name of the invoked method
+         */
+        protected void replaceMethodName(MethodCallExpression call, String prefix) {
+            call.setMethod( new ConstantExpression(prefix + ":" + call.method.text) )
+        }
+
+    }
+
+    /**
+     * This visitor is only used to render the closure source code
+     * when is required to visualise the nextflow config content
+     */
+    @CompileStatic
+    static class RetainClosureSourceCodeVisitorSupport extends DefaultConfigCodeVisitor {
 
         /**
          * Visit expression statements replacing a binary assignment such as:
