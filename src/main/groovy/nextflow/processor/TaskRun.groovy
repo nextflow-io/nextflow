@@ -20,6 +20,8 @@
 
 package nextflow.processor
 
+import java.nio.file.Files
+
 import nextflow.container.ContainerHandler
 
 import java.nio.file.NoSuchFileException
@@ -184,14 +186,13 @@ class TaskRun implements Cloneable {
         // print the stdout
         if( stdout instanceof Path ) {
             try {
-                synchronized (System.out) {
-                    stdout.withReader {  reader ->
-                        reader.eachLine { System.out.println(it) }
-                    }
-                }
+                Files.copy(stdout, System.out)
             }
             catch( NoSuchFileException e ) {
                 log.trace "Echo file does not exist: ${stdout}"
+            }
+            catch( Exception e ) {
+                log.error "Unable to echo process output -- check the log file for details", e
             }
             return
         }
