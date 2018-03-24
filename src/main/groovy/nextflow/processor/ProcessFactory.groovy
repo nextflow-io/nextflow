@@ -20,6 +20,8 @@
 
 package nextflow.processor
 
+import java.util.regex.Pattern
+
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.ConfigParseException
@@ -207,7 +209,7 @@ class ProcessFactory {
         final processConfig = new ProcessConfig(owner)
 
         // -- set 'default' properties defined in the configuration file in the 'process' section
-        applyConfigSettings(config.process as Map, processConfig, name)
+        applyConfigSettings(name, processConfig, config.process as Map)
 
         /*
          * options that may be passed along the process declaration e.g.
@@ -235,16 +237,16 @@ class ProcessFactory {
 
         // -- Apply the directives defined in the config object using the`withLabel:` syntax
         for( String lbl : processConfig.getLabels() ) {
-            applyConfigForLabel("withLabel:$lbl", config.process as Map, processConfig, name)
+            applyConfigForLabel(name, processConfig, "withLabel:", lbl, config.process as Map)
         }
 
         // -- apply setting for name
-        applyConfigForLabel("withName:$name", config.process as Map, processConfig, name)
+        applyConfigForLabel(name, processConfig, "withName:", name, config.process as Map)
 
         // -- Apply process specific setting defined using `process.$name` syntax
         //    NOTE: this is deprecated and will be removed
         if( legacySettings ) {
-            applyConfigSettings(legacySettings, processConfig, name)
+            applyConfigSettings(name, processConfig, legacySettings)
         }
 
         // -- load the executor to be used
@@ -279,7 +281,7 @@ class ProcessFactory {
      * }
      * ```
      *
-     * @param lbl
+     * @param processLabel
      *      A specific label name representing the object holding the configuration setting to apply
      * @param settings
      *      A map object modelling the setting defined defined by the user in the nextflow configuration file
@@ -288,27 +290,46 @@ class ProcessFactory {
      * @param processName
      *      The name of the process to which application the configuration settings
      */
-    protected void applyConfigForLabel( String lbl, Map<String,?> configDirectives, ProcessConfig processConfig, String processName ) {
-        def settings = configDirectives.get(lbl)
-        if( settings instanceof Map ) {
-            applyConfigSettings(settings, processConfig, processName)
-        }
-        else if( settings != null ) {
-            throw new ConfigParseException("Unknown config settings for label `$lbl` -- settings=$settings ")
+    protected void applyConfigForLabel( String processName, ProcessConfig processConfig, String category, String processLabel, Map<String,?> configDirectives ) {
+        assert category in ['withLabel:','withName:']
+        assert processName
+        assert processLabel
+        
+        for( String rule : configDirectives.keySet() ) {
+            if( !rule.startsWith(category) )
+                continue
+            def isLabel = category=='withLabel:'
+            def pattern = rule.substring(category.size()).trim()
+            final isNegated = pattern.startsWith('!')
+            if( isNegated )
+                pattern = pattern.substring(1).trim()
+            final target = isLabel ? processLabel : processName
+            final matches = Pattern.compile(pattern).matcher(target).matches() ^ isNegated
+            if( !matches )
+                continue
+
+            log.debug "Config settings `$rule` matches ${isLabel ? "label `$target` for process with name $processName" : "process $processName"}"
+            def settings = configDirectives.get(rule)
+            if( settings instanceof Map ) {
+                applyConfigSettings(processName, processConfig, settings)
+            }
+            else if( settings != null ) {
+                throw new ConfigParseException("Unknown config settings for label `$processLabel` -- settings=$settings ")
+            }
         }
     }
 
     /**
      * Apply the settings defined in the configuration file to the actual process configuration object
      *
-     * @param settings
-     *      A map object modelling the setting defined defined by the user in the nextflow configuration file
-     * @param processConfig
-     *      A {@link ProcessConfig} object modelling the a process configuration
      * @param processName
      *      The name of the process to which application the configuration settings
+     * @param processConfig
+     *      A {@link ProcessConfig} object modelling the a process configuration
+     * @param settings
+     *      A map object modelling the setting defined defined by the user in the nextflow configuration file
      */
-    protected void applyConfigSettings(Map<String,?> settings, ProcessConfig processConfig, String processName) {
+    protected void applyConfigSettings(String processName, ProcessConfig processConfig, Map<String,?> settings) {
         if( !settings )
             return
 

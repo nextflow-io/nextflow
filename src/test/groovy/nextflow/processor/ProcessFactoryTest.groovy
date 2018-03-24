@@ -113,6 +113,111 @@ class ProcessFactoryTest extends Specification {
         ProcessFactory.findNameByClass( SgeExecutor ) == 'sge'
         ProcessFactory.findNameByClass(XExecutor) == 'my_fancy_name'
     }
+
+
+    def 'should apply config setting for a process label' () {
+        given:
+        def factory = new ProcessFactory()
+        def settings = [
+                'withLabel:short'  : [ cpus: 1, time: '1h'],
+                'withLabel:!short' : [ cpus: 32, queue: 'cn-long'],
+                'withLabel:foo'    : [ cpus: 2 ],
+                'withLabel:foo|bar': [ disk: '100GB' ],
+                'withLabel:gpu.+'  : [ cpus: 4 ],
+        ]
+
+        when:
+        def process = new ProcessConfig([:])
+        factory.applyConfigForLabel('any', process, 'withLabel:', 'short', settings)
+        then:
+        process.cpus == 1
+        process.time == '1h'
+        process.size() == 2
+
+        when:
+        process = new ProcessConfig([:])
+        factory.applyConfigForLabel('any', process, 'withLabel:', 'long', settings)
+        then:
+        process.cpus == 32
+        process.queue == 'cn-long'
+        process.size() == 2
+
+        when:
+        process = new ProcessConfig([:])
+        factory.applyConfigForLabel('any', process, 'withLabel:', 'foo', settings)
+        then:
+        process.cpus == 2
+        process.disk == '100GB'
+        process.queue == 'cn-long'
+        process.size() == 3
+
+        when:
+        process = new ProcessConfig([:])
+        factory.applyConfigForLabel('any', process, 'withLabel:', 'bar', settings)
+        then:
+        process.cpus == 32
+        process.disk == '100GB'
+        process.queue == 'cn-long'
+        process.size() == 3
+
+        when:
+        process = new ProcessConfig([:])
+        factory.applyConfigForLabel('any', process, 'withLabel:', 'gpu-1', settings)
+        then:
+        process.cpus == 4
+        process.queue == 'cn-long'
+        process.size() == 2
+        
+    }
+
+
+    def 'should apply config setting for a process name' () {
+        given:
+        def factory = new ProcessFactory()
+        def settings = [
+                'withName:alpha'        : [ cpus: 1, time: '1h'],
+                'withName:delta'        : [ cpus: 2 ],
+                'withName:delta|gamma'  : [ disk: '100GB' ],
+                'withName:omega.+'      : [ cpus: 4 ],
+        ]
+
+        when:
+        def process = new ProcessConfig([:])
+        factory.applyConfigForLabel('xx', process, 'withName:', 'any', settings)
+        then:
+        process.size() == 0
+
+        when:
+        process = new ProcessConfig([:])
+        factory.applyConfigForLabel('alpha', process, 'withName:', 'any', settings)
+        then:
+        process.cpus == 1
+        process.time == '1h'
+        process.size() == 2
+
+        when:
+        process = new ProcessConfig([:])
+        factory.applyConfigForLabel('delta', process, 'withName:', 'any', settings)
+        then:
+        process.cpus == 2
+        process.disk == '100GB'
+        process.size() == 2
+
+        when:
+        process = new ProcessConfig([:])
+        factory.applyConfigForLabel('gamma', process, 'withName:', 'any', settings)
+        then:
+        process.disk == '100GB'
+        process.size() == 1
+
+        when:
+        process = new ProcessConfig([:])
+        factory.applyConfigForLabel('omega_x', process,'withName:', 'any', settings)
+        then:
+        process.cpus == 4
+        process.size() == 1
+    }
+
 }
 
 
