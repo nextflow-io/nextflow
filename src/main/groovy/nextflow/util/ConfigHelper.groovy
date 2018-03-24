@@ -138,7 +138,7 @@ class ConfigHelper {
                 }
 
                 writer.append(TAB*level)
-                writer.append(wrap0(key))
+                writer.append(wrap1(key))
                 writer.append(' {\n')
                 canonicalFormat(writer, value, level+1,sort)
                 writer.append(TAB*level)
@@ -151,7 +151,7 @@ class ConfigHelper {
                 }
 
                 writer.append(TAB*level)
-                writer.append(wrap0(key))
+                writer.append(wrap1(key))
                 writer.append(' = ')
                 writer.append( render0(value) )
                 writer.append('\n')
@@ -159,20 +159,20 @@ class ConfigHelper {
         }
     }
 
-    static @PackageScope String wrap0(param) {
+    static @PackageScope String wrap1(param) {
         final key = param.toString()
         if( key.startsWith('withLabel:') )  {
-            return 'withLabel:' + wrap1(key.substring('withLabel:'.length()))
+            return 'withLabel:' + wrap0(key.substring('withLabel:'.length()))
         }
         else if( key.startsWith('withName:') )  {
-            return 'withName:' + wrap1(key.substring('withName:'.length()))
+            return 'withName:' + wrap0(key.substring('withName:'.length()))
         }
         else {
-            return wrap1(key)
+            return wrap0(key)
         }
     }
 
-    static @PackageScope String wrap1( param ) {
+    static @PackageScope String wrap0( param ) {
         def key = param.toString()
         isValidIdentifier(key) ? key : "'$key'"
     }
