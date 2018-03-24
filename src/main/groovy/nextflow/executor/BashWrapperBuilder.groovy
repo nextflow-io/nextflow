@@ -99,7 +99,6 @@ class BashWrapperBuilder {
 
         nxf_mktemp() {
             local base=${1:-/tmp}
-            if [[ $base == /dev/shm && ! -d $base ]]; then base=/tmp; fi 
             if [[ $(uname) = Darwin ]]; then mktemp -d $base/nxf.XXXXXXXXXX
             else TMPDIR="$base" mktemp -d -t nxf.XXXXXXXXXX
             fi
@@ -456,7 +455,7 @@ class BashWrapperBuilder {
          */
         wrapper << '' << ENDL
         wrapper << 'set +e' << ENDL  // <-- note: use loose error checking so that ops after the script command are executed in all cases
-        wrapper << 'ctmp=$(nxf_mktemp /dev/shm)' << ENDL
+        wrapper << 'ctmp=$(set +u; nxf_mktemp /dev/shm 2>/dev/null || nxf_mktemp $TMPDIR)' << ENDL
         wrapper << 'cout=$ctmp/.command.out; mkfifo $cout' << ENDL
         wrapper << 'cerr=$ctmp/.command.err; mkfifo $cerr' << ENDL
         wrapper << 'tee '<< TaskRun.CMD_OUTFILE <<' < $cout &' << ENDL
