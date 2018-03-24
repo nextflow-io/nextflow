@@ -95,7 +95,6 @@ class AwsBatchScriptLauncherTest extends Specification {
 
                 nxf_mktemp() {
                     local base=\${1:-/tmp}
-                    if [[ \$base == /dev/shm && ! -d \$base ]]; then base=/tmp; fi 
                     if [[ \$(uname) = Darwin ]]; then mktemp -d \$base/nxf.XXXXXXXXXX
                     else TMPDIR="\$base" mktemp -d -t nxf.XXXXXXXXXX
                     fi
@@ -149,7 +148,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                 /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors s3:/${folder}/.command.in .command.in
 
                 set +e
-                ctmp=\$(nxf_mktemp /dev/shm)
+                ctmp=\$(set +u; nxf_mktemp /dev/shm 2>/dev/null || nxf_mktemp \$TMPDIR)
                 cout=\$ctmp/.command.out; mkfifo \$cout
                 cerr=\$ctmp/.command.err; mkfifo \$cerr
                 tee .command.out < \$cout &
@@ -239,7 +238,6 @@ class AwsBatchScriptLauncherTest extends Specification {
 
                 nxf_mktemp() {
                     local base=\${1:-/tmp}
-                    if [[ \$base == /dev/shm && ! -d \$base ]]; then base=/tmp; fi 
                     if [[ \$(uname) = Darwin ]]; then mktemp -d \$base/nxf.XXXXXXXXXX
                     else TMPDIR="\$base" mktemp -d -t nxf.XXXXXXXXXX
                     fi
@@ -291,7 +289,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                 aws s3 cp --only-show-errors s3:/${folder}/.command.in .command.in
 
                 set +e
-                ctmp=\$(nxf_mktemp /dev/shm)
+                ctmp=\$(set +u; nxf_mktemp /dev/shm 2>/dev/null || nxf_mktemp \$TMPDIR)
                 cout=\$ctmp/.command.out; mkfifo \$cout
                 cerr=\$ctmp/.command.err; mkfifo \$cerr
                 tee .command.out < \$cout &
