@@ -425,7 +425,7 @@ else
     [[ $? -ne 0 ]] && echo_red 'Unable to initialize nextflow environment' && exit $?
 
     if [[ "$JAVA_VER" =~ ^9 ]]; then
-      echo_yellow "Nextflow support for Java 8 is still experimental an some advanced features are not yet supported -- Please use Java 8"
+      echo_yellow "Nextflow support for Java 9 is still experimental an some advanced features are not yet supported -- Please use Java 8"
       launcher=("${cli[@]:0:1}")
       launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
