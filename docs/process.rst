@@ -1017,7 +1017,6 @@ A `set` declaration can contain any combination of the following qualifiers, pre
 .. tip:: Variable identifiers are interpreted as `values` while strings literals are interpreted as `files` by default,
   thus the above output `set` can be rewritten using a short notation as shown below.
 
-
 ::
 
     output:
@@ -1026,6 +1025,19 @@ A `set` declaration can contain any combination of the following qualifiers, pre
 
 
 File names can be defined in a dynamic manner as explained in the :ref:`process-dynoutname` section.
+
+Optional Output
+---------------
+
+In most cases a process is expected to generate output that is added to the output channel.  However, there are situations where it is valid for a process to `not` generate output. In these cases ``optional true`` may be added to the output declaration, which tells Nextflow not to fail the process if the declared output is not created.
+
+::
+
+    output:
+        file("output.txt") optional true into outChannel
+
+In this example, the process is normally expected to generate an ``output.txt`` file, but in the cases where the file is legitimately missing, the process does not fail. ``outChannel`` is only populated by those processes that do generate ``output.txt``. 
+
 
 When
 =======
