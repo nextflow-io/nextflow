@@ -1,6 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.28.1 - 27 Mar 2018
+- Fixed A HTTP access error is raised when the URL contains a ? character #634
+- Fixed Creation of temp files in the /dev/shm directory can result in a permission
+  error in some Linux installations #638
+- Make process echo safer
+
 0.28.0 - 10 Mar 2018
 - Fixed Singularity pull is executed even when container execution is disabled #628
 - Fixed issue when setting container attribute to `false` [9de636c5]
