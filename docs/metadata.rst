@@ -101,7 +101,7 @@ to access the workflow termination status and other useful information. For exam
 Error handler
 -------------
 
-The ``onError`` even handler is invoked by Nextflow when a runtime or process error caused the pipeline execution to stop.
+The ``onError`` event handler is invoked by Nextflow when a runtime or process error caused the pipeline execution to stop.
 For example::
 
     workflow.onError {
