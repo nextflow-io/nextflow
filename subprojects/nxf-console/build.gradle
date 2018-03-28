@@ -30,6 +30,6 @@ sourceSets {
 
 dependencies {
     compile project(':')
-    compile "org.codehaus.groovy:groovy-console:2.4.13"
+    compile "org.codehaus.groovy:groovy-console:2.4.15"
 }
 
