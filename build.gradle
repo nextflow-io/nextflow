@@ -135,10 +135,10 @@ configurations {
 dependencies {
     compile(project(':nxf-commons'))
     compile(project(':nxf-httpfs'))
-    compile "org.codehaus.groovy:groovy:2.4.13"
-    compile "org.codehaus.groovy:groovy-nio:2.4.13"
-    compile "org.codehaus.groovy:groovy-json:2.4.13"
-    compile "org.codehaus.groovy:groovy-templates:2.4.13"
+    compile "org.codehaus.groovy:groovy:2.4.15"
+    compile "org.codehaus.groovy:groovy-nio:2.4.15"
+    compile "org.codehaus.groovy:groovy-json:2.4.15"
+    compile "org.codehaus.groovy:groovy-templates:2.4.15"
     compile "org.slf4j:jcl-over-slf4j:1.7.21"
     compile "org.slf4j:jul-to-slf4j:1.7.21"
     compile "org.slf4j:log4j-over-slf4j:1.7.21"
@@ -180,8 +180,8 @@ dependencies {
 
     // Documentation required libraries
     gdocLibs 'org.fusesource.jansi:jansi:1.11'
-    gdocLibs "org.codehaus.groovy:groovy-groovydoc:2.4.13"
-    gdocLibs "org.codehaus.groovy:groovy-ant:2.4.13"
+    gdocLibs "org.codehaus.groovy:groovy-groovydoc:2.4.15"
+    gdocLibs "org.codehaus.groovy:groovy-ant:2.4.15"
 
 }
 
