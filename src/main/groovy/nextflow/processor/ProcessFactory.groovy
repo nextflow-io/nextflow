@@ -236,7 +236,8 @@ class ProcessFactory {
             throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
 
         // -- Apply the directives defined in the config object using the`withLabel:` syntax
-        for( String lbl : processConfig.getLabels() ) {
+        final processLabels = processConfig.getLabels() ?: ['']
+        for( String lbl : processLabels ) {
             applyConfigForLabel(name, processConfig, "withLabel:", lbl, config.process as Map)
         }
 
@@ -281,19 +282,21 @@ class ProcessFactory {
      * }
      * ```
      *
-     * @param processLabel
-     *      A specific label name representing the object holding the configuration setting to apply
-     * @param settings
-     *      A map object modelling the setting defined defined by the user in the nextflow configuration file
-     * @param processConfig
-     *      A {@link ProcessConfig} object modelling the a process configuration
      * @param processName
      *      The name of the process to which application the configuration settings
+     * @param processConfig
+     *      A {@link ProcessConfig} object modelling the a process configuration
+     * @param category
+     *      The type of annotation ie. `label` or `name
+     * @param processLabel
+     *      A specific label name representing the object holding the configuration setting to apply
+     * @param configDirectives
+     *      A map object modelling the setting defined defined by the user in the nextflow configuration file
      */
     protected void applyConfigForLabel( String processName, ProcessConfig processConfig, String category, String processLabel, Map<String,?> configDirectives ) {
         assert category in ['withLabel:','withName:']
-        assert processName
-        assert processLabel
+        assert processName != null
+        assert processLabel != null
         
         for( String rule : configDirectives.keySet() ) {
             if( !rule.startsWith(category) )
