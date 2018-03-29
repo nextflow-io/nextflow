@@ -318,7 +318,7 @@ else
   JAVA_VER=$(echo "$JAVA_VER" | awk '/version/ {gsub(/"/, "", $3); print $3}')
   # check NF version
   if [[ ! $NXF_VER =~ ([0-9]+)\.([0-9]+)\.([0-9].*) ]]; then
-    echo_ref "Not a valid Nextflow version: $NXF_VER"
+    echo_red "Not a valid Nextflow version: $NXF_VER"
     exit 1
   fi
   major=${BASH_REMATCH[1]}
