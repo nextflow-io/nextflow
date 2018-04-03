@@ -119,8 +119,6 @@ Simply prefix your variable names with the ``env`` scope or surround them by cur
    }
 
 
-
-
 Scope `params`
 --------------
 
@@ -159,25 +157,94 @@ For examples::
 By using this configuration all processes in your pipeline will be executed through the SGE cluster, with the specified
 settings.
 
-It is possible to set the properties for a specific process in your pipeline by prefixing the process name with
-the symbol ``$`` and using it as special scope identifier. For example::
+.. _config-process-selectors:
 
-  process.queue = 'short'
-  process.$hello.queue = 'long'
+Process selectors
+^^^^^^^^^^^^^^^^^
 
+The ``withLabel`` selectors allow the configuration of all processes annotated with a :ref:`process-label` directive
+shown below::
 
-The above configuration example sets the ``queue`` property to ``'short'`` as default value for all processes in your
-pipeline, but the process ``hello`` for which the ``queue`` property is set to ``'long'``.
-
-When using the curly brackets notation, the above can be written as shown below::
-
-  process {
-    queue = 'short'
-
-    $hello {
-        queue = 'long'
+    process {
+        withLabel: big_mem {
+            cpus = 16
+            memory = 64.GB
+            queue = 'long'
+        }
     }
-  }
+
+The above configuration example assigns 16 cpus, 64 Gb of memory and the ``long`` queue to all processes annotated
+with a ``big_mem`` label.
+
+
+In the same manner, the ``withName`` selector allows the configuration of a specific process in your pipeline by its name.
+For example::
+
+    process {
+        withName: hello {
+            cpus = 4
+            memory = 8.GB
+            queue = 'short'
+        }
+    }
+
+.. tip:: Either label and process names do not need to be enclosed with quote characters, provided the name
+  does include special characters (e.g. ``-``, ``!``, etc) or it's not a keyword or a built-in type identifier.
+  In case of doubt, you can enclose the label name or the process name with single or double quote characters.
+
+.. _config-selector-expressions:
+
+Selector expressions
+^^^^^^^^^^^^^^^^^^^^
+
+Both label and process name selectors allow the use of a regular expression to apply the same configuration
+to all processes matching the selection pattern condition. For example::
+
+    process {
+        withLabel: 'foo|bar' {
+            cpus = 2
+            memory = 4.GB
+        }
+    }
+
+The above configuration snippet sets 2 cpus and 4 GB of memory to the processes annotated with with a label ``foo``
+and ``bar``.
+
+A process selector can be negated prefixing it with the special character ``!``. For example::
+
+    process {
+        withLabel: 'foo' { cpus = 2 }
+        withLabel: '!foo' { cpus = 4 }
+        withName: '!align.*' { queue = 'long' }
+    }
+
+The above configuration snippet sets 2 cpus to processes annotated with the ``foo`` label and 4 cpus to all processes
+*not* annotated with that label. Finally it sets the use of ``long`` queue to all process whose name does *not* start
+with ``align``.
+
+.. _config-selectors-priority:
+
+Selectors priority
+^^^^^^^^^^^^^^^^^^
+
+When mixing generic process configuration and selectors the following priority rules are applied (from lower to higher):
+
+1. Process generic configuration.
+2. Process specific directive defined in the workflow script.
+3. ``withLabel`` selector definition.
+4. ``withName`` selector definition.
+
+For example::
+
+    process {
+        cpus = 4
+        withLabel: foo { cpus = 8 }
+        withName: bar { cpus = 32 }
+    }
+
+Using the above configuration snippet, all workflow processes use 4 cpus in not otherwise specified in the workflow
+script. Moreover processes annotated with the ``foo`` label use 8 cpus. Finally the process named ``bar``
+uses 32 cpus.
 
 
 .. _config-executor:

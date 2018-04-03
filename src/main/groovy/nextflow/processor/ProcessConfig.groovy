@@ -24,6 +24,7 @@ import static nextflow.util.CacheHelper.*
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.exception.IllegalConfigException
 import nextflow.exception.IllegalDirectiveException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.script.BaseScript
@@ -54,6 +55,8 @@ class ProcessConfig implements Map<String,Object> {
     static final public transient BOOL_YES = ['true','yes','on']
 
     static final public transient BOOL_NO = ['false','no','off']
+
+    static final public transient LABEL_REGEXP = ~/[a-zA-Z]([a-zA-Z0-9_]*[a-zA-Z0-9]+)?/
 
     static final public List<String> DIRECTIVES = [
             'afterScript',
@@ -361,14 +364,30 @@ class ProcessConfig implements Map<String,Object> {
         configProperties.cache == 'deep' ? HashMode.DEEP : HashMode.STANDARD
     }
 
+    protected boolean isValidLabel(String lbl) {
+        def p = lbl.indexOf('=')
+        if( p==-1 )
+            return LABEL_REGEXP.matcher(lbl).matches()
+
+        def left = lbl.substring(0,p)
+        def right = lbl.substring(p+1)
+        return LABEL_REGEXP.matcher(left).matches() && LABEL_REGEXP.matcher(right).matches()
+    }
+
     ProcessConfig label(String lbl) {
         if( !lbl ) return this
-        def allLabels = configProperties.get('label')
+        // -- check that label has a valid syntax
+        if( !isValidLabel(lbl) )
+            throw new IllegalConfigException("Not a valid process label: $lbl -- Label must consist of alphanumeric characters or '_', must start with an alphabetic character and must end with an alphanumeric character")
+        // -- get the current label, it must be a list
+        def allLabels = (List)configProperties.get('label')
         if( !allLabels ) {
             allLabels = []
             configProperties.put('label', allLabels)
         }
-        allLabels << lbl
+        // -- avoid duplicates
+        if( !allLabels.contains(lbl) )
+            allLabels.add(lbl)
         return this
     }
 
