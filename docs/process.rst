@@ -1,8 +1,8 @@
 .. _process-page:
 
-************
+*********
 Processes
-************
+*********
 
 In Nextflow a `process` is the basic processing `primitive` to execute a user script.
 
@@ -46,7 +46,7 @@ inputs, outputs, when clause and finally the process script. The syntax is defin
 .. _process-script:
 
 Script
-=======
+======
 
 The `script` block is a string statement that defines the command that is executed by the process to carry out its task.
 
@@ -213,7 +213,7 @@ the other branches will be executed.
 .. _process-template:
 
 Template
----------
+--------
 
 Process script can be externalised by using *template* files which can be reused across different processes and tested
 independently by the overall pipeline execution.
@@ -256,7 +256,7 @@ The template script can contain any piece of code that can be executed by the un
 .. _process-shell:
 
 Shell
---------
+-----
 
 .. warning:: This is an incubating feature. It may change in future Nextflow releases.
 
@@ -299,7 +299,7 @@ as a process input variable managed by Nextflow.
 .. _process-native:
 
 Native execution
-------------------
+----------------
 
 Nextflow processes can execute native code other than system scripts as shown in the previous paragraphs.
 
@@ -328,7 +328,7 @@ Will display::
 .. _process-input:
 
 Inputs
-=======
+======
 
 Nextflow processes are isolated from each other but can communicate between themselves sending values through channels.
 
@@ -366,7 +366,7 @@ each        Lets you execute the process for each entry in the input collection.
 
 
 Input of generic values
--------------------------
+-----------------------
 
 The ``val`` qualifier allows you to receive data of any type as input. It can be accessed in the process script
 by using the specified input name, as shown in the following example::
@@ -409,7 +409,7 @@ Thus the above example can be written as shown below::
 
 
 Input of files
------------------
+--------------
 
 The ``file`` qualifier allows you to receive a value as a file in the process execution context. This means that
 Nextflow will stage it in the process execution directory, and you can access it in the script by using the name
@@ -487,7 +487,7 @@ execution is launched.
 
 
 Multiple input files
-----------------------
+--------------------
 
 A process can declare as input file a channel that emits a collection of values, instead of a simple value.
 
@@ -529,7 +529,7 @@ Cardinality   Name pattern     Staged file names
  many        ``file?.ext``   ``file1.ext``, ``file2.ext``, ``file3.ext``, ..
  many        ``file??.ext``  ``file01.ext``, ``file02.ext``, ``file03.ext``, ..
  many        ``dir/*``       named as the source file, created in ``dir`` subdirectory
- many        ``dir??/*``     named as the source file, created in a progressively indexed subdirectory e.g. ``dir01/``, ``dir02/`, etc.
+ many        ``dir??/*``     named as the source file, created in a progressively indexed subdirectory e.g. ``dir01/``, ``dir02/``, etc.
  many        ``dir*/*``      (as above)
 ============ ============== ==================================================
 
@@ -553,7 +553,7 @@ The following fragment shows how a wildcard can be used in the input file declar
   name pattern or a variable identifier.
 
 Dynamic input file names
-----------------------------
+------------------------
 
 When the input file name is specified by using the ``name`` file clause or the short `string` notation, you
 are allowed to use other input values as variables in the file name string. For example::
@@ -582,7 +582,7 @@ with the current execution context.
 
 
 Input of type 'stdin'
------------------------
+---------------------
 
 The ``stdin`` input qualifier allows you the forwarding of the value received from a channel to the
 `standard input <http://en.wikipedia.org/wiki/Standard_streams#Standard_input_.28stdin.29>`_
@@ -611,7 +611,7 @@ It will output::
 
 
 Input of type 'env'
----------------------
+-------------------
 
 The ``env`` qualifier allows you to define an environment variable in the process execution context based
 on the value received from the channel. For example::
@@ -639,7 +639,7 @@ on the value received from the channel. For example::
 
 
 Input of type 'set'
---------------------
+-------------------
 
 The ``set`` qualifier allows you to group multiple parameters in a single parameter definition. It can be useful
 when a process receives, in input, tuples of values that need to be handled separately. Each element in the tuple
@@ -696,7 +696,7 @@ File names can be defined in *dynamic* manner as explained in the `Dynamic input
 
 
 Input repeaters
-----------------
+---------------
 
 The ``each`` qualifier allows you to repeat the execution of a process for each item in a collection,
 every time a new data is received. For example::
@@ -749,7 +749,7 @@ against the same library files.
   In this regard, see the :ref:`operator-combine`, :ref:`operator-cross` and :ref:`operator-phase` operators.
 
 Outputs
-========
+=======
 
 The `output` declaration block allows to define the channels used by the process to send out the results produced.
 
@@ -1040,7 +1040,7 @@ In this example, the process is normally expected to generate an ``output.txt`` 
 
 
 When
-=======
+====
 
 The ``when`` declaration allows you to define a condition that must be verified in order to execute the process.
 This can be any expression that evaluates a boolean value.

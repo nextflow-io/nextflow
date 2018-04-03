@@ -144,9 +144,9 @@ different conditions. The simplest way to do this is to use the ``if`` construct
 
 
 Strings
---------
+-------
 
-Strings can be defined by enclosing text in single or double quotes (``'``s or ``"``s)::
+Strings can be defined by enclosing text in single or double quotes (``'`` or ``"`` characters)::
 
     println "he said 'cheese' once"
     println 'he said "cheese!" again'
@@ -161,7 +161,7 @@ Strings can be concatenated with ``+``::
 .. _string-interpolation:
 
 String interpolation
-----------------------
+--------------------
 
 There is an important difference between single- and double-quoted strings:
 Double-quoted strings support variable interpolations, while single-quoted strings do not.
@@ -586,7 +586,7 @@ The ``Writer`` and ``OutputStream`` classes provide fine control for writing tex
 respectively, including low-level operations for single characters or bytes, and support for big files.
 
 For example, given two file objects ``sourceFile`` and ``targetFile``, the following code copies the
-first file's content into the second file, replacing all ``U`` characters with ``X``s::
+first file's content into the second file, replacing all ``U`` characters with ``X``::
 
     sourceFile.withReader { source ->
         targetFile.withWriter { target ->
