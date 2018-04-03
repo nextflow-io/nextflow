@@ -429,7 +429,7 @@ class FunctionalTests extends Specification {
         String CONFIG = '''
             process {
                 executor = 'nope'
-                withLabel: 'my-env' {
+                withLabel: 'my_env' {
                     module = 'ncbi-blast/2.2.27:t_coffee/10.0:clustalw/2.1'
                 }
             }
@@ -458,7 +458,7 @@ class FunctionalTests extends Specification {
         when:
             script = '''   
                         process foo {
-                            label 'my-env'
+                            label 'my_env'
                             script:
                             'echo hello'
                         }
