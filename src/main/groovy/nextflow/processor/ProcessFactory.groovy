@@ -202,7 +202,7 @@ class ProcessFactory {
         Map legacySettings = null
         if( config.process['$'+name] instanceof Map ) {
             legacySettings = (Map)config.process['$'+name]
-            log.warn "Process configuration syntax \$<process-name> has been deprecated -- Replace `process.\$$name = .. ` with a configuration label annotation"
+            //log.warn "Process configuration syntax \$<process-name> has been deprecated -- Replace `process.\$$name = .. ` with a configuration label annotation"
         }
 
         // -- the config object

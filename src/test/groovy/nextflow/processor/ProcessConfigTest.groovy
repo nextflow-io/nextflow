@@ -318,4 +318,34 @@ class ProcessConfigTest extends Specification {
         config.getLabels() == ['foo','bar']
     }
 
+    def 'should check a valid label' () {
+
+        expect:
+        new ProcessConfig([:]).isValidLabel(lbl) == result
+
+        where:
+        lbl         | result
+        'foo'       | true
+        'foo1'      | true
+        '1foo'      | false
+        '_foo'      | false
+        'foo1_'     | false
+        'foo_1'     | true
+        'foo-1'     | false
+        'foo.1'     | false
+        'a'         | true
+        'A'         | true
+        '1'         | false
+        '_'         | false
+        'a=b'       | true
+        'a=foo'     | true
+        'a=foo_1'   | true
+        'a=foo_'    | false
+        '_=foo'     | false
+        '=a'        | false
+        'a='        | false
+        'a=1'       | false
+
+    }
+
 }

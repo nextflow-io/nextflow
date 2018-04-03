@@ -1093,6 +1093,7 @@ The directives are:
 * `executor`_
 * `ext`_
 * `queue`_
+* `label`_
 * `maxErrors`_
 * `maxForks`_
 * `maxRetries`_
@@ -1691,6 +1692,37 @@ Multiple queues can be specified by separating their names with a comma for exam
 
 .. note:: This directive is taken in account only by the following executors: :ref:`sge-executor`, :ref:`lsf-executor`,
   :ref:`slurm-executor` and :ref:`pbs-executor` executors.
+
+
+.. _process-label:
+
+label
+-----
+
+The ``label`` directive allows the annotation of processes with mnemonic identifier of your choice.
+For example::
+
+  process bigTask {
+
+    label 'big_mem'
+
+    '''
+    <task script>
+    '''
+  }
+
+
+The same label can be applied to more than a process and multiple labels can be applied to the same
+process using the ``label`` directive more than one time.
+
+.. note:: A label must consist of alphanumeric characters or ``_``, must start with an alphabetic character
+  and must end with an alphanumeric character.
+
+Labels are useful to organise workflow processes in separate groups which can be referenced
+in the configuration file to select and configure subset of processes having similar computing requirements.
+
+See the :ref:`config-process-selectors` documentation for details.
+
 
 .. _process-scratch:
 
