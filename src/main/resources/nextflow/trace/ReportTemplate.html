@@ -147,10 +147,10 @@
 
         <dl>
           <div class="progress" style="height: 1.6rem; margin: 1.2rem auto; border-radius: 0.20rem;">
-            <div style="width: ${workflow.stats.succeedPct}%" class="progress-bar bg-success text-truncate" data-toggle="tooltip" data-placement="top" title="$workflow.stats.succeedCount tasks succeeded">$workflow.stats.succeedCount succeeded</div>
-            <div style="width: ${workflow.stats.cachedPct}%" class="progress-bar bg-secondary text-truncate" data-toggle="tooltip" data-placement="top" title="$workflow.stats.cachedCount tasks were cached">$workflow.stats.cachedCount cached</div>
-            <div style="width: ${workflow.stats.ignoredPct}%" class="progress-bar bg-warning text-truncate" data-toggle="tooltip" data-placement="top" title="$workflow.stats.ignoredCount tasks reported and error and were ignored">$workflow.stats.ignoredCount ignored</div>
-            <div style="width: ${workflow.stats.failedPct}%" class="progress-bar bg-danger text-truncate" data-toggle="tooltip" data-placement="top" title="$workflow.stats.failedCount tasks failed">$workflow.stats.failedCount failed</div>
+            <div style="width: ${workflow.stats.succeedPct}%" class="progress-bar bg-success" data-toggle="tooltip" data-placement="top" title="$workflow.stats.succeedCount tasks succeeded"><span class="text-truncate">&nbsp; $workflow.stats.succeedCount succeeded &nbsp;</span></div>
+            <div style="width: ${workflow.stats.cachedPct}%" class="progress-bar bg-secondary" data-toggle="tooltip" data-placement="top" title="$workflow.stats.cachedCount tasks were cached"><span class="text-truncate">&nbsp; $workflow.stats.cachedCount cached &nbsp;</span></div>
+            <div style="width: ${workflow.stats.ignoredPct}%" class="progress-bar bg-warning" data-toggle="tooltip" data-placement="top" title="$workflow.stats.ignoredCount tasks reported and error and were ignored"><span class="text-truncate">&nbsp; $workflow.stats.ignoredCount ignored &nbsp;</span></div>
+            <div style="width: ${workflow.stats.failedPct}%" class="progress-bar bg-danger" data-toggle="tooltip" data-placement="top" title="$workflow.stats.failedCount tasks failed"><span class="text-truncate">&nbsp; $workflow.stats.failedCount failed &nbsp;</span></div>
           </div>
         </dl>
 
