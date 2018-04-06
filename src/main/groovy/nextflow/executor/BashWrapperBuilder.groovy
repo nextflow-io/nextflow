@@ -712,6 +712,11 @@ class BashWrapperBuilder {
         if( !this.containerExecutable )
             builder.params(entry: '/bin/bash')
 
+        // give a chance to override any option with process specific `containerOptions`
+        if( containerOptions ) {
+            builder.addRunOptions(containerOptions)
+        }
+
         builder.build()
         return builder
     }
