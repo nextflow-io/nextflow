@@ -1086,6 +1086,7 @@ The directives are:
 * `cache`_
 * `cpus`_
 * `container`_
+* `containerOptions`_
 * `clusterOptions`_
 * `disk`_
 * `echo`_
@@ -1196,6 +1197,31 @@ Simply replace in the above script ``dockerbox:tag`` with the Docker image name 
 
 .. note:: This directive is ignore for processes :ref:`executed natively <process-native>`.
 
+
+.. _process-containerOptions:
+
+containerOptions
+----------------
+
+The ``containerOptions`` directive allows you to specify any container execution option supported by the underlying
+container engine (ie. Docker, Singularity, etc). This can be useful to provide container settings
+only for a specific process e.g. mount a custom path::
+
+
+  process runThisWithDocker {
+
+      container 'busybox:latest'
+      containerOptions '--volume /data/db:/db'
+
+      output: file 'output.txt'
+
+      '''
+      your_command --data /db > output.txt
+      '''
+  }
+
+
+.. warning:: This feature is not supported by :ref:`awsbatch-executor` and :ref:`kubernetes-executor` executors.
 
 .. _process-cpus:
 
