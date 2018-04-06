@@ -1,6 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.28.2 - 6 Feb 2018
+- Fixed Class FtpURLConnection is not accessible when using Java 9 #646
+- Fixed Lengthen mktemp TEMPLATE so works on BusyBox #647
+- Fixed Report HTML/CSS tweaks to make progress bar text overflow work properly #645
+- Fixed typo in the nextflow launcher #643
+
 0.28.1 - 27 Mar 2018
 - Fixed A HTTP access error is raised when the URL contains a ? character #634
 - Fixed Creation of temp files in the /dev/shm directory can result in a permission
