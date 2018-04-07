@@ -1323,10 +1323,17 @@ class TaskProcessor {
      */
     @CompileStatic
     protected void publishOutputs( TaskRun task ) {
-        def publish = task.config.getPublishDir()
-        if( !publish ) {
+        final publishList = task.config.getPublishDir()
+        if( !publishList ) {
             return
         }
+
+        for( PublishDir pub : publishList ) {
+            publishOutputs0(task, pub)
+        }
+    }
+
+    private void publishOutputs0( TaskRun task, PublishDir publish ) {
 
         if( publish.overwrite == null ) {
             publish.overwrite = !task.cached
@@ -1348,7 +1355,6 @@ class TaskProcessor {
 
         publish.apply(files, task)
     }
-
 
     /**
      * Bind the expected output files to the corresponding output channels

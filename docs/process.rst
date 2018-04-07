@@ -1629,6 +1629,9 @@ The ``publishDir`` directive allows you to publish the process output files to a
 The above example splits the string ``Hola`` into file chunks of a single byte. When complete the ``chunk_*`` output files
 are published into the ``/data/chunks`` folder.
 
+.. tip:: The ``publishDir`` directive can be specified more than one time in to publish the output files
+  to different target directories. This feature requires version 0.29.0 or higher.
+
 By default files are published to the target folder creating a *symbolic link* for each process output that links
 the file produced into the process working directory. This behavior can be modified using the ``mode`` parameter.
 

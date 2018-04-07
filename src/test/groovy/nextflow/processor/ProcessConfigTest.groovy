@@ -260,23 +260,26 @@ class ProcessConfigTest extends Specification {
     def 'should create PublishDir object' () {
 
         setup:
-        def script = Mock(BaseScript)
-        def config = new ProcessConfig(script)
+        BaseScript script = Mock(BaseScript)
+        ProcessConfig config
 
         when:
+        config = new ProcessConfig(script)
         config.publishDir '/data'
         then:
-        config.get('publishDir') == '/data'
+        config.get('publishDir')[0] == [path:'/data']
 
         when:
+        config = new ProcessConfig(script)
         config.publishDir '/data', mode: 'link', pattern: '*.bam'
         then:
-        config.get('publishDir') == [[mode: 'link', pattern: '*.bam'], '/data']
+        config.get('publishDir')[0] == [path: '/data', mode: 'link', pattern: '*.bam']
 
         when:
+        config = new ProcessConfig(script)
         config.publishDir path: '/data', mode: 'link', pattern: '*.bam'
         then:
-        config.get('publishDir') == [path: '/data', mode: 'link', pattern: '*.bam']
+        config.get('publishDir')[0] == [path: '/data', mode: 'link', pattern: '*.bam']
     }
 
     def 'should throw InvalidDirectiveException'() {

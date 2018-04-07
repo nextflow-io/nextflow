@@ -53,11 +53,11 @@ class TestParser {
         session = session1
     }
 
-    def BaseScript parseScript ( String scriptText, Map map = null ) {
+    BaseScript parseScript ( String scriptText, Map map = null ) {
         parseScript(scriptText, new Binding(map))
     }
 
-    def BaseScript parseScript( String scriptText, Binding binding ) {
+    BaseScript parseScript( String scriptText, Binding binding ) {
 
         def importCustomizer = new ImportCustomizer()
         importCustomizer.addImports( StringUtils.name, groovy.transform.Field.name )
@@ -83,7 +83,7 @@ class TestParser {
         return script
     }
 
-    def TaskProcessor parseAndGetProcess( String scriptText ) {
+    TaskProcessor parseAndGetProcess( String scriptText ) {
         def script = parseScript(scriptText)
         script.run()
         return script.getTaskProcessor()

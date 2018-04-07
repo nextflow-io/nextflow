@@ -437,7 +437,7 @@ class ScriptRunnerTest extends Specification {
 
         then:
         process.config instanceof ProcessConfig
-        process.config.module == ['b/2','z/9']
+        process.config.module == ['b/2:z/9']
         process.config.createTaskConfig().module == ['b/2','z/9']
         process.config.createTaskConfig().getModule() == ['b/2','z/9']
     }

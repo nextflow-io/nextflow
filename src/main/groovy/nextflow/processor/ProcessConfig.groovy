@@ -101,16 +101,24 @@ class ProcessConfig implements Map<String,Object> {
             'stageOutMode'
     ]
 
+    static final List<String> repeatableDirectives = ['label','module','publishDir']
+
+    static final Map<String,Object> DEFAULT_CONFIG = [
+            echo: false,
+            cacheable: true,
+            shell: BashWrapperBuilder.BASH,
+            validExitStatus: [0],
+            maxRetries: 0,
+            maxErrors: -1,
+            errorStrategy: ErrorStrategy.TERMINATE
+    ]
+
     @Delegate
     protected final Map<String,Object> configProperties
 
     private BaseScript ownerScript
 
     private boolean throwExceptionOnMissingProperty
-
-    private boolean allowMultipleModules
-
-    private int moduleInvocationCount
 
     private inputs = new InputsList()
 
@@ -124,28 +132,14 @@ class ProcessConfig implements Map<String,Object> {
      *      having the same name defined at the task level
      */
     ProcessConfig( BaseScript script ) {
-
         ownerScript = script
-
         configProperties = new LinkedHashMap()
-        configProperties.echo = false
-        configProperties.cacheable = true
-        configProperties.shell = BashWrapperBuilder.BASH
-        configProperties.validExitStatus = [0]
-        configProperties.maxRetries = 0
-        configProperties.maxErrors = -1
-        configProperties.errorStrategy = ErrorStrategy.TERMINATE
+        configProperties.putAll( DEFAULT_CONFIG )
     }
 
     /* Only for testing purpose */
     protected ProcessConfig( Map delegate ) {
         configProperties = delegate
-    }
-
-    protected ProcessConfig( ProcessConfig cfg ) {
-        configProperties = cfg
-        ownerScript = cfg.@ownerScript
-        log.trace "TaskConfig >> ownerScript: $ownerScript"
     }
 
     @PackageScope
@@ -165,9 +159,8 @@ class ProcessConfig implements Map<String,Object> {
      * @return The object itself
      */
     @PackageScope
-    ProcessConfig enterCaptureMode(boolean value ) {
+    ProcessConfig enterCaptureMode( boolean value ) {
         this.throwExceptionOnMissingProperty = value
-        this.allowMultipleModules = value
         return this
     }
 
@@ -197,7 +190,8 @@ class ProcessConfig implements Map<String,Object> {
          */
         if( configProperties.get(name) instanceof Closure )
             configProperties.remove(name)
-        super.invokeMethod(name, args)
+
+        this.metaClass.invokeMethod(this,name,args)
     }
 
     def methodMissing( String name, def args ) {
@@ -245,6 +239,19 @@ class ProcessConfig implements Map<String,Object> {
                     return null
         }
 
+    }
+
+    Object put( String name, Object value ) {
+
+        if( name in repeatableDirectives  ) {
+            final result = configProperties.get(name)
+            configProperties.remove(name)
+            this.metaClass.invokeMethod(this, name, value)
+            return result
+        }
+        else {
+            return configProperties.put(name,value)
+        }
     }
 
     @PackageScope
@@ -380,12 +387,14 @@ class ProcessConfig implements Map<String,Object> {
         // -- check that label has a valid syntax
         if( !isValidLabel(lbl) )
             throw new IllegalConfigException("Not a valid process label: $lbl -- Label must consist of alphanumeric characters or '_', must start with an alphabetic character and must end with an alphanumeric character")
+
         // -- get the current label, it must be a list
         def allLabels = (List)configProperties.get('label')
         if( !allLabels ) {
-            allLabels = []
+            allLabels = new ConfigList()
             configProperties.put('label', allLabels)
         }
+
         // -- avoid duplicates
         if( !allLabels.contains(lbl) )
             allLabels.add(lbl)
@@ -401,39 +410,86 @@ class ProcessConfig implements Map<String,Object> {
         if( !moduleName )
             return this
 
-        final current = allowMultipleModules && moduleInvocationCount++ ? configProperties.module : null
-        final result = parseModule(moduleName, current)
-        configProperties.put('module', result)
+        def result = (List)configProperties.module
+        if( result == null ) {
+            result = new ConfigList()
+            configProperties.put('module', result)
+        }
+
+        if( moduleName instanceof List )
+            result.addAll(moduleName)
+        else
+            result.add(moduleName)
         return this
     }
 
-    @PackageScope
-    static List parseModule( value, current = null ) {
-
-        // if no modules list exist create it
-        List copy
-
-        // normalize the current value to a list
-        // note: any value that is not a list is discarded
-        if( current instanceof List )
-            copy = new ArrayList<>(current)
-        else
-            copy = []
-
-        // parse the module list
-        if( value instanceof List )
-            copy.addAll(value)
-        else if( value instanceof String && value.contains(':'))
-            for( String it : value.split(':') ) { copy.add(it) }
-        else
-            copy.add( value )
-
-        return copy
-    }
 
     ProcessConfig errorStrategy( value ) {
         configProperties.put('errorStrategy', value)
         return this
     }
 
+    /**
+     * Allow the user to specify publishDir directive as a map eg:
+     *
+     *     publishDir path:'/some/dir', mode: 'copy'
+     *
+     * @param params
+     *      A map representing the the publishDir setting
+     * @return
+     *      The {@link ProcessConfig} instance itself
+     */
+    ProcessConfig publishDir(Map params ) {
+        if( !params )
+            return this
+
+        def dirs = (List)configProperties.get('publishDir')
+        if( !dirs ) {
+            dirs = new ConfigList()
+            configProperties.put('publishDir', dirs)
+        }
+
+        dirs.add(params)
+        return this
+    }
+
+    /**
+     * Allow the user to specify publishDir directive with a path and a list of named parameters, eg:
+     *
+     *     publishDir '/some/dir', mode: 'copy'
+     *
+     * @param params
+     *      A map representing the publishDir properties
+     * @param target
+     *      The target publishDir path
+     * @return
+     *      The {@link ProcessConfig} instance itself
+     */
+    ProcessConfig publishDir(Map params, target ) {
+        params.put('path', target)
+        publishDir( params )
+    }
+
+    /**
+     * Allow the user to specify the publishDir as a string path, eg:
+     *
+     *      publishDir '/some/dir'
+     *
+     * @param target
+     *      The target publishDir path
+     * @return
+     *      The {@link ProcessConfig} instance itself
+     */
+    ProcessConfig publishDir( target ) {
+        if( target instanceof List ) {
+            for( Object item : target ) { publishDir(item) }
+        }
+        else if( target instanceof Map ) {
+            publishDir( target as Map )
+        }
+        else {
+            publishDir([path: target])
+        }
+        return this
+    }
 }
