@@ -183,9 +183,16 @@ class ProcessFactory {
     /**
      * Create a task processor
      *
-     * @param name The name of the process as defined in the script
-     * @param body The process declarations provided by the user
-     * @return The {@code Processor} instance
+     * @param name
+     *      The name of the process as defined in the script
+     * @param body
+     *      The process declarations provided by the user
+     * @param options
+     *      A map representing the named parameter specified after the process name eg:
+     *          `process foo(bar: 'x') {  }`
+     *      (not used)
+     * @return
+     *      The {@code Processor} instance
      */
     TaskProcessor createProcessor( String name, Closure body, Map options = null ) {
         assert body
@@ -208,28 +215,12 @@ class ProcessFactory {
         // -- the config object
         final processConfig = new ProcessConfig(owner)
 
-        // -- set 'default' properties defined in the configuration file in the 'process' section
-        applyConfigSettings(name, processConfig, config.process as Map)
-
-        /*
-         * options that may be passed along the process declaration e.g.
-         *
-         * process name ( x: 1, ... ) {
-         *
-         * }
-         */
-
-        options?.each { String key, value -> processConfig.setProperty(key,value)}
-
         // Invoke the code block which will return the script closure to the executed.
         // As side effect will set all the property declarations in the 'taskConfig' object.
-        // Note: the config object is wrapped by a TaskConfigWrapper because it is needed
-        // to raise a MissingPropertyException when some values are missing, thus the closure
-        // will try to fallback on the owner object
         processConfig.enterCaptureMode(true)
         final copy = (Closure)body.clone()
-        copy.setResolveStrategy(Closure.DELEGATE_FIRST);
-        copy.setDelegate(processConfig);
+        copy.setResolveStrategy(Closure.DELEGATE_FIRST)
+        copy.setDelegate(processConfig)
         final script = copy.call() as TaskBody
         processConfig.enterCaptureMode(false)
         if ( !script )
@@ -249,6 +240,9 @@ class ProcessFactory {
         if( legacySettings ) {
             applyConfigSettings(name, processConfig, legacySettings)
         }
+
+        // -- Apply defaults
+        applyProcessDefaults( config.process as Map, processConfig )
 
         // -- load the executor to be used
         def execName = getExecutorName(processConfig) ?: DEFAULT_EXECUTOR
@@ -297,7 +291,7 @@ class ProcessFactory {
         assert category in ['withLabel:','withName:']
         assert processName != null
         assert processLabel != null
-        
+
         for( String rule : configDirectives.keySet() ) {
             if( !rule.startsWith(category) )
                 continue
@@ -349,19 +343,34 @@ class ProcessFactory {
             if( entry.key == 'params' ) // <-- patch issue #242
                 continue
 
-            if( entry.key == 'ext' && processConfig.getProperty('ext') instanceof Map ) {
-                // update missing 'ext' properties found in 'process' scope
-                def ext = processConfig.getProperty('ext') as Map
-                entry.value.each { String k, v -> ext[k] = v }
-                continue
-            }
-
-            if( entry.key == 'module') {
-                processConfig.module(entry.value)
+            if( entry.key == 'ext' ) {
+                if( processConfig.getProperty('ext') instanceof Map ) {
+                    // update missing 'ext' properties found in 'process' scope
+                    def ext = processConfig.getProperty('ext') as Map
+                    entry.value.each { String k, v -> ext[k] = v }
+                }
                 continue
             }
 
             processConfig.put(entry.key,entry.value)
+        }
+    }
+
+    protected void applyProcessDefaults( Map processDefaults, ProcessConfig processConfig ) {
+        for( String key : processDefaults.keySet() ) {
+            if( key == 'params' )
+                continue
+            def value = processDefaults.get(key)
+            def current = processConfig.get(key)
+            if( key == 'ext' ) {
+                if( value instanceof Map && current instanceof Map ) {
+                    def ext = current as Map
+                    value.each { k,v -> if(!ext.containsKey(k)) ext.put(k,v) }
+                }
+            }
+            else if( current==null || current == ProcessConfig.DEFAULT_CONFIG.get(key) ) {
+                processConfig.put( key, value )
+            }
         }
     }
 

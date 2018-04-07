@@ -40,17 +40,17 @@ class PublishDirTest extends Specification {
         PublishDir publish
 
         when:
-        publish =  PublishDir.create('/data')
+        publish = PublishDir.create(path: '/data')
         then:
         publish.path == Paths.get('/data')
 
         when:
-        publish =  PublishDir.create('data')
+        publish =  PublishDir.create(path: 'data')
         then:
         publish.path == Paths.get('data').complete()
 
         when:
-        publish =  PublishDir.create( Paths.get('data') )
+        publish =  PublishDir.create( path: Paths.get('data') )
         then:
         publish.path == Paths.get('data').complete()
 
@@ -72,7 +72,7 @@ class PublishDirTest extends Specification {
 
 
         when:
-        publish =  PublishDir.create( [[overwrite: false, pattern: '*.txt', mode: 'copy'], 'this/folder'] )
+        publish =  PublishDir.create( [path:'this/folder', overwrite: false, pattern: '*.txt', mode: 'copy'] )
         then:
         publish.path == Paths.get('this/folder').complete()
         publish.mode == PublishDir.Mode.COPY

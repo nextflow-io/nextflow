@@ -421,12 +421,8 @@ class FunctionalTests extends Specification {
     }
 
     def 'should set module directive' () {
-        given:
-        /*
-         * A config with a `memory` definition for all process
-         * and two labels `small` and `big`
-         */
-        String CONFIG = '''
+        when:
+        String config = '''
             process {
                 executor = 'nope'
                 withLabel: 'my_env' {
@@ -434,44 +430,233 @@ class FunctionalTests extends Specification {
                 }
             }
             '''
+        String script = '''   
+                process foo {
+                    module 'mod-a/1.1:mod-b/2.2'
+                    script:
+                    'echo hello'
+                }
+                '''
+
+        def cfg = new ConfigParser().parse(config)
+        def runner = new ScriptRunner(cfg)
+        runner.setScript(script).execute()
+        def processor = runner.scriptObj.taskProcessor
+
+        then:
+        processor instanceof TaskProcessor
+        processor.config.module == ['mod-a/1.1:mod-b/2.2']
+        processor.config.createTaskConfig().getModule() == ['mod-a/1.1','mod-b/2.2']
 
 
         when:
-            String script = '''   
-                    process foo {
-                        module 'mod-a/1.1:mod-b/2.2'
-                        script:
-                        'echo hello'
-                    }
-                    '''
+        config = '''
+            process {
+                executor = 'nope'
+                withLabel: 'my_env' {
+                    module = 'ncbi-blast/2.2.27:t_coffee/10.0:clustalw/2.1'
+                }
+            }
+            '''
+        script = '''   
+                process foo {
+                    label 'my_env'
+                    script:
+                    'echo hello'
+                }
+                '''
 
-            def cfg = new ConfigParser().parse(CONFIG)
-            def runner = new ScriptRunner(cfg)
-            runner.setScript(script).execute()
-            def processor = runner.scriptObj.taskProcessor
+        cfg = new ConfigParser().parse(config)
+        runner = new ScriptRunner(cfg)
+        runner.setScript(script).execute()
+        processor = runner.scriptObj.taskProcessor
 
         then:
-            processor instanceof TaskProcessor
-            processor.config.module == ['mod-a/1.1','mod-b/2.2']
+        processor instanceof TaskProcessor
+        processor.config.module == ['ncbi-blast/2.2.27:t_coffee/10.0:clustalw/2.1']
+        processor.config.createTaskConfig().getModule() == ['ncbi-blast/2.2.27','t_coffee/10.0','clustalw/2.1']
+
+    }
+
+    def 'should set publishDir directive' () {
+        when:
+        String CONFIG = '''
+            process {
+                executor = 'nope'
+                publishDir = '/some/dir'
+            }
+            '''
+        String script = '''   
+                process foo {
+                    script:
+                    'echo hello'
+                }
+                '''
+
+        def cfg = new ConfigParser().parse(CONFIG)
+        def runner = new ScriptRunner(cfg)
+        runner.setScript(script).execute()
+        def processor = runner.scriptObj.taskProcessor
+        then:
+        processor instanceof TaskProcessor
+        processor.config.publishDir[0] == [path:'/some/dir']
 
 
         when:
-            script = '''   
-                        process foo {
-                            label 'my_env'
-                            script:
-                            'echo hello'
-                        }
-                        '''
+        CONFIG = '''
+            process {
+                executor = 'nope'
+                publishDir = [ '/some/dir', [path:'/other/dir', mode: 'copy'] ]
+            }
+            '''
+        script = '''   
+                process foo {
+                    script:
+                    'echo hello'
+                }
+                '''
 
-            cfg = new ConfigParser().parse(CONFIG)
-            runner = new ScriptRunner(cfg)
-            runner.setScript(script).execute()
-            processor = runner.scriptObj.taskProcessor
-
+        cfg = new ConfigParser().parse(CONFIG)
+        runner = new ScriptRunner(cfg)
+        runner.setScript(script).execute()
+        processor = runner.scriptObj.taskProcessor
         then:
-            processor instanceof TaskProcessor
-            processor.config.module == ['ncbi-blast/2.2.27','t_coffee/10.0','clustalw/2.1']
+        processor instanceof TaskProcessor
+        processor.config.publishDir[0] == [path:'/some/dir']
+        processor.config.publishDir[1] == [path:'/other/dir', mode: 'copy']
+
+
+        when:
+        CONFIG = '''
+            process {
+                executor = 'nope'
+            }
+            '''
+        script = '''   
+                process foo {
+                    publishDir '/data1'
+                    publishDir '/data2', mode: 'symlink'
+                    script:
+                    'echo hello'
+                }
+                '''
+
+        cfg = new ConfigParser().parse(CONFIG)
+        runner = new ScriptRunner(cfg)
+        runner.setScript(script).execute()
+        processor = runner.scriptObj.taskProcessor
+        then:
+        processor instanceof TaskProcessor
+        processor.config.publishDir[0] == [path:'/data1']
+        processor.config.publishDir[1] == [path:'/data2', mode: 'symlink']
+
+
+        when:
+        CONFIG = '''
+            process {
+                executor = 'nope'
+                publishDir = '/dir/cfg'
+            }
+            '''
+        script = '''   
+                process foo {
+                    publishDir '/dir/alpha'
+                    publishDir '/dir/bravo'  
+                    script:
+                    'echo hello'
+                }
+                '''
+
+        cfg = new ConfigParser().parse(CONFIG)
+        runner = new ScriptRunner(cfg)
+        runner.setScript(script).execute()
+        processor = runner.scriptObj.taskProcessor
+        then:
+        processor instanceof TaskProcessor
+        processor.config.publishDir[0] == [path:'/dir/alpha']
+        processor.config.publishDir[1] == [path:'/dir/bravo']
+        processor.config.publishDir.size() == 2
+
+
+
+        when:
+        CONFIG = '''
+            process {
+                executor = 'nope'
+                publishDir = '/dir/cfg'
+                withName: foo { publishDir = '/dir/omega' }
+            }
+            '''
+        script = '''   
+                process foo {
+                    publishDir '/dir/alpha'
+                    publishDir '/dir/bravo'  
+                    script:
+                    'echo hello'
+                }
+                '''
+
+        cfg = new ConfigParser().parse(CONFIG)
+        runner = new ScriptRunner(cfg)
+        runner.setScript(script).execute()
+        processor = runner.scriptObj.taskProcessor
+        then:
+        processor instanceof TaskProcessor
+        processor.config.publishDir[0] == [path:'/dir/omega']
+        processor.config.publishDir.size() == 1
+    }
+
+
+
+    def 'should set directive label' () {
+
+        when:
+        def CONFIG = '''
+            process {
+                executor = 'nope'
+                label = 'alpha'
+            }
+            '''
+        def script = '''   
+                process foo {
+                    script:
+                    'echo hello'
+                }
+                '''
+
+        def cfg = new ConfigParser().parse(CONFIG)
+        def runner = new ScriptRunner(cfg)
+        runner.setScript(script).execute()
+        def processor = runner.scriptObj.taskProcessor
+        then:
+        processor instanceof TaskProcessor
+        processor.config.label == [ 'alpha' ]
+
+
+        when:
+        CONFIG = '''
+            process {
+                executor = 'nope'
+                label = 'alpha'
+            }
+            '''
+        script = '''   
+                process foo {
+                    label 'bravo'
+                    label 'gamma'  
+                    script:
+                    'echo hello'
+                }
+                '''
+
+        cfg = new ConfigParser().parse(CONFIG)
+        runner = new ScriptRunner(cfg)
+        runner.setScript(script).execute()
+        processor = runner.scriptObj.taskProcessor
+        then:
+        processor instanceof TaskProcessor
+        processor.config.label.size() == 2
+        processor.config.label == [ 'bravo', 'gamma' ]
 
     }
 }

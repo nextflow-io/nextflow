@@ -108,31 +108,25 @@ class TaskConfigTest extends Specification {
 
         when:
         config = new ProcessConfig([:])
-        config.enterCaptureMode(true)
-        
         config.module 't_coffee/10'
         config.module( [ 'blast/2.2.1', 'clustalw/2'] )
         local = config.createTaskConfig()
-
         then:
-        local.module == ['t_coffee/10','blast/2.2.1', 'clustalw/2']
+        local.module == ['t_coffee/10', 'blast/2.2.1', 'clustalw/2']
         local.getModule() == ['t_coffee/10','blast/2.2.1', 'clustalw/2']
+
 
         when:
         config = new ProcessConfig([:])
-        config.enterCaptureMode(true)
-
         config.module 'a/1'
         config.module 'b/2:c/3'
         local = config.createTaskConfig()
-
         then:
         local.module == ['a/1','b/2','c/3']
 
+
         when:
         config = new ProcessConfig([:])
-        config.enterCaptureMode(true)
-
         config.module { 'a/1' }
         config.module { 'b/2:c/3' }
         config.module 'd/4'
@@ -141,13 +135,11 @@ class TaskConfigTest extends Specification {
         then:
         local.module == ['a/1','b/2','c/3', 'd/4']
 
+
         when:
         config = new ProcessConfig([:])
-        config.enterCaptureMode(true)
-
         config.module = 'b/2:c/3'
         local = config.createTaskConfig()
-
         then:
         local.module == ['b/2','c/3']
         local.getModule() == ['b/2','c/3']
@@ -453,22 +445,23 @@ class TaskConfigTest extends Specification {
 
         setup:
         def script = Mock(BaseScript)
-        def process = new ProcessConfig(script)
+        ProcessConfig process
         PublishDir publish
 
         when:
+        process = new ProcessConfig(script)
         process.publishDir '/data'
-        publish = process.createTaskConfig().getPublishDir()
+        publish = process.createTaskConfig().getPublishDir()[0]
         then:
         publish.path == Paths.get('/data').complete()
         publish.pattern == null
         publish.overwrite == null
         publish.mode == null
 
-
         when:
+        process = new ProcessConfig(script)
         process.publishDir '/data', overwrite: false, mode: 'copy', pattern: '*.txt'
-        publish = process.createTaskConfig().getPublishDir()
+        publish = process.createTaskConfig().getPublishDir()[0]
         then:
         publish.path == Paths.get('/data').complete()
         publish.pattern == '*.txt'
@@ -476,11 +469,24 @@ class TaskConfigTest extends Specification {
         publish.mode == PublishDir.Mode.COPY
 
         when:
+        process = new ProcessConfig(script)
         process.publishDir '/my/data', mode: 'copyNoFollow'
-        publish = process.createTaskConfig().getPublishDir()
+        publish = process.createTaskConfig().getPublishDir()[0]
         then:
         publish.path == Paths.get('//my/data').complete()
         publish.mode == PublishDir.Mode.COPY_NO_FOLLOW
+
+        when:
+        process = new ProcessConfig(script)
+        process.publishDir '/here'
+        process.publishDir '/there', pattern: '*.fq'
+        def dirs = process.createTaskConfig().getPublishDir()
+        then:
+        dirs.size() == 2 
+        dirs[0].path == Paths.get('/here')
+        dirs[0].pattern == null
+        dirs[1].path == Paths.get('/there')
+        dirs[1].pattern == '*.fq'
 
     }
 
@@ -489,43 +495,12 @@ class TaskConfigTest extends Specification {
         given:
         TaskConfig config
 
-        // It is defined using a local variable e.g.
-        // publishDir "$x"
         when:
         config = new TaskConfig()
-        config.publishDir = "${-> foo }/${-> bar }"
-        config.setContext( foo: 'hello', bar: 'world' )
-        then:
-        config.getPublishDir() == PublishDir.create('hello/world')
-
-        // It is defined using named parameters
-        // publishDir path: "$x", mode: "$y"
-        when:
-        config = new TaskConfig()
-        config.publishDir = [path: "${-> foo }/${-> bar }", mode: "${-> x }"]
+        config.publishDir = [ [path: "${-> foo }/${-> bar }", mode: "${-> x }"] ] as ConfigList
         config.setContext( foo: 'world', bar: 'hello', x: 'copy' )
         then:
-        config.getPublishDir() == PublishDir.create(path: 'world/hello', mode: 'copy')
-
-        // It is defined using both named parameters and local vars
-        // publishDir "/data/$output", mode: "$x"
-        when:
-        config = new TaskConfig()
-        config.publishDir = [[ mode: "${-> x }"], "${-> foo }/${-> bar }"]
-        config.setContext( foo: 'world', bar: 'hello', x: 'copy' )
-        then:
-        config.getPublishDir() == PublishDir.create(path: 'world/hello', mode: 'copy')
-
-
-        // It is defined using both named parameters and local vars
-        // publishDir { "/data/$output" }, mode: "$x"
-        when:
-        config = new TaskConfig()
-        config.publishDir = [[ mode: "${-> x }"], { "$foo/$bar" }]
-        config.setContext( foo: 'hello', bar: 'world', x: 'copy' )
-        then:
-        config.getPublishDir() == PublishDir.create(path: 'hello/world', mode: 'copy')
-
+        config.getPublishDir() == [ PublishDir.create(path: 'world/hello', mode: 'copy') ]
 
     }
 
