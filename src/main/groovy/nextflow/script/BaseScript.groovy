@@ -110,7 +110,7 @@ abstract class BaseScript extends Script {
      * Enable disable task 'echo' configuration property
      * @param value
      */
-    def void echo(boolean value = true) {
+    void echo(boolean value = true) {
         config.process.echo = value
     }
 

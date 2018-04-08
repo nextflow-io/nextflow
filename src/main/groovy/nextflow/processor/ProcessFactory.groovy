@@ -20,11 +20,8 @@
 
 package nextflow.processor
 
-import java.util.regex.Pattern
-
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.exception.ConfigParseException
 import nextflow.executor.AwsBatchExecutor
 import nextflow.executor.CondorExecutor
 import nextflow.executor.CrgExecutor
@@ -43,7 +40,6 @@ import nextflow.script.ScriptType
 import nextflow.script.TaskBody
 import nextflow.util.ServiceDiscover
 import nextflow.util.ServiceName
-
 /**
  *  Factory class for {@TaskProcessor} instances
  *
@@ -213,36 +209,36 @@ class ProcessFactory {
         }
 
         // -- the config object
-        final processConfig = new ProcessConfig(owner)
+        final processConfig = new ProcessConfig(owner).setProcessName(name)
 
         // Invoke the code block which will return the script closure to the executed.
         // As side effect will set all the property declarations in the 'taskConfig' object.
-        processConfig.enterCaptureMode(true)
+        processConfig.throwExceptionOnMissingProperty(true)
         final copy = (Closure)body.clone()
         copy.setResolveStrategy(Closure.DELEGATE_FIRST)
         copy.setDelegate(processConfig)
         final script = copy.call() as TaskBody
-        processConfig.enterCaptureMode(false)
+        processConfig.throwExceptionOnMissingProperty(false)
         if ( !script )
             throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
 
         // -- Apply the directives defined in the config object using the`withLabel:` syntax
         final processLabels = processConfig.getLabels() ?: ['']
         for( String lbl : processLabels ) {
-            applyConfigForLabel(name, processConfig, "withLabel:", lbl, config.process as Map)
+            processConfig.applyConfigForLabel(config.process as Map, "withLabel:", lbl)
         }
 
         // -- apply setting for name
-        applyConfigForLabel(name, processConfig, "withName:", name, config.process as Map)
+        processConfig.applyConfigForLabel(config.process as Map, "withName:", name)
 
         // -- Apply process specific setting defined using `process.$name` syntax
         //    NOTE: this is deprecated and will be removed
         if( legacySettings ) {
-            applyConfigSettings(name, processConfig, legacySettings)
+            processConfig.applyConfigSettings(legacySettings)
         }
 
         // -- Apply defaults
-        applyProcessDefaults( config.process as Map, processConfig )
+        processConfig.applyConfigDefaults( config.process as Map )
 
         // -- load the executor to be used
         def execName = getExecutorName(processConfig) ?: DEFAULT_EXECUTOR
@@ -264,115 +260,6 @@ class ProcessFactory {
         newTaskProcessor( name, execObj, session, owner, processConfig, script )
     }
 
-    /**
-     * Apply the settings defined in the configuration file for the given annotation label, for example:
-     *
-     * ```
-     * process {
-     *     label: foo {
-     *         cpus = 1
-     *         memory = 2.gb
-     *     }
-     * }
-     * ```
-     *
-     * @param processName
-     *      The name of the process to which application the configuration settings
-     * @param processConfig
-     *      A {@link ProcessConfig} object modelling the a process configuration
-     * @param category
-     *      The type of annotation ie. `label` or `name
-     * @param processLabel
-     *      A specific label name representing the object holding the configuration setting to apply
-     * @param configDirectives
-     *      A map object modelling the setting defined defined by the user in the nextflow configuration file
-     */
-    protected void applyConfigForLabel( String processName, ProcessConfig processConfig, String category, String processLabel, Map<String,?> configDirectives ) {
-        assert category in ['withLabel:','withName:']
-        assert processName != null
-        assert processLabel != null
-
-        for( String rule : configDirectives.keySet() ) {
-            if( !rule.startsWith(category) )
-                continue
-            def isLabel = category=='withLabel:'
-            def pattern = rule.substring(category.size()).trim()
-            final isNegated = pattern.startsWith('!')
-            if( isNegated )
-                pattern = pattern.substring(1).trim()
-            final target = isLabel ? processLabel : processName
-            final matches = Pattern.compile(pattern).matcher(target).matches() ^ isNegated
-            if( !matches )
-                continue
-
-            log.debug "Config settings `$rule` matches ${isLabel ? "label `$target` for process with name $processName" : "process $processName"}"
-            def settings = configDirectives.get(rule)
-            if( settings instanceof Map ) {
-                applyConfigSettings(processName, processConfig, settings)
-            }
-            else if( settings != null ) {
-                throw new ConfigParseException("Unknown config settings for label `$processLabel` -- settings=$settings ")
-            }
-        }
-    }
-
-    /**
-     * Apply the settings defined in the configuration file to the actual process configuration object
-     *
-     * @param processName
-     *      The name of the process to which application the configuration settings
-     * @param processConfig
-     *      A {@link ProcessConfig} object modelling the a process configuration
-     * @param settings
-     *      A map object modelling the setting defined defined by the user in the nextflow configuration file
-     */
-    protected void applyConfigSettings(String processName, ProcessConfig processConfig, Map<String,?> settings) {
-        if( !settings )
-            return
-
-        for( Map.Entry<String,?> entry: settings ) {
-            if( entry.key.startsWith('$'))
-                continue
-
-            if( entry.key.startsWith("withLabel:") || entry.key.startsWith("withName:"))
-                continue
-
-            if( !ProcessConfig.DIRECTIVES.contains(entry.key) )
-                log.warn "Unknown directive `$entry.key` for process `$processName`"
-
-            if( entry.key == 'params' ) // <-- patch issue #242
-                continue
-
-            if( entry.key == 'ext' ) {
-                if( processConfig.getProperty('ext') instanceof Map ) {
-                    // update missing 'ext' properties found in 'process' scope
-                    def ext = processConfig.getProperty('ext') as Map
-                    entry.value.each { String k, v -> ext[k] = v }
-                }
-                continue
-            }
-
-            processConfig.put(entry.key,entry.value)
-        }
-    }
-
-    protected void applyProcessDefaults( Map processDefaults, ProcessConfig processConfig ) {
-        for( String key : processDefaults.keySet() ) {
-            if( key == 'params' )
-                continue
-            def value = processDefaults.get(key)
-            def current = processConfig.get(key)
-            if( key == 'ext' ) {
-                if( value instanceof Map && current instanceof Map ) {
-                    def ext = current as Map
-                    value.each { k,v -> if(!ext.containsKey(k)) ext.put(k,v) }
-                }
-            }
-            else if( current==null || current == ProcessConfig.DEFAULT_CONFIG.get(key) ) {
-                processConfig.put( key, value )
-            }
-        }
-    }
 
     /**
      * Find out the 'executor' to be used in the process definition or in teh session configuration object

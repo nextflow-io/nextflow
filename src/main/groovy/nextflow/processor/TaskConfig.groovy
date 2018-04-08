@@ -25,6 +25,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.exception.FailedGuardException
 import nextflow.executor.BashWrapperBuilder
@@ -143,7 +144,15 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     boolean getEcho() {
         def value = get('echo')
-        ProcessConfig.toBool(value)
+        toBool(value)
+    }
+
+    private static boolean toBool( value )  {
+        if( value instanceof Boolean ) {
+            return value.booleanValue()
+        }
+
+        return value != null && value.toString().toLowerCase() in Const.BOOL_YES
     }
 
     List<Integer> getValidExitStatus() {
