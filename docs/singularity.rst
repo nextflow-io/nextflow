@@ -93,9 +93,17 @@ It is possible to specify a different Singularity image for each process definit
 let's suppose you have two processes named ``foo`` and ``bar``. You can specify two different Singularity images
 specifing them in the ``nextflow.config`` file as shown below::
 
-    process.$foo.container = 'image_name_1'
-    process.$bar.container = 'image_name_2'
-    singularity.enabled = true
+    process {
+        withName:foo {
+            container = 'image_name_1'
+        }
+        withName:bar {
+            container = 'image_name_2'
+        }
+    }
+    singularity {
+        enabled = true
+    }
 
 
 Read the :ref:`Process scope <config-process>` section to learn more about processes configuration.
