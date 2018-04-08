@@ -1252,7 +1252,7 @@ See also: `penv`_, `memory`_, `time`_, `queue`_, `maxForks`_
 clusterOptions
 --------------
 
-The ``clusterOptions`` directive allows to use any `native` configuration option accepted by your cluster submit command.
+The ``clusterOptions`` directive allows the usage of any `native` configuration option accepted by your cluster submit command.
 You can use it to request non-standard resources or use settings that are specific to your cluster and not supported
 out of the box by Nextflow.
 

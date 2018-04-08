@@ -32,6 +32,10 @@ import static nextflow.extension.Bolts.DATETIME_FORMAT
  */
 class Const {
 
+    static final public transient BOOL_YES = ['true','yes','on']
+
+    static final public transient BOOL_NO = ['false','no','off']
+
     /**
      * The application main package name
      */

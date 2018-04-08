@@ -131,7 +131,7 @@ class ProcessConfigTest extends Specification {
     def 'should throw MissingPropertyException' () {
         when:
         def script = Mock(BaseScript)
-        def config = new ProcessConfig(script).enterCaptureMode(true)
+        def config = new ProcessConfig(script).throwExceptionOnMissingProperty(true)
         def x = config.hola
 
         then:
@@ -349,6 +349,107 @@ class ProcessConfigTest extends Specification {
         'a='        | false
         'a=1'       | false
 
+    }
+
+    def 'should apply config setting for a process label' () {
+        given:
+        def settings = [
+                'withLabel:short'  : [ cpus: 1, time: '1h'],
+                'withLabel:!short' : [ cpus: 32, queue: 'cn-long'],
+                'withLabel:foo'    : [ cpus: 2 ],
+                'withLabel:foo|bar': [ disk: '100GB' ],
+                'withLabel:gpu.+'  : [ cpus: 4 ],
+        ]
+
+        when:
+        def process = new ProcessConfig([:]).setProcessName('any')
+        process.applyConfigForLabel(settings, 'withLabel:', 'short')
+        then:
+        process.cpus == 1
+        process.time == '1h'
+        process.size() == 2
+
+        when:
+        process = new ProcessConfig([:]).setProcessName('any')
+        process.applyConfigForLabel(settings, 'withLabel:', 'long')
+        then:
+        process.cpus == 32
+        process.queue == 'cn-long'
+        process.size() == 2
+
+        when:
+        process = new ProcessConfig([:]).setProcessName('any')
+        process.applyConfigForLabel(settings, 'withLabel:', 'foo')
+        then:
+        process.cpus == 2
+        process.disk == '100GB'
+        process.queue == 'cn-long'
+        process.size() == 3
+
+        when:
+        process = new ProcessConfig([:]).setProcessName('any')
+        process.applyConfigForLabel(settings, 'withLabel:', 'bar')
+        then:
+        process.cpus == 32
+        process.disk == '100GB'
+        process.queue == 'cn-long'
+        process.size() == 3
+
+        when:
+        process = new ProcessConfig([:]).setProcessName('any')
+        process.applyConfigForLabel(settings, 'withLabel:', 'gpu-1')
+        then:
+        process.cpus == 4
+        process.queue == 'cn-long'
+        process.size() == 2
+
+    }
+
+
+    def 'should apply config setting for a process name' () {
+        given:
+        def settings = [
+                'withName:alpha'        : [ cpus: 1, time: '1h'],
+                'withName:delta'        : [ cpus: 2 ],
+                'withName:delta|gamma'  : [ disk: '100GB' ],
+                'withName:omega.+'      : [ cpus: 4 ],
+        ]
+
+        when:
+        def process = new ProcessConfig([:]).setProcessName('xx')
+        process.applyConfigForLabel(settings, 'withName:', 'any')
+        then:
+        process.size() == 0
+
+        when:
+        process = new ProcessConfig([:]).setProcessName('alpha')
+        process.applyConfigForLabel(settings, 'withName:', 'any')
+        then:
+        process.cpus == 1
+        process.time == '1h'
+        process.size() == 2
+
+        when:
+        process =  new ProcessConfig([:]).setProcessName('delta')
+        process.applyConfigForLabel(settings, 'withName:', 'any')
+        then:
+        process.cpus == 2
+        process.disk == '100GB'
+        process.size() == 2
+
+        when:
+        process =  new ProcessConfig([:]).setProcessName('gamma')
+        process.applyConfigForLabel(settings, 'withName:', 'any')
+        then:
+        process.disk == '100GB'
+        process.size() == 1
+
+        when:
+        process = new ProcessConfig([:]).setProcessName('omega_x')
+        process.applyConfigForLabel(settings, 'withName:', 'any')
+        then:
+        process.cpus == 4
+        process.size() == 1
     }
 
 }
