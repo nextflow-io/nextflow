@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
+import com.google.common.hash.HashCode
 import com.upplication.s3fs.S3OutputStream
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -55,6 +56,7 @@ import nextflow.trace.StatsObserver
 import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceObserver
+import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStats
 import nextflow.util.Barrier
 import nextflow.util.ConfigHelper
@@ -547,7 +549,7 @@ class Session implements ISession {
                 log.trace "Session > after processors join"
             }
 
-            cleanUp()
+            shutdown0()
             log.trace "Session > after cleanup"
 
             execService.shutdown()
@@ -569,7 +571,7 @@ class Session implements ISession {
         }
     }
 
-    final protected void cleanUp() {
+    final protected void shutdown0() {
         log.trace "Shutdown: $shutdownCallbacks"
         while( shutdownCallbacks.size() ) {
             def hook = shutdownCallbacks.poll()
@@ -871,6 +873,37 @@ class Session implements ISession {
      */
     void onError( Closure action ) {
         errorAction = action
+    }
+
+    /**
+     * Delete the workflow work directory from tasks temporary files
+     */
+    void cleanup() {
+        if( !workDir || !config.cleanup )
+            return
+
+        if( aborted || cancelled || error )
+            return
+
+        CacheDB db = null
+        try {
+            log.trace "Cleaning-up workdir"
+            db = new CacheDB(uniqueId, runName).openForRead()
+            db.eachRecord { HashCode hash, TraceRecord record ->
+                def deleted = db.removeTaskEntry(hash)
+                if( deleted ) {
+                    // delete folder
+                    FileHelper.asPath(record.workDir).deleteDir()
+                }
+            }
+            log.trace "Clean workdir complete"
+        }
+        catch( Exception e ) {
+            log.warn("Failed to cleanup work dir: $workDir")
+        }
+        finally {
+            db.close()
+        }
     }
 
     /**
