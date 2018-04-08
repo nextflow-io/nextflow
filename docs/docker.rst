@@ -81,9 +81,17 @@ in the Nextflow script as shown below::
 
 Alternatively, the same containers definitions can be provided by using the ``nextflow.config`` file as shown below::
 
-    process.$foo.container = 'image_name_1'
-    process.$bar.container = 'image_name_2'
-    docker.enabled = true
+    process {
+        withName:foo {
+            container = 'image_name_1'
+        }
+        withName:bar {
+            container = 'image_name_2'
+        }
+    }
+    docker {
+        enabled = true
+    }
 
 
 Read the :ref:`Process scope <config-process>` section to learn more about processes configuration.
