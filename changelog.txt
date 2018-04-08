@@ -1,7 +1,15 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-0.28.2 - 6 Feb 2018
+0.29.9-RC1 - 8 Apr 2018
+- Added `containerOptions` directive #415
+- Added support for multiple `publishDir` directives for process #256
+- Added cleanup feature to delete workflow work dir on completion #649
+- Added label directive and process configuration selectors `withLabel` and `withName` #623
+- Fixed Invalid process cache when using a different environment module #627
+- Upgrading groovy runtime to version 2.4.15
+
+0.28.2 - 6 Apr 2018
 - Fixed Class FtpURLConnection is not accessible when using Java 9 #646
 - Fixed Lengthen mktemp TEMPLATE so works on BusyBox #647
 - Fixed Report HTML/CSS tweaks to make progress bar text overflow work properly #645
