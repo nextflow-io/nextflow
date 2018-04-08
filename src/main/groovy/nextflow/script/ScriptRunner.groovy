@@ -346,6 +346,7 @@ class ScriptRunner {
         session.await()
         normalizeOutput()
         session.destroy()
+        session.cleanup()
         log.debug "> Execution complete -- Goodbye"
     }
 
