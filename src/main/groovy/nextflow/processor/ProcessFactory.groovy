@@ -61,6 +61,7 @@ class ProcessFactory {
             'uge':  SgeExecutor,
             'lsf': LsfExecutor,
             'pbs': PbsExecutor,
+            'oar': OarExecutor,
             'slurm': SlurmExecutor,
             'crg': CrgExecutor,
             'bsc': LsfExecutor,
