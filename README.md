@@ -7,10 +7,10 @@ Nextflow
 Rationale
 ---------
 
-With the arise of big data, techniques to analyse and run experiments on large datasets are increasingly necessary.
+With the rise of big data, techniques to analyse and run experiments on large datasets are increasingly necessary.
 
 Parallelization and distributed computing are the best ways to tackle this kind of problem, but the tools commonly available
-to the bioinformaticians community, traditionally lack good support for these techniques, or provide a model that fits
+to the bioinformatics community traditionally lack good support for these techniques, or provide a model that fits
 badly with the specific requirements in the bioinformatics domain and, most of the time, require the knowledge
 of complex tools or low-level APIs.
 
