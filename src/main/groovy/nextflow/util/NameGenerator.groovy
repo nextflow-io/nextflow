@@ -49,9 +49,9 @@ class NameGenerator {
             "cheeky",
             "cheesy",
             "clever",
-            "cocky",
             "compassionate",
             "condescending",
+            "confident",
             "cranky",
             "crazy",
             "curious",
@@ -131,7 +131,7 @@ class NameGenerator {
             "thirsty",
             "tiny",
             "trusting",
-            "voluptuous",
+            "voluminous",
             "wise",
             "zen"
 
