@@ -67,6 +67,10 @@ class FileHelper {
 
     private static List<String> UNSUPPORTED_GLOB_WILDCARDS = ['http','https','ftp','ftps']
 
+    private static LinkOption[] NO_FOLLOW_LINKS = [LinkOption.NOFOLLOW_LINKS] as LinkOption[]
+
+    private static LinkOption[] FOLLOW_LINKS = [] as LinkOption[]
+
     static {
         def temp = System.getenv('NXF_TEMP')
         if( temp ) {
@@ -824,8 +828,9 @@ class FileHelper {
     {
         FileSystemProvider provider = source.fileSystem.provider()
         if (target.fileSystem.provider().is(provider)) {
+            final linkOpts = options.contains(LinkOption.NOFOLLOW_LINKS) ? NO_FOLLOW_LINKS : FOLLOW_LINKS
             // same provider
-            if( Files.isDirectory(source) ) {
+            if( Files.isDirectory(source, linkOpts) ) {
                 CopyMoveHelper.copyDirectory(source, target, options)
             }
             else {
