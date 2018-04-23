@@ -1110,12 +1110,12 @@ class DataflowExtensions {
      * @param closingCriteria A condition that has to be verified to close
      * @return A newly created dataflow queue which emitted the gathered values as bundles
      */
-    static final <V> DataflowReadChannel<V> buffer( final DataflowReadChannel<V> source, Object closingCriteria ) {
+    static final <V> DataflowReadChannel<V> buffer( final DataflowReadChannel<V> source, Map params=null, Object closingCriteria ) {
 
-        def target = new DataflowQueue()
-        def closure = new BooleanReturningMethodInvoker("isCase");
-        buffer0(source, target, null, { Object it -> closure.invoke(closingCriteria, it) }, false)
-
+        def target = new BufferOp(source)
+                        .setParams(params)
+                        .setCloseCriteria(closingCriteria)
+                        .apply()
         NodeMarker.addOperatorNode('buffer', source, target)
         return target
     }
@@ -1124,11 +1124,10 @@ class DataflowExtensions {
         assert startingCriteria != null
         assert closingCriteria != null
 
-        def c1 = new BooleanReturningMethodInvoker("isCase");
-        def c2 = new BooleanReturningMethodInvoker("isCase");
-
-        def target = new DataflowQueue()
-        buffer0(source, target, {Object it -> c1.invoke(startingCriteria, it)}, {Object it -> c2.invoke(closingCriteria, it)}, false)
+        def target = new BufferOp(source)
+                .setStartCriteria(startingCriteria)
+                .setCloseCriteria(closingCriteria)
+                .apply()
 
         NodeMarker.addOperatorNode('buffer', source, target)
         return target
@@ -1137,102 +1136,23 @@ class DataflowExtensions {
     static final <V> DataflowReadChannel<V> buffer( DataflowReadChannel<V> source, Map<String,?> params ) {
         checkParams( 'buffer', params, 'size','skip','remainder' )
 
-        int skip = (int)(params?.skip ?: 0)
-        int size = params.size as int
-        boolean remainder = params?.remainder ?: false
-        if( !size ) {
-            throw new IllegalArgumentException()
-        }
-
-        final target = new DataflowQueue()
-        bufferWithSizeConstraint( source, target, size, skip, remainder )
+        def target = new BufferOp(source)
+                        .setParams(params)
+                        .apply()
 
         NodeMarker.addOperatorNode('buffer', source, target)
         return target
     }
 
-    static <V> DataflowProcessor bufferWithSizeConstraint( final DataflowReadChannel<V> source, DataflowQueue target, int size, int skip, boolean reminder ) {
-        assert size>0
-
-        int skipCount = 0
-        int itemCount = 0
-
-        def closeRule = {
-            itemCount +=1
-            if( itemCount-skip == size ) {
-                itemCount = 0;
-                return true
-            }
-            return false
-        }
-
-
-        def startRule = {
-            skipCount +=1
-            if( skipCount > skip ) {
-                skipCount = 0
-                return true
-            }
-            return false
-        }
-
-        buffer0(source, target, skip>0 ? startRule : null, closeRule, reminder )
-    }
-
-
-    static private <V> DataflowProcessor buffer0( DataflowReadChannel<V> source, DataflowQueue target, Closure startingCriteria, Closure closeCriteria, boolean remainder ) {
-        assert closeCriteria
-
-        // the list holding temporary collected elements
-        def buffer = []
-
-        // -- intercepts the PoisonPill and sent out the items remaining in the buffer when the 'remainder' flag is true
-        def listener = new DataflowEventAdapter() {
-
-            public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-                if( message instanceof PoisonPill && remainder && buffer.size() )
-                    target.bind(buffer)
-
-                return message;
-            }
-
-            @Override
-            boolean onException(DataflowProcessor processor, Throwable e) {
-                DataflowExtensions.log.error("@unknown", e)
-                session.abort(e)
-                return true
-            }
-        }
-
-        // -- open frame flag
-        boolean isOpen = startingCriteria == null
-
-        // -- the operator collecting the elements
-        newOperator( source, target, listener ) {
-            if( isOpen ) {
-                buffer << it
-            }
-            else if( startingCriteria.call(it) ) {
-                isOpen = true
-                buffer << it
-            }
-
-            if( closeCriteria.call(it) ) {
-                ((DataflowProcessor) getDelegate()).bindOutput(buffer);
-                buffer = []
-                // when a *startingCriteria* is defined, close the open frame flag
-                isOpen = (startingCriteria == null)
-            }
-        }
-    }
 
     static final <V> DataflowReadChannel<V> collate( DataflowReadChannel<V> source, int size, boolean keepRemainder = true ) {
         if( size <= 0 ) {
             throw new IllegalArgumentException("Illegal argument 'size' for operator 'collate' -- it must be greater than zero: $size")
         }
 
-        final target = new DataflowQueue()
-        bufferWithSizeConstraint( source, target, size, 0, keepRemainder )
+        def target = new BufferOp(source)
+                        .setParams( size: size, remainder: keepRemainder )
+                        .apply()
 
         NodeMarker.addOperatorNode('collate', source, target)
         return target
@@ -1256,7 +1176,7 @@ class DataflowExtensions {
         // -- intercepts the PoisonPill and sent out the items remaining in the buffer when the 'remainder' flag is true
         def listener = new DataflowEventAdapter() {
 
-            public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+            Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
                 if( message instanceof PoisonPill && keepRemainder && allBuffers.size() ) {
                     allBuffers.each {
                         target.bind( it )
