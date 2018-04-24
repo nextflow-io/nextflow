@@ -21,9 +21,6 @@
 package nextflow.processor
 
 import java.nio.file.Files
-
-import nextflow.container.ContainerHandler
-
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -31,7 +28,10 @@ import com.google.common.hash.HashCode
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.conda.CondaCache
+import nextflow.conda.CondaConfig
 import nextflow.container.ContainerConfig
+import nextflow.container.ContainerHandler
 import nextflow.container.ContainerScriptTokens
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessTemplateException
@@ -544,6 +544,15 @@ class TaskRun implements Cloneable {
             result << str[i]
         }
         return result.toString()
+    }
+
+    Path getCondaEnv() {
+        if( !config.conda )
+            return null
+
+        final cfg = processor.session.config.conda as Map ?: Collections.emptyMap()
+        final cache = new CondaCache(new CondaConfig(cfg))
+        cache.getCachePathFor(config.conda as String)
     }
 
     /**

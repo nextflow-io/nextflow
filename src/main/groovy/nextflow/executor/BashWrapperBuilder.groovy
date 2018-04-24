@@ -430,6 +430,13 @@ class BashWrapperBuilder {
         }
 
         /*
+         * activate conda environment 
+         */
+        if( condaEnv ) {
+            wrapper << 'source activate ' << condaEnv.toString() << ENDL
+        }
+
+        /*
          * add the task environment
          */
         def envSnippet = createTaskEnvironment(environment)
