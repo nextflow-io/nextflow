@@ -1,7 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-0.29.9-RC1 - 8 Apr 2018
+0.29.0  - 24 Apr 2018
+- Fixed Buffer operator fails to recognise optional parameter when a closing condition is specified #652
+- Fixed PublishDir mode "copyNoFollow" does not work for directories #658
+- Update NameGenerator adjectives #656
+
+0.29.0-RC1 - 8 Apr 2018
 - Added `containerOptions` directive #415
 - Added support for multiple `publishDir` directives for process #256
 - Added cleanup feature to delete workflow work dir on completion #649
