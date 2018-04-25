@@ -19,6 +19,7 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Path
 
 import groovy.transform.PackageScope
@@ -433,7 +434,8 @@ class BashWrapperBuilder {
          * activate conda environment 
          */
         if( condaEnv ) {
-            wrapper << 'source activate ' << condaEnv.toString() << ENDL
+            wrapper << '# conda environment' << ENDL
+            wrapper << 'export PATH="' << condaEnv.resolve('bin') << ':$PATH"' << ENDL
         }
 
         /*

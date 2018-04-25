@@ -22,6 +22,7 @@ package nextflow.conda
 
 import java.nio.file.FileSystems
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
@@ -34,6 +35,7 @@ import nextflow.file.FileMutex
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import nextflow.util.Escape
+import org.yaml.snakeyaml.Yaml
 /**
  * Handle Conda environment creation and caching
  *
@@ -43,13 +45,25 @@ import nextflow.util.Escape
 @CompileStatic
 class CondaCache {
 
-    static final private Map<String,DataflowVariable<Path>> localImageNames = new ConcurrentHashMap<>()
+    /**
+     * Cache the prefix path for each Conda environment
+     */
+    static final private Map<String,DataflowVariable<Path>> condaPrefixPaths = new ConcurrentHashMap<>()
 
+    /**
+     * The Conda settings defined in the nextflow config file
+     */
     private CondaConfig config
 
+    /**
+     * The current system environment
+     */
     private Map<String,String> env
 
-    private Duration pullTimeout = Duration.of('10min')
+    /**
+     * Timeout after which the environment creation is aborted
+     */
+    private Duration createTimeout = Duration.of('10min')
 
     /** Only for debugging purpose - do not use */
     @PackageScope
@@ -80,8 +94,8 @@ class CondaCache {
     @PackageScope
     Path getCacheDir() {
 
-        if( config.pullTimeout )
-            pullTimeout = config.pullTimeout as Duration
+        if( config.createTimeout )
+            createTimeout = config.createTimeout as Duration
 
         def cacheDir = config.cacheDir as Path
         if( !cacheDir )
@@ -98,17 +112,36 @@ class CondaCache {
         return cacheDir
     }
 
+    @PackageScope
+    boolean isEnvFile(String str) {
+        str.endsWith('.yml') || str.endsWith('.yaml')
+    }
+
     /**
      * Get the path on the file system where store a Conda environment
      *
      * @param condaEnv The conda environment
-     * @return the conda env unique path {@link Path}
+     * @return the conda unique prefix {@link Path} where the env is created
      */
     @PackageScope
-    Path localCondaEnvPath(String condaEnv) {
+    Path condaPrefixPath(String condaEnv) {
         assert condaEnv
-        final uniqueID = CacheHelper.hasher(condaEnv).hash().toString()
-        getCacheDir().resolve(uniqueID)
+
+        final DEFAULT_NAME = 'env'
+        // check if it's a YAML file
+        String prefix
+        if( isEnvFile(condaEnv) ) {
+            final path = condaEnv as Path
+            final text = path.text
+            final yaml = (Map)new Yaml().load(text)
+            final name = yaml.name ?: DEFAULT_NAME
+            prefix = "$name-${CacheHelper.hasher(text).hash().toString()}"
+        }
+        else {
+            prefix = "$DEFAULT_NAME-${CacheHelper.hasher(condaEnv).hash().toString()}"
+        }
+
+        getCacheDir().resolve(prefix)
     }
 
     /**
@@ -119,55 +152,61 @@ class CondaCache {
      */
     @PackageScope
     Path createLocalCondaEnv(String condaEnv) {
-        final localEnvPath = localCondaEnvPath(condaEnv)
-        final file = new File("${localEnvPath.parent}/.${localEnvPath.name}.lock")
+        final prefixPath = condaPrefixPath(condaEnv)
+        final file = new File("${prefixPath.parent}/.${prefixPath.name}.lock")
         final wait = "Another Nextflow instance is creatign the Conda environment $condaEnv -- please wait it completes"
-        final err =  "Unable to acquire exclusive lock after $pullTimeout on file: $file"
+        final err =  "Unable to acquire exclusive lock after $createTimeout on file: $file"
 
-        final mutex = new FileMutex(target: file, timeout: pullTimeout, waitMessage: wait, errorMessage: err)
+        final mutex = new FileMutex(target: file, timeout: createTimeout, waitMessage: wait, errorMessage: err)
         try {
-            mutex .lock { createLocalCondaEnv0(condaEnv, localEnvPath) }
+            mutex .lock { createLocalCondaEnv0(condaEnv, prefixPath) }
         }
         finally {
             file.delete()
         }
 
-        return localEnvPath
+        return prefixPath
     }
 
+    @PackageScope
+    Path makeAbsolute( String envFile ) {
+        Paths.get(envFile).toAbsolutePath()
+    }
 
     @PackageScope
-    Path createLocalCondaEnv0(String condaEnv, Path localEnvPath) {
+    Path createLocalCondaEnv0(String condaEnv, Path prefixPath) {
 
-        if( localEnvPath.exists() ) {
-            log.debug "Conda found local env for environment=$condaEnv; path=$localEnvPath"
-            return localEnvPath
+        if( prefixPath.isDirectory() ) {
+            log.debug "Conda found local env for environment=$condaEnv; path=$prefixPath"
+            return prefixPath
         }
         log.trace "Conda create env=$condaEnv"
 
-        log.info "Creatind Conda env $condaEnv [cache $localEnvPath]"
+        log.info "Creating Conda env: $condaEnv [cache $prefixPath]"
 
-        String cmd = "conda create --use-index-cache --use-local --prefix ${Escape.path(localEnvPath)} --mkdir --yes -q $condaEnv > /dev/null"
+        final isFile = isEnvFile(condaEnv)
+        final String cmd = ( isFile
+                    ? "conda env create --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
+                    : "conda create --mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} $condaEnv")
         try {
-            runCommand( cmd, localEnvPath )
-            log.debug "Conda create complete env=$condaEnv path=$localEnvPath"
+            runCommand( cmd )
+            log.debug "Conda create complete env=$condaEnv path=$prefixPath"
         }
         catch( Exception e ){
             // clean-up to avoid to keep eventually corrupted image file
-            localEnvPath.delete()
+            prefixPath.delete()
             throw e
         }
-        return localEnvPath
+        return prefixPath
     }
 
     @PackageScope
-    int runCommand( String cmd, Path localEnvPath ) {
+    int runCommand( String cmd ) {
         log.trace """Conda create
                      command: $cmd
-                     timeout: $pullTimeout
-                     folder : $localEnvPath""".stripIndent()
+                     timeout: $createTimeout""".stripIndent()
 
-        final max = pullTimeout.toMillis()
+        final max = createTimeout.toMillis()
         final builder = new ProcessBuilder(['bash','-c',cmd])
         final proc = builder.start()
         final err = new StringBuilder()
@@ -175,7 +214,7 @@ class CondaCache {
         proc.waitForOrKill(max)
         def status = proc.exitValue()
         if( status != 0 ) {
-            def msg = "Failed to create conda environment\n  command: $cmd\n  status : $status\n  message:\n"
+            def msg = "Failed to create Conda environment\n  command: $cmd\n  status : $status\n  message:\n"
             msg += err.toString().trim().indent('    ')
             throw new IllegalStateException(msg)
         }
@@ -196,16 +235,16 @@ class CondaCache {
      */
     @PackageScope
     DataflowVariable<Path> getLazyImagePath(String condaEnv) {
-        if( condaEnv in localImageNames ) {
+        if( condaEnv in condaPrefixPaths ) {
             log.trace "Conda found local environment `$condaEnv`"
-            return localImageNames[condaEnv]
+            return condaPrefixPaths[condaEnv]
         }
 
-        synchronized (localImageNames) {
-            def result = localImageNames[condaEnv]
+        synchronized (condaPrefixPaths) {
+            def result = condaPrefixPaths[condaEnv]
             if( result == null ) {
                 result = new LazyDataflowVariable<Path>({ createLocalCondaEnv(condaEnv) })
-                localImageNames[condaEnv] = result
+                condaPrefixPaths[condaEnv] = result
             }
             else {
                 log.trace "Conda found local cache for environment `$condaEnv` (2)"
