@@ -424,6 +424,11 @@ class ConfigBuilder {
             config.process[name] = parseValue(value)
         }
 
+        // -- apply the conda environment
+        if( cmdRun.withConda ) {
+            config.process.conda = cmdRun.withConda
+        }
+
         // -- sets the resume option
         if( cmdRun.resume )
             config.resume = cmdRun.resume

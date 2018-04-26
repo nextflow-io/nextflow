@@ -870,6 +870,15 @@ class ConfigBuilderTest extends Specification {
         config.params == [foo:'Ciao', bar:20, data: '/some/path']
     }
 
+    def 'should run with conda' () {
+
+        when:
+        def config = new ConfigBuilder().setCmdRun(new CmdRun(withConda: '/some/path/env.yml')).build()
+        then:
+        config.process.conda == '/some/path/env.yml'
+
+    }
+
     def 'should warn about missing attribute' () {
 
         given:
