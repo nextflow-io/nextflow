@@ -41,9 +41,9 @@ class OarExecutor extends AbstractGridExecutor {
     protected List<String> getDirectives( TaskRun task, List<String> result ) {
         assert result !=null
 
-        result << '-N' << getJobNameFor(task)
-        result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
-        result << '-j' << 'oe'
+        result << '-n' << getJobNameFor(task)
+        result << '-O' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
+        result << '-E' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
 
         // the requested queue name
         if( task.config.queue ) {
