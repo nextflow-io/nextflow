@@ -101,7 +101,7 @@ class OarExecutor extends AbstractGridExecutor {
      * @return A list representing the submit command line
      */
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
-        [ 'oarsub', '-S',  '-n', getJobNameFor(task), scriptFile.getName() ]
+        [ 'chmod', '755', scriptFile.getName() , '&&', 'oarsub', '-S',  '-n', getJobNameFor(task), scriptFile.getName() ]
     }
 
     protected String getHeaderToken() { '#OAR' }
