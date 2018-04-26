@@ -177,6 +177,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-N','-with-notification'], description = 'Send a notification email on workflow completion to the specified recipients')
     String withNotification
 
+    @Parameter(names=['-with-conda'], description = 'Use the specified Conda environment package or file (must end with .yml|.yaml suffix)')
+    String withConda
+
     @Override
     String getName() { NAME }
 

@@ -21,6 +21,7 @@
 package nextflow.conda
 
 import java.nio.file.FileSystems
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
@@ -36,6 +37,7 @@ import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import nextflow.util.Escape
 import org.yaml.snakeyaml.Yaml
+
 /**
  * Handle Conda environment creation and caching
  *
@@ -127,21 +129,30 @@ class CondaCache {
     Path condaPrefixPath(String condaEnv) {
         assert condaEnv
 
-        final DEFAULT_NAME = 'env'
+        String content
+        String name = 'env'
         // check if it's a YAML file
-        String prefix
         if( isEnvFile(condaEnv) ) {
-            final path = condaEnv as Path
-            final text = path.text
-            final yaml = (Map)new Yaml().load(text)
-            final name = yaml.name ?: DEFAULT_NAME
-            prefix = "$name-${CacheHelper.hasher(text).hash().toString()}"
+            try {
+                final path = condaEnv as Path
+                content = path.text
+                final yaml = (Map)new Yaml().load(content)
+                if( yaml.name )
+                    name = yaml.name
+            }
+            catch( NoSuchFileException e ) {
+                throw new IllegalArgumentException("Conda environment file does not exist: $condaEnv")
+            }
+            catch( Exception e ) {
+                throw new IllegalArgumentException("Error parsing Conda environment YAML file: $condaEnv -- Chech the log file for details", e)
+            }
         }
         else {
-            prefix = "$DEFAULT_NAME-${CacheHelper.hasher(condaEnv).hash().toString()}"
+            content = condaEnv
         }
 
-        getCacheDir().resolve(prefix)
+        final hash = CacheHelper.hasher(content).hash().toString()
+        getCacheDir().resolve("$name-$hash")
     }
 
     /**
