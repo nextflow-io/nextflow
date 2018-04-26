@@ -24,7 +24,7 @@ The report file name can be specified as an optional parameter following the rep
 Summary
 -------
 
-The `Summary` section reports reports the execution status, the launch command, overall execution time and some
+The `Summary` section reports the execution status, the launch command, overall execution time and some
 other workflow metadata. You can see an example below:
 
 .. image:: images/report-summary-min.png
