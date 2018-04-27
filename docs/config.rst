@@ -162,7 +162,7 @@ settings.
 Process selectors
 ^^^^^^^^^^^^^^^^^
 
-The ``withLabel`` selectors allow the configuration of all processes annotated with a :ref:`process-label` directive
+The ``withLabel`` selectors allow the configuration of all processes annotated with a :ref:`process-label` directive as
 shown below::
 
     process {
@@ -174,7 +174,7 @@ shown below::
     }
 
 The above configuration example assigns 16 cpus, 64 Gb of memory and the ``long`` queue to all processes annotated
-with a ``big_mem`` label.
+with the ``big_mem`` label.
 
 
 In the same manner, the ``withName`` selector allows the configuration of a specific process in your pipeline by its name.
@@ -190,15 +190,15 @@ For example::
 
 .. tip:: Either label and process names do not need to be enclosed with quote characters, provided the name
   does include special characters (e.g. ``-``, ``!``, etc) or it's not a keyword or a built-in type identifier.
-  In case of doubt, you can enclose the label name or the process name with single or double quote characters.
+  In case of doubt, you can enclose the label names or the process names with single or double quote characters.
 
 .. _config-selector-expressions:
 
 Selector expressions
 ^^^^^^^^^^^^^^^^^^^^
 
-Both label and process name selectors allow the use of a regular expression to apply the same configuration
-to all processes matching the selection pattern condition. For example::
+Both label and process name selectors allow the use of a regular expression in order to apply the same configuration
+to all processes matching the specified pattern condition. For example::
 
     process {
         withLabel: 'foo|bar' {
@@ -218,7 +218,7 @@ A process selector can be negated prefixing it with the special character ``!``.
         withName: '!align.*' { queue = 'long' }
     }
 
-The above configuration snippet sets 2 cpus to processes annotated with the ``foo`` label and 4 cpus to all processes
+The above configuration snippet sets 2 cpus for the processes annotated with the ``foo`` label and 4 cpus to all processes
 *not* annotated with that label. Finally it sets the use of ``long`` queue to all process whose name does *not* start
 with ``align``.
 
@@ -242,7 +242,7 @@ For example::
         withName: bar { cpus = 32 }
     }
 
-Using the above configuration snippet, all workflow processes use 4 cpus in not otherwise specified in the workflow
+Using the above configuration snippet, all workflow processes use 4 cpus if not otherwise specified in the workflow
 script. Moreover processes annotated with the ``foo`` label use 8 cpus. Finally the process named ``bar``
 uses 32 cpus.
 
