@@ -33,6 +33,8 @@ import nextflow.container.UdockerBuilder
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import nextflow.util.Escape
+
 /**
  * Builder to create the BASH script which is used to
  * wrap and launch the user task
@@ -435,7 +437,7 @@ class BashWrapperBuilder {
          */
         if( condaEnv ) {
             wrapper << '# conda environment' << ENDL
-            wrapper << 'export PATH="' << condaEnv.resolve('bin') << ':$PATH"' << ENDL
+            wrapper << 'source activate ' << Escape.path(condaEnv) << ENDL
         }
 
         /*
