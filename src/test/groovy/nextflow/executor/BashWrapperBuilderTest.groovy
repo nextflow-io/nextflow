@@ -1099,7 +1099,7 @@ class BashWrapperBuilderTest extends Specification {
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
                 # conda environment
-                export PATH="/some/conda/env/foo/bin:\$PATH"
+                source activate /some/conda/env/foo
                 [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
                 set +e
