@@ -136,6 +136,36 @@ class FunctionalTests extends Specification {
 
     }
 
+    def 'should define default ext property' () {
+
+        given:
+        def CONFIG = '''
+            process.ext.foo = 'hello'
+        '''
+        def cfg = new ConfigSlurper().parse(CONFIG)
+
+        when:
+        def script = '''
+
+            process foo {
+                script:
+                /
+                echo ciao
+                /
+            }
+
+            '''
+
+        def runner = new ScriptRunner(cfg).setScript(script)
+        runner.execute()
+        def processor = runner.scriptObj.taskProcessor
+        then:
+        processor instanceof TaskProcessor
+        processor.config.ext.foo == 'hello'
+
+    }
+
+
     def 'test merge ext properties' () {
         given:
         def configStr = '''

@@ -396,7 +396,7 @@ class ProcessConfig implements Map<String,Object> {
             if( key == 'params' )
                 continue
             def value = processDefaults.get(key)
-            def current = this.get(key)
+            def current = this.getProperty(key)
             if( key == 'ext' ) {
                 if( value instanceof Map && current instanceof Map ) {
                     def ext = current as Map
