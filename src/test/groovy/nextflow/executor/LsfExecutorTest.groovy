@@ -78,7 +78,7 @@ class LsfExecutorTest extends Specification {
                 #BSUB -R "span[hosts=1]"
                 #BSUB -W 01:30
                 #BSUB -M 4096
-                #BSUB -R "rusage[mem=8192]"
+                #BSUB -R "select[mem>=8192] rusage[mem=8192]"
                 #BSUB -J nf-mapping_hola
                 #BSUB -x 1
                 #BSUB -R "span[ptile=2]"
@@ -111,7 +111,7 @@ class LsfExecutorTest extends Specification {
                 #BSUB -q alpha
                 #BSUB -W 00:01
                 #BSUB -M 10
-                #BSUB -R "rusage[mem=10]"
+                #BSUB -R "select[mem>=10] rusage[mem=10]"
                 #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
@@ -129,7 +129,7 @@ class LsfExecutorTest extends Specification {
                 #BSUB -q gamma
                 #BSUB -W 04:00
                 #BSUB -M 200
-                #BSUB -R "rusage[mem=200]"
+                #BSUB -R "select[mem>=200] rusage[mem=200]"
                 #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
@@ -147,7 +147,7 @@ class LsfExecutorTest extends Specification {
                 #BSUB -n 4
                 #BSUB -R "span[hosts=1]"
                 #BSUB -M 512
-                #BSUB -R "rusage[mem=2048]"
+                #BSUB -R "select[mem>=2048] rusage[mem=2048]"
                 #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
@@ -166,7 +166,7 @@ class LsfExecutorTest extends Specification {
                 #BSUB -R "span[hosts=1]"
                 #BSUB -W 24:00
                 #BSUB -M 512
-                #BSUB -R "rusage[mem=2048]"
+                #BSUB -R "select[mem>=2048] rusage[mem=2048]"
                 #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
@@ -186,7 +186,7 @@ class LsfExecutorTest extends Specification {
                 #BSUB -R "span[hosts=1]"
                 #BSUB -W 48:00
                 #BSUB -M 256
-                #BSUB -R "rusage[mem=2048]"
+                #BSUB -R "select[mem>=2048] rusage[mem=2048]"
                 #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
@@ -203,7 +203,7 @@ class LsfExecutorTest extends Specification {
                 #BSUB -q delta
                 #BSUB -W 60:05
                 #BSUB -M 2048
-                #BSUB -R "rusage[mem=2048]"
+                #BSUB -R "select[mem>=2048] rusage[mem=2048]"
                 #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
@@ -241,7 +241,7 @@ class LsfExecutorTest extends Specification {
                 #BSUB -n 4
                 #BSUB -R "span[hosts=1]"
                 #BSUB -M 2048
-                #BSUB -R "rusage[mem=8192]"
+                #BSUB -R "select[mem>=8192] rusage[mem=8192]"
                 #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
@@ -258,7 +258,7 @@ class LsfExecutorTest extends Specification {
                 #BSUB -n 4
                 #BSUB -R "span[hosts=1]"
                 #BSUB -M 8192
-                #BSUB -R "rusage[mem=8192]"
+                #BSUB -R "select[mem>=8192] rusage[mem=8192]"
                 #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
@@ -301,7 +301,7 @@ class LsfExecutorTest extends Specification {
                 #BSUB -R "span[hosts=1]"
                 #BSUB -W 01:30
                 #BSUB -M 4096
-                #BSUB -R "rusage[mem=8192]"
+                #BSUB -R "select[mem>=8192] rusage[mem=8192]"
                 #BSUB -J nf-mapping_hola
                 #BSUB -x 1
                 #BSUB -R "span[ptile=2]"

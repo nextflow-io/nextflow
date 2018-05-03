@@ -77,7 +77,7 @@ class LsfExecutor extends AbstractGridExecutor {
                 result << '-M' << String.valueOf(mem.toMega())
             }
 
-            result << '-R' << "rusage[mem=${mem.toMega()}]"
+            result << '-R' << "select[mem>=${mem.toMega()}] rusage[mem=${mem.toMega()}]"
         }
 
         // -- the job name
@@ -199,4 +199,3 @@ class LsfExecutor extends AbstractGridExecutor {
     }
 
 }
-
