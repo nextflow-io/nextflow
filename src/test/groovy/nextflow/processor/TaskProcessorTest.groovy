@@ -19,6 +19,7 @@
  */
 
 package nextflow.processor
+
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
@@ -34,11 +35,8 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.NopeExecutor
 import nextflow.file.FileHolder
 import nextflow.script.BaseScript
-import nextflow.script.FileInParam
 import nextflow.script.FileOutParam
 import nextflow.script.TaskBody
-import nextflow.script.TokenVar
-import nextflow.script.ValueInParam
 import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
 import spock.lang.Specification
@@ -74,33 +72,24 @@ class TaskProcessorTest extends Specification {
 
     def 'should filter staged inputs'() {
 
-        setup:
+        given:
+        def task = Spy(TaskRun)
         def processor = [:] as TaskProcessor
-        def binding = new Binding()
-        def holder = []
 
-        def inputs = [:]
-        def key1 = new FileInParam(binding, holder).bind('file1')
-        def key2 = new FileInParam(binding, holder).bind('file_')
-        def key3 = new ValueInParam(binding, holder).bind( new TokenVar('xxx') )
+        def WORK_DIR = Paths.get('/work/dir')
+        def FILE1 = WORK_DIR.resolve('alpha.txt')
+        def FILE2 = WORK_DIR.resolve('beta.txt')
+        def FILE3 = WORK_DIR.resolve('out/beta.txt')
+        def FILE4 = WORK_DIR.resolve('gamma.fasta')
 
-        def val1 = [ FileHolder.get('xxx', 'file.txt') ]
-        def val2 =  [ FileHolder.get('yyy', 'file.2'), FileHolder.get('zzz', '.hidden') ]
-        def val3 =  'just a value'
-        inputs[key1] = val1
-        inputs[key2] = val2
-        inputs[key3] = val3
-
-        def task = [:] as TaskRun
-        task.inputs = inputs
+        def collectedFiles = [ FILE1, FILE2, FILE3, FILE4 ]
 
         when:
-        // three files have been produced
-        def files = [ Paths.get('file.1'), Paths.get('file.2'), Paths.get('file.3') ]
-        def result = processor.filterByRemovingStagedInputs(task, files)
+        def result = processor.filterByRemovingStagedInputs(task, collectedFiles)
         then:
-        // the *file.2* is removed since it belongs to the inputs list
-        result == [ Paths.get('file.1'), Paths.get('file.3')  ]
+        task.workDir >> WORK_DIR
+        1 * task.getStagedInputs() >> [ 'beta.txt' ]
+        result == [ FILE1, FILE3, FILE4 ]
 
     }
 

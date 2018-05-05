@@ -1616,16 +1616,24 @@ class TaskProcessor {
      * See TaskRun#getStagedInputs
      *
      * @param task
-     * @param files
+     * @param collectedFiles
      * @return
      */
     @PackageScope
-    List<Path> filterByRemovingStagedInputs( TaskRun task, List<Path> files ) {
+    List<Path> filterByRemovingStagedInputs( TaskRun task, List<Path> collectedFiles ) {
 
         // get the list of input files
-        def List<String> allStaged = task.getStagedInputs()
-        files.findAll { !allStaged.contains(it.getName()) }
+        final List<String> allStaged = task.getStagedInputs()
+        final List<Path> result = new ArrayList<>(collectedFiles.size())
 
+        for( int i=0; i<collectedFiles.size(); i++ ) {
+            final it = collectedFiles.get(i)
+            final relName = task.workDir.relativize(it).toString()
+            if( !allStaged.contains(relName) )
+                result.add(it)
+        }
+
+        return result
     }
 
 
@@ -1633,7 +1641,7 @@ class TaskProcessor {
      * @return The map holding the shell environment variables for the task to be executed
      */
     @Memoized
-    def Map<String,String> getProcessEnvironment() {
+    Map<String,String> getProcessEnvironment() {
 
         def result = [:]
 
