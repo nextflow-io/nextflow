@@ -1512,7 +1512,7 @@ class TaskProcessor {
                 result = fetchResultFiles(param, filePattern, workDir)
                 // filter the inputs
                 if( !param.includeInputs ) {
-                    result = filterByRemovingStagedInputs(task, result)
+                    result = filterByRemovingStagedInputs(task, result, workDir)
                     log.trace "Process ${task.name} > after removing staged inputs: ${result}"
                 }
             }
@@ -1616,11 +1616,14 @@ class TaskProcessor {
      * See TaskRun#getStagedInputs
      *
      * @param task
+     *      A {@link TaskRun} object representing the task executed
      * @param collectedFiles
+     *      Collection of candidate output files
      * @return
+     *      List of the actual output files (not including any input matching an output file name pattern)
      */
     @PackageScope
-    List<Path> filterByRemovingStagedInputs( TaskRun task, List<Path> collectedFiles ) {
+    List<Path> filterByRemovingStagedInputs( TaskRun task, List<Path> collectedFiles, Path workDir ) {
 
         // get the list of input files
         final List<String> allStaged = task.getStagedInputs()
@@ -1628,7 +1631,7 @@ class TaskProcessor {
 
         for( int i=0; i<collectedFiles.size(); i++ ) {
             final it = collectedFiles.get(i)
-            final relName = task.workDir.relativize(it).toString()
+            final relName = workDir.relativize(it).toString()
             if( !allStaged.contains(relName) )
                 result.add(it)
         }
