@@ -85,9 +85,8 @@ class TaskProcessorTest extends Specification {
         def collectedFiles = [ FILE1, FILE2, FILE3, FILE4 ]
 
         when:
-        def result = processor.filterByRemovingStagedInputs(task, collectedFiles)
+        def result = processor.filterByRemovingStagedInputs(task, collectedFiles, WORK_DIR)
         then:
-        task.workDir >> WORK_DIR
         1 * task.getStagedInputs() >> [ 'beta.txt' ]
         result == [ FILE1, FILE3, FILE4 ]
 
