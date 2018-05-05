@@ -164,7 +164,9 @@ class K8sTaskHandler extends TaskHandler {
         req.command = cmd
         req.workDir = task.workDir.toString()
         req.labels = getLabels(task)
-        req.env = fixOwnership ? [NXF_OWNER: getOwner()] : Collections.emptyMap()
+        req.env = task.getEnvironment()
+        if( fixOwnership )
+            req.env.put( 'NXF_OWNER', getOwner() )
 
         // add computing resources
         final taskCfg = task.getConfig()

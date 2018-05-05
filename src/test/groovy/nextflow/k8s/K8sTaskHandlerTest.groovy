@@ -96,6 +96,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getOwner() >> '501:502'
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
+        1 * task.getEnvironment() >> [FOO: 'bar']
         1 * task.getConfig() >> config
         1 * config.getCpus() >> 1
         1 * config.getMemory() >> null
@@ -110,7 +111,7 @@ class K8sTaskHandlerTest extends Specification {
                                      image:'debian:latest',
                                      command:['/bin/bash', '-ue','.command.run'],
                                      workingDir:'/some/work/dir',
-                                     env: [ [name:'NXF_OWNER', value:'501:502'] ]
+                                     env: [  [name:'FOO', value:'bar'], [name:'NXF_OWNER', value:'501:502'] ]
                                     ]
                             ]
                     ]
