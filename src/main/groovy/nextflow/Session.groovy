@@ -77,7 +77,7 @@ class Session implements ISession {
     /**
      * Keep a list of all processor created
      */
-    final List<DataflowProcessor> allOperators = []
+    final Collection<DataflowProcessor> allOperators = new ConcurrentLinkedQueue<>()
 
     /**
      * Dispatch tasks for executions
@@ -545,7 +545,7 @@ class Session implements ISession {
         try {
             log.trace "Session > destroying"
             if( !aborted ) {
-                allOperators *. join()
+                allOperatorsJoin()
                 log.trace "Session > after processors join"
             }
 
@@ -570,6 +570,23 @@ class Session implements ISession {
             log.trace "Session destroyed"
         }
     }
+
+    final private allOperatorsJoin() {
+        int attempts=0
+
+        while( allOperators.size() ) {
+            if( attempts++>0 )
+                log.debug "This looks weird, attempt number $attempts to join pending operators"
+
+            final itr = allOperators.iterator()
+            while( itr.hasNext() ) {
+                final op = itr.next()
+                op.join()
+                itr.remove()
+            }
+        }
+    }
+
 
     final protected void shutdown0() {
         log.trace "Shutdown: $shutdownCallbacks"
