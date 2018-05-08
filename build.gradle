@@ -121,6 +121,24 @@ allprojects {
         }
     }
 
+    // Required to run tests on Java 9 and higher in compatibility mode
+    if (JavaVersion.current() >= JavaVersion.VERSION_1_9) {
+        tasks.withType(Test) {
+            jvmArgs ([
+                    '--add-opens=java.base/java.lang=ALL-UNNAMED',
+                    '--add-opens=java.base/java.io=ALL-UNNAMED',
+                    '--add-opens=java.base/java.nio=ALL-UNNAMED',
+                    '--add-opens=java.base/java.util=ALL-UNNAMED',
+                    '--add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
+                    '--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED',
+                    '--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED',
+                    '--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED',
+                    '--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED',
+                    '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED',
+                    '--add-modules=java.xml.bind,java.activation',
+            ])
+        }
+    }
 }
 
 configurations {
@@ -158,6 +176,7 @@ dependencies {
     compile ('com.amazonaws:aws-java-sdk-s3:1.11.172')
     compile ('com.amazonaws:aws-java-sdk-ec2:1.11.172')
     compile ('com.amazonaws:aws-java-sdk-batch:1.11.172')
+    compile ('com.sun.activation:javax.activation:1.2.0')
     compile ('javax.mail:mail:1.4.7')
     compile ('org.yaml:snakeyaml:1.18')
     compile ('org.jsoup:jsoup:1.11.2')
@@ -166,7 +185,8 @@ dependencies {
     runtime "org.apache.ivy:ivy:2.3.0"
 
     // library used to compile but not included in the final jar
-
+    compileOnly ('javax.xml.bind:jaxb-api:2.3.0')
+    
     // Capsule manages the fat jar building process
     capsule(project(':my-capsule'))
 
