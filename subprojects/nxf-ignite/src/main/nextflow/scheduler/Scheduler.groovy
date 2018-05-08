@@ -211,7 +211,7 @@ class Scheduler {
 
             //
             // note: the message is not processed inline, but added as a closure
-            // in the `messageQueue` object to be processed orderly in the same ethread
+            // in the `messageQueue` object to be processed orderly in the same thread
             //
             messageQueue << {
 
