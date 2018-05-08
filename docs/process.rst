@@ -1953,8 +1953,8 @@ d       Days
 ======= =============
 
 .. note:: This directive is taken in account only when using one of the following grid based executors:
-  :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor` and
-  :ref:`condor-executor` executors.
+  :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor`,
+  :ref:`condor-executor` and :ref:`awsbatch-executor` executors.
 
 See also: `cpus`_, `memory`_, `queue`_ and `Dynamic computing resources`_.
 

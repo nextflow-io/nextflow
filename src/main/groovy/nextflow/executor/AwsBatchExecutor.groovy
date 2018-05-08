@@ -19,6 +19,7 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -33,6 +34,7 @@ import com.amazonaws.services.batch.model.Host
 import com.amazonaws.services.batch.model.JobDefinition
 import com.amazonaws.services.batch.model.JobDefinitionType
 import com.amazonaws.services.batch.model.JobDetail
+import com.amazonaws.services.batch.model.JobTimeout
 import com.amazonaws.services.batch.model.KeyValuePair
 import com.amazonaws.services.batch.model.MountPoint
 import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
@@ -542,6 +544,16 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             result.setRetryStrategy(retry)
         }
 
+        // set task timeout
+        final time = task.config.getTime()
+        if( time ) {
+            def secs = time.toSeconds() as Integer
+            if( secs < 60 ) {
+                secs = 60   // Batch minimal allowed timeout is 60 seconds
+            }
+            result.setTimeout(new JobTimeout().withAttemptDurationSeconds(secs))
+        }
+
         // set the actual command
         def container = new ContainerOverrides()
         container.command = cli
@@ -551,6 +563,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // set the task cpus
         if( task.config.getCpus() > 1 )
             container.vcpus = task.config.getCpus()
+
         // set the environment
         def vars = getEnvironmentVars()
         if( vars )
