@@ -395,16 +395,16 @@ class ProcessConfig implements Map<String,Object> {
         for( String key : processDefaults.keySet() ) {
             if( key == 'params' )
                 continue
-            def value = processDefaults.get(key)
-            def current = this.getProperty(key)
+            final value = processDefaults.get(key)
+            final current = this.getProperty(key)
             if( key == 'ext' ) {
                 if( value instanceof Map && current instanceof Map ) {
-                    def ext = current as Map
+                    final ext = current as Map
                     value.each { k,v -> if(!ext.containsKey(k)) ext.put(k,v) }
                 }
             }
-            else if( current==null || current == ProcessConfig.DEFAULT_CONFIG.get(key) ) {
-                this.put( key, value )
+            else if( !this.containsKey(key) || (DEFAULT_CONFIG.containsKey(key) && current==DEFAULT_CONFIG.get(key)) ) {
+                this.put(key, value)
             }
         }
     }
