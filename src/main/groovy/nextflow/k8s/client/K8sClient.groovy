@@ -278,9 +278,7 @@ class K8sClient {
             sslContext.init(config.keyManagers, trustManagers, new SecureRandom());
             conn.setSSLSocketFactory(sslContext.getSocketFactory())
         }
-        else {
-            conn.setSSLSocketFactory(null)
-        }
+
         if( hostnameVerifier )
             conn.setHostnameVerifier(hostnameVerifier)
     }
