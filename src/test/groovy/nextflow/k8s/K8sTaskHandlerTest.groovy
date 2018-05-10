@@ -399,28 +399,67 @@ class K8sTaskHandlerTest extends Specification {
         def handler = Spy(K8sTaskHandler)
         handler.client = client
         handler.podName = POD_NAME
-        Map STATE1 = [foo:1, bar:2]
-        Map STATE2 = [fizz:1, bazz: 2]
+        Map STATE1 = [status:'pending']
+        Map STATE2 = [status:'running']
+        Map STATE3 = [status:'complete']
         Map state
 
+        // first time `client.podState` is invoked
         when:
         state = handler.getState()
         then:
         1 * client.podState(POD_NAME) >> STATE1
         state == STATE1
 
+        // second time `client.podState` NOT invoked
+        // the cached status is returned
         when:
         state = handler.getState()
         then:
-        0 * client.podState(POD_NAME) >> 0
+        0 * client.podState(POD_NAME)
         state == STATE1
 
+        // after more than a second `client.podState` is invoked
+        // an empty value is returned, therefore the previous status is returned
         when:
         sleep 1_500
         state = handler.getState()
         then:
+        1 * client.podState(POD_NAME) >> [:]
+        state == STATE1
+
+        // still an empty status
+        // the previous status is returned
+        when:
+        state = handler.getState()
+        then:
+        1 * client.podState(POD_NAME) >> [:]
+        state == STATE1
+
+        // now, the a valid status is returned
+        // the status is cached
+        when:
+        state = handler.getState()
+        then:
         1 * client.podState(POD_NAME) >> STATE2
         state == STATE2
+
+        // following invocation is cached
+        // the previous status is returned
+        when:
+        state = handler.getState()
+        then:
+        0 * client.podState(POD_NAME)
+        state == STATE2
+
+        // after a second, the a new invocation is executed
+        // the new status is returned
+        when:
+        sleep 1_500
+        state = handler.getState()
+        then:
+        1 * client.podState(POD_NAME) >> STATE3
+        state == STATE3
     }
 
     def 'should return container mounts' () {

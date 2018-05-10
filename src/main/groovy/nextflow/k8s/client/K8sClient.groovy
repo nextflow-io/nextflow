@@ -208,8 +208,8 @@ class K8sClient {
      *
      * @param podName The pod name
      * @return
-     *  A {@link Map} representing the pod state at shown below
-     *  <code>
+     *      A {@link Map} representing the container state object as shown below
+     *      <code>
      *       {
      *                "terminated": {
      *                    "exitCode": 127,
@@ -219,7 +219,12 @@ class K8sClient {
      *                    "finishedAt": "2018-01-12T22:04:25Z",
      *                    "containerID": "docker://730ef2e05be72ffc354f2682b4e8300610812137b9037b726c21e5c4e41b6dda"
      *                }
-     *  </code>
+     *      </code>
+     *      See the following link for details https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.10/#containerstate-v1-core
+     *      An empty map is return if the pod is a `Pending` status and the container state is not
+     *      yet available
+     *
+     *
      */
     @CompileDynamic
     Map podState( String podName ) {
@@ -237,9 +242,22 @@ class K8sClient {
 
             return container.state
         }
-        else
-            throw new K8sResponseException("Invalid pod status -- missing container statuses", resp)
+
+        if( resp.status?.phase == 'Pending' && resp.status.conditions instanceof List ) {
+            final allConditions = resp.status.conditions as List<Map>
+            final cond = allConditions.find { cond -> cond.type == 'PodScheduled' }
+            if( cond.reason == 'Unschedulable' ) {
+                def message = "Pod is unschedulable"
+                if( cond.message ) message += " -- cause: $cond.message"
+                throw new K8sResponseException(message, resp)
+            }
+            // undetermined status -- return an empty response
+            return Collections.emptyMap()
+        }
+
+        throw new K8sResponseException("Invalid pod status -- missing container statuses", resp)
     }
+
     /*
      * https://v1-8.docs.kubernetes.io/docs/api-reference/v1.8/#read-log
      */

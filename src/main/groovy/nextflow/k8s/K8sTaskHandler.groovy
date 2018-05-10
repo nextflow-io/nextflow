@@ -260,8 +260,15 @@ class K8sTaskHandler extends TaskHandler {
      */
     protected Map getState() {
         final now = System.currentTimeMillis()
-        final delta =  now - timestamp; timestamp = now
-        state && delta < 1_000 ? state : (state = client.podState(podName))
+        final delta =  now - timestamp;
+        if( !state || delta >= 1_000) {
+            def newState = client.podState(podName)
+            if( newState ) {
+                state = newState
+                timestamp = now
+            }
+        }
+        return state
     }
 
     @Override

@@ -309,76 +309,8 @@ class K8sClientTest extends Specification {
                      "app": "nextflow"
                  }
              },
-             "spec": {
-                 "volumes": [
-                     {
-                         "name": "vol-1",
-                         "hostPath": {
-                             "path": "/Users/pditommaso/projects/nextflow",
-                             "type": ""
-                         }
-                     },
-                     {
-                         "name": "default-token-zv6gb",
-                         "secret": {
-                             "secretName": "default-token-zv6gb",
-                             "defaultMode": 420
-                         }
-                     }
-                 ],
-                 "containers": [
-                     {
-                         "name": "pod-xyz",
-                         "image": "debian:latest",
-                         "command": [
-                             "bash",
-                             ".command.run"
-                         ],
-                         "workingDir": "/Users/pditommaso/projects/nextflow/work/a8/d8e76afef8d5bb73d115bc8f474ec2",
-                         "resources": {
-
-                         },
-                         "volumeMounts": [
-                             {
-                                 "name": "vol-1",
-                                 "mountPath": "/Users/pditommaso/projects/nextflow"
-                             },
-                             {
-                                 "name": "default-token-zv6gb",
-                                 "readOnly": true,
-                                 "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
-                             }
-                         ],
-                         "terminationMessagePath": "/dev/termination-log",
-                         "terminationMessagePolicy": "File",
-                         "imagePullPolicy": "Always"
-                     }
-                 ],
-                 "restartPolicy": "Never",
-                 "terminationGracePeriodSeconds": 30,
-                 "dnsPolicy": "ClusterFirst",
-                 "serviceAccountName": "default",
-                 "serviceAccount": "default",
-                 "nodeName": "docker-for-desktop",
-                 "securityContext": {
-
-                 },
-                 "schedulerName": "default-scheduler",
-                 "tolerations": [
-                     {
-                         "key": "node.alpha.kubernetes.io/notReady",
-                         "operator": "Exists",
-                         "effect": "NoExecute",
-                         "tolerationSeconds": 300
-                     },
-                     {
-                         "key": "node.alpha.kubernetes.io/unreachable",
-                         "operator": "Exists",
-                         "effect": "NoExecute",
-                         "tolerationSeconds": 300
-                     }
-                 ]
-             },
+             
+             
              "status": {
                  "phase": "Succeeded",
                  "conditions": [
@@ -448,6 +380,54 @@ class K8sClientTest extends Specification {
                                 containerID: "docker://90d447d4a2518642b12c8979474aa2bbb5fe8e96ed9e5caf3c979bb3b751519a"]]
 
 
+    }
+
+    def 'should return undetermined status' () {
+        given:
+        def JSON = '''
+             {
+                 "kind": "Pod",
+                 "apiVersion": "v1",
+                 "metadata": {
+                     "name": "nf-eb853c8010b8e173b23d8d15489d1a31",
+                     "namespace": "default",
+                     "selfLink": "/api/v1/namespaces/default/pods/nf-eb853c8010b8e173b23d8d15489d1a31/status",
+                     "uid": "5ccdeb23-4f69-11e8-89b1-fa163e31bb09",
+                     "resourceVersion": "2847182",
+                     "creationTimestamp": "2018-05-04T07:04:18Z",
+                     "labels": {
+                         "app": "nextflow",
+                         "processName": "markDuplicates",
+                         "runName": "grave-jones",
+                         "sessionId": "uuid-f51cd941-c21c-447b-86ca-eaebafa5ad9b",
+                         "taskName": "markDuplicates_22028_2_118_1AlignedByCoord.out"
+                     }
+                 },
+              
+                 "status": {
+                     "phase": "Pending",
+                     "conditions": [
+                         {
+                             "type": "PodScheduled",
+                             "status": "True",
+                             "lastProbeTime": null,
+                             "lastTransitionTime": "2018-05-04T07:04:18Z"
+                         }
+                     ],
+                     "qosClass": "Guaranteed"
+                 }
+             }        
+        '''
+
+        def client = Spy(K8sClient)
+        final POD_NAME = 'nf-eb853c8010b8e173b23d8d15489d1a31'
+        
+        when:
+        def result = client.podState(POD_NAME)
+        then:
+        1 * client.podStatus(POD_NAME) >> new K8sResponseJson(JSON)
+
+        result == [:]
     }
 
     def 'should fail to get pod state' () {
