@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.util.logging.Slf4j
 import nextflow.container.DockerBuilder
+import nextflow.exception.ProcessSubmitException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
@@ -150,7 +151,21 @@ class K8sTaskHandler extends TaskHandler {
      * @param task A {@link TaskRun} instance representing the task to execute
      * @return A {@link Map} object modeling a Pod specification
      */
+
     protected Map newSubmitRequest(TaskRun task) {
+        def imageName = task.container
+        if( !imageName )
+            throw new ProcessSubmitException("Missing container image for process `$task.processor.name`")
+
+        try {
+            newSubmitRequest0(task, imageName)
+        }
+        catch( Throwable e ) {
+            throw  new ProcessSubmitException("Failed to submit K8s job -- Cause: ${e.message ?: e}", e)
+        }
+    }
+
+    protected Map newSubmitRequest0(TaskRun task, String imageName) {
 
         final fixOwnership = builder.fixOwnership()
         final cmd = new ArrayList(new ArrayList(BashWrapperBuilder.BASH)) << TaskRun.CMD_RUN
@@ -160,7 +175,7 @@ class K8sTaskHandler extends TaskHandler {
         req.podName = getSyntheticPodName(task)
         req.namespace = clientConfig.namespace
         req.serviceAccount = clientConfig.serviceAccount
-        req.imageName = task.container
+        req.imageName = imageName
         req.command = cmd
         req.workDir = task.workDir.toString()
         req.labels = getLabels(task)
