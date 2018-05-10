@@ -1,6 +1,15 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.29.1 - 10 May 2018
+- Fixed Default ext property are not included in process context #673
+- Fixed Operator concat throws a ConcurrentModificationException #675
+- Fixed Output file is not recognised when it's created into a subdir and the name matches an input #688 
+- Fixed Empty container definition being ignored when default one is specified #691
+- Fixed K8s client fails to connect the cluster when client key nor certificate is specified #692
+- Fixed K8s executor hang on pod creation failure
+- Added select in -R for memory for LSF executor #683
+
 0.29.0  - 24 Apr 2018
 - Fixed Buffer operator fails to recognise optional parameter when a closing condition is specified #652
 - Fixed PublishDir mode "copyNoFollow" does not work for directories #658
