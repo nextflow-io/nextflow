@@ -404,7 +404,6 @@ class K8sDriverLauncher {
         addOption(result, cmd.&withTrace )
         addOption(result, cmd.&withTimeline )
         addOption(result, cmd.&withDag )
-        addOption(result, cmd.&profile )
         addOption(result, cmd.&dumpHashes )
         addOption(result, cmd.&dumpChannels )
         addOption(result, cmd.&env )
