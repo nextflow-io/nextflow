@@ -19,6 +19,8 @@
  */
 
 package nextflow.k8s
+
+import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.Session
@@ -370,6 +372,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getState() >> [terminated: ["reason": "Completed", "finishedAt": "2018-01-13T10:19:36Z", exitCode: 0]]
         1 * handler.readExitFile() >> EXIT_STATUS
         1 * handler.deletePodIfSuccessful(task) >> null
+        1 * handler.savePodLogOnError(task) >> null
         handler.task.exitStatus == EXIT_STATUS
         handler.task.@stdout == OUT_FILE
         handler.task.@stderr == ERR_FILE
@@ -566,6 +569,47 @@ class K8sTaskHandlerTest extends Specification {
         then:
         1 * executor.getK8sConfig() >> [cleanup: true]
         0 * client.podDelete(POD_NAME) >> null
+
+    }
+
+
+    def 'should save pod log' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def POD_NAME = 'the-pod-name'
+        def POD_MESSAGE = 'Hello world!'
+        def POD_LOG = new ByteArrayInputStream(new String(POD_MESSAGE).bytes)
+        def session = Mock(Session)
+        def task = Mock(TaskRun)
+        def executor = Mock(K8sExecutor)
+        def client = Mock(K8sClient)
+
+        def handler = Spy(K8sTaskHandler)
+        handler.executor = executor
+        handler.client = client
+        handler.podName = POD_NAME
+
+        when:
+        handler.savePodLogOnError(task)
+        then:
+        task.isSuccess() >> true
+        0 * client.podLog(_)
+
+        when:
+        handler.savePodLogOnError(task)
+        then:
+        task.isSuccess() >> false
+        task.getWorkDir() >> folder
+        executor.getSession() >> session
+        session.isTerminated() >> false
+        session.isCancelled() >> false
+        session.isAborted() >> false
+        1 * client.podLog(POD_NAME) >> POD_LOG
+
+        folder.resolve( TaskRun.CMD_LOG ).text == POD_MESSAGE
+        cleanup:
+        folder?.deleteDir()
 
     }
 }

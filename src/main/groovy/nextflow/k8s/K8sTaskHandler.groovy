@@ -20,6 +20,7 @@
 
 package nextflow.k8s
 
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -288,11 +289,32 @@ class K8sTaskHandler extends TaskHandler {
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
+            savePodLogOnError(task)
             deletePodIfSuccessful(task)
             return true
         }
 
         return false
+    }
+
+    protected void savePodLogOnError(TaskRun task) {
+        if( task.isSuccess() )
+            return
+
+        if( errorFile && !errorFile.empty() )
+            return
+
+        final session = executor.getSession()
+        if( session.isAborted() || session.isCancelled() || session.isTerminated() )
+            return
+
+        try {
+            final stream = client.podLog(podName)
+            Files.copy(stream, task.workDir.resolve(TaskRun.CMD_LOG))
+        }
+        catch( Exception e ) {
+            log.warn "Failed to copy log for pod $podName", e
+        }
     }
 
     protected int readExitFile() {
