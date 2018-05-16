@@ -48,14 +48,16 @@ class K8sResponseJson implements Map {
         this.rawText = response
     }
 
-    boolean isRawText() { !response }
+    boolean isRawText() { !response && rawText }
+
+    String getRawText() { rawText }
 
     static private Map toJson(String raw) {
         try {
             return (Map)new JsonSlurper().parseText(raw)
         }
         catch( Exception e ) {
-            log.debug "[K8s] cannot parse response to json -- raw: ${raw? '\n'+raw.indent('  ') :'null'}"
+            log.trace "[K8s] cannot parse response to json -- raw: ${raw? '\n'+raw.indent('  ') :'null'}"
             return Collections.emptyMap()
         }
     }

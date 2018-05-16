@@ -54,8 +54,8 @@ class K8sExecutor extends Executor {
     /**
      * @return The `k8s` configuration scope in the nextflow configuration object
      */
-    @PackageScope Map<String,?> getK8sConfig() {
-        (Map<String,?>)(session.config.k8s ?: Collections.emptyMap())
+    @PackageScope Map<String,Object> getK8sConfig() {
+        (Map<String,Object>)(session.config.k8s ?: Collections.emptyMap())
     }
 
     /**

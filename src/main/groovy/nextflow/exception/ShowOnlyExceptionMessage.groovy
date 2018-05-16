@@ -20,13 +20,12 @@
 
 package nextflow.exception
 
-import groovy.transform.InheritConstructors
-
 /**
- * Exception thrown when an error is raised during the process file staging phase
+ * This interface is used to mark exception for which
+ * is required to show the error message in the error report
+ * printed in the stdout instead of the error cause
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@InheritConstructors
-class ProcessStageException extends ProcessException implements ShowOnlyExceptionMessage {
+interface ShowOnlyExceptionMessage {
 }

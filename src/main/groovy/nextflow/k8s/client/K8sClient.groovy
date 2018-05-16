@@ -19,6 +19,7 @@
  */
 
 package nextflow.k8s.client
+
 import javax.net.ssl.HostnameVerifier
 import javax.net.ssl.HttpsURLConnection
 import javax.net.ssl.SSLContext
@@ -33,11 +34,9 @@ import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 
 import groovy.json.JsonOutput
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.yaml.snakeyaml.Yaml
-
 /**
  * Kubernetes API client
  *
@@ -226,36 +225,38 @@ class K8sClient {
      *
      *
      */
-    @CompileDynamic
     Map podState( String podName ) {
         assert podName
 
         final resp = podStatus(podName)
+        final status = resp.status as Map
+        final containerStatuses = status?.containerStatuses as List<Map>
 
-        if( resp.status?.containerStatuses instanceof List && resp.status.containerStatuses.size()>0 ) {
-            final container = resp.status.containerStatuses.get(0)
+        if( containerStatuses?.size()>0 ) {
+            final container = containerStatuses.get(0)
             if( container.name != podName )
-                throw new K8sResponseException("Invalid pod status -- name does not match", resp)
+                throw new K8sResponseException("K8s invalid pod status (name does not match)", resp)
 
             if( !container.state )
-                throw new K8sResponseException("Invalid pod status -- missing state object", resp)
+                throw new K8sResponseException("K8s invalid pod status (missing state object)", resp)
 
-            return container.state
+            return container.state as Map
         }
 
-        if( resp.status?.phase == 'Pending' && resp.status.conditions instanceof List ) {
-            final allConditions = resp.status.conditions as List<Map>
+        if( status?.phase == 'Pending' && status.conditions instanceof List ) {
+            final allConditions = status.conditions as List<Map>
             final cond = allConditions.find { cond -> cond.type == 'PodScheduled' }
             if( cond.reason == 'Unschedulable' ) {
-                def message = "Pod is unschedulable"
-                if( cond.message ) message += " -- cause: $cond.message"
-                throw new K8sResponseException(message, resp)
+                def message = "K8s pod cannot be scheduled"
+                if( cond.message ) message += " -- $cond.message"
+                def cause = new K8sResponseException(resp)
+                throw new PodUnschedulableException(message,cause)
             }
             // undetermined status -- return an empty response
             return Collections.emptyMap()
         }
 
-        throw new K8sResponseException("Invalid pod status -- missing container statuses", resp)
+        throw new K8sResponseException("K8s invalid pod status (missing container status)", resp)
     }
 
     /*
