@@ -60,8 +60,8 @@ import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
-import nextflow.exception.ProcessStageException
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.exception.ShowOnlyExceptionMessage
 import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
 import nextflow.extension.DataflowHelper
@@ -1115,6 +1115,7 @@ class TaskProcessor {
                     message << formatErrorCause(error)
                     dumpStackTrace = true
             }
+
             if( dumpStackTrace )
                 log.error(message.join('\n'), error)
             else
@@ -1300,7 +1301,7 @@ class TaskProcessor {
         result << '\nCaused by:\n'
 
         def message
-        if( error instanceof ProcessStageException || error instanceof MissingFileException || !error.cause )
+        if( error instanceof ShowOnlyExceptionMessage || !error.cause )
             message = error.getMessage()
         else
             message = error.cause.getMessage()

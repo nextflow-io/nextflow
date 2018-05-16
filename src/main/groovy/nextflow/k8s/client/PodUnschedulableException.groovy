@@ -18,15 +18,23 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.exception
+package nextflow.k8s.client
 
-import groovy.transform.InheritConstructors
+import groovy.transform.CompileStatic
+import nextflow.exception.ShowOnlyExceptionMessage
 
 /**
- * Exception thrown when an error is raised during the process file staging phase
+ * Exception raised when a pod cannot be scheduled because
+ * e.g. the container image cannot be pulled, required resources
+ * cannot be fulfilled, etc.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@InheritConstructors
-class ProcessStageException extends ProcessException implements ShowOnlyExceptionMessage {
+@CompileStatic
+class PodUnschedulableException extends Exception implements ShowOnlyExceptionMessage {
+
+    PodUnschedulableException(String message, Throwable cause) {
+        super(message,cause)
+    }
+
 }
