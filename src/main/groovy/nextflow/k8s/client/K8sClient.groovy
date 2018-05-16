@@ -240,7 +240,17 @@ class K8sClient {
             if( !container.state )
                 throw new K8sResponseException("K8s invalid pod status (missing state object)", resp)
 
-            return container.state as Map
+            final state = container.state as Map
+            if( state.waiting instanceof Map ) {
+                def waiting = state.waiting as Map
+                if( waiting.reason == 'ErrImagePull' || waiting.reason == 'ImagePullBackOff') {
+                    def message = "K8s pod image cannot be pulled"
+                    if( waiting.message ) message += " -- $waiting.message"
+                    final cause = new K8sResponseException(resp)
+                    throw new PodUnschedulableException(message, cause)
+                }
+            }
+            return state
         }
 
         if( status?.phase == 'Pending' && status.conditions instanceof List ) {
