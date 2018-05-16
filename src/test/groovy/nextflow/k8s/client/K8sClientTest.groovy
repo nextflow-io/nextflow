@@ -473,6 +473,173 @@ class K8sClientTest extends Specification {
         result == STATE
     }
 
+    def 'client should throw an exception when container status returns ErrImagePull' () {
+        given:
+        def JSON = '''
+             {
+                 "kind": "Pod",
+                 "apiVersion": "v1",
+                 "metadata": {
+                     "name": "nf-c6e49ee9ebc79486f774a47924a743d7",
+                     "namespace": "default",
+                     "selfLink": "/api/v1/namespaces/default/pods/nf-c6e49ee9ebc79486f774a47924a743d7/status",
+                     "uid": "18954b48-5811-11e8-8e71-025000000001",
+                     "resourceVersion": "3615842",
+                     "creationTimestamp": "2018-05-15T07:25:08Z",
+                     "labels": {
+                         "app": "nextflow",
+                         "processName": "sayHello",
+                         "runName": "lethal-jones",
+                         "sessionId": "uuid-b6243a3d-5c07-44f4-97eb-9de499747800",
+                         "taskName": "sayHello_2"
+                     }
+                 },
+                 "spec": {
+ 
+                 },
+                 "status": {
+                     "phase": "Pending",
+                     "conditions": [
+                         {
+                             "type": "Initialized",
+                             "status": "True",
+                             "lastProbeTime": null,
+                             "lastTransitionTime": "2018-05-15T07:25:08Z"
+                         },
+                         {
+                             "type": "Ready",
+                             "status": "False",
+                             "lastProbeTime": null,
+                             "lastTransitionTime": "2018-05-15T07:25:08Z",
+                             "reason": "ContainersNotReady",
+                             "message": "containers with unready status: [nf-c6e49ee9ebc79486f774a47924a743d7]"
+                         },
+                         {
+                             "type": "PodScheduled",
+                             "status": "True",
+                             "lastProbeTime": null,
+                             "lastTransitionTime": "2018-05-15T07:25:08Z"
+                         }
+                     ],
+                     "hostIP": "192.168.65.3",
+                     "podIP": "10.1.3.173",
+                     "startTime": "2018-05-15T07:25:08Z",
+                     "containerStatuses": [
+                         {
+                             "name": "nf-c6e49ee9ebc79486f774a47924a743d7",
+                             "state": {
+                                 "waiting": {
+                                     "reason": "ErrImagePull",
+                                     "message": "rpc error: code = Unknown desc = Error response from daemon: pull access denied for nextflow/foo, repository does not exist or may require 'docker login'"
+                                 }
+                             },
+                             "lastState": {
+                                 
+                             },
+                             "ready": false,
+                             "restartCount": 0,
+                             "image": "nextflow/foo",
+                             "imageID": ""
+                         }
+                     ],
+                     "qosClass": "BestEffort"
+                 }
+             }
+'''
+
+        def client = Spy(K8sClient)
+        final POD_NAME = 'nf-c6e49ee9ebc79486f774a47924a743d7'
+
+        when:
+        client.podState(POD_NAME)
+        then:
+        1 * client.podStatus(POD_NAME) >> new K8sResponseJson(JSON)
+        def e = thrown(PodUnschedulableException)
+        e.message == "K8s pod image cannot be pulled -- rpc error: code = Unknown desc = Error response from daemon: pull access denied for nextflow/foo, repository does not exist or may require 'docker login'"
+    }
+
+    def 'client should throw an exception when container status returns ImagePullBackOff' () {
+        def JSON = '''
+            {
+                 "kind": "Pod",
+                 "apiVersion": "v1",
+                 "metadata": {
+                     "name": "nf-c6e49ee9ebc79486f774a47924a743d7",
+                     "namespace": "default",
+                     "selfLink": "/api/v1/namespaces/default/pods/nf-c6e49ee9ebc79486f774a47924a743d7/status",
+                     "uid": "18954b48-5811-11e8-8e71-025000000001",
+                     "resourceVersion": "3615866",
+                     "creationTimestamp": "2018-05-15T07:25:08Z",
+                     "labels": {
+                         "app": "nextflow",
+                         "processName": "sayHello",
+                         "runName": "lethal-jones",
+                         "sessionId": "uuid-b6243a3d-5c07-44f4-97eb-9de499747800",
+                         "taskName": "sayHello_2"
+                     }
+                 },
+                 "spec": { },
+                 "status": {
+                     "phase": "Pending",
+                     "conditions": [
+                         {
+                             "type": "Initialized",
+                             "status": "True",
+                             "lastProbeTime": null,
+                             "lastTransitionTime": "2018-05-15T07:25:08Z"
+                         },
+                         {
+                             "type": "Ready",
+                             "status": "False",
+                             "lastProbeTime": null,
+                             "lastTransitionTime": "2018-05-15T07:25:08Z",
+                             "reason": "ContainersNotReady",
+                             "message": "containers with unready status: [nf-c6e49ee9ebc79486f774a47924a743d7]"
+                         },
+                         {
+                             "type": "PodScheduled",
+                             "status": "True",
+                             "lastProbeTime": null,
+                             "lastTransitionTime": "2018-05-15T07:25:08Z"
+                         }
+                     ],
+                     "hostIP": "192.168.65.3",
+                     "podIP": "10.1.3.173",
+                     "startTime": "2018-05-15T07:25:08Z",
+                     "containerStatuses": [
+                         {
+                             "name": "nf-c6e49ee9ebc79486f774a47924a743d7",
+                             "state": {
+                                 "waiting": {
+                                     "reason": "ImagePullBackOff",
+                                     "message": "Back-off pulling image \\"nextflow/foo\\""
+                                 }
+                             },
+                             "lastState": {
+                                 
+                             },
+                             "ready": false,
+                             "restartCount": 0,
+                             "image": "nextflow/foo",
+                             "imageID": ""
+                         }
+                     ],
+                     "qosClass": "BestEffort"
+                 }
+             }
+'''
+        def client = Spy(K8sClient)
+        final POD_NAME = 'nf-c6e49ee9ebc79486f774a47924a743d7'
+
+        when:
+        client.podState(POD_NAME)
+        then:
+        1 * client.podStatus(POD_NAME) >> new K8sResponseJson(JSON)
+        def e = thrown(PodUnschedulableException)
+        e.message == "K8s pod image cannot be pulled -- Back-off pulling image \"nextflow/foo\""
+
+    }
+
     def 'client should throw an exception when pod is Unschedulable' () {
 
         given:
@@ -511,7 +678,7 @@ class K8sClientTest extends Specification {
                      "qosClass": "Guaranteed"
                  }
              }
-'''
+        '''
 
         def client = Spy(K8sClient)
         final POD_NAME = 'nf-52b131a30381b0b88926a9c12e5b1ff1'
