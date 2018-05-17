@@ -730,6 +730,7 @@ NXF_DEBUG                   Defines scripts debugging level: ``1`` dump task env
 NXF_EXECUTOR                Defines the default process executor e.g. `sge`
 NXF_SINGULARITY_CACHEDIR    Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
 NXF_JAVA_HOME               Defines the path location of the Java VM installation used to run Nextflow. This variable overrides the ``JAVA_HOME`` variable if defined.
+NXF_OFFLINE                 When ``true`` disables the project automatic download and update from remote repositories (default: ``false``).
 JAVA_HOME                   Defines the path location of the Java VM installation used to run Nextflow.
 JAVA_CMD                    Defines the path location of the Java binary command used to launch Nextflow.
 HTTP_PROXY                  Defines the HTTP proxy server
