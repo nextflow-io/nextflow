@@ -37,7 +37,6 @@ import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import nextflow.util.Escape
 import org.yaml.snakeyaml.Yaml
-
 /**
  * Handle Conda environment creation and caching
  *
@@ -65,7 +64,17 @@ class CondaCache {
     /**
      * Timeout after which the environment creation is aborted
      */
-    private Duration createTimeout = Duration.of('10min')
+    private Duration createTimeout = Duration.of('20min')
+
+    private String createOptions
+
+    private Path configCacheDir0
+
+    @PackageScope String getCreateOptions() { createOptions }
+
+    @PackageScope Duration getCreateTimeout() { createTimeout }
+
+    @PackageScope Map<String,String> getEnv() { env }
 
     /** Only for debugging purpose - do not use */
     @PackageScope
@@ -80,6 +89,17 @@ class CondaCache {
     CondaCache(CondaConfig config, Map<String,String> env=null) {
         this.config = config
         this.env = env ?: System.getenv()
+
+        if( config.createTimeout )
+            createTimeout = config.createTimeout as Duration
+
+        if( config.createOptions )
+            createOptions = config.createOptions
+
+        if( config.cacheDir )
+            configCacheDir0 = config.cacheDir as Path
+        else if( env?.NXF_CONDA_CACHEDIR )
+            configCacheDir0 = env.NXF_CONDA_CACHEDIR as Path
     }
 
 
@@ -96,12 +116,9 @@ class CondaCache {
     @PackageScope
     Path getCacheDir() {
 
-        if( config.createTimeout )
-            createTimeout = config.createTimeout as Duration
-
-        def cacheDir = config.cacheDir as Path
+        def cacheDir = configCacheDir0
         if( !cacheDir )
-            cacheDir = Global.session.workDir.resolve('conda')
+            cacheDir = getSessionWorkDir().resolve('conda')
 
         if( cacheDir.fileSystem != FileSystems.default ) {
             throw new IOException("Cannot store Conda environments to a remote work directory -- Use a POSIX compatible work directory or specify an alternative path with the `conda.cacheDir` config setting")
@@ -114,10 +131,15 @@ class CondaCache {
         return cacheDir
     }
 
+    @PackageScope Path getSessionWorkDir() {
+        Global.session.workDir
+    }
+
     @PackageScope
     boolean isEnvFile(String str) {
         str.endsWith('.yml') || str.endsWith('.yaml')
     }
+
 
     /**
      * Get the path on the file system where store a Conda environment
@@ -146,6 +168,16 @@ class CondaCache {
             catch( Exception e ) {
                 throw new IllegalArgumentException("Error parsing Conda environment YAML file: $condaEnv -- Chech the log file for details", e)
             }
+        }
+        // it's interpreted as user provided prefix directory
+        else if( condaEnv.contains('/') ) {
+            final prefix = condaEnv as Path
+            if( !prefix.isDirectory() )
+                throw new IllegalArgumentException("Conda prefix path does not exist or it's not a directory: $prefix")
+            if( prefix.fileSystem != FileSystems.default )
+                throw new IllegalArgumentException("Conda prefix path must be a POSIX file path: $prefix")
+
+            return prefix
         }
         else {
             content = condaEnv
@@ -191,14 +223,13 @@ class CondaCache {
             log.debug "Conda found local env for environment=$condaEnv; path=$prefixPath"
             return prefixPath
         }
-        log.trace "Conda create env=$condaEnv"
-
         log.info "Creating Conda env: $condaEnv [cache $prefixPath]"
 
+        final opts = createOptions ? "$createOptions " : ''
         final isFile = isEnvFile(condaEnv)
         final String cmd = ( isFile
                     ? "conda env create --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
-                    : "conda create --mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} $condaEnv")
+                    : "conda create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} $condaEnv")
         try {
             runCommand( cmd )
             log.debug "Conda create complete env=$condaEnv path=$prefixPath"

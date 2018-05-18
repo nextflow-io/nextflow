@@ -1966,6 +1966,11 @@ class TaskProcessor {
         if( modules ) {
             keys.addAll(modules)
         }
+        
+        final conda = task.getCondaEnv()
+        if( conda ) {
+            keys.add(conda)
+        }
 
         final mode = config.getHashMode()
         final hash = CacheHelper.hasher(keys, mode).hash()

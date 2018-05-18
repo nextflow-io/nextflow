@@ -546,6 +546,7 @@ class TaskRun implements Cloneable {
         return result.toString()
     }
 
+    @Memoized
     Path getCondaEnv() {
         if( !config.conda )
             return null
