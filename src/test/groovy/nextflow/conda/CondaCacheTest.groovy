@@ -24,7 +24,6 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -111,6 +110,25 @@ class CondaCacheTest extends Specification {
 
     }
 
+    def 'should return a conda prefix directory' () {
+
+        given:
+        def cache = Spy(CondaCache)
+        def folder = Files.createTempDirectory('test')
+        def ENV = folder.toString()
+
+        when:
+        def prefix = cache.condaPrefixPath(ENV)
+        then:
+        1 * cache.isEnvFile(ENV)
+        0 * cache.getCacheDir()
+        prefix.toString() == folder.toString()
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
 
     def 'should create a conda environment' () {
 
@@ -138,6 +156,23 @@ class CondaCacheTest extends Specification {
         
     }
 
+    def 'should create conda env with options' () {
+        given:
+        def ENV = 'bwa=1.1.1'
+        def PREFIX = Paths.get('/foo/bar')
+        def cache = Spy(CondaCache)
+
+        when:
+        cache.createOptions = '--this --that'
+        def result = cache.createLocalCondaEnv0(ENV,PREFIX)
+        then:
+        1 * cache.isEnvFile(ENV)
+        0 * cache.makeAbsolute(_)
+        1 * cache.runCommand( "conda create --this --that --mkdir --yes --quiet --prefix $PREFIX $ENV" ) >> null
+        result == PREFIX
+    }
+
+
     def 'should create a conda env with a env file' () {
 
         given:
@@ -153,5 +188,76 @@ class CondaCacheTest extends Specification {
         1 * cache.runCommand( "conda env create --prefix $PREFIX --file /usr/base/foo.yml" ) >> null
         result == PREFIX
 
+    }
+
+    def 'should get options from the config' () {
+
+        when:
+        def cache = new CondaCache(new CondaConfig(), [ALPHA: 'aaa', BRAVO: 'bbb'])
+        then:
+        cache.createTimeout.minutes == 20
+        cache.createOptions == null
+        cache.env.ALPHA == 'aaa'
+        cache.env.BRAVO == 'bbb'
+
+        when:
+        cache = new CondaCache(new CondaConfig(createTimeout: '5 min', createOptions: '--foo --bar'))
+        then:
+        cache.createTimeout.minutes == 5
+        cache.createOptions == '--foo --bar'
+    }
+
+    def 'should define cache dir from config' () {
+
+        given:
+        def folder = Files.createTempDirectory('test'); folder.deleteDir()
+        def config = new CondaConfig(cacheDir: folder.toString())
+        CondaCache cache = Spy(CondaCache, constructorArgs: [config])
+
+        when:
+        def result = cache.getCacheDir()
+        then:
+        0 * cache.getSessionWorkDir()
+        result == folder
+        result.exists()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should define cache dir from env' () {
+
+        given:
+        def folder = Files.createTempDirectory('test'); folder.deleteDir()
+        def config = new CondaConfig()
+        def env = [NXF_CONDA_CACHEDIR: folder.toString()]
+        CondaCache cache = Spy(CondaCache, constructorArgs: [config, env])
+
+        when:
+        def result = cache.getCacheDir()
+        then:
+        0 * cache.getSessionWorkDir()
+        result == folder
+        result.exists()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should define cache dir from session workdir' () {
+
+        given:
+        def folder = Files.createTempDirectory('test');
+        def cache = Spy(CondaCache)
+
+        when:
+        def result = cache.getCacheDir()
+        then:
+        1 * cache.getSessionWorkDir() >> folder
+        result == folder.resolve('conda')
+        result.exists()
+
+        cleanup:
+        folder?.deleteDir()
     }
 }
