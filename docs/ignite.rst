@@ -94,8 +94,6 @@ interface                   Network interfaces that Ignite will use. It can be t
 tcp.localAddress            Defines the local host IP address.
 tcp.localPort               Defines the local port to listen to.
 tcp.localPortRange          Range for local ports.
-tcp.heartbeatFrequency      Defines the delay between heartbeat messages sent by coordinator.
-tcp.maxMissedHeartbeats     Defines max heartbeats count node can miss without initiating status check.
 tcp.reconnectCount          Number of times the node tries to (re)establish connection to another node.
 tcp.networkTimeout          Defines the network timeout.
 tcp.socketTimeout           Defines the socket operations timeout. This timeout is used to limit connection time and write-to-socket time. Note that when running Ignite on Amazon EC2, socket timeout must be set to a value significantly greater than the default (e.g. to 30000).

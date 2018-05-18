@@ -323,7 +323,7 @@ else
   fi
   major=${BASH_REMATCH[1]}
   minor=${BASH_REMATCH[2]}
-  version_check="^(1.8|9)"
+  version_check="^(1.8|9|10)"
   version_message="Java 8"
   # legacy version - Java 7/8 only
   if [[ $major==0 && $minor<26 ]]; then
@@ -341,10 +341,6 @@ else
   fi
   mkdir -p $(dirname "$JAVA_KEY")
   [[ -f $JAVA_VER ]] && echo $JAVA_VER > "$JAVA_KEY"
-fi
-if [[ "$JAVA_VER" =~ ^9 ]]; then
-  echo_yellow "WARN: Nextflow support for Java 9 is still in beta stage and some advanced features are not supported"
-  echo_yellow "WARN: It is suggested the use of Java version 8"
 fi
 
 # Verify nextflow jar is available
@@ -424,17 +420,19 @@ else
     cli=($("$JAVA_CMD" "${JAVA_OPTS[@]}" -jar "$NXF_BIN"))
     [[ $? -ne 0 ]] && echo_red 'Unable to initialize nextflow environment' && exit $?
 
-    if [[ "$JAVA_VER" =~ ^9 ]]; then
-      echo_yellow "Nextflow support for Java 9 is still experimental an some advanced features are not yet supported -- Please use Java 8"
+    if [[ "$JAVA_VER" =~ ^(9|10) ]]; then
       launcher=("${cli[@]:0:1}")
       launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
+      launcher+=(--add-opens=java.base/java.nio=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.util=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.nio.ch=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED)
+      launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
+      launcher+=(--add-modules=java.xml.bind)
       launcher+=(--illegal-access=deny)
       launcher+=("${cli[@]:1}")
     else

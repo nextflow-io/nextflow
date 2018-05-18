@@ -314,9 +314,6 @@ class SchedulerAgent implements Closeable {
 
                     // -- reset the idle status
                     idleTimestamp = 0
-
-                    // -- signal that task has started
-                    notifyTaskStart(it)
                 }
             }
 
@@ -351,6 +348,9 @@ class SchedulerAgent implements Closeable {
         }
 
         void runTask0( IgBaseTask task ) {
+
+            // -- signal that task has started
+            notifyTaskStart(task)
 
             boolean error
             try {

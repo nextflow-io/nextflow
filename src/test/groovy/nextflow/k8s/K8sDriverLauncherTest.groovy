@@ -63,7 +63,6 @@ class K8sDriverLauncherTest extends Specification {
         new CmdKubeRun(withTrace: true)                 | 'nextflow run foo -with-trace true'
         new CmdKubeRun(withTimeline: true)              | 'nextflow run foo -with-timeline true'
         new CmdKubeRun(withDag: true)                   | 'nextflow run foo -with-dag true'
-        new CmdKubeRun(profile: 'ciao')                 | 'nextflow run foo -profile ciao'
         new CmdKubeRun(dumpHashes: true)                | 'nextflow run foo -dump-hashes true'
         new CmdKubeRun(dumpChannels: 'lala')            | 'nextflow run foo -dump-channels lala'
         new CmdKubeRun(env: [XX:'hello', YY: 'world'])  | 'nextflow run foo -e.XX hello -e.YY world'

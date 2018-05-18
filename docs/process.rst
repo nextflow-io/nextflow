@@ -1085,6 +1085,7 @@ The directives are:
 * `beforeScript`_
 * `cache`_
 * `cpus`_
+* `conda`_
 * `container`_
 * `containerOptions`_
 * `clusterOptions`_
@@ -1166,6 +1167,34 @@ Value                 Description
 ``true`` (default)    Cache process outputs. Input files are indexed by using the meta-data information (name, size and last update timestamp).
 ``'deep'``            Cache process outputs. Input files are indexed by their content.
 ===================== =================
+
+
+.. _process-conda:
+
+conda
+-----
+
+The ``conda`` directive allows the definition of the process dependencies by using the `Conda <https://conda.io>`_
+package manager.
+
+Nextflow automatically setup an environment for the given package names listed by in the ``conda`` directive.
+For example::
+
+  process foo {
+    conda 'bwa=0.7.15'
+
+    '''
+    your_command --here
+    '''
+  }
+
+
+Multiple packages can be specified separating them with a blank space eg. ``bwa=0.7.15 fastqc=0.11.5``.
+The name of the channel from where a specific package needs to be download can be specified using the usual
+Conda notation i.e. prefixing the package with the channel name as shown here ``bioconda::bwa=0.7.15``.
+
+The ``conda`` directory allows also the specification of a Conda environment file
+path or the path of an existing environment directory. See the :ref:`conda-page` page for further details.
 
 .. _process-container:
 
@@ -1953,8 +1982,8 @@ d       Days
 ======= =============
 
 .. note:: This directive is taken in account only when using one of the following grid based executors:
-  :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor` and
-  :ref:`condor-executor` executors.
+  :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor`,
+  :ref:`condor-executor` and :ref:`awsbatch-executor` executors.
 
 See also: `cpus`_, `memory`_, `queue`_ and `Dynamic computing resources`_.
 

@@ -19,6 +19,7 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Path
 
 import groovy.transform.PackageScope
@@ -32,6 +33,8 @@ import nextflow.container.UdockerBuilder
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import nextflow.util.Escape
+
 /**
  * Builder to create the BASH script which is used to
  * wrap and launch the user task
@@ -427,6 +430,14 @@ class BashWrapperBuilder {
                 wrapper << moduleLoad(it) << ENDL
             }
             wrapper << ENDL
+        }
+
+        /*
+         * activate conda environment 
+         */
+        if( condaEnv ) {
+            wrapper << '# conda environment' << ENDL
+            wrapper << 'source activate ' << Escape.path(condaEnv) << ENDL
         }
 
         /*

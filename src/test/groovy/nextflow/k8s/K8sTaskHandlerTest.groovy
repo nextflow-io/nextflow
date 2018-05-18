@@ -19,6 +19,8 @@
  */
 
 package nextflow.k8s
+
+import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.Session
@@ -370,6 +372,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getState() >> [terminated: ["reason": "Completed", "finishedAt": "2018-01-13T10:19:36Z", exitCode: 0]]
         1 * handler.readExitFile() >> EXIT_STATUS
         1 * handler.deletePodIfSuccessful(task) >> null
+        1 * handler.savePodLogOnError(task) >> null
         handler.task.exitStatus == EXIT_STATUS
         handler.task.@stdout == OUT_FILE
         handler.task.@stderr == ERR_FILE
@@ -399,28 +402,67 @@ class K8sTaskHandlerTest extends Specification {
         def handler = Spy(K8sTaskHandler)
         handler.client = client
         handler.podName = POD_NAME
-        Map STATE1 = [foo:1, bar:2]
-        Map STATE2 = [fizz:1, bazz: 2]
+        Map STATE1 = [status:'pending']
+        Map STATE2 = [status:'running']
+        Map STATE3 = [status:'complete']
         Map state
 
+        // first time `client.podState` is invoked
         when:
         state = handler.getState()
         then:
         1 * client.podState(POD_NAME) >> STATE1
         state == STATE1
 
+        // second time `client.podState` NOT invoked
+        // the cached status is returned
         when:
         state = handler.getState()
         then:
-        0 * client.podState(POD_NAME) >> 0
+        0 * client.podState(POD_NAME)
         state == STATE1
 
+        // after more than a second `client.podState` is invoked
+        // an empty value is returned, therefore the previous status is returned
         when:
         sleep 1_500
         state = handler.getState()
         then:
+        1 * client.podState(POD_NAME) >> [:]
+        state == STATE1
+
+        // still an empty status
+        // the previous status is returned
+        when:
+        state = handler.getState()
+        then:
+        1 * client.podState(POD_NAME) >> [:]
+        state == STATE1
+
+        // now, the a valid status is returned
+        // the status is cached
+        when:
+        state = handler.getState()
+        then:
         1 * client.podState(POD_NAME) >> STATE2
         state == STATE2
+
+        // following invocation is cached
+        // the previous status is returned
+        when:
+        state = handler.getState()
+        then:
+        0 * client.podState(POD_NAME)
+        state == STATE2
+
+        // after a second, the a new invocation is executed
+        // the new status is returned
+        when:
+        sleep 1_500
+        state = handler.getState()
+        then:
+        1 * client.podState(POD_NAME) >> STATE3
+        state == STATE3
     }
 
     def 'should return container mounts' () {
@@ -527,6 +569,47 @@ class K8sTaskHandlerTest extends Specification {
         then:
         1 * executor.getK8sConfig() >> [cleanup: true]
         0 * client.podDelete(POD_NAME) >> null
+
+    }
+
+
+    def 'should save pod log' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def POD_NAME = 'the-pod-name'
+        def POD_MESSAGE = 'Hello world!'
+        def POD_LOG = new ByteArrayInputStream(new String(POD_MESSAGE).bytes)
+        def session = Mock(Session)
+        def task = Mock(TaskRun)
+        def executor = Mock(K8sExecutor)
+        def client = Mock(K8sClient)
+
+        def handler = Spy(K8sTaskHandler)
+        handler.executor = executor
+        handler.client = client
+        handler.podName = POD_NAME
+
+        when:
+        handler.savePodLogOnError(task)
+        then:
+        task.isSuccess() >> true
+        0 * client.podLog(_)
+
+        when:
+        handler.savePodLogOnError(task)
+        then:
+        task.isSuccess() >> false
+        task.getWorkDir() >> folder
+        executor.getSession() >> session
+        session.isTerminated() >> false
+        session.isCancelled() >> false
+        session.isAborted() >> false
+        1 * client.podLog(POD_NAME) >> POD_LOG
+
+        folder.resolve( TaskRun.CMD_LOG ).text == POD_MESSAGE
+        cleanup:
+        folder?.deleteDir()
 
     }
 }

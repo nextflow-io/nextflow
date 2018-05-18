@@ -21,6 +21,7 @@ Contents:
    config
    awscloud
    amazons3
+   conda
    docker
    singularity
    ignite

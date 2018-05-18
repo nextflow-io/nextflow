@@ -50,5 +50,28 @@ class TaskPollingMonitorTest extends Specification {
 
     }
 
+    def 'should create a rate limiter for the given rate format'() {
+
+        given:
+        def session = Mock(Session)
+        def monitor = new TaskPollingMonitor(name:'local', session: session, pollInterval: '1s', capacity: 100)
+        
+        when:
+        def limit = monitor.createSubmitRateLimit()
+        then:
+        1 * session.getExecConfigProp('local','submitRateLimit', null) >> RATE
+        limit ? Math.round(limit.getRate()) : null == EXPECTED
+
+        where:
+        RATE            | EXPECTED
+        '1'             | 1                         // 1 per second
+        '5'             | 5                         // 5 per second
+        '100 min'       | 100 / 60                  // 100 per minute
+        '100 / 1 s'     | 100                       // 100 per second
+        '100 / 2 s'     | 50                        // 100 per 2 seconds
+        '600 / 5'       | 600i / 5l as double       // 600 per 5 seconds
+        '600 / 5min'    | 600 / (5 * 60)            // 600 per 5 minutes
+
+    }
 
 }

@@ -82,7 +82,7 @@ class ConfigHelperTest extends Specification {
 
     }
 
-    def 'should properties notation' () {
+    def 'should render config using properties notation' () {
 
         given:
         def mem = { return 0 }
@@ -94,20 +94,20 @@ class ConfigHelperTest extends Specification {
         config.process.omega = "Hi' there"
 
         when:
-        def result = ConfigHelper.toPropertiesString(config)
+        def result = ConfigHelper.toPropertiesString(config,true)
 
         then:
         result == """
                 docker.enabled=true
+                process.executor=slurm
+                process.memory=${mem.toString()}
                 process.omega=Hi' there
                 process.queue=long
-                process.memory=${mem.toString()}
-                process.executor=slurm
                 """
                 .stripIndent().leftTrim()
 
     }
-    def 'should canonical notation' () {
+    def 'should render config using canonical notation' () {
 
         given:
         def config = new ConfigObject()
@@ -193,7 +193,7 @@ class ConfigHelperTest extends Specification {
                     .stripIndent().leftTrim()
     }
 
-    def 'should flatten notation' () {
+    def 'should render config using flatten notation' () {
 
         given:
         def config = new ConfigObject()
@@ -232,47 +232,6 @@ class ConfigHelperTest extends Specification {
         then:
         result == "foo = 'Hi\\' there'\n"
 
-    }
-
-
-    def 'should sort property keys' () {
-
-        given:
-        def props = new ConfigHelper.OrderedProperties()
-        props.setProperty('omega', '1')
-        props.setProperty('beta',  '3')
-        props.setProperty('delta', '2')
-        props.setProperty('alpha', '4')
-
-
-        when:
-        def e = props.keys()
-        then:
-        e.nextElement() == 'alpha'
-        e.nextElement() == 'beta'
-        e.nextElement() == 'delta'
-        e.nextElement() == 'omega'
-
-    }
-
-
-    def 'should create from a properties object' () {
-
-        given:
-        def config = new Properties()
-        config.'omega' = 1
-        config.'alpha' = 4
-        config.'delta.y' = 'Hello'
-        config.'delta.z' = 'world'
-
-        when:
-        def props = new ConfigHelper.OrderedProperties(config)
-        then:
-        props.'omega' == 1
-        props.'alpha' == 4
-        props.'delta.y' == 'Hello'
-        props.'delta.z' == 'world'
-        props.keys().toSet() == ['alpha', 'delta.y', 'delta.z','omega'] as Set
     }
 
     def 'should verify valid identifiers' () {
