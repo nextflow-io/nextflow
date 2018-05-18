@@ -22,7 +22,6 @@ package nextflow.k8s.client
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-
 /**
  * Model a kubernetes invalid response
  *
@@ -35,13 +34,43 @@ class K8sResponseException extends Exception {
 
     K8sResponseJson response
 
+    K8sResponseException(K8sResponseJson response) {
+        super(msg0(response))
+    }
+
     K8sResponseException(String message, K8sResponseJson response) {
-        super(message)
+        super(msg1(message,response))
         this.response = response
     }
 
     K8sResponseException(String message, InputStream response) {
         this(message, new K8sResponseJson(fetch(response)))
+    }
+
+    static private String msg1( String msg, K8sResponseJson resp ) {
+        if( !msg && resp==null )
+            return null
+
+        if( msg && resp != null ) {
+            def sep = resp.isRawText() ? ' -- ' : '\n'
+            return "${msg}${sep}${msg0(resp)}"
+        }
+        else if( msg ) {
+            return msg
+        }
+        else {
+            return msg0(resp)
+        }
+    }
+
+    static private String msg0( K8sResponseJson response ) {
+        if( response == null )
+            return null
+
+        if( response.isRawText() )
+            response.getRawText()
+        else
+            "\n${response.toString().indent('  ')}"
     }
 
     static private String fetch(InputStream stream) {
@@ -52,16 +81,6 @@ class K8sResponseException extends Exception {
             log.debug "Unable to fetch response text -- Cause: ${e.message ?: e}"
             return null
         }
-    }
-
-    String getMessage() {
-        def result = super.getMessage()
-
-        if( response == null )
-            return result
-
-        final prefix = response.isRawText() ? '> ' : ' '
-        "$result\n${response.toString().indent(prefix)}"
     }
 
 }

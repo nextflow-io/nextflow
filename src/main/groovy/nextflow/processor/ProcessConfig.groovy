@@ -63,6 +63,7 @@ class ProcessConfig implements Map<String,Object> {
             'beforeScript',
             'echo',
             'cache',
+            'conda',
             'cpus',
             'container',
             'containerOptions',

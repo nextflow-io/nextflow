@@ -17,32 +17,24 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
-apply plugin: 'groovy'
 
-sourceSets {
-    main.java.srcDirs = []
-    main.groovy.srcDirs = ['src/main']
-    main.resources.srcDirs = ['src/resources']
-    test.groovy.srcDirs = ['src/test']
-    test.java.srcDirs = []
-    test.resources.srcDirs = []
+package nextflow.k8s.client
+
+import groovy.transform.CompileStatic
+import nextflow.exception.ShowOnlyExceptionMessage
+
+/**
+ * Exception raised when a pod cannot be scheduled because
+ * e.g. the container image cannot be pulled, required resources
+ * cannot be fulfilled, etc.
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@CompileStatic
+class PodUnschedulableException extends Exception implements ShowOnlyExceptionMessage {
+
+    PodUnschedulableException(String message, Throwable cause) {
+        super(message,cause)
+    }
+
 }
-
-dependencies {
-    compile project(':')
-
-    compile ('org.apache.ignite:ignite-core:2.4.0')
-    compile ('org.apache.ignite:ignite-slf4j:2.4.0')
-    compile ('org.apache.ignite:ignite-aws:2.4.0') {
-        exclude group: 'com.amazonaws', module: 'aws-java-sdk'
-    }
-    runtime ('com.amazonaws:aws-java-sdk-s3:1.10.29') {
-        exclude group: 'commons-logging', module: 'commons-logging'
-    }
-
-    /* testCompile inherited from top gradle build file */
-    testCompile ('org.apache.ignite:ignite-spring:2.4.0') {
-        exclude group: 'commons-logging', module: 'commons-logging'
-    }
-}
-

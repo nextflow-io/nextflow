@@ -20,9 +20,11 @@
 
 package nextflow.k8s
 
+import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.atomic.AtomicInteger
 
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.container.DockerBuilder
 import nextflow.exception.ProcessSubmitException
@@ -35,14 +37,13 @@ import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.PathTrie
 /**
- * Implements the {@link TaskHandler} interface for kubenetes jobs
+ * Implements the {@link TaskHandler} interface for Kubernetes jobs
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class K8sTaskHandler extends TaskHandler {
-
-    static private AtomicInteger VOLUMES = new AtomicInteger()
 
     @Lazy
     static private final String OWNER = {
@@ -206,8 +207,9 @@ class K8sTaskHandler extends TaskHandler {
 
     protected Map getLabels(TaskRun task) {
         Map result = [:]
-        if( executor.getK8sConfig().labels instanceof Map ) {
-            executor.getK8sConfig().labels.each { k,v -> result.put(k,sanitize0(v)) }
+        def labels = executor.getK8sConfig().labels
+        if( labels instanceof Map ) {
+            labels.entrySet().each { entry -> result.put(entry.key, sanitize0(entry.value)) }
         }
         result.app = 'nextflow'
         result.runName = sanitize0(getRunName())
@@ -237,6 +239,7 @@ class K8sTaskHandler extends TaskHandler {
      * Creates a new K8s pod executing the associated task
      */
     @Override
+    @CompileDynamic
     void submit() {
         builder = createBashWrapper(task)
         builder.build()
@@ -250,6 +253,7 @@ class K8sTaskHandler extends TaskHandler {
         this.status = TaskStatus.SUBMITTED
     }
 
+    @CompileDynamic
     protected Path yamlDebugPath() {
         boolean debug = executor.getK8sConfig()?.debug?.yaml?.toString() == 'true'
         return debug ? task.workDir.resolve('.command.yaml') : null
@@ -260,8 +264,15 @@ class K8sTaskHandler extends TaskHandler {
      */
     protected Map getState() {
         final now = System.currentTimeMillis()
-        final delta =  now - timestamp; timestamp = now
-        state && delta < 1_000 ? state : (state = client.podState(podName))
+        final delta =  now - timestamp;
+        if( !state || delta >= 1_000) {
+            def newState = client.podState(podName)
+            if( newState ) {
+                state = newState
+                timestamp = now
+            }
+        }
+        return state
     }
 
     @Override
@@ -281,11 +292,32 @@ class K8sTaskHandler extends TaskHandler {
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
+            savePodLogOnError(task)
             deletePodIfSuccessful(task)
             return true
         }
 
         return false
+    }
+
+    protected void savePodLogOnError(TaskRun task) {
+        if( task.isSuccess() )
+            return
+
+        if( errorFile && !errorFile.empty() )
+            return
+
+        final session = executor.getSession()
+        if( session.isAborted() || session.isCancelled() || session.isTerminated() )
+            return
+
+        try {
+            final stream = client.podLog(podName)
+            Files.copy(stream, task.workDir.resolve(TaskRun.CMD_LOG))
+        }
+        catch( Exception e ) {
+            log.warn "Failed to copy log for pod $podName", e
+        }
     }
 
     protected int readExitFile() {

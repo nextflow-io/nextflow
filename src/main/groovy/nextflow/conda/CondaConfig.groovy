@@ -17,32 +17,26 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
-apply plugin: 'groovy'
 
-sourceSets {
-    main.java.srcDirs = []
-    main.groovy.srcDirs = ['src/main']
-    main.resources.srcDirs = ['src/resources']
-    test.groovy.srcDirs = ['src/test']
-    test.java.srcDirs = []
-    test.resources.srcDirs = []
-}
+package nextflow.conda
 
-dependencies {
-    compile project(':')
+import groovy.transform.CompileStatic
 
-    compile ('org.apache.ignite:ignite-core:2.4.0')
-    compile ('org.apache.ignite:ignite-slf4j:2.4.0')
-    compile ('org.apache.ignite:ignite-aws:2.4.0') {
-        exclude group: 'com.amazonaws', module: 'aws-java-sdk'
-    }
-    runtime ('com.amazonaws:aws-java-sdk-s3:1.10.29') {
-        exclude group: 'commons-logging', module: 'commons-logging'
+/**
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@CompileStatic
+class CondaConfig extends LinkedHashMap {
+
+    /* required by Kryo deserialization -- do not remove */
+    private CondaConfig() { }
+
+    CondaConfig(Map config) {
+        super(config)
     }
 
-    /* testCompile inherited from top gradle build file */
-    testCompile ('org.apache.ignite:ignite-spring:2.4.0') {
-        exclude group: 'commons-logging', module: 'commons-logging'
+    boolean isEnabled() {
+        get('enabled')?.toString() == 'true'
     }
 }
-

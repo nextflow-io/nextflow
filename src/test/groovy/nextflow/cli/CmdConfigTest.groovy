@@ -70,15 +70,16 @@ class CmdConfigTest extends Specification {
         def cmd = new CmdConfig()
 
         when:
+        cmd.sort = true
         cmd.printProperties(config, buffer)
 
         then:
         buffer.toString() == """
                 docker.enabled=true
+                process.executor=slurm
+                process.memory=${mem.toString()}
                 process.omega=Hi' there
                 process.queue=long
-                process.memory=${mem.toString()}
-                process.executor=slurm
                 """
                 .stripIndent().leftTrim()
 

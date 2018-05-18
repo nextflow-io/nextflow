@@ -19,6 +19,7 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Paths
 
 import com.amazonaws.services.batch.AWSBatchClient
@@ -171,6 +172,63 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
         req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "trap \"{ ret=\$?; /bin/aws --region eu-west-1 s3 cp --only-show-errors .command.log s3://bucket/test/.command.log||true; exit \$ret; }\" EXIT; /bin/aws --region eu-west-1 s3 cp --only-show-errors s3://bucket/test/.command.run - | bash 2>&1 | tee .command.log".toString()]
         req.getRetryStrategy() == null  // <-- retry is managed by NF, hence this must be null
+
+    }
+
+    def 'should create an aws submit request with a timeout'() {
+
+        given:
+        def task = Mock(TaskRun)
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when:
+        def req = handler.newSubmitRequest(task)
+        then:
+        task.getName() >> 'batch-task'
+        task.getConfig() >> new TaskConfig()
+
+        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+        1 * handler.getJobQueue(task) >> 'queue1'
+        1 * handler.getJobDefinition(task) >> 'job-def:1'
+
+        req.getJobName() == 'batchtask'
+        req.getJobQueue() == 'queue1'
+        req.getJobDefinition() == 'job-def:1'
+        req.getTimeout() == null
+
+
+        when:
+        req = handler.newSubmitRequest(task)
+        then:
+        task.getName() >> 'batch-task'
+        task.getConfig() >> new TaskConfig(time: '5 sec')
+
+        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+        1 * handler.getJobQueue(task) >> 'queue2'
+        1 * handler.getJobDefinition(task) >> 'job-def:2'
+
+        req.getJobName() == 'batchtask'
+        req.getJobQueue() == 'queue2'
+        req.getJobDefinition() == 'job-def:2'
+        // minimal allowed timeout is 60 seconds
+        req.getTimeout().getAttemptDurationSeconds() == 60
+
+
+        when:
+        req = handler.newSubmitRequest(task)
+        then:
+        task.getName() >> 'batch-task'
+        task.getConfig() >> new TaskConfig(time: '1 hour')
+
+        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+        1 * handler.getJobQueue(task) >> 'queue3'
+        1 * handler.getJobDefinition(task) >> 'job-def:3'
+
+        req.getJobName() == 'batchtask'
+        req.getJobQueue() == 'queue3'
+        req.getJobDefinition() == 'job-def:3'
+        // minimal allowed timeout is 60 seconds
+        req.getTimeout().getAttemptDurationSeconds() == 3600
 
     }
 

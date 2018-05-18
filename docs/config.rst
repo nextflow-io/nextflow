@@ -264,6 +264,7 @@ dumpInterval          Determines how often the executor status is written in the
 queueStatInterval     Determines how often the queue status is fetched from the cluster system. This setting is used only by grid executors (default: ``1min``).
 exitReadTimeout       Determines how long the executor waits before return an error status when a process is terminated but the `exit` file does not exist or it is empty. This setting is used only by grid executors (default: ``270 sec``).
 killBatchSize         Determines the number of jobs that can be `killed` in a single command execution (default: ``100``).
+submitRateLimit       Determines the max rate of jobs that can be executed per time unit, for example ``'10 sec'`` eg. max 10 jobs per second (default: `unlimited`).
 perJobMemLimit        Specifies Platform LSF *per-job* memory limit mode. See :ref:`lsf-executor`.
 jobName               Determines the name of jobs submitted to the underlying cluster executor e.g. ``executor.jobName = { "$task.name - $task.hash" }`` .
 cpus                  The maximum number of CPUs made available by the underlying system (only used by the ``local`` executor).
@@ -534,6 +535,24 @@ instanceType                Type of the virtual machine(s) to launch when new in
 spotPrice                   Price bid for spot/preemptive instances launched while auto-scaling the cluster.
 =========================== ================
 
+.. _config-conda:
+
+Scope `conda`
+-------------
+
+The ``conda`` scope allows the definition of the configuration settings that control the creation of Conda environment
+with by the Conda package manager.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+cacheDir            Defines the path where Conda environments are stored. When using a compute cluster make sure to provide a shared file system path accessible from all computing nodes.
+createTimeout       Defines the amount of time the Conda environment creation can last. The creation process is terminated when the timeout is exceeded (default: ``20 min``).
+================== ================
+
+
 .. _config-k8s:
 
 Scope `k8s`
@@ -720,15 +739,17 @@ NXF_VER                     Defines what version of Nextflow to use.
 NXF_ORG                     Default `organization` prefix when looking for a hosted repository (default: ``nextflow-io``).
 NXF_GRAB                    Provides extra runtime dependencies downloaded from a Maven repository service.
 NXF_OPTS                    Provides extra options for the Java and Nextflow runtime. It must be a blank separated list of ``-Dkey[=value]`` properties.
-NXF_CLASSPATH               Allows to extend the Java runtime classpath with extra jar files or class folders.
-NXF_ASSETS                  Defined the directory where downloaded pipeline repositories are stored (default: ``$NXF_HOME/assets``)
+NXF_CLASSPATH               Allows the extension of the Java runtime classpath with extra JAR files or class folders.
+NXF_ASSETS                  Defines the directory where downloaded pipeline repositories are stored (default: ``$NXF_HOME/assets``)
 NXF_PID_FILE                Name of the file where the process PID is saved when Nextflow is launched in background.
 NXF_WORK                    Directory where working files are stored (usually your *scratch* directory)
 NXF_TEMP                    Directory where temporary files are stored
 NXF_DEBUG                   Defines scripts debugging level: ``1`` dump task environment variables in the task log file; ``2`` enables command script execution tracing; ``3`` enables command wrapper execution tracing.
 NXF_EXECUTOR                Defines the default process executor e.g. `sge`
-NXF_SINGULARITY_CACHEDIR    Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
+NXF_CONDA_CACHEDIR          Directory where Conda environments are store. When using a computing cluster it must be a shared folder accessible from all computing nodes.
+NXF_SINGULARITY_CACHEDIR    Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all computing nodes.
 NXF_JAVA_HOME               Defines the path location of the Java VM installation used to run Nextflow. This variable overrides the ``JAVA_HOME`` variable if defined.
+NXF_OFFLINE                 When ``true`` disables the project automatic download and update from remote repositories (default: ``false``).
 JAVA_HOME                   Defines the path location of the Java VM installation used to run Nextflow.
 JAVA_CMD                    Defines the path location of the Java binary command used to launch Nextflow.
 HTTP_PROXY                  Defines the HTTP proxy server

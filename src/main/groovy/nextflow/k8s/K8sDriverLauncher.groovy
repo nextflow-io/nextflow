@@ -142,7 +142,10 @@ class K8sDriverLauncher {
         print "Pod submitted: $name .. waiting to start"
         while( true ) {
             sleep 1000
-            if( !client.podState(name).containsKey('waiting')  ) break
+            final state = client.podState(name)
+            if( state && !state.containsKey('waiting')  ) {
+                break
+            }
         }
         print "\33[2K\r"
         println "Pod started: $name"
@@ -401,7 +404,6 @@ class K8sDriverLauncher {
         addOption(result, cmd.&withTrace )
         addOption(result, cmd.&withTimeline )
         addOption(result, cmd.&withDag )
-        addOption(result, cmd.&profile )
         addOption(result, cmd.&dumpHashes )
         addOption(result, cmd.&dumpChannels )
         addOption(result, cmd.&env )
