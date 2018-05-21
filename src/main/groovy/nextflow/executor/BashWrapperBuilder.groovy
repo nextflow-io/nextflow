@@ -20,6 +20,7 @@
 
 package nextflow.executor
 
+import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.PackageScope
@@ -327,7 +328,7 @@ class BashWrapperBuilder {
          * save the input when required
          */
         if( input != null ) {
-            inputFile.text = input
+            Files.write(inputFile, input.toString().getBytes())
         }
 
         // whenever it has to change to the scratch directory
@@ -361,7 +362,7 @@ class BashWrapperBuilder {
         /*
          * save the script file
          */
-        scriptFile.text = taskScript
+        Files.write(scriptFile, taskScript.getBytes())
 
         /*
          * fetch the script interpreter i.e. BASH, Perl, Python, etc
@@ -506,7 +507,8 @@ class BashWrapperBuilder {
             wrapper << afterScript << ENDL
         }
 
-        wrapperFile.text = wrapperScript = wrapper.toString()
+        wrapperScript = wrapper.toString()
+        Files.write(wrapperFile, wrapperScript.getBytes())
         return wrapperFile
     }
 
@@ -591,7 +593,7 @@ class BashWrapperBuilder {
             stub << "\n# patch root ownership problem of files created with docker\n[ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*} || true\n"
 
         // save to file
-        stubFile.text = stub.toString()
+        Files.write(stubFile, stub.toString().getBytes())
         return stubFile
     }
 
