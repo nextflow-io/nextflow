@@ -1174,10 +1174,10 @@ Value                 Description
 conda
 -----
 
-The ``conda`` directive allows the definition of the process dependencies by using the `Conda <https://conda.io>`_
+The ``conda`` directive allows for the definition of the process dependencies using the `Conda <https://conda.io>`_
 package manager.
 
-Nextflow automatically setup an environment for the given package names listed by in the ``conda`` directive.
+Nextflow automatically sets up an environment for the given package names listed by in the ``conda`` directive.
 For example::
 
   process foo {
@@ -1190,10 +1190,10 @@ For example::
 
 
 Multiple packages can be specified separating them with a blank space eg. ``bwa=0.7.15 fastqc=0.11.5``.
-The name of the channel from where a specific package needs to be download can be specified using the usual
+The name of the channel from where a specific package needs to be downloaded can be specified using the usual
 Conda notation i.e. prefixing the package with the channel name as shown here ``bioconda::bwa=0.7.15``.
 
-The ``conda`` directory allows also the specification of a Conda environment file
+The ``conda`` directory also allows the specification of a Conda environment file
 path or the path of an existing environment directory. See the :ref:`conda-page` page for further details.
 
 .. _process-container:
