@@ -11,15 +11,15 @@ in a platform agnostic manner.
 Nextflow has built-in support for Conda that allows the configuration of workflow dependencies
 using Conda recipes and environment files.
 
-This allows Nextflow applications to use popular tools collections
-such as `Bioconda <https://bioconda.github.io>`_, taking advantage of the configuration
+This allows Nextflow applications to use popular tool collections
+such as `Bioconda <https://bioconda.github.io>`_ whilst taking advantage of the configuration
 flexibility provided by Nextflow.
 
 Prerequisites
 -------------
 
-This feature requires Nextflow version 0.30.x or higher and Conda or
-`Miniconda <https://conda.io/miniconda.html>`_ package manager installed in your system.
+This feature requires Nextflow version 0.30.x or higher and the Conda or
+`Miniconda <https://conda.io/miniconda.html>`_ package manager installed on your system.
 
 How it works
 ------------
@@ -29,26 +29,26 @@ specified by each process.
 
 Dependencies are specified by using the :ref:`process-conda` directive, providing either
 the names of the required Conda packages, the path of a Conda environment yaml file or
-even the path of an existing Conda environment directory.
+the path of an existing Conda environment directory.
 
-.. note:: Conda environments are stored in the file system. By default Nextflow instructs Conda to save
+.. note:: Conda environments are stored on the file system. By default Nextflow instructs Conda to save
   the required environments in the pipeline work directory. Therefore the same environment can be created/saved
   multiple times across multiple executions when using a different work directory.
 
-You can specify the directory where to store the Conda environments using the ``conda.cacheDir``
+You can specify the directory where the Conda environments are stored using the ``conda.cacheDir``
 configuration property (see the :ref:`configuration page <config-conda>` for details).
-When using a computing cluster make sure to use a share file system path
+When using a computing cluster, make sure to use a shared file system path
 accessible from all computing nodes.
 
-.. warning:: Conda environment feature is not supported by executors which uses as work directory
-  a remote object storage eg. AWS Batch.
+.. warning:: The Conda environment feature is not supported by executors which use
+  a remote object storage as a work directory eg. AWS Batch.
 
 
 Use Conda package names
 =======================
 
-Conda package names can specified using the ``conda`` directive. Multiple package names can specified
-separating them with a blank space. For example.
+Conda package names can specified using the ``conda`` directive. Multiple package names can be specified
+by separating them with a blank space.
 For example::
 
   process foo {
@@ -63,7 +63,7 @@ For example::
 Using the above definition a Conda environment including BWA, Samtools and MultiQC tools is created and
 activated when the process is executed.
 
-The usual Conda packages syntax and naming conventions can be used. The version of a package can be
+The usual Conda package syntax and naming conventions can be used. The version of a package can be
 specified after the package name as shown here ``bwa=0.7.15``.
 
 The name of the channel where a package is located can be specified prefixing the package with
@@ -86,7 +86,7 @@ lists the required packages and channels structured using the YAML format. For e
       - star=2.5.4a
       - bwa=0.7.15
 
-Read the Conda documentation for more details how create `environment files <https://conda.io/docs/user-guide/tasks/manage-environments.html#creating-an-environment-file-manually>`_.
+Read the Conda documentation for more details about how to create `environment files <https://conda.io/docs/user-guide/tasks/manage-environments.html#creating-an-environment-file-manually>`_.
 
 The path of an environment file can be specified using the ``conda`` directive::
 
@@ -98,8 +98,8 @@ The path of an environment file can be specified using the ``conda`` directive::
     '''
   }
 
-.. warning:: The environment file name **must** ends with a ``.yml`` or ``.yaml`` suffix otherwise
-  it won't be properly recognised.
+.. warning:: The environment file name **must** end with a ``.yml`` or ``.yaml`` suffix otherwise 
+it won't be properly recognised.
 
 
 Use existing Conda environments
@@ -123,6 +123,6 @@ installation directory of such environment by using the ``conda`` directive::
 Advanced settings
 -----------------
 
-Conda advanced configuration settings are described in :ref:`Conda <config-conda>` section in the Nextflow
+Conda advanced configuration settings are described in the :ref:`Conda <config-conda>` section on the Nextflow
 configuration page.
 
