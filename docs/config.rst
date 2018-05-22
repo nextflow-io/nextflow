@@ -540,8 +540,8 @@ spotPrice                   Price bid for spot/preemptive instances launched whi
 Scope `conda`
 -------------
 
-The ``conda`` scope allows the definition of the configuration settings that control the creation of Conda environment
-with by the Conda package manager.
+The ``conda`` scope allows for the definition of the configuration settings that control the creation of a Conda environment
+by the Conda package manager.
 
 The following settings are available:
 
