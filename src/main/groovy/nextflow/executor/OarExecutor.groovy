@@ -101,6 +101,7 @@ class OarExecutor extends AbstractGridExecutor {
      * @return A list representing the submit command line
      */
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
+        scriptFile.setPermissions(7,0,0)
         [ 'oarsub', '-S',  '-n', getJobNameFor(task), scriptFile.getName() ]
     }
 
@@ -112,15 +113,18 @@ class OarExecutor extends AbstractGridExecutor {
      * @param text The string returned when submitting the job
      * @return The actual job ID string
      */
+
     @Override
-    def parseJobId( String text ) {
-        // return always the last line
-        def result = text?.trim()
-        if( result ) {
-            return result
+    def parseJobId(String text) {
+    def pattern = ~ /OAR_JOB_ID=(\d+)/
+    for( String line : text.readLines() ) {
+        def m = pattern.matcher(line)
+        if( m.matches() ) {
+            return m.group(1).toString()
+            }
         }
 
-        throw new IllegalStateException("Invalid OAR submit response:\n$text\n\n")
+        throw new IllegalStateException("Invalid PBS/Torque submit response:\n$text\n\n")        
     }
 
     @Override
