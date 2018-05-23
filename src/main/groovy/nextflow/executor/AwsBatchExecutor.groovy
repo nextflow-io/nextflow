@@ -700,7 +700,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         if( path.isDirectory() ) {
             op += "--recursive "
         }
-        op += "s3:/${path} ${targetName}"
+        op += "s3:/${Escape.path(path)} ${Escape.path(targetName)}"
         return op
     }
 

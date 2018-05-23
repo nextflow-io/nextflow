@@ -178,12 +178,17 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         1 * opts.getCliPath() >> null
         script == "aws s3 cp --only-show-errors --recursive s3:/$folder bar" as String
 
-
         when:
         script = copy.stageInputFile( folder, 'bar')
         then:
         1 * opts.getCliPath() >> '/home/bin/aws'
         script == "/home/bin/aws s3 cp --only-show-errors --recursive s3:/$folder bar" as String
+
+        when:
+        script = copy.stageInputFile( folder.resolve('01_A(R2).fastq'), '01_A(R2).fastq')
+        then:
+        1 * opts.getCliPath() >> '/home/bin/aws'
+        script == "/home/bin/aws s3 cp --only-show-errors s3:/$folder/01_A\\(R2\\).fastq 01_A\\(R2\\).fastq" as String
     }
     
 }
