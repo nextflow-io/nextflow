@@ -162,6 +162,9 @@ dependencies {
     compile ('org.yaml:snakeyaml:1.18')
     compile ('org.jsoup:jsoup:1.11.2')
 
+    // GCE libraries
+    compile 'com.google.apis:google-api-services-compute:v1-rev182-1.23.0'
+
     // include Ivy at runtime in order to have Grape @Grab work correctly
     runtime "org.apache.ivy:ivy:2.3.0"
 
