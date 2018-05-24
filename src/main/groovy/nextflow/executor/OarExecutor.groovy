@@ -44,6 +44,10 @@ class OarExecutor extends AbstractGridExecutor {
         result << '-n' << getJobNameFor(task)
         result << '-O' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
         result << '-E' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
+        result << '-d' << quote(task.workDir)
+
+
+
 
         // the requested queue name
         if( task.config.queue ) {
@@ -124,7 +128,7 @@ class OarExecutor extends AbstractGridExecutor {
             }
         }
 
-        throw new IllegalStateException("Invalid PBS/Torque submit response:\n$text\n\n")        
+        throw new IllegalStateException("Invalid PBS/Torque submit response:\n$text\n\n")
     }
 
     @Override
