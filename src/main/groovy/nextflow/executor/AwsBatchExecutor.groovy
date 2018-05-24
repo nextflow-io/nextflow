@@ -719,7 +719,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         if( normalized ) {
             result << ""
             normalized.each {
-                result << "nxf_s3_upload '$it' s3:/${targetDir} || true" // <-- add true to avoid it stops on errors
+                result << "nxf_s3_upload '${Escape.path(it)}' s3:/${targetDir} || true" // <-- add true to avoid it stops on errors
             }
         }
 

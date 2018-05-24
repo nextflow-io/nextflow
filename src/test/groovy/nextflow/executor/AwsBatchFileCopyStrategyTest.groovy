@@ -43,6 +43,32 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         copy.stageInputFile(FILE, 'foo.txt') == 'aws s3 cp --only-show-errors s3://some/data/nobel_prize_results.gz foo.txt'
     }
 
+    def 'should return unstage script' () {
+        given:
+        def copy = new AwsBatchFileCopyStrategy(Mock(TaskBean), new AwsOptions())
+        def target = Paths.get('/foo/bar')
+
+        when:
+        def script = copy.getUnstageOutputFilesScript(['file.txt'],target)
+        then:
+        script.trim() == "nxf_s3_upload 'file.txt' s3://foo/bar || true"
+
+        when:
+        script = copy.getUnstageOutputFilesScript(['file-*.txt'],target)
+        then:
+        script.trim() == "nxf_s3_upload 'file-*.txt' s3://foo/bar || true"
+
+        when:
+        script = copy.getUnstageOutputFilesScript(['file-[a,b].txt'],target)
+        then:
+        script.trim() == "nxf_s3_upload 'file-[a,b].txt' s3://foo/bar || true"
+
+        when:
+        script = copy.getUnstageOutputFilesScript(['file-01(A).txt'],target)
+        then:
+        script.trim() == "nxf_s3_upload 'file-01\\(A\\).txt' s3://foo/bar || true"
+    }
+
     def 'should check the beforeScript' () {
 
         given:
