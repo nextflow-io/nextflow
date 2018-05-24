@@ -39,20 +39,21 @@ apply plugin: 'io.codearte.nexus-staging'   // See https://github.com/Codearte/g
 // Add ability to test with upcoming versions of Groovy
 def groovyVer = System.getenv('CI_GROOVY_VERSION')
 if (groovyVer) {
-    logger.lifecycle "Overriden Groovy dependency to use $groovyVer"
+    def repo = groovyVer.startsWith('com.github.apache:') ? 'https://jitpack.io' : 'https://oss.jfrog.org/oss-snapshot-local/'
+    logger.lifecycle "Overriden Groovy dependency to use $groovyVer - repository: $repo"
     allprojects {
         repositories {
-            maven {
-                name 'JFrog OSS snapshot repo'
-                url 'https://oss.jfrog.org/oss-snapshot-local/'
-            }
+            maven { url repo }
         }
     }
 
     configurations.all {
         resolutionStrategy.eachDependency { DependencyResolveDetails details ->
             if (details.requested.group == 'org.codehaus.groovy') {
-                details.useVersion(groovyVer)
+                if( groovyVer.contains(':') )
+                    details.useTarget(groovyVer)
+                else
+                    details.useVersion(groovyVer)
                 println ">> Overriding $details.requested with version: $groovyVer"
             }
         }
