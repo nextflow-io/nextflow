@@ -106,7 +106,7 @@ class OarExecutor extends AbstractGridExecutor {
      */
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
         scriptFile.setPermissions(7,0,0)
-        [ 'oarsub', '-S',  '-n', getJobNameFor(task), scriptFile.getName() ]
+        return [ 'oarsub', '-S',  '-n', "${getJobNameFor(task)}", "./${scriptFile.getName()}"]
     }
 
     protected String getHeaderToken() { '#OAR' }
