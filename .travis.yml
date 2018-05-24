@@ -19,10 +19,7 @@ env:
 before_script:
   - rm $HOME/.gitconfig
   - mkdir -p "$HOME/.nextflow" && echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
-  - make assemble
 script:
-  - make test
-  - make install
-  - export WITH_DOCKER='-with-docker'; ./integration-tests.sh
+  - make assemble test install && export WITH_DOCKER='-with-docker' && ./integration-tests.sh
 after_script:
   - bash pub-tests.sh travis
