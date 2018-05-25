@@ -126,13 +126,15 @@ class AwsBatchScriptLauncherTest extends Specification {
                 nxf_s3_upload() {
                     local pattern=\$1
                     local s3path=\$2
+                    IFS=''
                     for name in \$(eval "ls -d \$pattern");do
                       if [[ -d "\$name" ]]; then
-                        /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --recursive --storage-class STANDARD \$name \$s3path/\$name
+                        /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --recursive --storage-class STANDARD "\$name" "\$s3path/\$name"
                       else
-                        /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --storage-class STANDARD \$name \$s3path/\$name
+                        /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --storage-class STANDARD "\$name" "\$s3path/\$name"
                       fi
-                  done
+                    done
+                    unset IFS
                 }
 
                 echo start | /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors - s3:/${folder}/.command.begin
@@ -269,13 +271,15 @@ class AwsBatchScriptLauncherTest extends Specification {
                 nxf_s3_upload() {
                     local pattern=\$1
                     local s3path=\$2
+                    IFS=''
                     for name in \$(eval "ls -d \$pattern");do
                       if [[ -d "\$name" ]]; then
-                        aws s3 cp --only-show-errors --recursive --storage-class STANDARD \$name \$s3path/\$name
+                        aws s3 cp --only-show-errors --recursive --storage-class STANDARD "\$name" "\$s3path/\$name"
                       else
-                        aws s3 cp --only-show-errors --storage-class STANDARD \$name \$s3path/\$name
+                        aws s3 cp --only-show-errors --storage-class STANDARD "\$name" "\$s3path/\$name"
                       fi
-                  done
+                    done
+                    unset IFS
                 }
 
                 echo start | aws s3 cp --only-show-errors - s3:/${folder}/.command.begin

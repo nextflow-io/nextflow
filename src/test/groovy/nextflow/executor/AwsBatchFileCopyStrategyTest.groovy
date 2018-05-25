@@ -88,13 +88,15 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                     nxf_s3_upload() {
                         local pattern=$1
                         local s3path=$2
+                        IFS=''
                         for name in $(eval "ls -d $pattern");do
                           if [[ -d "$name" ]]; then
-                            aws s3 cp --only-show-errors --recursive --storage-class STANDARD $name $s3path/$name
+                            aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
                           else
-                            aws s3 cp --only-show-errors --storage-class STANDARD $name $s3path/$name
+                            aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
                           fi
-                      done
+                        done
+                        unset IFS
                     }
                     '''.stripIndent()
 
@@ -110,13 +112,15 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                 nxf_s3_upload() {
                     local pattern=$1
                     local s3path=$2
+                    IFS=''
                     for name in $(eval "ls -d $pattern");do
                       if [[ -d "$name" ]]; then
-                        /foo/aws s3 cp --only-show-errors --recursive --sse AES256 --storage-class REDUCED_REDUNDANCY $name $s3path/$name
+                        /foo/aws s3 cp --only-show-errors --recursive --sse AES256 --storage-class REDUCED_REDUNDANCY "$name" "$s3path/$name"
                       else
-                        /foo/aws s3 cp --only-show-errors --sse AES256 --storage-class REDUCED_REDUNDANCY $name $s3path/$name
+                        /foo/aws s3 cp --only-show-errors --sse AES256 --storage-class REDUCED_REDUNDANCY "$name" "$s3path/$name"
                       fi
-                  done
+                    done
+                    unset IFS
                 }
             '''.stripIndent()
     }

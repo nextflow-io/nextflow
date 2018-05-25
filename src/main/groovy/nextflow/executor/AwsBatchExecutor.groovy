@@ -842,13 +842,15 @@ class S3Helper {
         nxf_s3_upload() {
             local pattern=\$1
             local s3path=\$2
+            IFS=''
             for name in \$(eval "ls -d \$pattern");do
               if [[ -d "\$name" ]]; then
-                $cli s3 cp --only-show-errors --recursive $encryption--storage-class $storage \$name \$s3path/\$name
+                $cli s3 cp --only-show-errors --recursive $encryption--storage-class $storage "\$name" "\$s3path/\$name"
               else
-                $cli s3 cp --only-show-errors $encryption--storage-class $storage \$name \$s3path/\$name
+                $cli s3 cp --only-show-errors $encryption--storage-class $storage "\$name" "\$s3path/\$name"
               fi
-          done
+            done
+            unset IFS
         }
         """.stripIndent()
     }
