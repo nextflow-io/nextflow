@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit
 import nextflow.Global
 import nextflow.file.FileHelper
 import spock.lang.Specification
+import test.TestHelper
 
 /**
  *
@@ -260,6 +261,22 @@ class PublishDirTest extends Specification {
 
         def targetDir = FileHelper.asPath( 's3://bucket/work' )
         def publisher = new PublishDir(mode:'symlink', path: targetDir, sourceFileSystem: FileSystems.default)
+
+        when:
+        publisher.validatePublishMode()
+        then:
+        publisher.mode == PublishDir.Mode.COPY
+    }
+
+    def 'should change mode to `copy` when the target is a foreign file system' () {
+
+        given:
+        def workDirFileSystem = TestHelper.createInMemTempDir().fileSystem
+        def processor = [:] as TaskProcessor
+        processor.name = 'foo'
+
+        def targetDir = TestHelper.createInMemTempDir()
+        def publisher = new PublishDir(mode:'symlink', path: targetDir, sourceFileSystem: workDirFileSystem)
 
         when:
         publisher.validatePublishMode()
