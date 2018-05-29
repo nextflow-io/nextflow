@@ -199,7 +199,7 @@ The amount of resources requested by each task submission is defined by the foll
 Read the :ref:`ignite-page` section in this documentation to learn how to configure Nextflow to deploy and run an
 Ignite cluster in your infrastructure.
 
-.. _kubernetes-executor:
+.. _k8s-executor:
 
 Kubernetes
 ==========

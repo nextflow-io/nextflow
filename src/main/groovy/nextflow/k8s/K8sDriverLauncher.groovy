@@ -29,15 +29,16 @@ import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
 import com.google.common.hash.Hashing
 import groovy.util.logging.Slf4j
-import nextflow.Const
 import nextflow.cli.CmdKubeRun
 import nextflow.cli.CmdRun
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
-import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
+import nextflow.k8s.model.PodEnv
+import nextflow.k8s.model.PodMountConfig
+import nextflow.k8s.model.PodSpecBuilder
 import nextflow.scm.AssetManager
 import nextflow.scm.ProviderConfig
 import nextflow.util.ConfigHelper
@@ -69,7 +70,7 @@ class K8sDriverLauncher {
     /**
      * Kubernetes client
      */
-    private K8sClient client
+    private K8sClient k8sClient
 
     /**
      * Nextflow resolved config object
@@ -77,30 +78,14 @@ class K8sDriverLauncher {
     private Map config
 
     /**
-     * Absolute path where the workflow temporary data is stored.
-     * This must be a shared path mounted through a persistent volume claim.
+     * Kubernetes specific config settings
      */
-    private String workDir
-
-    /**
-     * Absolute path where workflow scripts and binary files are stored.
-     * This must be a shared path mounted through a persistent volume claim.
-     */
-    private String projectDir
-
-    /**
-     * Absolute path where used data is stored
-     *
-     * This must be a shared path mounted through a persistent volume claim.
-     */
-    private String userDir
+    private K8sConfig k8sConfig
 
     /**
      * The current user name
      */
     private String userName = System.properties.get('user.name')
-
-    private Map<String,String> configMounts = [:]
 
     private String paramsFile
 
@@ -127,10 +112,11 @@ class K8sDriverLauncher {
         this.args = args
         this.pipelineName = name
         this.interactive = name == 'login'
-        this.scm = ProviderConfig.getDefault()
+        this.scm = makeScmConfig()
         this.config = makeConfig(pipelineName)
-        this.client = createK8sClient(config)
-        checkStorageAndPaths()
+        this.k8sConfig = makeK8sConfig(config)
+        this.k8sClient = makeK8sClient(k8sConfig)
+        this.k8sConfig.checkStorageAndPaths(k8sClient)
         createK8sConfigMap()
         createK8sLauncherPod()
         waitPodStart()
@@ -142,7 +128,7 @@ class K8sDriverLauncher {
         print "Pod submitted: $name .. waiting to start"
         while( true ) {
             sleep 1000
-            final state = client.podState(name)
+            final state = k8sClient.podState(name)
             if( state && !state.containsKey('waiting')  ) {
                 break
             }
@@ -156,53 +142,7 @@ class K8sDriverLauncher {
      * console standard output
      */
     protected void printK8sPodOutput() {
-        client.podLog(runName, follow:true).eachLine { println it }
-    }
-
-    protected void validateClaimNames(Collection<String> allNames) {
-        for( String name : allNames ) {
-            try {
-                client.volumeClaimRead(name)
-            }
-            catch (K8sResponseException e) {
-                if( e.response.code == 404 ) {
-                    throw new AbortOperationException("Unknown volume claim: $name -- make sure a persistent volume claim with the specified name is defined in your K8s cluster")
-                }
-                else throw e
-            }
-        }
-    }
-
-    /**
-     * Setup and verify required volumes and paths are properly configured
-     */
-    protected void checkStorageAndPaths() {
-        final volumes = getVolumeClaims()
-        if( !volumes )
-            throw new AbortOperationException("Missing volume claim -- At least persistent volume claim definition needs to be provided in the nextflow configuration file")
-
-        // validate volume claim names
-        validateClaimNames(volumes.getClaimNames())
-
-        final defaultSharedDir = volumes.getFirstMount()
-
-        // -- set launch dir
-        userDir = config.k8s?.userDir ?: "$defaultSharedDir/$userName"
-        if( !volumes.findVolumeByPath(userDir) )
-            throw new AbortOperationException("Kubernetes `userDir` must be a path mounted as a persistent volume -- userDir=$userDir; volumes=${volumes.getMountPaths().join(', ')}")
-
-        // -- set the work dir
-        workDir = cmd.workDir ?: config.k8s?.workDir ?: config.workDir ?: "$userDir/work"
-        if( !volumes.findVolumeByPath(workDir) )
-            throw new AbortOperationException("Kubernetes workDir must be a path mounted as a persistent volume -- workDir=$workDir; volumes=${volumes.getMountPaths().join(', ')}")
-
-        // -- set project dir
-        projectDir = config.k8s?.projectDir ?: "$defaultSharedDir/projects"
-        if( !volumes.findVolumeByPath(projectDir) )
-            throw new AbortOperationException("Kubernetes projectDir must be a path mounted as a persistent volume -- projectDir=$projectDir; volumes=${volumes.getMountPaths().join(', ')}")
-
-
-        log.debug "Kubernetes workDir=$workDir; projectDir=$projectDir; volumeClaims=$volumes"
+        k8sClient.podLog(runName, follow:true).eachLine { println it }
     }
 
     protected ConfigObject loadConfig( String pipelineName ) {
@@ -215,15 +155,27 @@ class K8sDriverLauncher {
         ConfigObject config
         if( interactive || pipelineName.startsWith('/') ) {
             // when it's an absolute path the config must be local
-            config = local
+            return local
         }
         else {
             // -- check and parse project remote config
-            def remote = new AssetManager(pipelineName, cmd)
+            final remote = new AssetManager(pipelineName, cmd)
                     .checkValidRemoteRepo()
                     .readRemoteConfig(cmd.profile)
-            config = (ConfigObject) remote.merge(local)
+            return (ConfigObject) remote.merge(local)
         }
+    }
+
+    protected Map makeScmConfig() {
+        ProviderConfig.getDefault()
+    }
+
+    protected K8sConfig makeK8sConfig(Map config) {
+        config.k8s instanceof Map ? new K8sConfig(config.k8s as Map) : new K8sConfig()
+    }
+
+    protected makeK8sClient( K8sConfig k8sConfig ) {
+        new K8sClient(k8sConfig.getClient())
     }
 
     /**
@@ -243,71 +195,79 @@ class K8sDriverLauncher {
 
         def config = loadConfig(pipelineName)
 
-        // merge command line volume mounts
-        final volClaims = new VolumeClaims()
-        cmd.volMounts?.each { volClaims.add(it) }
-        volClaims.addAllSkipExisting( config.k8s.volumeClaims )
-        config.k8s.volumeClaims = volClaims
+        // normalize pod entries
+        def k8s = config.k8s
 
-        // set k8s executor
+        if( !k8s.isSet('pod') )
+            k8s.pod = []
+        else if( k8s.pod instanceof Map ) {
+            k8s.pod = [ k8s.pod ]
+        }
+        else if( !(k8s.pod instanceof List) )
+            throw new IllegalArgumentException("Illegal k8s.pod configuratun value: ${k8s.pod}")
+
+        // -- use the volume claims specified in the command line
+        //   to populate the pod config
+        for( int i=0; i<cmd.volMounts?.size(); i++ ){
+            def entry = cmd.volMounts.get(i)
+            def parts = entry.tokenize(':')
+            def name = parts[0]
+            def path = parts[1]
+            if( i==0 ) {
+                k8s.storageClaimName = name
+                k8s.storageMountPath = path
+            }
+            else {
+                k8s.pod.add( [volumeClaim: name, mountPath: path] )
+            }
+        }
+
+        // -- backward compatibility
+        if( k8s.isSet('volumeClaims') ) {
+            log.warn "Config setting k8s.volumeClaims has been deprecated -- Use k8s.storageClaimName and k8s.storageMountPath instead"
+            k8s.volumeClaims.each { k,v ->
+                def name = k as String
+                def path = v instanceof Map ? v.mountPath : v.toString()
+                if( !k8s.isSet('storageClaimName') ) {
+                    k8s.storageClaimName = name
+                    k8s.storageMountPath = path
+                }
+                else if( !cmd.volMounts ) {
+                    k8s.pod.add( [volumeClaim: name, mountPath: path] )
+                }
+            }
+            // remove it
+            k8s.remove('volumeClaims')
+        }
+
+        // -- set k8s executor
         config.process.executor = 'k8s'
-        // make sure to disable k8s auto mounts
-        config.k8s.autoMountHostPaths = false
-        // strip default work dir
+
+        // -- strip default work dir
         if( config.workDir == 'work' )
             config.remove('workDir')
 
+        // -- check work dir
+        if( cmd?.workDir )
+            k8s.workDir = cmd.workDir
+        else if( !k8s.isSet('workDir') && config.workDir )
+            k8s.workDir = config.workDir
+
+        // -- some cleanup
+        if( !k8s.pod )
+            k8s.remove('pod')
+
+        if( !k8s.storageClaimName )
+            k8s.remove('storageClaimName')
+        if( !k8s.storageMountPath )
+            k8s.remove('storageMountPath')
+
+        if( !config.libDir )
+            config.remove('libDir')
+        
         return config.toMap()
     }
 
-    protected ClientConfig configCreate(Map config) {
-        ClientConfig.fromMap(config)
-    }
-
-    protected ClientConfig configDiscover(String context=null) {
-        ClientConfig.discover(context)
-    }
-
-    /**
-     * Get a Kubernetes HTTP client to interact with the K8s cluster
-     *
-     * @param config The nextflow configuration with may hold the client settings
-     * @return The {@link K8sClient} instance
-     */
-    protected K8sClient createK8sClient(Map config) {
-
-        final ctx = config.k8s?.context as String
-
-        final k8sConfig = ( config.k8s?.client?.server
-                ? configCreate(config.k8s.client as Map)
-                : configDiscover(ctx)
-        )
-
-        if( config.k8s?.namespace ) {
-            k8sConfig.namespace = config.k8s.namespace
-        }
-        if( cmd?.namespace ) {
-            k8sConfig.namespace = cmd.namespace
-        }
-
-        if( config.k8s?.serviceAccount ) {
-            k8sConfig.serviceAccount = config.k8s.serviceAccount
-        }
-
-        new K8sClient(k8sConfig)
-    }
-
-    /**
-     * @return Container image name used by the driver pod
-     */
-    protected String getImageName() {
-        final defImage = "nextflow/nextflow:${Const.APP_VER}"
-        return config.navigate('k8s.nextflow.image', defImage)
-    }
-
-    protected VolumeClaims getVolumeClaims() {
-        config.k8s.volumeClaims as VolumeClaims
-    }
 
     private Field getField(CmdRun cmd, String name) {
         def clazz = cmd.class
@@ -441,32 +401,23 @@ class K8sDriverLauncher {
      */
     protected Map makeLauncherSpec() {
         assert runName
-        assert userDir
-        assert workDir
-        assert projectDir
-        assert configMounts
-        assert client
+        assert k8sClient
 
         // -- setup config file
         String cmd = "source /etc/nextflow/init.sh; ${getLaunchCli()}"
 
-        def params = [
-                podName: runName,
-                imageName: getImageName(),
-                command: ['/bin/bash', '-c', cmd],
-                labels: [ app: 'nextflow', runName: runName ],
-                namespace: client.config.namespace,
-                serviceAccount: client.config.serviceAccount,
-                volumeClaims: getVolumeClaims(),
-                configMounts: configMounts,
-                env: [
-                        NXF_WORK: workDir,
-                        NXF_ASSETS: projectDir,
-                        NXF_EXECUTOR: 'k8s'
-                ],
-        ]
-
-        K8sHelper.createPodSpec(params)
+        new PodSpecBuilder()
+            .withPodName(runName)
+            .withImageName(k8sConfig.getNextflowImageName())
+            .withCommand(['/bin/bash', '-c', cmd])
+            .withLabels([ app: 'nextflow', runName: runName ])
+            .withNamespace(k8sClient.config.namespace)
+            .withServiceAccount(k8sClient.config.serviceAccount)
+            .withPodOptions(k8sConfig.getPodOptions())
+            .withEnv( PodEnv.value('NXF_WORK', k8sConfig.getWorkDir()) )
+            .withEnv( PodEnv.value('NXF_ASSETS', k8sConfig.getProjectDir()) )
+            .withEnv( PodEnv.value('NXF_EXECUTOR', 'k8s'))
+            .build()
     }
 
     /**
@@ -475,7 +426,7 @@ class K8sDriverLauncher {
      */
     protected createK8sLauncherPod() {
         final spec = makeLauncherSpec()
-        client.podCreate(spec, yamlDebugPath())
+        k8sClient.podCreate(spec, yamlDebugPath())
     }
 
     protected Path yamlDebugPath() {
@@ -493,6 +444,7 @@ class K8sDriverLauncher {
     protected void createK8sConfigMap() {
         Map<String,String> configMap = [:]
 
+        final userDir = k8sConfig.getUserDir()
         // init file
         String initScript = ''
         initScript += "mkdir -p '$userDir'; if [ -d '$userDir' ]; then cd '$userDir'; else echo 'Cannot create nextflow userDir: $userDir'; exit 1; fi; "
@@ -522,12 +474,12 @@ class K8sDriverLauncher {
         // create the config map
         final name = makeConfigMapName(configMap)
         tryCreateConfigMap(name, configMap)
-        configMounts[name] = '/etc/nextflow'
+        k8sConfig.getPodOptions().getMountConfigMaps().add( new PodMountConfig(name, '/etc/nextflow') )
     }
 
     protected void tryCreateConfigMap(String name, Map data) {
         try {
-            client.configCreate(name, data)
+            k8sClient.configCreate(name, data)
         }
         catch( K8sResponseException e ) {
             if( e.response.reason != 'AlreadyExists' )
@@ -550,9 +502,9 @@ class K8sDriverLauncher {
     }
 
     protected void launchLogin() {
-        def cmd = "kubectl -n ${client.config.namespace} exec -it $runName -- /bin/bash --login"
+        def cmd = "kubectl -n ${k8sClient.config.namespace} exec -it $runName -- /bin/bash --login"
         def proc = new ProcessBuilder().command('bash','-c',cmd).inheritIO().start()
         proc.waitFor()
-        client.podDelete(runName)
+        k8sClient.podDelete(runName)
     }
 }

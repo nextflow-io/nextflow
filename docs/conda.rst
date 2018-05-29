@@ -99,7 +99,7 @@ The path of an environment file can be specified using the ``conda`` directive::
   }
 
 .. warning:: The environment file name **must** end with a ``.yml`` or ``.yaml`` suffix otherwise 
-it won't be properly recognised.
+  it won't be properly recognised.
 
 
 Use existing Conda environments

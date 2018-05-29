@@ -83,6 +83,7 @@ class ProcessConfig implements Map<String,Object> {
             'memory',
             'module',
             'penv',
+            'pod',
             'publishDir',
             'scratch',
             'shell',
@@ -106,7 +107,7 @@ class ProcessConfig implements Map<String,Object> {
      * Names of directives that can be used more than once in the process definition
      */
     @PackageScope
-    static final List<String> repeatableDirectives = ['label','module','publishDir']
+    static final List<String> repeatableDirectives = ['label','module','pod','publishDir']
 
     /**
      * Default directives values
@@ -614,7 +615,7 @@ class ProcessConfig implements Map<String,Object> {
      * @return
      *      The {@link ProcessConfig} instance itself
      */
-    ProcessConfig publishDir(Map params ) {
+    ProcessConfig publishDir(Map params) {
         if( !params )
             return this
 
@@ -640,7 +641,7 @@ class ProcessConfig implements Map<String,Object> {
      * @return
      *      The {@link ProcessConfig} instance itself
      */
-    ProcessConfig publishDir(Map params, target ) {
+    ProcessConfig publishDir(Map params, target) {
         params.put('path', target)
         publishDir( params )
     }
@@ -666,5 +667,31 @@ class ProcessConfig implements Map<String,Object> {
             publishDir([path: target])
         }
         return this
+    }
+
+    private static final Map POD_OPTIONS = [secret:String, mountPath:String, envName: String]
+
+    /**
+     * Allow use to specify K8s `pod` options
+     *
+     * @param entry
+     *      A map object representing pod config options
+     * @return
+     *      The {@link ProcessConfig} instance itself
+     */
+    ProcessConfig pod( Map entry ) {
+
+        if( !entry )
+            return this
+
+        def allOptions = (List)configProperties.get('pod')
+        if( !allOptions ) {
+            allOptions = new ConfigList()
+            configProperties.put('pod', allOptions)
+        }
+
+        allOptions.add(entry)
+        return this
+
     }
 }

@@ -19,7 +19,8 @@
  */
 
 package nextflow.processor
-import static nextflow.processor.TaskProcessor.TASK_CONTEXT_PROPERTY_NAME
+
+import static nextflow.processor.TaskProcessor.*
 
 import java.nio.file.Path
 
@@ -29,6 +30,7 @@ import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.exception.FailedGuardException
 import nextflow.executor.BashWrapperBuilder
+import nextflow.k8s.model.PodOptions
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
@@ -340,6 +342,10 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     Integer getRetryCount() {
         get('retryCount') as Integer ?: 0
+    }
+
+    PodOptions getPodOptions() {
+        new PodOptions((List)get('pod'))
     }
 
     /**
