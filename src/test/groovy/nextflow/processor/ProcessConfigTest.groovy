@@ -509,4 +509,30 @@ class ProcessConfigTest extends Specification {
         process.maxRetries == 10
     }
 
+
+    def 'should apply pod configs' () {
+
+        when:
+        def process =  new ProcessConfig([:])
+        process.applyConfigDefaults( pod: [secret: 'foo', mountPath: '/there'] )
+        then:
+        process.pod == [
+                [secret: 'foo', mountPath: '/there']
+        ]
+
+        when:
+        process =  new ProcessConfig([:])
+        process.applyConfigDefaults( pod: [
+                [secret: 'foo', mountPath: '/here'],
+                [secret: 'bar', mountPath: '/there']
+        ] )
+
+        then:
+        process.pod == [
+                [secret: 'foo', mountPath: '/here'],
+                [secret: 'bar', mountPath: '/there']
+        ]
+
+    }
+
 }

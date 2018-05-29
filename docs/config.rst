@@ -566,31 +566,20 @@ The following settings are available:
 ================== ================
 Name                Description
 ================== ================
+autoMountHostPaths  Automatically mounts host paths in the job pods. Only for development purpose when using a single node cluster (default: ``false``).
 context             Defines the Kubernetes `configuration context name <https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/>`_ to use.
 namespace           Defines the Kubernetes namespace to use (default: ``default``).
 serviceAccount      Defines the Kubernetes `service account name <https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/>`_ to use.
 userDir             Defines the path where the workflow is launched and the user data is stored. This must be a path in a shared K8s persistent volume (default: ``<volume-claim-mount-path>/<user-name>``.
 workDir             Defines the path where the workflow temporary data is stored. This must be a path in a shared K8s persistent volume (default:``<user-dir>/work``).
 projectDir          Defines the path where Nextflow projects are downloaded. This must be a path in a shared K8s persistent volume (default: ``<volume-claim-mount-path>/projects``).
-volumeClaims        Configures one or more persistent volume claims in the execution environment. See below for details.
+pod                 Allows the definition of one or more pod configuration options such as environment variables, config maps, secrets, etc. It allows the same settings as the :ref:`process-pod` process directive.
+volumeClaims        (deprecated)
+storageClaimName    The name of the persistent volume claim where store workflow result data.
+storageMountPath    The path location used to mount the persistent volume claim (default: ``/workspace``).
 ================== ================
 
-Volume claims need to be defined as a named object specifying the ``mountPath`` as a nested object::
-
-    k8s {
-      volumeClaims = [ 'your-pvc-name': [mountPath: '/workspace'] ]
-    }
-
-An equivalent declaration using the curly brackets notation is shown below::
-
-    k8s {
-        volumeClaims {
-            'your-pvc-name' { mountPath = '/workspace' }
-        }
-    }
-
-More than one volume claims can be defined repeating the name and mount path declaration in the ``volumeClaims`` block.
-
+See the :ref:`k8s-page` documentation for more details.
 
 .. _config-timeline:
 

@@ -1102,6 +1102,7 @@ The directives are:
 * `memory`_
 * `module`_
 * `penv`_
+* `pod`_
 * `publishDir`_
 * `scratch`_
 * `stageInMode`_
@@ -1250,7 +1251,7 @@ only for a specific process e.g. mount a custom path::
   }
 
 
-.. warning:: This feature is not supported by :ref:`awsbatch-executor` and :ref:`kubernetes-executor` executors.
+.. warning:: This feature is not supported by :ref:`awsbatch-executor` and :ref:`k8s-executor` executors.
 
 .. _process-cpus:
 
@@ -1632,6 +1633,50 @@ cluster documentation or contact your admin to lean more about this.
 .. note:: This setting is available when using the :ref:`sge-executor` executor.
 
 See also: `cpus`_, `memory`_, `time`_
+
+.. _process-pod:
+
+pod
+---
+
+The ``pod`` directive allows the definition of pods specific settings, such as environment variables, secrets
+and config maps when using the :ref:`k8s-executor` executor.
+
+For example::
+
+  process your_task {
+    pod env: 'FOO', value: 'bar'
+
+    '''
+    echo $FOO
+    '''
+  }
+
+The above snippet defines an environment variable named ``FOO`` which value is ``bar``.
+
+The ``pod`` directive allows the definition of the following options:
+
+================================================= =================================================
+``env: <E>, value: <V>``                          Defines an environment variable with name ``E`` and whose value is given by the ``V`` string.
+``env: <E>, config: <C/K>``                       Defines an environment variable with name ``E`` and whose value is given by the entry associated to the key with name ``K`` in the `ConfigMap <https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/>`_ with name ``C``.
+``env: <E>, secret: <S/K>``                       Defines an environment variable with name ``E`` and whose value is given by the entry associated to the key with name ``K`` in the `Secret <https://kubernetes.io/docs/concepts/configuration/secret/>`_ with name ``S``.
+``config: <C/K>, mountPath: </absolute/path>``    The content of the `ConfigMap <https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/>`_ with name ``C`` with key ``K`` is made available to the path ``/absolute/path``. When the key component is omitted the path is interpreted as a directory and all the `ConfigMap` entries are exposed in that path.
+``secret: <S/K>, mountPath: </absolute/path>``    The content of the `Secret <https://kubernetes.io/docs/concepts/configuration/secret/>`_ with name ``S`` with key ``K`` is made available to the path ``/absolute/path``. When the key component is omitted the path is interpreted as a directory and all the `Secret` entries are exposed in that path.
+``volumeClaim: <V>, mountPath: </absolute/path>`` Mounts a `Persistent volume claim <https://kubernetes.io/docs/concepts/storage/persistent-volumes/>`_ with name ``V`` to the specified path location.
+================================================= =================================================
+
+When defined in the Nextflow configuration file, a pod setting can be defined using the canonical
+associative array syntax. For example::
+
+  process {
+    pod = [env: 'FOO', value: 'bar']
+  }
+
+When more than one setting needs to be provides they must be enclosed in a list definition as shown below::
+
+  process {
+    pod = [ [env: 'FOO', value: 'bar'], [secret: 'my-secret/key1', mountPath: '/etc/file.txt'] ]
+  }
 
 
 .. _process-publishDir:

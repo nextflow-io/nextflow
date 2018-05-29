@@ -22,6 +22,7 @@ package nextflow.processor
 import java.nio.file.Paths
 
 import nextflow.exception.FailedGuardException
+import nextflow.k8s.model.PodOptions
 import nextflow.script.BaseScript
 import nextflow.script.TaskClosure
 import nextflow.util.Duration
@@ -527,6 +528,27 @@ class TaskConfigTest extends Specification {
         then:
         config.getCpus() == 3
         config.getCpus() == 3
+    }
+
+    def 'should configure pod options'()  {
+
+        given:
+        def script = Mock(BaseScript)
+
+        when:
+        def process = new ProcessConfig(script)
+        process.pod secret: 'foo', mountPath: '/this'
+        process.pod secret: 'bar', env: 'BAR_XXX'
+        
+        then:
+        process.get('pod') == [
+                    [secret: 'foo', mountPath: '/this'],
+                    [secret: 'bar', env: 'BAR_XXX'] ]
+
+        process.createTaskConfig().getPodOptions() == new PodOptions([
+                    [secret: 'foo', mountPath: '/this'],
+                    [secret: 'bar', env: 'BAR_XXX'] ])
+
     }
 
 }

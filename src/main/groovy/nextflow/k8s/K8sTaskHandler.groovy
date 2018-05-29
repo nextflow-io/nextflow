@@ -31,6 +31,9 @@ import nextflow.exception.ProcessSubmitException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
+import nextflow.k8s.model.PodEnv
+import nextflow.k8s.model.PodOptions
+import nextflow.k8s.model.PodSpecBuilder
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -75,7 +78,7 @@ class K8sTaskHandler extends TaskHandler {
 
     private long timestamp
 
-    private Map k8sConfig
+    private K8sConfig k8sConfig
 
     private K8sExecutor executor
 
@@ -101,25 +104,11 @@ class K8sTaskHandler extends TaskHandler {
         executor.session.runName
     }
 
-    protected boolean getAutoMountHostPaths() {
-        def flag = k8sConfig.autoMountHostPaths
-        if( flag == null ) {
-            // enable auto-mount when kubernetes client is created from
-            // a external config file
-            flag = !client.config.isFromCluster
-        }
-
-        return flag
-    }
-
-    protected Map<String,Map> getVolumeClaims() {
-        if( !(k8sConfig.volumeClaims instanceof Map) )
-            return Collections.emptyMap()
-
-        (Map<String,Map>)k8sConfig.volumeClaims
-    }
-
     protected List<String> getContainerMounts() {
+
+        if( !k8sConfig.getAutoMountHostPaths() ) {
+            return Collections.<String>emptyList()
+        }
 
         // get input files paths
         final paths = DockerBuilder.inputFilesToPaths(builder.getResolvedInputs())
@@ -170,46 +159,54 @@ class K8sTaskHandler extends TaskHandler {
 
         final fixOwnership = builder.fixOwnership()
         final cmd = new ArrayList(new ArrayList(BashWrapperBuilder.BASH)) << TaskRun.CMD_RUN
+        final taskCfg = task.getConfig()
 
         final clientConfig = client.config
-        final req = [:]
-        req.podName = getSyntheticPodName(task)
-        req.namespace = clientConfig.namespace
-        req.serviceAccount = clientConfig.serviceAccount
-        req.imageName = imageName
-        req.command = cmd
-        req.workDir = task.workDir.toString()
-        req.labels = getLabels(task)
+        final builder = new PodSpecBuilder()
+            .withImageName(imageName)
+            .withPodName(getSyntheticPodName(task))
+            .withCommand(cmd)
+            .withWorkDir(task.workDir)
+            .withNamespace(clientConfig.namespace)
+            .withServiceAccount(clientConfig.serviceAccount)
+            .withLabels(getLabels(task))
+            .withPodOptions(getPodOptions())
+
         // note: task environment is managed by the task bash wrapper
         // do not add here -- see also #680
-        req.env = fixOwnership ? [NXF_OWNER: getOwner()] : Collections.emptyMap()
+        if( fixOwnership )
+            builder.withEnv(PodEnv.value('NXF_OWNER', getOwner()))
 
         // add computing resources
-        final taskCfg = task.getConfig()
         final cpus = taskCfg.getCpus()
         final mem = taskCfg.getMemory()
-        if( cpus > 1 ) req.cpus = cpus
-        if( mem ) req.memory = "${mem.toMega()}Mi"
+        if( cpus > 1 )
+            builder.withCpus(cpus)
+        if( mem )
+            builder.withMemory(mem)
 
-        // storage
-        def claims = getVolumeClaims()
-        if( claims ) req.volumeClaims = claims
-
-        final hostMounts = autoMountHostPaths ? getContainerMounts() : Collections.emptyList()
-        if( hostMounts ) {
-            def mounts = [:]
-            hostMounts.each {  path -> mounts[path]=path }
-            req.hostMounts = mounts
+        final List<String> hostMounts = getContainerMounts()
+        for( String mount : hostMounts ) {
+            builder.withHostMount(mount,mount)
         }
 
-        K8sHelper.createPodSpec( req )
+        return builder.build()
     }
+
+    protected PodOptions getPodOptions() {
+        // merge the pod options provided in the k8s config
+        // with the ones in process config
+        def opt1 = k8sConfig.getPodOptions()
+        def opt2 = task.getConfig().getPodOptions()
+        return opt1 + opt2
+    }
+
 
     protected Map getLabels(TaskRun task) {
         Map result = [:]
-        def labels = executor.getK8sConfig().labels
-        if( labels instanceof Map ) {
-            labels.entrySet().each { entry -> result.put(entry.key, sanitize0(entry.value)) }
+        def labels = executor.getK8sConfig().getLabels()
+        if( labels ) {
+            labels.each { k,v -> result.put(k,sanitize0(v)) }
         }
         result.app = 'nextflow'
         result.runName = sanitize0(getRunName())
@@ -255,7 +252,7 @@ class K8sTaskHandler extends TaskHandler {
 
     @CompileDynamic
     protected Path yamlDebugPath() {
-        boolean debug = executor.getK8sConfig()?.debug?.yaml?.toString() == 'true'
+        boolean debug = executor.getK8sConfig().getDebug().getYaml()
         return debug ? task.workDir.resolve('.command.yaml') : null
     }
 
@@ -335,6 +332,9 @@ class K8sTaskHandler extends TaskHandler {
      */
     @Override
     void kill() {
+        if( cleanupDisabled() )
+            return
+        
         if( podName ) {
             log.trace "[K8s] deleting pod name=$podName"
             client.podDelete(podName)
@@ -342,13 +342,17 @@ class K8sTaskHandler extends TaskHandler {
         else {
             log.debug "[K8s] Oops.. invalid delete action"
         }
+        }
+
+    protected boolean cleanupDisabled() {
+        !executor.getK8sConfig().getCleanup()
     }
 
     protected void deletePodIfSuccessful(TaskRun task) {
         if( !podName )
             return
 
-        if( executor.getK8sConfig().cleanup == false )
+        if( cleanupDisabled() )
             return
 
         if( !task.isSuccess() ) {

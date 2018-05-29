@@ -108,12 +108,8 @@ the ``k8s`` executor and the required persistent volume claim in the ``nextflow.
     }
 
     k8s {
-       volumeClaims {
-          'vol-claim' {
-             mountPath = '/mount/path'
-          }
-       }
-       autoMountHostPaths = false
+       storageClaimName = 'vol-claim'
+       storageMountPath = '/mount/path'
     }
 
 In the above snippet replace ``vol-claim`` with the name of an existing persistent volume claim and replace
@@ -124,13 +120,20 @@ In the above snippet replace ``vol-claim`` with the name of an existing persiste
     Note also that the ``run`` command does not support the ``-v`` option.
    
 
+Pod settings
+============
+
+The process :ref:`process-pod` directive allows the definition of pods specific settings, such as environment variables,
+secrets and config maps when using the :ref:`k8s-executor` executor. See the :ref:`process-pod` directive for more details.
+
 Limitation
 ==========
 
-Currently the ``kuberun`` command does not allow the execution of local Nextflow scripts.
+Currently, the ``kuberun`` command does not allow the execution of local Nextflow scripts.
 
 
 Advanced configuration
 ======================
 
-Read :ref:`Kubernetes configuration<config-k8s>` section to learn more about advanced cloud configuration options.
+Read :ref:`Kubernetes configuration<config-k8s>` and :ref:`executor <k8s-executor>` sections to learn more
+about advanced configuration options.
