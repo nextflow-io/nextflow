@@ -112,8 +112,10 @@ class GoogleCloudDriver implements CloudDriver {
             def inst = new Instance();
             inst.setName(helper.randomName(config.getClusterName() + "-"));
             inst.setMachineType(helper.instanceType(config.getInstanceType()));
+
             helper.setBootDisk(inst,config.getImageId());
             helper.setNetworkInterface(inst);
+            helper.setStartupScript(inst,config)
             def insert = helper.compute().instances().insert(project, zone, inst);
 
             result << inst.getName()
@@ -172,7 +174,11 @@ class GoogleCloudDriver implements CloudDriver {
     @Override
     void eachInstanceWithIds(List<String> instanceIds,
                              @ClosureParams(value=SimpleType, options = ['nextflow.cloud.types.CloudInstance']) Closure callback) {
-        unsupported("eachInstanceWithIds")
+        if (instanceIds.size() > 0) {
+            def listRequest = helper.compute().instances().list(project, zone)
+            listRequest.setFilter(instanceIds.collect(this.&instanceIdToFilterExpression).join(" or "))
+            listRequest.execute().getItems()?.each { inst -> callback.call(toNextflow(inst)) }
+        }
     }
 
     @Override
@@ -216,7 +222,11 @@ class GoogleCloudDriver implements CloudDriver {
     }
 
     def tagToFilterExpression(String k,v) {
-        '(labels.' + k.toLowerCase() + '= ' + (v?:'*') + ')'
+        '(labels.' + k.toLowerCase() + '= "' + (v?:'*') + '")'
+    }
+
+    def instanceIdToFilterExpression(instanceId) {
+        '(name = "' + instanceId + '")'
     }
 
     def toNextflow(Instance instance) {
