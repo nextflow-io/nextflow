@@ -115,7 +115,6 @@ class GoogleCloudDriver implements CloudDriver {
 
             helper.setBootDisk(inst,config.getImageId());
             helper.setNetworkInterface(inst);
-            helper.setStartupScript(inst,config)
             def insert = helper.compute().instances().insert(project, zone, inst);
 
             result << inst.getName()
