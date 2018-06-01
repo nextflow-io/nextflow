@@ -896,8 +896,10 @@ class BashWrapperBuilderTest extends Specification {
                 NXF_SCRATCH=''
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
+                set +u
                 # conda environment
                 source activate /some/conda/env/foo
+                set -u
                 [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
                 set +e
@@ -2114,6 +2116,7 @@ class BashWrapperBuilderTest extends Specification {
                     NXF_SCRATCH=\'\'
                     [[ \$NXF_DEBUG > 0 ]] && nxf_env
                     touch ${folder}/.command.begin
+                    set +u
                     nxf_module_load(){
                       local mod=\$1
                       local ver=\${2:-}
@@ -2132,6 +2135,7 @@ class BashWrapperBuilderTest extends Specification {
                     nxf_module_load xx 1.2
                     nxf_module_load yy 3.4
 
+                    set -u
                     # task environment
                     export DELTA="1"
                     export OMEGA="2"
@@ -2220,6 +2224,7 @@ class BashWrapperBuilderTest extends Specification {
                     NXF_SCRATCH=\'\'
                     [[ \$NXF_DEBUG > 0 ]] && nxf_env
                     touch ${folder}/.command.begin
+                    set +u
                     nxf_module_load(){
                       local mod=\$1
                       local ver=\${2:-}
@@ -2239,6 +2244,7 @@ class BashWrapperBuilderTest extends Specification {
                     nxf_module_load mondo 2
                     nxf_module_load bioinfo-tools
 
+                    set -u
                     [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
                     set +e
@@ -2347,8 +2353,10 @@ class BashWrapperBuilderTest extends Specification {
                 NXF_SCRATCH=''
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
+                set +u
                 # user `beforeScript`
                 init this
+                set -u
                 [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
                 set +e

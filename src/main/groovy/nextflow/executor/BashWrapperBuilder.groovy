@@ -497,29 +497,13 @@ class BashWrapperBuilder {
         // -- start creating a file to signal that task has began
         wrapper << touchFile(startedFile) << ENDL
 
-        if( beforeScript ) {
-            wrapper << '# user `beforeScript`' << ENDL
-            wrapper << beforeScript << ENDL
-        }
-
-        /*
-         * add modules to the environment file
-         * note: singularity engine can be loaded by using module
-         */
-        if( moduleNames ) {
-            wrapper << MODULE_LOAD << ENDL << ENDL
-            moduleNames.each {
-                wrapper << moduleLoad(it) << ENDL
-            }
-            wrapper << ENDL
-        }
-
-        /*
-         * activate conda environment 
-         */
-        if( condaEnv ) {
-            wrapper << '# conda environment' << ENDL
-            wrapper << 'source activate ' << Escape.path(condaEnv) << ENDL
+        def customEnv = createCustomEnvironment()
+        if( customEnv ) {
+            // -- enable unbound variables
+            wrapper << 'set +u' << ENDL
+            wrapper << customEnv 
+            // -- disable unbound variables
+            wrapper << 'set -u' << ENDL
         }
 
         /*
@@ -591,6 +575,37 @@ class BashWrapperBuilder {
         wrapperScript = wrapper.toString()
         Files.write(wrapperFile, wrapperScript.getBytes())
         return wrapperFile
+    }
+
+    protected String createCustomEnvironment() {
+
+        def result = new StringBuilder()
+        if( beforeScript ) {
+            result << '# user `beforeScript`' << ENDL
+            result << beforeScript << ENDL
+        }
+
+        /*
+         * add modules to the environment file
+         * note: singularity engine can be loaded by using module
+         */
+        if( moduleNames ) {
+            result << MODULE_LOAD << ENDL << ENDL
+            moduleNames.each {
+                result << moduleLoad(it) << ENDL
+            }
+            result << ENDL
+        }
+
+        /*
+         * activate conda environment
+         */
+        if( condaEnv ) {
+            result << '# conda environment' << ENDL
+            result << 'source activate ' << Escape.path(condaEnv) << ENDL
+        }
+
+        return result.toString()
     }
 
     protected String createTaskEnvironment(Map environment) {
