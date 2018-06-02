@@ -225,6 +225,25 @@ class CondaCacheTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should define cache dir from rel path' () {
+
+        given:
+        def folder = Paths.get('.test-conda-cache-' + Math.random())
+        def config = new CondaConfig(cacheDir: folder.toString())
+        CondaCache cache = Spy(CondaCache, constructorArgs: [config])
+
+        when:
+        def result = cache.getCacheDir()
+        println result
+        then:
+        0 * cache.getSessionWorkDir()
+        result == folder.toAbsolutePath()
+        result.exists()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should define cache dir from env' () {
 
         given:

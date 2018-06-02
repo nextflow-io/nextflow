@@ -116,7 +116,7 @@ class CondaCache {
     @PackageScope
     Path getCacheDir() {
 
-        def cacheDir = configCacheDir0
+        def cacheDir = configCacheDir0?.toAbsolutePath()
         if( !cacheDir )
             cacheDir = getSessionWorkDir().resolve('conda')
 
