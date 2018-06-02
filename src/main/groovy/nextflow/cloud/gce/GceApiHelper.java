@@ -154,7 +154,6 @@ public class GceApiHelper {
             if (elapsed >= timeoutMs) {
                 throw new InterruptedException("Timed out waiting for operation to complete");
             }
-            System.out.println("waiting...");
             if (zone != null) {
                 Compute.ZoneOperations.Get get = compute.zoneOperations().get(project, zone, opId);
                 operation = get.execute();
@@ -176,4 +175,35 @@ public class GceApiHelper {
     public MachineType lookupMachineType(String machineType) throws IOException {
         return compute.machineTypes().get(project,zone,machineType).execute();
     }
+
+    public String instanceIdToPrivateDNS(String instanceId) {
+        return instanceId+".c."+project+".internal";
+    }
+
+    public String publicIpToDns(String ip) {
+        if (ip == null) return null;
+        String[] parts = ip.split("\\.");
+        if (parts.length != 4) throw new IllegalArgumentException("Expected IPv4 Public IP address instead of '"+ip+"'");
+
+        // TODO: Is this domain name stable ?
+        return parts[3]+"."+parts[2]+"."+parts[1]+"."+parts[0]+".bc.googleusercontent.com";
+    }
+
+    /**
+     * Check if value is valid as a label value as specified here: https://cloud.google.com/compute/docs/labeling-resources
+     * @return null if valid or error message
+     */
+    public String validateLabelValue(String value) {
+        if (value == null) return null;
+
+        if (!value.matches("[a-z0-9-_]*")) {
+            return "Value must consist of lowercase letters, numbers, underscores and dashes only";
+        }
+        if (value.length() > 63) {
+            return "Value exceeds maximum length of 63";
+        }
+        return null;
+    }
+
+
 }
