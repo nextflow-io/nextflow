@@ -1576,7 +1576,7 @@ See also: `cpus`_, `time`_, `queue`_ and `Dynamic computing resources`_.
 module
 ------
 
-`Modules <http://modules.sourceforge.net/>`_ is a package manager that allows you to dynamically configure
+`Environment Modules <http://modules.sourceforge.net/>`_ is a package manager that allows you to dynamically configure
 your execution environment and easily switch between multiple versions of the same software tool.
 
 If it is available in your system you can use it with Nextflow in order to configure the processes execution

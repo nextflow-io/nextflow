@@ -60,7 +60,7 @@ For example::
   }
 
 
-Using the above definition a Conda environment including BWA, Samtools and MultiQC tools is created and
+Using the above definition a Conda environment that includes BWA, Samtools and MultiQC tools is created and
 activated when the process is executed.
 
 The usual Conda package syntax and naming conventions can be used. The version of a package can be
