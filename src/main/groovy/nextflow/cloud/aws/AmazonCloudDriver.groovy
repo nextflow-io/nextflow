@@ -295,8 +295,7 @@ class AmazonCloudDriver implements CloudDriver {
      * @return
      *          A BASH script setting up the user account for the given parameters.
      */
-    @PackageScope
-    String scriptCreateUser(String userName, String key) {
+    static String scriptCreateUser(String userName, String key) {
         """\
         useradd -m -s /bin/bash $userName
         mkdir ~$userName/.ssh
@@ -525,8 +524,7 @@ class AmazonCloudDriver implements CloudDriver {
      * @return
      *      A BASH snippet representing the environment to be defined in the target EC2 instance
      */
-    @PackageScope
-    String scriptBashEnv( LaunchConfig cfg ) {
+     String scriptBashEnv( LaunchConfig cfg ) {
         def profile = """\
         export NXF_VER='${cfg.nextflow.version}'
         export NXF_MODE='${cfg.nextflow.mode}'
