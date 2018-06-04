@@ -36,9 +36,22 @@ class CondaCacheTest extends Specification {
         def cache = new CondaCache()
         
         expect:
-        !cache.isEnvFile('foo=1.0')
-        cache.isEnvFile('env.yml')
-        cache.isEnvFile('env.yaml')
+        !cache.isYamlFilePath('foo=1.0')
+        cache.isYamlFilePath('env.yml')
+        cache.isYamlFilePath('env.yaml')
+    }
+
+    def 'should text file' () {
+
+        given:
+        def cache = new CondaCache()
+
+        expect:
+        !cache.isTextFilePath('foo=1.0')
+        !cache.isTextFilePath('env.yaml')
+        !cache.isTextFilePath('foo.txt\nbar.txt')
+        cache.isTextFilePath('env.txt')
+        cache.isTextFilePath('foo/bar/env.txt')
     }
 
 
@@ -52,17 +65,19 @@ class CondaCacheTest extends Specification {
         when:
         def prefix = cache.condaPrefixPath(ENV)
         then:
-        1 * cache.isEnvFile(ENV)
+        1 * cache.isYamlFilePath(ENV)
         1 * cache.getCacheDir() >> BASE
         prefix.toString() == '/conda/envs/env-eaeb133f4ca62c95e9c0eec7ef8d553b'
     }
 
-    def 'should create conda env prefix path for a env file' () {
+
+    def 'should create conda env prefix path for a yaml env file' () {
 
         given:
+        def folder = Files.createTempDirectory('test')
         def cache = Spy(CondaCache)
         def BASE = Paths.get('/conda/envs')
-        def ENV = Files.createTempFile('test','.yml')
+        def ENV = folder.resolve('foo.yml')
         ENV.text = '''
             channels:
               - bioconda
@@ -77,13 +92,16 @@ class CondaCacheTest extends Specification {
         when:
         def prefix = cache.condaPrefixPath(ENV.toString())
         then:
-        1 * cache.isEnvFile(ENV.toString())
+        1 * cache.isYamlFilePath(ENV.toString())
         1 * cache.getCacheDir() >> BASE
-        prefix.toString() == '/conda/envs/env-9416240708c49c4e627414b46a743664'
+        prefix.toString() == '/conda/envs/foo-9416240708c49c4e627414b46a743664'
+
+        cleanup:
+        folder?.deleteDir()
 
     }
 
-    def 'should create conda env prefix path for a env file with name' () {
+    def 'should create conda env prefix path for a env yaml file with name' () {
 
         given:
         def cache = Spy(CondaCache)
@@ -104,9 +122,36 @@ class CondaCacheTest extends Specification {
         when:
         def prefix = cache.condaPrefixPath(ENV.toString())
         then:
-        1 * cache.isEnvFile(ENV.toString())
+        1 * cache.isYamlFilePath(ENV.toString())
         1 * cache.getCacheDir() >> BASE
         prefix.toString() == '/conda/envs/my-env-1.1-e7fafe40ca966397a2c0d9bed7181aa7'
+
+    }
+
+    def 'should create conda env prefix path for a text env file' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def cache = Spy(CondaCache)
+        def BASE = Paths.get('/conda/envs')
+        def ENV = folder.resolve('bar.txt')
+        ENV.text = '''
+                star=2.5.4a
+                bwa=0.7.15   
+                multiqc=1.2.3
+                '''
+                .stripIndent()
+
+        when:
+        def prefix = cache.condaPrefixPath(ENV.toString())
+        then:
+        1 * cache.isYamlFilePath(ENV.toString())
+        1 * cache.isTextFilePath(ENV.toString())
+        1 * cache.getCacheDir() >> BASE
+        prefix.toString() == '/conda/envs/bar-8a4aa7db8ddb8ce4eb4d450d4814a437'
+
+        cleanup:
+        folder?.deleteDir()
 
     }
 
@@ -120,7 +165,7 @@ class CondaCacheTest extends Specification {
         when:
         def prefix = cache.condaPrefixPath(ENV)
         then:
-        1 * cache.isEnvFile(ENV)
+        1 * cache.isYamlFilePath(ENV)
         0 * cache.getCacheDir()
         prefix.toString() == folder.toString()
 
@@ -141,7 +186,7 @@ class CondaCacheTest extends Specification {
         // the prefix directory exists ==> no conda command is executed
         def result = cache.createLocalCondaEnv0(ENV,PREFIX)
         then:
-        0 * cache.isEnvFile(ENV)
+        0 * cache.isYamlFilePath(ENV)
         0 * cache.runCommand(_)
         result == PREFIX
 
@@ -149,7 +194,7 @@ class CondaCacheTest extends Specification {
         PREFIX.deleteDir()
         result = cache.createLocalCondaEnv0(ENV,PREFIX)
         then:
-        1 * cache.isEnvFile(ENV)
+        1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
         1 * cache.runCommand( "conda create --mkdir --yes --quiet --prefix $PREFIX $ENV" ) >> null
         result == PREFIX
@@ -166,14 +211,15 @@ class CondaCacheTest extends Specification {
         cache.createOptions = '--this --that'
         def result = cache.createLocalCondaEnv0(ENV,PREFIX)
         then:
-        1 * cache.isEnvFile(ENV)
+        1 * cache.isYamlFilePath(ENV)
+        1 * cache.isTextFilePath(ENV)
         0 * cache.makeAbsolute(_)
         1 * cache.runCommand( "conda create --this --that --mkdir --yes --quiet --prefix $PREFIX $ENV" ) >> null
         result == PREFIX
     }
 
 
-    def 'should create a conda env with a env file' () {
+    def 'should create a conda env with a yaml file' () {
 
         given:
         def ENV = 'foo.yml'
@@ -183,9 +229,29 @@ class CondaCacheTest extends Specification {
         when:
         def result = cache.createLocalCondaEnv0(ENV, PREFIX)
         then:
-        1 * cache.isEnvFile(ENV)
+        1 * cache.isYamlFilePath(ENV)
+        0 * cache.isTextFilePath(ENV)
         1 * cache.makeAbsolute(ENV) >> Paths.get('/usr/base').resolve(ENV)
         1 * cache.runCommand( "conda env create --prefix $PREFIX --file /usr/base/foo.yml" ) >> null
+        result == PREFIX
+
+    }
+
+    def 'should create a conda env with a text file' () {
+
+        given:
+        def ENV = 'foo.txt'
+        def PREFIX = Paths.get('/conda/envs/my-env')
+        def cache = Spy(CondaCache)
+
+        when:
+        cache.createOptions = '--this --that'
+        def result = cache.createLocalCondaEnv0(ENV, PREFIX)
+        then:
+        1 * cache.isYamlFilePath(ENV)
+        1 * cache.isTextFilePath(ENV)
+        1 * cache.makeAbsolute(ENV) >> Paths.get('/usr/base').resolve(ENV)
+        1 * cache.runCommand( "conda create --this --that --mkdir --yes --quiet --prefix $PREFIX --file /usr/base/foo.txt" ) >> null
         result == PREFIX
 
     }

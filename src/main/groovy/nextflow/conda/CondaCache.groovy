@@ -136,8 +136,12 @@ class CondaCache {
     }
 
     @PackageScope
-    boolean isEnvFile(String str) {
-        str.endsWith('.yml') || str.endsWith('.yaml')
+    boolean isYamlFilePath(String str) {
+        (str.endsWith('.yml') || str.endsWith('.yaml')) && !str.contains('\n')
+    }
+
+    boolean isTextFilePath(String str) {
+        str.endsWith('.txt') && !str.contains('\n')
     }
 
 
@@ -154,19 +158,34 @@ class CondaCache {
         String content
         String name = 'env'
         // check if it's a YAML file
-        if( isEnvFile(condaEnv) ) {
+        if( isYamlFilePath(condaEnv) ) {
             try {
                 final path = condaEnv as Path
                 content = path.text
                 final yaml = (Map)new Yaml().load(content)
                 if( yaml.name )
                     name = yaml.name
+                else
+                    name = path.baseName
             }
             catch( NoSuchFileException e ) {
                 throw new IllegalArgumentException("Conda environment file does not exist: $condaEnv")
             }
             catch( Exception e ) {
                 throw new IllegalArgumentException("Error parsing Conda environment YAML file: $condaEnv -- Chech the log file for details", e)
+            }
+        }
+        else if( isTextFilePath(condaEnv) )  {
+            try {
+                final path = condaEnv as Path
+                content = path.text
+                name = path.baseName
+            }
+            catch( NoSuchFileException e ) {
+                throw new IllegalArgumentException("Conda environment file does not exist: $condaEnv")
+            }
+            catch( Exception e ) {
+                throw new IllegalArgumentException("Error parsing Conda environment text file: $condaEnv -- Chech the log file for details", e)
             }
         }
         // it's interpreted as user provided prefix directory
@@ -226,10 +245,17 @@ class CondaCache {
         log.info "Creating Conda env: $condaEnv [cache $prefixPath]"
 
         final opts = createOptions ? "$createOptions " : ''
-        final isFile = isEnvFile(condaEnv)
-        final String cmd = ( isFile
-                    ? "conda env create --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
-                    : "conda create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} $condaEnv")
+        def cmd
+        if( isYamlFilePath(condaEnv) ) {
+            cmd = "conda env create --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
+        }
+        else if( isTextFilePath(condaEnv) ) {
+            cmd = "conda create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
+        }
+        else {
+            cmd = "conda create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} $condaEnv"
+        }
+
         try {
             runCommand( cmd )
             log.debug "Conda create complete env=$condaEnv path=$prefixPath"
