@@ -42,8 +42,8 @@ class OarExecutor extends AbstractGridExecutor {
         assert result !=null
 
         result << '-n' << getJobNameFor(task)
-        result << '-O' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
-        result << '-E' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
+        // result << '-O' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
+        // result << '-E' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
         result << '-d' << quote(task.workDir)
 
 
@@ -128,7 +128,7 @@ class OarExecutor extends AbstractGridExecutor {
             }
         }
 
-        throw new IllegalStateException("Invalid PBS/Torque submit response:\n$text\n\n")
+        throw new IllegalStateException("Invalid OAR submit response:\n$text\n\n")
     }
 
     @Override
