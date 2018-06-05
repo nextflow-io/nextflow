@@ -1,6 +1,24 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.30.0 - 5 Jun 2018
+- Added the support for Bioconda #493
+- Added support for AWS Batch job timeout #648
+- Added jobs submit rate limit #198
+- Added offline option #665
+- Enabling Java 9/10 support for build and launcher scripts #674
+- Fixed Expose Kubernetes Secrets to worker pods #651
+- Fixed K8s execution hangs when a non-existing docker image is specified #697
+- Fixed K8s execution terminates abruptly if a pod requires more resources than available ones #676
+- Fixed K8s executor does not report command log when a task fail #699
+- Fixed Configuration profile is not handled properly by the kuberun command #696
+- Fixed Enhance process metrics to avoid usage of ps tool #499
+- Fixed PublishDir should use copy mode by default when the target is a S3 path #718
+- Fixed Unbounded variable breaks task launcher script #722
+- Fixed Escape filenames when copying from S3 #717
+- Fixed AWS executor should use putObject API to upload job scripts to S3 #712
+- Fixed Exception is thrown when an output folder contains a circular symlink path #701
+
 0.29.1 - 10 May 2018
 - Fixed Default ext property are not included in process context #673
 - Fixed Operator concat throws a ConcurrentModificationException #675
