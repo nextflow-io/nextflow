@@ -1,12 +1,7 @@
 package nextflow.cloud.gce
 
 import com.google.api.services.compute.Compute
-import com.google.api.services.compute.model.AccessConfig
-import com.google.api.services.compute.model.Instance
-import com.google.api.services.compute.model.InstancesSetLabelsRequest
-import com.google.api.services.compute.model.NetworkInterface
-import com.google.api.services.compute.model.Operation
-import com.google.common.collect.Maps
+import com.google.api.services.compute.model.*
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.stc.ClosureParams
@@ -20,8 +15,6 @@ import nextflow.cloud.types.CloudInstanceStatus
 import nextflow.cloud.types.CloudInstanceType
 import nextflow.exception.AbortOperationException
 import nextflow.util.ServiceName
-
-import java.security.GeneralSecurityException
 
 import static nextflow.cloud.CloudConst.TAG_CLUSTER_NAME
 import static nextflow.cloud.CloudConst.TAG_CLUSTER_ROLE
@@ -194,7 +187,11 @@ class GoogleCloudDriver implements CloudDriver {
 
     @Override
     void terminateInstances(Collection<String> instanceIds) {
-        unsupported("terminateInstances")
+        log.debug "Terminating Compute instances: ids=${instanceIds?.join(',')}"
+        for (String idInstance : instanceIds) {
+            Compute.Instances.Delete delete = helper.compute().instances().delete(project, zone, idInstance)
+            delete.execute()
+        }
     }
 
     @Override
