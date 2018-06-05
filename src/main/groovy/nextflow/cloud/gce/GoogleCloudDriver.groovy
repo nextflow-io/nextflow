@@ -254,7 +254,11 @@ class GoogleCloudDriver implements CloudDriver {
 
     @Override
     void terminateInstances(Collection<String> instanceIds) {
-        unsupported("terminateInstances")
+        log.debug "Terminating Compute instances: ids=${instanceIds?.join(',')}"
+        for (String idInstance : instanceIds) {
+            Compute.Instances.Delete delete = helper.compute().instances().delete(helper.project, helper.zone, idInstance)
+            delete.execute()
+        }
     }
 
     @Override
