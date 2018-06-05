@@ -102,6 +102,17 @@ The path of an environment file can be specified using the ``conda`` directive::
   it won't be properly recognised.
 
 
+Alternatively it is also possible to provide the dependencies using a plain text file,
+just listing each package name as a separate line. For example::
+
+      bioconda::star=2.5.4a
+      bioconda::bwa=0.7.15
+      bioconda::multiqc=1.4
+
+
+.. note:: Like before the extension matter, make sure such file ends with the ``.txt`` extension.
+
+
 Use existing Conda environments
 ===============================
 
