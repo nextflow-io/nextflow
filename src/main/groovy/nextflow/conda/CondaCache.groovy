@@ -198,6 +198,9 @@ class CondaCache {
 
             return prefix
         }
+        else if( condaEnv.contains('\n') ) {
+            throw new IllegalArgumentException("Invalid Conda environment definition: $condaEnv")
+        }
         else {
             content = condaEnv
         }
