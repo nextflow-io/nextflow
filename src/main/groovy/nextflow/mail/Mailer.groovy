@@ -220,7 +220,9 @@ class Mailer {
      * @param message A {@link MimeMessage} object representing the email to send
      */
     protected void sendViaJavaMail(MimeMessage message) {
-
+        if( !message.getAllRecipients() )
+            throw new IllegalArgumentException("Missing mail message recipient")
+        
         final transport = getSession().getTransport()
         transport.connect(host, port as int, user, password)
         log.trace("Connected to host=$host port=$port")
