@@ -14,8 +14,8 @@ import groovy.transform.stc.SimpleType
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.cloud.CloudDriver
+import nextflow.cloud.CloudScripts
 import nextflow.cloud.LaunchConfig
-import nextflow.cloud.aws.AmazonCloudDriver
 import nextflow.cloud.aws.CloudBootTemplateBinding
 import nextflow.cloud.types.CloudInstance
 import nextflow.cloud.types.CloudInstanceStatus
@@ -273,7 +273,7 @@ class GoogleCloudDriver implements CloudDriver {
         def builder = []
 
         if( cfg.createUser ) {
-            builder << AmazonCloudDriver.scriptCreateUser(cfg.userName, cfg.keyHash)
+            builder << CloudScripts.scriptCreateUser(cfg.userName, cfg.keyHash)
         }
 
         builder << cloudInitScript(cfg)
@@ -341,6 +341,18 @@ class GoogleCloudDriver implements CloudDriver {
             profile += 'export GOOGLE_APPLICATION_CREDENTIALS='+GCE_CREDENTIAL_FILE
         }
 
+//        if( hasInstanceStorage(cfg) )
+//            profile += "export NXF_TEMP='${cfg.instanceStorageMount}'\n"
+//
+//        // access/secret keys are propagated only if IAM profile is not specified
+//        if( !cfg.instanceRole && accessKey && secretKey ) {
+//            profile += "export AWS_ACCESS_KEY_ID='$accessKey'\n"
+//            profile += "export AWS_SECRET_ACCESS_KEY='$secretKey'\n"
+//        }
+//
+//        if( region )
+//            profile += "export AWS_DEFAULT_REGION='$region'\n"
+//
         return profile
     }
 }

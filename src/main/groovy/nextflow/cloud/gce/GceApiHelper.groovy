@@ -185,7 +185,7 @@ class GceApiHelper {
         if (parts.length != 4) throw new IllegalArgumentException("Expected IPv4 Public IP address instead of '" + ip + "'");
 
         // TODO: Is this domain name stable ?
-        parts[3] + "." + parts[2] + "." + parts[1] + "." + parts[0] + ".bc.googleusercontent.com";
+        parts.reverse().join(".")+".bc.googleusercontent.com";
     }
 
     /**
