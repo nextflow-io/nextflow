@@ -51,7 +51,7 @@ class SingularityCache {
 
     private boolean missingCacheDir
 
-    private Duration pullTimeout = Duration.of('10min')
+    private Duration pullTimeout = Duration.of('20min')
 
     /** Only for debugging purpose - do not use */
     @PackageScope
