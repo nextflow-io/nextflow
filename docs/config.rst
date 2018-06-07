@@ -362,6 +362,7 @@ engineOptions       This attribute can be used to provide any option supported b
 runOptions          This attribute can be used to provide any extra command line options supported by the ``singularity exec``.
 autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed contained. It requires the `user bind control` feature enabled in your Singularity installation (default: ``false``).
 cacheDir            The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
+pullTimeout         The amount of time the Singularity pull can last, exceeding which the process is terminated (default: ``20 min``).
 ================== ================
 
 
