@@ -29,6 +29,7 @@ import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.model.PodMountConfig
 import nextflow.k8s.model.PodOptions
+import nextflow.k8s.model.PodSpecBuilder
 import nextflow.k8s.model.PodVolumeClaim
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -37,6 +38,10 @@ import spock.lang.Unroll
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class K8sDriverLauncherTest extends Specification {
+
+    def setup() {
+        PodSpecBuilder.VOLUMES.set(0)
+    }
 
     def 'should execute run' () {
         given:
