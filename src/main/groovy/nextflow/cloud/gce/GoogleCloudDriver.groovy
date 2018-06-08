@@ -341,18 +341,6 @@ class GoogleCloudDriver implements CloudDriver {
             profile += 'export GOOGLE_APPLICATION_CREDENTIALS='+GCE_CREDENTIAL_FILE
         }
 
-//        if( hasInstanceStorage(cfg) )
-//            profile += "export NXF_TEMP='${cfg.instanceStorageMount}'\n"
-//
-//        // access/secret keys are propagated only if IAM profile is not specified
-//        if( !cfg.instanceRole && accessKey && secretKey ) {
-//            profile += "export AWS_ACCESS_KEY_ID='$accessKey'\n"
-//            profile += "export AWS_SECRET_ACCESS_KEY='$secretKey'\n"
-//        }
-//
-//        if( region )
-//            profile += "export AWS_DEFAULT_REGION='$region'\n"
-//
         return profile
     }
 }

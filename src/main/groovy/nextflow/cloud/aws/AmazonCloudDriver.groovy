@@ -515,7 +515,8 @@ class AmazonCloudDriver implements CloudDriver {
      * @return
      *      A BASH snippet representing the environment to be defined in the target EC2 instance
      */
-     String scriptBashEnv( LaunchConfig cfg ) {
+    @PackageScope
+    String scriptBashEnv( LaunchConfig cfg ) {
         def profile = """\
         export NXF_VER='${cfg.nextflow.version}'
         export NXF_MODE='${cfg.nextflow.mode}'

@@ -19,39 +19,39 @@ import java.util.*;
  */
 class GceApiHelper {
     private static final String PROJECT_PREFIX = "https://www.googleapis.com/compute/v1/projects/";
-    final String project;
-    final String zone;
-    private Compute compute;
-    Random random = new Random();
+    final String project
+    final String zone
+    private Compute compute
+    def random = new Random()
 
     GceApiHelper(String project, String zone) throws IOException, GeneralSecurityException {
         this.project = project ?: readProject()
         this.zone = zone ?: readZone()
-        this.compute = createComputeService();
+        this.compute = createComputeService()
     }
 
     Compute compute() {
-        return compute;
+        compute;
     }
 
     Compute createComputeService() throws IOException, GeneralSecurityException {
-        HttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
-        JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
+        def httpTransport = GoogleNetHttpTransport.newTrustedTransport()
+        def jsonFactory = JacksonFactory.getDefaultInstance()
 
-        GoogleCredential credential = GoogleCredential.getApplicationDefault();
+        def credential = GoogleCredential.getApplicationDefault()
 
         if (credential.createScopedRequired()) {
             credential =
-                    credential.createScoped(Arrays.asList("https://www.googleapis.com/auth/cloud-platform"));
+                    credential.createScoped(Arrays.asList("https://www.googleapis.com/auth/cloud-platform"))
         }
 
-        return new Compute.Builder(httpTransport, jsonFactory, credential)
+        new Compute.Builder(httpTransport, jsonFactory, credential)
                 .setApplicationName("NextCode-Experiments/0.1")
-                .build();
+                .build()
     }
 
     String projectZonePrefix() {
-        PROJECT_PREFIX + project + "/zones/" + zone + "/";
+        "${PROJECT_PREFIX}$project/zones/$zone/"
     }
 
     /**
@@ -60,7 +60,7 @@ class GceApiHelper {
      * @return Fully qualifie machine type
      */
     String instanceType(String shortName) {
-        projectZonePrefix() + "machineTypes/" + shortName;
+        "${projectZonePrefix()}machineTypes/$shortName"
     }
 
     /**
@@ -69,123 +69,123 @@ class GceApiHelper {
      * @return Fully qualified image name
      */
     String imageName(String imagePath) {
-        PROJECT_PREFIX + imagePath;
+        PROJECT_PREFIX + imagePath
     }
 
     AttachedDisk setBootDisk(Instance instance, String imagePath) {
-        def disk = new AttachedDisk();
-        disk.setBoot(true);
-        disk.setAutoDelete(true);
-        disk.setType("PERSISTENT");
-        AttachedDiskInitializeParams params = new AttachedDiskInitializeParams();
+        def disk = new AttachedDisk()
+        disk.setBoot(true)
+        disk.setAutoDelete(true)
+        disk.setType("PERSISTENT")
+        def params = new AttachedDiskInitializeParams()
         // Assign the Persistent Disk the same name as the VM Instance.
         if (instance.getName() != null) {
-            params.setDiskName(instance.getName());
+            params.setDiskName(instance.getName())
         }
         // Specify the source operating system machine image to be used by the VM Instance.
-        params.setSourceImage(imageName(imagePath));
+        params.setSourceImage(imageName(imagePath))
         // Specify the disk type as Standard Persistent Disk
-        params.setDiskType(projectZonePrefix() + "diskTypes/pd-standard");
-        disk.setInitializeParams(params);
-        instance.setDisks(Collections.singletonList(disk));
-        return disk;
+        params.setDiskType(projectZonePrefix() + "diskTypes/pd-standard")
+        disk.setInitializeParams(params)
+        instance.setDisks(Collections.singletonList(disk))
+        disk
     }
 
     NetworkInterface setNetworkInterface(Instance inst) {
-        def ifc = new NetworkInterface();
-        ifc.setNetwork(PROJECT_PREFIX + project + "/global/networks/default");
+        def ifc = new NetworkInterface()
+        ifc.setNetwork("${PROJECT_PREFIX}${project}/global/networks/default")
         List<AccessConfig> configs = []
-        AccessConfig config = new AccessConfig();
-        config.setType("ONE_TO_ONE_NAT");
-        config.setName("External NAT");
-        configs.add(config);
-        ifc.setAccessConfigs(configs);
-        inst.setNetworkInterfaces(Collections.singletonList(ifc));
-        return ifc;
+        def config = new AccessConfig()
+        config.setType("ONE_TO_ONE_NAT")
+        config.setName("External NAT")
+        configs.add(config)
+        ifc.setAccessConfigs(configs)
+        inst.setNetworkInterfaces(Collections.singletonList(ifc))
+        ifc
     }
 
     String randomName(String baseName) {
-        return baseName + randomName();
+        baseName + randomName()
     }
 
     String randomName() {
-        byte[] bytes = new byte[5];
-        random.nextBytes(bytes);
-        return new BigInteger(bytes).abs().toString(16);
+        def bytes = new byte[5]
+        random.nextBytes(bytes)
+        new BigInteger(bytes).abs().toString(16);
     }
 
     Metadata createMetadata(String... tagVal) {
         def metadata = new Metadata();
 
-        List<Metadata.Items> items = new ArrayList<>();
+        List<Metadata.Items> items = []
         for (int i = 0; i < tagVal.length - 1; i += 2) {
-            Metadata.Items it = new Metadata.Items();
-            it.set(tagVal[i], tagVal[i + 1]);
-            items.add(it);
+            Metadata.Items it = new Metadata.Items()
+            it.set(tagVal[i], tagVal[i + 1])
+            items.add(it)
         }
-        metadata.setItems(items);
-        System.out.println(metadata);
-        return metadata;
+        metadata.setItems(items)
+        return metadata
     }
 
+    /**
+     * Block until all operations are complete or if any results in an error.
+     */
     Operation.Error blockUntilComplete(Iterable<Operation> ops, long timeoutMs) throws InterruptedException, IOException {
-        long start = System.currentTimeMillis();
+        long start = System.currentTimeMillis()
         for (Operation op : ops) {
-            Operation.Error result = blockUntilComplete(op, timeoutMs - (System.currentTimeMillis() - start));
-            if (result != null) return null;
+            Operation.Error result = blockUntilComplete(op, timeoutMs - (System.currentTimeMillis() - start))
+            if (result != null) return result
         }
-        return null;
+        null
     }
 
     Operation.Error blockUntilComplete(Operation operation, long timeoutMs) throws InterruptedException, IOException {
-        long start = System.currentTimeMillis();
-        final long pollInterval = 5 * 1000;
-        String zone = operation.getZone();  // null for global/regional operations
-        if (zone != null) {
-            String[] bits = zone.split("/");
-            zone = bits[bits.length - 1];
+        def start = System.currentTimeMillis()
+        def pollInterval = 5 * 1000
+        def opZone = operation.getZone()  // null for global/regional operations
+
+        if (opZone != null) {
+            opZone = opZone.split("/").last()
         }
-        String status = operation.getStatus();
-        String opId = operation.getName();
-        while (operation != null && !status.equals("DONE")) {
-            Thread.sleep(pollInterval);
-            long elapsed = System.currentTimeMillis() - start;
+        def status = operation.getStatus()
+        def opId = operation.getName()
+        while (operation != null && status != "DONE") {
+            Thread.sleep(pollInterval)
+            long elapsed = System.currentTimeMillis() - start
             if (elapsed >= timeoutMs) {
-                throw new InterruptedException("Timed out waiting for operation to complete");
+                throw new InterruptedException("Timed out waiting for operation to complete")
             }
-            if (zone != null) {
-                Compute.ZoneOperations.Get get = compute.zoneOperations().get(project, zone, opId);
-                operation = get.execute();
+            if (opZone != null) {
+                Compute.ZoneOperations.Get get = compute.zoneOperations().get(project, opZone, opId)
+                operation = get.execute()
             } else {
-                Compute.GlobalOperations.Get get = compute.globalOperations().get(project, opId);
-                operation = get.execute();
+                Compute.GlobalOperations.Get get = compute.globalOperations().get(project, opId)
+                operation = get.execute()
             }
-            if (operation != null) {
-                status = operation.getStatus();
-            }
+            status = operation?.getStatus()
         }
-        return operation == null ? null : operation.getError();
+        operation?.getError()
     }
 
     Image lookupImage(String imagePath) throws IOException {
-        compute.images().get(project, imageName(imagePath)).execute();
+        compute.images().get(project, imageName(imagePath)).execute()
     }
 
     MachineType lookupMachineType(String machineType) throws IOException {
-        compute.machineTypes().get(project, zone, machineType).execute();
+        compute.machineTypes().get(project, zone, machineType).execute()
     }
 
     String instanceIdToPrivateDNS(String instanceId) {
-        instanceId + ".c." + project + ".internal";
+        "${instanceId}.c.${project}.internal"
     }
 
     String publicIpToDns(String ip) {
-        if (ip == null) return null;
-        String[] parts = ip.split("\\.");
-        if (parts.length != 4) throw new IllegalArgumentException("Expected IPv4 Public IP address instead of '" + ip + "'");
+        if (ip == null) return null
+        String[] parts = ip.split("\\.")
+        if (parts.length != 4) throw new IllegalArgumentException("Expected IPv4 Public IP address instead of '" + ip + "'")
 
         // TODO: Is this domain name stable ?
-        parts.reverse().join(".")+".bc.googleusercontent.com";
+        parts.reverse().join(".")+".bc.googleusercontent.com"
     }
 
     /**
@@ -193,37 +193,32 @@ class GceApiHelper {
      * @return null if valid or error message
      */
     String validateLabelValue(String value) {
-        if (value == null) return null;
+        if (value == null) return null
 
         if (!value.matches("[a-z0-9-_]*")) {
-            return "Value must consist of lowercase letters, numbers, underscores and dashes only";
+            return "Value must consist of lowercase letters, numbers, underscores and dashes only"
         }
         if (value.length() > 63) {
-            return "Value exceeds maximum length of 63";
+            return "Value exceeds maximum length of 63"
         }
-        return null;
+        null
     }
 
 
     def setStartupScript(Instance instance, String script) {
-        addMetadataItem(instance, "startup-script", script);
+        addMetadataItem(instance, "startup-script", script)
     }
 
     def addMetadataItem(Instance instance, String key, String value) {
-        def metadata = instance.getMetadata();
-        if (metadata == null) {
-            metadata = new Metadata();
-        }
-        List<Metadata.Items> items = metadata.getItems();
-        if (items == null) {
-            items = new ArrayList<>();
-        }
-        Metadata.Items item = new Metadata.Items();
-        item.setKey(key);
-        item.setValue(value);
-        items.add(item);
-        metadata.setItems(items);
-        instance.setMetadata(metadata);
+        def metadata = instance.getMetadata() ?: new Metadata()
+        List<Metadata.Items> items = metadata.getItems() ?: []
+
+        Metadata.Items item = new Metadata.Items()
+        item.setKey(key)
+        item.setValue(value)
+        items.add(item)
+        metadata.setItems(items)
+        instance.setMetadata(metadata)
     }
 
     String readGoogleMetadata(String meta) {
@@ -233,6 +228,7 @@ class GceApiHelper {
             throw new AbortOperationException("Cannot read Google metadata $meta: ${e.getClass()}(${e.getMessage()})",e)
         }
     }
+
     String readProject() {
         readGoogleMetadata('project/project-id')
     }
