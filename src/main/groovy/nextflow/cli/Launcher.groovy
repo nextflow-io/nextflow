@@ -449,7 +449,11 @@ class Launcher {
         }
 
         catch( ConfigParseException e )  {
-            log.error("${e.message}\n\n${e.cause?.message?.toString()?.indent('  ')}", e.cause ?: e)
+            def message = e.message
+            if( e.cause?.message ) {
+                message += "\n\n${e.cause.message.toString().indent('  ')}"
+            }
+            log.error(message, e.cause ?: e)
             return(1)
         }
 

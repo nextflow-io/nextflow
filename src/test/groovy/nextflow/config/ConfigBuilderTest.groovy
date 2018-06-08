@@ -905,9 +905,29 @@ class ConfigBuilderTest extends Specification {
         new ConfigBuilder().setOptions(opt).build()
         then:
         def e = thrown(ConfigParseException)
-        e.message == "Unknown config attribute: bar -- check config file: ${file.toRealPath()}".toString()
+        e.message == "Unknown config attribute `bar` -- check config file: ${file.toRealPath()}".toString()
 
     }
+
+    def 'should report fully qualified missing attribute'  () {
+
+        given:
+        def file = Files.createTempFile('test','config')
+        file.deleteOnExit()
+
+        when:
+        file.text =
+                '''
+                params.x = foo.bar
+                '''
+        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
+        new ConfigBuilder().setOptions(opt).build()
+        then:
+        def e = thrown(ConfigParseException)
+        e.message == "Unknown config attribute `foo.bar` -- check config file: ${file.toRealPath()}".toString()
+
+    }
+
 
     def 'should collect config files' () {
 
