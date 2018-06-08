@@ -184,6 +184,40 @@ class ConfigBuilderTest extends Specification {
         file?.delete()
     }
 
+    def 'CLI params should override the ones defined in the config file (2)' () {
+        setup:
+        def file = Files.createTempFile('test',null)
+        file.text = '''
+        params {
+          alpha = 'x'
+          beta = 'y'
+          delta = 'Foo'
+          gamma = params.alpha
+          omega = 'Bar'
+        }
+
+        process {
+          publishDir = [path: params.alpha]
+        }
+        '''
+        when:
+        def opt = new CliOptions()
+        def run = new CmdRun(params: [alpha: 'Hello', beta: 'World', omega: 'Last'])
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildConfig([file])
+
+        then:
+        result.params.alpha == 'Hello'  // <-- params defined as CLI options override the ones in the config file
+        result.params.beta == 'World'   // <--   as above
+        result.params.gamma == 'Hello'  // <--   as above
+        result.params.omega == 'Last'
+        result.params.delta == 'Foo'
+        result.process.publishDir == [path: 'Hello']
+
+        cleanup:
+        file?.delete()
+    }
+
+
     def 'CLI params should override the ones in one or more config files' () {
         given:
         def folder = File.createTempDir()
@@ -1158,6 +1192,113 @@ class ConfigBuilderTest extends Specification {
         cleanup:
         folder?.deleteDir()
 
+    }
+
+    def 'should access top params from profile' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def file1 = folder.resolve('file1.conf')
+
+        file1.text = """
+            params.alpha = 1 
+            params.delta = 2 
+            
+            profiles {
+                foo {
+                    params.delta = 20 
+                    params.gamma = 30 
+                    
+                    process {  
+                        cpus = params.alpha
+                    }
+                }
+            }
+            """
+
+        when:
+        def cfg = new ConfigBuilder().setProfile('foo').buildConfig0([:], [file1])
+        then:
+        cfg.process == [cpus: 1]
+        cfg.params == [alpha: 1, delta: 20, gamma: 30]
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should access top params from profile (2)' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def file1 = folder.resolve('file1.conf')
+
+        file1.text = """
+            params {
+                alpha = 1 
+                delta = 2 
+            }
+            
+            profiles {
+                foo {
+                    params {
+                        delta = 20 
+                        gamma = 30
+                    }
+
+                    process {  
+                        cpus = params.alpha
+                    }
+                }
+            }
+            """
+
+
+        when:
+        def cfg = new ConfigBuilder().setProfile('foo').buildConfig0([:], [file1])
+        then:
+        cfg.process == [cpus: 1]
+        cfg.params == [alpha: 1, delta: 20, gamma: 30]
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should merge params two profiles' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def file1 = folder.resolve('file1.conf')
+
+        file1.text = '''    
+            profiles {
+                foo {
+                    params {
+                        alpha = 1 
+                        delta = 2 
+                    }
+                }
+
+                bar {
+                    params {
+                        delta = 20 
+                        gamma = 30 
+                    }
+                    
+                    process {
+                        cpus = params.alpha
+                    }                
+                }
+            }
+            '''
+
+
+        when:
+        def cfg = new ConfigBuilder().setProfile('foo,bar') .buildConfig0([:], [file1])
+        then:
+        cfg.process.cpus == 1
+        cfg.params.alpha == 1
+        cfg.params.delta == 20
+        cfg.params.gamma == 30
+
+        cleanup:
+        folder?.deleteDir()
     }
 }
 

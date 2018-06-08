@@ -359,10 +359,15 @@ class ConfigParser {
                         stack.pop()
                     }
                 } else {
+                    def current = stack.last
                     def co
-                    if (stack.last.config.get(name) instanceof ConfigObject) {
-                        co = stack.last.config.get(name)
-                    } else {
+                    if (current.config.get(name) instanceof ConfigObject) {
+                        co = current.config.get(name)
+                    }
+                    else if (current.scope.get(name) instanceof ConfigObject) {
+                        co = current.scope.get(name)
+                    }
+                    else {
                         co = new ConfigObject()
                     }
 
@@ -421,7 +426,7 @@ class ConfigParser {
      * @param value A boolean value, when {@code true} includes are disabled
      * @return The {@link ConfigParser} object itself
      */
-    ConfigParser setIgnoreIncludes(boolean value ) {
+    ConfigParser setIgnoreIncludes(boolean value) {
         this.ignoreIncludes = value
         return this
     }
