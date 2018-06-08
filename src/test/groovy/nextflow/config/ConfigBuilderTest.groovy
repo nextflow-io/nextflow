@@ -1117,5 +1117,47 @@ class ConfigBuilderTest extends Specification {
         result.profiles.singularity.process.container == 'bar-2.img'
     }
 
+    def 'should resolve process withLabel inside a profile' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def file1 = folder.resolve('test.conf')
+        file1.text = '''
+            process {
+                cpus = 2
+
+                withName: bar {
+                    cpus = 4
+                }
+
+                withLabel: foo {
+                    cpus = 8
+                }
+            }
+            '''
+
+        when:
+        def cfg1 = new ConfigBuilder().buildConfig0([:], [file1])
+        then:
+        cfg1.process.cpus == 2
+        cfg1.process.'withName:bar'.cpus == 4
+        cfg1.process.'withLabel:foo'.cpus == 8
+        cfg1.process == [cpus: 2, 'withName:bar': [cpus:4], 'withLabel:foo': [cpus: 8]]
+
+        // make sure the same config is returned when the file is included
+        when:
+        def file2 = folder.resolve('nextflow.config')
+        file2.text = """
+            includeConfig "$file1" 
+            """
+
+        def cfg2 = new ConfigBuilder().buildConfig0([:], [file2])
+        then:
+        cfg1 == cfg2
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
 }
 
