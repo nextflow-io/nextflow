@@ -142,7 +142,7 @@ class DirWatcher {
         this.watcher = base.getFileSystem().newWatchService()
         this.watchedPaths = new HashMap<WatchKey,Path>()
 
-        thread = Thread.start {
+        thread = Thread.startDaemon {
             try {
                 apply0()
             }
