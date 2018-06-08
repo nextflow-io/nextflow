@@ -346,14 +346,16 @@ class ConfigBuilder {
      * @param file The source config file/snippet
      * @return
      */
-    protected validate(ConfigObject config, file) {
-        config.each { k, v ->
-            if( v instanceof ConfigObject ) {
-                if( v.isEmpty() ) {
-                    log.debug "In the following config object the attribute `$k` is empty:\n${config.prettyPrint().indent('  ')}"
-                    throw new ConfigParseException("Unknown config attribute: $k -- check config file: $file")
+    protected validate(ConfigObject config, file, String parent=null) {
+        for( String key : config.keySet() ) {
+            final value = config.get(key)
+            if( value instanceof ConfigObject ) {
+                final fqKey = parent ? "${parent}.${key}": key as String
+                if( value.isEmpty() ) {
+                    log.debug "In the following config object the attribute `$fqKey` is empty:\n${config.prettyPrint().indent('  ')}"
+                    throw new ConfigParseException("Unknown config attribute `$fqKey` -- check config file: $file")
                 }
-                validate(v,file)
+                validate(value, file, fqKey)
             }
         }
     }
