@@ -94,8 +94,10 @@ abstract class ConfigBase extends Script {
         // -- set the required base script
         def config = new CompilerConfiguration()
         config.scriptBaseClass = ConfigBase.class.name
+        def params = [:]
         if( renderClosureAsString )
-            config.addCompilationCustomizers(new ASTTransformationCustomizer(ConfigTransform))
+            params.put('renderClosureAsString', true)
+        config.addCompilationCustomizers(new ASTTransformationCustomizer(params, ConfigTransform))
 
         // -- setup the grengine instance
         def engine = new Grengine(this.class.classLoader,config)
