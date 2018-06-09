@@ -32,6 +32,7 @@ The available filter operators are:
 * `randomSample`_
 * `take`_
 * `unique`_
+* `until`_
 
 filter
 ---------
@@ -247,6 +248,8 @@ The ``take`` operator allows you to filter only the first `n` items emitted by a
 
 .. note:: By specifying the value ``-1`` the operator takes all values.
 
+See also `until`_.
+
 last
 -------
 
@@ -261,6 +264,25 @@ The ``last`` operator creates a channel that only returns the last item emitted 
 
     6
 
+
+until
+-----
+
+The ``until`` operator creates a channel that returns the items emitted by the source channel and stop when
+the condition specified is verified. For example::
+
+  Channel
+      .from( 3,2,1,5,1,5 )
+      .until{ it==5 }
+      .println()
+
+::
+
+  3
+  2
+  1
+
+See also `take`_. 
 
 Transforming operators
 ======================
@@ -291,7 +313,7 @@ and is expressed with a :ref:`closure <script-closure>` as shown in the example 
 
     Channel
         .from( 1, 2, 3, 4, 5 )
-        .map { it * it  }
+        .map { it * it }
         .subscribe onNext: { println it }, onComplete: { println 'Done' }
 
 ::
