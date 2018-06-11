@@ -6,22 +6,25 @@ import com.google.api.services.compute.model.Instance
 import com.google.api.services.compute.model.InstancesSetLabelsRequest
 import com.google.api.services.compute.model.NetworkInterface
 import com.google.api.services.compute.model.Operation
-import com.google.common.collect.Maps
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.SimpleType
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.cloud.CloudDriver
+import nextflow.cloud.CloudScripts
 import nextflow.cloud.LaunchConfig
+import nextflow.cloud.aws.CloudBootTemplateBinding
 import nextflow.cloud.types.CloudInstance
 import nextflow.cloud.types.CloudInstanceStatus
 import nextflow.cloud.types.CloudInstanceType
 import nextflow.exception.AbortOperationException
+import nextflow.processor.TaskTemplateEngine
 import nextflow.util.ServiceName
 
-import java.security.GeneralSecurityException
+import java.nio.file.Path
 
 import static nextflow.cloud.CloudConst.TAG_CLUSTER_NAME
 import static nextflow.cloud.CloudConst.TAG_CLUSTER_ROLE
@@ -40,8 +43,6 @@ class GoogleCloudDriver implements CloudDriver {
      * The GCE zone eg. {@code us-central1-f}. If it's not specified the current region is retrieved from
      * the GCE instance metadata
      */
-    private String zone
-    private String project
     private String group = "inst"
 
     private GceApiHelper helper
@@ -67,13 +68,10 @@ class GoogleCloudDriver implements CloudDriver {
     GoogleCloudDriver(Map config) {
         log.debug("Config: {}",config)
         log.debug("Global config: {}",Global.getConfig())
-        this.zone = config.zone ?: Global.getConfig().gce.zone
-        this.project = config.project ?: Global.getConfig().gce.project
-        if (!(this.zone && this.project)) {
-            throw new AbortOperationException("Need GCE project and region")
-        }
-        log.debug("Starting GoogleCloudDriver in project {} and zone {}",this.project,this.zone)
+        def zone = config.zone ?: Global.getConfig()?.gce?.zone
+        def project = config.project ?: Global.getConfig()?.gce?.project
         this.helper = new GceApiHelper(project,zone)
+        log.debug("Starting GoogleCloudDriver in project {} and zone {}",helper.project,helper.zone)
     }
 
     /**
@@ -102,6 +100,10 @@ class GoogleCloudDriver implements CloudDriver {
         if (validationError != null) {
             throw new AbortOperationException("Invalid cluster name '"+config.getClusterName()+"': "+validationError);
         }
+
+        if (config.sharedStorageId && config.sharedStorageMount) {
+            throw new AbortOperationException("Shared storage not supported in Google Cloud")
+        }
     }
 
     @Override
@@ -109,13 +111,14 @@ class GoogleCloudDriver implements CloudDriver {
         List<String> result = []
         List<Operation> ops = []
         instanceCount.times {
-            def inst = new Instance();
+            Instance inst = new Instance();
             inst.setName(helper.randomName(config.getClusterName() + "-"));
             inst.setMachineType(helper.instanceType(config.getInstanceType()));
 
             helper.setBootDisk(inst,config.getImageId());
             helper.setNetworkInterface(inst);
-            def insert = helper.compute().instances().insert(project, zone, inst);
+            helper.setStartupScript(inst,gceStartupScript(config))
+            def insert = helper.compute().instances().insert(helper.project, helper.zone, inst);
 
             result << inst.getName()
             ops << insert.execute()
@@ -136,7 +139,7 @@ class GoogleCloudDriver implements CloudDriver {
 
         List<Operation> ops = []
         for (String instanceId: instanceIds) {
-            def instance = helper.compute().instances().get(project,zone,instanceId).execute()
+            def instance = helper.compute().instances().get(helper.project,helper.zone,instanceId).execute()
 
             // Preserve existing labels
             if (instance.getLabels() != null) {
@@ -147,9 +150,9 @@ class GoogleCloudDriver implements CloudDriver {
             request.setLabelFingerprint(instance.getLabelFingerprint())
             request.setLabels(labels)
 
-            ops << helper.compute().instances().setLabels(project,zone,instanceId,request).execute()
+            ops << helper.compute().instances().setLabels(helper.project,helper.zone,instanceId,request).execute()
         }
-        helper.blockUntilComplete(ops,OPS_WAIT_TIMEOUT_MS);
+        helper.blockUntilComplete(ops,OPS_WAIT_TIMEOUT_MS)
     }
 
     @Override
@@ -162,34 +165,43 @@ class GoogleCloudDriver implements CloudDriver {
     @Override
     void eachInstanceWithTags(Map tags,
                               @ClosureParams(value=SimpleType, options = ['nextflow.cloud.types.CloudInstance']) Closure callback) {
-        def listRequest = helper.compute().instances().list(project, zone)
+        String filter = null
 
         if (tags != null && !tags.isEmpty()) {
-            listRequest.setFilter(tags.collect(this.&tagToFilterExpression).join(" "))
+            filter = tags.collect(this.&tagToFilterExpression).join(" ")
         }
-        listRequest.execute().getItems()?.each {inst -> callback.call(toNextflow(inst))}
+        eachInstanceWithFilter(filter,callback)
     }
 
     @Override
     void eachInstanceWithIds(List<String> instanceIds,
                              @ClosureParams(value=SimpleType, options = ['nextflow.cloud.types.CloudInstance']) Closure callback) {
         if (instanceIds.size() > 0) {
-            def listRequest = helper.compute().instances().list(project, zone)
-            listRequest.setFilter(instanceIds.collect(this.&instanceIdToFilterExpression).join(" or "))
-            listRequest.execute().getItems()?.each { inst -> callback.call(toNextflow(inst)) }
+            eachInstanceWithFilter(instanceIds.collect(this.&instanceIdToFilterExpression).join(" OR "),callback)
         }
     }
 
     @Override
     void eachInstance(
             @ClosureParams(value=SimpleType, options = ['nextflow.cloud.types.CloudInstance']) Closure callback) {
-        unsupported("eachInstance")
+        eachInstanceWithFilter(null as String,callback)
+    }
+
+    void eachInstanceWithFilter(String filter,@ClosureParams(value=SimpleType, options = ['nextflow.cloud.types.CloudInstance']) Closure callback) {
+        def listRequest = helper.compute().instances().list(helper.project, helper.zone)
+        listRequest.setFilter(filter)
+        listRequest.execute().getItems()?.each { inst -> callback.call(toNextflow(inst)) }
     }
 
     @Override
     List<String> listPrivateIPs(String clusterName) {
-        unsupported("listPrivateIPs")
-        return null
+        def result = []
+
+        eachInstanceWithTags([(TAG_CLUSTER_NAME): clusterName]) { CloudInstance it ->
+            result << it.privateIpAddress
+        }
+
+        return result
     }
 
     @Override
@@ -199,7 +211,7 @@ class GoogleCloudDriver implements CloudDriver {
 
     @Override
     String getLocalInstanceId() {
-        unsupported("getLocalInstanceId")
+        helper.readInstanceId()
     }
 
     @Override
@@ -253,4 +265,82 @@ class GoogleCloudDriver implements CloudDriver {
     }
 
 
+    /**
+     * @TODO: This is mostly a copy paste from AmazonCloudDriver
+     */
+    @PackageScope
+    String gceStartupScript( LaunchConfig cfg ) {
+        def builder = []
+
+        if( cfg.createUser ) {
+            builder << CloudScripts.scriptCreateUser(cfg.userName, cfg.keyHash)
+        }
+
+        builder << cloudInitScript(cfg)
+
+        if( builder ) {
+            builder.add(0, '#!/bin/bash')
+        }
+        // note: `findAll` remove all empty strings
+        builder.join('\n')
+    }
+
+    def GCE_CREDENTIAL_FILE = '$HOME/.nextflow/gce_credentials.json'
+
+    /**
+     * @TODO: This is mostly a copy paste from AmazonCloudDriver
+     */
+    @PackageScope
+    String cloudInitScript(LaunchConfig cfg) {
+        // load init script template
+        def template =  this.class.getResourceAsStream('cloud-boot.txt')
+        if( !template )
+            throw new IllegalStateException("Missing `cloud-boot.txt` template resource")
+
+        def binding = new CloudBootTemplateBinding(cfg)
+        binding.nextflowConfig = cfg.renderCloudConfigObject()
+        binding.bashProfile = scriptBashEnv(cfg)
+        def credFile = System.getenv("GOOGLE_APPLICATION_CREDENTIALS") as Path
+        if (credFile) {
+            binding.gceCredentialsFile = GCE_CREDENTIAL_FILE
+            binding.gceCredentials = credFile.text
+        }
+        new TaskTemplateEngine()
+                .setPlaceholder('!' as char)
+                .setEnableShortNotation(false)
+                .createTemplate(new InputStreamReader(template))
+                .make(binding)
+                .toString()
+
+    }
+
+    /**
+     * @TODO: This is mostly a copy paste from AmazonCloudDriver
+     */
+    String scriptBashEnv( LaunchConfig cfg ) {
+        def profile = """\
+        export NXF_VER='${cfg.nextflow.version}'
+        export NXF_MODE='${cfg.nextflow.mode}'
+        export NXF_EXECUTOR='ignite'
+        export NXF_CLUSTER_JOIN='cloud:gce:${cfg.clusterName}'
+        """
+                .stripIndent()
+
+        if( cfg.nextflow.trace )
+            profile += "export NXF_TRACE='${cfg.nextflow.trace}'\n"
+
+        if( cfg.nextflow.options )
+            profile += "export NXF_OPTS='${cfg.nextflow.options}'\n"
+
+        if( cfg.sharedStorageId && cfg.sharedStorageMount ) {
+            profile += "export NXF_WORK='${cfg.sharedStorageMount}/${cfg.userName}/work'\n"
+            profile += "export NXF_ASSETS='${cfg.sharedStorageMount}/${cfg.userName}/projects'\n"
+        }
+
+        if (System.getenv("GOOGLE_APPLICATION_CREDENTIALS")) {
+            profile += 'export GOOGLE_APPLICATION_CREDENTIALS='+GCE_CREDENTIAL_FILE
+        }
+
+        return profile
+    }
 }
