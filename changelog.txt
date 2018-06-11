@@ -1,6 +1,18 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.30.1 - 11 Jun 2018
+- Use a daemon thread for watchPath method #735
+- Fixed Gitlab API v3 has been deprecated and does not work any more #734
+- Fixed Unable to access params defined in the top scope from a nested profile #733
+- Fixed Process config selectors do not work when the config is included #729
+- Fixed Improve the error message when a missing property is used in the config file #730
+- Added Travis build support for jdk10
+- Added documentation for `until` operator #736
+- Added mailer recipients check
+- Increased Singularity pull timeout to 20 minutes
+- Updated build to Gradle 4.8
+
 0.30.0 - 5 Jun 2018
 - Added the support for Bioconda #493
 - Added support for AWS Batch job timeout #648
