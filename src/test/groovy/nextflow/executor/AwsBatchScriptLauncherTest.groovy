@@ -321,4 +321,34 @@ class AwsBatchScriptLauncherTest extends Specification {
         cleanup:
         folder?.deleteDir()
     }
+
+
+    def 'test bash wrapper with custom scratch'() {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        /*
+         * simple bash run
+         */
+        when:
+        def opts = new AwsOptions(cliPath:'/conda/bin/aws', region: 'eu-west-1')
+        def bash = new AwsBatchScriptLauncher([
+                name: 'Hello 1',
+                workDir: folder,
+                script: 'echo Hello world!',
+                scratch: '/foo/bar/tmp'
+        ] as TaskBean, opts)
+        bash.build()
+
+        then:
+        Files.exists(folder.resolve('.command.sh'))
+        Files.exists(folder.resolve('.command.run'))
+
+        folder.resolve('.command.run').text.contains('NXF_SCRATCH="$(set +u; nxf_mktemp /foo/bar/tmp)"')
+
+
+        cleanup:
+        folder?.deleteDir()
+    }
 }
