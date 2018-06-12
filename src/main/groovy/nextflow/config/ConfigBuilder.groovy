@@ -552,8 +552,12 @@ class ConfigBuilder {
                 config.notification.to = cmdRun.withNotification
             }
         }
-
-
+        // -- sets the messages options
+        if( cmdRun.withProv ) {
+            if( !(config.prov instanceof Map) )
+                config.prov = [:]
+                config.prov.enabled = true
+        }
         // -- add the command line parameters to the 'taskConfig' object
         if( cmdRun.params || cmdRun.paramsFile )
             config.params.putAll( cmdRun.parsedParams )

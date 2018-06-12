@@ -61,7 +61,9 @@ class TraceFileObserver implements TraceObserver {
             'rss',
             'vmem',
             'rchar',
-            'wchar'
+            'wchar',
+            'input',
+            'output'
     ]
 
     List<String> formats
