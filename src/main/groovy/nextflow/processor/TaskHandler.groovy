@@ -20,6 +20,11 @@
 
 package nextflow.processor
 
+import nextflow.util.ArrayBag
+import java.nio.file.Path
+import org.apache.commons.lang.StringUtils
+import sun.nio.fs.UnixPath
+
 import static nextflow.processor.TaskStatus.*
 
 import java.nio.file.NoSuchFileException
@@ -43,9 +48,8 @@ public abstract class TaskHandler {
         this.task = task
     }
 
-
     /** Only for testing purpose */
-    protected TaskHandler() { }
+    protected TaskHandler() {}
 
     /**
      * The task managed by this handler
@@ -70,14 +74,13 @@ public abstract class TaskHandler {
 
     long completeTimeMillis
 
-
     /**
-     * Model the start transition from {@code #SUBMITTED} to {@code STARTED}
+     * Model the start transition from {@code # SUBMITTED} to {@code STARTED}
      */
     abstract boolean checkIfRunning()
 
     /**
-     *  Model the start transition from {@code #STARTED} to {@code TERMINATED}
+     *  Model the start transition from {@code # STARTED} to {@code TERMINATED}
      */
     abstract boolean checkIfCompleted()
 
@@ -98,15 +101,15 @@ public abstract class TaskHandler {
      *
      * @param status The sask status as defined by {@link TaskStatus}
      */
-    def void setStatus( TaskStatus status ) {
+    def void setStatus(TaskStatus status) {
 
         // skip if the status is the same aam
-        if ( this.status == status || status == null )
+        if (this.status == status || status == null)
             return
 
         // change the status
         this.status = status
-        switch( status ) {
+        switch (status) {
             case SUBMITTED: submitTimeMillis = System.currentTimeMillis(); break
             case RUNNING: startTimeMillis = System.currentTimeMillis(); break
             case COMPLETED: completeTimeMillis = System.currentTimeMillis(); break
@@ -120,14 +123,14 @@ public abstract class TaskHandler {
 
     boolean isRunning() { return status == RUNNING }
 
-    boolean isCompleted()  { return status == COMPLETED  }
+    boolean isCompleted() { return status == COMPLETED }
 
     protected StringBuilder toStringBuilder(StringBuilder builder) {
         builder << "id: ${task.id}; name: ${task.name}; status: $status; exit: ${task.exitStatus != Integer.MAX_VALUE ? task.exitStatus : '-'}; error: ${task.error ?: '-'}; workDir: ${task.workDir?.toUriString()}"
     }
 
     String toString() {
-        def builder = toStringBuilder( new StringBuilder() )
+        def builder = toStringBuilder(new StringBuilder())
         return "TaskHandler[${builder.toString()}]"
     }
 
@@ -136,7 +139,7 @@ public abstract class TaskHandler {
      * failed executions
      *
      * @return
-     *      Can be either:
+     * Can be either:
      *      - NEW: task has just been created and not yet submitted for execution
      *      - SUBMITTED: task has been submitted for execution
      *      - RUNNING: task is currently running
@@ -145,8 +148,8 @@ public abstract class TaskHandler {
      *      - ABORTED: task execution was aborted by NF (likely because another task forced the workflow termination)
      */
     String getStatusString() {
-        if( task.failed ) return 'FAILED'
-        if( task.aborted ) return 'ABORTED'
+        if (task.failed) return 'FAILED'
+        if (task.aborted) return 'ABORTED'
         return this.status.toString()
     }
 
@@ -178,9 +181,48 @@ public abstract class TaskHandler {
         record.time = task.config.getTime()?.toMillis()
         record.env = task.getEnvironmentStr()
 
-        if( isCompleted() ) {
-            record.error_action = task.errorAction?.toString()
 
+        if (isCompleted()) {
+            record.error_action = task.errorAction?.toString()
+//**********************************************
+            //println "onComplete name: ${task.name} IN  >> ${task.inputs.values()}\n"
+            def inputAux = ''
+            def outputAux = ''
+            //println "id: ${task.id}; name: ${task.name} \n :-: IN :-:"
+            for (item in task.inputs.values()) {
+                //println ("IN-ITEM: ${task.name}} -- ${item.getProperties()}")
+                if (item instanceof ArrayBag) {
+                    //println "sourceObj >> ${((item as ArrayBag).getProperty("target") as ArrayList).get(0).getAt("sourceObj")}"
+                    //println "storePath >> ${((item as ArrayBag).getProperty("target") as ArrayList).get(0).getAt("storePath")}"
+                    //println "stageName >> ${((item as ArrayBag).getProperty("target") as ArrayList).get(0).getAt("stageName")}"
+                    //println "name: ${task.name} \ntarget: ${(item.getProperty("target") as ArrayList).getAt("storePath")}\n\n"
+                    //inputAux = "${(item.getProperty("target") as ArrayList).getAt("storePath")}; ${inputAux}"
+                    for (file in item.getProperty("target")){
+                        inputAux="${file.getAt("storePath")}; ${inputAux}"
+                    }
+                    //println "**** id: ${task.name}; inputAux: ${inputAux}"
+                    inputAux = inputAux.replaceAll("; \$", "") //remove last semicolon
+                    record.input = inputAux
+                }
+            }
+            //println "### OUT-ITEM: ${task.name}}"//\n### ${task.outputs}\n*** ${task.outputs.values()}\n"
+            for (item in task.outputs.values()) {
+                if(!item.getClass().toString().equals("class java.lang.String")){ //if its not a string -> string==${id}
+                    //println (" *-* OUT-Loop: ${task.name}}\n-*- ${item} -- ${item.getClass()}\n***${item.getProperties()}")
+                    if(item.getClass().toString().equals("class sun.nio.fs.UnixPath")){ //becasue it's just a SINGLE file. not a list of files
+                        //println (" *-* PATH-Loop: ${task.name}}\n-*- ${item}")
+                        outputAux="${item.toString()}; ${outputAux}"
+                    }else if(item.getClass().toString().equals("class java.util.ArrayList")) {  //in that case we have a LIST of files
+                        for (file in item){
+                            //println (" *-* FILE-Loop: ${task.name}}\n-*- ${file}")
+                            outputAux="${file.toString()}; ${outputAux}"
+                        }
+                    }
+                }
+                outputAux = outputAux.replaceAll("; \$", "") //remove last semicolon
+                record.output = outputAux
+            }
+//**********************************************
             if( completeTimeMillis ) {
                 // completion timestamp
                 record.complete = completeTimeMillis

@@ -79,6 +79,7 @@ class Launcher {
 
     private String colsString
 
+    private static String commandLine=""
     /**
      * Create a launcher object and parse the command line parameters
      *
@@ -118,7 +119,6 @@ class Launcher {
         }
         jcommander.setProgramName( APP_NAME )
     }
-
     /**
      * Create the Jcommander 'interpreter' and parse the command line arguments
      */
@@ -140,6 +140,10 @@ class Launcher {
         // set the log file name
         checkLogFileName()
 
+        // store the args to the class -> used to get CommandLine -> PROVENANCE
+        for (command in args){
+            commandLine="${commandLine} ${command}"
+        }
         return this
     }
 
@@ -244,7 +248,9 @@ class Launcher {
             else if( current == '-dump-channels' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << '*'
             }
-
+            else if( current == '-with-prov' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
+            }
             else if( current ==~ /^\-\-[a-zA-Z\d].*/ && !current.contains('=') ) {
                 current += '='
                 current += ( i<args.size() && isValue(args[i]) ? args[i++] : 'true' )
@@ -603,6 +609,14 @@ class Launcher {
             "${APP_NAME} version ${APP_VER}.${APP_BUILDNUM}"
         }
 
+    }
+    /**
+     * Return the commandLine of the execution as STRING
+     * @param args
+     * @return
+     */
+    static String getCommandLine(){
+        return this.commandLine
     }
 
 

@@ -8,8 +8,8 @@
 .node-nextflow*
 build/**
 lib/commons-cli-1.2.jar
-subprojects/**/build/
-subprojects/**/*.iml
+**/build/
+**/*.iml
 out/**
 piper/**
 tmp/*
@@ -38,3 +38,7 @@ temp
 gradle.properties
 .dockerignore
 .launch.classpath
+trace.*
+ro/*
+src/main/groovy/nextflow/Const.groovy
+results/*
