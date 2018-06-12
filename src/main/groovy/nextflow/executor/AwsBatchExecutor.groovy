@@ -620,7 +620,8 @@ class AwsBatchScriptLauncher extends BashWrapperBuilder {
     AwsBatchScriptLauncher( TaskBean bean, AwsOptions opts ) {
         super(bean, new AwsBatchFileCopyStrategy(bean,opts))
         // enable the copying of output file to the S3 work dir
-        scratch = true
+        if( !scratch )
+            scratch = true
         // include task script as an input to force its staging in the container work directory
         bean.inputFiles[TaskRun.CMD_SCRIPT] = bean.workDir.resolve(TaskRun.CMD_SCRIPT)
         // add the wrapper file when stats are enabled
