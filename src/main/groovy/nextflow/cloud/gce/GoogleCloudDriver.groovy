@@ -129,7 +129,99 @@ class GoogleCloudDriver implements CloudDriver {
 
     @Override
     void waitInstanceStatus(Collection<String> instanceIds, CloudInstanceStatus status) {
-        unsupported("waitInstanceStatus")
+        switch( status ) {
+            case CloudInstanceStatus.STARTED:
+                waitStarted(instanceIds)
+                break
+
+            case CloudInstanceStatus.READY:
+                waitStarted(instanceIds)
+                waitRunning(instanceIds)
+                break
+
+            case CloudInstanceStatus.TERMINATED:
+                waitTerminated(instanceIds)
+                break
+
+            default:
+                throw new IllegalStateException("Unknown instance status: $status")
+        }
+    }
+
+    /**
+     * Wait for the specified instances reach Started status
+     *
+     * @param instanceIds One or more Compute instance IDs
+     */
+    @PackageScope
+    void waitStarted( Collection<String> instanceIds ) {
+
+        Set<String> remaining = new HashSet<>(instanceIds)
+        while (!remaining.isEmpty()) {
+            def filter = instanceIds.collect(this.&instanceIdToFilterExpression).join(" OR ")
+            def listRequest = helper.compute().instances().list(helper.project, helper.zone)
+            listRequest.setFilter(filter)
+            List<Instance> instances = listRequest.execute().getItems()
+            if (instances != null) {
+                for (Instance instance: instances) {
+                    if (instance.status == 'PROVISIONING' || instance.status == 'STAGING' || instance.status == 'RUNNING') {
+                        remaining.remove(instance.getName())
+                    }
+                }
+            }
+            if (!remaining.isEmpty()) Thread.sleep(1000)
+        }
+    }
+
+
+    /**
+     * Wait for the specified instances reach Running status
+     *
+     * @param instanceIds One or more Compute instance IDs
+     */
+    @PackageScope
+    void waitRunning( Collection<String> instanceIds ) {
+
+        Set<String> remaining = new HashSet<>(instanceIds)
+        while (!remaining.isEmpty()) {
+            def filter = instanceIds.collect(this.&instanceIdToFilterExpression).join(" OR ")
+            def listRequest = helper.compute().instances().list(helper.project, helper.zone)
+            listRequest.setFilter(filter)
+            List<Instance> instances = listRequest.execute().getItems()
+            if (instances != null) {
+                for (Instance instance: instances) {
+                    if (instance.status == 'RUNNING') {
+                        remaining.remove(instance.getName())
+                    }
+                }
+            }
+            if (!remaining.isEmpty()) Thread.sleep(1000)
+        }
+    }
+
+    /**
+     * Wait for the specified instances reach a Termination status
+     *
+     * @param instanceIds One or more Compute instance IDs
+     */
+    @PackageScope
+    void waitTerminated( Collection<String> instanceIds ) {
+
+        Set<String> remaining = new HashSet<>(instanceIds)
+        while (!remaining.isEmpty()) {
+            def filter = instanceIds.collect(this.&instanceIdToFilterExpression).join(" OR ")
+            def listRequest = helper.compute().instances().list(helper.project, helper.zone)
+            listRequest.setFilter(filter)
+            List<Instance> instances = listRequest.execute().getItems()
+            if (instances != null) {
+                for (Instance instance: instances) {
+                    if (instance.status == 'TERMINATED') {
+                        remaining.remove(instance.getName())
+                    }
+                }
+            }
+            if (!remaining.isEmpty()) Thread.sleep(1000)
+        }
     }
 
     @Override
