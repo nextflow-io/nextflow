@@ -220,7 +220,8 @@ you will be able to run your Nextflow pipeline as usual.
 Required dependencies
 ---------------------
 
-Java 8 
+* Compiler Java 8
+* Runtime Java 8 or later
 
 Build from source
 -----------------
@@ -317,8 +318,7 @@ Build servers
 --------------
 
   * [Travis-CI](https://travis-ci.org/nextflow-io/nextflow)
-  * [Circle-CI](https://circleci.com/gh/nextflow-io/nextflow)
-  * [Groovy Joint build](http://ci.groovy-lang.org/project.html?projectId=JointBuilds_Nextflow&guest=1) 
+  * [Groovy Joint build](http://ci.groovy-lang.org/project.html?projectId=JointBuilds_Nextflow&guest=1)
 
 License
 -------
