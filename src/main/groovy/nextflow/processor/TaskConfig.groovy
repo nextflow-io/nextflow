@@ -120,7 +120,7 @@ class TaskConfig extends LazyMap implements Cloneable {
             cache.remove(key)
         if( key == 'module' && value instanceof List ) {
             // 'module' directive can be defined as a list of dynamic values
-            value.each { if (it instanceof Closure) dynamic |= true }
+            for( Object it : value ) { if (it instanceof Closure) super.dynamic |= true }
             target.put(key, value)
         }
         else if( key == 'ext' && value instanceof Map ) {
