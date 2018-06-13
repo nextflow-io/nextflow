@@ -318,7 +318,7 @@ class TraceRecord implements Serializable {
 
         try {
             //println"return: $val"
-            return formatter.call(val,'str')
+            return formatter.call(val,sFormat)
         }
         catch( Throwable e ) {
             log.debug "Not a valid trace value -- field: '$name'; value: '$val'; format: '$sFormat'"
