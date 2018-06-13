@@ -283,6 +283,20 @@ Or, in alternative, using the Git clone URL::
   you may need to import such certificate into your local Java keystore. Read more
   `here <https://docs.oracle.com/javase/tutorial/security/toolsign/rstep2.html>`_.
 
+Local repository configuration
+==============================
+
+Nextflow is also able to handle repositories stored in a local or shared file system. The repository
+must be created as a `bare repository <https://mijingo.com/blog/what-is-a-bare-git-repository>`_.
+
+
+Having, for example. a bare repository store at path ``/shared/projects/foo.git``, Nextflow is able
+to run it using the following syntax::
+
+  $ nextflow run file:/shared/projects/foo.git
+
+See `Git documentation <https://git-scm.com/book/en/v2/Git-on-the-Server-Getting-Git-on-a-Server>`_ for
+more details about how create and manage bare repositories.
 
 Publishing your pipeline
 ========================
