@@ -49,6 +49,8 @@ class GoogleCloudDriver implements CloudDriver {
 
     static long OPS_WAIT_TIMEOUT_MS = 5*60*1000
 
+    static  long POLL_WAIT = 1000
+
     /**
      * Initialise the Google cloud driver with default (empty) parameters
      */
@@ -131,16 +133,15 @@ class GoogleCloudDriver implements CloudDriver {
     void waitInstanceStatus(Collection<String> instanceIds, CloudInstanceStatus status) {
         switch( status ) {
             case CloudInstanceStatus.STARTED:
-                waitStarted(instanceIds)
+                waitStatus(instanceIds, status)
                 break
 
             case CloudInstanceStatus.READY:
-                waitStarted(instanceIds)
-                waitRunning(instanceIds)
+                waitStatus(instanceIds, status)
                 break
 
             case CloudInstanceStatus.TERMINATED:
-                waitTerminated(instanceIds)
+                waitStatus(instanceIds, status)
                 break
 
             default:
@@ -148,39 +149,17 @@ class GoogleCloudDriver implements CloudDriver {
         }
     }
 
-    /**
-     * Wait for the specified instances reach Started status
-     *
-     * @param instanceIds One or more Compute instance IDs
-     */
     @PackageScope
-    void waitStarted( Collection<String> instanceIds ) {
+    void waitStatus( Collection<String> instanceIds, CloudInstanceStatus status) {
+        def instanceStatusList
 
-        Set<String> remaining = new HashSet<>(instanceIds)
-        while (!remaining.isEmpty()) {
-            def filter = instanceIds.collect(this.&instanceIdToFilterExpression).join(" OR ")
-            def listRequest = helper.compute().instances().list(helper.project, helper.zone)
-            listRequest.setFilter(filter)
-            List<Instance> instances = listRequest.execute().getItems()
-            if (instances != null) {
-                for (Instance instance: instances) {
-                    if (instance.status == 'PROVISIONING' || instance.status == 'STAGING' || instance.status == 'RUNNING') {
-                        remaining.remove(instance.getName())
-                    }
-                }
-            }
-            if (!remaining.isEmpty()) Thread.sleep(1000)
+        if (status.toString() == 'STARTED') {
+            instanceStatusList = ['PROVISIONING', 'STAGING', 'RUNNING']
+        } else if (status.toString() == 'READY') {
+            instanceStatusList = ['RUNNING']
+        } else {
+            instanceStatusList = ['TERMINATED']
         }
-    }
-
-
-    /**
-     * Wait for the specified instances reach Running status
-     *
-     * @param instanceIds One or more Compute instance IDs
-     */
-    @PackageScope
-    void waitRunning( Collection<String> instanceIds ) {
 
         Set<String> remaining = new HashSet<>(instanceIds)
         while (!remaining.isEmpty()) {
@@ -190,37 +169,14 @@ class GoogleCloudDriver implements CloudDriver {
             List<Instance> instances = listRequest.execute().getItems()
             if (instances != null) {
                 for (Instance instance: instances) {
-                    if (instance.status == 'RUNNING') {
+                    if (instanceStatusList.contains(instance.status)) {
                         remaining.remove(instance.getName())
                     }
                 }
+            } else if (status.toString() == 'TERMINATED' && instances == null) {
+                break
             }
-            if (!remaining.isEmpty()) Thread.sleep(1000)
-        }
-    }
-
-    /**
-     * Wait for the specified instances reach a Termination status
-     *
-     * @param instanceIds One or more Compute instance IDs
-     */
-    @PackageScope
-    void waitTerminated( Collection<String> instanceIds ) {
-
-        Set<String> remaining = new HashSet<>(instanceIds)
-        while (!remaining.isEmpty()) {
-            def filter = instanceIds.collect(this.&instanceIdToFilterExpression).join(" OR ")
-            def listRequest = helper.compute().instances().list(helper.project, helper.zone)
-            listRequest.setFilter(filter)
-            List<Instance> instances = listRequest.execute().getItems()
-            if (instances != null) {
-                for (Instance instance: instances) {
-                    if (instance.status == 'TERMINATED') {
-                        remaining.remove(instance.getName())
-                    }
-                }
-            }
-            if (!remaining.isEmpty()) Thread.sleep(1000)
+            if (!remaining.isEmpty()) Thread.sleep(POLL_WAIT)
         }
     }
 
