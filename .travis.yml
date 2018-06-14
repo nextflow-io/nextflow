@@ -34,4 +34,4 @@ script:
     export WITH_DOCKER='-with-docker';
     ./integration-tests.sh
 after_script:
-  - bash pub-tests.sh travis
+  - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then bash pub-tests.sh travis; fi
