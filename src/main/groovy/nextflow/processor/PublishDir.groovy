@@ -263,7 +263,8 @@ class PublishDir {
         log.trace "publishing file: $source -[$mode]-> $destination"
 
         if( !mode || mode == Mode.SYMLINK ) {
-            Files.createSymbolicLink(destination, source)
+            def sourceRelative = destination.getParent().relativize(source)
+            Files.createSymbolicLink(destination, sourceRelative)
         }
         else if( mode == Mode.LINK ) {
             FilesEx.mklink(source, [hard:true], destination)

@@ -1945,7 +1945,8 @@ Value   Description
 ======= ==================
 copy    Input files are staged in the process work directory by creating a copy.
 link    Input files are staged in the process work directory by creating an (hard) link for each of them.
-symlink Input files are staged in the process work directory by creating an symlink for each of them (default).
+symlink Input files are staged in the process work directory by creating a symbolic link with an absolute path for each of them (default).
+rellink Input files are staged in the process work directory by creating a symbolic link with a relative path for each of them.
 ======= ==================
 
 

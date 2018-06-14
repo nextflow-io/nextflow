@@ -20,6 +20,7 @@
 
 package nextflow.executor
 import java.nio.file.Path
+import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -166,10 +167,45 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         return result.join(separatorChar)
     }
 
+    /**
+     * Prepare a bash command for staging input files for a task.
+     *
+     * This method should only be called when workDir is defined, and with a
+     * relative target path.
+     *
+     * NB: 'target' and 'source' are the opposite from the ln command
+     *
+     * Methods:
+     * * symlink: Create a symbolic link to source from target using an
+     *   absolute path.
+     * * rellink: Create a symbolic link to source from target using
+     *   a relative path.
+     * * link: Create a hard link to source from target.
+     * * copy: Copy the file at source to target.
+     * 
+     * @param source The original file that is to be staged.
+     * @param target The new path to create.
+     * @param mode The method to use for staging the file. See Methods above.
+     * @return The command to issue to stage the specified file.
+     */ 
     protected String stageInCommand( String source, String target, String mode ) {
+
+        assert workDir : "Task work dir path must be defined"
+        assert !target.startsWith('/') : "Target path must be relative"
 
         if( mode == 'symlink' || !mode )
             return "ln -s ${Escape.path(source)} ${Escape.path(target)}"
+
+        if( mode == 'rellink' ) {
+            // GNU ln has the '-r' flag, but BSD ln doesn't, so we have to
+            // manually resolve the relative path.
+
+            def targetPath = workDir.resolve(target)
+            def sourcePath = workDir.resolve(source)
+            source = targetPath.getParent().relativize(sourcePath).toString()
+
+            return "ln -s ${Escape.path(source)} ${Escape.path(target)}"
+        }
 
         if( mode == 'link' )
             return "ln ${Escape.path(source)} ${Escape.path(target)}"
