@@ -33,6 +33,7 @@ endif
 
 compile:
 	./gradlew compile exportClasspath
+	@echo "DONE `date`"
 
 clean:
 	./gradlew clean
