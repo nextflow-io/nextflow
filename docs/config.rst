@@ -667,13 +667,29 @@ eventually provided by the underlying system (eg. ``sendmail`` or ``mail``).
 Scope `report`
 --------------
 
-The ``report`` scope scope allows you to define configuration setting of the workflow :ref:`execution-report`.
+The ``report`` scope allows you to define configuration setting of the workflow :ref:`execution-report`.
 
 ================== ================
 Name                Description
 ================== ================
 enabled             If ``true`` it create the workflow execution report.
 file                The path of the created execution report file (default: ``report.html``).
+================== ================
+
+.. _config-weblog:
+
+Scope `weblog`
+--------------
+
+The ``weblog`` scope allows to send detailed :ref:`trace scope<trace-fields>` information as HTTP POST request to a webserver, shipped as a JSON object.
+
+Detailed information about the JSON fields can be found in the :ref:`weblog description<weblog-service>`.
+
+================== ================
+Name                Description
+================== ================
+enabled             If ``true`` it will send HTTP POST requests to a given url.
+url                The url where to send HTTP POST requests (default: ``http:localhost``).
 ================== ================
 
 
