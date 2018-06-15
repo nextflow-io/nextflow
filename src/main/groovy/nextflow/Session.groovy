@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2018, University of Tübingen, Quantitative Biology Center (QBiC).
  * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
  * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
@@ -19,6 +20,7 @@
  */
 
 package nextflow
+
 import static nextflow.Const.S3_UPLOADER_CLASS
 
 import java.lang.reflect.Method
@@ -50,6 +52,7 @@ import nextflow.processor.TaskFault
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
 import nextflow.script.ScriptBinding
+import nextflow.trace.WebLogObserver
 import nextflow.trace.GraphObserver
 import nextflow.trace.ReportObserver
 import nextflow.trace.StatsObserver
@@ -331,8 +334,23 @@ class Session implements ISession {
         createReportObserver(result)
         createTimelineObserver(result)
         createDagObserver(result)
+        createWebLogObserver(result)
 
         return result
+    }
+
+    /**
+     * Create workflow message observer
+     * @param result
+     */
+    protected void createWebLogObserver(Collection<TraceObserver> result) {
+        Boolean isEnabled = config.navigate('weblog.enabled') as Boolean
+        String url = config.navigate('weblog.url') as String
+        if (isEnabled) {
+            if ( !url ) url = WebLogObserver.DEF_URL
+            def observer = new WebLogObserver(url)
+            result << observer
+        }
     }
 
     protected void createStatsObserver(Collection<TraceObserver> result) {
@@ -856,6 +874,16 @@ class Session implements ISession {
      * @param e
      */
     void notifyError( TaskHandler handler ) {
+
+        for ( int i=0; i<observers.size(); i++){
+            try{
+                final observer = observers.get(i)
+                observer.onFlowError(handler, handler?.getTraceRecord())
+            } catch ( Throwable e ) {
+                log.debug(e.getMessage(), e)
+            }
+        }
+
         if( !errorAction )
             return
 

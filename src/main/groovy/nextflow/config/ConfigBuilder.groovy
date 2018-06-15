@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2018, University of Tübingen, Quantitative Biology Center (QBiC).
  * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
  * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
@@ -496,6 +497,15 @@ class ConfigBuilder {
                 config.notification.enabled = true
                 config.notification.to = cmdRun.withNotification
             }
+        }
+
+        // -- sets the messages options
+        if( cmdRun.withWebLog ) {
+            if( !(config.weblog instanceof Map) )
+                config.weblog = [:]
+            config.weblog.enabled = true
+            if ( !config.weblog.url )
+                config.weblog.url = cmdRun.withWebLog
         }
 
 

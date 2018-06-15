@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2018, University of Tübingen, Quantitative Biology Center (QBiC).
  * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
  * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
@@ -30,49 +31,56 @@ import nextflow.processor.TaskProcessor
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-interface TraceObserver {
+trait TraceObserver {
 
     /**
      * The is method is invoked when the flow is going to start
      */
-    void onFlowStart(Session session)
+    void onFlowStart(Session session){}
 
     /**
      * This method is invoked when the flow is going to complete
      */
-    void onFlowComplete()
+    void onFlowComplete(){}
 
     /*
      * Invoked when the process is created.
      */
-    void onProcessCreate( TaskProcessor process )
+    void onProcessCreate( TaskProcessor process ){}
 
     /**
      * This method is invoked before a process run is going to be submitted
      * @param handler
      */
-    void onProcessSubmit(TaskHandler handler, TraceRecord trace)
+    void onProcessSubmit(TaskHandler handler, TraceRecord trace){}
 
     /**
      * This method is invoked when a process run is going to start
      * @param handler
      */
-    void onProcessStart(TaskHandler handler, TraceRecord trace)
+    void onProcessStart(TaskHandler handler, TraceRecord trace){}
 
     /**
      * This method is invoked when a process run completes
      * @param handler
      */
-    void onProcessComplete(TaskHandler handler, TraceRecord trace)
+    void onProcessComplete(TaskHandler handler, TraceRecord trace){}
 
     /**
      * method invoked when a task execution is skipped because a cached result is found
      * @param handler
      */
-    void onProcessCached(TaskHandler handler, TraceRecord trace)
+    void onProcessCached(TaskHandler handler, TraceRecord trace){}
 
     /**
      * @return {@code true} whenever this observer requires to collect task execution metrics
      */
-    boolean enableMetrics()
+    boolean enableMetrics(){}
+
+    /**
+     * Method that is invoked, when a workflow fails.
+     * @param handler
+     * @param trace
+     */
+    void onFlowError(TaskHandler handler, TraceRecord trace){}
 }
