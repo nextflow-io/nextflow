@@ -19,6 +19,7 @@
  */
 
 package nextflow.config
+
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -85,11 +86,19 @@ abstract class ConfigBase extends Script {
         log.trace "Include config file: $includeFile [parent: $owner]"
 
         if( !includePath.isAbsolute() && owner ) {
-            includePath = owner.resolveSibling(includePath)
+            includePath = owner.resolveSibling(includeFile.toString())
         }
 
-        if( !includePath.exists() )
-            throw new NoSuchFileException("Config file does not exist: ${includePath}")
+        def configText
+        try {
+            configText = includePath.getText()
+        }
+        catch( IOException e ) {
+            if( !includePath.exists() )
+                throw new NoSuchFileException("Config file does not exist: ${includePath.toUriString()}")
+            else
+                throw new IOException("Cannot read config file include: ${includePath.toUriString()}", e)
+        }
 
         // -- set the required base script
         def config = new CompilerConfiguration()
@@ -101,7 +110,7 @@ abstract class ConfigBase extends Script {
 
         // -- setup the grengine instance
         def engine = new Grengine(this.class.classLoader,config)
-        def clazz = engine.load(includePath.toUri().toURL())
+        def clazz = engine.load(configText)
 
         // -- push this file on the stack
         this.configStack.push(includePath)

@@ -116,7 +116,7 @@ class ScriptRunner {
         this.session = new Session(builder.build())
         // note config files are collected during the build process
         // this line should be after `ConfigBuilder#build`
-        this.session.configFiles = builder.configFiles
+        this.session.configFiles = builder.parsedConfigFiles
     }
 
     ScriptRunner setScript( String text ) {

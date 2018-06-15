@@ -82,19 +82,9 @@ class K8sDriverLauncher {
      */
     private K8sConfig k8sConfig
 
-    /**
-     * The current user name
-     */
-    private String userName = System.properties.get('user.name')
-
     private String paramsFile
 
     private boolean interactive
-
-    /**
-     * source code management configuration
-     */
-    private Map scm
 
     /**
      * Workflow script positional parameters
@@ -112,7 +102,6 @@ class K8sDriverLauncher {
         this.args = args
         this.pipelineName = name
         this.interactive = name == 'login'
-        this.scm = makeScmConfig()
         this.config = makeConfig(pipelineName)
         this.k8sConfig = makeK8sConfig(config)
         this.k8sClient = makeK8sClient(k8sConfig)
@@ -146,28 +135,21 @@ class K8sDriverLauncher {
     }
 
     protected ConfigObject loadConfig( String pipelineName ) {
+
         // -- load local config if available
-        final local = new ConfigBuilder()
+        final builder = new ConfigBuilder()
+                .setShowClosures(true)
                 .setOptions(cmd.launcher.options)
+                .setProfile(cmd.profile)
                 .setCmdRun(cmd)
-                .configObject()
 
-        ConfigObject config
-        if( interactive || pipelineName.startsWith('/') ) {
-            // when it's an absolute path the config must be local
-            return local
-        }
-        else {
+        if( !interactive && !pipelineName.startsWith('/') ) {
             // -- check and parse project remote config
-            final remote = new AssetManager(pipelineName, cmd)
-                    .checkValidRemoteRepo()
-                    .readRemoteConfig(cmd.profile)
-            return (ConfigObject) remote.merge(local)
+            final pipelineConfig = new AssetManager(pipelineName, cmd) .getConfigFile()
+            builder.setUserConfigFiles(pipelineConfig)
         }
-    }
 
-    protected Map makeScmConfig() {
-        ProviderConfig.getDefault()
+        return builder.buildConfigObject()
     }
 
     protected K8sConfig makeK8sConfig(Map config) {
@@ -265,7 +247,9 @@ class K8sDriverLauncher {
         if( !config.libDir )
             config.remove('libDir')
         
-        return config.toMap()
+        final result = config.toMap()
+        log.trace "K8s config object:\n${ConfigHelper.toCanonicalString(result).indent('  ')}"
+        return result
     }
 
 
@@ -437,6 +421,9 @@ class K8sDriverLauncher {
         return result
     }
 
+    protected Path getScmFile() {
+        ProviderConfig.SCM_FILE.toPath()
+    }
 
     /**
      * Creates a K8s ConfigMap to share the nextflow configuration in the K8s cluster
@@ -459,8 +446,9 @@ class K8sDriverLauncher {
         }
 
         // scm config file
-        if( scm ) {
-            configMap['scm']  = ConfigHelper.toCanonicalString(scm)
+        final scmFile = getScmFile()
+        if( scmFile.exists() ) {
+            configMap['scm']  = scmFile.text
         }
 
         // params file
