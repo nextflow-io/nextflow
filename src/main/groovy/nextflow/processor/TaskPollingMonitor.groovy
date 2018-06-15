@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2018, University of Tübingen, Quantitative Biology Center (QBiC).
  * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
  * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *
@@ -566,7 +567,7 @@ class TaskPollingMonitor implements TaskMonitor {
         finally {
             // abort the session if a task task was returned
             if (fault instanceof TaskFault) {
-                session.fault(fault)
+                session.fault(fault, handler)
             }
         }
     }
@@ -603,7 +604,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
             // abort the execution in case of task failure
             if (fault instanceof TaskFault) {
-                session.fault(fault)
+                session.fault(fault, handler)
             }
         }
 
