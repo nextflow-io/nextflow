@@ -20,8 +20,14 @@
 
 package nextflow.config
 
+import java.nio.file.Files
 import java.nio.file.NoSuchFileException
+import java.nio.file.Path
 
+import com.sun.net.httpserver.Headers
+import com.sun.net.httpserver.HttpExchange
+import com.sun.net.httpserver.HttpHandler
+import com.sun.net.httpserver.HttpServer
 import spock.lang.Specification
 /**
  *
@@ -463,5 +469,69 @@ class ConfigParserTest extends Specification {
 
     }
 
+
+    def 'should parse a config from an http server' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('conf').mkdir()
+        // launch web server
+        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
+        server.createContext("/", new ConfigFileHandler(folder));
+        server.start()
+
+        // main `nextflow.config` file
+        folder.resolve('nextflow.config').text = '''
+        includeConfig 'conf/base.config'
+        includeConfig 'http://localhost:9900/conf/remote.config'
+        '''
+
+        folder.resolve('conf/base.config').text = '''
+        params.foo = 'Hello'
+        params.bar = 'world!'
+        '''
+
+        folder.resolve('conf/remote.config').text = '''
+        process {
+            cpus = 4 
+            memory = '10GB'
+        }
+        '''
+        
+        when:
+        def url = 'http://localhost:9900/nextflow.config' as Path
+        def cfg = new ConfigBuilder().buildGivenFiles(url)
+        then:
+        cfg.params.foo == 'Hello'
+        cfg.params.bar == 'world!'
+        cfg.process.cpus == 4
+        cfg.process.memory == '10GB'
+
+        cleanup:
+        server?.stop(0)
+        folder?.deleteDir()
+    }
+
+
+    static class ConfigFileHandler implements HttpHandler {
+
+        Path folder
+
+        ConfigFileHandler(Path folder) {
+             this.folder = folder
+        }
+
+        void handle(HttpExchange request) throws IOException {
+            def path = request.requestURI.toString().substring(1)
+            def file = folder.resolve(path)
+
+            Headers header = request.getResponseHeaders()
+            header.add("Content-Type", "text/plain")
+            request.sendResponseHeaders(200, file.size())
+
+            OutputStream os = request.getResponseBody();
+            os.write(file.getBytes());
+            os.close();
+        }
+    }
 
 }
