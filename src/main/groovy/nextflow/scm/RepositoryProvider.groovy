@@ -202,19 +202,19 @@ abstract class RepositoryProvider {
             readBytes(scriptName)
         }
         catch( IOException e1 ) {
-
-            try {
-                invokeAndParseResponse( getEndpointUrl() )
-            }
-            catch( IOException e2 ) {
-                throw new AbortOperationException("Cannot find `$project` -- Make sure exists a ${name.capitalize()} repository at this address `${getRepositoryUrl()}`", e2)
-            }
-
+            validateRepo()
             throw new AbortOperationException("Not a valid Nextflow project -- The repository `${getRepositoryUrl()}` must contain a the script `${AssetManager.DEFAULT_MAIN_FILE_NAME}` or the file `${AssetManager.MANIFEST_FILE_NAME}`", e1)
         }
-
     }
 
+    void validateRepo() {
+        try {
+            invokeAndParseResponse( getEndpointUrl() )
+        }
+        catch( IOException e ) {
+            throw new AbortOperationException("Cannot find `$project` -- Make sure exists a ${name.capitalize()} repository at this address `${getRepositoryUrl()}`", e)
+        }
+    }
     /**
      * Factory method
      *

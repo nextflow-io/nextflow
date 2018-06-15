@@ -25,6 +25,7 @@ import java.nio.file.Paths
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
@@ -82,18 +83,18 @@ class CmdConfig extends CmdBase {
         def config = new ConfigBuilder()
                 .setShowClosures(true)
                 .setOptions(launcher.options)
-                .setBaseDir(base.complete())
+                .setBaseDir(base)
                 .setCmdConfig(this)
-                .configObject()
+                .buildConfigObject()
 
         if( printProperties ) {
-            printProperties(config, stdout)
+            printProperties0(config, stdout)
         }
         else if( printFlatten ) {
-            printFlatten(config, stdout)
+            printFlatten0(config, stdout)
         }
         else {
-            printCanonical(config, stdout)
+            printCanonical0(config, stdout)
         }
     }
 
@@ -104,7 +105,7 @@ class CmdConfig extends CmdBase {
      * @param config The {@link ConfigObject} representing the parsed workflow configuration
      * @param output The stream where output the formatted configuration notation
      */
-    protected void printCanonical(ConfigObject config, OutputStream output) {
+    @PackageScope void printCanonical0(ConfigObject config, OutputStream output) {
         output << ConfigHelper.toCanonicalString(config, sort)
     }
 
@@ -114,7 +115,7 @@ class CmdConfig extends CmdBase {
      * @param config The {@link ConfigObject} representing the parsed workflow configuration
      * @param output The stream where output the formatted configuration notation
      */
-    protected void printProperties(ConfigObject config, OutputStream output) {
+    @PackageScope void printProperties0(ConfigObject config, OutputStream output) {
         output << ConfigHelper.toPropertiesString(config, sort)
     }
 
@@ -125,7 +126,7 @@ class CmdConfig extends CmdBase {
      * @param config The {@link ConfigObject} representing the parsed workflow configuration
      * @param output The stream where output the formatted configuration notation
     */
-    protected void printFlatten(ConfigObject config, OutputStream output) {
+    @PackageScope void printFlatten0(ConfigObject config, OutputStream output) {
         output << ConfigHelper.toFlattenString(config, sort)
     }
 
@@ -135,7 +136,7 @@ class CmdConfig extends CmdBase {
      * @param config The {@link ConfigObject} representing the parsed workflow configuration
      * @param output The stream where output the formatted configuration notation
      */
-    protected void printDefault(ConfigObject config, OutputStream output) {
+    @PackageScope void printDefault0(ConfigObject config, OutputStream output) {
         def writer = new PrintWriter(output,true)
         config.writeTo( writer )
     }
