@@ -420,8 +420,8 @@ class BashWrapperBuilderTest extends Specification {
                 nxf_s3_upload() {
                     local pattern=\$1
                     local s3path=\$2
-                    IFS=''
-                    for name in \$(eval "ls -d \$pattern");do
+                    IFS=\$'\\n'
+                    for name in \$(eval "ls -1d \$pattern");do
                       if [[ -d "\$name" ]]; then
                         aws s3 cp --only-show-errors --recursive --storage-class STANDARD "\$name" "\$s3path/\$name"
                       else
