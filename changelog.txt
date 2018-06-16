@@ -1,6 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.30.2 - 16 Jun 2018
+- Fixed Output declarations with a glob pattern fail when AWS Batch executor is used #748
+- Fixed Scratch directive not working for AWS Batch executor #740
+- Fixed K8s launcher does not parse remote config files #738
+- Minor refactoring to enable Groovy 2.5 compilation 20b6d933 a8b994f1
+
 0.30.1 - 11 Jun 2018
 - Use a daemon thread for watchPath method #735
 - Fixed Gitlab API v3 has been deprecated and does not work any more #734
