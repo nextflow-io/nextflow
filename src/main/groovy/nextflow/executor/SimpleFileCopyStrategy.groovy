@@ -156,9 +156,10 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
             def prefix = getUnstagePrefix(targetDir)
             if( prefix )
                 result << prefix
+            def useStageoutMode = (workDir != targetDir && stageoutMode == null) ? 'move' : stageoutMode
             for( int i=0; i<normalized.size(); i++ ) {
                 final path = normalized[i]
-                final cmd = stageOutCommand(path, targetDir, stageoutMode) + ' || true' // <-- add true to avoid it stops on errors
+                final cmd = stageOutCommand(path, targetDir, useStageoutMode) + ' || true' // <-- add true to avoid it stops on errors
                 result << cmd
             }
         }

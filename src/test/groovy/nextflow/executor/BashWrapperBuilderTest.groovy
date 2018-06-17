@@ -328,6 +328,126 @@ class BashWrapperBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'test bash wrapper with inputs and outputs and storeDir' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def storeDirFolder = Files.createTempDirectory('testStoreDir')
+
+        /*
+         * simple bash run
+         */
+        when:
+        def bash = new BashWrapperBuilder([
+                name: 'Hello 1',
+                workDir: folder,
+                targetDir: storeDirFolder,
+                scratch: true,
+                inputFiles: ['sample_1.fq':Paths.get('/some/data/sample_1.fq'), 'sample_2.fq':Paths.get('/some/data/sample_2.fq'), ],
+                outputFiles: ['test.bam','test.bai'],
+                script: 'echo Hello world!',
+                headerScript: '#BSUB -x 1\n#BSUB -y 2'
+        ] as TaskBean )
+        bash.build()
+
+        then:
+        folder.resolve('.command.run').text ==
+                """
+                #!/bin/bash
+                #BSUB -x 1
+                #BSUB -y 2
+                # NEXTFLOW TASK: Hello 1
+                set -e
+                set -u
+                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 1 ]] && set -x
+
+                nxf_env() {
+                    echo '============= task environment ============='
+                    env | sort | sed "s/\\(.*\\)AWS\\(.*\\)=\\(.\\{6\\}\\).*/\\1AWS\\2=\\3xxxxxxxxxxxxx/"
+                    echo '============= task output =================='
+                }
+
+                nxf_kill() {
+                    declare -a ALL_CHILD
+                    while read P PP;do
+                        ALL_CHILD[\$PP]+=" \$P"
+                    done < <(ps -e -o pid= -o ppid=)
+
+                    walk() {
+                        [[ \$1 != \$\$ ]] && kill \$1 2>/dev/null || true
+                        for i in \${ALL_CHILD[\$1]:=}; do walk \$i; done
+                    }
+
+                    walk \$1
+                }
+
+                nxf_mktemp() {
+                    local base=\${1:-/tmp}
+                    if [[ \$(uname) = Darwin ]]; then mktemp -d \$base/nxf.XXXXXXXXXX
+                    else TMPDIR="\$base" mktemp -d -t nxf.XXXXXXXXXX
+                    fi
+                }
+
+                on_exit() {
+                  exit_status=\${ret:=\$?}
+                  printf \$exit_status > ${folder}/.exitcode
+                  set +u
+                  [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                  [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
+                  [[ "\$ctmp" ]] && rm -rf \$ctmp || true
+                  rm -rf \$NXF_SCRATCH || true
+                  exit \$exit_status
+                }
+
+                on_term() {
+                    set +e
+                    [[ "\$pid" ]] && nxf_kill \$pid
+                }
+
+                trap on_exit EXIT
+                trap on_term TERM INT USR1 USR2
+
+                NXF_SCRATCH="\$(set +u; nxf_mktemp \$TMPDIR)"
+                [[ \$NXF_DEBUG > 0 ]] && nxf_env
+                touch ${folder}/.command.begin
+                [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
+                # stage input files
+                rm -f sample_1.fq
+                rm -f sample_2.fq
+                ln -s /some/data/sample_1.fq sample_1.fq
+                ln -s /some/data/sample_2.fq sample_2.fq
+
+                set +e
+                ctmp=\$(set +u; nxf_mktemp /dev/shm 2>/dev/null || nxf_mktemp \$TMPDIR)
+                cout=\$ctmp/.command.out; mkfifo \$cout
+                cerr=\$ctmp/.command.err; mkfifo \$cerr
+                tee .command.out < \$cout &
+                tee1=\$!
+                tee .command.err < \$cerr >&2 &
+                tee2=\$!
+                (
+                /bin/bash -ue ${folder}/.command.sh
+                ) >\$cout 2>\$cerr &
+                pid=\$!
+                wait \$pid || ret=\$?
+                wait \$tee1 \$tee2
+                cp .command.out ${folder}/.command.out || true
+                cp .command.err ${folder}/.command.err || true
+                # copies output files to target
+                if [[ \${ret:=0} == 0 ]]; then
+                  mkdir -p ${storeDirFolder}
+                  mv -f test.bam ${storeDirFolder} || true
+                  mv -f test.bai ${storeDirFolder} || true
+                fi
+                """
+                        .stripIndent().leftTrim()
+
+
+        cleanup:
+        folder?.deleteDir()
+        storeDirFolder?.deleteDir()
+    }
+
 
     def 'test bash wrapper with inputs and outputs with s3 target' () {
 
