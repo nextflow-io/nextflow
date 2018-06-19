@@ -141,7 +141,6 @@ class GoogleCloudDriver implements CloudDriver {
                 break
 
             case CloudInstanceStatus.TERMINATED:
-                System.out.println("******************** You are in cloud instance TERMINATED ********************")
                 waitStatus(instanceIds, status)
                 break
 
@@ -173,7 +172,6 @@ class GoogleCloudDriver implements CloudDriver {
                     if (instanceStatusList.contains(instance.status)) {
                         remaining.remove(instance.getName())
                     }
-                    System.out.println(instances.status)
                 }
             } else if (status.toString() == 'TERMINATED' && (instances == null || instances.isEmpty())) {
                 break
