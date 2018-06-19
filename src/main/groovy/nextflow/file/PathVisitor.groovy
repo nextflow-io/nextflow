@@ -20,23 +20,25 @@
 
 package nextflow.file
 
+import static nextflow.Channel.STOP
 import static nextflow.file.FileHelper.fileSystemForScheme
 import static nextflow.file.FileHelper.isGlobAllowed
 import static nextflow.file.FileHelper.visitFiles
-import static nextflow.Channel.STOP
 
 import java.nio.file.FileSystem
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowQueue
+import nextflow.Global
+import nextflow.Session
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-
 /**
  * Implements the logic for {@code Channel.fromPath} and {@code Channel.fromFilePairs}
  * factory methods
@@ -47,7 +49,7 @@ class PathVisitor {
     private static Logger log = LoggerFactory.getLogger(PathVisitor)
 
     @Lazy
-    static ExecutorService singleThread = { Executors.newSingleThreadExecutor() }()
+    static ExecutorService singleThread = createExecutorService()
 
     DataflowQueue target
 
@@ -156,6 +158,19 @@ class PathVisitor {
                     target.bind(STOP)
             }
         }
+    }
+
+    static private ExecutorService createExecutorService() {
+        final result = Executors.newSingleThreadExecutor()
+        def session = Global.session as Session
+        if( !session ) return result
+
+        session.onShutdown {
+            result.shutdown()
+            result.awaitTermination(5,TimeUnit.MINUTES)
+        }
+        
+        return result
     }
 
 }
