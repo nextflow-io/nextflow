@@ -141,6 +141,7 @@ class GoogleCloudDriver implements CloudDriver {
                 break
 
             case CloudInstanceStatus.TERMINATED:
+                System.out.println("******************** You are in cloud instance TERMINATED ********************")
                 waitStatus(instanceIds, status)
                 break
 
@@ -172,8 +173,9 @@ class GoogleCloudDriver implements CloudDriver {
                     if (instanceStatusList.contains(instance.status)) {
                         remaining.remove(instance.getName())
                     }
+                    System.out.println(instances.status)
                 }
-            } else if (status.toString() == 'TERMINATED' && instances == null) {
+            } else if (status.toString() == 'TERMINATED' && (instances == null || instances.isEmpty())) {
                 break
             }
             if (!remaining.isEmpty()) Thread.sleep(POLL_WAIT)
@@ -259,6 +261,7 @@ class GoogleCloudDriver implements CloudDriver {
             Compute.Instances.Delete delete = helper.compute().instances().delete(helper.project, helper.zone, idInstance)
             delete.execute()
         }
+        waitInstanceStatus(instanceIds, CloudInstanceStatus.TERMINATED)
     }
 
     @Override
