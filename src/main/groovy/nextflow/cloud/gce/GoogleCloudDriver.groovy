@@ -157,7 +157,7 @@ class GoogleCloudDriver implements CloudDriver {
             instanceStatusList = ['PROVISIONING', 'STAGING', 'RUNNING']
         } else if (status.toString() == 'READY') {
             instanceStatusList = ['RUNNING']
-        } else {
+        } else if (status.toString() == 'TERMINATED') {
             instanceStatusList = ['TERMINATED']
         }
 
