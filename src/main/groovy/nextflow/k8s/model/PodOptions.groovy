@@ -46,6 +46,8 @@ class PodOptions {
 
     private Collection<PodVolumeClaim> mountClaims
 
+    private Map<String,String> labels = [:]
+
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
         envVars = new HashSet<>(size)
@@ -84,6 +86,9 @@ class PodOptions {
         else if( entry.pullPolicy || entry.imagePullPolicy ) {
             this.pullPolicy = entry.pullPolicy ?: entry.imagePullPolicy as String
         }
+        else if( entry.label && entry.value ) {
+            this.labels.put(entry.label as String, entry.value as String)
+        }
         else 
             throw new IllegalArgumentException("Unknown pod options: $entry")
     }
@@ -96,6 +101,8 @@ class PodOptions {
     Collection<PodMountSecret> getMountSecrets() { mountSecrets }
 
     Collection<PodVolumeClaim> getVolumeClaims() { mountClaims }
+
+    Map<String,String> getLabels() { labels }
 
     String getPullPolicy() { pullPolicy }
 

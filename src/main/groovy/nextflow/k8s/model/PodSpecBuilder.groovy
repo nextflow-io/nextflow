@@ -211,6 +211,14 @@ class PodSpecBuilder {
         // -- volume claims 
         if( opts.getVolumeClaims() )
             volumeClaims.addAll( opts.getVolumeClaims() )
+        // -- labels
+        if( opts.labels ) {
+            def keys = opts.labels.keySet()
+            if( 'app' in keys ) throw new IllegalArgumentException("Invalid pod label -- `app` is a reserved label")
+            if( 'runName' in keys ) throw new IllegalArgumentException("Invalid pod label -- `runName` is a reserved label")
+            labels.putAll( opts.labels )
+        }
+
         return this
     }
 
