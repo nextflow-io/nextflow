@@ -433,6 +433,7 @@ class PodSpecBuilderTest extends Specification {
         2 * opts.getMountSecrets() >> [ new PodMountSecret('blah', '/etc/secret.txt') ]
         2 * opts.getEnvVars() >> [ PodEnv.value('HELLO','WORLD') ]
         _ * opts.getLabels() >> [ALPHA: 'xxx', GAMMA: 'yyy']
+        _ * opts.getSecurityContext() >> new PodSecurityContext(1000)
 
         spec == [
                 apiVersion: 'v1',
@@ -443,6 +444,7 @@ class PodSpecBuilderTest extends Specification {
                         labels:[runName:'crazy_john', ALPHA:'xxx', GAMMA:'yyy'] ],
                 spec: [
                         restartPolicy:'Never',
+                        securityContext: [ runAsUser: 1000 ],
                         containers:[
                                 [name:'foo',
                                  image:'image',
