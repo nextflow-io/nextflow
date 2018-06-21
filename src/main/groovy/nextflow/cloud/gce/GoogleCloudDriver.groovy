@@ -49,6 +49,8 @@ class GoogleCloudDriver implements CloudDriver {
 
     static long OPS_WAIT_TIMEOUT_MS = 5*60*1000
 
+    static  long POLL_WAIT = 1000
+
     /**
      * Initialise the Google cloud driver with default (empty) parameters
      */
@@ -129,7 +131,49 @@ class GoogleCloudDriver implements CloudDriver {
 
     @Override
     void waitInstanceStatus(Collection<String> instanceIds, CloudInstanceStatus status) {
-        unsupported("waitInstanceStatus")
+        def instanceStatusList
+
+        switch( status ) {
+            case CloudInstanceStatus.STARTED:
+                instanceStatusList = ['PROVISIONING', 'STAGING', 'RUNNING']
+                waitStatus(instanceIds, instanceStatusList)
+                break
+
+            case CloudInstanceStatus.READY:
+                instanceStatusList = ['RUNNING']
+                waitStatus(instanceIds, instanceStatusList)
+                break
+
+            case CloudInstanceStatus.TERMINATED:
+                instanceStatusList = ['TERMINATED']
+                waitStatus(instanceIds, instanceStatusList)
+                break
+
+            default:
+                throw new IllegalStateException("Unknown instance status: $status")
+        }
+    }
+
+    @PackageScope
+    void waitStatus( Collection<String> instanceIds, List<String> instanceStatusList) {
+
+        Set<String> remaining = new HashSet<>(instanceIds)
+        while (!remaining.isEmpty()) {
+            def filter = instanceIds.collect(this.&instanceIdToFilterExpression).join(" OR ")
+            def listRequest = helper.compute().instances().list(helper.project, helper.zone)
+            listRequest.setFilter(filter)
+            List<Instance> instances = listRequest.execute().getItems()
+            if (instances != null && !instances.isEmpty()) {
+                for (Instance instance: instances) {
+                    if (instanceStatusList.contains(instance.status)) {
+                        remaining.remove(instance.getName())
+                    }
+                }
+            } else if (instanceStatusList.contains('TERMINATED') && (instances == null || instances.isEmpty())) {
+                break
+            }
+            if (!remaining.isEmpty()) Thread.sleep(POLL_WAIT)
+        }
     }
 
     @Override
@@ -206,7 +250,10 @@ class GoogleCloudDriver implements CloudDriver {
 
     @Override
     void terminateInstances(Collection<String> instanceIds) {
-        unsupported("terminateInstances")
+        for (String idInstance : instanceIds) {
+            Compute.Instances.Delete delete = helper.compute().instances().delete(helper.project, helper.zone, idInstance)
+            delete.execute()
+        }
     }
 
     @Override
