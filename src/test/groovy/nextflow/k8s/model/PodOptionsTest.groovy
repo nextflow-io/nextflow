@@ -137,15 +137,17 @@ class PodOptionsTest extends Specification {
         def options = [
                 [volumeClaim:'pvc1', mountPath: '/this/path'],
                 [volumeClaim:'pvc2', mountPath: '/that/path'],
+                [volumeClaim:'pvc3', mountPath: '/some/data', subPath: '/foo']
         ]
 
         when:
         def claims = new PodOptions(options).getVolumeClaims()
         then:
-        claims.size() == 2
+        claims.size() == 3
         claims == [
                 new PodVolumeClaim('pvc1', '/this/path'),
                 new PodVolumeClaim('pvc2', '/that/path'),
+                new PodVolumeClaim('pvc3', '/some/data', '/foo')
         ] as Set
 
     }

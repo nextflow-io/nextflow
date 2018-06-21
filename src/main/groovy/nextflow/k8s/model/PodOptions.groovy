@@ -79,7 +79,7 @@ class PodOptions {
             mountConfigMaps << new PodMountConfig(entry)
         }
         else if( entry.mountPath && entry.volumeClaim ) {
-            mountClaims << new PodVolumeClaim(entry.volumeClaim as String, entry.mountPath as String)
+            mountClaims << new PodVolumeClaim(entry)
         }
         else if( entry.pullPolicy || entry.imagePullPolicy ) {
             this.pullPolicy = entry.pullPolicy ?: entry.imagePullPolicy as String

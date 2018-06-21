@@ -96,6 +96,14 @@ class K8sConfigTest extends Specification {
         ] as Set
 
 
+        when:
+        cfg = new K8sConfig(storageClaimName: 'pvc-3', storageMountPath: '/some/path', storageSubPath: '/bar')
+        then:
+        cfg.getStorageClaimName() == 'pvc-3'
+        cfg.getStorageMountPath() == '/some/path'
+        cfg.getStorageSubPath() == '/bar'
+        cfg.getPodOptions().getVolumeClaims() == [ new PodVolumeClaim('pvc-3', '/some/path', '/bar') ] as Set
+
     }
 
     def 'should create client config' () {

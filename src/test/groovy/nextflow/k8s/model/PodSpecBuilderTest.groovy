@@ -135,8 +135,8 @@ class PodSpecBuilderTest extends Specification {
                     .withImageName('busybox')
                     .withWorkDir('/path')
                     .withCommand(['echo'])
-                    .withVolumeClaim('first','/work')
-                    .withVolumeClaim('second', '/data')
+                    .withVolumeClaim(new PodVolumeClaim('first','/work'))
+                    .withVolumeClaim(new PodVolumeClaim('second', '/data', '/foo'))
                     .build()
         then:
         spec ==  [ apiVersion: 'v1',
@@ -151,7 +151,7 @@ class PodSpecBuilderTest extends Specification {
                                     workingDir:'/path',
                                     volumeMounts:[
                                             [name:'vol-1', mountPath:'/work'],
-                                            [name:'vol-2', mountPath:'/data']] ]
+                                            [name:'vol-2', mountPath:'/data', subPath: '/foo']] ]
                            ],
                            volumes:[
                                    [name:'vol-1', persistentVolumeClaim:[claimName:'first']],
