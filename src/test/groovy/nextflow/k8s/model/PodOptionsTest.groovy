@@ -279,4 +279,29 @@ class PodOptionsTest extends Specification {
         opts.labels == [ALPHA: 'aaa', DELTA: 'ddd']
 
     }
+
+    def 'should create user security context' () {
+        when:
+        def opts = new PodOptions([ [runAsUser: 1000] ])
+        then:
+        opts.getSecurityContext() == new PodSecurityContext(1000)
+
+        when:
+        opts = new PodOptions([ [runAsUser: 'foo'] ])
+        then:
+        opts.getSecurityContext() == new PodSecurityContext('foo')
+
+        when:
+        opts = new PodOptions([ [runAsUser: 'foo'] ])
+        then:
+        opts.getSecurityContext() != new PodSecurityContext('bar')
+
+        when:
+        def ctx = [runAsUser: 500, fsGroup: 200, allowPrivilegeEscalation: true, seLinuxOptions: [level: "s0:c123,c456"]]
+        def expected = new PodSecurityContext(ctx)
+        opts = new PodOptions([ [securityContext: ctx] ])
+        then:
+        opts.getSecurityContext() == expected
+        opts.getSecurityContext().toSpec() == ctx
+    }
 }

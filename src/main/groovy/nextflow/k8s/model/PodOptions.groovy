@@ -48,6 +48,8 @@ class PodOptions {
 
     private Map<String,String> labels = [:]
 
+    private PodSecurityContext securityContext
+
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
         envVars = new HashSet<>(size)
@@ -89,6 +91,12 @@ class PodOptions {
         else if( entry.label && entry.value ) {
             this.labels.put(entry.label as String, entry.value as String)
         }
+        else if( entry.runAsUser != null ) {
+            this.securityContext = new PodSecurityContext(entry.runAsUser)
+        }
+        else if( entry.securityContext instanceof Map ) {
+            this.securityContext = new PodSecurityContext(entry.securityContext as Map)
+        }
         else 
             throw new IllegalArgumentException("Unknown pod options: $entry")
     }
@@ -103,6 +111,8 @@ class PodOptions {
     Collection<PodVolumeClaim> getVolumeClaims() { mountClaims }
 
     Map<String,String> getLabels() { labels }
+
+    PodSecurityContext getSecurityContext() { securityContext }
 
     String getPullPolicy() { pullPolicy }
 

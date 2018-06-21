@@ -69,6 +69,7 @@ class PodSpecBuilder {
 
     Collection<PodVolumeClaim> volumeClaims = []
 
+    PodSecurityContext securityContext
 
     /**
      * @return A sequential volume unique identifier
@@ -218,6 +219,9 @@ class PodSpecBuilder {
             if( 'runName' in keys ) throw new IllegalArgumentException("Invalid pod label -- `runName` is a reserved label")
             labels.putAll( opts.labels )
         }
+        // -- security context
+        if( opts.securityContext )
+            securityContext = opts.securityContext
 
         return this
     }
@@ -261,6 +265,9 @@ class PodSpecBuilder {
 
         if( this.serviceAccount )
             spec.serviceAccountName = this.serviceAccount
+
+        if( securityContext )
+            spec.securityContext = securityContext.toSpec()
 
         // add labels
         if( labels )
