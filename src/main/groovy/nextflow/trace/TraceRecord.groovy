@@ -306,7 +306,6 @@ class TraceRecord implements Serializable {
                 sFormat = converter.substring(p+1)
             }
         }
-        //println"no converters "
         def type = sType ?: FIELDS.get(name)
         if( !type )
             throw new IllegalArgumentException("Not a valid trace field name: '$name'")
@@ -317,7 +316,6 @@ class TraceRecord implements Serializable {
             throw new IllegalArgumentException("Not a valid trace formatter for field: '$name' with type: '$type'")
 
         try {
-            //println"return: $val"
             return formatter.call(val,sFormat)
         }
         catch( Throwable e ) {
@@ -329,10 +327,6 @@ class TraceRecord implements Serializable {
     TaskId getTaskId() { (TaskId)get('task_id') }
 
     String getWorkDir() { get('workdir') }
-
-    //String getInput(){get('input')}
-
-    //String getOutput(){get('output')}
 
     /**
      * Render the specified list of fields to a single string value
