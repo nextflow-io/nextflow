@@ -11,19 +11,6 @@ class ProvObserverTest extends Specification{
     def 'get Author Information from Manifest' (){
             //get Author name
             //get orcid
-        given:
-        def manifest = [author:'AuthorFoo']
-        def session = Mock(Session)
-        session.getConfig() >> [manifest: manifest]
-
-        def observer = new ProvObserver()
-
-        when:
-        def result = observer.getAuthor(session)
-        then:
-        result == 'AuthorFoo'
-
-
     }
     def 'get Manifest' (){
         //get manifest
