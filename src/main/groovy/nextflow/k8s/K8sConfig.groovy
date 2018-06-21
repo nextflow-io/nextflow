@@ -52,8 +52,9 @@ class K8sConfig implements Map<String,Object> {
         this.podOptions = new PodOptions( target.pod as List<Map> )
         if( getStorageClaimName() ) {
             final name = getStorageClaimName()
-            final path = getStorageMountPath()
-            this.podOptions.volumeClaims.add(new PodVolumeClaim(name, path))
+            final mount = getStorageMountPath()
+            final subPath = getStorageSubPath()
+            this.podOptions.volumeClaims.add(new PodVolumeClaim(name, mount, subPath))
         }
     }
 
@@ -79,6 +80,10 @@ class K8sConfig implements Map<String,Object> {
 
     String getStorageMountPath() {
         target.storageMountPath ?: '/workspace' as String
+    }
+
+    String getStorageSubPath() {
+        target.storageSubPath
     }
 
     /**

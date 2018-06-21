@@ -110,10 +110,12 @@ the ``k8s`` executor and the required persistent volume claim in the ``nextflow.
     k8s {
        storageClaimName = 'vol-claim'
        storageMountPath = '/mount/path'
+       storageSubPath = '/my-data'
     }
 
 In the above snippet replace ``vol-claim`` with the name of an existing persistent volume claim and replace
-``/mount/path`` with the actual desired mount path eg. ``/workspace``.
+``/mount/path`` with the actual desired mount path (default: ``/workspace``) and ``storageSubPath``
+with the directory in the volume to be mounted (default: ``/``).
 
 .. warning:: The running pod must have been created with the same persistent volume claim name and mount as the
     one specified in your Nextflow configuration file.

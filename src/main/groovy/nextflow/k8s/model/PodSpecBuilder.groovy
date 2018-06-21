@@ -155,11 +155,6 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withVolumeClaim( String name, String mount ) {
-        volumeClaims.add(new PodVolumeClaim(name, mount))
-        return this
-    }
-
     PodSpecBuilder withVolumeClaim( PodVolumeClaim claim ) {
         volumeClaims.add(claim)
         return this
@@ -288,6 +283,7 @@ class PodSpecBuilder {
         for( PodVolumeClaim entry : volumeClaims ) {
             final name = nextVolName()
             final claim = [name: name, mountPath: entry.mountPath ]
+            if( entry.subPath ) claim.subPath = entry.subPath
             mounts << claim
             volumes << [name: name, persistentVolumeClaim: [claimName: entry.claimName]]
         }
