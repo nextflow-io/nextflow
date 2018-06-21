@@ -422,7 +422,7 @@ class PodSpecBuilderTest extends Specification {
 
         given:
         def opts = Mock(PodOptions)
-        def builder = new PodSpecBuilder(podName: 'foo', imageName: 'image', command: ['echo'])
+        def builder = new PodSpecBuilder(podName: 'foo', imageName: 'image', command: ['echo'], labels: [runName: 'crazy_john'])
 
         when:
         def spec = builder.withPodOptions(opts).build()
@@ -432,11 +432,15 @@ class PodSpecBuilderTest extends Specification {
         2 * opts.getMountConfigMaps() >> [ new PodMountConfig('data', '/home/user') ]
         2 * opts.getMountSecrets() >> [ new PodMountSecret('blah', '/etc/secret.txt') ]
         2 * opts.getEnvVars() >> [ PodEnv.value('HELLO','WORLD') ]
+        _ * opts.getLabels() >> [ALPHA: 'xxx', GAMMA: 'yyy']
 
         spec == [
                 apiVersion: 'v1',
                 kind: 'Pod',
-                metadata: [name:'foo', namespace:'default'],
+                metadata: [
+                        name:'foo',
+                        namespace:'default',
+                        labels:[runName:'crazy_john', ALPHA:'xxx', GAMMA:'yyy'] ],
                 spec: [
                         restartPolicy:'Never',
                         containers:[

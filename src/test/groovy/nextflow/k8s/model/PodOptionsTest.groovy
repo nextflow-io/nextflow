@@ -262,4 +262,21 @@ class PodOptionsTest extends Specification {
                 new PodVolumeClaim('z','/z'),
         ] as Set 
     }
+
+    def 'should create pod labels' () {
+
+        given:
+        def options = [
+                [label: 'ALPHA', value: 'aaa'],
+                [label: 'DELTA', value: 'bbb'],
+                [label: 'DELTA', value: 'ddd']
+        ]
+        
+        when:
+        def opts = new PodOptions(options)
+        then:
+        opts.labels.size() == 2
+        opts.labels == [ALPHA: 'aaa', DELTA: 'ddd']
+
+    }
 }
