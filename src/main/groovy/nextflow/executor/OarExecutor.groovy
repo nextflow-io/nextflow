@@ -23,6 +23,8 @@ import java.nio.file.Path
 
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
+
+
 /**
  * Implements a executor for OAR cluster
  *
@@ -38,48 +40,27 @@ class OarExecutor extends AbstractGridExecutor {
      * @param result The {@link List} instance to which add the job directives
      * @return A {@link List} containing all directive tokens and values.
      */
+
     protected List<String> getDirectives( TaskRun task, List<String> result ) {
         assert result !=null
 
         result << '-n' << getJobNameFor(task)
-        // result << '-O' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
-        // result << '-E' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
         result << '-d' << quote(task.workDir)
-
-
-
 
         // the requested queue name
         if( task.config.queue ) {
             result << '-q'  << (String)task.config.queue
         }
 
-        if( task.config.cpus > 1 ) {
-            if( task.config.time ) {
-              final duration = task.config.getTime()
-              result << '-l' << "nodes=1/core=${task.config.cpus},walltime=${duration.format('HH:mm:ss')}"
-            }else{
-              result << '-l' << "nodes=1/core=${task.config.cpus},walltime=00:30:00"
-            }
-        }
-
-        // max task duration
-        //if( task.config.time ) {
-        //    final duration = task.config.getTime()
-        //    result << "-l" << "walltime=${duration.format('HH:mm:ss')}"
-        //}
-
-        // task max memory
-        //if( task.config.memory ) {
-        //   result << "-l" << "mem=${task.config.memory.toString().replaceAll(/[\s]/,'').toLowerCase()}"
-        //}
-
-        // -- at the end append the command script wrapped file name
+        // miscellaneous cluster options semicollon separated
         if( task.config.clusterOptions ) {
-            result << task.config.clusterOptions.toString() << ''
+          for (String item : task.config.clusterOptions.toString().tokenize(';')) {
+            result << item
+          }
         }
 
-        return result
+      return result
+
     }
 
     @Override
@@ -106,7 +87,7 @@ class OarExecutor extends AbstractGridExecutor {
      */
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
         scriptFile.setPermissions(7,0,0)
-        return [ 'oarsub', '-S',  '-n', "${getJobNameFor(task)}", "./${scriptFile.getName()}"]
+        return [ "oarsub", "-S", "./${scriptFile.getName()}"]
     }
 
     protected String getHeaderToken() { '#OAR' }
