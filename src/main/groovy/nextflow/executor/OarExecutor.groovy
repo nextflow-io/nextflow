@@ -55,7 +55,7 @@ class OarExecutor extends AbstractGridExecutor {
         // miscellaneous cluster options semicollon separated
         if( task.config.clusterOptions ) {
           for (String item : task.config.clusterOptions.toString().tokenize(';')) {
-            result << item
+            result << item << ''
           }
         }
 
