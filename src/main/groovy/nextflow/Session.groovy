@@ -37,6 +37,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
+import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
 import nextflow.dag.DAG
 import nextflow.exception.AbortOperationException
@@ -516,7 +517,7 @@ class Session implements ISession {
         }
     }
 
-    def List<Path> getLibDir() {
+    List<Path> getLibDir() {
         if( libDir )
             return libDir
 
@@ -527,6 +528,10 @@ class Session implements ISession {
             libDir << localLib
         }
         return libDir
+    }
+
+    Manifest getManifest() {
+        config.manifest instanceof Map ? new Manifest(config.manifest as Map) : new Manifest()
     }
 
     /**

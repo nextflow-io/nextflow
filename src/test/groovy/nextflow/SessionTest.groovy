@@ -344,4 +344,18 @@ class SessionTest extends Specification {
         'shifter'   | [enabled: true, x:'delta', y: 'gamma']
     }
 
+    def 'should get manifest object' () {
+
+        given:
+        def MAN = [author: 'pablo', nextflowVersion: '1.2.3']
+
+        when:
+        def session = new Session([manifest: MAN])
+        then:
+        session.manifest.author == 'pablo'
+        session.manifest.nextflowVersion == '1.2.3'
+
+    }
+
+
 }
