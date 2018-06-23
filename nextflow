@@ -100,8 +100,10 @@ function resolve_link() {
       realpath "$1"
     elif command -v readlink &>/dev/null; then
       local target="$1"
+      cd $(dirname $target); target=$(basename $target)
       while [ -L "$target" ]; do
         target="$(readlink "$target")"
+        cd $(dirname $target); target=$(basename $target)
       done
       echo "$(cd "$(dirname "$target")"; pwd -P)/$target"
     else
