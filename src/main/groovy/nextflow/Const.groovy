@@ -135,4 +135,16 @@ class Const {
 
     static public final String ROLE_MASTER = 'master'
 
+    static public final String MANIFEST_FILE_NAME = 'nextflow.config'
+
+    static public final String DEFAULT_MAIN_FILE_NAME = 'main.nf'
+
+    static public final String DEFAULT_ORGANIZATION = System.getenv('NXF_ORG') ?: 'nextflow-io'
+
+    static public final String DEFAULT_HUB = System.getenv('NXF_HUB') ?: 'github'
+
+    static public final File DEFAULT_ROOT = System.getenv('NXF_ASSETS') ? new File(System.getenv('NXF_ASSETS')) : Const.APP_HOME_DIR.resolve('assets').toFile()
+
+    static public final String DEFAULT_BRANCH = 'master'
+
 }
