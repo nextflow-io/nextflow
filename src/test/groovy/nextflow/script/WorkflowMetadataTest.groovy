@@ -113,7 +113,7 @@ class WorkflowMetadataTest extends Specification {
         metadata.configFiles == [Paths.get('foo').toAbsolutePath(), Paths.get('bar').toAbsolutePath()]
         metadata.resume == false
         metadata.userName == System.getProperty('user.name')
-        metadata.userDir == Paths.get(System.getProperty('user.home'))
+        metadata.homeDir == Paths.get(System.getProperty('user.home'))
 
         when:
         metadata.invokeOnComplete()

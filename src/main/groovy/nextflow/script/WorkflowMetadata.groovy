@@ -132,8 +132,14 @@ class WorkflowMetadata {
      */
     Path workDir
 
-    Path userDir
+    /**
+     * User system home directory
+     */
+    Path homeDir
 
+    /**
+     * User system account name
+     */
     String userName
 
     /**
@@ -215,7 +221,7 @@ class WorkflowMetadata {
         this.configFiles = owner.session.configFiles?.collect { it.toAbsolutePath() }
         this.stats = owner.session.workflowStats
         this.userName = System.getProperty('user.name')
-        this.userDir = Paths.get(System.getProperty('user.home'))
+        this.homeDir = Paths.get(System.getProperty('user.home'))
 
         // check if there's a onComplete action in the config file
         registerConfigAction(owner.session.config.workflow as Map)
