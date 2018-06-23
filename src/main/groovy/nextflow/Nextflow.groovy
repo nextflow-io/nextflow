@@ -142,8 +142,8 @@ class Nextflow {
      */
     static file( Map options = null, def filePattern ) {
 
-        if( filePattern == null )
-            return null
+        if( !filePattern )
+            throw new IllegalArgumentException("Argument of `file` function cannot be ${filePattern==null?'null':'empty'}")
 
         final path = filePattern as Path
         final glob = options?.containsKey('glob') ? options.glob as boolean : isGlobAllowed(path)

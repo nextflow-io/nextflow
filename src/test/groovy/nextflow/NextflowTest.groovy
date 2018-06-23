@@ -59,7 +59,21 @@ class NextflowTest extends Specification {
         Nextflow.file( Paths.get('some/path') ).toString() == current + '/some/path'
         Nextflow.file( '/abs/path/file.txt' ) == Paths.get('/abs/path/file.txt')
 
+    }
 
+    def testFile3() {
+        Exception e
+        when:
+        Nextflow.file(null)
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == 'Argument of `file` function cannot be null'
+
+        when:
+        Nextflow.file('')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == 'Argument of `file` function cannot be empty'
     }
 
     def testFileWithWildcards() {
