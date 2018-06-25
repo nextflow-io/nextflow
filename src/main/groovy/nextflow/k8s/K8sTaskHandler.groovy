@@ -78,15 +78,12 @@ class K8sTaskHandler extends TaskHandler {
 
     private long timestamp
 
-    private K8sConfig k8sConfig
-
     private K8sExecutor executor
 
     K8sTaskHandler( TaskRun task, K8sExecutor executor ) {
         super(task)
         this.executor = executor
         this.client = executor.client
-        this.k8sConfig = executor.k8sConfig
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
@@ -103,6 +100,8 @@ class K8sTaskHandler extends TaskHandler {
     protected String getRunName() {
         executor.session.runName
     }
+
+    protected K8sConfig getK8sConfig() { executor.getK8sConfig() }
 
     protected List<String> getContainerMounts() {
 
@@ -204,7 +203,7 @@ class K8sTaskHandler extends TaskHandler {
 
     protected Map getLabels(TaskRun task) {
         Map result = [:]
-        def labels = executor.getK8sConfig().getLabels()
+        def labels = k8sConfig.getLabels()
         if( labels ) {
             labels.each { k,v -> result.put(k,sanitize0(v)) }
         }
@@ -252,7 +251,7 @@ class K8sTaskHandler extends TaskHandler {
 
     @CompileDynamic
     protected Path yamlDebugPath() {
-        boolean debug = executor.getK8sConfig().getDebug().getYaml()
+        boolean debug = k8sConfig.getDebug().getYaml()
         return debug ? task.workDir.resolve('.command.yaml') : null
     }
 
@@ -345,7 +344,7 @@ class K8sTaskHandler extends TaskHandler {
         }
 
     protected boolean cleanupDisabled() {
-        !executor.getK8sConfig().getCleanup()
+        !k8sConfig.getCleanup()
     }
 
     protected void deletePodIfSuccessful(TaskRun task) {

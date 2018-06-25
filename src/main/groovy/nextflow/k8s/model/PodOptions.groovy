@@ -114,7 +114,17 @@ class PodOptions {
 
     PodSecurityContext getSecurityContext() { securityContext }
 
+    PodOptions setSecurityContext( PodSecurityContext ctx) {
+        this.securityContext = ctx
+        return this
+    }
+
     String getPullPolicy() { pullPolicy }
+
+    PodOptions setPullPolicy( String p ) {
+        this.pullPolicy = p
+        return this
+    }
 
     PodOptions plus( PodOptions other ) {
         def result = new PodOptions()

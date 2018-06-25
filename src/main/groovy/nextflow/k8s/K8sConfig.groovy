@@ -30,6 +30,7 @@ import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.model.PodOptions
+import nextflow.k8s.model.PodSecurityContext
 import nextflow.k8s.model.PodVolumeClaim
 /**
  * Model Kubernetes specific settings defined in the nextflow
@@ -47,19 +48,44 @@ class K8sConfig implements Map<String,Object> {
     private PodOptions podOptions
 
     K8sConfig(Map<String,Object> config) {
-        this.target = config ?: Collections.<String,Object>emptyMap()
+        target = config ?: Collections.<String,Object>emptyMap()
 
-        this.podOptions = new PodOptions( target.pod as List<Map> )
+        this.podOptions = createPodOptions(target.pod)
         if( getStorageClaimName() ) {
             final name = getStorageClaimName()
             final mount = getStorageMountPath()
             final subPath = getStorageSubPath()
             this.podOptions.volumeClaims.add(new PodVolumeClaim(name, mount, subPath))
         }
+
+        // -- shortcut to pod image pull-policy
+        if( target.pullPolicy )
+            podOptions.pullPolicy = target.pullPolicy.toString()
+        else if( target.imagePullPolicy )
+            podOptions.pullPolicy = target.imagePullPolicy.toString()
+
+        // -- shortcut to pod security context
+        if( target.runAsUser != null )
+            podOptions.securityContext = new PodSecurityContext(target.runAsUser)
+        else if( target.securityContext instanceof Map )
+            podOptions.securityContext = new PodSecurityContext(target.securityContext as Map)
+    }
+
+    private PodOptions createPodOptions( value ) {
+        if( value instanceof List )
+            return new PodOptions( value as List )
+
+        if( value instanceof Map )
+            return new PodOptions( [(Map)value] )
+
+        if( value == null )
+            return new PodOptions()
+
+        throw new IllegalArgumentException("Not a valid pod setting: $value")
     }
 
     Map<String,String> getLabels() {
-        target.labels as Map<String,String>
+        podOptions.getLabels()
     }
 
     K8sDebug getDebug() {
