@@ -32,6 +32,7 @@ import nextflow.executor.NopeExecutor
 import nextflow.executor.NqsiiExecutor
 import nextflow.executor.PbsExecutor
 import nextflow.executor.SgeExecutor
+import nextflow.executor.OarExecutor
 import nextflow.executor.SlurmExecutor
 import nextflow.executor.SupportedScriptTypes
 import nextflow.k8s.K8sExecutor
@@ -61,6 +62,7 @@ class ProcessFactory {
             'uge':  SgeExecutor,
             'lsf': LsfExecutor,
             'pbs': PbsExecutor,
+            'oar': OarExecutor,
             'slurm': SlurmExecutor,
             'crg': CrgExecutor,
             'bsc': LsfExecutor,
