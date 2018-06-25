@@ -22,6 +22,7 @@ package nextflow.processor
 
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
@@ -310,7 +311,7 @@ class PublishDir {
     @PackageScope
     void validatePublishMode() {
 
-        if( sourceFileSystem != path.fileSystem ) {
+        if( sourceFileSystem != path.fileSystem || path.fileSystem != FileSystems.default ) {
             if( !mode ) {
                 mode = Mode.COPY
             }

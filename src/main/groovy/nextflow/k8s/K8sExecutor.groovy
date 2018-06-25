@@ -20,6 +20,7 @@
 
 package nextflow.k8s
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.executor.Executor
@@ -54,8 +55,10 @@ class K8sExecutor extends Executor {
     /**
      * @return The `k8s` configuration scope in the nextflow configuration object
      */
-    @PackageScope Map<String,?> getK8sConfig() {
-        (Map<String,?>)(session.config.k8s ?: Collections.emptyMap())
+    @Memoized
+    @PackageScope
+    K8sConfig getK8sConfig() {
+        new K8sConfig( (Map<String,Object>)session.config.k8s )
     }
 
     /**

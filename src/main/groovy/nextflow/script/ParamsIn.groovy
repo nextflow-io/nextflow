@@ -19,6 +19,7 @@
  */
 
 package nextflow.script
+
 import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
 import groovy.transform.ToString
@@ -120,32 +121,6 @@ abstract class BaseParam {
         getScriptVar(name,true)
     }
 
-
-    protected DataflowReadChannel inputValToChannel( def value ) {
-
-        if ( value instanceof DataflowBroadcast )  {
-            return value.createReadChannel()
-        }
-
-        if( value instanceof DataflowReadChannel ) {
-            return value
-        }
-
-        // wrap any collections with a DataflowQueue
-        if( value instanceof Collection ) {
-            return Nextflow.channel(value as List)
-        }
-
-        // wrap any array with a DataflowQueue
-        if ( value && value.class.isArray() ) {
-            return Nextflow.channel(value as List)
-        }
-
-        // wrap a single value with a DataflowVariable
-        return Nextflow.variable(value)
-
-    }
-
 }
 
 /**
@@ -211,6 +186,33 @@ abstract class BaseInParam extends BaseParam implements InParam {
 
     abstract String getTypeName()
 
+    protected DataflowReadChannel inputValToChannel( value ) {
+        checkFromNotNull(value)
+
+        if ( value instanceof DataflowBroadcast )  {
+            return value.createReadChannel()
+        }
+
+        if( value instanceof DataflowReadChannel ) {
+            return value
+        }
+
+        // wrap any collections with a DataflowQueue
+        if( value instanceof Collection ) {
+            return Nextflow.channel(value as List)
+        }
+
+        // wrap any array with a DataflowQueue
+        if ( value && value.class.isArray() ) {
+            return Nextflow.channel(value as List)
+        }
+
+        // wrap a single value with a DataflowVariable
+        return Nextflow.variable(value)
+
+    }
+
+
     /**
      * Lazy parameter initializer.
      *
@@ -249,7 +251,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
     /**
      * @return The parameter name
      */
-    def String getName() {
+    String getName() {
         if( bindObject instanceof TokenVar )
             return bindObject.name
 
@@ -267,17 +269,21 @@ abstract class BaseInParam extends BaseParam implements InParam {
         return this
     }
 
-    private void checkFrom(obj) {
+    private void checkFromNotNull(obj) {
         if( obj != null ) return
-        def message = 'A process input `from` clause evaluates to null'
-        def name = bindObject instanceof TokenVar ? bindObject.name : null
+        def message = 'A process input channel evaluates to null'
+        def name = null
+        if( bindObject instanceof TokenVar )
+            name = bindObject.name
+        else if( bindObject instanceof CharSequence )
+            name = bindObject.toString()
         if( name )
             message += " -- Invalid declaration `${getTypeName()} $name`"
         throw new IllegalArgumentException(message)
     }
 
     BaseInParam from( def obj ) {
-        checkFrom(obj)
+        checkFromNotNull(obj)
         fromObject = obj
         return this
     }

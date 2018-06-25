@@ -692,4 +692,42 @@ class ParamsInTest extends Specification {
         param.decodeInputs( [[1,2,3],'b','c'] ) == [1,2,3]
     }
 
+    def testInvalidInputs() {
+
+        given:
+        TaskProcessor process
+        Exception e
+
+        when:
+        process = parseAndReturnProcess('''
+                        x = null
+                        process hola {
+                          input:
+                            val x
+            
+                          return ''
+                        }
+                        ''')
+        process.config.getInputs().get(0).inChannel
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == 'A process input channel evaluates to null -- Invalid declaration `val x`'
+
+        when:
+        process = parseAndReturnProcess('''
+                        x = null
+                        process hola {
+                          input:
+                            file foo from x
+            
+                          return ''
+                        }
+                        ''')
+        process.config.getInputs().get(0).inChannel
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == 'A process input channel evaluates to null -- Invalid declaration `file foo`'
+
+    }
+
 }

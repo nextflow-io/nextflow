@@ -452,4 +452,87 @@ class ProcessConfigTest extends Specification {
         process.size() == 1
     }
 
+
+    def 'should apply config process defaults' () {
+
+        when:
+        def process = new ProcessConfig(Mock(BaseScript))
+
+        // set process specific settings
+        process.queue = 'cn-el6'
+        process.memory = '10 GB'
+
+        // apply config defaults
+        process.applyConfigDefaults(
+                queue: 'def-queue',
+                container: 'ubuntu:latest'
+        )
+
+        then:
+        process.queue == 'cn-el6'
+        process.container == 'ubuntu:latest'
+        process.memory == '10 GB'
+        process.cacheable == true
+
+
+
+        when:
+        process = new ProcessConfig(Mock(BaseScript))
+        // set process specific settings
+        process.container = null
+        // apply process defaults
+        process.applyConfigDefaults(
+                queue: 'def-queue',
+                container: 'ubuntu:latest',
+                maxRetries: 5
+        )
+        then:
+        process.queue == 'def-queue'
+        process.container == null
+        process.maxRetries == 5
+
+
+
+        when:
+        process = new ProcessConfig(Mock(BaseScript))
+        // set process specific settings
+        process.maxRetries = 10
+        // apply process defaults
+        process.applyConfigDefaults(
+                queue: 'def-queue',
+                container: 'ubuntu:latest',
+                maxRetries: 5
+        )
+        then:
+        process.queue == 'def-queue'
+        process.container == 'ubuntu:latest'
+        process.maxRetries == 10
+    }
+
+
+    def 'should apply pod configs' () {
+
+        when:
+        def process =  new ProcessConfig([:])
+        process.applyConfigDefaults( pod: [secret: 'foo', mountPath: '/there'] )
+        then:
+        process.pod == [
+                [secret: 'foo', mountPath: '/there']
+        ]
+
+        when:
+        process =  new ProcessConfig([:])
+        process.applyConfigDefaults( pod: [
+                [secret: 'foo', mountPath: '/here'],
+                [secret: 'bar', mountPath: '/there']
+        ] )
+
+        then:
+        process.pod == [
+                [secret: 'foo', mountPath: '/here'],
+                [secret: 'bar', mountPath: '/there']
+        ]
+
+    }
+
 }

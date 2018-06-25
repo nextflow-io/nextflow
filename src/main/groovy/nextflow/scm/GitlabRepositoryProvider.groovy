@@ -24,7 +24,7 @@ import groovy.util.logging.Slf4j
  * Implements a repository provider for GitHub service
  *
  * See https://gitlab.com/
- * See http://doc.gitlab.com/ee/api/
+ * https://docs.gitlab.com/ee/api/repositories.html
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -53,7 +53,7 @@ class GitlabRepositoryProvider extends RepositoryProvider {
 
     @Override
     String getEndpointUrl() {
-        return "${config.endpoint}/api/v3/projects/${getProjectName()}"
+        return "${config.endpoint}/api/v4/projects/${getProjectName()}"
     }
 
     String getDefaultBranch() {
@@ -68,7 +68,7 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getContentUrl( String path ) {
-        "${config.endpoint}/api/v3/projects/${getProjectName()}/repository/files?file_path=${path}&ref=${getDefaultBranch()}"
+        "${config.endpoint}/api/v4/projects/${getProjectName()}/repository/files/${path}?ref=${getDefaultBranch()}"
     }
 
     /** {@inheritDoc} */

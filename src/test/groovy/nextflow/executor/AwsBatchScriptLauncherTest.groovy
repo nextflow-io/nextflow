@@ -126,13 +126,15 @@ class AwsBatchScriptLauncherTest extends Specification {
                 nxf_s3_upload() {
                     local pattern=\$1
                     local s3path=\$2
-                    for name in \$(eval "ls -d \$pattern");do
+                    IFS=\$'\\n'
+                    for name in \$(eval "ls -1d \$pattern");do
                       if [[ -d "\$name" ]]; then
-                        /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --recursive --storage-class STANDARD \$name \$s3path/\$name
+                        /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --recursive --storage-class STANDARD "\$name" "\$s3path/\$name"
                       else
-                        /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --storage-class STANDARD \$name \$s3path/\$name
+                        /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --storage-class STANDARD "\$name" "\$s3path/\$name"
                       fi
-                  done
+                    done
+                    unset IFS
                 }
 
                 echo start | /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors - s3:/${folder}/.command.begin
@@ -269,13 +271,15 @@ class AwsBatchScriptLauncherTest extends Specification {
                 nxf_s3_upload() {
                     local pattern=\$1
                     local s3path=\$2
-                    for name in \$(eval "ls -d \$pattern");do
+                    IFS=\$'\\n'
+                    for name in \$(eval "ls -1d \$pattern");do
                       if [[ -d "\$name" ]]; then
-                        aws s3 cp --only-show-errors --recursive --storage-class STANDARD \$name \$s3path/\$name
+                        aws s3 cp --only-show-errors --recursive --storage-class STANDARD "\$name" "\$s3path/\$name"
                       else
-                        aws s3 cp --only-show-errors --storage-class STANDARD \$name \$s3path/\$name
+                        aws s3 cp --only-show-errors --storage-class STANDARD "\$name" "\$s3path/\$name"
                       fi
-                  done
+                    done
+                    unset IFS
                 }
 
                 echo start | aws s3 cp --only-show-errors - s3:/${folder}/.command.begin
@@ -312,6 +316,36 @@ class AwsBatchScriptLauncherTest extends Specification {
                 nxf_s3_upload .command.trace s3:/${folder} || true
                 """
                         .stripIndent().leftTrim()
+
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+
+    def 'test bash wrapper with custom scratch'() {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        /*
+         * simple bash run
+         */
+        when:
+        def opts = new AwsOptions(cliPath:'/conda/bin/aws', region: 'eu-west-1')
+        def bash = new AwsBatchScriptLauncher([
+                name: 'Hello 1',
+                workDir: folder,
+                script: 'echo Hello world!',
+                scratch: '/foo/bar/tmp'
+        ] as TaskBean, opts)
+        bash.build()
+
+        then:
+        Files.exists(folder.resolve('.command.sh'))
+        Files.exists(folder.resolve('.command.run'))
+
+        folder.resolve('.command.run').text.contains('NXF_SCRATCH="$(set +u; nxf_mktemp /foo/bar/tmp)"')
 
 
         cleanup:

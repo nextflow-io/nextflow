@@ -20,28 +20,33 @@
 
 package nextflow.k8s
 
+import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.atomic.AtomicInteger
 
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.container.DockerBuilder
+import nextflow.exception.ProcessSubmitException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
+import nextflow.k8s.model.PodEnv
+import nextflow.k8s.model.PodOptions
+import nextflow.k8s.model.PodSpecBuilder
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.PathTrie
 /**
- * Implements the {@link TaskHandler} interface for kubenetes jobs
+ * Implements the {@link TaskHandler} interface for Kubernetes jobs
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class K8sTaskHandler extends TaskHandler {
-
-    static private AtomicInteger VOLUMES = new AtomicInteger()
 
     @Lazy
     static private final String OWNER = {
@@ -73,7 +78,7 @@ class K8sTaskHandler extends TaskHandler {
 
     private long timestamp
 
-    private Map k8sConfig
+    private K8sConfig k8sConfig
 
     private K8sExecutor executor
 
@@ -99,25 +104,11 @@ class K8sTaskHandler extends TaskHandler {
         executor.session.runName
     }
 
-    protected boolean getAutoMountHostPaths() {
-        def flag = k8sConfig.autoMountHostPaths
-        if( flag == null ) {
-            // enable auto-mount when kubernetes client is created from
-            // a external config file
-            flag = !client.config.isFromCluster
-        }
-
-        return flag
-    }
-
-    protected Map<String,Map> getVolumeClaims() {
-        if( !(k8sConfig.volumeClaims instanceof Map) )
-            return Collections.emptyMap()
-
-        (Map<String,Map>)k8sConfig.volumeClaims
-    }
-
     protected List<String> getContainerMounts() {
+
+        if( !k8sConfig.getAutoMountHostPaths() ) {
+            return Collections.<String>emptyList()
+        }
 
         // get input files paths
         final paths = DockerBuilder.inputFilesToPaths(builder.getResolvedInputs())
@@ -150,47 +141,72 @@ class K8sTaskHandler extends TaskHandler {
      * @param task A {@link TaskRun} instance representing the task to execute
      * @return A {@link Map} object modeling a Pod specification
      */
+
     protected Map newSubmitRequest(TaskRun task) {
+        def imageName = task.container
+        if( !imageName )
+            throw new ProcessSubmitException("Missing container image for process `$task.processor.name`")
+
+        try {
+            newSubmitRequest0(task, imageName)
+        }
+        catch( Throwable e ) {
+            throw  new ProcessSubmitException("Failed to submit K8s job -- Cause: ${e.message ?: e}", e)
+        }
+    }
+
+    protected Map newSubmitRequest0(TaskRun task, String imageName) {
 
         final fixOwnership = builder.fixOwnership()
         final cmd = new ArrayList(new ArrayList(BashWrapperBuilder.BASH)) << TaskRun.CMD_RUN
+        final taskCfg = task.getConfig()
 
         final clientConfig = client.config
-        final req = [:]
-        req.podName = getSyntheticPodName(task)
-        req.namespace = clientConfig.namespace
-        req.serviceAccount = clientConfig.serviceAccount
-        req.imageName = task.container
-        req.command = cmd
-        req.workDir = task.workDir.toString()
-        req.labels = getLabels(task)
-        req.env = fixOwnership ? [NXF_OWNER: getOwner()] : Collections.emptyMap()
+        final builder = new PodSpecBuilder()
+            .withImageName(imageName)
+            .withPodName(getSyntheticPodName(task))
+            .withCommand(cmd)
+            .withWorkDir(task.workDir)
+            .withNamespace(clientConfig.namespace)
+            .withServiceAccount(clientConfig.serviceAccount)
+            .withLabels(getLabels(task))
+            .withPodOptions(getPodOptions())
+
+        // note: task environment is managed by the task bash wrapper
+        // do not add here -- see also #680
+        if( fixOwnership )
+            builder.withEnv(PodEnv.value('NXF_OWNER', getOwner()))
 
         // add computing resources
-        final taskCfg = task.getConfig()
         final cpus = taskCfg.getCpus()
         final mem = taskCfg.getMemory()
-        if( cpus > 1 ) req.cpus = cpus
-        if( mem ) req.memory = "${mem.toMega()}Mi"
+        if( cpus > 1 )
+            builder.withCpus(cpus)
+        if( mem )
+            builder.withMemory(mem)
 
-        // storage
-        def claims = getVolumeClaims()
-        if( claims ) req.volumeClaims = claims
-
-        final hostMounts = autoMountHostPaths ? getContainerMounts() : Collections.emptyList()
-        if( hostMounts ) {
-            def mounts = [:]
-            hostMounts.each {  path -> mounts[path]=path }
-            req.hostMounts = mounts
+        final List<String> hostMounts = getContainerMounts()
+        for( String mount : hostMounts ) {
+            builder.withHostMount(mount,mount)
         }
 
-        K8sHelper.createPodSpec( req )
+        return builder.build()
     }
+
+    protected PodOptions getPodOptions() {
+        // merge the pod options provided in the k8s config
+        // with the ones in process config
+        def opt1 = k8sConfig.getPodOptions()
+        def opt2 = task.getConfig().getPodOptions()
+        return opt1 + opt2
+    }
+
 
     protected Map getLabels(TaskRun task) {
         Map result = [:]
-        if( executor.getK8sConfig().labels instanceof Map ) {
-            executor.getK8sConfig().labels.each { k,v -> result.put(k,sanitize0(v)) }
+        def labels = executor.getK8sConfig().getLabels()
+        if( labels ) {
+            labels.each { k,v -> result.put(k,sanitize0(v)) }
         }
         result.app = 'nextflow'
         result.runName = sanitize0(getRunName())
@@ -220,6 +236,7 @@ class K8sTaskHandler extends TaskHandler {
      * Creates a new K8s pod executing the associated task
      */
     @Override
+    @CompileDynamic
     void submit() {
         builder = createBashWrapper(task)
         builder.build()
@@ -233,8 +250,9 @@ class K8sTaskHandler extends TaskHandler {
         this.status = TaskStatus.SUBMITTED
     }
 
+    @CompileDynamic
     protected Path yamlDebugPath() {
-        boolean debug = executor.getK8sConfig()?.debug?.yaml?.toString() == 'true'
+        boolean debug = executor.getK8sConfig().getDebug().getYaml()
         return debug ? task.workDir.resolve('.command.yaml') : null
     }
 
@@ -243,8 +261,15 @@ class K8sTaskHandler extends TaskHandler {
      */
     protected Map getState() {
         final now = System.currentTimeMillis()
-        final delta =  now - timestamp; timestamp = now
-        state && delta < 1_000 ? state : (state = client.podState(podName))
+        final delta =  now - timestamp;
+        if( !state || delta >= 1_000) {
+            def newState = client.podState(podName)
+            if( newState ) {
+                state = newState
+                timestamp = now
+            }
+        }
+        return state
     }
 
     @Override
@@ -264,11 +289,32 @@ class K8sTaskHandler extends TaskHandler {
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
+            savePodLogOnError(task)
             deletePodIfSuccessful(task)
             return true
         }
 
         return false
+    }
+
+    protected void savePodLogOnError(TaskRun task) {
+        if( task.isSuccess() )
+            return
+
+        if( errorFile && !errorFile.empty() )
+            return
+
+        final session = executor.getSession()
+        if( session.isAborted() || session.isCancelled() || session.isTerminated() )
+            return
+
+        try {
+            final stream = client.podLog(podName)
+            Files.copy(stream, task.workDir.resolve(TaskRun.CMD_LOG))
+        }
+        catch( Exception e ) {
+            log.warn "Failed to copy log for pod $podName", e
+        }
     }
 
     protected int readExitFile() {
@@ -286,6 +332,9 @@ class K8sTaskHandler extends TaskHandler {
      */
     @Override
     void kill() {
+        if( cleanupDisabled() )
+            return
+        
         if( podName ) {
             log.trace "[K8s] deleting pod name=$podName"
             client.podDelete(podName)
@@ -293,13 +342,17 @@ class K8sTaskHandler extends TaskHandler {
         else {
             log.debug "[K8s] Oops.. invalid delete action"
         }
+        }
+
+    protected boolean cleanupDisabled() {
+        !executor.getK8sConfig().getCleanup()
     }
 
     protected void deletePodIfSuccessful(TaskRun task) {
         if( !podName )
             return
 
-        if( executor.getK8sConfig().cleanup == false )
+        if( cleanupDisabled() )
             return
 
         if( !task.isSuccess() ) {

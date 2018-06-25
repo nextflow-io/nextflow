@@ -39,20 +39,21 @@ apply plugin: 'io.codearte.nexus-staging'   // See https://github.com/Codearte/g
 // Add ability to test with upcoming versions of Groovy
 def groovyVer = System.getenv('CI_GROOVY_VERSION')
 if (groovyVer) {
-    logger.lifecycle "Overriden Groovy dependency to use $groovyVer"
+    def repo = groovyVer.startsWith('com.github.apache:') ? 'https://jitpack.io' : 'https://oss.jfrog.org/oss-snapshot-local/'
+    logger.lifecycle "Overriden Groovy dependency to use $groovyVer - repository: $repo"
     allprojects {
         repositories {
-            maven {
-                name 'JFrog OSS snapshot repo'
-                url 'https://oss.jfrog.org/oss-snapshot-local/'
-            }
+            maven { url repo }
         }
     }
 
     configurations.all {
         resolutionStrategy.eachDependency { DependencyResolveDetails details ->
             if (details.requested.group == 'org.codehaus.groovy') {
-                details.useVersion(groovyVer)
+                if( groovyVer.contains(':') )
+                    details.useTarget(groovyVer)
+                else
+                    details.useVersion(groovyVer)
                 println ">> Overriding $details.requested with version: $groovyVer"
             }
         }
@@ -68,7 +69,7 @@ allprojects {
     apply plugin: 'java'
     apply plugin: 'idea'
 
-    version = '0.29.0-RC1'
+    version = /0.30.2/
     group = 'io.nextflow'
 
     sourceCompatibility = 1.8
@@ -82,7 +83,6 @@ allprojects {
         jcenter()
         mavenCentral()
         maven { url 'http://uk.maven.org/maven2' }
-        maven { url 'http://dl.bintray.com/paolo-ditommaso/maven'}
         maven { url 'https://repo.eclipse.org/content/groups/releases' }
         maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
     }
@@ -121,6 +121,24 @@ allprojects {
         }
     }
 
+    // Required to run tests on Java 9 and higher in compatibility mode
+    if (JavaVersion.current() >= JavaVersion.VERSION_1_9) {
+        tasks.withType(Test) {
+            jvmArgs ([
+                    '--add-opens=java.base/java.lang=ALL-UNNAMED',
+                    '--add-opens=java.base/java.io=ALL-UNNAMED',
+                    '--add-opens=java.base/java.nio=ALL-UNNAMED',
+                    '--add-opens=java.base/java.util=ALL-UNNAMED',
+                    '--add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
+                    '--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED',
+                    '--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED',
+                    '--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED',
+                    '--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED',
+                    '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED',
+                    '--add-modules=java.xml.bind,java.activation',
+            ])
+        }
+    }
 }
 
 configurations {
@@ -155,9 +173,10 @@ dependencies {
         exclude group: 'org.apache.tika', module: 'tika-core'
         exclude group: 'com.amazonaws', module: 'aws-java-sdk-s3'
     }
-    compile ('com.amazonaws:aws-java-sdk-s3:1.11.172')
-    compile ('com.amazonaws:aws-java-sdk-ec2:1.11.172')
-    compile ('com.amazonaws:aws-java-sdk-batch:1.11.172')
+    compile ('com.amazonaws:aws-java-sdk-s3:1.11.324')
+    compile ('com.amazonaws:aws-java-sdk-ec2:1.11.324')
+    compile ('com.amazonaws:aws-java-sdk-batch:1.11.324')
+    compile ('com.sun.activation:javax.activation:1.2.0')
     compile ('javax.mail:mail:1.4.7')
     compile ('org.yaml:snakeyaml:1.18')
     compile ('org.jsoup:jsoup:1.11.2')
@@ -166,7 +185,8 @@ dependencies {
     runtime "org.apache.ivy:ivy:2.3.0"
 
     // library used to compile but not included in the final jar
-
+    compileOnly ('javax.xml.bind:jaxb-api:2.3.0')
+    
     // Capsule manages the fat jar building process
     capsule(project(':my-capsule'))
 

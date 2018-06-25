@@ -25,6 +25,7 @@ import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
+import com.google.common.util.concurrent.RateLimiter
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -43,6 +44,8 @@ import nextflow.util.Throttle
 @CompileStatic
 class TaskPollingMonitor implements TaskMonitor {
 
+    private static String RATE_FORMAT = ~/^(\d+\.?\d*)\s*([a-zA-Z]*)/
+    
     /**
      * The current session object
      */
@@ -109,6 +112,11 @@ class TaskPollingMonitor implements TaskMonitor {
      * the same time.
      */
     private int capacity
+
+    /**
+     * Define rate limit for task submission
+     */
+    private RateLimiter submitRateLimit
 
     /**
      * Create the task polling monitor with the provided named parameters object.
@@ -276,6 +284,9 @@ class TaskPollingMonitor implements TaskMonitor {
         this.taskAvail = pendingQueueLock.newCondition()
         this.slotAvail = pendingQueueLock.newCondition()
 
+        //
+        this.submitRateLimit = createSubmitRateLimit()
+
         // remove pending tasks on termination
         session.onShutdown { this.cleanup() }
 
@@ -294,6 +305,55 @@ class TaskPollingMonitor implements TaskMonitor {
         Thread.startDaemon('Task submitter', this.&submitLoop)
 
         return this
+    }
+
+    protected RateLimiter createSubmitRateLimit() {
+        def limit = session.getExecConfigProp(name,'submitRateLimit',null) as String
+        if( !limit )
+            return null
+
+        def tokens = limit.tokenize('/')
+        if( tokens.size() == 2 ) {
+            /*
+             * the rate limit is provide num of task over a duration
+             * - eg. 100 / 5 min
+             * - ie. max 100 task per 5 minutes
+             */
+
+            final X = tokens[0].trim()
+            final Y = tokens[1].trim()
+
+            return newRateLimiter(X, Y, limit)
+        }
+
+        /*
+         * the rate limit is provide as a duration
+         * - eg. 200 min
+         * - ie. max 200 task per minutes
+         */
+
+        final matcher = (limit =~ RATE_FORMAT)
+        if( !matcher.matches() )
+            throw new IllegalArgumentException("Invalid submit-rate-limit value: $limit -- It must be provide using the following format `num request sec|min|hour` eg. 10 sec ie. max 10 tasks per second")
+
+        final num = matcher.group(1) ?: '_'
+        final unit = matcher.group(2) ?: 'sec'
+
+        return newRateLimiter(num, "1 $unit", limit)
+    }
+
+    private RateLimiter newRateLimiter( String X, String Y, String limit ) {
+        if( !X.isInteger() )
+            throw new IllegalArgumentException("Invalid submit-rate-limit value: $limit -- It must be provide using the following format `num request / duration` eg. 10/1s")
+
+        final num = Integer.parseInt(X)
+        final duration = Y.isInteger() ? Duration.of( Y+'sec' ) : Duration.of(Y)
+        long seconds = duration.toSeconds()
+        if( !seconds )
+            throw new IllegalArgumentException("Invalid submit-rate-limit value: $limit -- The interval must be at least 1 second")
+
+        log.debug "Creating submit rate limit of $num reqs by $seconds seconds"
+        return RateLimiter.create( num / seconds as double )
     }
 
     /**
@@ -473,6 +533,8 @@ class TaskPollingMonitor implements TaskMonitor {
         while( itr.hasNext() ) {
             final handler = itr.next()
             try {
+                submitRateLimit?.acquire()
+
                 if( !canSubmit(handler))
                     continue
 
@@ -484,7 +546,7 @@ class TaskPollingMonitor implements TaskMonitor {
                 else
                     break
             }
-            catch ( Exception e ) {
+            catch ( Throwable e ) {
                 handleException(handler, e)
                 session.notifyTaskComplete(handler)
             }

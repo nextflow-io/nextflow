@@ -92,13 +92,48 @@ login session.
 .. warning:: The pod is automatically destroyed once the shell session terminates. Do not use to start long running
   workflow executions in background.
 
+
+Running in a pod
+==================
+
+The main convenience of the ``kuberun`` command is that it spares the user from manually creating a pod from
+where the main Nextflow application is launched. In this scenario, the user environment is not containerised.
+
+However there are scenarios in which Nextflow needs to be executed directly from a pod running in a
+Kubernetes cluster. In these cases you will need to use the plain Nextflow ``run`` command and specify
+the ``k8s`` executor and the required persistent volume claim in the ``nextflow.config`` file as shown below::
+
+    process {
+       executor = 'k8s'
+    }
+
+    k8s {
+       storageClaimName = 'vol-claim'
+       storageMountPath = '/mount/path'
+    }
+
+In the above snippet replace ``vol-claim`` with the name of an existing persistent volume claim and replace
+``/mount/path`` with the actual desired mount path eg. ``/workspace``.
+
+.. warning:: The running pod must have been created with the same persistent volume claim name and mount as the
+    one specified in your Nextflow configuration file.
+    Note also that the ``run`` command does not support the ``-v`` option.
+   
+
+Pod settings
+============
+
+The process :ref:`process-pod` directive allows the definition of pods specific settings, such as environment variables,
+secrets and config maps when using the :ref:`k8s-executor` executor. See the :ref:`process-pod` directive for more details.
+
 Limitation
 ==========
 
-Currently Nextflow does not allow the execution of local workflow scripts.
+Currently, the ``kuberun`` command does not allow the execution of local Nextflow scripts.
 
 
 Advanced configuration
 ======================
 
-Read :ref:`Kubernetes configuration<config-k8s>` section to learn more about advanced cloud configuration options.
+Read :ref:`Kubernetes configuration<config-k8s>` and :ref:`executor <k8s-executor>` sections to learn more
+about advanced configuration options.

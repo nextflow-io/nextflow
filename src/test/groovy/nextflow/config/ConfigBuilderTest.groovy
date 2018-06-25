@@ -170,7 +170,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions()
         def run = new CmdRun(params: [alpha: 'Hello', beta: 'World', omega: 'Last'])
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildConfig([file])
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
 
         then:
         result.params.alpha == 'Hello'  // <-- params defined as CLI options override the ones in the config file
@@ -183,6 +183,40 @@ class ConfigBuilderTest extends Specification {
         cleanup:
         file?.delete()
     }
+
+    def 'CLI params should override the ones defined in the config file (2)' () {
+        setup:
+        def file = Files.createTempFile('test',null)
+        file.text = '''
+        params {
+          alpha = 'x'
+          beta = 'y'
+          delta = 'Foo'
+          gamma = params.alpha
+          omega = 'Bar'
+        }
+
+        process {
+          publishDir = [path: params.alpha]
+        }
+        '''
+        when:
+        def opt = new CliOptions()
+        def run = new CmdRun(params: [alpha: 'Hello', beta: 'World', omega: 'Last'])
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+
+        then:
+        result.params.alpha == 'Hello'  // <-- params defined as CLI options override the ones in the config file
+        result.params.beta == 'World'   // <--   as above
+        result.params.gamma == 'Hello'  // <--   as above
+        result.params.omega == 'Last'
+        result.params.delta == 'Foo'
+        result.process.publishDir == [path: 'Hello']
+
+        cleanup:
+        file?.delete()
+    }
+
 
     def 'CLI params should override the ones in one or more config files' () {
         given:
@@ -221,7 +255,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions()
         def run = new CmdRun(params: [one: '1', two: 'dos', three: 'tres'])
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildConfig([configMain.toPath()])
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(configMain.toPath())
 
         then:
         config.params.one == 1
@@ -286,7 +320,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions()
         def run = new CmdRun(params: [alpha: 'AAA', beta: 'BBB'])
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildConfig([file])
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
         then:
         config.params.alpha == 'AAA'
         config.params.beta == 'BBB'
@@ -299,7 +333,7 @@ class ConfigBuilderTest extends Specification {
         when:
         opt = new CliOptions()
         run = new CmdRun(params: [alpha: 'AAA', beta: 'BBB'], profile: 'first')
-        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildConfig([file])
+        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
         then:
         config.params.alpha == 'AAA'
         config.params.beta == 'BBB'
@@ -314,7 +348,7 @@ class ConfigBuilderTest extends Specification {
         when:
         opt = new CliOptions()
         run = new CmdRun(params: [alpha: 'AAA', beta: 'BBB', genomes: 'xxx'], profile: 'second')
-        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildConfig([file])
+        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
         then:
         config.params.alpha == 'AAA'
         config.params.beta == 'BBB'
@@ -330,24 +364,68 @@ class ConfigBuilderTest extends Specification {
     def 'valid config files' () {
 
         given:
-        def path = Files.createTempDirectory('test')
+        def folder = Files.createTempDirectory('test')
+        def f1 = folder.resolve('file1')
+        def f2 = folder.resolve('file2')
 
         when:
-        def f1 = path.resolve('file1')
-        def f2 = path.resolve('file2')
-        def files = new ConfigBuilder().validateConfigFiles([f1.toString(), f2.toString()])
+        new ConfigBuilder()
+                    .validateConfigFiles([f1.toString(), f2.toString()])
         then:
         thrown(AbortOperationException)
 
+
         when:
         f1.text = '1'; f2.text = '2'
-        files = new ConfigBuilder().validateConfigFiles([f1.toString(), f2.toString()])
+        def files = new ConfigBuilder()
+                    .validateConfigFiles([f1.toString(), f2.toString()])
+        then:
+        files == [f1, f2]
+
+
+        when:
+        files = new ConfigBuilder(homeDir: folder, currentDir: folder)
+                    .setUserConfigFiles(f1,f2)
+                    .validateConfigFiles()
         then:
         files == [f1, f2]
 
         cleanup:
-        path.deleteDir()
+        folder.deleteDir()
 
+    }
+
+    def 'should discover default config files' () {
+        given:
+        def homeDir = Files.createTempDirectory('home')
+        def baseDir = Files.createTempDirectory('work')
+        def workDir = Files.createTempDirectory('work')
+
+        when:
+        def homeConfig = homeDir.resolve('config')
+        homeConfig.text = 'foo=1'
+        def files1 = new ConfigBuilder(homeDir: homeDir, baseDir: workDir, currentDir: workDir).validateConfigFiles()
+        then:
+        files1 == [homeConfig]
+
+        when:
+        def workConfig = workDir.resolve('nextflow.config')
+        workConfig.text = 'bar=2'
+        def files2 = new ConfigBuilder(homeDir: homeDir, baseDir: workDir, currentDir: workDir).validateConfigFiles()
+        then:
+        files2 == [homeConfig, workConfig]
+
+        when:
+        def baseConfig = baseDir.resolve('nextflow.config')
+        baseConfig.text = 'ciao=3'
+        def files3 = new ConfigBuilder(homeDir: homeDir, baseDir: baseDir, currentDir: workDir).validateConfigFiles()
+        then:
+        files3 == [homeConfig, baseConfig, workConfig]
+
+
+        cleanup:
+        homeDir?.deleteDir()
+        workDir?.deleteDir()
     }
 
     def 'command executor options'() {
@@ -355,7 +433,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions()
         def run = new CmdRun(executorOptions: [ alpha: 1, 'beta.x': 'hola', 'beta.y': 'ciao' ])
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildConfig([])
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles()
         then:
         result.executor.alpha == 1
         result.executor.beta.x == 'hola'
@@ -368,7 +446,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions()
         def run = new CmdRun(clusterOptions: [ alpha: 1, 'beta.x': 'hola', 'beta.y': 'ciao' ])
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildConfig([])
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles()
         then:
         result.cluster.alpha == 1
         result.cluster.beta.x == 'hola'
@@ -870,6 +948,15 @@ class ConfigBuilderTest extends Specification {
         config.params == [foo:'Ciao', bar:20, data: '/some/path']
     }
 
+    def 'should run with conda' () {
+
+        when:
+        def config = new ConfigBuilder().setCmdRun(new CmdRun(withConda: '/some/path/env.yml')).build()
+        then:
+        config.process.conda == '/some/path/env.yml'
+
+    }
+
     def 'should warn about missing attribute' () {
 
         given:
@@ -896,9 +983,29 @@ class ConfigBuilderTest extends Specification {
         new ConfigBuilder().setOptions(opt).build()
         then:
         def e = thrown(ConfigParseException)
-        e.message == "Unknown config attribute: bar -- check config file: ${file.toRealPath()}".toString()
+        e.message == "Unknown config attribute `bar` -- check config file: ${file.toRealPath()}".toString()
 
     }
+
+    def 'should report fully qualified missing attribute'  () {
+
+        given:
+        def file = Files.createTempFile('test','config')
+        file.deleteOnExit()
+
+        when:
+        file.text =
+                '''
+                params.x = foo.bar
+                '''
+        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
+        new ConfigBuilder().setOptions(opt).build()
+        then:
+        def e = thrown(ConfigParseException)
+        e.message == "Unknown config attribute `foo.bar` -- check config file: ${file.toRealPath()}".toString()
+
+    }
+
 
     def 'should collect config files' () {
 
@@ -918,7 +1025,7 @@ class ConfigBuilderTest extends Specification {
         then:
         result.foo == 1
         result.bar == 2
-        builder.configFiles == [file1, file2]
+        builder.parsedConfigFiles == [file1, file2]
 
         cleanup:
         file1?.delete()
@@ -1088,5 +1195,154 @@ class ConfigBuilderTest extends Specification {
         result.profiles.singularity.process.container == 'bar-2.img'
     }
 
+    def 'should resolve process withLabel inside a profile' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def file1 = folder.resolve('test.conf')
+        file1.text = '''
+            process {
+                cpus = 2
+
+                withName: bar {
+                    cpus = 4
+                }
+
+                withLabel: foo {
+                    cpus = 8
+                }
+            }
+            '''
+
+        when:
+        def cfg1 = new ConfigBuilder().buildConfig0([:], [file1])
+        then:
+        cfg1.process.cpus == 2
+        cfg1.process.'withName:bar'.cpus == 4
+        cfg1.process.'withLabel:foo'.cpus == 8
+        cfg1.process == [cpus: 2, 'withName:bar': [cpus:4], 'withLabel:foo': [cpus: 8]]
+
+        // make sure the same config is returned when the file is included
+        when:
+        def file2 = folder.resolve('nextflow.config')
+        file2.text = """
+            includeConfig "$file1" 
+            """
+
+        def cfg2 = new ConfigBuilder().buildConfig0([:], [file2])
+        then:
+        cfg1 == cfg2
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
+    def 'should access top params from profile' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def file1 = folder.resolve('file1.conf')
+
+        file1.text = """
+            params.alpha = 1 
+            params.delta = 2 
+            
+            profiles {
+                foo {
+                    params.delta = 20 
+                    params.gamma = 30 
+                    
+                    process {  
+                        cpus = params.alpha
+                    }
+                }
+            }
+            """
+
+        when:
+        def cfg = new ConfigBuilder().setProfile('foo').buildConfig0([:], [file1])
+        then:
+        cfg.process == [cpus: 1]
+        cfg.params == [alpha: 1, delta: 20, gamma: 30]
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should access top params from profile (2)' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def file1 = folder.resolve('file1.conf')
+
+        file1.text = """
+            params {
+                alpha = 1 
+                delta = 2 
+            }
+            
+            profiles {
+                foo {
+                    params {
+                        delta = 20 
+                        gamma = 30
+                    }
+
+                    process {  
+                        cpus = params.alpha
+                    }
+                }
+            }
+            """
+
+
+        when:
+        def cfg = new ConfigBuilder().setProfile('foo').buildConfig0([:], [file1])
+        then:
+        cfg.process == [cpus: 1]
+        cfg.params == [alpha: 1, delta: 20, gamma: 30]
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should merge params two profiles' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def file1 = folder.resolve('file1.conf')
+
+        file1.text = '''    
+            profiles {
+                foo {
+                    params {
+                        alpha = 1 
+                        delta = 2 
+                    }
+                }
+
+                bar {
+                    params {
+                        delta = 20 
+                        gamma = 30 
+                    }
+                    
+                    process {
+                        cpus = params.alpha
+                    }                
+                }
+            }
+            '''
+
+
+        when:
+        def cfg = new ConfigBuilder().setProfile('foo,bar') .buildConfig0([:], [file1])
+        then:
+        cfg.process.cpus == 1
+        cfg.params.alpha == 1
+        cfg.params.delta == 20
+        cfg.params.gamma == 30
+
+        cleanup:
+        folder?.deleteDir()
+    }
 }
 

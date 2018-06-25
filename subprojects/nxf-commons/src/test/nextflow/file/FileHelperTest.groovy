@@ -644,6 +644,56 @@ class FileHelperTest extends Specification {
         root?.deleteDir()
     }
 
+    def 'should copy path content' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('source').mkdir()
+        folder.resolve('target').mkdir()
+
+        folder.resolve('source/file.txt').text = 'hello world'
+        folder.resolve('source/file.txt').mklink(folder.resolve('source/link.txt'))
+        folder.resolve('source/dir-x').mkdir()
+        folder.resolve('source/dir-x/content.txt').text = 'foo'
+        folder.resolve('source/dir-x').mklink(folder.resolve('source/link-dir'))
+
+        when:
+        def s = folder.resolve('source/link.txt')
+        def t = folder.resolve('target/file-b.txt')
+        FileHelper.copyPath(s,t)
+        then:
+        t.text == 'hello world'
+        Files.isRegularFile(t)
+
+        when:
+        s = folder.resolve('source/link.txt')
+        t = folder.resolve('target/file-c.txt')
+        FileHelper.copyPath(s,t, LinkOption.NOFOLLOW_LINKS)
+        then:
+        t.text == 'hello world'
+        Files.isSymbolicLink(t)
+
+        when:
+        s = folder.resolve('source/link-dir')
+        t = folder.resolve('target/copy-dir')
+        FileHelper.copyPath(s,t)
+        then:
+        Files.isDirectory(t)
+        t.resolve('content.txt').text == 'foo'
+
+        when:
+        s = folder.resolve('source/link-dir')
+        t = folder.resolve('target/link-dir')
+        FileHelper.copyPath(s,t, LinkOption.NOFOLLOW_LINKS)
+        then:
+        Files.isSymbolicLink(t)
+        Files.isDirectory(t)
+        t.resolve('content.txt').text == 'foo'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should move file path to foreign file system' () {
 
         given:

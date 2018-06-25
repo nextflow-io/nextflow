@@ -129,7 +129,7 @@ class CloudConfigTest extends Specification {
         '''
 
         when:
-        def config = new ConfigBuilder().buildConfig([cfgFile])
+        def config = new ConfigBuilder().buildGivenFiles(cfgFile)
         def cloud = CloudConfig.create(config)
 
         then:

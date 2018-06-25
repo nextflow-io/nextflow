@@ -1,7 +1,57 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-0.29.9-RC1 - 8 Apr 2018
+0.30.2 - 16 Jun 2018
+- Fixed Output declarations with a glob pattern fail when AWS Batch executor is used #748
+- Fixed Scratch directive not working for AWS Batch executor #740
+- Fixed K8s launcher does not parse remote config files #738
+- Minor refactoring to enable Groovy 2.5 compilation 20b6d933 a8b994f1
+
+0.30.1 - 11 Jun 2018
+- Use a daemon thread for watchPath method #735
+- Fixed Gitlab API v3 has been deprecated and does not work any more #734
+- Fixed Unable to access params defined in the top scope from a nested profile #733
+- Fixed Process config selectors do not work when the config is included #729
+- Fixed Improve the error message when a missing property is used in the config file #730
+- Added Travis build support for jdk10
+- Added documentation for `until` operator #736
+- Added mailer recipients check
+- Increased Singularity pull timeout to 20 minutes
+- Updated build to Gradle 4.8
+
+0.30.0 - 5 Jun 2018
+- Added the support for Bioconda #493
+- Added support for AWS Batch job timeout #648
+- Added jobs submit rate limit #198
+- Added offline option #665
+- Enabling Java 9/10 support for build and launcher scripts #674
+- Fixed Expose Kubernetes Secrets to worker pods #651
+- Fixed K8s execution hangs when a non-existing docker image is specified #697
+- Fixed K8s execution terminates abruptly if a pod requires more resources than available ones #676
+- Fixed K8s executor does not report command log when a task fail #699
+- Fixed Configuration profile is not handled properly by the kuberun command #696
+- Fixed Enhance process metrics to avoid usage of ps tool #499
+- Fixed PublishDir should use copy mode by default when the target is a S3 path #718
+- Fixed Unbounded variable breaks task launcher script #722
+- Fixed Escape filenames when copying from S3 #717
+- Fixed AWS executor should use putObject API to upload job scripts to S3 #712
+- Fixed Exception is thrown when an output folder contains a circular symlink path #701
+
+0.29.1 - 10 May 2018
+- Fixed Default ext property are not included in process context #673
+- Fixed Operator concat throws a ConcurrentModificationException #675
+- Fixed Output file is not recognised when it's created into a subdir and the name matches an input #688 
+- Fixed Empty container definition being ignored when default one is specified #691
+- Fixed K8s client fails to connect the cluster when client key nor certificate is specified #692
+- Fixed K8s executor hang on pod creation failure
+- Added select in -R for memory for LSF executor #683
+
+0.29.0  - 24 Apr 2018
+- Fixed Buffer operator fails to recognise optional parameter when a closing condition is specified #652
+- Fixed PublishDir mode "copyNoFollow" does not work for directories #658
+- Update NameGenerator adjectives #656
+
+0.29.0-RC1 - 8 Apr 2018
 - Added `containerOptions` directive #415
 - Added support for multiple `publishDir` directives for process #256
 - Added cleanup feature to delete workflow work dir on completion #649

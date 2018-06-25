@@ -50,6 +50,10 @@ class EscapeTest extends Specification {
         Escape.path("hello'3.txt").size() == "hello'3.txt".size()+1
         Escape.path("hello(3).txt") == "hello\\(3\\).txt"
         Escape.path("hello!3.txt") == "hello\\!3.txt"
+        Escape.path('hello[!x].txt') == 'hello[!x].txt' // <-- this `!` should not be escaped because it's a glob negation http://man7.org/linux/man-pages/man7/glob.7.html
+        Escape.path('hello[x!].txt') == 'hello[x\\!].txt'
+        Escape.path('hello[!x.txt') == 'hello[\\!x.txt'
+        Escape.path('hello![x,*.txt]') == 'hello\\![x,*.txt]'
         Escape.path("hello&3.txt") == "hello\\&3.txt"
         Escape.path("hello<3.txt") == "hello\\<3.txt"
         Escape.path("hello>3.txt") == "hello\\>3.txt"
@@ -65,6 +69,8 @@ class EscapeTest extends Specification {
         Escape.wildcards('file_*') == 'file_\\*'
         Escape.wildcards('file_??') == 'file_\\?\\?'
         Escape.wildcards('file_{a,b}') == 'file_\\{a,b\\}'
+        Escape.wildcards('file_!a.txt') == 'file_\\!a.txt'
+        Escape.wildcards('file_[!a].txt') == 'file_\\[\\!a\\].txt'
     }
 
 }

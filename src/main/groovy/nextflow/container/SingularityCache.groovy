@@ -51,7 +51,7 @@ class SingularityCache {
 
     private boolean missingCacheDir
 
-    private Duration pullTimeout = Duration.of('10min')
+    private Duration pullTimeout = Duration.of('20min')
 
     /** Only for debugging purpose - do not use */
     @PackageScope
@@ -105,7 +105,7 @@ class SingularityCache {
     }
 
     /**
-     * Retried the directory where store the singularity images once downloaded.
+     * Retrieve the directory where store the singularity images once downloaded.
      * If tries these setting in the following order:
      * 1) {@code singularity.cacheDir} setting in the nextflow config file;
      * 2) the {@code NXF_SINGULARITY_CACHEDIR} environment variable

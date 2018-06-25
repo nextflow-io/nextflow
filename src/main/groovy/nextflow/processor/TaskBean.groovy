@@ -51,6 +51,8 @@ class TaskBean implements Serializable, Cloneable {
 
     String containerImage
 
+    Path condaEnv
+
     List<String> moduleNames
 
     Path workDir
@@ -117,6 +119,7 @@ class TaskBean implements Serializable, Cloneable {
         // set the environment
         this.environment = task.getEnvironment()
 
+        this.condaEnv = task.getCondaEnv()
         this.moduleNames = task.config.getModule()
         this.shell = task.config.getShell() ?: BashWrapperBuilder.BASH
         this.script = task.getScript()

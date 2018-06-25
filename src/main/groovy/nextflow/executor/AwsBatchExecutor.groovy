@@ -19,6 +19,7 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -33,6 +34,7 @@ import com.amazonaws.services.batch.model.Host
 import com.amazonaws.services.batch.model.JobDefinition
 import com.amazonaws.services.batch.model.JobDefinitionType
 import com.amazonaws.services.batch.model.JobDetail
+import com.amazonaws.services.batch.model.JobTimeout
 import com.amazonaws.services.batch.model.KeyValuePair
 import com.amazonaws.services.batch.model.MountPoint
 import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
@@ -542,6 +544,16 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             result.setRetryStrategy(retry)
         }
 
+        // set task timeout
+        final time = task.config.getTime()
+        if( time ) {
+            def secs = time.toSeconds() as Integer
+            if( secs < 60 ) {
+                secs = 60   // Batch minimal allowed timeout is 60 seconds
+            }
+            result.setTimeout(new JobTimeout().withAttemptDurationSeconds(secs))
+        }
+
         // set the actual command
         def container = new ContainerOverrides()
         container.command = cli
@@ -551,6 +563,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // set the task cpus
         if( task.config.getCpus() > 1 )
             container.vcpus = task.config.getCpus()
+
         // set the environment
         def vars = getEnvironmentVars()
         if( vars )
@@ -607,7 +620,8 @@ class AwsBatchScriptLauncher extends BashWrapperBuilder {
     AwsBatchScriptLauncher( TaskBean bean, AwsOptions opts ) {
         super(bean, new AwsBatchFileCopyStrategy(bean,opts))
         // enable the copying of output file to the S3 work dir
-        scratch = true
+        if( !scratch )
+            scratch = true
         // include task script as an input to force its staging in the container work directory
         bean.inputFiles[TaskRun.CMD_SCRIPT] = bean.workDir.resolve(TaskRun.CMD_SCRIPT)
         // add the wrapper file when stats are enabled
@@ -687,7 +701,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         if( path.isDirectory() ) {
             op += "--recursive "
         }
-        op += "s3:/${path} ${targetName}"
+        op += "s3:/${Escape.path(path)} ${Escape.path(targetName)}"
         return op
     }
 
@@ -706,7 +720,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         if( normalized ) {
             result << ""
             normalized.each {
-                result << "nxf_s3_upload '$it' s3:/${targetDir} || true" // <-- add true to avoid it stops on errors
+                result << "nxf_s3_upload '${Escape.path(it)}' s3:/${Escape.path(targetDir)} || true" // <-- add true to avoid it stops on errors
             }
         }
 
@@ -829,13 +843,15 @@ class S3Helper {
         nxf_s3_upload() {
             local pattern=\$1
             local s3path=\$2
-            for name in \$(eval "ls -d \$pattern");do
+            IFS=\$'\\n'
+            for name in \$(eval "ls -1d \$pattern");do
               if [[ -d "\$name" ]]; then
-                $cli s3 cp --only-show-errors --recursive $encryption--storage-class $storage \$name \$s3path/\$name
+                $cli s3 cp --only-show-errors --recursive $encryption--storage-class $storage "\$name" "\$s3path/\$name"
               else
-                $cli s3 cp --only-show-errors $encryption--storage-class $storage \$name \$s3path/\$name
+                $cli s3 cp --only-show-errors $encryption--storage-class $storage "\$name" "\$s3path/\$name"
               fi
-          done
+            done
+            unset IFS
         }
         """.stripIndent()
     }

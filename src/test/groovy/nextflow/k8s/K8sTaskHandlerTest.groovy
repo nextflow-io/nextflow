@@ -19,6 +19,8 @@
  */
 
 package nextflow.k8s
+
+import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.Session
@@ -26,6 +28,12 @@ import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.client.K8sResponseJson
+import nextflow.k8s.model.PodEnv
+import nextflow.k8s.model.PodMountConfig
+import nextflow.k8s.model.PodMountSecret
+import nextflow.k8s.model.PodOptions
+import nextflow.k8s.model.PodSpecBuilder
+import nextflow.k8s.model.PodVolumeClaim
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -40,6 +48,9 @@ import spock.lang.Unroll
  */
 class K8sTaskHandlerTest extends Specification {
 
+    def setup() {
+        PodSpecBuilder.VOLUMES.set(0)
+    }
 
     def 'should return a new pod request with no storage' () {
         given:
@@ -56,11 +67,10 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
+        1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
-        1 * handler.getAutoMountHostPaths() >> false
-        1 * handler.getVolumeClaims() >> [:]
         1 * handler.getLabels(task) >> [foo: 'bar', hello: 'world']
-        0 * handler.getContainerMounts() >> null
+        1 * handler.getContainerMounts() >> []
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
@@ -88,10 +98,9 @@ class K8sTaskHandlerTest extends Specification {
         result = handler.newSubmitRequest(task)
         then:
         1 * handler.getSyntheticPodName(task) >> 'nf-foo'
-        1 * handler.getAutoMountHostPaths() >> false
-        1 * handler.getVolumeClaims() >> null
         1 * handler.getLabels(task) >> [sessionId:'xxx']
-        0 * handler.getContainerMounts() >> null
+        1 * handler.getPodOptions() >> new PodOptions()
+        1 * handler.getContainerMounts() >> []
         1 * builder.fixOwnership() >> true
         1 * handler.getOwner() >> '501:502'
         1 * task.getContainer() >> 'debian:latest'
@@ -110,7 +119,7 @@ class K8sTaskHandlerTest extends Specification {
                                      image:'debian:latest',
                                      command:['/bin/bash', '-ue','.command.run'],
                                      workingDir:'/some/work/dir',
-                                     env: [ [name:'NXF_OWNER', value:'501:502'] ]
+                                     env: [  [name:'NXF_OWNER', value:'501:502'] ]
                                     ]
                             ]
                     ]
@@ -121,10 +130,9 @@ class K8sTaskHandlerTest extends Specification {
         result = handler.newSubmitRequest(task)
         then:
         1 * handler.getSyntheticPodName(task) >> 'nf-abc'
-        1 * handler.getLabels(task) >> null
-        1 * handler.getAutoMountHostPaths() >> false
-        1 * handler.getVolumeClaims() >> null
-        0 * handler.getContainerMounts() >> null
+        1 * handler.getLabels(task) >> [:]
+        1 * handler.getPodOptions() >> new PodOptions()
+        1 * handler.getContainerMounts() >> []
         1 * task.getContainer() >> 'user/alpine:1.0'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
@@ -166,10 +174,9 @@ class K8sTaskHandlerTest extends Specification {
         result = handler.newSubmitRequest(task)
         then:
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
-        1 * handler.getAutoMountHostPaths() >> false
-        1 * handler.getVolumeClaims() >> [:]
+        1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getLabels(task) >> [:]
-        0 * handler.getContainerMounts() >> null
+        1 * handler.getContainerMounts() >> []
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> new TaskConfig()
@@ -194,6 +201,59 @@ class K8sTaskHandlerTest extends Specification {
 
     }
 
+    def 'should create a pod with specified pod options' () {
+
+        given:
+        def WORK_DIR = Paths.get('/some/work/dir')
+        def task = Mock(TaskRun)
+        def client = Mock(K8sClient)
+        def builder = Mock(K8sWrapperBuilder)
+        def config = Mock(TaskConfig)
+        def handler = Spy(K8sTaskHandler)
+        def podOptions = Mock(PodOptions)
+        handler.builder = builder
+        handler.client = client
+        Map result
+
+        when:
+        result = handler.newSubmitRequest(task)
+        then:
+        1 * client.getConfig() >> new ClientConfig()
+        1 * handler.getSyntheticPodName(task) >> 'nf-123'
+        1 * handler.getLabels(task) >> [:]
+        1 * handler.getPodOptions() >> podOptions
+        1 * handler.getContainerMounts() >> []
+        1 * task.getContainer() >> 'debian:latest'
+        1 * task.getWorkDir() >> WORK_DIR
+        1 * task.getConfig() >> config
+        2 * podOptions.getEnvVars() >> [ PodEnv.value('FOO','bar') ]
+        2 * podOptions.getMountSecrets() >> [ new PodMountSecret('my-secret/key-z', '/data/secret.txt') ]
+        2 * podOptions.getMountConfigMaps() >> [ new PodMountConfig('my-data/key-x', '/etc/file.txt') ]
+
+        result == [ apiVersion: 'v1',
+                    kind: 'Pod',
+                    metadata: [name:'nf-123', namespace:'default' ],
+                    spec: [
+                            restartPolicy:'Never',
+                            containers:[
+                                    [name:'nf-123',
+                                     image:'debian:latest',
+                                     command:['/bin/bash', '-ue','.command.run'],
+                                     workingDir:'/some/work/dir',
+                                     env:[[name:'FOO', value:'bar']],
+                                     volumeMounts:[ [name:'vol-1', mountPath:'/etc'],
+                                                    [name:'vol-2', mountPath:'/data'] ]
+                                    ]
+                            ],
+                            volumes:[
+                                    [name:'vol-1', configMap:[name:'my-data', items:[[key:'key-x', path:'file.txt']]]],
+                                    [name:'vol-2', secret:[secretName:'my-secret', items:[[key:'key-z', path:'secret.txt']]]]
+                            ]
+                    ]
+        ]
+
+    }
+
     def 'should create a request with vols and mounts' () {
 
         given:
@@ -207,22 +267,23 @@ class K8sTaskHandlerTest extends Specification {
         handler.client = client
         Map result
 
-        def CLAIMS = [ 'first': [mountPath: '/work'], second: [mountPath: '/data'] ]
+        def podOptions = Mock(PodOptions)
+        def CLAIMS = [ new PodVolumeClaim('first','/work'), new PodVolumeClaim('second','/data') ]
 
         when:
         result = handler.newSubmitRequest(task)
         then:
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
-        1 * handler.getVolumeClaims() >> CLAIMS
-        1 * handler.getAutoMountHostPaths() >> false
-        0 * handler.getContainerMounts() >> null
-        1 * handler.getLabels(task) >> null
+        1 * handler.getContainerMounts() >> []
+        1 * handler.getLabels(task) >> [:]
+        1 * handler.getPodOptions() >> podOptions
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
         1 * config.getCpus() >> 1
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
+        2 * podOptions.getVolumeClaims() >> CLAIMS
 
         result == [ apiVersion: 'v1',
                     kind: 'Pod',
@@ -249,10 +310,9 @@ class K8sTaskHandlerTest extends Specification {
         result = handler.newSubmitRequest(task)
         then:
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
-        1 * handler.getVolumeClaims() >> null
-        1 * handler.getAutoMountHostPaths() >> true
         1 * handler.getContainerMounts() >> ['/tmp', '/data']
-        1 * handler.getLabels(task) >> null
+        1 * handler.getLabels(task) >> [:]
+        1 * handler.getPodOptions() >> new PodOptions()
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
@@ -370,6 +430,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getState() >> [terminated: ["reason": "Completed", "finishedAt": "2018-01-13T10:19:36Z", exitCode: 0]]
         1 * handler.readExitFile() >> EXIT_STATUS
         1 * handler.deletePodIfSuccessful(task) >> null
+        1 * handler.savePodLogOnError(task) >> null
         handler.task.exitStatus == EXIT_STATUS
         handler.task.@stdout == OUT_FILE
         handler.task.@stderr == ERR_FILE
@@ -389,7 +450,14 @@ class K8sTaskHandlerTest extends Specification {
         when:
         handler.kill()
         then:
+        1 * handler.cleanupDisabled() >> false
         1 * client.podDelete(POD_NAME) >> null
+
+        when:
+        handler.kill()
+        then:
+        1 * handler.cleanupDisabled() >> true
+        0 * client.podDelete(POD_NAME) >> null
     }
 
     def 'should check task cached state' () {
@@ -399,39 +467,88 @@ class K8sTaskHandlerTest extends Specification {
         def handler = Spy(K8sTaskHandler)
         handler.client = client
         handler.podName = POD_NAME
-        Map STATE1 = [foo:1, bar:2]
-        Map STATE2 = [fizz:1, bazz: 2]
+        Map STATE1 = [status:'pending']
+        Map STATE2 = [status:'running']
+        Map STATE3 = [status:'complete']
         Map state
 
+        // first time `client.podState` is invoked
         when:
         state = handler.getState()
         then:
         1 * client.podState(POD_NAME) >> STATE1
         state == STATE1
 
+        // second time `client.podState` NOT invoked
+        // the cached status is returned
         when:
         state = handler.getState()
         then:
-        0 * client.podState(POD_NAME) >> 0
+        0 * client.podState(POD_NAME)
         state == STATE1
 
+        // after more than a second `client.podState` is invoked
+        // an empty value is returned, therefore the previous status is returned
         when:
         sleep 1_500
         state = handler.getState()
         then:
+        1 * client.podState(POD_NAME) >> [:]
+        state == STATE1
+
+        // still an empty status
+        // the previous status is returned
+        when:
+        state = handler.getState()
+        then:
+        1 * client.podState(POD_NAME) >> [:]
+        state == STATE1
+
+        // now, the a valid status is returned
+        // the status is cached
+        when:
+        state = handler.getState()
+        then:
         1 * client.podState(POD_NAME) >> STATE2
         state == STATE2
+
+        // following invocation is cached
+        // the previous status is returned
+        when:
+        state = handler.getState()
+        then:
+        0 * client.podState(POD_NAME)
+        state == STATE2
+
+        // after a second, the a new invocation is executed
+        // the new status is returned
+        when:
+        sleep 1_500
+        state = handler.getState()
+        then:
+        1 * client.podState(POD_NAME) >> STATE3
+        state == STATE3
     }
 
     def 'should return container mounts' () {
 
         given:
         def wrapper = Mock(K8sWrapperBuilder)
+        def k8sConfig = Mock(K8sConfig)
         def handler = new K8sTaskHandler(builder: wrapper)
+        handler.k8sConfig = k8sConfig
 
         when:
         def mounts = handler.getContainerMounts()
         then:
+        1 * k8sConfig.getAutoMountHostPaths() >> false
+        0 * _   // <-- it should do anything else 
+        mounts == []
+
+        when:
+        mounts = handler.getContainerMounts()
+        then:
+        1 * k8sConfig.getAutoMountHostPaths() >> true
         1 * wrapper.getResolvedInputs() >> ['foo': Paths.get('/base_path/foo.txt'), 'bar': Paths.get('/base_path/bar.txt')]
         1 * wrapper.getBinDir() >> Paths.get('/user/bin')
         1 * wrapper.getWorkDir() >> Paths.get('/work/dir')
@@ -512,21 +629,98 @@ class K8sTaskHandlerTest extends Specification {
         when:
         handler.deletePodIfSuccessful(TASK_OK)
         then:
-        1 * executor.getK8sConfig() >> [cleanup: true]
+        1 * executor.getK8sConfig() >> new K8sConfig()
         1 * client.podDelete(POD_NAME) >> null
 
         when:
         handler.deletePodIfSuccessful(TASK_OK)
         then:
-        1 * executor.getK8sConfig() >> [cleanup: false]
-        0 * client.podDelete(POD_NAME) >> null
-
+        1 * executor.getK8sConfig() >> new K8sConfig(cleanup: true)
+        1 * client.podDelete(POD_NAME) >> null
 
         when:
         handler.deletePodIfSuccessful(TASK_FAIL)
         then:
-        1 * executor.getK8sConfig() >> [cleanup: true]
+        1 * executor.getK8sConfig() >> new K8sConfig(cleanup: false)
         0 * client.podDelete(POD_NAME) >> null
 
+    }
+
+
+    def 'should save pod log' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def POD_NAME = 'the-pod-name'
+        def POD_MESSAGE = 'Hello world!'
+        def POD_LOG = new ByteArrayInputStream(new String(POD_MESSAGE).bytes)
+        def session = Mock(Session)
+        def task = Mock(TaskRun)
+        def executor = Mock(K8sExecutor)
+        def client = Mock(K8sClient)
+
+        def handler = Spy(K8sTaskHandler)
+        handler.executor = executor
+        handler.client = client
+        handler.podName = POD_NAME
+
+        when:
+        handler.savePodLogOnError(task)
+        then:
+        task.isSuccess() >> true
+        0 * client.podLog(_)
+
+        when:
+        handler.savePodLogOnError(task)
+        then:
+        task.isSuccess() >> false
+        task.getWorkDir() >> folder
+        executor.getSession() >> session
+        session.isTerminated() >> false
+        session.isCancelled() >> false
+        session.isAborted() >> false
+        1 * client.podLog(POD_NAME) >> POD_LOG
+
+        folder.resolve( TaskRun.CMD_LOG ).text == POD_MESSAGE
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
+    def 'should merge pod options' () {
+
+        given:
+        PodOptions opts
+
+        def taskConfig = Mock(TaskConfig)
+        def task = Mock(TaskRun)
+        task.getConfig() >> taskConfig
+
+        def k8sConfig = Mock(K8sConfig)
+        def handler = Spy(K8sTaskHandler)
+        handler.k8sConfig = k8sConfig
+        handler.task = task
+
+        when:
+        opts = handler.getPodOptions()
+        then:
+        1 * taskConfig.getPodOptions() >> new PodOptions()
+        1 * k8sConfig.getPodOptions() >> new PodOptions()
+        opts == new PodOptions()
+
+        when:
+        opts = handler.getPodOptions()
+        then:
+        1 * taskConfig.getPodOptions() >> new PodOptions([[env:'HELLO', value:'WORLD']])
+        1 * k8sConfig.getPodOptions() >> new PodOptions()
+        opts == new PodOptions([[env:'HELLO', value:'WORLD']])
+
+
+        when:
+        opts = handler.getPodOptions()
+        then:
+        1 * taskConfig.getPodOptions() >> new PodOptions([[env:'HELLO', value:'WORLD']])
+        1 * k8sConfig.getPodOptions() >> new PodOptions([ [env:'BRAVO', value:'HOTEL'] ])
+        opts == new PodOptions([[env:'HELLO', value:'WORLD'], [env:'BRAVO', value:'HOTEL']])
     }
 }

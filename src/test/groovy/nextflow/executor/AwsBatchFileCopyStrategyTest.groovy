@@ -43,6 +43,32 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         copy.stageInputFile(FILE, 'foo.txt') == 'aws s3 cp --only-show-errors s3://some/data/nobel_prize_results.gz foo.txt'
     }
 
+    def 'should return unstage script' () {
+        given:
+        def copy = new AwsBatchFileCopyStrategy(Mock(TaskBean), new AwsOptions())
+        def target = Paths.get('/foo/bar')
+
+        when:
+        def script = copy.getUnstageOutputFilesScript(['file.txt'],target)
+        then:
+        script.trim() == "nxf_s3_upload 'file.txt' s3://foo/bar || true"
+
+        when:
+        script = copy.getUnstageOutputFilesScript(['file-*.txt'],target)
+        then:
+        script.trim() == "nxf_s3_upload 'file-*.txt' s3://foo/bar || true"
+
+        when:
+        script = copy.getUnstageOutputFilesScript(['file-[a,b].txt'],target)
+        then:
+        script.trim() == "nxf_s3_upload 'file-[a,b].txt' s3://foo/bar || true"
+
+        when:
+        script = copy.getUnstageOutputFilesScript(['file-01(A).txt'],target)
+        then:
+        script.trim() == "nxf_s3_upload 'file-01\\(A\\).txt' s3://foo/bar || true"
+    }
+
     def 'should check the beforeScript' () {
 
         given:
@@ -62,13 +88,15 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                     nxf_s3_upload() {
                         local pattern=$1
                         local s3path=$2
-                        for name in $(eval "ls -d $pattern");do
+                        IFS=$'\\n'
+                        for name in $(eval "ls -1d $pattern");do
                           if [[ -d "$name" ]]; then
-                            aws s3 cp --only-show-errors --recursive --storage-class STANDARD $name $s3path/$name
+                            aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
                           else
-                            aws s3 cp --only-show-errors --storage-class STANDARD $name $s3path/$name
+                            aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
                           fi
-                      done
+                        done
+                        unset IFS
                     }
                     '''.stripIndent()
 
@@ -84,13 +112,15 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                 nxf_s3_upload() {
                     local pattern=$1
                     local s3path=$2
-                    for name in $(eval "ls -d $pattern");do
+                    IFS=$'\\n'
+                    for name in $(eval "ls -1d $pattern");do
                       if [[ -d "$name" ]]; then
-                        /foo/aws s3 cp --only-show-errors --recursive --sse AES256 --storage-class REDUCED_REDUNDANCY $name $s3path/$name
+                        /foo/aws s3 cp --only-show-errors --recursive --sse AES256 --storage-class REDUCED_REDUNDANCY "$name" "$s3path/$name"
                       else
-                        /foo/aws s3 cp --only-show-errors --sse AES256 --storage-class REDUCED_REDUNDANCY $name $s3path/$name
+                        /foo/aws s3 cp --only-show-errors --sse AES256 --storage-class REDUCED_REDUNDANCY "$name" "$s3path/$name"
                       fi
-                  done
+                    done
+                    unset IFS
                 }
             '''.stripIndent()
     }
@@ -178,12 +208,17 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         1 * opts.getCliPath() >> null
         script == "aws s3 cp --only-show-errors --recursive s3:/$folder bar" as String
 
-
         when:
         script = copy.stageInputFile( folder, 'bar')
         then:
         1 * opts.getCliPath() >> '/home/bin/aws'
         script == "/home/bin/aws s3 cp --only-show-errors --recursive s3:/$folder bar" as String
+
+        when:
+        script = copy.stageInputFile( folder.resolve('01_A(R2).fastq'), '01_A(R2).fastq')
+        then:
+        1 * opts.getCliPath() >> '/home/bin/aws'
+        script == "/home/bin/aws s3 cp --only-show-errors s3:/$folder/01_A\\(R2\\).fastq 01_A\\(R2\\).fastq" as String
     }
     
 }

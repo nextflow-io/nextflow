@@ -19,6 +19,9 @@
  */
 
 package nextflow.scm
+
+import java.nio.file.Path
+
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -27,7 +30,6 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.cli.HubOptions
 import nextflow.config.ConfigParser
-import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.script.ScriptFile
 import nextflow.util.IniFile
@@ -426,24 +428,25 @@ class AssetManager {
         return result ?: new ConfigObject()
     }
 
-    ConfigObject readRemoteConfig(String profile=null) {
-        ConfigObject result = null
-        try {
-            def text = provider.readText(MANIFEST_FILE_NAME)
-            if( text ) {
-                // TODO this must be able to parse remote config includes
-                def slurper = new ConfigParser()
-                slurper.setIgnoreIncludes(true)
-                slurper.registerConditionalBlock('profiles', profile ?: ConfigBuilder.DEFAULT_PROFILE)
-                result = slurper.parse(text)
+    Path getConfigFile() {
+        if( localPath.exists() ) {
+            return new File(localPath, MANIFEST_FILE_NAME).toPath()
+        }
+        else {
+            try {
+                // try to read the config file
+                provider.readBytes(MANIFEST_FILE_NAME)
+                // no error => exist, return a path for it
+                return new ProviderPath(provider, MANIFEST_FILE_NAME)
+            }
+            catch (IOException e) {
+                provider.validateRepo()
+                log.debug "Cannot retried remote config file -- likely does not exist"
+                return null
             }
         }
-        catch( Exception e ) {
-            log.trace "Cannot read project manifest -- Cause: ${e.message}"
-        }
-        // by default return an empty object
-        return result ?: new ConfigObject()
     }
+
 
     String getBaseName() {
         def result = project.tokenize('/')

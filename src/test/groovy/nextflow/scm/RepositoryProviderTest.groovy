@@ -42,7 +42,7 @@ class RepositoryProviderTest extends Specification {
         provider = RepositoryProvider.create(new ProviderConfig('gitlab'),'project/y')
         then:
         provider instanceof GitlabRepositoryProvider
-        provider.endpointUrl == 'https://gitlab.com/api/v3/projects/project%2Fy'
+        provider.endpointUrl == 'https://gitlab.com/api/v4/projects/project%2Fy'
 
         when:
         provider = RepositoryProvider.create(new ProviderConfig('bitbucket'),'project/z')

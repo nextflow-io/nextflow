@@ -23,6 +23,7 @@ package nextflow.file
 import java.lang.reflect.Field
 import java.nio.file.CopyOption
 import java.nio.file.FileSystem
+import java.nio.file.FileSystemLoopException
 import java.nio.file.FileSystemNotFoundException
 import java.nio.file.FileSystems
 import java.nio.file.FileVisitOption
@@ -66,6 +67,10 @@ class FileHelper {
     static final public char[] ALPHA = ('a'..'z') as char[]
 
     private static List<String> UNSUPPORTED_GLOB_WILDCARDS = ['http','https','ftp','ftps']
+
+    private static LinkOption[] NO_FOLLOW_LINKS = [LinkOption.NOFOLLOW_LINKS] as LinkOption[]
+
+    private static LinkOption[] FOLLOW_LINKS = [] as LinkOption[]
 
     static {
         def temp = System.getenv('NXF_TEMP')
@@ -727,7 +732,7 @@ class FileHelper {
         Files.walkFileTree(folder, walkOptions, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
 
             @Override
-            public FileVisitResult preVisitDirectory(Path fullPath, BasicFileAttributes attrs) throws IOException {
+            FileVisitResult preVisitDirectory(Path fullPath, BasicFileAttributes attrs) throws IOException {
                 final int depth = fullPath.nameCount - folder.nameCount
                 final path = folder.relativize(fullPath)
                 log.trace "visitFiles > dir=$path; depth=$depth; includeDir=$includeDir; matches=${matcher.matches(path)}; isDir=${attrs.isDirectory()}"
@@ -741,7 +746,7 @@ class FileHelper {
             }
 
             @Override
-            public FileVisitResult visitFile(Path fullPath, BasicFileAttributes attrs) throws IOException {
+            FileVisitResult visitFile(Path fullPath, BasicFileAttributes attrs) throws IOException {
                 final path = folder.relativize(fullPath)
                 log.trace "visitFiles > file=$path; includeFile=$includeFile; matches=${matcher.matches(path)}; isRegularFile=${attrs.isRegularFile()}"
 
@@ -750,7 +755,24 @@ class FileHelper {
                     singleParam ? action.call(result) : action.call(result,attrs)
                 }
 
-                return FileVisitResult.CONTINUE;
+                return FileVisitResult.CONTINUE
+            }
+
+            FileVisitResult visitFileFailed(Path currentPath, IOException e) {
+                if( e instanceof FileSystemLoopException ) {
+                    final path = folder.relativize(currentPath).toString()
+                    final capture = FilePatternSplitter.glob().parse(filePattern).getParent()
+                    final message = "Circular file path detected -- Files in the following directory will be ignored: $currentPath"
+                    // show a warning message only when offending path is contained
+                    // by the capture path specified by the user
+                    if( capture=='./' || path.startsWith(capture) )
+                        log.warn(message)
+                    else
+                        log.debug(message)
+
+                    return FileVisitResult.SKIP_SUBTREE
+                }
+                throw  e
             }
       })
 
@@ -824,8 +846,9 @@ class FileHelper {
     {
         FileSystemProvider provider = source.fileSystem.provider()
         if (target.fileSystem.provider().is(provider)) {
+            final linkOpts = options.contains(LinkOption.NOFOLLOW_LINKS) ? NO_FOLLOW_LINKS : FOLLOW_LINKS
             // same provider
-            if( Files.isDirectory(source) ) {
+            if( Files.isDirectory(source, linkOpts) ) {
                 CopyMoveHelper.copyDirectory(source, target, options)
             }
             else {
