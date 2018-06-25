@@ -535,14 +535,14 @@ class K8sTaskHandlerTest extends Specification {
         given:
         def wrapper = Mock(K8sWrapperBuilder)
         def k8sConfig = Mock(K8sConfig)
-        def handler = new K8sTaskHandler(builder: wrapper)
-        handler.k8sConfig = k8sConfig
+        def handler = Spy(K8sTaskHandler)
+        handler.builder = wrapper
+        handler.getK8sConfig() >> k8sConfig
 
         when:
         def mounts = handler.getContainerMounts()
         then:
         1 * k8sConfig.getAutoMountHostPaths() >> false
-        0 * _   // <-- it should do anything else 
         mounts == []
 
         when:
@@ -575,12 +575,15 @@ class K8sTaskHandlerTest extends Specification {
         proc.getName() >> 'hello-proc'
         exec.getSession() >> sess
         sess.getUniqueId() >> uuid
-        exec.getK8sConfig() >> [labels: [foo:'bar', app: 'snakemake', x:'hello world', y:null ]]
+        exec.getK8sConfig() >> [pod: [
+                [label: 'foo', value: 'bar'],
+                [label: 'app', value: 'nextflow'],
+                [label: 'x', value: 'hello_world']
+        ]]
 
         labels.app == 'nextflow'
         labels.foo == 'bar'
         labels.x == 'hello_world'    
-        labels.y == 'null'
         labels.processName == 'hello-proc'
         labels.taskName ==  'hello-world-1'
         labels.sessionId instanceof String 
@@ -698,7 +701,7 @@ class K8sTaskHandlerTest extends Specification {
 
         def k8sConfig = Mock(K8sConfig)
         def handler = Spy(K8sTaskHandler)
-        handler.k8sConfig = k8sConfig
+        handler.getK8sConfig() >> k8sConfig
         handler.task = task
 
         when:

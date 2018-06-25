@@ -24,6 +24,7 @@ import nextflow.Const
 import nextflow.k8s.K8sConfig
 import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.model.PodEnv
+import nextflow.k8s.model.PodSecurityContext
 import nextflow.k8s.model.PodVolumeClaim
 import spock.lang.Specification
 /**
@@ -275,4 +276,58 @@ class K8sConfigTest extends Specification {
         cfg.getStorageClaimName() == 'xxx'
     }
 
+    def 'should create k8s config with one volume claim' () {
+
+        when:
+        def cfg = new K8sConfig( pod: [runAsUser: 1000] )
+        then:
+        cfg.getPodOptions().getSecurityContext() == new PodSecurityContext(1000)
+        cfg.getPodOptions().getVolumeClaims().size() == 0
+
+        when:
+        cfg = new K8sConfig( pod: [volumeClaim: 'nf-0001', mountPath: '/workspace'] )
+        then:
+        cfg.getPodOptions().getSecurityContext() == null
+        cfg.getPodOptions().getVolumeClaims() == [new PodVolumeClaim('nf-0001', '/workspace')] as Set
+
+
+        when:
+        cfg = new K8sConfig( pod: [
+                [runAsUser: 1000],
+                [volumeClaim: 'nf-0001', mountPath: '/workspace'],
+                [volumeClaim: 'nf-0002', mountPath: '/data', subPath: '/home']
+        ])
+        then:
+        cfg.getPodOptions().getSecurityContext() == new PodSecurityContext(1000)
+        cfg.getPodOptions().getVolumeClaims() == [
+                    new PodVolumeClaim('nf-0001', '/workspace'),
+                    new PodVolumeClaim('nf-0002', '/data', '/home')
+        ] as Set
+        
+    }
+
+
+    def 'should set the sec context'( ) {
+
+        given:
+        def ctx = [runAsUser: 500, fsGroup: 200, allowPrivilegeEscalation: true, seLinuxOptions: [level: "s0:c123,c456"]]
+
+        when:
+        def cfg = new K8sConfig( runAsUser: 500 )
+        then:
+        cfg.getPodOptions().getSecurityContext() == new PodSecurityContext(500)
+
+        when:
+        cfg = new K8sConfig( securityContext: ctx )
+        then:
+        cfg.getPodOptions().getSecurityContext() == new PodSecurityContext(ctx)
+
+    }
+
+    def 'should set the image pull policy' () {
+        when:
+        def cfg = new K8sConfig( pullPolicy: 'always' )
+        then:
+        cfg.getPodOptions().getPullPolicy() == 'always'
+    }
 }
