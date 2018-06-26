@@ -9,8 +9,8 @@ and actual behavior)
 
 ### Program output 
 
-(Copy and paste here output produced by failing execution. Please format it properly as a [fenced code block](https://help.github.com/articles/creating-and-highlighting-code-blocks/).
-Whenever possible upload the `.nextflow.log` file)
+(Copy and paste here output produced by the failing execution. Please highlight it as a code block.
+Whenever possible upload the `.nextflow.log` file.)
 
 ### Steps to reproduce the problem
 
