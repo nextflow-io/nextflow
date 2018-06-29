@@ -1094,7 +1094,6 @@ The directives are:
 * `errorStrategy`_
 * `executor`_
 * `ext`_
-* `queue`_
 * `label`_
 * `maxErrors`_
 * `maxForks`_
@@ -1104,6 +1103,7 @@ The directives are:
 * `penv`_
 * `pod`_
 * `publishDir`_
+* `queue`_
 * `scratch`_
 * `stageInMode`_
 * `stageOutMode`_
