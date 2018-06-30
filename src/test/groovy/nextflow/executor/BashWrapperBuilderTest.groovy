@@ -431,6 +431,45 @@ class BashWrapperBuilderTest extends Specification {
                     unset IFS
                 }
 
+                nxf_s3_download() {
+                    local source=\$1
+                    local target=\$2
+                    local file_name=\$(basename \$1)
+                    local is_dir=\$(aws s3 ls \$source | grep -F "PRE \${file_name}/" -c)
+                    if [[ \$is_dir == 1 ]]; then
+                        aws s3 cp --only-show-errors --recursive "\$source" "\$target"
+                    else 
+                        aws s3 cp --only-show-errors "\$source" "\$target"
+                    fi
+                }
+                
+                nxf_parallel() {
+                    local cmd=("\$@")
+                    local cpus=\$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
+                    local max=\$(if (( cpus>16 )); then echo 16; else echo \$cpus; fi)
+                    local i=0
+                    local pid=()
+                    (
+                    set +u
+                    while ((i<\${#cmd[@]})); do
+                        local copy=()
+                        for x in "\${pid[@]}"; do
+                          [[ -e /proc/\$x ]] && copy+=(\$x) 
+                        done
+                        pid=("\${copy[@]}")
+                
+                        if ((\${#pid[@]}>=\$max)); then 
+                          sleep 1 
+                        else 
+                          \${cmd[\$i]} &
+                          pid+=(\$!)
+                          ((i+=1))
+                        fi 
+                    done
+                    ((\${#pid[@]}>0)) && wait \${pid[@]}
+                    )
+                }     
+                
                 touch ${folder}/.command.begin
                 [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
