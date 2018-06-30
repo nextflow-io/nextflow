@@ -691,18 +691,21 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         return result.toString()
     }
 
+    @Override
+    String getStageInputFilesScript(Map<String,Path> inputFiles) {
+        def result = 'downloads=()\n'
+        result += super.getStageInputFilesScript(inputFiles) + '\n'
+        result += 'nxf_parallel "${downloads[@]}"\n'
+        return result
+    }
+
     /**
      * {@inheritDoc}
      */
     @Override
     String stageInputFile( Path path, String targetName ) {
-        final aws = opts.getAwsCli()
-        def op = "$aws s3 cp --only-show-errors "
-        if( path.isDirectory() ) {
-            op += "--recursive "
-        }
-        op += "s3:/${Escape.path(path)} ${Escape.path(targetName)}"
-        return op
+        // third param should not be escaped, because it's used in the grep match rule
+        "downloads+=('nxf_s3_download 's3:/${Escape.path(path)}' ${Escape.path(targetName)}')"
     }
 
     /**
@@ -718,10 +721,11 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         // create a bash script that will copy the out file to the working directory
         log.trace "[AWS BATCH] Unstaging file path: $normalized"
         if( normalized ) {
-            result << ""
+            result << 'uploads=()'
             normalized.each {
-                result << "nxf_s3_upload '${Escape.path(it)}' s3:/${Escape.path(targetDir)} || true" // <-- add true to avoid it stops on errors
+                result << "uploads+=(\"nxf_s3_upload '${Escape.path(it)}' s3:/${Escape.path(targetDir)} || true\")" // <-- add true to avoid it stops on errors
             }
+            result << 'nxf_parallel "${uploads[@]}"'
         }
 
         return result.join(separatorChar)
@@ -853,6 +857,45 @@ class S3Helper {
             done
             unset IFS
         }
+        
+        nxf_s3_download() {
+            local source=\$1
+            local target=\$2
+            local file_name=\$(basename \$1)
+            local is_dir=\$($cli s3 ls \$source | grep -F "PRE \${file_name}/" -c)
+            if [[ \$is_dir == 1 ]]; then
+                $cli s3 cp --only-show-errors --recursive "\$source" "\$target"
+            else 
+                $cli s3 cp --only-show-errors "\$source" "\$target"
+            fi
+        }
+     
+        nxf_parallel() {
+            local cmd=("\$@")
+            local cpus=\$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
+            local max=\$(if (( cpus>16 )); then echo 16; else echo \$cpus; fi)
+            local i=0
+            local pid=()
+            (
+            set +u
+            while ((i<\${#cmd[@]})); do
+                local copy=()
+                for x in "\${pid[@]}"; do
+                  [[ -e /proc/\$x ]] && copy+=(\$x) 
+                done
+                pid=("\${copy[@]}")
+                
+                if ((\${#pid[@]}>=\$max)); then 
+                  sleep 1 
+                else 
+                  \${cmd[\$i]} &
+                  pid+=(\$!)
+                  ((i+=1))
+                fi 
+            done
+            ((\${#pid[@]}>0)) && wait \${pid[@]}
+            )
+        }     
         """.stripIndent()
     }
 
