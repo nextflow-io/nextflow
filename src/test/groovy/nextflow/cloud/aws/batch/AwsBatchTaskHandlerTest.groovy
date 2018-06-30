@@ -18,7 +18,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.executor
+package nextflow.cloud.aws.batch
 
 import java.nio.file.Paths
 
@@ -34,6 +34,7 @@ import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
 import com.amazonaws.services.batch.model.RegisterJobDefinitionResult
 import com.amazonaws.services.batch.model.RetryStrategy
 import nextflow.Session
+import nextflow.cloud.aws.batch.AwsBatchExecutor
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.processor.BatchContext
 import nextflow.processor.TaskBean
