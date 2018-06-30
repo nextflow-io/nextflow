@@ -26,6 +26,8 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
+import nextflow.cloud.aws.batch.AwsOptions
+import nextflow.cloud.aws.batch.S3Helper
 import nextflow.file.FilePorter
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor

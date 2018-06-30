@@ -18,7 +18,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.executor
+package nextflow.cloud.aws.batch
 import java.nio.file.Paths
 
 import nextflow.processor.TaskBean
