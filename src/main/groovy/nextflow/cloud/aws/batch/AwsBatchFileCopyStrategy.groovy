@@ -97,7 +97,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     @Override
     String stageInputFile( Path path, String targetName ) {
         // third param should not be escaped, because it's used in the grep match rule
-        "downloads+=('nxf_s3_download 's3:/${Escape.path(path)}' ${Escape.path(targetName)}')"
+        "downloads+=(\"nxf_s3_download s3:/${Escape.path(path)} ${Escape.path(targetName)}\")"
     }
 
     /**
@@ -115,7 +115,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         if( normalized ) {
             result << 'uploads=()'
             normalized.each {
-                result << "uploads+=(\"nxf_s3_upload '${Escape.path(it)}' s3:/${Escape.path(targetDir)} || true\")" // <-- add true to avoid it stops on errors
+                result << "uploads+=(\"nxf_s3_upload '${Escape.path(it)}' s3:/${Escape.path(targetDir)}\")" // <-- add true to avoid it stops on errors
             }
             result << 'nxf_parallel "${uploads[@]}"'
         }

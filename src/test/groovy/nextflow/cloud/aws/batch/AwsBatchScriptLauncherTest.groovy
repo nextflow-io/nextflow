@@ -167,7 +167,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                         if ((\${#pid[@]}>=\$max)); then 
                           sleep 1 
                         else 
-                          \${cmd[\$i]} &
+                          eval "\${cmd[\$i]}" &
                           pid+=(\$!)
                           ((i+=1))
                         fi 
@@ -186,8 +186,8 @@ class AwsBatchScriptLauncherTest extends Specification {
                 downloads=()
                 rm -f .command.sh
                 rm -f .command.in
-                downloads+=('nxf_s3_download 's3:/$folder/.command.sh' .command.sh')
-                downloads+=('nxf_s3_download 's3:/$folder/.command.in' .command.in')
+                downloads+=("nxf_s3_download s3:/$folder/.command.sh .command.sh")
+                downloads+=("nxf_s3_download s3:/$folder/.command.in .command.in")
                 nxf_parallel "\${downloads[@]}"
 
 
@@ -354,7 +354,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                         if ((\${#pid[@]}>=\$max)); then 
                           sleep 1 
                         else 
-                          \${cmd[\$i]} &
+                          eval "\${cmd[\$i]}" &
                           pid+=(\$!)
                           ((i+=1))
                         fi 
@@ -370,9 +370,9 @@ class AwsBatchScriptLauncherTest extends Specification {
                 rm -f .command.sh
                 rm -f .command.stub
                 rm -f .command.in
-                downloads+=('nxf_s3_download 's3:/$folder/.command.sh' .command.sh')
-                downloads+=('nxf_s3_download 's3:/$folder/.command.stub' .command.stub')
-                downloads+=('nxf_s3_download 's3:/$folder/.command.in' .command.in')
+                downloads+=("nxf_s3_download s3:/$folder/.command.sh .command.sh")
+                downloads+=("nxf_s3_download s3:/$folder/.command.stub .command.stub")
+                downloads+=("nxf_s3_download s3:/$folder/.command.in .command.in")
                 nxf_parallel "\${downloads[@]}"
 
 
@@ -395,8 +395,8 @@ class AwsBatchScriptLauncherTest extends Specification {
                 # copies output files to target
                 if [[ \${ret:=0} == 0 ]]; then
                   uploads=()
-                  uploads+=("nxf_s3_upload 'foo.txt' s3:/$folder || true")
-                  uploads+=("nxf_s3_upload 'bar.fastq' s3:/$folder || true")
+                  uploads+=("nxf_s3_upload 'foo.txt' s3:/$folder")
+                  uploads+=("nxf_s3_upload 'bar.fastq' s3:/$folder")
                   nxf_parallel "\${uploads[@]}"
                 fi
                 nxf_s3_upload .command.trace s3:/${folder} || true
