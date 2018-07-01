@@ -39,11 +39,14 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         copy.touchFile(RUN) == "echo start | aws s3 cp --only-show-errors - s3://some/data/.command.run"
         copy.copyFile("nobel_prize_results.gz",Paths.get("/some/data/nobel_prize_results.gz")) == "nxf_s3_upload nobel_prize_results.gz s3://some/data"
         copy.exitFile(EXIT) == "| aws s3 cp --only-show-errors - s3://some/path/.exitcode || true"
-        copy.stageInputFile(FILE, 'foo.txt') == "downloads+=('nxf_s3_download 's3://some/data/nobel_prize_results.gz' foo.txt')"
+        copy.stageInputFile(FILE, 'foo.txt') == """
+                                    downloads+=("nxf_s3_download s3://some/data/nobel_prize_results.gz foo.txt")
+                                    """
+                                    .stripIndent().trim()
         copy.getUnstageOutputFilesScript(OUTPUTS,TARGET) == """
                                         uploads=()
-                                        uploads+=("nxf_s3_upload 'outputs_*' s3://data/results || true")
-                                        uploads+=("nxf_s3_upload 'final_folder' s3://data/results || true")
+                                        uploads+=("nxf_s3_upload 'outputs_*' s3://data/results")
+                                        uploads+=("nxf_s3_upload 'final_folder' s3://data/results")
                                         nxf_parallel "\${uploads[@]}"
                                         """
                                         .stripIndent().trim()
@@ -59,7 +62,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         then:
         script.trim() == """
                     uploads=()
-                    uploads+=("nxf_s3_upload 'file.txt' s3://foo/bar || true")
+                    uploads+=("nxf_s3_upload 'file.txt' s3://foo/bar")
                     nxf_parallel "\${uploads[@]}"
                     """
                     .stripIndent().trim()
@@ -69,7 +72,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         then:
         script.trim() == """
                         uploads=()
-                        uploads+=("nxf_s3_upload 'file-*.txt' s3://foo/bar || true")
+                        uploads+=("nxf_s3_upload 'file-*.txt' s3://foo/bar")
                         nxf_parallel "\${uploads[@]}"
                         """
                         .stripIndent().trim()
@@ -79,7 +82,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         then:
         script.trim() == """
                     uploads=()
-                    uploads+=("nxf_s3_upload 'file-[a,b].txt' s3://foo/bar || true")
+                    uploads+=("nxf_s3_upload 'file-[a,b].txt' s3://foo/bar")
                     nxf_parallel "\${uploads[@]}"
                     """
                     .stripIndent().trim()
@@ -89,7 +92,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         then:
         script.trim() == """
                     uploads=()
-                    uploads+=("nxf_s3_upload 'file-01\\(A\\).txt' s3://foo/bar || true")
+                    uploads+=("nxf_s3_upload 'file-01\\(A\\).txt' s3://foo/bar")
                     nxf_parallel "\${uploads[@]}"
                     """
                     .stripIndent().trim()
@@ -155,7 +158,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                             if ((${#pid[@]}>=$max)); then 
                               sleep 1 
                             else 
-                              ${cmd[$i]} &
+                              eval "${cmd[$i]}" &
                               pid+=($!)
                               ((i+=1))
                             fi 
@@ -218,7 +221,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                         if ((${#pid[@]}>=$max)); then 
                           sleep 1 
                         else 
-                          ${cmd[$i]} &
+                          eval "${cmd[$i]}" &
                           pid+=($!)
                           ((i+=1))
                         fi 
@@ -302,7 +305,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         when:
         def script = copy.stageInputFile( file, 'bar.txt')
         then:
-        script == "downloads+=('nxf_s3_download 's3:/$file' bar.txt')" as String
+        script == "downloads+=(\"nxf_s3_download s3:/$file bar.txt\")" as String
 
     }
     

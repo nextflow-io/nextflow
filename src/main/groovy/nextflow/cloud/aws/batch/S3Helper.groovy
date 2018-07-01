@@ -76,7 +76,7 @@ class S3Helper {
                 if ((\${#pid[@]}>=\$max)); then 
                   sleep 1 
                 else 
-                  \${cmd[\$i]} &
+                  eval "\${cmd[\$i]}" &
                   pid+=(\$!)
                   ((i+=1))
                 fi 
