@@ -21,53 +21,22 @@
 package nextflow.cloud.aws.batch
 
 import java.nio.file.Path
-import java.nio.file.Paths
 
 import com.amazonaws.services.batch.AWSBatchClient
-import com.amazonaws.services.batch.model.CancelJobRequest
-import com.amazonaws.services.batch.model.ContainerOverrides
-import com.amazonaws.services.batch.model.ContainerProperties
-import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
-import com.amazonaws.services.batch.model.DescribeJobsRequest
-import com.amazonaws.services.batch.model.DescribeJobsResult
-import com.amazonaws.services.batch.model.Host
-import com.amazonaws.services.batch.model.JobDefinition
-import com.amazonaws.services.batch.model.JobDefinitionType
-import com.amazonaws.services.batch.model.JobDetail
-import com.amazonaws.services.batch.model.JobTimeout
-import com.amazonaws.services.batch.model.KeyValuePair
-import com.amazonaws.services.batch.model.MountPoint
-import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
-import com.amazonaws.services.batch.model.RetryStrategy
-import com.amazonaws.services.batch.model.SubmitJobRequest
-import com.amazonaws.services.batch.model.Volume
 import com.upplication.s3fs.S3Path
 import groovy.transform.CompileStatic
-import groovy.transform.EqualsAndHashCode
-import groovy.transform.Memoized
 import groovy.transform.PackageScope
-import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Nextflow
-import nextflow.Session
 import nextflow.cloud.aws.AmazonCloudDriver
 import nextflow.exception.AbortOperationException
-import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
 import nextflow.extension.FilesEx
-import nextflow.processor.BatchContext
-import nextflow.processor.BatchHandler
-import nextflow.processor.ErrorStrategy
-import nextflow.processor.TaskBean
+import nextflow.processor.ParallelPollingMonitor
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
-import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
-import nextflow.processor.TaskStatus
-import nextflow.trace.TraceRecord
-import nextflow.util.CacheHelper
 import nextflow.util.Duration
-import nextflow.util.Escape
 /**
  * AWS Batch executor
  * https://aws.amazon.com/batch/
@@ -136,7 +105,7 @@ class AwsBatchExecutor extends Executor {
 
     @Override
     protected TaskMonitor createTaskMonitor() {
-        TaskPollingMonitor.create(session, name, 1000, Duration.of('10 sec'))
+        ParallelPollingMonitor.create(session, name, Duration.of('10 sec'))
     }
 
     @Override
