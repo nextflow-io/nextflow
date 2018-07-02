@@ -398,6 +398,12 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.checkIfRunning()
         then:
+        1 * handler.getState() >> null
+        result == false
+
+        when:
+        result = handler.checkIfRunning()
+        then:
         1 * handler.getState() >> [running:["startedAt": "2018-01-13T10:19:16Z"]]
         result == true
     }
@@ -421,6 +427,13 @@ class K8sTaskHandlerTest extends Specification {
         def result = handler.checkIfCompleted()
         then:
         1 * handler.getState() >> [:]
+        handler.status != TaskStatus.COMPLETED
+        result == false
+
+        when:
+        result = handler.checkIfCompleted()
+        then:
+        1 * handler.getState() >> null
         handler.status != TaskStatus.COMPLETED
         result == false
 
