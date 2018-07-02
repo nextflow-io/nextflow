@@ -69,6 +69,7 @@ class TaskPollingMonitorTest extends Specification {
         '100 min'       | 100 / 60                  // 100 per minute
         '100 / 1 s'     | 100                       // 100 per second
         '100 / 2 s'     | 50                        // 100 per 2 seconds
+        '200 / sec'     | 200                       // 200 per second
         '600 / 5'       | 600i / 5l as double       // 600 per 5 seconds
         '600 / 5min'    | 600 / (5 * 60)            // 600 per 5 minutes
 

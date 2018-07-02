@@ -19,7 +19,10 @@
  */
 package nextflow.processor
 
-import static nextflow.processor.ErrorStrategy.*
+import static nextflow.processor.ErrorStrategy.FINISH
+import static nextflow.processor.ErrorStrategy.IGNORE
+import static nextflow.processor.ErrorStrategy.RETRY
+import static nextflow.processor.ErrorStrategy.TERMINATE
 
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
@@ -28,8 +31,6 @@ import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicIntegerArray
-import java.util.concurrent.locks.Lock
-import java.util.concurrent.locks.ReentrantLock
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
@@ -305,10 +306,6 @@ class TaskProcessor {
      */
     private volatile int errorCount
 
-    /**
-     * Lock the work dir creation process
-     */
-    private static Lock lockWorkDirCreation = new ReentrantLock()
 
     /**
      * Set to true the very first time the error is shown.
@@ -826,17 +823,11 @@ class TaskProcessor {
         while( true ) {
             hash = CacheHelper.defaultHasher().newHasher().putBytes(hash.asBytes()).putInt(tries).hash()
 
-            boolean exists=false
+            boolean exists
             final folder = FileHelper.getWorkFolder(session.workDir, hash)
-            lockWorkDirCreation.lock()
-            try {
-                exists = folder.exists()
-                if( !exists && !folder.mkdirs() )
-                    throw new IOException("Unable to create folder=$folder -- check file system permission")
-            }
-            finally {
-                lockWorkDirCreation.unlock()
-            }
+            exists = folder.exists()
+            if( !exists && !folder.mkdirs() )
+                throw new IOException("Unable to create folder=$folder -- check file system permission")
 
             log.trace "[${task.name}] Cacheable folder=$folder -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache"
             def cached = shouldTryCache && exists && checkCachedOutput(task.clone(), folder, hash)
