@@ -973,7 +973,7 @@ the required fields, or just specify ``record: true`` as in the example shown be
 
 
 Finally the ``splitFastq`` operator is able to split paired-end read pair FASTQ files. It must be applied to a channel
-which emits tuples containing at list two elements that are the files to be splitted. For example::
+which emits tuples containing at least two elements that are the files to be splitted. For example::
 
     Channel
         .fromFilePairs('/my/data/SRR*_{1,2}.fastq', flat:true)
