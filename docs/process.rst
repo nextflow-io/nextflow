@@ -1094,7 +1094,6 @@ The directives are:
 * `errorStrategy`_
 * `executor`_
 * `ext`_
-* `queue`_
 * `label`_
 * `maxErrors`_
 * `maxForks`_
@@ -1104,6 +1103,7 @@ The directives are:
 * `penv`_
 * `pod`_
 * `publishDir`_
+* `queue`_
 * `scratch`_
 * `stageInMode`_
 * `stageOutMode`_
@@ -2120,12 +2120,12 @@ For example::
 Dynamic computing resources
 ---------------------------
 
-It's very common scenario that different instances of the same process may have a very different needs in terms of
-computing resources. In such situation requesting, for example, an amount of memory too low will cause some tasks to fail,
-instead using an higher limit that fits all the tasks execution could significantly decrease the execution priority of your jobs.
+It's a very common scenario that different instances of the same process may have very different needs in terms of computing resources. 
+In such situations requesting, for example, an amount of memory too low will cause some tasks to fail. 
+Instead, using a higher limit that fits all the tasks in your execution could significantly decrease the execution priority of your jobs.
 
-The `Dynamic directives`_ evaluation feature can used to modify the amount of computing resources request in case
-of a process failure and try to re-execute it using an higher limit. For example::
+The `Dynamic directives`_ evaluation feature can be used to modify the amount of computing resources requested in case
+of a process failure and try to re-execute it using a higher limit. For example::
 
 
     process foo {
