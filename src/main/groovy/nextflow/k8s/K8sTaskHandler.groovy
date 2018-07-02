@@ -275,14 +275,14 @@ class K8sTaskHandler extends TaskHandler {
     boolean checkIfRunning() {
         if( !podName ) throw new IllegalStateException("Missing K8s pod name -- cannot check if running")
         def state = getState()
-        return state.running != null
+        return state && state.running != null
     }
 
     @Override
     boolean checkIfCompleted() {
         if( !podName ) throw new IllegalStateException("Missing K8s pod name - cannot check if complete")
         def state = getState()
-        if( state.terminated ) {
+        if( state && state.terminated ) {
             // finalize the task
             task.exitStatus = readExitFile()
             task.stdout = outputFile
