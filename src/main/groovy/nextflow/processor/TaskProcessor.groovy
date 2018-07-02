@@ -2197,10 +2197,12 @@ class TaskProcessor {
         for( int i=0; i<openPorts.length(); i++ ) {
             def last = i == openPorts.length()-1
             def param = config.getInputs()[i]
-            def isValue = param?.inChannel instanceof DataflowExpression
+            def chnnl = param?.inChannel
+            def isValue = chnnl instanceof DataflowExpression
             def type = last ? '(cntrl)' : (isValue ? '(value)' : '(queue)')
             def channel = param && !(param instanceof SetInParam) ? param.getName() : '-'
-            def status = type != '(value)' ? (openPorts.get(i) ? 'OPEN' : 'CLOSED') : '-   '
+            def status; if( isValue ) { status = !chnnl.isBound() ? 'OPEN  ' : 'bound ' }
+            else status = type == '(queue)' ? (openPorts.get(i) ? 'OPEN  ' : 'closed') : '-     '
             result << "  port $i: $type ${status}; channel: $channel\n"
         }
 
