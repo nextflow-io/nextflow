@@ -66,7 +66,7 @@ class CmdClean extends CmdBase implements CacheBase {
     @Parameter(names='-but', description = 'Clean up all runs except the specified one')
     String but
 
-    @Parameter(names='-keepLogs', description = 'Removes only temp files but keeps the "dot" files')
+    @Parameter(names=['-k', '-keep-logs'], description = 'Removes only temporary files but keeps execution logs and metadata')
     boolean keepLogs
 
     @Parameter
@@ -178,15 +178,14 @@ class CmdClean extends CmdBase implements CacheBase {
         def deleted = currentCacheDb.removeTaskEntry(hash)
         if( deleted ) {
             // delete folder
-            if(keepLogs){
-                if( deleteTempFilesKeepLogs(FileHelper.asPath(record.workDir))) {
+            if( deleteFolder(FileHelper.asPath(record.workDir))) {
+                if(keepLogs){
                     if(!quiet) println "Removed Temp Files from ${record.workDir}"
-                }
-            } else {
-                if( deleteFolder(FileHelper.asPath(record.workDir))) {
+                } else {
                     if(!quiet) println "Removed ${record.workDir}"
                 }
             }
+
         }
     }
 
@@ -210,62 +209,21 @@ class CmdClean extends CmdBase implements CacheBase {
 
             @Override
             FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                if( !file.delete() ) {
-                    result = false
-                    if(!quiet) System.err.println "Failed to remove $file"
-                }
 
-                result ? FileVisitResult.CONTINUE : FileVisitResult.TERMINATE
-            }
-
-            @Override
-            FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-                FileVisitResult.CONTINUE
-            }
-
-            @Override
-            FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                if( result && !dir.delete() ) {
-                    result = false
-                    if(!quiet) System.err.println "Failed to remove $dir"
-                }
-
-                result ? FileVisitResult.CONTINUE : FileVisitResult.TERMINATE
-            }
-        })
-
-        return result
-    }
-
-    /**
-     * Traverse a directory structure and delete all user temp files.
-     *
-     * This mode will retain all .command.* and .exitcode files inclusive
-     * the directory structure in the work directory.
-     *
-     * @param folder
-     *      The directory to delete
-     * @return
-     *      {@code true} in the directory was removed, {@code false}  otherwise
-     */
-    private boolean deleteTempFilesKeepLogs( Path folder ) {
-
-        def result = true
-        Files.walkFileTree(folder, new FileVisitor<Path>() {
-
-            @Override
-            FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                result ? FileVisitResult.CONTINUE : FileVisitResult.TERMINATE
-            }
-
-            @Override
-            FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                if( !(file.getFileName() ==~ /^\.command.*/  || file.getFileName() ==~ /^\.exitcode/)){
+                if(keepLogs){
+                    if( !(file.name.startsWith('.command.')  || file.name == '.exitcode')){
+                        if( !file.delete() ) {
+                            result = false
+                            if(!quiet) System.err.println "Failed to remove $file"
+                        }
+                    }
+                } else {
                     if( !file.delete() ) {
                         result = false
                         if(!quiet) System.err.println "Failed to remove $file"
                     }
                 }
+
                 result ? FileVisitResult.CONTINUE : FileVisitResult.TERMINATE
             }
 
@@ -276,6 +234,12 @@ class CmdClean extends CmdBase implements CacheBase {
 
             @Override
             FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                if(!keepLogs){
+                    if( result && !dir.delete() ) {
+                        result = false
+                        if(!quiet) System.err.println "Failed to remove $dir"
+                    }
+                }
                 result ? FileVisitResult.CONTINUE : FileVisitResult.TERMINATE
             }
         })
