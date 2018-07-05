@@ -226,7 +226,7 @@ Required dependencies
 Build from source
 -----------------
 
-*Nextflow* is written in [Groovy](http://groovy.codehaus.org) (a scripting language for the JVM). A pre-compiled,
+*Nextflow* is written in [Groovy](http://groovy-lang.org) (a scripting language for the JVM). A pre-compiled,
 ready-to-run, package is available at the [Github releases page](https://github.com/nextflow-io/nextflow/releases),
 thus it is not necessary to compile it in order to use it.
 
@@ -335,7 +335,7 @@ P. Di Tommaso, et al. Nextflow enables reproducible computational workflows. Nat
 Credits
 -------
 
-Nextflow is built on two great pieces of open source software, namely <a href='http://groovy.codehaus.org' target='_blank'>Groovy</a>
+Nextflow is built on two great pieces of open source software, namely <a href='http://groovy-lang.org' target='_blank'>Groovy</a>
 and <a href='http://www.gpars.org/' target='_blank'>Gpars</a>
 
 YourKit is kindly supporting this open source project with its full-featured Java Profiler.
