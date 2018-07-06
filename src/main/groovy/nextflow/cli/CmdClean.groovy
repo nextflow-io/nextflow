@@ -40,6 +40,7 @@ import nextflow.util.HistoryFile.Record
  * Implements cache clean up command
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Lorenz Gerber <lorenzottogerber@gmail.com>
  */
 @Slf4j
 @CompileStatic
@@ -178,7 +179,7 @@ class CmdClean extends CmdBase implements CacheBase {
         def deleted = currentCacheDb.removeTaskEntry(hash)
         if( deleted ) {
             // delete folder
-            if( deleteFolder(FileHelper.asPath(record.workDir))) {
+            if( deleteFolder(FileHelper.asPath(record.workDir), keepLogs)) {
                 if(keepLogs){
                     if(!quiet) println "Removed Temp Files from ${record.workDir}"
                 } else {
@@ -197,7 +198,7 @@ class CmdClean extends CmdBase implements CacheBase {
      * @return
      *      {@code true} in the directory was removed, {@code false}  otherwise
      */
-    private boolean deleteFolder( Path folder ) {
+    private boolean deleteFolder( Path folder, boolean keepLogs ) {
 
         def result = true
         Files.walkFileTree(folder, new FileVisitor<Path>() {
@@ -210,18 +211,10 @@ class CmdClean extends CmdBase implements CacheBase {
             @Override
             FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
 
-                if(keepLogs){
-                    if( !(file.name.startsWith('.command.')  || file.name == '.exitcode')){
-                        if( !file.delete() ) {
-                            result = false
-                            if(!quiet) System.err.println "Failed to remove $file"
-                        }
-                    }
-                } else {
-                    if( !file.delete() ) {
-                        result = false
-                        if(!quiet) System.err.println "Failed to remove $file"
-                    }
+                final canDelete = !keepLogs || ( keepLogs &&  !(file.name.startsWith('.command.')  || file.name == '.exitcode'))
+                if( canDelete && !file.delete() ) {
+                    result = false
+                    if(!quiet) System.err.println "Failed to remove $file"
                 }
 
                 result ? FileVisitResult.CONTINUE : FileVisitResult.TERMINATE
