@@ -23,7 +23,7 @@ package nextflow.cloud.aws.batch
 import java.nio.file.Path
 import java.nio.file.Paths
 
-import com.amazonaws.services.batch.AWSBatchClient
+import com.amazonaws.services.batch.model.AWSBatchException
 import com.amazonaws.services.batch.model.CancelJobRequest
 import com.amazonaws.services.batch.model.ContainerOverrides
 import com.amazonaws.services.batch.model.ContainerProperties
@@ -45,6 +45,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.exception.TaskRecoverException
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
 import nextflow.processor.ErrorStrategy
@@ -54,7 +55,6 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
-
 /**
  * Implements a task handler for AWS Batch jobs
  */
@@ -84,7 +84,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     private AwsBatchExecutor executor
 
-    private AWSBatchClient client
+    private AwsBatchProxy client
 
     private volatile String jobId
 
@@ -267,10 +267,22 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         /*
          * submit the task execution
          */
-        def resp = client.submitJob(req)
-        this.jobId = resp.jobId
-        this.status = TaskStatus.SUBMITTED
-        log.debug "[AWS BATCH] submitted > job=$jobId; work-dir=${task.getWorkDirStr()}"
+        submitJob(req)
+    }
+
+    protected void submitJob(SubmitJobRequest req) {
+        try {
+            final resp = client.submitJob(req)
+            this.jobId = resp.jobId
+            this.status = TaskStatus.SUBMITTED
+            log.debug "[AWS BATCH] submitted > job=$jobId; work-dir=${task.getWorkDirStr()}"
+        }
+        catch (AWSBatchException e) {
+            if( e.errorCode == 'TooManyRequestsException' )
+                throw new TaskRecoverException("Unable to submit job -- too many requests", e);
+            else
+                throw e
+        }
     }
 
     /**

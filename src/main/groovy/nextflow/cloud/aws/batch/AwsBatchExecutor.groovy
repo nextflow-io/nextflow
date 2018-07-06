@@ -22,7 +22,6 @@ package nextflow.cloud.aws.batch
 
 import java.nio.file.Path
 
-import com.amazonaws.services.batch.AWSBatchClient
 import com.upplication.s3fs.S3Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -51,9 +50,11 @@ class AwsBatchExecutor extends Executor {
      * AWS batch client instance
      */
     @PackageScope
-    private static AWSBatchClient client
+    private static AwsBatchProxy client
 
     private static Path remoteBinDir = null
+
+    private static ParallelPollingMonitor monitor
 
     final boolean isContainerNative() {
         return true
@@ -89,8 +90,10 @@ class AwsBatchExecutor extends Executor {
         /*
          * retrieve config and credentials and create AWS client
          */
-        client = new AmazonCloudDriver(session.config).getBatchClient()
+        final batch = new AmazonCloudDriver(session.config).getBatchClient()
 
+        // create a proxy client to throttle requests
+        client = new AwsBatchProxy(batch, monitor.getExecutor())
     }
 
     @PackageScope
@@ -99,13 +102,14 @@ class AwsBatchExecutor extends Executor {
     }
 
     @PackageScope
-    AWSBatchClient getClient() {
+    AwsBatchProxy getClient() {
         client
     }
 
     @Override
     protected TaskMonitor createTaskMonitor() {
-        ParallelPollingMonitor.create(session, name, Duration.of('10 sec'))
+        // note this is invoke only the very first time a AWS Batch executor is created
+        monitor = ParallelPollingMonitor.create(session, name, Duration.of('10 sec'))
     }
 
     @Override
