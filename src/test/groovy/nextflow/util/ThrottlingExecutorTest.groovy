@@ -20,14 +20,111 @@
 
 package nextflow.util
 
+import java.util.concurrent.Future
+
 import com.google.common.util.concurrent.RateLimiter
+import groovy.util.logging.Slf4j
 import spock.lang.Specification
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 class ThrottlingExecutorTest extends Specification {
+
+
+    def 'should set properties' () {
+
+        given:
+        def success = { 1 }
+        def failure = { 2 }
+        def change = { 3 }
+        def retry = { 4 }
+        def retryOn = { false }
+
+        when:
+        def builder = new ThrottlingExecutor.Options()
+                .withRateLimit('20/sec')
+                .withPoolSize(10)
+                .withMaxPoolSize(20)
+                .withQueueSize(50)
+                .withKeepAlive(Duration.of('3 min'))
+                .withMaxRetries(11)
+                .withRampUp(50.0, 1.5, 500)
+                .withBackOff('10/sec', 1.9)
+                .withAutoThrottle(true)
+                .withErrorBurstDelay(Duration.of('5 sec'))
+                .withRetryDelay(Duration.of('7 sec'))
+                .onFailure(failure)
+                .onSuccess(success)
+                .onRetry(retry)
+                .onRateLimitChange(change)
+                .retryOn(retryOn)
+                .withPoolName('foo')
+
+        then:
+        builder.limiter.rate == RateLimiter.create(20).rate
+        builder.poolSize == 10
+        builder.maxPoolSize == 20
+        builder.queueSize == 50
+        builder.maxRetries == 11
+        builder.keepAlive == Duration.of('3 min')
+        builder.failureAction.is(failure)
+        builder.successAction.is(success)
+        builder.retryAction.is(retry)
+        builder.rateLimitChangeAction.is(change)
+        builder.retryCondition.is(retryOn)
+        builder.errorBurstDelay == Duration.of('5 sec')
+        builder.retryDelay == Duration.of('7 sec')
+        builder.rampUpInterval == 500
+        builder.rampUpFactor == 1.5
+        builder.rampUpMaxRate == 50.0
+        builder.backOffMinRate == 10d
+        builder.backOffFactor == 1.9f
+        builder.poolName == 'foo'
+
+    }
+
+    def 'should configure with options map' () {
+
+        given:
+        def OPTS = [
+                poolSize: 1,
+                maxPoolSize: 2,
+                queueSize: 3,
+                maxRetries: 4,
+                keepAlive: '5 sec',
+                errorBurstDelay: '6 sec',
+                rampUpInterval: 7,
+                rampUpFactor: 8,
+                rampUpMaxRate: 11.1,
+                backOffMinRate: '9/sec',
+                backOffFactor: 10,
+                rateLimit: '20/s',
+                autoThrottle: true,
+        ]
+
+        when:
+        def builder = new ThrottlingExecutor.Options().withOptions(OPTS)
+
+        then:
+        builder.poolSize == 1
+        builder.maxPoolSize == 2
+        builder.queueSize == 3
+        builder.maxRetries == 4
+        builder.keepAlive == Duration.of('5 sec')
+        builder.autoThrottle == true
+        builder.errorBurstDelay == Duration.of('6 sec')
+        builder.rampUpInterval == 7
+        builder.rampUpFactor == 8
+        builder.rampUpMaxRate == 11.1
+        builder.backOffMinRate == 9
+        builder.backOffFactor == 10
+        builder.limiter.rate == RateLimiter.create(20).rate
+    }
+
+
 
     def 'should increase rate limit' () {
 
@@ -109,6 +206,30 @@ class ThrottlingExecutorTest extends Specification {
         limiter.rate == 0.75    // <-- use the min rate define in the setting
         change == 1
 
+    }
+
+
+    def 'should throttle requests' () {
+
+        given:
+        def opts = new ThrottlingExecutor.Options().withRateLimit('1/sec')
+        def exec = ThrottlingExecutor.create(opts)
+        long begin = System.currentTimeMillis()
+
+        when:
+        List<Future> futures = []
+        int count = 0
+        for( int i=0; i<5; i++ ) {
+            futures << exec.submit( { log.info "tick=${count++}" } )
+        }
+
+        futures.each {  while(!it.isDone()) sleep(500) }
+        long delta = System.currentTimeMillis()-begin
+        println "delta=$delta"
+        then:
+        delta > 3_000
+        delta < 5_000
+        count == 5
     }
 
 }

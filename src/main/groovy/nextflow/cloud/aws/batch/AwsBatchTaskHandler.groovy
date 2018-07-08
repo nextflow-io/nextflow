@@ -23,7 +23,7 @@ package nextflow.cloud.aws.batch
 import java.nio.file.Path
 import java.nio.file.Paths
 
-import com.amazonaws.services.batch.model.AWSBatchException
+import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.CancelJobRequest
 import com.amazonaws.services.batch.model.ContainerOverrides
 import com.amazonaws.services.batch.model.ContainerProperties
@@ -41,11 +41,9 @@ import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
 import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.Volume
-import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessUnrecoverableException
-import nextflow.exception.TaskRecoverException
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
 import nextflow.processor.ErrorStrategy
@@ -58,8 +56,8 @@ import nextflow.util.CacheHelper
 /**
  * Implements a task handler for AWS Batch jobs
  */
+// note: do not declare this class as `CompileStatic` otherwise the proxy is not get invoked
 @Slf4j
-@CompileStatic
 class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,JobDetail> {
 
     private final Path exitFile
@@ -84,7 +82,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     private AwsBatchExecutor executor
 
-    private AwsBatchProxy client
+    private AWSBatch client
 
     private volatile String jobId
 
@@ -134,11 +132,11 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final name = executor.name
 
         new AwsOptions(
-                cliPath: executor.session.getExecConfigProp(name,'awscli',null) as String,
-                storageClass: executor.session.config.navigate('aws.client.uploadStorageClass') as String,
-                storageEncryption: executor.session.config.navigate('aws.client.storageEncryption') as String,
+                cliPath: executor.getSession().getExecConfigProp(name,'awscli',null) as String,
+                storageClass: executor.getSession().config.navigate('aws.client.uploadStorageClass') as String,
+                storageEncryption: executor.getSession().config.navigate('aws.client.storageEncryption') as String,
                 remoteBinDir: executor.remoteBinDir as String,
-                region: executor.session.config.navigate('aws.region') as String
+                region: executor.getSession().config.navigate('aws.region') as String
         )
 
     }
@@ -244,7 +242,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     @Override
     void kill() {
         assert jobId
-        log.debug "[AWS BATCH] killing job=$jobId"
+        log.trace "[AWS BATCH] killing job=$jobId"
         final req = new CancelJobRequest().withJobId(jobId).withReason('Job killed by NF')
         final resp = client.cancelJob(req)
         log.debug "[AWS BATCH] killing job=$jobId; response=$resp"
@@ -258,31 +256,32 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         /*
          * create task wrapper
          */
-        final launcher = new AwsBatchScriptLauncher(bean,getAwsOptions())
-        launcher.build()
+        createTaskWrapper()
 
+        /*
+         * create submit request
+         */
         final req = newSubmitRequest(task)
         log.trace "[AWS BATCH] new job request > $req"
 
         /*
          * submit the task execution
          */
-        submitJob(req)
+        // note use the real client object because this method
+        // is supposed to be invoked by the thread pool
+        final resp = bypassProxy(client).submitJob(req)
+        this.jobId = resp.jobId
+        this.status = TaskStatus.SUBMITTED
+        log.debug "[AWS BATCH] submitted > job=$jobId; work-dir=${task.getWorkDirStr()}"
     }
 
-    protected void submitJob(SubmitJobRequest req) {
-        try {
-            final resp = client.submitJob(req)
-            this.jobId = resp.jobId
-            this.status = TaskStatus.SUBMITTED
-            log.debug "[AWS BATCH] submitted > job=$jobId; work-dir=${task.getWorkDirStr()}"
-        }
-        catch (AWSBatchException e) {
-            if( e.errorCode == 'TooManyRequestsException' )
-                throw new TaskRecoverException("Unable to submit job -- too many requests", e);
-            else
-                throw e
-        }
+    protected createTaskWrapper() {
+        final launcher = new AwsBatchScriptLauncher(bean,getAwsOptions())
+        launcher.build()
+    }
+
+    protected AWSBatch bypassProxy(AWSBatch client) {
+        client instanceof AwsBatchProxy ? client.getClient() : client
     }
 
     /**

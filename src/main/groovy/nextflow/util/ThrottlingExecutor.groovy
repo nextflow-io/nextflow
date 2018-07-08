@@ -30,7 +30,6 @@ import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
 
 import com.google.common.util.concurrent.RateLimiter
 import groovy.transform.CompileStatic
@@ -39,15 +38,14 @@ import groovy.transform.ToString
 import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.SimpleType
 import groovy.util.logging.Slf4j
-
-/**
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
- */
-
-
 /**
  * Implements the throttling and retry logic
+ *
+ * Inspired by
+ *   http://fahdshariff.blogspot.com/2013/11/throttling-task-submission-with.html
+ *   https://www.logicbig.com/tutorials/core-java-tutorial/java-multi-threading/thread-pools.html
+ * 
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
@@ -98,46 +96,112 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
     @ToString(includeNames = true, excludes='successAction,failureAction,retryAction,rateLimitChangeAction,retryCondition')
     static class Options {
 
-        String name
+        /** the thread pool name */
+        String poolName
 
+        /**
+         * The rate limiter object submitting request at the specified rate
+         */
         RateLimiter limiter
 
+        /**
+         * Closure invoked when the task is successfully completed
+         */
         Closure successAction
 
+        /**
+         * Closure invoked when the task execution failed (after all retry attempts failed)
+         */
         Closure failureAction
 
+        /**
+         * Closure invoked on each retry attempt
+         */
         Closure retryAction
 
+        /**
+         * Closure invoked to signal that the rate limit has been automatically adjusted
+         */
         Closure rateLimitChangeAction
 
+        /**
+         * A closure receiving a {@link Throwable} object as parameter a returning {@code true}
+         * if one or more retries need to be tempted for a failing task.
+         */
         Closure<Boolean> retryCondition
 
+        /**
+         * The thread pool size
+         */
         int poolSize
 
+        /**
+         * The thread pool max size
+         */
         int maxPoolSize
 
+        /**
+         * The size of the queue where tasks are kept when the thread pool is full
+         */
         int queueSize
 
+        /**
+         * Number of attempts a task execution is retried when an exception
+         * matching the #retryCondition is raised
+         */
         int maxRetries = Integer.MAX_VALUE
 
-        Duration keepAlive
+        /**
+         * Timeout period after when idle thread will be evicted
+         */
+        Duration keepAlive = Duration.of('2 min')
 
+        /**
+         * When {@code true} the executor automatically decreases and increases
+         * the execution rate to adjust to failure events
+         */
         boolean autoThrottle
 
-        long errorBurstDelayMillis = 1_000
+        /**
+         * Period during which error conditions are ignored
+         */
+        Duration errorBurstDelay = Duration.of('1 sec')
 
+        /**
+         * Number of successful task execution after which the execution rate is increased
+         */
         int rampUpInterval = 100
 
+        /**
+         * Factor by which the rate limit is increased. It must be greater than 1.
+         */
         float rampUpFactor = 1.2
 
+        /**
+         * Max allowed execution rate
+         */
         double rampUpMaxRate = Double.MAX_VALUE
 
-        double backOffMinRate
-
+        /**
+         * Factor by which the execution rate is decreased on a failed execution
+         */
         float backOffFactor = 2.0f
 
+        /**
+         * Min allowed execution rate
+         */
+        double backOffMinRate = RateUnit.of('1 / min').rate
+
+        /**
+         * Period after which the task execution should be retried
+         */
         Duration retryDelay = Duration.of('1 sec')
 
+        /**
+         * Initialise missing attribute to default values
+         *
+         * @return The {@link Options} object itself
+         */
         Options normalise() {
             if( !poolSize )
                 poolSize = Runtime.runtime.availableProcessors()
@@ -145,14 +209,28 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
                 maxPoolSize = poolSize
             if( keepAlive==null )
                 keepAlive = Duration.of(0)
-            if( !name )
-                name = ThrottlingExecutor.simpleName
+            if( !poolName )
+                poolName = ThrottlingExecutor.simpleName
 
             return this
         }
 
-        Options withName(String n) {
-            this.name = n
+        void setRampUpFactor(float factor) {
+            if( factor > 1 )
+                rampUpFactor = factor
+            else
+                log.warn "Throttling executor ramp-up factor must be greater than 1"
+        }
+
+        void setBackOffFactor(float factor) {
+            if( factor > 1 )
+                backOffFactor = factor
+            else
+                log.warn "Throttling executor back-off factor must be greater than 1"
+        }
+
+        Options withPoolName(String n) {
+            this.poolName = n
             return this
         }
 
@@ -176,17 +254,12 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
             return this
         }
 
-        Options withQueueSize(int size ) {
+        Options withQueueSize(int size) {
             queueSize = size
             return this
         }
 
-        Options withRateLimit(RateLimiter rate ) {
-            limiter = rate
-            return this
-        }
-
-        Options withRateLimit(String rate ) {
+        Options withRateLimit(String rate) {
             limiter = new RateUnit(rate).getRateLimiter()
             return this
         }
@@ -201,15 +274,16 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
             return this
         }
 
-        Options retryOn(Closure<Boolean> condition) {
+        Options retryOn( @ClosureParams(value = SimpleType.class, options = "java.lang.Throwable") Closure<Boolean> condition) {
             retryCondition = condition
             return this
         }
 
         Options withRampUp(double maxRate, Float factor=null, Integer interval=null) {
             this.rampUpMaxRate = maxRate
-            if( factor!=null )
-                this.rampUpFactor = factor
+            if( factor!=null ) {
+                this.setRampUpFactor(factor)
+            }
             if( interval!=null )
                 this.rampUpInterval = interval
             return this
@@ -218,7 +292,7 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
         Options withBackOff(double minRate, Float factor=null) {
             backOffMinRate = minRate
             if( factor != null )
-                backOffFactor = factor
+                setBackOffFactor(factor)
             return this
         }
 
@@ -227,7 +301,7 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
         }
 
         Options withErrorBurstDelay(Duration duration) {
-            this.errorBurstDelayMillis = duration.millis
+            this.errorBurstDelay = duration
             return this
         }
 
@@ -282,7 +356,7 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
                 autoThrottle = opts.autoThrottle as boolean
 
             if( opts.errorBurstDelay )
-                errorBurstDelayMillis = (opts.errorBurstDelay as Duration).millis
+                errorBurstDelay = opts.errorBurstDelay as Duration
 
             if( opts.rampUpInterval )
                 rampUpInterval = opts.rampUpInterval as int
@@ -306,9 +380,24 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
         }
     }
 
-    private abstract class Recoverable implements Callable, Runnable {
+    abstract static class Recoverable implements Callable, Runnable {
 
-        abstract Object invoke()
+        private ThrottlingExecutor executor
+
+        private Options opts
+
+        private int retryCount
+
+        abstract protected Object invoke()
+
+        protected Recoverable setOwner(ThrottlingExecutor e) {
+            this.executor=e
+            this.opts=e.opts
+            return this
+        }
+
+        @Override
+        final void run() { call() }
 
         @Override
         final Object call() throws Exception {
@@ -319,13 +408,60 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
                     return result
                 }
                 catch (Throwable t) {
-                    if( !handleRetry0(t) )
+                    try {
+                        if( handleRetry0(t) )
+                            continue
+                        // invoke error handling callback
+                        onFailure(t)
                         return null
+                    }
+                    catch (Throwable e) {
+                        log.error("Unexpected failure", e)
+                        return null
+                    }
                 }
+
         }
 
-        @Override
-        final void run() { call() }
+        /**
+         * Subclasses can provide task specific error handling policy
+         * @param the error thrown
+         */
+        protected void onFailure(Throwable t) {
+            if( opts.failureAction ) {
+                opts.failureAction.call(t)
+            }
+            else {
+                log.error("Unable to process client request", t)
+            }
+        }
+
+        private void handleSuccess0(Object result) {
+            log.trace "Succeed task"
+            // invoke the success handler
+            opts.successAction?.call(result)
+            // try to speed-up the submission rate
+            if( executor.canSpeedUp0() ) {
+                executor.speedUp0(opts.limiter)
+            }
+        }
+
+        private boolean handleRetry0(Throwable t) {
+            log.trace "Failure exception=$t"
+            // reset the success counter
+            synchronized (executor.countLock) { executor.successCount=0 }
+            // check if can retry the task execution
+            if( opts.retryCondition && opts.retryCondition.call(t) && retryCount++ < opts.maxRetries ) {
+                // slow down the submission throughput
+                if( opts.autoThrottle )
+                    executor.slowDown0()
+                // wait before retry this task execution
+                executor.retry0(t, retryCount)
+                return true
+            }
+
+            return false
+        }
     }
 
     // ---- executor settings ----
@@ -334,17 +470,19 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
 
     private Semaphore semaphore
 
-    private AtomicLong successCount = new AtomicLong()
+    private final Object countLock = new Object()
 
-    private AtomicInteger retryCount = new AtomicInteger()
+    private int successCount
 
     private long lastFailureMillis
+
+    private volatile double timeToAcquire
 
     /**
      * Executor factory method
      *
      * @param opts Throttling and executor options
-     * @return The {@link ThrottlingExecutor} object instance 
+     * @return The {@link ThrottlingExecutor} object instance
      */
     static ThrottlingExecutor create( Options opts ) {
         assert opts
@@ -359,10 +497,14 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
                 opts.maxPoolSize,
                 opts.keepAlive.millis, TimeUnit.MILLISECONDS,
                 new LinkedBlockingQueue<>(),
-                new ThreadFactory0(opts.name))
+                new ThreadFactory0(opts.poolName))
+
+        // the executor options
+        this.opts = opts
+        // allow core thread to be removed from cache
+        allowCoreThreadTimeOut(true)
         // the semaphore is bounding both the number of tasks currently executing
         // and those queued up
-        this.opts = opts
         if( opts.queueSize )
             this.semaphore = new Semaphore(opts.maxPoolSize + opts.queueSize)
     }
@@ -384,21 +526,29 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
     }
 
     protected <T> Callable<T> wrap(Callable<T> task) {
+        Recoverable result
         if( task instanceof Recoverable )
-            return task
+            result = task
 
-        new Recoverable() {
-            @Override Object invoke() { return task.call() }
-        }
+        else
+            result = new Recoverable() {
+                @Override Object invoke() { return task.call() }
+            }
+
+        result.setOwner(this)
     }
 
     protected  Runnable wrap(Runnable task) {
+        Recoverable result
         if( task instanceof Recoverable )
-            return task
+            result = task
 
-        new Recoverable() {
-            @Override Object invoke() { return task.run() }
-        }
+        else
+            result = new Recoverable() {
+                @Override Object invoke() { return task.run() }
+            }
+
+        result.setOwner(this)
     }
 
     @Override
@@ -411,12 +561,14 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
         return super.newTaskFor(wrap(task), value)
     }
 
-
     protected void beforeExecute(Thread thread, Runnable task) {
-        log.trace "Before acquire limit=$opts.limiter"
-        if( opts.limiter ) opts.limiter.acquire()
         super.beforeExecute(thread,task)
-        log.trace "Before execute task"
+        log.trace "Before acquire limit=$opts.limiter"
+        if( opts.limiter ) {
+            timeToAcquire = opts.limiter.acquire()
+            if( timeToAcquire )
+            log.trace "Time spent to enforce rate=$timeToAcquire"
+        }
     }
 
     @Override
@@ -434,46 +586,12 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
                 acquired = true
             }
             catch (InterruptedException e) {
-                log.warn("InterruptedException whilst acquiring semaphore", e);
+                log.debug("InterruptedException whilst acquiring semaphore", e);
             }
         }
     }
 
-
-    private void handleSuccess0(Object result) {
-        log.trace "Succeed task"
-
-        // invoke the success handler
-        opts.successAction?.call(result)
-        // reset the retry counter on the first successful execution
-        retryCount.set(0)
-        // try to speed-up the submission rate
-        final count = successCount.incrementAndGet()
-        if( opts.autoThrottle && opts.rampUpInterval>0 && (count % opts.rampUpInterval)==0 ) {
-            speedUp0(opts.limiter)
-        }
-    }
-
-    private boolean handleRetry0(Throwable t) {
-        log.trace "Failure exception=$t"
-
-        if( opts.retryCondition && opts.retryCondition.call(t) && retryCount.getAndIncrement()<opts.maxRetries ) {
-            // slow down the submission throughput
-            if( opts.autoThrottle ) slowDown0()
-            // now retry
-            retry(t)
-            return true
-        }
-        else if( opts.failureAction ) {
-            opts.failureAction.call(t)
-        }
-        else {
-            log.error("Unable to process client request", t)
-        }
-        return false
-    }
-
-    private void retry(Throwable t) {
+    private void retry0(Throwable t, int retryCount) {
         if( isTerminating() ) {
             log.debug("WARN: Task execution cannot be retried -- executor is terminating")
             return
@@ -481,32 +599,32 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
 
         // sleep before retry
         try {
-            sleep(opts.retryDelay.millis * retryCount.get())
+            sleep(opts.retryDelay.millis * retryCount)
         }
         catch( InterruptedException e ) {
             log.debug "Oops.. retry sleep interrupted", e
         }
 
-        // invoke the retry handler
+        // notify the retry event
         opts.retryAction?.call(t)
     }
 
     @PackageScope
     synchronized void slowDown0() {
         final long now = System.currentTimeMillis()
-        if( now-lastFailureMillis > opts.errorBurstDelayMillis ) {
-            log.debug "Throttler slowing down event -- delta=${now-lastFailureMillis}; limiter=$opts.limiter"
+        if( now-lastFailureMillis > opts.errorBurstDelay.millis ) {
+            log.trace "Throttler slowing down event -- delta=${now-lastFailureMillis}; limiter=$opts.limiter"
             lastFailureMillis = now
             backOff0(opts.limiter)
         }
         else {
-            log.debug "Throttler skipped slowing down event -- delta=${now-lastFailureMillis}"
+            log.trace "Throttler skipped slowing down event -- delta=${now-lastFailureMillis}"
         }
     }
 
     @PackageScope
     void backOff0(RateLimiter limiter) {
-        if( limiter == null )
+        if( limiter == null || !opts.backOffFactor )
             return
 
         final double newRate = Math.max( limiter.rate / opts.backOffFactor, opts.backOffMinRate )
@@ -517,9 +635,25 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
         opts.rateLimitChangeAction?.call(new RateUnit(newRate))
     }
 
+    private boolean canSpeedUp0() {
+        if( !opts.autoThrottle )
+            return false
+        // increase execution rate only when some time is spent to enforce the current limit
+        // otherwise is useless because there no execution pressure 
+        if( !timeToAcquire )
+            return false
+        
+        synchronized (countLock) {
+            def result = opts.rampUpInterval>0 && ++successCount >= opts.rampUpInterval
+            if( result )
+                successCount=0
+            return result
+        }
+    }
+
     @PackageScope
     synchronized void speedUp0(RateLimiter limiter) {
-        if( limiter == null )
+        if( limiter == null || !opts.rampUpFactor )
             return
 
         final double newRate = Math.min( limiter.rate * opts.rampUpFactor, opts.rampUpMaxRate )
@@ -566,7 +700,8 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
     Object doInvoke1(final Object target, final String name, final Object args) {
 
         final task = new Recoverable() {
-            @Override  Object invoke() {
+            @Override Object invoke() {
+                log.trace "Invoke client >> $name( $args )"
                 target.invokeMethod(name,args)
             }
         }
@@ -577,7 +712,6 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
 
         return result.get(0).get()
     }
-
 
 }
 

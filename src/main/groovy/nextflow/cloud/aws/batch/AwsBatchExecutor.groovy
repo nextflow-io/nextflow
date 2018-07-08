@@ -22,7 +22,10 @@ package nextflow.cloud.aws.batch
 
 import java.nio.file.Path
 
+import com.amazonaws.services.batch.AWSBatch
+import com.amazonaws.services.batch.model.AWSBatchException
 import com.upplication.s3fs.S3Path
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -36,6 +39,8 @@ import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
+import nextflow.util.RateUnit
+import nextflow.util.ThrottlingExecutor
 /**
  * AWS Batch executor
  * https://aws.amazon.com/batch/
@@ -47,19 +52,31 @@ import nextflow.util.Duration
 class AwsBatchExecutor extends Executor {
 
     /**
-     * AWS batch client instance
+     * Proxy to throttle AWS batch client requests
      */
     @PackageScope
     private static AwsBatchProxy client
 
+    /**
+     * The executor service to throttle service requests
+     */
+    private static ThrottlingExecutor executor
+
+    /**
+     * A S3 path where executable scripts need to be uploaded
+     */
     private static Path remoteBinDir = null
 
-    private static ParallelPollingMonitor monitor
-
+    /**
+     * @return {@code true} to signal containers are managed directly the AWS Batch service
+     */
     final boolean isContainerNative() {
         return true
     }
 
+    /**
+     * Initialise the AWS batch executor.
+     */
     @Override
     void register() {
         super.register()
@@ -90,10 +107,12 @@ class AwsBatchExecutor extends Executor {
         /*
          * retrieve config and credentials and create AWS client
          */
-        final batch = new AmazonCloudDriver(session.config).getBatchClient()
+        final driver = new AmazonCloudDriver(session.config)
 
-        // create a proxy client to throttle requests
-        client = new AwsBatchProxy(batch, monitor.getExecutor())
+        /*
+         * create a proxy for the aws batch client that manages the request throttling 
+         */
+        client = new AwsBatchProxy(driver.getBatchClient(), executor)
     }
 
     @PackageScope
@@ -102,22 +121,81 @@ class AwsBatchExecutor extends Executor {
     }
 
     @PackageScope
-    AwsBatchProxy getClient() {
+    AWSBatch getClient() {
         client
     }
 
+    /**
+     * @return The monitor instance that handles AWS batch tasks
+     */
     @Override
     protected TaskMonitor createTaskMonitor() {
+
+        // create the throttling executor
         // note this is invoke only the very first time a AWS Batch executor is created
-        monitor = ParallelPollingMonitor.create(session, name, Duration.of('10 sec'))
+        // therefore it's safe to assign to a static attribute
+        executor = createExecutorService()
+
+        final pollInterval = session.getPollInterval(name, Duration.of('10 sec'))
+        final dumpInterval = session.getMonitorDumpInterval(name)
+
+        final def params = [
+                name: name,
+                session: session,
+                pollInterval: pollInterval,
+                dumpInterval: dumpInterval
+        ]
+
+        log.debug "Creating parallel monitor for executor '$name' > pollInterval=$pollInterval; dumpInterval=$dumpInterval"
+        new ParallelPollingMonitor(executor, params)
     }
 
+    /**
+     * Create a task handler for the given task instance
+     *
+     * @param task The {@link TaskRun} instance to be executed
+     * @return A {@link AwsBatchTaskHandler} for the given task
+     */
     @Override
     TaskHandler createTaskHandler(TaskRun task) {
         assert task
         assert task.workDir
         log.trace "[AWS BATCH] Launching process > ${task.name} -- work folder: ${task.workDirStr}"
         new AwsBatchTaskHandler(task, this)
+    }
+
+    /**
+     * @return Creates a {@link ThrottlingExecutor} service to throttle
+     * the API requests to the AWS Batch service.
+     */
+    private ThrottlingExecutor createExecutorService() {
+
+        final qs = session.getQueueSize(name, 5_000)
+        final limit = session.getExecConfigProp(name,'submitRateLimit','50/s') as String
+        final size = Runtime.runtime.availableProcessors() * 5
+
+        final opts = new ThrottlingExecutor.Options()
+                .retryOn { Throwable t -> t instanceof AWSBatchException && t.errorCode=='TooManyRequestsException' }
+                .onFailure { Throwable t -> session?.abort(t) }
+                .onRateLimitChange { RateUnit rate -> logRateLimitChange(rate) }
+                .withRateLimit(limit)
+                .withQueueSize(qs)
+                .withPoolSize(size)
+                .withKeepAlive(Duration.of('1 min'))
+                .withAutoThrottle(true)
+                .withMaxRetries(10)
+                .withOptions( getConfigOpts() )
+
+        ThrottlingExecutor.create(opts)
+    }
+
+    @CompileDynamic
+    protected Map getConfigOpts() {
+        session.config?.executor?.submitter as Map
+    }
+
+    protected void logRateLimitChange(RateUnit rate) {
+        log.debug "New submission rate limit: $rate"
     }
 }
 

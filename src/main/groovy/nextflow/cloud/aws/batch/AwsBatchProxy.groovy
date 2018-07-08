@@ -20,21 +20,25 @@
 
 package nextflow.cloud.aws.batch
 
-import com.amazonaws.services.batch.AWSBatchClient
+import com.amazonaws.services.batch.AWSBatch
 import nextflow.util.ClientProxyThrottler
 import nextflow.util.ThrottlingExecutor
-
 /**
+ * Implements a AWS Batch client proxy that handle all API invocations
+ * through the provided executor service
+ *
+ * WARN: the caller class/method should not be compile static
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class AwsBatchProxy extends ClientProxyThrottler<AWSBatchClient> {
+class AwsBatchProxy extends ClientProxyThrottler<AWSBatch> {
 
     @Delegate(deprecated=true)
-    protected AWSBatchClient client
+    private AWSBatch target
 
-    AwsBatchProxy(AWSBatchClient client, ThrottlingExecutor executor) {
+    AwsBatchProxy(AWSBatch client, ThrottlingExecutor executor) {
         super(client, executor)
-        this.client = client
+        this.target = client
     }
+
 }

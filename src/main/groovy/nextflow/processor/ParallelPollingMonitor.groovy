@@ -20,18 +20,15 @@
 
 package nextflow.processor
 
+import java.util.concurrent.Callable
+
 import com.google.common.util.concurrent.RateLimiter
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.Session
-import nextflow.exception.TaskRecoverException
-import nextflow.util.Duration
-import nextflow.util.RateUnit
 import nextflow.util.ThrottlingExecutor
+
 /**
- * Polling monitor class submitting job execution
- * is a parallel manner
+ * Polling monitor class submitting job execution in a parallel manner
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -40,18 +37,6 @@ import nextflow.util.ThrottlingExecutor
 class ParallelPollingMonitor extends TaskPollingMonitor {
 
     private ThrottlingExecutor submitter
-
-    static ParallelPollingMonitor create(Session session, String name, Duration defPollInterval) {
-        assert session
-        assert name
-
-        final pollInterval = session.getPollInterval(name, defPollInterval)
-        final dumpInterval = session.getMonitorDumpInterval(name)
-
-        log.debug "Creating parallel monitor for executor '$name' > pollInterval=$pollInterval; dumpInterval=$dumpInterval"
-        new ParallelPollingMonitor(name: name, session: session, pollInterval: pollInterval, dumpInterval: dumpInterval)
-    }
-
 
     /**
      * Create the task polling monitor with the provided named parameters object.
@@ -65,74 +50,41 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
      *
      * @param params
      */
-    protected ParallelPollingMonitor(Map params) {
+    ParallelPollingMonitor(ThrottlingExecutor executor, Map params) {
         super(params)
+        this.submitter = executor
     }
 
-    @Override
-    TaskMonitor start() {
-        createExecutorService()
-        super.start()
+    protected RateLimiter createSubmitRateLimit() {
+        // disable the rate limiter managed by the super-class
+        // it has be managed by the throttling executor
+        return null
     }
 
-    ThrottlingExecutor getExecutor() { submitter }
-
-    @Override
-    protected void cleanup() {
-        submitter.shutdownNow()
-        super.cleanup()
-    }
-
-    private void createExecutorService() {
-        final qs = session.getQueueSize(name, 5_000)
-        final limit = session.getExecConfigProp(name,'submitRateLimit','50/s') as String
-        final size = Runtime.runtime.availableProcessors() * 5
-
-        final opts = new ThrottlingExecutor.Options()
-                            .retryOn(TaskRecoverException)
-                            .onFailure { Throwable t -> session?.abort(t) }
-                            .onRateLimitChange { RateUnit rate -> logRateLimitChange(rate) }
-                            .withRateLimit(limit)
-                            .withQueueSize(qs)
-                            .withPoolSize(size)
-                            .withKeepAlive(Duration.of('1 min'))
-                            .withAutoThrottle(true)
-                            .withMaxRetries(10)
-                            .withOptions( getConfigOpts() )
-
-        submitter = ThrottlingExecutor.create(opts)
-    }
-
-    @CompileDynamic
-    protected Map getConfigOpts() {
-        session.config?.executor?.submitter as Map
-    }
-
-    /* disable default implementation */
-    protected RateLimiter createSubmitRateLimit() { return null }
-
-    protected void logRateLimitChange(RateUnit rate) {
-        log.debug "New submission rate limit: $rate"
+    protected void submit0(TaskHandler handler) {
+        super.submit(handler)
     }
 
     @Override
     protected void submit(TaskHandler handler) {
         // execute task submission in a parallel
         // using an thread-pool via the executor service
-        submitter.submit({
+        final wrapper = (Callable)new ThrottlingExecutor.Recoverable() {
+            @Override protected Object invoke() {
+                return submit0(handler)
+            }
 
-            try {
-                super.submit(handler)
-            }
-            catch (TaskRecoverException e) {
-                throw  e
-            }
-            catch (Throwable e) {
-                log.debug "Handle exception: $e"
+            // when the submission fails it handles the error
+            // condition and notify the task completion (as a failure)
+            // note: depending the task error strategy it may try
+            // to submit a new task instance
+            @Override
+            protected void onFailure(Throwable e) {
                 handleException(handler, e)
                 session.notifyTaskComplete(handler)
             }
+        }
 
-        } as Runnable)
+        submitter.submit(wrapper)
     }
 }
