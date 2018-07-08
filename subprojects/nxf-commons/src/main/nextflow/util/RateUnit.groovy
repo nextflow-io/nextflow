@@ -21,13 +21,15 @@
 package nextflow.util
 
 import com.google.common.util.concurrent.RateLimiter
+import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 
 /**
- * Model a rate limit measure unit
+ * Model am execution rate limit measure unit
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 @EqualsAndHashCode(includeFields=true,includes='rate')
 class RateUnit {
 
@@ -35,16 +37,38 @@ class RateUnit {
 
     private double rate
 
+    static RateUnit of(String str) { new RateUnit(str) }
+
+    /**
+     * Create a rate unit by a double value representing the number of events per second
+     *
+     * @param rate The rate unit as a double value
+     */
     RateUnit(double rate) {
+        assert rate>0, "Rate unit must be greater than zero"
         this.rate = rate
     }
 
+    /**
+     * Create a rate unit using a string annotation as `10 sec` ie. 10 per second
+     * or `100 / 5 min` 100 events each 5 minutes
+     *
+     * @param str The rate string 
+     */
     RateUnit(String str) {
         this.rate = parse(str)
     }
 
+    /**
+     * @return The actual rate unit as a double
+     */
     double getRate() { rate }
 
+    /**
+     * Create a {@link RateLimiter} object for rate unit
+     *
+     * @return An instance of {@link RateLimiter}
+     */
     RateLimiter getRateLimiter() { RateLimiter.create(rate) }
 
     protected double parse(String limit) {

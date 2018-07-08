@@ -50,6 +50,12 @@ class RateUnitTest extends Specification {
 
     }
 
+    def 'should create rate limit with a string' () {
+        expect:
+        RateUnit.of('1 /sec') == new RateUnit(1.0)
+        RateUnit.of('1 /min') == new RateUnit( 1 / 60 )
+    }
+
 
     def 'should create with a double value' () {
         expect:

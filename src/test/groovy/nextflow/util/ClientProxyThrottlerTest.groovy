@@ -22,7 +22,6 @@ package nextflow.util
 
 import java.util.concurrent.atomic.AtomicInteger
 
-import com.google.common.util.concurrent.RateLimiter
 import groovy.util.logging.Slf4j
 import spock.lang.Specification
 /**
@@ -55,7 +54,7 @@ class ClientProxyThrottlerTest extends Specification {
         }
     }
 
-    static class MyClientProxy extends ClientProxyThrottler {
+    static class MyClientProxy extends ClientProxyThrottler<MyClient> {
 
         @Delegate
         MyClient target
@@ -65,6 +64,10 @@ class ClientProxyThrottlerTest extends Specification {
             target = client
         }
 
+        MyClientProxy(MyClient client, ThrottlingExecutor executor) {
+            super(client, executor)
+            target = client
+        }
     }
 
     def 'should invoke target client method' () {
@@ -100,93 +103,6 @@ class ClientProxyThrottlerTest extends Specification {
     }
 
 
-    def 'should set properties' () {
-
-        given:
-        def success = { 1 }
-        def failure = { 2 }
-        def change = { 3 }
-        def retry = { 4 }
-        def retryOn = { false }
-
-        when:
-        def builder = new ThrottlingExecutor.Options()
-                .withRateLimit('20/sec')
-                .withPoolSize(10)
-                .withMaxPoolSize(20)
-                .withQueueSize(50)
-                .withKeepAlive(Duration.of('3 min'))
-                .withMaxRetries(11)
-                .withRampUp(50.0, 1.5, 500)
-                .withBackOff('10/sec', 1.9)
-                .withAutoThrottle(true)
-                .withErrorBurstDelay(Duration.of('5 sec'))
-                .onFailure(failure)
-                .onSuccess(success)
-                .onRetry(retry)
-                .onRateLimitChange(change)
-                .retryOn(retryOn)
-
-        then:
-        builder.limiter.rate == RateLimiter.create(20).rate
-        builder.poolSize == 10
-        builder.maxPoolSize == 20
-        builder.queueSize == 50
-        builder.maxRetries == 11
-        builder.keepAlive == Duration.of('3 min')
-        builder.failureAction.is(failure)
-        builder.successAction.is(success)
-        builder.retryAction.is(retry)
-        builder.rateLimitChangeAction.is(change)
-        builder.retryCondition.is(retryOn)
-        builder.errorBurstDelayMillis == 5_000
-        builder.rampUpInterval == 500
-        builder.rampUpFactor == 1.5
-        builder.rampUpMaxRate == 50.0
-        builder.backOffMinRate == 10d
-        builder.backOffFactor == 1.9f
-
-    }
-
-    def 'should configure with options map' () {
-
-        given:
-        def OPTS = [
-                poolSize: 1,
-                maxPoolSize: 2,
-                queueSize: 3,
-                maxRetries: 4,
-                keepAlive: '5 sec',
-                errorBurstDelay: '6 sec',
-                rampUpInterval: 7,
-                rampUpFactor: 8,
-                rampUpMaxRate: 11.1,
-                backOffMinRate: '9/sec',
-                backOffFactor: 10,
-                rateLimit: '20/s',
-                autoThrottle: true,
-
-        ]
-
-        when:
-        def builder = new ThrottlingExecutor.Options().withOptions(OPTS)
-
-        then:
-        builder.poolSize == 1
-        builder.maxPoolSize == 2
-        builder.queueSize == 3
-        builder.maxRetries == 4
-        builder.keepAlive == Duration.of('5 sec')
-        builder.autoThrottle == true
-        builder.errorBurstDelayMillis == 6_000
-        builder.rampUpInterval == 7
-        builder.rampUpFactor == 8
-        builder.rampUpMaxRate == 11.1
-        builder.backOffMinRate == 9
-        builder.backOffFactor == 10
-        builder.limiter.rate == RateLimiter.create(20).rate
-    }
-
     def 'should throttle requests' () {
 
         given:
@@ -199,7 +115,7 @@ class ClientProxyThrottlerTest extends Specification {
         when:
         int count = 0
         for( int i=0; i<5; i++ ) {
-            proxy.runThis( { log.info "thick=${count++}" } )
+            proxy.runThis( { log.info "tick=${count++}" } )
         }
  
         long delta = System.currentTimeMillis()-begin
@@ -334,6 +250,34 @@ class ClientProxyThrottlerTest extends Specification {
         then:
         count.get() == 10
         delta>5_000
+    }
+
+
+    def 'should call invoke0' () {
+        given:
+        def client = new MyClient()
+        def exec = Mock(ThrottlingExecutor)
+        def proxy = new MyClientProxy(client, exec)
+        def cmd = { it.foo() }
+
+        when:
+        def result = proxy.async(cmd)
+        then:
+        1 * exec.doInvoke0(client, 'async', [cmd] as Object[])  >> 'OK'
+        result == 'OK'
+    }
+
+    def 'should call invoke1' () {
+        given:
+        def client = new MyClient()
+        def exec = Mock(ThrottlingExecutor)
+        def proxy = new MyClientProxy(client, exec)
+
+        when:
+        def result = proxy.alpha('hello world')
+        then:
+        1 * exec.doInvoke1(client, 'alpha', ['hello world'] as Object[])  >> 'OK'
+        result == 'OK'
     }
 
 }

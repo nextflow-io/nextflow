@@ -24,7 +24,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 import nextflow.Session
-import nextflow.exception.TaskRecoverException
 import nextflow.util.Duration
 import nextflow.util.ThrottlingExecutor
 import spock.lang.Specification
@@ -45,10 +44,9 @@ class ParallelPollingMonitorTest extends Specification {
 
         def session = Mock(Session)
         def handler = Mock(TaskHandler)
-        def mon = new ParallelPollingMonitor(session:session, name:'foo', pollInterval:'1sec')
 
         def opts = new ThrottlingExecutor.Options()
-                        .retryOn(TaskRecoverException)
+                        .retryOn(IllegalArgumentException)
                         .withRateLimit('10/sec')
                         .withErrorBurstDelay(Duration.of('5sec'))
                         .withAutoThrottle()
@@ -57,16 +55,18 @@ class ParallelPollingMonitorTest extends Specification {
                         .onFailure { failure.incrementAndGet() }
                         .onRateLimitChange { change.incrementAndGet() }
 
-        def pool = ThrottlingExecutor.create(opts)
+        def exec = ThrottlingExecutor.create(opts)
+
+        def mon = new ParallelPollingMonitor(exec, [session:session, name:'foo', pollInterval:'1sec'])
         when:
-        mon.submitter = pool
+        mon.submitter = exec
         mon.submit(handler)
         sleep 3_000
-        pool.shutdown()
-        pool.awaitTermination(1, TimeUnit.MINUTES)
+        exec.shutdown()
+        exec.awaitTermination(1, TimeUnit.MINUTES)
 
         then:
-        handler.submit() >> { println "c=$count"; if(count.getAndIncrement()<2) throw new TaskRecoverException("Ooops!") }
+        handler.submit() >> { println "c=$count"; if(count.getAndIncrement()<2) throw new IllegalArgumentException("Ooops!") }
 
         success.get() == 1
         retry.get() == 2

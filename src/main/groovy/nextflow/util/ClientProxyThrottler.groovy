@@ -21,23 +21,29 @@
 package nextflow.util
 
 import java.util.concurrent.Future
-import java.util.concurrent.ThreadPoolExecutor
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.codehaus.groovy.runtime.InvokerHelper
+
 /**
  * Implements a proxy class that forwards method call invocations to
  * a thread pool execution which throttle requests according a specified rate limit
  *
+ * WARN: the caller class/method should not be compile static
+ *
+ * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 abstract class ClientProxyThrottler<T> implements GroovyInterceptable {
 
     /* the underlying thread pool executor */
-    protected ThreadPoolExecutor executor
+    private ThrottlingExecutor executor
 
-    protected T client
+    /* the target client object that will manage the requests to be throttled */
+    private T client
 
     /**
      * Create the proxy throttler object. Subclasses must provide the
@@ -50,10 +56,16 @@ abstract class ClientProxyThrottler<T> implements GroovyInterceptable {
     ClientProxyThrottler(T client, ThrottlingExecutor.Options opts) {
         assert client
         this.client = client
-        opts.name = "${client.getClass().getSimpleName()}-ProxyThrottler"
+        opts.poolName = "${client.getClass().getSimpleName()}-ProxyThrottler"
         this.executor = ThrottlingExecutor.create(opts)
     }
 
+    /**
+     * Create the proxy throttler object using the specified {@link ThrottlingExecutor} instance
+     *
+     * @param client The target client whose method invocation needs to be throttled
+     * @param executor The {@link ThrottlingExecutor} scheduling and executig the actual requests to the client
+     */
     ClientProxyThrottler(T client, ThrottlingExecutor executor) {
         assert client
         assert executor
@@ -61,9 +73,15 @@ abstract class ClientProxyThrottler<T> implements GroovyInterceptable {
         this.executor = executor
     }
 
+    Object getProperty(String name) {
+        name=='client' ? client : InvokerHelper.getProperty(this,name)
+    }
 
     @Override
     Object invokeMethod(String name, Object args) {
+        if( name=='getClient' && !args )
+            return client
+        
         def dispatcher = name=='async' ? 'doInvoke0' : 'doInvoke1'
         return InvokerHelper.invokeMethod(executor, dispatcher, [client, name, args] as Object[])
     }
@@ -74,5 +92,9 @@ abstract class ClientProxyThrottler<T> implements GroovyInterceptable {
         return null
     }
 
-
+    /**
+     * @return The client instance associate to this proxy. This allows the direct
+     * access with the client bypassing the throttling logic
+     */
+    T getClient() { client }
 }

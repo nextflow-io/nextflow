@@ -1015,7 +1015,7 @@ class Session implements ISession {
      * @return A {@code Duration} object. Default '5 minutes'
      */
     @Memoized
-    public Duration getMonitorDumpInterval( String execName, Duration defValue = Duration.of('5min')) {
+    Duration getMonitorDumpInterval( String execName, Duration defValue = Duration.of('5min')) {
         getExecConfigProp(execName, 'dumpInterval', defValue) as Duration
     }
 
