@@ -25,17 +25,16 @@ import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovy.util.logging.Slf4j
 import groovyx.gpars.agent.Agent
-
 import nextflow.Session
-import nextflow.script.WorkflowMetadata
-import nextflow.util.SimpleHttpClient
 import nextflow.processor.TaskHandler
+import nextflow.util.SimpleHttpClient
 
 /**
  * Send out messages via HTTP to a configured URL on different workflow
  * execution events.
  *
  * @author Sven Fillinger <sven.fillinger@qbic.uni-tuebingen.de>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 class WebLogObserver implements TraceObserver{
@@ -53,27 +52,22 @@ class WebLogObserver implements TraceObserver{
     /**
      * Not a HTTP header, but a message header with some general workflow info
      */
-    private static JsonSlurper JSLURPER = new JsonSlurper()
+    private static JsonSlurper SLURPER = new JsonSlurper()
 
     /**
      * The default url is localhost
      */
-    static String DEF_URL = 'http://localhost'
+    static public String DEF_URL = 'http://localhost'
 
     /**
      * Contains server request response
      */
-    String response = ""
+    private String response
 
     /**
      * Simple http client object that will send out messages
      */
     private SimpleHttpClient httpClient = new SimpleHttpClient()
-
-    /**
-     * Holds information of workflow metadata
-     */
-    private WorkflowMetadata workflowMetadata
 
     /**
      * An agent for the http request in an own thread
@@ -87,9 +81,14 @@ class WebLogObserver implements TraceObserver{
      */
     WebLogObserver(String url) {
         this.httpClient.setUrl(checkUrl(url))
-        this.runName = ""
-        this.runId = ""
         this.webLogAgent = new Agent<>(this)
+    }
+
+    /**
+     * only for testing purpose -- do not use
+     */
+    protected WebLogObserver() {
+
     }
 
     /**
@@ -101,13 +100,11 @@ class WebLogObserver implements TraceObserver{
      * @param url String with target URL
      * @return The requested url or the default url, if invalid
      */
-    static String checkUrl(String url){
-        try {
-            assert url=~ "^(https|http)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]"
-        } catch (AssertionError e){
-            throw new IllegalArgumentException("Only http or https are supported protocols. The given URL was ${url}.")
+    protected String checkUrl(String url){
+        if( url =~ "^(https|http)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]" ) {
+            return url
         }
-        return url
+        throw new IllegalArgumentException("Only http or https are supported protocols -- The given URL was: ${url}")
     }
 
     /**
@@ -118,7 +115,7 @@ class WebLogObserver implements TraceObserver{
      */
     @Override
     void onFlowStart(Session session) {
-        // This is either set by the user or via Nexflows name generator
+        // This is either set by the user or via Nextflow name generator
         runName = session.getRunName()
         runId = session.getUniqueId()
         asyncHttpMessage("started")
@@ -190,12 +187,12 @@ class WebLogObserver implements TraceObserver{
 
         // Set the message info
         def time = new Date().format("yyyy-MM-dd'T'HH:mm:ss'Z'", TimeZone.getTimeZone("UTC"))
-        def messageJson = JSLURPER.parseText(
+        def messageJson = SLURPER.parseText(
                 """{ "runName": "$runName", "runId": "$runId", "runStatus":"$runStatus", "utcTime":"$time" }""")
 
         // Append the trace object if present
         if (trace)
-            messageJson["trace"] = JSLURPER.parseText(JsonOutput.toJson(trace.store))
+            messageJson["trace"] = SLURPER.parseText(JsonOutput.toJson(trace.store))
 
         // The actual HTTP request
         httpClient.sendHttpMessage(JsonOutput.toJson(messageJson))
@@ -220,10 +217,15 @@ class WebLogObserver implements TraceObserver{
     private void logHttpResponse(){
         def statusCode = httpClient.getResponseCode()
         if (statusCode == 200)
-            log.debug "Successfully send message to ${httpClient.getUrl()}, received status code 200."
+            log.debug "Successfully send message to ${httpClient.getUrl()} -- received status code 200"
         else {
-            log.debug "Failed to send message to ${httpClient.getUrl()}, received status code $statusCode"
-            log.debug httpClient.getResponse()
+            def msg = """\
+                Failed to send message to ${httpClient.getUrl()} -- received 
+                - status code : $statusCode    
+                - response msg: ${httpClient.getResponse()}  
+                """
+                .stripIndent()
+            log.debug msg
         }
     }
 

@@ -42,7 +42,7 @@ class SimpleHttpClient {
     /**
      * Contains the HTTP POST target url
      */
-    private String url = ""
+    private String url
 
     /**
      * Contains the response code of a request
@@ -52,7 +52,7 @@ class SimpleHttpClient {
     /**
      * Contains the response string of a request
      */
-    private String response = ""
+    private String response
 
     /**
      * Setter for the target url

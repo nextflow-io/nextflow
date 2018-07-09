@@ -1,5 +1,4 @@
 /*
- * Copyright (c) 2018, University of Tübingen, Quantitative Biology Center (QBiC).
  * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
  * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
  *

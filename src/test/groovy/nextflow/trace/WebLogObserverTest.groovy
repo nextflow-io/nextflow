@@ -62,4 +62,22 @@ class WebLogObserverTest extends Specification{
 
     }
 
+
+    def 'should validate URL' () {
+        given:
+        def observer = new WebLogObserver()
+        
+        expect:
+        observer.checkUrl('http://localhost') == 'http://localhost'
+        observer.checkUrl('http://google.com') == 'http://google.com'
+        observer.checkUrl('https://google.com') == 'https://google.com'
+        observer.checkUrl('http://google.com:8080') == 'http://google.com:8080'
+        observer.checkUrl('http://google.com:8080/foo/bar') == 'http://google.com:8080/foo/bar'
+
+        when:
+        observer.checkUrl('ftp://localhost')
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == 'Only http or https are supported protocols -- The given URL was: ftp://localhost'
+    }
 }
