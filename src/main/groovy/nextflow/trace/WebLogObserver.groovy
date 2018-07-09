@@ -23,6 +23,7 @@ package nextflow.trace
 
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.agent.Agent
 import nextflow.Session
@@ -37,7 +38,10 @@ import nextflow.util.SimpleHttpClient
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class WebLogObserver implements TraceObserver{
+
+    private static final TimeZone UTC = TimeZone.getTimeZone("UTC")
 
     /**
      * Workflow identifier, will be taken from the Session() object later
@@ -131,8 +135,9 @@ class WebLogObserver implements TraceObserver{
 
     /**
      * Send an HTTP message when a process has been submitted
-     * @param handler
-     * @param trace
+     *
+     * @param handler A {@link TaskHandler} object representing the task submitted
+     * @param trace A {@link TraceRecord} object holding the task metadata and runtime info
      */
     @Override
     void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
@@ -141,8 +146,9 @@ class WebLogObserver implements TraceObserver{
 
     /**
      * Send an HTTP message, when a process has started
-     * @param handler
-     * @param trace
+     *
+     * @param handler A {@link TaskHandler} object representing the task started
+     * @param trace A {@link TraceRecord} object holding the task metadata and runtime info
      */
     @Override
     void onProcessStart(TaskHandler handler, TraceRecord trace) {
@@ -151,8 +157,9 @@ class WebLogObserver implements TraceObserver{
 
     /**
      * Send an HTTP message, when a process completed
-     * @param handler
-     * @param trace
+     *
+     * @param handler A {@link TaskHandler} object representing the task completed
+     * @param trace A {@link TraceRecord} object holding the task metadata and runtime info
      */
     @Override
     void onProcessComplete(TaskHandler handler, TraceRecord trace) {
@@ -161,8 +168,9 @@ class WebLogObserver implements TraceObserver{
 
     /**
      * Send an HTTP message, when a workflow has failed
-     * @param handler
-     * @param trace
+     *
+     * @param handler A {@link TaskHandler} object representing the task that caused the workflow execution to fail (it may be null)
+     * @param trace A {@link TraceRecord} object holding the task metadata and runtime info (it may be null)
      */
     @Override
     void onFlowError(TaskHandler handler, TraceRecord trace) {
@@ -179,14 +187,8 @@ class WebLogObserver implements TraceObserver{
      */
     protected void sendHttpMessage(String runStatus, TraceRecord trace = null){
 
-        if (!this.httpClient.getUrl()){
-            this.response = "No message send, url was not specified or formatted wrong."
-            log.error(this.response)
-            return
-        }
-
         // Set the message info
-        def time = new Date().format("yyyy-MM-dd'T'HH:mm:ss'Z'", TimeZone.getTimeZone("UTC"))
+        def time = new Date().format("yyyy-MM-dd'T'HH:mm:ss'Z'", UTC)
         def messageJson = SLURPER.parseText(
                 """{ "runName": "$runName", "runId": "$runId", "runStatus":"$runStatus", "utcTime":"$time" }""")
 
