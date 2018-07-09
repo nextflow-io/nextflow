@@ -21,41 +21,30 @@
 
 package nextflow.util
 
-import spock.lang.Shared
 import spock.lang.Specification
 
 class SimpleHttpClientTest extends Specification{
 
-    @Shared SimpleHttpClient httpClient
-
-    @Shared String dummyUrl
-
-    def setupSpec(){
-
-        httpClient = new SimpleHttpClient()
-
-        dummyUrl = "http://foo.bar"
-
-    }
 
     def 'should set a http url successfully' () {
 
         given:
         def url = "http://localhost"
-
+        def httpClient = new SimpleHttpClient()
         when:
         httpClient.setUrl(url)
 
         then:
         noExceptionThrown()
         assert httpClient.getUrl() == url
-
     }
+
 
     def 'should raise a ConnectException' () {
 
         given:
         def url = "http://localhost"
+        def httpClient = new SimpleHttpClient()
 
         when:
         httpClient.setUrl(url)
@@ -63,7 +52,7 @@ class SimpleHttpClientTest extends Specification{
 
         then:
         thrown(ConnectException)
-        assert httpClient.getResponse() == ''
+        assert httpClient.getResponse() == null
         assert httpClient.getResponseCode() == -1
 
     }
@@ -71,10 +60,11 @@ class SimpleHttpClientTest extends Specification{
     def 'should return a HTTP 404 error' () {
 
         given:
+        def dummyUrl = "http://foo.bar"
         def con = Mock(HttpURLConnection)
-        def httpClient0 = Spy(SimpleHttpClient)
-        httpClient0.setUpConnection(dummyUrl) >> con
-        httpClient0.setUrl(dummyUrl)
+        def httpClient = Spy(SimpleHttpClient)
+        httpClient.setUpConnection(dummyUrl) >> con
+        httpClient.setUrl(dummyUrl)
         con.getOutputStream() >> new OutputStream() {
             @Override
             void write(int i) throws IOException {
@@ -90,17 +80,18 @@ class SimpleHttpClientTest extends Specification{
         con.getResponseCode() >> 404
 
         when:
-        httpClient0.sendHttpMessage('{"test_id": 2}')
+        httpClient.sendHttpMessage('{"test_id": 2}')
 
         then:
         noExceptionThrown()
-        assert httpClient0.getResponseCode() == 404 : "Response code was ${httpClient.getResponseCode()}"
+        assert httpClient.getResponseCode() == 404 : "Response code was ${httpClient.getResponseCode()}"
 
     }
 
     def 'should not send message when not a JSON-like string' (){
 
         given:
+        def dummyUrl = "http://foo.bar"
         def httpClient0 = Spy(SimpleHttpClient)
         httpClient0.setUrl(dummyUrl)
 
@@ -118,10 +109,12 @@ class SimpleHttpClientTest extends Specification{
     def 'raise exception when host not available'() {
 
         given:
+        def dummyUrl = "http://foo.bar"
+        def httpClient = new SimpleHttpClient()
         httpClient.setUrl(dummyUrl)
 
         when:
-        httpClient.sendHttpMessage('{"test_id": 2}')
+        httpClient.sendHttpMessage('{"test_id": "2"}')
 
         then:
         thrown(UnknownHostException)
@@ -130,6 +123,7 @@ class SimpleHttpClientTest extends Specification{
     def 'check isJson() method'() {
 
         when:
+        def httpClient = new SimpleHttpClient()
         def noJson = httpClient.isJson("noJson")
         def json = httpClient.isJson('{"test": 2}')
 
@@ -140,7 +134,10 @@ class SimpleHttpClientTest extends Specification{
 
     }
 
-    def 'ckeck for missing URL'() {
+    def 'check for missing URL'() {
+
+        given:
+        def httpClient = new SimpleHttpClient()
 
         when:
         httpClient.setUrl("")
@@ -149,9 +146,6 @@ class SimpleHttpClientTest extends Specification{
 
         then:
         thrown(IllegalStateException)
-
-
     }
-
 
 }
