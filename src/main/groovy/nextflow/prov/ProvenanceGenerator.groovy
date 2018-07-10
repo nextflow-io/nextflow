@@ -5,12 +5,14 @@ import groovy.util.logging.Slf4j
 import nextflow.trace.TraceRecord
 import org.openprovenance.prov.interop.InteropFramework
 import org.openprovenance.prov.model.Activity
+import org.openprovenance.prov.model.Agent
 import org.openprovenance.prov.model.Document
 import org.openprovenance.prov.model.Entity
 import org.openprovenance.prov.model.Namespace
 import org.openprovenance.prov.model.ProvFactory
 import org.openprovenance.prov.model.QualifiedName
 import org.openprovenance.prov.model.Used
+import org.openprovenance.prov.model.WasAssociatedWith
 import org.openprovenance.prov.model.WasGeneratedBy
 
 import javax.xml.datatype.DatatypeFactory
@@ -36,6 +38,8 @@ public class ProvenanceGenerator {
     private final String activity_prefix = "activity_"
     private final String used_prefix = "used_"
     private final String generatedBy_prefix = "generatedBy_"
+    private final String agent_prefix="agent_"
+    private final String associatedWith_prefix = "associatedWith_"
 
     private final ProvFactory pFactory = InteropFramework.newXMLProvFactory();
     private final Namespace ns;
@@ -59,6 +63,8 @@ public class ProvenanceGenerator {
     private Map<QualifiedName, Activity> activityMap = new HashMap<QualifiedName, Activity>();
     private Map<QualifiedName, Used> usedMap = new HashMap<QualifiedName, Used>();
     private Map<QualifiedName, WasGeneratedBy> generatedMap = new HashMap<QualifiedName, WasGeneratedBy>();
+    private Map<QualifiedName, WasAssociatedWith> associatedMap = new HashMap<QualifiedName, WasAssociatedWith>();
+    private Map<QualifiedName, Agent> agentMap = new HashMap<QualifiedName, Agent>();
 
     public void setElementsToProvFile(Document provDocument) {
         /**
@@ -70,13 +76,6 @@ public class ProvenanceGenerator {
         } else {
             for (Map.Entry<QualifiedName, Entity> entity : inputEntityMap.entrySet()) {
                 provDocument.getStatementOrBundle().add(entity.value)
-                //print   "-->>value: ${entity.getKey()} \n" //+
-                //"-->Value: ${entity.value} \n"+
-                //"-->Label: ${entity.getLabel()} \n" +
-                //"-->Type: ${entity.getType()} \n"+
-                //"-->Kind: ${entity.getKind()} \n"+
-                //"-->Other: ${entity.getOther()} \n"+
-                //"-->Location: ${entity.getLocation()} \n"
             }
         }
         /**
@@ -102,6 +101,15 @@ public class ProvenanceGenerator {
         for (Map.Entry<QualifiedName, WasGeneratedBy> generated : generatedMap.entrySet()) {
             provDocument.getStatementOrBundle().add(generated.value)
         }
+        //ASSOCIATED WITH by
+        for (Map.Entry<QualifiedName, WasAssociatedWith> associated : associatedMap.entrySet()) {
+            provDocument.getStatementOrBundle().add(associated.value)
+        }
+        //AGENT
+        for (Map.Entry<QualifiedName, Agent> agent : agentMap.entrySet()) {
+            provDocument.getStatementOrBundle().add(agent.value)
+        }
+
     }
 
     public generateProvenance(TraceRecord trace){
@@ -126,6 +134,9 @@ public class ProvenanceGenerator {
          * Iterate the OUTPUT list to get the values we need
          */
         generateOutputEntity(trace, outputList, activity_object)
+
+        //TODO ERRO WITH QN
+        // generateSoftwareAgent(activity_object,trace)
     }
 
     public void generateProvFile(Document provDocument){
@@ -171,6 +182,21 @@ public class ProvenanceGenerator {
         activity_object.setEndTime(gregorianEnd)
     }
 
+    private void generateSoftwareAgent(Activity activity_object, TraceRecord trace){
+        String associatedWithId = "${associatedWith_prefix}_${trace.getTaskId()}"
+        String softwareId = "${agent_prefix}_${activity_object.getId()}"
+
+        Agent softwareAgent = new org.openprovenance.prov.xml.Agent()
+        softwareAgent.setId(qn(softwareId.toString()))
+        pFactory.addLabel(softwareAgent, trace.get('script').toString())
+        pFactory.newAgent(softwareAgent)
+
+        WasAssociatedWith associatedWith = pFactory.newWasAssociatedWith(qn(associatedWithId.toString()),activity_object.getId(),softwareAgent.getId()) //id, activity, agent
+
+        associatedMap.put(associatedWith.getId(), associatedWith)
+        agentMap.put(softwareAgent.getId(), softwareAgent)
+    }
+
     private void generateInputEntity(TraceRecord trace, List<String> inputList, Activity activity_object){
 
         for (elem in inputList) {
@@ -178,36 +204,18 @@ public class ProvenanceGenerator {
             String pathString = pathAux.toString().trim()
             //remove space from the begining of the path.. need to avoid uncomprensive behaviour
             def entity_name = pathAux.getFileName()
-            //println "** onProcessComplete INPUT: ${entity_name} \n* PATH:${pathString}"
             //XXX check if the ELEM is already on the inputList (global) or not --> done with a MAP
             Entity input_entity = pFactory.newEntity(qn(pathString.toString()));
-            //setId()
+
             input_entity.setValue(pFactory.newValue(entity_name.toString(), qn(ProvenanceType.fileName.toString())))
-            //setValue()
 
-            //pFactory.addLabel(input_entity, "labelFOO", "ENG")
-
-            //here we add on the "type" list
-            //URI uriAux = new URI('URI_Foo');
-            //pFactory.addType(input_entity, uriAux)
             File fileAux = new File(pathString)
 
-            //--
             Object checkAux = getFileSHA256(fileAux)
             pFactory.addType(input_entity, checkAux, qn(ProvenanceType.fileChecksum.toString()))
 
             Object sizeAux = fileAux.length()
             pFactory.addType(input_entity, sizeAux, qn(ProvenanceType.fileSize.toString()))
-
-            //Object typeEntity = elem.getClass().toString()
-            //pFactory.addType(input_entity, typeEntity, qn("elementType"))
-
-            //Location locationAux = path as Location
-            //input_entity.getLocation().add(locationAux)
-
-            //Other otherAux
-            //otherAux.setValue("hola")
-            //input_entity.getOther().add(otherAux)
 
             /*
              Create the relation btwn the ACTIVITY and the ENTITY
@@ -217,7 +225,7 @@ public class ProvenanceGenerator {
             usedMap.put(usedAction.getId(), usedAction)
 
             /*
-            Save the input element as a ENTITY inside the GLOBAL list of the Input entities
+            Save the input element as an ENTITY inside the GLOBAL list of the Input entities
              */
             inputEntityMap.put(input_entity.getId(), input_entity)
         }
@@ -230,12 +238,10 @@ public class ProvenanceGenerator {
 
             //remove space from the begining of the path.. need to avoid uncomprensive behaviour
             def entity_name = pathAux.getFileName()
-            //println "** onProcessComplete INPUT: ${entity_name} \n* PATH:${pathString}"
-            //XXX check if the ELEM is already on the inputList (global) or not --> done with a MAP
+
             Entity output_entity = pFactory.newEntity(qn(pathString.toString()));
-            //setId()
+
             output_entity.setValue(pFactory.newValue(entity_name.toString(), qn(ProvenanceType.fileName.toString())))
-            //setValue()
 
             File fileAux = new File(pathString)
             Object checkAux = getFileSHA256(fileAux)

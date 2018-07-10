@@ -1,24 +1,21 @@
 package nextflow.prov
 
 import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.Session
+
 import nextflow.cli.Launcher
+import nextflow.trace.TraceRecord
 import nextflow.util.Duration
 import org.apache.taverna.robundle.Bundle
 import org.apache.taverna.robundle.Bundles
 import org.apache.taverna.robundle.manifest.Agent
 import org.apache.taverna.robundle.manifest.Manifest
 import org.apache.taverna.robundle.manifest.PathMetadata
-import org.openprovenance.prov.model.Document
 
-import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
-import java.nio.file.StandardOpenOption
 import java.text.SimpleDateFormat
 
 /**
@@ -36,6 +33,7 @@ public class ResearchObjectGenerator {
     private String snapshotFolderName = "snapshot"
     private String workflowFolderName = "workflow"
     private String dataFolderName = "data"
+    private String outputFolderName= "outputs"
     // .ro
         //bundle manifest.xml
 
@@ -46,7 +44,7 @@ public class ResearchObjectGenerator {
     private String containerSha
     private String dockerSHAPrefix ="sha256:"
     private String singularitySHAPrefix=""
-    private String commandLine
+    private String commandLine=System.getenv('NXF_CLI')
     private String uuid
     private String nextflowVersionPrefix = "nextflow version "
     private String nextflowVersion
@@ -54,6 +52,10 @@ public class ResearchObjectGenerator {
     private String commandLineFileName = "commandLine.txt"
     private String enviromentFileName = "enviroment.txt"
 
+    private String orcidERROR= "**ORCID_not_provided**"
+
+    private List<String> inputFiles =[]
+    private List<String> outputFiles =[]
 
     ResearchObjectGenerator(){
 
@@ -74,6 +76,9 @@ public class ResearchObjectGenerator {
 
         Path dataFolderPath = bundle.getRoot().resolve(dataFolderName);
         Files.createDirectory(dataFolderPath);
+
+        Path outputFolderPath = bundle.getRoot().resolve(outputFolderName);
+        Files.createDirectory(outputFolderPath);
     }
 
     public void setManifest(Bundle bundle, Map configManifest){
@@ -88,9 +93,8 @@ public class ResearchObjectGenerator {
     }
 
     public void generateLogFile(Bundle bundle, String author ){
-
         File logFile = getLogInfo(author)
-        fileToBundle(bundle,Paths.get(logFile.path),logFileName, "")
+        fileToBundle(bundle,Paths.get(logFile.path),logFileName, metadataFolder)
     }
 
     public void addProvenanceFile(Bundle bundle){
@@ -99,14 +103,51 @@ public class ResearchObjectGenerator {
         boolean result = Files.deleteIfExists(Paths.get(provenanceFileName))
     }
 
-    public void generateMetadataFile(Bundle bundle, Map configMap){
-        getMetadataInfo(configMap)
-        Path metadataFile = writeMetadataIntoFile()
-        fileToBundle(bundle, metadataFile,metadataFileName,metadataFolder)
+    public void generateDataFolder(Bundle bundle){
+        inputFiles.unique()
+        for (file in inputFiles){
+            Path auxPath = Paths.get(file)
+            fileToBundle(bundle, auxPath, auxPath.getFileName().toString(), dataFolderName)
+        }
+        //TODO generate sha256 HERE ??
+    }
+    public Path generateOutputFolder(Bundle bundle){
+        outputFiles.unique()
+        for (file in outputFiles){
+            Path auxPath = Paths.get(file)
+            fileToBundle(bundle, auxPath, auxPath.getFileName().toString(), outputFolderName)
+        }
+        //TODO generate sha256 HERE??
+    }
+
+    public void generateWorkflowFolder(Bundle bundle, String baseDir){
+        def result = getFilesFromDir(baseDir).tokenize('\n')
+        for (element in result){
+            Path auxPath = Paths.get("${baseDir}/${element}")
+            fileToBundle(bundle, auxPath,auxPath.getFileName().toString(),workflowFolderName)
+        }
     }
 
     public void generateSnapshot(Bundle bundle){
+            println "Command Line used ${commandLine}"
+    }
 
+    public void generateMetadataFolder(Bundle bundle, Map configMap){
+        Path metadataFile = generateMetadataFile(configMap)
+        fileToBundle(bundle, metadataFile,metadataFileName,metadataFolder)
+    }
+
+    private String getFilesFromDir(String dir){
+        def proc = "ls ${dir}".execute()
+        def b = new StringBuffer()
+        proc.consumeProcessErrorStream(b)
+        def resultado = proc.text
+        return resultado
+    }
+
+    private Path generateMetadataFile(Map configMap){
+        getMetadataInfo(configMap)
+        return writeMetadataIntoFile()
     }
 
     private File provDocumentToFile(String provenanceFileName){
@@ -114,18 +155,38 @@ public class ResearchObjectGenerator {
         return file
     }
 
+    public void getCleanInputFiles(TraceRecord trace){
+        def inputFiles = trace.getFmtStr("input")
+        List<String> inputList = Arrays.asList(inputFiles.split(";"));
+
+        for (inputElem in inputList){
+            if (!inputElem.contains(/work/)){
+                this.inputFiles.add(inputElem.trim())
+            }
+        }
+    }
+
+    public void getCleanOutputFiles(Map manifest){
+        def paramsMap = manifest.getAt('params')
+        def outDirConfig= paramsMap.getAt('outdir').toString()
+        def outResult = getFilesFromDir(outDirConfig).tokenize('\n')
+        File fileAux = new File ("${outDirConfig}/${outResult[0].toString()}")
+        String filePath = fileAux.absolutePath.substring(0,fileAux.absolutePath.lastIndexOf(File.separator));
+        for (element in outResult){
+            String aux = "${filePath}/${element}"
+            outputFiles.add(aux)
+        }
+    }
+
     private void fileToBundle(Bundle bundle, Path filePath, String fileName, String folderName){
-        // Get the inputs
-        Path folderPath = bundle.getRoot().resolve(folderName);
-
-        // Get an input port:
-        Path bundleFilePath = folderPath.resolve(fileName);
-
-        // Setting a string value for the input port:
-        Bundles.setStringValue(bundleFilePath, filePath.text);
-
-        // Or Java 7 style
-        Files.copy(bundleFilePath, filePath, StandardCopyOption.REPLACE_EXISTING);
+        if (filePath.isFile()){
+            Path folderPath = bundle.getRoot().resolve(folderName);
+            Path bundleFilePath = folderPath.resolve(fileName);
+            Bundles.setStringValue(bundleFilePath, filePath.text);
+            Files.copy(bundleFilePath, filePath, StandardCopyOption.REPLACE_EXISTING);
+        }else if (filePath.isDirectory()){
+            println "The element: \"${fileName}\" is a directory" //TODO change println to LOG
+        }
     }
 
     public void saveBundle(Bundle bundle){
@@ -136,13 +197,20 @@ public class ResearchObjectGenerator {
 
     private void setAuthorInformation(Manifest manifest, Map configManifest) {
         def author = getAuthor(configManifest)
-        Agent createdBy = new Agent(author);
+        if (author!=null){
+            Agent createdBy = new Agent(author);
 
-        def authorORCID = getAuthorORCID(configManifest)
-        if (!authorORCID.isEmpty()) {                   //TODO allow author ORCID on nextflow.config.manifest ?
-            createdBy.setOrcid(URI.create(authorORCID));
+            def authorORCID = getAuthorORCID(configManifest)
+            if (authorORCID!=null) {                   //TODO allow author ORCID on nextflow.config.manifest ?
+                createdBy.setOrcid(URI.create(authorORCID));
+            }else{
+                createdBy.setOrcid(URI.create(orcidERROR));
+            }
+            manifest.setCreatedBy(createdBy);
+        }else{
+            // what to do if we dont have author on the manifest?? -> WARNING?
+            //Now we dont "generate" the entity --> not ORCID allow neither
         }
-        manifest.setCreatedBy(createdBy);
     }
 
     private String getAuthor(Map manifestConfig) {
@@ -170,17 +238,16 @@ public class ResearchObjectGenerator {
             dockerImage = true
             return "Docker"
         }
+        //TODO capture if user uses CONDA ??
     }
 
-    //TODO why it need to be public
-    public String getContainerName(Map config){
+    private String getContainerName(Map config){
         return config.getAt('process').getAt('container')
     }
 
     private String getContainerSHA256() {
         def cmd
         def duration = '10min'
-
         /**
          * decide the command line to get the SHA
          */
@@ -202,8 +269,6 @@ public class ResearchObjectGenerator {
 
         final max = Duration.of(duration).toMillis()
         final builder = new ProcessBuilder(['bash', '-c', cmd.toString()])
-        //builder.directory(storePath.toFile())
-        //builder.environment().remove('SINGULARITY_PULLFOLDER')
         final proc = builder.start()
         final err = new StringBuilder()
         //*********START read proc stdout       https://stackoverflow.com/questions/8149828/read-the-output-from-java-exec
@@ -235,27 +300,14 @@ public class ResearchObjectGenerator {
     }
 
     private void getMetadataInfo(Map configMap){
-
         containerTech = getContainerTechnology(configMap)
         if (dockerImage || singularityImage) {
             containerName = getContainerName(configMap)
             containerSha = getContainerSHA256()
         }
-        commandLine= System.getenv('NXF_CLI')
         uuid= "" //TODO GET UUID --> "${session.getUniqueId().toString()}"
         nextflowVersion= Launcher.getVersion().substring(nextflowVersionPrefix.size())
 
-        /*
-        println "**** METADATA info ****\n"+
-                "containerTech: ${containerTech}\n"+
-                "dockerImage: ${dockerImage}\tsingularityImage: ${singularityImage}\n"+
-                "containerName: ${containerName}\n"+
-                "containerSha:  ${containerSha}\n"+
-                "commandLine:  ${commandLine}\n"+
-                "uuid:  ${uuid}\n"+
-                "nextflowVersion:  ${nextflowVersion}\n"+
-                "****        ****"
-       */
     }
 
     private Path  writeMetadataIntoFile(){
