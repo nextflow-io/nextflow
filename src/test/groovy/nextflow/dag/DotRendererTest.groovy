@@ -55,7 +55,7 @@ class DotRendererTest extends Specification {
         then:
         file.text ==
             '''
-            digraph TheGraph {
+            digraph "TheGraph" {
             p0 [shape=point,label="",fixedsize=true,width=0.1];
             p1 [shape=circle,label="",fixedsize=true,width=0.1,xlabel="Op1"];
             p0 -> p1;
