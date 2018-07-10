@@ -55,7 +55,7 @@ class DotRenderer implements DagRenderer {
 
     String renderNetwork(DAG dag) {
         def result = []
-        result << "digraph $name {"
+        result << "digraph \"$name\" {"
         dag.edges.each { edge -> result << renderEdge( edge ) }
         result << "}\n"
         return result.join('\n')
