@@ -87,7 +87,7 @@ class GraphObserverTest extends Specification {
         then:
         def result = file.text
         // is dot
-        result.contains("digraph ${file.baseName} {")
+        result.contains("digraph \"${file.baseName}\" {")
         // contains expected nodes
         result.contains('label="Source"')
         result.contains('label="Process 1"')
@@ -194,7 +194,7 @@ class GraphObserverTest extends Specification {
         then:
         def result = file.text
         // is dot
-        result.contains("digraph ${file.baseName} {")
+        result.contains("digraph \"${file.baseName}\" {")
         // contains expected nodes
         result.contains('label="Source"')
         result.contains('label="Process 1"')
