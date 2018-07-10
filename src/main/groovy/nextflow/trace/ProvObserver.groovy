@@ -28,6 +28,7 @@ public class ProvObserver implements TraceObserver {
     private Map configMap
 
     private String author
+    private String baseDir
 
     @Override
     public void onFlowStart(Session session) {
@@ -37,11 +38,11 @@ public class ProvObserver implements TraceObserver {
         configManifest= getManifestConfig(session)
         configMap = getConfigMap(session)
         author = getManifestConfig(session).author
+        baseDir = session.baseDir
     }
 
     @Override
     public void onFlowComplete() {
-
         Document provDocument = provGenerator.getProvDocument()
         /**
          * Introduce all the provenance object to the PROV file
@@ -71,9 +72,23 @@ public class ProvObserver implements TraceObserver {
          */
         roGenerator.generateSnapshot(bundle)
         /**
+         * Generate Workflow folder
+         */
+        roGenerator.generateWorkflowFolder(bundle,baseDir)
+        /**
+         * Generate the Data folder with th input files
+         */
+        roGenerator.generateDataFolder(bundle)
+        /**
+         * Generate the Output folder
+         */
+        //TODO need to implement a way to detect final output automatically
+        roGenerator.getCleanOutputFiles(configMap)
+        roGenerator.generateOutputFolder(bundle)
+        /**
          * save data into METADATA file
          */
-        roGenerator.generateMetadataFile(bundle,configMap)
+        roGenerator.generateMetadataFolder(bundle,configMap)
 
         /**
          * save data into LOG file
@@ -98,13 +113,15 @@ public class ProvObserver implements TraceObserver {
 
     @Override
     public void onProcessStart(TaskHandler handler, TraceRecord trace) {
-
     }
 
     @Override
     public void onProcessComplete(TaskHandler handler, TraceRecord trace) {
-
         provGenerator.generateProvenance(trace)
+        /**
+         * Add the input files of the process to the main list
+         */
+        roGenerator.getCleanInputFiles(trace)
     }
 
     @Override
