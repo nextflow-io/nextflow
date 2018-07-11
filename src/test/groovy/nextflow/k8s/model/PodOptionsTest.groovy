@@ -182,7 +182,8 @@ class PodOptionsTest extends Specification {
                 [env: 'HELLO', value: 'WORLD'],
                 [secret: 'secret/key', mountPath: '/etc/secret'],
                 [config: 'data/key', mountPath: '/data/file.txt'],
-                [volumeClaim: 'pvc', mountPath: '/mnt/claim']
+                [volumeClaim: 'pvc', mountPath: '/mnt/claim'],
+                [runAsUser: 500]
         ]
 
         def list2 = [
@@ -207,6 +208,7 @@ class PodOptionsTest extends Specification {
                 [secret: 'x', mountPath: '/x'],
                 [config: 'y', mountPath: '/y'],
                 [volumeClaim: 'z', mountPath: '/z'],
+                [securityContext: [runAsUser: 1000, fsGroup: 200, allowPrivilegeEscalation: true]]
 
         ]
 
@@ -222,22 +224,26 @@ class PodOptionsTest extends Specification {
         opts = new PodOptions(list1) + new PodOptions()
         then:
         opts == new PodOptions(list1)
+        opts.securityContext.toSpec() == [runAsUser:500]
 
         when:
         opts = new PodOptions() + new PodOptions(list1)
         then:
         opts == new PodOptions(list1)
+        opts.securityContext.toSpec() == [runAsUser:500]
 
         when:
         opts = new PodOptions(list1) + new PodOptions(list1)
         then:
         opts == new PodOptions(list1)
+        opts.securityContext.toSpec() == [runAsUser:500]
 
 
         when:
         opts = new PodOptions(list1) + new PodOptions(list2)
         then:
         opts == new PodOptions(list1 + list2)
+        opts.securityContext.toSpec() == [runAsUser:500]
 
         when:
         opts = new PodOptions(list1) + new PodOptions(list3)
@@ -260,7 +266,9 @@ class PodOptionsTest extends Specification {
         opts.getVolumeClaims() == [
                 new PodVolumeClaim('pvc','/mnt/claim'),
                 new PodVolumeClaim('z','/z'),
-        ] as Set 
+        ] as Set
+
+        opts.securityContext.toSpec() == [runAsUser: 1000, fsGroup: 200, allowPrivilegeEscalation: true]
     }
 
     def 'should create pod labels' () {

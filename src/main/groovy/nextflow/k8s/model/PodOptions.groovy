@@ -144,6 +144,11 @@ class PodOptions {
         result.volumeClaims.addAll( volumeClaims )
         result.volumeClaims.addAll( other.volumeClaims )
 
+        if( other.securityContext )
+            result.securityContext = other.securityContext
+        else
+            result.securityContext = securityContext
+
         return result
     }
 }
