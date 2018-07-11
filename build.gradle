@@ -91,6 +91,8 @@ allprojects {
     configurations {
         // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
         all*.exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+        all*.exclude group: 'org.slf4j', module: 'slf4j-log4j12'
+        all*.exclude group: 'log4j', module: 'log4j'
     }
 
     dependencies {

@@ -13,6 +13,7 @@ import org.apache.taverna.robundle.manifest.Manifest
 import org.apache.taverna.robundle.manifest.PathMetadata
 
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
@@ -129,7 +130,7 @@ public class ResearchObjectGenerator {
     }
 
     public void generateSnapshot(Bundle bundle){
-            println "Command Line used ${commandLine}"
+
     }
 
     public void generateMetadataFolder(Bundle bundle, Map configMap){
@@ -167,14 +168,17 @@ public class ResearchObjectGenerator {
     }
 
     public void getCleanOutputFiles(Map manifest){
-        def paramsMap = manifest.getAt('params')
-        def outDirConfig= paramsMap.getAt('outdir').toString()
-        def outResult = getFilesFromDir(outDirConfig).tokenize('\n')
-        File fileAux = new File ("${outDirConfig}/${outResult[0].toString()}")
-        String filePath = fileAux.absolutePath.substring(0,fileAux.absolutePath.lastIndexOf(File.separator));
-        for (element in outResult){
-            String aux = "${filePath}/${element}"
-            outputFiles.add(aux)
+        def outDirFolder = getOutdirFolder(manifest)
+        if (outDirFolder !=null){
+            def outDirFiles = getOutDirFiles(outDirFolder)
+            File fileAux = new File ("${outDirFolder}/${outDirFiles[0].toString()}")
+            String filePath = fileAux.absolutePath.substring(0,fileAux.absolutePath.lastIndexOf(File.separator));
+            for (element in outDirFiles){
+                String aux = "${filePath}/${element}"
+                outputFiles.add(aux)
+            }
+        }else{
+            log.warn("You need to specify the output directory inside nextflow.config/params for the RO zip file")
         }
     }
 
@@ -185,16 +189,40 @@ public class ResearchObjectGenerator {
             Bundles.setStringValue(bundleFilePath, filePath.text);
             Files.copy(bundleFilePath, filePath, StandardCopyOption.REPLACE_EXISTING);
         }else if (filePath.isDirectory()){
-            println "The element: \"${fileName}\" is a directory" //TODO change println to LOG
+            log.warn("The element: \"${fileName}\" is a directory")
         }
     }
 
-    public void saveBundle(Bundle bundle){
-        Path zip = Files.createTempFile(roBundleName, ".zip");
+    public void saveBundle(Bundle bundle) {
+        Path ro = Paths.get("${System.getProperty("user.dir")}/${roBundleName}.zip")
+
+        /**
+         * Remove the older zip if it exist
+         */
+        boolean pathExists =Files.exists(ro, LinkOption.NOFOLLOW_LINKS);
+        if (pathExists) {
+            try {
+                Files.delete(ro);
+            } catch (IOException e) {
+                //deleting file failed
+                e.printStackTrace();
+            }
+        }
+        Path zip = Files.createFile(ro)
         Bundles.closeAndSaveBundle(bundle, zip);
         log.info "RO Bundle saved to ${zip}"
+
     }
 
+    private String getOutdirFolder(Map manifest){
+        def paramsMap = manifest.getAt('params')
+        return paramsMap.getAt('outdir')
+    }
+    private List getOutDirFiles(String outDirFolder){
+        if (outDirFolder!=null){
+            return getFilesFromDir(outDirFolder).tokenize('\n')
+        }
+    }
     private void setAuthorInformation(Manifest manifest, Map configManifest) {
         def author = getAuthor(configManifest)
         if (author!=null){
@@ -214,11 +242,19 @@ public class ResearchObjectGenerator {
     }
 
     private String getAuthor(Map manifestConfig) {
-        return manifestConfig.author
+        if(manifestConfig.author!=null){
+            return manifestConfig.author
+        }else {
+            log.warn("You need to specify the Author's name  inside nextflow.config/manifest for the RO zip file")
+        }
     }
 
     private String getAuthorORCID(Map manifestConfig) {
-        return manifestConfig.ORCID
+        if(manifestConfig.ORCID!=null){
+            return manifestConfig.ORCID
+        }else {
+            log.warn("You need to specify the Author's ORCID  inside nextflow.config/manifest for the RO zip file")
+        }
     }
 
     private void setAggregationManifest(Manifest manifest){
@@ -264,14 +300,14 @@ public class ResearchObjectGenerator {
             //**** Done. Container is at: /home/vanessa/ed9755a0871f04db3e14971bec56a33f.simg                      <-- file hash
 
             // use RGEGISTRY (singularity global client) : sregistry inspect $IMAGE -> version
-            cmd = "sha256sum ./work/singularity/cbcrg-regressive-msa-v0.2.6.img | cut -d' ' -f1" //${containerName}
+            cmd = "sha256sum ./work/singularity/cbcrg-regressive-msa-v0.2.6.img | cut -d' ' -f1" //use container PATH
         }
 
         final max = Duration.of(duration).toMillis()
         final builder = new ProcessBuilder(['bash', '-c', cmd.toString()])
         final proc = builder.start()
         final err = new StringBuilder()
-        //*********START read proc stdout       https://stackoverflow.com/questions/8149828/read-the-output-from-java-exec
+        //https://stackoverflow.com/questions/8149828/read-the-output-from-java-exec
         builder.redirectErrorStream(true)
         BufferedReader ine;
         ine = new BufferedReader(new InputStreamReader(proc.getInputStream()));
@@ -287,7 +323,6 @@ public class ResearchObjectGenerator {
             }
         }
         ine.close();
-        //*******END read proc stdout
         proc.consumeProcessErrorStream(err)
         proc.waitForOrKill(max)
         def status = proc.exitValue()
