@@ -52,7 +52,6 @@ import nextflow.processor.TaskFault
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
 import nextflow.script.ScriptBinding
-import nextflow.trace.WebLogObserver
 import nextflow.trace.GraphObserver
 import nextflow.trace.ReportObserver
 import nextflow.trace.StatsObserver
@@ -60,6 +59,7 @@ import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceRecord
+import nextflow.trace.WebLogObserver
 import nextflow.trace.WorkflowStats
 import nextflow.util.Barrier
 import nextflow.util.ConfigHelper
@@ -995,6 +995,37 @@ class Session implements ISession {
         def key = "NXF_EXECUTOR_${name.toUpperCase().replaceAll(/\./,'_')}".toString()
         if( env == null ) env = System.getenv()
         return env.containsKey(key) ? env.get(key) : defValue
+    }
+
+    @Memoized
+    def getConfigAttribute(String name, defValue )  {
+        def result = getMap0(getConfig(),name,name)
+        if( result != null )
+            return result
+
+        def key = "NXF_${name.toUpperCase().replaceAll(/\./,'_')}".toString()
+        def env = getSystemEnv()
+        return (env.containsKey(key) ? env.get(key) : defValue)
+    }
+
+    private getMap0(Map map, String name, String fqn) {
+        def p=name.indexOf('.')
+        if( p == -1 )
+            return map.get(name)
+        else {
+            def k=name.substring(0,p)
+            def v=map.get(k)
+            if( v == null )
+                return null
+            if( v instanceof Map )
+                return getMap0(v,name.substring(p+1),fqn)
+            throw new IllegalArgumentException("Not a valid config attribute: $fqn -- Missing element: $k")
+        }
+    }
+
+    @Memoized
+    protected Map<String,String> getSystemEnv() {
+        new HashMap<String, String>(System.getenv())
     }
 
     /**

@@ -18,13 +18,39 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-include 'my-capsule'
-include 'nxf-commons'
-include 'nxf-console'
-include 'nxf-ignite'
-include 'nxf-httpfs'
-include 'nxf-ga4gh'
+package nextflow.ga4gh.tes.executor
 
-rootProject.children.each { prj ->
-    prj.projectDir = new File("$rootDir/subprojects/$prj.name")
+import spock.lang.Specification
+
+/**
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+class TesFileCopyStrategyTest extends Specification {
+
+    def 'should return task env' () {
+
+        given:
+        def strategy = new TesFileCopyStrategy()
+
+        when:
+        def script = strategy.getEnvScript([ALPHA:'xx', BETA:'yy'])
+        then:
+        script == '''\
+            export ALPHA="xx"
+            export BETA="yy"
+            '''.stripIndent()
+
+        when:
+        script = strategy.getEnvScript([ALPHA:'xx', BETA:'yy'], 'foo')
+        then:
+        script == '''\
+            foo() {
+            cat << EOF
+            export ALPHA="xx"
+            export BETA="yy"
+            EOF
+            }
+            '''.stripIndent()
+    }
 }

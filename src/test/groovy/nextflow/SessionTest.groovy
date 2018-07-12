@@ -357,5 +357,52 @@ class SessionTest extends Specification {
 
     }
 
+    def 'should get config attribute' () {
+
+        given:
+        def session = Spy(Session)
+
+        when:
+        def result = session.getConfigAttribute('alpha', 'hello')
+        then:
+        result == 'hello'
+
+        when:
+        result = session.getConfigAttribute('delta', 'hello')
+        then:
+        session.getConfig() >> [delta: '1234']
+        result == '1234'
+
+        when:
+        result = session.getConfigAttribute('omega', 'hello')
+        then:
+        session.getSystemEnv() >> [NXF_OMEGA: '6789']
+        result == '6789'
+    }
+
+    def 'should get config nested attribute' () {
+
+        given:
+        def session = Spy(Session)
+
+        when:
+        def result = session.getConfigAttribute('alpha.beta.delta', 'hello')
+        then:
+        result == 'hello'
+
+        when:
+        result = session.getConfigAttribute('alpha.beta.gamma', 'hello')
+        then:
+        session.getConfig() >> [alpha: [beta: [gamma: 'abc']]]
+        result == 'abc'
+
+        when:
+        result = session.getConfigAttribute('alpha.beta.omega', 'hello')
+        then:
+        session.getSystemEnv() >> [NXF_ALPHA_BETA_OMEGA: 'OK']
+        result == 'OK'
+
+    }
+
 
 }
