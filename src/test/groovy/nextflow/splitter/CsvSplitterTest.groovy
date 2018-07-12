@@ -195,4 +195,27 @@ class CsvSplitterTest extends Specification {
 
     }
 
+    def 'should ignore empty lines' () {
+        given:
+        def LINES = '''
+                alpha,beta,delta
+                gamma,,zeta
+                eta,theta,iota
+
+                pi,rho,sigma
+                '''
+                .stripIndent().trim()
+
+        when:
+        def items = new CsvSplitter().target(LINES).list()
+
+        then:
+        items.size() == 4
+        items[0] instanceof List
+        items[0] == ['alpha', 'beta', 'delta']
+        items[1] == ['gamma', '', 'zeta']
+        items[2] == ['eta', 'theta', 'iota']
+        items[3] == ['pi', 'rho', 'sigma']
+    }
+
 }
