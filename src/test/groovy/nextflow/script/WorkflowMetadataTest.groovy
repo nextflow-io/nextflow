@@ -111,7 +111,9 @@ class WorkflowMetadataTest extends Specification {
         metadata.runName == session.runName
         metadata.containerEngine == 'docker'
         metadata.configFiles == [Paths.get('foo').toAbsolutePath(), Paths.get('bar').toAbsolutePath()]
-        !metadata.resume
+        metadata.resume == false
+        metadata.userName == System.getProperty('user.name')
+        metadata.homeDir == Paths.get(System.getProperty('user.home'))
 
         when:
         metadata.invokeOnComplete()

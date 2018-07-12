@@ -19,6 +19,7 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -26,6 +27,8 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
+import nextflow.cloud.aws.batch.AwsOptions
+import nextflow.cloud.aws.batch.S3Helper
 import nextflow.file.FilePorter
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
@@ -339,7 +342,10 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
 
     @Override
     String getEnvScript(Map environment, String handler=null) {
+        getEnvScript0(environment,handler)
+    }
 
+    static String getEnvScript0(Map environment, String handler=null) {
         if( !environment )
             return null
 

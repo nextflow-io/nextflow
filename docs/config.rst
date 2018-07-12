@@ -575,9 +575,12 @@ userDir             Defines the path where the workflow is launched and the user
 workDir             Defines the path where the workflow temporary data is stored. This must be a path in a shared K8s persistent volume (default:``<user-dir>/work``).
 projectDir          Defines the path where Nextflow projects are downloaded. This must be a path in a shared K8s persistent volume (default: ``<volume-claim-mount-path>/projects``).
 pod                 Allows the definition of one or more pod configuration options such as environment variables, config maps, secrets, etc. It allows the same settings as the :ref:`process-pod` process directive.
-volumeClaims        (deprecated)
+pullPolicy          Defines the strategy to be used to pull the container image e.g. ``pullPolicy: 'Always'``.
+runAsUser           Defines the user ID to be used to run the containers.
 storageClaimName    The name of the persistent volume claim where store workflow result data.
 storageMountPath    The path location used to mount the persistent volume claim (default: ``/workspace``).
+storageSubPath      The path in the persistent volume to be mounted (default: root).
+volumeClaims        (deprecated)
 ================== ================
 
 See the :ref:`k8s-page` documentation for more details.
@@ -664,13 +667,29 @@ eventually provided by the underlying system (eg. ``sendmail`` or ``mail``).
 Scope `report`
 --------------
 
-The ``report`` scope scope allows you to define configuration setting of the workflow :ref:`execution-report`.
+The ``report`` scope allows you to define configuration setting of the workflow :ref:`execution-report`.
 
 ================== ================
 Name                Description
 ================== ================
 enabled             If ``true`` it create the workflow execution report.
 file                The path of the created execution report file (default: ``report.html``).
+================== ================
+
+.. _config-weblog:
+
+Scope `weblog`
+--------------
+
+The ``weblog`` scope allows to send detailed :ref:`trace scope<trace-fields>` information as HTTP POST request to a webserver, shipped as a JSON object.
+
+Detailed information about the JSON fields can be found in the :ref:`weblog description<weblog-service>`.
+
+================== ================
+Name                Description
+================== ================
+enabled             If ``true`` it will send HTTP POST requests to a given url.
+url                The url where to send HTTP POST requests (default: ``http:localhost``).
 ================== ================
 
 

@@ -35,12 +35,12 @@ interface ScriptFileCopyStrategy {
     /**
      * Resolve all foreign file to storing then in the pipeline working directory
      *
-     * @param inputFile A map of <file name, path location> of files. It can hold both local and foreign files
+     * @param inputFiles A map of <file name, path location> of files. It can hold both local and foreign files
      * @return
      *      A map <file name, path location> of files in which all foreign files have been replaced
      *      by local copies in the working directory
      */
-    Map<String,Path> resolveForeignFiles(Map<String,Path> inputFile)
+    Map<String,Path> resolveForeignFiles(Map<String,Path> inputFiles)
 
     /**
      * @param inputFiles All the input files as a map of {@code <stage name, store path>} pairs
