@@ -91,8 +91,6 @@ allprojects {
     configurations {
         // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
         all*.exclude group: 'org.codehaus.groovy', module: 'groovy-all'
-        all*.exclude group: 'org.slf4j', module: 'slf4j-log4j12'
-        all*.exclude group: 'log4j', module: 'log4j'
     }
 
     dependencies {
@@ -149,6 +147,7 @@ configurations {
     //provided
     ignite.extendsFrom runtime
     console.extendsFrom runtime
+    prov.extendsFrom(runtime)
     gdocLibs.extendsFrom runtime
 }
 
@@ -202,6 +201,10 @@ dependencies {
     }
 
     console(project(':nxf-console')) {
+        exclude module: 'nextflow'
+    }
+
+    prov(project(':nxf-prov')) {
         exclude module: 'nextflow'
     }
 
@@ -332,6 +335,7 @@ ext.deployable << project(':nxf-commons')
 ext.deployable << project(':nxf-ignite')
 ext.deployable << project(':nxf-console')
 ext.deployable << project(':nxf-httpfs')
+ext.deployable << project(':nxf-prov')
 
 protected error(String message) {
     logger.error message
@@ -405,6 +409,13 @@ task packOne(type: Jar) {
     deps = resolveDeps('console')
     manifest.attributes('Application-Class' : 'nextflow.ui.console.Nextflow', 'console' )
     manifest.attributes('Dependencies': deps, 'console')
+
+    /*
+     * `RO-Prov` dependencies
+     */
+    deps = resolveDeps('prov')
+    manifest.attributes('Application-Class' : 'nextflow.prov.Main', 'prov' )
+    manifest.attributes('Dependencies': deps, 'prov')
 
     /*
      * `ignite` dependencies
@@ -602,10 +613,10 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
  * Save the runtime classpath
  */
 task exportClasspath {
-    dependsOn configurations.ignite, configurations.console
+    dependsOn configurations.ignite, configurations.console, configurations.prov
 
     def home = System.getProperty('user.home')
-    def all = configurations.ignite + configurations.console
+    def all = configurations.ignite + configurations.console + configurations.prov
     def libs = all.collect { File file -> /* println file.canonicalPath.replace(home, '$HOME'); */ file.canonicalPath;  }
     new File('.launch.classpath').text = libs.join(':')
 }
