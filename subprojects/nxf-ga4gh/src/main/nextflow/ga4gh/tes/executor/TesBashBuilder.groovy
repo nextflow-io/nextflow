@@ -18,13 +18,27 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-include 'my-capsule'
-include 'nxf-commons'
-include 'nxf-console'
-include 'nxf-ignite'
-include 'nxf-httpfs'
-include 'nxf-ga4gh'
+package nextflow.ga4gh.tes.executor
 
-rootProject.children.each { prj ->
-    prj.projectDir = new File("$rootDir/subprojects/$prj.name")
+import groovy.transform.CompileStatic
+import nextflow.executor.BashWrapperBuilder
+import nextflow.processor.TaskBean
+import nextflow.processor.TaskRun
+
+/**
+ * Bash builder adapter to manage TES specific tasks
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@CompileStatic
+class TesBashBuilder extends BashWrapperBuilder {
+
+    TesBashBuilder(TaskRun task) {
+        super(new TaskBean(task), new TesFileCopyStrategy())
+    }
+
+    TesBashBuilder(TaskBean task) {
+        super(task, new TesFileCopyStrategy())
+    }
+
 }
