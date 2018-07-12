@@ -130,6 +130,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names='-stdin', hidden = true)
     boolean stdin
 
+    @Parameter(names = ['-with-weblog'], description = 'Send workflow status messages via HTTP to target URL')
+    String withWebLog
+
     @Parameter(names = ['-with-trace'], description = 'Create processes execution tracing file')
     String withTrace
 

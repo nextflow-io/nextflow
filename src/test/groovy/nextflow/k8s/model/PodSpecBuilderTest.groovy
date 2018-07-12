@@ -135,8 +135,8 @@ class PodSpecBuilderTest extends Specification {
                     .withImageName('busybox')
                     .withWorkDir('/path')
                     .withCommand(['echo'])
-                    .withVolumeClaim('first','/work')
-                    .withVolumeClaim('second', '/data')
+                    .withVolumeClaim(new PodVolumeClaim('first','/work'))
+                    .withVolumeClaim(new PodVolumeClaim('second', '/data', '/foo'))
                     .build()
         then:
         spec ==  [ apiVersion: 'v1',
@@ -151,7 +151,7 @@ class PodSpecBuilderTest extends Specification {
                                     workingDir:'/path',
                                     volumeMounts:[
                                             [name:'vol-1', mountPath:'/work'],
-                                            [name:'vol-2', mountPath:'/data']] ]
+                                            [name:'vol-2', mountPath:'/data', subPath: '/foo']] ]
                            ],
                            volumes:[
                                    [name:'vol-1', persistentVolumeClaim:[claimName:'first']],
@@ -422,7 +422,7 @@ class PodSpecBuilderTest extends Specification {
 
         given:
         def opts = Mock(PodOptions)
-        def builder = new PodSpecBuilder(podName: 'foo', imageName: 'image', command: ['echo'])
+        def builder = new PodSpecBuilder(podName: 'foo', imageName: 'image', command: ['echo'], labels: [runName: 'crazy_john'])
 
         when:
         def spec = builder.withPodOptions(opts).build()
@@ -432,13 +432,19 @@ class PodSpecBuilderTest extends Specification {
         2 * opts.getMountConfigMaps() >> [ new PodMountConfig('data', '/home/user') ]
         2 * opts.getMountSecrets() >> [ new PodMountSecret('blah', '/etc/secret.txt') ]
         2 * opts.getEnvVars() >> [ PodEnv.value('HELLO','WORLD') ]
+        _ * opts.getLabels() >> [ALPHA: 'xxx', GAMMA: 'yyy']
+        _ * opts.getSecurityContext() >> new PodSecurityContext(1000)
 
         spec == [
                 apiVersion: 'v1',
                 kind: 'Pod',
-                metadata: [name:'foo', namespace:'default'],
+                metadata: [
+                        name:'foo',
+                        namespace:'default',
+                        labels:[runName:'crazy_john', ALPHA:'xxx', GAMMA:'yyy'] ],
                 spec: [
                         restartPolicy:'Never',
+                        securityContext: [ runAsUser: 1000 ],
                         containers:[
                                 [name:'foo',
                                  image:'image',

@@ -18,11 +18,11 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.executor
+package nextflow.cloud.aws.batch
 
 import java.nio.file.Paths
 
-import com.amazonaws.services.batch.AWSBatchClient
+import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsResult
 import com.amazonaws.services.batch.model.DescribeJobsRequest
@@ -33,12 +33,15 @@ import com.amazonaws.services.batch.model.KeyValuePair
 import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
 import com.amazonaws.services.batch.model.RegisterJobDefinitionResult
 import com.amazonaws.services.batch.model.RetryStrategy
+import com.amazonaws.services.batch.model.SubmitJobRequest
+import com.amazonaws.services.batch.model.SubmitJobResult
 import nextflow.Session
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.processor.BatchContext
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
+import nextflow.processor.TaskStatus
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -68,13 +71,13 @@ class AwsBatchTaskHandlerTest extends Specification {
         ]
         def session = new Session(cfg)
         def executor = Mock(AwsBatchExecutor)
-        executor.getSession() >> session
 
         def handler = new AwsBatchTaskHandler(executor: executor)
 
         when:
         def opts = handler.getAwsOptions()
         then:
+        executor.getSession() >> session
         opts.cliPath == awscliPath
         opts.storageClass == awsStorClass
         opts.storageEncryption == awsStorEncrypt
@@ -172,6 +175,10 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
         req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "trap \"{ ret=\$?; /bin/aws --region eu-west-1 s3 cp --only-show-errors .command.log s3://bucket/test/.command.log||true; exit \$ret; }\" EXIT; /bin/aws --region eu-west-1 s3 cp --only-show-errors s3://bucket/test/.command.run - | bash 2>&1 | tee .command.log".toString()]
         req.getRetryStrategy() == null  // <-- retry is managed by NF, hence this must be null
+
+    }
+
+    def 'should manage TooManyRequestException' () {
 
     }
 
@@ -318,7 +325,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         vars.size() == 0
 
         when:
-        handler.environment = [NXF_DEBUG: 2, NXF_FOO: 'ignore']
+        handler.environment = [NXF_DEBUG: '2', NXF_FOO: 'ignore']
         vars = handler.getEnvironmentVars()
         then:
         vars == [ VAR_NXF ]
@@ -349,7 +356,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * handler.makeJobDefRequest(IMAGE) >> req
         1 * req.getJobDefinitionName() >> JOB_NAME
-        2 * req.getParameters() >> [ 'nf-token': JOB_ID ]
+        1 * req.getParameters() >> [ 'nf-token': JOB_ID ]
         1 * handler.findJobDef(JOB_NAME, JOB_ID) >> null
         1 * handler.createJobDef(req) >> null
 
@@ -368,7 +375,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         given:
         def JOB_NAME = 'foo-bar-1-0'
         def JOB_ID = '123'
-        def client = Mock(AWSBatchClient)
+        def client = Mock(AWSBatch)
         def handler = Spy(AwsBatchTaskHandler)
         handler.client = client
 
@@ -389,7 +396,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * client.describeJobDefinitions(req) >> res
         1 * res.getJobDefinitions() >> [job]
         1 * job.getStatus() >> 'ACTIVE'
-        2 * job.getParameters() >> ['nf-token': JOB_ID]
+        1 * job.getParameters() >> ['nf-token': JOB_ID]
         1 * job.getRevision() >> 3
         result == "$JOB_NAME:3"
 
@@ -399,7 +406,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * client.describeJobDefinitions(req) >> res
         1 * res.getJobDefinitions() >> [job]
         1 * job.getStatus() >> 'ACTIVE'
-        2 * job.getParameters() >> [:]
+        1 * job.getParameters() >> [:]
         result == null
 
         when:
@@ -417,7 +424,7 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         given:
         def JOB_NAME = 'foo-bar-1-0'
-        def client = Mock(AWSBatchClient)
+        def client = Mock(AWSBatch)
         def handler = Spy(AwsBatchTaskHandler)
         handler.client = client
 
@@ -471,7 +478,7 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         given:
         def JOB_ID = 'job-2'
-        def client = Mock(AWSBatchClient)
+        def client = Mock(AWSBatch)
         def handler = Spy(AwsBatchTaskHandler)
         handler.client = client
 
@@ -495,7 +502,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         given:
         def collector = Mock(BatchContext)
         def JOB_ID = 'job-1'
-        def client = Mock(AWSBatchClient)
+        def client = Mock(AWSBatch)
         def handler = Spy(AwsBatchTaskHandler)
         handler.client = client
         handler.jobId = JOB_ID
@@ -523,7 +530,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         given:
         def collector = Mock(BatchContext)
         def JOB_ID = 'job-1'
-        def client = Mock(AWSBatchClient)
+        def client = Mock(AWSBatch)
         def handler = Spy(AwsBatchTaskHandler)
         handler.client = client
         handler.jobId = JOB_ID
@@ -542,6 +549,30 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     }
 
+    def 'should submit job' () {
 
+        given:
+        def task = Mock(TaskRun)
+        def client = Mock(AWSBatch)
+        def proxy = Mock(AwsBatchProxy)
+        def handler = Spy(AwsBatchTaskHandler)
+        handler.client = proxy
+        handler.task = task
+
+        def req = Mock(SubmitJobRequest)
+        def resp = Mock(SubmitJobResult)
+
+        when:
+        handler.submit()
+        then:
+        1 * handler.createTaskWrapper() >> null
+        1 * handler.newSubmitRequest(task) >> req
+        1 * handler.bypassProxy(proxy) >> client
+        1 * client.submitJob(req) >> resp
+        1 * resp.getJobId() >> '12345'
+
+        handler.status == TaskStatus.SUBMITTED
+        handler.jobId == '12345'
+    }
 
 }

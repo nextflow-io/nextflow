@@ -62,20 +62,21 @@ class CmdInfo extends CmdBase {
             return
         }
 
-        def manager = new AssetManager(args[0])
+        final manager = new AssetManager(args[0])
         if( !manager.isLocal() )
             throw new AbortOperationException("Unknown project `${args[0]}`")
 
+        final manifest = manager.getManifest()
         println " project name: ${manager.project}"
         println " repository  : ${manager.repositoryUrl}"
         println " local path  : ${manager.localPath}"
         println " main script : ${manager.mainScriptName}"
         if( manager.homePage && manager.homePage != manager.repositoryUrl )
             println " home page   : ${manager.homePage}"
-        if( manager.description )
-            println " description : ${manager.description}"
-        if( manager.author )
-            println " author      : ${manager.author}"
+        if( manifest.description )
+            println " description : ${manifest.description}"
+        if( manifest.author )
+            println " author      : ${manifest.author}"
 
         def revs = manager.getRevisions(level)
         if( revs.size() == 1 )

@@ -233,3 +233,37 @@ The pipeline can be launched either in a local computer or a EC2 instance. The l
 running workloads. Moreover a S3 bucket must be used as pipeline work directory.
 
 See the :ref:`AWS Batch<awscloud-batch>` page for further configuration details.
+
+.. _ga4ghtes-executor:
+
+GA4GH TES
+=========
+
+.. warning:: This is an experimental feature and it may change in a future release. It requires Nextflow
+  version 0.31.0 or later.
+
+The `Task Execution Schema <https://github.com/ga4gh/task-execution-schemas>`_ (TES) project
+by the `GA4GH <https://www.ga4gh.org>`_ standardisation initiative is an effort to define a
+standardized schema and API for describing batch execution tasks in portable manner.
+
+Nextflow includes an experimental support for the TES API providing a ``tes`` executor which allows
+the submission of workflow tasks to a remote execution back-end exposing a TES API endpoint.
+
+To use this feature define the following variables in the workflow launching environment::
+
+    export NXF_EXPERIMENTAL_GA4GH=1
+    export NXF_EXECUTOR_TES_ENDPOINT='http://back.end.com'
+    
+
+Then you will be able to run your workflow over TES using the usual Nextflow command line, i.e.::
+
+    nextflow run rnaseq-nf
+
+.. tip:: If the variable ``NXF_EXECUTOR_TES_ENDPOINT`` is omitted the default endpoint is ``http://localhost:8000``.
+
+
+**Known limitation**
+
+
+* Process output directories are not supported. For details see `#76 <https://github.com/ga4gh/task-execution-schemas/issues/76>`_.
+* Glob patterns in process output declarations are not supported. For details see `#76 <https://github.com/ga4gh/task-execution-schemas/issues/77>`_.
