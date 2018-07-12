@@ -17,14 +17,22 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
+apply plugin: 'groovy'
 
-include 'my-capsule'
-include 'nxf-commons'
-include 'nxf-console'
-include 'nxf-ignite'
-include 'nxf-httpfs'
-include 'nxf-prov'
-
-rootProject.children.each { prj ->
-    prj.projectDir = new File("$rootDir/subprojects/$prj.name")
+sourceSets {
+    main.java.srcDirs = []
+    main.groovy.srcDirs = ['src/main']
+    main.resources.srcDirs = ['src/resources']
+    test.groovy.srcDirs = ['src/test']
+    test.java.srcDirs = []
+    test.resources.srcDirs = []
 }
+
+dependencies {
+    compile project(':')
+    compile ('org.openprovenance.prov:ProvToolbox:0.7.3')
+    compile ('org.openprovenance.prov:prov-model:0.7.3')
+    compile ('org.openprovenance.prov:prov-interop:0.7.3')
+    compile ('org.apache.taverna.language:taverna-robundle:0.15.1-incubating')
+}
+
