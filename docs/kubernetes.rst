@@ -14,7 +14,7 @@ The built-in support for Kubernetes provided by Nextflow streamlines the executi
 Kubernetes clusters.
 
 .. warning:: This is an experimental feature and it may change in a future release. It requires Nextflow
-    version 0.28.0 or higher.
+    version 0.28.0 or later.
 
 
 Concepts
