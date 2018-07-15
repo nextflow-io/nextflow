@@ -21,12 +21,12 @@
 package nextflow.processor
 
 import java.util.concurrent.Callable
+import java.util.concurrent.TimeUnit
 
 import com.google.common.util.concurrent.RateLimiter
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.util.ThrottlingExecutor
-
 /**
  * Polling monitor class submitting job execution in a parallel manner
  *
@@ -37,6 +37,8 @@ import nextflow.util.ThrottlingExecutor
 class ParallelPollingMonitor extends TaskPollingMonitor {
 
     private ThrottlingExecutor submitter
+
+    private ThrottlingExecutor reaper
 
     /**
      * Create the task polling monitor with the provided named parameters object.
@@ -50,9 +52,10 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
      *
      * @param params
      */
-    ParallelPollingMonitor(ThrottlingExecutor executor, Map params) {
+    ParallelPollingMonitor(ThrottlingExecutor executor, ThrottlingExecutor reaper, Map params) {
         super(params)
         this.submitter = executor
+        this.reaper = reaper
     }
 
     protected RateLimiter createSubmitRateLimit() {
@@ -61,7 +64,7 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
         return null
     }
 
-    protected void submit0(TaskHandler handler) {
+    final protected void submit0(TaskHandler handler) {
         super.submit(handler)
     }
 
@@ -80,11 +83,25 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
             // to submit a new task instance
             @Override
             protected void onFailure(Throwable e) {
+                if( !session.success )
+                    return // ignore error when the session has been interrupted 
                 handleException(handler, e)
                 session.notifyTaskComplete(handler)
             }
         }
 
         submitter.submit(wrapper)
+    }
+
+    @Override
+    protected void cleanup() {
+        def tasks = submitter.shutdownNow()
+        if( tasks ) log.warn "Execution interrupted -- cleaning up execution pool"
+        submitter.awaitTermination(5, TimeUnit.MINUTES)
+        // -- now cleanup pending task
+        super.cleanup()
+        // -- finally delete cleanup executor
+        reaper.shutdown()
+        reaper.awaitTermination(5, TimeUnit.MINUTES)
     }
 }

@@ -538,10 +538,10 @@ class TaskPollingMonitor implements TaskMonitor {
             try {
                 submitRateLimit?.acquire()
 
-                if( !canSubmit(handler))
+                if( !canSubmit(handler) )
                     continue
 
-                if( !session.aborted && !session.cancelled ) {
+                if( session.isSuccess() ) {
                     itr.remove(); count++   // <-- remove the task in all cases
                     submit(handler)
                 }

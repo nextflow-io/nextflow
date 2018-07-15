@@ -456,7 +456,9 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
                 if( opts.autoThrottle )
                     executor.slowDown0()
                 // wait before retry this task execution
-                executor.retry0(t, retryCount)
+                sleep(opts.retryDelay.millis * retryCount)
+                // notify the retry event
+                opts.retryAction?.call(t)
                 return true
             }
 
@@ -512,9 +514,7 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
     @Override
     void execute(final Runnable task) {
         def wrapper = task instanceof FutureTask ? task : wrap(task)
-
-        acquireSemaphore()
-        log.trace "Executing task"
+        semaphore?.acquire()
 
         try {
             super.execute(wrapper)
@@ -576,37 +576,6 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
         super.afterExecute(task,ex)
         semaphore?.release()
         log.trace "After execute task"
-    }
-
-    private void acquireSemaphore() {
-        boolean acquired = false
-        while (!acquired) {
-            try {
-                semaphore?.acquire()
-                acquired = true
-            }
-            catch (InterruptedException e) {
-                log.debug("InterruptedException whilst acquiring semaphore", e);
-            }
-        }
-    }
-
-    private void retry0(Throwable t, int retryCount) {
-        if( isTerminating() ) {
-            log.debug("WARN: Task execution cannot be retried -- executor is terminating")
-            return
-        }
-
-        // sleep before retry
-        try {
-            sleep(opts.retryDelay.millis * retryCount)
-        }
-        catch( InterruptedException e ) {
-            log.debug "Oops.. retry sleep interrupted", e
-        }
-
-        // notify the retry event
-        opts.retryAction?.call(t)
     }
 
     @PackageScope
