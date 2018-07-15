@@ -23,6 +23,7 @@ package nextflow.cloud.aws.batch
 import java.nio.file.Paths
 
 import com.amazonaws.services.batch.AWSBatch
+import com.amazonaws.services.batch.model.CancelJobRequest
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsResult
 import com.amazonaws.services.batch.model.DescribeJobsRequest
@@ -573,6 +574,26 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         handler.status == TaskStatus.SUBMITTED
         handler.jobId == '12345'
+    }
+
+
+    def 'should kill a job' () {
+        given:
+        def JOB_ID = '54321'
+        def task = Mock(TaskRun)
+        def handler = Spy(AwsBatchTaskHandler)
+        handler.task = task
+        handler.jobId = JOB_ID
+
+        def req = Mock(CancelJobRequest)
+        req.getJobId() >> JOB_ID
+        req.getReason() >> 'Job killed by NF'
+
+        when:
+        handler.kill()
+        then:
+        1 * handler.cancelJob(req) >> null
+
     }
 
 }

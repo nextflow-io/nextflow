@@ -244,8 +244,16 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         assert jobId
         log.trace "[AWS BATCH] killing job=$jobId"
         final req = new CancelJobRequest().withJobId(jobId).withReason('Job killed by NF')
-        final resp = client.cancelJob(req)
-        log.debug "[AWS BATCH] killing job=$jobId; response=$resp"
+        cancelJob(req)
+    }
+
+    protected void cancelJob(CancelJobRequest req) {
+
+        final batch = bypassProxy(client)
+        executor.reaper.submit({
+            final resp = batch.cancelJob(req)
+            log.debug "[AWS BATCH] killing job=$jobId; response=$resp"
+        })
     }
 
     /**
@@ -280,8 +288,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         launcher.build()
     }
 
-    protected AWSBatch bypassProxy(AWSBatch client) {
-        client instanceof AwsBatchProxy ? client.getClient() : client
+    protected AWSBatch bypassProxy(AWSBatch batch) {
+        batch instanceof AwsBatchProxy ? batch.getClient() : batch
     }
 
     /**

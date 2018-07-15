@@ -58,9 +58,14 @@ class AwsBatchExecutor extends Executor {
     private static AwsBatchProxy client
 
     /**
-     * The executor service to throttle service requests
+     * executor service to throttle service requests
      */
-    private static ThrottlingExecutor executor
+    private static ThrottlingExecutor submitter
+
+    /**
+     * Executor service to throttle cancel requests
+     */
+    private static ThrottlingExecutor reaper
 
     /**
      * A S3 path where executable scripts need to be uploaded
@@ -112,7 +117,7 @@ class AwsBatchExecutor extends Executor {
         /*
          * create a proxy for the aws batch client that manages the request throttling 
          */
-        client = new AwsBatchProxy(driver.getBatchClient(), executor)
+        client = new AwsBatchProxy(driver.getBatchClient(), submitter)
     }
 
     @PackageScope
@@ -134,7 +139,9 @@ class AwsBatchExecutor extends Executor {
         // create the throttling executor
         // note this is invoke only the very first time a AWS Batch executor is created
         // therefore it's safe to assign to a static attribute
-        executor = createExecutorService()
+        submitter = createExecutorService('AWSBatch-executor')
+
+        reaper = createExecutorService('AWSBatch-reaper')
 
         final pollInterval = session.getPollInterval(name, Duration.of('10 sec'))
         final dumpInterval = session.getMonitorDumpInterval(name)
@@ -147,7 +154,7 @@ class AwsBatchExecutor extends Executor {
         ]
 
         log.debug "Creating parallel monitor for executor '$name' > pollInterval=$pollInterval; dumpInterval=$dumpInterval"
-        new ParallelPollingMonitor(executor, params)
+        new ParallelPollingMonitor(submitter, reaper, params)
     }
 
     /**
@@ -168,7 +175,7 @@ class AwsBatchExecutor extends Executor {
      * @return Creates a {@link ThrottlingExecutor} service to throttle
      * the API requests to the AWS Batch service.
      */
-    private ThrottlingExecutor createExecutorService() {
+    private ThrottlingExecutor createExecutorService(String name) {
 
         final qs = session.getQueueSize(name, 5_000)
         final limit = session.getExecConfigProp(name,'submitRateLimit','50/s') as String
@@ -185,6 +192,7 @@ class AwsBatchExecutor extends Executor {
                 .withAutoThrottle(true)
                 .withMaxRetries(10)
                 .withOptions( getConfigOpts() )
+                .withPoolName(name)
 
         ThrottlingExecutor.create(opts)
     }
@@ -197,6 +205,10 @@ class AwsBatchExecutor extends Executor {
     protected void logRateLimitChange(RateUnit rate) {
         log.debug "New submission rate limit: $rate"
     }
+
+    @PackageScope
+    ThrottlingExecutor getReaper() { reaper }
+
 }
 
 
