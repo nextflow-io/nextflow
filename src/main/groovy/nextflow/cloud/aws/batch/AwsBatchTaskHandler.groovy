@@ -24,7 +24,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import com.amazonaws.services.batch.AWSBatch
-import com.amazonaws.services.batch.model.CancelJobRequest
 import com.amazonaws.services.batch.model.ContainerOverrides
 import com.amazonaws.services.batch.model.ContainerProperties
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
@@ -40,6 +39,7 @@ import com.amazonaws.services.batch.model.MountPoint
 import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
 import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
+import com.amazonaws.services.batch.model.TerminateJobRequest
 import com.amazonaws.services.batch.model.Volume
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
@@ -243,15 +243,15 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     void kill() {
         assert jobId
         log.trace "[AWS BATCH] killing job=$jobId"
-        final req = new CancelJobRequest().withJobId(jobId).withReason('Job killed by NF')
-        cancelJob(req)
+        final req = new TerminateJobRequest().withJobId(jobId).withReason('Job killed by NF')
+        terminateJob(req)
     }
 
-    protected void cancelJob(CancelJobRequest req) {
+    protected void terminateJob(TerminateJobRequest req) {
 
         final batch = bypassProxy(client)
         executor.reaper.submit({
-            final resp = batch.cancelJob(req)
+            final resp = batch.terminateJob(req)
             log.debug "[AWS BATCH] killing job=$jobId; response=$resp"
         })
     }

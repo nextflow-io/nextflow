@@ -23,7 +23,6 @@ package nextflow.cloud.aws.batch
 import java.nio.file.Paths
 
 import com.amazonaws.services.batch.AWSBatch
-import com.amazonaws.services.batch.model.CancelJobRequest
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsResult
 import com.amazonaws.services.batch.model.DescribeJobsRequest
@@ -36,6 +35,7 @@ import com.amazonaws.services.batch.model.RegisterJobDefinitionResult
 import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
+import com.amazonaws.services.batch.model.TerminateJobRequest
 import nextflow.Session
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.processor.BatchContext
@@ -585,14 +585,14 @@ class AwsBatchTaskHandlerTest extends Specification {
         handler.task = task
         handler.jobId = JOB_ID
 
-        def req = Mock(CancelJobRequest)
+        def req = Mock(TerminateJobRequest)
         req.getJobId() >> JOB_ID
         req.getReason() >> 'Job killed by NF'
 
         when:
         handler.kill()
         then:
-        1 * handler.cancelJob(req) >> null
+        1 * handler.terminateJob(req) >> null
 
     }
 
