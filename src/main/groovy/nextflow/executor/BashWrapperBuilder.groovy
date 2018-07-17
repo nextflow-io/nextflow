@@ -429,7 +429,7 @@ class BashWrapperBuilder {
         /*
          * create the container launcher command if needed
          */
-        containerBuilder = runWithContainer ? createContainerBuilder(environment,changeDir) : null
+        containerBuilder = runWithContainer ? createContainerBuilder(changeDir) : null
 
         /*
          * reformat the task script to include the container launch command when it's a executable container eg:
@@ -749,7 +749,7 @@ class BashWrapperBuilder {
      * @return A {@link DockerBuilder} instance
      */
     @PackageScope
-    ContainerBuilder createContainerBuilder(Map environment, String changeDir) {
+    ContainerBuilder createContainerBuilder(String changeDir) {
 
         final engine = containerConfig.getEngine()
         ContainerBuilder builder
@@ -813,6 +813,10 @@ class BashWrapperBuilder {
 
         if( engine=='docker' && System.getenv('NXF_DOCKER_OPTS') ) {
             builder.addRunOptions(System.getenv('NXF_DOCKER_OPTS'))
+        }
+
+        for( String var : containerConfig.getEnvWhitelist() ) {
+            builder.addEnv(var)
         }
 
         // set up run docker params

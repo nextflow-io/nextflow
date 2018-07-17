@@ -317,6 +317,7 @@ The following settings are available:
 Name                Description
 ================== ================
 enabled             Turn this flag to ``true`` to enable Docker execution (default: ``false``).
+envWhitelist        Comma separated list of environment variable names to be included in the container environment.
 legacy              Uses command line options removed since version 1.10.x (default: ``false``).
 sudo                Executes Docker run command as ``sudo`` (default: ``false``).
 tty                 Allocates a pseudo-tty (default: ``false``).
@@ -359,6 +360,7 @@ Name                Description
 ================== ================
 enabled             Turn this flag to ``true`` to enable Singularity execution (default: ``false``).
 engineOptions       This attribute can be used to provide any option supported by the Singularity engine i.e. ``singularity [OPTIONS]``.
+envWhitelist        Comma separated list of environment variable names to be included in the container environment.
 runOptions          This attribute can be used to provide any extra command line options supported by the ``singularity exec``.
 autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed contained. It requires the `user bind control` feature enabled in your Singularity installation (default: ``false``).
 cacheDir            The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
