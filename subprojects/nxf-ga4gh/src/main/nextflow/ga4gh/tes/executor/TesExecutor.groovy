@@ -22,6 +22,7 @@ package nextflow.ga4gh.tes.executor
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
 import nextflow.ga4gh.tes.client.ApiClient
 import nextflow.ga4gh.tes.client.api.TaskServiceApi
@@ -47,8 +48,18 @@ class TesExecutor extends Executor {
 
     @Override
     void register() {
+        if( session.binDir && !session.binDir.empty() ) {
+            session.abort()
+            throw new AbortOperationException("ERROR: TES executor does not allow the use of custom scripts in the `bin` folder")
+        }
+
         super.register()
+
         client = new TaskServiceApi( new ApiClient(basePath: getEndPoint()) )
+    }
+
+    protected String getDisplayName() {
+        return "$name [${getEndPoint()}]"
     }
 
     TaskServiceApi getClient() {
