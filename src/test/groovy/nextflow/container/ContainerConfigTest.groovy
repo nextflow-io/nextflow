@@ -21,48 +21,29 @@
 package nextflow.container
 
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ContainerBuilderTest extends Specification {
+class ContainerConfigTest extends Specification {
 
-    def 'should return mount flags'() {
-
-        given:
-        def builder = Spy(ContainerBuilder)
-
-        expect:
-        builder.mountFlags(false) == ''
-        builder.mountFlags(true) == ':ro'
-
-    }
-
-    def 'should make env var' () {
-        given:
-        StringBuilder result
-        def builder = Spy(ContainerBuilder)
-
+    @Unroll
+    def 'should return env whitelist for=#VAL' () {
         when:
-        result = builder.makeEnv([FOO: 'x', BAR: 'y'])
+        def cfg = new ContainerConfig(envWhitelist: VAL)
         then:
-        result.toString() == '-e "FOO=x" -e "BAR=y"'
+        cfg.getEnvWhitelist() == EXPECTED
 
-        when:
-        result = builder.makeEnv('FOO=hello')
-        then:
-        result.toString() == '-e "FOO=hello"'
-        
-        when:
-        result = builder.makeEnv( 'FOO' )
-        then:
-        result.toString() == '${FOO:+-e "FOO=$FOO"}'
-
-        when:
-        builder.makeEnv( 1 )
-        then:
-        thrown(IllegalArgumentException)
+        where:
+        VAL         | EXPECTED
+        null        | []
+        ''          | []
+        'FOO'       | ['FOO']
+        'FOO,BAR'   | ['FOO','BAR']
+        'A ,, B,C ' | ['A','B','C']
+        ['X','Y']   | ['X','Y']
 
     }
 

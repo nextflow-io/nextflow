@@ -28,6 +28,7 @@ import nextflow.Session
 import nextflow.cloud.aws.batch.AwsOptions
 import nextflow.container.ContainerConfig
 import nextflow.container.DockerBuilder
+import nextflow.container.SingularityBuilder
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -3070,6 +3071,32 @@ class BashWrapperBuilderTest extends Specification {
 
         cleanup:
         stub?.delete()
+    }
+
+    def 'should create container env' () {
+        given:
+        def bash = Spy(BashWrapperBuilder)
+
+        when:
+        def builder = bash.createContainerBuilder(null)
+        then:
+        bash.getEnvironment() >> [:]
+        bash.getBinDir() >> Paths.get('/my/bin')
+        bash.getWorkDir() >> Paths.get('/my/work/dir')
+        bash.getStatsEnabled() >> false
+
+        bash.getResolvedInputs() >> [:]
+        bash.getContainerConfig() >> [engine: 'singularity', envWhitelist: 'FOO,BAR']
+        bash.getContainerImage() >> 'foo/bar'
+        bash.getContainerExecutable() >> false
+        bash.getContainerMount() >> null
+        bash.getContainerMemory() >> null
+        bash.getContainerCpuset() >> null
+        bash.getContainerOptions() >> null
+
+        builder instanceof SingularityBuilder
+        builder.env == ['FOO','BAR']
+        builder.workDir == Paths.get('/my/work/dir')
     }
 
 }
