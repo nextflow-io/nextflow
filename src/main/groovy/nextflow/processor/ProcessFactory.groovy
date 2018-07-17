@@ -240,6 +240,12 @@ class ProcessFactory {
         // -- Apply defaults
         processConfig.applyConfigDefaults( config.process as Map )
 
+        // -- check for conflicting settings
+        if( processConfig.scratch && processConfig.stageInMode == 'rellink' ) {
+            log.warn("Directives `scratch` and `stageInMode=rellink` conflict each other -- Enforcing default stageInMode for process `$name`")
+            processConfig.remove('stageInMode')
+        }
+
         // -- load the executor to be used
         def execName = getExecutorName(processConfig) ?: DEFAULT_EXECUTOR
         def execClass = loadExecutorClass(execName)
