@@ -36,14 +36,14 @@ class SimpleHttpClientTest extends Specification{
 
         then:
         noExceptionThrown()
-        assert httpClient.getUrl() == url
+        httpClient.getUrl() == url
     }
 
 
     def 'should raise a ConnectException' () {
 
         given:
-        def url = "http://localhost"
+        def url = "http://localhost:3100"
         def httpClient = new SimpleHttpClient()
 
         when:
@@ -52,8 +52,8 @@ class SimpleHttpClientTest extends Specification{
 
         then:
         thrown(ConnectException)
-        assert httpClient.getResponse() == null
-        assert httpClient.getResponseCode() == -1
+        httpClient.getResponse() == null
+        httpClient.getResponseCode() == -1
 
     }
 
@@ -67,15 +67,11 @@ class SimpleHttpClientTest extends Specification{
         httpClient.setUrl(dummyUrl)
         con.getOutputStream() >> new OutputStream() {
             @Override
-            void write(int i) throws IOException {
-
-            }
+            void write(int i) throws IOException { }
         }
         con.getInputStream() >> new InputStream() {
             @Override
-            int read() throws IOException {
-                return -1
-            }
+            int read() throws IOException { return -1 }
         }
         con.getResponseCode() >> 404
 
@@ -84,7 +80,7 @@ class SimpleHttpClientTest extends Specification{
 
         then:
         noExceptionThrown()
-        assert httpClient.getResponseCode() == 404 : "Response code was ${httpClient.getResponseCode()}"
+        httpClient.getResponseCode() == 404
 
     }
 
@@ -100,7 +96,7 @@ class SimpleHttpClientTest extends Specification{
 
         then:
         thrown(IllegalArgumentException)
-        assert httpClient0.getResponseCode() == -1
+        httpClient0.getResponseCode() == -1
         1 * httpClient0.isJson("Foobar")
         0 * httpClient0.setUpConnection(dummyUrl)
 
@@ -129,8 +125,8 @@ class SimpleHttpClientTest extends Specification{
 
         then:
         noExceptionThrown()
-        assert !noJson
-        assert json
+        !noJson
+        json
 
     }
 
@@ -142,7 +138,6 @@ class SimpleHttpClientTest extends Specification{
         when:
         httpClient.setUrl("")
         httpClient.sendHttpMessage()
-
 
         then:
         thrown(IllegalStateException)
