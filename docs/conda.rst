@@ -134,14 +134,14 @@ Conda environments best practices
 If a ``conda`` directive is used in any ``process`` block within the workflow, Conda is required for workflow execution. There is no way to disable Conda if the directive is present in the Nextflow workflow file. Specifying the Conda environments in a :ref:`Profile <config-profiles>` in ``nextflow.config`` is therefore recommended to enable portability of workflows.::  
   
   profiles{
-  conda{
-    process.conda = 'samtools'
+    conda{
+      process.conda = 'samtools'
+    }
+    docker{
+      process.container = 'biocontainers/samtools'
+      docker.enabled = true
+    }
   }
-  docker{
-    process.container = 'biocontainers/samtools'
-	docker.enabled = true
-  }
- }
 
 
 
