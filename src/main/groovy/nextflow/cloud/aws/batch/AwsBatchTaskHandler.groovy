@@ -142,6 +142,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     /**
+     * Set the batch collector object. This has not to be confused AWSBatch.
+     * It is needed to aggregate multiple API requests to a single remote
+     * invocation. It can be implemented by any executor, not just AWSBatch.
+     *
      * @param context The {@link BatchContext} object to be used
      */
     void batch( BatchContext<String,JobDetail> context ) {
