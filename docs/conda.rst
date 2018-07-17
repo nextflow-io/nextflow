@@ -70,7 +70,6 @@ The name of the channel where a package is located can be specified prefixing th
 the channel name as shown here ``bioconda::bwa=0.7.15``.
 
 
-
 Use Conda environment files
 ===========================
 
@@ -127,6 +126,22 @@ installation directory of such environment by using the ``conda`` directive::
     your_command --here
     '''
   }
+
+
+Conda environments best practices
+===============================
+
+If a `conda` directive is used in any `process` block within the workflow, Conda is required for workflow execution. TThere is no way to disable Conda if the directive is present in the Nextflow workflow file. Specifying the Conda environments in a profile in `nextflow.config` is therefore recommended to enable portability of workflows.::  
+  
+  profiles{
+	conda{
+		process.conda = 'samtools'
+	}
+	docker{
+		process.container = 'biocontainers/samtools'
+		docker.enabled = true
+	}
+}
 
 
 
