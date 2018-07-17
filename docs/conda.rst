@@ -131,7 +131,7 @@ installation directory of such environment by using the ``conda`` directive::
 Conda environments best practices
 ===============================
 
-If a ``conda`` directive is used in any ``process`` block within the workflow, Conda is required for workflow execution. There is no way to disable Conda if the directive is present in the Nextflow workflow file. Specifying the Conda environments in a :ref:`Profile <config-profiles>` in ``nextflow.config`` is therefore recommended to enable portability of workflows.::  
+If a ``conda`` directive is used in any ``process`` block within the workflow, Conda is required for workflow execution. There is no way to disable Conda if the directive is present in the Nextflow workflow file. Specifying the Conda environments in a :ref:`Profile <config-profiles>` in ``nextflow.config`` is therefore recommended to enable portability of workflows. ::  
   
   profiles{
     conda{
