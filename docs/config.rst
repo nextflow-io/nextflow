@@ -693,6 +693,8 @@ url                The url where to send HTTP POST requests (default: ``http:loc
 ================== ================
 
 
+.. _config-profiles:
+
 Config profiles
 ===============
 
