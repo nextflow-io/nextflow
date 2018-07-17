@@ -220,7 +220,7 @@ class TesTaskHandler extends TaskHandler {
 
     private TesInput inItem( Path realPath, String fileName = null) {
         def result = new TesInput()
-        result.url = realPath.toUri().toString()
+        result.url = realPath.toUriString()
         result.path = fileName ? "$WORK_DIR/$fileName" : "$WORK_DIR/${realPath.getName()}"
         log.trace "[TES] Adding INPUT file: $result"
         return result
@@ -229,7 +229,7 @@ class TesTaskHandler extends TaskHandler {
     private TesOutput outItem( String fileName ) {
         def result = new TesOutput()
         result.path = "$WORK_DIR/$fileName"
-        result.url = task.workDir.resolve(fileName).uri.toString()
+        result.url = task.workDir.resolve(fileName).toUriString()
         log.trace "[TES] Adding OUTPUT file: $result"
         return result
     }
