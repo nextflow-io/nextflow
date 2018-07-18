@@ -20,12 +20,14 @@
 
 package nextflow.extension
 
+import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Channel
 import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
 import nextflow.util.CheckHelper
+import nextflow.util.GroupSize
 /**
  * Implements {@link DataflowExtensions#groupTuple} operator logic
  *
@@ -36,6 +38,46 @@ class GroupTupleOp {
     static private Map GROUP_TUPLE_PARAMS = [ by: [Integer, List], sort: [Boolean, 'true','natural','deep','hash',Closure,Comparator], size: Integer, remainder: Boolean ]
 
     static private List<Integer> GROUP_DEFAULT_INDEX = [0]
+
+    @CompileStatic
+    private static class KeyWrap {
+
+        private Object[] target
+
+        Object getAt(int i) { target[i] }
+
+        KeyWrap(List items ) {
+            target = new Object[items.size()]
+            for( int i=0; i<items.size(); i++ ) { target[i]=items[i] }
+        }
+
+        boolean equals( Object obj ) {
+            if( obj==null ) return false
+            if( obj.class != this.class ) return false
+
+            KeyWrap that = (KeyWrap)obj
+            if( target.size()!=that.target.size() ) return false
+
+            for( int i=0; i<target.size(); i++ ) {
+                if( target[i] != that[i] )
+                    return false
+            }
+            return true
+        }
+
+        int hashCode() {
+            Arrays.hashCode(target)
+        }
+
+        String toString() {
+            String.valueOf(target)
+        }
+
+        int getGroupSize() {
+            if( target.size()!=1 ) return -1
+            target[0] instanceof GroupSize ? ((GroupSize)target[0]).getGroupSize() : -1
+        }
+    }
 
     /**
      * Comparator used to sort tuple entries (when required)
@@ -52,7 +94,7 @@ class GroupTupleOp {
 
     private boolean remainder
 
-    private Map groups = [:]
+    private Map<KeyWrap,List> groups = [:]
 
     private sort
 
@@ -63,7 +105,7 @@ class GroupTupleOp {
         channel = source
         target = new DataflowQueue()
         indices = getGroupTupleIndices(params)
-        size = params?.size ?: -1
+        size = params?.size ?: 0
         remainder = params?.remainder ?: false
         sort = params?.sort
 
@@ -90,10 +132,10 @@ class GroupTupleOp {
      */
     private void collect(List tuple) {
 
-        final key = tuple[indices]                        // the actual grouping key
+        final key = new KeyWrap(tuple[indices])         // the actual grouping key
         final len = tuple.size()
 
-        final List items = groups.getOrCreate(key) {     // get the group for the specified key
+        final List items = groups.getOrCreate(key) {    // get the group for the specified key
             def result = new ArrayList(len)             // create if does not exists
             for( int i=0; i<len; i++ )
                 result[i] = (i in indices ? tuple[i] : new ArrayBag())
@@ -109,8 +151,9 @@ class GroupTupleOp {
             }
         }
 
-        if( size>0 && size==count ) {
-            bindTuple(items)
+        final _size = size ?: key.groupSize
+        if( _size>0 && _size==count ) {
+            bindTuple(items, _size)
             groups.remove(key)
         }
     }
@@ -120,21 +163,21 @@ class GroupTupleOp {
      * finalize the grouping binding the remaining values
      */
     private void finalise(nop) {
-        groups.values().each { List items -> bindTuple(items) }
+        groups.each { KeyWrap k, List items -> bindTuple(items, size?:k.groupSize) }
         target.bind(Channel.STOP)
     }
 
     /*
      * bind collected items to the target channel
      */
-    private void bindTuple ( List items ) {
+    private void bindTuple( List items, int _size ) {
 
         def tuple = new ArrayList(items)
 
-        if( !remainder && size>0 ) {
+        if( !remainder && _size>0 ) {
             // verify exist it contains 'size' elements
             List list = items.find { it instanceof List }
-            if( list.size() != size ) {
+            if( list.size() != _size ) {
                 return
             }
         }
