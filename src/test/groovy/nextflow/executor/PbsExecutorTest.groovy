@@ -218,6 +218,13 @@ class PbsExecutorTest extends Specification {
         expect:
         executor.parseJobId('\n10.localhost\n') == '10.localhost'
         executor.parseJobId('1584288.biocluster.igb.illinois.edu') == '1584288.biocluster.igb.illinois.edu'
+
+        when:
+        executor.parseJobId('foo\nbar\n1584288.biocluster.igb.illinois.edu')
+        then:
+        thrown(IllegalArgumentException)
+
+
     }
 
 
