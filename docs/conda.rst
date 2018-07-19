@@ -148,7 +148,7 @@ recommended to allow the execution via a command line option and to enhance the 
     }
   }
 
-The above configuration snippet allow the execution either with Conda or Docker specifying ``-profile conda`` or
+The above configuration snippet allows the execution either with Conda or Docker specifying ``-profile conda`` or
 ``-profile docker`` when running the workflow script.
 
 
