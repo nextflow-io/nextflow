@@ -246,8 +246,39 @@ class SlurmExecutorTest extends Specification {
         def exec = [:] as SlurmExecutor
         then:
         usr
-        exec.queueStatusCommand(null) == ['squeue','--noheader','-o','%i %t','-t','all','-u', usr]
-        exec.queueStatusCommand('xxx') == ['squeue','--noheader','-o','%i %t','-t','all','-p','xxx','-u', usr]
+        exec.queueStatusCommand([:]) == ['squeue','--noheader','-o','%i %t','-t','all','-u', usr]
+        exec.queueStatusCommand([queue:'foo']) == ['squeue','--noheader','-o','%i %t','-t','all','-p','foo','-u', usr]
+        exec.queueStatusCommand([cluster:'bar']) == ['squeue','--noheader','-o','%i %t','-t','all','-M','bar','-u', usr]
 
     }
+
+    def 'should get directives' () {
+        given:
+        def config = Mock(TaskConfig)
+        def task = Mock(TaskRun)
+        def exec = Spy(SlurmExecutor)
+
+        when:
+        def result = exec.getDirectives(task)
+        then:
+        config.getProperty('clusterOptions') >> '--cluster bar'
+        config.getCpus() >> 1
+        task.getConfig() >> config
+        task.getWorkDir() >> Paths.get('/work/dir/foo')
+        1 * exec.getJobNameFor(task) >> 'foo'
+
+        result == [
+                '-D',
+                '/work/dir/foo',
+                '-J',
+                'foo',
+                '-o',
+                '/work/dir/foo/.command.log',
+                '--no-requeue',
+                '',
+                '--cluster bar',
+                ''
+        ]
+    }
+
 }

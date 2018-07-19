@@ -206,7 +206,7 @@ class GridTaskHandler extends TaskHandler {
                     log.trace "JobId `$jobId` exit file: ${exitFile.toUriString()} - lastModified: ${exitAttrs?.lastModifiedTime()} - size: ${exitAttrs?.size()}"
             }
             // -- fetch the job status before return a result
-            final active = executor.checkActiveStatus(jobId, queue)
+            final active = executor.checkActiveStatus(jobId, getQueueOpts())
 
             // --
             def elapsed = System.currentTimeMillis() - startedMillis
@@ -386,12 +386,23 @@ class GridTaskHandler extends TaskHandler {
      * @return An {@link nextflow.trace.TraceRecord} instance holding task runtime information
      */
     @Override
-    public TraceRecord getTraceRecord() {
+    TraceRecord getTraceRecord() {
         def trace = super.getTraceRecord()
         trace.put('native_id', jobId)
         return trace
     }
 
+    /**
+     * Template method, subclass can override to provide other
+     * their own options
+     *
+     * @return Just return the current {@link #queue}.
+     */
+    protected getQueueOpts() { queue }
 
+    /**
+     * @return The queue setting if provider
+     */
+    protected String getQueue() { queue }
 
 }

@@ -58,14 +58,14 @@ abstract class AbstractGridExecutor extends Executor {
      * Create a a queue holder for this executor
      * @return
      */
-    def TaskMonitor createTaskMonitor() {
+    TaskMonitor createTaskMonitor() {
         return TaskPollingMonitor.create(session, name, 100, Duration.of('5 sec'))
     }
 
     /*
      * Prepare and launch the task in the underlying execution platform
      */
-    def GridTaskHandler createTaskHandler(TaskRun task) {
+    GridTaskHandler createTaskHandler(TaskRun task) {
         assert task
         assert task.workDir
 
@@ -254,26 +254,26 @@ abstract class AbstractGridExecutor extends Executor {
     /**
      * @return The status for all the scheduled and running jobs
      */
-    Map<String,QueueStatus> getQueueStatus(queue) {
+    Map<String,QueueStatus> getQueueStatus(opts) {
 
-        List cmd = queueStatusCommand(queue)
+        List cmd = queueStatusCommand(opts)
         if( !cmd ) return null
 
         try {
-            log.trace "[${name.toUpperCase()}] getting queue ${queue?"($queue) ":''}status > cmd: ${cmd.join(' ')}"
+            log.trace "[${name.toUpperCase()}] getting queue ${opts?"($opts) ":''}status > cmd: ${cmd.join(' ')}"
 
             def process = new ProcessBuilder(cmd).start()
             def result = process.text
             process.waitForOrKill( 10 * 1000 )
             def exit = process.exitValue()
 
-            log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status > cmd exit: $exit\n$result"
+            log.trace "[${name.toUpperCase()}] queue ${opts?"($opts) ":''}status > cmd exit: $exit\n$result"
 
             return ( exit == 0 ) ? parseQueueStatus( result ) : null
 
         }
         catch( Exception e ) {
-            log.warn "[${name.toUpperCase()}] failed to retrieve queue ${queue?"($queue) ":''}status -- See the log file for details", e
+            log.warn "[${name.toUpperCase()}] failed to retrieve queue ${opts?"($opts) ":''}status -- See the log file for details", e
             return null
         }
 
@@ -313,13 +313,13 @@ abstract class AbstractGridExecutor extends Executor {
      * @return {@code true} if the job is in RUNNING or HOLD status, or even if it is temporarily unable
      *  to retrieve the job status for some
      */
-    public boolean checkActiveStatus( jobId, queue ) {
+    boolean checkActiveStatus( jobId, opts ) {
         assert jobId
 
         // -- fetch the queue status
-        Map<String,QueueStatus>status = Throttle.cache(queue, queueInterval) {
-            final result = getQueueStatus(queue)
-            log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status >\n" + dumpQueueStatus(result)
+        Map<String,QueueStatus>status = Throttle.cache(opts, queueInterval) {
+            final result = getQueueStatus(opts)
+            log.trace "[${name.toUpperCase()}] queue ${opts?"($opts) ":''}status >\n" + dumpQueueStatus(result)
             return result
         }
 
@@ -328,12 +328,12 @@ abstract class AbstractGridExecutor extends Executor {
         }
 
         if( !status.containsKey(jobId) ) {
-            log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status > map does not contain jobId: `$jobId`"
+            log.trace "[${name.toUpperCase()}] queue ${opts?"($opts) ":''}status > map does not contain jobId: `$jobId`"
             return false
         }
 
         final result = status[jobId.toString()] == QueueStatus.RUNNING || status[jobId.toString()] == QueueStatus.HOLD
-        log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status > jobId `$jobId` active status: $result"
+        log.trace "[${name.toUpperCase()}] queue ${opts?"($opts) ":''}status > jobId `$jobId` active status: $result"
         return result
     }
 

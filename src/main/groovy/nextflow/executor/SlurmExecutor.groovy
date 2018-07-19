@@ -19,13 +19,14 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Path
 import java.util.regex.Pattern
 
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 /**
- * Processor for SLURM resource manager (DRAFT)
+ * Executor for SLURM resource manager
  *
  * See http://computing.llnl.gov/linux/slurm/
  *
@@ -36,6 +37,14 @@ import nextflow.processor.TaskRun
 class SlurmExecutor extends AbstractGridExecutor {
 
     static private Pattern SUBMIT_REGEX = ~/Submitted batch job (\d+)/
+
+    @Override
+    GridTaskHandler createTaskHandler(TaskRun task) {
+        assert task
+        assert task.workDir
+        new SlurmTaskHandler(task,this)
+    }
+
 
     /**
      * Gets the directives to submit the specified task to the cluster for execution
@@ -120,12 +129,17 @@ class SlurmExecutor extends AbstractGridExecutor {
     protected List<String> getKillCommand() { ['scancel'] }
 
     @Override
-    protected List<String> queueStatusCommand(Object queue) {
+    protected List<String> queueStatusCommand(Object opts) {
+        assert opts instanceof Map, "SLURM queue options must be a map object: $opts"
 
+        final params = (Map)opts
         final result = ['squeue','--noheader','-o','%i %t', '-t', 'all']
 
-        if( queue )
-            result << '-p' << queue.toString()
+        if( params.queue )
+            result << '-p' << params.queue.toString()
+
+        if( params.cluster )
+            result << '-M' << params.cluster.toString()
 
         final user = System.getProperty('user.name')
         if( user )
@@ -172,5 +186,44 @@ class SlurmExecutor extends AbstractGridExecutor {
         }
 
         return result
+    }
+}
+
+class SlurmTaskHandler extends GridTaskHandler {
+
+    private String cluster
+
+    /* only for testing -- do not use */
+    private SlurmTaskHandler() {}
+
+    SlurmTaskHandler(TaskRun task, SlurmExecutor executor) {
+        super(task,executor)
+        cluster = fetchClusterOption( task.config.clusterOptions as String )
+    }
+
+    protected String getCluster() { cluster }
+
+    @Override
+    def getQueueOpts() {
+        if( !queue && !cluster ) return Collections.emptyMap()
+        final opts = [:]
+        if( queue ) opts.queue = queue
+        if( cluster ) opts.cluster = cluster
+        return opts
+    }
+
+
+    protected String fetchClusterOption(String str) {
+        if( !str )
+            return null
+
+        def items = str.tokenize(' =')
+        int p
+
+        if( (p=items.indexOf('--cluster')) != -1 && p+1<items.size() ) {
+            return items[p+1]
+        }
+
+        return null
     }
 }
