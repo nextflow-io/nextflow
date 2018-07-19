@@ -1,6 +1,36 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.31.0-RC1 - 19 Jul 2018
+- Fixed K8s pod request should include resources spec when 1 cpu is specified #806
+- Fixed PBS executor should fail when submit response contains invalid data #753
+- Fixed SLURM executor fail to submit jobs when cluster option is specified #805
+- Fixed Allow the use relative paths for symlinks process input files #296
+- Fixed AWS batch jobs are not properly stopped when execution is interrupted #782
+- Fixed splitCsv is not properly handling blank lines #795
+- Fixed K8s pod runAsUser definition #707
+- Fixed Prevent NPE when K8s reports an empty pod state [dcc7ec5f]
+- Fixed Allow list of patterns for fromPath and fromFilePairs channel factories #732
+- Fixed K8s execution hangs if an invalid pod secret file is specified #754
+- Fixed Correctly shutdown executor service #732
+- Fixed bug in dot rendering due to unquoted graph name when DOT language keyword used #783
+- Fixed Execution hangs if one or more inputs evaluate to null #764
+- Fixed Method `file` should thrown an error null is given as input #765
+- Fixed invalid relative link resolution with `readlink`
+- Added AWS batch requests throttling handling #710 #709
+- Added AWS Batch parallel downloads/uploads [codefest] [8ba1716b,ba5ad7a8]
+- Added K8s pod config and security context definition #707
+- Added Container env variables whitelist #803
+- Added support for K8s pod labels #762
+- Added support for K8s volume mount subPath #758
+- Added Nextflow required version in the config manifest #752
+- Added disk resource requirement in LSF executor #747
+- Added GA4GH TES executor [experimental] #794
+- Added System info to workflow metadata object #759
+- Added weblog feature #681
+- Deprecated process.$name syntax to define process specific settings #713
+- Upgrade to Gradle 4.9
+
 0.30.2 - 16 Jun 2018
 - Fixed Output declarations with a glob pattern fail when AWS Batch executor is used #748
 - Fixed Scratch directive not working for AWS Batch executor #740
