@@ -4,16 +4,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.trace.TraceRecord
 import org.openprovenance.prov.interop.InteropFramework
-import org.openprovenance.prov.model.Activity
-import org.openprovenance.prov.model.Agent
-import org.openprovenance.prov.model.Document
-import org.openprovenance.prov.model.Entity
-import org.openprovenance.prov.model.Namespace
-import org.openprovenance.prov.model.ProvFactory
-import org.openprovenance.prov.model.QualifiedName
-import org.openprovenance.prov.model.Used
-import org.openprovenance.prov.model.WasAssociatedWith
-import org.openprovenance.prov.model.WasGeneratedBy
+import org.openprovenance.prov.model.*
 
 import javax.xml.datatype.DatatypeFactory
 import java.nio.file.Path
@@ -27,7 +18,7 @@ import java.security.MessageDigest
 @CompileStatic
 public class ProvenanceGenerator {
     enum ProvenanceType {
-        activityType, fileChecksum, fileSize, fileName
+        activityType, SHA256, fileSize, fileName
     }
     //** PROV info **
     public static final String PROVBOOK_NS = "prov";
@@ -212,7 +203,7 @@ public class ProvenanceGenerator {
             File fileAux = new File(pathString)
 
             Object checkAux = getFileSHA256(fileAux)
-            pFactory.addType(input_entity, checkAux, qn(ProvenanceType.fileChecksum.toString()))
+            pFactory.addType(input_entity, checkAux, qn(ProvenanceType.SHA256.toString()))
 
             Object sizeAux = fileAux.length()
             pFactory.addType(input_entity, sizeAux, qn(ProvenanceType.fileSize.toString()))
@@ -245,7 +236,7 @@ public class ProvenanceGenerator {
 
             File fileAux = new File(pathString)
             Object checkAux = getFileSHA256(fileAux)
-            pFactory.addType(output_entity, checkAux, qn(ProvenanceType.fileChecksum.toString()))
+            pFactory.addType(output_entity, checkAux, qn(ProvenanceType.SHA256.toString()))
 
             Object sizeAux = fileAux.length()
             pFactory.addType(output_entity, sizeAux, qn(ProvenanceType.fileSize.toString()))
@@ -276,6 +267,12 @@ public class ProvenanceGenerator {
             }
         }
         byte[] elementHash = digest.digest()
-        return Base64.getEncoder().encodeToString(elementHash).toString()
+        return bytesToHex(elementHash)
+    }
+
+    String bytesToHex(byte[] bytes) {
+        StringBuffer result = new StringBuffer();
+        for (byte byt : bytes) result.append(Integer.toString((byt & 0xff) + 0x100, 16).substring(1));
+        return result.toString();
     }
 }

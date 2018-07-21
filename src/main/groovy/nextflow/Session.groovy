@@ -19,6 +19,9 @@
  */
 
 package nextflow
+
+import nextflow.cli.Launcher
+
 import static nextflow.Const.S3_UPLOADER_CLASS
 
 import java.lang.reflect.Method
@@ -58,7 +61,6 @@ import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStats
-import nextflow.trace.ProvObserver
 import nextflow.util.Barrier
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
@@ -315,6 +317,10 @@ class Session implements ISession {
         this.statsEnabled = observers.any { it.enableMetrics() }
 
         cache = new CacheDB(uniqueId,runName).open()
+
+        String commandLine = System.getenv('NXF_CLI')
+        String nfVersion = Launcher.getVersion()
+        cache.getProvMetadata(uniqueId, runName, config, baseDir,commandLine, nfVersion)
     }
 
     /**
@@ -332,7 +338,6 @@ class Session implements ISession {
         createReportObserver(result)
         createTimelineObserver(result)
         createDagObserver(result)
-        createProvObserver(result)
 
         return result
     }
@@ -403,18 +408,6 @@ class Session implements ISession {
         }
     }
 
-    protected void createProvObserver(Collection<TraceObserver> result){
-        Boolean isEnabled = config.navigate('prov.enabled') as Boolean
-        if (isEnabled) {
-            //log.info '-info- PROV is ENABLED'
-            log.debug('PROV is ENABLED')
-            def observer = new ProvObserver() //need to send tracefile??
-            result << observer
-        }else{
-            //log.info '-info- PROV is -- not -- ENABLED'
-            log.debug('PROV is -- not -- ENABLED')
-        }
-    }
     /*
      * intercepts interruption signal i.e. CTRL+C
      * - on the first invoke session#abort

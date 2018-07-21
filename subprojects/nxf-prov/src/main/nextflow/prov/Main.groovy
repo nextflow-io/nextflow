@@ -8,6 +8,9 @@ package nextflow.prov
 class Main {
 
     static void main(String... args) {
+        CmdProv cmdProv = new CmdProv()
+        cmdProv.run()
+
         println "Hello prov!"
     }
 }

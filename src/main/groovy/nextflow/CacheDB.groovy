@@ -19,6 +19,10 @@
  */
 
 package nextflow
+
+import nextflow.util.ConfigHelper
+import org.apache.commons.lang3.StringUtils
+
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -72,6 +76,9 @@ class CacheDB implements Closeable {
     /** Index file read/write handle */
     private RandomAccessFile indexHandle
 
+    /** The path to the file with the metadata for the Provenance process*/
+    private Path provFile
+
     private final int KEY_SIZE
 
     CacheDB(Record entry, Path home=null) {
@@ -88,6 +95,7 @@ class CacheDB implements Closeable {
         this.baseDir = home ?: Paths.get('.nextflow').toAbsolutePath()
         this.dataDir = baseDir.resolve("cache/$uniqueId")
         this.indexFile = dataDir.resolve("index.$runName")
+        this.provFile = dataDir.resolve("prov.$runName")
         this.writer = new Agent()
     }
 
@@ -262,6 +270,9 @@ class CacheDB implements Closeable {
         dataDir.deleteDir()
     }
 
+    void deleteProvFile(){
+        provFile.delete()
+    }
     /**
      * Iterate the tasks cache using the index file
      * @param closure The operation to applied
@@ -304,7 +315,26 @@ class CacheDB implements Closeable {
         return this
     }
 
+    void getProvMetadata(UUID uniqueId, String runName, Map config, Path baseDir, String commandLine, String nfVersion){
+        Map provMap =[:]
+        runName.substring(1, runName.length()-1)
 
+        provMap.put("uuid",uniqueId)
+        provMap.put("runName",runName)
+        provMap.put("baseDir",baseDir)
+        provMap.put("outDir",getManifestMap(config).outdir) //TODO another way to capture IT!
+        provMap.put("commandLine",commandLine)
+        provMap.put("author",getManifestMap(config).author)
+        provMap.put("orcid",getManifestMap(config).ORCID)//TODO allow author ORCID on nextflow.config.manifest ?
+        provMap.put("nfVersion",nfVersion)
+
+        def provString = ConfigHelper.toCanonicalString(provMap)
+        provFile.write(provString)
+
+    }
+    private Map getManifestMap(Map config){
+        return config.manifest as Map
+    }
     /**
      * Close the underlying database and index file
      */
