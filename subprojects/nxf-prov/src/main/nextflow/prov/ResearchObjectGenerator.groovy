@@ -2,7 +2,6 @@ package nextflow.prov
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-
 import nextflow.cli.Launcher
 import nextflow.trace.TraceRecord
 import nextflow.util.Duration
@@ -12,11 +11,9 @@ import org.apache.taverna.robundle.manifest.Agent
 import org.apache.taverna.robundle.manifest.Manifest
 import org.apache.taverna.robundle.manifest.PathMetadata
 
-import java.nio.file.Files
-import java.nio.file.LinkOption
-import java.nio.file.Path
-import java.nio.file.Paths
-import java.nio.file.StandardCopyOption
+import java.nio.file.*
+import java.security.DigestInputStream
+import java.security.MessageDigest
 import java.text.SimpleDateFormat
 
 /**
@@ -37,7 +34,13 @@ public class ResearchObjectGenerator {
     private String outputFolderName= "outputs"
     // .ro
         //bundle manifest.xml
+    private String commandLineFileName = "commandLine.txt"
+    private String enviromentFileName = "enviroment.txt"
 
+    private String author
+    private String authorORCID
+    private String outDirFolder
+    private String baseDir
     private boolean dockerImage
     private boolean singularityImage
     private String containerTech
@@ -45,24 +48,19 @@ public class ResearchObjectGenerator {
     private String containerSha
     private String dockerSHAPrefix ="sha256:"
     private String singularitySHAPrefix=""
-    private String commandLine=System.getenv('NXF_CLI')
+    private String commandLine
     private String uuid
     private String nextflowVersionPrefix = "nextflow version "
     private String nextflowVersion
-
-    private String commandLineFileName = "commandLine.txt"
-    private String enviromentFileName = "enviroment.txt"
-
     private String orcidERROR= "**ORCID_not_provided**"
 
     private List<String> inputFiles =[]
     private List<String> outputFiles =[]
 
-    ResearchObjectGenerator(){
+    ResearchObjectGenerator(){}
 
-    }
     public Bundle generateROBundle(){
-        return Bundles.createBundle();
+        return Bundles.createBundle()
     }
 
     public void generateFileStructure(Bundle bundle){
@@ -80,28 +78,34 @@ public class ResearchObjectGenerator {
 
         Path outputFolderPath = bundle.getRoot().resolve(outputFolderName);
         Files.createDirectory(outputFolderPath);
+        log.info "RO structure generated"
+
     }
 
-    public void setManifest(Bundle bundle, Map configManifest){
+    public void setManifest(Bundle bundle){
         // https://github.com/apache/incubator-taverna-language/blob/master/taverna-robundle/src/test/java/org/apache/taverna/robundle/manifest/TestManifestJSON.java
         Manifest manifest = bundle.getManifest();
 
-        this.setAuthorInformation(manifest,configManifest)
+        this.setAuthorInformation(manifest)
 
         manifest.setId(URI.create("/"))
 
         setAggregationManifest(manifest)
+
+        log.info "set RO manifest"
     }
 
-    public void generateLogFile(Bundle bundle, String author ){
-        File logFile = getLogInfo(author)
+    public void generateLogFile(Bundle bundle){
+        File logFile = getLogInfo()
         fileToBundle(bundle,Paths.get(logFile.path),logFileName, metadataFolder)
+        log.info "Generate Log File DONE"
     }
 
     public void addProvenanceFile(Bundle bundle){
-        File file = provDocumentToFile(provenanceFileName)
+        File file = new File(provenanceFileName)
         fileToBundle(bundle, Paths.get(file.getPath()), provenanceFileName,metadataFolder)
-        boolean result = Files.deleteIfExists(Paths.get(provenanceFileName))
+        boolean result = removeFile(provenanceFileName)
+        log.info "Add prov to bundle: ${result} DONE"
     }
 
     public void generateDataFolder(Bundle bundle){
@@ -110,7 +114,8 @@ public class ResearchObjectGenerator {
             Path auxPath = Paths.get(file)
             fileToBundle(bundle, auxPath, auxPath.getFileName().toString(), dataFolderName)
         }
-        //TODO generate sha256 HERE ??
+        log.info "Generate Data folder DONE"
+
     }
     public Path generateOutputFolder(Bundle bundle){
         outputFiles.unique()
@@ -118,24 +123,37 @@ public class ResearchObjectGenerator {
             Path auxPath = Paths.get(file)
             fileToBundle(bundle, auxPath, auxPath.getFileName().toString(), outputFolderName)
         }
-        //TODO generate sha256 HERE??
+        log.info "Generate Output folder DONE"
+
     }
 
-    public void generateWorkflowFolder(Bundle bundle, String baseDir){
+    public void generateWorkflowFolder(Bundle bundle){
         def result = getFilesFromDir(baseDir).tokenize('\n')
+        log.info "Get Files from workflow dir DONE"
         for (element in result){
+            //println("** ** ** workflow path: >>${baseDir}/${element}<< ")
             Path auxPath = Paths.get("${baseDir}/${element}")
+            //log.info "Get Path from workflow dir DONE"
             fileToBundle(bundle, auxPath,auxPath.getFileName().toString(),workflowFolderName)
+            //log.info "File workdir into bundle DONE"
         }
+        log.info "Generate Workflow folder DONE"
+
     }
 
     public void generateSnapshot(Bundle bundle){
+        File scriptFile = generateScript()
+        fileToBundle(bundle,Paths.get(scriptFile.path),commandLineFileName, snapshotFolderName)
+        boolean result = removeFile(commandLineFileName)
+        log.info "Generate Snapshot file: ${result}"
 
     }
 
-    public void generateMetadataFolder(Bundle bundle, Map configMap){
-        Path metadataFile = generateMetadataFile(configMap)
+    public void generateMetadataFolder(Bundle bundle){
+        Path metadataFile = generateMetadataFile()
         fileToBundle(bundle, metadataFile,metadataFileName,metadataFolder)
+        log.info "Generate Metadata folder DONE"
+
     }
 
     private String getFilesFromDir(String dir){
@@ -146,18 +164,27 @@ public class ResearchObjectGenerator {
         return resultado
     }
 
-    private Path generateMetadataFile(Map configMap){
-        getMetadataInfo(configMap)
-        return writeMetadataIntoFile()
+    private Path generateMetadataFile(){
+        Path metadataFile = Files.createTempFile("","");
+        metadataFile.write"Command Line: ${commandLine}\n"
+        /*       "Container technology: ${containerTech}\n"
+        metadataFile << "Container name: ${containerName}\n"
+        metadataFile << "Container SHA256: ${containerSha}\n"
+        metadataFile << */
+        metadataFile << "UUID: ${uuid}\n"
+        metadataFile << "Nextflow version: ${nextflowVersion}\n"
+
+        return metadataFile
     }
 
-    private File provDocumentToFile(String provenanceFileName){
+    /*private File provDocumentToFile(String provenanceFileName){
         File file = new File(provenanceFileName)
         return file
-    }
+    }*/
 
     public void getCleanInputFiles(TraceRecord trace){
         def inputFiles = trace.getFmtStr("input")
+        inputFiles= inputFiles.replaceAll("\\s","")//remove whitespace from the string
         List<String> inputList = Arrays.asList(inputFiles.split(";"));
 
         for (inputElem in inputList){
@@ -165,11 +192,12 @@ public class ResearchObjectGenerator {
                 this.inputFiles.add(inputElem.trim())
             }
         }
+        log.info "Get Clean Input Files (data folder)"
+
     }
 
-    public void getCleanOutputFiles(Map manifest){
-        def outDirFolder = getOutdirFolder(manifest)
-        if (outDirFolder !=null){
+    public void getCleanOutputFiles(){
+        if (outDirFolder.equals("null")){ // because we miss the "concept" null when we add it on the map>>file>>map
             def outDirFiles = getOutDirFiles(outDirFolder)
             File fileAux = new File ("${outDirFolder}/${outDirFiles[0].toString()}")
             String filePath = fileAux.absolutePath.substring(0,fileAux.absolutePath.lastIndexOf(File.separator));
@@ -178,8 +206,9 @@ public class ResearchObjectGenerator {
                 outputFiles.add(aux)
             }
         }else{
-            log.warn("You need to specify the output directory inside nextflow.config/params for the RO zip file")
+            // NOT NEEDED, its controled on the CMDPROV --> log.warn("You need to specify the output directory inside nextflow.config/params for the RO zip file")
         }
+        log.info "Get Clean Output Files (output folder)"
     }
 
     private void fileToBundle(Bundle bundle, Path filePath, String fileName, String folderName){
@@ -190,9 +219,13 @@ public class ResearchObjectGenerator {
             Files.copy(bundleFilePath, filePath, StandardCopyOption.REPLACE_EXISTING);
         }else if (filePath.isDirectory()){
             log.warn("The element: \"${fileName}\" is a directory")
+            //directoryToBundle(bundle,filePath,fileName,folderName)
         }
+        log.info "File to bundle: ${fileName} to ${folderName}"
     }
-
+    private void directoryToBundle(Bundle bundle, Path filePath, String fileName, String folderName){
+        //TODO NEED TO BE IMPLEMENT!!!
+    }
     public void saveBundle(Bundle bundle) {
         Path ro = Paths.get("${System.getProperty("user.dir")}/${roBundleName}.zip")
 
@@ -214,22 +247,18 @@ public class ResearchObjectGenerator {
 
     }
 
-    private String getOutdirFolder(Map manifest){
-        def paramsMap = manifest.getAt('params')
-        return paramsMap.getAt('outdir')
-    }
     private List getOutDirFiles(String outDirFolder){
         if (outDirFolder!=null){
+            log.info "OutDir folder exist"
             return getFilesFromDir(outDirFolder).tokenize('\n')
         }
+        log.warn "OutDir folder NOT exsit"
     }
-    private void setAuthorInformation(Manifest manifest, Map configManifest) {
-        def author = getAuthor(configManifest)
+    private void setAuthorInformation(Manifest manifest) {
         if (author!=null){
             Agent createdBy = new Agent(author);
 
-            def authorORCID = getAuthorORCID(configManifest)
-            if (authorORCID!=null) {                   //TODO allow author ORCID on nextflow.config.manifest ?
+            if (authorORCID!=null) {
                 createdBy.setOrcid(URI.create(authorORCID));
             }else{
                 createdBy.setOrcid(URI.create(orcidERROR));
@@ -239,21 +268,15 @@ public class ResearchObjectGenerator {
             // what to do if we dont have author on the manifest?? -> WARNING?
             //Now we dont "generate" the entity --> not ORCID allow neither
         }
+        log.info "set Author info to RO manifest"
+
     }
 
-    private String getAuthor(Map manifestConfig) {
-        if(manifestConfig.author!=null){
-            return manifestConfig.author
-        }else {
-            log.warn("You need to specify the Author's name  inside nextflow.config/manifest for the RO zip file")
-        }
-    }
-
-    private String getAuthorORCID(Map manifestConfig) {
-        if(manifestConfig.ORCID!=null){
-            return manifestConfig.ORCID
-        }else {
-            log.warn("You need to specify the Author's ORCID  inside nextflow.config/manifest for the RO zip file")
+    private String getFieldMap(Map map, String field){
+        if(map.get(field) != "null"){ //from map to string to file -> to map again... we miss the "concept" null, and it stay as a string value
+            return map.get(field)
+        }else{
+            log.warn("The field ${field} is not configured on the project.")
         }
     }
 
@@ -264,8 +287,12 @@ public class ResearchObjectGenerator {
 
         aggregationList.add(metaPath)
         manifest.setAggregates(aggregationList)
+
+        log.info "Set Aggregation to RO manifest"
     }
 
+    /*
+    // TODO IT WILL BE PART OF THE AGENT
     private String getContainerTechnology(Map config) {
         if (config.containsKey("singularity") && config.get("singularity").getAt("enabled").toString().equals("true")) {
             singularityImage = true
@@ -284,9 +311,9 @@ public class ResearchObjectGenerator {
     private String getContainerSHA256() {
         def cmd
         def duration = '10min'
-        /**
-         * decide the command line to get the SHA
-         */
+
+         //decide the command line to get the SHA
+
         if (dockerImage == true) {
             //https://stackoverflow.com/questions/32046334/where-can-i-find-the-sha256-code-of-a-docker-image
             //give a diff sha256 the .repoDigest and the Id value --> TO CHECK
@@ -334,40 +361,46 @@ public class ResearchObjectGenerator {
         return containerAux
     }
 
-    private void getMetadataInfo(Map configMap){
+    private void getMetadataInfo(){
         containerTech = getContainerTechnology(configMap)
         if (dockerImage || singularityImage) {
             containerName = getContainerName(configMap)
             containerSha = getContainerSHA256()
         }
-        uuid= "" //TODO GET UUID --> "${session.getUniqueId().toString()}"
-        nextflowVersion= Launcher.getVersion().substring(nextflowVersionPrefix.size())
+    }*/
+    private File generateScript(){
+        File scriptFile= new File(commandLineFileName)
+        scriptFile.write(commandLine)
 
+        return scriptFile
     }
-
-    private Path  writeMetadataIntoFile(){
-        Path metadataFile = Files.createTempFile("","");
-        metadataFile.write "Container technology: ${containerTech}\n"
-        metadataFile << "Container name: ${containerName}\n"
-        metadataFile << "Container SHA256: ${containerSha}\n"
-        metadataFile << "Command Line: ${commandLine}\n"
-        metadataFile << "UUID: ${uuid}\n"
-        metadataFile << "Nextflow version: ${nextflowVersion}\n"
-
-        return metadataFile
+    private boolean removeFile(String fileName){
+        return Files.deleteIfExists(Paths.get(fileName))
     }
-
-    private File getLogInfo(String author){
+    private File getLogInfo(){
         def today = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss").format(new Date())
         File logFile = new File(logFileName)
-        logFile.append("${today} -- ${author} -- ${uuid} -- ${containerSha}\n\t${commandLine}\n")
+        logFile.append("${today} -- ${author} -- ${uuid} -- ${commandLine}\n")
 
         return logFile
     }
+    public void setProvValues(Map provMap){
+        //TODO modify variable to "null" concept?
 
+        author = getFieldMap(provMap, 'author')
+        authorORCID = getFieldMap(provMap,'orcid')
+        commandLine= getFieldMap(provMap, 'commandLine')
+        uuid= getFieldMap(provMap, 'uuid')
+        nextflowVersion= getFieldMap(provMap, 'nfVersion').substring(nextflowVersionPrefix.size())
+        outDirFolder = getFieldMap(provMap, 'outDir')
+        baseDir = getFieldMap(provMap, 'baseDir')
+
+    }
     public void printMap(Map map){
      for (Map.Entry<String, String> element : map.entrySet()){
-         print   "-->>value: ${element.getKey()}  -- ${element.getValue()} \n"
+         print   "-->>value: ..${element.getKey()}..  -- ${element.getValue()} \n"
      }
     }
+
+
 }
