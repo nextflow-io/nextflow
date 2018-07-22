@@ -197,7 +197,7 @@ public class ResearchObjectGenerator {
     }
 
     public void getCleanOutputFiles(){
-        if (outDirFolder.equals("null")){ // because we miss the "concept" null when we add it on the map>>file>>map
+        if (!outDirFolder.equals("null")){ // because we miss the "concept" null when we add it on the map>>file>>map
             def outDirFiles = getOutDirFiles(outDirFolder)
             File fileAux = new File ("${outDirFolder}/${outDirFiles[0].toString()}")
             String filePath = fileAux.absolutePath.substring(0,fileAux.absolutePath.lastIndexOf(File.separator));
@@ -219,7 +219,7 @@ public class ResearchObjectGenerator {
             Files.copy(bundleFilePath, filePath, StandardCopyOption.REPLACE_EXISTING);
         }else if (filePath.isDirectory()){
             log.warn("The element: \"${fileName}\" is a directory")
-            //directoryToBundle(bundle,filePath,fileName,folderName)
+            directoryToBundle(bundle,filePath,fileName,folderName)
         }
         log.info "File to bundle: ${fileName} to ${folderName}"
     }
@@ -252,7 +252,7 @@ public class ResearchObjectGenerator {
             log.info "OutDir folder exist"
             return getFilesFromDir(outDirFolder).tokenize('\n')
         }
-        log.warn "OutDir folder NOT exsit"
+        log.warn "OutDir folder NOT exist"
     }
     private void setAuthorInformation(Manifest manifest) {
         if (author!=null){
@@ -281,11 +281,7 @@ public class ResearchObjectGenerator {
     }
 
     private void setAggregationManifest(Manifest manifest){
-        //TODO fill list
         LinkedList<PathMetadata> aggregationList = new LinkedList<PathMetadata>()
-        PathMetadata metaPath = new PathMetadata("URI_Example")        // set URI
-
-        aggregationList.add(metaPath)
         manifest.setAggregates(aggregationList)
 
         log.info "Set Aggregation to RO manifest"
