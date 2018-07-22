@@ -63,7 +63,7 @@ public class ProvenanceGenerator {
          */
         log.debug "Input Entity List: ${inputEntityMap.size()}"
         if (inputEntityMap.isEmpty()) {
-            log.debug "INPUT is empty"
+            log.debug "Prov INPUT is empty"
         } else {
             for (Map.Entry<QualifiedName, Entity> entity : inputEntityMap.entrySet()) {
                 provDocument.getStatementOrBundle().add(entity.value)
@@ -72,9 +72,9 @@ public class ProvenanceGenerator {
         /**
          * Fill the PROV document with the output entities
          */
-        log.debug "Output Entity List:: ${outputEntityMap.size()}"
+        log.debug "Output Entity List: ${outputEntityMap.size()}"
         if (outputEntityMap.isEmpty()) {
-            log.debug "OUTPUT is empty"
+            log.debug "Prov OUTPUT is empty"
         } else {
             for (Map.Entry<QualifiedName, Entity> entity : outputEntityMap.entrySet()) {
                 provDocument.getStatementOrBundle().add(entity.value)
@@ -126,8 +126,14 @@ public class ProvenanceGenerator {
          */
         generateOutputEntity(trace, outputList, activity_object)
 
-        //TODO ERRO WITH QN
-        // generateSoftwareAgent(activity_object,trace)
+        /**
+         * Generate the Agent with the information:
+         * script used
+         * container name
+         * container hash
+         * container technology
+         */
+        generateSoftwareAgent(trace,activity_object)
     }
 
     public void generateProvFile(Document provDocument){
@@ -173,14 +179,19 @@ public class ProvenanceGenerator {
         activity_object.setEndTime(gregorianEnd)
     }
 
-    private void generateSoftwareAgent(Activity activity_object, TraceRecord trace){
-        String associatedWithId = "${associatedWith_prefix}_${trace.getTaskId()}"
-        String softwareId = "${agent_prefix}_${activity_object.getId()}"
+    private void generateSoftwareAgent(TraceRecord trace, Activity activity_object){
+        String associatedWithId = "${associatedWith_prefix}${trace.getTaskId()}"
+        String softwareId = "${agent_prefix}${activity_object.getId().localPart}"
 
         Agent softwareAgent = new org.openprovenance.prov.xml.Agent()
         softwareAgent.setId(qn(softwareId.toString()))
-        pFactory.addLabel(softwareAgent, trace.get('script').toString())
+        pFactory.addLabel(softwareAgent, cleanScript(trace.get('script').toString()))
         pFactory.newAgent(softwareAgent)
+
+        //TODO incluir informacion CONTAINER!
+        // name , technology + hash
+        Object containerAux = trace.get('container').toString()
+        pFactory.addType(softwareAgent, containerAux, qn("ContainerName"))
 
         WasAssociatedWith associatedWith = pFactory.newWasAssociatedWith(qn(associatedWithId.toString()),activity_object.getId(),softwareAgent.getId()) //id, activity, agent
 
@@ -270,9 +281,12 @@ public class ProvenanceGenerator {
         return bytesToHex(elementHash)
     }
 
-    String bytesToHex(byte[] bytes) {
+    private String bytesToHex(byte[] bytes) {
         StringBuffer result = new StringBuffer();
         for (byte byt : bytes) result.append(Integer.toString((byt & 0xff) + 0x100, 16).substring(1));
         return result.toString();
+    }
+    private String cleanScript(String script){
+        return script.trim()
     }
 }
