@@ -40,6 +40,7 @@ import nextflow.util.HistoryFile.Record
  * Implements cache clean up command
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Lorenz Gerber <lorenzottogerber@gmail.com>
  */
 @Slf4j
 @CompileStatic
@@ -65,6 +66,9 @@ class CmdClean extends CmdBase implements CacheBase {
 
     @Parameter(names='-but', description = 'Clean up all runs except the specified one')
     String but
+
+    @Parameter(names=['-k', '-keep-logs'], description = 'Removes only temporary files but keeps execution logs and metadata')
+    boolean keepLogs
 
     @Parameter
     List<String> args
@@ -175,9 +179,14 @@ class CmdClean extends CmdBase implements CacheBase {
         def deleted = currentCacheDb.removeTaskEntry(hash)
         if( deleted ) {
             // delete folder
-            if( deleteFolder(FileHelper.asPath(record.workDir))) {
-                if(!quiet) println "Removed ${record.workDir}"
+            if( deleteFolder(FileHelper.asPath(record.workDir), keepLogs)) {
+                if(keepLogs){
+                    if(!quiet) println "Removed Temp Files from ${record.workDir}"
+                } else {
+                    if(!quiet) println "Removed ${record.workDir}"
+                }
             }
+
         }
     }
 
@@ -189,7 +198,7 @@ class CmdClean extends CmdBase implements CacheBase {
      * @return
      *      {@code true} in the directory was removed, {@code false}  otherwise
      */
-    private boolean deleteFolder( Path folder ) {
+    private boolean deleteFolder( Path folder, boolean keepLogs ) {
 
         def result = true
         Files.walkFileTree(folder, new FileVisitor<Path>() {
@@ -201,7 +210,9 @@ class CmdClean extends CmdBase implements CacheBase {
 
             @Override
             FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                if( !file.delete() ) {
+
+                final canDelete = !keepLogs || ( keepLogs &&  !(file.name.startsWith('.command.')  || file.name == '.exitcode'))
+                if( canDelete && !file.delete() ) {
                     result = false
                     if(!quiet) System.err.println "Failed to remove $file"
                 }
@@ -216,11 +227,12 @@ class CmdClean extends CmdBase implements CacheBase {
 
             @Override
             FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                if( result && !dir.delete() ) {
-                    result = false
-                    if(!quiet) System.err.println "Failed to remove $dir"
+                if(!keepLogs){
+                    if( result && !dir.delete() ) {
+                        result = false
+                        if(!quiet) System.err.println "Failed to remove $dir"
+                    }
                 }
-
                 result ? FileVisitResult.CONTINUE : FileVisitResult.TERMINATE
             }
         })
