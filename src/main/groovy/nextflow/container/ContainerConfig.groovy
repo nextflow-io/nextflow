@@ -48,4 +48,18 @@ class ContainerConfig extends LinkedHashMap {
     String getEngine() {
         get('engine')
     }
+
+    List<String> getEnvWhitelist() {
+        def result = get('envWhitelist')
+        if( !result )
+            return Collections.emptyList()
+
+        if( result instanceof CharSequence )
+            return result.tokenize(',').collect { it.trim() }
+
+        if( result instanceof List )
+            return result
+
+        throw new IllegalArgumentException("Not a valid `envWhitelist` argument")
+    }
 }

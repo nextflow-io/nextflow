@@ -553,6 +553,15 @@ class ConfigBuilder {
             }
         }
 
+        // -- sets the messages options
+        if( cmdRun.withWebLog ) {
+            if( !(config.weblog instanceof Map) )
+                config.weblog = [:]
+            config.weblog.enabled = true
+            if ( !config.weblog.url )
+                config.weblog.url = cmdRun.withWebLog
+        }
+
 
         // -- add the command line parameters to the 'taskConfig' object
         if( cmdRun.params || cmdRun.paramsFile )

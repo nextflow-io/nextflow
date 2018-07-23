@@ -18,7 +18,7 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.executor
+package nextflow.cloud.aws.batch
 
 import java.nio.file.Files
 
@@ -137,6 +137,45 @@ class AwsBatchScriptLauncherTest extends Specification {
                     unset IFS
                 }
 
+                nxf_s3_download() {
+                    local source=\$1
+                    local target=\$2
+                    local file_name=\$(basename \$1)
+                    local is_dir=\$(/conda/bin/aws --region eu-west-1 s3 ls \$source | grep -F "PRE \${file_name}/" -c)
+                    if [[ \$is_dir == 1 ]]; then
+                        /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --recursive "\$source" "\$target"
+                    else 
+                        /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors "\$source" "\$target"
+                    fi
+                }
+                
+                nxf_parallel() {
+                    local cmd=("\$@")
+                    local cpus=\$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
+                    local max=\$(if (( cpus>16 )); then echo 16; else echo \$cpus; fi)
+                    local i=0
+                    local pid=()
+                    (
+                    set +u
+                    while ((i<\${#cmd[@]})); do
+                        local copy=()
+                        for x in "\${pid[@]}"; do
+                          [[ -e /proc/\$x ]] && copy+=(\$x) 
+                        done
+                        pid=("\${copy[@]}")
+                
+                        if ((\${#pid[@]}>=\$max)); then 
+                          sleep 1 
+                        else 
+                          eval "\${cmd[\$i]}" &
+                          pid+=(\$!)
+                          ((i+=1))
+                        fi 
+                    done
+                    ((\${#pid[@]}>0)) && wait \${pid[@]}
+                    )
+                }     
+
                 echo start | /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors - s3:/${folder}/.command.begin
                 # task environment
                 export FOO="1"
@@ -144,10 +183,13 @@ class AwsBatchScriptLauncherTest extends Specification {
 
                 [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
                 # stage input files
+                downloads=()
                 rm -f .command.sh
                 rm -f .command.in
-                /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors s3:/${folder}/.command.sh .command.sh
-                /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors s3:/${folder}/.command.in .command.in
+                downloads+=("nxf_s3_download s3:/$folder/.command.sh .command.sh")
+                downloads+=("nxf_s3_download s3:/$folder/.command.in .command.in")
+                nxf_parallel "\${downloads[@]}"
+
 
                 set +e
                 ctmp=\$(set +u; nxf_mktemp /dev/shm 2>/dev/null || nxf_mktemp \$TMPDIR)
@@ -282,15 +324,57 @@ class AwsBatchScriptLauncherTest extends Specification {
                     unset IFS
                 }
 
+                nxf_s3_download() {
+                    local source=\$1
+                    local target=\$2
+                    local file_name=\$(basename \$1)
+                    local is_dir=\$(aws s3 ls \$source | grep -F "PRE \${file_name}/" -c)
+                    if [[ \$is_dir == 1 ]]; then
+                        aws s3 cp --only-show-errors --recursive "\$source" "\$target"
+                    else 
+                        aws s3 cp --only-show-errors "\$source" "\$target"
+                    fi
+                }
+                
+                nxf_parallel() {
+                    local cmd=("\$@")
+                    local cpus=\$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
+                    local max=\$(if (( cpus>16 )); then echo 16; else echo \$cpus; fi)
+                    local i=0
+                    local pid=()
+                    (
+                    set +u
+                    while ((i<\${#cmd[@]})); do
+                        local copy=()
+                        for x in "\${pid[@]}"; do
+                          [[ -e /proc/\$x ]] && copy+=(\$x) 
+                        done
+                        pid=("\${copy[@]}")
+                
+                        if ((\${#pid[@]}>=\$max)); then 
+                          sleep 1 
+                        else 
+                          eval "\${cmd[\$i]}" &
+                          pid+=(\$!)
+                          ((i+=1))
+                        fi 
+                    done
+                    ((\${#pid[@]}>0)) && wait \${pid[@]}
+                    )
+                }     
+
                 echo start | aws s3 cp --only-show-errors - s3:/${folder}/.command.begin
                 [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
                 # stage input files
+                downloads=()
                 rm -f .command.sh
                 rm -f .command.stub
                 rm -f .command.in
-                aws s3 cp --only-show-errors s3:/${folder}/.command.sh .command.sh
-                aws s3 cp --only-show-errors s3:/${folder}/.command.stub .command.stub
-                aws s3 cp --only-show-errors s3:/${folder}/.command.in .command.in
+                downloads+=("nxf_s3_download s3:/$folder/.command.sh .command.sh")
+                downloads+=("nxf_s3_download s3:/$folder/.command.stub .command.stub")
+                downloads+=("nxf_s3_download s3:/$folder/.command.in .command.in")
+                nxf_parallel "\${downloads[@]}"
+
 
                 set +e
                 ctmp=\$(set +u; nxf_mktemp /dev/shm 2>/dev/null || nxf_mktemp \$TMPDIR)
@@ -310,8 +394,10 @@ class AwsBatchScriptLauncherTest extends Specification {
                 nxf_s3_upload .command.err s3:/${folder} || true
                 # copies output files to target
                 if [[ \${ret:=0} == 0 ]]; then
-                  nxf_s3_upload 'foo.txt' s3:/${folder} || true
-                  nxf_s3_upload 'bar.fastq' s3:/${folder} || true
+                  uploads=()
+                  uploads+=("nxf_s3_upload 'foo.txt' s3:/$folder")
+                  uploads+=("nxf_s3_upload 'bar.fastq' s3:/$folder")
+                  nxf_parallel "\${uploads[@]}"
                 fi
                 nxf_s3_upload .command.trace s3:/${folder} || true
                 """
@@ -351,4 +437,5 @@ class AwsBatchScriptLauncherTest extends Specification {
         cleanup:
         folder?.deleteDir()
     }
+
 }

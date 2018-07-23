@@ -90,6 +90,12 @@ class SingularityBuilderTest extends Specification {
                 .addEnv(ALPHA:'aaa', BETA: 'bbb')
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" SINGULARITYENV_X=1 SINGULARITYENV_ALPHA="aaa" SINGULARITYENV_BETA="bbb" singularity exec busybox'
+
+        new SingularityBuilder('busybox')
+                .addEnv('CUDA_VISIBLE_DEVICES')
+                .build()
+                .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" ${CUDA_VISIBLE_DEVICES:+SINGULARITYENV_CUDA_VISIBLE_DEVICES="$CUDA_VISIBLE_DEVICES"} singularity exec busybox'
+
     }
 
 
@@ -111,5 +117,16 @@ class SingularityBuilderTest extends Specification {
         cmd == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec ubuntu.img /bin/sh -c "cd $PWD; bwa --this --that file.fastq"'
 
 
+    }
+
+    def 'test singularity env'() {
+
+        given:
+        def builder = [:] as SingularityBuilder
+
+        expect:
+        builder.makeEnv('X=1').toString() == 'SINGULARITYENV_X=1'
+        builder.makeEnv([VAR_X:1, VAR_Y: 2]).toString() == 'SINGULARITYENV_VAR_X="1" SINGULARITYENV_VAR_Y="2"'
+        builder.makeEnv('BAR').toString() == '${BAR:+SINGULARITYENV_BAR="$BAR"}'
     }
 }

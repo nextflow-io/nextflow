@@ -46,6 +46,10 @@ class PodOptions {
 
     private Collection<PodVolumeClaim> mountClaims
 
+    private Map<String,String> labels = [:]
+
+    private PodSecurityContext securityContext
+
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
         envVars = new HashSet<>(size)
@@ -79,10 +83,19 @@ class PodOptions {
             mountConfigMaps << new PodMountConfig(entry)
         }
         else if( entry.mountPath && entry.volumeClaim ) {
-            mountClaims << new PodVolumeClaim(entry.volumeClaim as String, entry.mountPath as String)
+            mountClaims << new PodVolumeClaim(entry)
         }
         else if( entry.pullPolicy || entry.imagePullPolicy ) {
             this.pullPolicy = entry.pullPolicy ?: entry.imagePullPolicy as String
+        }
+        else if( entry.label && entry.value ) {
+            this.labels.put(entry.label as String, entry.value as String)
+        }
+        else if( entry.runAsUser != null ) {
+            this.securityContext = new PodSecurityContext(entry.runAsUser)
+        }
+        else if( entry.securityContext instanceof Map ) {
+            this.securityContext = new PodSecurityContext(entry.securityContext as Map)
         }
         else 
             throw new IllegalArgumentException("Unknown pod options: $entry")
@@ -97,7 +110,21 @@ class PodOptions {
 
     Collection<PodVolumeClaim> getVolumeClaims() { mountClaims }
 
+    Map<String,String> getLabels() { labels }
+
+    PodSecurityContext getSecurityContext() { securityContext }
+
+    PodOptions setSecurityContext( PodSecurityContext ctx) {
+        this.securityContext = ctx
+        return this
+    }
+
     String getPullPolicy() { pullPolicy }
+
+    PodOptions setPullPolicy( String p ) {
+        this.pullPolicy = p
+        return this
+    }
 
     PodOptions plus( PodOptions other ) {
         def result = new PodOptions()
@@ -116,6 +143,11 @@ class PodOptions {
         // volume claims
         result.volumeClaims.addAll( volumeClaims )
         result.volumeClaims.addAll( other.volumeClaims )
+
+        if( other.securityContext )
+            result.securityContext = other.securityContext
+        else
+            result.securityContext = securityContext
 
         return result
     }

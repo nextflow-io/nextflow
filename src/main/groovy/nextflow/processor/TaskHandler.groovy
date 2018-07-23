@@ -98,7 +98,7 @@ public abstract class TaskHandler {
      *
      * @param status The sask status as defined by {@link TaskStatus}
      */
-    def void setStatus( TaskStatus status ) {
+    void setStatus( TaskStatus status ) {
 
         // skip if the status is the same aam
         if ( this.status == status || status == null )

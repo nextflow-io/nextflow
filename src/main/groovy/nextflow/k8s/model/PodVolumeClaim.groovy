@@ -40,17 +40,23 @@ class PodVolumeClaim {
 
     String mountPath
 
-    PodVolumeClaim(String name, String mount) {
+    String subPath
+
+    PodVolumeClaim(String name, String mount, String subPath=null) {
+        assert name
+        assert mount
         this.claimName = name
         this.mountPath = sanitize(mount)
+        this.subPath = subPath
         validate(mountPath)
     }
 
     PodVolumeClaim(Map entry) {
-        assert entry.claimName
+        assert entry.volumeClaim
         assert entry.mountPath
-        this.claimName = entry.claimName
+        this.claimName = entry.volumeClaim
         this.mountPath = sanitize(entry.mountPath)
+        this.subPath = entry.subPath
         validate(mountPath)
     }
 
