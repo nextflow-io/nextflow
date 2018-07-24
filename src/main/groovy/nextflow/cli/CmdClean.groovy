@@ -121,7 +121,7 @@ class CmdClean extends CmdBase implements CacheBase {
         currentCacheDb.close()
 
         // -- STOP HERE !
-        if( dryRun ) return
+        if( dryRun || keepLogs ) return
 
         // -- remove the index file
         currentCacheDb.deleteIndex()
@@ -175,9 +175,16 @@ class CmdClean extends CmdBase implements CacheBase {
             return
         }
 
-        // decrement the ref count in the db
-        def deleted = currentCacheDb.removeTaskEntry(hash)
-        if( deleted ) {
+        // success for reduce ref count in the db is
+        // used as trigger to proceed with delete. In
+        // case of keepLogs, proceed by default
+        def proceed
+        if (keepLogs){
+            proceed = true
+        } else {
+            proceed = currentCacheDb.removeTaskEntry(hash)
+        }
+        if( proceed ) {
             // delete folder
             if( deleteFolder(FileHelper.asPath(record.workDir), keepLogs)) {
                 if(!quiet) printMessage(record.workDir,false)
@@ -236,7 +243,7 @@ class CmdClean extends CmdBase implements CacheBase {
                     result = false
                     if(!quiet) System.err.println "Failed to remove $dir"
                 }
-                
+
                 result ? FileVisitResult.CONTINUE : FileVisitResult.TERMINATE
             }
         })
