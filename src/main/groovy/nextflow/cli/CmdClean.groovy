@@ -67,7 +67,7 @@ class CmdClean extends CmdBase implements CacheBase {
     @Parameter(names='-but', description = 'Clean up all runs except the specified one')
     String but
 
-    @Parameter(names=['-k', '-keep-logs'], description = 'Removes only temporary files but keeps execution logs and metadata')
+    @Parameter(names=['-k', '-keep-logs'], description = 'Removes only temporary files but retains execution log entries and metadata')
     boolean keepLogs
 
     @Parameter
@@ -121,7 +121,7 @@ class CmdClean extends CmdBase implements CacheBase {
         currentCacheDb.close()
 
         // -- STOP HERE !
-        if( dryRun ) return
+        if( dryRun || keepLogs ) return
 
         // -- remove the index file
         currentCacheDb.deleteIndex()
@@ -171,22 +171,27 @@ class CmdClean extends CmdBase implements CacheBase {
     private void removeRecord(HashCode hash, TraceRecord record, int refCount) {
         if( dryRun ) {
             if( wouldRemove(hash,refCount) )
-                println "Would remove ${record.workDir}"
+                printMessage(record.workDir,true)
             return
         }
 
         // decrement the ref count in the db
-        def deleted = currentCacheDb.removeTaskEntry(hash)
-        if( deleted ) {
+        def proceed = keepLogs || currentCacheDb.removeTaskEntry(hash)
+        if( proceed ) {
             // delete folder
             if( deleteFolder(FileHelper.asPath(record.workDir), keepLogs)) {
-                if(keepLogs){
-                    if(!quiet) println "Removed Temp Files from ${record.workDir}"
-                } else {
-                    if(!quiet) println "Removed ${record.workDir}"
-                }
+                if(!quiet) printMessage(record.workDir,false)
             }
 
+        }
+    }
+
+    private printMessage(String path, boolean dryRun) {
+        if( dryRun ) {
+            println keepLogs ? "Would remove temp files from ${path}" : "Would remove ${path}"
+        }
+        else {
+            println keepLogs ? "Removed temp files from ${path}" : "Removed ${path}"
         }
     }
 
@@ -227,12 +232,11 @@ class CmdClean extends CmdBase implements CacheBase {
 
             @Override
             FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                if(!keepLogs){
-                    if( result && !dir.delete() ) {
-                        result = false
-                        if(!quiet) System.err.println "Failed to remove $dir"
-                    }
+                if( !keepLogs && result && !dir.delete() ) {
+                    result = false
+                    if(!quiet) System.err.println "Failed to remove $dir"
                 }
+                
                 result ? FileVisitResult.CONTINUE : FileVisitResult.TERMINATE
             }
         })
