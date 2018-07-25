@@ -198,6 +198,8 @@ class Session implements ISession {
 
     WorkflowStats getWorkflowStats() { workflowStats }
 
+    private Map provMap =[:]
+
     /**
      * Creates a new session with an 'empty' (default) configuration
      */
@@ -318,9 +320,7 @@ class Session implements ISession {
 
         cache = new CacheDB(uniqueId,runName).open()
 
-        String commandLine = System.getenv('NXF_CLI')
-        String nfVersion = Launcher.getVersion()
-        cache.getProvMetadata(uniqueId, runName, config, baseDir,commandLine, nfVersion)
+//TODO maybe chache.store...
     }
 
     /**
@@ -562,6 +562,10 @@ class Session implements ISession {
             execService.shutdown()
             execService = null
             log.trace "Session > executor shutdown"
+
+            // save provenance information
+            this.storeProvMetadata()
+            cache?.writeProvFile(provMap)
 
             // -- close db
             cache?.close()
@@ -1045,6 +1049,40 @@ class Session implements ISession {
         find.setAccessible(true)
         return find.invoke(ClassLoader.getSystemClassLoader(), className)
     }
+    void storeProvMetadata(){
 
+        String commandLine = System.getenv('NXF_CLI')
+        String nfVersion = Launcher.getVersion()
+        runName.substring(1, runName.length()-1)
 
+        provMap.put("uuid",uniqueId)
+        provMap.put("runName",runName)
+        provMap.put("baseDir",baseDir)
+        provMap.put("outDir",getManifestField(config, "outdir")) //TODO another way to capture IT!
+        provMap.put("commandLine",commandLine)
+        provMap.put("author",getManifestField(config, "author"))
+        provMap.put("orcid",getManifestField(config, "orcid"))//TODO allow author ORCID on nextflow.config.manifest ?
+        provMap.put("nfVersion",nfVersion)
+
+    }
+    private String getManifestField(Map config, String field){
+        if (config.containsKey("manifest")){
+            Map configMap = config.get("manifest")
+            if (configMap.containsKey(field)){
+                return configMap.get(field)
+            }else{
+                log.debug "configMap doesnt have ${field} declared"
+                return "not_defined" //have to be the same value than ResearchObjectGenerator.groovy/getFieldMap(provMap)
+            }
+        }else{
+            log.debug "configMap doesnt have a Manifest declared"
+            return "not_defined"        //have to be the same value than ResearchObjectGenerator.groovy/getFieldMap(provMap)
+        }
+    }
+
+    public void printMap(Map map){
+        for (Map.Entry<String, String> element : map.entrySet()){
+            print   "-->>value: ..${element.getKey()}..  -- ${element.getValue()} \n"
+        }
+    }
 }

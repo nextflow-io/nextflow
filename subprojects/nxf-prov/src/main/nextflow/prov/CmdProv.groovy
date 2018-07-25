@@ -8,8 +8,6 @@ import nextflow.util.HistoryFile
 import org.apache.taverna.robundle.Bundle
 import org.openprovenance.prov.model.Document
 
-import java.nio.file.Paths
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
