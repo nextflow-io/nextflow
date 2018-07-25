@@ -1,6 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.31.0 - 25 Jul 2018
+- Fixed CLI parameter value starting with a `-` is misinterpreted #808
+- Added keep-logs option to clean command #775
+
 0.31.0-RC1 - 19 Jul 2018
 - Fixed K8s pod request should include resources spec when 1 cpu is specified #806
 - Fixed PBS executor should fail when submit response contains invalid data #753
