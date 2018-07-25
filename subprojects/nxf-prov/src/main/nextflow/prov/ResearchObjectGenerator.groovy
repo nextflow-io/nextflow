@@ -2,9 +2,7 @@ package nextflow.prov
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.cli.Launcher
 import nextflow.trace.TraceRecord
-import nextflow.util.Duration
 import org.apache.taverna.robundle.Bundle
 import org.apache.taverna.robundle.Bundles
 import org.apache.taverna.robundle.manifest.Agent
@@ -12,8 +10,6 @@ import org.apache.taverna.robundle.manifest.Manifest
 import org.apache.taverna.robundle.manifest.PathMetadata
 
 import java.nio.file.*
-import java.security.DigestInputStream
-import java.security.MessageDigest
 import java.text.SimpleDateFormat
 
 /**
@@ -131,11 +127,10 @@ public class ResearchObjectGenerator {
         def result = getFilesFromDir(baseDir).tokenize('\n')
         log.info "Get Files from workflow dir DONE"
         for (element in result){
-            //println("** ** ** workflow path: >>${baseDir}/${element}<< ")
             Path auxPath = Paths.get("${baseDir}/${element}")
-            //log.info "Get Path from workflow dir DONE"
+            log.info "Get Path from .${element}. workflow dir path: ${auxPath} >> >> DONE"
             fileToBundle(bundle, auxPath,auxPath.getFileName().toString(),workflowFolderName)
-            //log.info "File workdir into bundle DONE"
+            log.info "File ${auxPath.getFileName().toString()} workdir into bundle DONE"
         }
         log.info "Generate Workflow folder DONE"
 
@@ -273,7 +268,7 @@ public class ResearchObjectGenerator {
     }
 
     private String getFieldMap(Map map, String field){
-        if(map.get(field) != "null"){ //from map to string to file -> to map again... we miss the "concept" null, and it stay as a string value
+        if(map.get(field) != "not_defined"){ //from map to string to file -> to map again... we miss the "concept" null, and it stay as a string value
             return map.get(field)
         }else{
             log.warn("The field ${field} is not configured on the project.")

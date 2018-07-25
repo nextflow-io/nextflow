@@ -1,7 +1,5 @@
 package nextflow.prov
 
-import nextflow.Session
-import nextflow.trace.ProvObserver
 import spock.lang.Specification
 
 /**
@@ -11,7 +9,7 @@ import spock.lang.Specification
 //def session = Mock(Session)
 //session.getConfig() >> [manifest: manifest]
 class ResearchObjectGeneratorTest extends Specification {
-
+/*
     def 'check author from Manifest' (){
         given:
         def manifest = [author:'AuthorFoo']
@@ -103,4 +101,5 @@ class ResearchObjectGeneratorTest extends Specification {
     def 'check provenance file'(){
         //check if prov file exist
     }
+ */
 }

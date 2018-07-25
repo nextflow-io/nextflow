@@ -18,7 +18,7 @@ import java.security.MessageDigest
 @CompileStatic
 public class ProvenanceGenerator {
     enum ProvenanceType {
-        activityType, SHA256, fileSize, fileName
+        activityType, SHA256, fileSize, fileName, containerName
     }
     //** PROV info **
     public static final String PROVBOOK_NS = "prov";
@@ -188,10 +188,10 @@ public class ProvenanceGenerator {
         pFactory.addLabel(softwareAgent, cleanScript(trace.get('script').toString()))
         pFactory.newAgent(softwareAgent)
 
-        //TODO incluir informacion CONTAINER!
+        //TODO include information about CONTAINER!
         // name , technology + hash
         Object containerAux = trace.get('container').toString()
-        pFactory.addType(softwareAgent, containerAux, qn("ContainerName"))
+        pFactory.addType(softwareAgent, containerAux, qn(ProvenanceType.containerName.toString()))
 
         WasAssociatedWith associatedWith = pFactory.newWasAssociatedWith(qn(associatedWithId.toString()),activity_object.getId(),softwareAgent.getId()) //id, activity, agent
 
