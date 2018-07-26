@@ -1739,6 +1739,7 @@ The ``pod`` directive allows the definition of the following options:
 ``secret: <S/K>, mountPath: </absolute/path>``    The content of the `Secret <https://kubernetes.io/docs/concepts/configuration/secret/>`_ with name ``S`` with key ``K`` is made available to the path ``/absolute/path``. When the key component is omitted the path is interpreted as a directory and all the `Secret` entries are exposed in that path.
 ``volumeClaim: <V>, mountPath: </absolute/path>`` Mounts a `Persistent volume claim <https://kubernetes.io/docs/concepts/storage/persistent-volumes/>`_ with name ``V`` to the specified path location. Use the optional `subPath` parameter to mount a directory inside the referenced volume instead of its root.
 ``imagePullPolicy: <V>``                          Specifies the strategy to be used to pull the container image e.g. ``imagePullPolicy: 'Always'``.
+``imagePullSecret: <V>``                          Specifies the secret name to access a private container image registry. See `Kubernetes documentation <https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod>`_ for details.
 ``runAsUser: <UID>``                              Specifies the user ID to be used to run the container.
 ================================================= =================================================
 

@@ -38,6 +38,8 @@ class PodOptions {
 
     private String imagePullPolicy
 
+    private String imagePullSecret
+
     private Collection<PodEnv> envVars
 
     private Collection<PodMountConfig> mountConfigMaps
@@ -88,6 +90,9 @@ class PodOptions {
         else if( entry.pullPolicy || entry.imagePullPolicy ) {
             this.imagePullPolicy = entry.pullPolicy ?: entry.imagePullPolicy as String
         }
+        else if( entry.imagePullSecret || entry.imagePullSecrets ) {
+            this.imagePullSecret = entry.imagePullSecret ?: entry.imagePullSecrets
+        }
         else if( entry.label && entry.value ) {
             this.labels.put(entry.label as String, entry.value as String)
         }
@@ -118,6 +123,8 @@ class PodOptions {
         this.securityContext = ctx
         return this
     }
+
+    String getImagePullSecret() { imagePullSecret }
 
     String getImagePullPolicy() { imagePullPolicy }
 

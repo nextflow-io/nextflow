@@ -428,6 +428,7 @@ class PodSpecBuilderTest extends Specification {
         def spec = builder.withPodOptions(opts).build()
         then:
         2 * opts.getImagePullPolicy() >> 'always'
+        2 * opts.getImagePullSecret() >> 'myPullSecret'
         2 * opts.getVolumeClaims() >> [ new PodVolumeClaim('pvc1', '/work') ]
         2 * opts.getMountConfigMaps() >> [ new PodMountConfig('data', '/home/user') ]
         2 * opts.getMountSecrets() >> [ new PodMountSecret('blah', '/etc/secret.txt') ]
@@ -445,6 +446,7 @@ class PodSpecBuilderTest extends Specification {
                 spec: [
                         restartPolicy:'Never',
                         securityContext: [ runAsUser: 1000 ],
+                        imagePullSecrets: [ name: 'myPullSecret' ],
                         containers:[
                                 [name:'foo',
                                  image:'image',
