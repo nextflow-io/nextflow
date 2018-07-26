@@ -43,6 +43,8 @@ class PodSpecBuilder {
 
     String imagePullPolicy
 
+    String imagePullSecret
+
     List<String> command = []
 
     Map<String,String> labels = [:]
@@ -200,6 +202,8 @@ class PodSpecBuilder {
         // -- pull policy
         if( opts.imagePullPolicy )
             imagePullPolicy = opts.imagePullPolicy
+        if( opts.imagePullSecret )
+            imagePullSecret = opts.imagePullSecret
         // -- env vars
         if( opts.getEnvVars() )
             envVars.addAll( opts.getEnvVars() )
@@ -271,6 +275,9 @@ class PodSpecBuilder {
 
         if( securityContext )
             spec.securityContext = securityContext.toSpec()
+
+        if( imagePullSecret )
+            spec.imagePullSecrets = ((Map)[name: imagePullSecret])
 
         // add labels
         if( labels )

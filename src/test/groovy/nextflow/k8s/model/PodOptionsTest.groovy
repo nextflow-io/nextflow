@@ -57,6 +57,24 @@ class PodOptionsTest extends Specification {
         options.getImagePullPolicy() == 'latest'
     }
 
+    def 'should set imagePullSecret' () {
+
+        when:
+        def options = new PodOptions()
+        then:
+        options.imagePullSecret == null
+
+        when:
+        options = new PodOptions([ [imagePullSecret:'foo'] ])
+        then:
+        options.imagePullSecret == 'foo'
+
+        when:
+        options = new PodOptions([ [imagePullSecrets:'bar'] ])
+        then:
+        options.imagePullSecret == 'bar'
+    }
+
     def 'should return config mounts' () {
 
         given:
