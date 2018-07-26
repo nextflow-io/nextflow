@@ -21,7 +21,6 @@
 package nextflow.k8s
 
 import nextflow.Const
-import nextflow.k8s.K8sConfig
 import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.model.PodEnv
 import nextflow.k8s.model.PodSecurityContext
@@ -181,7 +180,7 @@ class K8sConfigTest extends Specification {
         when:
         opts = new K8sConfig(pod: [ [pullPolicy: 'Always'], [env: 'HELLO', value: 'WORLD'] ]).getPodOptions()
         then:
-        opts.getPullPolicy() == 'Always'
+        opts.getImagePullPolicy() == 'Always'
         opts.getEnvVars() == [ PodEnv.value('HELLO','WORLD') ] as Set
     }
 
@@ -328,6 +327,6 @@ class K8sConfigTest extends Specification {
         when:
         def cfg = new K8sConfig( pullPolicy: 'always' )
         then:
-        cfg.getPodOptions().getPullPolicy() == 'always'
+        cfg.getPodOptions().getImagePullPolicy() == 'always'
     }
 }

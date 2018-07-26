@@ -60,9 +60,9 @@ class K8sConfig implements Map<String,Object> {
 
         // -- shortcut to pod image pull-policy
         if( target.pullPolicy )
-            podOptions.pullPolicy = target.pullPolicy.toString()
+            podOptions.imagePullPolicy = target.pullPolicy.toString()
         else if( target.imagePullPolicy )
-            podOptions.pullPolicy = target.imagePullPolicy.toString()
+            podOptions.imagePullPolicy = target.imagePullPolicy.toString()
 
         // -- shortcut to pod security context
         if( target.runAsUser != null )
