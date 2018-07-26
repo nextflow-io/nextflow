@@ -44,17 +44,17 @@ class PodOptionsTest extends Specification {
         when:
         def options = new PodOptions()
         then:
-        options.getPullPolicy() == null
+        options.getImagePullPolicy() == null
         
         when:
         options = new PodOptions([ [pullPolicy:'Always'] ])
         then:
-        options.getPullPolicy() == 'Always'
+        options.getImagePullPolicy() == 'Always'
 
         when:
         options = new PodOptions([ [imagePullPolicy:'latest'] ])
         then:
-        options.getPullPolicy() == 'latest'
+        options.getImagePullPolicy() == 'latest'
     }
 
     def 'should return config mounts' () {

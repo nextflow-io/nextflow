@@ -41,7 +41,7 @@ class PodSpecBuilder {
 
     String imageName
 
-    String pullPolicy
+    String imagePullPolicy
 
     List<String> command = []
 
@@ -89,8 +89,8 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withPullPolicy(String policy) {
-        this.pullPolicy = policy
+    PodSpecBuilder withImagePullPolicy(String policy) {
+        this.imagePullPolicy = policy
         return this
     }
 
@@ -198,8 +198,8 @@ class PodSpecBuilder {
 
     PodSpecBuilder withPodOptions(PodOptions opts) {
         // -- pull policy
-        if( opts.pullPolicy )
-            pullPolicy = opts.pullPolicy
+        if( opts.imagePullPolicy )
+            imagePullPolicy = opts.imagePullPolicy
         // -- env vars
         if( opts.getEnvVars() )
             envVars.addAll( opts.getEnvVars() )
@@ -257,6 +257,9 @@ class PodSpecBuilder {
         
         if( this.workDir )
             container.put('workingDir', workDir)
+
+        if( imagePullPolicy )
+            container.imagePullPolicy = imagePullPolicy
 
         final spec = [
                 restartPolicy: restart,

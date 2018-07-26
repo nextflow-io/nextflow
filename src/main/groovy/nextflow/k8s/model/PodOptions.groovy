@@ -36,7 +36,7 @@ import groovy.transform.ToString
 @EqualsAndHashCode(includeFields = true)
 class PodOptions {
 
-    private String pullPolicy
+    private String imagePullPolicy
 
     private Collection<PodEnv> envVars
 
@@ -86,7 +86,7 @@ class PodOptions {
             mountClaims << new PodVolumeClaim(entry)
         }
         else if( entry.pullPolicy || entry.imagePullPolicy ) {
-            this.pullPolicy = entry.pullPolicy ?: entry.imagePullPolicy as String
+            this.imagePullPolicy = entry.pullPolicy ?: entry.imagePullPolicy as String
         }
         else if( entry.label && entry.value ) {
             this.labels.put(entry.label as String, entry.value as String)
@@ -119,10 +119,10 @@ class PodOptions {
         return this
     }
 
-    String getPullPolicy() { pullPolicy }
+    String getImagePullPolicy() { imagePullPolicy }
 
-    PodOptions setPullPolicy( String p ) {
-        this.pullPolicy = p
+    PodOptions setImagePullPolicy(String p ) {
+        this.imagePullPolicy = p
         return this
     }
 
