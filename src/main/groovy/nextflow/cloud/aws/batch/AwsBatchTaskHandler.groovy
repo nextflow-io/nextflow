@@ -205,10 +205,13 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      */
     @Override
     boolean checkIfRunning() {
-        if( !jobId )
+        if( !jobId || !isSubmitted() )
             return false
         final job = describeJob(jobId)
-        return job?.status in ['RUNNING', 'SUCCEEDED', 'FAILED']
+        final result = job?.status in ['RUNNING', 'SUCCEEDED', 'FAILED']
+        if( result )
+            this.status = TaskStatus.RUNNING
+        return result
     }
 
     /**
@@ -217,6 +220,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     @Override
     boolean checkIfCompleted() {
         assert jobId
+        if( !isRunning() )
+            return false
         final job = describeJob(jobId)
         final done = job?.status in ['SUCCEEDED', 'FAILED']
         if( done ) {
