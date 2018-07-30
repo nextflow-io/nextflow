@@ -109,6 +109,10 @@ The amount of resources requested by each job submission is defined by the follo
 .. note:: SLURM `partitions` can be considered jobs queues. Nextflow allows to set partitions by using the above ``queue``
     directive.
 
+.. tip:: Nextflow does not provide a direct support for SLURM multi-clusters feature. If you need to
+  submit workflow executions to a cluster that is not the current one, specify it setting the
+  ``SLURM_CLUSTERS`` variable in the launching environment. 
+
 .. _pbs-executor:
 
 PBS/Torque
