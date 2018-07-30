@@ -138,4 +138,9 @@ class VersionNumberTest extends Specification {
         '1.2'       | '2+'          | false
     }
 
+    def 'should match hashCode' () {
+        expect:
+        new VersionNumber('1.0.0').hashCode() == new VersionNumber('1.0.0').hashCode()
+        new VersionNumber('1.0.0').hashCode() != new VersionNumber('1.0.1').hashCode()
+    }
 }
