@@ -11,7 +11,7 @@ import org.apache.taverna.robundle.manifest.PathMetadata
 
 import java.nio.file.*
 import java.text.SimpleDateFormat
-
+import groovy.io.FileType
 /**
  * Created by edgar on 19/06/18.
  */
@@ -124,11 +124,11 @@ public class ResearchObjectGenerator {
     }
 
     public void generateWorkflowFolder(Bundle bundle){
-        def result = getFilesFromDir(baseDir).tokenize('\n')
+        def result = getFilesFromDir(baseDir)
         log.info "Get Files from workflow dir DONE"
         for (element in result){
             Path auxPath = Paths.get("${baseDir}/${element}")
-            log.info "Get Path from .${element}. workflow dir path: ${auxPath} >> >> DONE"
+            log.info "Get Path from .${element}. workflow dir path: ${auxPath} DONE"
             fileToBundle(bundle, auxPath,auxPath.getFileName().toString(),workflowFolderName)
             log.info "File ${auxPath.getFileName().toString()} workdir into bundle DONE"
         }
@@ -151,12 +151,15 @@ public class ResearchObjectGenerator {
 
     }
 
-    private String getFilesFromDir(String dir){
-        def proc = "ls ${dir}".execute()
-        def b = new StringBuffer()
-        proc.consumeProcessErrorStream(b)
-        def resultado = proc.text
-        return resultado
+    private List getFilesFromDir(String dir){
+        //https://stackoverflow.com/questions/3953965/get-a-list-of-all-the-files-in-a-directory-recursive
+        def list = []
+
+        def dire = new File(dir)
+        dire.eachFileRecurse (FileType.FILES) { file ->
+            list << file
+        }
+        return list
     }
 
     private Path generateMetadataFile(){
@@ -172,15 +175,10 @@ public class ResearchObjectGenerator {
         return metadataFile
     }
 
-    /*private File provDocumentToFile(String provenanceFileName){
-        File file = new File(provenanceFileName)
-        return file
-    }*/
-
     public void getCleanInputFiles(TraceRecord trace){
         def inputFiles = trace.getFmtStr("input")
         inputFiles= inputFiles.replaceAll("\\s","")//remove whitespace from the string
-        List<String> inputList = Arrays.asList(inputFiles.split(";"));
+        List<String> inputList = Arrays.asList(inputFiles.split(';'));
 
         for (inputElem in inputList){
             if (!inputElem.contains(/work/)){
@@ -245,7 +243,7 @@ public class ResearchObjectGenerator {
     private List getOutDirFiles(String outDirFolder){
         if (outDirFolder!=null){
             log.info "OutDir folder exist"
-            return getFilesFromDir(outDirFolder).tokenize('\n')
+            return getFilesFromDir(outDirFolder)
         }
         log.warn "OutDir folder NOT exist"
     }

@@ -73,24 +73,10 @@ class CmdProv extends CmdBase {
         /**
          * Generate Workflow folder
          */
-        //TODO check random ERROR
+        //DONE check random ERROR -> it was getFilesFromDir
         //  Exception in thread "Thread-1" groovy.lang.GroovyRuntimeException: exception while reading process stream
         //  at org.codehaus.groovy.runtime.ProcessGroovyMethods$TextDumper.run(ProcessGroovyMethods.java:496)
-        //
-        // at java.lang.Thread.run(Thread.java:748)
-        // Caused by: java.io.IOException: Stream closed
-        // 	    at java.io.BufferedInputStream.getBufIfOpen(BufferedInputStream.java:170)
-        //  	at java.io.BufferedInputStream.read(BufferedInputStream.java:336)
-        //	    at sun.nio.cs.StreamDecoder.readBytes(StreamDecoder.java:284)
-        //	    at sun.nio.cs.StreamDecoder.implRead(StreamDecoder.java:326)
-        //	    at sun.nio.cs.StreamDecoder.read(StreamDecoder.java:178)
-        //	    at java.io.InputStreamReader.read(InputStreamReader.java:184)
-        //	    at java.io.BufferedReader.fill(BufferedReader.java:161)
-        //	    at java.io.BufferedReader.readLine(BufferedReader.java:324)
-        //	    at java.io.BufferedReader.readLine(BufferedReader.java:389)
-        //	    at org.codehaus.groovy.runtime.ProcessGroovyMethods$TextDumper.run(ProcessGroovyMethods.java:489)
-        //	    ... 1 more
-        roGenerator.generateWorkflowFolder(bundle)
+        //        roGenerator.generateWorkflowFolder(bundle)
         /**
          * Generate the Data folder with th input files
          */
@@ -98,7 +84,7 @@ class CmdProv extends CmdBase {
         /**
          * Generate the Output folder
          */
-        //TODO check random ERROR
+        //DONE check random ERROR -> it was getFilesFromDir
         //  Exception in thread "Thread-1" groovy.lang.GroovyRuntimeException: exception while reading process stream
         //  at org.codehaus.groovy.runtime.ProcessGroovyMethods$TextDumper.run(ProcessGroovyMethods.java:496)
         //
