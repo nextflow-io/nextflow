@@ -149,6 +149,10 @@ public class CacheHelper {
             return hasher.putLong(uuid.getMostSignificantBits()).putLong(uuid.getLeastSignificantBits());
         }
 
+        if( value instanceof VersionNumber ) {
+            return hasher.putInt( value.hashCode() );
+        }
+
         log.debug("[WARN] Unknown hashing type: {} -- {}", value.getClass(), value);
         return hasher.putInt( value.hashCode() );
     }
