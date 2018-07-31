@@ -74,7 +74,7 @@ public class ResearchObjectGenerator {
 
         Path outputFolderPath = bundle.getRoot().resolve(outputFolderName);
         Files.createDirectory(outputFolderPath);
-        log.info "RO structure generated"
+        log.debug "RO structure generated"
 
     }
 
@@ -88,20 +88,20 @@ public class ResearchObjectGenerator {
 
         setAggregationManifest(manifest)
 
-        log.info "set RO manifest"
+        log.debug "set RO manifest"
     }
 
     public void generateLogFile(Bundle bundle){
         File logFile = getLogInfo()
         fileToBundle(bundle,Paths.get(logFile.path),logFileName, metadataFolder)
-        log.info "Generate Log File DONE"
+        log.debug "Generate Log File DONE"
     }
 
     public void addProvenanceFile(Bundle bundle){
         File file = new File(provenanceFileName)
         fileToBundle(bundle, Paths.get(file.getPath()), provenanceFileName,metadataFolder)
         boolean result = removeFile(provenanceFileName)
-        log.info "Add prov to bundle: ${result} DONE"
+        log.debug "Add prov to bundle: ${result} DONE"
     }
 
     public void generateDataFolder(Bundle bundle){
@@ -110,7 +110,7 @@ public class ResearchObjectGenerator {
             Path auxPath = Paths.get(file)
             fileToBundle(bundle, auxPath, auxPath.getFileName().toString(), dataFolderName)
         }
-        log.info "Generate Data folder DONE"
+        log.debug "Generate Data folder DONE"
 
     }
     public Path generateOutputFolder(Bundle bundle){
@@ -119,35 +119,40 @@ public class ResearchObjectGenerator {
             Path auxPath = Paths.get(file)
             fileToBundle(bundle, auxPath, auxPath.getFileName().toString(), outputFolderName)
         }
-        log.info "Generate Output folder DONE"
+        log.debug "Generate Output folder DONE"
 
     }
 
     public void generateWorkflowFolder(Bundle bundle){
-        def result = getFilesFromDir(baseDir)
-        log.info "Get Files from workflow dir DONE"
-        for (element in result){
-            Path auxPath = Paths.get("${baseDir}/${element}")
-            log.info "Get Path from .${element}. workflow dir path: ${auxPath} DONE"
-            fileToBundle(bundle, auxPath,auxPath.getFileName().toString(),workflowFolderName)
-            log.info "File ${auxPath.getFileName().toString()} workdir into bundle DONE"
-        }
-        log.info "Generate Workflow folder DONE"
+        //TODO fix copy directory with the same structure!
+        //all files together after last change -> solution? -> add relative path to bundle ?
 
+        def result = getFilesFromDir(baseDir)
+        log.debug "Get Files from workflow dir DONE"
+        for (element in result){
+            Path auxPath = Paths.get(element.toString())
+            if (auxPath.toString().contains(".git")){   //TODO FIX encoded problem with git files
+            }else{
+                log.debug "Get Path from .${element}. workflow dir path: .${auxPath}. DONE"
+                fileToBundle(bundle, auxPath,auxPath.getFileName().toString(),workflowFolderName)
+                log.debug "File ${auxPath.getFileName().toString()} workdir into bundle DONE"
+            }
+        }
+        log.debug "Generate Workflow folder DONE"
     }
 
     public void generateSnapshot(Bundle bundle){
         File scriptFile = generateScript()
         fileToBundle(bundle,Paths.get(scriptFile.path),commandLineFileName, snapshotFolderName)
         boolean result = removeFile(commandLineFileName)
-        log.info "Generate Snapshot file: ${result}"
+        log.debug "Generate Snapshot file: ${result}"
 
     }
 
     public void generateMetadataFolder(Bundle bundle){
         Path metadataFile = generateMetadataFile()
         fileToBundle(bundle, metadataFile,metadataFileName,metadataFolder)
-        log.info "Generate Metadata folder DONE"
+        log.debug "Generate Metadata folder DONE"
 
     }
 
@@ -185,12 +190,12 @@ public class ResearchObjectGenerator {
                 this.inputFiles.add(inputElem.trim())
             }
         }
-        log.info "Get Clean Input Files (data folder)"
+        log.debug "Get Clean Input Files (data folder)"
 
     }
 
     public void getCleanOutputFiles(){
-        if (!outDirFolder.equals("null")){ // because we miss the "concept" null when we add it on the map>>file>>map
+        if (outDirFolder!=null){ // because we miss the "concept" null when we add it on the map>>file>>map
             def outDirFiles = getOutDirFiles(outDirFolder)
             File fileAux = new File ("${outDirFolder}/${outDirFiles[0].toString()}")
             String filePath = fileAux.absolutePath.substring(0,fileAux.absolutePath.lastIndexOf(File.separator));
@@ -201,20 +206,20 @@ public class ResearchObjectGenerator {
         }else{
             // NOT NEEDED, its controled on the CMDPROV --> log.warn("You need to specify the output directory inside nextflow.config/params for the RO zip file")
         }
-        log.info "Get Clean Output Files (output folder)"
+        log.debug "Get Clean Output Files (output folder)"
     }
 
     private void fileToBundle(Bundle bundle, Path filePath, String fileName, String folderName){
         if (filePath.isFile()){
             Path folderPath = bundle.getRoot().resolve(folderName);
             Path bundleFilePath = folderPath.resolve(fileName);
-            Bundles.setStringValue(bundleFilePath, filePath.text);
+            Bundles.setStringValue(bundleFilePath, filePath.text.toString());
             Files.copy(bundleFilePath, filePath, StandardCopyOption.REPLACE_EXISTING);
         }else if (filePath.isDirectory()){
             log.warn("The element: \"${fileName}\" is a directory")
             directoryToBundle(bundle,filePath,fileName,folderName)
         }
-        log.info "File to bundle: ${fileName} to ${folderName}"
+        log.debug "File to bundle: ${fileName} to ${folderName}"
     }
     private void directoryToBundle(Bundle bundle, Path filePath, String fileName, String folderName){
         //TODO NEED TO BE IMPLEMENT!!!
@@ -242,7 +247,7 @@ public class ResearchObjectGenerator {
 
     private List getOutDirFiles(String outDirFolder){
         if (outDirFolder!=null){
-            log.info "OutDir folder exist"
+            log.debug "OutDir folder exist"
             return getFilesFromDir(outDirFolder)
         }
         log.warn "OutDir folder NOT exist"
@@ -261,7 +266,7 @@ public class ResearchObjectGenerator {
             // what to do if we dont have author on the manifest?? -> WARNING?
             //Now we dont "generate" the entity --> not ORCID allow neither
         }
-        log.info "set Author info to RO manifest"
+        log.debug "set Author info to RO manifest"
 
     }
 
@@ -277,7 +282,7 @@ public class ResearchObjectGenerator {
         LinkedList<PathMetadata> aggregationList = new LinkedList<PathMetadata>()
         manifest.setAggregates(aggregationList)
 
-        log.info "Set Aggregation to RO manifest"
+        log.debug "Set Aggregation to RO manifest"
     }
 
     /*

@@ -30,9 +30,8 @@ sourceSets {
 
 dependencies {
     compile project(':')
-    compile ('org.openprovenance.prov:ProvToolbox:0.7.3')
-    compile ('org.openprovenance.prov:prov-model:0.7.3')
-    compile ('org.openprovenance.prov:prov-interop:0.7.3')
-    compile ('org.apache.taverna.language:taverna-robundle:0.15.1-incubating')
+    compile group: 'org.openprovenance.prov', name: 'ProvToolbox', version: '0.7.3', ext: 'pom'
+    compile group: 'org.openprovenance.prov', name: 'prov-model', version: '0.7.3'
+    compile group: 'org.openprovenance.prov', name: 'prov-interop', version: '0.7.3'
+    compile group: 'org.apache.taverna.language', name: 'taverna-robundle', version: '0.15.1-incubating'
 }
-

@@ -76,7 +76,7 @@ class CmdProv extends CmdBase {
         //DONE check random ERROR -> it was getFilesFromDir
         //  Exception in thread "Thread-1" groovy.lang.GroovyRuntimeException: exception while reading process stream
         //  at org.codehaus.groovy.runtime.ProcessGroovyMethods$TextDumper.run(ProcessGroovyMethods.java:496)
-        //        roGenerator.generateWorkflowFolder(bundle)
+        roGenerator.generateWorkflowFolder(bundle)
         /**
          * Generate the Data folder with th input files
          */
@@ -87,7 +87,7 @@ class CmdProv extends CmdBase {
         //DONE check random ERROR -> it was getFilesFromDir
         //  Exception in thread "Thread-1" groovy.lang.GroovyRuntimeException: exception while reading process stream
         //  at org.codehaus.groovy.runtime.ProcessGroovyMethods$TextDumper.run(ProcessGroovyMethods.java:496)
-        //
+
         roGenerator.getCleanOutputFiles()
         roGenerator.generateOutputFolder(bundle)
         /**

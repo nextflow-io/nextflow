@@ -1,5 +1,8 @@
 package nextflow.prov
 
+import nextflow.cli.CliOptions
+import nextflow.util.LoggerHelper
+
 /**
  * RO-Prov command entry point
  * 
@@ -8,9 +11,9 @@ package nextflow.prov
 class Main {
 
     static void main(String... args) {
+        LoggerHelper.configureLogger(new CliOptions(logFile: '.nextflow-prov.log'))
         CmdProv cmdProv = new CmdProv()
         cmdProv.run()
 
-        println "Hello prov!"
     }
 }
