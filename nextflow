@@ -189,7 +189,7 @@ bg=''
 dockerize=''
 declare -a jvmopts=()
 declare -a args=("$@")
-declare -a commands=(clone config drop help history info ls pull run view node console kube-run)
+declare -a commands=(clone config drop help history info ls pull run view node console kube-run prov)
 cmd=''
 while [[ $# != 0 ]]; do
     case $1 in
@@ -356,6 +356,7 @@ fi
 
 [[ "$cmd" == "console" ]] && NXF_MODE='console'
 [[ "$cmd" == "node" && ! "$NXF_MODE" ]] && NXF_MODE='ignite'
+[[ "$cmd" == "prov" ]] && NXF_MODE='prov'
 
 COLUMNS=${COLUMNS:-`tty -s && tput cols 2>/dev/null || true`}
 declare -a JAVA_OPTS=()

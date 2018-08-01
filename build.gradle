@@ -418,6 +418,8 @@ task packOne(type: Jar) {
      */
     deps = resolveDeps('prov')
     manifest.attributes('Application-Class' : 'nextflow.prov.Main', 'prov' )
+    manifest.attributes('Allow-Snapshots': true)
+    manifest.attributes('Repositories': 'local https://oss.sonatype.org/content/repositories/snapshots central')
     manifest.attributes('Dependencies': deps, 'prov')
 
     /*
