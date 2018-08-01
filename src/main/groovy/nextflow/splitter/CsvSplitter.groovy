@@ -166,9 +166,14 @@ class CsvSplitter extends AbstractTextSplitter {
      */
     @Override
     protected fetchRecord(BufferedReader reader) {
-        String line = reader.readLine()
-        if( !line )
-            return null
+        String line
+        while( true ) {
+            line = reader.readLine()
+            if( line )
+                break
+            if( line==null )
+                return null
+        }
 
         def tokens = StringUtils.splitPreserveAllTokens(line, sep) as List<String>
         // -- strip blanks and quote

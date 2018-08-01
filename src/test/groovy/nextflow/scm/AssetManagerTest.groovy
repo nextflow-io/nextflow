@@ -366,10 +366,10 @@ class AssetManagerTest extends Specification {
         holder.build('foo/bar')
         then:
         holder.getMainScriptName() == 'hello.nf'
-        holder.getDefaultBranch() == 'super-stuff'
-        holder.getHomePage() == 'http://foo.com'
-        holder.getDescription() == 'This pipeline do this and that'
-        holder.getAuthor() == 'Hi Dude'
+        holder.manifest.getDefaultBranch() == 'super-stuff'
+        holder.manifest.getHomePage() == 'http://foo.com'
+        holder.manifest.getDescription() == 'This pipeline do this and that'
+        holder.manifest.getAuthor() == 'Hi Dude'
 
     }
 
@@ -388,9 +388,9 @@ class AssetManagerTest extends Specification {
 
         then:
         holder.getMainScriptName() == 'main.nf'
-        holder.getDefaultBranch() == 'master'
         holder.getHomePage() == 'https://github.com/foo/bar'
-        holder.getDescription() == null
+        holder.manifest.getDefaultBranch() == 'master'
+        holder.manifest.getDescription() == null
 
     }
 

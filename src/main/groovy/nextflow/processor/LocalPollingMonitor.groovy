@@ -191,6 +191,7 @@ class LocalPollingMonitor extends TaskPollingMonitor {
      * @param handler
      *      The {@link TaskHandler} representing the task to be executed
      */
+    @Override
     protected void submit(TaskHandler handler) {
         super.submit(handler)
         availCpus -= cpus(handler)

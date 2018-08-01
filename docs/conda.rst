@@ -70,7 +70,6 @@ The name of the channel where a package is located can be specified prefixing th
 the channel name as shown here ``bioconda::bwa=0.7.15``.
 
 
-
 Use Conda environment files
 ===========================
 
@@ -129,6 +128,28 @@ installation directory of such environment by using the ``conda`` directive::
   }
 
 
+Best practices
+--------------
+
+When a ``conda`` directive is used in any ``process`` definition within the workflow script, Conda tool is required for
+the workflow execution.
+
+Specifying the Conda environments in a separate configuration :ref:`profile <config-profiles>` is therefore
+recommended to allow the execution via a command line option and to enhance the workflow portability. For example::
+  
+  profiles {
+    conda {
+      process.conda = 'samtools'
+    }
+
+    docker {
+      process.container = 'biocontainers/samtools'
+      docker.enabled = true
+    }
+  }
+
+The above configuration snippet allows the execution either with Conda or Docker specifying ``-profile conda`` or
+``-profile docker`` when running the workflow script.
 
 
 Advanced settings

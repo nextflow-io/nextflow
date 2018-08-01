@@ -20,6 +20,12 @@
 
 package nextflow.scm
 
+import static nextflow.Const.DEFAULT_HUB
+import static nextflow.Const.DEFAULT_MAIN_FILE_NAME
+import static nextflow.Const.DEFAULT_ORGANIZATION
+import static nextflow.Const.DEFAULT_ROOT
+import static nextflow.Const.MANIFEST_FILE_NAME
+
 import java.nio.file.Path
 
 import groovy.transform.Canonical
@@ -27,9 +33,9 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.Const
 import nextflow.cli.HubOptions
 import nextflow.config.ConfigParser
+import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
 import nextflow.script.ScriptFile
 import nextflow.util.IniFile
@@ -53,18 +59,6 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 @Slf4j
 @CompileStatic
 class AssetManager {
-
-    static public final String MANIFEST_FILE_NAME = 'nextflow.config'
-
-    static public final String DEFAULT_MAIN_FILE_NAME = 'main.nf'
-
-    static public final String DEFAULT_BRANCH = 'master'
-
-    static public final String DEFAULT_ORGANIZATION = System.getenv('NXF_ORG') ?: 'nextflow-io'
-
-    static public final String DEFAULT_HUB = System.getenv('NXF_HUB') ?: 'github'
-
-    static public final File DEFAULT_ROOT = System.getenv('NXF_ASSETS') ? new File(System.getenv('NXF_ASSETS')) : Const.APP_HOME_DIR.resolve('assets').toFile()
 
     /**
      * The folder all pipelines scripts are installed
@@ -383,15 +377,11 @@ class AssetManager {
     }
 
     String getMainScriptName() {
-        if( mainScript )
-            return mainScript
-
-        readManifest().mainScript ?: DEFAULT_MAIN_FILE_NAME
+        return mainScript ?: getManifest().getMainScript()
     }
 
     String getHomePage() {
-        def manifest = readManifest()
-        manifest.homePage ?: provider.getRepositoryUrl()
+        getManifest().getHomePage() ?: provider.getRepositoryUrl()
     }
 
     String getRepositoryUrl() {
@@ -399,20 +389,15 @@ class AssetManager {
     }
 
     String getDefaultBranch() {
-        readManifest().defaultBranch ?: DEFAULT_BRANCH
+        getManifest().getDefaultBranch()
     }
 
-    String getDescription() {
-        // note: if description is not set it will return an empty ConfigObject
-        // thus use the elvis operator to return null
-        readManifest().description ?: null
+    @Memoized
+    Manifest getManifest() {
+        getManifest0()
     }
 
-    String getAuthor() {
-        readManifest().author ?: null
-    }
-
-    protected Map readManifest() {
+    protected Manifest getManifest0() {
         ConfigObject result = null
         try {
             def text = localPath.exists() ? new File(localPath, MANIFEST_FILE_NAME).text : provider.readText(MANIFEST_FILE_NAME)
@@ -424,8 +409,12 @@ class AssetManager {
         catch( Exception e ) {
             log.trace "Cannot read project manifest -- Cause: ${e.message}"
         }
+
         // by default return an empty object
-        return result ?: new ConfigObject()
+        if( result == null )
+            result = new ConfigObject()
+
+        return new Manifest(result)
     }
 
     Path getConfigFile() {
@@ -860,7 +849,7 @@ class AssetManager {
             return
 
         // the `gitmodules` attribute in the manifest makes it possible to enable/disable modules updating
-        final modules = readManifest().gitmodules
+        final modules = getManifest().gitmodules
         if( modules == false )
             return
 
@@ -931,7 +920,7 @@ class AssetManager {
         }
 
         final iniFile = new IniFile().load(gitConfig)
-        final branch = getDefaultBranch() ?: DEFAULT_BRANCH
+        final branch = manifest.getDefaultBranch()
         final remote = iniFile.getString("branch \"${branch}\"", "remote", "origin")
         final url = iniFile.getString("remote \"${remote}\"", "url")
         log.debug "Git config: $gitConfig; branch: $branch; remote: $remote; url: $url"

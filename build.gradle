@@ -69,7 +69,7 @@ allprojects {
     apply plugin: 'java'
     apply plugin: 'idea'
 
-    version = /0.30.2/
+    version = /0.31.0/
     group = 'io.nextflow'
 
     sourceCompatibility = 1.8
@@ -151,6 +151,7 @@ configurations {
     console.extendsFrom runtime
     prov.extendsFrom(runtime)
     gdocLibs.extendsFrom runtime
+    ga4gh.extendsFrom runtime
 }
 
 
@@ -173,7 +174,7 @@ dependencies {
     compile("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
     compile('org.iq80.leveldb:leveldb:0.7')
     compile('org.eclipse.jgit:org.eclipse.jgit:4.8.0.201706111038-r')
-    compile('io.nextflow:nxf-s3fs:1.0.3') {
+    compile('io.nextflow:nxf-s3fs:1.0.4') {
         exclude group: 'org.apache.tika', module: 'tika-core'
         exclude group: 'com.amazonaws', module: 'aws-java-sdk-s3'
     }
@@ -199,6 +200,10 @@ dependencies {
     }
 
     console(project(':nxf-console')) {
+        exclude module: 'nextflow'
+    }
+
+    ga4gh(project(':nxf-ga4gh')) {
         exclude module: 'nextflow'
     }
 
@@ -333,6 +338,7 @@ ext.deployable << project(':nxf-commons')
 ext.deployable << project(':nxf-ignite')
 ext.deployable << project(':nxf-console')
 ext.deployable << project(':nxf-httpfs')
+ext.deployable << project(':nxf-ga4gh')
 ext.deployable << project(':nxf-prov')
 
 protected error(String message) {
@@ -420,6 +426,12 @@ task packOne(type: Jar) {
      */
     deps = resolveDeps('ignite')
     manifest.attributes('Dependencies': deps, 'ignite')
+
+    /*
+     * `ga4gh` dependencies
+     */
+    deps = resolveDeps('ga4gh')
+    manifest.attributes('Dependencies': deps, 'ga4gh')
 
     doLast {
         ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: releaseDir, overwrite: true)
@@ -611,10 +623,10 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
  * Save the runtime classpath
  */
 task exportClasspath {
-    dependsOn configurations.ignite, configurations.console, configurations.prov
+    dependsOn configurations.ignite, configurations.console, configurations.ga4gh, configurations.prov
 
     def home = System.getProperty('user.home')
-    def all = configurations.ignite + configurations.console + configurations.prov
+    def all = configurations.ignite + configurations.console + configurations.ga4gh + configurations.prov
     def libs = all.collect { File file -> /* println file.canonicalPath.replace(home, '$HOME'); */ file.canonicalPath;  }
     new File('.launch.classpath').text = libs.join(':')
 }

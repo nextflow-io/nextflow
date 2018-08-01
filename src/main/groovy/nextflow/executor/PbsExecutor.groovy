@@ -113,11 +113,11 @@ class PbsExecutor extends AbstractGridExecutor {
     def parseJobId( String text ) {
         // return always the last line
         def result = text?.trim()
-        if( result ) {
+        if( result && !result.contains('\n')) {
             return result
         }
 
-        throw new IllegalStateException("Invalid PBS/Torque submit response:\n$text\n\n")
+        throw new IllegalArgumentException("Invalid PBS/Torque submit response:\n$text\n\n")
     }
 
     @Override

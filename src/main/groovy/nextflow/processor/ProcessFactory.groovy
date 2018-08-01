@@ -22,7 +22,7 @@ package nextflow.processor
 
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.executor.AwsBatchExecutor
+import nextflow.cloud.aws.batch.AwsBatchExecutor
 import nextflow.executor.CondorExecutor
 import nextflow.executor.CrgExecutor
 import nextflow.executor.Executor
@@ -205,7 +205,7 @@ class ProcessFactory {
         Map legacySettings = null
         if( config.process['$'+name] instanceof Map ) {
             legacySettings = (Map)config.process['$'+name]
-            //log.warn "Process configuration syntax \$<process-name> has been deprecated -- Replace `process.\$$name = .. ` with a configuration label annotation"
+            log.warn "Process configuration syntax \$processName has been deprecated -- Replace `process.\$$name = <value>` with a process selector"
         }
 
         // -- the config object
@@ -239,6 +239,12 @@ class ProcessFactory {
 
         // -- Apply defaults
         processConfig.applyConfigDefaults( config.process as Map )
+
+        // -- check for conflicting settings
+        if( processConfig.scratch && processConfig.stageInMode == 'rellink' ) {
+            log.warn("Directives `scratch` and `stageInMode=rellink` conflict each other -- Enforcing default stageInMode for process `$name`")
+            processConfig.remove('stageInMode')
+        }
 
         // -- load the executor to be used
         def execName = getExecutorName(processConfig) ?: DEFAULT_EXECUTOR

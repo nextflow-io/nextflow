@@ -317,12 +317,13 @@ The following settings are available:
 Name                Description
 ================== ================
 enabled             Turn this flag to ``true`` to enable Docker execution (default: ``false``).
+envWhitelist        Comma separated list of environment variable names to be included in the container environment.
 legacy              Uses command line options removed since version 1.10.x (default: ``false``).
 sudo                Executes Docker run command as ``sudo`` (default: ``false``).
 tty                 Allocates a pseudo-tty (default: ``false``).
 temp                Mounts a path of your choice as the ``/tmp`` directory in the container. Use the special value ``auto`` to create a temporary directory each time a container is created.
-remove              Clean-up the container after the execution (default: ``true``). For details see: http://docs.docker.com/reference/run/#clean-up-rm .
-runOptions          This attribute can be used to provide any extra command line options supported by the ``docker run`` command. For details see: http://docs.docker.com/reference/run .
+remove              Clean-up the container after the execution (default: ``true``). For details see: https://docs.docker.com/engine/reference/run/#clean-up---rm .
+runOptions          This attribute can be used to provide any extra command line options supported by the ``docker run`` command. For details see: https://docs.docker.com/engine/reference/run/ .
 registry            The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. ``http://``.
 fixOwnership        Fixes ownership of files created by the docker container.
 engineOptions       This attribute can be used to provide any option supported by the Docker engine i.e. ``docker [OPTIONS]``.
@@ -359,6 +360,7 @@ Name                Description
 ================== ================
 enabled             Turn this flag to ``true`` to enable Singularity execution (default: ``false``).
 engineOptions       This attribute can be used to provide any option supported by the Singularity engine i.e. ``singularity [OPTIONS]``.
+envWhitelist        Comma separated list of environment variable names to be included in the container environment.
 runOptions          This attribute can be used to provide any extra command line options supported by the ``singularity exec``.
 autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed contained. It requires the `user bind control` feature enabled in your Singularity installation (default: ``false``).
 cacheDir            The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
@@ -575,9 +577,12 @@ userDir             Defines the path where the workflow is launched and the user
 workDir             Defines the path where the workflow temporary data is stored. This must be a path in a shared K8s persistent volume (default:``<user-dir>/work``).
 projectDir          Defines the path where Nextflow projects are downloaded. This must be a path in a shared K8s persistent volume (default: ``<volume-claim-mount-path>/projects``).
 pod                 Allows the definition of one or more pod configuration options such as environment variables, config maps, secrets, etc. It allows the same settings as the :ref:`process-pod` process directive.
-volumeClaims        (deprecated)
+pullPolicy          Defines the strategy to be used to pull the container image e.g. ``pullPolicy: 'Always'``.
+runAsUser           Defines the user ID to be used to run the containers.
 storageClaimName    The name of the persistent volume claim where store workflow result data.
 storageMountPath    The path location used to mount the persistent volume claim (default: ``/workspace``).
+storageSubPath      The path in the persistent volume to be mounted (default: root).
+volumeClaims        (deprecated)
 ================== ================
 
 See the :ref:`k8s-page` documentation for more details.
@@ -664,7 +669,7 @@ eventually provided by the underlying system (eg. ``sendmail`` or ``mail``).
 Scope `report`
 --------------
 
-The ``report`` scope scope allows you to define configuration setting of the workflow :ref:`execution-report`.
+The ``report`` scope allows you to define configuration setting of the workflow :ref:`execution-report`.
 
 ================== ================
 Name                Description
@@ -673,6 +678,24 @@ enabled             If ``true`` it create the workflow execution report.
 file                The path of the created execution report file (default: ``report.html``).
 ================== ================
 
+.. _config-weblog:
+
+Scope `weblog`
+--------------
+
+The ``weblog`` scope allows to send detailed :ref:`trace scope<trace-fields>` information as HTTP POST request to a webserver, shipped as a JSON object.
+
+Detailed information about the JSON fields can be found in the :ref:`weblog description<weblog-service>`.
+
+================== ================
+Name                Description
+================== ================
+enabled             If ``true`` it will send HTTP POST requests to a given url.
+url                The url where to send HTTP POST requests (default: ``http:localhost``).
+================== ================
+
+
+.. _config-profiles:
 
 Config profiles
 ===============

@@ -20,8 +20,6 @@
 
 package nextflow
 
-import nextflow.cli.Launcher
-
 import static nextflow.Const.S3_UPLOADER_CLASS
 
 import java.lang.reflect.Method
@@ -40,6 +38,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
+import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
 import nextflow.dag.DAG
 import nextflow.exception.AbortOperationException
@@ -60,6 +59,7 @@ import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceRecord
+import nextflow.trace.WebLogObserver
 import nextflow.trace.WorkflowStats
 import nextflow.util.Barrier
 import nextflow.util.ConfigHelper
@@ -338,8 +338,23 @@ class Session implements ISession {
         createReportObserver(result)
         createTimelineObserver(result)
         createDagObserver(result)
+        createWebLogObserver(result)
 
         return result
+    }
+
+    /**
+     * Create workflow message observer
+     * @param result
+     */
+    protected void createWebLogObserver(Collection<TraceObserver> result) {
+        Boolean isEnabled = config.navigate('weblog.enabled') as Boolean
+        String url = config.navigate('weblog.url') as String
+        if (isEnabled) {
+            if ( !url ) url = WebLogObserver.DEF_URL
+            def observer = new WebLogObserver(url)
+            result << observer
+        }
     }
 
     protected void createStatsObserver(Collection<TraceObserver> result) {
@@ -523,7 +538,7 @@ class Session implements ISession {
         }
     }
 
-    def List<Path> getLibDir() {
+    List<Path> getLibDir() {
         if( libDir )
             return libDir
 
@@ -534,6 +549,10 @@ class Session implements ISession {
             libDir << localLib
         }
         return libDir
+    }
+
+    Manifest getManifest() {
+        config.manifest instanceof Map ? new Manifest(config.manifest as Map) : new Manifest()
     }
 
     /**
@@ -884,6 +903,16 @@ class Session implements ISession {
      * @param e
      */
     void notifyError( TaskHandler handler ) {
+
+        for ( int i=0; i<observers.size(); i++){
+            try{
+                final observer = observers.get(i)
+                observer.onFlowError(handler, handler?.getTraceRecord())
+            } catch ( Throwable e ) {
+                log.debug(e.getMessage(), e)
+            }
+        }
+
         if( !errorAction )
             return
 
@@ -976,6 +1005,37 @@ class Session implements ISession {
         return env.containsKey(key) ? env.get(key) : defValue
     }
 
+    @Memoized
+    def getConfigAttribute(String name, defValue )  {
+        def result = getMap0(getConfig(),name,name)
+        if( result != null )
+            return result
+
+        def key = "NXF_${name.toUpperCase().replaceAll(/\./,'_')}".toString()
+        def env = getSystemEnv()
+        return (env.containsKey(key) ? env.get(key) : defValue)
+    }
+
+    private getMap0(Map map, String name, String fqn) {
+        def p=name.indexOf('.')
+        if( p == -1 )
+            return map.get(name)
+        else {
+            def k=name.substring(0,p)
+            def v=map.get(k)
+            if( v == null )
+                return null
+            if( v instanceof Map )
+                return getMap0(v,name.substring(p+1),fqn)
+            throw new IllegalArgumentException("Not a valid config attribute: $fqn -- Missing element: $k")
+        }
+    }
+
+    @Memoized
+    protected Map<String,String> getSystemEnv() {
+        new HashMap<String, String>(System.getenv())
+    }
+
     /**
      * Defines the number of tasks the executor will handle in a parallel manner
      *
@@ -1021,7 +1081,7 @@ class Session implements ISession {
      * @return A {@code Duration} object. Default '5 minutes'
      */
     @Memoized
-    public Duration getMonitorDumpInterval( String execName, Duration defValue = Duration.of('5min')) {
+    Duration getMonitorDumpInterval( String execName, Duration defValue = Duration.of('5min')) {
         getExecConfigProp(execName, 'dumpInterval', defValue) as Duration
     }
 

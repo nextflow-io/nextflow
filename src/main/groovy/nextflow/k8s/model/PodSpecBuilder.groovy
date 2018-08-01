@@ -69,6 +69,7 @@ class PodSpecBuilder {
 
     Collection<PodVolumeClaim> volumeClaims = []
 
+    PodSecurityContext securityContext
 
     /**
      * @return A sequential volume unique identifier
@@ -155,11 +156,6 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withVolumeClaim( String name, String mount ) {
-        volumeClaims.add(new PodVolumeClaim(name, mount))
-        return this
-    }
-
     PodSpecBuilder withVolumeClaim( PodVolumeClaim claim ) {
         volumeClaims.add(claim)
         return this
@@ -216,6 +212,17 @@ class PodSpecBuilder {
         // -- volume claims 
         if( opts.getVolumeClaims() )
             volumeClaims.addAll( opts.getVolumeClaims() )
+        // -- labels
+        if( opts.labels ) {
+            def keys = opts.labels.keySet()
+            if( 'app' in keys ) throw new IllegalArgumentException("Invalid pod label -- `app` is a reserved label")
+            if( 'runName' in keys ) throw new IllegalArgumentException("Invalid pod label -- `runName` is a reserved label")
+            labels.putAll( opts.labels )
+        }
+        // -- security context
+        if( opts.securityContext )
+            securityContext = opts.securityContext
+
         return this
     }
 
@@ -259,6 +266,9 @@ class PodSpecBuilder {
         if( this.serviceAccount )
             spec.serviceAccountName = this.serviceAccount
 
+        if( securityContext )
+            spec.securityContext = securityContext.toSpec()
+
         // add labels
         if( labels )
             metadata.labels = labels
@@ -288,6 +298,7 @@ class PodSpecBuilder {
         for( PodVolumeClaim entry : volumeClaims ) {
             final name = nextVolName()
             final claim = [name: name, mountPath: entry.mountPath ]
+            if( entry.subPath ) claim.subPath = entry.subPath
             mounts << claim
             volumes << [name: name, persistentVolumeClaim: [claimName: entry.claimName]]
         }

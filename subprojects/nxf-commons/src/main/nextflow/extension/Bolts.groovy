@@ -34,6 +34,7 @@ import nextflow.util.CheckHelper
 import nextflow.util.Duration
 import nextflow.file.FileMutex
 import nextflow.util.MemoryUnit
+import nextflow.util.RateUnit
 import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import org.codehaus.groovy.runtime.GStringImpl
@@ -453,6 +454,9 @@ class Bolts {
         }
         else if( type == MemoryUnit ) {
             return new MemoryUnit(self)
+        }
+        else if( type == RateUnit ) {
+            return new RateUnit(self)
         }
 
         StringGroovyMethods.asType(self, type);
