@@ -48,8 +48,9 @@ public abstract class TaskHandler {
         this.task = task
     }
 
+
     /** Only for testing purpose */
-    protected TaskHandler() {}
+    protected TaskHandler() { }
 
     /**
      * The task managed by this handler
@@ -74,13 +75,14 @@ public abstract class TaskHandler {
 
     long completeTimeMillis
 
+
     /**
-     * Model the start transition from {@code # SUBMITTED} to {@code STARTED}
+     * Model the start transition from {@code #SUBMITTED} to {@code STARTED}
      */
     abstract boolean checkIfRunning()
 
     /**
-     *  Model the start transition from {@code # STARTED} to {@code TERMINATED}
+     *  Model the start transition from {@code #STARTED} to {@code TERMINATED}
      */
     abstract boolean checkIfCompleted()
 
@@ -104,12 +106,12 @@ public abstract class TaskHandler {
     void setStatus( TaskStatus status ) {
 
         // skip if the status is the same aam
-        if (this.status == status || status == null)
+        if ( this.status == status || status == null )
             return
 
         // change the status
         this.status = status
-        switch (status) {
+        switch( status ) {
             case SUBMITTED: submitTimeMillis = System.currentTimeMillis(); break
             case RUNNING: startTimeMillis = System.currentTimeMillis(); break
             case COMPLETED: completeTimeMillis = System.currentTimeMillis(); break
@@ -123,14 +125,14 @@ public abstract class TaskHandler {
 
     boolean isRunning() { return status == RUNNING }
 
-    boolean isCompleted() { return status == COMPLETED }
+    boolean isCompleted()  { return status == COMPLETED  }
 
     protected StringBuilder toStringBuilder(StringBuilder builder) {
         builder << "id: ${task.id}; name: ${task.name}; status: $status; exit: ${task.exitStatus != Integer.MAX_VALUE ? task.exitStatus : '-'}; error: ${task.error ?: '-'}; workDir: ${task.workDir?.toUriString()}"
     }
 
     String toString() {
-        def builder = toStringBuilder(new StringBuilder())
+        def builder = toStringBuilder( new StringBuilder() )
         return "TaskHandler[${builder.toString()}]"
     }
 
@@ -139,7 +141,7 @@ public abstract class TaskHandler {
      * failed executions
      *
      * @return
-     * Can be either:
+     *      Can be either:
      *      - NEW: task has just been created and not yet submitted for execution
      *      - SUBMITTED: task has been submitted for execution
      *      - RUNNING: task is currently running
@@ -148,8 +150,8 @@ public abstract class TaskHandler {
      *      - ABORTED: task execution was aborted by NF (likely because another task forced the workflow termination)
      */
     String getStatusString() {
-        if (task.failed) return 'FAILED'
-        if (task.aborted) return 'ABORTED'
+        if( task.failed ) return 'FAILED'
+        if( task.aborted ) return 'ABORTED'
         return this.status.toString()
     }
 
@@ -181,8 +183,7 @@ public abstract class TaskHandler {
         record.time = task.config.getTime()?.toMillis()
         record.env = task.getEnvironmentStr()
 
-
-        if (isCompleted()) {
+        if( isCompleted() ) {
             record.error_action = task.errorAction?.toString()
 
             getInputEntity(record)
@@ -207,6 +208,7 @@ public abstract class TaskHandler {
                 if(file) record.parseTraceFile(file)
             }
             catch( NoSuchFileException e ) {
+                // ignore it
             }
             catch( IOException e ) {
                 log.debug "[WARN] Cannot read trace file: $file -- Cause: ${e.message}"

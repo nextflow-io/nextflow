@@ -85,7 +85,6 @@ allprojects {
         maven { url 'http://uk.maven.org/maven2' }
         maven { url 'https://repo.eclipse.org/content/groups/releases' }
         maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
-
     }
 
     configurations {

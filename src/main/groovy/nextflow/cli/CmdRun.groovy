@@ -157,9 +157,6 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names = '-with-dag', description = 'Create pipeline DAG file')
     String withDag
 
-    @Parameter(names = ['-with-prov'], description = 'Create provenance info')
-    String withProv
-
     @Parameter(names = ['-bg'], arity = 0, hidden = true)
     void setBackground(boolean value) {
         launcher.options.background = value

@@ -17,6 +17,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package nextflow.trace
 import java.nio.file.Path
 
@@ -249,7 +250,6 @@ class TraceRecord implements Serializable {
     }
 
     def get( String name ) {
-
         assert keySet().contains(name), "Not a valid TraceRecord field: '$name'"
         store.get(name)
     }
@@ -306,6 +306,7 @@ class TraceRecord implements Serializable {
                 sFormat = converter.substring(p+1)
             }
         }
+
         def type = sType ?: FIELDS.get(name)
         if( !type )
             throw new IllegalArgumentException("Not a valid trace field name: '$name'")

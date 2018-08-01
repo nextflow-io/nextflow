@@ -38,6 +38,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
+import nextflow.cli.Launcher
 import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
 import nextflow.dag.DAG
