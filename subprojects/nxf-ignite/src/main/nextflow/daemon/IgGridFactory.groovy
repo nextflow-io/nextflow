@@ -136,6 +136,16 @@ class IgGridFactory {
         // this is not really used -- just set to avoid it complaining
         cfg.setWorkDirectory( FileHelper.getLocalTempPath().resolve('ignite').toString() )
 
+        def timeout = clusterConfig.getAttribute('failureDetectionTimeout') as Duration
+        if( timeout )
+            cfg.setFailureDetectionTimeout(timeout.millis)
+
+        timeout = clusterConfig.getAttribute('clientFailureDetectionTimeout') as Duration
+        if( timeout )
+            cfg.setClientFailureDetectionTimeout(timeout.millis)
+
+        log.debug "Apache Ignite config > $clusterConfig"
+        
         return cfg
     }
 

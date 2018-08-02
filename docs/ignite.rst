@@ -82,25 +82,27 @@ Advanced options
 
 The following cluster node configuration options can be used.
 
-=========================== ================
-Name                        Description
-=========================== ================
-join                        IP address(es) of one or more cluster nodes to which the daemon will join.
-group                       The name of the cluster to which this node join. It allows the creation of separate cluster instances. Default: ``nextflow``
-maxCpus                     Max number of CPUs that can be used by the daemon to run user tasks. By default it is equal to the number of CPU cores.
-maxDisk                     Max amount of disk storage that can be used by user tasks eg. ``500 GB``.
-maxMemory                   Max amount of memory that can be used by user tasks eg. ``64 GB``. Default total available memory.
-interface                   Network interfaces that Ignite will use. It can be the interface IP address or name.
-tcp.localAddress            Defines the local host IP address.
-tcp.localPort               Defines the local port to listen to.
-tcp.localPortRange          Range for local ports.
-tcp.reconnectCount          Number of times the node tries to (re)establish connection to another node.
-tcp.networkTimeout          Defines the network timeout.
-tcp.socketTimeout           Defines the socket operations timeout. This timeout is used to limit connection time and write-to-socket time. Note that when running Ignite on Amazon EC2, socket timeout must be set to a value significantly greater than the default (e.g. to 30000).
-tcp.ackTimeout              Defines the timeout for receiving acknowledgement for sent message.
-tcp.maxAckTimeout           Defines the maximum timeout for receiving acknowledgement for sent message.
-tcp.joinTimeout             Defines the join timeout.
-=========================== ================
+============================= ================
+Name                          Description
+============================= ================
+join                          IP address(es) of one or more cluster nodes to which the daemon will join.
+group                         The name of the cluster to which this node join. It allows the creation of separate cluster instances. Default: ``nextflow``
+maxCpus                       Max number of CPUs that can be used by the daemon to run user tasks. By default it is equal to the number of CPU cores.
+maxDisk                       Max amount of disk storage that can be used by user tasks eg. ``500 GB``.
+maxMemory                     Max amount of memory that can be used by user tasks eg. ``64 GB``. Default total available memory.
+interface                     Network interfaces that Ignite will use. It can be the interface IP address or name.
+failureDetectionTimeout       Failure detection timeout is used to determine how long the communication or discovery SPIs should wait before considering a remote connection failed.
+clientFailureDetectionTimeout Failure detection timeout is used to determine how long the communication or discovery SPIs should wait before considering a remote connection failed.
+tcp.localAddress              Defines the local host IP address.
+tcp.localPort                 Defines the local port to listen to.
+tcp.localPortRange            Range for local ports.
+tcp.reconnectCount            Number of times the node tries to (re)establish connection to another node.
+tcp.networkTimeout            Defines the network timeout.
+tcp.socketTimeout             Defines the socket operations timeout. This timeout is used to limit connection time and write-to-socket time. Note that when running Ignite on Amazon EC2, socket timeout must be set to a value significantly greater than the default (e.g. to 30000).
+tcp.ackTimeout                Defines the timeout for receiving acknowledgement for sent message.
+tcp.maxAckTimeout             Defines the maximum timeout for receiving acknowledgement for sent message.
+tcp.joinTimeout               Defines the join timeout.
+============================= ================
 
 
 
