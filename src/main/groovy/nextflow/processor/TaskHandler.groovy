@@ -20,6 +20,7 @@
 
 package nextflow.processor
 
+import nextflow.file.FileHolder
 import nextflow.util.ArrayBag
 import java.nio.file.Path
 import org.apache.commons.lang.StringUtils
@@ -222,7 +223,9 @@ public abstract class TaskHandler {
         for (item in task.inputs.values()) {
             if (item instanceof ArrayBag) {
                 for (file in item.getProperty("target")){
-                    inputAux="${file.getAt("storePath")}; ${inputAux}"
+                    if(file instanceof FileHolder){
+                        inputAux="${file.getAt("storePath")}; ${inputAux}"
+                    }
                 }
                 inputAux = inputAux.replaceAll("; \$", "") //remove last semicolon
                 record.input = inputAux
@@ -235,8 +238,10 @@ public abstract class TaskHandler {
             if (item instanceof  Path) {
                 outputAux = "${item.toString()}; ${outputAux}"
             } else if (item instanceof List){
-                for (file in item){
-                    outputAux="${file.toString()}; ${outputAux}"
+                for (filePath in item){
+                    if(filePath instanceof Path){
+                        outputAux="${filePath.toString()}; ${outputAux}"
+                    }
                 }
             }
             outputAux = outputAux.replaceAll("; \$", "") //remove last semicolon

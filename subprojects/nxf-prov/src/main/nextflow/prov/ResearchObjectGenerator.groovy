@@ -124,18 +124,22 @@ public class ResearchObjectGenerator {
     }
 
     public void generateWorkflowFolder(Bundle bundle){
-        //TODO fix copy directory with the same structure!
-        //all files together after last change -> solution? -> add relative path to bundle ?
-
         def result = getFilesFromDir(baseDir)
         log.debug "Get Files from workflow dir DONE"
-        for (element in result){
+        for (element in result) {
             Path auxPath = Paths.get(element.toString())
-            if (auxPath.toString().contains(".git")){   //TODO FIX encoded problem with git files
-            }else{
-                log.debug "Get Path from .${element}. workflow dir path: .${auxPath}. DONE"
-                fileToBundle(bundle, auxPath,auxPath.getFileName().toString(),workflowFolderName)
-                log.debug "File ${auxPath.getFileName().toString()} workdir into bundle DONE"
+            if (auxPath.toString().contains(".git")) {}   //TODO FIX encoded problem with git files
+            else {
+                String trimmedPath = auxPath.toString().replace(baseDir, ""); //remove the baseDir from the filePath -> relativePath for bundle
+                trimmedPath = trimmedPath.replace(auxPath.getFileName().toString(), "");// remove fileName from the relativePath
+
+                if (Paths.get(trimmedPath).getNameCount() == 0) {   //if the file is in the "relative" root -> file2bundle
+                    fileToBundle(bundle, auxPath, auxPath.getFileName().toString(), "${workflowFolderName}${trimmedPath}")
+                    log.debug "File ${auxPath.getFileName().toString()} workdir into bundle DONE"
+                } else {    //the file is not in the root -> there are intermediate folder
+                    directoryToBundle(bundle, Paths.get(trimmedPath),workflowFolderName)
+                    fileToBundle(bundle, auxPath, auxPath.getFileName().toString(), "${workflowFolderName}${trimmedPath}")
+                }
             }
         }
         log.debug "Generate Workflow folder DONE"
@@ -159,7 +163,6 @@ public class ResearchObjectGenerator {
     private List getFilesFromDir(String dir){
         //https://stackoverflow.com/questions/3953965/get-a-list-of-all-the-files-in-a-directory-recursive
         def list = []
-
         def dire = new File(dir)
         dire.eachFileRecurse (FileType.FILES) { file ->
             list << file
@@ -217,12 +220,28 @@ public class ResearchObjectGenerator {
             Files.copy(bundleFilePath, filePath, StandardCopyOption.REPLACE_EXISTING);
         }else if (filePath.isDirectory()){
             log.warn("The element: \"${fileName}\" is a directory")
-            directoryToBundle(bundle,filePath,fileName,folderName)
+            //directoryToBundle(bundle,filePath,fileName,folderName)
         }
         log.debug "File to bundle: ${fileName} to ${folderName}"
     }
-    private void directoryToBundle(Bundle bundle, Path filePath, String fileName, String folderName){
-        //TODO NEED TO BE IMPLEMENT!!!
+    private void directoryToBundle(Bundle bundle, Path filePath, String folderName){
+        //TODO --> commented in fileToBundle -> not needed to control there??
+
+        Path auxPath = bundle.getRoot().resolve("${folderName}");
+        //**
+        // generate intermeditate directories
+        //**
+        for (int i=0; i<filePath.getNameCount(); i++){
+            auxPath = Paths.get("${auxPath}/${filePath.getName(i)}")
+            String stringAuxPath = auxPath.toString().substring(1) // remove first "/"
+            Path intermediateFolderPath = bundle.getRoot().resolve(stringAuxPath);
+
+            if (!Files.exists(intermediateFolderPath)) {
+                Files.createDirectory(intermediateFolderPath);
+                log.debug "Directory ${intermediateFolderPath.toString()} Created!"
+
+            }
+        }
     }
     public void saveBundle(Bundle bundle) {
         Path ro = Paths.get("${System.getProperty("user.dir")}/${roBundleName}.zip")
