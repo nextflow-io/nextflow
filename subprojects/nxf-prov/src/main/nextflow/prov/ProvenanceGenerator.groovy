@@ -234,6 +234,7 @@ public class ProvenanceGenerator {
     }
 
     private void generateOutputEntity(TraceRecord trace, List<String> outputList, Activity activity_object){
+
         for (elem in outputList) {
             Path pathAux = Paths.get(elem);
             String pathString = pathAux.toString().trim()
@@ -289,4 +290,5 @@ public class ProvenanceGenerator {
     private String cleanScript(String script){
         return script.trim()
     }
+
 }

@@ -232,13 +232,11 @@ public abstract class TaskHandler {
     private void getOutputEntity(TraceRecord record){
         def outputAux = ''
         for (item in task.outputs.values()) {
-            if(!item.getClass().toString().equals("class java.lang.String")){ //if its not a string -> string==${id}
-                if(item.getClass().toString().equals("class sun.nio.fs.UnixPath")){ //becasue it's just a SINGLE file. not a list of files
-                    outputAux="${item.toString()}; ${outputAux}"
-                }else if(item.getClass().toString().equals("class java.util.ArrayList")) {  //in that case we have a LIST of files
-                    for (file in item){
-                        outputAux="${file.toString()}; ${outputAux}"
-                    }
+            if (item instanceof  Path) {
+                outputAux = "${item.toString()}; ${outputAux}"
+            } else if (item instanceof List){
+                for (file in item){
+                    outputAux="${file.toString()}; ${outputAux}"
                 }
             }
             outputAux = outputAux.replaceAll("; \$", "") //remove last semicolon
