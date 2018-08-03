@@ -418,7 +418,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     protected String findJobDef(String name, String jobId) {
         log.trace "[AWS BATCH] checking job definition with name=$name; jobid=$jobId"
         final req = new DescribeJobDefinitionsRequest().withJobDefinitionName(name)
-        final res = client.describeJobDefinitions(req)
+        // bypass the proxy because this method is invoked during a
+        // job submit request that's already in a separate thread pool request
+        // therefore it's protected by a TooManyRequestsException
+        final res = bypassProxy(this.client).describeJobDefinitions(req)
         final jobs = res.getJobDefinitions()
         if( jobs.size()==0 )
             return null
