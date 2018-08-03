@@ -537,7 +537,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @return A job name without invalid characters
      */
     protected String normalizeJobName(String name) {
-        name.replaceAll(' ','_').replaceAll(/[^a-zA-Z0-9_]/,'')
+        def result = name.replaceAll(' ','_').replaceAll(/[^a-zA-Z0-9_]/,'')
+        result.size()>128 ? result.substring(0,128) : result
     }
 
     TraceRecord getTraceRecord() {
