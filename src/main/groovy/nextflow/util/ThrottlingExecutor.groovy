@@ -675,13 +675,10 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
             }
         }
 
-        def list = new ArrayList(1)
-        list.add(task)
-        def result = this.invokeAll(list)
-
-        return result.get(0).get()
+        final result = submit((Callable)task)
+        // get the result waiting if necessary
+        return result.get()
     }
-
 }
 
 
