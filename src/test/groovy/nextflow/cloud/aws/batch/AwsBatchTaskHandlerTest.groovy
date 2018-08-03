@@ -57,6 +57,14 @@ class AwsBatchTaskHandlerTest extends Specification {
         expect:
         handler.normalizeJobName('foo') == 'foo'
         handler.normalizeJobName('foo (12)') == 'foo_12'
+
+        when:
+        def looong = '012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789'
+        def result = handler.normalizeJobName(looong)
+        then:
+        looong.size() == 150
+        result.size() == 128
+        result == looong.substring(0,128)
     }
 
     @Unroll
