@@ -176,6 +176,11 @@ followLinks     When ``true`` it follows symbolic links during directories tree 
 relative        When ``true`` returned paths are relative to the top-most common directory (default: false)
 =============== ===================
 
+.. note:: More than one path or glob pattern can be specified using a list as argument::
+
+      Channel.fromPath( ['/some/path/*.fq', '/other/path/*.fastq'] )
+
+  (requires version 0.31.x or later)
 
 .. _channel-filepairs:
 
@@ -224,6 +229,13 @@ followLinks     When ``true`` it follows symbolic links during directories tree 
 size            Defines the number of files each emitted item is expected to hold (default: 2). Set to ``-1`` for any.
 flat            When ``true`` the matching files are produced as sole elements in the emitted tuples (default: ``false``).
 =============== ===================
+
+.. note:: More than one glob pattern can be specified using a list as argument::
+
+      Channel.fromFilePairs( ['/some/data/SRR*_{1,2}.fastq', '/other/data/QFF*_{1,2}.fastq'] )
+
+  (requires version 0.31.x or later)
+
 
 .. _channel-watch:
 
