@@ -330,7 +330,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             return container.substring(17)
         }
 
-        resolveJobDefinition(container)
+        def mounts = task?.getConfig().getProperty('batchContainerMounts')
+
+        resolveJobDefinition(container, mounts)
     }
 
     /**
@@ -339,7 +341,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @param container The Docker container image name which need to be used to run the job
      * @return The Batch Job Definition name associated with the specified container
      */
-    protected String resolveJobDefinition(String container) {
+    protected String resolveJobDefinition(String container, List mounts = null) {
         if( jobDefinitions.containsKey(container) )
             return jobDefinitions[container]
 
@@ -349,7 +351,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             if( jobDefinitions.containsKey(container) )
                 return jobDefinitions[container]
 
-            def req = makeJobDefRequest(container)
+            def req = makeJobDefRequest(container, mounts)
             def name = findJobDef(req.jobDefinitionName, req.parameters?.'nf-token')
             if( name ) {
                 log.debug "[AWS BATCH] Found job definition name=$name; container=$container"
@@ -370,7 +372,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @param image The Docker container image for which is required to create a Batch job definition
      * @return An instance of {@link com.amazonaws.services.batch.model.RegisterJobDefinitionRequest} for the specified Docker image
      */
-    protected RegisterJobDefinitionRequest makeJobDefRequest(String image) {
+    protected RegisterJobDefinitionRequest makeJobDefRequest(String image, List mounts = null) {
         final name = normalizeJobDefinitionName(image)
         final result = new RegisterJobDefinitionRequest()
         result.setJobDefinitionName(name)
@@ -383,6 +385,11 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                 .withCommand('true')
                 .withMemory(1024)
                 .withVcpus(1)
+
+        def mountPoints = []
+        def volumes = []
+
+        // add mount for AWS CLI
         def awscli = getAwsOptions().cliPath
         if( awscli ) {
             def mountName = 'aws-cli'
@@ -391,18 +398,43 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                     .withSourceVolume(mountName)
                     .withContainerPath(path)
                     .withReadOnly(true)
-            container.setMountPoints([mount])
+            mountPoints << mount
 
             def vol = new Volume()
                     .withName(mountName)
                     .withHost(new Host()
                     .withSourcePath(path))
-            container.setVolumes([vol])
+            volumes << vol
         }
+
+        // Add any additional mounts for the container
+        if( mounts ) {
+            mounts.each {
+                def mountName = it.name
+                def mount = new MountPoint()
+                        .withSourceVolume(mountName)
+                        .withContainerPath(it.containerPath)
+                        .withReadOnly(it.readOnly)
+                mountPoints << mount
+
+                def vol = new Volume()
+                        .withName(mountName)
+                        .withHost(new Host()
+                        .withSourcePath(it.hostPath))
+                volumes << vol
+            }
+        }
+
+        log.debug "[AWS BATCH] container mount points: " + mountPoints.toString()
+        log.debug "[AWS BATCH] container volumes: " + volumes.toString()
+
+        container.setMountPoints(mountPoints)
+        container.setVolumes(volumes)
+
         result.setContainerProperties(container)
 
         // create a job marker uuid
-        def uuid = CacheHelper.hasher([name, image, awscli]).hash().toString()
+        def uuid = CacheHelper.hasher([name, image, mountPoints.toString()]).hash().toString()
         result.setParameters(['nf-token':uuid])
 
         return result
