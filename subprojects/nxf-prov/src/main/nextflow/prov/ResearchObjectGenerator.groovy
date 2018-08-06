@@ -61,19 +61,19 @@ public class ResearchObjectGenerator {
 
     public void generateFileStructure(Bundle bundle){
         Path metaFolderPath = bundle.getRoot().resolve(metadataFolder);
-        Files.createDirectory(metaFolderPath);
+        createROdirectory(metaFolderPath);
 
         Path snapFolderPath = bundle.getRoot().resolve(snapshotFolderName);
-        Files.createDirectory(snapFolderPath);
+        createROdirectory(snapFolderPath);
 
         Path workflowFolderPath = bundle.getRoot().resolve(workflowFolderName);
-        Files.createDirectory(workflowFolderPath);
+        createROdirectory(workflowFolderPath);
 
         Path dataFolderPath = bundle.getRoot().resolve(dataFolderName);
-        Files.createDirectory(dataFolderPath);
+        createROdirectory(dataFolderPath);
 
         Path outputFolderPath = bundle.getRoot().resolve(outputFolderName);
-        Files.createDirectory(outputFolderPath);
+        createROdirectory(outputFolderPath);
         log.debug "RO structure generated"
 
     }
@@ -82,7 +82,7 @@ public class ResearchObjectGenerator {
         // https://github.com/apache/incubator-taverna-language/blob/master/taverna-robundle/src/test/java/org/apache/taverna/robundle/manifest/TestManifestJSON.java
         Manifest manifest = bundle.getManifest();
 
-        this.setAuthorInformation(manifest)
+        setAuthorInformation(manifest)
 
         manifest.setId(URI.create("/"))
 
@@ -113,6 +113,7 @@ public class ResearchObjectGenerator {
         log.debug "Generate Data folder DONE"
 
     }
+
     public Path generateOutputFolder(Bundle bundle){
         outputFiles.unique()
         for (file in outputFiles){
@@ -212,7 +213,7 @@ public class ResearchObjectGenerator {
         log.debug "Get Clean Output Files (output folder)"
     }
 
-    private void fileToBundle(Bundle bundle, Path filePath, String fileName, String folderName){
+    protected void fileToBundle(Bundle bundle, Path filePath, String fileName, String folderName){
         if (filePath.isFile()){
             Path folderPath = bundle.getRoot().resolve(folderName);
             Path bundleFilePath = folderPath.resolve(fileName);
@@ -271,13 +272,13 @@ public class ResearchObjectGenerator {
         }
         log.warn "OutDir folder NOT exist"
     }
-    private void setAuthorInformation(Manifest manifest) {
+    protected void setAuthorInformation(Manifest manifest) {
         if (author!=null){
             Agent createdBy = new Agent(author);
 
             if (authorORCID!=null) {
                 createdBy.setOrcid(URI.create(authorORCID));
-            }else{
+            }else{      //TODO >> Do we want to save an "ORCID ERROR" or just not create the instance?
                 createdBy.setOrcid(URI.create(orcidERROR));
             }
             manifest.setCreatedBy(createdBy);
@@ -297,7 +298,7 @@ public class ResearchObjectGenerator {
         }
     }
 
-    private void setAggregationManifest(Manifest manifest){
+    protected void setAggregationManifest(Manifest manifest){
         LinkedList<PathMetadata> aggregationList = new LinkedList<PathMetadata>()
         manifest.setAggregates(aggregationList)
 
@@ -390,7 +391,7 @@ public class ResearchObjectGenerator {
     private boolean removeFile(String fileName){
         return Files.deleteIfExists(Paths.get(fileName))
     }
-    private File getLogInfo(){
+    protected File getLogInfo(){
         def today = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss").format(new Date())
         File logFile = new File(logFileName)
         logFile.append("${today} -- ${author} -- ${uuid} -- ${commandLine}\n")
@@ -413,6 +414,17 @@ public class ResearchObjectGenerator {
      for (Map.Entry<String, String> element : map.entrySet()){
          print   "-->>value: ..${element.getKey()}..  -- ${element.getValue()} \n"
      }
+
+    }
+    protected void createROdirectory(Path path){
+        if (!Files.exists(path)) {
+            try {
+                Files.createDirectories(path);
+            } catch (IOException e) {
+                //fail to create directory
+                e.printStackTrace();
+            }
+        }
     }
 
 

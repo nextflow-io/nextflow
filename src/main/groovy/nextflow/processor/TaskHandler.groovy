@@ -23,8 +23,6 @@ package nextflow.processor
 import nextflow.file.FileHolder
 import nextflow.util.ArrayBag
 import java.nio.file.Path
-import org.apache.commons.lang.StringUtils
-import sun.nio.fs.UnixPath
 
 import static nextflow.processor.TaskStatus.*
 
@@ -221,8 +219,8 @@ public abstract class TaskHandler {
     private void getInputEntity(TraceRecord record){
         def inputAux = ''
         for (item in task.inputs.values()) {
-            if (item instanceof ArrayBag) {
-                for (file in item.getProperty("target")){
+            if (item instanceof List) {
+                for (file in item){
                     if(file instanceof FileHolder){
                         inputAux="${file.getAt("storePath")}; ${inputAux}"
                     }

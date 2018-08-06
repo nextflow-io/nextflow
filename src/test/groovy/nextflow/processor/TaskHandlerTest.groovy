@@ -21,10 +21,17 @@
 package nextflow.processor
 
 import nextflow.Session
+import nextflow.file.FileHolder
+import nextflow.script.FileInParam
+import nextflow.script.TokenVar
+import nextflow.script.ValueInParam
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import test.TestHelper
+
+import java.nio.file.Paths
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -134,5 +141,45 @@ class TaskHandlerTest extends Specification {
 
     }
 
+    def 'check inputEntity functionality'(){
+        given:
+        def binding = new Binding()
+        def list = []
+        def x = new ValueInParam(binding, list).bind( new TokenVar('x') )
+        def y = new FileInParam(binding, list).bind('y')
+        def fileHolder = new FileHolder(Paths.get('file_y_1'))
 
+        def folder = TestHelper.createInMemTempDir()
+        def config = [
+                tag: 'seq_x',
+                container: 'ubuntu',
+                queue: 'longjobs',
+                cpus: 2,
+                time: '1 hour',
+                disk: '100 GB',
+                memory: '4 GB'
+        ]
+        def task = new TaskRun(id: new TaskId(100), workDir: folder, name:'task1', exitStatus: 127, config: config )
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> new Session()
+        task.processor.getName() >> 'TheProcessName'
+        task.processor.getProcessEnvironment() >> [FOO:'hola', BAR: 'mundo']
+        task.context = new TaskContext(Mock(Script), [:], 'none')
+
+        def handler = [:] as TaskHandler
+        handler.task = task
+        handler.status = TaskStatus.COMPLETED
+        handler.submitTimeMillis = 1000
+        handler.startTimeMillis = 1500
+
+        when:
+        task.setInput(x, 1)
+        task.setInput(y, [ fileHolder ])
+        def trace = handler.getTraceRecord()
+        then:
+        trace.get('input') == fileHolder.getStorePath().toString()
+
+        //check when NO fileHolder
+
+    }
 }
