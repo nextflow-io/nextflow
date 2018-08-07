@@ -3,6 +3,8 @@
 Nextflow documentation is written using [Sphinx](http://www.sphinx-doc.org/) which 
 uses the [reStructuredText](https://en.wikipedia.org/wiki/ReStructuredText) file format.
 
+A quick intro to reStructuredText is available at [this link](http://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html).
+
 To edit and contribute to the documentation you only need a text editor to change the
 appropriate `.rst` files in this directory.
 
