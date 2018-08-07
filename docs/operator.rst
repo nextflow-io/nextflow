@@ -170,6 +170,7 @@ For example::
     Done
 
 
+.. _operator-first:
 
 first
 --------
@@ -250,6 +251,8 @@ The ``take`` operator allows you to filter only the first `n` items emitted by a
 
 See also `until`_.
 
+.. _operator-last:
+
 last
 -------
 
@@ -303,6 +306,8 @@ These operators are:
 * `toList`_
 * `toSortedList`_
 * `transpose`_
+
+.. _operator-map:
 
 map
 ------
@@ -372,6 +377,8 @@ Associative arrays are handled in the same way, so that each array entry is emit
     number: 3
     square: 9
 
+
+.. _operator-reduce:
 
 reduce
 ---------
@@ -645,6 +652,8 @@ As before, if you don't want to emit the last items which do not complete a tupl
 
 
 See also: `buffer`_ operator.
+
+.. _operator-collect:
 
 collect
 -------
@@ -1802,6 +1811,7 @@ The maths operators are:
 * `sum`_
 * `toInteger`_
 
+.. _operator-count:
 
 count
 --------
@@ -1872,6 +1882,7 @@ that associates each item with the grouping key. For example::
     [h:3, c:1, b:1]
 
 
+.. _operator-min:
 
 min
 ------
@@ -1911,6 +1922,7 @@ taking two parameters that represent two emitted items to be compared. For examp
     	.subscribe {  println it }
 
 
+.. _operator-max:
 
 max
 ------
@@ -1951,6 +1963,7 @@ taking two parameters that represent two emitted items to be compared. For examp
     	.subscribe {  println it }
 
 
+.. _operator-sum:
 
 sum
 ------

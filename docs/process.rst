@@ -748,6 +748,80 @@ against the same library files.
   create a channel combining the input values as needed to trigger the process execution multiple times.
   In this regard, see the :ref:`operator-combine`, :ref:`operator-cross` and :ref:`operator-phase` operators.
 
+.. _process-understand-how-multiple-input-channels-work:
+
+Understand how multiple input channels work
+-------------------------------------------
+
+A key feature of processes is the ability to handle inputs from multiple channels.
+
+When two or more channels are declared as process inputs, the process stops until
+there's a complete input configuration ie. it receives an input value from all the channels declared
+as input.
+
+When this condition is verified, it consumes the input values coming from the respective channels,
+and spawns a task execution, then repeat the same logic until one or more channels have no more content.
+
+This means channel values are consumed serially one after another and the first empty channel
+cause the process execution to stop even if there are other values in other channels.
+
+For example::
+
+  process foo {
+    echo true
+    input:
+    val x from Channel.from(1,2)
+    val y from Channel.from('a','b','c')
+    script:
+     """
+     echo $x and $y
+     """
+  }
+
+
+The process ``foo`` is executed two times because the first input channel only provides two values and therefore
+the ``c`` element is discarded. It prints::
+
+    1 and a
+    2 and b
+
+
+.. warning:: A different semantic is a applied when using *Value channel* a.k.a. *Singleton channel*.
+
+This kind of channel is created by the :ref:`Channel.value <channel-value>` factory method or implicitly
+when a process input specifies a simple value in the ``from`` clause.
+
+By definition, a *Value channel* is bound to a single value and it can be read unlimited times without
+consuming its content.
+
+These properties make that when mixing a *value channel* with one or more (queue) channels,
+it does not affect the process termination which only depends by the other channels and its
+content is applied repeatedly.
+
+To better understand this behavior compare the previous example with the following one::
+
+  process bar {
+    echo true
+    input:
+    val x from Channel.value(1)
+    val y from Channel.from('a','b','c')
+    script:
+     """
+     echo $x and $y
+     """
+  }
+
+The above snippet executes the ``bar`` process three times because the first input is a *value channel*, therefore
+its content can be read as many times as needed. The process termination is determined by the content of the second
+channel. It prints::
+
+
+  1 and a
+  1 and b
+  1 and c
+
+See also: :ref:`channel-types`.
+
 Outputs
 =======
 
