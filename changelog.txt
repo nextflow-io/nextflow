@@ -1,6 +1,14 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.31.1 - 7 Aug 2018
+- Fixed AWS Batch execution hangs when running on 1 cpu machine #825 
+- Fixed AWS Batch fails if process tag length is too long #822
+- Fixed AWS Batch executor creates timeline report with missing time data #816
+- Added Ignite failure detection timeout configuration parameters #820
+- Added VersionNumber class to CacheHelper handler [90fb69fa]
+- Added CONTRIBUTING file #564
+
 0.31.0 - 25 Jul 2018
 - Fixed CLI parameter value starting with a `-` is misinterpreted #808
 - Added keep-logs option to clean command #775
