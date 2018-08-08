@@ -403,8 +403,8 @@ brackets. For example::
 To learn how to publish your pipeline on GitHub, BitBucket or GitLab code repositories read :ref:`sharing-page`
 documentation page.
 
-nextflowVersion
-^^^^^^^^^^^^^^^
+Nextflow version
+^^^^^^^^^^^^^^^^
 
 The ``nextflowVersion`` setting allows you to specify a minimum required version to run the pipeline.
 This may be useful to ensure that a specific version is used::
