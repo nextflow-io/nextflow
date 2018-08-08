@@ -375,8 +375,7 @@ Read :ref:`singularity-page` page to lean more how use Singularity containers wi
 Scope `manifest`
 ----------------
 
-The ``manifest`` configuration scope allows you to define some meta-data information needed when publishing your
-pipeline project on GitHub, BitBucket or GitLab.
+The ``manifest`` configuration scope allows you to define some meta-data information needed when publishing your pipeline project on GitHub, BitBucket or GitLab, or when running your pipeline.
 
 The following settings are available:
 
@@ -388,6 +387,7 @@ homePage            Project home page URL
 description         Free text describing the pipeline project
 mainScript          Pipeline main script (default: ``main.nf``)
 defaultBranch       Git repository default branch (default: ``master``)
+nextflowVersion     Minimum required Nextflow version to run the pipeline
 ================== ================
 
 The above options can be used by prefixing them with the ``manifest`` scope or surrounding them by curly
@@ -402,6 +402,20 @@ brackets. For example::
 
 To learn how to publish your pipeline on GitHub, BitBucket or GitLab code repositories read :ref:`sharing-page`
 documentation page.
+
+Nextflow version
+^^^^^^^^^^^^^^^^
+
+The ``nextflowVersion`` setting allows you to specify a minimum required version to run the pipeline.
+This may be useful to ensure that a specific version is used::
+
+    nextflowVersion = '1.2.3'        // exact match
+    nextflowVersion = '1.2+'         // 1.2 or later (excluding 2 and later)
+    nextflowVersion = '>=1.2'        // 1.2 or later
+    nextflowVersion = '>=1.2, <=1.5' // any version in the 1.2 .. 1.5 range
+    nextflowVersion = '!>=1.2'       // with ! prefix, stop execution if current version
+                                        does not match required version.
+
 
 .. _config-trace:
 
@@ -736,7 +750,7 @@ when no other profile is specified by the user.
 
         nextflow run <your script> -profile standard,cloud
 
-The above feature requires version 0.28.x or higher. 
+The above feature requires version 0.28.x or higher.
 
 Environment variables
 =====================
