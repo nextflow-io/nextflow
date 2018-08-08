@@ -404,7 +404,7 @@ To learn how to publish your pipeline on GitHub, BitBucket or GitLab code reposi
 documentation page.
 
 nextflowVersion
-^^^^^^^^^^^
+^^^^^^^^^^^^^^^
 
 The ``nextflowVersion`` setting allows you to specify a minimum required version to run the pipeline.
 This may be useful to ensure that a specific version is used::
