@@ -97,6 +97,9 @@ public class CacheHelper {
         if( value instanceof Double )
             return hasher.putDouble( (Double)value );
 
+        if( value instanceof Byte )
+            return hasher.putByte( (Byte)value );
+
         if( value instanceof Number )
             // reduce all other number types (BigInteger, BigDecimal, AtomicXxx, etc) to string equivalent
             return hasher.putUnencodedChars(value.toString());
@@ -106,9 +109,6 @@ public class CacheHelper {
 
         if( value instanceof CharSequence )
             return hasher.putUnencodedChars( (CharSequence)value );
-
-        if( value instanceof Byte )
-            return hasher.putByte( (Byte)value );
 
         if( value instanceof byte[] )
             return hasher.putBytes( (byte[])value );
