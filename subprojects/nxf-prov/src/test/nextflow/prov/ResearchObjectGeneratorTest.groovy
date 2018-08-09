@@ -22,7 +22,7 @@ class ResearchObjectGeneratorTest extends Specification {
         observer.generateFileStructure(bundle)
 
         then:
-        //1 * bundle.getRoot().resolve("metadata") >> metaFolderPath
+        //1 * bundle.getRoot().resolve("metadata") >> Path
         1 * observer.createROdirectory(Paths.get("${actualPath}/outputs"))>> null
         1 * observer.createROdirectory(Paths.get("${actualPath}/data"))>> null
         1 * observer.createROdirectory(Paths.get("${actualPath}/workflow"))>> null
@@ -65,14 +65,14 @@ class ResearchObjectGeneratorTest extends Specification {
         1 * observer.fileToBundle(bundle,actualPath,logFile.name, "metadata")
     }
 
-   /* def 'check addProvenanceFile()'(){
+    def 'check addProvenanceFile()'(){
         given:
         def observer = Spy(ResearchObjectGenerator)
         def bundle = Mock(Bundle)
         def provFile = Mock(File)
         def actualPath = Paths.get(System.getProperty("user.dir"))
         provFile.name >>"provenance.json"
-        provFile.path >> actualPath
+        provFile.path >>"provenance.json"
 
         when:
         bundle.getRoot() >> actualPath
@@ -80,21 +80,73 @@ class ResearchObjectGeneratorTest extends Specification {
         observer.addProvenanceFile(bundle)
 
         then:
-        1 * observer.fileToBundle(bundle,actualPath,provFile.name, "metadata")
-    }*/
-/*
+        1 * observer.fileToBundle(bundle,Paths.get(provFile.path),provFile.name, "metadata") >> null
+    }
+
     def 'check generateDataFolder()'(){
         given:
         def observer = Spy(ResearchObjectGenerator)
         def bundle = Mock(Bundle)
+        def provFile = Mock(File)
+        def actualPath = Paths.get(System.getProperty("user.dir"))
+        def numberFiles = observer.inputFiles.unique().size()
+        def dataFolderName = "data"
 
         when:
-        def numberFiles = observer.inputFiles.unique().size()
+        bundle.getRoot() >> actualPath
 
         then:
-        numberFiles * observer.fileToBundle(bundle, auxPath, auxPath.getFileName().toString(), dataFolderName)
-    }*/
+        numberFiles * observer.fileToBundle(bundle, provFile.getPath(), provFile.getName(), dataFolderName)
+    }
 
+    //def 'check generateOutputFolder()'(){}
+
+
+    def 'check generateWorkflowFolder()'(){
+        given:
+        def observer = Spy(ResearchObjectGenerator)
+        def bundle = Mock(Bundle)
+        def actualPath = Paths.get(System.getProperty("user.dir"))
+        observer.baseDir = "${actualPath}/test"
+
+        when:
+        bundle.getRoot() >> actualPath
+        observer.generateWorkflowFolder(bundle)
+
+        then:
+        1 * observer.getFilesFromDir(observer.baseDir)
+    }
+
+    def 'check generateSnapshot'(){
+        given:
+        def observer = Spy(ResearchObjectGenerator)
+        def bundle = Mock(Bundle)
+        def actualPath = Paths.get(System.getProperty("user.dir"))
+        observer.commandLine = "holaMundo"
+
+        when:
+        bundle.getRoot() >> actualPath
+        observer.generateSnapshot(bundle)
+
+        then:
+        1 * observer.generateScript()
+    }
+
+    def 'check generateMetadataFolder'(){
+        given:
+        def observer = Spy(ResearchObjectGenerator)
+        def bundle = Mock(Bundle)
+        def actualPath = Paths.get(System.getProperty("user.dir"))
+
+        when:
+        bundle.getRoot() >> actualPath
+        observer.generateMetadataFolder(bundle)
+
+        then:
+        1 * observer.generateMetadataFile()
+        //1 * observer.fileToBundle(bundle, metadataFile,metadataFileName,metadataFolder)
+
+    }
 
     def 'check null Author into RO bundle' (){
         given:

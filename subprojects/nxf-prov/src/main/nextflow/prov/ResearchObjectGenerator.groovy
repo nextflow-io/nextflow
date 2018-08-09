@@ -129,7 +129,7 @@ public class ResearchObjectGenerator {
         log.debug "Get Files from workflow dir DONE"
         for (element in result) {
             Path auxPath = Paths.get(element.toString())
-            if (auxPath.toString().contains(".git")) {}   //TODO FIX encoded problem with git files
+            if (auxPath.toString().contains(".git")||auxPath.toString().contains(".DS_Store")) {}   //TODO FIX encoded problem with git files
             else {
                 String trimmedPath = auxPath.toString().replace(baseDir, ""); //remove the baseDir from the filePath -> relativePath for bundle
                 trimmedPath = trimmedPath.replace(auxPath.getFileName().toString(), "");// remove fileName from the relativePath
@@ -161,7 +161,7 @@ public class ResearchObjectGenerator {
 
     }
 
-    private List getFilesFromDir(String dir){
+    protected List getFilesFromDir(String dir){
         //https://stackoverflow.com/questions/3953965/get-a-list-of-all-the-files-in-a-directory-recursive
         def list = []
         def dire = new File(dir)
@@ -171,7 +171,7 @@ public class ResearchObjectGenerator {
         return list
     }
 
-    private Path generateMetadataFile(){
+    protected Path generateMetadataFile(){
         Path metadataFile = Files.createTempFile("","");
         metadataFile.write"Command Line: ${commandLine}\n"
         /*       "Container technology: ${containerTech}\n"
@@ -382,7 +382,7 @@ public class ResearchObjectGenerator {
             containerSha = getContainerSHA256()
         }
     }*/
-    private File generateScript(){
+    protected File generateScript(){
         File scriptFile= new File(commandLineFileName)
         scriptFile.write(commandLine)
 
@@ -410,7 +410,7 @@ public class ResearchObjectGenerator {
         baseDir = getFieldMap(provMap, 'baseDir')
 
     }
-    public void printMap(Map map){
+    private void printMap(Map map){
      for (Map.Entry<String, String> element : map.entrySet()){
          print   "-->>value: ..${element.getKey()}..  -- ${element.getValue()} \n"
      }
