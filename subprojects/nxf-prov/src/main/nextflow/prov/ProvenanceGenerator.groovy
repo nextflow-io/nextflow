@@ -1,3 +1,22 @@
+/*
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ *
+ *   This file is part of 'Nextflow'.
+ *
+ *   Nextflow is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   Nextflow is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package nextflow.prov
 
 import groovy.transform.CompileStatic
@@ -12,14 +31,19 @@ import java.nio.file.Paths
 import java.security.MessageDigest
 
 /**
- * Created by edgar on 19/06/18.
+ *
+ * @author Edgar Garriga <edgano@gmail.com>
  */
 @Slf4j
 @CompileStatic
 public class ProvenanceGenerator {
+    /**
+     * Enum to define the different types of the provenance
+     */
     enum ProvenanceType {
         activityType, SHA256, fileSize, fileName, containerName
     }
+
     //** PROV info **
     public static final String PROVBOOK_NS = "prov";
     public static final String PROVBOOK_PREFIX = "PROV";
@@ -35,19 +59,6 @@ public class ProvenanceGenerator {
     private final ProvFactory pFactory = InteropFramework.newXMLProvFactory();
     private final Namespace ns;
 
-    ProvenanceGenerator(){
-        ns = new Namespace();
-        ns.addKnownNamespaces();
-        ns.register(PROVBOOK_PREFIX, PROVBOOK_NS);
-    }
-
-    public QualifiedName qn(String n) {
-        return ns.qualifiedName(PROVBOOK_PREFIX, n, pFactory);
-    }
-
-    public Document getProvDocument(){ //TODO make it singleton
-        return pFactory.newDocument()
-    }
     private Map<QualifiedName, Entity> inputEntityMap = new HashMap<QualifiedName, Entity>();
     //TODO Can merge both entity maps (I guess)
     private Map<QualifiedName, Entity> outputEntityMap = new HashMap<QualifiedName, Entity>();
@@ -57,10 +68,36 @@ public class ProvenanceGenerator {
     private Map<QualifiedName, WasAssociatedWith> associatedMap = new HashMap<QualifiedName, WasAssociatedWith>();
     private Map<QualifiedName, Agent> agentMap = new HashMap<QualifiedName, Agent>();
 
+    ProvenanceGenerator(){
+        ns = new Namespace();
+        ns.addKnownNamespaces();
+        ns.register(PROVBOOK_PREFIX, PROVBOOK_NS);
+    }
+
+    /**
+     * Convert String into a QualifiedName
+     * @param n
+     * @return QualifiedName
+     */
+    public QualifiedName qn(String n) {
+        return ns.qualifiedName(PROVBOOK_PREFIX, n, pFactory);
+    }
+
+    /**
+     * Get the provenance document
+     * @return Document
+     */
+    public Document getProvDocument(){
+        return pFactory.newDocument()
+    }
+
+    /**
+     * Set all the provenance elements into the provDocument
+     * @param provDocument
+     */
     public void setElementsToProvFile(Document provDocument) {
-        /**
-         * Fill the PROV document with the inputs entities
-         */
+
+        // Fill the PROV document with the inputs entities
         log.debug "Input Entity List: ${inputEntityMap.size()}"
         if (inputEntityMap.isEmpty()) {
             log.debug "Prov INPUT is empty"
@@ -69,9 +106,8 @@ public class ProvenanceGenerator {
                 provDocument.getStatementOrBundle().add(entity.value)
             }
         }
-        /**
-         * Fill the PROV document with the output entities
-         */
+
+        // Fill the PROV document with the output entities
         log.debug "Output Entity List: ${outputEntityMap.size()}"
         if (outputEntityMap.isEmpty()) {
             log.debug "Prov OUTPUT is empty"
@@ -100,53 +136,48 @@ public class ProvenanceGenerator {
         for (Map.Entry<QualifiedName, Agent> agent : agentMap.entrySet()) {
             provDocument.getStatementOrBundle().add(agent.value)
         }
-
     }
 
+    /**
+     * Generate the provenance objects
+     * @param trace
+     */
     public generateProvenance(TraceRecord trace){
+
         Activity activity_object= generateActivities(trace)
 
-        /**
-         * Get the I/O objects from the trace.
-         * Convert the string into a List<String> to iterate it
-         */
+        // Get the I/O objects from the trace.
+        // Convert the string into a List<String> to iterate it
         def inputFiles = trace.getFmtStr("input")
         List<String> inputList = Arrays.asList(inputFiles.split(";"));
 
         def outputFiles = trace.getFmtStr("output")
         List<String> outputList = Arrays.asList(outputFiles.split(";"));
 
-        /**
-         * Iterate the INPUT list to get the values we need
-         */
         generateInputEntity(trace, inputList, activity_object)
 
-        /**
-         * Iterate the OUTPUT list to get the values we need
-         */
         generateOutputEntity(trace, outputList, activity_object)
 
-        /**
-         * Generate the Agent with the information:
-         * script used
-         * container name
-         * container hash
-         * container technology
-         */
         generateSoftwareAgent(trace,activity_object)
     }
 
+    /**
+     * Generate the prov Document using ProvToolBox
+     * @param provDocument
+     */
     public void generateProvFile(Document provDocument){
         provDocument.setNamespace(ns);
         InteropFramework intF=new InteropFramework();
         intF.writeDocument(provFileName, provDocument);
     }
 
+    /**
+     * Generate one activity for each NF process
+     * @param trace
+     * @return Activity
+     */
     private Activity generateActivities(TraceRecord trace){
-        /**
-         * Code to generate the ACTITY object.
-         * It's the object who represents the process itself
-         */
+
         String activityId = "${activity_prefix}${trace.getTaskId()}"
         Activity activity_object = pFactory.newActivity(qn(activityId.toString()));
 
@@ -163,11 +194,14 @@ public class ProvenanceGenerator {
         return activity_object
     }
 
+    /**
+     * Add the time information into the Activity object
+     * @param activity_object
+     * @param trace
+     */
     private void setActivityTime(Activity activity_object, TraceRecord trace){
-        /**
-         * add start adn end time to the activity
-         */
-        //convert miliseconds to Gregorain
+
+        //convert miliseconds to Gregorain format
         final GregorianCalendar calendarGregStart = new GregorianCalendar();
         calendarGregStart.setTimeInMillis(trace.get("start") as long);
         def gregorianStart = DatatypeFactory.newInstance().newXMLGregorianCalendar(calendarGregStart);
@@ -179,6 +213,15 @@ public class ProvenanceGenerator {
         activity_object.setEndTime(gregorianEnd)
     }
 
+    /**
+     * Generate the Agent with the information:
+     * script used
+     * container name
+     * container hash
+     * container technology
+     * @param trace
+     * @param activity_object
+     */
     private void generateSoftwareAgent(TraceRecord trace, Activity activity_object){
         String associatedWithId = "${associatedWith_prefix}${trace.getTaskId()}"
         String softwareId = "${agent_prefix}${activity_object.getId().localPart}"
@@ -188,8 +231,6 @@ public class ProvenanceGenerator {
         pFactory.addLabel(softwareAgent, cleanScript(trace.get('script').toString()))
         pFactory.newAgent(softwareAgent)
 
-        //TODO include information about CONTAINER!
-        // name , technology + hash
         Object containerAux = trace.get('container').toString()
         pFactory.addType(softwareAgent, containerAux, qn(ProvenanceType.containerName.toString()))
 
@@ -199,14 +240,19 @@ public class ProvenanceGenerator {
         agentMap.put(softwareAgent.getId(), softwareAgent)
     }
 
+    /**
+     * Generate the input entity
+     * @param trace
+     * @param inputList
+     * @param activity_object
+     */
     private void generateInputEntity(TraceRecord trace, List<String> inputList, Activity activity_object){
 
         for (elem in inputList) {
             Path pathAux = Paths.get(elem);
-            String pathString = pathAux.toString().trim()
-            //remove space from the begining of the path.. need to avoid uncomprensive behaviour
+            String pathString = pathAux.toString().trim() //remove space from the begining of the path. need to avoid unexpected behaviour
             def entity_name = pathAux.getFileName()
-            //XXX check if the ELEM is already on the inputList (global) or not --> done with a MAP
+
             Entity input_entity = pFactory.newEntity(qn(pathString.toString()));
 
             input_entity.setValue(pFactory.newValue(entity_name.toString(), qn(ProvenanceType.fileName.toString())))
@@ -219,27 +265,27 @@ public class ProvenanceGenerator {
             Object sizeAux = fileAux.length()
             pFactory.addType(input_entity, sizeAux, qn(ProvenanceType.fileSize.toString()))
 
-            /*
-             Create the relation btwn the ACTIVITY and the ENTITY
-              */
+            // Create the relation btwn the ACTIVITY and the ENTITY
             Used usedAction = pFactory.newUsed(activity_object.getId(), input_entity.getId());
             usedAction.setId(qn("${used_prefix}${trace.getTaskId()}_${pathString}"))
             usedMap.put(usedAction.getId(), usedAction)
 
-            /*
-            Save the input element as an ENTITY inside the GLOBAL list of the Input entities
-             */
+            //Save the input element as an ENTITY inside the GLOBAL list of the Input entities
             inputEntityMap.put(input_entity.getId(), input_entity)
         }
     }
 
+    /**
+     * Generate the output entity
+     * @param trace
+     * @param outputList
+     * @param activity_object
+     */
     private void generateOutputEntity(TraceRecord trace, List<String> outputList, Activity activity_object){
 
         for (elem in outputList) {
             Path pathAux = Paths.get(elem);
-            String pathString = pathAux.toString().trim()
-
-            //remove space from the begining of the path.. need to avoid uncomprensive behaviour
+            String pathString = pathAux.toString().trim() //remove space from the begining of the path. need to avoid unexpected behaviour
             def entity_name = pathAux.getFileName()
 
             Entity output_entity = pFactory.newEntity(qn(pathString.toString()));
@@ -253,20 +299,21 @@ public class ProvenanceGenerator {
             Object sizeAux = fileAux.length()
             pFactory.addType(output_entity, sizeAux, qn(ProvenanceType.fileSize.toString()))
 
-            /*
-            Create the relation btwn ACTIVITY and the ENTITY
-             */
+            //Create the relation btwn ACTIVITY and the ENTITY
             WasGeneratedBy generationAction = pFactory.newWasGeneratedBy(output_entity, "", activity_object)
             generationAction.setId(qn("${generatedBy_prefix}${trace.getTaskId()}_${pathString}"))
             generatedMap.put(generationAction.getId(), generationAction)
 
-            /*
-            Save the input element as a ENTITY inside the GLOBAL list of the Input entities
-             */
+            //Save the input element as a ENTITY inside the GLOBAL list of the Input entities
             outputEntityMap.put(output_entity.getId(), output_entity)
         }
     }
 
+    /**
+     * Get the SHA256 from a file
+     * @param fileAux
+     * @return String with the SHA256
+     */
     private String getFileSHA256(File fileAux ){
         //-- Digest sha256
         // https://gist.github.com/ikarius/299062/85b6540c99878f50f082aaee236ef15fc78e527c
@@ -282,13 +329,23 @@ public class ProvenanceGenerator {
         return bytesToHex(elementHash)
     }
 
+    /**
+     * Convert from []bytes to Hex String
+     * @param bytes
+     * @return String with the sha code in hex
+     */
     private String bytesToHex(byte[] bytes) {
         StringBuffer result = new StringBuffer();
         for (byte byt : bytes) result.append(Integer.toString((byt & 0xff) + 0x100, 16).substring(1));
         return result.toString();
     }
+
+    /**
+     * Clean the command line to include it as part of a label
+     * @param script
+     * @return String with the commandLine in one line
+     */
     private String cleanScript(String script){
         return script.trim()
     }
-
 }

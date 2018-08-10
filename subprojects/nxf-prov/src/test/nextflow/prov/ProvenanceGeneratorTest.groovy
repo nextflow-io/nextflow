@@ -3,7 +3,8 @@ package nextflow.prov
 import spock.lang.Specification
 
 /**
- * Created by edgar on 21/06/18.
+ *
+ * @author Edgar Garriga <edgano@gmail.com>
  */
 class ProvenanceGeneratorTest extends Specification {
 }

@@ -6,7 +6,8 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 /**
- * Created by edgar on 21/06/18.
+ *
+ * @author Edgar Garriga <edgano@gmail.com>
  */
 class ResearchObjectGeneratorTest extends Specification {
 
@@ -61,7 +62,7 @@ class ResearchObjectGeneratorTest extends Specification {
         observer.generateLogFile(bundle)
 
         then:
-        1 * observer.getLogInfo() >> logFile
+        1 * observer.setLogInfo() >> logFile
         1 * observer.fileToBundle(bundle,actualPath,logFile.name, "metadata")
     }
 
@@ -94,12 +95,27 @@ class ResearchObjectGeneratorTest extends Specification {
 
         when:
         bundle.getRoot() >> actualPath
+        observer.generateDataFolder()
 
         then:
         numberFiles * observer.fileToBundle(bundle, provFile.getPath(), provFile.getName(), dataFolderName)
     }
 
-    //def 'check generateOutputFolder()'(){}
+    def 'check generateOutputFolder()'(){
+        given:
+        def observer = Spy(ResearchObjectGenerator)
+        def bundle = Mock(Bundle)
+        def provFile = Mock(File)
+        def actualPath = Paths.get(System.getProperty("user.dir"))
+        def numberFiles = observer.outputFiles.unique().size()
+        def outputFolderName = "outputs"
+
+        when:
+        bundle.getRoot() >> actualPath
+        observer.generateOutputFolder()
+
+        then:
+        numberFiles * observer.fileToBundle(bundle, provFile.getPath(), provFile.getName(), outputFolderName)    }
 
 
     def 'check generateWorkflowFolder()'(){
@@ -136,7 +152,7 @@ class ResearchObjectGeneratorTest extends Specification {
         given:
         def observer = Spy(ResearchObjectGenerator)
         def bundle = Mock(Bundle)
-        def actualPath = Paths.get(System.getProperty("user.dir"))
+        Path actualPath = Paths.get(System.getProperty("user.dir"))
 
         when:
         bundle.getRoot() >> actualPath
@@ -202,32 +218,4 @@ class ResearchObjectGeneratorTest extends Specification {
         then:
         resultManifest.getCreatedBy() == null
     }
-    /*
-    def 'check Data folder'(){
-        //check all input data is inside
-        //check what happens when no input is defined
-    }
-
-    def 'check Workflow folder'(){
-        //check all baseDir files are inside
-    }
-
-    def 'check Snapshot folder'(){
-        //check all baseDir files are inside
-        //check is the .command.sh is there
-    }
-    def 'check Metadata folder'(){
-        //check metadata.json file
-
-    }
-    def 'check log file'(){
-        //check the correctness of the info
-        //check what happen when NO author
-        //check what happen wih NO container
-    }
-
-    def 'check provenance file'(){
-        //check if prov file exist
-    }
- */
 }

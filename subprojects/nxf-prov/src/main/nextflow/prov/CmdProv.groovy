@@ -1,3 +1,22 @@
+/*
+ * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
+ * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ *
+ *   This file is part of 'Nextflow'.
+ *
+ *   Nextflow is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   Nextflow is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package nextflow.prov
 
 import nextflow.CacheDB
@@ -73,9 +92,6 @@ class CmdProv extends CmdBase {
         /**
          * Generate Workflow folder
          */
-        //DONE check random ERROR -> it was getFilesFromDir
-        //  Exception in thread "Thread-1" groovy.lang.GroovyRuntimeException: exception while reading process stream
-        //  at org.codehaus.groovy.runtime.ProcessGroovyMethods$TextDumper.run(ProcessGroovyMethods.java:496)
         roGenerator.generateWorkflowFolder(bundle)
         /**
          * Generate the Data folder with th input files
@@ -84,17 +100,12 @@ class CmdProv extends CmdBase {
         /**
          * Generate the Output folder
          */
-        //DONE check random ERROR -> it was getFilesFromDir
-        //  Exception in thread "Thread-1" groovy.lang.GroovyRuntimeException: exception while reading process stream
-        //  at org.codehaus.groovy.runtime.ProcessGroovyMethods$TextDumper.run(ProcessGroovyMethods.java:496)
-
         roGenerator.getCleanOutputFiles()
         roGenerator.generateOutputFolder(bundle)
         /**
          * save data into METADATA file
          */
         roGenerator.generateMetadataFolder(bundle)
-
         /**
          * save data into LOG file
          */
@@ -116,7 +127,7 @@ class CmdProv extends CmdBase {
     private Map readProvMetadataFile(String path){
         String fileContents=new File(path).text
 
-        fileContents = fileContents.replace("\n",',') //put everithing on a single line
+        fileContents = fileContents.replace("\n",',') //put everything on a single line
         fileContents = fileContents.replace(" = ",'=') // remove space on the equal symbol
 
         def newMap = [:]
