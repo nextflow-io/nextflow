@@ -26,6 +26,7 @@ import nextflow.executor.AwsBatchExecutor
 import nextflow.executor.CondorExecutor
 import nextflow.executor.CrgExecutor
 import nextflow.executor.Executor
+import nextflow.executor.GooglePipelineExecutor
 import nextflow.executor.LocalExecutor
 import nextflow.executor.LsfExecutor
 import nextflow.executor.NopeExecutor
@@ -67,7 +68,8 @@ class ProcessFactory {
             'condor': CondorExecutor,
             'k8s': K8sExecutor,
             'nqsii': NqsiiExecutor,
-            'awsbatch': AwsBatchExecutor
+            'awsbatch': AwsBatchExecutor,
+            'googlepipeline': GooglePipelineExecutor
     ]
 
     private final Session session
