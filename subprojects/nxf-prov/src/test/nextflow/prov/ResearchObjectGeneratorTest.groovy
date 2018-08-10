@@ -123,7 +123,7 @@ class ResearchObjectGeneratorTest extends Specification {
         def observer = Spy(ResearchObjectGenerator)
         def bundle = Mock(Bundle)
         def actualPath = Paths.get(System.getProperty("user.dir"))
-        observer.baseDir = "${actualPath}/test"
+        observer.baseDir = "${actualPath}/src/test/nextflow/prov/test"
 
         when:
         bundle.getRoot() >> actualPath
