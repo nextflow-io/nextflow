@@ -492,7 +492,8 @@ class K8sDriverLauncher {
     protected void launchLogin() {
         def cmd = "kubectl -n ${k8sClient.config.namespace} exec -it $runName -- /bin/bash --login"
         def proc = new ProcessBuilder().command('bash','-c',cmd).inheritIO().start()
-        proc.waitFor()
-        k8sClient.podDelete(runName)
+        def result = proc.waitFor()
+        if( result == 0 )
+            k8sClient.podDelete(runName)
     }
 }
