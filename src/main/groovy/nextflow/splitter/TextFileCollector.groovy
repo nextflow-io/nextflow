@@ -19,12 +19,15 @@
  */
 
 package nextflow.splitter
+
 import java.nio.charset.Charset
 import java.nio.charset.CharsetEncoder
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.GZIPOutputStream
 
+import com.google.common.hash.HashCode
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 /**
@@ -34,6 +37,13 @@ import groovy.transform.PackageScope
  */
 @CompileStatic
 class TextFileCollector implements CollectorStrategy, CacheableCollector, Closeable {
+
+    @Canonical
+    @PackageScope
+    static class CachePath {
+        Path path
+        HashCode hash
+    }
 
     final private Charset charset
 
@@ -45,10 +55,12 @@ class TextFileCollector implements CollectorStrategy, CacheableCollector, Closea
 
     private boolean compress
 
-    TextFileCollector(Path baseFile, Charset charset = Charset.defaultCharset(), boolean compress=false ) {
-        assert baseFile
+    TextFileCollector(CachePath base, Charset charset = Charset.defaultCharset(), boolean compress=false ) {
+        assert base
+        assert base.path
 
-        this.baseFile = baseFile
+        this.baseFile = base.path
+        this.hashCode = base.hash
         this.charset = charset
         this.compress = compress
     }
