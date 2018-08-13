@@ -21,11 +21,11 @@ manifest {
 This procedure is under development to improve it and get the information in an automatic way.
 
 Once you have completed the information needed by Nextfow, you need to have your pipeline executed. Usually, it will be something like this: ```nextflow run <your main file> --parameters <your pipeline parameters>```
-Once the pipeline is done. You will be able to generate the RO zip file with the command line ```./prov.sh```
+Once the pipeline is done. You will be able to generate the RO zip file with the command line ```nextflow prov```
 Then, it will appear on the console some information about the procedure, and it will show some *WARN* if we missed some information to add or there is any unexpected problem during the execution.
  ## How it works
  The way it works it's easy. During the execution of the pipeline, Nextflow is capturing all the metadata and information on the fly, and it will store it on the cache and on a provenance file.
- Once the user runs the ```./prov.sh```, Nextflow starts converting all the information and metadata into the RO object.
+ Once the user runs the ```nextflow prov```, Nextflow starts converting all the information and metadata into the RO object.
  First step, is to generate the file structure in the zip file. This file will contain the following folders:
  - **Data** 
  - **Workflow** 

@@ -106,7 +106,6 @@ public class ProvenanceGenerator {
                 provDocument.getStatementOrBundle().add(entity.value)
             }
         }
-
         // Fill the PROV document with the output entities
         log.debug "Output Entity List: ${outputEntityMap.size()}"
         if (outputEntityMap.isEmpty()) {
@@ -347,5 +346,14 @@ public class ProvenanceGenerator {
      */
     private String cleanScript(String script){
         return script.trim()
+    }
+    /**
+     * Print a given map
+     * @param map
+     */
+    private void printMap(Map map){
+        for (Map.Entry<String, String> element : map.entrySet()){
+            print   "-->>value: ..${element.getKey()}..  -- ${element.getValue()} \n"
+        }
     }
 }
