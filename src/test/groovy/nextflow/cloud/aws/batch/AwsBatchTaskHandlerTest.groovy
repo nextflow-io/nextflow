@@ -455,6 +455,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         given:
         def IMAGE = 'foo/bar:1.0'
         def JOB_NAME = 'nf-foo-bar-1-0'
+        def MNT1= [name:'efs', containerPath:'/efs', hostPath:'/mnt/efs']
+        def MNT2= [name:'special', containerPath:'/special', hostPath:'/mnt/x', readOnly:true]
         def handler = Spy(AwsBatchTaskHandler)
 
         when:
@@ -464,7 +466,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getAwsOptions() >> new AwsOptions()
         result.jobDefinitionName == JOB_NAME
         result.type == 'container'
-        result.parameters.'nf-token' == 'fdb5ef295f566138a43252b2ea272282'
+        result.parameters.'nf-token' == '2e1bb10f1c7de6358bef1ed8a4a24c3d'
         !result.containerProperties.mountPoints
 
         when:
@@ -474,13 +476,60 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getAwsOptions() >> new AwsOptions(cliPath: '/home/conda/bin/aws')
         result.jobDefinitionName == JOB_NAME
         result.type == 'container'
-        result.parameters.'nf-token' == '9c56fd073d32e0c29f51f12afdfe4750'
+        result.parameters.'nf-token' == '47651d78fda3a2e635217a59d794fac4'
         result.containerProperties.mountPoints[0].sourceVolume == 'aws-cli'
         result.containerProperties.mountPoints[0].containerPath == '/home/conda'
         result.containerProperties.mountPoints[0].readOnly
         result.containerProperties.volumes[0].host.sourcePath == '/home/conda'
         result.containerProperties.volumes[0].name == 'aws-cli'
 
+        when:
+        result = handler.makeJobDefRequest(IMAGE) // just one extra mount
+        then:
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.getAwsOptions() >> new AwsOptions(cliPath: '/home/conda/bin/aws', batchContainerMounts: [MNT1])
+        result.jobDefinitionName == JOB_NAME
+        result.type == 'container'
+        result.parameters.'nf-token' == '7eddd7058c04f974d0c20bf24149cf59'
+
+        result.containerProperties.mountPoints[0].sourceVolume == 'aws-cli'
+        result.containerProperties.mountPoints[0].containerPath == '/home/conda'
+        result.containerProperties.mountPoints[0].readOnly
+        result.containerProperties.volumes[0].host.sourcePath == '/home/conda'
+        result.containerProperties.volumes[0].name == 'aws-cli'
+
+        result.containerProperties.mountPoints[1].sourceVolume == 'efs'
+        result.containerProperties.mountPoints[1].containerPath == '/efs'
+        !result.containerProperties.mountPoints[1].readOnly
+        result.containerProperties.volumes[1].host.sourcePath == '/mnt/efs'
+        result.containerProperties.volumes[1].name == 'efs'
+
+        when:
+        result = handler.makeJobDefRequest(IMAGE) // more than one extra mount
+        then:
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.getAwsOptions() >> new AwsOptions(cliPath: '/home/conda/bin/aws', batchContainerMounts: [MNT1, MNT2])
+        result.jobDefinitionName == JOB_NAME
+        result.type == 'container'
+        result.parameters.'nf-token' == 'faf98e378343bf02afb6134f4ab541c0'
+
+        result.containerProperties.mountPoints[0].sourceVolume == 'aws-cli'
+        result.containerProperties.mountPoints[0].containerPath == '/home/conda'
+        result.containerProperties.mountPoints[0].readOnly
+        result.containerProperties.volumes[0].host.sourcePath == '/home/conda'
+        result.containerProperties.volumes[0].name == 'aws-cli'
+
+        result.containerProperties.mountPoints[1].sourceVolume == 'efs'
+        result.containerProperties.mountPoints[1].containerPath == '/efs'
+        !result.containerProperties.mountPoints[1].readOnly
+        result.containerProperties.volumes[1].host.sourcePath == '/mnt/efs'
+        result.containerProperties.volumes[1].name == 'efs'
+
+        result.containerProperties.mountPoints[2].sourceVolume == 'special'
+        result.containerProperties.mountPoints[2].containerPath == '/special'
+        result.containerProperties.mountPoints[2].readOnly
+        result.containerProperties.volumes[2].host.sourcePath == '/mnt/x'
+        result.containerProperties.volumes[2].name == 'special'
     }
 
     def 'should check task status' () {

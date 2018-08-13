@@ -136,7 +136,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                 storageClass: executor.getSession().config.navigate('aws.client.uploadStorageClass') as String,
                 storageEncryption: executor.getSession().config.navigate('aws.client.storageEncryption') as String,
                 remoteBinDir: executor.remoteBinDir as String,
-                region: executor.getSession().config.navigate('aws.region') as String
+                region: executor.getSession().config.navigate('aws.region') as String,
+                batchContainerMounts: executor.getSession().config.navigate('aws.batchContainerMounts') as List
         )
 
     }
@@ -383,7 +384,14 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                 .withCommand('true')
                 .withMemory(1024)
                 .withVcpus(1)
-        def awscli = getAwsOptions().cliPath
+
+        def mountPoints = []
+        def volumes = []
+
+        def awsOpts = getAwsOptions()
+
+        // add mount for AWS CLI
+        def awscli = awsOpts.cliPath
         if( awscli ) {
             def mountName = 'aws-cli'
             def path = Paths.get(awscli).parent.parent.toString()
@@ -391,18 +399,44 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                     .withSourceVolume(mountName)
                     .withContainerPath(path)
                     .withReadOnly(true)
-            container.setMountPoints([mount])
+            mountPoints << mount
 
             def vol = new Volume()
                     .withName(mountName)
                     .withHost(new Host()
                     .withSourcePath(path))
-            container.setVolumes([vol])
+            volumes << vol
         }
+
+        // Add any additional mounts for the container
+        def mounts = awsOpts.batchContainerMounts
+        if( mounts ) {
+            mounts.each {
+                def mountName = it.name
+                def mount = new MountPoint()
+                        .withSourceVolume(mountName)
+                        .withContainerPath(it.containerPath)
+                        .withReadOnly(it.readOnly)
+                mountPoints << mount
+
+                def vol = new Volume()
+                        .withName(mountName)
+                        .withHost(new Host()
+                        .withSourcePath(it.hostPath))
+                volumes << vol
+            }
+        }
+
+        log.debug "[AWS BATCH] container mount points: " + mountPoints.toString()
+        log.debug "[AWS BATCH] container volumes: " + volumes.toString()
+
+        container.setMountPoints(mountPoints)
+        container.setVolumes(volumes)
+
         result.setContainerProperties(container)
 
         // create a job marker uuid
-        def uuid = CacheHelper.hasher([name, image, awscli]).hash().toString()
+        def uuid = CacheHelper.hasher([name, image, mountPoints.toString()]).hash().toString()
         result.setParameters(['nf-token':uuid])
 
         return result

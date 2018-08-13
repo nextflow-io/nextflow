@@ -46,12 +46,15 @@ class AwsOptions {
 
     String region
 
+    List batchContainerMounts
+
     AwsOptions() { }
 
     AwsOptions(Session session) {
         storageClass = session.config.navigate('aws.client.uploadStorageClass') as String
         storageEncryption = session.config.navigate('aws.client.storageEncryption') as String
         region = session.config.navigate('aws.region') as String
+        batchContainerMounts = session.config.navigate('aws.batchContainerMounts') as List
     }
 
     void setStorageClass(String value) {
