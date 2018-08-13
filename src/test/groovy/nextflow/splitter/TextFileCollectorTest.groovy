@@ -25,7 +25,10 @@ import java.nio.file.Paths
 
 import spock.lang.Specification
 
+import com.google.common.hash.HashCode
 import static test.TestHelper.gunzip
+
+import nextflow.splitter.TextFileCollector.CachePath
 
 /**
  *
@@ -36,7 +39,8 @@ class TextFileCollectorTest extends Specification {
     def 'test next name' () {
 
         given:
-        def buffer = new TextFileCollector(Paths.get('.'))
+        def base = new TextFileCollector.CachePath(Paths.get('.'))
+        def buffer = new TextFileCollector(base)
 
         expect:
         buffer.getNextNameFor(Paths.get('/some/file.fa'),1) == Paths.get('/some/file.1.fa')
@@ -48,7 +52,7 @@ class TextFileCollectorTest extends Specification {
 
         given:
         def base = Files.createTempDirectory('test').resolve('sample.fasta')
-        def buffer = new TextFileCollector(base)
+        def buffer = new TextFileCollector(new CachePath(base))
 
         when:
         buffer.add('>seq1\n')
@@ -88,9 +92,8 @@ class TextFileCollectorTest extends Specification {
         given:
         def base = Files.createTempDirectory('test').resolve('chunk.fasta')
 
-
         when:
-        def buffer = new TextFileCollector(base)
+        def buffer = new TextFileCollector(new CachePath(base))
         then:
         !buffer.hasChunk()
 
@@ -122,7 +125,7 @@ class TextFileCollectorTest extends Specification {
 
         given:
         def base = Files.createTempDirectory('test').resolve('sample.fasta')
-        def collector = new TextFileCollector(base, Charset.defaultCharset(), true)
+        def collector = new TextFileCollector(new CachePath(base), Charset.defaultCharset(), true)
 
         when:
         collector.add('>seq1\n')
@@ -156,5 +159,31 @@ class TextFileCollectorTest extends Specification {
         base?.parent?.deleteDir()
     }
 
+    def 'should create unique cache marker file' () {
+        given:
+        def hash = HashCode.fromLong(89323923l)
+        def base = Files.createTempDirectory('test').resolve('sample.fasta')
+        def collector = new TextFileCollector(new CachePath(base, hash), Charset.defaultCharset(), false)
+
+        when:
+        collector.add('xxx')
+        assert collector.nextChunk() == base.resolveSibling('sample.1.fasta')
+
+        collector.add('yyy')
+        assert collector.nextChunk() == base.resolveSibling('sample.2.fasta')
+
+        collector.add('zzz')
+        assert collector.nextChunk() == base.resolveSibling('sample.3.fasta')
+
+        collector.close()
+
+        then:
+        base.resolveSibling(".chunks.sample.fasta.$hash").exists()
+        collector.checkCached()
+        collector.getAllChunks()*.name == ['sample.1.fasta','sample.2.fasta','sample.3.fasta']
+
+        cleanup:
+        base?.parent?.deleteDir()
+    }
 
 }

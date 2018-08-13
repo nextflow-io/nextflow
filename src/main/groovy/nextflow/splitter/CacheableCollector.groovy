@@ -19,14 +19,15 @@
  */
 
 package nextflow.splitter
+
 import java.nio.file.Path
 
+import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.util.KryoHelper
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-
 /**
  * Defines a trait which can cache the produced chunks
  *
@@ -39,20 +40,28 @@ trait CacheableCollector  {
 
     @PackageScope Path baseFile
 
+    @PackageScope HashCode hashCode
+
     @PackageScope List<Path> allPaths = []
 
     void markComplete() throws IOException {
         // save the list of all chunks
-        def marker = baseFile.resolveSibling(".chunks.${baseFile.name}")
+        def marker = getMarkerFile()
         log.trace "Caching chunk paths > marker=$marker; chunks=$allPaths"
         KryoHelper.serialize(allPaths, marker)
+    }
+
+    Path getMarkerFile() {
+        def fileName = ".chunks.${baseFile.name}"
+        if( hashCode ) fileName += ".$hashCode"
+        return baseFile.resolveSibling(fileName)
     }
 
     Path getBaseFile() { baseFile }
 
     boolean checkCached() {
         try {
-            def marker = baseFile.resolveSibling(".chunks.${baseFile.name}")
+            def marker = getMarkerFile()
             allPaths = (List<Path>)KryoHelper.deserialize(marker)
             log.trace "Found cached chunk paths > marker=$marker; chunks=$allPaths"
             return true
