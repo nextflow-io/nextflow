@@ -426,10 +426,11 @@ class SplitFastqOperatorTest extends Specification {
         then:
         result == Channel.STOP
         sleep 1_000
-        // finally check the existence of the
-        folder.resolve('.chunks.aaa_1.fq').exists()
-        folder.resolve('.chunks.aaa_2.fq').exists()
-        folder.resolve('.chunks.bbb_1.fq').exists()
-        folder.resolve('.chunks.bbb_2.fq').exists()
+        then:
+        // finally check the existence of cached marker files
+        folder.list().find { it.startsWith('.chunks.aaa_1.fq') }
+        folder.list().find { it.startsWith('.chunks.aaa_2.fq') }
+        folder.list().find { it.startsWith('.chunks.bbb_1.fq') }
+        folder.list().find { it.startsWith('.chunks.bbb_2.fq') }
     }
 }
