@@ -267,7 +267,7 @@ class GooglePipelineTaskHandler extends TaskHandler {
             throw new ProcessUnrecoverableException("No container is specified for process $task.name . Either specify the container to use in the process definition or with 'process.container' value in your config")
         }
     }
-www
+
     @Override
     boolean checkIfRunning() {
 
