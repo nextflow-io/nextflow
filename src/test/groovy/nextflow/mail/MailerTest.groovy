@@ -20,18 +20,21 @@
 
 package nextflow.mail
 
+import spock.lang.IgnoreIf
+import spock.lang.Specification
+import spock.lang.Unroll
+
+import java.nio.file.Files
+import java.nio.file.Path
 import javax.mail.Message
 import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
 import javax.mail.internet.MimeMultipart
-import java.nio.file.Files
-import java.nio.file.Path
 
 import org.subethamail.wiser.Wiser
-import spock.lang.Specification
-import spock.lang.Unroll
 import spock.util.environment.RestoreSystemProperties
 
+@IgnoreIf({System.getenv('NXF_QUICK')})
 class MailerTest extends Specification {
 
 
