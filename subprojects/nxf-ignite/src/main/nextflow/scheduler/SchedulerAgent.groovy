@@ -343,8 +343,10 @@ class SchedulerAgent implements Closeable {
             return true
         }
 
-        Callable runTask(IgBaseTask task) {
-            return { runTask0(task) } as Callable
+        Runnable runTask(IgBaseTask task) {
+            new Runnable() {
+                @Override void run() { runTask0(task) }
+            }
         }
 
         void runTask0( IgBaseTask task ) {

@@ -168,7 +168,6 @@ class ProviderConfigTest extends Specification {
 
     def 'should create all config providers'() {
 
-        given:
         when:
         def result = ProviderConfig.createFromText(CONFIG)
         then:
