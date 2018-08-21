@@ -202,7 +202,7 @@ class ConfigHelper {
         for( int i=0; i<keys.size(); i++) {
             final key = keys.get(i)
             final val = config.get(key)
-            stack.push(wrap0(key))
+            stack.add(wrap0(key))
             if( val instanceof ConfigObject ) {
                 flattenFormat(val, stack, result, sort)
             }
@@ -210,7 +210,7 @@ class ConfigHelper {
                 final name = stack.join('.')
                 result << name << ' = ' << render0(val) << '\n'
             }
-            stack.pop()
+            stack.removeLast()
         }
 
     }

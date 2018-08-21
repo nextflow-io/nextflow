@@ -92,9 +92,9 @@ class PublishDirTest extends Specification {
         folder.resolve('work-dir/file3.fastq').text = 'ccc'
         folder.resolve('work-dir/file4.temp').text = 'zzz'
 
-        final workDir = folder.resolve('work-dir')
-        final publishDir = folder.resolve('pub-dir')
-        final task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
+        def workDir = folder.resolve('work-dir')
+        def publishDir = folder.resolve('pub-dir')
+        def task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
 
         when:
         def outputs =  [
@@ -153,9 +153,9 @@ class PublishDirTest extends Specification {
         folder.resolve('work-dir/dir-y').resolve('file.3').text = '333'
         folder.resolve('work-dir/dir-y').resolve('file.4').text = '444'
 
-        final workDir = folder.resolve('work-dir')
-        final publishDir = folder.resolve('pub-dir')
-        final task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
+        def workDir = folder.resolve('work-dir')
+        def publishDir = folder.resolve('pub-dir')
+        def task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
 
         when:
         def outputs = [
@@ -204,10 +204,10 @@ class PublishDirTest extends Specification {
         folder.resolve('work-dir/file3.fastq').text = 'ccc'
         folder.resolve('work-dir/file4.temp').text = 'zzz'
 
-        final workDir = folder.resolve('work-dir')
-        final target1 = folder.resolve('pub-dir1')
-        final target2 = folder.resolve('pub-dir2')
-        final task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
+        def workDir = folder.resolve('work-dir')
+        def target1 = folder.resolve('pub-dir1')
+        def target2 = folder.resolve('pub-dir2')
+        def task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
 
         when:
         def outputs = [

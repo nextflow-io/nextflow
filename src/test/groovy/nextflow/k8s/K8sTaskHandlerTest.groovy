@@ -353,10 +353,10 @@ class K8sTaskHandlerTest extends Specification {
         handler.client = client
         handler.task = task
 
-        final POD_NAME = 'new-pod-id'
-        final REQUEST =  [foo: 'bar']
-        final RESPONSE = new K8sResponseJson([metadata: [name:POD_NAME]])
-        final YAML = Paths.get('file.yaml')
+        def POD_NAME = 'new-pod-id'
+        def REQUEST =  [foo: 'bar']
+        def RESPONSE = new K8sResponseJson([metadata: [name:POD_NAME]])
+        def YAML = Paths.get('file.yaml')
         when:
         handler.submit()
         then:
@@ -384,7 +384,7 @@ class K8sTaskHandlerTest extends Specification {
 
     def 'should check if running'  () {
         given:
-        final POD_NAME = 'pod-xyz'
+        def POD_NAME = 'pod-xyz'
         def client = Mock(K8sClient)
         def handler = Spy(K8sTaskHandler)
         handler.client = client
@@ -411,10 +411,10 @@ class K8sTaskHandlerTest extends Specification {
 
     def 'should check if completed' () {
         given:
-        final ERR_FILE = Paths.get('err.file')
-        final OUT_FILE = Paths.get('out.filex')
-        final POD_NAME = 'pod-xyz'
-        final EXIT_STATUS = 111
+        def ERR_FILE = Paths.get('err.file')
+        def OUT_FILE = Paths.get('out.filex')
+        def POD_NAME = 'pod-xyz'
+        def EXIT_STATUS = 111
         def task = new TaskRun()
         def client = Mock(K8sClient)
         def handler = Spy(K8sTaskHandler)
@@ -455,7 +455,7 @@ class K8sTaskHandlerTest extends Specification {
 
     def 'should kill a pod' () {
         given:
-        final POD_NAME = 'pod-xyz'
+        def POD_NAME = 'pod-xyz'
         def client = Mock(K8sClient)
         def handler = Spy(K8sTaskHandler)
         handler.client = client
@@ -476,7 +476,7 @@ class K8sTaskHandlerTest extends Specification {
 
     def 'should check task cached state' () {
         given:
-        final POD_NAME = 'pod-xyz'
+        def POD_NAME = 'pod-xyz'
         def client = Mock(K8sClient)
         def handler = Spy(K8sTaskHandler)
         handler.client = client

@@ -37,7 +37,7 @@ class SequentialFileStoreTest extends Specification {
 
         given:
         Path file = tempDir.newFile()
-        final HELLO = 'Hello world'.getBytes()
+        def HELLO = 'Hello world'.getBytes()
 
         when:
         def store = new SequentialFileStore(file)
@@ -74,7 +74,7 @@ class SequentialFileStoreTest extends Specification {
 
         given:
         Path file = tempDir.newFile()
-        final HELLO = 'Hello world'.getBytes()
+        def HELLO = 'Hello world'.getBytes()
         def store = new SequentialFileStore(file, 10) // <- use a very small buffer, this forces to flush the data to the file
 
         when:
@@ -118,7 +118,7 @@ class SequentialFileStoreTest extends Specification {
 
         given:
         Path file = tempDir.newFile()
-        final HELLO = 'Hello world'
+        def HELLO = 'Hello world'
 
         when:
         def store = new SequentialFileStore(file)

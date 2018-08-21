@@ -77,10 +77,10 @@ class MailerTest extends Specification {
     def "sending mails using javamail"() {
 
         given:
-        final PORT = 3025
-        final USER = 'foo'
-        final PASSWORD = 'secret'
-        final server = new Wiser(PORT)
+        def PORT = 3025
+        def USER = 'foo'
+        def PASSWORD = 'secret'
+        def server = new Wiser(PORT)
         server.start()
 
         def SMTP = [ host: 'localhost', port: PORT, user: USER, password: PASSWORD]
@@ -117,10 +117,10 @@ class MailerTest extends Specification {
     def "sending mails using java with attachment"() {
 
         given:
-        final PORT = 3025
-        final USER = 'foo'
-        final PASSWORD = 'secret'
-        final server = new Wiser(PORT)
+        def PORT = 3025
+        def USER = 'foo'
+        def PASSWORD = 'secret'
+        def server = new Wiser(PORT)
         server.start()
 
         def SMTP = [ host: '127.0.0.1', port: PORT, user: USER, password: PASSWORD]

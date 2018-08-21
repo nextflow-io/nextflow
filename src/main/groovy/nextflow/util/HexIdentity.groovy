@@ -20,19 +20,23 @@
 
 package nextflow.util
 
-import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
 
 /**
  * Hexadecimal identify value class
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Canonical
 @CompileStatic
+@EqualsAndHashCode
 class HexIdentity {
 
     int value
+
+    HexIdentity(int value) {
+        this.value = value
+    }
 
     String toString() {
         "0x${Integer.toHexString(value)}"
