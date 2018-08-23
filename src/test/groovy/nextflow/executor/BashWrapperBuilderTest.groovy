@@ -2757,8 +2757,7 @@ class BashWrapperBuilderTest extends Specification {
                   local count=0;
                   declare -a max=(); for i in {0..13}; do max[i]=0; done
                   while [[ true ]]; do
-                    kill -0 $pid >/dev/null
-                    [[ $? != 0 ]] && exit 0
+                    if ! kill -0 $pid 2>/dev/null; then exit 0; fi
                     tot=$(nxf_pstat $pid)
                     [[ ! $tot ]] && break
                     IFS=' ' read -a val <<< "$tot"; unset IFS
