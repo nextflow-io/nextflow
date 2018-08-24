@@ -73,4 +73,8 @@ class Manifest {
         target.nextflowVersion
     }
 
+    String getVersion() {
+        target.version
+    }
+
 }
