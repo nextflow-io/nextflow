@@ -2,7 +2,7 @@
 
 
 # Install java and docker.
-# TODO: have this configured as an option in gce config block
+# TODO: have this configured as an option in gce config block or remove altogether
 
 if ! which java; then
   if which apt-get; then
@@ -66,8 +66,8 @@ fi
 #
 version="v!{nextflow.version}"
 
-#curl -fsSL http://www.nextflow.io/releases/${version}/nextflow  > $HOME/nextflow
-curl http://nextflow-nextcode-dev.storage.googleapis.com/nextflow-!{nextflow.version}-all >$HOME/nextflow
+download_url=${NEXFLOW_DOWNLOAD_URL:-http://www.nextflow.io/releases}
+curl -fsSL ${download_url}/${version}/nextflow  > $HOME/nextflow
 chmod +x $HOME/nextflow
 $HOME/nextflow -download
 
@@ -94,7 +94,8 @@ EndOfScript
 userhome=$(echo ~!{userName})
 sudo -u !{userName} mkdir -p work
 
-# TODO: apt-get/yum auto
+# TODO: Have automatic NFS support configurable or remove altogether
+# TODO: apt-get/yum auto and
 yum -y install nfs-utils
 echo "Userhome: ${userhome}"
 if [[ '!{role}' == master ]]; then
