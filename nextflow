@@ -189,7 +189,7 @@ bg=''
 dockerize=''
 declare -a jvmopts=()
 declare -a args=("$@")
-declare -a commands=(clone config drop help history info ls pull run view node console kube-run)
+declare -a commands=(clone config drop help history info ls pull run view node console kuberun)
 cmd=''
 while [[ $# != 0 ]]; do
     case $1 in
