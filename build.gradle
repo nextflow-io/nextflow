@@ -96,10 +96,11 @@ allprojects {
 
     dependencies {
         // test configuration
+        testCompile ("org.codehaus.groovy:groovy-test:2.5.1") { exclude group: 'org.codehaus.groovy' }
         testCompile ("cglib:cglib-nodep:2.2")
-        testCompile ("org.objenesis:objenesis:1.4")
-        testCompile ("org.spockframework:spock-core:1.2-RC1-groovy-2.5") { exclude group: 'info.picocli', module: 'picocli' }
-        testCompile 'com.google.jimfs:jimfs:1.0'
+        testCompile ("org.objenesis:objenesis:2.1")
+        testCompile ("org.spockframework:spock-core:1.2-RC1-groovy-2.5") { exclude group: 'org.codehaus.groovy' }
+        testCompile 'com.google.jimfs:jimfs:1.1'
         testCompile 'org.subethamail:subethasmtp:3.1.7'
         // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sec:module_replacement
         modules {
@@ -171,17 +172,17 @@ dependencies {
     compile "org.codehaus.groovy:groovy-nio:2.5.1"
     compile "org.codehaus.groovy:groovy-json:2.5.1"
     compile "org.codehaus.groovy:groovy-templates:2.5.1"
-    compile "org.slf4j:jcl-over-slf4j:1.7.21"
-    compile "org.slf4j:jul-to-slf4j:1.7.21"
-    compile "org.slf4j:log4j-over-slf4j:1.7.21"
-    compile "ch.qos.logback:logback-classic:1.1.10"
-    compile "ch.qos.logback:logback-core:1.1.10"
+    compile "org.slf4j:jcl-over-slf4j:1.7.25"
+    compile "org.slf4j:jul-to-slf4j:1.7.25"
+    compile "org.slf4j:log4j-over-slf4j:1.7.25"
+    compile "ch.qos.logback:logback-classic:1.1.11"
+    compile "ch.qos.logback:logback-core:1.1.11"
     compile "org.codehaus.gpars:gpars:1.2.1"
     compile("ch.grengine:grengine:1.2.1") 
     compile "commons-lang:commons-lang:2.6"
     compile "com.beust:jcommander:1.35"
     compile("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
-    compile('org.iq80.leveldb:leveldb:0.7')
+    compile('org.iq80.leveldb:leveldb:0.10')
     compile('org.eclipse.jgit:org.eclipse.jgit:4.8.0.201706111038-r')
     compile('io.nextflow:nxf-s3fs:1.0.4') {
         exclude group: 'org.apache.tika', module: 'tika-core'

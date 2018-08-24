@@ -31,7 +31,7 @@ sourceSets {
 }
 
 dependencies {
-    compile "ch.qos.logback:logback-classic:1.1.10"
+    compile "ch.qos.logback:logback-classic:1.1.11"
     compile "org.codehaus.groovy:groovy:2.5.1"
     compile "org.codehaus.groovy:groovy-nio:2.5.1"
 
