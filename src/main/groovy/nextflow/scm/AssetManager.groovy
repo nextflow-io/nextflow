@@ -20,18 +20,14 @@
 
 package nextflow.scm
 
-import static nextflow.Const.DEFAULT_HUB
-import static nextflow.Const.DEFAULT_MAIN_FILE_NAME
-import static nextflow.Const.DEFAULT_ORGANIZATION
-import static nextflow.Const.DEFAULT_ROOT
-import static nextflow.Const.MANIFEST_FILE_NAME
-
 import java.nio.file.Path
 
-import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
+import groovy.transform.ToString
+import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import nextflow.cli.HubOptions
 import nextflow.config.ConfigParser
@@ -50,6 +46,11 @@ import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+import static nextflow.Const.DEFAULT_HUB
+import static nextflow.Const.DEFAULT_MAIN_FILE_NAME
+import static nextflow.Const.DEFAULT_ORGANIZATION
+import static nextflow.Const.DEFAULT_ROOT
+import static nextflow.Const.MANIFEST_FILE_NAME
 /**
  * Handles operation on remote and local installed pipelines
  *
@@ -959,7 +960,9 @@ class AssetManager {
     /**
      * Models revision information of a project repository.
      */
-    @Canonical
+    @ToString
+    @EqualsAndHashCode
+    @TupleConstructor
     static class RevisionInfo {
         static enum Type {
             TAG,

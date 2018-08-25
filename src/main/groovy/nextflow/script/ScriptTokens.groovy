@@ -19,15 +19,18 @@
  */
 
 package nextflow.script
-import groovy.transform.Canonical
+
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import groovy.transform.TupleConstructor
 /**
  * Presents a variable definition in the script context.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Canonical
+@ToString
+@EqualsAndHashCode
+@TupleConstructor
 class TokenVar {
 
     /** The variable name */
@@ -84,7 +87,9 @@ class TokenStdoutCall { }
  *     set( env(X), ... )
  *     <pre>
  */
-@Canonical
+@ToString
+@EqualsAndHashCode
+@TupleConstructor
 class TokenEnvCall {
     Object val
 }
@@ -102,7 +107,9 @@ class TokenEnvCall {
  * </pre>
  *
  */
-@Canonical
+@ToString
+@EqualsAndHashCode
+@TupleConstructor
 class TokenValCall {
     Object val
 }
