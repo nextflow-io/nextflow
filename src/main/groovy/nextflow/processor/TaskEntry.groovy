@@ -20,15 +20,18 @@
 
 package nextflow.processor
 
-import groovy.transform.Canonical
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
+import groovy.transform.TupleConstructor
 import nextflow.trace.TraceRecord
-
 /**
  * Model a task entry persisted in the {@link nextflow.CacheDB}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Canonical
+@ToString
+@EqualsAndHashCode
+@TupleConstructor
 class TaskEntry {
 
     TraceRecord trace
