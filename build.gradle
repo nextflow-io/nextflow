@@ -90,6 +90,7 @@ allprojects {
     configurations {
         // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
         all*.exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+        all*.exclude group: 'org.codehaus.groovy', module: 'groovy-cli-picocli'
         // groovydoc libs
         groovyDoc.extendsFrom runtime
     }
@@ -178,7 +179,7 @@ dependencies {
     compile "ch.qos.logback:logback-classic:1.1.11"
     compile "ch.qos.logback:logback-core:1.1.11"
     compile "org.codehaus.gpars:gpars:1.2.1"
-    compile("ch.grengine:grengine:1.2.1") 
+    compile("ch.grengine:grengine:1.3.0") { exclude group: 'org.codehaus.groovy'  }
     compile "commons-lang:commons-lang:2.6"
     compile "com.beust:jcommander:1.35"
     compile("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
