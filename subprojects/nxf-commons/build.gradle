@@ -33,7 +33,7 @@ dependencies {
     compile "org.codehaus.groovy:groovy:2.5.1"
     compile "org.codehaus.groovy:groovy-nio:2.5.1"
     compile "commons-lang:commons-lang:2.6"
-    compile 'com.google.guava:guava:26.0-jre'
+    compile 'com.google.guava:guava:21.0'
 
     /* testCompile inherited from top gradle build file */
 }
