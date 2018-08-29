@@ -20,13 +20,6 @@
 
 package nextflow.scheduler
 
-import javax.cache.CacheException
-
-import static nextflow.Const.ROLE_MASTER
-import static nextflow.scheduler.Protocol.PENDING_TASKS_CACHE
-import static nextflow.scheduler.Protocol.TOPIC_AGENT_EVENTS
-import static nextflow.scheduler.Protocol.TOPIC_SCHEDULER_EVENTS
-
 import java.nio.channels.ClosedByInterruptException
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
@@ -70,6 +63,10 @@ import org.apache.ignite.events.Event
 import org.apache.ignite.events.EventType
 import org.apache.ignite.lang.IgniteBiPredicate
 import org.apache.ignite.lang.IgnitePredicate
+import static nextflow.Const.ROLE_MASTER
+import static nextflow.scheduler.Protocol.PENDING_TASKS_CACHE
+import static nextflow.scheduler.Protocol.TOPIC_AGENT_EVENTS
+import static nextflow.scheduler.Protocol.TOPIC_SCHEDULER_EVENTS
 /**
  * Implements the scheduler execution logic. Each worker deploy an instance of this class
  * to process the tasks submitted by driver nextflow application
@@ -166,10 +163,6 @@ class SchedulerAgent implements Closeable {
                     }
 
                 }
-                catch( CacheException e ) {
-                    stopped = e?.message?.contains('grid is stopping')
-                    log.error "=== Unexpected scheduler cache error", e
-                }
                 catch( InterruptedException e ) {
                     log.trace "=== Message processor interrupted"
                     stopped = true
@@ -178,6 +171,7 @@ class SchedulerAgent implements Closeable {
                     log.trace "=== Task execution rejected -- ${e.message ?: e}"
                 }
                 catch( Exception e ) {
+                    stopped = e?.message?.contains('grid is stopping') || e?.message?.contains('cache is stopped')
                     log.error "=== Unexpected scheduler agent error", e
                 }
             }
