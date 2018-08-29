@@ -20,7 +20,8 @@
 
 package nextflow.daemon
 
-import static nextflow.Const.*
+import java.util.logging.Level
+import java.util.logging.Logger
 
 import com.amazonaws.auth.BasicAWSCredentials
 import groovy.transform.CompileStatic
@@ -48,6 +49,8 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMultic
 import org.apache.ignite.spi.discovery.tcp.ipfinder.s3.TcpDiscoveryS3IpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.sharedfs.TcpDiscoverySharedFsIpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder
+import static nextflow.Const.ROLE_MASTER
+import static nextflow.Const.ROLE_WORKER
 /**
  * Grid factory class. It can be used to create a {@link IgniteConfiguration} or the {@link Ignite} instance directly
  *
@@ -113,6 +116,10 @@ class IgGridFactory {
      * @return
      */
     IgniteConfiguration config() {
+        // required by
+        // https://issues.apache.org/jira/browse/IGNITE-8899
+        // https://issues.apache.org/jira/browse/IGNITE-8426
+        Logger.getLogger('').setLevel(Level.OFF)
 
         System.setProperty('IGNITE_UPDATE_NOTIFIER','false')
         System.setProperty('IGNITE_NO_ASCII', 'true')
