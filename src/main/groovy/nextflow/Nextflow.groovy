@@ -36,6 +36,7 @@ import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.util.ArrayTuple
 import nextflow.util.CacheHelper
+import nextflow.extension.GroupKey
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -366,6 +367,7 @@ class Nextflow {
 
     /**
      * Implements built-in send mail functionality
+     *
      * @param params
      *    A closure representing the mail message to send eg
      *    <code>
@@ -387,4 +389,14 @@ class Nextflow {
                 .send(params)
     }
 
+    /**
+     * Creates a groupTuple dynamic key
+     *
+     * @param key
+     * @param size
+     * @return
+     */
+    static GroupKey groupKey(key, int size) {
+        new GroupKey(key,size)
+    }
 }
