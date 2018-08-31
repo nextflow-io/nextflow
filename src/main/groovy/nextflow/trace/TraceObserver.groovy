@@ -74,7 +74,7 @@ trait TraceObserver {
     /**
      * @return {@code true} whenever this observer requires to collect task execution metrics
      */
-    boolean enableMetrics(){}
+    boolean enableMetrics(){ false }
 
     /**
      * Method that is invoked, when a workflow fails.
