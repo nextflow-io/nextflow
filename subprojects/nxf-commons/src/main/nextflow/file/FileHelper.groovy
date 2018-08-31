@@ -20,6 +20,8 @@
 
 package nextflow.file
 
+import com.google.cloud.storage.contrib.nio.CloudStoragePath
+
 import java.lang.reflect.Field
 import java.nio.file.CopyOption
 import java.nio.file.FileSystem
@@ -194,7 +196,9 @@ class FileHelper {
 
         def str = hash.toString()
         def bucket = str.substring(0,2)
-        def folder = bashPath.resolve("${bucket}/${str.substring(2)}")
+        //TODO: Temp change to see if CloudStorageFilsSystem works if we end the dir with a forward slash
+        //def folder = bashPath.resolve("${bucket}/${str.substring(2)}")
+        def folder = bashPath.resolve("${bucket}/${str.substring(2)}/")
 
         return folder.toAbsolutePath()
     }
@@ -733,7 +737,8 @@ class FileHelper {
             @Override
             public FileVisitResult preVisitDirectory(Path fullPath, BasicFileAttributes attrs) throws IOException {
                 final int depth = fullPath.nameCount - folder.nameCount
-                final path = folder.relativize(fullPath)
+                //TODO: This workaround should go away so soon as the forward slash problem is solved in the nio CloudStorageFileSystemProvider
+                final path = fullPath in CloudStoragePath ?  folder.relativize(fixCloudStoragePath(fullPath)) : folder.relativize(fullPath)
                 log.trace "visitFiles > dir=$path; depth=$depth; includeDir=$includeDir; matches=${matcher.matches(path)}; isDir=${attrs.isDirectory()}"
 
                 if (depth>0 && includeDir && matcher.matches(path) && attrs.isDirectory() && (includeHidden || !isHidden(fullPath))) {
@@ -746,7 +751,10 @@ class FileHelper {
 
             @Override
             public FileVisitResult visitFile(Path fullPath, BasicFileAttributes attrs) throws IOException {
-                final path = folder.relativize(fullPath)
+                //TODO: This workaround should go away so soon as the forward slash problem is solved in the nio CloudStorageFileSystemProvider
+                final path = fullPath in CloudStoragePath ?  folder.relativize(fixCloudStoragePath(fullPath)) : folder.relativize(fullPath)
+
+                //final path = folder.relativize(fullPath)
                 log.trace "visitFiles > file=$path; includeFile=$includeFile; matches=${matcher.matches(path)}; isRegularFile=${attrs.isRegularFile()}"
 
                 if (includeFile && matcher.matches(path) && attrs.isRegularFile() && (includeHidden || !isHidden(fullPath))) {
@@ -758,6 +766,15 @@ class FileHelper {
             }
       })
 
+    }
+
+    //TODO: This workaround should go away so soon as the forward slash problem is solved in the nio CloudStorageFileSystemProvider
+    public static Path fixCloudStoragePath(Path path) {
+        if(path in CloudStoragePath)
+            asPath(path.toUri())
+        else
+            path
+        //path
     }
 
     private static boolean isHidden(Path path) {
