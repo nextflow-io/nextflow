@@ -19,6 +19,13 @@
  */
 
 package nextflow.util
+
+import com.google.cloud.storage.contrib.nio.CloudStorageConfiguration
+import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
+import com.google.cloud.storage.contrib.nio.CloudStorageFileSystemProvider
+import com.google.cloud.storage.contrib.nio.CloudStoragePath
+import com.google.cloud.storage.contrib.nio.UnixPath
+
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
@@ -219,6 +226,33 @@ class MatcherInstantiator implements ObjectInstantiator {
         c.newInstance()
     }
 }
+//TODO: This should not be necessary if if CloudStoragePath has a public constructor
+@Singleton
+class CloudStoragePathInstantiator implements ObjectInstantiator {
+
+    @Override
+    Object newInstance() {
+        def c = CloudStoragePath.getDeclaredConstructor(CloudStorageFileSystem.class, UnixPath.class)
+        c.setAccessible(true)
+        c.newInstance(null,null)
+    }
+}
+
+@Singleton
+class CloudStorageFileSystemInstantiator implements ObjectInstantiator {
+
+    @Override
+    Object newInstance() {
+        def c = CloudStorageFileSystem.getDeclaredConstructor(CloudStorageFileSystemProvider.class,String.class, CloudStorageConfiguration.class)
+        c.setAccessible(true)
+        try {
+            c.newInstance(new CloudStorageFileSystemProvider(),"bucket",CloudStorageConfiguration.DEFAULT)
+        } catch (Throwable t) {
+            t.printStackTrace()
+            throw t
+        }
+    }
+}
 
 @Singleton
 @CompileStatic
@@ -228,6 +262,11 @@ class InstantiationStrategy extends Kryo.DefaultInstantiatorStrategy {
     public ObjectInstantiator newInstantiatorOf (final Class type) {
         if( type == Matcher ) {
             MatcherInstantiator.instance
+        //TODO: This should not be necessary if if CloudStoragePath has a public constructor
+        } else if(type == CloudStoragePath) {
+            CloudStoragePathInstantiator.instance
+        } else if(type == CloudStorageFileSystem) {
+            CloudStorageFileSystemInstantiator.instance
         }
         else {
             super.newInstantiatorOf(type)

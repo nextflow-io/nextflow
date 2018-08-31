@@ -188,8 +188,8 @@ class PublishDir {
 
     @CompileStatic
     protected void apply( Path source, boolean inProcess ) {
-
-        def target = sourceDir.relativize(source)
+        //TODO: This workaround should go away so soon as the forward slash problem is solved in the nio CloudStorageFileSystemProvider
+        def target = sourceDir.relativize(FileHelper.fixCloudStoragePath(source))
         if( matcher && !matcher.matches(target) ) {
             // skip not matching file
             return
