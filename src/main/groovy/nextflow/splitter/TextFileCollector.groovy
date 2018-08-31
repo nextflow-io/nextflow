@@ -27,9 +27,11 @@ import java.nio.file.Path
 import java.util.zip.GZIPOutputStream
 
 import com.google.common.hash.HashCode
-import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
+import groovy.transform.ToString
+import groovy.transform.TupleConstructor
 /**
  * A collector strategy that creates a chunks as text files
  *
@@ -38,7 +40,9 @@ import groovy.transform.PackageScope
 @CompileStatic
 class TextFileCollector implements CollectorStrategy, CacheableCollector, Closeable {
 
-    @Canonical
+    @ToString
+    @EqualsAndHashCode
+    @TupleConstructor
     @PackageScope
     static class CachePath {
         Path path

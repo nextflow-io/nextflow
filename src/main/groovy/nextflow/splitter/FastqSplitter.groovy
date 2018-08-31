@@ -20,14 +20,15 @@
 
 package nextflow.splitter
 
-import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
 import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
+import groovy.transform.ToString
+import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.exception.StopSplitIterationException
-
 /**
  * Split FASTQ formatted text content or files
  *
@@ -46,7 +47,9 @@ class FastqSplitter extends AbstractTextSplitter {
      *
      * See {@link nextflow.extension.SplitterMergeClosure}
      */
-    @Canonical
+    @ToString
+    @EqualsAndHashCode
+    @TupleConstructor
     static class SplitIndex {
         int value
         String toString() { "SplitIndex($value)" }

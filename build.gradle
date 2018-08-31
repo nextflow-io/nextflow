@@ -69,7 +69,7 @@ allprojects {
     apply plugin: 'java'
     apply plugin: 'idea'
 
-    version = /0.31.1/
+    version = /0.32.0-SNAPSHOT/
     group = 'io.nextflow'
 
     sourceCompatibility = 1.8
@@ -90,19 +90,28 @@ allprojects {
     configurations {
         // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
         all*.exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+        all*.exclude group: 'org.codehaus.groovy', module: 'groovy-cli-picocli'
+        // groovydoc libs
+        groovyDoc.extendsFrom runtime
     }
 
     dependencies {
         // test configuration
+        testCompile ("org.codehaus.groovy:groovy-test:2.5.1") { exclude group: 'org.codehaus.groovy' }
         testCompile ("cglib:cglib-nodep:2.2")
-        testCompile ("org.objenesis:objenesis:1.4")
-        testCompile ("org.spockframework:spock-core:1.1-groovy-2.4")
-        testCompile 'com.google.jimfs:jimfs:1.0'
+        testCompile ("org.objenesis:objenesis:2.1")
+        testCompile ("org.spockframework:spock-core:1.2-RC1-groovy-2.5") { exclude group: 'org.codehaus.groovy' }
+        testCompile 'com.google.jimfs:jimfs:1.1'
         testCompile 'org.subethamail:subethasmtp:3.1.7'
         // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sec:module_replacement
         modules {
             module("commons-logging:commons-logging") { replacedBy("org.slf4j:jcl-over-slf4j") }
         }
+
+        // Documentation required libraries
+        groovyDoc 'org.fusesource.jansi:jansi:1.11'
+        groovyDoc "org.codehaus.groovy:groovy-groovydoc:2.5.1"
+        groovyDoc "org.codehaus.groovy:groovy-ant:2.5.1"
     }
 
     // this is required due to this IDEA bug
@@ -119,6 +128,13 @@ allprojects {
         tasks.withType(Javadoc) {
             options.addStringOption('Xdoclint:none', '-quiet')
         }
+    }
+
+    // patched as described here
+    // http://forums.gradle.org/gradle/topics/gradle_task_groovydoc_failing_with_noclassdeffounderror
+    tasks.withType(Groovydoc) {
+        groovyClasspath = project.configurations.groovyDoc
+        includes  = ["nextflow/**"]
     }
 
     // Required to run tests on Java 9 and higher in compatibility mode
@@ -146,7 +162,6 @@ configurations {
     //provided
     ignite.extendsFrom runtime
     console.extendsFrom runtime
-    gdocLibs.extendsFrom runtime
     ga4gh.extendsFrom runtime
 }
 
@@ -154,21 +169,21 @@ configurations {
 dependencies {
     compile(project(':nxf-commons'))
     compile(project(':nxf-httpfs'))
-    compile "org.codehaus.groovy:groovy:2.4.15"
-    compile "org.codehaus.groovy:groovy-nio:2.4.15"
-    compile "org.codehaus.groovy:groovy-json:2.4.15"
-    compile "org.codehaus.groovy:groovy-templates:2.4.15"
-    compile "org.slf4j:jcl-over-slf4j:1.7.21"
-    compile "org.slf4j:jul-to-slf4j:1.7.21"
-    compile "org.slf4j:log4j-over-slf4j:1.7.21"
-    compile "ch.qos.logback:logback-classic:1.1.10"
-    compile "ch.qos.logback:logback-core:1.1.10"
+    compile "org.codehaus.groovy:groovy:2.5.1"
+    compile "org.codehaus.groovy:groovy-nio:2.5.1"
+    compile "org.codehaus.groovy:groovy-json:2.5.1"
+    compile "org.codehaus.groovy:groovy-templates:2.5.1"
+    compile "org.slf4j:jcl-over-slf4j:1.7.25"
+    compile "org.slf4j:jul-to-slf4j:1.7.25"
+    compile "org.slf4j:log4j-over-slf4j:1.7.25"
+    compile "ch.qos.logback:logback-classic:1.1.11"
+    compile "ch.qos.logback:logback-core:1.1.11"
     compile "org.codehaus.gpars:gpars:1.2.1"
-    compile("ch.grengine:grengine:1.2.1") { exclude group: 'org.codehaus.groovy', module: 'groovy-all' }
+    compile("ch.grengine:grengine:1.3.0") { exclude group: 'org.codehaus.groovy'  }
     compile "commons-lang:commons-lang:2.6"
     compile "com.beust:jcommander:1.35"
     compile("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
-    compile('org.iq80.leveldb:leveldb:0.7')
+    compile('org.iq80.leveldb:leveldb:0.10')
     compile('org.eclipse.jgit:org.eclipse.jgit:4.8.0.201706111038-r')
     compile('io.nextflow:nxf-s3fs:1.0.4') {
         exclude group: 'org.apache.tika', module: 'tika-core'
@@ -203,19 +218,8 @@ dependencies {
         exclude module: 'nextflow'
     }
 
-    // Documentation required libraries
-    gdocLibs 'org.fusesource.jansi:jansi:1.11'
-    gdocLibs "org.codehaus.groovy:groovy-groovydoc:2.4.15"
-    gdocLibs "org.codehaus.groovy:groovy-ant:2.4.15"
-
 }
 
-// patched as described here
-// http://forums.gradle.org/gradle/topics/gradle_task_groovydoc_failing_with_noclassdeffounderror
-groovydoc {
-    groovyClasspath = project.configurations.gdocLibs
-    includes  = ["nextflow/**"]
-}
 
 //sourceSets.main.compileClasspath += configurations.provided
 sourceSets.main.java.srcDirs = []

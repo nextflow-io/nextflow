@@ -447,7 +447,7 @@ following these rules:
 * For any other value, the value itself is used as a key.
 
 groupTuple
------------
+----------
 
 The ``groupTuple`` operator collects tuples (or lists) of values emitted by the source channel grouping together the
 elements that share the same key. Finally it emits a new tuple object for each distinct key collected.
@@ -510,6 +510,12 @@ deep            Similar to the previous, but the hash number is created on actua
 `custom`        A custom sorting criteria can be specified by using either a :ref:`Closure <script-closure>` or a `Comparator <http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html>`_ object.
 =============== ========================
 
+
+.. tip:: You should always specify the number of expected element in each tuple using the ``size`` attribute
+  to allow the ``groupTuple`` operator to stream the collected values as soon as possible. However there
+  are use cases in which each tuple has a different size depending grouping key. In this cases use the
+  built-in function ``groupKey`` that allows you to create a special grouping key object to which it's possible
+  to associate the group size for a given key.
 
 
 buffer

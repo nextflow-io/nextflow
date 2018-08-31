@@ -131,10 +131,13 @@ function install() {
 
 function launch_nextflow() {
     # the launch command line
-    local cmdline="${launcher[@]} "
-    for x in "${args[@]}"; do
-        cmdline+="'$x' "
-    done
+    local cmdline=()
+    # remove leading and trailing double-quotes 
+    for x in "${launcher[@]}"; do
+        x="${x%\"}"
+        x="${x#\"}"
+        cmdline+=("$x") 
+    done 
 
     if [[ $NXF_MPIRUN ]]; then
         local rank=''
@@ -154,19 +157,20 @@ function launch_nextflow() {
             export NXF_EXECUTOR='ignite'
             export NXF_CLUSTER_SHUTDOWNONCOMPLETE='true'
         else
-            cmdline="${launcher[@]} -log .nextflow_node_${rank}.log node ignite"
+            args=(-log .nextflow_node_${rank}.log node ignite)
         fi
     # start in daemon mode
     elif [[ "$bg" ]]; then
       local pid_file="${NXF_PID_FILE:-.nextflow.pid}"
-      bash -c "exec $cmdline" &
+      cmdline+=("${args[@]}")
+      exec "${cmdline[@]}" &
       disown
       echo $! > "$pid_file"
       exit 0
     fi
 
-    # trampoline syntax -- https://github.com/puniverse/capsule/pull/71
-    exec bash -c "exec $cmdline"
+    cmdline+=("${args[@]}")
+    exec "${cmdline[@]}"
     exit 1
 }
 
@@ -189,7 +193,7 @@ bg=''
 dockerize=''
 declare -a jvmopts=()
 declare -a args=("$@")
-declare -a commands=(clone config drop help history info ls pull run view node console kube-run)
+declare -a commands=(clone config drop help history info ls pull run view node console kuberun)
 cmd=''
 while [[ $# != 0 ]]; do
     case $1 in
