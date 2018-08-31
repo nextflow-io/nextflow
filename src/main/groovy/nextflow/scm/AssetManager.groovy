@@ -132,6 +132,11 @@ class AssetManager {
         return this
     }
 
+    @PackageScope
+    File getLocalGitConfig() {
+        localPath ? new File(localPath,'.git/config') : null
+    }
+
     /**
      * Sets the user credentials on the {@link RepositoryProvider} object
      *
@@ -182,11 +187,9 @@ class AssetManager {
         }
 
         // if project dir exists it must contain the Git config file
-        final configProvider = guessHubProviderFromGitConfig()
-        if( !configProvider ) {
-            log.debug "Too bad! Can't find any provider from git config. Check file `${localPath}/.git/config`"
-            throw new AbortOperationException("Corrupted git repository at path: $localPath")
-        }
+        final configProvider = guessHubProviderFromGitConfig(true)
+        if( !configProvider )
+            throw new IllegalStateException("Cannot find a provider config for repository at path: $localPath")
 
         // checks that the selected hub matches with the one defined in the git config file
         if( hub != configProvider ) {
@@ -236,7 +239,7 @@ class AssetManager {
         if( project )
             return project
 
-        String[] parts = name.split('/')
+        def parts = name.split('/') as List<String>
         def last = parts[-1]
         if( last.endsWith('.nf') || last.endsWith('.nxf') ) {
             if( parts.size()==1 )
@@ -915,7 +918,7 @@ class AssetManager {
             return null
         }
 
-        final gitConfig = new File(localPath,'.git/config')
+        final gitConfig = localGitConfig
         if( !gitConfig.exists() ) {
             return null
         }
@@ -949,10 +952,23 @@ class AssetManager {
     }
 
 
-    protected String guessHubProviderFromGitConfig() {
-
+    protected String guessHubProviderFromGitConfig(boolean failFast=false) {
+        assert localPath
+        
+        // find the repository remote URL from the git project config file
         final server = getGitConfigRemoteDomain()
+        if( !server && failFast ) {
+            def message = (localGitConfig.exists()
+                            ? "Can't find git repository remote host -- Check config file at path: $localGitConfig"
+                            : "Can't find git repository config file -- Repository may be corrupted: $localPath" )
+            throw new AbortOperationException(message)
+        }
+
         final result = providerConfigs.find { it -> it.domain == server }
+        if( !result && failFast ) {
+            def message = "Can't find any configured provider for git server `$server` -- Make sure to have specified it in your `scm` file. For details check https://www.nextflow.io/docs/latest/sharing.html#scm-configuration-file"
+            throw new AbortOperationException(message)
+        }
 
         return result ? result.name : null
     }
