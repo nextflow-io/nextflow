@@ -231,11 +231,6 @@ while [[ $# != 0 ]]; do
       NXF_MODE='ignite'; shift;
       fi
       ;;
-    -with-extrae)
-      export EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}
-      rm -f TRACE.*
-      rm -rf set-0
-      ;;
     -with-mpi)
       NXF_MODE='ignite'
       NXF_MPIRUN='true'
