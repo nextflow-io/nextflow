@@ -7,18 +7,18 @@ Configuration
 Configuration file
 ==================
 
-When a pipeline script is launched Nextflow looks for a file named ``nextflow.config`` in the current directory and
-in the script base directory (if it is not the same as the current directory). Finally it checks for the file
-``$HOME/.nextflow/config``.
+When a pipeline script is launched Nextflow looks for configurations in multiple locations. Since multiple files can
+contain conflicting settings the sources are ranked to decide which setting to come in play. The possible sources for
+configuration values are listed below with the highest preference at the top:
 
-When more than one on the above files exist they are merged, so that the settings in the first override the same ones
-that may appear in the second one, and so on.
+1. Command line individual parameter (``--something value``)
+2. Command line specified config file (``-c my_config``)
+3. A file named ``nextflow.config`` in the current directory
+4. A file named ``nextflow.config`` in the script base directory (when it is not the same as the current directory)
+5. The file ``$HOME/.nextflow/config``
 
-The default config file search mechanism can be extended proving an extra configuration file by using the command line
-option ``-c <config file>``.
-
-.. note:: It's worth noting that by doing this, the files ``nextflow.config`` and ``$HOME/.nextflow/config`` are not
-  ignored and they are merged as explained above.
+When more than one of these ways of specifying configurations are used, they are merged, so that the settings in the
+first override the same ones that may appear in the second one, and so on.
 
 .. tip:: If you want to ignore any default configuration files and use only the custom one use the command line option
   ``-C <config file>``.
