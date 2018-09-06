@@ -21,6 +21,8 @@
 package nextflow.cloud.aws.batch
 
 import com.amazonaws.services.batch.AWSBatchClient
+import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
+import com.amazonaws.services.batch.model.DescribeJobDefinitionsResult
 import com.amazonaws.services.batch.model.DescribeJobsRequest
 import com.amazonaws.services.batch.model.DescribeJobsResult
 import nextflow.util.ThrottlingExecutor
@@ -51,18 +53,37 @@ class AwsBatchProxyTest extends Specification {
 
     }
 
-    def 'should invoke executor' () {
+    def 'should invoke executor with normal priority' () {
+
+        given:
+        def client = Mock(AWSBatchClient)
+        def exec = Mock(ThrottlingExecutor)
+        def req = Mock(DescribeJobDefinitionsRequest)
+        def resp = Mock(DescribeJobDefinitionsResult)
+        def ZERO = 0 as byte
+
+        when:
+        def result = new AwsBatchProxy(client,exec).describeJobDefinitions(req)
+        then:
+        1 * exec.doInvoke1(client, 'describeJobDefinitions', [req] as Object[], ZERO) >> resp
+
+        result == resp
+
+    }
+
+    def 'should invoke executor with higher priority' () {
 
         given:
         def client = Mock(AWSBatchClient)
         def exec = Mock(ThrottlingExecutor)
         def req = Mock(DescribeJobsRequest)
         def resp = Mock(DescribeJobsResult)
+        def _10 = 10 as byte
 
         when:
         def result = new AwsBatchProxy(client,exec).describeJobs(req)
         then:
-        1 * exec.doInvoke1(client, 'describeJobs', [req] as Object[]) >> resp
+        1 * exec.doInvoke1(client, 'describeJobs', [req] as Object[], _10) >> resp
 
         result == resp
 

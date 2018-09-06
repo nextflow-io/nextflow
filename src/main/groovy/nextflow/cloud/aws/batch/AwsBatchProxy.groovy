@@ -37,7 +37,7 @@ class AwsBatchProxy extends ClientProxyThrottler<AWSBatch> {
     private AWSBatch target
 
     AwsBatchProxy(AWSBatch client, ThrottlingExecutor executor) {
-        super(client, executor)
+        super(client, executor, [describeJobs: 10 as Byte]) // note: use higher priority for `describeJobs` invocations
         this.target = client
     }
 
