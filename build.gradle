@@ -391,7 +391,7 @@ task packOne(type: Jar) {
                 'Application-Name'  : 'nextflow',
                 'Application-Class' : mainClassName,
                 'Application-Version': version,
-                'Min-Java-Version'  : '1.7.0',
+                'Min-Java-Version'  : '1.8.0',
                 'Caplets'           : 'MavenCapsule',
                 'Dependencies'      : deps
     )
@@ -440,7 +440,7 @@ task packAll(type: Jar) {
                           'Application-Name'  : 'nextflow-all',
                           'Application-Class' : mainClassName,
                           'Application-Version': version,
-                          'Min-Java-Version'  : '1.7.0'
+                          'Min-Java-Version'  : '1.8.0'
                           )
 
     manifest.attributes('Main-Class': 'CapsuleLoader', 'ignite')
