@@ -52,19 +52,14 @@ class PbsProExecutor extends AbstractGridExecutor {
             result << '-q'  << (String)task.config.queue
         }
 
-        if( task.config.cpus > 1 ) {
-            result << '-l' << "nodes=1:ppn=${task.config.cpus}"
+        if( task.config.cpus > 1 && task.config.memory ) {
+            result << '-l' << "select=1:ncpus=${task.config.cpus}:mem=${task.config.memory.toString().replaceAll(/[\s]/,'').toLowerCase()}"
         }
 
         // max task duration
         if( task.config.time ) {
             final duration = task.config.getTime()
             result << "-l" << "walltime=${duration.format('HH:mm:ss')}"
-        }
-
-        // task max memory
-        if( task.config.memory ) {
-            result << "-l" << "mem=${task.config.memory.toString().replaceAll(/[\s]/,'').toLowerCase()}"
         }
 
         // -- at the end append the command script wrapped file name
