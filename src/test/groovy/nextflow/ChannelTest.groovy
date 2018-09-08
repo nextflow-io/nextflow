@@ -21,6 +21,7 @@
 package nextflow
 
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
@@ -390,6 +391,57 @@ class ChannelTest extends Specification {
         result = Channel.fromPath( ["$folder/*"] ).toSortedList({it.name}).getVal().collect { it.getName() }
         then:
         result == [ 'file1.txt', 'file2.txt', 'file3.fq' ]
+    }
+
+    def 'should check file exists' () {
+
+        given:
+        def folder = tempDir.root.toAbsolutePath()
+
+        def file1 = folder.resolve('file1.txt')
+        def file2 = folder.resolve('file2.txt')
+        def file3 = folder.resolve('file3.txt')
+
+        // only file1 and file3 exist
+        file1.text = 'foo'
+        file3.text = 'bar'
+
+        when:
+        def ch = Channel.fromPath(file1.toString())
+        then:
+        ch.getVal() == file1
+        ch.getVal() == Channel.STOP
+
+        when:
+        ch = Channel.fromPath([file1.toString(), file2.toString()])
+        then:
+        ch.getVal() == file1
+        ch.getVal() == file2
+        ch.getVal() == Channel.STOP
+
+        when:
+        ch = Channel.fromPath(file1.toString(), checkIfExists: true)
+        then:
+        ch.getVal() == file1
+        ch.getVal() == Channel.STOP
+
+        when:
+        Channel.fromPath(file2.toString(), checkIfExists: true)
+        then:
+        def e = thrown(NoSuchFileException)
+        e.message == file2.toString()
+
+        when:
+        Channel.fromPath([file1, file2, file3], checkIfExists: true)
+        then:
+        e = thrown(NoSuchFileException)
+        e.message == file2.toString()
+
+        when:
+        Channel.fromPath('http://google.com/foo.txt', checkIfExists: true)
+        then:
+        e = thrown(NoSuchFileException)
+        e.message == 'http://google.com/foo.txt'
     }
 
     def 'should return files prefix' () {
