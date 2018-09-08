@@ -29,6 +29,7 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.StopSplitIterationException
+import nextflow.extension.GroupKey
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
 import nextflow.mail.Mailer
@@ -36,12 +37,9 @@ import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.util.ArrayTuple
 import nextflow.util.CacheHelper
-import nextflow.extension.GroupKey
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-
 import static nextflow.file.FileHelper.isGlobAllowed
-
 /**
  * Defines the main methods imported by default in the script scope
  *
@@ -149,7 +147,7 @@ class Nextflow {
         final path = filePattern as Path
         final glob = options?.containsKey('glob') ? options.glob as boolean : isGlobAllowed(path)
         if( !glob ) {
-            return path.complete()
+            return FileHelper.checkIfExists(path, options)
         }
 
         // if it isn't a glob pattern simply return it a normalized absolute Path object
@@ -157,10 +155,10 @@ class Nextflow {
         if( !splitter.isPattern() ) {
             def normalised = splitter.strip(path.toString())
             if( path instanceof Path )  {
-                return path.fileSystem.getPath(normalised).complete()
+                return FileHelper.checkIfExists(path.fileSystem.getPath(normalised), options)
             }
             else {
-                return FileHelper.asPath(normalised).complete()
+                return FileHelper.checkIfExists(FileHelper.asPath(normalised), options)
             }
         }
 
@@ -172,6 +170,7 @@ class Nextflow {
         def result = file(options, path)
         return result instanceof List ? result : [result]
     }
+
 
     /**
      * Creates a {@link ArrayTuple} object with the given open array items

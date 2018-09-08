@@ -233,7 +233,8 @@ type            Type of paths returned, either ``file``, ``dir`` or ``any`` (def
 hidden          When ``true`` includes hidden files in the resulting paths (default: ``false``)
 maxDepth        Maximum number of directory levels to visit (default: `no limit`)
 followLinks     When ``true`` it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: ``true``)
-relative        When ``true`` returned paths are relative to the top-most common directory (default: false)
+relative        When ``true`` returned paths are relative to the top-most common directory (default: ``false``)
+checkIfExists   When ``true`` throws an exception of the specified path do not exist in the file system (default: ``false``)
 =============== ===================
 
 .. note:: More than one path or glob pattern can be specified using a list as argument::

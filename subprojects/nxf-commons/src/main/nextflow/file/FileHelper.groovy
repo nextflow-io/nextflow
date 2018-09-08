@@ -30,6 +30,7 @@ import java.nio.file.FileVisitOption
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.LinkOption
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.nio.file.Paths
@@ -941,6 +942,18 @@ class FileHelper {
             log.trace "Unable to read attributes for file: $path"
             return null
         }
+    }
+
+    static Path checkIfExists(Path path, Map opts) throws NoSuchFileException {
+
+        final result = FilesEx.complete(path)
+        final checkIfExists = opts?.checkIfExists as boolean
+        final followLinks = opts?.followLinks == false ? [LinkOption.NOFOLLOW_LINKS] : Collections.emptyList()
+        if( !checkIfExists || FilesEx.exists(result, followLinks as LinkOption[]) ) {
+            return result
+        }
+
+        throw new NoSuchFileException(FilesEx.toUriString(result))
     }
 
 }

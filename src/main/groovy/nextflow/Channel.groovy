@@ -176,7 +176,7 @@ class Channel  {
             followLinks: Boolean,
             hidden: Boolean,
             maxDepth: Integer,
-            exists: Boolean,
+            checkIfExists: Boolean,
             glob: Boolean,
             relative: Boolean
     ]
