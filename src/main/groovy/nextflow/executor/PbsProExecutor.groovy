@@ -122,7 +122,7 @@ class PbsProExecutor extends AbstractGridExecutor {
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
-        String cmd = 'qstat -f -1'
+        String cmd = 'qstat -f'
         if( queue ) cmd += ' ' + queue
         return ['sh','-c', "$cmd | egrep '(Job Id:|job_state =)'".toString()]
     }
