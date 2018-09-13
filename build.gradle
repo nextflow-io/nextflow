@@ -197,6 +197,8 @@ dependencies {
     compile ('javax.mail:mail:1.4.7')
     compile ('org.yaml:snakeyaml:1.18')
     compile ('org.jsoup:jsoup:1.11.2')
+    compile 'com.google.cloud:google-cloud-storage:1.35.0'
+    compile 'com.google.cloud:google-cloud-nio:0.56.0-alpha'
 
     // GCE libraries
     compile 'com.google.apis:google-api-services-compute:v1-rev182-1.23.0'
