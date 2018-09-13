@@ -20,19 +20,21 @@
 
 package nextflow.cloud.aws
 
+import spock.lang.IgnoreIf
+import spock.lang.Specification
+import spock.lang.Unroll
+
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.attribute.FileTime
 
 import nextflow.util.Duration
-import spock.lang.Specification
-import spock.lang.Unroll
 import test.TestHelper
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@IgnoreIf({System.getenv('NXF_QUICK')})
 class AmazonPriceReaderTest extends Specification {
 
     static String REGION = 'eu-west-1'

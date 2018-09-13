@@ -20,7 +20,7 @@
 
 package nextflow.processor
 import nextflow.Session
-import nextflow.executor.AwsBatchExecutor
+import nextflow.cloud.aws.batch.AwsBatchExecutor
 import nextflow.executor.CondorExecutor
 import nextflow.executor.Executor
 import nextflow.executor.LocalExecutor

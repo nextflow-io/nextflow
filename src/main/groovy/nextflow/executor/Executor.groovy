@@ -59,6 +59,8 @@ abstract class Executor {
      */
     void register() { }
 
+    protected String getDisplayName() { name }
+
     /**
      * Allows to post-initialize the executor
      */
@@ -71,7 +73,7 @@ abstract class Executor {
 
         // -- get the reference to the monitor class for this executor
         monitor = session.dispatcher.getOrCreateMonitor(this.class) {
-            log.info "[warm up] executor > $name"
+            log.info "[warm up] executor > ${getDisplayName()}"
             createTaskMonitor()
         }
 

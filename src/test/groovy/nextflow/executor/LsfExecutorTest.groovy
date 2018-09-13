@@ -26,6 +26,7 @@ import nextflow.Session
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 /**
  *
@@ -208,6 +209,25 @@ class LsfExecutorTest extends Specification {
                 '''
                 .stripIndent().leftTrim()
 
+    }
+
+    def testDiskResources() {
+        given:
+        def config = Mock(TaskConfig)
+        def WORKDIR = Paths.get('/my/work')
+        def lsf = [:] as LsfExecutor
+        def task = Mock(TaskRun)
+
+        when:
+        def result = lsf.getDirectives(task)
+        then:
+        task.workDir >> WORKDIR
+        task.config >> config
+        task.name >> 'foo'
+        config.getClusterOptionsAsList() >> []
+        1 * config.getDisk() >> MemoryUnit.of('10GB')
+
+        result.join(' ') == "-o $WORKDIR/.command.log -R select[tmp>=10240] rusage[tmp=10240] -J nf-foo"
     }
 
     def testPerJobMemLimit() {

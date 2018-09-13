@@ -138,7 +138,7 @@ class AssetManagerTest extends Specification {
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', [github: [auth: token]])
+        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
 
         when:
         manager.download()
@@ -159,7 +159,7 @@ class AssetManagerTest extends Specification {
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', [github: [auth: token]])
+        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
 
         when:
         manager.download("v1.2")
@@ -179,7 +179,7 @@ class AssetManagerTest extends Specification {
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', [github: [auth: token]])
+        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
 
         when:
         manager.download("6b9515aba6c7efc6a9b3f273ce116fc0c224bf68")
@@ -202,7 +202,7 @@ class AssetManagerTest extends Specification {
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', [github: [auth: token]])
+        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
 
         when:
         manager.download("mybranch")
@@ -225,7 +225,7 @@ class AssetManagerTest extends Specification {
         given:
         def folder = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', [github: [auth: token]])
+        def manager = new AssetManager().build('nextflow-io/hello', [providers: [github: [auth: token]]])
 
         when:
         manager.download("v1.2")
@@ -245,7 +245,7 @@ class AssetManagerTest extends Specification {
         given:
         def dir = tempDir.getRoot()
         def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def manager = new AssetManager().build('nextflow-io/hello', [github: [auth: token]])
+        def manager = new AssetManager().build('nextflow-io/hello', [providers:[github: [auth: token]]])
 
         when:
         manager.clone(dir.toFile())
@@ -366,10 +366,10 @@ class AssetManagerTest extends Specification {
         holder.build('foo/bar')
         then:
         holder.getMainScriptName() == 'hello.nf'
-        holder.getDefaultBranch() == 'super-stuff'
-        holder.getHomePage() == 'http://foo.com'
-        holder.getDescription() == 'This pipeline do this and that'
-        holder.getAuthor() == 'Hi Dude'
+        holder.manifest.getDefaultBranch() == 'super-stuff'
+        holder.manifest.getHomePage() == 'http://foo.com'
+        holder.manifest.getDescription() == 'This pipeline do this and that'
+        holder.manifest.getAuthor() == 'Hi Dude'
 
     }
 
@@ -388,9 +388,9 @@ class AssetManagerTest extends Specification {
 
         then:
         holder.getMainScriptName() == 'main.nf'
-        holder.getDefaultBranch() == 'master'
         holder.getHomePage() == 'https://github.com/foo/bar'
-        holder.getDescription() == null
+        holder.manifest.getDefaultBranch() == 'master'
+        holder.manifest.getDescription() == null
 
     }
 

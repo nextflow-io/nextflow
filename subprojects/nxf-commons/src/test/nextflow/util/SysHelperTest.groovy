@@ -25,7 +25,6 @@ import java.lang.management.ManagementFactory
 import com.sun.management.OperatingSystemMXBean
 import nextflow.file.FileHelper
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -73,7 +72,7 @@ class SysHelperTest extends Specification {
         expect:
         SysHelper.availCpus == Runtime.runtime.availableProcessors()
         SysHelper.availMemory == new MemoryUnit(bean.getTotalPhysicalMemorySize())
-        SysHelper.getAvailDisk() == new MemoryUnit(FileHelper.getLocalTempPath().toFile().getFreeSpace())
+        SysHelper.availDisk.giga == new MemoryUnit(FileHelper.getLocalTempPath().toFile().getFreeSpace()).giga
         SysHelper.hostName == (System.getenv('HOSTNAME') ?: InetAddress.getLocalHost().getHostName())
     }
 

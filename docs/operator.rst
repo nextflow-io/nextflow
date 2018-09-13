@@ -32,6 +32,7 @@ The available filter operators are:
 * `randomSample`_
 * `take`_
 * `unique`_
+* `until`_
 
 filter
 ---------
@@ -169,6 +170,7 @@ For example::
     Done
 
 
+.. _operator-first:
 
 first
 --------
@@ -247,6 +249,10 @@ The ``take`` operator allows you to filter only the first `n` items emitted by a
 
 .. note:: By specifying the value ``-1`` the operator takes all values.
 
+See also `until`_.
+
+.. _operator-last:
+
 last
 -------
 
@@ -261,6 +267,25 @@ The ``last`` operator creates a channel that only returns the last item emitted 
 
     6
 
+
+until
+-----
+
+The ``until`` operator creates a channel that returns the items emitted by the source channel and stop when
+the condition specified is verified. For example::
+
+  Channel
+      .from( 3,2,1,5,1,5 )
+      .until{ it==5 }
+      .println()
+
+::
+
+  3
+  2
+  1
+
+See also `take`_. 
 
 Transforming operators
 ======================
@@ -282,6 +307,8 @@ These operators are:
 * `toSortedList`_
 * `transpose`_
 
+.. _operator-map:
+
 map
 ------
 
@@ -291,7 +318,7 @@ and is expressed with a :ref:`closure <script-closure>` as shown in the example 
 
     Channel
         .from( 1, 2, 3, 4, 5 )
-        .map { it * it  }
+        .map { it * it }
         .subscribe onNext: { println it }, onComplete: { println 'Done' }
 
 ::
@@ -350,6 +377,8 @@ Associative arrays are handled in the same way, so that each array entry is emit
     number: 3
     square: 9
 
+
+.. _operator-reduce:
 
 reduce
 ---------
@@ -418,7 +447,7 @@ following these rules:
 * For any other value, the value itself is used as a key.
 
 groupTuple
------------
+----------
 
 The ``groupTuple`` operator collects tuples (or lists) of values emitted by the source channel grouping together the
 elements that share the same key. Finally it emits a new tuple object for each distinct key collected.
@@ -481,6 +510,12 @@ deep            Similar to the previous, but the hash number is created on actua
 `custom`        A custom sorting criteria can be specified by using either a :ref:`Closure <script-closure>` or a `Comparator <http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html>`_ object.
 =============== ========================
 
+
+.. tip:: You should always specify the number of expected element in each tuple using the ``size`` attribute
+  to allow the ``groupTuple`` operator to stream the collected values as soon as possible. However there
+  are use cases in which each tuple has a different size depending grouping key. In this cases use the
+  built-in function ``groupKey`` that allows you to create a special grouping key object to which it's possible
+  to associate the group size for a given key.
 
 
 buffer
@@ -623,6 +658,8 @@ As before, if you don't want to emit the last items which do not complete a tupl
 
 
 See also: `buffer`_ operator.
+
+.. _operator-collect:
 
 collect
 -------
@@ -951,7 +988,7 @@ the required fields, or just specify ``record: true`` as in the example shown be
 
 
 Finally the ``splitFastq`` operator is able to split paired-end read pair FASTQ files. It must be applied to a channel
-which emits tuples containing at list two elements that are the files to be splitted. For example::
+which emits tuples containing at least two elements that are the files to be splitted. For example::
 
     Channel
         .fromFilePairs('/my/data/SRR*_{1,2}.fastq', flat:true)
@@ -1780,6 +1817,7 @@ The maths operators are:
 * `sum`_
 * `toInteger`_
 
+.. _operator-count:
 
 count
 --------
@@ -1850,6 +1888,7 @@ that associates each item with the grouping key. For example::
     [h:3, c:1, b:1]
 
 
+.. _operator-min:
 
 min
 ------
@@ -1889,6 +1928,7 @@ taking two parameters that represent two emitted items to be compared. For examp
     	.subscribe {  println it }
 
 
+.. _operator-max:
 
 max
 ------
@@ -1929,6 +1969,7 @@ taking two parameters that represent two emitted items to be compared. For examp
     	.subscribe {  println it }
 
 
+.. _operator-sum:
 
 sum
 ------

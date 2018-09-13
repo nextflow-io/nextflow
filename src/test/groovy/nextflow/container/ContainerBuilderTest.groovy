@@ -39,4 +39,31 @@ class ContainerBuilderTest extends Specification {
 
     }
 
+    def 'should make env var' () {
+        given:
+        StringBuilder result
+        def builder = Spy(ContainerBuilder)
+
+        when:
+        result = builder.makeEnv([FOO: 'x', BAR: 'y'])
+        then:
+        result.toString() == '-e "FOO=x" -e "BAR=y"'
+
+        when:
+        result = builder.makeEnv('FOO=hello')
+        then:
+        result.toString() == '-e "FOO=hello"'
+        
+        when:
+        result = builder.makeEnv( 'FOO' )
+        then:
+        result.toString() == '${FOO:+-e "FOO=$FOO"}'
+
+        when:
+        builder.makeEnv( 1 )
+        then:
+        thrown(IllegalArgumentException)
+
+    }
+
 }

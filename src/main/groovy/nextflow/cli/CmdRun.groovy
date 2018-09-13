@@ -130,6 +130,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names='-stdin', hidden = true)
     boolean stdin
 
+    @Parameter(names = ['-with-weblog'], description = 'Send workflow status messages via HTTP to target URL')
+    String withWebLog
+
     @Parameter(names = ['-with-trace'], description = 'Create processes execution tracing file')
     String withTrace
 
@@ -177,6 +180,12 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-N','-with-notification'], description = 'Send a notification email on workflow completion to the specified recipients')
     String withNotification
 
+    @Parameter(names=['-with-conda'], description = 'Use the specified Conda environment package or file (must end with .yml|.yaml suffix)')
+    String withConda
+
+    @Parameter(names=['-offline'], description = 'Do not check for remote project updates')
+    boolean offline = System.getenv('NXF_OFFLINE') as boolean
+
     @Override
     String getName() { NAME }
 
@@ -189,6 +198,9 @@ class CmdRun extends CmdBase implements HubOptions {
 
         if( withDocker && withoutDocker )
             throw new AbortOperationException("Command line options `-with-docker` and `-without-docker` cannot be specified at the same time")
+
+        if( offline && latest )
+            throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
 
         checkRunName()
 
@@ -277,6 +289,8 @@ class CmdRun extends CmdBase implements HubOptions {
 
         boolean checkForUpdate = true
         if( !manager.isRunnable() || latest ) {
+            if( offline )
+                throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
             log.info "Pulling $repo ..."
             def result = manager.download()
             if( result )
@@ -289,7 +303,7 @@ class CmdRun extends CmdBase implements HubOptions {
             manager.updateModules()
             def scriptFile = manager.getScriptFile()
             log.info "Launching `$repo` [$runName] - revision: ${scriptFile.revisionInfo}"
-            if( checkForUpdate )
+            if( checkForUpdate && !offline )
                 manager.checkRemoteStatus(scriptFile.revisionInfo)
             // return the script file
             return scriptFile

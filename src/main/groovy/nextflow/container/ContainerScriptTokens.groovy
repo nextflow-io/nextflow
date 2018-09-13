@@ -19,13 +19,18 @@
  */
 
 package nextflow.container
-import groovy.transform.Canonical
+
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
+import groovy.transform.TupleConstructor
 /**
  * Hold container definition parsed in a shell script
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Canonical
+@ToString
+@EqualsAndHashCode
+@TupleConstructor
 class ContainerScriptTokens {
 
     static private final BASH_VAR = ~/([a-zA-Z_][0-9a-zA-Z_]*)=(.*)/

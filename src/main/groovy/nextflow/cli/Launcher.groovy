@@ -229,6 +229,10 @@ class Launcher {
                 normalized << '-'
             }
 
+            else if( current == '-with-weblog' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
+            }
+
             else if( (current == '-N' || current == '-with-notification') && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << 'true'
             }
@@ -278,10 +282,10 @@ class Launcher {
         return normalized
     }
 
-    private boolean isValue( String x ) {
+    static private boolean isValue( String x ) {
         if( !x ) return false                   // an empty string -> not a value
         if( x.size() == 1 ) return true         // a single char is not an option -> value true
-        !x.startsWith('-') || x.isNumber()      // if not start with `-` or is a number -> value true
+        !x.startsWith('-') || x.isNumber() || x.contains(' ')
     }
 
     CmdBase findCommand( String cmdName ) {
@@ -449,7 +453,11 @@ class Launcher {
         }
 
         catch( ConfigParseException e )  {
-            log.error("${e.message}\n\n${e.cause?.message?.toString()?.indent('  ')}", e.cause ?: e)
+            def message = e.message
+            if( e.cause?.message ) {
+                message += "\n\n${e.cause.message.toString().indent('  ')}"
+            }
+            log.error(message, e.cause ?: e)
             return(1)
         }
 

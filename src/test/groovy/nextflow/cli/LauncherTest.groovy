@@ -238,9 +238,26 @@ class LauncherTest extends Specification {
 
         launcher.normalizeArgs( script.toAbsolutePath().toString(), '--x=1' ) == ['run', script.toAbsolutePath().toString(), '--x=1']
 
+        launcher.normalizeArgs('--foo', '--bar x') == ['--foo=--bar x']
 
         cleanup:
         script?.delete()
+    }
+
+    def 'should validate isValue' () {
+        expect:
+        Launcher.isValue(STR) == EXPECTED
+        
+        where:
+        STR                 | EXPECTED
+        'foo'               | true
+        '10'                | true
+        '-10'               | true
+        '-foo'              | false
+        '--bar'             | false
+        'x y'               | true
+        '-x y'              | true
+        '-x=y'              | false
     }
 
 

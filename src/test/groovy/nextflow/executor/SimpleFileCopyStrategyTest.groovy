@@ -45,7 +45,8 @@ class SimpleFileCopyStrategyTest extends Specification {
         files['sub/dir/seq_4.fa']  = Paths.get("/home'data/file4")
 
         when:
-        def strategy = new SimpleFileCopyStrategy()
+        def task = new TaskBean(workDir: Paths.get("/my/work/dir"))
+        def strategy = new SimpleFileCopyStrategy(task)
         def script = strategy.getStageInputFilesScript(files)
         def lines = script.readLines()
 
@@ -67,7 +68,7 @@ class SimpleFileCopyStrategyTest extends Specification {
         files = [:]
         files['file.txt'] = Paths.get('/data/file')
         files['seq_1.fa'] = Paths.get('/data/seq')
-        strategy = new SimpleFileCopyStrategy(separatorChar: '; ')
+        strategy = new SimpleFileCopyStrategy(workDir: Paths.get("/my/work/dir"), separatorChar: '; ')
         script = strategy.getStageInputFilesScript(files)
         lines = script.readLines()
 
@@ -103,22 +104,62 @@ class SimpleFileCopyStrategyTest extends Specification {
         strategy.normalizeGlobStarPaths(['file1.txt','path/file2.txt','path/**/file3.txt', 'path/**/file4.txt','**/fa']) == ['file1.txt','path/file2.txt','path','*']
     }
 
-
     @Unroll
     def 'should return a valid stage-in command' () {
 
         given:
-        def strategy = [:] as SimpleFileCopyStrategy
+        def task = new TaskBean(workDir: Paths.get("/my/work/dir"))
+        def strategy = new SimpleFileCopyStrategy(task)
+
         expect:
         strategy.stageInCommand(source, target, mode) == result
 
         where:
-        source                      | target            | mode      | result
-        'some/path/to/file.txt'     | 'file.txt'        | null      | 'ln -s some/path/to/file.txt file.txt'
-        "some/path/to/file'3.txt"   | 'file\'3.txt'     | null      | "ln -s some/path/to/file\\'3.txt file\\'3.txt"
-        'some/path/to/file.txt'     | 'file.txt'        | 'link'    | 'ln some/path/to/file.txt file.txt'
-        '/some/path/to/file.txt'    | 'file.txt'        | 'copy'    | 'cp -fRL /some/path/to/file.txt file.txt'
-        '/some/path/to/file.txt'    | 'here/to/abc.txt' | 'copy'    | 'cp -fRL /some/path/to/file.txt here/to/abc.txt'
+        source                      | target               | mode              | result
+        'some/path/to/file.txt'     | 'file.txt'           | null              | 'ln -s some/path/to/file.txt file.txt'
+        "some/path/to/file'3.txt"   | 'file\'3.txt'        | null              | "ln -s some/path/to/file\\'3.txt file\\'3.txt"
+        'some/path/to/file.txt'     | 'file.txt'           | 'link'            | 'ln some/path/to/file.txt file.txt'
+        '/some/path/to/file.txt'    | 'file.txt'           | 'copy'            | 'cp -fRL /some/path/to/file.txt file.txt'
+        '/some/path/to/file.txt'    | 'here/to/abc.txt'    | 'copy'            | 'cp -fRL /some/path/to/file.txt here/to/abc.txt'
+
+        // Check the various combinations of relative/absolute inputs to 
+        // rellink when workDir is defined:
+        '/some/path/to/file.txt'    | 'abc.txt'            | 'rellink' | 'ln -s ../../../some/path/to/file.txt abc.txt'
+        '/some/path/to/file.txt'    | 'xyz/abc.txt'        | 'rellink' | 'ln -s ../../../../some/path/to/file.txt xyz/abc.txt'
+        'some/path/to/file.txt'     | 'abc.txt'            | 'rellink' | 'ln -s some/path/to/file.txt abc.txt'
+        '/my/other/file.txt'        | 'abc.txt'            | 'rellink' | 'ln -s ../../other/file.txt abc.txt'
+        '/my/work/dir/file.txt'     | 'abc.txt'            | 'rellink' | 'ln -s file.txt abc.txt'
+
+        // Check that the 'symlink' mode is default and uses absolute paths
+        '/some/path/to/file.txt'    | 'abc.txt'            | null              | 'ln -s /some/path/to/file.txt abc.txt'
+        '/some/path/to/file.txt'    | 'abc.txt'            | 'symlink'         | 'ln -s /some/path/to/file.txt abc.txt'
+
+    }
+
+
+    @Unroll
+    def 'stage-in command should throw an exception absolute target path' () {
+
+        given:
+        def task = Mock(TaskBean)
+        def strategy = new SimpleFileCopyStrategy(task)
+
+        when:
+        strategy.stageInCommand(source, target, mode)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.startsWith("Process input file target path must be relative: $target")
+
+        where:
+        source                   | target                | mode
+        '/some/path/to/file.txt' | '/abc.txt'            | null
+        'some/path/to/file.txt'  | '/abc.txt'            | null
+        '/some/path/to/file.txt' | '/some/other/abc.txt' | 'symlink'
+        'some/path/to/file.txt'  | '/some/other/abc.txt' | 'symlink'
+        '/some/path/to/file.txt' | '/some/other/abc.txt' | 'rellink'
+        'some/path/to/file.txt'  | '/some/other/abc.txt' | 'rellink'
+
     }
 
     @Unroll
@@ -184,7 +225,7 @@ class SimpleFileCopyStrategyTest extends Specification {
 
         given:
         def inputs = ['hello.txt': Paths.get('/some/file.txt'), 'dir/to/file.txt': Paths.get('/other/file.txt')]
-        def task = new TaskBean()
+        def task = new TaskBean(workDir: Paths.get("/my/work/dir"))
 
         when:
         def strategy = new SimpleFileCopyStrategy(task)
@@ -204,7 +245,7 @@ class SimpleFileCopyStrategyTest extends Specification {
 
         given:
         def inputs = ['hello.txt': Paths.get('/some/file.txt'), 'dir/to/file.txt': Paths.get('/other/file.txt')]
-        def task = new TaskBean( stageInMode: 'copy' )
+        def task = new TaskBean( stageInMode: 'copy', workDir: Paths.get("/my/work/dir") )
 
         when:
         def strategy = new SimpleFileCopyStrategy(task)

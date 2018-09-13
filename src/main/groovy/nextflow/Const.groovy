@@ -54,17 +54,17 @@ class Const {
     /**
      * The application version
      */
-    static public final String APP_VER = "0.29.0"
+    static public final String APP_VER = "0.31.1"
 
     /**
      * The app build time as linux/unix timestamp
      */
-    static public final long APP_TIMESTAMP = 1524557352936
+    static public final long APP_TIMESTAMP = 1533657185191
 
     /**
      * The app build number
      */
-    static public final int APP_BUILDNUM = 4803
+    static public final int APP_BUILDNUM = 4886
 
 
     /**
@@ -134,5 +134,17 @@ class Const {
     static public final String ROLE_WORKER = 'worker'
 
     static public final String ROLE_MASTER = 'master'
+
+    static public final String MANIFEST_FILE_NAME = 'nextflow.config'
+
+    static public final String DEFAULT_MAIN_FILE_NAME = 'main.nf'
+
+    static public final String DEFAULT_ORGANIZATION = System.getenv('NXF_ORG') ?: 'nextflow-io'
+
+    static public final String DEFAULT_HUB = System.getenv('NXF_HUB') ?: 'github'
+
+    static public final File DEFAULT_ROOT = System.getenv('NXF_ASSETS') ? new File(System.getenv('NXF_ASSETS')) : Const.APP_HOME_DIR.resolve('assets').toFile()
+
+    static public final String DEFAULT_BRANCH = 'master'
 
 }

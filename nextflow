@@ -19,7 +19,7 @@
 #  along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'0.29.0'}
+NXF_VER=${NXF_VER:-'0.31.1'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -100,8 +100,10 @@ function resolve_link() {
       realpath "$1"
     elif command -v readlink &>/dev/null; then
       local target="$1"
+      cd $(dirname $target); target=$(basename $target)
       while [ -L "$target" ]; do
         target="$(readlink "$target")"
+        cd $(dirname $target); target=$(basename $target)
       done
       echo "$(cd "$(dirname "$target")"; pwd -P)/$target"
     else
@@ -129,10 +131,13 @@ function install() {
 
 function launch_nextflow() {
     # the launch command line
-    local cmdline="${launcher[@]} "
-    for x in "${args[@]}"; do
-        cmdline+="'$x' "
-    done
+    local cmdline=()
+    # remove leading and trailing double-quotes 
+    for x in "${launcher[@]}"; do
+        x="${x%\"}"
+        x="${x#\"}"
+        cmdline+=("$x") 
+    done 
 
     if [[ $NXF_MPIRUN ]]; then
         local rank=''
@@ -152,19 +157,20 @@ function launch_nextflow() {
             export NXF_EXECUTOR='ignite'
             export NXF_CLUSTER_SHUTDOWNONCOMPLETE='true'
         else
-            cmdline="${launcher[@]} -log .nextflow_node_${rank}.log node ignite"
+            args=(-log .nextflow_node_${rank}.log node ignite)
         fi
     # start in daemon mode
     elif [[ "$bg" ]]; then
       local pid_file="${NXF_PID_FILE:-.nextflow.pid}"
-      bash -c "exec $cmdline" &
+      cmdline+=("${args[@]}")
+      exec "${cmdline[@]}" &
       disown
       echo $! > "$pid_file"
       exit 0
     fi
 
-    # trampoline syntax -- https://github.com/puniverse/capsule/pull/71
-    exec bash -c "exec $cmdline"
+    cmdline+=("${args[@]}")
+    exec "${cmdline[@]}"
     exit 1
 }
 
@@ -187,7 +193,7 @@ bg=''
 dockerize=''
 declare -a jvmopts=()
 declare -a args=("$@")
-declare -a commands=(clone config drop help history info ls pull run view node console kube-run)
+declare -a commands=(clone config drop help history info ls pull run view node console kuberun)
 cmd=''
 while [[ $# != 0 ]]; do
     case $1 in
@@ -224,11 +230,6 @@ while [[ $# != 0 ]]; do
       if [[ $2 && $2 == 'ignite' ]]; then
       NXF_MODE='ignite'; shift;
       fi
-      ;;
-    -with-extrae)
-      export EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}
-      rm -f TRACE.*
-      rm -rf set-0
       ;;
     -with-mpi)
       NXF_MODE='ignite'
@@ -323,7 +324,7 @@ else
   fi
   major=${BASH_REMATCH[1]}
   minor=${BASH_REMATCH[2]}
-  version_check="^(1.8|9)"
+  version_check="^(1.8|9|10)"
   version_message="Java 8"
   # legacy version - Java 7/8 only
   if [[ $major==0 && $minor<26 ]]; then
@@ -341,10 +342,6 @@ else
   fi
   mkdir -p $(dirname "$JAVA_KEY")
   [[ -f $JAVA_VER ]] && echo $JAVA_VER > "$JAVA_KEY"
-fi
-if [[ "$JAVA_VER" =~ ^9 ]]; then
-  echo_yellow "WARN: Nextflow support for Java 9 is still in beta stage and some advanced features are not supported"
-  echo_yellow "WARN: It is suggested the use of Java version 8"
 fi
 
 # Verify nextflow jar is available
@@ -424,17 +421,19 @@ else
     cli=($("$JAVA_CMD" "${JAVA_OPTS[@]}" -jar "$NXF_BIN"))
     [[ $? -ne 0 ]] && echo_red 'Unable to initialize nextflow environment' && exit $?
 
-    if [[ "$JAVA_VER" =~ ^9 ]]; then
-      echo_yellow "Nextflow support for Java 9 is still experimental an some advanced features are not yet supported -- Please use Java 8"
+    if [[ "$JAVA_VER" =~ ^(9|10) ]]; then
       launcher=("${cli[@]:0:1}")
       launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
+      launcher+=(--add-opens=java.base/java.nio=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.util=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.nio.ch=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED)
+      launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
+      launcher+=(--add-modules=java.xml.bind)
       launcher+=(--illegal-access=deny)
       launcher+=("${cli[@]:1}")
     else

@@ -211,7 +211,7 @@ class Scheduler {
 
             //
             // note: the message is not processed inline, but added as a closure
-            // in the `messageQueue` object to be processed orderly in the same ethread
+            // in the `messageQueue` object to be processed orderly in the same thread
             //
             messageQueue << {
 
@@ -552,8 +552,13 @@ class Scheduler {
      * Shutdown scheduler remote agents by sending a {@link Protocol#TOPIC_AGENT_EVENTS} message
      */
     void shutdownRemoteAgents() {
-        def nodes = ignite.cluster().forRemotes()
-        ignite.message(nodes).send( TOPIC_AGENT_EVENTS, NodeShutdown.INSTANCE )
+        final group = ignite.cluster().forRemotes()
+        if( group.node() ) try {
+            ignite.message(group).send( TOPIC_AGENT_EVENTS, NodeShutdown.INSTANCE )
+        }
+        catch( Exception e ) {
+            log.warn("+++ Unexpected error notifying remote nodes shutdown", e)
+        }
     }
 
     /**

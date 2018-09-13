@@ -40,6 +40,7 @@ import nextflow.util.HistoryFile.Record
  * Implements cache clean up command
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Lorenz Gerber <lorenzottogerber@gmail.com>
  */
 @Slf4j
 @CompileStatic
@@ -65,6 +66,9 @@ class CmdClean extends CmdBase implements CacheBase {
 
     @Parameter(names='-but', description = 'Clean up all runs except the specified one')
     String but
+
+    @Parameter(names=['-k', '-keep-logs'], description = 'Removes only temporary files but retains execution log entries and metadata')
+    boolean keepLogs
 
     @Parameter
     List<String> args
@@ -117,7 +121,7 @@ class CmdClean extends CmdBase implements CacheBase {
         currentCacheDb.close()
 
         // -- STOP HERE !
-        if( dryRun ) return
+        if( dryRun || keepLogs ) return
 
         // -- remove the index file
         currentCacheDb.deleteIndex()
@@ -167,17 +171,27 @@ class CmdClean extends CmdBase implements CacheBase {
     private void removeRecord(HashCode hash, TraceRecord record, int refCount) {
         if( dryRun ) {
             if( wouldRemove(hash,refCount) )
-                println "Would remove ${record.workDir}"
+                printMessage(record.workDir,true)
             return
         }
 
         // decrement the ref count in the db
-        def deleted = currentCacheDb.removeTaskEntry(hash)
-        if( deleted ) {
+        def proceed = keepLogs || currentCacheDb.removeTaskEntry(hash)
+        if( proceed ) {
             // delete folder
-            if( deleteFolder(FileHelper.asPath(record.workDir))) {
-                if(!quiet) println "Removed ${record.workDir}"
+            if( deleteFolder(FileHelper.asPath(record.workDir), keepLogs)) {
+                if(!quiet) printMessage(record.workDir,false)
             }
+
+        }
+    }
+
+    private printMessage(String path, boolean dryRun) {
+        if( dryRun ) {
+            println keepLogs ? "Would remove temp files from ${path}" : "Would remove ${path}"
+        }
+        else {
+            println keepLogs ? "Removed temp files from ${path}" : "Removed ${path}"
         }
     }
 
@@ -189,7 +203,7 @@ class CmdClean extends CmdBase implements CacheBase {
      * @return
      *      {@code true} in the directory was removed, {@code false}  otherwise
      */
-    private boolean deleteFolder( Path folder ) {
+    private boolean deleteFolder( Path folder, boolean keepLogs ) {
 
         def result = true
         Files.walkFileTree(folder, new FileVisitor<Path>() {
@@ -201,7 +215,9 @@ class CmdClean extends CmdBase implements CacheBase {
 
             @Override
             FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                if( !file.delete() ) {
+
+                final canDelete = !keepLogs || ( keepLogs &&  !(file.name.startsWith('.command.')  || file.name == '.exitcode'))
+                if( canDelete && !file.delete() ) {
                     result = false
                     if(!quiet) System.err.println "Failed to remove $file"
                 }
@@ -216,11 +232,11 @@ class CmdClean extends CmdBase implements CacheBase {
 
             @Override
             FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                if( result && !dir.delete() ) {
+                if( !keepLogs && result && !dir.delete() ) {
                     result = false
                     if(!quiet) System.err.println "Failed to remove $dir"
                 }
-
+                
                 result ? FileVisitResult.CONTINUE : FileVisitResult.TERMINATE
             }
         })
