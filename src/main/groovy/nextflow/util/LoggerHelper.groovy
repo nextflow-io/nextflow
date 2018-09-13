@@ -275,7 +275,7 @@ class LoggerHelper {
 
     protected PatternLayoutEncoder createEncoder() {
         def result = new PatternLayoutEncoder()
-        result.setPattern('%d{MMM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n')
+        result.setPattern('%d{yyyy MMM-dd HH:mm:ss.SSS XXXX} [%t] %-5level %logger{36} - %msg%n')
         result.setContext(loggerContext)
         result.start()
         return result
