@@ -4,8 +4,7 @@ machine:
     services:
         - docker
     environment:
-        GRADLE_OPTS: -Dorg.gradle.daemon=false -Xmx3000m #Try to reduce memory usage so that we don't crash out circleci test container
-        NXF_QUICK: 1 #Let's try to speed things up
+        GRADLE_OPTS: -Dorg.gradle.daemon=false
 
 dependencies:
     pre:
