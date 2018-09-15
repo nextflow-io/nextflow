@@ -359,6 +359,14 @@ protected resolveDeps( String configName, String... x ) {
     logger.info ">> Dependencies for configuration: $configName"
     deps.sort().each { logger.info " - $it" }
 
+    // make sure there aren't any version conflict
+    def conflicts = deps.countBy {  it.tokenize(":")[0..1].join(':') }.findAll { k,v -> v>1 }
+    if( conflicts ) {
+        def err = "There are multiple versions for the following lib(s):"
+        conflicts.each { name, count -> err += "\n- $name: " + deps.findAll{ it.startsWith(name) }.collect{ it.tokenize(':')[2] } }
+        throw new IllegalStateException(err)
+    }
+
     return deps.collect{ "$it(*:*)" }.join(' ')
 }
 
