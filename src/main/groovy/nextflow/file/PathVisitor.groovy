@@ -83,9 +83,6 @@ class PathVisitor {
         pathImpl( 'regex', splitter.parent, splitter.fileName, fs )
     }
 
-    private void emitPath( Path path ) {
-
-    }
 
     private void applyGlobPattern0(Path filePattern) {
 
