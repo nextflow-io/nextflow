@@ -349,7 +349,6 @@ protected resolveDeps( String configName, String... x ) {
     final incoming = config.getIncoming()
 
     deps << incoming.getResolutionResult().root.moduleVersion.toString()
-    incoming.getDependencies().each{ deps << coordinates(it) }
 
     config.getResolvedConfiguration().getResolvedArtifacts().each{ deps << coordinates(it) }
 
