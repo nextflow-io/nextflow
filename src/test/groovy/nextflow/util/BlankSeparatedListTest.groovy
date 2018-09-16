@@ -78,4 +78,17 @@ class BlankSeparatedListTest extends Specification {
         p.first() == 'x'
     }
 
+
+    def 'should serialised blank separated list' () {
+
+        given:
+        def list = new BlankSeparatedList(['alpha','beta',null,'gamma'])
+        when:
+        def buffer = KryoHelper.serialize(list)
+        then:
+        KryoHelper.deserialize(buffer) == list
+        KryoHelper.deserialize(buffer) instanceof BlankSeparatedList
+
+    }
+
 }

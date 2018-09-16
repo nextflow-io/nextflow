@@ -20,6 +20,7 @@
 
 package nextflow.extension
 
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.text.DateFormat
 import java.text.SimpleDateFormat
@@ -902,5 +903,13 @@ class Bolts {
         if( log.isTraceEnabled() ) {
             log.trace(msg.toString(),e)
         }
+    }
+
+    static String getErrMessage(Throwable e) {
+        if( e instanceof NoSuchFileException ) {
+            return "No such file: $e.message"
+        }
+
+        return e.message ?: e.toString()
     }
 }

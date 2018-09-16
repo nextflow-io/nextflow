@@ -19,11 +19,6 @@
  */
 package nextflow.processor
 
-import static nextflow.processor.ErrorStrategy.FINISH
-import static nextflow.processor.ErrorStrategy.IGNORE
-import static nextflow.processor.ErrorStrategy.RETRY
-import static nextflow.processor.ErrorStrategy.TERMINATE
-
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -91,6 +86,10 @@ import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.CollectionHelper
+import static nextflow.processor.ErrorStrategy.FINISH
+import static nextflow.processor.ErrorStrategy.IGNORE
+import static nextflow.processor.ErrorStrategy.RETRY
+import static nextflow.processor.ErrorStrategy.TERMINATE
 /**
  * Implement nextflow process execution logic
  *
@@ -1152,7 +1151,6 @@ class TaskProcessor {
         }
     }
 
-
     private String formatErrorCause( Throwable error ) {
 
         def result = new StringBuilder()
@@ -1160,12 +1158,9 @@ class TaskProcessor {
 
         def message
         if( error instanceof ShowOnlyExceptionMessage || !error.cause )
-            message = error.getMessage()
+            message = error.getErrMessage()
         else
-            message = error.cause.getMessage()
-
-        if( !message )
-            message = error.toString()
+            message = error.cause.getErrMessage()
 
         result
             .append('  ')
@@ -1576,18 +1571,29 @@ class TaskProcessor {
         return files
     }
 
-    protected singleItemOrList( List<FileHolder> items ) {
+    protected singleItemOrList( List<FileHolder> items, ScriptType type ) {
         assert items != null
 
         if( items.size() == 1 ) {
-            return Paths.get(items[0].stageName)
+            return makePath(items[0],type)
         }
 
         def result = new ArrayList(items.size())
         for( int i=0; i<items.size(); i++ ) {
-            result.add( Paths.get(items[i].stageName) )
+            result.add( makePath(items[i],type) )
         }
         return new BlankSeparatedList(result)
+    }
+
+    private Path makePath( FileHolder holder, ScriptType type ) {
+        if( type == ScriptType.SCRIPTLET ) {
+            return new TaskPath(holder)
+        }
+        if( type == ScriptType.GROOVY) {
+            // the real path for the native task needs to be fixed -- see #378
+            return Paths.get(holder.stageName)
+        }
+        throw new IllegalStateException("Unknown task type: $type")
     }
 
 
@@ -1759,7 +1765,7 @@ class TaskProcessor {
             def fileParam = param as FileInParam
             def normalized = normalizeInputToFiles(val,count)
             def resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
-            ctx.put( param.name, singleItemOrList(resolved) )
+            ctx.put( param.name, singleItemOrList(resolved, task.type) )
             count += resolved.size()
             for( FileHolder item : resolved ) {
                 Integer num = allNames.getOrCreate(item.stageName, 0) +1
