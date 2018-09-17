@@ -140,6 +140,11 @@ class LaunchConfig extends CascadingConfig<String,Object> {
     }
 
     @ConfigField
+    boolean getPreemptible() {
+        getAttribute('preemptible')
+    }
+
+    @ConfigField
     CloudConfig.Nextflow getNextflow() {
         (CloudConfig.Nextflow)getAttribute('nextflow')
     }

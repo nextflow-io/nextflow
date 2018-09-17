@@ -1,44 +1,45 @@
-package nextflow.cloud.gce;
+package nextflow.cloud.gce
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
-import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
-import com.google.api.client.http.HttpTransport;
-import com.google.api.client.json.JsonFactory;
-import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.api.services.compute.Compute;
+import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
+import com.google.api.client.googleapis.json.GoogleJsonResponseException
+import com.google.api.client.json.jackson2.JacksonFactory
+import com.google.api.services.compute.Compute
 import com.google.api.services.compute.model.*
+import groovy.transform.CompileStatic
+import nextflow.cloud.LaunchConfig
 import nextflow.exception.AbortOperationException
 
-import java.security.GeneralSecurityException;
-import java.util.*;
+import java.security.GeneralSecurityException
 
 /**
  * Helper class for Google Compute Engine
  *
  * @author Vilmundur Pálmason <vilmundur@wuxinextcode.com>
  */
+@CompileStatic
 class GceApiHelper {
-    private static final String PROJECT_PREFIX = "https://www.googleapis.com/compute/v1/projects/";
+
+    private static final String PROJECT_PREFIX = "https://www.googleapis.com/compute/v1/projects/"
+
     final String project
     final String zone
-    private Compute compute
-    def random = new Random()
+    final GoogleCredential credential
+    final Compute compute
 
-    GceApiHelper(String project, String zone) throws IOException, GeneralSecurityException {
+    Random random = new Random()
+
+
+    GceApiHelper(String project = null, String zone = null,GoogleCredential credential = null) throws IOException, GeneralSecurityException {
         this.project = project ?: readProject()
         this.zone = zone ?: readZone()
-        this.compute = createComputeService()
+        this.credential = credential ?: GoogleCredential.getApplicationDefault()
+        this.compute = createComputeService(this.credential)
     }
 
-    Compute compute() {
-        compute;
-    }
-
-    Compute createComputeService() throws IOException, GeneralSecurityException {
+    static Compute createComputeService(GoogleCredential credential) throws IOException, GeneralSecurityException {
         def httpTransport = GoogleNetHttpTransport.newTrustedTransport()
         def jsonFactory = JacksonFactory.getDefaultInstance()
-
-        def credential = GoogleCredential.getApplicationDefault()
 
         if (credential.createScopedRequired()) {
             credential =
@@ -111,11 +112,11 @@ class GceApiHelper {
     String randomName() {
         def bytes = new byte[5]
         random.nextBytes(bytes)
-        new BigInteger(bytes).abs().toString(16);
+        new BigInteger(bytes).abs().toString(16)
     }
 
     Metadata createMetadata(String... tagVal) {
-        def metadata = new Metadata();
+        def metadata = new Metadata()
 
         List<Metadata.Items> items = []
         for (int i = 0; i < tagVal.length - 1; i += 2) {
@@ -171,8 +172,14 @@ class GceApiHelper {
         compute.images().get(project, imageName(imagePath)).execute()
     }
 
-    MachineType lookupMachineType(String machineType) throws IOException {
-        compute.machineTypes().get(project, zone, machineType).execute()
+    MachineType lookupMachineType(String machineType) {
+        try {
+            compute.machineTypes().get(project, zone, machineType).execute()
+        } catch(GoogleJsonResponseException re) {
+            if(re.details.getCode() == 404)
+                return null
+            else throw re
+        }
     }
 
     String instanceIdToPrivateDNS(String instanceId) {
@@ -185,7 +192,7 @@ class GceApiHelper {
         if (parts.length != 4) throw new IllegalArgumentException("Expected IPv4 Public IP address instead of '" + ip + "'")
 
         // TODO: Is this domain name stable ?
-        parts.reverse().join(".")+".bc.googleusercontent.com"
+        parts.reverse().join(".") + ".bc.googleusercontent.com"
     }
 
     /**
@@ -225,7 +232,7 @@ class GceApiHelper {
         try {
             "http://metadata/computeMetadata/v1/$meta".toURL().getText(requestProperties: ['Metadata-Flavor': 'Google'])
         } catch (Exception e) {
-            throw new AbortOperationException("Cannot read Google metadata $meta: ${e.getClass()}(${e.getMessage()})",e)
+            throw new AbortOperationException("Cannot read Google metadata $meta: ${e.getClass()}(${e.getMessage()})", e)
         }
     }
 
@@ -239,5 +246,9 @@ class GceApiHelper {
 
     String readInstanceId() {
         readGoogleMetadata('instance/name')
+    }
+
+    Scheduling createScheduling(LaunchConfig launchConfig) {
+        new Scheduling().setPreemptible(launchConfig.getPreemptible())
     }
 }
