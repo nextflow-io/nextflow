@@ -11,6 +11,8 @@ dependencies:
         - mkdir -p ~/.nextflow/aws
         - echo ignite.nf >>tests/checks/.ignore
         - echo s3-files.nf >>tests/checks/.ignore
+        - echo files.nf >>tests/checks/.ignore
+        - echo mixing-langs.nf >>tests/checks/.ignore
     cache_directories:
         - ~/.nextflow/aws
 
