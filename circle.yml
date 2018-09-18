@@ -26,7 +26,7 @@ test:
         - mkdir -p "$HOME/.nextflow" && echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
         - make assemble
     override:
-        - make check install && ./integration-tests.sh :
+        - make check install: #&& ./integration-tests.sh :
             timeout: 2700
     post:
         - mkdir -p $CIRCLE_TEST_REPORTS/junit/
