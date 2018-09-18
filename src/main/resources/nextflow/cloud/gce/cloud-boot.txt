@@ -1,7 +1,8 @@
 #!/bin/bash
 
+
 # Install java and docker.
-# TODO: have this configured as an option in gce config block
+# TODO: have this configured as an option in gce config block or remove altogether
 
 if ! which java; then
   if which apt-get; then
@@ -62,7 +63,9 @@ fi
 # Install NEXTFLOW and launch it
 #
 version="v!{nextflow.version}"
-curl -fsSL http://www.nextflow.io/releases/${version}/nextflow  > $HOME/nextflow
+
+download_url=${NEXFLOW_DOWNLOAD_URL:-http://www.nextflow.io/releases}
+curl -fsSL ${download_url}/${version}/nextflow  > $HOME/nextflow
 chmod +x $HOME/nextflow
 $HOME/nextflow -download
 
@@ -82,3 +85,21 @@ touch READY
 
 ) &> ~!{userName}/boot.log
 EndOfScript
+
+# NFS share work folder
+userhome=$(echo ~!{userName})
+sudo -u !{userName} mkdir -p $userhome/work
+
+# TODO: Have automatic NFS support configurable or remove altogether
+# TODO: apt-get/yum auto
+yum -y install nfs-utils
+echo "Userhome: ${userhome}"
+if [[ '!{role}' == master ]]; then
+  systemctl enable nfs-server.service
+  systemctl start nfs-server.service
+  echo "${userhome}/work           *(rw,sync,no_root_squash,no_subtree_check)" >/etc/exports
+  exportfs -a
+else
+  master=$(su - !{userName} ./nextflow cloud list !{clusterName} | grep master | sed 's/ .*//')
+  mount $master:/$userhome/work $userhome/work
+fi

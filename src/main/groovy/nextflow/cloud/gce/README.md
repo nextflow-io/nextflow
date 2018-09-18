@@ -20,7 +20,7 @@ export GOOGLE_APPLICATION_CREDENTIALS=$PWD/creds.json
 Create nextflow.config file in project root directory. Example:
 ```
 cloud {
-  imageId = 'debian-cloud/global/images/debian-7-wheezy-v20150710'
+  imageId = 'centos-cloud/global/images/centos-7-v20180815'
   instanceType = 'n1-standard-1'
 }
 
