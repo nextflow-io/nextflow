@@ -216,6 +216,10 @@ class GceApiHelper {
         addMetadataItem(instance, "startup-script", script)
     }
 
+    def setShutdownScript(Instance instance, String script) {
+        addMetadataItem(instance, "shutdown-script", script)
+    }
+
     def addMetadataItem(Instance instance, String key, String value) {
         def metadata = instance.getMetadata() ?: new Metadata()
         List<Metadata.Items> items = metadata.getItems() ?: []

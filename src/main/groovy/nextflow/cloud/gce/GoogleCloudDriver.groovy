@@ -22,9 +22,11 @@ import nextflow.cloud.types.CloudInstance
 import nextflow.cloud.types.CloudInstanceStatus
 import nextflow.cloud.types.CloudInstanceType
 import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
 import nextflow.processor.TaskTemplateEngine
 import nextflow.util.ServiceName
 
+import java.nio.file.Files
 import java.nio.file.Path
 
 import static nextflow.cloud.CloudConst.TAG_CLUSTER_NAME
@@ -124,6 +126,8 @@ class GoogleCloudDriver implements CloudDriver {
             helper.setBootDisk(inst, config.getImageId())
             helper.setNetworkInterface(inst)
             helper.setStartupScript(inst, gceStartupScript(config))
+            //TODO do this in conjuction with scheduling
+            helper.setShutdownScript(inst,gceShutdownScript())
             def insert = helper.compute.instances().insert(helper.project, helper.zone, inst)
 
             result << inst.getName()
@@ -267,7 +271,14 @@ class GoogleCloudDriver implements CloudDriver {
 
     @Override
     String getLocalTerminationNotice() {
-        unsupported("getLocalTerminationNotice")
+        Path shutdownFile = FileHelper.asPath("/tmp/shutdown.begin")
+
+        if(Files.exists(shutdownFile)) {
+            shutdownFile.toFile().text
+        }
+        else {
+            null
+        }
     }
 
     @Override
@@ -313,6 +324,15 @@ class GoogleCloudDriver implements CloudDriver {
                 role: labels[TAG_CLUSTER_ROLE.toLowerCase()],
                 clusterName: labels[TAG_CLUSTER_NAME.toLowerCase()]
         )
+    }
+
+    @PackageScope
+    //TODO: Contantinize the file name and location
+    String gceShutdownScript() {
+        """
+            #!/bin/bash
+            date >> /tmp/shutdown.begin            
+        """.stripIndent().leftTrim()
     }
 
     /**
