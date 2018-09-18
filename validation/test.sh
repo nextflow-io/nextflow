@@ -13,7 +13,6 @@ export TRAVIS_PULL_REQUEST=${TRAVIS_PULL_REQUEST:=false}
 # Tests
 #
 (
-  export WITH_DOCKER='-with-docker';
   cd ../tests/checks;
   bash run.sh
 )
