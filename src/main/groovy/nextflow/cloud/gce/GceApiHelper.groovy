@@ -24,17 +24,24 @@ class GceApiHelper {
 
     final String project
     final String zone
-    final GoogleCredential credential
     final Compute compute
 
     Random random = new Random()
 
 
-    GceApiHelper(String project = null, String zone = null,GoogleCredential credential = null) throws IOException, GeneralSecurityException {
+    /**
+     * only for testing purpose -- do not use
+     */
+    GceApiHelper(String project, String zone, Compute compute) {
+        this.project = project
+        this.zone = zone
+        this.compute = compute
+    }
+
+    GceApiHelper(String project, String zone) throws IOException, GeneralSecurityException {
         this.project = project ?: readProject()
         this.zone = zone ?: readZone()
-        this.credential = credential ?: GoogleCredential.getApplicationDefault()
-        this.compute = createComputeService(this.credential)
+        this.compute = createComputeService(GoogleCredential.getApplicationDefault())
     }
 
     static Compute createComputeService(GoogleCredential credential) throws IOException, GeneralSecurityException {
@@ -69,30 +76,29 @@ class GceApiHelper {
      * @param imagePath including image project (e.g. "debian-cloud/global/images/debian-7-wheezy-v20150710" )
      * @return Fully qualified image name
      */
-    String imageName(String imagePath) {
+    static String imageName(String imagePath) {
         PROJECT_PREFIX + imagePath
     }
 
-    AttachedDisk setBootDisk(Instance instance, String imagePath) {
+    AttachedDisk createBootDisk(String name, String imagePath) {
         def disk = new AttachedDisk()
         disk.setBoot(true)
         disk.setAutoDelete(true)
         disk.setType("PERSISTENT")
         def params = new AttachedDiskInitializeParams()
         // Assign the Persistent Disk the same name as the VM Instance.
-        if (instance.getName() != null) {
-            params.setDiskName(instance.getName())
+        if (name != null) {
+            params.setDiskName(name)
         }
         // Specify the source operating system machine image to be used by the VM Instance.
         params.setSourceImage(imageName(imagePath))
         // Specify the disk type as Standard Persistent Disk
         params.setDiskType(projectZonePrefix() + "diskTypes/pd-standard")
         disk.setInitializeParams(params)
-        instance.setDisks(Collections.singletonList(disk))
         disk
     }
 
-    NetworkInterface setNetworkInterface(Instance inst) {
+    NetworkInterface createNetworkInterface() {
         def ifc = new NetworkInterface()
         ifc.setNetwork("${PROJECT_PREFIX}${project}/global/networks/default")
         List<AccessConfig> configs = []
@@ -101,7 +107,6 @@ class GceApiHelper {
         config.setName("External NAT")
         configs.add(config)
         ifc.setAccessConfigs(configs)
-        inst.setNetworkInterfaces(Collections.singletonList(ifc))
         ifc
     }
 
@@ -115,23 +120,10 @@ class GceApiHelper {
         new BigInteger(bytes).abs().toString(16)
     }
 
-    Metadata createMetadata(String... tagVal) {
-        def metadata = new Metadata()
-
-        List<Metadata.Items> items = []
-        for (int i = 0; i < tagVal.length - 1; i += 2) {
-            Metadata.Items it = new Metadata.Items()
-            it.set(tagVal[i], tagVal[i + 1])
-            items.add(it)
-        }
-        metadata.setItems(items)
-        return metadata
-    }
-
     /**
      * Block until all operations are complete or if any results in an error.
      */
-    Operation.Error blockUntilComplete(Iterable<Operation> ops, long timeoutMs) throws InterruptedException, IOException {
+    Operation.Error blockUntilComplete(Iterable<Operation> ops, long timeoutMs) {
         long start = System.currentTimeMillis()
         for (Operation op : ops) {
             Operation.Error result = blockUntilComplete(op, timeoutMs - (System.currentTimeMillis() - start))
@@ -140,7 +132,7 @@ class GceApiHelper {
         null
     }
 
-    Operation.Error blockUntilComplete(Operation operation, long timeoutMs) throws InterruptedException, IOException {
+    Operation.Error blockUntilComplete(Operation operation, long timeoutMs) {
         def start = System.currentTimeMillis()
         def pollInterval = 5 * 1000
         def opZone = operation.getZone()  // null for global/regional operations
@@ -252,7 +244,7 @@ class GceApiHelper {
         readGoogleMetadata('instance/name')
     }
 
-    Scheduling createScheduling(LaunchConfig launchConfig) {
-        new Scheduling().setPreemptible(launchConfig.getPreemptible())
+    Scheduling createScheduling(boolean preemptible) {
+        new Scheduling().setPreemptible(preemptible)
     }
 }

@@ -119,12 +119,10 @@ class GoogleCloudDriver implements CloudDriver {
             Instance inst = new Instance();
             inst.setName(helper.randomName(config.getClusterName() + "-"))
             inst.setMachineType(helper.instanceType(config.getInstanceType()))
-            inst.setScheduling(helper.createScheduling(config))
+            inst.setScheduling(helper.createScheduling(config.preemptible))
 
-
-            //TODO make helper return the instances instead of setting them
-            helper.setBootDisk(inst, config.getImageId())
-            helper.setNetworkInterface(inst)
+            inst.setDisks([helper.createBootDisk(inst.getName(), config.getImageId())])
+            inst.setNetworkInterfaces([helper.createNetworkInterface()])
             helper.setStartupScript(inst, gceStartupScript(config))
             //TODO do this in conjuction with scheduling
             helper.setShutdownScript(inst,gceShutdownScript())
