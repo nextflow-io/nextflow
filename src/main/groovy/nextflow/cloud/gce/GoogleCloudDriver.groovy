@@ -119,13 +119,15 @@ class GoogleCloudDriver implements CloudDriver {
             Instance inst = new Instance();
             inst.setName(helper.randomName(config.getClusterName() + "-"))
             inst.setMachineType(helper.instanceType(config.getInstanceType()))
-            inst.setScheduling(helper.createScheduling(config.preemptible))
+            if(config.preemptible) {
+                inst.setScheduling(helper.createScheduling(config.preemptible))
+                helper.setShutdownScript(inst, gceShutdownScript())
+            }
 
             inst.setDisks([helper.createBootDisk(inst.getName(), config.getImageId())])
             inst.setNetworkInterfaces([helper.createNetworkInterface()])
             helper.setStartupScript(inst, gceStartupScript(config))
-            //TODO do this in conjuction with scheduling
-            helper.setShutdownScript(inst,gceShutdownScript())
+
             def insert = helper.compute.instances().insert(helper.project, helper.zone, inst)
 
             result << inst.getName()
@@ -328,8 +330,8 @@ class GoogleCloudDriver implements CloudDriver {
     //TODO: Contantinize the file name and location
     String gceShutdownScript() {
         """
-            #!/bin/bash
-            date >> /tmp/shutdown.begin            
+            #!/bin/bash            
+            date >> /tmp/shutdown.begin                                               
         """.stripIndent().leftTrim()
     }
 
