@@ -97,6 +97,9 @@ public class CacheHelper {
         if( value instanceof Double )
             return hasher.putDouble( (Double)value );
 
+        if( value instanceof Byte )
+            return hasher.putByte( (Byte)value );
+
         if( value instanceof Number )
             // reduce all other number types (BigInteger, BigDecimal, AtomicXxx, etc) to string equivalent
             return hasher.putUnencodedChars(value.toString());
@@ -106,9 +109,6 @@ public class CacheHelper {
 
         if( value instanceof CharSequence )
             return hasher.putUnencodedChars( (CharSequence)value );
-
-        if( value instanceof Byte )
-            return hasher.putByte( (Byte)value );
 
         if( value instanceof byte[] )
             return hasher.putBytes( (byte[])value );
@@ -147,6 +147,10 @@ public class CacheHelper {
         if( value instanceof UUID ) {
             UUID uuid = (UUID)value;
             return hasher.putLong(uuid.getMostSignificantBits()).putLong(uuid.getLeastSignificantBits());
+        }
+
+        if( value instanceof VersionNumber ) {
+            return hasher.putInt( value.hashCode() );
         }
 
         log.debug("[WARN] Unknown hashing type: {} -- {}", value.getClass(), value);

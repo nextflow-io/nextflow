@@ -29,16 +29,14 @@ import spock.lang.Specification
  */
 class IgGridFactoryTest extends Specification {
 
-    def test() {
+    def 'should set tcp parameters'() {
         when:
-        def cfg = new IgGridFactory('master', [cluster: [tcp:[
+        def cfg = new IgGridFactory('master', [cluster: [ tcp:[
                 localAddress:'127.1.2.3',
                 localPort:8888,
                 ackTimeout: '11s',
                 socketTimeout: '30s',
                 maxAckTimeout: 55_000,
-                heartbeatFrequency: '3sec',
-                maxMissedHeartbeats: 3,
                 reconnectCount: 20,
                 networkTimeout: '10s',
                 joinTimeout: 100
@@ -49,13 +47,25 @@ class IgGridFactoryTest extends Specification {
         tcp.getLocalAddress() == '127.1.2.3'
         //tcp.getLocalPort() == 8888
         tcp.getAckTimeout() == 11_000       // 5 sec
-        tcp.getHeartbeatFrequency() == 3_000    // 2 sec
-        tcp.getMaxMissedHeartbeats() == 3       // 1
         tcp.getReconnectCount() == 20       // def: 10
         tcp.getNetworkTimeout() == 10_000   // def: 5 sec
         tcp.getSocketTimeout() == 30_000   // def: 2 sec
         tcp.getMaxAckTimeout() == 55_000    // def: 600 sec
         tcp.getJoinTimeout() == 100         // def: 0
+
+    }
+
+    def 'should set failure detection parameters'() {
+
+        when:
+        def cfg = new IgGridFactory('master', [cluster: [
+                failureDetectionTimeout: '20 sec',
+                clientFailureDetectionTimeout: '40 sec'
+        ]]).config()
+        
+        then:
+        cfg.getFailureDetectionTimeout() == 20_000
+        cfg.getClientFailureDetectionTimeout() == 40_000
 
     }
 

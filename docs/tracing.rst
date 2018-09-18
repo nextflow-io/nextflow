@@ -52,7 +52,7 @@ and many other runtime metrics. You can see an example below:
 
 
 .. note:: Nextflow collect these metrics running a background process for each job in the target environment.
-  Make sure the following tools are available ``ps``, ``date``, ``sed``, ``egrep``, ``awk`` in the system where
+  Make sure the following tools are available ``ps``, ``date``, ``sed``, ``grep``, ``egrep``, ``awk`` in the system where
   the jobs are executed. Moreover some of these metrics are not reported when using a Mac OSX system. See the note
   message about that in the `Trace report`_ below.
 
@@ -219,4 +219,51 @@ svg           SVG file (*)
 The DAG produced by Nextflow for the `Shootstrap <https://github.com/cbcrg/shootstrap/>`_ pipeline:
 
 .. image:: images/dag.png
+
+.. _weblog-service:
+
+Weblog via HTTP
+===============
+
+In order to enable Nextflow to send detailed trace reports via HTTP POST requests, add the following command line option::
+
+  nextflow run <pipeline name> -with-weblog [url]
+
+Nextflow will then take trace information and send it as JSON object to the given URL. An example JSON message can look like this::
+
+   {
+        "runName": "mighty_jones",
+        "runId": "f6b21633-af1e-4fe2-8328-39e70b110c83",
+        "runStatus": "process_started",
+        "utcTime": "2018-05-14T08:28:48Z",
+        "trace": {
+            "task_id": 2,
+            "status": "RUNNING",
+            "hash": "e9/9efab9",
+            "name": "printHello (3)",
+            "exit": 2147483647,
+            "submit": 1526313056637,
+            "start": 1526313056715,
+            "process": "printHello",
+            "tag": null,
+            "module": [
+
+            ],
+            "container": "nextflow/examples",
+            ...
+   }
+
+The JSON object contains the following attributes:
+
+================== ================
+Attribute          Description
+================== ================
+runName            The worklow run name. Nextflow creates an own, if you do not provide one explicitly.
+runId              The unique workflow id Nextflow creates for every workflow.
+runStatus          The current status of the workflow. One of ``["started", "process_submitted", "process_started", "process_completed", "error", "completed"]``.
+utcTime            The UTC timestamp in ISO 8601 format.
+(trace)            Provided only on process submission, process start, process complete and workflow error.
+================== ================
+
+The ``trace`` attribute contains a list of trace information fields, which you can look up in the :ref:`trace fields<trace-fields>` description.
 

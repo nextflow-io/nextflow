@@ -19,6 +19,7 @@
  */
 
 package nextflow.container
+
 import java.nio.file.Path
 
 import nextflow.util.Escape
@@ -135,7 +136,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
     }
 
     V addEnv( entry ) {
-        env.add(entry)
+        env.add(entry instanceof GString ? entry.toString() : entry)
         return (V)this
     }
 
@@ -208,6 +209,9 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
         }
         else if( env instanceof String && env.contains('=') ) {
             result << '-e "' << env << '"'
+        }
+        else if( env instanceof String ) {
+            result << "\${$env:+-e \"$env=\$$env\"}"
         }
         else if( env ) {
             throw new IllegalArgumentException("Not a valid environment value: $env [${env.class.name}]")

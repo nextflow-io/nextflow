@@ -39,20 +39,21 @@ apply plugin: 'io.codearte.nexus-staging'   // See https://github.com/Codearte/g
 // Add ability to test with upcoming versions of Groovy
 def groovyVer = System.getenv('CI_GROOVY_VERSION')
 if (groovyVer) {
-    logger.lifecycle "Overriden Groovy dependency to use $groovyVer"
+    def repo = groovyVer.startsWith('com.github.apache:') ? 'https://jitpack.io' : 'https://oss.jfrog.org/oss-snapshot-local/'
+    logger.lifecycle "Overriden Groovy dependency to use $groovyVer - repository: $repo"
     allprojects {
         repositories {
-            maven {
-                name 'JFrog OSS snapshot repo'
-                url 'https://oss.jfrog.org/oss-snapshot-local/'
-            }
+            maven { url repo }
         }
     }
 
     configurations.all {
         resolutionStrategy.eachDependency { DependencyResolveDetails details ->
             if (details.requested.group == 'org.codehaus.groovy') {
-                details.useVersion(groovyVer)
+                if( groovyVer.contains(':') )
+                    details.useTarget(groovyVer)
+                else
+                    details.useVersion(groovyVer)
                 println ">> Overriding $details.requested with version: $groovyVer"
             }
         }
@@ -68,7 +69,7 @@ allprojects {
     apply plugin: 'java'
     apply plugin: 'idea'
 
-    version = '0.29.0'
+    version = /0.32.0u1-SNAPSHOT/
     group = 'io.nextflow'
 
     sourceCompatibility = 1.8
@@ -82,7 +83,6 @@ allprojects {
         jcenter()
         mavenCentral()
         maven { url 'http://uk.maven.org/maven2' }
-        maven { url 'http://dl.bintray.com/paolo-ditommaso/maven'}
         maven { url 'https://repo.eclipse.org/content/groups/releases' }
         maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
     }
@@ -90,19 +90,29 @@ allprojects {
     configurations {
         // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
         all*.exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+        all*.exclude group: 'org.codehaus.groovy', module: 'groovy-cli-picocli'
+        // groovydoc libs
+        groovyDoc.extendsFrom runtime
     }
 
     dependencies {
         // test configuration
+        testCompile ("org.codehaus.groovy:groovy-test:2.5.1") { exclude group: 'org.codehaus.groovy' }
         testCompile ("cglib:cglib-nodep:2.2")
-        testCompile ("org.objenesis:objenesis:1.4")
-        testCompile ("org.spockframework:spock-core:1.1-groovy-2.4")
-        testCompile 'com.google.jimfs:jimfs:1.0'
+        testCompile ("org.objenesis:objenesis:2.1")
+        testCompile ("org.spockframework:spock-core:1.2-RC1-groovy-2.5") { exclude group: 'org.codehaus.groovy' }
+        testCompile 'com.google.jimfs:jimfs:1.1'
         testCompile 'org.subethamail:subethasmtp:3.1.7'
         // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sec:module_replacement
         modules {
             module("commons-logging:commons-logging") { replacedBy("org.slf4j:jcl-over-slf4j") }
+            module("javax.activation:activation") { replacedBy("com.sun.activation:javax.activation") }
         }
+
+        // Documentation required libraries
+        groovyDoc 'org.fusesource.jansi:jansi:1.11'
+        groovyDoc "org.codehaus.groovy:groovy-groovydoc:2.5.1"
+        groovyDoc "org.codehaus.groovy:groovy-ant:2.5.1"
     }
 
     // this is required due to this IDEA bug
@@ -121,6 +131,31 @@ allprojects {
         }
     }
 
+    // patched as described here
+    // http://forums.gradle.org/gradle/topics/gradle_task_groovydoc_failing_with_noclassdeffounderror
+    tasks.withType(Groovydoc) {
+        groovyClasspath = project.configurations.groovyDoc
+        includes  = ["nextflow/**"]
+    }
+
+    // Required to run tests on Java 9 and higher in compatibility mode
+    if (JavaVersion.current() >= JavaVersion.VERSION_1_9) {
+        tasks.withType(Test) {
+            jvmArgs ([
+                    '--add-opens=java.base/java.lang=ALL-UNNAMED',
+                    '--add-opens=java.base/java.io=ALL-UNNAMED',
+                    '--add-opens=java.base/java.nio=ALL-UNNAMED',
+                    '--add-opens=java.base/java.util=ALL-UNNAMED',
+                    '--add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
+                    '--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED',
+                    '--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED',
+                    '--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED',
+                    '--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED',
+                    '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED',
+                    '--add-modules=java.xml.bind,java.activation',
+            ])
+        }
+    }
 }
 
 configurations {
@@ -128,36 +163,37 @@ configurations {
     //provided
     ignite.extendsFrom runtime
     console.extendsFrom runtime
-    gdocLibs.extendsFrom runtime
+    ga4gh.extendsFrom runtime
 }
 
 
 dependencies {
     compile(project(':nxf-commons'))
     compile(project(':nxf-httpfs'))
-    compile "org.codehaus.groovy:groovy:2.4.15"
-    compile "org.codehaus.groovy:groovy-nio:2.4.15"
-    compile "org.codehaus.groovy:groovy-json:2.4.15"
-    compile "org.codehaus.groovy:groovy-templates:2.4.15"
-    compile "org.slf4j:jcl-over-slf4j:1.7.21"
-    compile "org.slf4j:jul-to-slf4j:1.7.21"
-    compile "org.slf4j:log4j-over-slf4j:1.7.21"
-    compile "ch.qos.logback:logback-classic:1.1.10"
-    compile "ch.qos.logback:logback-core:1.1.10"
+    compile "org.codehaus.groovy:groovy:2.5.1"
+    compile "org.codehaus.groovy:groovy-nio:2.5.1"
+    compile "org.codehaus.groovy:groovy-json:2.5.1"
+    compile "org.codehaus.groovy:groovy-templates:2.5.1"
+    compile "org.slf4j:jcl-over-slf4j:1.7.25"
+    compile "org.slf4j:jul-to-slf4j:1.7.25"
+    compile "org.slf4j:log4j-over-slf4j:1.7.25"
+    compile "ch.qos.logback:logback-classic:1.1.11"
+    compile "ch.qos.logback:logback-core:1.1.11"
     compile "org.codehaus.gpars:gpars:1.2.1"
-    compile("ch.grengine:grengine:1.2.1") { exclude group: 'org.codehaus.groovy', module: 'groovy-all' }
+    compile("ch.grengine:grengine:1.3.0") { exclude group: 'org.codehaus.groovy'  }
     compile "commons-lang:commons-lang:2.6"
     compile "com.beust:jcommander:1.35"
     compile("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
-    compile('org.iq80.leveldb:leveldb:0.7')
+    compile('org.iq80.leveldb:leveldb:0.10')
     compile('org.eclipse.jgit:org.eclipse.jgit:4.8.0.201706111038-r')
-    compile('io.nextflow:nxf-s3fs:1.0.3') {
+    compile('io.nextflow:nxf-s3fs:1.0.4') {
         exclude group: 'org.apache.tika', module: 'tika-core'
         exclude group: 'com.amazonaws', module: 'aws-java-sdk-s3'
     }
-    compile ('com.amazonaws:aws-java-sdk-s3:1.11.172')
-    compile ('com.amazonaws:aws-java-sdk-ec2:1.11.172')
-    compile ('com.amazonaws:aws-java-sdk-batch:1.11.172')
+    compile ('com.amazonaws:aws-java-sdk-s3:1.11.324')
+    compile ('com.amazonaws:aws-java-sdk-ec2:1.11.324')
+    compile ('com.amazonaws:aws-java-sdk-batch:1.11.324')
+    compile ('javax.activation:activation:1.1.1')
     compile ('javax.mail:mail:1.4.7')
     compile ('org.yaml:snakeyaml:1.18')
     compile ('org.jsoup:jsoup:1.11.2')
@@ -171,7 +207,8 @@ dependencies {
     runtime "org.apache.ivy:ivy:2.3.0"
 
     // library used to compile but not included in the final jar
-
+    compileOnly ('javax.xml.bind:jaxb-api:2.3.0')
+    
     // Capsule manages the fat jar building process
     capsule(project(':my-capsule'))
 
@@ -183,19 +220,12 @@ dependencies {
         exclude module: 'nextflow'
     }
 
-    // Documentation required libraries
-    gdocLibs 'org.fusesource.jansi:jansi:1.11'
-    gdocLibs "org.codehaus.groovy:groovy-groovydoc:2.4.15"
-    gdocLibs "org.codehaus.groovy:groovy-ant:2.4.15"
+    ga4gh(project(':nxf-ga4gh')) {
+        exclude module: 'nextflow'
+    }
 
 }
 
-// patched as described here
-// http://forums.gradle.org/gradle/topics/gradle_task_groovydoc_failing_with_noclassdeffounderror
-groovydoc {
-    groovyClasspath = project.configurations.gdocLibs
-    includes  = ["nextflow/**"]
-}
 
 //sourceSets.main.compileClasspath += configurations.provided
 sourceSets.main.java.srcDirs = []
@@ -310,6 +340,7 @@ ext.deployable << project(':nxf-commons')
 ext.deployable << project(':nxf-ignite')
 ext.deployable << project(':nxf-console')
 ext.deployable << project(':nxf-httpfs')
+ext.deployable << project(':nxf-ga4gh')
 
 protected error(String message) {
     logger.error message
@@ -366,7 +397,7 @@ task packOne(type: Jar) {
                 'Application-Name'  : 'nextflow',
                 'Application-Class' : mainClassName,
                 'Application-Version': version,
-                'Min-Java-Version'  : '1.7.0',
+                'Min-Java-Version'  : '1.8.0',
                 'Caplets'           : 'MavenCapsule',
                 'Dependencies'      : deps
     )
@@ -390,6 +421,12 @@ task packOne(type: Jar) {
     deps = resolveDeps('ignite')
     manifest.attributes('Dependencies': deps, 'ignite')
 
+    /*
+     * `ga4gh` dependencies
+     */
+    deps = resolveDeps('ga4gh')
+    manifest.attributes('Dependencies': deps, 'ga4gh')
+
     doLast {
         ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: releaseDir, overwrite: true)
         ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: nextflowDir, overwrite: true)
@@ -409,7 +446,7 @@ task packAll(type: Jar) {
                           'Application-Name'  : 'nextflow-all',
                           'Application-Class' : mainClassName,
                           'Application-Version': version,
-                          'Min-Java-Version'  : '1.7.0'
+                          'Min-Java-Version'  : '1.8.0'
                           )
 
     manifest.attributes('Main-Class': 'CapsuleLoader', 'ignite')
@@ -580,10 +617,10 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
  * Save the runtime classpath
  */
 task exportClasspath {
-    dependsOn configurations.ignite, configurations.console
+    dependsOn configurations.ignite, configurations.console, configurations.ga4gh
 
     def home = System.getProperty('user.home')
-    def all = configurations.ignite + configurations.console
+    def all = configurations.ignite + configurations.console + configurations.ga4gh
     def libs = all.collect { File file -> /* println file.canonicalPath.replace(home, '$HOME'); */ file.canonicalPath;  }
     new File('.launch.classpath').text = libs.join(':')
 }

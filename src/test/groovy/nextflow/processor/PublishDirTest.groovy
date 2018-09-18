@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit
 import nextflow.Global
 import nextflow.file.FileHelper
 import spock.lang.Specification
+import test.TestHelper
 
 /**
  *
@@ -91,9 +92,9 @@ class PublishDirTest extends Specification {
         folder.resolve('work-dir/file3.fastq').text = 'ccc'
         folder.resolve('work-dir/file4.temp').text = 'zzz'
 
-        final workDir = folder.resolve('work-dir')
-        final publishDir = folder.resolve('pub-dir')
-        final task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
+        def workDir = folder.resolve('work-dir')
+        def publishDir = folder.resolve('pub-dir')
+        def task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
 
         when:
         def outputs =  [
@@ -152,9 +153,9 @@ class PublishDirTest extends Specification {
         folder.resolve('work-dir/dir-y').resolve('file.3').text = '333'
         folder.resolve('work-dir/dir-y').resolve('file.4').text = '444'
 
-        final workDir = folder.resolve('work-dir')
-        final publishDir = folder.resolve('pub-dir')
-        final task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
+        def workDir = folder.resolve('work-dir')
+        def publishDir = folder.resolve('pub-dir')
+        def task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
 
         when:
         def outputs = [
@@ -203,10 +204,10 @@ class PublishDirTest extends Specification {
         folder.resolve('work-dir/file3.fastq').text = 'ccc'
         folder.resolve('work-dir/file4.temp').text = 'zzz'
 
-        final workDir = folder.resolve('work-dir')
-        final target1 = folder.resolve('pub-dir1')
-        final target2 = folder.resolve('pub-dir2')
-        final task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
+        def workDir = folder.resolve('work-dir')
+        def target1 = folder.resolve('pub-dir1')
+        def target2 = folder.resolve('pub-dir2')
+        def task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
 
         when:
         def outputs = [
@@ -260,6 +261,22 @@ class PublishDirTest extends Specification {
 
         def targetDir = FileHelper.asPath( 's3://bucket/work' )
         def publisher = new PublishDir(mode:'symlink', path: targetDir, sourceFileSystem: FileSystems.default)
+
+        when:
+        publisher.validatePublishMode()
+        then:
+        publisher.mode == PublishDir.Mode.COPY
+    }
+
+    def 'should change mode to `copy` when the target is a foreign file system' () {
+
+        given:
+        def workDirFileSystem = TestHelper.createInMemTempDir().fileSystem
+        def processor = [:] as TaskProcessor
+        processor.name = 'foo'
+
+        def targetDir = TestHelper.createInMemTempDir()
+        def publisher = new PublishDir(mode:'symlink', path: targetDir, sourceFileSystem: workDirFileSystem)
 
         when:
         publisher.validatePublishMode()

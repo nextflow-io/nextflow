@@ -7,13 +7,13 @@ get_abs_filename() {
 }
 
 export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
+export TRAVIS_PULL_REQUEST=${TRAVIS_PULL_REQUEST:=false}
 
 #
 # Tests
 #
 (
-  export WITH_DOCKER='-with-docker';
-  cd ../tests/checks; 
+  cd ../tests/checks;
   bash run.sh
 )
 
@@ -28,16 +28,6 @@ git clone https://github.com/nextflow-io/hello
 )
 
 #
-# Rna-Toy
-#
-git clone https://github.com/nextflow-io/rnatoy
-(
-  cd rnatoy; 
-  $NXF_CMD run . -with-docker 
-  $NXF_CMD run . -with-docker -resume 
-)
-
-#
 # AMPA-NF
 #
 git clone https://github.com/cbcrg/ampa-nf
@@ -49,37 +39,21 @@ docker pull cbcrg/ampa-nf
 )
 
 #
-# MTA-NF
+# RNASEQ-NF
 #
-git clone https://github.com/cbcrg/mta-nf
-docker pull cbcrg/mta-nf
-(
-  cd mta-nf;
-  $NXF_CMD run . -with-docker --seq tutorial/small.fa --ntree 5 --msa clustalw
-  $NXF_CMD run . -with-docker --seq tutorial/small.fa --ntree 5 --msa clustalw -resume
-)
-
-#
-# GRAPE-NF
-#
-git clone  https://github.com/cbcrg/grape-nf
-docker pull cbcrg/grape-nf
-(
-  cd grape-nf; 
-  $NXF_CMD run . -with-docker 
-  $NXF_CMD run . -with-docker -resume 
-)
-
-#
-# PIPER-NF
-#
-git clone https://github.com/cbcrg/piper-nf
-docker pull cbcrg/piper-nf
-(
-  cd piper-nf; 
-  $NXF_CMD run . -with-docker 
-  $NXF_CMD run . -with-docker -resume 
-)
+echo nextflow-io/rnaseq-nf
+$NXF_CMD run nextflow-io/rnaseq-nf -with-docker
+$NXF_CMD run nextflow-io/rnaseq-nf -with-docker -resume
 
 
+if [[ $TRAVIS_PULL_REQUEST == false ]]; then
 
+#
+# AWS Batch tests
+#
+echo aws batch tests
+./await.sh bash awsbatch.sh
+
+else
+echo Skipping tests requiring AWS credentials
+fi

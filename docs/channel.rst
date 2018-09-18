@@ -6,13 +6,73 @@ Channels
 
 Nextflow is based on the Dataflow programming model in which processes communicate through channels.
 
-A `channel` is a non-blocking unidirectional FIFO queue which connects two processes. It has two properties:
+A channel has two major properties:
 
 #. Sending a message is an `asynchronous` operation which completes immediately,
    without having to wait for the receiving process.
 
 #. Receiving data is a blocking operation which stops the receiving process until the message has arrived.
 
+.. _channel-types:
+
+Channel types
+=============
+
+Nextflow distinguish two different kinds of channels: `queue channels` and `value channels`.
+
+Queue channel
+-------------
+
+A `queue channel` is a non-blocking unidirectional FIFO queue which connects two processes or operators.
+
+A queue channel is usually created using a factory method such as a `from`_, `fromPath`_, etc.
+or chaining it with a channel operator such as :ref:`operator-map`, :ref:`operator-flatmap`, etc.
+
+Queue channels are also created by process output declarations using the ``into`` clause.
+
+.. note:: The definition implies that the same queue channel cannot be used more than one time as process
+ output and more then one time as process input.
+
+In you need to connect a process output channel to more then one process or operator use the
+:ref:`operator-into` operator to create two (or more) copies of the same channel and use each
+of them to connect a separate process.
+
+
+Value channel
+-------------
+
+A `value channel` a.k.a. *singleton channel* by definition is bound to a single value and it can be read
+unlimited times without consuming its content.
+
+.. tip:: For this reason a value channel can be used as input by more than one process.
+
+A value channel is created using the `value`_ factory method or by operators returning
+a single value, such us :ref:`operator-first`, :ref:`operator-last`, :ref:`operator-collect`,
+:ref:`operator-count`, :ref:`operator-min`, :ref:`operator-max`, :ref:`operator-reduce`, :ref:`operator-sum`.
+
+
+.. note:: A value channel is implicitly created by a process when an input specifies a simple value
+  in the ``from`` clause.
+  Moreover, a value channel is also implicitly created as output for a process whose
+  inputs are only value channels.
+
+For example::
+
+    process foo {
+      input:
+      val x from 1
+      output:
+      file 'x.txt' into result
+
+      """
+      echo $x > x.txt
+      """
+    }
+
+The process in the above snippet declare a single input which implicitly is a value channel.
+Therefore also the ``result`` output is a value channel that can be read by more than one process.
+
+See also: :ref:`process-understand-how-multiple-input-channels-work`.
 
 .. _channel-factory:
 
@@ -173,9 +233,15 @@ type            Type of paths returned, either ``file``, ``dir`` or ``any`` (def
 hidden          When ``true`` includes hidden files in the resulting paths (default: ``false``)
 maxDepth        Maximum number of directory levels to visit (default: `no limit`)
 followLinks     When ``true`` it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: ``true``)
-relative        When ``true`` returned paths are relative to the top-most common directory (default: false)
+relative        When ``true`` returned paths are relative to the top-most common directory (default: ``false``)
+checkIfExists   When ``true`` throws an exception of the specified path do not exist in the file system (default: ``false``)
 =============== ===================
 
+.. note:: More than one path or glob pattern can be specified using a list as argument::
+
+      Channel.fromPath( ['/some/path/*.fq', '/other/path/*.fastq'] )
+
+  (requires version 0.31.x or later)
 
 .. _channel-filepairs:
 
@@ -224,6 +290,13 @@ followLinks     When ``true`` it follows symbolic links during directories tree 
 size            Defines the number of files each emitted item is expected to hold (default: 2). Set to ``-1`` for any.
 flat            When ``true`` the matching files are produced as sole elements in the emitted tuples (default: ``false``).
 =============== ===================
+
+.. note:: More than one glob pattern can be specified using a list as argument::
+
+      Channel.fromFilePairs( ['/some/data/SRR*_{1,2}.fastq', '/other/data/QFF*_{1,2}.fastq'] )
+
+  (requires version 0.31.x or later)
+
 
 .. _channel-watch:
 
@@ -377,9 +450,6 @@ For example::
     2
     3
     Done.
-
-
-
 
 
 .. Special messages

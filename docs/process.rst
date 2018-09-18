@@ -748,6 +748,80 @@ against the same library files.
   create a channel combining the input values as needed to trigger the process execution multiple times.
   In this regard, see the :ref:`operator-combine`, :ref:`operator-cross` and :ref:`operator-phase` operators.
 
+.. _process-understand-how-multiple-input-channels-work:
+
+Understand how multiple input channels work
+-------------------------------------------
+
+A key feature of processes is the ability to handle inputs from multiple channels.
+
+When two or more channels are declared as process inputs, the process stops until
+there's a complete input configuration ie. it receives an input value from all the channels declared
+as input.
+
+When this condition is verified, it consumes the input values coming from the respective channels,
+and spawns a task execution, then repeat the same logic until one or more channels have no more content.
+
+This means channel values are consumed serially one after another and the first empty channel
+cause the process execution to stop even if there are other values in other channels.
+
+For example::
+
+  process foo {
+    echo true
+    input:
+    val x from Channel.from(1,2)
+    val y from Channel.from('a','b','c')
+    script:
+     """
+     echo $x and $y
+     """
+  }
+
+
+The process ``foo`` is executed two times because the first input channel only provides two values and therefore
+the ``c`` element is discarded. It prints::
+
+    1 and a
+    2 and b
+
+
+.. warning:: A different semantic is a applied when using *Value channel* a.k.a. *Singleton channel*.
+
+This kind of channel is created by the :ref:`Channel.value <channel-value>` factory method or implicitly
+when a process input specifies a simple value in the ``from`` clause.
+
+By definition, a *Value channel* is bound to a single value and it can be read unlimited times without
+consuming its content.
+
+These properties make that when mixing a *value channel* with one or more (queue) channels,
+it does not affect the process termination which only depends by the other channels and its
+content is applied repeatedly.
+
+To better understand this behavior compare the previous example with the following one::
+
+  process bar {
+    echo true
+    input:
+    val x from Channel.value(1)
+    val y from Channel.from('a','b','c')
+    script:
+     """
+     echo $x and $y
+     """
+  }
+
+The above snippet executes the ``bar`` process three times because the first input is a *value channel*, therefore
+its content can be read as many times as needed. The process termination is determined by the content of the second
+channel. It prints::
+
+
+  1 and a
+  1 and b
+  1 and c
+
+See also: :ref:`channel-types`.
+
 Outputs
 =======
 
@@ -1085,6 +1159,7 @@ The directives are:
 * `beforeScript`_
 * `cache`_
 * `cpus`_
+* `conda`_
 * `container`_
 * `containerOptions`_
 * `clusterOptions`_
@@ -1093,7 +1168,6 @@ The directives are:
 * `errorStrategy`_
 * `executor`_
 * `ext`_
-* `queue`_
 * `label`_
 * `maxErrors`_
 * `maxForks`_
@@ -1101,7 +1175,9 @@ The directives are:
 * `memory`_
 * `module`_
 * `penv`_
+* `pod`_
 * `publishDir`_
+* `queue`_
 * `scratch`_
 * `stageInMode`_
 * `stageOutMode`_
@@ -1167,6 +1243,34 @@ Value                 Description
 ``'deep'``            Cache process outputs. Input files are indexed by their content.
 ===================== =================
 
+
+.. _process-conda:
+
+conda
+-----
+
+The ``conda`` directive allows for the definition of the process dependencies using the `Conda <https://conda.io>`_
+package manager.
+
+Nextflow automatically sets up an environment for the given package names listed by in the ``conda`` directive.
+For example::
+
+  process foo {
+    conda 'bwa=0.7.15'
+
+    '''
+    your_command --here
+    '''
+  }
+
+
+Multiple packages can be specified separating them with a blank space eg. ``bwa=0.7.15 fastqc=0.11.5``.
+The name of the channel from where a specific package needs to be downloaded can be specified using the usual
+Conda notation i.e. prefixing the package with the channel name as shown here ``bioconda::bwa=0.7.15``.
+
+The ``conda`` directory also allows the specification of a Conda environment file
+path or the path of an existing environment directory. See the :ref:`conda-page` page for further details.
+
 .. _process-container:
 
 container
@@ -1221,7 +1325,7 @@ only for a specific process e.g. mount a custom path::
   }
 
 
-.. warning:: This feature is not supported by :ref:`awsbatch-executor` and :ref:`kubernetes-executor` executors.
+.. warning:: This feature is not supported by :ref:`awsbatch-executor` and :ref:`k8s-executor` executors.
 
 .. _process-cpus:
 
@@ -1546,7 +1650,7 @@ See also: `cpus`_, `time`_, `queue`_ and `Dynamic computing resources`_.
 module
 ------
 
-`Modules <http://modules.sourceforge.net/>`_ is a package manager that allows you to dynamically configure
+`Environment Modules <http://modules.sourceforge.net/>`_ is a package manager that allows you to dynamically configure
 your execution environment and easily switch between multiple versions of the same software tool.
 
 If it is available in your system you can use it with Nextflow in order to configure the processes execution
@@ -1604,6 +1708,54 @@ cluster documentation or contact your admin to lean more about this.
 
 See also: `cpus`_, `memory`_, `time`_
 
+.. _process-pod:
+
+pod
+---
+
+The ``pod`` directive allows the definition of pods specific settings, such as environment variables, secrets
+and config maps when using the :ref:`k8s-executor` executor.
+
+For example::
+
+  process your_task {
+    pod env: 'FOO', value: 'bar'
+
+    '''
+    echo $FOO
+    '''
+  }
+
+The above snippet defines an environment variable named ``FOO`` which value is ``bar``.
+
+The ``pod`` directive allows the definition of the following options:
+
+================================================= =================================================
+``label: <K>, value: <V>``                        Defines a pod label with key ``K`` and value ``V``.
+``env: <E>, value: <V>``                          Defines an environment variable with name ``E`` and whose value is given by the ``V`` string.
+``env: <E>, config: <C/K>``                       Defines an environment variable with name ``E`` and whose value is given by the entry associated to the key with name ``K`` in the `ConfigMap <https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/>`_ with name ``C``.
+``env: <E>, secret: <S/K>``                       Defines an environment variable with name ``E`` and whose value is given by the entry associated to the key with name ``K`` in the `Secret <https://kubernetes.io/docs/concepts/configuration/secret/>`_ with name ``S``.
+``config: <C/K>, mountPath: </absolute/path>``    The content of the `ConfigMap <https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/>`_ with name ``C`` with key ``K`` is made available to the path ``/absolute/path``. When the key component is omitted the path is interpreted as a directory and all the `ConfigMap` entries are exposed in that path.
+``secret: <S/K>, mountPath: </absolute/path>``    The content of the `Secret <https://kubernetes.io/docs/concepts/configuration/secret/>`_ with name ``S`` with key ``K`` is made available to the path ``/absolute/path``. When the key component is omitted the path is interpreted as a directory and all the `Secret` entries are exposed in that path.
+``volumeClaim: <V>, mountPath: </absolute/path>`` Mounts a `Persistent volume claim <https://kubernetes.io/docs/concepts/storage/persistent-volumes/>`_ with name ``V`` to the specified path location. Use the optional `subPath` parameter to mount a directory inside the referenced volume instead of its root.
+``imagePullPolicy: <V>``                          Specifies the strategy to be used to pull the container image e.g. ``imagePullPolicy: 'Always'``.
+``imagePullSecret: <V>``                          Specifies the secret name to access a private container image registry. See `Kubernetes documentation <https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod>`_ for details.
+``runAsUser: <UID>``                              Specifies the user ID to be used to run the container.
+================================================= =================================================
+
+When defined in the Nextflow configuration file, a pod setting can be defined using the canonical
+associative array syntax. For example::
+
+  process {
+    pod = [env: 'FOO', value: 'bar']
+  }
+
+When more than one setting needs to be provides they must be enclosed in a list definition as shown below::
+
+  process {
+    pod = [ [env: 'FOO', value: 'bar'], [secret: 'my-secret/key1', mountPath: '/etc/file.txt'] ]
+  }
+
 
 .. _process-publishDir:
 
@@ -1657,7 +1809,8 @@ Table of publish modes:
 =============== =================
  Mode           Description
 =============== =================
-symlink         Creates a `symbolic link` in the published directory for each process output file (default).
+symlink         Creates an absolute `symbolic link` in the published directory for each process output file (default).
+rellink         Creates a relative `symbolic link` in the published directory for each process output file.
 link            Creates a `hard link` in the published directory for each process output file.
 copy            Copies the output files into the published directory.
 copyNoFollow    Copies the output files into the published directory without following symlinks ie. copies the links themselves. 
@@ -1871,7 +2024,8 @@ Value   Description
 ======= ==================
 copy    Input files are staged in the process work directory by creating a copy.
 link    Input files are staged in the process work directory by creating an (hard) link for each of them.
-symlink Input files are staged in the process work directory by creating an symlink for each of them (default).
+symlink Input files are staged in the process work directory by creating a symbolic link with an absolute path for each of them (default).
+rellink Input files are staged in the process work directory by creating a symbolic link with a relative path for each of them.
 ======= ==================
 
 
@@ -1953,8 +2107,8 @@ d       Days
 ======= =============
 
 .. note:: This directive is taken in account only when using one of the following grid based executors:
-  :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor` and
-  :ref:`condor-executor` executors.
+  :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor`,
+  :ref:`condor-executor` and :ref:`awsbatch-executor` executors.
 
 See also: `cpus`_, `memory`_, `queue`_ and `Dynamic computing resources`_.
 
@@ -2043,12 +2197,12 @@ For example::
 Dynamic computing resources
 ---------------------------
 
-It's very common scenario that different instances of the same process may have a very different needs in terms of
-computing resources. In such situation requesting, for example, an amount of memory too low will cause some tasks to fail,
-instead using an higher limit that fits all the tasks execution could significantly decrease the execution priority of your jobs.
+It's a very common scenario that different instances of the same process may have very different needs in terms of computing resources. 
+In such situations requesting, for example, an amount of memory too low will cause some tasks to fail. 
+Instead, using a higher limit that fits all the tasks in your execution could significantly decrease the execution priority of your jobs.
 
-The `Dynamic directives`_ evaluation feature can used to modify the amount of computing resources request in case
-of a process failure and try to re-execute it using an higher limit. For example::
+The `Dynamic directives`_ evaluation feature can be used to modify the amount of computing resources requested in case
+of a process failure and try to re-execute it using a higher limit. For example::
 
 
     process foo {

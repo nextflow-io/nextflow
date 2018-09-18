@@ -37,7 +37,7 @@ class LocalPollingMonitorTest extends Specification {
 
         given:
         def _20_GB = MemoryUnit.of('20GB').toBytes()
-        def session = new Session()
+        def session = Mock(Session)
         def monitor = new LocalPollingMonitor(
                 cpus: 10,
                 capacity: 20,
@@ -62,6 +62,7 @@ class LocalPollingMonitorTest extends Specification {
         when:
         monitor.submit(handler)
         then:
+        session.notifyTaskSubmit(handler) >> null
         monitor.getRunningQueue().size()==1
         monitor.availCpus == 7
         monitor.availMemory == MemoryUnit.of('18GB').toBytes()
@@ -84,7 +85,7 @@ class LocalPollingMonitorTest extends Specification {
 
         given:
         def _20_GB = MemoryUnit.of('20GB').toBytes()
-        def session = new Session()
+        def session = Mock(Session)
         def monitor = new LocalPollingMonitor(
                 cpus: 10,
                 capacity: 10,
@@ -99,25 +100,28 @@ class LocalPollingMonitorTest extends Specification {
         def handler = Mock(TaskHandler)
         handler.getTask() >> { task }
 
-        when:
-        true
-        then:
-        monitor.canSubmit(handler)
+        expect:
+        monitor.canSubmit(handler) == true
 
         when:
         monitor.submit(handler)
         then:
-        monitor.canSubmit(handler)
+        1 * handler.submit() >> null
+        1 * session.notifyTaskSubmit(handler) >> null
+        and:
+        monitor.canSubmit(handler) == true
         monitor.availCpus == 6
         monitor.availMemory == MemoryUnit.of('12GB').toBytes()
 
         when:
         monitor.submit(handler)
         then:
-        !monitor.canSubmit(handler)
+        1 * handler.submit() >> null
+        1 * session.notifyTaskSubmit(handler) >> null
+        and:
+        monitor.canSubmit(handler) == false
         monitor.availCpus == 2
         monitor.availMemory == MemoryUnit.of('4GB').toBytes()
-
 
     }
 
@@ -125,7 +129,7 @@ class LocalPollingMonitorTest extends Specification {
 
         given:
         def _20_GB = MemoryUnit.of('20GB').toBytes()
-        def session = new Session()
+        def session = Mock(Session)
         def monitor = new LocalPollingMonitor(
                 cpus: 1,
                 capacity: 1,
@@ -140,18 +144,18 @@ class LocalPollingMonitorTest extends Specification {
         def handler = Mock(TaskHandler)
         handler.getTask() >> { task }
 
-        when:
-        true
-        then:
-        monitor.canSubmit(handler)
+        expect:
+        monitor.canSubmit(handler) == true
         monitor.availCpus == 1
 
         when:
         monitor.submit(handler)
         then:
-        !monitor.canSubmit(handler)
+        1 * handler.submit() >> null
+        1 * session.notifyTaskSubmit(handler) >> null
+        and:
+        monitor.canSubmit(handler) == false
         monitor.availCpus == 0
-
     }
 
     def 'should throw an exception for missing cpus' () {

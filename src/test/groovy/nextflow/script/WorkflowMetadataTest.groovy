@@ -76,7 +76,9 @@ class WorkflowMetadataTest extends Specification {
          * config file onComplete handler
          */
         def handlerInvoked
-        def session = new Session([workflow: [onComplete: { -> handlerInvoked=workflow.commandLine } ], docker:[enabled:true]  ])
+        def session = new Session([workflow: [onComplete: { -> handlerInvoked=workflow.commandLine } ],
+                                   docker:[enabled:true],
+                                   manifest: [version: '1.0.0', nextflowVersion: '>=0.31.1']])
         session.configFiles = [Paths.get('foo'), Paths.get('bar')]
         /*
          * script runner
@@ -111,7 +113,11 @@ class WorkflowMetadataTest extends Specification {
         metadata.runName == session.runName
         metadata.containerEngine == 'docker'
         metadata.configFiles == [Paths.get('foo').toAbsolutePath(), Paths.get('bar').toAbsolutePath()]
-        !metadata.resume
+        metadata.resume == false
+        metadata.userName == System.getProperty('user.name')
+        metadata.homeDir == Paths.get(System.getProperty('user.home'))
+        metadata.manifest.version == '1.0.0'
+        metadata.manifest.nextflowVersion == '>=0.31.1'
 
         when:
         metadata.invokeOnComplete()

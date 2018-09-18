@@ -19,6 +19,7 @@
  */
 
 package nextflow.config
+
 import static nextflow.util.ConfigHelper.parseValue
 
 import java.nio.file.Path
@@ -52,15 +53,26 @@ class ConfigBuilder {
 
     Path baseDir
 
+    Path homeDir
+
+    Path currentDir
+
     boolean showAllProfiles
 
     String profile = DEFAULT_PROFILE
 
     boolean validateProfile
 
-    List<Path> configFiles = []
+    List<Path> userConfigFiles = []
+
+    List<Path> parsedConfigFiles = []
 
     boolean showClosures
+
+    {
+        setHomeDir(Const.APP_HOME_DIR)
+        setCurrentDir(Paths.get('.'))
+    }
 
     ConfigBuilder setShowClosures(boolean value) {
         this.showClosures = value
@@ -78,8 +90,18 @@ class ConfigBuilder {
         return this
     }
 
-    ConfigBuilder setBaseDir( Path file ) {
-        this.baseDir = file
+    ConfigBuilder setBaseDir( Path path ) {
+        this.baseDir = path.complete()
+        return this
+    }
+
+    ConfigBuilder setCurrentDir( Path path ) {
+        this.currentDir = path.complete()
+        return this
+    }
+
+    ConfigBuilder setHomeDir( Path path ) {
+        this.homeDir = path.complete()
         return this
     }
 
@@ -97,6 +119,17 @@ class ConfigBuilder {
     ConfigBuilder setProfile( String value ) {
         profile = value ?: DEFAULT_PROFILE
         validateProfile = value as boolean
+        return this
+    }
+
+    ConfigBuilder setUserConfigFiles( Path... files )  {
+        setUserConfigFiles(files as List)
+        return this
+    }
+
+    ConfigBuilder setUserConfigFiles( List<Path> files ) {
+        if( files )
+            userConfigFiles.addAll(files)
         return this
     }
 
@@ -126,12 +159,13 @@ class ConfigBuilder {
      * @param files
      * @return
      */
-    def List<Path> validateConfigFiles( List<String> files ) {
+    @PackageScope
+    List<Path> validateConfigFiles( List<String> files ) {
 
         def result = []
         if ( files ) {
-            files.each { String fileName ->
-                def thisFile = Paths.get(fileName)
+            for( String fileName : files ) { 
+                def thisFile = currentDir.resolve(fileName)
                 if(!thisFile.exists()) {
                     throw new AbortOperationException("The specified configuration file does not exist: $thisFile -- check the name or choose another file")
                 }
@@ -143,7 +177,7 @@ class ConfigBuilder {
         /*
          * config file in the nextflow home
          */
-        def home = Const.APP_HOME_DIR.resolve('config')
+        def home = homeDir.resolve('config')
         if( home.exists() ) {
             log.debug "Found config home: $home"
             result << home
@@ -153,7 +187,7 @@ class ConfigBuilder {
          * Config file in the pipeline base dir
          */
         def base = null
-        if( baseDir && baseDir.complete() != Paths.get('.').complete() ) {
+        if( baseDir && baseDir != currentDir ) {
             base = baseDir.resolve('nextflow.config')
             if( base.exists() ) {
                 log.debug "Found config base: $base"
@@ -164,18 +198,19 @@ class ConfigBuilder {
         /**
          * Local or user provided file
          */
-        def local = Paths.get('nextflow.config')
+        def local = currentDir.resolve('nextflow.config')
         if( local.exists() && local != base ) {
             log.debug "Found config local: $local"
             result << local
         }
 
         def customConfigs = []
+        if( userConfigFiles ) customConfigs.addAll(userConfigFiles)
         if( options?.userConfig ) customConfigs.addAll(options.userConfig)
         if( cmdRun?.runConfig ) customConfigs.addAll(cmdRun.runConfig)
         if( customConfigs ) {
-            for( String item : customConfigs ) {
-                def configFile = Paths.get(item)
+            for( def item : customConfigs ) {
+                def configFile = item instanceof Path ? item : currentDir.resolve(item.toString())
                 if(!configFile.exists()) {
                     throw new AbortOperationException("The specified configuration file does not exist: $configFile -- check the name or choose another file")
                 }
@@ -188,13 +223,21 @@ class ConfigBuilder {
         return result
     }
 
-    ConfigObject buildConfig( List<Path> files ) {
+    /**
+     * Create the nextflow configuration {@link ConfigObject} given a one or more
+     * config files
+     *
+     * @param files A list of config files {@link Path}
+     * @return The resulting {@link ConfigObject} instance
+     */
+    @PackageScope
+    ConfigObject buildGivenFiles(List<Path> files) {
 
         final Map<String,String> vars = cmdRun?.env
         final boolean exportSysEnv = cmdRun?.exportSysEnv
 
         def items = []
-        files?.each { Path file ->
+        if( files ) for( Path file : files ) {
             log.debug "Parsing config file: ${file.complete()}"
             if (!file.exists()) {
                 log.warn "The specified configuration file cannot be found: $file"
@@ -243,8 +286,12 @@ class ConfigBuilder {
         buildConfig0( env, items )
     }
 
+    @PackageScope
+    ConfigObject buildGivenFiles(Path... files) {
+        buildGivenFiles(files as List<Path>)
+    }
 
-    ConfigObject buildConfig0( Map env, List configEntries )  {
+    protected ConfigObject buildConfig0( Map env, List configEntries )  {
         assert env != null
 
         final slurper = new ConfigParser().setRenderClosureAsString(showClosures)
@@ -327,13 +374,14 @@ class ConfigBuilder {
 
     protected ConfigObject parse0(ConfigParser slurper, entry) {
         if( entry instanceof File ) {
-            configFiles << entry.toPath()
-            return slurper.parse(entry)
+            final path = entry.toPath()
+            parsedConfigFiles << path
+            return slurper.parse(path)
         }
 
         if( entry instanceof Path ) {
-            configFiles << entry
-            return slurper.parse(entry.toFile())
+            parsedConfigFiles << entry
+            return slurper.parse(entry)
         }
 
         return slurper.parse(entry.toString())
@@ -346,14 +394,16 @@ class ConfigBuilder {
      * @param file The source config file/snippet
      * @return
      */
-    protected validate(ConfigObject config, file) {
-        config.each { k, v ->
-            if( v instanceof ConfigObject ) {
-                if( v.isEmpty() ) {
-                    log.debug "In the following config object the attribute `$k` is empty:\n${config.prettyPrint().indent('  ')}"
-                    throw new ConfigParseException("Unknown config attribute: $k -- check config file: $file")
+    protected validate(ConfigObject config, file, String parent=null) {
+        for( String key : config.keySet() ) {
+            final value = config.get(key)
+            if( value instanceof ConfigObject ) {
+                final fqKey = parent ? "${parent}.${key}": key as String
+                if( value.isEmpty() ) {
+                    log.debug "In the following config object the attribute `$fqKey` is empty:\n${config.prettyPrint().indent('  ')}"
+                    throw new ConfigParseException("Unknown config attribute `$fqKey` -- check config file: $file")
                 }
-                validate(v,file)
+                validate(value, file, fqKey)
             }
         }
     }
@@ -422,6 +472,11 @@ class ConfigBuilder {
         // -- override 'process' parameters defined on the cmd line
         cmdRun.process.each { name, value ->
             config.process[name] = parseValue(value)
+        }
+
+        // -- apply the conda environment
+        if( cmdRun.withConda ) {
+            config.process.conda = cmdRun.withConda
         }
 
         // -- sets the resume option
@@ -498,6 +553,15 @@ class ConfigBuilder {
             }
         }
 
+        // -- sets the messages options
+        if( cmdRun.withWebLog ) {
+            if( !(config.weblog instanceof Map) )
+                config.weblog = [:]
+            config.weblog.enabled = true
+            if ( !config.weblog.url )
+                config.weblog.url = cmdRun.withWebLog
+        }
+
 
         // -- add the command line parameters to the 'taskConfig' object
         if( cmdRun.params || cmdRun.paramsFile )
@@ -564,10 +628,10 @@ class ConfigBuilder {
         return false
     }
 
-    ConfigObject configObject() {
+    ConfigObject buildConfigObject() {
         // -- configuration file(s)
         def configFiles = validateConfigFiles(options?.config)
-        def config = buildConfig(configFiles)
+        def config = buildGivenFiles(configFiles)
 
         if( cmdRun )
             configRunOptions(config, System.getenv(), cmdRun)
@@ -580,7 +644,7 @@ class ConfigBuilder {
      * @return A the application options hold in a {@code ConfigObject} instance
      */
     Map build() {
-        configObject().toMap()
+        buildConfigObject().toMap()
     }
 
 

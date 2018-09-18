@@ -20,6 +20,7 @@
 
 package nextflow.executor
 import java.nio.file.Path
+import java.util.regex.Pattern
 
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
@@ -33,6 +34,8 @@ import nextflow.processor.TaskRun
  */
 @Slf4j
 class SlurmExecutor extends AbstractGridExecutor {
+
+    static private Pattern SUBMIT_REGEX = ~/Submitted batch job (\d+)/
 
     /**
      * Gets the directives to submit the specified task to the cluster for execution
@@ -97,10 +100,10 @@ class SlurmExecutor extends AbstractGridExecutor {
      */
     @Override
     def parseJobId(String text) {
-        def pattern = ~ /Submitted batch job (\d+)/
+
         for( String line : text.readLines() ) {
-            def m = pattern.matcher(line)
-            if( m.matches() ) {
+            def m = SUBMIT_REGEX.matcher(line)
+            if( m.find() ) {
                 return m.group(1).toString()
             }
         }

@@ -24,11 +24,11 @@ import static nextflow.util.CheckHelper.checkParams
 
 import java.nio.file.FileSystem
 import java.nio.file.Files
-import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.regex.Pattern
 
+import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowChannel
@@ -43,25 +43,21 @@ import nextflow.extension.MapOp
 import nextflow.file.DirWatcher
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
+import nextflow.file.PathVisitor
 import nextflow.util.Duration
 import org.codehaus.groovy.runtime.NullObject
-
-import static nextflow.file.FileHelper.isGlobAllowed
-
 /**
  * Channel factory object
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class Channel  {
 
     static public ControlMessage STOP = PoisonPill.getInstance()
 
     static public NullObject VOID = NullObject.getNullObject()
-
-    @Lazy
-    static private Session session = { Global.session as Session }()
 
     /**
      * Create an new channel
@@ -172,111 +168,51 @@ class Channel  {
         return result
     }
 
-    static DataflowChannel<Path> fromPath( Map opts = null, filePattern ) {
-        if( !filePattern ) throw new AbortOperationException("Missing `fromPath` parameter")
-
-        // verify that the 'type' parameter has a valid value
-        checkParams( 'path', opts, VALID_PATH_PARAMS )
-
-        final result = fromPath0(opts, filePattern)
-        NodeMarker.addSourceNode('Channel.fromPath', result)
-        return result
-    }
-
-    static private DataflowChannel<Path> fromPath0( Map options, filePattern ) {
-
-        if( filePattern instanceof Pattern )
-            return fromPathWithPattern(options, filePattern)
-
-        else
-            return fromPathWithMap(options, filePattern as Path)
-
-    }
-
-    static private DataflowChannel<Path> fromPathWithPattern( Map opts = null, Pattern filePattern ) {
-        assert filePattern
-
-        // split the folder and the pattern
-        final splitter = FilePatternSplitter.regex().parse(filePattern.toString())
-        final fs = FileHelper.fileSystemForScheme(splitter.scheme)
-        pathImpl( 'regex', splitter.parent, splitter.fileName, opts, fs )
-    }
-
-
-    static private DataflowChannel<Path> fromPathWithMap( Map opts = null, Path filePattern ) {
-
-        final glob = opts?.containsKey('glob') ? opts.glob as boolean : isGlobAllowed(filePattern)
-        if( !glob ) {
-            return Nextflow.channel(filePattern.complete())
-        }
-
-        final fs = filePattern.getFileSystem()
-        final path = filePattern.toString()
-        final splitter = FilePatternSplitter.glob().parse(path)
-
-        if( !splitter.isPattern() ) {
-            return Nextflow.channel( fs.getPath( splitter.strip(path) ).complete() )
-        }
-
-        final folder = splitter.parent
-        final pattern = splitter.fileName
-        final result = pathImpl('glob', folder, pattern, opts, fs)
-        return result
-    }
-
     /*
      * valid parameters for fromPath operator
      */
-    static private Map VALID_PATH_PARAMS = [
+    static private Map VALID_FROM_PATH_PARAMS = [
             type:['file','dir','any'],
             followLinks: Boolean,
             hidden: Boolean,
             maxDepth: Integer,
-            exists: Boolean,
+            checkIfExists: Boolean,
             glob: Boolean,
             relative: Boolean
-            ]
+    ]
 
     /**
-     * Implement the logic for files matching
+     * Implements {@code Channel.fromPath} factory method
      *
-     * @param syntax The "syntax" to match file names, either {@code regex} or {@code glob}
-     * @param folder The parent folder
-     * @param pattern The file name pattern
-     * @param skipHidden Whenever skip the hidden files
-     * @return A dataflow channel instance emitting the file matching the specified criteria
+     * @param opts
+     *      A map object holding the optional method parameters
+     * @param pattern
+     *      A file path or a glob pattern matching the required files.
+     *      Multiple paths or patterns can be using a list object
+     * @return
+     *      A channel emitting the matching files
      */
-    static private DataflowChannel<Path> pathImpl( String syntax, String folder, String pattern, Map opts, FileSystem fs )  {
-        assert syntax in ['regex','glob']
-        log.debug "files for syntax: $syntax; folder: $folder; pattern: $pattern; options: ${opts}"
+    static DataflowChannel<Path> fromPath( Map opts = null, pattern ) {
+        if( !pattern ) throw new AbortOperationException("Missing `fromPath` parameter")
 
-        // now apply glob file search
-        final path = fs.getPath(folder).complete()
-        final channel = new DataflowQueue<Path>()
+        // verify that the 'type' parameter has a valid value
+        checkParams( 'path', opts, VALID_FROM_PATH_PARAMS )
 
-        if( opts == null )
-            opts = [:]
+        final result = fromPath0(opts, pattern instanceof List ? pattern : [pattern])
+        NodeMarker.addSourceNode('Channel.fromPath', result)
+        return result
+    }
 
-        // set the 'matcher' syntax: 'regex' or 'glob'
-        opts.syntax = syntax
+    private static DataflowChannel<Path> fromPath0( Map opts, List allPatterns ) {
 
-        // set the 'matcher' type: 'file', 'dir' or 'any' (default: file)
-        if( !opts.type )
-            opts.type = 'file'
-
-        Thread.start {
-            try {
-                FileHelper.visitFiles(opts, path, pattern) { Path file -> channel.bind(file) }
-            }
-            catch (NoSuchFileException e) {
-                log.debug "No such file: $folder -- Skipping visit"
-            }
-            finally {
-                channel << STOP
-            }
+        final result = new DataflowQueue()
+        for( int i=0; i<allPatterns.size(); i++ ) {
+            def factory = new PathVisitor(target: result, opts: opts)
+            factory.closeChannelOnComplete = i==allPatterns.size()-1
+            factory.apply(allPatterns[i])
         }
 
-        return channel
+        return result
     }
 
 
@@ -361,23 +297,84 @@ class Channel  {
         return result
     }
 
+    /**
+     * Implements the `fromFilePairs` channel factory method
+     * 
+     * @param options
+     *      A {@link Map} holding the optional parameters
+     *      - type: either `file`, `dir` or `any`
+     *      - followLinks: Boolean
+     *      - hidden: Boolean
+     *      - maxDepth: Integer
+     *      - glob: Boolean
+     *      - relative: Boolean
+     * @param pattern
+     *      One or more path patterns eg. `/some/path/*_{1,2}.fastq`
+     * @return
+     *      A channel emitting the file pairs matching the specified pattern(s)
+     */
+    static DataflowChannel fromFilePairs(Map options = null, pattern) {
+        final allPatterns = pattern instanceof List ? pattern : [pattern]
+        final allGrouping = new ArrayList(allPatterns.size())
+        for( int i=0; i<allPatterns.size(); i++ ) {
+            final template = allPatterns[i]
+            allGrouping[i] = { Path path -> readPrefix(path,template) }
+        }
 
-    static DataflowChannel fromFilePairs(Map options = null, filePattern) {
-        def closure = { Path path -> readPrefix(path,filePattern) }
-        fromFilePairs(options, filePattern, closure)
+        final result = fromFilePairs0(options, allPatterns, allGrouping)
+        NodeMarker.addSourceNode('Channel.fromFilePairs', result)
+        return result
     }
 
-    static DataflowChannel fromFilePairs(Map options = null, filePattern, Closure grouping) {
-        if( !filePattern ) throw new AbortOperationException("Missing `fromFilePairs` parameter")
+    /**
+     * Implements the `fromFilePairs` channel factory method
+     *
+     * @param options
+     *      A {@link Map} holding the optional parameters
+     *      - type: either `file`, `dir` or `any`
+     *      - followLinks: Boolean
+     *      - hidden: Boolean
+     *      - maxDepth: Integer
+     *      - glob: Boolean
+     *      - relative: Boolean
+     * @param pattern
+     *      One or more path patterns eg. `/some/path/*_{1,2}.fastq`
+     * @param grouping
+     *      A closure implementing a pair grouping rule for the specified
+     *      file patterns
+     * @return
+     *      A channel emitting the file pairs matching the specified pattern(s)
+     */
+    static DataflowChannel fromFilePairs(Map options = null, pattern, Closure grouping) {
+        final allPatterns = pattern instanceof List ? pattern : [pattern]
+        final allGrouping = new ArrayList(allPatterns.size())
+        for( int i=0; i<allPatterns.size(); i++ ) {
+            allGrouping[i] = grouping
+        }
+
+        final result = fromFilePairs0(options, allPatterns, allGrouping)
+        NodeMarker.addSourceNode('Channel.fromFilePairs', result)
+        return result
+    }
+
+    private static DataflowChannel fromFilePairs0(Map options, List allPatterns, List<Closure> grouping) {
+        assert allPatterns.size() == grouping.size()
+        if( !allPatterns ) throw new AbortOperationException("Missing `fromFilePairs` parameter")
         if( !grouping ) throw new AbortOperationException("Missing `fromFilePairs` grouping parameter")
 
         // -- a channel from the path
-        def fromOpts = fetchParams(VALID_PATH_PARAMS, options)
-        def files = fromPath0(fromOpts,filePattern)
+        final fromOpts = fetchParams(VALID_FROM_PATH_PARAMS, options)
+        final files = new DataflowQueue()
+        for( int index=0; index<allPatterns.size(); index++ )  {
+            def factory = new PathVisitor(opts: fromOpts, target: files)
+            factory.bindPayload = index
+            factory.closeChannelOnComplete = index == allPatterns.size()-1
+            factory.apply( allPatterns.get(index) )
+        }
 
         // -- map the files to a tuple like ( ID, filePath )
-        def mapper = { path ->
-            def prefix = grouping.call(path)
+        def mapper = { path, int index ->
+            def prefix = grouping[index].call(path)
             return [ prefix, path ]
         }
         def mapChannel = new MapOp(files, mapper).apply()
@@ -402,7 +399,6 @@ class Channel  {
             result = groupChannel
         }
 
-        NodeMarker.addSourceNode('Channel.fromFilePairs', result)
         return result
     }
 
