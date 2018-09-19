@@ -402,16 +402,24 @@ class AssetManager {
     }
 
     protected Manifest getManifest0() {
+        String text = null
         ConfigObject result = null
         try {
-            def text = localPath.exists() ? new File(localPath, MANIFEST_FILE_NAME).text : provider.readText(MANIFEST_FILE_NAME)
-            if( text ) {
-                def config = new ConfigParser().setIgnoreIncludes(true).parse(text)
-                result = (ConfigObject)config.manifest
-            }
+            text = localPath.exists() ? new File(localPath, MANIFEST_FILE_NAME).text : provider.readText(MANIFEST_FILE_NAME)
+        }
+        catch( FileNotFoundException e ) {
+            log.debug "Project manifest does not exist: ${e.message}"
         }
         catch( Exception e ) {
-            log.trace "Cannot read project manifest -- Cause: ${e.message}"
+            log.warn "Cannot read project manifest -- Cause: ${e.message ?: e}", e
+        }
+
+        if( text ) try {
+            def config = new ConfigParser().setIgnoreIncludes(true).parse(text)
+            result = (ConfigObject)config.manifest
+        }
+        catch( Exception e ) {
+            throw new Exception("Project config file is malformed -- Cause: ${e.message ?: e}", e)
         }
 
         // by default return an empty object
