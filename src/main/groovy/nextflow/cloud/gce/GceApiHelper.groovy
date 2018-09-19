@@ -7,9 +7,12 @@ import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.services.compute.Compute
 import com.google.api.services.compute.model.*
 import groovy.transform.CompileStatic
+import groovyjarjarcommonscli.MissingArgumentException
 import nextflow.cloud.LaunchConfig
 import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
 
+import java.nio.file.Path
 import java.security.GeneralSecurityException
 
 /**
@@ -201,6 +204,20 @@ class GceApiHelper {
             return "Value exceeds maximum length of 63"
         }
         null
+    }
+
+    String getCredentialsFile() {
+        String credFileLocation =  System.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+
+        if(!credFileLocation)
+            throw new MissingArgumentException("GOOGLE_APPLICATION_CREDENTIALS is not defined in your environment" )
+
+        Path credFile = FileHelper.asPath(credFileLocation)
+        if (credFile) {
+            credFile.toFile().text
+        } else {
+            throw new FileNotFoundException("Could not find Google credentials file '$credFileLocation'")
+        }
     }
 
 

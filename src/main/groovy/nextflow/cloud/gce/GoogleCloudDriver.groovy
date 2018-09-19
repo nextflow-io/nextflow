@@ -55,10 +55,18 @@ class GoogleCloudDriver implements CloudDriver {
     static long POLL_WAIT = 1000
 
     /**
+     * Only use for testing
+     */
+    GoogleCloudDriver(GceApiHelper helper) {
+        this.helper = helper
+    }
+
+
+    /**
      * Initialise the Google cloud driver with default (empty) parameters
      */
-    GoogleCloudDriver(GoogleCredential credential = null) {
-        this(Collections.emptyMap(), credential)
+    GoogleCloudDriver() {
+        this(Collections.emptyMap())
     }
 
     /**
@@ -70,12 +78,12 @@ class GoogleCloudDriver implements CloudDriver {
      *      - project: GCE project id
      */
     @CompileDynamic
-    GoogleCloudDriver(Map config, GoogleCredential credential = null) {
+    GoogleCloudDriver(Map config) {
         log.debug("Config: {}", config)
         log.debug("Global config: {}", Global.getConfig())
         String zone = config.zone ?: Global.getConfig()?.gce?.zone
         String project = config.project ?: Global.getConfig()?.gce?.project
-        this.helper = credential ? new GceApiHelper(project, zone, credential) : new GceApiHelper(project, zone)
+        this.helper = new GceApiHelper(project, zone)
         log.debug("Starting GoogleCloudDriver in project {} and zone {}", helper.project, helper.zone)
     }
 
@@ -97,6 +105,9 @@ class GoogleCloudDriver implements CloudDriver {
 
         if (!config.instanceType)
             throw new AbortOperationException("Missing mandatory cloud `instanceType` setting")
+
+        if (!helper.lookupImage(config.imageId))
+            throw new AbortOperationException("Unknown GCE ImageId: ${config.imageId}")
 
         if (!helper.lookupMachineType(config.instanceType))
             throw new AbortOperationException("Unknown GCE machine type: ${config.instanceType}")
@@ -371,11 +382,9 @@ class GoogleCloudDriver implements CloudDriver {
         def binding = new CloudBootTemplateBinding(cfg)
         binding.nextflowConfig = cfg.renderCloudConfigObject()
         binding.bashProfile = scriptBashEnv(cfg)
-        def credFile = System.getenv("GOOGLE_APPLICATION_CREDENTIALS") as Path
-        if (credFile) {
-            binding.gceCredentialsFile = GCE_CREDENTIAL_FILE
-            binding.gceCredentials = credFile.text
-        }
+        binding.gceCredentialsFile = GCE_CREDENTIAL_FILE
+        binding.gceCredentials = helper.getCredentialsFile()
+
         new TaskTemplateEngine()
                 .setPlaceholder('!' as char)
                 .setEnableShortNotation(false)
