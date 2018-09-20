@@ -106,8 +106,8 @@ class GoogleCloudDriver implements CloudDriver {
         if (!config.instanceType)
             throw new AbortOperationException("Missing mandatory cloud `instanceType` setting")
 
-        if (!helper.lookupImage(config.imageId))
-            throw new AbortOperationException("Unknown GCE ImageId: ${config.imageId}")
+        //if (!helper.lookupImage(config.imageId))
+        //    throw new AbortOperationException("Unknown GCE ImageId: ${config.imageId}")
 
         if (!helper.lookupMachineType(config.instanceType))
             throw new AbortOperationException("Unknown GCE machine type: ${config.instanceType}")
