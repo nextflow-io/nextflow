@@ -5,6 +5,7 @@ import com.google.api.services.compute.Compute
 import com.google.api.services.compute.model.AccessConfig
 import com.google.api.services.compute.model.Instance
 import com.google.api.services.compute.model.InstancesSetLabelsRequest
+import com.google.api.services.compute.model.MachineType
 import com.google.api.services.compute.model.NetworkInterface
 import com.google.api.services.compute.model.Operation
 import groovy.transform.CompileDynamic
@@ -24,6 +25,7 @@ import nextflow.cloud.types.CloudInstanceType
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.processor.TaskTemplateEngine
+import nextflow.util.MemoryUnit
 import nextflow.util.ServiceName
 
 import java.nio.file.Files
@@ -294,8 +296,12 @@ class GoogleCloudDriver implements CloudDriver {
 
     @Override
     CloudInstanceType describeInstanceType(String instanceType) {
-        unsupported("describeInstanceType")
-        return null
+        MachineType type = helper.lookupMachineType(instanceType)
+        if(!type) {
+            return null
+        } else {
+            new CloudInstanceType(type.getName(),type.getGuestCpus(),new MemoryUnit("${type.getMemoryMb()} MB"),new MemoryUnit("${type.getImageSpaceGb()} GB"),type.getMaximumPersistentDisks())
+        }
     }
 
     /**
@@ -417,9 +423,8 @@ class GoogleCloudDriver implements CloudDriver {
             profile += "export NXF_ASSETS='${cfg.sharedStorageMount}/${cfg.userName}/projects'\n"
         }
 
-        if (System.getenv("GOOGLE_APPLICATION_CREDENTIALS")) {
-            profile += 'export GOOGLE_APPLICATION_CREDENTIALS='+GCE_CREDENTIAL_FILE+"\n"
-        }
+        profile += 'export GOOGLE_APPLICATION_CREDENTIALS='+GCE_CREDENTIAL_FILE+"\n"
+
         if (System.getenv("NEXFLOW_DOWNLOAD_URL")) {
             profile += 'export NEXFLOW_DOWNLOAD_URL='+System.getenv("NEXFLOW_DOWNLOAD_URL")+"\n"
         }
