@@ -1,6 +1,5 @@
 package nextflow.cloud.gce
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.api.services.compute.Compute
 import com.google.api.services.compute.model.AttachedDisk
 import com.google.api.services.compute.model.NetworkInterface
@@ -8,6 +7,7 @@ import nextflow.exception.AbortOperationException
 import spock.lang.Shared
 import spock.lang.Specification
 
+//TODO: Implement real or stubbed tests depending on if we are running with google credentials or not
 class GceApiHelperTest extends Specification {
 
     static String testProject = "testProject"
@@ -58,7 +58,6 @@ class GceApiHelperTest extends Specification {
         AttachedDisk disk = sharedHelper.createBootDisk("testDisk","testimage")
         then:
         disk.getBoot()
-
         disk.getInitializeParams().getDiskName() == "testDisk"
         disk.getInitializeParams().getSourceImage() == GceApiHelper.imageName("testimage")
     }

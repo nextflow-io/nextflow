@@ -20,20 +20,13 @@
 
 package nextflow.cloud.gce
 
-import com.amazonaws.services.ec2.AmazonEC2Client
-import com.amazonaws.services.ec2.model.*
-import com.amazonaws.services.ec2.waiters.AmazonEC2Waiters
-import com.amazonaws.waiters.Waiter
+
 import com.google.api.services.compute.Compute
+import com.google.api.services.compute.model.Image
 import com.google.api.services.compute.model.MachineType
 import nextflow.cloud.CloudConfig
 import nextflow.cloud.LaunchConfig
-import nextflow.cloud.aws.AmazonCloudDriver
-import nextflow.cloud.types.CloudInstanceStatus
-import nextflow.cloud.types.CloudInstanceType
 import nextflow.exception.AbortOperationException
-import nextflow.util.MemoryUnit
-import spock.lang.Ignore
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -41,21 +34,44 @@ import spock.lang.Specification
  *
  * @author Ólafur Haukur Flygenring <olafurh@wuxinextcode.com>
  */
+//TODO: Project should be read form credential file if it is available in helper.readProjct
 class GoogleCloudDriverTest extends Specification {
 
-    final static String VALID_IMAGEID = "VALID_IMAGEID"
-    final static String VALID_INSTANCETYPE = "VALID_INSTANCETYPE"
-    final static String INVALID = "!\tINVALID\t!"
+    final static String VALID_IMAGE_ID = "VALID_IMAGE_ID"
+    final static String VALID_INSTANCETYPE = "n1-standard-1"
+    final static String INVALID_INSTANCETYPE = "n1337-standard-1337"
+    final static String ILLEGAL_NAME = "!\tINVALID\t!"
     final static String VALID_CLUSTER = "legal-label"
+    final static String ZONE = "us-central1-f"
+
+    @Shared boolean runAgainstGce = System.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
     @Shared
-    GceApiHelper stubbedHelper
+    GceApiHelper sharedHelper
 
 
     def setupSpec() {
-        stubbedHelper = Spy(GceApiHelper,constructorArgs: ["","",Stub(Compute)])
-        stubbedHelper.lookupMachineType(VALID_INSTANCETYPE) >> {new MachineType().setName(VALID_INSTANCETYPE)}
-        stubbedHelper.lookupImage(VALID_IMAGEID) >> {new com.google.api.services.compute.model.Image().setName(VALID_IMAGEID)}
+        //Use a real connection to GCE if credentials are defined
+        if(runAgainstGce) {
+            print("Got google credentials. Running tests against GCE.")
+            sharedHelper = new GceApiHelper("r-ice-120-00411-nextflow",ZONE)
+        }
+        // else fake it so we make it
+        else {
+            print("No google credentials found.  Stubbing out GCE.")
+            sharedHelper = Spy(GceApiHelper, constructorArgs: ["r-ice-120-00411-nextflow", ZONE, Stub(Compute)])
+            sharedHelper.lookupMachineType(VALID_INSTANCETYPE) >> {
+                new MachineType()
+                        .setName(VALID_INSTANCETYPE)
+                        .setGuestCpus(1)
+                        .setMaximumPersistentDisks(65536)
+                        .setMemoryMb(3875)
+                        .setImageSpaceGb(10)
+            }
+            sharedHelper.lookupImage(VALID_IMAGE_ID) >> {
+                new Image().setName(VALID_IMAGE_ID)
+            }
+        }
     }
 
     def 'should create bash profile properly'() {
@@ -77,6 +93,7 @@ class GoogleCloudDriverTest extends Specification {
             export NXF_MODE='ignite'
             export NXF_EXECUTOR='ignite'
             export NXF_CLUSTER_JOIN='cloud:gce:cluster-x'
+            export GOOGLE_APPLICATION_CREDENTIALS=$HOME/.nextflow/gce_credentials.json
             '''
                 .stripIndent().leftTrim()
 
@@ -92,6 +109,7 @@ class GoogleCloudDriverTest extends Specification {
             export NXF_EXECUTOR='ignite'
             export NXF_CLUSTER_JOIN='cloud:gce:cluster-x'
             export NXF_TRACE='io.nextflow.TaskProcess'
+            export GOOGLE_APPLICATION_CREDENTIALS=$HOME/.nextflow/gce_credentials.json
             '''
                 .stripIndent().leftTrim()
 
@@ -108,6 +126,7 @@ class GoogleCloudDriverTest extends Specification {
             export NXF_EXECUTOR='ignite'
             export NXF_CLUSTER_JOIN='cloud:gce:cluster-x'
             export NXF_OPTS='-XX:this-and-that'
+            export GOOGLE_APPLICATION_CREDENTIALS=$HOME/.nextflow/gce_credentials.json
             '''
                 .stripIndent().leftTrim()
 
@@ -128,6 +147,7 @@ class GoogleCloudDriverTest extends Specification {
             export NXF_CLUSTER_JOIN='cloud:gce:cluster-x'
             export NXF_WORK='/mount/my/path/illo/work'
             export NXF_ASSETS='/mount/my/path/illo/projects'
+            export GOOGLE_APPLICATION_CREDENTIALS=$HOME/.nextflow/gce_credentials.json
             '''
                 .stripIndent().leftTrim()
     }
@@ -214,6 +234,7 @@ class GoogleCloudDriverTest extends Specification {
                     export NXF_MODE='ignite'
                     export NXF_EXECUTOR='ignite'
                     export NXF_CLUSTER_JOIN='cloud:gce:my-cluster'
+                    export GOOGLE_APPLICATION_CREDENTIALS=$HOME/.nextflow/gce_credentials.json
 
                     EOF
 
@@ -303,7 +324,7 @@ class GoogleCloudDriverTest extends Specification {
 
     def 'should return a valid Compute service'() {
         given:
-        GoogleCloudDriver driver = new GoogleCloudDriver(stubbedHelper)
+        GoogleCloudDriver driver = new GoogleCloudDriver(sharedHelper)
 
         when:
         Compute client = driver.getClient()
@@ -315,7 +336,7 @@ class GoogleCloudDriverTest extends Specification {
     //TODO: Split up into multiple :and blocks
     def 'should validate a config'() {
         given:
-        GoogleCloudDriver driver = new GoogleCloudDriver(stubbedHelper)
+        GoogleCloudDriver driver = new GoogleCloudDriver(sharedHelper)
         def cfg
 
         when: 'ImageId is missing'
@@ -327,46 +348,69 @@ class GoogleCloudDriverTest extends Specification {
         //TODO: Fix the validation and set this again
         /*
         when: 'ImageId is invalid'
-        cfg = CloudConfig.create(cloud: [instanceType: VALID_INSTANCETYPE, imageId: INVALID])
+        cfg = CloudConfig.create(cloud: [instanceType: VALID_INSTANCETYPE, imageId: ILLEGAL_NAME])
         driver.validate(cfg)
         then:
         thrown AbortOperationException*/
 
         when: 'instanceType is missing'
-        cfg = CloudConfig.create(cloud: [imageId: VALID_IMAGEID])
+        cfg = CloudConfig.create(cloud: [imageId: VALID_IMAGE_ID])
         driver.validate(cfg)
         then:
         thrown AbortOperationException
 
+        /* TODO: Make this work properly in real and stubbed gce
+        when: 'illegal instance type name'
+        cfg = CloudConfig.create(cloud: [imageId: VALID_IMAGE_ID, instanceType: ILLEGAL_NAME])
+        driver.validate(cfg)
+        then:
+        thrown IllegalArgumentException*/
+
         when: 'invalid instance type'
-        cfg = CloudConfig.create(cloud: [imageId: VALID_IMAGEID, instanceType: INVALID])
+        cfg = CloudConfig.create(cloud: [imageId: VALID_IMAGE_ID, instanceType: INVALID_INSTANCETYPE])
         driver.validate(cfg)
         then:
         thrown AbortOperationException
 
         when: 'invalid cluster name'
-        cfg = CloudConfig.create(cloud: [imageId: VALID_IMAGEID, instanceType: VALID_INSTANCETYPE, clusterName: INVALID])
+        cfg = CloudConfig.create(cloud: [imageId: VALID_IMAGE_ID, instanceType: VALID_INSTANCETYPE, clusterName: ILLEGAL_NAME])
         driver.validate(cfg)
         then:
         thrown AbortOperationException
 
         when: 'configured with a shared storage'
-        cfg = CloudConfig.create(cloud: [imageId: VALID_IMAGEID, instanceType: VALID_INSTANCETYPE, clusterName: VALID_CLUSTER, sharedStorageId: "12345"])
+        cfg = CloudConfig.create(cloud: [imageId: VALID_IMAGE_ID, instanceType: VALID_INSTANCETYPE, clusterName: VALID_CLUSTER, sharedStorageId: "12345"])
         driver.validate(cfg)
         then:
         thrown AbortOperationException
 
         when: 'configured with a shared storage'
-        cfg = CloudConfig.create(cloud: [imageId: VALID_IMAGEID, instanceType: VALID_INSTANCETYPE, clusterName: VALID_CLUSTER, sharedStorageId: "12345", sharedStorageMount: "12345"])
+        cfg = CloudConfig.create(cloud: [imageId: VALID_IMAGE_ID, instanceType: VALID_INSTANCETYPE, clusterName: VALID_CLUSTER, sharedStorageId: "12345", sharedStorageMount: "12345"])
         driver.validate(cfg)
         then:
         thrown AbortOperationException
 
         when: 'has a valid config'
-        cfg = CloudConfig.create(cloud: [imageId: VALID_IMAGEID, instanceType: VALID_INSTANCETYPE, clusterName: VALID_CLUSTER])
+        cfg = CloudConfig.create(cloud: [imageId: VALID_IMAGE_ID, instanceType: VALID_INSTANCETYPE, clusterName: VALID_CLUSTER])
         def result = driver.validate(cfg)
         then:
         result == null
+    }
+
+    def 'should describe an instanceType'() {
+        given:
+        GoogleCloudDriver driver = new GoogleCloudDriver(sharedHelper)
+
+        when: 'valid instanceType'
+        def validResult = driver.describeInstanceType(VALID_INSTANCETYPE)
+        then:
+        validResult?.id == VALID_INSTANCETYPE
+        validResult?.cpus > 0
+
+        when: 'invalid instanceType'
+        def invalidResult = driver.describeInstanceType(INVALID_INSTANCETYPE)
+        then:
+        invalidResult == null
     }
 }
 
