@@ -100,6 +100,6 @@ if [[ '!{role}' == master ]]; then
   echo "${userhome}/work           *(rw,sync,no_root_squash,no_subtree_check)" >/etc/exports
   exportfs -a
 else
-  master=$(su - !{userName} ./nextflow cloud list !{clusterName} | grep master | sed 's/ .*//')
+  master=$(su - !{userName} ./nextflow cloud list !{clusterName} -driver gce | grep master | sed 's/ .*//')
   mount $master:/$userhome/work $userhome/work
 fi

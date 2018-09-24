@@ -79,6 +79,9 @@ class CmdCloud extends CmdBase implements UsageAware {
     @Parameter(names='-spot-price', description = 'Price for spot/preemptive instances')
     String spotPrice
 
+    @Parameter(names='-preemptible', description = "Sets if the instances can be preemptied or not")
+    boolean preemptible
+
     @Parameter(names=['-p','-profile'], description='Configuration profile')
     String profile
 
@@ -195,6 +198,7 @@ class CmdCloud extends CmdBase implements UsageAware {
         if( instanceType) result.setInstanceType(instanceType)
         if( imageId ) result.setImageId(imageId)
         if( spotPrice ) result.setSpotPrice(spotPrice)
+        if( preemptible) result.setPreemptible(true)
 
         result.build()
         result.validate(driver)

@@ -1,44 +1,55 @@
-package nextflow.cloud.gce;
+package nextflow.cloud.gce
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
-import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
-import com.google.api.client.http.HttpTransport;
-import com.google.api.client.json.JsonFactory;
-import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.api.services.compute.Compute;
+import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
+import com.google.api.client.googleapis.json.GoogleJsonResponseException
+import com.google.api.client.json.jackson2.JacksonFactory
+import com.google.api.services.compute.Compute
 import com.google.api.services.compute.model.*
+import groovy.transform.CompileStatic
+import groovyjarjarcommonscli.MissingArgumentException
+import nextflow.cloud.LaunchConfig
 import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
 
-import java.security.GeneralSecurityException;
-import java.util.*;
+import java.nio.file.Path
+import java.security.GeneralSecurityException
 
 /**
  * Helper class for Google Compute Engine
  *
  * @author Vilmundur Pálmason <vilmundur@wuxinextcode.com>
  */
+@CompileStatic
 class GceApiHelper {
-    private static final String PROJECT_PREFIX = "https://www.googleapis.com/compute/v1/projects/";
+
+    private static final String PROJECT_PREFIX = "https://www.googleapis.com/compute/v1/projects/"
+
     final String project
     final String zone
-    private Compute compute
-    def random = new Random()
+    final Compute compute
+
+    Random random = new Random()
+
+
+    /**
+     * only for testing purpose -- do not use
+     */
+    GceApiHelper(String project, String zone, Compute compute) {
+        this.project = project
+        this.zone = zone
+        this.compute = compute
+    }
 
     GceApiHelper(String project, String zone) throws IOException, GeneralSecurityException {
         this.project = project ?: readProject()
         this.zone = zone ?: readZone()
-        this.compute = createComputeService()
+        this.compute = createComputeService(GoogleCredential.getApplicationDefault())
     }
 
-    Compute compute() {
-        compute;
-    }
-
-    Compute createComputeService() throws IOException, GeneralSecurityException {
+    static Compute createComputeService(GoogleCredential credential) throws IOException, GeneralSecurityException {
         def httpTransport = GoogleNetHttpTransport.newTrustedTransport()
         def jsonFactory = JacksonFactory.getDefaultInstance()
-
-        def credential = GoogleCredential.getApplicationDefault()
 
         if (credential.createScopedRequired()) {
             credential =
@@ -68,30 +79,29 @@ class GceApiHelper {
      * @param imagePath including image project (e.g. "debian-cloud/global/images/debian-7-wheezy-v20150710" )
      * @return Fully qualified image name
      */
-    String imageName(String imagePath) {
+    static String imageName(String imagePath) {
         PROJECT_PREFIX + imagePath
     }
 
-    AttachedDisk setBootDisk(Instance instance, String imagePath) {
+    AttachedDisk createBootDisk(String name, String imagePath) {
         def disk = new AttachedDisk()
         disk.setBoot(true)
         disk.setAutoDelete(true)
         disk.setType("PERSISTENT")
         def params = new AttachedDiskInitializeParams()
         // Assign the Persistent Disk the same name as the VM Instance.
-        if (instance.getName() != null) {
-            params.setDiskName(instance.getName())
+        if (name != null) {
+            params.setDiskName(name)
         }
         // Specify the source operating system machine image to be used by the VM Instance.
         params.setSourceImage(imageName(imagePath))
         // Specify the disk type as Standard Persistent Disk
         params.setDiskType(projectZonePrefix() + "diskTypes/pd-standard")
         disk.setInitializeParams(params)
-        instance.setDisks(Collections.singletonList(disk))
         disk
     }
 
-    NetworkInterface setNetworkInterface(Instance inst) {
+    NetworkInterface createNetworkInterface() {
         def ifc = new NetworkInterface()
         ifc.setNetwork("${PROJECT_PREFIX}${project}/global/networks/default")
         List<AccessConfig> configs = []
@@ -100,7 +110,6 @@ class GceApiHelper {
         config.setName("External NAT")
         configs.add(config)
         ifc.setAccessConfigs(configs)
-        inst.setNetworkInterfaces(Collections.singletonList(ifc))
         ifc
     }
 
@@ -111,26 +120,13 @@ class GceApiHelper {
     String randomName() {
         def bytes = new byte[5]
         random.nextBytes(bytes)
-        new BigInteger(bytes).abs().toString(16);
-    }
-
-    Metadata createMetadata(String... tagVal) {
-        def metadata = new Metadata();
-
-        List<Metadata.Items> items = []
-        for (int i = 0; i < tagVal.length - 1; i += 2) {
-            Metadata.Items it = new Metadata.Items()
-            it.set(tagVal[i], tagVal[i + 1])
-            items.add(it)
-        }
-        metadata.setItems(items)
-        return metadata
+        new BigInteger(bytes).abs().toString(16)
     }
 
     /**
      * Block until all operations are complete or if any results in an error.
      */
-    Operation.Error blockUntilComplete(Iterable<Operation> ops, long timeoutMs) throws InterruptedException, IOException {
+    Operation.Error blockUntilComplete(Iterable<Operation> ops, long timeoutMs) {
         long start = System.currentTimeMillis()
         for (Operation op : ops) {
             Operation.Error result = blockUntilComplete(op, timeoutMs - (System.currentTimeMillis() - start))
@@ -139,7 +135,7 @@ class GceApiHelper {
         null
     }
 
-    Operation.Error blockUntilComplete(Operation operation, long timeoutMs) throws InterruptedException, IOException {
+    Operation.Error blockUntilComplete(Operation operation, long timeoutMs) {
         def start = System.currentTimeMillis()
         def pollInterval = 5 * 1000
         def opZone = operation.getZone()  // null for global/regional operations
@@ -171,8 +167,14 @@ class GceApiHelper {
         compute.images().get(project, imageName(imagePath)).execute()
     }
 
-    MachineType lookupMachineType(String machineType) throws IOException {
-        compute.machineTypes().get(project, zone, machineType).execute()
+    MachineType lookupMachineType(String machineType) {
+        try {
+            compute.machineTypes().get(project, zone, machineType).execute()
+        } catch(GoogleJsonResponseException re) {
+            if(re.details.getCode() == 404)
+                return null
+            else throw re
+        }
     }
 
     String instanceIdToPrivateDNS(String instanceId) {
@@ -185,7 +187,7 @@ class GceApiHelper {
         if (parts.length != 4) throw new IllegalArgumentException("Expected IPv4 Public IP address instead of '" + ip + "'")
 
         // TODO: Is this domain name stable ?
-        parts.reverse().join(".")+".bc.googleusercontent.com"
+        parts.reverse().join(".") + ".bc.googleusercontent.com"
     }
 
     /**
@@ -204,9 +206,27 @@ class GceApiHelper {
         null
     }
 
+    String getCredentialsFile() {
+        String credFileLocation =  System.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+
+        if(!credFileLocation)
+            throw new MissingArgumentException("GOOGLE_APPLICATION_CREDENTIALS is not defined in your environment" )
+
+        Path credFile = FileHelper.asPath(credFileLocation)
+        if (credFile) {
+            credFile.toFile().text
+        } else {
+            throw new FileNotFoundException("Could not find Google credentials file '$credFileLocation'")
+        }
+    }
+
 
     def setStartupScript(Instance instance, String script) {
         addMetadataItem(instance, "startup-script", script)
+    }
+
+    def setShutdownScript(Instance instance, String script) {
+        addMetadataItem(instance, "shutdown-script", script)
     }
 
     def addMetadataItem(Instance instance, String key, String value) {
@@ -225,7 +245,7 @@ class GceApiHelper {
         try {
             "http://metadata/computeMetadata/v1/$meta".toURL().getText(requestProperties: ['Metadata-Flavor': 'Google'])
         } catch (Exception e) {
-            throw new AbortOperationException("Cannot read Google metadata $meta: ${e.getClass()}(${e.getMessage()})",e)
+            throw new AbortOperationException("Cannot read Google metadata $meta: ${e.getClass()}(${e.getMessage()})", e)
         }
     }
 
@@ -239,5 +259,9 @@ class GceApiHelper {
 
     String readInstanceId() {
         readGoogleMetadata('instance/name')
+    }
+
+    Scheduling createScheduling(boolean preemptible) {
+        new Scheduling().setPreemptible(preemptible)
     }
 }
