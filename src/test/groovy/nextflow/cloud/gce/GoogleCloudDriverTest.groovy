@@ -20,13 +20,18 @@
 
 package nextflow.cloud.gce
 
-
 import com.google.api.services.compute.Compute
 import com.google.api.services.compute.model.Image
+import com.google.api.services.compute.model.Instance
 import com.google.api.services.compute.model.MachineType
+import com.google.api.services.compute.model.Operation
+import nextflow.Global
 import nextflow.cloud.CloudConfig
 import nextflow.cloud.LaunchConfig
+import nextflow.cloud.types.CloudInstance
+import nextflow.cloud.types.CloudInstanceStatus
 import nextflow.exception.AbortOperationException
+import spock.lang.IgnoreIf
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -34,7 +39,8 @@ import spock.lang.Specification
  *
  * @author Ólafur Haukur Flygenring <olafurh@wuxinextcode.com>
  */
-//TODO: Project should be read form credential file if it is available in helper.readProjct
+//TODO: Project should be read form credential file if it is available in helper.readProject
+@SuppressWarnings("UnnecessaryQualifiedReference")
 class GoogleCloudDriverTest extends Specification {
 
     final static String VALID_IMAGE_ID = "VALID_IMAGE_ID"
@@ -44,7 +50,9 @@ class GoogleCloudDriverTest extends Specification {
     final static String VALID_CLUSTER = "legal-label"
     final static String ZONE = "us-central1-f"
 
-    @Shared boolean runAgainstGce = System.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    static boolean runAgainstGce() {
+        System.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    }
 
     @Shared
     GceApiHelper sharedHelper
@@ -52,14 +60,14 @@ class GoogleCloudDriverTest extends Specification {
 
     def setupSpec() {
         //Use a real connection to GCE if credentials are defined
-        if(runAgainstGce) {
+        if(runAgainstGce()) {
             print("Got google credentials. Running tests against GCE.")
-            sharedHelper = new GceApiHelper("r-ice-120-00411-nextflow",ZONE)
+            sharedHelper = new GceApiHelper(null,ZONE)
         }
         // else fake it so we make it
         else {
             print("No google credentials found.  Stubbing out GCE.")
-            sharedHelper = Spy(GceApiHelper, constructorArgs: ["r-ice-120-00411-nextflow", ZONE, Stub(Compute)])
+            sharedHelper = Spy(GceApiHelper, constructorArgs: ["r-ice-120-00411-nextflow", ZONE, Stub(Compute)]) as GceApiHelper
             sharedHelper.lookupMachineType(VALID_INSTANCETYPE) >> {
                 new MachineType()
                         .setName(VALID_INSTANCETYPE)
@@ -412,5 +420,83 @@ class GoogleCloudDriverTest extends Specification {
         then:
         invalidResult == null
     }
-}
 
+    @IgnoreIf({!GoogleCloudDriverTest.runAgainstGce()})
+    def 'should intitialize correctly when given google credentials'() {
+        given:
+        def config = [ project: "projectname", zone: "projectzone"]
+        when:
+        def driver = new GoogleCloudDriver(config)
+        then:
+        driver.helper.project == "projectname"
+        driver.helper.zone == "projectzone"
+    }
+
+    @IgnoreIf({!GoogleCloudDriverTest.runAgainstGce()})
+    def 'should intitialize with values form the gobal config if given an empty map'() {
+        given:
+        def globalConfig = [ gce: [project: "globalprojectname", zone: "globalprojectzone"]]
+        def localCOnfig = [:]
+        Global.config = globalConfig
+        when:
+        def driver = new GoogleCloudDriver(localCOnfig)
+        then:
+        driver.helper.project == "globalprojectname"
+        driver.helper.zone == "globalprojectzone"
+    }
+
+    def 'should return the name of instances when asked to launch new instances'() {
+        given:
+        def helper = Spy(GceApiHelper, constructorArgs: ["project","zone",Stub(Compute)]) {
+            if(!runAgainstGce()) {
+                getCredentialsFile() >> "stubbed out"
+            }
+        }
+
+        def driver = new GoogleCloudDriver(helper)
+
+        def cloudConfig = CloudConfig.create().build()
+        cloudConfig.setClusterName("testcluster")
+        cloudConfig.setPreemptible(true)
+        when:
+        def instances = driver.launchInstances(2,cloudConfig)
+        then:
+        1 * helper.blockUntilComplete(_ as Iterable<Operation>,_,_)
+        2 * helper.blockUntilComplete(_ as Operation,_,_) >> null
+
+        instances.size() == 2
+        instances.each {
+            assert it.startsWith("testcluster")
+        }
+    }
+
+    def 'should wait correctly for instance to return a status'() {
+        given:
+        GceApiHelper helper = Mock()
+        GoogleCloudDriver driver = Spy(GoogleCloudDriver, constructorArgs: [helper])
+
+        when: 'wait correctly for READY status from instances'
+        driver.waitInstanceStatus(["1"],CloudInstanceStatus.READY)
+        then:
+        1 * driver.waitInstanceStatus(_ ,_)
+        1 * helper.getInstanceList(_) >>> [[new Instance().setStatus("RUNNING").setName("1")]]
+
+        when: 'wait correctly for STARTED status from instances'
+        driver.waitInstanceStatus(["1","2","3"],CloudInstanceStatus.STARTED)
+        then:
+        1 * driver.waitInstanceStatus(_ ,_)
+        3 * helper.getInstanceList(_) >>> [[new Instance().setStatus("PROVISIONING").setName("1")],[new Instance().setStatus("STAGING").setName("2")],[new Instance().setStatus("RUNNING").setName("3")]]
+
+        when: 'wait correctly for TERMINATED status from instances'
+        driver.waitInstanceStatus(["1"],CloudInstanceStatus.TERMINATED)
+        then:
+        1 * driver.waitInstanceStatus(_ ,_)
+        1 * helper.getInstanceList(_) >>> [[new Instance().setStatus("TERMINATED").setName("1")]]
+
+        when: 'wait correctly for TERMINATED status from instances when instance list is empty'
+        driver.waitInstanceStatus(["1","2"],CloudInstanceStatus.TERMINATED)
+        then:
+        1 * driver.waitInstanceStatus(_ ,_)
+        1 * helper.getInstanceList(_) >> {[] as List<Instance>}
+    }
+}

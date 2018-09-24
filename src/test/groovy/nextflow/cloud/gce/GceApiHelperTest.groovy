@@ -1,22 +1,33 @@
 package nextflow.cloud.gce
 
 import com.google.api.services.compute.Compute
-import com.google.api.services.compute.model.AttachedDisk
-import com.google.api.services.compute.model.NetworkInterface
+import com.google.api.services.compute.model.*
 import nextflow.exception.AbortOperationException
+import spock.lang.IgnoreIf
 import spock.lang.Shared
 import spock.lang.Specification
 
-//TODO: Implement real or stubbed tests depending on if we are running with google credentials or not
+@SuppressWarnings("UnnecessaryQualifiedReference")
 class GceApiHelperTest extends Specification {
 
     static String testProject = "testProject"
     static String testZone = "testZone"
 
+    static boolean runAgainstGce() {
+        System.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    }
+
     @Shared
-    Compute computeStub = Stub()
-    @Shared
-    GceApiHelper sharedHelper = new GceApiHelper(testProject,testZone,computeStub)
+    GceApiHelper sharedHelper
+
+    def setupSpec() {
+
+        sharedHelper = runAgainstGce() ?
+                Spy(GceApiHelper, constructorArgs: [testProject,testZone])  :
+                Spy(GceApiHelper, constructorArgs: [testProject,testZone,Stub(Compute)])
+
+        sharedHelper.readGoogleMetadata(_) >> "metadata"
+    }
 
     def 'should report error when region and zone are null'() {
         when:
@@ -25,6 +36,8 @@ class GceApiHelperTest extends Specification {
         thrown(AbortOperationException)
     }
 
+    @IgnoreIf({GceApiHelperTest.runAgainstGce()})
+    //If we have a google credentials file, we can read the project name from it
     def 'should report error when project is missing in initialization'() {
         when:
         new GceApiHelper(null,testZone)
@@ -39,17 +52,25 @@ class GceApiHelperTest extends Specification {
         thrown(AbortOperationException)
     }
 
+    //TODO: See is we can also read this data form the credentials file
     def 'should read metadata if it is available'() {
-        given:
-        def helper = Spy(GceApiHelper, constructorArgs: [testProject,testZone,computeStub])
-        helper.readGoogleMetadata(_) >> "metadata"
         when:
-        def project = helper.readProject()
-        def zone = helper.readZone()
-        def instanceId = helper.readInstanceId()
+        def project = sharedHelper.readProject()
+
         then:
-        project == "metadata"
+        if(runAgainstGce())
+            assert project != "metadata" //should get a real project name here
+        else
+            assert project == "metadata" //should get the stubbed out value
+
+        when:
+        def zone = sharedHelper.readZone()
+        then:
         zone == "metadata"
+
+        when:
+        def instanceId = sharedHelper.readInstanceId()
+        then:
         instanceId == "metadata"
     }
 
@@ -69,7 +90,7 @@ class GceApiHelperTest extends Specification {
         netInt as NetworkInterface
     }
 
-    //This is, of course, by no means a definite test that all names will be unique, but it will hopefully catch silly mistakes
+    //This is, of course, by no means a definite test that ensures that all names will be unique, but it will hopefully catch silly mistakes
     def 'should return random names'() {
         when:
         def randomNames = []
@@ -124,5 +145,154 @@ class GceApiHelperTest extends Specification {
         then:
         thrown(IllegalArgumentException)
     }
+
+    def 'should attach scripts as metadata to an instance'() {
+        given:
+        Instance gceInstance = new Instance()
+        when:
+        sharedHelper.setStartupScript(gceInstance,"startup")
+        sharedHelper.setShutdownScript(gceInstance,"shutdown")
+        def metadata = gceInstance.getMetadata()
+        then:
+        metadata.getItems().any{it.getKey() == "startup-script" && it.getValue() == "startup"}
+        metadata.getItems().any{it.getKey() == "shutdown-script" && it.getValue() == "shutdown"}
+
+    }
+
+    def 'should block until a GCE operation returns status "DONE"'() {
+        given:
+        Compute.GlobalOperations globalOperations = Mock()
+        Compute compute = Mock(Compute)
+
+        def runningOp = new Operation().setStatus("RUNNING")
+        def doneOp = new Operation().setStatus("DONE")
+
+        Compute.GlobalOperations.Get computeGlobalOperations = Stub()
+        computeGlobalOperations.execute() >>> [runningOp,doneOp]
+
+        GceApiHelper helper = Spy(GceApiHelper,constructorArgs: [testProject,testZone,compute])
+
+        when:
+        def ret = helper.blockUntilComplete(runningOp,100,10)
+        then:
+        (1.._) * globalOperations.get(_,_) >>{
+            computeGlobalOperations
+        }
+        (1.._) * compute.globalOperations() >> {
+            globalOperations
+        }
+        !ret
+    }
+
+    def 'should block until multiple GCE operations returns status "DONE"'() {
+        given:
+        Compute.GlobalOperations globalOperations = Mock()
+        Compute compute = Mock(Compute)
+
+        def runningOp = new Operation().setStatus("RUNNING")
+        def doneOp = new Operation().setStatus("DONE")
+
+        Compute.GlobalOperations.Get computeGlobalOperations = Stub()
+        computeGlobalOperations.execute() >>> [runningOp,doneOp,runningOp,doneOp]
+
+        GceApiHelper helper = Spy(GceApiHelper,constructorArgs: [testProject,testZone,compute])
+
+        when:
+        def ret = helper.blockUntilComplete([runningOp,runningOp],100,10)
+        then:
+        (1.._) * globalOperations.get(_,_) >>{
+            computeGlobalOperations
+        }
+        (1.._) * compute.globalOperations() >> {
+            globalOperations
+        }
+        !ret
+    }
+
+    def 'should timeout while waiting too long for an operation to complete'() {
+        given:
+        Compute.GlobalOperations globalOperations = Mock()
+        Compute compute = Mock(Compute)
+
+        def runningOp = new Operation().setStatus("RUNNING")
+
+        Compute.GlobalOperations.Get computeGlobalOperations = Stub()
+        computeGlobalOperations.execute() >> {runningOp}
+
+        GceApiHelper helper = Spy(GceApiHelper,constructorArgs: [testProject,testZone,compute])
+
+        when:
+        helper.blockUntilComplete(runningOp,100,10)
+        then:
+        (1.._) * globalOperations.get(_,_) >>{
+            computeGlobalOperations
+        }
+        (1.._) * compute.globalOperations() >> {
+            globalOperations
+        }
+        thrown(InterruptedException)
+    }
+
+    def 'should timeout while waiting too long for multiple operations to complete'() {
+        given:
+        Compute.GlobalOperations globalOperations = Mock()
+        Compute compute = Mock(Compute)
+
+        def runningOp = new Operation().setStatus("RUNNING")
+        def doneOp = new Operation().setStatus("DONE")
+
+        Compute.GlobalOperations.Get computeGlobalOperations = Stub()
+        computeGlobalOperations.execute() >>> [runningOp,doneOp,runningOp,runningOp]
+
+        GceApiHelper helper = Spy(GceApiHelper,constructorArgs: [testProject,testZone,compute])
+
+        when:
+        helper.blockUntilComplete([runningOp,runningOp],100,50)
+        then:
+        (1.._) * globalOperations.get(_,_) >>{
+            computeGlobalOperations
+        }
+        (1.._) * compute.globalOperations() >> {
+            globalOperations
+        }
+        thrown(InterruptedException)
+    }
+
+
+    @IgnoreIf({!GceApiHelperTest.runAgainstGce()})
+    def 'should get the google credentials file'() {
+        when:
+        def fileContent = sharedHelper.getCredentialsFile()
+        then:
+        fileContent
+    }
+
+    @IgnoreIf({!GceApiHelperTest.runAgainstGce()})
+    def 'should read project name from google credentials file'() {
+        when:
+        def project = sharedHelper.readProject()
+        then:
+        project != "metadata"
+    }
+
+    def 'should get a list of instances from gce api'() {
+        given:
+        Compute compute = Mock()
+        Compute.Instances instances = Mock()
+        Compute.Instances.List list = Mock()
+        GceApiHelper helper = new GceApiHelper("testProject","testZone",compute)
+        when:
+        def instList = helper.getInstanceList("")
+        then:
+        1 * compute.instances() >> {instances}
+        1 * instances.list(_,_) >> {list}
+        1 * list.execute() >>{
+            new InstanceList().setItems([new Instance().setName("instance")])
+        }
+
+        instList.size() == 1
+        instList.get(0).getName() == "instance"
+    }
+
 
 }

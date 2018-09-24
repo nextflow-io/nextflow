@@ -50,7 +50,8 @@ class CloudConfigTest extends Specification {
                 sharedStorageMount: '/mnt/efs',
                 spotPrice: 0.55,
                 instanceRole: 'foo-role',
-                dockerPull: 'cbcrg/image:tag'
+                dockerPull: 'cbcrg/image:tag',
+                preemptible: true,
         ]
 
         when:
@@ -69,6 +70,8 @@ class CloudConfigTest extends Specification {
             spotPrice == '0.55'
             dockerPull == ['cbcrg/image:tag']
             instanceRole == 'foo-role'
+            preemptible
+
         }
 
     }
@@ -84,7 +87,8 @@ class CloudConfigTest extends Specification {
                 keyHash: 'ssh-rsa AAAAB3Nza...',
                 subnetId: 'subnet-05222a43',
                 bootStorageSize: '10GB',
-                spotPrice: 0.55
+                spotPrice: 0.55,
+                preemptible: true
         ]
 
         when:
@@ -95,6 +99,7 @@ class CloudConfigTest extends Specification {
                 - imageId: 'ami-123'
                 - instanceType: 'r3.abc'
                 - keyHash: 'ssh-rsa AAAAB3Nza...'
+                - preemptible: true
                 - securityGroup: 'sg-df72b9ba'
                 - spotPrice: 0.55
                 - subnetId: 'subnet-05222a43'
@@ -124,6 +129,7 @@ class CloudConfigTest extends Specification {
                   starvingTimeout = '6 min'
                   terminateWhenIdle = true
                   spotPrice = 0.35
+                  preemptible = true
               }
             }
         '''
@@ -156,6 +162,7 @@ class CloudConfigTest extends Specification {
                                 - autoscale:
                                   - enabled: true
                                   - instanceType: 'm3.xlarge'
+                                  - preemptible: true
                                   - spotPrice: 0.35
                                   - starvingTimeout: '6 min'
                                   - terminateWhenIdle: true
@@ -202,7 +209,8 @@ class CloudConfigTest extends Specification {
                 keyName: 'eurokey',
                 subnetId: 'subnet-05222a43',
                 bootStorageSize: '10GB',
-                spotPrice: 0.55
+                spotPrice: 0.55,
+                preemptible: true
         ]
 
         expect:
@@ -216,6 +224,7 @@ class CloudConfigTest extends Specification {
                 	subnetId='subnet-05222a43'
                 	bootStorageSize='10GB'
                 	spotPrice=0.55
+                	preemptible=true
                 }
                 '''
                 .stripIndent().leftTrim()
