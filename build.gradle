@@ -106,7 +106,6 @@ allprojects {
         // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sec:module_replacement
         modules {
             module("commons-logging:commons-logging") { replacedBy("org.slf4j:jcl-over-slf4j") }
-            module("javax.activation:activation") { replacedBy("com.sun.activation:javax.activation") }
         }
 
         // Documentation required libraries
