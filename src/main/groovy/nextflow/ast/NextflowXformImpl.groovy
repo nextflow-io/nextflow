@@ -26,6 +26,7 @@ import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassCodeExpressionTransformer
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.expr.BinaryExpression
+import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.NotExpression
@@ -61,11 +62,13 @@ class NextflowXformImpl implements ASTTransformation {
 
             @Override
             Expression transform(Expression expr) {
-
-                if( expr instanceof BinaryExpression ) {
-                    def call = replaceBinaryWithEquals(expr)
-                    if( call )
-                        return call
+                if( expr.class == BinaryExpression ) {
+                    def newExpr = replaceBinaryExpression(expr as BinaryExpression)
+                    if( newExpr )
+                        return newExpr
+                }
+                else if( expr instanceof ClosureExpression) {
+                    visitClosureExpression(expr)
                 }
 
                 super.transform(expr)
@@ -83,10 +86,7 @@ class NextflowXformImpl implements ASTTransformation {
              *  https://stackoverflow.com/questions/28355773/in-groovy-why-does-the-behaviour-of-change-for-interfaces-extending-compar#comment45123447_28387391
              *
              */
-            protected Expression replaceBinaryWithEquals(Expression expr) {
-
-                if( !(expr instanceof BinaryExpression) )
-                    return null
+            protected Expression replaceBinaryExpression(BinaryExpression expr) {
 
                 final binary = expr as BinaryExpression
                 final left = binary.getLeftExpression()

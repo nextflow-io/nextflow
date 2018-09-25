@@ -22,6 +22,7 @@ package nextflow.ast
 
 import spock.lang.Specification
 
+import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.processor.TaskPath
@@ -256,6 +257,28 @@ class NextflowXformImplTest extends Specification {
         then:
         noExceptionThrown()
 
+    }
+
+    def 'should apply to conditional expression' () {
+
+        given:
+        def reads = Files.createTempFile('test',null); reads.text = 'Hello'
+        def config = new CompilerConfiguration()
+        config.scriptBaseClass = BaseScript.class.name
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+        def bind = new Binding(reads: reads)
+        def shell = new GroovyShell(bind, config)
+
+        when:
+        shell.evaluate '''
+        def x = { reads.size() < 70.KB ? 1.GB : 5.GB }
+        assert x.call() == 1.GB
+        '''
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        reads?.delete()
     }
 
 }
