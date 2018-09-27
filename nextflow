@@ -19,7 +19,7 @@
 #  along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'0.31.1'}
+NXF_VER=${NXF_VER:-'0.32.0'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
