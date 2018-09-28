@@ -306,13 +306,17 @@ Documentation
 
 Nextflow documentation is available at this link http://docs.nextflow.io
 
+Contributing 
+------------
+
+Project contribution are more than welcome. See the [CONTRIBUTING](CONTRIBUTING.md) file for details.
+
 Community
 ----------
 
-You can post questions, or report problems by using the Nextflow Google group available
-at this link https://groups.google.com/forum/#!forum/nextflow
+You can post questions, or report problems by using the Nextflow [discussion forum](https://groups.google.com/forum/#!forum/nextflow)
+or the [Nextflow channel on Gitter](https://gitter.im/nextflow-io/nextflow).
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/nextflow-io/nextflow?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 Build servers 
 --------------
@@ -323,7 +327,7 @@ Build servers
 License
 -------
 
-The *Nextflow* framework is released under the GNU GPLv3 License.
+The *Nextflow* framework is released under the Apache 2.0 license.
 
 Citations
 ----------
@@ -336,7 +340,7 @@ Credits
 -------
 
 Nextflow is built on two great pieces of open source software, namely <a href='http://groovy-lang.org' target='_blank'>Groovy</a>
-and <a href='http://www.gpars.org/' target='_blank'>Gpars</a>
+and <a href='http://www.gpars.org/' target='_blank'>Gpars</a>.
 
 YourKit is kindly supporting this open source project with its full-featured Java Profiler.
 Read more http://www.yourkit.com

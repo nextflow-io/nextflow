@@ -1,3 +1,0 @@
-# Cloud boot 
-
-## Deprecated

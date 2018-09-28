@@ -41,7 +41,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Nextflow'
-copyright = u'2013-2016, Nextflow authors'
+copyright = u'2013-2018, Centre for Genomic Regulation (CRG)'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -257,7 +257,7 @@ texinfo_documents = [
 epub_title = u'Nextflow'
 epub_author = u'Paolo Di Tommaso'
 epub_publisher = u'Paolo Di Tommaso'
-epub_copyright = u'2013-2016, Paolo Di Tommaso'
+epub_copyright = u'2013-2018, Centre for Genomic Regulation'
 
 # The language of the text. It defaults to the language option
 # or en if the language is not set.

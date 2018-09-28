@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2013 the original author or authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,3 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+package nextflow.file
+
+import spock.lang.Specification
+
+/**
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+class GlobsTest extends Specification {
+
+    def 'should get regex pattern' () {
+        
+        expect:
+        Globs.toUnixRegexPattern('*.txt') == '^[^/]*\\.txt$'
+
+    }
+
+}
