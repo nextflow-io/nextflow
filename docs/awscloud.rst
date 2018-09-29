@@ -300,8 +300,8 @@ An example ``nextflow.config`` file is shown below::
     process.container = 'quay.io/biocontainers/salmon'
     aws.region = 'eu-west-1'
     
-    // NOTE: the following line only if the `aws` tool is installed in a custom AMI
-    executor.awscli = '/home/ec2-home/miniconda/bin/aws'
+    // NOTE: this setting is only required if the AWS CLI tool is installed in a custom AMI
+    executor.awscli = '/home/ec2-user/miniconda/bin/aws'
 
 .. note:: Nextflow requires to access the AWS command line tool (``aws``) from the container in which the job runs
   in order to stage the required input files and to copy back the resulting output files in the
@@ -404,7 +404,9 @@ By default Nextflow will assume the AWS CLI tool is directly available in the co
 from the host image specify the ``awscli`` parameter in the Nextflow :ref:`executor <awsbatch-executor>`
 configuration as shown below::
 
-    executor.awscli = '/home/ec2-home/miniconda/bin/aws'
+    executor.awscli = '/home/ec2-user/miniconda/bin/aws'
+
+Replace the path above with the one matching the location where ``aws`` tool is installed in your AMI.
 
 Custom job definition
 ---------------------
