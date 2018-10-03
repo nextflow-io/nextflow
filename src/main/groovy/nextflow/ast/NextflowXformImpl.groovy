@@ -62,6 +62,8 @@ class NextflowXformImpl implements ASTTransformation {
 
             @Override
             Expression transform(Expression expr) {
+                if (expr == null) return null
+
                 if( expr.class == BinaryExpression ) {
                     def newExpr = replaceBinaryExpression(expr as BinaryExpression)
                     if( newExpr )
