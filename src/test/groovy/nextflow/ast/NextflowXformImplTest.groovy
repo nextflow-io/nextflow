@@ -281,4 +281,24 @@ class NextflowXformImplTest extends Specification {
         reads?.delete()
     }
 
+    def 'should allow enum casting' () {
+
+        given:
+        def config = new CompilerConfiguration()
+        config.scriptBaseClass = BaseScript.class.name
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+        def shell = new GroovyShell(config)
+
+        when:
+        shell.evaluate '''
+        enum MyEnum { FOO, BAR, BAZ }
+        def stage = 'FOO' as MyEnum
+        assert stage == MyEnum.FOO 
+        assert stage.is(MyEnum.FOO) 
+        '''
+        then:
+        noExceptionThrown()
+
+    }
+
 }
