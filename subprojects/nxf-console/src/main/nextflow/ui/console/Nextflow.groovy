@@ -32,6 +32,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Channel
 import nextflow.Session
 import nextflow.ast.NextflowDSL
+import nextflow.ast.NextflowXform
 import nextflow.cli.CliOptions
 import nextflow.cli.CmdInfo
 import nextflow.cli.CmdRun
@@ -110,6 +111,7 @@ class Nextflow extends Console {
         config.addCompilationCustomizers( importCustomizer )
         config.scriptBaseClass = BaseScript.class.name
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
 
         return config
     }
