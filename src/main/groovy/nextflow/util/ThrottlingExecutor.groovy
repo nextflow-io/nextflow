@@ -26,10 +26,8 @@ import java.util.concurrent.PriorityBlockingQueue
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.RunnableFuture
 import java.util.concurrent.Semaphore
-import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
 
 import com.google.common.util.concurrent.RateLimiter
 import groovy.transform.CompileStatic
@@ -38,7 +36,6 @@ import groovy.transform.ToString
 import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.SimpleType
 import groovy.util.logging.Slf4j
-
 /**
  * Implements the throttling and retry logic
  *
@@ -52,32 +49,6 @@ import groovy.util.logging.Slf4j
 @CompileStatic
 class ThrottlingExecutor extends ThreadPoolExecutor {
 
-    /**
-     * A customised thread factory 
-     */
-    @CompileStatic
-    static private class ThreadFactory0 implements ThreadFactory {
-
-        private ThreadGroup group
-        private AtomicInteger threadNumber = new AtomicInteger(1)
-        private ExceptionHandler0 handler = new ExceptionHandler0();
-        private prefix
-
-        ThreadFactory0(String prefix) {
-            this.prefix = prefix ?: ThrottlingExecutor.simpleName
-            this.group = System.getSecurityManager()?.getThreadGroup() ?: Thread.currentThread().getThreadGroup()
-        }
-
-        Thread newThread(Runnable r) {
-            def thread = new Thread(group, r, "${prefix}-${threadNumber.getAndIncrement()}", 0)
-            if (thread.isDaemon())
-                thread.setDaemon(false);
-            if (thread.getPriority() != Thread.NORM_PRIORITY)
-                thread.setPriority(Thread.NORM_PRIORITY);
-            thread.setUncaughtExceptionHandler(handler)
-            return thread
-        }
-    }
 
     /**
      * Redirect uncaught exceptionHandler to logging subsystem
@@ -525,7 +496,7 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
                 opts.maxPoolSize,
                 opts.keepAlive.millis, TimeUnit.MILLISECONDS,
                 new PriorityBlockingQueue<Runnable>(),
-                new ThreadFactory0(opts.poolName))
+                new CustomThreadFactory(opts.poolName, new ExceptionHandler0()))
 
         // the executor options
         this.opts = opts
