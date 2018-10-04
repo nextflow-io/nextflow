@@ -20,6 +20,7 @@
 
 package nextflow
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Paths
 
 import nextflow.util.ArrayTuple
@@ -298,5 +299,19 @@ class NextflowTest extends Specification {
         root?.deleteDir()
     }
 
+    def 'should check if file exists' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def foo = folder.resolve('foo.txt')
+
+        when:
+        Nextflow.file(foo.toString(), checkIfExists: true)
+        then:
+        def e = thrown(NoSuchFileException)
+        e.message == foo.toString()
+
+        cleanup:
+        folder?.deleteDir()
+    }
 
 }

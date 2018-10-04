@@ -20,7 +20,9 @@
 
 package nextflow.util
 
+import java.util.concurrent.Callable
 import java.util.concurrent.Future
+import java.util.concurrent.PriorityBlockingQueue
 
 import com.google.common.util.concurrent.RateLimiter
 import groovy.util.logging.Slf4j
@@ -230,6 +232,59 @@ class ThrottlingExecutorTest extends Specification {
         delta > 3_000
         delta < 5_000
         count == 5
+    }
+
+    def 'should apply request priority' () {
+
+        given:
+        def opts = new ThrottlingExecutor.Options().withPoolSize(1).withQueueSize(10)
+        def exec = ThrottlingExecutor.create(opts)
+
+        when:
+        int seq = 0
+        def f1 = exec.submit( (Callable)new ThrottlingExecutor.Recoverable() {
+            @Override protected Object invoke() { sleep 500; return ++seq }
+        })
+        def f2 = exec.submit( (Callable)new ThrottlingExecutor.Recoverable() {
+            @Override protected Object invoke() { sleep 500; return ++seq }
+        })
+        def f3 = exec.submit( (Callable)new ThrottlingExecutor.Recoverable() {
+            @Override protected Object invoke() { sleep 500; return ++seq }
+            @Override byte getPriority() { 10 as byte }
+        })
+        def f4 = exec.submit( (Callable)new ThrottlingExecutor.Recoverable() {
+            @Override protected Object invoke() { sleep 500; return ++seq }
+            @Override byte getPriority() { 20 as byte }
+        })
+        def f5 = exec.submit( (Callable)new ThrottlingExecutor.Recoverable() {
+            @Override protected Object invoke() { sleep 500; return ++seq }
+            @Override byte getPriority() { 30 as byte }
+        })
+
+        then:
+        f1.get() == 1
+        f5.get() == 2   // f3 is executed as second because it has higher priority (30)
+        f4.get() == 3
+        f3.get() == 4
+        f2.get() == 5   // f2 is executed as last because it has lower priority (0)
+
+    }
+
+    def 'check priority blocking queue ordering' () {
+        given:
+        def q = new PriorityBlockingQueue<Byte>()
+        q.offer( 30 as byte )
+        q.offer( 10 as byte )
+        q.offer( -10 as byte )
+        q.offer( 20 as byte )
+        q.offer( 0 as byte )
+
+        expect: 
+        q.take() == -10
+        q.take() == 0
+        q.take() == 10
+        q.take() == 20
+        q.take() == 30
     }
 
 }

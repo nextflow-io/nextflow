@@ -390,12 +390,14 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     protected void pollLoop() {
 
+        int iteration=0
         while( true ) {
-            long time = System.currentTimeMillis()
-            log.trace "Scheduler queue size: ${runningQueue.size()}"
+            final long time = System.currentTimeMillis()
+            final tasks = new ArrayList(runningQueue)
+            log.trace "Scheduler queue size: ${tasks.size()} (iteration: ${++iteration})"
 
             // check all running tasks for termination
-            checkAllTasks()
+            checkAllTasks(tasks)
 
             if( (session.isTerminated() && runningQueue.size()==0 && pendingQueue.size()==0) || session.isAborted() ) {
                 break
@@ -486,9 +488,10 @@ class TaskPollingMonitor implements TaskMonitor {
         }
     }
 
-    protected void setupBatchCollector() {
+    protected void setupBatchCollector(List<TaskHandler> queue) {
         Map<Class,BatchContext> collectors
-        for( TaskHandler handler : runningQueue ) {
+        for( int i=0; i<queue.size(); i++ ) {
+            final TaskHandler handler = queue.get(i)
             // ignore tasks but BatchHandler
             if( handler instanceof BatchHandler ) {
                 // create the main collectors map
@@ -505,14 +508,15 @@ class TaskPollingMonitor implements TaskMonitor {
     /**
      * Check and update the status of queued tasks
      */
-    protected void checkAllTasks() {
+    protected void checkAllTasks(List<TaskHandler> queue) {
 
         // -- find all task handlers that are *batch* aware
         //    this allows to group multiple calls to a remote system together
-        setupBatchCollector()
+        setupBatchCollector(queue)
 
         // -- iterate over the task and check the status
-        for( TaskHandler handler : runningQueue ) {
+        for( int i=0; i<queue.size(); i++ ) {
+            final handler = queue.get(i)
             try {
                 checkTaskStatus(handler)
             }

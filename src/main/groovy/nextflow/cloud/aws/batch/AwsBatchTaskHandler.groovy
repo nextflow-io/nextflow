@@ -155,6 +155,12 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         }
     }
 
+    private String jobIdsToString(Collection items) {
+        final MAX=10
+        final sz = items.size()
+        items.size()<=MAX ? items.join(', ').toString() : items.take(MAX).join(', ').toString() + ", ... other ${sz-MAX} omitted"
+    }
+
     /**
      * Retrieve Batch job status information
      *
@@ -170,6 +176,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                 log.trace "[AWS BATCH] hit cache for describe job=$jobId"
                 return context.get(jobId)
             }
+            log.trace "[AWS BATCH] missed cache for describe job=$jobId"
             // get next 100 job ids for which it's required to check the status
             batchIds = context.getBatchFor(jobId, 100)
         }
@@ -178,7 +185,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         }
 
         // retrieve the status for the specified job and along with the next batch
-        log.trace "[AWS BATCH] requesting describe jobs=$batchIds"
+        log.trace "[AWS BATCH] requesting describe jobs=${jobIdsToString(batchIds)}"
         DescribeJobsResult resp = client.describeJobs(new DescribeJobsRequest().withJobs(batchIds))
         if( !resp.getJobs() ) {
             log.debug "[AWS BATCH] cannot retrieve running status for job=$jobId"

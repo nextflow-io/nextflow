@@ -24,6 +24,7 @@ import com.esotericsoftware.kryo.KryoSerializable
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import groovy.transform.CompileStatic
+import org.codehaus.groovy.runtime.InvokerHelper
 
 /**
  * A bag implementation based on an array list.
@@ -56,6 +57,11 @@ class ArrayBag<E> implements Bag<E>, List<E>, KryoSerializable {
 
     ArrayBag( Object ... items ) {
         this(items as List)
+    }
+
+    @Override
+    String toString() {
+        InvokerHelper.inspect(this)
     }
 
 //    E getAt( int index )  {

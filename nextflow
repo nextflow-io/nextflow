@@ -19,7 +19,7 @@
 #  along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'0.31.1'}
+NXF_VER=${NXF_VER:-'0.32.0'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -230,11 +230,6 @@ while [[ $# != 0 ]]; do
       if [[ $2 && $2 == 'ignite' ]]; then
       NXF_MODE='ignite'; shift;
       fi
-      ;;
-    -with-extrae)
-      export EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}
-      rm -f TRACE.*
-      rm -rf set-0
       ;;
     -with-mpi)
       NXF_MODE='ignite'

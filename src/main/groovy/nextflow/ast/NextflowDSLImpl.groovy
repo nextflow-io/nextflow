@@ -137,6 +137,7 @@ public class NextflowDSLImpl implements ASTTransformation {
                 }
             }
 
+            @Override
             protected void visitObjectInitializerStatements(ClassNode node) {
                 if( node.getSuperClass().getName() == BaseScript.getName() ) {
                     injectMetadata(node)
@@ -144,7 +145,7 @@ public class NextflowDSLImpl implements ASTTransformation {
                 super.visitObjectInitializerStatements(node)
             }
 
-
+            @Override
             void visitMethodCallExpression(MethodCallExpression methodCall) {
                 // pre-condition to be verified to apply the transformation
                 Boolean preCondition = methodCall.objectExpression?.getText() == 'this'

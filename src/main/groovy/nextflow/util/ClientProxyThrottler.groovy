@@ -20,12 +20,10 @@
 
 package nextflow.util
 
-import java.util.concurrent.Future
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.codehaus.groovy.runtime.InvokerHelper
-
 /**
  * Implements a proxy class that forwards method call invocations to
  * a thread pool execution which throttle requests according a specified rate limit
@@ -46,6 +44,11 @@ abstract class ClientProxyThrottler<T> implements GroovyInterceptable {
     private T client
 
     /**
+     * Allow the definition of an optional priority for each method name
+     */
+    private Map<String,Byte> priority = [:]
+
+    /**
      * Create the proxy throttler object. Subclasses must provide the
      * target client instance as first parameter and the throttling options
      * as second parameter
@@ -64,13 +67,15 @@ abstract class ClientProxyThrottler<T> implements GroovyInterceptable {
      * Create the proxy throttler object using the specified {@link ThrottlingExecutor} instance
      *
      * @param client The target client whose method invocation needs to be throttled
-     * @param executor The {@link ThrottlingExecutor} scheduling and executig the actual requests to the client
+     * @param executor The {@link ThrottlingExecutor} scheduling and executing the actual requests to the client
+     * @param priority An optional Map that allows the specification of the execution priority for a given method name
      */
-    ClientProxyThrottler(T client, ThrottlingExecutor executor) {
+    ClientProxyThrottler(T client, ThrottlingExecutor executor, Map<String,Byte> priority = [:]) {
         assert client
         assert executor
         this.client = client
         this.executor = executor
+        this.priority = priority
     }
 
     Object getProperty(String name) {
@@ -81,15 +86,10 @@ abstract class ClientProxyThrottler<T> implements GroovyInterceptable {
     Object invokeMethod(String name, Object args) {
         if( name=='getClient' && !args )
             return client
-        
-        def dispatcher = name=='async' ? 'doInvoke0' : 'doInvoke1'
-        return InvokerHelper.invokeMethod(executor, dispatcher, [client, name, args] as Object[])
-    }
 
-    Future async(Closure c) {
-        // this is mock method
-        // the real implementation is given by`invokeMethod`
-        return null
+        Byte p = priority.get(name)
+        if( p == null ) p = 0
+        return InvokerHelper.invokeMethod(executor, 'doInvoke1', [client, name, args, p] as Object[])
     }
 
     /**

@@ -69,7 +69,7 @@ allprojects {
     apply plugin: 'java'
     apply plugin: 'idea'
 
-    version = /0.32.0-SNAPSHOT/
+    version = /0.32.0/
     group = 'io.nextflow'
 
     sourceCompatibility = 1.8
@@ -100,7 +100,7 @@ allprojects {
         testCompile ("org.codehaus.groovy:groovy-test:2.5.1") { exclude group: 'org.codehaus.groovy' }
         testCompile ("cglib:cglib-nodep:2.2")
         testCompile ("org.objenesis:objenesis:2.1")
-        testCompile ("org.spockframework:spock-core:1.2-RC1-groovy-2.5") { exclude group: 'org.codehaus.groovy' }
+        testCompile ("org.spockframework:spock-core:1.2-groovy-2.5") { exclude group: 'org.codehaus.groovy' }
         testCompile 'com.google.jimfs:jimfs:1.1'
         testCompile 'org.subethamail:subethasmtp:3.1.7'
         // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sec:module_replacement
@@ -192,7 +192,7 @@ dependencies {
     compile ('com.amazonaws:aws-java-sdk-s3:1.11.324')
     compile ('com.amazonaws:aws-java-sdk-ec2:1.11.324')
     compile ('com.amazonaws:aws-java-sdk-batch:1.11.324')
-    compile ('com.sun.activation:javax.activation:1.2.0')
+    compile ('javax.activation:activation:1.1.1')
     compile ('javax.mail:mail:1.4.7')
     compile ('org.yaml:snakeyaml:1.18')
     compile ('org.jsoup:jsoup:1.11.2')
@@ -348,7 +348,6 @@ protected resolveDeps( String configName, String... x ) {
     final incoming = config.getIncoming()
 
     deps << incoming.getResolutionResult().root.moduleVersion.toString()
-    incoming.getDependencies().each{ deps << coordinates(it) }
 
     config.getResolvedConfiguration().getResolvedArtifacts().each{ deps << coordinates(it) }
 
@@ -357,6 +356,14 @@ protected resolveDeps( String configName, String... x ) {
 
     logger.info ">> Dependencies for configuration: $configName"
     deps.sort().each { logger.info " - $it" }
+
+    // make sure there aren't any version conflict
+    def conflicts = deps.countBy {  it.tokenize(":")[0..1].join(':') }.findAll { k,v -> v>1 }
+    if( conflicts ) {
+        def err = "There are multiple versions for the following lib(s):"
+        conflicts.each { name, count -> err += "\n- $name: " + deps.findAll{ it.startsWith(name) }.collect{ it.tokenize(':')[2] } }
+        throw new IllegalStateException(err)
+    }
 
     return deps.collect{ "$it(*:*)" }.join(' ')
 }
@@ -391,7 +398,7 @@ task packOne(type: Jar) {
                 'Application-Name'  : 'nextflow',
                 'Application-Class' : mainClassName,
                 'Application-Version': version,
-                'Min-Java-Version'  : '1.7.0',
+                'Min-Java-Version'  : '1.8.0',
                 'Caplets'           : 'MavenCapsule',
                 'Dependencies'      : deps
     )
@@ -440,7 +447,7 @@ task packAll(type: Jar) {
                           'Application-Name'  : 'nextflow-all',
                           'Application-Class' : mainClassName,
                           'Application-Version': version,
-                          'Min-Java-Version'  : '1.7.0'
+                          'Min-Java-Version'  : '1.8.0'
                           )
 
     manifest.attributes('Main-Class': 'CapsuleLoader', 'ignite')

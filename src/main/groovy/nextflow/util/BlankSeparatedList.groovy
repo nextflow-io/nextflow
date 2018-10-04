@@ -40,7 +40,8 @@ public class BlankSeparatedList implements KryoSerializable {
     @Delegate(interfaces = false)
     List target
 
-    BlankSeparatedList() { }
+    // note: this constructor is needed by kryo serialization
+    private BlankSeparatedList() { }
 
     BlankSeparatedList( Collection items ) {
         target = items != null ? new ArrayList(items) : []

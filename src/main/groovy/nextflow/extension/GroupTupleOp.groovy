@@ -20,6 +20,7 @@
 
 package nextflow.extension
 
+import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Channel
@@ -31,11 +32,13 @@ import nextflow.util.CheckHelper
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 class GroupTupleOp {
 
     static private Map GROUP_TUPLE_PARAMS = [ by: [Integer, List], sort: [Boolean, 'true','natural','deep','hash',Closure,Comparator], size: Integer, remainder: Boolean ]
 
     static private List<Integer> GROUP_DEFAULT_INDEX = [0]
+
 
     /**
      * Comparator used to sort tuple entries (when required)
@@ -52,7 +55,7 @@ class GroupTupleOp {
 
     private boolean remainder
 
-    private Map groups = [:]
+    private Map<List,List> groups = [:]
 
     private sort
 
@@ -63,7 +66,7 @@ class GroupTupleOp {
         channel = source
         target = new DataflowQueue()
         indices = getGroupTupleIndices(params)
-        size = params?.size ?: -1
+        size = params?.size ?: 0
         remainder = params?.remainder ?: false
         sort = params?.sort
 
@@ -90,10 +93,10 @@ class GroupTupleOp {
      */
     private void collect(List tuple) {
 
-        final key = tuple[indices]                        // the actual grouping key
+        final key = tuple[indices]                      // the actual grouping key
         final len = tuple.size()
 
-        final List items = groups.getOrCreate(key) {     // get the group for the specified key
+        final List items = groups.getOrCreate(key) {    // get the group for the specified key
             def result = new ArrayList(len)             // create if does not exists
             for( int i=0; i<len; i++ )
                 result[i] = (i in indices ? tuple[i] : new ArrayBag())
@@ -109,8 +112,9 @@ class GroupTupleOp {
             }
         }
 
-        if( size>0 && size==count ) {
-            bindTuple(items)
+        final sz = size ?: sizeBy(key)
+        if( sz>0 && sz==count ) {
+            bindTuple(items, sz)
             groups.remove(key)
         }
     }
@@ -120,21 +124,21 @@ class GroupTupleOp {
      * finalize the grouping binding the remaining values
      */
     private void finalise(nop) {
-        groups.values().each { List items -> bindTuple(items) }
+        groups.each { keys, items -> bindTuple(items, size ?: sizeBy(keys)) }
         target.bind(Channel.STOP)
     }
 
     /*
      * bind collected items to the target channel
      */
-    private void bindTuple ( List items ) {
+    private void bindTuple( List items, int sz ) {
 
         def tuple = new ArrayList(items)
 
-        if( !remainder && size>0 ) {
+        if( !remainder && sz>0 ) {
             // verify exist it contains 'size' elements
             List list = items.find { it instanceof List }
-            if( list.size() != size ) {
+            if( list.size() != sz ) {
                 return
             }
         }
@@ -225,6 +229,17 @@ class GroupTupleOp {
             Collections.sort(entry as List, c)
         }
 
+    }
+
+    static protected int sizeBy(List target)  {
+        if( target.size()==1 && target[0] instanceof GroupKey ) {
+            final group = (GroupKey)target[0]
+            final size = group.getGroupSize()
+            log.debug "GroupTuple dynamic size: key=${group} size=$size"
+            return size
+        }
+        else
+            return 0
     }
 
 }

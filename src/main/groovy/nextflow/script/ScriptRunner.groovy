@@ -20,8 +20,6 @@
 
 package nextflow.script
 
-import static nextflow.util.ConfigHelper.parseValue
-
 import java.nio.file.Path
 
 import com.google.common.hash.Hashing
@@ -34,6 +32,7 @@ import nextflow.Const
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.ast.NextflowDSL
+import nextflow.ast.NextflowXform
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
@@ -45,6 +44,7 @@ import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
+import static nextflow.util.ConfigHelper.parseValue
 /**
  * Application main class
  *
@@ -281,6 +281,7 @@ class ScriptRunner {
         config.addCompilationCustomizers( importCustomizer )
         config.scriptBaseClass = BaseScript.class.name
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
 
         // extend the class-loader if required
         def gcl = new GroovyClassLoader()

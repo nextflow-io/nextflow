@@ -20,11 +20,6 @@
 
 package nextflow.file
 
-import static nextflow.Channel.STOP
-import static nextflow.file.FileHelper.fileSystemForScheme
-import static nextflow.file.FileHelper.isGlobAllowed
-import static nextflow.file.FileHelper.visitFiles
-
 import java.nio.file.FileSystem
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -39,6 +34,10 @@ import nextflow.Global
 import nextflow.Session
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import static nextflow.Channel.STOP
+import static nextflow.file.FileHelper.fileSystemForScheme
+import static nextflow.file.FileHelper.isGlobAllowed
+import static nextflow.file.FileHelper.visitFiles
 /**
  * Implements the logic for {@code Channel.fromPath} and {@code Channel.fromFilePairs}
  * factory methods
@@ -89,7 +88,7 @@ class PathVisitor {
 
         final glob = opts?.containsKey('glob') ? opts.glob as boolean : isGlobAllowed(filePattern)
         if( !glob ) {
-            target << filePattern.complete()
+            target << FileHelper.checkIfExists(filePattern, opts)
             if( closeChannelOnComplete ) target << STOP
             return
         }
@@ -99,7 +98,8 @@ class PathVisitor {
         final splitter = FilePatternSplitter.glob().parse(path)
 
         if( !splitter.isPattern() ) {
-            target << fs.getPath( splitter.strip(path) ).complete()
+            final result = fs.getPath( splitter.strip(path) )
+            target << FileHelper.checkIfExists(result, opts)
             if( closeChannelOnComplete ) target << STOP
             return
         }

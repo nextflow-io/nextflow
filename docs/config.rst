@@ -388,6 +388,7 @@ description         Free text describing the pipeline project
 mainScript          Pipeline main script (default: ``main.nf``)
 defaultBranch       Git repository default branch (default: ``master``)
 nextflowVersion     Minimum required Nextflow version to run the pipeline
+version             The pipeline version
 ================== ================
 
 The above options can be used by prefixing them with the ``manifest`` scope or surrounding them by curly
@@ -397,6 +398,7 @@ brackets. For example::
         homePage = 'http://foo.com'
         description = 'Pipeline does this and that'
         mainScript = 'foo.nf'
+        version = '1.0.0'
     }
 
 

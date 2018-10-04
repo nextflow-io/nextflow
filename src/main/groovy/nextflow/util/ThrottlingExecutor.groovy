@@ -22,7 +22,7 @@ package nextflow.util
 
 import java.util.concurrent.Callable
 import java.util.concurrent.FutureTask
-import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.PriorityBlockingQueue
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.RunnableFuture
 import java.util.concurrent.Semaphore
@@ -38,6 +38,7 @@ import groovy.transform.ToString
 import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.SimpleType
 import groovy.util.logging.Slf4j
+
 /**
  * Implements the throttling and retry logic
  *
@@ -380,6 +381,30 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
         }
     }
 
+    @CompileStatic
+    private static class PriorityTask<V> extends FutureTask<V> implements Comparable<PriorityTask> {
+
+        private short priority
+
+        PriorityTask(Callable<V> callable, short p) {
+            super(callable)
+            this.priority = p
+        }
+
+        PriorityTask(Runnable runnable, V result, short p) {
+            super(runnable,result)
+            this.priority = p
+        }
+
+        @Override
+        int compareTo(PriorityTask that) {
+            // important: the comparator is inverted because it implements
+            // an *inverted* natural ordering i.e. higher values comes first
+            // therefore are taken first from the head of the queue
+            return that.priority <=> this.priority
+        }
+    }
+
     abstract static class Recoverable implements Callable, Runnable {
 
         private ThrottlingExecutor executor
@@ -395,6 +420,8 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
             this.opts=e.opts
             return this
         }
+
+        protected byte getPriority() { 0 }
 
         @Override
         final void run() { call() }
@@ -437,7 +464,6 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
         }
 
         private void handleSuccess0(Object result) {
-            log.trace "Succeed task"
             // invoke the success handler
             opts.successAction?.call(result)
             // try to speed-up the submission rate
@@ -498,7 +524,7 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
                 opts.poolSize,
                 opts.maxPoolSize,
                 opts.keepAlive.millis, TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<>(),
+                new PriorityBlockingQueue<Runnable>(),
                 new ThreadFactory0(opts.poolName))
 
         // the executor options
@@ -513,7 +539,7 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
 
     @Override
     void execute(final Runnable task) {
-        def wrapper = task instanceof FutureTask ? task : wrap(task)
+        Runnable wrapper = task instanceof PriorityTask ? (Runnable)task : wrap(task)
         semaphore?.acquire()
 
         try {
@@ -525,7 +551,7 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
         }
     }
 
-    protected <T> Callable<T> wrap(Callable<T> task) {
+    protected <T> Recoverable wrap(Callable<T> task) {
         Recoverable result
         if( task instanceof Recoverable )
             result = task
@@ -538,7 +564,7 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
         result.setOwner(this)
     }
 
-    protected  Runnable wrap(Runnable task) {
+    protected Recoverable wrap(Runnable task) {
         Recoverable result
         if( task instanceof Recoverable )
             result = task
@@ -553,12 +579,14 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
 
     @Override
     protected <T> RunnableFuture<T> newTaskFor(Callable<T> task) {
-        return super.newTaskFor(wrap(task))
+        final recoverable = wrap(task)
+        return new PriorityTask<T>(recoverable, recoverable.priority);
     }
 
     @Override
     protected <T> RunnableFuture<T> newTaskFor(Runnable task, T value) {
-        return super.newTaskFor(wrap(task), value)
+        final recoverable = wrap(task)
+        return new PriorityTask<T>(recoverable, value, recoverable.priority);
     }
 
     protected void beforeExecute(Thread thread, Runnable task) {
@@ -573,9 +601,9 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
 
     @Override
     protected void afterExecute(Runnable task, Throwable ex) {
+        log.trace "After execute task -- ${this}"
         super.afterExecute(task,ex)
         semaphore?.release()
-        log.trace "After execute task"
     }
 
     @PackageScope
@@ -596,7 +624,8 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
         if( limiter == null || !opts.backOffFactor )
             return
 
-        final double newRate = Math.max( limiter.rate / opts.backOffFactor, opts.backOffMinRate )
+        final double norm = limiter.rate / opts.backOffFactor
+        final double newRate = Math.max( norm, opts.backOffMinRate )
         if( newRate == limiter.rate )
             return
 
@@ -644,6 +673,7 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
      * @param args
      * @return
      */
+    @Deprecated
     Object doInvoke0(final Object target, final String name, final Object args) {
         assert ((Object[])args).length==1
 
@@ -666,13 +696,15 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
      * @param args The arguments of the method
      * @return The method invocation result
      */
-    Object doInvoke1(final Object target, final String name, final Object args) {
+    Object doInvoke1(final Object target, final String name, final Object args, final byte priority) {
 
         final task = new Recoverable() {
             @Override Object invoke() {
-                log.trace "Invoke client >> $name( $args )"
+                log.trace "Invoke client method [priority=$priority] >> $name($args)"
                 target.invokeMethod(name,args)
             }
+
+            @Override byte getPriority() { priority }
         }
 
         final result = submit((Callable)task)

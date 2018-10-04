@@ -1239,8 +1239,9 @@ The ``cache`` directive possible values are shown in the following table:
 Value                 Description
 ===================== =================
 ``false``             Disable cache feature.
-``true`` (default)    Cache process outputs. Input files are indexed by using the meta-data information (name, size and last update timestamp).
-``'deep'``            Cache process outputs. Input files are indexed by their content.
+``true`` (default)    Enable caching. Cache keys are created indexing input files meta-data information (name, size and last update timestamp attributes).
+``'deep'``            Enable caching. Cache keys are created indexing input files content.
+``'lenient'``         Enable caching. Cache keys are created indexing input files path and size attributes (this policy provides a workaround for incorrect caching invalidation observed on shared file systems due to inconsistent files timestamps; requires version 0.32.x or later).
 ===================== =================
 
 

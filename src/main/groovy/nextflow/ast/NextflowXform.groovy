@@ -18,35 +18,19 @@
  *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nextflow.cli
-import java.nio.file.Files
+package nextflow.ast
 
-import spock.lang.Requires
-import spock.lang.Specification
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
+
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
+
 /**
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * Marker interface which to apply AST transformation to {@code process} declaration
  */
-class CmdCloneTest extends Specification {
-
-    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def testClone() {
-
-        given:
-        def accessToken = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def dir = Files.createTempDirectory('test')
-        def cmd = new CmdClone(hubUser: accessToken)
-        cmd.args = ['nextflow-io/hello', dir.toFile().toString()]
-
-        when:
-        cmd.run()
-
-        then:
-        dir.resolve('README.md').exists()
-
-        cleanup:
-        dir?.deleteDir()
-
-    }
-
-}
+@Retention(RetentionPolicy.SOURCE)
+@Target(ElementType.METHOD)
+@GroovyASTTransformationClass(classes = [NextflowXformImpl])
+@interface NextflowXform {}

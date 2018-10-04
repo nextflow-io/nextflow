@@ -1,6 +1,34 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+0.32.0 - 8 Aug 2018
+- Fixed CPU usage metrics can be wrongly reported #858
+- Fixed Allow a process to access input file metadata #731
+- Fixed Completed jobs are detected with a big delay #799
+- Fixed Misleading message is shown when pulling a project with a invalid config #863
+- Fixed Allow groupTuple operator to handle multi-size tuples #796
+- Fixed Ignite executor fills up logs when node is disconnected #810
+- Fixed Log filter option is misinterpreted when enclosed in double quotes #846
+- Fixed Metrics collector process may cause the main process to report a false non-zero exit status #836
+- Fixed K8s imagePullPolicy is not included in the pod spec #815
+- Fixed Splitter caching is too eager when caching path is specified #835
+- Fixed Improve error message for missing git provider configuration #847
+- Fixed Byte hashing is never reached in CacheHelper class 9ac81153
+- Fixed K8s launcher should not delete pod when `login` command fails (5175942a)
+- Fixed Dump operator should nicely print ArrayBag content (91e371ba)
+- Added manifest data in workflow metadata object #841
+- Added support for K8s imagePullSecrets pod attribute #800
+- Added option "checkIfExists" to Channel.fromPath method #666
+- Upgraded Apache Groovy to version 2.5.1
+- Upgraded Apache Ignite to version 2.6
+- Upgraded Slf4j to version 1.7.25
+- Upgraded Logback to version 1.1.11
+- Upgraded Grengine to version 1.3.0
+- Upgraded LevelDB to version 0.10
+- Upgraded Guava to version 21.0
+- Upgraded Spock to version 1.2 
+- Using javax.activation:activation:1.1.1 (from com.sun.activation:javax.activation:1.2.0)
+
 0.31.1 - 7 Aug 2018
 - Fixed AWS Batch execution hangs when running on 1 cpu machine #825 
 - Fixed AWS Batch fails if process tag length is too long #822

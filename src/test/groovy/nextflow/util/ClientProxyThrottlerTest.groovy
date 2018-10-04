@@ -65,7 +65,7 @@ class ClientProxyThrottlerTest extends Specification {
         }
 
         MyClientProxy(MyClient client, ThrottlingExecutor executor) {
-            super(client, executor)
+            super(client, executor, [beta: 10 as byte])
             target = client
         }
     }
@@ -84,22 +84,6 @@ class ClientProxyThrottlerTest extends Specification {
         proxy.sayHello() == 'Hello world'
 
         success.get()==3
-    }
-
-    def 'should invoke async' () {
-
-        given:
-        def success = new AtomicInteger()
-        def opts = new ThrottlingExecutor.Options() .onSuccess { success.incrementAndGet() }
-        def proxy = new MyClientProxy( new MyClient(), opts )
-        
-        when:
-        def f = proxy.async { MyClient c -> c.foo() }
-        while( !f.isDone() ) sleep 50
-        then:
-        f.get() == 42
-        success.get()==1
-
     }
 
 
@@ -253,30 +237,25 @@ class ClientProxyThrottlerTest extends Specification {
     }
 
 
-    def 'should call invoke0' () {
-        given:
-        def client = new MyClient()
-        def exec = Mock(ThrottlingExecutor)
-        def proxy = new MyClientProxy(client, exec)
-        def cmd = { it.foo() }
-
-        when:
-        def result = proxy.async(cmd)
-        then:
-        1 * exec.doInvoke0(client, 'async', [cmd] as Object[])  >> 'OK'
-        result == 'OK'
-    }
-
     def 'should call invoke1' () {
         given:
         def client = new MyClient()
         def exec = Mock(ThrottlingExecutor)
         def proxy = new MyClientProxy(client, exec)
-
+        byte ZERO = 0 as byte
+        byte _10 = 10 as byte
         when:
         def result = proxy.alpha('hello world')
         then:
-        1 * exec.doInvoke1(client, 'alpha', ['hello world'] as Object[])  >> 'OK'
+        1 * exec.doInvoke1(client, 'alpha', ['hello world'] as Object[], ZERO)  >> 'OK'
+        result == 'OK'
+
+        // it should use a different priority for method `beta`, the priority is defined in the
+        // MyClientProxy class definition
+        when:
+        result = proxy.beta('hola mundo')
+        then:
+        1 * exec.doInvoke1(client, 'beta', ['hola mundo'] as Object[], _10)  >> 'OK'
         result == 'OK'
     }
 
