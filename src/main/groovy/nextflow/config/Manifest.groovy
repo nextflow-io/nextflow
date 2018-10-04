@@ -21,6 +21,7 @@
 package nextflow.config
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 
 import static nextflow.Const.DEFAULT_BRANCH
 import static nextflow.Const.DEFAULT_MAIN_FILE_NAME
@@ -30,6 +31,7 @@ import static nextflow.Const.DEFAULT_MAIN_FILE_NAME
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class Manifest {
 
@@ -40,6 +42,27 @@ class Manifest {
     Manifest(Map object) {
         assert object != null
         this.target = object
+        this.assessFields()
+    }
+
+    /**
+     * Small helper method that checks for fields
+     * that do not match the manifest metadata fields
+     * based on their specification.
+     *
+     * Raises a warning for each mismatching field.
+     *
+     * https://www.nextflow.io/docs/latest/config.html#scope-manifest
+     */
+    private assessFields() {
+
+        def validFields = this.metaClass.properties.collect { it.name }.findAll { it!='class'}
+
+        this.target.each { field, value ->
+            if ( !((field as String) in validFields) ) {
+                log.warn("\'${field}\' is not a valid manifest field!")
+            }
+        }
     }
 
     String getHomePage() {
@@ -75,6 +98,10 @@ class Manifest {
 
     String getVersion() {
         target.version
+    }
+
+    String getName() {
+        target.name
     }
 
 }
