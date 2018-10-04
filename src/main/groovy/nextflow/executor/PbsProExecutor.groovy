@@ -7,6 +7,9 @@ import nextflow.processor.TaskRun
 
 /**
  * Implements a executor for PBSPro cluster
+ * Tested with version:
+ * - 14.2.4
+ * - 19.0.0
  *
  * See http://www.pbspro.org
  */
