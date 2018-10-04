@@ -19,8 +19,6 @@
  */
 package nextflow.processor
 
-import com.google.cloud.storage.contrib.nio.CloudStoragePath
-
 import static nextflow.processor.ErrorStrategy.*
 
 import java.nio.file.LinkOption
@@ -832,8 +830,7 @@ class TaskProcessor {
             final folder = FileHelper.getWorkFolder(session.workDir, hash)
             lockWorkDirCreation.lock()
             try {
-                //TODO: This workaround should go away so soon as the forward slash problem is solved in the nio CloudStorageFileSystemProvider
-                exists = !(folder in CloudStoragePath) && folder.exists()
+                exists = folder.exists()
                 if( !exists && !folder.mkdirs() )
                     throw new IOException("Unable to create folder=$folder -- check file system permission")
             }
@@ -1634,8 +1631,7 @@ class TaskProcessor {
 
         for( int i=0; i<collectedFiles.size(); i++ ) {
             final it = collectedFiles.get(i)
-            //TODO: This workaround should go away so soon as the forward slash problem is solved in the nio CloudStorageFileSystemProvider
-            final relName = it in CloudStoragePath ? workDir.relativize(FileHelper.fixCloudStoragePath(it)).toString() : workDir.relativize(it).toString()
+            final relName = workDir.relativize(it).toString()
             if( !allStaged.contains(relName) )
                 result.add(it)
         }

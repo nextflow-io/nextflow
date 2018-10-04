@@ -20,7 +20,7 @@
 
 package nextflow.file
 
-import com.google.cloud.storage.contrib.nio.CloudStoragePath
+import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 
 import java.lang.reflect.Field
 import java.nio.file.CopyOption
@@ -196,9 +196,7 @@ class FileHelper {
 
         def str = hash.toString()
         def bucket = str.substring(0,2)
-        //TODO: Temp change to see if CloudStorageFilsSystem works if we end the dir with a forward slash
-        //def folder = bashPath.resolve("${bucket}/${str.substring(2)}")
-        def folder = bashPath.resolve("${bucket}/${str.substring(2)}/")
+        def folder = bashPath.resolve("${bucket}/${str.substring(2)}")
 
         return folder.toAbsolutePath()
     }
@@ -277,7 +275,11 @@ class FileHelper {
             Paths.get(uri)
         }
         else {
-            getOrCreateFileSystemFor(uri).provider().getPath(uri)
+            //TODO: Fix this special treatment of gs scheme
+            if(uri.scheme.toLowerCase() == "gs")
+                getOrCreateFileSystemFor(uri).getPath(uri.path)
+            else
+                getOrCreateFileSystemFor(uri).provider().getPath(uri)
         }
     }
 
@@ -474,6 +476,12 @@ class FileHelper {
 
             log.debug "AWS S3 config details: ${dumpAwsConfig(result)}"
         }
+        else if(scheme?.toLowerCase() == "gs") {
+            //TODO: NC - This option name is up for a change
+            log.debug "Creating the GS filesystem with directoryEmulation"
+            //Configure the GS NIO filesystem to use "proper" directory detection
+            result.directoryEmulation = true
+        }
         else {
             assert Global.session, "Session is not available -- make sure to call this after Session object has been created"
             result.session = Global.session
@@ -565,6 +573,7 @@ class FileHelper {
      * @return The corresponding {@link FileSystem} object
      * @throws IllegalArgumentException if does not exist a valid provider for the given URI scheme
      */
+    //TODO: Initialise the gs provider in directory emulation mode
     static FileSystem getOrCreateFileSystemFor( URI uri, Map env = null ) {
         assert uri
 
@@ -575,10 +584,22 @@ class FileHelper {
         if( !provider )
             throw new IllegalArgumentException("Cannot a find a file system provider for scheme: ${uri.scheme}")
 
+
+        FileSystem fs
+        /*
+         * Initialize the gs filesystem with non default parameters
+         */
+        if(uri.getScheme().toLowerCase() == "gs"){
+            log.debug "Creating GS file system"
+            def f = provider.newFileSystem(uri,["directoryEmulation": true]) as CloudStorageFileSystem
+            log.debug "FS config: ${f.config()}"
+            return f
+        }
+
         /*
          * check if already exists a file system for it
          */
-        FileSystem fs
+
         try { fs = provider.getFileSystem(uri) }
         catch( FileSystemNotFoundException e ) { fs=null }
         if( fs )
@@ -737,8 +758,7 @@ class FileHelper {
             @Override
             public FileVisitResult preVisitDirectory(Path fullPath, BasicFileAttributes attrs) throws IOException {
                 final int depth = fullPath.nameCount - folder.nameCount
-                //TODO: This workaround should go away so soon as the forward slash problem is solved in the nio CloudStorageFileSystemProvider
-                final path = fullPath in CloudStoragePath ?  folder.relativize(fixCloudStoragePath(fullPath)) : folder.relativize(fullPath)
+                final path = folder.relativize(fullPath)
                 log.trace "visitFiles > dir=$path; depth=$depth; includeDir=$includeDir; matches=${matcher.matches(path)}; isDir=${attrs.isDirectory()}"
 
                 if (depth>0 && includeDir && matcher.matches(path) && attrs.isDirectory() && (includeHidden || !isHidden(fullPath))) {
@@ -751,10 +771,7 @@ class FileHelper {
 
             @Override
             public FileVisitResult visitFile(Path fullPath, BasicFileAttributes attrs) throws IOException {
-                //TODO: This workaround should go away so soon as the forward slash problem is solved in the nio CloudStorageFileSystemProvider
-                final path = fullPath in CloudStoragePath ?  folder.relativize(fixCloudStoragePath(fullPath)) : folder.relativize(fullPath)
-
-                //final path = folder.relativize(fullPath)
+                final path = folder.relativize(fullPath)
                 log.trace "visitFiles > file=$path; includeFile=$includeFile; matches=${matcher.matches(path)}; isRegularFile=${attrs.isRegularFile()}"
 
                 if (includeFile && matcher.matches(path) && attrs.isRegularFile() && (includeHidden || !isHidden(fullPath))) {
@@ -766,15 +783,6 @@ class FileHelper {
             }
       })
 
-    }
-
-    //TODO: This workaround should go away so soon as the forward slash problem is solved in the nio CloudStorageFileSystemProvider
-    public static Path fixCloudStoragePath(Path path) {
-        if(path in CloudStoragePath)
-            asPath(path.toUri())
-        else
-            path
-        //path
     }
 
     private static boolean isHidden(Path path) {

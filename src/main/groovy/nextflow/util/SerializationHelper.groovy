@@ -20,11 +20,8 @@
 
 package nextflow.util
 
-import com.google.cloud.storage.contrib.nio.CloudStorageConfiguration
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
-import com.google.cloud.storage.contrib.nio.CloudStorageFileSystemProvider
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
-import com.google.cloud.storage.contrib.nio.UnixPath
 
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -64,6 +61,7 @@ class KryoHelper {
         serializers.put( UUID, UUIDSerializer )
         serializers.put( File, FileSerializer )
         serializers.put( S3Path, PathSerializer )
+        serializers.put(CloudStoragePath,CloudStoragePathSerializer)
         serializers.put( XPath, XPathSerializer )
         serializers.put( Pattern, PatternSerializer )
         serializers.put( ArrayTuple, ArrayTupleSerializer )
@@ -78,6 +76,7 @@ class KryoHelper {
 
     /**
      * Register a new class - serializer pair
+     *
      *
      * @param clazz
      * @param item
@@ -226,33 +225,6 @@ class MatcherInstantiator implements ObjectInstantiator {
         c.newInstance()
     }
 }
-//TODO: This should not be necessary if if CloudStoragePath has a public constructor
-@Singleton
-class CloudStoragePathInstantiator implements ObjectInstantiator {
-
-    @Override
-    Object newInstance() {
-        def c = CloudStoragePath.getDeclaredConstructor(CloudStorageFileSystem.class, UnixPath.class)
-        c.setAccessible(true)
-        c.newInstance(null,null)
-    }
-}
-
-@Singleton
-class CloudStorageFileSystemInstantiator implements ObjectInstantiator {
-
-    @Override
-    Object newInstance() {
-        def c = CloudStorageFileSystem.getDeclaredConstructor(CloudStorageFileSystemProvider.class,String.class, CloudStorageConfiguration.class)
-        c.setAccessible(true)
-        try {
-            c.newInstance(new CloudStorageFileSystemProvider(),"bucket",CloudStorageConfiguration.DEFAULT)
-        } catch (Throwable t) {
-            t.printStackTrace()
-            throw t
-        }
-    }
-}
 
 @Singleton
 @CompileStatic
@@ -262,11 +234,6 @@ class InstantiationStrategy extends Kryo.DefaultInstantiatorStrategy {
     public ObjectInstantiator newInstantiatorOf (final Class type) {
         if( type == Matcher ) {
             MatcherInstantiator.instance
-        //TODO: This should not be necessary if if CloudStoragePath has a public constructor
-        } else if(type == CloudStoragePath) {
-            CloudStoragePathInstantiator.instance
-        } else if(type == CloudStorageFileSystem) {
-            CloudStorageFileSystemInstantiator.instance
         }
         else {
             super.newInstantiatorOf(type)
@@ -309,6 +276,37 @@ class PathSerializer extends Serializer<Path> {
         def fs = FileHelper.getOrCreateFileSystemFor(uri)
         return fs.provider().getPath(uri)
 
+    }
+}
+
+@Slf4j
+@CompileStatic
+//TODO: See if we can combine this with the standard path serialiser
+class CloudStoragePathSerializer extends Serializer<CloudStoragePath> {
+
+    @Override
+    void write(Kryo kryo, Output output, CloudStoragePath target) {
+        final scheme = target.getFileSystem().provider().getScheme()
+        final host = target.toUri().getHost()
+        final path = target.toString()
+        log.trace "Path serialization > scheme: $scheme; host: $host; path: $path"
+
+        output.writeString(scheme)
+        output.writeString(host)
+        output.writeString(path)
+    }
+
+    @Override
+    CloudStoragePath  read(Kryo kryo, Input input, Class<CloudStoragePath> type) {
+        final scheme = input.readString()
+        final host = input.readString()
+        final path = input.readString()
+        log.trace "CloudStoragePath de-serialization > scheme: $scheme; host: $host; path: $path"
+
+        def uri = URI.create("$scheme://$host$path")
+        //TODO: options might change
+        def fs = FileHelper.getOrCreateFileSystemFor(uri,["directoryEmulation" : true]) as CloudStorageFileSystem
+        return fs.getPath(uri.path)
     }
 }
 
