@@ -32,12 +32,16 @@ import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Global
 import nextflow.Session
+import nextflow.util.CustomThreadFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import static nextflow.Channel.STOP
 import static nextflow.file.FileHelper.fileSystemForScheme
 import static nextflow.file.FileHelper.isGlobAllowed
 import static nextflow.file.FileHelper.visitFiles
+
+import java.lang.Thread.UncaughtExceptionHandler
+
 /**
  * Implements the logic for {@code Channel.fromPath} and {@code Channel.fromFilePairs}
  * factory methods
@@ -137,8 +141,10 @@ class PathVisitor {
             opts.type = 'file'
 
         singleThread.execute {
+            int count=0
             try {
                 visitFiles(opts, path, pattern) { Path file ->
+                    count++
                     if( bindPayload == null )
                         target.bind(file)
 
@@ -154,6 +160,8 @@ class PathVisitor {
                 log.debug "No such file: $folder -- Skipping visit"
             }
             finally {
+                if( !count && opts.checkIfExists as boolean )
+                    throw new IllegalArgumentException("No files match pattern `$pattern` at path: $folder")
                 if( closeChannelOnComplete )
                     target.bind(STOP)
             }
@@ -161,9 +169,19 @@ class PathVisitor {
     }
 
     static private ExecutorService createExecutorService() {
-        final result = Executors.newSingleThreadExecutor()
-        def session = Global.session as Session
-        if( !session ) return result
+        final session = Global.session as Session
+        final handler = new UncaughtExceptionHandler() {
+            @Override
+            void uncaughtException(Thread t, Throwable e) {
+                log.error(e.message, e)
+                session?.abort(e)
+            }
+        }
+        final factory = new CustomThreadFactory('PathVisitor', handler)
+        final result = Executors.newSingleThreadExecutor(factory)
+
+        if( !session )
+            return result
 
         session.onShutdown {
             result.shutdown()
