@@ -383,12 +383,13 @@ The following settings are available:
 Name                Description
 ================== ================
 author              Project author name (use a comma to separate multiple names).
-homePage            Project home page URL
-description         Free text describing the pipeline project
-mainScript          Pipeline main script (default: ``main.nf``)
-defaultBranch       Git repository default branch (default: ``master``)
-nextflowVersion     Minimum required Nextflow version to run the pipeline
-version             The pipeline version
+defaultBranch       Git repository default branch (default: ``master``).
+description         Free text describing the workflow project.
+homePage            Project home page URL.
+mainScript          Project main script (default: ``main.nf``).
+name                Project short name.
+nextflowVersion     Minimum required Nextflow version.
+version             Project version number.
 ================== ================
 
 The above options can be used by prefixing them with the ``manifest`` scope or surrounding them by curly

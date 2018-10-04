@@ -547,8 +547,16 @@ class Session implements ISession {
         return libDir
     }
 
+    @Memoized
     Manifest getManifest() {
-        config.manifest instanceof Map ? new Manifest(config.manifest as Map) : new Manifest()
+        if( !config.manifest )
+            return new Manifest()
+        if( config.manifest instanceof Map )
+            return new Manifest(config.manifest as Map)
+        else {
+            log.warn "Invalid config manifest definition [${this.getClass().getName()}]"
+            return new Manifest()
+        }
     }
 
     /**
