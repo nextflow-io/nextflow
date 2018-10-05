@@ -20,6 +20,8 @@
 
 package nextflow
 
+import java.util.concurrent.CompletableFuture
+
 import static nextflow.util.CheckHelper.checkParams
 
 import java.nio.file.FileSystem
@@ -58,6 +60,9 @@ class Channel  {
     static public ControlMessage STOP = PoisonPill.getInstance()
 
     static public NullObject VOID = NullObject.getNullObject()
+
+    // only for testing purpose !
+    private static CompletableFuture fromPath0Future
 
     /**
      * Create an new channel
@@ -206,15 +211,25 @@ class Channel  {
     private static DataflowChannel<Path> fromPath0( Map opts, List allPatterns ) {
 
         final result = new DataflowQueue()
-        for( int i=0; i<allPatterns.size(); i++ ) {
+        def future = CompletableFuture.completedFuture(null)
+        for( int index=0; index<allPatterns.size(); index++ ) {
             def factory = new PathVisitor(target: result, opts: opts)
-            factory.closeChannelOnComplete = i==allPatterns.size()-1
-            factory.apply(allPatterns[i])
+            factory.closeChannelOnComplete = index==allPatterns.size()-1
+            future = factory.applyAsync(future, allPatterns[index])
         }
+
+        // abort the execution when an exception is raised
+        fromPath0Future = future.exceptionally(Channel.&handlerException)
 
         return result
     }
 
+    static private void handlerException(Throwable e) {
+        final error = e.cause ?: e
+        log.error(error.message, error)
+        final session = Global.session as Session
+        session?.abort(error)
+    }
 
     static private DataflowChannel<Path> watchImpl( String syntax, String folder, String pattern, boolean skipHidden, String events, FileSystem fs ) {
         final result = create()
@@ -365,12 +380,15 @@ class Channel  {
         // -- a channel from the path
         final fromOpts = fetchParams(VALID_FROM_PATH_PARAMS, options)
         final files = new DataflowQueue()
+        def future = CompletableFuture.completedFuture(null)
         for( int index=0; index<allPatterns.size(); index++ )  {
             def factory = new PathVisitor(opts: fromOpts, target: files)
             factory.bindPayload = index
             factory.closeChannelOnComplete = index == allPatterns.size()-1
-            factory.apply( allPatterns.get(index) )
+            future = factory.applyAsync( future, allPatterns.get(index) )
         }
+        // abort the execution when an exception is raised
+        future.exceptionally(Channel.&handlerException)
 
         // -- map the files to a tuple like ( ID, filePath )
         def mapper = { path, int index ->

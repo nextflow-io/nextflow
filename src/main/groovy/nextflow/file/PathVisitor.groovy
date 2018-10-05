@@ -23,25 +23,17 @@ package nextflow.file
 import java.nio.file.FileSystem
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.CompletableFuture
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowQueue
-import nextflow.Global
-import nextflow.Session
-import nextflow.util.CustomThreadFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import static nextflow.Channel.STOP
 import static nextflow.file.FileHelper.fileSystemForScheme
 import static nextflow.file.FileHelper.isGlobAllowed
 import static nextflow.file.FileHelper.visitFiles
-
-import java.lang.Thread.UncaughtExceptionHandler
-
 /**
  * Implements the logic for {@code Channel.fromPath} and {@code Channel.fromFilePairs}
  * factory methods
@@ -50,9 +42,6 @@ import java.lang.Thread.UncaughtExceptionHandler
 class PathVisitor {
 
     private static Logger log = LoggerFactory.getLogger(PathVisitor)
-
-    @Lazy
-    static ExecutorService singleThread = createExecutorService()
 
     DataflowQueue target
 
@@ -78,6 +67,9 @@ class PathVisitor {
         return target
     }
 
+    CompletableFuture applyAsync(final CompletableFuture future, final Object filePattern ) {
+        future.thenRunAsync { apply(filePattern) }
+    }
 
     private void applyRegexPattern0( Pattern filePattern ) {
         assert filePattern
@@ -140,55 +132,33 @@ class PathVisitor {
         if( !opts.type )
             opts.type = 'file'
 
-        singleThread.execute {
-            int count=0
-            try {
-                visitFiles(opts, path, pattern) { Path file ->
-                    count++
-                    if( bindPayload == null )
-                        target.bind(file)
+        int count=0
+        try {
+            visitFiles(opts, path, pattern) { Path file ->
+                count++
+                if( bindPayload == null )
+                    target.bind(file)
 
-                    else {
-                        def pair = new ArrayList<>(2)
-                        pair[0] = file
-                        pair[1] = bindPayload
-                        target.bind(pair)
-                    }
+                else {
+                    def pair = new ArrayList<>(2)
+                    pair[0] = file
+                    pair[1] = bindPayload
+                    target.bind(pair)
                 }
             }
-            catch (NoSuchFileException e) {
-                log.debug "No such file: $folder -- Skipping visit"
-            }
-            finally {
-                if( !count && opts.checkIfExists as boolean )
-                    throw new IllegalArgumentException("No files match pattern `$pattern` at path: $folder")
-                if( closeChannelOnComplete )
-                    target.bind(STOP)
-            }
         }
+        catch (NoSuchFileException e) {
+            log.debug "No such file: $folder -- Skipping visit"
+        }
+        finally {
+            if( !count && opts.checkIfExists as boolean )
+                throw new IllegalArgumentException("No files match pattern `$pattern` at path: $folder")
+            if( closeChannelOnComplete )
+                target.bind(STOP)
+        }
+
     }
 
-    static private ExecutorService createExecutorService() {
-        final session = Global.session as Session
-        final handler = new UncaughtExceptionHandler() {
-            @Override
-            void uncaughtException(Thread t, Throwable e) {
-                log.error(e.message, e)
-                session?.abort(e)
-            }
-        }
-        final factory = new CustomThreadFactory('PathVisitor', handler)
-        final result = Executors.newSingleThreadExecutor(factory)
 
-        if( !session )
-            return result
-
-        session.onShutdown {
-            result.shutdown()
-            result.awaitTermination(5,TimeUnit.MINUTES)
-        }
-        
-        return result
-    }
 
 }
