@@ -20,6 +20,10 @@
 
 package nextflow
 
+import org.junit.Rule
+import spock.lang.Specification
+import spock.lang.Timeout
+
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -27,9 +31,6 @@ import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
 import groovyx.gpars.dataflow.DataflowQueue
-import org.junit.Rule
-import spock.lang.Specification
-import spock.lang.Timeout
 import test.TemporaryPath
 import test.TestHelper
 /**
@@ -426,22 +427,82 @@ class ChannelTest extends Specification {
         ch.getVal() == Channel.STOP
 
         when:
+        def session = new Session()
         Channel.fromPath(file2.toString(), checkIfExists: true)
+        Channel.fromPath0Future.get()
         then:
-        def e = thrown(NoSuchFileException)
-        e.message == file2.toString()
+        session == Global.session
+        session.aborted
+        session.error instanceof NoSuchFileException
+        session.error.message == file2.toString()
 
         when:
+        session = new Session()
         Channel.fromPath([file1, file2, file3], checkIfExists: true)
+        Channel.fromPath0Future.get()
         then:
-        e = thrown(NoSuchFileException)
-        e.message == file2.toString()
+        session.aborted
+        session.error instanceof NoSuchFileException
+        session.error.message == file2.toString()
 
         when:
+        session = new Session()
         Channel.fromPath('http://google.com/foo.txt', checkIfExists: true)
+        Channel.fromPath0Future.get()
         then:
-        e = thrown(NoSuchFileException)
-        e.message == 'http://google.com/foo.txt'
+        session.aborted
+        session.error instanceof NoSuchFileException
+        session.error.message == 'http://google.com/foo.txt'
+    }
+
+    def 'should check if pattern exists' () {
+
+        given:
+        def session = new Session()
+        when:
+        Channel.fromPath('foo/*.txt', checkIfExists: true)
+        Channel.fromPath0Future.get()
+        then:
+        session.isAborted()
+        session.getError() instanceof IllegalArgumentException
+
+    }
+
+    def 'should check if pattern exists for multiple patterns' () {
+
+        given:
+        def session = new Session()
+        def folder = tempDir.root.toAbsolutePath()
+        def file1 = folder.resolve('file1.txt'); file1.text = 'foo'
+
+        when:
+        def result = Channel.fromPath("$folder/*.txt", checkIfExists: true)
+        then:
+        result.getVal() instanceof Path
+        !session.terminated
+
+        when:
+        session = new Session()
+        Channel.fromPath(["$folder/*.txt", 'foo/*.fq'], checkIfExists: true)
+        Channel.fromPath0Future.get()
+        then:
+        session.isAborted()
+        session.getError() instanceof IllegalArgumentException
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should check if pattern exists for filePairs' () {
+
+        when:
+        def session = new Session()
+        Channel.fromFilePairs('foo/*.txt', checkIfExists: true)
+        Channel.fromPath0Future.get()
+        then:
+        session.isAborted()
+        session.getError() instanceof IllegalArgumentException
+
     }
 
     def 'should return files prefix' () {

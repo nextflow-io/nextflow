@@ -904,7 +904,7 @@ class Session implements ISession {
      */
     void notifyError( TaskHandler handler ) {
 
-        for ( int i=0; i<observers.size(); i++){
+        for ( int i=0; i<observers?.size(); i++){
             try{
                 final observer = observers.get(i)
                 observer.onFlowError(handler, handler?.getTraceRecord())
