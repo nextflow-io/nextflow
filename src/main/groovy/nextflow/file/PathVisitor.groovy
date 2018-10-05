@@ -24,10 +24,13 @@ import java.nio.file.FileSystem
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowQueue
+import nextflow.util.CustomThreadFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import static nextflow.Channel.STOP
@@ -42,6 +45,9 @@ import static nextflow.file.FileHelper.visitFiles
 class PathVisitor {
 
     private static Logger log = LoggerFactory.getLogger(PathVisitor)
+
+    @Lazy
+    private static ExecutorService executor = Executors.newCachedThreadPool(new CustomThreadFactory('PathVisitor'))
 
     DataflowQueue target
 
@@ -68,7 +74,7 @@ class PathVisitor {
     }
 
     CompletableFuture applyAsync(final CompletableFuture future, final Object filePattern ) {
-        future.thenRunAsync { apply(filePattern) }
+        future.thenRunAsync({ apply(filePattern) } as Runnable, executor)
     }
 
     private void applyRegexPattern0( Pattern filePattern ) {
