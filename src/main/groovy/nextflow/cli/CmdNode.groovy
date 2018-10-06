@@ -101,9 +101,7 @@ class CmdNode extends CmdBase {
     static DaemonLauncher loadDaemonByName( String name ) {
 
         Class<DaemonLauncher> clazz = null
-        final itr = ServiceDiscover.load(DaemonLauncher).iterator()
-        while( itr.hasNext() ) {
-            final item = itr.next()
+        for( Class<DaemonLauncher> item : ServiceDiscover.load(DaemonLauncher) ) {
             log.debug "Discovered daemon class: ${item.name}"
             ServiceName annotation = item.getAnnotation(ServiceName)
             if( annotation && annotation.value() == name ) {
