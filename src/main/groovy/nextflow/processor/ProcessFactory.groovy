@@ -87,9 +87,9 @@ class ProcessFactory {
         this.config = config != null ? config : session.config
 
         // discover non-core executors
-        for( Class<Executor> exec : ServiceDiscover.load(Executor).iterator() ) {
-            log.debug "Discovered executor class: ${exec.name}"
-            executorsMap.put(findNameByClass(exec), exec.name)
+        for( Class<Executor> clazz : ServiceDiscover.load(Executor) ) {
+            log.debug "Discovered executor class: ${clazz.name}"
+            executorsMap.put(findNameByClass(clazz), clazz)
         }
     }
 

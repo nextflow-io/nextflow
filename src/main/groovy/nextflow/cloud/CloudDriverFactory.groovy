@@ -42,7 +42,7 @@ class CloudDriverFactory {
     static Map<String,Class<CloudDriver>> loadDrivers() {
 
         def result = new HashMap<String,Class<CloudDriver>>()
-        ServiceDiscover.load(CloudDriver).iterator().each { Class<CloudDriver> driver ->
+        ServiceDiscover.load(CloudDriver).each { Class<CloudDriver> driver ->
             final name = nameForClass(driver)
             log.debug "Discovered cloud driver: `$name` [${driver.getName()}]"
             result.put(name, driver)
