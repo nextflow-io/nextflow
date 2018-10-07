@@ -1,0 +1,31 @@
+set -e
+
+#
+# run normal mode
+#
+echo ''
+$NXF_RUN | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > printEnv'` == 3 ]] || false
+
+[[ `grep -c 'HELLO_1=1' stdout` == 3 ]] || false
+[[ `grep -c 'HELLO_2=2' stdout` == 3 ]] || false
+[[ `grep -c 'HELLO_X=a' stdout` == 1 ]] || false
+[[ `grep -c 'HELLO_X=b' stdout` == 1 ]] || false
+[[ `grep -c 'HELLO_X=c' stdout` == 1 ]] || false
+
+
+#
+# RESUME mode
+#
+echo ''
+$NXF_RUN -resume | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Cached process > printEnv'` == 3 ]] || false
+
+[[ `grep -c 'HELLO_1=1' stdout` == 3 ]] || false
+[[ `grep -c 'HELLO_2=2' stdout` == 3 ]] || false
+[[ `grep -c 'HELLO_X=a' stdout` == 1 ]] || false
+[[ `grep -c 'HELLO_X=b' stdout` == 1 ]] || false
+[[ `grep -c 'HELLO_X=c' stdout` == 1 ]] || false
+
