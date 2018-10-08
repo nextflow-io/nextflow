@@ -267,3 +267,260 @@ utcTime            The UTC timestamp in ISO 8601 format.
 
 The ``trace`` attribute contains a list of trace information fields, which you can look up in the :ref:`trace fields<trace-fields>` description.
 
+Weblog Example
+--------------
+
+Let's have a look at an example, running the `nf-core/hlatyping <https://github.com/nf-core/hlatyping>`_ pipeline on test data. In order to
+log the **complete** trace information, you have to define all trace fields in the config first (either you go for ``nextflow.config``, or you define a :ref:`profile<config-profiles>`)::
+
+
+  trace {
+    fields = [
+        'task_id',
+        'hash',
+        'native_id',
+        'process',
+        'tag',
+        'name',
+        'status',
+        'exit',
+        'module',
+        'container',
+        'cpus',
+        'time',
+        'disk',
+        'memory',
+        'attempt',
+        'submit',
+        'start',
+        'complete',
+        'duration',
+        'realtime',
+        'queue',
+        '%cpu',
+        '%mem',
+        'rss',
+        'vmem',
+        'peak_rss',
+        'peak_vmem',
+        'rchar',
+        'wchar',
+        'syscr',
+        'syscw',
+        'read_bytes',
+        'write_bytes'
+    ].join(",")
+   }
+
+The content will be send as type ``application/json``, and can be consumed by the target REST endpoint.
+
+Workflow Submit Message
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Starting the workflow will result in a first POST message like this::
+
+
+  {
+    "runName": "friendly_pesquet",
+    "runId": "170aa09c-105f-49d0-99b4-8eb6a146e4a7",
+    "runStatus": "started",
+    "utcTime": "2018-10-07T11:42:08Z"
+  }
+
+
+Process Submit Message
+~~~~~~~~~~~~~~~~~~~~~~
+
+The first process of the pipeline ``make_ot_config`` is then submitted to the executor::
+
+  {
+    "runName": "friendly_pesquet",
+    "runId": "170aa09c-105f-49d0-99b4-8eb6a146e4a7",
+    "runStatus": "process_submitted",
+    "utcTime": "2018-10-07T11:42:09Z",
+    "trace": {
+        "task_id": 2,
+        "status": "SUBMITTED",
+        "hash": "a1/0024fd",
+        "name": "make_ot_config",
+        "exit": 2147483647,
+        "submit": 1538912529498,
+        "start": 0,
+        "process": "make_ot_config",
+        "tag": null,
+        "module": [
+
+        ],
+        "container": "nfcore/hlatyping:1.1.1",
+        "attempt": 1,
+        "script": "\n    configbuilder --max-cpus 2 --solver glpk > config.ini\n    ",
+        "scratch": null,
+        "workdir": "/home/sven1103/git/hlatyping-workflow/work/a1/0024fd028375e2b601aaed44d112e3",
+        "queue": null,
+        "cpus": 1,
+        "memory": 7516192768,
+        "disk": null,
+        "time": 7200000,
+        "env": "PATH=/home/sven1103/git/hlatyping-workflow/bin:$PATH\n",
+        "native_id": null
+    }
+  }
+
+Process Started/Running Message
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Once the process runs, the POST message will look like this::
+
+  {
+    "runName": "friendly_pesquet",
+    "runId": "170aa09c-105f-49d0-99b4-8eb6a146e4a7",
+    "runStatus": "process_started",
+    "utcTime": "2018-10-07T11:42:09Z",
+    "trace": {
+        "task_id": 2,
+        "status": "RUNNING",
+        "hash": "a1/0024fd",
+        "name": "make_ot_config",
+        "exit": 2147483647,
+        "submit": 1538912529498,
+        "start": 1538912529629,
+        "process": "make_ot_config",
+        "tag": null,
+        "module": [
+
+        ],
+        "container": "nfcore/hlatyping:1.1.1",
+        "attempt": 1,
+        "script": "\n    configbuilder --max-cpus 2 --solver glpk > config.ini\n    ",
+        "scratch": null,
+        "workdir": "/home/sven1103/git/hlatyping-workflow/work/a1/0024fd028375e2b601aaed44d112e3",
+        "queue": null,
+        "cpus": 1,
+        "memory": 7516192768,
+        "disk": null,
+        "time": 7200000,
+        "env": "PATH=/home/sven1103/git/hlatyping-workflow/bin:$PATH\n",
+        "native_id": 27185
+    }
+  }
+
+Process Completed Message
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Once a process is completed, the POST message will look like this::
+
+  {
+    "runName": "friendly_pesquet",
+    "runId": "170aa09c-105f-49d0-99b4-8eb6a146e4a7",
+    "runStatus": "process_completed",
+    "utcTime": "2018-10-07T11:45:30Z",
+    "trace": {
+        "task_id": 2,
+        "status": "COMPLETED",
+        "hash": "a1/0024fd",
+        "name": "make_ot_config",
+        "exit": 0,
+        "submit": 1538912529498,
+        "start": 1538912529629,
+        "process": "make_ot_config",
+        "tag": null,
+        "module": [
+
+        ],
+        "container": "nfcore/hlatyping:1.1.1",
+        "attempt": 1,
+        "script": "\n    configbuilder --max-cpus 2 --solver glpk > config.ini\n    ",
+        "scratch": null,
+        "workdir": "/home/sven1103/git/hlatyping-workflow/work/a1/0024fd028375e2b601aaed44d112e3",
+        "queue": null,
+        "cpus": 1,
+        "memory": 7516192768,
+        "disk": null,
+        "time": 7200000,
+        "env": "PATH=/home/sven1103/git/hlatyping-workflow/bin:$PATH\n",
+        "error_action": null,
+        "complete": 1538912730599,
+        "duration": 201101,
+        "realtime": 69,
+        "%cpu": 0.0,
+        "%mem": 0.1,
+        "vmem": 54259712,
+        "rss": 10469376,
+        "peak_vmem": 20185088,
+        "peak_rss": 574972928,
+        "rchar": 7597,
+        "wchar": 162,
+        "syscr": 16,
+        "syscw": 4083712,
+        "read_bytes": 4096,
+        "write_bytes": 0,
+        "native_id": 27185
+    }
+  }
+
+Workflow Completed Message
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Once the workflow is completed, the POST message will look like this::
+
+  {
+    "runName": "friendly_pesquet",
+    "runId": "170aa09c-105f-49d0-99b4-8eb6a146e4a7",
+    "runStatus": "completed",
+    "utcTime": "2018-10-07T11:46:15Z"
+  }
+
+
+Workflow Error Message
+~~~~~~~~~~~~~~~~~~~~~~
+
+In the case a i.e. process fails during execution, a POST message will look like this::
+
+  {
+    "runName": "distraught_northcutt",
+    "runId": "e41fb726-86ae-4bf7-a97f-d79380db2c1a",
+    "runStatus": "error",
+    "utcTime": "2018-10-07T12:46:56Z",
+    "trace": {
+        "task_id": 2,
+        "status": "FAILED",
+        "hash": "4c/b73a66",
+        "name": "make_ot_config",
+        "exit": 127,
+        "submit": 1538916410847,
+        "start": 1538916410947,
+        "process": "make_ot_config",
+        "tag": null,
+        "module": [
+
+        ],
+        "container": "nfcore/hlatyping:1.1.1",
+        "attempt": 1,
+        "script": "\n    configbuilders --max-cpus 2 --solver glpk > config.ini\n    ",
+        "scratch": null,
+        "workdir": "/home/sven1103/git/hlatyping-workflow/work/4c/b73a665897840ef533e8d3bcc09ffc",
+        "queue": null,
+        "cpus": 1,
+        "memory": 7516192768,
+        "disk": null,
+        "time": 7200000,
+        "env": "PATH=/home/sven1103/git/hlatyping-workflow/bin:$PATH\n",
+        "error_action": "FINISH",
+        "complete": 1538916416263,
+        "duration": 5416,
+        "realtime": 4,
+        "%cpu": 0.0,
+        "%mem": 0.0,
+        "vmem": 0,
+        "rss": 0,
+        "peak_vmem": 0,
+        "peak_rss": 0,
+        "rchar": 0,
+        "wchar": 0,
+        "syscr": 0,
+        "syscw": 0,
+        "read_bytes": 0,
+        "write_bytes": 0,
+        "native_id": 30239
+    }
+  }
