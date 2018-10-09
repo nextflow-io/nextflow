@@ -41,7 +41,7 @@ class CmdConfigTest extends Specification {
         def cmd = new CmdConfig()
 
         when:
-        cmd.printDefault(config, buffer)
+        cmd.printDefault0(config, buffer)
 
         then:
         buffer.toString() == '''
@@ -70,15 +70,16 @@ class CmdConfigTest extends Specification {
         def cmd = new CmdConfig()
 
         when:
-        cmd.printProperties(config, buffer)
+        cmd.sort = true
+        cmd.printProperties0(config, buffer)
 
         then:
         buffer.toString() == """
                 docker.enabled=true
+                process.executor=slurm
+                process.memory=${mem.toString()}
                 process.omega=Hi' there
                 process.queue=long
-                process.memory=${mem.toString()}
-                process.executor=slurm
                 """
                 .stripIndent().leftTrim()
 
@@ -103,7 +104,7 @@ class CmdConfigTest extends Specification {
         config.mail.smtp.port = 25
         config.mail.smtp.user = 'yo'
 
-        cmd.printCanonical(config, buffer)
+        cmd.printCanonical0(config, buffer)
         then:
         buffer.toString() == '''
                     process {
@@ -141,7 +142,7 @@ class CmdConfigTest extends Specification {
         config.process.executor = 'slurm'
         config.process.queue = 'long'
         config.docker.enabled = true
-        cmd.printFlatten(config, buffer)
+        cmd.printFlatten0(config, buffer)
 
         then:
         buffer.toString() == '''
@@ -156,7 +157,7 @@ class CmdConfigTest extends Specification {
         config = new ConfigObject()
         config.foo = "Hi' there"
 
-        cmd.printFlatten(config, buffer)
+        cmd.printFlatten0(config, buffer)
         then:
         buffer.toString() == "foo = 'Hi\\' there'\n"
 

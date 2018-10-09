@@ -178,6 +178,14 @@ class VersionNumber implements Comparable {
      * @return
      */
     boolean matches(String condition) {
+        for( String token : condition.tokenize(',')) {
+            if( !matches0(token) )
+                return false
+        }
+        return true
+    }
+
+    private boolean matches0(String condition) {
         def matcher = CHECK.matcher(condition)
         if( !matcher.matches() )
             throw new IllegalArgumentException("Not a valid version check condition: $condition")

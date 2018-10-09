@@ -42,6 +42,7 @@ class SlurmExecutorTest extends Specification {
         exec.parseJobId('30') == '30'
         exec.parseJobId('40\n') == '40'
         exec.parseJobId('\n50') == '50'
+        exec.parseJobId('Submitted batch job 630114 on cluster mpp2') == '630114'
 
         when:
         exec.parseJobId('Something else 10')

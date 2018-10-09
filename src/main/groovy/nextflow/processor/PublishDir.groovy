@@ -22,6 +22,7 @@ package nextflow.processor
 
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
@@ -51,7 +52,7 @@ import nextflow.file.FileHelper
 @EqualsAndHashCode
 class PublishDir {
 
-    enum Mode { SYMLINK, LINK, COPY, MOVE, COPY_NO_FOLLOW }
+    enum Mode { SYMLINK, LINK, COPY, MOVE, COPY_NO_FOLLOW, RELLINK }
 
     private Map<Path,Boolean> makeCache = new HashMap<>()
 
@@ -87,6 +88,8 @@ class PublishDir {
     private TaskProcessor processor
 
     private Path sourceDir
+
+    private String stageInMode
 
     private static ExecutorService executor
 
@@ -157,7 +160,7 @@ class PublishDir {
         this.processor = task.processor
         this.sourceDir = task.targetDir
         this.sourceFileSystem = sourceDir.fileSystem
-
+        this.stageInMode = task.config.stageInMode
         createPublishDir()
 
         validatePublishMode()
@@ -167,7 +170,7 @@ class PublishDir {
          * otherwise copy and moving file can take a lot of time, thus
          * apply the operation using an external thread
          */
-        final inProcess = mode == Mode.LINK || mode == Mode.SYMLINK
+        final inProcess = mode == Mode.LINK || mode == Mode.SYMLINK || mode == Mode.RELLINK
 
         if( pattern ) {
             this.matcher = FileHelper.getPathMatcherFor("glob:${pattern}", sourceFileSystem)
@@ -264,6 +267,10 @@ class PublishDir {
         if( !mode || mode == Mode.SYMLINK ) {
             Files.createSymbolicLink(destination, source)
         }
+        else if( mode == Mode.RELLINK ) {
+            def sourceRelative = destination.getParent().relativize(source)
+            Files.createSymbolicLink(destination, sourceRelative)
+        }
         else if( mode == Mode.LINK ) {
             FilesEx.mklink(source, [hard:true], destination)
         }
@@ -310,18 +317,18 @@ class PublishDir {
     @PackageScope
     void validatePublishMode() {
 
-        if( sourceFileSystem != path.fileSystem ) {
+        if( sourceFileSystem != path.fileSystem || path.fileSystem != FileSystems.default ) {
             if( !mode ) {
                 mode = Mode.COPY
             }
-            else if( mode == Mode.SYMLINK || mode == Mode.LINK ) {
+            else if( mode == Mode.SYMLINK || mode == Mode.LINK || mode == Mode.RELLINK ) {
                 log.warn1("Cannot use mode `${mode.toString().toLowerCase()}` to publish files to path: $path -- Using mode `copy` instead", firstOnly:true)
                 mode = Mode.COPY
             }
         }
 
         if( !mode ) {
-            mode = Mode.SYMLINK
+            mode = stageInMode=='rellink' ? Mode.RELLINK : Mode.SYMLINK
         }
     }
 

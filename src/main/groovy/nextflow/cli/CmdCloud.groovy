@@ -135,16 +135,6 @@ class CmdCloud extends CmdBase implements UsageAware {
         if( !availDrivers )
             throw new AbortOperationException("No cloud drivers are available")
 
-
-        // -- create the config object
-        this.config = new ConfigBuilder()
-                .setOptions(launcher.options)
-                .setBaseDir(Paths.get('.').complete())
-                .setProfile(profile)
-                .build()
-
-        if (!driverName) driverName = config.cloud?.driver
-
         // no driver was specified -- choose the first available
         if( !driverName ) {
             if( availDrivers.size()>1 ) throw new AbortOperationException("No cloud driver was specified -- Use option -driver to choose one of the following: ${availDrivers.collect { ',' }}")
@@ -158,6 +148,13 @@ class CmdCloud extends CmdBase implements UsageAware {
                 msg += " -- Did you mean one of these?\n" + matches.collect { "  $it"}.join('\n')
             throw new AbortOperationException(msg)
         }
+
+        // -- create the config object
+        this.config = new ConfigBuilder()
+                .setOptions(launcher.options)
+                .setBaseDir(Paths.get('.'))
+                .setProfile(profile)
+                .build()
 
         Global.setConfig(config)
         this.driver = CloudDriverFactory.getDriver(driverName, [region: this.region])

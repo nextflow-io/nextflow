@@ -28,7 +28,7 @@ import groovy.transform.InheritConstructors;
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors
-class MissingFileException extends ProcessException {
+class MissingFileException extends ProcessException implements ShowOnlyExceptionMessage {
 
 
 }

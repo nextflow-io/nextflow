@@ -19,15 +19,19 @@
  */
 
 package nextflow.scm
-import groovy.transform.Canonical
+
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
+import groovy.transform.ToString
+import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
-import nextflow.Const
 import nextflow.cli.HubOptions
 import nextflow.config.ConfigParser
-import nextflow.config.ConfigBuilder
+import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
 import nextflow.script.ScriptFile
 import nextflow.util.IniFile
@@ -42,6 +46,11 @@ import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+import static nextflow.Const.DEFAULT_HUB
+import static nextflow.Const.DEFAULT_MAIN_FILE_NAME
+import static nextflow.Const.DEFAULT_ORGANIZATION
+import static nextflow.Const.DEFAULT_ROOT
+import static nextflow.Const.MANIFEST_FILE_NAME
 /**
  * Handles operation on remote and local installed pipelines
  *
@@ -51,18 +60,6 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 @Slf4j
 @CompileStatic
 class AssetManager {
-
-    static public final String MANIFEST_FILE_NAME = 'nextflow.config'
-
-    static public final String DEFAULT_MAIN_FILE_NAME = 'main.nf'
-
-    static public final String DEFAULT_BRANCH = 'master'
-
-    static public final String DEFAULT_ORGANIZATION = System.getenv('NXF_ORG') ?: 'nextflow-io'
-
-    static public final String DEFAULT_HUB = System.getenv('NXF_HUB') ?: 'github'
-
-    static public final File DEFAULT_ROOT = System.getenv('NXF_ASSETS') ? new File(System.getenv('NXF_ASSETS')) : Const.APP_HOME_DIR.resolve('assets').toFile()
 
     /**
      * The folder all pipelines scripts are installed
@@ -135,6 +132,11 @@ class AssetManager {
         return this
     }
 
+    @PackageScope
+    File getLocalGitConfig() {
+        localPath ? new File(localPath,'.git/config') : null
+    }
+
     /**
      * Sets the user credentials on the {@link RepositoryProvider} object
      *
@@ -185,11 +187,9 @@ class AssetManager {
         }
 
         // if project dir exists it must contain the Git config file
-        final configProvider = guessHubProviderFromGitConfig()
-        if( !configProvider ) {
-            log.debug "Too bad! Can't find any provider from git config. Check file `${localPath}/.git/config`"
-            throw new AbortOperationException("Corrupted git repository at path: $localPath")
-        }
+        final configProvider = guessHubProviderFromGitConfig(true)
+        if( !configProvider )
+            throw new IllegalStateException("Cannot find a provider config for repository at path: $localPath")
 
         // checks that the selected hub matches with the one defined in the git config file
         if( hub != configProvider ) {
@@ -239,7 +239,7 @@ class AssetManager {
         if( project )
             return project
 
-        String[] parts = name.split('/')
+        def parts = name.split('/') as List<String>
         def last = parts[-1]
         if( last.endsWith('.nf') || last.endsWith('.nxf') ) {
             if( parts.size()==1 )
@@ -381,15 +381,11 @@ class AssetManager {
     }
 
     String getMainScriptName() {
-        if( mainScript )
-            return mainScript
-
-        readManifest().mainScript ?: DEFAULT_MAIN_FILE_NAME
+        return mainScript ?: getManifest().getMainScript()
     }
 
     String getHomePage() {
-        def manifest = readManifest()
-        manifest.homePage ?: provider.getRepositoryUrl()
+        getManifest().getHomePage() ?: provider.getRepositoryUrl()
     }
 
     String getRepositoryUrl() {
@@ -397,20 +393,15 @@ class AssetManager {
     }
 
     String getDefaultBranch() {
-        readManifest().defaultBranch ?: DEFAULT_BRANCH
+        getManifest().getDefaultBranch()
     }
 
-    String getDescription() {
-        // note: if description is not set it will return an empty ConfigObject
-        // thus use the elvis operator to return null
-        readManifest().description ?: null
+    @Memoized
+    Manifest getManifest() {
+        getManifest0()
     }
 
-    String getAuthor() {
-        readManifest().author ?: null
-    }
-
-    protected Map readManifest() {
+    protected Manifest getManifest0() {
         ConfigObject result = null
         try {
             def text = localPath.exists() ? new File(localPath, MANIFEST_FILE_NAME).text : provider.readText(MANIFEST_FILE_NAME)
@@ -422,28 +413,33 @@ class AssetManager {
         catch( Exception e ) {
             log.trace "Cannot read project manifest -- Cause: ${e.message}"
         }
+
         // by default return an empty object
-        return result ?: new ConfigObject()
+        if( result == null )
+            result = new ConfigObject()
+
+        return new Manifest(result)
     }
 
-    ConfigObject readRemoteConfig(String profile=null) {
-        ConfigObject result = null
-        try {
-            def text = provider.readText(MANIFEST_FILE_NAME)
-            if( text ) {
-                // TODO this must be able to parse remote config includes
-                def slurper = new ConfigParser()
-                slurper.setIgnoreIncludes(true)
-                slurper.registerConditionalBlock('profiles', profile ?: ConfigBuilder.DEFAULT_PROFILE)
-                result = slurper.parse(text)
+    Path getConfigFile() {
+        if( localPath.exists() ) {
+            return new File(localPath, MANIFEST_FILE_NAME).toPath()
+        }
+        else {
+            try {
+                // try to read the config file
+                provider.readBytes(MANIFEST_FILE_NAME)
+                // no error => exist, return a path for it
+                return new ProviderPath(provider, MANIFEST_FILE_NAME)
+            }
+            catch (IOException e) {
+                provider.validateRepo()
+                log.debug "Cannot retried remote config file -- likely does not exist"
+                return null
             }
         }
-        catch( Exception e ) {
-            log.trace "Cannot read project manifest -- Cause: ${e.message}"
-        }
-        // by default return an empty object
-        return result ?: new ConfigObject()
     }
+
 
     String getBaseName() {
         def result = project.tokenize('/')
@@ -857,7 +853,7 @@ class AssetManager {
             return
 
         // the `gitmodules` attribute in the manifest makes it possible to enable/disable modules updating
-        final modules = readManifest().gitmodules
+        final modules = getManifest().gitmodules
         if( modules == false )
             return
 
@@ -922,13 +918,13 @@ class AssetManager {
             return null
         }
 
-        final gitConfig = new File(localPath,'.git/config')
+        final gitConfig = localGitConfig
         if( !gitConfig.exists() ) {
             return null
         }
 
         final iniFile = new IniFile().load(gitConfig)
-        final branch = getDefaultBranch() ?: DEFAULT_BRANCH
+        final branch = manifest.getDefaultBranch()
         final remote = iniFile.getString("branch \"${branch}\"", "remote", "origin")
         final url = iniFile.getString("remote \"${remote}\"", "url")
         log.debug "Git config: $gitConfig; branch: $branch; remote: $remote; url: $url"
@@ -956,10 +952,23 @@ class AssetManager {
     }
 
 
-    protected String guessHubProviderFromGitConfig() {
-
+    protected String guessHubProviderFromGitConfig(boolean failFast=false) {
+        assert localPath
+        
+        // find the repository remote URL from the git project config file
         final server = getGitConfigRemoteDomain()
+        if( !server && failFast ) {
+            def message = (localGitConfig.exists()
+                            ? "Can't find git repository remote host -- Check config file at path: $localGitConfig"
+                            : "Can't find git repository config file -- Repository may be corrupted: $localPath" )
+            throw new AbortOperationException(message)
+        }
+
         final result = providerConfigs.find { it -> it.domain == server }
+        if( !result && failFast ) {
+            def message = "Can't find any configured provider for git server `$server` -- Make sure to have specified it in your `scm` file. For details check https://www.nextflow.io/docs/latest/sharing.html#scm-configuration-file"
+            throw new AbortOperationException(message)
+        }
 
         return result ? result.name : null
     }
@@ -967,7 +976,9 @@ class AssetManager {
     /**
      * Models revision information of a project repository.
      */
-    @Canonical
+    @ToString
+    @EqualsAndHashCode
+    @TupleConstructor
     static class RevisionInfo {
         static enum Type {
             TAG,

@@ -135,7 +135,9 @@ with the ``shub://`` or ``docker://`` pseudo-protocol as required by the Singula
 
     process.container = 'docker://quay.io/biocontainers/multiqc:1.3--py35_2'
     singularity.enabled = true
-
+    
+.. note:: As of Nextflow v0.27 you no longer need to specify `docker://` to pull from a Docker repository. Nextflow will automatically add it to your image name when Singularity is enabled. Additionally, the Docker engine will not work with containers specified as `docker://`. 
+  
 .. note:: This feature requires the availability of the ``singularity`` tool in the computer
   where the workflow execution is launched (other than the computing nodes).
 

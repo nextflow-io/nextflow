@@ -152,7 +152,7 @@ class IgConnector {
             shutdownScheduler()
         }
         catch( Exception e ) {
-            log.debug e.message ?: e.toString()
+            log.warn "Unexpected error shutting down Ignite scheduler -- ${e.message ?: e.toString()}"
         }
     }
 

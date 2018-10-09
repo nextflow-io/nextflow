@@ -21,6 +21,7 @@
 package nextflow
 
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
@@ -368,6 +369,80 @@ class ChannelTest extends Specification {
 
     }
 
+    def testFromPathWithListOfPatterns() {
+
+        setup:
+        def folder = tempDir.root.toAbsolutePath()
+        folder.resolve('file1.txt').text = 'Hello'
+        folder.resolve('file2.txt').text = 'Hola'
+        folder.resolve('file3.fq').text = 'Ciao'
+
+        when:
+        def result = Channel.fromPath( ["$folder/*.txt", "$folder/*.fq"] ).toSortedList({it.name}).getVal().collect { it.getName() }
+        then:
+        result == [ 'file1.txt', 'file2.txt', 'file3.fq' ]
+
+        when:
+        result = Channel.fromPath( ["$folder/file1.txt", "$folder/file2.txt", "$folder/file3.fq"] ).toSortedList({it.name}).getVal().collect { it.getName() }
+        then:
+        result == [ 'file1.txt', 'file2.txt', 'file3.fq' ]
+
+        when:
+        result = Channel.fromPath( ["$folder/*"] ).toSortedList({it.name}).getVal().collect { it.getName() }
+        then:
+        result == [ 'file1.txt', 'file2.txt', 'file3.fq' ]
+    }
+
+    def 'should check file exists' () {
+
+        given:
+        def folder = tempDir.root.toAbsolutePath()
+
+        def file1 = folder.resolve('file1.txt')
+        def file2 = folder.resolve('file2.txt')
+        def file3 = folder.resolve('file3.txt')
+
+        // only file1 and file3 exist
+        file1.text = 'foo'
+        file3.text = 'bar'
+
+        when:
+        def ch = Channel.fromPath(file1.toString())
+        then:
+        ch.getVal() == file1
+        ch.getVal() == Channel.STOP
+
+        when:
+        ch = Channel.fromPath([file1.toString(), file2.toString()])
+        then:
+        ch.getVal() == file1
+        ch.getVal() == file2
+        ch.getVal() == Channel.STOP
+
+        when:
+        ch = Channel.fromPath(file1.toString(), checkIfExists: true)
+        then:
+        ch.getVal() == file1
+        ch.getVal() == Channel.STOP
+
+        when:
+        Channel.fromPath(file2.toString(), checkIfExists: true)
+        then:
+        def e = thrown(NoSuchFileException)
+        e.message == file2.toString()
+
+        when:
+        Channel.fromPath([file1, file2, file3], checkIfExists: true)
+        then:
+        e = thrown(NoSuchFileException)
+        e.message == file2.toString()
+
+        when:
+        Channel.fromPath('http://google.com/foo.txt', checkIfExists: true)
+        then:
+        e = thrown(NoSuchFileException)
+        e.message == 'http://google.com/foo.txt'
+    }
 
     def 'should return files prefix' () {
 
@@ -413,6 +488,27 @@ class ChannelTest extends Specification {
         pairs.val == Channel.STOP
     }
 
+    def 'should group files with the same prefix using a custom grouping' () {
+
+        setup:
+        def folder = TestHelper.createInMemTempDir()
+        def a1 = Files.createFile(folder.resolve('hello_1.fa'))
+        def a2 = Files.createFile(folder.resolve('hello_2.fa'))
+        def b1 = Files.createFile(folder.resolve('hola_1.fa'))
+        def b2 = Files.createFile(folder.resolve('hola_2.fa'))
+        def c1 = Files.createFile(folder.resolve('ciao_1.fa'))
+        def c2 = Files.createFile(folder.resolve('ciao_2.fa'))
+
+        when:
+        def grouping = { Path file -> file.name.substring(0,1) }
+        def pairs = Channel.fromFilePairs(folder.resolve("*_{1,2}.*"), grouping, size:-1)
+        then:
+        pairs.val == ['c', [c1, c2]]
+        pairs.val == ['h', [a1, a2, b1, b2]]
+        pairs.val == Channel.STOP
+
+    }
+
     def 'should group files with the same prefix and setting size' () {
 
         setup:
@@ -453,6 +549,31 @@ class ChannelTest extends Specification {
         pairs.val == ['alpha', [a1, a2, a3]]
         pairs.val == ['beta', [b1, b2, b3]]
         pairs.val == ['delta', [d1, d2, d3, d4]]
+        pairs.val == Channel.STOP
+
+    }
+
+    def 'should group file with a collection of patterns' () {
+
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def a1 = Files.createFile(folder.resolve('alpha_1.fa'))
+        def a2 = Files.createFile(folder.resolve('alpha_2.fa'))
+        def b1 = Files.createFile(folder.resolve('beta_1.fa'))
+        def b2 = Files.createFile(folder.resolve('beta_2.fa'))
+
+        def d1 = Files.createFile(folder.resolve('delta_1.fq'))
+        def d2 = Files.createFile(folder.resolve('delta_2.fq'))
+        def g1 = Files.createFile(folder.resolve('gamma_1.fq'))
+        def g2 = Files.createFile(folder.resolve('gamma_2.fq'))
+
+        when:
+        def pairs = Channel.fromFilePairs([folder.resolve("*_{1,2}.fa"), folder.resolve("$folder/*_{1,2}.fq")])
+        then:
+        pairs.val == ['alpha', [a1, a2]]
+        pairs.val == ['beta', [b1, b2]]
+        pairs.val == ['delta', [d1, d2]]
+        pairs.val == ['gamma', [g1, g2]]
         pairs.val == Channel.STOP
 
     }

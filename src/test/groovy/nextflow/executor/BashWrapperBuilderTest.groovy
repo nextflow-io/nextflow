@@ -25,12 +25,15 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.cloud.aws.batch.AwsOptions
 import nextflow.container.ContainerConfig
 import nextflow.container.DockerBuilder
+import nextflow.container.SingularityBuilder
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import spock.lang.Specification
+import spock.lang.Unroll
 import test.TestHelper
 /**
  *
@@ -419,15 +422,56 @@ class BashWrapperBuilderTest extends Specification {
                 nxf_s3_upload() {
                     local pattern=\$1
                     local s3path=\$2
-                    for name in \$(eval "ls -d \$pattern");do
+                    IFS=\$'\\n'
+                    for name in \$(eval "ls -1d \$pattern");do
                       if [[ -d "\$name" ]]; then
-                        aws s3 cp --only-show-errors --recursive --storage-class STANDARD \$name \$s3path/\$name
+                        aws s3 cp --only-show-errors --recursive --storage-class STANDARD "\$name" "\$s3path/\$name"
                       else
-                        aws s3 cp --only-show-errors --storage-class STANDARD \$name \$s3path/\$name
+                        aws s3 cp --only-show-errors --storage-class STANDARD "\$name" "\$s3path/\$name"
                       fi
-                  done
+                    done
+                    unset IFS
                 }
 
+                nxf_s3_download() {
+                    local source=\$1
+                    local target=\$2
+                    local file_name=\$(basename \$1)
+                    local is_dir=\$(aws s3 ls \$source | grep -F "PRE \${file_name}/" -c)
+                    if [[ \$is_dir == 1 ]]; then
+                        aws s3 cp --only-show-errors --recursive "\$source" "\$target"
+                    else 
+                        aws s3 cp --only-show-errors "\$source" "\$target"
+                    fi
+                }
+                
+                nxf_parallel() {
+                    local cmd=("\$@")
+                    local cpus=\$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
+                    local max=\$(if (( cpus>16 )); then echo 16; else echo \$cpus; fi)
+                    local i=0
+                    local pid=()
+                    (
+                    set +u
+                    while ((i<\${#cmd[@]})); do
+                        local copy=()
+                        for x in "\${pid[@]}"; do
+                          [[ -e /proc/\$x ]] && copy+=(\$x) 
+                        done
+                        pid=("\${copy[@]}")
+                
+                        if ((\${#pid[@]}>=\$max)); then 
+                          sleep 1 
+                        else 
+                          eval "\${cmd[\$i]}" &
+                          pid+=(\$!)
+                          ((i+=1))
+                        fi 
+                    done
+                    ((\${#pid[@]}>0)) && wait \${pid[@]}
+                    )
+                }     
+                
                 touch ${folder}/.command.begin
                 [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
@@ -563,109 +607,6 @@ class BashWrapperBuilderTest extends Specification {
                 wait \$tee1 \$tee2
                 """
                         .stripIndent().leftTrim()
-
-                folder.resolve('.command.stub').text ==
-                """
-                #!/bin/bash
-                set -e
-                set -u
-                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
-
-                nxf_kill() {
-                    declare -a ALL_CHILD
-                    while read P PP;do
-                        ALL_CHILD[\$PP]+=" \$P"
-                    done < <(ps -e -o pid= -o ppid=)
-
-                    walk() {
-                        [[ \$1 != \$\$ ]] && kill \$1 2>/dev/null || true
-                        for i in \${ALL_CHILD[\$1]:=}; do walk \$i; done
-                    }
-
-                    walk \$1
-                }
-
-                nxf_tree() {
-                    declare -a ALL_CHILD
-                    while read P PP;do
-                        ALL_CHILD[\$PP]+=" \$P"
-                    done < <(ps -e -o pid= -o ppid=)
-
-                    stat() {
-                        local x_ps=\$(ps -o pid= -o state= -o pcpu= -o pmem= -o vsz= -o rss= \$1)
-                        local x_io=\$(cat /proc/\$1/io 2> /dev/null | sed 's/^.*:\\s*//' | tr '\\n' ' ')
-                        local x_vm=\$(cat /proc/\$1/status 2> /dev/null | egrep 'VmPeak|VmHWM' | sed 's/^.*:\\s*//' | sed 's/[\\sa-zA-Z]*\$//' | tr '\\n' ' ')
-                        [[ ! \$x_ps ]] && return 0
-
-                        printf "\$x_ps"
-                        if [[ \$x_vm ]]; then printf " \$x_vm"; else printf " 0 0"; fi
-                        if [[ \$x_io ]]; then printf " \$x_io"; fi
-                        printf "\\n"
-                    }
-
-                    walk() {
-                        stat \$1
-                        for i in \${ALL_CHILD[\$1]:=}; do walk \$i; done
-                    }
-
-                    walk \$1
-                }
-
-                nxf_pstat() {
-                    local data=\$(nxf_tree \$1)
-                    local tot=''
-                    if [[ "\$data" ]]; then
-                      tot=\$(awk '{ t3+=(\$3*10); t4+=(\$4*10); t5+=\$5; t6+=\$6; t7+=\$7; t8+=\$8; t9+=\$9; t10+=\$10; t11+=\$11; t12+=\$12; t13+=\$13; t14+=\$14 } END { printf "%d 0 %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f\\n", NR,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14 }' <<< "\$data")
-                      printf "\$tot\\n" || true
-                    fi
-                }
-
-                nxf_sleep() {
-                  if [[ \$1 < 0 ]]; then sleep 5;
-                  elif [[ \$1 < 10 ]]; then sleep 0.1 2>/dev/null || sleep 1;
-                  elif [[ \$1 < 130 ]]; then sleep 1;
-                  else sleep 5; fi
-                }
-
-                nxf_date() {
-                    local ts=\$(date +%s%3N); [[ \$ts == *3N ]] && date +%s000 || echo \$ts
-                }
-
-                nxf_trace() {
-                  local pid=\$1; local trg=\$2;
-                  local tot;
-                  local count=0;
-                  declare -a max=(); for i in {0..13}; do max[i]=0; done
-                  while [[ true ]]; do
-                    tot=\$(nxf_pstat \$pid)
-                    [[ ! \$tot ]] && break
-                    IFS=' ' read -a val <<< "\$tot"; unset IFS
-                    for i in {0..13}; do
-                      [ \${val[i]} -gt \${max[i]} ] && max[i]=\${val[i]}
-                    done
-                    echo "pid state %cpu %mem vmem rss peak_vmem peak_rss rchar wchar syscr syscw read_bytes write_bytes" > \$trg
-                    echo "\${max[@]}" >> \$trg
-                    nxf_sleep \$count
-                    count=\$((count+1))
-                  done
-                }
-
-
-                trap 'exit \${ret:=\$?}' EXIT
-                touch .command.trace
-                start_millis=\$(nxf_date)
-                (
-                /bin/bash -ue ${folder}/.command.sh
-                ) &
-                pid=\$!
-                nxf_trace "\$pid" .command.trace &
-                mon=\$!
-                wait \$pid || ret=\$?
-                end_millis=\$(nxf_date)
-                nxf_kill \$mon || wait \$mon
-                echo \$((end_millis-start_millis)) >> .command.trace
-                """
-                    .stripIndent().leftTrim()
 
         cleanup:
         folder?.deleteDir()
@@ -910,112 +851,120 @@ class BashWrapperBuilderTest extends Specification {
                 """
                         .stripIndent().leftTrim()
 
-        folder.resolve('.command.stub').text ==
-            """
-            #!/bin/bash
-            set -e
-            set -u
-            NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 2 ]] && set -x
-
-            nxf_kill() {
-                declare -a ALL_CHILD
-                while read P PP;do
-                    ALL_CHILD[\$PP]+=" \$P"
-                done < <(ps -e -o pid= -o ppid=)
-
-                walk() {
-                    [[ \$1 != \$\$ ]] && kill \$1 2>/dev/null || true
-                    for i in \${ALL_CHILD[\$1]:=}; do walk \$i; done
-                }
-
-                walk \$1
-            }
-
-            nxf_tree() {
-                declare -a ALL_CHILD
-                while read P PP;do
-                    ALL_CHILD[\$PP]+=" \$P"
-                done < <(ps -e -o pid= -o ppid=)
-
-                stat() {
-                    local x_ps=\$(ps -o pid= -o state= -o pcpu= -o pmem= -o vsz= -o rss= \$1)
-                    local x_io=\$(cat /proc/\$1/io 2> /dev/null | sed 's/^.*:\\s*//' | tr '\\n' ' ')
-                    local x_vm=\$(cat /proc/\$1/status 2> /dev/null | egrep 'VmPeak|VmHWM' | sed 's/^.*:\\s*//' | sed 's/[\\sa-zA-Z]*\$//' | tr '\\n' ' ')
-                    [[ ! \$x_ps ]] && return 0
-
-                    printf "\$x_ps"
-                    if [[ \$x_vm ]]; then printf " \$x_vm"; else printf " 0 0"; fi
-                    if [[ \$x_io ]]; then printf " \$x_io"; fi
-                    printf "\\n"
-                }
-
-                walk() {
-                    stat \$1
-                    for i in \${ALL_CHILD[\$1]:=}; do walk \$i; done
-                }
-
-                walk \$1
-            }
-
-            nxf_pstat() {
-                local data=\$(nxf_tree \$1)
-                local tot=''
-                if [[ "\$data" ]]; then
-                  tot=\$(awk '{ t3+=(\$3*10); t4+=(\$4*10); t5+=\$5; t6+=\$6; t7+=\$7; t8+=\$8; t9+=\$9; t10+=\$10; t11+=\$11; t12+=\$12; t13+=\$13; t14+=\$14 } END { printf "%d 0 %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f\\n", NR,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14 }' <<< "\$data")
-                  printf "\$tot\\n" || true
-                fi
-            }
-
-            nxf_sleep() {
-              if [[ \$1 < 0 ]]; then sleep 5;
-              elif [[ \$1 < 10 ]]; then sleep 0.1 2>/dev/null || sleep 1;
-              elif [[ \$1 < 130 ]]; then sleep 1;
-              else sleep 5; fi
-            }
-
-            nxf_date() {
-                local ts=\$(date +%s%3N); [[ \$ts == *3N ]] && date +%s000 || echo \$ts
-            }
-
-            nxf_trace() {
-              local pid=\$1; local trg=\$2;
-              local tot;
-              local count=0;
-              declare -a max=(); for i in {0..13}; do max[i]=0; done
-              while [[ true ]]; do
-                tot=\$(nxf_pstat \$pid)
-                [[ ! \$tot ]] && break
-                IFS=' ' read -a val <<< "\$tot"; unset IFS
-                for i in {0..13}; do
-                  [ \${val[i]} -gt \${max[i]} ] && max[i]=\${val[i]}
-                done
-                echo "pid state %cpu %mem vmem rss peak_vmem peak_rss rchar wchar syscr syscw read_bytes write_bytes" > \$trg
-                echo "\${max[@]}" >> \$trg
-                nxf_sleep \$count
-                count=\$((count+1))
-              done
-            }
-
-
-            trap 'exit \${ret:=\$?}' EXIT
-            touch .command.trace
-            start_millis=\$(nxf_date)
-            (
-            /bin/bash -ue ${folder}/.command.sh < ${folder}/.command.in
-            ) &
-            pid=\$!
-            nxf_trace "\$pid" .command.trace &
-            mon=\$!
-            wait \$pid || ret=\$?
-            end_millis=\$(nxf_date)
-            nxf_kill \$mon || wait \$mon
-            echo \$((end_millis-start_millis)) >> .command.trace
-            """
-                    .stripIndent().leftTrim()
 
         cleanup:
         folder?.deleteDir()
     }
+
+    /**
+     * test running with Docker executed as 'sudo'
+     */
+    def 'test bash wrapper with conda env' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        /*
+         * simple bash run
+         */
+        when:
+        def bash = new BashWrapperBuilder([
+                name: 'Hello 1',
+                workDir: folder,
+                script: 'echo Hello world!',
+                condaEnv: Paths.get('/some/conda/env/foo')
+        ] as TaskBean )
+        bash.build()
+
+        then:
+        Files.exists(folder.resolve('.command.sh'))
+        Files.exists(folder.resolve('.command.run'))
+
+
+        folder.resolve('.command.run').text ==
+                """
+                #!/bin/bash
+                # NEXTFLOW TASK: Hello 1
+                set -e
+                set -u
+                NXF_DEBUG=\${NXF_DEBUG:=0}; [[ \$NXF_DEBUG > 1 ]] && set -x
+
+                nxf_env() {
+                    echo '============= task environment ============='
+                    env | sort | sed "s/\\(.*\\)AWS\\(.*\\)=\\(.\\{6\\}\\).*/\\1AWS\\2=\\3xxxxxxxxxxxxx/"
+                    echo '============= task output =================='
+                }
+
+                nxf_kill() {
+                    declare -a ALL_CHILD
+                    while read P PP;do
+                        ALL_CHILD[\$PP]+=" \$P"
+                    done < <(ps -e -o pid= -o ppid=)
+
+                    walk() {
+                        [[ \$1 != \$\$ ]] && kill \$1 2>/dev/null || true
+                        for i in \${ALL_CHILD[\$1]:=}; do walk \$i; done
+                    }
+
+                    walk \$1
+                }
+
+                nxf_mktemp() {
+                    local base=\${1:-/tmp}
+                    if [[ \$(uname) = Darwin ]]; then mktemp -d \$base/nxf.XXXXXXXXXX
+                    else TMPDIR="\$base" mktemp -d -t nxf.XXXXXXXXXX
+                    fi
+                }
+
+                on_exit() {
+                  exit_status=\${ret:=\$?}
+                  printf \$exit_status > ${folder}/.exitcode
+                  set +u
+                  [[ "\$tee1" ]] && kill \$tee1 2>/dev/null
+                  [[ "\$tee2" ]] && kill \$tee2 2>/dev/null
+                  [[ "\$ctmp" ]] && rm -rf \$ctmp || true
+                  exit \$exit_status
+                }
+
+                on_term() {
+                    set +e
+                    [[ "\$pid" ]] && nxf_kill \$pid
+                }
+
+                trap on_exit EXIT
+                trap on_term TERM INT USR1 USR2
+
+                NXF_SCRATCH=''
+                [[ \$NXF_DEBUG > 0 ]] && nxf_env
+                touch ${folder}/.command.begin
+                set +u
+                # conda environment
+                source activate /some/conda/env/foo
+                set -u
+                [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
+
+                set +e
+                ctmp=\$(set +u; nxf_mktemp /dev/shm 2>/dev/null || nxf_mktemp \$TMPDIR)
+                cout=\$ctmp/.command.out; mkfifo \$cout
+                cerr=\$ctmp/.command.err; mkfifo \$cerr
+                tee .command.out < \$cout &
+                tee1=\$!
+                tee .command.err < \$cerr >&2 &
+                tee2=\$!
+                (
+                /bin/bash -ue ${folder}/.command.sh
+                ) >\$cout 2>\$cerr &
+                pid=\$!
+                wait \$pid || ret=\$?
+                wait \$tee1 \$tee2
+                """
+                        .stripIndent().leftTrim()
+
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 
     /**
      * test running with Docker executed as 'sudo'
@@ -1707,35 +1656,6 @@ class BashWrapperBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
-    def 'should append chown command to fix ownership of files created by docker' () {
-
-        given:
-        def folder = TestHelper.createInMemTempDir()
-
-        /*
-          * bash run through docker
-          */
-        when:
-        def bash = new BashWrapperBuilder([
-                workDir: folder,
-                script: 'echo Hello world!',
-                containerEnabled: true,
-                containerImage: 'sl65',
-                containerConfig: [enabled: true, fixOwnership: true, engine: 'docker'] as ContainerConfig
-                ] as TaskBean)
-        bash.systemOsName = 'Linux'
-        bash.build()
-
-        then:
-
-        folder.resolve('.command.stub').readLines()[-2..-1].join('\n') ==
-                """
-                # patch root ownership problem of files created with docker
-                [ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${folder}/{*,.*} || true
-                """
-                        .stripIndent().trim()
-
-    }
 
     def 'should create script for docker executable container' () {
         given:
@@ -1763,7 +1683,7 @@ class BashWrapperBuilderTest extends Specification {
                 """
                 #!/bin/bash -ue
                 FOO=bar
-                docker run -i -e "NXF_DEBUG=\${NXF_DEBUG:=0}" -e "FOO=bar" -v $folder:$folder -v "\$PWD":"\$PWD" -w "\$PWD" --name \$NXF_BOXID docker-io/busybox --fox --baz
+                docker run -i -e "FOO=bar" -v $folder:$folder -v "\$PWD":"\$PWD" -w "\$PWD" --name \$NXF_BOXID docker-io/busybox --fox --baz
                 """
                 .stripIndent().leftTrim()
 
@@ -2237,6 +2157,7 @@ class BashWrapperBuilderTest extends Specification {
                     NXF_SCRATCH=\'\'
                     [[ \$NXF_DEBUG > 0 ]] && nxf_env
                     touch ${folder}/.command.begin
+                    set +u
                     nxf_module_load(){
                       local mod=\$1
                       local ver=\${2:-}
@@ -2255,6 +2176,7 @@ class BashWrapperBuilderTest extends Specification {
                     nxf_module_load xx 1.2
                     nxf_module_load yy 3.4
 
+                    set -u
                     # task environment
                     export DELTA="1"
                     export OMEGA="2"
@@ -2343,6 +2265,7 @@ class BashWrapperBuilderTest extends Specification {
                     NXF_SCRATCH=\'\'
                     [[ \$NXF_DEBUG > 0 ]] && nxf_env
                     touch ${folder}/.command.begin
+                    set +u
                     nxf_module_load(){
                       local mod=\$1
                       local ver=\${2:-}
@@ -2362,6 +2285,7 @@ class BashWrapperBuilderTest extends Specification {
                     nxf_module_load mondo 2
                     nxf_module_load bioinfo-tools
 
+                    set -u
                     [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
                     set +e
@@ -2470,8 +2394,10 @@ class BashWrapperBuilderTest extends Specification {
                 NXF_SCRATCH=''
                 [[ \$NXF_DEBUG > 0 ]] && nxf_env
                 touch ${folder}/.command.begin
+                set +u
                 # user `beforeScript`
                 init this
+                set -u
                 [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
                 set +e
@@ -2630,7 +2556,7 @@ class BashWrapperBuilderTest extends Specification {
                 tee2=\$!
                 (
                 shifter_pull docker:ubuntu:latest
-                NXF_DEBUG=\${NXF_DEBUG:=0} shifter --image docker:ubuntu:latest /bin/bash -c "eval \$(nxf_taskenv); /bin/bash -ue ${folder}/.command.sh"
+                shifter --image docker:ubuntu:latest /bin/bash -c "eval \$(nxf_taskenv); /bin/bash -ue ${folder}/.command.sh"
                 ) >\$cout 2>\$cerr &
                 pid=\$!
                 wait \$pid || ret=\$?
@@ -2731,6 +2657,445 @@ class BashWrapperBuilderTest extends Specification {
 
     }
 
+    @Unroll
+    def 'check legacy stub script flag' () {
+        given:
+        def builder = Spy(BashWrapperBuilder)
 
+        when:
+        def flag = builder.isLegacyStubScript()
+        then:
+        builder.isMacOS() >> IS_MAC
+        builder.isContainerEnabled() >> IS_CONTAINER
+        flag == IS_LEGACY
+
+        where:
+        IS_MAC  | IS_CONTAINER  | IS_LEGACY
+        false   | false         | false
+        false   | true          | false
+        true    | false         | true
+        true    | true          | false
+    }
+
+    def 'should return stub script for mac' () {
+        given:
+        def stub = Files.createTempFile('test',null)
+        def copy = Mock(ScriptFileCopyStrategy)
+        def bean = Mock(TaskBean)
+
+        def builder = Spy(BashWrapperBuilder)
+        builder.copyStrategy = copy
+        builder.stubFile = stub
+        builder.scriptFile = Paths.get('my-command.sh')
+        builder.bean = bean
+
+        when:
+        builder.createStubScript('/bin/bash')
+
+        then:
+        builder
+        1 * builder.isLegacyStubScript() >> true
+        1 * builder.fixOwnership() >> false
+        _ * copy.fileStr(_ as Path) >>  { Path path -> path.getFileName().toString() }
+        _ * copy.pipeInputFile(_ as Path) >> { " < ${it.getFileName()}"  }
+
+        stub.text == '''
+                #!/bin/bash
+                set -e
+                set -u
+                NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 2 ]] && set -x
+                
+                nxf_tree() {
+                    declare -a ALL_CHILD
+                    while read P PP;do
+                        ALL_CHILD[$PP]+=" $P"
+                    done < <(ps -e -o pid= -o ppid=)
+                
+                    stat() {
+                        local x_ps=$(ps -o pid= -o state= -o pcpu= -o pmem= -o vsz= -o rss= $1)
+                        local x_io=$(cat /proc/$1/io 2> /dev/null | sed 's/^.*:\\s*//' | tr '\\n' ' ')
+                        local x_vm=$(cat /proc/$1/status 2> /dev/null | egrep 'VmPeak|VmHWM' | sed 's/^.*:\\s*//' | sed 's/[\\sa-zA-Z]*$//' | tr '\\n' ' ')
+                        [[ ! $x_ps ]] && return 0
+                
+                        printf "$x_ps"
+                        if [[ $x_vm ]]; then printf " $x_vm"; else printf " 0 0"; fi
+                        if [[ $x_io ]]; then printf " $x_io"; fi
+                        printf "\\n"
+                    }
+                
+                    walk() {
+                        stat $1
+                        for i in ${ALL_CHILD[$1]:=}; do walk $i; done
+                    }
+                
+                    walk $1
+                }
+                
+                nxf_pstat() {
+                    local data=$(nxf_tree $1)
+                    local tot=\'\'
+                    if [[ "$data" ]]; then
+                      tot=$(awk '{ t3+=($3*10); t4+=($4*10); t5+=$5; t6+=$6; t7+=$7; t8+=$8; t9+=$9; t10+=$10; t11+=$11; t12+=$12; t13+=$13; t14+=$14 } END { printf "%d 0 %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f\\n", NR,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14 }' <<< "$data")
+                      printf "$tot\\n" || true
+                    fi
+                }
+                
+                nxf_sleep() {
+                  if [[ $1 < 0 ]]; then sleep 5;
+                  elif [[ $1 < 10 ]]; then sleep 0.1 2>/dev/null || sleep 1;
+                  elif [[ $1 < 130 ]]; then sleep 1;
+                  else sleep 5; fi
+                }
+                
+                nxf_date() {
+                    local ts=$(date +%s%3N); [[ $ts == *3N ]] && date +%s000 || echo $ts
+                }
+                
+                nxf_trace() {
+                  local pid=$1; local trg=$2;
+                  local tot;
+                  local count=0;
+                  declare -a max=(); for i in {0..13}; do max[i]=0; done
+                  while [[ true ]]; do
+                    if ! kill -0 $pid 2>/dev/null; then exit 0; fi
+                    tot=$(nxf_pstat $pid)
+                    [[ ! $tot ]] && break
+                    IFS=' ' read -a val <<< "$tot"; unset IFS
+                    for i in {0..13}; do
+                      [ ${val[i]} -gt ${max[i]} ] && max[i]=${val[i]}
+                    done
+                    echo "pid state %cpu %mem vmem rss peak_vmem peak_rss rchar wchar syscr syscw read_bytes write_bytes" > $trg
+                    echo "${max[@]}" >> $trg
+                    nxf_sleep $count
+                    count=$((count+1))
+                  done
+                }
+                
+                
+                trap 'exit ${ret:=$?}' EXIT
+                touch .command.trace
+                start_millis=$(nxf_date)
+                (
+                /bin/bash my-command.sh
+                ) &
+                pid=$!
+                nxf_trace "$pid" .command.trace &
+                mon=$!
+                wait $pid || ret=$?
+                end_millis=$(nxf_date)
+                wait $mon
+                echo $((end_millis-start_millis)) >> .command.trace
+                '''
+                .stripIndent().leftTrim()
+
+        cleanup:
+        stub?.delete()
+    }
+
+    def 'should return stub script for linux' () {
+        given:
+        def stub = Files.createTempFile('test',null)
+        def copy = Mock(ScriptFileCopyStrategy)
+        def bean = Mock(TaskBean)
+
+        def builder = Spy(BashWrapperBuilder)
+        builder.copyStrategy = copy
+        builder.stubFile = stub
+        builder.scriptFile = Paths.get('my-command.sh')
+        builder.bean = bean
+
+        when:
+        builder.createStubScript('/bin/bash')
+
+        then:
+        builder
+        1 * builder.isLegacyStubScript() >> false
+        1 * builder.fixOwnership() >> false
+        _ * copy.fileStr(_ as Path) >>  { Path it -> it.getFileName().toString() }
+        _ * copy.pipeInputFile(_ as Path) >> { " < ${it.getFileName()}"  }
+
+        stub.text == '''
+                #!/bin/bash
+                set -e
+                set -u
+                NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 2 ]] && set -x
+                
+                set -o pipefail
+                prev_total=0
+                declare -a prev_time
+                mem_tot=$(< /proc/meminfo grep MemTotal | awk '{print $2}')
+                num_cpus=$(< /proc/cpuinfo grep '^processor' -c)
+                
+                nxf_pcpu() {
+                    local pid=$1
+                    local proc_time=$(2> /dev/null < /proc/$pid/stat awk '{sum=$14+$15+$16+$17; printf "%.0f",sum}' || echo -n 0)
+                    local cpu_usage=$(echo -n $proc_time ${prev_time[pid]:-0} $total_time $prev_total $num_cpus | awk '{ pct=($1-$2)/($3-$4)*$5 *100; printf "%.1f", pct }' )
+                    prev_time[pid]=$proc_time
+                    nxf_pcpu_ret=$cpu_usage
+                }
+                
+                nxf_tree() {
+                    declare -a ALL_CHILD
+                    while read P PP;do
+                        ALL_CHILD[$PP]+=" $P"
+                    done < <(ps -e -o pid= -o ppid=)
+                
+                    stat() {
+                        nxf_pcpu $1 
+                        local x_pid=$1
+                        local x_stat=$(2> /dev/null < /proc/$1/stat awk '{print $3}' || echo -n X)
+                        local x_pcpu=$nxf_pcpu_ret
+                        
+                        local x_vsz=$(2> /dev/null < /proc/$1/stat awk '{printf "%.0f", $23/1024}' || echo -n 0)
+                        local x_rss=$(2> /dev/null < /proc/$1/status grep VmRSS | awk '{print $2}' || echo -n 0)
+                        local x_pmem=$(echo $x_rss | awk -v mem_tot=$mem_tot '{printf "%.1f", $1/mem_tot*100}')
+
+                        local x_io=$(2> /dev/null < /proc/$1/io sed 's/^.*:\\s*//' | tr '\\n' ' ' || echo -n 0)
+                        local x_vm=$(2> /dev/null < /proc/$1/status egrep 'VmPeak|VmHWM' | sed 's/^.*:\\s*//' | sed 's/[\\sa-zA-Z]*$//' | tr '\\n' ' ' || echo -n 0)
+                
+                        stat_ret+="$x_pid $x_stat $x_pcpu $x_pmem $x_vsz $x_rss"
+                        if [[ $x_vm ]]; then stat_ret+=" $x_vm"; else stat_ret+=" 0 0"; fi
+                        if [[ $x_io ]]; then stat_ret+=" $x_io"; fi
+                        stat_ret+='\\n\'
+                    }
+                
+                    walk() {
+                        stat $1 
+                        for i in ${ALL_CHILD[$1]:=}; do walk $i; done
+                    }
+                
+                    stat_ret=\'\'
+                    total_time=$(grep '^cpu ' /proc/stat |awk '{sum=$2+$3+$4+$5+$6+$7+$8+$9+$10; printf "%.0f",sum}')
+                    walk $1
+                    prev_total=$total_time
+                    nxf_tree_ret=$stat_ret  
+                }
+                
+                nxf_pstat() {
+                    nxf_tree $1
+                    if [[ "$nxf_tree_ret" ]]; then
+                      nxf_pstat_ret=$(printf "$nxf_tree_ret" | awk '{ t3+=($3*10); t4+=($4*10); t5+=$5; t6+=$6; t7+=$7; t8+=$8; t9+=$9; t10+=$10; t11+=$11; t12+=$12; t13+=$13; t14+=$14 } END { printf "%d 0 %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f\\n", NR,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14 }')
+                    else
+                      nxf_pstat_ret=''  
+                    fi
+                }
+                
+                nxf_sleep() {
+                  if [[ $1 < 0 ]]; then sleep 5;
+                  elif [[ $1 < 10 ]]; then sleep 0.1 2>/dev/null || sleep 1;
+                  elif [[ $1 < 130 ]]; then sleep 1;
+                  else sleep 5; fi
+                }
+                
+                nxf_date() {
+                    local ts=$(date +%s%3N); [[ $ts == *3N ]] && date +%s000 || echo $ts
+                }
+                
+                nxf_trace() {
+                  local pid=$1; local trg=$2;
+                  local count=0;
+                  declare -a max=(); for i in {0..13}; do max[i]=0; done
+                  while [[ -d /proc/$pid ]]; do
+                    nxf_pstat $pid
+                    [[ ! "$nxf_pstat_ret" ]] && break
+                    IFS=' ' read -a val <<< "$nxf_pstat_ret"; unset IFS
+                    for i in {0..13}; do
+                      [ ${val[i]} -gt ${max[i]} ] && max[i]=${val[i]}
+                    done
+                    echo "pid state %cpu %mem vmem rss peak_vmem peak_rss rchar wchar syscr syscw read_bytes write_bytes" > $trg
+                    echo "${max[@]}" >> $trg
+                    nxf_sleep $count
+                    count=$((count+1))
+                  done
+                } 
+                
+                
+                trap 'exit ${ret:=$?}' EXIT
+                touch .command.trace
+                start_millis=$(nxf_date)
+                (
+                /bin/bash my-command.sh
+                ) &
+                pid=$!
+                nxf_trace "$pid" .command.trace &
+                mon=$!
+                wait $pid || ret=$?
+                end_millis=$(nxf_date)
+                wait $mon
+                echo $((end_millis-start_millis)) >> .command.trace
+                '''
+                .stripIndent().leftTrim()
+
+        cleanup:
+        stub?.delete()
+    }
+
+    def 'should return stub script for linux with input and fixOwnership' () {
+        given:
+        def stub = Files.createTempFile('test',null)
+        def copy = Mock(ScriptFileCopyStrategy)
+        def bean = Mock(TaskBean)
+
+        def builder = Spy(BashWrapperBuilder)
+        builder.copyStrategy = copy
+        builder.stubFile = stub
+        builder.scriptFile = Paths.get('my-command.sh')
+        builder.bean = bean
+        builder.bean.input = 'hello world'
+
+        when:
+        builder.createStubScript('/bin/bash')
+
+        then:
+        builder
+        1 * builder.isLegacyStubScript() >> false
+        1 * builder.fixOwnership() >> true
+        _ * copy.fileStr(_ as Path) >>  { Path it -> it.getFileName().toString() }
+        _ * copy.pipeInputFile(_ as Path) >> { " < ${it.getFileName()}"  }
+
+        stub.text == '''
+                #!/bin/bash
+                set -e
+                set -u
+                NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 2 ]] && set -x
+                
+                set -o pipefail
+                prev_total=0
+                declare -a prev_time
+                mem_tot=$(< /proc/meminfo grep MemTotal | awk '{print $2}')
+                num_cpus=$(< /proc/cpuinfo grep '^processor' -c)
+                
+                nxf_pcpu() {
+                    local pid=$1
+                    local proc_time=$(2> /dev/null < /proc/$pid/stat awk '{sum=$14+$15+$16+$17; printf "%.0f",sum}' || echo -n 0)
+                    local cpu_usage=$(echo -n $proc_time ${prev_time[pid]:-0} $total_time $prev_total $num_cpus | awk '{ pct=($1-$2)/($3-$4)*$5 *100; printf "%.1f", pct }' )
+                    prev_time[pid]=$proc_time
+                    nxf_pcpu_ret=$cpu_usage
+                }
+                
+                nxf_tree() {
+                    declare -a ALL_CHILD
+                    while read P PP;do
+                        ALL_CHILD[$PP]+=" $P"
+                    done < <(ps -e -o pid= -o ppid=)
+                
+                    stat() {
+                        nxf_pcpu $1 
+                        local x_pid=$1
+                        local x_stat=$(2> /dev/null < /proc/$1/stat awk '{print $3}' || echo -n X)
+                        local x_pcpu=$nxf_pcpu_ret
+
+                        local x_vsz=$(2> /dev/null < /proc/$1/stat awk '{printf "%.0f", $23/1024}' || echo -n 0)
+                        local x_rss=$(2> /dev/null < /proc/$1/status grep VmRSS | awk '{print $2}' || echo -n 0)
+                        local x_pmem=$(echo $x_rss | awk -v mem_tot=$mem_tot '{printf "%.1f", $1/mem_tot*100}')
+                
+                        local x_io=$(2> /dev/null < /proc/$1/io sed 's/^.*:\\s*//' | tr '\\n' ' ' || echo -n 0)
+                        local x_vm=$(2> /dev/null < /proc/$1/status egrep 'VmPeak|VmHWM' | sed 's/^.*:\\s*//' | sed 's/[\\sa-zA-Z]*$//' | tr '\\n' ' ' || echo -n 0)
+                
+                        stat_ret+="$x_pid $x_stat $x_pcpu $x_pmem $x_vsz $x_rss"
+                        if [[ $x_vm ]]; then stat_ret+=" $x_vm"; else stat_ret+=" 0 0"; fi
+                        if [[ $x_io ]]; then stat_ret+=" $x_io"; fi
+                        stat_ret+='\\n\'
+                    }
+                
+                    walk() {
+                        stat $1 
+                        for i in ${ALL_CHILD[$1]:=}; do walk $i; done
+                    }
+                
+                    stat_ret=\'\'
+                    total_time=$(grep '^cpu ' /proc/stat |awk '{sum=$2+$3+$4+$5+$6+$7+$8+$9+$10; printf "%.0f",sum}')
+                    walk $1
+                    prev_total=$total_time
+                    nxf_tree_ret=$stat_ret  
+                }
+                
+                nxf_pstat() {
+                    nxf_tree $1
+                    if [[ "$nxf_tree_ret" ]]; then
+                      nxf_pstat_ret=$(printf "$nxf_tree_ret" | awk '{ t3+=($3*10); t4+=($4*10); t5+=$5; t6+=$6; t7+=$7; t8+=$8; t9+=$9; t10+=$10; t11+=$11; t12+=$12; t13+=$13; t14+=$14 } END { printf "%d 0 %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f\\n", NR,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14 }')
+                    else
+                      nxf_pstat_ret=''  
+                    fi
+                }
+                
+                nxf_sleep() {
+                  if [[ $1 < 0 ]]; then sleep 5;
+                  elif [[ $1 < 10 ]]; then sleep 0.1 2>/dev/null || sleep 1;
+                  elif [[ $1 < 130 ]]; then sleep 1;
+                  else sleep 5; fi
+                }
+                
+                nxf_date() {
+                    local ts=$(date +%s%3N); [[ $ts == *3N ]] && date +%s000 || echo $ts
+                }
+                
+                nxf_trace() {
+                  local pid=$1; local trg=$2;
+                  local count=0;
+                  declare -a max=(); for i in {0..13}; do max[i]=0; done
+                  while [[ -d /proc/$pid ]]; do
+                    nxf_pstat $pid
+                    [[ ! "$nxf_pstat_ret" ]] && break
+                    IFS=' ' read -a val <<< "$nxf_pstat_ret"; unset IFS
+                    for i in {0..13}; do
+                      [ ${val[i]} -gt ${max[i]} ] && max[i]=${val[i]}
+                    done
+                    echo "pid state %cpu %mem vmem rss peak_vmem peak_rss rchar wchar syscr syscw read_bytes write_bytes" > $trg
+                    echo "${max[@]}" >> $trg
+                    nxf_sleep $count
+                    count=$((count+1))
+                  done
+                } 
+                
+                
+                trap 'exit ${ret:=$?}' EXIT
+                touch .command.trace
+                start_millis=$(nxf_date)
+                (
+                /bin/bash my-command.sh
+                ) &
+                pid=$!
+                nxf_trace "$pid" .command.trace &
+                mon=$!
+                wait $pid || ret=$?
+                end_millis=$(nxf_date)
+                wait $mon
+                echo $((end_millis-start_millis)) >> .command.trace
+                
+                # patch root ownership problem of files created with docker
+                [ ${NXF_OWNER:=''} ] && chown -fR --from root $NXF_OWNER null/{*,.*} || true
+                '''
+                .stripIndent().leftTrim()
+
+        cleanup:
+        stub?.delete()
+    }
+
+    def 'should create container env' () {
+        given:
+        def bash = Spy(BashWrapperBuilder)
+
+        when:
+        def builder = bash.createContainerBuilder(null)
+        then:
+        bash.getEnvironment() >> [:]
+        bash.getBinDir() >> Paths.get('/my/bin')
+        bash.getWorkDir() >> Paths.get('/my/work/dir')
+        bash.getStatsEnabled() >> false
+
+        bash.getResolvedInputs() >> [:]
+        bash.getContainerConfig() >> [engine: 'singularity', envWhitelist: 'FOO,BAR']
+        bash.getContainerImage() >> 'foo/bar'
+        bash.getContainerExecutable() >> false
+        bash.getContainerMount() >> null
+        bash.getContainerMemory() >> null
+        bash.getContainerCpuset() >> null
+        bash.getContainerOptions() >> null
+
+        builder instanceof SingularityBuilder
+        builder.env == ['FOO','BAR']
+        builder.workDir == Paths.get('/my/work/dir')
+    }
 
 }

@@ -95,6 +95,9 @@ class VersionNumberTest extends Specification {
         '1.2'       | '= 1.0'       | false
         '1.2'       | '< 1.0'       | false
 
+        '1.2'       | '>1.0, <=1.2' | true
+        '1.2'       | '>1.0, <1.1'  | false
+
     }
 
     @Unroll
@@ -135,4 +138,9 @@ class VersionNumberTest extends Specification {
         '1.2'       | '2+'          | false
     }
 
+    def 'should match hashCode' () {
+        expect:
+        new VersionNumber('1.0.0').hashCode() == new VersionNumber('1.0.0').hashCode()
+        new VersionNumber('1.0.0').hashCode() != new VersionNumber('1.0.1').hashCode()
+    }
 }

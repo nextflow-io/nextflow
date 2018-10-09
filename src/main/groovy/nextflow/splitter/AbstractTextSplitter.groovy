@@ -23,13 +23,20 @@ import java.nio.charset.Charset
 import java.nio.charset.CharsetDecoder
 import java.nio.file.Path
 
+import com.google.common.hash.HashCode
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.Nextflow
 import nextflow.exception.AbortOperationException
+import nextflow.util.CacheHelper
 import nextflow.util.CharsetHelper
+
+import nextflow.splitter.TextFileCollector.CachePath
+
 /**
  * Implements an abstract text splitting for the main types
  *
@@ -110,22 +117,22 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
     protected Reader normalizeSource( obj ) {
 
         if( obj instanceof Reader )
-            return (Reader) obj
+            return (Reader)obj
 
         if( obj instanceof CharSequence )
             return new StringReader(obj.toString())
 
         if( obj instanceof Path )
-            return newReader(obj, charset)
+            return newReader((Path)obj, charset)
 
         if( obj instanceof InputStream )
-            return new InputStreamReader(obj,charset)
+            return new InputStreamReader((InputStream)obj,charset)
 
         if( obj instanceof File )
             return newReader(obj.toPath(), charset)
 
         if( obj instanceof char[] )
-            return new StringReader(new String(obj))
+            return new StringReader(new String((char[])obj))
 
         throw new IllegalArgumentException("Object of class '${obj.class.name}' does not support 'splitter' methods")
 
@@ -242,8 +249,8 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
             return new ObjectListCollector()
 
         if( fileMode ) {
-            def baseFile = getCollectorBaseFile()
-            return new TextFileCollector(baseFile, charset, compress)
+            def base = getCollectorBaseFile()
+            return new TextFileCollector(base, charset, compress)
         }
 
         return new CharSequenceCollector()
@@ -269,22 +276,28 @@ abstract class AbstractTextSplitter extends AbstractSplitter<Reader> {
      * @return A path where file chunks are cached
      */
     @PackageScope
-    Path getCollectorBaseFile () {
+    CachePath getCollectorBaseFile () {
 
         final fileName = getCollectFileName()
         log.trace "Splitter collector file name: $fileName"
 
-        Path result
+        CachePath result
         if( collectPath ) {
-            result = collectPath.isDirectory() ? collectPath.resolve(fileName) : collectPath
+            final file = sourceFile ?: targetObj
+            final path = collectPath.isDirectory() ? collectPath.resolve(fileName) : collectPath
+            final keys = [Global?.session?.uniqueId, file, getCacheableOptions()]
+            final hash = CacheHelper.hasher(keys).hash()
+            result = new CachePath(path,hash)
         }
 
         else if( sourceFile ) {
-            result = Nextflow.cacheableFile( [sourceFile, getCacheableOptions()], fileName)
+            final path = Nextflow.cacheableFile( [sourceFile, getCacheableOptions()], fileName)
+            result = new CachePath(path)
         }
 
         else {
-            result = Nextflow.cacheableFile( [targetObj, getCacheableOptions()], fileName )
+            final path = Nextflow.cacheableFile( [targetObj, getCacheableOptions()], fileName )
+            result = new CachePath(path)
         }
 
         log.debug "Splitter `$operatorName` collector path: $result"

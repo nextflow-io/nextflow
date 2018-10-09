@@ -267,3 +267,13 @@ This is also useful if all the items of a channel are required to be in the work
         """
     }
 
+How do I use a specific version of Nextflow?
+------------------------------------------------------
+
+*Q: I need to specify a version of Nextflow to use, or I need to pull a snapshot release.*
+
+A: Sometimes it is necessary to use a different version of Nextflow for a specific feature or testing purposes. Nextflow is able to automatically pull versions when the ``NXF_VER`` environment variable is defined on the commandline. 
+
+::
+
+    NXF_VER=0.28.0 nextflow run main.nf

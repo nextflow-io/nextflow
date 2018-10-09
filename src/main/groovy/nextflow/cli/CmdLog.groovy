@@ -47,8 +47,6 @@ import static nextflow.cli.CmdHelper.fixEqualsOp
 @Parameters(commandDescription = "Print executions log and runtime info")
 class CmdLog extends CmdBase implements CacheBase {
 
-    static private int MAX_LINES = 100
-
     static private List<String> ALL_FIELDS
 
     static private DEFAULT_FIELDS = 'workdir'
@@ -225,6 +223,8 @@ class CmdLog extends CmdBase implements CacheBase {
      * Wrap a {@link TraceRecord} instance as a {@link Map} or a {@link Binding} object
      */
     private static class TraceAdaptor extends Binding {
+
+        static private int MAX_LINES = 100
 
         private TraceRecord record
 

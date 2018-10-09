@@ -19,6 +19,7 @@
  */
 
 package nextflow.file
+
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.Callable
@@ -31,8 +32,10 @@ import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
-import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
+import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
@@ -145,7 +148,9 @@ class FilePorter {
         return FileHelper.copyPath(source, target)
     }
 
-    @Canonical
+    @ToString
+    @EqualsAndHashCode
+    @TupleConstructor
     static private class NamePathPair {
         String name
         Path path

@@ -687,6 +687,30 @@ class FunctionalTests extends Specification {
         processor instanceof TaskProcessor
         processor.config.label.size() == 2
         processor.config.label == [ 'bravo', 'gamma' ]
+    }
 
+    def 'should create process with repeater'() {
+
+        when:
+        def CONFIG = '''
+            process {
+                executor = 'nope'
+            }
+            '''
+
+        def script = '''   
+                process foo {
+                    input:
+                    each x from (1,2,3)
+                    script:
+                    'echo hello'
+                }
+                '''
+
+        def cfg = new ConfigParser().parse(CONFIG)
+        def runner = new ScriptRunner(cfg)
+        runner.setScript(script).execute()
+        then:
+        noExceptionThrown()
     }
 }

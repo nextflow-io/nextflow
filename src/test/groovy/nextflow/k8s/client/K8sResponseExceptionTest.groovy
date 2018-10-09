@@ -37,10 +37,11 @@ class K8sResponseExceptionTest extends Specification {
         then:
         resp.getMessage() == '''
                             Request /this/that failed
-                             {
-                                 "foo": "one",
-                                 "bar": "two"
-                             }
+                            
+                              {
+                                  "foo": "one",
+                                  "bar": "two"
+                              }
                             '''.stripIndent().leftTrim()
     }
 
@@ -52,9 +53,6 @@ class K8sResponseExceptionTest extends Specification {
                 'Request /this/that failed',
                 new K8sResponseJson('Oops.. it crashed badly'))
         then:
-        resp.getMessage() == '''
-                            Request /this/that failed
-                            > Oops.. it crashed badly
-                            '''.stripIndent().leftTrim()
+        resp.getMessage() == 'Request /this/that failed -- Oops.. it crashed badly'
     }
 }
