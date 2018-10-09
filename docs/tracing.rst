@@ -225,18 +225,20 @@ The DAG produced by Nextflow for the `Shootstrap <https://github.com/cbcrg/shoot
 Weblog via HTTP
 ===============
 
-In order to enable Nextflow to send detailed trace reports via HTTP POST requests, add the following command line option::
+Nextflow is able to send detailed workflow execution metadata and runtime statistics to a HTTP endpoint.
+To enable this feature use  the ``-with-weblog`` as shown below::
 
   nextflow run <pipeline name> -with-weblog [url]
 
-Nextflow will then take trace information and send it as JSON object to the given URL. An JSON message is structured like this::
+Workflow events are sent as HTTP POST requests to the given URL. The message is formatted using the
+following JSON structure::
 
    {
         "runName": <run name>,
         "runId": <uuid>,
         "runStatus": <started|process_submitted|process_started|process_completed|error|completed>,
         "utcTime": <UTC timestamp>,
-        ("trace": { ... })
+        "trace": { ... }
    }
 
 The JSON object contains the following attributes:
@@ -244,27 +246,22 @@ The JSON object contains the following attributes:
 ================== ================
 Attribute          Description
 ================== ================
-runName            The worklow run name. Nextflow creates an own, if you do not provide one explicitly.
-runId              The unique workflow id Nextflow creates for every workflow.
-runStatus          The current status of the workflow. One of ``["started", "process_submitted", "process_started", "process_completed", "error", "completed"]``.
+runName            The workflow execution run name.
+runId              The workflow execution unique ID.
+runStatus          The workflow execution status. One of ``started``, ``process_submitted``, ``process_started``, ``process_completed``, ``error``, ``completed``.
 utcTime            The UTC timestamp in ISO 8601 format.
-(trace)            Provided only on process **submission**, **process start**, **process complete** and **workflow error**.
+trace              A process runtime information as described in the :ref:`trace fields<trace-fields>` section. This attribute is only provided for the following events: ``process_submitted``, ``process_started``, ``process_completed``, ``error``.
 ================== ================
 
-The ``trace`` attribute contains a list of trace information fields, which you can look up in the :ref:`trace fields<trace-fields>` description.
-
-The content will be send as type ``application/json``, and can be consumed by the target REST endpoint.
-
-.. warning:: In order to log the **complete** trace information, you have to define all :ref:`trace fields<trace-fields>` in the config first (either you go for ``nextflow.config``, or you define a :ref:`profile<config-profiles>`)
+.. warning::
+  The content of the ``trace`` attribute depends on the settings for the `Trace report <trace-report>`_ defined in the
+  ``nextflow.config`` file. See the :ref:`Trace configuration<config-trace>` section to learn more.
 
 
-Weblog Example
---------------
+Weblog Submit example message
+-----------------------------
 
-Workflow Submit Message
-~~~~~~~~~~~~~~~~~~~~~~~
-
-Starting the workflow will result in a first POST message like this::
+When a workflow execution is a started a message like the following is posted to the specified end-point::
 
 
   {
@@ -275,10 +272,10 @@ Starting the workflow will result in a first POST message like this::
   }
 
 
-Process Completed Message
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Weblog Completed example message
+--------------------------------
 
-Once a process is completed, the POST message will look like this::
+Once a process is completed, a message like the following is posted to the specified end-point::
 
   {
     "runName": "friendly_pesquet",
