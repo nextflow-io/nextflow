@@ -30,6 +30,8 @@ import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowQueue
+import nextflow.Global
+import nextflow.Session
 import nextflow.util.CustomThreadFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -47,7 +49,7 @@ class PathVisitor {
     private static Logger log = LoggerFactory.getLogger(PathVisitor)
 
     @Lazy
-    private static ExecutorService executor = Executors.newCachedThreadPool(new CustomThreadFactory('PathVisitor'))
+    private static ExecutorService executor = createExecutor()
 
     DataflowQueue target
 
@@ -165,6 +167,12 @@ class PathVisitor {
 
     }
 
-
+    private static ExecutorService createExecutor() {
+        final result = Executors.newCachedThreadPool(new CustomThreadFactory('PathVisitor'))
+        final session = Global.session as Session
+        if( session )
+            session.onShutdown { result.shutdown() }
+        return result
+    }
 
 }
