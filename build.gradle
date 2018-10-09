@@ -79,6 +79,8 @@ allprojects {
     }
 
     repositories {
+        //TODO: remove local repo when google nio changes are ready for upstream
+        mavenLocal()
         jcenter()
         mavenCentral()
         maven { url 'http://uk.maven.org/maven2' }
@@ -165,7 +167,7 @@ dependencies {
     // GCE libraries
     compile 'com.google.apis:google-api-services-compute:v1-rev182-1.23.0'
     compile 'com.google.apis:google-api-services-genomics:v2alpha1-rev30-1.24.1'
-    compile 'com.google.cloud:google-cloud-nio:0.61.0-alpha'
+    compile 'com.google.cloud:google-cloud-nio:0.65.1-alpha-SNAPSHOT'
 
 
     // include Ivy at runtime in order to have Grape @Grab work correctly

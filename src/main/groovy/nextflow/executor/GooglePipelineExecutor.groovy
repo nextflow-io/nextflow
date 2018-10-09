@@ -5,8 +5,6 @@ import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.services.genomics.v2alpha1.Genomics
 import com.google.api.services.genomics.v2alpha1.model.*
-import com.google.cloud.storage.contrib.nio.CloudStorageConfiguration
-import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -18,10 +16,7 @@ import nextflow.processor.*
 import nextflow.script.ScriptType
 import nextflow.util.Duration
 
-import java.nio.file.Files
-import java.nio.file.LinkOption
 import java.nio.file.Path
-import java.nio.file.attribute.FileAttribute
 
 @Slf4j
 @SupportedScriptTypes(ScriptType.SCRIPTLET)
@@ -43,6 +38,7 @@ class GooglePipelineExecutor extends Executor {
         super.register()
 
         pipelineConfig = validateConfiguration()
+        log.debug "[GOOGLE PIPELINE] Pipeline config: $pipelineConfig"
 
         genomicsClient = GooglePipelineHelper.createGenomicClient()
 
@@ -51,7 +47,6 @@ class GooglePipelineExecutor extends Executor {
 
     @Override
     protected TaskMonitor createTaskMonitor() {
-        //TODO: Increase the Duration to 20+ secs when not developing
         TaskPollingMonitor.create(session, name, 1000, Duration.of('10 sec'))
     }
 
@@ -62,7 +57,7 @@ class GooglePipelineExecutor extends Executor {
 
     GooglePipelineConfiguration validateConfiguration() {
 
-        //Make sure that the workdir is a GCE Bucket
+        //Make sure that the workdir is a GS Bucket
         if (!(session.workDir instanceof CloudStoragePath)) {
             session.abort()
             throw new AbortOperationException("When using `$name` executor a GCE bucket must be provided as a working directory -- Add the option `-w gs://<your-bucket/path>` to your run command line or specify a workDir in your config file.")
@@ -78,7 +73,12 @@ class GooglePipelineExecutor extends Executor {
             }
         }
 
-        new GooglePipelineConfiguration(session.config.navigate("gce.project") as String, session.config.navigate("gce.zone") as String, session.config.navigate("cloud.instanceType") as String)
+        new GooglePipelineConfiguration(
+                session.config.navigate("gce.project") as String,
+                session.config.navigate("gce.zone") as String,
+                session.config.navigate("cloud.instanceType") as String,
+                session.config.navigate("cloud.preemptible") as boolean
+        )
     }
 }
 
@@ -88,36 +88,68 @@ class GooglePipelineConfiguration {
     String project
     String zone
     String vmInstanceType
+    boolean preemptible
 
-    GooglePipelineConfiguration(String project, String zone, String vmInstanceType) {
+    GooglePipelineConfiguration(String project, String zone, String vmInstanceType, boolean preemptible = false) {
         this.project = project
         this.zone = zone
         this.vmInstanceType = vmInstanceType
+        this.preemptible = preemptible
+    }
+
+
+    @Override
+    String toString() {
+        "GooglePipelineConfiguration{" +
+                "project='" + project + '\'' +
+                ", zone='" + zone + '\'' +
+                ", vmInstanceType='" + vmInstanceType + '\'' +
+                ", preemptible=" + preemptible +
+                '}'
     }
 }
 
 @Slf4j
-//TODO Make this class construct the gsutil cp commands instead of doing it in the task handler.
+@CompileStatic
 class GooglePipelineFileCopyStrategy extends SimpleFileCopyStrategy {
 
     GooglePipelineTaskHandler handler
+    TaskBean task
 
     GooglePipelineFileCopyStrategy(TaskBean bean, GooglePipelineTaskHandler handler) {
         super(bean)
         this.handler = handler
+        this.task = bean
     }
 
     @Override
     String getStageInputFilesScript(Map<String, Path> inputFiles) {
-        handler.inputFiles = inputFiles
-        "# Google pipeline staging is done in a container that is run before the main container"
+
+        def stagingCommands = inputFiles.collect {
+            "gsutil -m  -q cp -P -c -r ${it.value.toUriString()} ${task.workDir}/${it.value.toString().endsWith(it.key) ? "" : it.key} || true".toString()
+        }
+
+        log.debug "[GOOGLE PIPELINE] Constructed the following file copy staging commands: $stagingCommands"
+
+        handler.stagingCommands.addAll(stagingCommands)
+
+        //Insert this comment into the task run script to note that the staging is done differently
+        "# Google pipeline staging is done in a pipeline action step that is run prior to the main pipeline action"
     }
 
     @Override
     String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
-        handler.outputFiles = outputFiles
-        handler.outputTargetDir = targetDir
-        ": # Google pipeline unstaging is done in a container that is run after the main container"
+
+        def unstagingCommands = outputFiles.collect {
+            "gsutil -m -q cp -P -r -c ${task.workDir}/$it ${task.workDir.toUriString()} || true".toString()
+        }
+
+        log.debug "[GOOGLE PIPELINE] Constructed the following file copy staging commands: $unstagingCommands"
+
+        handler.unstagingCommands.addAll(unstagingCommands)
+
+        //Insert this comment into the task run script to note that the unstaging is done differently
+        ": # Google pipeline unstaging is done in a pipeline action step that is run after the main pipeline action"
     }
 
     //Although it seems like this is used as a general "touch" mechanism it's actually just used to create a .begin in the working directory
@@ -125,61 +157,89 @@ class GooglePipelineFileCopyStrategy extends SimpleFileCopyStrategy {
     String touchFile(Path file) {
         if (file in CloudStoragePath) {
             handler.stagingCommands << "echo start | gsutil -q cp  -c - ${file.toUriString()} || true".toString()
-            "# touchFIle is handled by a container that is run before the main container"
+            "# Google pipeline touchFile is done in a pipeline action step that is run prior to the main pipeline action"
         } else
             return super.touchFile(file)
     }
 }
 
-
 @Slf4j
 @CompileStatic
 class GooglePipelineHelper {
+
+    static final String SCOPE_CLOUD_PLATFORM = "https://www.googleapis.com/auth/cloud-platform"
+    static final List<String> ENV_VAR_TO_INCLUDE = ["NXF_DEBUG"]
+
+    enum ActionFlags {
+        FLAG_UNSPECIFIED,
+        IGNORE_EXIT_STATUS,
+        RUN_IN_BACKGROUND,
+        ALWAYS_RUN,
+        ENABLE_FUSE,
+        PUBLISH_EXPOSED_PORTS,
+        DISABLE_IMAGE_PREFETCH,
+        DISABLE_STANDARD_ERROR_CAPTURE
+    }
 
     static String sanitizeName(String name) {
         name.replaceAll(/[^a-zA-Z0-9\-_]+/, '-').take(63)
     }
 
-
     static Genomics createGenomicClient() {
 
-        //TODO: Combine shared code with GoogleCLoudDriver into a generic helper
         def credentials = GoogleCredential.applicationDefault
 
         if (credentials.createScopedRequired()) {
-            credentials =
-                    credentials.createScoped(["https://www.googleapis.com/auth/cloud-platform"])
+            credentials = credentials.createScoped([SCOPE_CLOUD_PLATFORM])
         }
 
-        new Genomics.Builder(GoogleNetHttpTransport.newTrustedTransport(), JacksonFactory.defaultInstance, credentials).setApplicationName("NextCode-Experiments/0.1").build()
+        new Genomics.Builder(GoogleNetHttpTransport.newTrustedTransport(), JacksonFactory.defaultInstance, credentials)
+                .setApplicationName("Nextflow GooglePipelineExecutor")
+                .build()
     }
 
-    //TODO: enum all the flags!!!!
-    //TODO: input environment
-    static Action createAction(String name, String imageUri, List<String> commands, List<Mount> mounts, List<String> flags = []) {
-        new Action().setName(name).setImageUri(imageUri).setCommands(commands).setMounts(mounts).setFlags(flags).setTimeout("3600s")
+    static Map<String,String> getEnvironment() {
+        def ret = [:]
+        def env = System.getenv()
+
+        env.each { kv ->
+            if(ENV_VAR_TO_INCLUDE.contains(kv.key))
+                ret << kv
+        }
+        ret
+    }
+
+    static Action createAction(String name, String imageUri, List<String> commands, List<Mount> mounts, List<ActionFlags> flags = [], String entrypoint = null) {
+        new Action()
+                .setName(name)
+                .setImageUri(imageUri)
+                .setCommands(commands)
+                .setMounts(mounts)
+                .setFlags(flags.collect{flag -> flag.toString()})
+                .setEntrypoint(entrypoint)
+                .setEnvironment(getEnvironment())
     }
 
     static Pipeline createPipeline(List<Action> actions, Resources resources) {
         new Pipeline().setActions(actions).setResources(resources)
     }
 
-    //TODO: constanti-nize the scope and take make it an input.
-    static Resources configureResources(String instanceType, String projectId, String zone, String diskName) {
+    //TODO: Do we want to configure this via nextflow config?
+    static Resources configureResources(String instanceType, String projectId, String zone, String diskName, List<String> scopes = null,boolean preEmptible = false) {
 
         def disk = new Disk()
         disk.setName(diskName)
 
-
-        //need the cloud-plaform scope so that we can execute gsutil cp commands
         def serviceAccount = new ServiceAccount()
-                .setScopes(["https://www.googleapis.com/auth/cloud-platform"])
-
+        if (scopes)
+            serviceAccount.setScopes(scopes)
 
         def vm = new VirtualMachine()
                 .setMachineType(instanceType)
                 .setDisks([disk])
                 .setServiceAccount(serviceAccount)
+                .setPreemptible(preEmptible)
+
 
         new Resources()
                 .setProjectId(projectId)
@@ -191,14 +251,13 @@ class GooglePipelineHelper {
         new Mount().setDisk(diskName).setPath(mountPath).setReadOnly(readOnly)
     }
 
-
 }
 
 /**
  * Implements BASH launcher script for Google Pipeline
  */
 //TODO: This code is copied nearly 100% from AWS batch.  Need to grok it and rewrite it
-//TODO: Scratch stuff and thancing the targetDir are both unsuitable to trigger getUnstageOutputFilesScript
+//TODO: Scratch stuff and changing the targetDir are both unsuitable to trigger getUnstageOutputFilesScript
 @CompileStatic
 class GooglePipelineScriptLauncher extends BashWrapperBuilder {
 
@@ -206,8 +265,9 @@ class GooglePipelineScriptLauncher extends BashWrapperBuilder {
         super(bean, new GooglePipelineFileCopyStrategy(bean, handler))
 
         // enable the copying of output file to the GS work dir
-        //scratch = true
+        //scratch = false
 
+        //TODO: here lies a hackdragon, 'YARR!!!!
         bean.targetDir = FileHelper.asPath("/work")
 
         // include task script as an input to force its staging in the container work directory
@@ -229,7 +289,6 @@ class GooglePipelineScriptLauncher extends BashWrapperBuilder {
 
 @Slf4j
 //@CompileStatic
-//TODO: Refaaaactor
 class GooglePipelineTaskHandler extends TaskHandler {
 
     final GooglePipelineExecutor executor
@@ -257,14 +316,13 @@ class GooglePipelineTaskHandler extends TaskHandler {
     Mount sharedMount
     Pipeline taskPipeline
 
-    @PackageScope
     private Operation operation
-    Map<String, Path> inputFiles
-    List<String> outputFiles
-    Path outputTargetDir
-    Metadata metadata
-    List<String> stagingCommands
+    private Metadata metadata
 
+    @PackageScope
+    List<String> stagingCommands = []
+    @PackageScope
+    List<String> unstagingCommands = []
 
     GooglePipelineTaskHandler(TaskRun task, Executor executor, GooglePipelineConfiguration pipeConfig) {
         super(task)
@@ -285,12 +343,7 @@ class GooglePipelineTaskHandler extends TaskHandler {
         this.taskName = GooglePipelineHelper.sanitizeName("nf-task-${executor.session.uniqueId}-${task.name}")
         this.taskInstanceName = GooglePipelineHelper.sanitizeName("$taskName-$task.id")
 
-        this.stagingCommands = []
-
         validateConfiguration()
-
-        //TODO: These patches should be removed once various kinks in the CloudStorageFilesystemProvider have been solved
-        CloudStoragePatcher.patch()
 
         log.debug "[GOOGLE PIPELINE] Created handler for task '${task.name}'."
     }
@@ -303,31 +356,23 @@ class GooglePipelineTaskHandler extends TaskHandler {
 
     @Override
     boolean checkIfRunning() {
-
-        //log.debug "[GOOGLE PIPELINE] Checking if task '$task.name' is still running"
-
         operation = executor.genomicsClient.projects().operations().get(operation.getName()).execute()
-
-        //log.debug "[GOOGLE PIPELINE] Task '$task.name' still running = ${!operation.getDone()}"
-
         return !operation.getDone()
     }
 
     @Override
+    //TODO: Catch pipeline errors and report them back
     boolean checkIfCompleted() {
-
-        //log.debug "[GOOGLE PIPELINE] Check if task '$task.name' has completed"
-
         operation = executor.genomicsClient.projects().operations().get(operation.getName()).execute()
 
         def events = extractRuntimeDataFromOperation()
         events.reverse().each {
-            log.trace "[GOOGLE PIPELINE] New event for task $task.name - time: ${it.get("timestamp")} - ${it.get("description")}"
+            log.trace "[GOOGLE PIPELINE] New event for task '$task.name' - time: ${it.get("timestamp")} - ${it.get("description")}"
         }
 
         if (operation.getDone()) {
             log.debug "[GOOGLE PIPELINE] Task '$task.name' complete. Start Time: ${metadata.getStartTime()} - End Time: ${metadata.getEndTime()}"
-            //log.debug(operation.toPrettyString())
+
             // finalize the task
             task.exitStatus = readExitFile()
             task.stdout = outputFile
@@ -373,119 +418,67 @@ class GooglePipelineTaskHandler extends TaskHandler {
         final launcher = new GooglePipelineScriptLauncher(this.taskBean, this)
         launcher.build()
 
-        //Create the mount for out work files.
-        sharedMount = GooglePipelineHelper.configureMount(diskName, mountPath)
-
-        def mainAction = GooglePipelineHelper.createAction(taskInstanceName, task.container, ["bash", "-c", "cd " + task.workDir + " ; ./" + TaskRun.CMD_RUN], [sharedMount])
-
-        def resources = GooglePipelineHelper.configureResources(pipeConfig.vmInstanceType, pipeConfig.project, pipeConfig.zone, diskName)
-
-        stagingCommands.addAll inputFiles.collect {
-            //"gsutil -m -q cp -P -c ${it.value.isDirectory() ? "-r" : ""} ${it.value.toUriString()} ${task.workDir}$it.key${it.value.isDirectory() ? "/" : ""} || true"
-            "gsutil -m -q cp -P -c -r ${it.value.toUriString()} ${task.workDir}${it.value.toString().endsWith(it.key) ? "" : it.key} || true"
-        }
-
         //TODO: chmod 777 is bad m'kay
+        //TODO: eliminate cd command as well as wildcard +x
         def stagingScript = """
            mkdir -p $task.workDir ;
            chmod 777 $task.workDir ;
            ${stagingCommands.join(" ; ")} ;
            cd $task.workDir ;
-           chmod +x .command*           
+           chmod 777 ${TaskRun.CMD_SCRIPT} ${TaskRun.CMD_RUN}            
+        """.stripIndent().leftTrim()
+
+        def mainScript = "cd ${task.workDir} ; echo \$(./${TaskRun.CMD_RUN}) | bash 2>&1 | tee ${TaskRun.CMD_LOG}".toString()
+
+        /*
+         * -m = run in parallel
+         * -q = quiet mode
+         * cp = copy
+         * -P = preserve POSIX attributes
+         * -c = continues on errors
+         * -r = recursive copy
+         */
+        def gsCopyPrefix = "gsutil -m -q cp -P -c"
+
+        //Copy the logs provided by Google Pipelines for the pipline to our work dir.
+        if(System.getenv().get("NXF_DEBUG")) {
+            unstagingCommands << "$gsCopyPrefix -r /google/ ${task.workDir.toUriString()} || true".toString()
+        }
+
+        //add the task output files to unstaging command list
+        [TaskRun.CMD_ERRFILE,
+         TaskRun.CMD_OUTFILE,
+         TaskRun.CMD_EXIT,
+         TaskRun.CMD_LOG
+        ].each {
+            unstagingCommands << "$gsCopyPrefix ${task.workDir}/$it ${task.workDir.toUriString()} || true".toString()
+        }
+
+        //Copy nextflow task progress files as well as the files we need to unstage
+        def unstagingScript = """                                                
+            ${unstagingCommands.join(" ; ")}                        
         """.stripIndent().leftTrim()
 
         log.debug "Staging script for task $task.name -> $stagingScript"
-
-        def stagingAction = GooglePipelineHelper.createAction("$taskInstanceName-staging", fileCopyImage, ["bash", "-c", stagingScript], [sharedMount], ["ALWAYS_RUN", "IGNORE_EXIT_STATUS"])
-
-        def unstagingCopy = outputFiles.collect {
-            def localFile = "${task.workDir}$it"
-            "gsutil -m -q cp -P -r -c $localFile ${task.workDir.toUriString()} || true"
-        }
-
-        //TODO: Only copy the google directory if we're in deep debug mode
-        //TODO: See if we can't skip using blanket copies of everything back to the working directory
-        def unstagingScript = """
-            ${unstagingCopy.join(" ; ")}
-            gsutil -m -q cp -P -c ${task.workDir}.command* ${task.workDir.toUriString()} || true; 
-            gsutil -m -q cp -P -c ${task.workDir}.exitcode ${task.workDir.toUriString()} || true;
-            gsutil -m -q cp -P -c -r /google/ ${task.workDir.toUriString()} || true ;            
-        """.stripIndent().leftTrim()
-
+        log.debug "Main script for task $task.name -> $mainScript"
         log.debug "Unstaging script for task $task.name -> $unstagingScript"
 
-        def unstagingAction = GooglePipelineHelper.createAction("$taskInstanceName-unstaging", fileCopyImage, ["bash", "-c", unstagingScript], [sharedMount], ["ALWAYS_RUN", "IGNORE_EXIT_STATUS"])
+        //Create the mount for out work files.
+        sharedMount = GooglePipelineHelper.configureMount(diskName, mountPath)
+
+        //need the cloud-platform scope so that we can execute gsutil cp commands
+        def resources = GooglePipelineHelper.configureResources(pipeConfig.vmInstanceType, pipeConfig.project, pipeConfig.zone, diskName, [GooglePipelineHelper.SCOPE_CLOUD_PLATFORM],pipeConfig.preemptible)
+
+        def stagingAction = GooglePipelineHelper.createAction("$taskInstanceName-staging", fileCopyImage, ["bash", "-c", stagingScript], [sharedMount], [GooglePipelineHelper.ActionFlags.ALWAYS_RUN, GooglePipelineHelper.ActionFlags.IGNORE_EXIT_STATUS])
+        //TODO: Do we really want to override the entrypoint?
+        def mainAction = GooglePipelineHelper.createAction(taskInstanceName, task.container, ['-o', 'pipefail', '-c', mainScript], [sharedMount], [], "bash")
+
+        def unstagingAction = GooglePipelineHelper.createAction("$taskInstanceName-unstaging", fileCopyImage, ["bash", "-c", unstagingScript], [sharedMount], [GooglePipelineHelper.ActionFlags.ALWAYS_RUN, GooglePipelineHelper.ActionFlags.IGNORE_EXIT_STATUS])
 
         taskPipeline = GooglePipelineHelper.createPipeline([stagingAction, mainAction, unstagingAction], resources)
 
         operation = executor.genomicsClient.pipelines().run(new RunPipelineRequest().setPipeline(taskPipeline)).execute()
 
-
-        log.debug "[GOOGLE PIPELINE] Submitted task '$task.name. Assigned Pipeline operation name = '${operation.getName()}'"
+        log.trace "[GOOGLE PIPELINE] Submitted task '$task.name. Assigned Pipeline operation name = '${operation.getName()}'"
     }
 }
-
-@Slf4j
-class CloudStoragePatcher {
-
-    def static patch() {
-        def oldExists = Files.metaClass.getStaticMetaMethod("exists", Path)
-        def oldIsDirectory = Files.metaClass.getStaticMetaMethod("isDirectory", Path)
-        def oldRelativize = Path.metaClass.getMetaMethod("relativize", Path)
-        def oldCreateDirectory = Files.metaClass.getStaticMetaMethod("createDirectories",Path,FileAttribute[])
-
-        Path.metaClass.relativize = { Path path ->
-            if (path in CloudStoragePath && !path.startsWith(delegate.toString()[0])) {
-                CloudStorageFileSystem noPseudoDirFs = CloudStorageFileSystem.forBucket(path.toUri().getHost(), CloudStorageConfiguration.builder().usePseudoDirectories(false).build())
-                def newPath = noPseudoDirFs.getPath("/" + path)
-                oldRelativize.invoke(delegate, newPath)
-            } else
-                oldRelativize.invoke(delegate, path)
-
-        }
-
-        Files.metaClass.static.createDirectories = { Path dir, FileAttribute<?>... attrs ->
-            if(dir in CloudStoragePath) {
-                log.warn "CloudStorageFilesystem needs to create the following directory: $dir"
-                CloudStorageFileSystem noPseudoDirFs = CloudStorageFileSystem.forBucket(dir.toUri().getHost(), CloudStorageConfiguration.builder().usePseudoDirectories(false).build())
-                def newPath = dir.toString().endsWith("/") ? dir.toString() : dir.toString() + "/"
-                def nf = Files.createFile(noPseudoDirFs.getPath(newPath))
-                nf
-            } else
-                oldCreateDirectory.invoke(null,dir,attrs)
-
-        }
-
-        Files.metaClass.static.exists = { Path path, LinkOption... options ->
-            def oldret = oldExists.invoke(null, path, options)
-            if (!oldret && path in CloudStoragePath && !path.toString().endsWith("/")) {
-                CloudStorageFileSystem noPseudoDirFs = CloudStorageFileSystem.forBucket(path.toUri().getHost(), CloudStorageConfiguration.builder().usePseudoDirectories(false).build())
-                def pathStr = path.toString().startsWith("/") ? path.toString().drop(1) : path.toString()
-                def newPath = noPseudoDirFs.getPath(pathStr + "/")
-                def newRet = oldExists.invoke(null, newPath, options)
-                newRet
-            } else
-                oldret
-        }
-
-        Files.metaClass.static.isDirectory = { Path path, LinkOption... options ->
-            def oldRet = oldIsDirectory.invoke(null, path, options)
-
-            if (!oldRet && path in CloudStoragePath) {
-                CloudStorageFileSystem noPseudoDirFs = CloudStorageFileSystem.forBucket(path.toUri().getHost(), CloudStorageConfiguration.builder().usePseudoDirectories(false).build())
-                def pathStr = path.toString()
-                def newPath = noPseudoDirFs.getPath(!pathStr.endsWith("/") ? pathStr + "/" : pathStr)
-                def newRet = oldExists.invoke(null, newPath, options)
-                newRet
-            } else
-                oldRet
-        }
-
-        CloudStoragePath.metaClass.constructor << { ->
-            log.debug "Yeah"
-        }
-
-        log.debug "Finished patching"
-    }
-}
-
