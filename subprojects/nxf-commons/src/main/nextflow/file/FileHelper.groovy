@@ -20,8 +20,6 @@
 
 package nextflow.file
 
-import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
-
 import java.lang.reflect.Field
 import java.nio.file.CopyOption
 import java.nio.file.FileSystem
@@ -275,11 +273,7 @@ class FileHelper {
             Paths.get(uri)
         }
         else {
-            //TODO: Fix this special treatment of gs scheme
-            if(uri.scheme.toLowerCase() == "gs")
-                getOrCreateFileSystemFor(uri).getPath(uri.path)
-            else
-                getOrCreateFileSystemFor(uri).provider().getPath(uri)
+            getOrCreateFileSystemFor(uri).provider().getPath(uri)
         }
     }
 
@@ -476,12 +470,6 @@ class FileHelper {
 
             log.debug "AWS S3 config details: ${dumpAwsConfig(result)}"
         }
-        else if(scheme?.toLowerCase() == "gs") {
-            //TODO: NC - This option name is up for a change
-            log.debug "Creating the GS filesystem with directoryEmulation"
-            //Configure the GS NIO filesystem to use "proper" directory detection
-            result.directoryEmulation = true
-        }
         else {
             assert Global.session, "Session is not available -- make sure to call this after Session object has been created"
             result.session = Global.session
@@ -573,7 +561,6 @@ class FileHelper {
      * @return The corresponding {@link FileSystem} object
      * @throws IllegalArgumentException if does not exist a valid provider for the given URI scheme
      */
-    //TODO: Initialise the gs provider in directory emulation mode
     static FileSystem getOrCreateFileSystemFor( URI uri, Map env = null ) {
         assert uri
 
@@ -584,22 +571,10 @@ class FileHelper {
         if( !provider )
             throw new IllegalArgumentException("Cannot a find a file system provider for scheme: ${uri.scheme}")
 
-
-        FileSystem fs
-        /*
-         * Initialize the gs filesystem with non default parameters
-         */
-        if(uri.getScheme().toLowerCase() == "gs"){
-            log.debug "Creating GS file system"
-            def f = provider.newFileSystem(uri,["directoryEmulation": true]) as CloudStorageFileSystem
-            log.debug "FS config: ${f.config()}"
-            return f
-        }
-
         /*
          * check if already exists a file system for it
          */
-
+        FileSystem fs
         try { fs = provider.getFileSystem(uri) }
         catch( FileSystemNotFoundException e ) { fs=null }
         if( fs )
