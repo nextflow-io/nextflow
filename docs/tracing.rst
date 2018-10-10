@@ -236,7 +236,7 @@ following JSON structure::
    {
         "runName": <run name>,
         "runId": <uuid>,
-        "runStatus": <started|process_submitted|process_started|process_completed|error|completed>,
+        "event": <started|process_submitted|process_started|process_completed|error|completed>,
         "utcTime": <UTC timestamp>,
         "trace": { ... }
    }
@@ -248,7 +248,7 @@ Attribute          Description
 ================== ================
 runName            The workflow execution run name.
 runId              The workflow execution unique ID.
-runStatus          The workflow execution status. One of ``started``, ``process_submitted``, ``process_started``, ``process_completed``, ``error``, ``completed``.
+event              The workflow execution event. One of ``started``, ``process_submitted``, ``process_started``, ``process_completed``, ``error``, ``completed``.
 utcTime            The UTC timestamp in ISO 8601 format.
 trace              A process runtime information as described in the :ref:`trace fields<trace-fields>` section. This attribute is only provided for the following events: ``process_submitted``, ``process_started``, ``process_completed``, ``error``.
 ================== ================
@@ -267,7 +267,7 @@ When a workflow execution is a started a message like the following is posted to
   {
     "runName": "friendly_pesquet",
     "runId": "170aa09c-105f-49d0-99b4-8eb6a146e4a7",
-    "runStatus": "started",
+    "event": "started",
     "utcTime": "2018-10-07T11:42:08Z"
   }
 
@@ -280,7 +280,7 @@ Once a process is completed, a message like the following is posted to the speci
   {
     "runName": "friendly_pesquet",
     "runId": "170aa09c-105f-49d0-99b4-8eb6a146e4a7",
-    "runStatus": "process_completed",
+    "event": "process_completed",
     "utcTime": "2018-10-07T11:45:30Z",
     "trace": {
         "task_id": 2,

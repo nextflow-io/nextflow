@@ -64,11 +64,6 @@ class WebLogObserver implements TraceObserver{
     static public String DEF_URL = 'http://localhost'
 
     /**
-     * Contains server request response
-     */
-    private String response
-
-    /**
      * Simple http client object that will send out messages
      */
     private SimpleHttpClient httpClient = new SimpleHttpClient()
@@ -181,42 +176,45 @@ class WebLogObserver implements TraceObserver{
      * Little helper method that sends a HTTP POST message as JSON with
      * the current run status, ISO 8601 UTC timestamp, run name and the TraceRecord
      * object, if present.
-     * @param runStatus The current run status. One of {'started', 'process_submit', 'process_start',
+     * @param event The current run status. One of {'started', 'process_submit', 'process_start',
      * 'process_complete', 'error', 'completed'}
      * @param trace A TraceRecord object that contains current process information
      */
-    protected void sendHttpMessage(String runStatus, TraceRecord trace = null){
+    protected void sendHttpMessage(String event, TraceRecord trace = null){
 
         // Set the message info
-        def time = new Date().format("yyyy-MM-dd'T'HH:mm:ss'Z'", UTC)
-        def messageJson = SLURPER.parseText(
-                """{ "runName": "$runName", "runId": "$runId", "runStatus":"$runStatus", "utcTime":"$time" }""")
+        final time = new Date().format("yyyy-MM-dd'T'HH:mm:ss'Z'", UTC)
+
+        final message = new HashMap(5)
+        message.runName = runName
+        message.runId = runId
+        message.event = event
+        message.runStatus = event // deprecated to be removed
+        message.utcTime = time
 
         // Append the trace object if present
         if (trace)
-            messageJson["trace"] = SLURPER.parseText(JsonOutput.toJson(trace.store))
+            message.trace = trace.store
 
         // The actual HTTP request
-        httpClient.sendHttpMessage(JsonOutput.toJson(messageJson))
+        httpClient.sendHttpMessage(JsonOutput.toJson(message))
         logHttpResponse()
-
-        this.response = httpClient.getResponse()
     }
 
     /**
      * Asynchronous HTTP POST request wrapper.
-     * @param runStatus The workflow run status
+     * @param event The workflow run status
      * @param trace A TraceRecord object with workflow information
      * @return A Java string, that contains the HTTP request response
      */
-    protected void asyncHttpMessage(String runStatus, TraceRecord trace = null){
-        webLogAgent.send{sendHttpMessage(runStatus, trace)}
+    protected void asyncHttpMessage(String event, TraceRecord trace = null){
+        webLogAgent.send{sendHttpMessage(event, trace)}
     }
 
     /**
      * Little helper function that can be called for logging upon an incoming HTTP response
      */
-    private void logHttpResponse(){
+    protected void logHttpResponse(){
         def statusCode = httpClient.getResponseCode()
         if (statusCode == 200)
             log.debug "Successfully send message to ${httpClient.getUrl()} -- received status code 200"
