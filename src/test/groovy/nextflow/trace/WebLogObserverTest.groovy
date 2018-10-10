@@ -21,9 +21,12 @@
 
 package nextflow.trace
 
+import spock.lang.Specification
+
+import groovy.json.JsonSlurper
 import nextflow.Session
 import nextflow.processor.TaskHandler
-import spock.lang.Specification
+import nextflow.util.SimpleHttpClient
 
 class WebLogObserverTest extends Specification{
 
@@ -62,6 +65,32 @@ class WebLogObserverTest extends Specification{
 
     }
 
+    def 'should create a json message' () {
+
+        given:
+        def observer = Spy(WebLogObserver)
+        def CLIENT = Mock(SimpleHttpClient)
+        observer.httpClient = CLIENT
+        observer.runName = 'foo'
+        observer.runId = 'xyz'
+        def TRACE = new TraceRecord([hash: '4a4a4a', process: 'bar'])
+
+        when:
+        observer.sendHttpMessage('started',  TRACE)
+        then:
+        1 * observer.logHttpResponse() >> null
+        1 * CLIENT.sendHttpMessage( _ as String ) >> { it ->
+            def message = (Map)new JsonSlurper().parseText((String)it[0])
+            assert message.runName == 'foo'
+            assert message.runId == 'xyz'
+            assert message.event == 'started'
+            assert message.runStatus == 'started'
+            assert message.trace.hash == '4a4a4a'
+            assert message.trace.process == 'bar'
+            return null
+        }
+
+    }
 
     def 'should validate URL' () {
         given:
