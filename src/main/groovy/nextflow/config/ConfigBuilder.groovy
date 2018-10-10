@@ -462,6 +462,9 @@ class ConfigBuilder {
         else if( !config.workDir )
             config.workDir = env.get('NXF_WORK') ?: 'work'
 
+        if( cmdRun.bucketDir )
+            config.bucketDir = cmdRun.bucketDir
+
         // -- sets the library path
         if( cmdRun.libPath )
             config.libDir = cmdRun.libPath

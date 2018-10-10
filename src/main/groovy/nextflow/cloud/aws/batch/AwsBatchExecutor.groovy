@@ -79,6 +79,11 @@ class AwsBatchExecutor extends Executor {
         return true
     }
 
+    @Override
+    final Path getWorkDir() {
+        session.bucketDir ?: session.workDir
+    }
+
     /**
      * Initialise the AWS batch executor.
      */
@@ -89,9 +94,9 @@ class AwsBatchExecutor extends Executor {
         /*
          * make sure the work dir is a S3 bucket
          */
-        if( !(session.workDir instanceof S3Path) ) {
+        if( !(workDir instanceof S3Path) ) {
             session.abort()
-            throw new AbortOperationException("When using `$name` executor a S3 bucket must be provided as working directory -- Add the option `-w s3://<your-bucket/path>` to your run command line")
+            throw new AbortOperationException("When using `$name` executor a S3 bucket must be provided as working directory either using -bucket-dir or -work-dir command line option")
         }
 
         def path = session.config.navigate('env.PATH')

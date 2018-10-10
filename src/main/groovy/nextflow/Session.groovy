@@ -108,6 +108,11 @@ class Session implements ISession {
     Path workDir
 
     /**
+     * Bucket work directory for cloud based executors
+     */
+    Path bucketDir
+
+    /**
      * The folder where the main script is contained
      */
     Path baseDir
@@ -304,7 +309,12 @@ class Session implements ISession {
         this.setLibDir( config.libDir as String )
 
         if(!workDir.mkdirs()) throw new AbortOperationException("Cannot create work-dir: $workDir -- Make sure you have write permissions or specify a different directory by using the `-w` command line option")
-        log.debug "Work-dir: ${workDir} [${FileHelper.getPathFsType(workDir)}]"
+        log.debug "Work-dir: ${workDir.toUriString()} [${FileHelper.getPathFsType(workDir)}]"
+
+        if( config.bucketDir ) {
+            this.bucketDir = config.bucketDir as Path
+            log.debug "Bucket-dir: ${bucketDir.toUriString()}"
+        }
 
         if( scriptPath ) {
             // the folder that contains the main script

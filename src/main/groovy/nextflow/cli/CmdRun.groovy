@@ -97,6 +97,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate result files are stored')
     String workDir
 
+    @Parameter(names=['-bucket-dir'], description = 'Remote bucket where intermediate result files are stored')
+    String bucketDir
+
     /**
      * Defines the parameters to be passed to the pipeline script
      */
