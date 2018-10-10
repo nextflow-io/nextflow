@@ -115,15 +115,19 @@ class K8sConfig implements Map<String,Object> {
     /**
      * @return the path where the workflow is launched and the user data is stored
      */
-    String getUserDir() {
-       target.userDir ?: "${getStorageMountPath()}/${getUserName()}" as String
+    String getLaunchDir() {
+        if( target.userDir ) {
+            log.warn "K8s `userDir` has been deprecated -- Use `launchDir` instead"
+            return target.userDir
+        }
+        target.launchDir ?: "${getStorageMountPath()}/${getUserName()}" as String
     }
 
     /**
      * @return Defines the path where the workflow temporary data is stored. This must be a path in a shared K8s persistent volume (default:<user-dir>/work).
      */
     String getWorkDir() {
-        target.workDir ?: "${getUserDir()}/work" as String
+        target.workDir ?: "${getLaunchDir()}/work" as String
     }
 
     /**
@@ -218,14 +222,14 @@ class K8sConfig implements Map<String,Object> {
             }
         }
 
-        if( !findVolumeClaimByPath(getUserDir()) )
-            throw new AbortOperationException("Kubernetes `userDir` must be a path mounted as a persistent volume -- userDir=$userDir; volumes=${getClaimPaths().join(', ')}")
+        if( !findVolumeClaimByPath(getLaunchDir()) )
+            throw new AbortOperationException("Kubernetes `launchDir` must be a path mounted as a persistent volume -- launchDir=$launchDir; volumes=${getClaimPaths().join(', ')}")
 
         if( !findVolumeClaimByPath(getWorkDir()) )
-            throw new AbortOperationException("Kubernetes workDir must be a path mounted as a persistent volume -- workDir=$workDir; volumes=${getClaimPaths().join(', ')}")
+            throw new AbortOperationException("Kubernetes `workDir` must be a path mounted as a persistent volume -- workDir=$workDir; volumes=${getClaimPaths().join(', ')}")
 
         if( !findVolumeClaimByPath(getProjectDir()) )
-            throw new AbortOperationException("Kubernetes projectDir must be a path mounted as a persistent volume -- projectDir=$projectDir; volumes=${getClaimPaths().join(', ')}")
+            throw new AbortOperationException("Kubernetes `projectDir` must be a path mounted as a persistent volume -- projectDir=$projectDir; volumes=${getClaimPaths().join(', ')}")
 
 
     }
