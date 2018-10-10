@@ -20,11 +20,12 @@
 
 package nextflow.util
 
-import java.nio.file.Files
-
-import com.google.common.hash.Hashing
 import spock.lang.Specification
 
+import java.nio.file.Files
+import java.nio.file.attribute.FileTime
+
+import com.google.common.hash.Hashing
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -152,5 +153,83 @@ class CacheHelperTest extends Specification {
 
     }
 
+    def 'should hash file in standard mode' () {
 
+        given:
+        def MODE = CacheHelper.HashMode.STANDARD
+        def folder = Files.createTempDirectory('test')
+
+        def file = folder.resolve('file.txt'); file.text = 'hello world'
+        def hash = CacheHelper .hasher(file, MODE) .hash() .toString()
+
+        // modified modified time does not affect hashcode
+        when:
+        def time = FileTime.fromMillis(System.currentTimeMillis()-100_000)
+        Files.setLastModifiedTime(file, time)
+        then:
+        CacheHelper .hasher(file, MODE) .hash() .toString() != hash
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should hash file in lenient mode' () {
+
+        given:
+        def MODE = CacheHelper.HashMode.LENIENT
+        def folder = Files.createTempDirectory('test')
+
+        def file = folder.resolve('file.txt'); file.text = 'hello world'
+        def hash = CacheHelper .hasher(file, MODE) .hash() .toString()
+
+        // modified modified time does not affect hashcode
+        when:
+        def time = FileTime.fromMillis(System.currentTimeMillis()-100_000)
+        Files.setLastModifiedTime(file, time)
+        then:
+        CacheHelper .hasher(file, MODE) .hash() .toString() == hash
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+
+    def 'should hash file in deep mode' () {
+
+        given:
+        def MODE = CacheHelper.HashMode.DEEP
+        def folder = Files.createTempDirectory('test')
+
+        when:
+        def file = folder.resolve('file.txt'); file.text = 'hello world'
+        then:
+        CacheHelper .hasher(file, MODE) .hash() .toString() == '0e617feb46603f53b163eb607d4697ab'
+
+        // modified modified time does not affect hashcode
+        when:
+        def time = FileTime.fromMillis(System.currentTimeMillis()-100_000)
+        Files.setLastModifiedTime(file, time)
+        then:
+        CacheHelper .hasher(file, MODE) .hash() .toString() == '0e617feb46603f53b163eb607d4697ab'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def "should get hash mode from value=#VALUE" () {
+
+        expect:
+        CacheHelper.HashMode.of(VALUE) == EXPECTED
+
+        where:
+        VALUE       | EXPECTED
+        null        | null
+        true        | null
+        'true'      | null
+        'false'     | null
+        'standard'  | CacheHelper.HashMode.STANDARD
+        'deep'      | CacheHelper.HashMode.DEEP
+        'lenient'   | CacheHelper.HashMode.LENIENT
+
+    }
 }
