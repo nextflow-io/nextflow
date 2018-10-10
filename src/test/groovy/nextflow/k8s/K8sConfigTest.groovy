@@ -201,17 +201,17 @@ class K8sConfigTest extends Specification {
         when:
         def cfg = new K8sConfig()
         then:
-        cfg.getUserDir() == '/workspace/' + System.properties.get('user.name')
+        cfg.getLaunchDir() == '/workspace/' + System.properties.get('user.name')
 
         when:
         cfg = new K8sConfig(storageMountPath: '/this/path', userName: 'foo')
         then:
-        cfg.getUserDir() == '/this/path/foo'
+        cfg.getLaunchDir() == '/this/path/foo'
 
         when:
-        cfg = new K8sConfig(storageMountPath: '/this/path', userName: 'foo', userDir: '/my/path')
+        cfg = new K8sConfig(storageMountPath: '/this/path', userName: 'foo', launchDir: '/my/path')
         then:
-        cfg.getUserDir() == '/my/path'
+        cfg.getLaunchDir() == '/my/path'
 
     }
 
@@ -222,12 +222,12 @@ class K8sConfigTest extends Specification {
         cfg.getWorkDir() == "/workspace/${System.properties.get('user.name')}/work"
 
         when:
-        cfg = new K8sConfig(userDir: '/my/dir')
+        cfg = new K8sConfig(launchDir: '/my/dir')
         then:
         cfg.getWorkDir() == "/my/dir/work"
 
         when:
-        cfg = new K8sConfig(userDir: '/my/dir', workDir: '/the/wor/dir')
+        cfg = new K8sConfig(launchDir: '/my/dir', workDir: '/the/wor/dir')
         then:
         cfg.getWorkDir() == "/the/wor/dir"
     }
