@@ -33,6 +33,9 @@ import nextflow.file.FileHelper
 import nextflow.file.SimpleFileCollector
 import nextflow.file.SortFileCollector
 import nextflow.util.CacheHelper
+
+import static nextflow.util.CacheHelper.HashMode
+
 /**
  * Implements the body of {@link DataflowExtensions#collectFile(groovyx.gpars.dataflow.DataflowReadChannel)} operator
  *
@@ -98,7 +101,7 @@ class CollectFileOp {
         // caching params
         collector.resumable = Global.session.resumeMode
         collector.cacheable = Global.session.cacheable && ( params?.cache?.toString() != 'false' )
-        collector.hashMode = params?.cache == 'deep' ? CacheHelper.HashMode.DEEP : CacheHelper.HashMode.STANDARD
+        collector.hashMode = HashMode.of(params?.cache) ?: HashMode.of(Global.session.config?.process?.cache) ?: HashMode.STANDARD
         collector.hashKeys = [
                 Global.session.uniqueId,
                 params?.storeDir,
