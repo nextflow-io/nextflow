@@ -56,6 +56,7 @@ class DockerBuilderTest extends Specification {
         expect:
         builder.makeEnv('X=1').toString() == '-e "X=1"'
         builder.makeEnv([VAR_X:1, VAR_Y: 2]).toString() == '-e "VAR_X=1" -e "VAR_Y=2"'
+        builder.makeEnv('BAR').toString() == '${BAR:+-e "BAR=$BAR"}'
     }
 
     def 'test docker create command line'() {

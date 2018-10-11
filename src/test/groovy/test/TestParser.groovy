@@ -26,6 +26,7 @@ import nextflow.Channel
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.ast.NextflowDSL
+import nextflow.ast.NextflowXform
 import nextflow.executor.Executor
 import nextflow.processor.ProcessConfig
 import nextflow.processor.ProcessFactory
@@ -68,6 +69,7 @@ class TestParser {
         def config = new CompilerConfiguration()
         config.scriptBaseClass = BaseScript.class.name
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
         config.addCompilationCustomizers(importCustomizer)
 
         // extend the class-loader if required

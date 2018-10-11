@@ -318,7 +318,7 @@ class K8sDriverLauncher {
         assert pipelineName
 
         if( interactive ) {
-            return 'tail -f /dev/null'
+            return "tail -f /dev/null"
         }
 
         def result = []
@@ -394,6 +394,7 @@ class K8sDriverLauncher {
             .withPodName(runName)
             .withImageName(k8sConfig.getNextflowImageName())
             .withCommand(['/bin/bash', '-c', cmd])
+            .withWorkDir(k8sConfig.getLaunchDir())
             .withLabels([ app: 'nextflow', runName: runName ])
             .withNamespace(k8sClient.config.namespace)
             .withServiceAccount(k8sClient.config.serviceAccount)
@@ -431,13 +432,12 @@ class K8sDriverLauncher {
     protected void createK8sConfigMap() {
         Map<String,String> configMap = [:]
 
-        final userDir = k8sConfig.getUserDir()
+        final launchDir = k8sConfig.getLaunchDir()
         // init file
         String initScript = ''
-        initScript += "mkdir -p '$userDir'; if [ -d '$userDir' ]; then cd '$userDir'; else echo 'Cannot create nextflow userDir: $userDir'; exit 1; fi; "
+        initScript += "mkdir -p '$launchDir'; if [ -d '$launchDir' ]; then cd '$launchDir'; else echo 'Cannot create directory: $launchDir'; exit 1; fi; "
         initScript += '[ -f /etc/nextflow/scm ] && ln -s /etc/nextflow/scm $NXF_HOME/scm; '
         initScript += '[ -f /etc/nextflow/nextflow.config ] && cp /etc/nextflow/nextflow.config $PWD/nextflow.config; '
-        initScript += 'echo cd \\"$PWD\\" > /root/.profile; '
         configMap['init.sh'] = initScript
 
         // nextflow config file
@@ -492,7 +492,8 @@ class K8sDriverLauncher {
     protected void launchLogin() {
         def cmd = "kubectl -n ${k8sClient.config.namespace} exec -it $runName -- /bin/bash --login"
         def proc = new ProcessBuilder().command('bash','-c',cmd).inheritIO().start()
-        proc.waitFor()
-        k8sClient.podDelete(runName)
+        def result = proc.waitFor()
+        if( result == 0 )
+            k8sClient.podDelete(runName)
     }
 }

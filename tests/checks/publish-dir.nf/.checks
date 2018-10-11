@@ -1,0 +1,73 @@
+#
+# run normal mode
+#
+echo First run
+$NXF_RUN | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process > align'` == 3 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process > combine'` == 1 ]] || false
+cmp stdout .expected || false
+
+[[ -f data/alpha.bai ]] || false
+[[ -f data/alpha.bam ]] || false
+[[ -f data/beta.bai ]] || false
+[[ -f data/beta.bam ]] || false
+[[ -f data/delta.bai ]] || false
+[[ -f data/delta.bam ]] || false
+[[ -L data/result.txt ]] || false
+[[ -f more/data/result.txt ]] || false
+[[ -f data/xxx/A ]] || false
+[[ -f data/xxx/B ]] || false
+[[ -f data/xxx/C ]] || false
+
+
+#
+# one more time to make sure 'overwrite' is fine
+#
+echo Second run
+$NXF_RUN | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process > align'` == 3 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process > combine'` == 1 ]] || false
+cmp stdout .expected || false
+
+[[ -f data/alpha.bai ]] || false
+[[ -f data/alpha.bam ]] || false
+[[ -f data/beta.bai ]] || false
+[[ -f data/beta.bam ]] || false
+[[ -f data/delta.bai ]] || false
+[[ -f data/delta.bam ]] || false
+[[ -L data/result.txt ]] || false
+[[ -f more/data/result.txt ]] || false
+[[ -f data/xxx/A ]] || false
+[[ -f data/xxx/B ]] || false
+[[ -f data/xxx/C ]] || false
+
+
+#
+# clean & run resume mode
+#
+echo Third run
+rm -rf data
+rm -rf more/data
+
+$NXF_RUN -resume | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > align'` == 3 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > combine'` == 1 ]] || false
+cmp stdout .expected || false
+[[ -f data/alpha.bai ]] || false
+[[ -f data/alpha.bam ]] || false
+[[ -f data/beta.bai ]] || false
+[[ -f data/beta.bam ]] || false
+[[ -f data/delta.bai ]] || false
+[[ -f data/delta.bam ]] || false
+[[ -L data/result.txt ]] || false
+[[ -f more/data/result.txt ]] || false
+#
+# NOTE: on Mac when deleting an hard-link also the origin is removed
+#
+[[ -f data/xxx/A ]] || false
+[[ -f data/xxx/B ]] || false
+[[ -f data/xxx/C ]] || false
+

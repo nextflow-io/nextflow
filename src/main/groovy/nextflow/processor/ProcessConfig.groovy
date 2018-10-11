@@ -515,7 +515,7 @@ class ProcessConfig implements Map<String,Object> {
     }
 
     HashMode getHashMode() {
-        configProperties.cache == 'deep' ? HashMode.DEEP : HashMode.STANDARD
+        HashMode.of(configProperties.cache) ?: HashMode.STANDARD
     }
 
     protected boolean isValidLabel(String lbl) {

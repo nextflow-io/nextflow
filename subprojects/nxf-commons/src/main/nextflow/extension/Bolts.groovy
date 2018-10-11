@@ -20,6 +20,7 @@
 
 package nextflow.extension
 
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.text.DateFormat
 import java.text.SimpleDateFormat
@@ -34,6 +35,7 @@ import nextflow.util.CheckHelper
 import nextflow.util.Duration
 import nextflow.file.FileMutex
 import nextflow.util.MemoryUnit
+import nextflow.util.RateUnit
 import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import org.codehaus.groovy.runtime.GStringImpl
@@ -453,6 +455,9 @@ class Bolts {
         }
         else if( type == MemoryUnit ) {
             return new MemoryUnit(self)
+        }
+        else if( type == RateUnit ) {
+            return new RateUnit(self)
         }
 
         StringGroovyMethods.asType(self, type);
@@ -898,5 +903,13 @@ class Bolts {
         if( log.isTraceEnabled() ) {
             log.trace(msg.toString(),e)
         }
+    }
+
+    static String getErrMessage(Throwable e) {
+        if( e instanceof NoSuchFileException ) {
+            return "No such file: $e.message"
+        }
+
+        return e.message ?: e.toString()
     }
 }

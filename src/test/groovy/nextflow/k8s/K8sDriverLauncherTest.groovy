@@ -144,7 +144,7 @@ class K8sDriverLauncherTest extends Specification {
 
         def k8s = Mock(K8sConfig)
         k8s.getNextflowImageName() >> 'the-image'
-        k8s.getUserDir() >> '/the/user/dir'
+        k8s.getLaunchDir() >> '/the/user/dir'
         k8s.getWorkDir() >> '/the/work/dir'
         k8s.getProjectDir() >> '/the/project/dir'
         k8s.getPodOptions() >> pod
@@ -167,6 +167,7 @@ class K8sDriverLauncherTest extends Specification {
                                 [name:'foo-boo',
                                  image:'the-image',
                                  command:['/bin/bash', '-c', "source /etc/nextflow/init.sh; nextflow run foo"],
+                                 workingDir: '/the/user/dir',
                                  env:[
                                          [name:'NXF_WORK', value:'/the/work/dir'],
                                          [name:'NXF_ASSETS', value:'/the/project/dir'],
@@ -203,7 +204,7 @@ class K8sDriverLauncherTest extends Specification {
         def POD_OPTIONS = new PodOptions()
 
         def K8S_CONFIG = Mock(K8sConfig)
-        K8S_CONFIG.getUserDir() >> '/launch/dir'
+        K8S_CONFIG.getLaunchDir() >> '/launch/dir'
         K8S_CONFIG.getPodOptions() >> POD_OPTIONS
 
         when:
@@ -216,7 +217,7 @@ class K8sDriverLauncherTest extends Specification {
         1 * driver.getScmFile() >> SCM_FILE
         1 * driver.makeConfigMapName(_ as Map) >> 'nf-config-123'
         1 * driver.tryCreateConfigMap('nf-config-123', _ as Map) >> {  name, cfg ->
-            assert cfg.'init.sh' == "mkdir -p '/launch/dir'; if [ -d '/launch/dir' ]; then cd '/launch/dir'; else echo 'Cannot create nextflow userDir: /launch/dir'; exit 1; fi; [ -f /etc/nextflow/scm ] && ln -s /etc/nextflow/scm \$NXF_HOME/scm; [ -f /etc/nextflow/nextflow.config ] && cp /etc/nextflow/nextflow.config \$PWD/nextflow.config; echo cd \\\"\$PWD\\\" > /root/.profile; "
+            assert cfg.'init.sh' == "mkdir -p '/launch/dir'; if [ -d '/launch/dir' ]; then cd '/launch/dir'; else echo 'Cannot create directory: /launch/dir'; exit 1; fi; [ -f /etc/nextflow/scm ] && ln -s /etc/nextflow/scm \$NXF_HOME/scm; [ -f /etc/nextflow/nextflow.config ] && cp /etc/nextflow/nextflow.config \$PWD/nextflow.config; "
             assert cfg.'nextflow.config' == "foo = 'bar'\n"
             assert cfg.'scm' == "hello = 'world'\n"
             assert cfg.'params.json' == 'bla-bla'

@@ -41,7 +41,9 @@ class PodSpecBuilder {
 
     String imageName
 
-    String pullPolicy
+    String imagePullPolicy
+
+    String imagePullSecret
 
     List<String> command = []
 
@@ -69,6 +71,7 @@ class PodSpecBuilder {
 
     Collection<PodVolumeClaim> volumeClaims = []
 
+    PodSecurityContext securityContext
 
     /**
      * @return A sequential volume unique identifier
@@ -88,8 +91,8 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withPullPolicy(String policy) {
-        this.pullPolicy = policy
+    PodSpecBuilder withImagePullPolicy(String policy) {
+        this.imagePullPolicy = policy
         return this
     }
 
@@ -155,11 +158,6 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withVolumeClaim( String name, String mount ) {
-        volumeClaims.add(new PodVolumeClaim(name, mount))
-        return this
-    }
-
     PodSpecBuilder withVolumeClaim( PodVolumeClaim claim ) {
         volumeClaims.add(claim)
         return this
@@ -202,8 +200,10 @@ class PodSpecBuilder {
 
     PodSpecBuilder withPodOptions(PodOptions opts) {
         // -- pull policy
-        if( opts.pullPolicy )
-            pullPolicy = opts.pullPolicy
+        if( opts.imagePullPolicy )
+            imagePullPolicy = opts.imagePullPolicy
+        if( opts.imagePullSecret )
+            imagePullSecret = opts.imagePullSecret
         // -- env vars
         if( opts.getEnvVars() )
             envVars.addAll( opts.getEnvVars() )
@@ -216,6 +216,17 @@ class PodSpecBuilder {
         // -- volume claims 
         if( opts.getVolumeClaims() )
             volumeClaims.addAll( opts.getVolumeClaims() )
+        // -- labels
+        if( opts.labels ) {
+            def keys = opts.labels.keySet()
+            if( 'app' in keys ) throw new IllegalArgumentException("Invalid pod label -- `app` is a reserved label")
+            if( 'runName' in keys ) throw new IllegalArgumentException("Invalid pod label -- `runName` is a reserved label")
+            labels.putAll( opts.labels )
+        }
+        // -- security context
+        if( opts.securityContext )
+            securityContext = opts.securityContext
+
         return this
     }
 
@@ -251,6 +262,9 @@ class PodSpecBuilder {
         if( this.workDir )
             container.put('workingDir', workDir)
 
+        if( imagePullPolicy )
+            container.imagePullPolicy = imagePullPolicy
+
         final spec = [
                 restartPolicy: restart,
                 containers: [ container ],
@@ -258,6 +272,12 @@ class PodSpecBuilder {
 
         if( this.serviceAccount )
             spec.serviceAccountName = this.serviceAccount
+
+        if( securityContext )
+            spec.securityContext = securityContext.toSpec()
+
+        if( imagePullSecret )
+            spec.imagePullSecrets = ((Map)[name: imagePullSecret])
 
         // add labels
         if( labels )
@@ -288,6 +308,7 @@ class PodSpecBuilder {
         for( PodVolumeClaim entry : volumeClaims ) {
             final name = nextVolName()
             final claim = [name: name, mountPath: entry.mountPath ]
+            if( entry.subPath ) claim.subPath = entry.subPath
             mounts << claim
             volumes << [name: name, persistentVolumeClaim: [claimName: entry.claimName]]
         }

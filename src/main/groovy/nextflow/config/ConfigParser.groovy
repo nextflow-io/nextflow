@@ -364,7 +364,7 @@ class ConfigParser {
                         } finally {
                             currentConditionalBlock.push(conditionalBlockKey)
                         }
-                        stack.pop()
+                        stack.removeLast()
                     }
                 } else {
                     def current = stack.last
@@ -382,7 +382,7 @@ class ConfigParser {
                     assignName.call(name, co)
                     pushStack.call(co)
                     args[0].call()
-                    stack.pop()
+                    stack.removeLast()
                 }
             } else if (args.length == 2 && args[1] instanceof Closure) {
                 try {

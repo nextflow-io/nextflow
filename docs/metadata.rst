@@ -14,6 +14,7 @@ For example::
     println "Project : $workflow.projectDir"
     println "Git info: $workflow.repository - $workflow.revision [$workflow.commitId]"
     println "Cmd line: $workflow.commandLine"
+    println "Manifest's pipeline version: $workflow.manifest.version"
 
 
 .. tip:: To shortcut the access to multiple ``workflow`` properties you can use the Groovy
@@ -34,6 +35,8 @@ revision                    Git branch/tag of the executed workflow repository.
 projectDir                  Directory where the workflow project is stored in the computer.
 launchDir                   Directory where the workflow execution has been launched.
 workDir                     Workflow working directory.
+homeDir                     User system home directory.
+userName                    User system account name.
 configFiles                 Configuration files used for the workflow execution.
 container                   Docker image used to run workflow tasks. When more than one image is used
                             it returns a map object containing `[process name, image name]` pair entries.
@@ -45,6 +48,7 @@ runName                     Mnemonic name assigned to this execution instance.
 sessionId                   Unique identifier (UUID) associated to current execution.
 resume                      Returns ``true`` whenever the current instance is resumed from a previous execution.
 start                       Timestamp of workflow at execution start.
+manifest                    Entries of the workflow manifest.
 :sup:`✝` complete           Timestamp of workflow when execution is completed.
 :sup:`✝` duration           Time elapsed to complete workflow execution.
 :sup:`*` success            Reports if the execution completed successfully.

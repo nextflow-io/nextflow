@@ -19,6 +19,8 @@
  */
 
 package nextflow.extension
+
+import org.codehaus.groovy.runtime.InvokerHelper
 import static nextflow.util.CheckHelper.checkParams
 
 import groovy.transform.CompileStatic
@@ -81,7 +83,7 @@ class DumpOp {
         final next = {
             def marker = 'DUMP'
             if( tag ) marker += ": $tag"
-            log.info "[$marker] " + ( renderer ? renderer.call(it) : String.valueOf(it) )
+            log.info "[$marker] " + ( renderer ? renderer.call(it) : InvokerHelper.inspect(it) )
             target.bind(it)
         }
 

@@ -20,6 +20,8 @@
 
 package nextflow.extension
 
+import spock.lang.Timeout
+
 import nextflow.Channel
 import spock.lang.Specification
 
@@ -27,6 +29,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(10)
 class BufferOpTest extends Specification {
 
     
@@ -124,6 +127,26 @@ class BufferOpTest extends Specification {
         r1.val == [2,3]
         r1.val == Channel.STOP
 
+    }
+
+    def testBufferWithValueChannel() {
+
+        when:
+        def result = Channel.value(1).buffer(size: 1)
+        then:
+        result.val == [1]
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.value(1).buffer(size: 10)
+        then:
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.value(1).buffer(size: 10,remainder: true)
+        result.val == [1]
+        then:
+        result.val == Channel.STOP
     }
 
 

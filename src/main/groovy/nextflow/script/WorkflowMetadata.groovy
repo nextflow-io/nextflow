@@ -19,6 +19,9 @@
  */
 
 package nextflow.script
+
+import nextflow.config.Manifest
+
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -133,6 +136,16 @@ class WorkflowMetadata {
     Path workDir
 
     /**
+     * User system home directory
+     */
+    Path homeDir
+
+    /**
+     * User system account name
+     */
+    String userName
+
+    /**
      * The exit status of the task that caused the workflow execution to fail
      */
     Integer exitStatus
@@ -177,6 +190,11 @@ class WorkflowMetadata {
      */
     WorkflowStats stats
 
+    /**
+     * The workflow manifest
+     */
+    Manifest manifest
+
     final private ScriptRunner owner
 
     final private List<Closure> onCompleteActions = []
@@ -210,6 +228,9 @@ class WorkflowMetadata {
         this.containerEngine = owner.session.containerConfig.with { isEnabled() ? getEngine() : null }
         this.configFiles = owner.session.configFiles?.collect { it.toAbsolutePath() }
         this.stats = owner.session.workflowStats
+        this.userName = System.getProperty('user.name')
+        this.homeDir = Paths.get(System.getProperty('user.home'))
+        this.manifest = owner.session.getManifest()
 
         // check if there's a onComplete action in the config file
         registerConfigAction(owner.session.config.workflow as Map)

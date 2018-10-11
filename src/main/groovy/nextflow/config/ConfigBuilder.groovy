@@ -438,7 +438,7 @@ class ConfigBuilder {
             uniqueId = HistoryFile.DEFAULT.getLast()?.sessionId
 
             if( !uniqueId ) {
-                log.warn "It seems you never run this project before -- Option `-resume` is ignored"
+                log.warn "It appears you have never run this project before -- Option `-resume` is ignored"
             }
         }
 
@@ -461,6 +461,9 @@ class ConfigBuilder {
 
         else if( !config.workDir )
             config.workDir = env.get('NXF_WORK') ?: 'work'
+
+        if( cmdRun.bucketDir )
+            config.bucketDir = cmdRun.bucketDir
 
         // -- sets the library path
         if( cmdRun.libPath )
@@ -551,6 +554,15 @@ class ConfigBuilder {
                 config.notification.enabled = true
                 config.notification.to = cmdRun.withNotification
             }
+        }
+
+        // -- sets the messages options
+        if( cmdRun.withWebLog ) {
+            if( !(config.weblog instanceof Map) )
+                config.weblog = [:]
+            config.weblog.enabled = true
+            if ( !config.weblog.url )
+                config.weblog.url = cmdRun.withWebLog
         }
 
 

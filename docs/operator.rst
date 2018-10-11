@@ -170,6 +170,7 @@ For example::
     Done
 
 
+.. _operator-first:
 
 first
 --------
@@ -250,6 +251,8 @@ The ``take`` operator allows you to filter only the first `n` items emitted by a
 
 See also `until`_.
 
+.. _operator-last:
+
 last
 -------
 
@@ -303,6 +306,8 @@ These operators are:
 * `toList`_
 * `toSortedList`_
 * `transpose`_
+
+.. _operator-map:
 
 map
 ------
@@ -373,6 +378,8 @@ Associative arrays are handled in the same way, so that each array entry is emit
     square: 9
 
 
+.. _operator-reduce:
+
 reduce
 ---------
 
@@ -440,7 +447,7 @@ following these rules:
 * For any other value, the value itself is used as a key.
 
 groupTuple
------------
+----------
 
 The ``groupTuple`` operator collects tuples (or lists) of values emitted by the source channel grouping together the
 elements that share the same key. Finally it emits a new tuple object for each distinct key collected.
@@ -503,6 +510,12 @@ deep            Similar to the previous, but the hash number is created on actua
 `custom`        A custom sorting criteria can be specified by using either a :ref:`Closure <script-closure>` or a `Comparator <http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html>`_ object.
 =============== ========================
 
+
+.. tip:: You should always specify the number of expected element in each tuple using the ``size`` attribute
+  to allow the ``groupTuple`` operator to stream the collected values as soon as possible. However there
+  are use cases in which each tuple has a different size depending grouping key. In this cases use the
+  built-in function ``groupKey`` that allows you to create a special grouping key object to which it's possible
+  to associate the group size for a given key.
 
 
 buffer
@@ -645,6 +658,8 @@ As before, if you don't want to emit the last items which do not complete a tupl
 
 
 See also: `buffer`_ operator.
+
+.. _operator-collect:
 
 collect
 -------
@@ -1802,6 +1817,7 @@ The maths operators are:
 * `sum`_
 * `toInteger`_
 
+.. _operator-count:
 
 count
 --------
@@ -1872,6 +1888,7 @@ that associates each item with the grouping key. For example::
     [h:3, c:1, b:1]
 
 
+.. _operator-min:
 
 min
 ------
@@ -1911,6 +1928,7 @@ taking two parameters that represent two emitted items to be compared. For examp
     	.subscribe {  println it }
 
 
+.. _operator-max:
 
 max
 ------
@@ -1951,6 +1969,7 @@ taking two parameters that represent two emitted items to be compared. For examp
     	.subscribe {  println it }
 
 
+.. _operator-sum:
 
 sum
 ------

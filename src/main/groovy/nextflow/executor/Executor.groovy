@@ -20,6 +20,8 @@
 
 package nextflow.executor
 
+import java.nio.file.Path
+
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -59,6 +61,8 @@ abstract class Executor {
      */
     void register() { }
 
+    protected String getDisplayName() { name }
+
     /**
      * Allows to post-initialize the executor
      */
@@ -71,7 +75,7 @@ abstract class Executor {
 
         // -- get the reference to the monitor class for this executor
         monitor = session.dispatcher.getOrCreateMonitor(this.class) {
-            log.info "[warm up] executor > $name"
+            log.info "[warm up] executor > ${getDisplayName()}"
             createTaskMonitor()
         }
 
@@ -83,6 +87,14 @@ abstract class Executor {
         }
     }
 
+    /**
+     * The path where workflow scratch data is written.
+     *
+     * @return The workflow base work directory
+     */
+    Path getWorkDir() {
+       session.getWorkDir()
+    }
 
     /**
      * @return Create a new instance of the {@code TaskQueueHolder} component

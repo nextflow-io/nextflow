@@ -68,6 +68,10 @@ class FileHolder  {
         new FileHolder( this.sourceObj, this.storePath, stageName )
     }
 
+    Path getStorePath() { storePath }
+
+    String getStageName() { stageName }
+
     @PackageScope
     static FileHolder get( def path, def name = null ) {
         Path storePath = path as Path

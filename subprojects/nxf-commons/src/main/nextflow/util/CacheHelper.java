@@ -48,7 +48,27 @@ import org.slf4j.LoggerFactory;
  */
 public class CacheHelper {
 
-    public enum HashMode { STANDARD, DEEP }
+    public enum HashMode {
+
+        STANDARD, DEEP, LENIENT;
+
+        public static HashMode of( Object obj ) {
+            if( obj==null || obj instanceof Boolean )
+                return null;
+            if( obj instanceof CharSequence ) {
+                if( "true".equals(obj) || "false".equals(obj) )
+                    return null;
+                if( "standard".equals(obj) )
+                    return STANDARD;
+                if( "lenient".equals(obj) )
+                    return LENIENT;
+                if( "deep".equals(obj) )
+                    return DEEP;
+            }
+            log.warn("Unknown cache mode: {}", obj.toString());
+            return null;
+        }
+    }
 
     private static final Logger log = LoggerFactory.getLogger(CacheHelper.class);
 
@@ -97,6 +117,9 @@ public class CacheHelper {
         if( value instanceof Double )
             return hasher.putDouble( (Double)value );
 
+        if( value instanceof Byte )
+            return hasher.putByte( (Byte)value );
+
         if( value instanceof Number )
             // reduce all other number types (BigInteger, BigDecimal, AtomicXxx, etc) to string equivalent
             return hasher.putUnencodedChars(value.toString());
@@ -106,9 +129,6 @@ public class CacheHelper {
 
         if( value instanceof CharSequence )
             return hasher.putUnencodedChars( (CharSequence)value );
-
-        if( value instanceof Byte )
-            return hasher.putByte( (Byte)value );
 
         if( value instanceof byte[] )
             return hasher.putBytes( (byte[])value );
@@ -147,6 +167,10 @@ public class CacheHelper {
         if( value instanceof UUID ) {
             UUID uuid = (UUID)value;
             return hasher.putLong(uuid.getMostSignificantBits()).putLong(uuid.getLeastSignificantBits());
+        }
+
+        if( value instanceof VersionNumber ) {
+            return hasher.putInt( value.hashCode() );
         }
 
         log.debug("[WARN] Unknown hashing type: {} -- {}", value.getClass(), value);
@@ -189,7 +213,7 @@ public class CacheHelper {
         if( mode==HashMode.DEEP && attrs!=null && attrs.isRegularFile() )
             return hashFileContent(hasher, path);
         else
-            return hashFileMetadata(hasher, path, attrs);
+            return hashFileMetadata(hasher, path, attrs, mode);
     }
 
     /**
@@ -199,12 +223,12 @@ public class CacheHelper {
      * @param file file The {@code Path} object to hash
      * @return The updated {@code Hasher} object
      */
-    static private Hasher hashFileMetadata( Hasher hasher, Path file, BasicFileAttributes attrs ) {
+    static private Hasher hashFileMetadata( Hasher hasher, Path file, BasicFileAttributes attrs, HashMode mode ) {
 
         hasher = hasher.putUnencodedChars( file.toAbsolutePath().toString() );
         if( attrs != null ) {
             hasher = hasher.putLong(attrs.size());
-            if( attrs.lastModifiedTime() != null) {
+            if( attrs.lastModifiedTime() != null && mode != HashMode.LENIENT ) {
                 hasher = hasher.putLong( attrs.lastModifiedTime().toMillis() );
             }
         }

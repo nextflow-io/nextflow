@@ -25,8 +25,10 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.cloud.aws.batch.AwsOptions
 import nextflow.container.ContainerConfig
 import nextflow.container.DockerBuilder
+import nextflow.container.SingularityBuilder
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -431,6 +433,45 @@ class BashWrapperBuilderTest extends Specification {
                     unset IFS
                 }
 
+                nxf_s3_download() {
+                    local source=\$1
+                    local target=\$2
+                    local file_name=\$(basename \$1)
+                    local is_dir=\$(aws s3 ls \$source | grep -F "PRE \${file_name}/" -c)
+                    if [[ \$is_dir == 1 ]]; then
+                        aws s3 cp --only-show-errors --recursive "\$source" "\$target"
+                    else 
+                        aws s3 cp --only-show-errors "\$source" "\$target"
+                    fi
+                }
+                
+                nxf_parallel() {
+                    local cmd=("\$@")
+                    local cpus=\$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
+                    local max=\$(if (( cpus>16 )); then echo 16; else echo \$cpus; fi)
+                    local i=0
+                    local pid=()
+                    (
+                    set +u
+                    while ((i<\${#cmd[@]})); do
+                        local copy=()
+                        for x in "\${pid[@]}"; do
+                          [[ -e /proc/\$x ]] && copy+=(\$x) 
+                        done
+                        pid=("\${copy[@]}")
+                
+                        if ((\${#pid[@]}>=\$max)); then 
+                          sleep 1 
+                        else 
+                          eval "\${cmd[\$i]}" &
+                          pid+=(\$!)
+                          ((i+=1))
+                        fi 
+                    done
+                    ((\${#pid[@]}>0)) && wait \${pid[@]}
+                    )
+                }     
+                
                 touch ${folder}/.command.begin
                 [[ \$NXF_SCRATCH ]] && echo "nxf-scratch-dir \$HOSTNAME:\$NXF_SCRATCH" && cd \$NXF_SCRATCH
 
@@ -2716,8 +2757,7 @@ class BashWrapperBuilderTest extends Specification {
                   local count=0;
                   declare -a max=(); for i in {0..13}; do max[i]=0; done
                   while [[ true ]]; do
-                    kill -0 $pid >/dev/null
-                    [[ $? != 0 ]] && exit 0
+                    if ! kill -0 $pid 2>/dev/null; then exit 0; fi
                     tot=$(nxf_pstat $pid)
                     [[ ! $tot ]] && break
                     IFS=' ' read -a val <<< "$tot"; unset IFS
@@ -2788,7 +2828,7 @@ class BashWrapperBuilderTest extends Specification {
                 
                 nxf_pcpu() {
                     local pid=$1
-                    local proc_time=$(2> /dev/null < /proc/$pid/stat awk '{sum=$14+$15+$16+$17; printf "%.0f",sum}' || echo -n 0)
+                    local proc_time=$(2> /dev/null < /proc/$pid/stat awk '{sum=$14+$15; printf "%.0f",sum}' || echo -n 0)
                     local cpu_usage=$(echo -n $proc_time ${prev_time[pid]:-0} $total_time $prev_total $num_cpus | awk '{ pct=($1-$2)/($3-$4)*$5 *100; printf "%.1f", pct }' )
                     prev_time[pid]=$proc_time
                     nxf_pcpu_ret=$cpu_usage
@@ -2857,13 +2897,14 @@ class BashWrapperBuilderTest extends Specification {
                   declare -a max=(); for i in {0..13}; do max[i]=0; done
                   while [[ -d /proc/$pid ]]; do
                     nxf_pstat $pid
-                    [[ ! "$nxf_pstat_ret" ]] && break
+                    if [[ "$nxf_pstat_ret" ]]; then
                     IFS=' ' read -a val <<< "$nxf_pstat_ret"; unset IFS
                     for i in {0..13}; do
                       [ ${val[i]} -gt ${max[i]} ] && max[i]=${val[i]}
                     done
                     echo "pid state %cpu %mem vmem rss peak_vmem peak_rss rchar wchar syscr syscw read_bytes write_bytes" > $trg
                     echo "${max[@]}" >> $trg
+                    fi
                     nxf_sleep $count
                     count=$((count+1))
                   done
@@ -2913,6 +2954,7 @@ class BashWrapperBuilderTest extends Specification {
         _ * copy.fileStr(_ as Path) >>  { Path it -> it.getFileName().toString() }
         _ * copy.pipeInputFile(_ as Path) >> { " < ${it.getFileName()}"  }
 
+        then:
         stub.text == '''
                 #!/bin/bash
                 set -e
@@ -2927,7 +2969,7 @@ class BashWrapperBuilderTest extends Specification {
                 
                 nxf_pcpu() {
                     local pid=$1
-                    local proc_time=$(2> /dev/null < /proc/$pid/stat awk '{sum=$14+$15+$16+$17; printf "%.0f",sum}' || echo -n 0)
+                    local proc_time=$(2> /dev/null < /proc/$pid/stat awk '{sum=$14+$15; printf "%.0f",sum}' || echo -n 0)
                     local cpu_usage=$(echo -n $proc_time ${prev_time[pid]:-0} $total_time $prev_total $num_cpus | awk '{ pct=($1-$2)/($3-$4)*$5 *100; printf "%.1f", pct }' )
                     prev_time[pid]=$proc_time
                     nxf_pcpu_ret=$cpu_usage
@@ -2996,13 +3038,14 @@ class BashWrapperBuilderTest extends Specification {
                   declare -a max=(); for i in {0..13}; do max[i]=0; done
                   while [[ -d /proc/$pid ]]; do
                     nxf_pstat $pid
-                    [[ ! "$nxf_pstat_ret" ]] && break
+                    if [[ "$nxf_pstat_ret" ]]; then
                     IFS=' ' read -a val <<< "$nxf_pstat_ret"; unset IFS
                     for i in {0..13}; do
                       [ ${val[i]} -gt ${max[i]} ] && max[i]=${val[i]}
                     done
                     echo "pid state %cpu %mem vmem rss peak_vmem peak_rss rchar wchar syscr syscw read_bytes write_bytes" > $trg
                     echo "${max[@]}" >> $trg
+                    fi
                     nxf_sleep $count
                     count=$((count+1))
                   done
@@ -3030,6 +3073,32 @@ class BashWrapperBuilderTest extends Specification {
 
         cleanup:
         stub?.delete()
+    }
+
+    def 'should create container env' () {
+        given:
+        def bash = Spy(BashWrapperBuilder)
+
+        when:
+        def builder = bash.createContainerBuilder(null)
+        then:
+        bash.getEnvironment() >> [:]
+        bash.getBinDir() >> Paths.get('/my/bin')
+        bash.getWorkDir() >> Paths.get('/my/work/dir')
+        bash.getStatsEnabled() >> false
+
+        bash.getResolvedInputs() >> [:]
+        bash.getContainerConfig() >> [engine: 'singularity', envWhitelist: 'FOO,BAR']
+        bash.getContainerImage() >> 'foo/bar'
+        bash.getContainerExecutable() >> false
+        bash.getContainerMount() >> null
+        bash.getContainerMemory() >> null
+        bash.getContainerCpuset() >> null
+        bash.getContainerOptions() >> null
+
+        builder instanceof SingularityBuilder
+        builder.env == ['FOO','BAR']
+        builder.workDir == Paths.get('/my/work/dir')
     }
 
 }

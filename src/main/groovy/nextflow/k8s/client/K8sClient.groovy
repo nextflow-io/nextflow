@@ -243,12 +243,7 @@ class K8sClient {
             final state = container.state as Map
             if( state.waiting instanceof Map ) {
                 def waiting = state.waiting as Map
-                if( waiting.reason == 'ErrImagePull' || waiting.reason == 'ImagePullBackOff') {
-                    def message = "K8s pod image cannot be pulled"
-                    if( waiting.message ) message += " -- $waiting.message"
-                    final cause = new K8sResponseException(resp)
-                    throw new PodUnschedulableException(message, cause)
-                }
+                checkInvalidWaitingState(waiting, resp)
             }
             return state
         }
@@ -267,6 +262,27 @@ class K8sClient {
         }
 
         throw new K8sResponseException("K8s invalid pod status (missing container status)", resp)
+    }
+
+    protected void checkInvalidWaitingState( Map waiting, K8sResponseJson resp ) {
+        if( waiting.reason == 'ErrImagePull' || waiting.reason == 'ImagePullBackOff') {
+            def message = "K8s pod image cannot be pulled"
+            if( waiting.message ) message += " -- $waiting.message"
+            final cause = new K8sResponseException(resp)
+            throw new PodUnschedulableException(message, cause)
+        }
+        if( waiting.reason == 'CreateContainerConfigError' ) {
+            def message = "K8s pod configuration failed"
+            if( waiting.message ) message += " -- $waiting.message"
+            final cause = new K8sResponseException(resp)
+            throw new PodUnschedulableException(message, cause)
+        }
+        if( waiting.reason =~ /.+Error$/ ) {
+            def message = "K8s pod waiting on unknown error state"
+            if( waiting.message ) message += " -- $waiting.message"
+            final cause = new K8sResponseException(resp)
+            throw new PodUnschedulableException(message, cause)
+        }
     }
 
     /*

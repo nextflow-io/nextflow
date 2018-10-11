@@ -21,7 +21,6 @@
 package nextflow.util
 
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -68,6 +67,15 @@ class ArrayBagTest extends Specification {
         alpha[2] == 'Hello'
         alpha[3] == 9
 
+    }
+
+    def 'should stringify the bag' () {
+        given:
+        def bag = new ArrayBag([1,2,3])
+        
+        expect:
+        bag.toString() == '[1, 2, 3]'
+        String.valueOf(bag) == '[1, 2, 3]'
     }
 
 }

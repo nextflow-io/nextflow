@@ -1,0 +1,23 @@
+set -e
+
+#
+# run normal mode
+#
+$NXF_RUN -c .config | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > task1'` == 3 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > task2'` == 3 ]] || false
+
+[[ `grep 'NOTE' .nextflow.log | egrep -c "Process .* terminated with an error exit status"` == 3 ]] || false
+
+
+#
+# RESUME mode
+#
+echo ''
+$NXF_RUN -c .config -resume | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > task1'` == 3 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Cached process > task2'` == 3 ]] || false
+
+[[ `grep 'NOTE' .nextflow.log | egrep -c "Process .* terminated with an error exit status"` == 3 ]] || false
