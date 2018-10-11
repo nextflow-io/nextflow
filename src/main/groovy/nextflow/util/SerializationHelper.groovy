@@ -20,7 +20,6 @@
 
 package nextflow.util
 
-import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
 
 import java.nio.file.FileSystems
@@ -281,13 +280,12 @@ class PathSerializer extends Serializer<Path> {
 
 @Slf4j
 @CompileStatic
-//TODO: See if we can combine this with the standard path serialiser
 class CloudStoragePathSerializer extends Serializer<CloudStoragePath> {
 
     @Override
     void write(Kryo kryo, Output output, CloudStoragePath target) {
         final scheme = target.getFileSystem().provider().getScheme()
-        final host = target.toUri().getHost()
+        final host = target.bucket()
         final path = target.toString()
         log.trace "Path serialization > scheme: $scheme; host: $host; path: $path"
 
@@ -297,16 +295,15 @@ class CloudStoragePathSerializer extends Serializer<CloudStoragePath> {
     }
 
     @Override
-    CloudStoragePath  read(Kryo kryo, Input input, Class<CloudStoragePath> type) {
+    CloudStoragePath read(Kryo kryo, Input input, Class<CloudStoragePath> type) {
         final scheme = input.readString()
         final host = input.readString()
         final path = input.readString()
         log.trace "CloudStoragePath de-serialization > scheme: $scheme; host: $host; path: $path"
 
         def uri = URI.create("$scheme://$host$path")
-        //TODO: options might change
-        def fs = FileHelper.getOrCreateFileSystemFor(uri,["directoryEmulation" : true]) as CloudStorageFileSystem
-        return fs.getPath(uri.path)
+        def fs = FileHelper.getOrCreateFileSystemFor(uri)
+        fs.provider().getPath(uri) as CloudStoragePath
     }
 }
 

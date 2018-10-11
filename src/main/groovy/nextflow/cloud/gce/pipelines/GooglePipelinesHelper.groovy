@@ -120,10 +120,12 @@ class GooglePipelinesHelper {
     }
 
     void cancelOperation(Operation operation) {
+        init()
         genomicsClient.projects().operations().cancel(operation.getName(), new CancelOperationRequest()).execute()
     }
 
     Operation runPipeline(Pipeline pipeline) {
+        init()
         genomicsClient.pipelines().run(new RunPipelineRequest().setPipeline(pipeline)).execute()
     }
 }

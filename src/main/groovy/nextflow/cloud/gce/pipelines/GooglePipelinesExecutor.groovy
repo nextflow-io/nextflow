@@ -19,7 +19,7 @@ import nextflow.util.Duration
 @CompileStatic
 class GooglePipelinesExecutor extends Executor {
 
-    GooglePipelinesConfiguration pipelineConfig
+    static GooglePipelinesConfiguration pipelineConfig
     final GooglePipelinesHelper helper
 
 
@@ -76,7 +76,7 @@ class GooglePipelinesExecutor extends Executor {
             }
         }
 
-        new GooglePipelinesConfiguration(
+        return new GooglePipelinesConfiguration(
                 session.config.navigate("gce.project") as String,
                 session.config.navigate("gce.zone") as String,
                 session.config.navigate("cloud.instanceType") as String,
