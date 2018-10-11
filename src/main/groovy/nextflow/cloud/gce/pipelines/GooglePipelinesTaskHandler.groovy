@@ -1,16 +1,10 @@
 package nextflow.cloud.gce.pipelines
 
-import com.google.api.services.genomics.v2alpha1.model.CancelOperationRequest
-import com.google.api.services.genomics.v2alpha1.model.Event
-import com.google.api.services.genomics.v2alpha1.model.Metadata
-import com.google.api.services.genomics.v2alpha1.model.Mount
-import com.google.api.services.genomics.v2alpha1.model.Operation
-import com.google.api.services.genomics.v2alpha1.model.Pipeline
-import com.google.api.services.genomics.v2alpha1.model.RunPipelineRequest
+import com.google.api.services.genomics.v2alpha1.model.*
+import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessUnrecoverableException
-import nextflow.executor.Executor
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
@@ -19,12 +13,12 @@ import nextflow.processor.TaskStatus
 import java.nio.file.Path
 
 @Slf4j
-//@CompileStatic
 class GooglePipelinesTaskHandler extends TaskHandler {
 
     final GooglePipelinesExecutor executor
     final TaskBean taskBean
     final GooglePipelinesConfiguration pipeConfig
+    GooglePipelinesScriptLauncher launcher
 
     final String taskName
     final String taskInstanceName
@@ -44,6 +38,8 @@ class GooglePipelinesTaskHandler extends TaskHandler {
     final static String diskName = "nf-pipeline-work"
     final static String fileCopyImage = "google/cloud-sdk:alpine"
 
+
+
     Mount sharedMount
     Pipeline taskPipeline
 
@@ -51,13 +47,13 @@ class GooglePipelinesTaskHandler extends TaskHandler {
     private Metadata metadata
 
     @PackageScope
-    List<String> stagingCommands = []
+    final List<String> stagingCommands = []
     @PackageScope
-    List<String> unstagingCommands = []
+    final List<String> unstagingCommands = []
 
-    GooglePipelinesTaskHandler(TaskRun task, Executor executor, GooglePipelinesConfiguration pipeConfig) {
+    GooglePipelinesTaskHandler(TaskRun task, GooglePipelinesExecutor executor, GooglePipelinesConfiguration pipeConfig) {
         super(task)
-        this.executor = executor as GooglePipelinesExecutor
+        this.executor = executor
         this.taskBean = new TaskBean(task)
         this.pipeConfig = pipeConfig
 
@@ -76,6 +72,8 @@ class GooglePipelinesTaskHandler extends TaskHandler {
 
         validateConfiguration()
 
+        launcher = new GooglePipelinesScriptLauncher(this.taskBean, this)
+
         log.debug "[GOOGLE PIPELINE] Created handler for task '${task.name}'."
     }
 
@@ -87,14 +85,14 @@ class GooglePipelinesTaskHandler extends TaskHandler {
 
     @Override
     boolean checkIfRunning() {
-        operation = executor.genomicsClient.projects().operations().get(operation.getName()).execute()
+        operation = executor.helper.checkOperationStatus(operation)
         return !operation.getDone()
     }
 
     @Override
     //TODO: Catch pipeline errors and report them back
     boolean checkIfCompleted() {
-        operation = executor.genomicsClient.projects().operations().get(operation.getName()).execute()
+        operation = executor.helper.checkOperationStatus(operation)
 
         def events = extractRuntimeDataFromOperation()
         events.reverse().each {
@@ -140,13 +138,13 @@ class GooglePipelinesTaskHandler extends TaskHandler {
     @Override
     void kill() {
         log.debug "[GOOGLE PIPELINE] Killing pipeline '$operation.name'"
-        executor.genomicsClient.projects().operations().cancel(operation.getName(), new CancelOperationRequest())
+        executor.helper.cancelOperation(operation)
     }
 
     @Override
     void submit() {
 
-        final launcher = new GooglePipelinesScriptLauncher(this.taskBean, this)
+        //final launcher = new GooglePipelinesScriptLauncher(this.taskBean, this)
         launcher.build()
 
         //TODO: chmod 777 is bad m'kay
@@ -195,20 +193,20 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         log.debug "Unstaging script for task $task.name -> $unstagingScript"
 
         //Create the mount for out work files.
-        sharedMount = GooglePipelinesHelper.configureMount(diskName, mountPath)
+        sharedMount = executor.helper.configureMount(diskName, mountPath)
 
         //need the cloud-platform scope so that we can execute gsutil cp commands
-        def resources = GooglePipelinesHelper.configureResources(pipeConfig.vmInstanceType, pipeConfig.project, pipeConfig.zone, diskName, [GooglePipelinesHelper.SCOPE_CLOUD_PLATFORM], pipeConfig.preemptible)
+        def resources = executor.helper.configureResources(pipeConfig.vmInstanceType, pipeConfig.project, pipeConfig.zone, diskName, [GooglePipelinesHelper.SCOPE_CLOUD_PLATFORM], pipeConfig.preemptible)
 
-        def stagingAction = GooglePipelinesHelper.createAction("$taskInstanceName-staging", fileCopyImage, ["bash", "-c", stagingScript], [sharedMount], [GooglePipelinesHelper.ActionFlags.ALWAYS_RUN, GooglePipelinesHelper.ActionFlags.IGNORE_EXIT_STATUS])
+        def stagingAction = executor.helper.createAction("$taskInstanceName-staging", fileCopyImage, ["bash", "-c", stagingScript], [sharedMount], [GooglePipelinesHelper.ActionFlags.ALWAYS_RUN, GooglePipelinesHelper.ActionFlags.IGNORE_EXIT_STATUS])
         //TODO: Do we really want to override the entrypoint?
-        def mainAction = GooglePipelinesHelper.createAction(taskInstanceName, task.container, ['-o', 'pipefail', '-c', mainScript], [sharedMount], [], "bash")
+        def mainAction = executor.helper.createAction(taskInstanceName, task.container, ['-o', 'pipefail', '-c', mainScript], [sharedMount], [], "bash")
 
-        def unstagingAction = GooglePipelinesHelper.createAction("$taskInstanceName-unstaging", fileCopyImage, ["bash", "-c", unstagingScript], [sharedMount], [GooglePipelinesHelper.ActionFlags.ALWAYS_RUN, GooglePipelinesHelper.ActionFlags.IGNORE_EXIT_STATUS])
+        def unstagingAction = executor.helper.createAction("$taskInstanceName-unstaging", fileCopyImage, ["bash", "-c", unstagingScript], [sharedMount], [GooglePipelinesHelper.ActionFlags.ALWAYS_RUN, GooglePipelinesHelper.ActionFlags.IGNORE_EXIT_STATUS])
 
-        taskPipeline = GooglePipelinesHelper.createPipeline([stagingAction, mainAction, unstagingAction], resources)
+        taskPipeline = executor.helper.createPipeline([stagingAction, mainAction, unstagingAction], resources)
 
-        operation = executor.genomicsClient.pipelines().run(new RunPipelineRequest().setPipeline(taskPipeline)).execute()
+        operation = executor.helper.runPipeline(taskPipeline)
 
         log.trace "[GOOGLE PIPELINE] Submitted task '$task.name. Assigned Pipeline operation name = '${operation.getName()}'"
     }

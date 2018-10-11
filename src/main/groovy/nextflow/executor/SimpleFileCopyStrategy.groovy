@@ -243,7 +243,6 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * @return A shell copy or move command string
      */
 
-    //TODO:  Do we need to add special handling for google cloud storage buckets here?
     protected String stageOutCommand( String source, Path targetDir, String mode = null) {
         def scheme = getPathScheme(targetDir)
         if( scheme == 'file' )

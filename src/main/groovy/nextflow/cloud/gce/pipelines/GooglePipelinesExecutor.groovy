@@ -1,8 +1,8 @@
 package nextflow.cloud.gce.pipelines
 
-import com.google.api.services.genomics.v2alpha1.Genomics
+
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
-import groovy.transform.PackageScope
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
@@ -16,13 +16,23 @@ import nextflow.util.Duration
 
 @Slf4j
 @SupportedScriptTypes(ScriptType.SCRIPTLET)
+@CompileStatic
 class GooglePipelinesExecutor extends Executor {
 
+    GooglePipelinesConfiguration pipelineConfig
+    final GooglePipelinesHelper helper
 
-    @PackageScope
-    static Genomics genomicsClient
 
-    static GooglePipelinesConfiguration pipelineConfig
+    /*
+     * Used for testing purposes
+     */
+    GooglePipelinesExecutor(GooglePipelinesHelper helper) {
+        this.helper = helper
+    }
+
+    GooglePipelinesExecutor() {
+        this.helper = new GooglePipelinesHelper()
+    }
 
     @Override
     final boolean isContainerNative() {
@@ -35,9 +45,6 @@ class GooglePipelinesExecutor extends Executor {
 
         pipelineConfig = validateConfiguration()
         log.debug "[GOOGLE PIPELINE] Pipeline config: $pipelineConfig"
-
-        genomicsClient = GooglePipelinesHelper.createGenomicClient()
-
         log.debug "[GOOGLE PIPELINE] Finished registration for executor $name"
     }
 

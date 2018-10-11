@@ -5,10 +5,13 @@ import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.services.genomics.v2alpha1.Genomics
 import com.google.api.services.genomics.v2alpha1.model.Action
+import com.google.api.services.genomics.v2alpha1.model.CancelOperationRequest
 import com.google.api.services.genomics.v2alpha1.model.Disk
 import com.google.api.services.genomics.v2alpha1.model.Mount
+import com.google.api.services.genomics.v2alpha1.model.Operation
 import com.google.api.services.genomics.v2alpha1.model.Pipeline
 import com.google.api.services.genomics.v2alpha1.model.Resources
+import com.google.api.services.genomics.v2alpha1.model.RunPipelineRequest
 import com.google.api.services.genomics.v2alpha1.model.ServiceAccount
 import com.google.api.services.genomics.v2alpha1.model.VirtualMachine
 import groovy.transform.CompileStatic
@@ -16,10 +19,16 @@ import groovy.util.logging.Slf4j
 
 @Slf4j
 @CompileStatic
+@SuppressWarnings("GrMethodMayBeStatic")
 class GooglePipelinesHelper {
 
     static final String SCOPE_CLOUD_PLATFORM = "https://www.googleapis.com/auth/cloud-platform"
     static final List<String> ENV_VAR_TO_INCLUDE = ["NXF_DEBUG"]
+
+    Genomics genomicsClient
+    GoogleCredential credential
+    final String applicationName
+
 
     enum ActionFlags {
         FLAG_UNSPECIFIED,
@@ -32,35 +41,38 @@ class GooglePipelinesHelper {
         DISABLE_STANDARD_ERROR_CAPTURE
     }
 
+    GooglePipelinesHelper(GoogleCredential credential = null,String name ="Nextflow GooglePipelinesExecutor") {
+        this.credential = credential
+        this.applicationName = name
+    }
+
     static String sanitizeName(String name) {
         name.replaceAll(/[^a-zA-Z0-9\-_]+/, '-').take(63)
     }
 
-    static Genomics createGenomicClient() {
+    void init() {
+        if(!genomicsClient) {
 
-        def credentials = GoogleCredential.applicationDefault
+            if (!credential)
+                credential = GoogleCredential.applicationDefault
 
-        if (credentials.createScopedRequired()) {
-            credentials = credentials.createScoped([SCOPE_CLOUD_PLATFORM])
+            if (credential.createScopedRequired()) {
+                credential = credential.createScoped([SCOPE_CLOUD_PLATFORM])
+            }
+
+            genomicsClient = new Genomics.Builder(GoogleNetHttpTransport.newTrustedTransport(), JacksonFactory.defaultInstance, credential)
+                    .setApplicationName(applicationName)
+                    .build()
         }
-
-        new Genomics.Builder(GoogleNetHttpTransport.newTrustedTransport(), JacksonFactory.defaultInstance, credentials)
-                .setApplicationName("Nextflow GooglePipelinesExecutor")
-                .build()
     }
 
-    static Map<String,String> getEnvironment() {
-        def ret = [:]
-        def env = System.getenv()
-
-        env.each { kv ->
-            if(ENV_VAR_TO_INCLUDE.contains(kv.key))
-                ret << kv
+    Map<String,String> getEnvironment() {
+        System.getenv().findAll {it ->
+            ENV_VAR_TO_INCLUDE.contains(it.key)
         }
-        ret
     }
 
-    static Action createAction(String name, String imageUri, List<String> commands, List<Mount> mounts, List<ActionFlags> flags = [], String entrypoint = null) {
+    Action createAction(String name, String imageUri, List<String> commands, List<Mount> mounts, List<ActionFlags> flags = [], String entrypoint = null) {
         new Action()
                 .setName(name)
                 .setImageUri(imageUri)
@@ -71,12 +83,12 @@ class GooglePipelinesHelper {
                 .setEnvironment(getEnvironment())
     }
 
-    static Pipeline createPipeline(List<Action> actions, Resources resources) {
+    Pipeline createPipeline(List<Action> actions, Resources resources) {
         new Pipeline().setActions(actions).setResources(resources)
     }
 
     //TODO: Do we want to configure this via nextflow config?
-    static Resources configureResources(String instanceType, String projectId, String zone, String diskName, List<String> scopes = null,boolean preEmptible = false) {
+    Resources configureResources(String instanceType, String projectId, String zone, String diskName, List<String> scopes = null,boolean preEmptible = false) {
 
         def disk = new Disk()
         disk.setName(diskName)
@@ -98,7 +110,20 @@ class GooglePipelinesHelper {
                 .setVirtualMachine(vm)
     }
 
-    static Mount configureMount(String diskName, String mountPath, boolean readOnly = false) {
+    Mount configureMount(String diskName, String mountPath, boolean readOnly = false) {
         new Mount().setDisk(diskName).setPath(mountPath).setReadOnly(readOnly)
+    }
+
+    Operation checkOperationStatus(Operation operation) {
+        init()
+        genomicsClient.projects().operations().get(operation.getName()).execute()
+    }
+
+    void cancelOperation(Operation operation) {
+        genomicsClient.projects().operations().cancel(operation.getName(), new CancelOperationRequest()).execute()
+    }
+
+    Operation runPipeline(Pipeline pipeline) {
+        genomicsClient.pipelines().run(new RunPipelineRequest().setPipeline(pipeline)).execute()
     }
 }
