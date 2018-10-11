@@ -35,8 +35,6 @@ dependencies {
     compile "commons-lang:commons-lang:2.6"
     compile 'com.google.guava:guava:21.0'
 
-    compile 'com.google.cloud:google-cloud-nio:0.65.1-alpha-SNAPSHOT'
-
     /* testCompile inherited from top gradle build file */
 }
 
