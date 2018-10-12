@@ -82,9 +82,17 @@ class SingularityCache {
     String simpleName(String imageUrl) {
         def p = imageUrl.indexOf('://')
         def name = p != -1 ? imageUrl.substring(p+3) : imageUrl
+        String extension = '.img'
+        if( name.contains('.sif:') ) {
+            extension = '.sif'
+            name = name.replace('.sif:','-')
+        }
+        else if( name.endsWith('.sif') ) {
+            extension = '.sif'
+            name = name.substring(0,name.length()-4)
+        }
         name = name.replace(':','-').replace('/','-')
-        name += ".img"
-        return name
+        return name + extension
     }
 
     /**

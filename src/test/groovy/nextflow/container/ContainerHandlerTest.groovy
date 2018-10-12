@@ -110,6 +110,7 @@ class ContainerHandlerTest extends Specification {
         'foo:2.0'                  | 'docker://foo:2.0'
         'foo.img'                  | 'docker://foo.img'
         'quay.io/busybox'          | 'docker://quay.io/busybox'
+        'library://library/default/debian:7'    | 'library://library/default/debian:7'
     }
 
     def 'test singularity relative path exists' () {
@@ -131,6 +132,7 @@ class ContainerHandlerTest extends Specification {
 
     }
 
+    @Unroll
     def 'test normalize method for docker' () {
         given:
         def n = Spy(ContainerHandler,constructorArgs:[[engine: 'docker', enabled: true, registry: registry]])
@@ -153,6 +155,7 @@ class ContainerHandlerTest extends Specification {
         'registry:5000/cbcrg/hello' | 'd.reg'   | 'registry:5000/cbcrg/hello'
     }
 
+    @Unroll
     def 'test normalize method for shifter' () {
 
         given:
@@ -177,29 +180,31 @@ class ContainerHandlerTest extends Specification {
         'docker:busybox'              | 'docker:busybox:latest'
     }
 
+    @Unroll
     def 'test normalize method for singularity' () {
         given:
         def handler = Spy(ContainerHandler,constructorArgs:[[engine: 'singularity', enabled: true]])
 
         when:
         handler.baseDir = Paths.get('/abs/path/')
-        def result = handler.normalizeImageName(image)
+        def result = handler.normalizeImageName(IMAGE)
 
         then:
-        1 * handler.normalizeSingularityImageName(image) >> normalized
-        X * handler.createCache(handler.config, normalized) >> expected
-        result == expected
+        1 * handler.normalizeSingularityImageName(IMAGE) >> NORMALIZED
+        X * handler.createCache(handler.config, NORMALIZED) >> EXPECTED
+        result == EXPECTED
 
         where:
-        image                      | normalized                                       | X           | expected
-        null                       | null                                             |           0 | null
-        ''                         | null                                             |           0 | null
-        '/abs/path/bar.img'        | '/abs/path/bar.img'                              |           0 | '/abs/path/bar.img'
-        'file:///abs/path/bar.img' | '/abs/path/bar.img'                              |           0 | '/abs/path/bar.img'
-        'foo.img'                  | Paths.get('foo.img').toAbsolutePath().toString() |           0 | Paths.get('foo.img').toAbsolutePath().toString()
-        'shub://busybox'           | 'shub://busybox'                                 |           1 | '/path/to/busybox'
-        'docker://library/busybox' | 'docker://library/busybox'                       |           1 | '/path/to/busybox'
-        'foo'                      | 'docker://foo'                                   |           1 | '/path/to/foo'
+        IMAGE                                       | NORMALIZED                                        | X           | EXPECTED
+        null                                        | null                                              |           0 | null
+        ''                                          | null                                              |           0 | null
+        '/abs/path/bar.img'                         | '/abs/path/bar.img'                               |           0 | '/abs/path/bar.img'
+        'file:///abs/path/bar.img'                  | '/abs/path/bar.img'                               |           0 | '/abs/path/bar.img'
+        'foo.img'                                   | Paths.get('foo.img').toAbsolutePath().toString() |       0 | Paths.get('foo.img').toAbsolutePath().toString()
+        'shub://busybox'                            | 'shub://busybox'                                  |           1 | '/path/to/busybox'
+        'docker://library/busybox'                  | 'docker://library/busybox'                        |           1 | '/path/to/busybox'
+        'foo'                                       | 'docker://foo'                                    |           1 | '/path/to/foo'
+        'library://pditommaso/foo/bar.sif:latest'   | 'library://pditommaso/foo/bar.sif:latest'         |           1 | '/path/to/foo-bar-latest.img'
     }
 
     def 'should not invoke caching when engine is disabled' () {
