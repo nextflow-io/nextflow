@@ -39,7 +39,6 @@ import spock.lang.Specification
  *
  * @author Ólafur Haukur Flygenring <olafurh@wuxinextcode.com>
  */
-//TODO: Project should be read form credential file if it is available in helper.readProject
 @SuppressWarnings("UnnecessaryQualifiedReference")
 class GoogleCloudDriverTest extends Specification {
 
@@ -67,7 +66,7 @@ class GoogleCloudDriverTest extends Specification {
         // else fake it so we make it
         else {
             print("No google credentials found.  Stubbing out GCE.")
-            sharedHelper = Spy(GceApiHelper, constructorArgs: ["r-ice-120-00411-nextflow", ZONE, Stub(Compute)]) as GceApiHelper
+            sharedHelper = Spy(GceApiHelper, constructorArgs: ["project", ZONE, Stub(Compute)]) as GceApiHelper
             sharedHelper.lookupMachineType(VALID_INSTANCETYPE) >> {
                 new MachineType()
                         .setName(VALID_INSTANCETYPE)
@@ -455,7 +454,7 @@ class GoogleCloudDriverTest extends Specification {
 
         def driver = new GoogleCloudDriver(helper)
 
-        def cloudConfig = CloudConfig.create().build()
+        def cloudConfig = CloudConfig.create([cloud: [keyHash: "hash"]]).build()
         cloudConfig.setClusterName("testcluster")
         cloudConfig.setPreemptible(true)
         when:
