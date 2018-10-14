@@ -324,7 +324,7 @@ else
   fi
   major=${BASH_REMATCH[1]}
   minor=${BASH_REMATCH[2]}
-  version_check="^(1.8|9|10)"
+  version_check="^(1.8|9|10|11)"
   version_message="Java 8"
   # legacy version - Java 7/8 only
   if [[ $major==0 && $minor<26 ]]; then
@@ -421,7 +421,7 @@ else
     cli=($("$JAVA_CMD" "${JAVA_OPTS[@]}" -jar "$NXF_BIN"))
     [[ $? -ne 0 ]] && echo_red 'Unable to initialize nextflow environment' && exit $?
 
-    if [[ "$JAVA_VER" =~ ^(9|10) ]]; then
+    if [[ "$JAVA_VER" =~ ^(9|10|11) ]]; then
       launcher=("${cli[@]:0:1}")
       launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
@@ -433,7 +433,6 @@ else
       launcher+=(--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
-      launcher+=(--add-modules=java.xml.bind)
       launcher+=(--illegal-access=deny)
       launcher+=("${cli[@]:1}")
     else
