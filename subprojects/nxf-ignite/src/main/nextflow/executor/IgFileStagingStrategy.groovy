@@ -57,13 +57,13 @@ class IgFileStagingStrategy implements StagingStrategy {
     /**
      * A temporary where all files are cached. The folder is deleted during instance shut-down
      */
-    private static final Path localCacheDir = FileHelper.createLocalDir()
+    private static final Path _localCacheDir = FileHelper.createLocalDir()
 
     static {
-        Runtime.getRuntime().addShutdownHook { localCacheDir.deleteDir() }
+        Runtime.getRuntime().addShutdownHook { _localCacheDir.deleteDir() }
     }
 
-    Path getLocalCacheDir() { localCacheDir }
+    Path getLocalCacheDir() { _localCacheDir }
 
     /**
      * Copies to the task input files to the execution folder, that is {@link #localWorkDir}

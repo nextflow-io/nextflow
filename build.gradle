@@ -97,7 +97,7 @@ allprojects {
 
     dependencies {
         // test configuration
-        testCompile ("org.codehaus.groovy:groovy-test:2.5.1") { exclude group: 'org.codehaus.groovy' }
+        testCompile ("org.codehaus.groovy:groovy-test:2.5.3") { exclude group: 'org.codehaus.groovy' }
         testCompile ("cglib:cglib-nodep:2.2")
         testCompile ("org.objenesis:objenesis:2.1")
         testCompile ("org.spockframework:spock-core:1.2-groovy-2.5") { exclude group: 'org.codehaus.groovy' }
@@ -110,8 +110,8 @@ allprojects {
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:1.11'
-        groovyDoc "org.codehaus.groovy:groovy-groovydoc:2.5.1"
-        groovyDoc "org.codehaus.groovy:groovy-ant:2.5.1"
+        groovyDoc "org.codehaus.groovy:groovy-groovydoc:2.5.3"
+        groovyDoc "org.codehaus.groovy:groovy-ant:2.5.3"
     }
 
     // this is required due to this IDEA bug
@@ -169,10 +169,10 @@ configurations {
 dependencies {
     compile(project(':nxf-commons'))
     compile(project(':nxf-httpfs'))
-    compile "org.codehaus.groovy:groovy:2.5.1"
-    compile "org.codehaus.groovy:groovy-nio:2.5.1"
-    compile "org.codehaus.groovy:groovy-json:2.5.1"
-    compile "org.codehaus.groovy:groovy-templates:2.5.1"
+    compile "org.codehaus.groovy:groovy:2.5.3"
+    compile "org.codehaus.groovy:groovy-nio:2.5.3"
+    compile "org.codehaus.groovy:groovy-json:2.5.3"
+    compile "org.codehaus.groovy:groovy-templates:2.5.3"
     compile "org.slf4j:jcl-over-slf4j:1.7.25"
     compile "org.slf4j:jul-to-slf4j:1.7.25"
     compile "org.slf4j:log4j-over-slf4j:1.7.25"
