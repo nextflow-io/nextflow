@@ -267,7 +267,7 @@ class GceApiHelper {
         String credFileLocation =  credentialFileLocation()
 
         if(!credFileLocation)
-            throw new MissingArgumentException("GOOGLE_APPLICATION_CREDENTIALS is not defined in your environment" )
+            throw new MissingArgumentException("$GAC_ENV is not defined in your environment" )
 
         Path credFile = FileHelper.asPath(credFileLocation)
         if (credFile) {
