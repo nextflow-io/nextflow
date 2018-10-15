@@ -41,7 +41,7 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class TraceRecord implements Serializable {
 
-    public TraceRecord() {
+    TraceRecord() {
         this.store = [:]
     }
 
@@ -230,7 +230,7 @@ class TraceRecord implements Serializable {
     Map<String,Object> store
 
     @Memoized
-    def Set<String> keySet() {
+    Set<String> keySet() {
         FIELDS.keySet()
     }
 

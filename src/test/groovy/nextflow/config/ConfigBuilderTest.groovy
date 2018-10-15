@@ -170,7 +170,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions()
         def run = new CmdRun(params: [alpha: 'Hello', beta: 'World', omega: 'Last'])
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildConfig([file])
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
 
         then:
         result.params.alpha == 'Hello'  // <-- params defined as CLI options override the ones in the config file
@@ -203,7 +203,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions()
         def run = new CmdRun(params: [alpha: 'Hello', beta: 'World', omega: 'Last'])
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildConfig([file])
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
 
         then:
         result.params.alpha == 'Hello'  // <-- params defined as CLI options override the ones in the config file
@@ -255,7 +255,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions()
         def run = new CmdRun(params: [one: '1', two: 'dos', three: 'tres'])
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildConfig([configMain.toPath()])
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(configMain.toPath())
 
         then:
         config.params.one == 1
@@ -320,7 +320,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions()
         def run = new CmdRun(params: [alpha: 'AAA', beta: 'BBB'])
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildConfig([file])
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
         then:
         config.params.alpha == 'AAA'
         config.params.beta == 'BBB'
@@ -333,7 +333,7 @@ class ConfigBuilderTest extends Specification {
         when:
         opt = new CliOptions()
         run = new CmdRun(params: [alpha: 'AAA', beta: 'BBB'], profile: 'first')
-        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildConfig([file])
+        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
         then:
         config.params.alpha == 'AAA'
         config.params.beta == 'BBB'
@@ -348,7 +348,7 @@ class ConfigBuilderTest extends Specification {
         when:
         opt = new CliOptions()
         run = new CmdRun(params: [alpha: 'AAA', beta: 'BBB', genomes: 'xxx'], profile: 'second')
-        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildConfig([file])
+        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
         then:
         config.params.alpha == 'AAA'
         config.params.beta == 'BBB'
@@ -364,24 +364,68 @@ class ConfigBuilderTest extends Specification {
     def 'valid config files' () {
 
         given:
-        def path = Files.createTempDirectory('test')
+        def folder = Files.createTempDirectory('test')
+        def f1 = folder.resolve('file1')
+        def f2 = folder.resolve('file2')
 
         when:
-        def f1 = path.resolve('file1')
-        def f2 = path.resolve('file2')
-        def files = new ConfigBuilder().validateConfigFiles([f1.toString(), f2.toString()])
+        new ConfigBuilder()
+                    .validateConfigFiles([f1.toString(), f2.toString()])
         then:
         thrown(AbortOperationException)
 
+
         when:
         f1.text = '1'; f2.text = '2'
-        files = new ConfigBuilder().validateConfigFiles([f1.toString(), f2.toString()])
+        def files = new ConfigBuilder()
+                    .validateConfigFiles([f1.toString(), f2.toString()])
+        then:
+        files == [f1, f2]
+
+
+        when:
+        files = new ConfigBuilder(homeDir: folder, currentDir: folder)
+                    .setUserConfigFiles(f1,f2)
+                    .validateConfigFiles()
         then:
         files == [f1, f2]
 
         cleanup:
-        path.deleteDir()
+        folder.deleteDir()
 
+    }
+
+    def 'should discover default config files' () {
+        given:
+        def homeDir = Files.createTempDirectory('home')
+        def baseDir = Files.createTempDirectory('work')
+        def workDir = Files.createTempDirectory('work')
+
+        when:
+        def homeConfig = homeDir.resolve('config')
+        homeConfig.text = 'foo=1'
+        def files1 = new ConfigBuilder(homeDir: homeDir, baseDir: workDir, currentDir: workDir).validateConfigFiles()
+        then:
+        files1 == [homeConfig]
+
+        when:
+        def workConfig = workDir.resolve('nextflow.config')
+        workConfig.text = 'bar=2'
+        def files2 = new ConfigBuilder(homeDir: homeDir, baseDir: workDir, currentDir: workDir).validateConfigFiles()
+        then:
+        files2 == [homeConfig, workConfig]
+
+        when:
+        def baseConfig = baseDir.resolve('nextflow.config')
+        baseConfig.text = 'ciao=3'
+        def files3 = new ConfigBuilder(homeDir: homeDir, baseDir: baseDir, currentDir: workDir).validateConfigFiles()
+        then:
+        files3 == [homeConfig, baseConfig, workConfig]
+
+
+        cleanup:
+        homeDir?.deleteDir()
+        workDir?.deleteDir()
     }
 
     def 'command executor options'() {
@@ -389,7 +433,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions()
         def run = new CmdRun(executorOptions: [ alpha: 1, 'beta.x': 'hola', 'beta.y': 'ciao' ])
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildConfig([])
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles()
         then:
         result.executor.alpha == 1
         result.executor.beta.x == 'hola'
@@ -402,7 +446,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions()
         def run = new CmdRun(clusterOptions: [ alpha: 1, 'beta.x': 'hola', 'beta.y': 'ciao' ])
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildConfig([])
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles()
         then:
         result.cluster.alpha == 1
         result.cluster.beta.x == 'hola'
@@ -981,7 +1025,7 @@ class ConfigBuilderTest extends Specification {
         then:
         result.foo == 1
         result.bar == 2
-        builder.configFiles == [file1, file2]
+        builder.parsedConfigFiles == [file1, file2]
 
         cleanup:
         file1?.delete()

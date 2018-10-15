@@ -19,6 +19,7 @@
  */
 
 package nextflow.executor
+
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
@@ -26,20 +27,17 @@ import nextflow.Const
 import nextflow.Session
 import nextflow.cloud.CloudConfig
 import nextflow.daemon.IgGridFactory
-import nextflow.file.FileHelper
-import nextflow.file.igfs.IgFileSystemProvider
-import nextflow.file.igfs.IgPath
 import nextflow.processor.TaskPollingMonitor
 import nextflow.scheduler.Autoscaler
 import nextflow.scheduler.Scheduler
 import nextflow.scheduler.SchedulerAgent
 import nextflow.util.ClusterConfig
-import nextflow.util.KryoHelper
-import nextflow.util.PathSerializer
 import nextflow.util.RemoteSession
 import org.apache.ignite.Ignite
 import org.apache.ignite.IgniteCache
 import org.apache.ignite.cluster.ClusterGroup
+import static nextflow.Const.ROLE_MASTER
+
 /**
  * Creates an instance of the Ignite node
  *
@@ -85,17 +83,8 @@ class IgConnector {
      */
     private void initialize() {
 
-        /*
-         * Register the path serializer
-         */
-        KryoHelper.register(IgPath, PathSerializer)
-
-        /*
-         * access to the Ignite file system to force the instantiation of a Ignite instance
-         * if it is not already available
-         */
-        def fs = FileHelper.getOrCreateFileSystemFor(URI.create('igfs:///'))
-        grid = (fs.provider() as IgFileSystemProvider).getGrid()
+        final factory = new IgGridFactory(ROLE_MASTER, session.config ?: [:])
+        grid = factory.start()
 
         /*
          * setup the session cache
@@ -152,7 +141,7 @@ class IgConnector {
             shutdownScheduler()
         }
         catch( Exception e ) {
-            log.debug e.message ?: e.toString()
+            log.warn "Unexpected error shutting down Ignite scheduler -- ${e.message ?: e.toString()}"
         }
     }
 

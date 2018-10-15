@@ -335,10 +335,27 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
         return durationInMillis != 0
     }
 
-
     @Override
     int compareTo(Duration that) {
         return this.durationInMillis <=> that.durationInMillis
+    }
+
+    static int compareTo(Duration left, Object right) {
+        assert left
+
+        if( right==null )
+            throw new IllegalArgumentException("Not a valid duration value: null")
+
+        if( right instanceof Duration )
+            return left <=> (Duration)right
+
+        if( right instanceof Number )
+            return left.durationInMillis <=> right.toLong()
+
+        if( right instanceof CharSequence )
+            return left <=> Duration.of(right.toString())
+
+        throw new IllegalArgumentException("Not a valid duration value: $right")
     }
 
 }

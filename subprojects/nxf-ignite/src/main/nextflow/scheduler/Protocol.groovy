@@ -19,10 +19,11 @@
  */
 
 package nextflow.scheduler
-import groovy.transform.Canonical
+
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import nextflow.cloud.CloudDriverFactory
 import nextflow.executor.IgBaseTask
@@ -50,7 +51,9 @@ interface Protocol {
     /**
      * Message sent to notify that a computing node is idle
      */
-    @Canonical
+    @ToString
+    @EqualsAndHashCode
+    @TupleConstructor
     @CompileStatic
     class NodeIdle implements Serializable, Cloneable {
 
@@ -76,7 +79,9 @@ interface Protocol {
      * Event send from the agent to the scheduler to notify that
      * an instance received a spot/preemptive termination notice
      */
-    @Canonical
+    @ToString
+    @EqualsAndHashCode
+    @TupleConstructor
     @CompileStatic
     class NodeRetired implements Cloneable, Serializable {
 
@@ -111,9 +116,10 @@ interface Protocol {
      *
      * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
      */
-    @Canonical
-    @CompileStatic
+    @ToString
     @EqualsAndHashCode
+    @TupleConstructor
+    @CompileStatic
     class TaskCancel implements Serializable, Cloneable {
 
         /**
@@ -297,7 +303,9 @@ interface Protocol {
      *
      * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
      */
-    @Canonical
+    @ToString
+    @EqualsAndHashCode
+    @TupleConstructor
     @CompileStatic
     class TaskStart implements Serializable, Cloneable {
 
@@ -439,6 +447,5 @@ interface Protocol {
         }
 
     }
-
 
 }

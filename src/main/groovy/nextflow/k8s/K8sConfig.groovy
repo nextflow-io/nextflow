@@ -30,6 +30,7 @@ import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.model.PodOptions
+import nextflow.k8s.model.PodSecurityContext
 import nextflow.k8s.model.PodVolumeClaim
 /**
  * Model Kubernetes specific settings defined in the nextflow
@@ -47,18 +48,44 @@ class K8sConfig implements Map<String,Object> {
     private PodOptions podOptions
 
     K8sConfig(Map<String,Object> config) {
-        this.target = config ?: Collections.<String,Object>emptyMap()
+        target = config ?: Collections.<String,Object>emptyMap()
 
-        this.podOptions = new PodOptions( target.pod as List<Map> )
+        this.podOptions = createPodOptions(target.pod)
         if( getStorageClaimName() ) {
             final name = getStorageClaimName()
-            final path = getStorageMountPath()
-            this.podOptions.volumeClaims.add(new PodVolumeClaim(name, path))
+            final mount = getStorageMountPath()
+            final subPath = getStorageSubPath()
+            this.podOptions.volumeClaims.add(new PodVolumeClaim(name, mount, subPath))
         }
+
+        // -- shortcut to pod image pull-policy
+        if( target.pullPolicy )
+            podOptions.imagePullPolicy = target.pullPolicy.toString()
+        else if( target.imagePullPolicy )
+            podOptions.imagePullPolicy = target.imagePullPolicy.toString()
+
+        // -- shortcut to pod security context
+        if( target.runAsUser != null )
+            podOptions.securityContext = new PodSecurityContext(target.runAsUser)
+        else if( target.securityContext instanceof Map )
+            podOptions.securityContext = new PodSecurityContext(target.securityContext as Map)
+    }
+
+    private PodOptions createPodOptions( value ) {
+        if( value instanceof List )
+            return new PodOptions( value as List )
+
+        if( value instanceof Map )
+            return new PodOptions( [(Map)value] )
+
+        if( value == null )
+            return new PodOptions()
+
+        throw new IllegalArgumentException("Not a valid pod setting: $value")
     }
 
     Map<String,String> getLabels() {
-        target.labels as Map<String,String>
+        podOptions.getLabels()
     }
 
     K8sDebug getDebug() {
@@ -81,18 +108,26 @@ class K8sConfig implements Map<String,Object> {
         target.storageMountPath ?: '/workspace' as String
     }
 
+    String getStorageSubPath() {
+        target.storageSubPath
+    }
+
     /**
      * @return the path where the workflow is launched and the user data is stored
      */
-    String getUserDir() {
-       target.userDir ?: "${getStorageMountPath()}/${getUserName()}" as String
+    String getLaunchDir() {
+        if( target.userDir ) {
+            log.warn "K8s `userDir` has been deprecated -- Use `launchDir` instead"
+            return target.userDir
+        }
+        target.launchDir ?: "${getStorageMountPath()}/${getUserName()}" as String
     }
 
     /**
      * @return Defines the path where the workflow temporary data is stored. This must be a path in a shared K8s persistent volume (default:<user-dir>/work).
      */
     String getWorkDir() {
-        target.workDir ?: "${getUserDir()}/work" as String
+        target.workDir ?: "${getLaunchDir()}/work" as String
     }
 
     /**
@@ -187,14 +222,14 @@ class K8sConfig implements Map<String,Object> {
             }
         }
 
-        if( !findVolumeClaimByPath(getUserDir()) )
-            throw new AbortOperationException("Kubernetes `userDir` must be a path mounted as a persistent volume -- userDir=$userDir; volumes=${getClaimPaths().join(', ')}")
+        if( !findVolumeClaimByPath(getLaunchDir()) )
+            throw new AbortOperationException("Kubernetes `launchDir` must be a path mounted as a persistent volume -- launchDir=$launchDir; volumes=${getClaimPaths().join(', ')}")
 
         if( !findVolumeClaimByPath(getWorkDir()) )
-            throw new AbortOperationException("Kubernetes workDir must be a path mounted as a persistent volume -- workDir=$workDir; volumes=${getClaimPaths().join(', ')}")
+            throw new AbortOperationException("Kubernetes `workDir` must be a path mounted as a persistent volume -- workDir=$workDir; volumes=${getClaimPaths().join(', ')}")
 
         if( !findVolumeClaimByPath(getProjectDir()) )
-            throw new AbortOperationException("Kubernetes projectDir must be a path mounted as a persistent volume -- projectDir=$projectDir; volumes=${getClaimPaths().join(', ')}")
+            throw new AbortOperationException("Kubernetes `projectDir` must be a path mounted as a persistent volume -- projectDir=$projectDir; volumes=${getClaimPaths().join(', ')}")
 
 
     }

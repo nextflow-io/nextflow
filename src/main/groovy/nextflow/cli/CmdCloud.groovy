@@ -152,7 +152,7 @@ class CmdCloud extends CmdBase implements UsageAware {
         // -- create the config object
         this.config = new ConfigBuilder()
                 .setOptions(launcher.options)
-                .setBaseDir(Paths.get('.').complete())
+                .setBaseDir(Paths.get('.'))
                 .setProfile(profile)
                 .build()
 

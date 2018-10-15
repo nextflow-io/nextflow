@@ -48,6 +48,9 @@ class SingularityCacheTest extends Specification {
         'shub://hello/world'        | 'hello-world.img'
         'ftp://hello/world'         | 'hello-world.img'
         'foo:bar'                   | 'foo-bar.img'
+        'library://library/default/debian:7'        | 'library-default-debian-7.img'
+        'library://library/default/debian.sif'      | 'library-default-debian.sif'
+        'library://sylabs/examples/blender.sif:7'   | 'sylabs-examples-blender-7.sif'
 
     }
 

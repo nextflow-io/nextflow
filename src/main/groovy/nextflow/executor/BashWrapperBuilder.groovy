@@ -181,8 +181,7 @@ class BashWrapperBuilder {
           local count=0;
           declare -a max=(); for i in {0..13}; do max[i]=0; done
           while [[ true ]]; do
-            kill -0 $pid >/dev/null
-            [[ $? != 0 ]] && exit 0
+            if ! kill -0 $pid 2>/dev/null; then exit 0; fi
             tot=$(nxf_pstat $pid)
             [[ ! $tot ]] && break
             IFS=' ' read -a val <<< "$tot"; unset IFS
@@ -213,7 +212,7 @@ class BashWrapperBuilder {
         
         nxf_pcpu() {
             local pid=$1
-            local proc_time=$(2> /dev/null < /proc/$pid/stat awk '{sum=$14+$15+$16+$17; printf "%.0f",sum}' || echo -n 0)
+            local proc_time=$(2> /dev/null < /proc/$pid/stat awk '{sum=$14+$15; printf "%.0f",sum}' || echo -n 0)
             local cpu_usage=$(echo -n $proc_time ${prev_time[pid]:-0} $total_time $prev_total $num_cpus | awk '{ pct=($1-$2)/($3-$4)*$5 *100; printf "%.1f", pct }' )
             prev_time[pid]=$proc_time
             nxf_pcpu_ret=$cpu_usage
@@ -282,13 +281,14 @@ class BashWrapperBuilder {
           declare -a max=(); for i in {0..13}; do max[i]=0; done
           while [[ -d /proc/$pid ]]; do
             nxf_pstat $pid
-            [[ ! "$nxf_pstat_ret" ]] && break
+            if [[ "$nxf_pstat_ret" ]]; then
             IFS=' ' read -a val <<< "$nxf_pstat_ret"; unset IFS
             for i in {0..13}; do
               [ ${val[i]} -gt ${max[i]} ] && max[i]=${val[i]}
             done
             echo "pid state %cpu %mem vmem rss peak_vmem peak_rss rchar wchar syscr syscw read_bytes write_bytes" > $trg
             echo "${max[@]}" >> $trg
+            fi
             nxf_sleep $count
             count=$((count+1))
           done
@@ -429,7 +429,7 @@ class BashWrapperBuilder {
         /*
          * create the container launcher command if needed
          */
-        containerBuilder = runWithContainer ? createContainerBuilder(environment,changeDir) : null
+        containerBuilder = runWithContainer ? createContainerBuilder(changeDir) : null
 
         /*
          * reformat the task script to include the container launch command when it's a executable container eg:
@@ -749,7 +749,7 @@ class BashWrapperBuilder {
      * @return A {@link DockerBuilder} instance
      */
     @PackageScope
-    ContainerBuilder createContainerBuilder(Map environment, String changeDir) {
+    ContainerBuilder createContainerBuilder(String changeDir) {
 
         final engine = containerConfig.getEngine()
         ContainerBuilder builder
@@ -813,6 +813,10 @@ class BashWrapperBuilder {
 
         if( engine=='docker' && System.getenv('NXF_DOCKER_OPTS') ) {
             builder.addRunOptions(System.getenv('NXF_DOCKER_OPTS'))
+        }
+
+        for( String var : containerConfig.getEnvWhitelist() ) {
+            builder.addEnv(var)
         }
 
         // set up run docker params

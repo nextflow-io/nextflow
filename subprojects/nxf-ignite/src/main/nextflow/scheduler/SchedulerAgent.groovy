@@ -19,14 +19,9 @@
  */
 
 package nextflow.scheduler
-import static nextflow.Const.ROLE_MASTER
-import static nextflow.scheduler.Protocol.PENDING_TASKS_CACHE
-import static nextflow.scheduler.Protocol.TOPIC_AGENT_EVENTS
-import static nextflow.scheduler.Protocol.TOPIC_SCHEDULER_EVENTS
 
 import java.nio.channels.ClosedByInterruptException
 import java.util.concurrent.BlockingQueue
-import java.util.concurrent.Callable
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -68,6 +63,10 @@ import org.apache.ignite.events.Event
 import org.apache.ignite.events.EventType
 import org.apache.ignite.lang.IgniteBiPredicate
 import org.apache.ignite.lang.IgnitePredicate
+import static nextflow.Const.ROLE_MASTER
+import static nextflow.scheduler.Protocol.PENDING_TASKS_CACHE
+import static nextflow.scheduler.Protocol.TOPIC_AGENT_EVENTS
+import static nextflow.scheduler.Protocol.TOPIC_SCHEDULER_EVENTS
 /**
  * Implements the scheduler execution logic. Each worker deploy an instance of this class
  * to process the tasks submitted by driver nextflow application
@@ -125,9 +124,9 @@ class SchedulerAgent implements Closeable {
 
         private long _1_min = Duration.of('1 min').toMillis()
 
-        private long errorTimestamp
+        private volatile int execErrCount
 
-        private int errorCount
+        private int fetchErrCount
 
         AgentProcessor() {
             this.name = 'scheduler-agent'
@@ -172,6 +171,7 @@ class SchedulerAgent implements Closeable {
                     log.trace "=== Task execution rejected -- ${e.message ?: e}"
                 }
                 catch( Exception e ) {
+                    stopped = e?.message?.contains('grid is stopping') || e?.message?.contains('cache is stopped')
                     log.error "=== Unexpected scheduler agent error", e
                 }
             }
@@ -268,16 +268,26 @@ class SchedulerAgent implements Closeable {
         }
 
         int processPendingTasks( Resources avail ) {
-
             // -- introduce a penalty on error burst
-            if( errorTimestamp ) {
-                def delta = System.currentTimeMillis() - errorTimestamp
-                def penalty = Math.round(Math.pow(errorCount, 2) * 1000)
-                if( delta < penalty ) {
-                    log.debug "=== Error burst prevention: errorCount=$errorCount; penalty=${Duration.of(penalty)}; delta=${Duration.of(delta)}"
-                    return 0
-                }
+            int count = Math.max(fetchErrCount, execErrCount)
+            if( count ) {
+                final penalty = Math.round(Math.pow(count, 1.8d) * 1_000i)
+                log.debug "=== Error burst prevention: sleep penalty=${Duration.of(penalty)}; execErrCount=$execErrCount; fetchErrCount=$fetchErrCount"
+                sleep penalty
             }
+
+            // -- process pending tasks
+            try {
+                processPendingTasks0(avail)
+                fetchErrCount = 0
+            }
+            catch (Throwable e) {
+                fetchErrCount++
+                throw e
+            }
+        }
+
+        int processPendingTasks0( Resources avail ) {
 
             // -- find candidate tasks to be executed
             def tasks = pendingTasks
@@ -343,8 +353,10 @@ class SchedulerAgent implements Closeable {
             return true
         }
 
-        Callable runTask(IgBaseTask task) {
-            return { runTask0(task) } as Callable
+        Runnable runTask(IgBaseTask task) {
+            new Runnable() {
+                @Override void run() { runTask0(task) }
+            }
         }
 
         void runTask0( IgBaseTask task ) {
@@ -403,15 +415,12 @@ class SchedulerAgent implements Closeable {
 
             // -- update error counter
             if( errorFlag ) {
-                if( errorCount++ == 0 ) {
-                    errorTimestamp = System.currentTimeMillis()
-                }
+                execErrCount++
             }
             else {
-                errorCount = 0
-                errorTimestamp = 0
+                execErrCount = 0
             }
-            log.trace "=== Errors: flag=$errorFlag; count=$errorCount; timestamp=$errorTimestamp"
+            log.trace "=== Errors: flag=$errorFlag; execErrCount=$execErrCount"
 
         }
 

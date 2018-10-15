@@ -20,6 +20,8 @@
 
 package nextflow.config
 
+import java.nio.file.Path
+
 import ch.grengine.Grengine
 import com.google.common.hash.Hashing
 import groovy.transform.PackageScope
@@ -259,6 +261,7 @@ class ConfigParser {
      * @param script The script to parse
      * @return A Map of maps that can be navigating with dot de-referencing syntax to obtain configuration entries
      */
+    @Deprecated
     ConfigObject parse(Script script) {
         return parse(script, null)
     }
@@ -269,12 +272,17 @@ class ConfigParser {
      * @param location The location of the script to parse
      * @return The ConfigObject instance
      */
+    @Deprecated
     ConfigObject parse(URL location) {
-        return parse(loadScript(location.text), location)
+        return parse(loadScript(location.text), FileHelper.asPath(location.toURI()))
     }
 
     ConfigObject parse(File file) {
-        return parse(loadScript(file.text), file.toURI().toURL())
+        return parse(file.toPath())
+    }
+
+    ConfigObject parse(Path path) {
+        return parse(loadScript(path.text), path)
     }
 
     /**
@@ -285,10 +293,10 @@ class ConfigParser {
      * @param location The original location of the Script as a URL
      * @return The ConfigObject instance
      */
-    ConfigObject parse(Script _script, URL location) {
+    ConfigObject parse(Script _script, Path location) {
         final script = (ConfigBase)_script
         Stack<String> currentConditionalBlock = new Stack<String>()
-        def config = location ? new ConfigObject(location) : new ConfigObject()
+        def config = location ? new ConfigObject(location.toUri().toURL()) : new ConfigObject()
         GroovySystem.metaClassRegistry.removeMetaClass(script.class)
         def mc = script.class.metaClass
         def prefix = ""
@@ -356,7 +364,7 @@ class ConfigParser {
                         } finally {
                             currentConditionalBlock.push(conditionalBlockKey)
                         }
-                        stack.pop()
+                        stack.removeLast()
                     }
                 } else {
                     def current = stack.last
@@ -374,7 +382,7 @@ class ConfigParser {
                     assignName.call(name, co)
                     pushStack.call(co)
                     args[0].call()
-                    stack.pop()
+                    stack.removeLast()
                 }
             } else if (args.length == 2 && args[1] instanceof Closure) {
                 try {
@@ -404,8 +412,7 @@ class ConfigParser {
 
         // add the script file location into the binding
         if( location ) {
-            final configPath = FileHelper.asPath(location.toURI())
-            script.setConfigPath(configPath)
+            script.setConfigPath(location)
         }
 
         // disable include parsing when required

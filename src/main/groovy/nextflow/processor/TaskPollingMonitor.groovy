@@ -19,7 +19,9 @@
  */
 
 package nextflow.processor
+
 import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.Lock
@@ -33,7 +35,6 @@ import nextflow.executor.BatchCleanup
 import nextflow.executor.GridTaskHandler
 import nextflow.util.Duration
 import nextflow.util.Throttle
-
 /**
  * Monitors the queued tasks waiting for their termination
  *
@@ -144,7 +145,7 @@ class TaskPollingMonitor implements TaskMonitor {
         this.capacity = (params.capacity ?: 0) as int
 
         this.pendingQueue = new ArrayDeque<>()
-        this.runningQueue = new ArrayBlockingQueue<>(capacity)
+        this.runningQueue = capacity ? new ArrayBlockingQueue<TaskHandler>(capacity) : new LinkedBlockingQueue<TaskHandler>()
     }
 
     static TaskPollingMonitor create( Session session, String name, int defQueueSize, Duration defPollInterval ) {
@@ -177,12 +178,12 @@ class TaskPollingMonitor implements TaskMonitor {
     /**
      * @return The current {@link TaskDispatcher} instance
      */
-    public TaskDispatcher getDispatcher() { dispatcher }
+    TaskDispatcher getDispatcher() { dispatcher }
 
     /**
      * @return the current capacity value by the number of slots specified
      */
-    public int getCapacity() { capacity }
+    int getCapacity() { capacity }
 
 
     /**
@@ -195,7 +196,7 @@ class TaskPollingMonitor implements TaskMonitor {
      *      by the polling monitor
      */
     protected boolean canSubmit(TaskHandler handler) {
-        runningQueue.size() < capacity
+        capacity>0 ? runningQueue.size() < capacity : true
     }
 
     /**
@@ -210,6 +211,8 @@ class TaskPollingMonitor implements TaskMonitor {
         // note: add the 'handler' into the polling queue *after* the submit operation,
         // this guarantees that in the queue are only jobs successfully submitted
         runningQueue.add(handler)
+        // notify task submission
+        session.notifyTaskSubmit(handler)
     }
 
     /**
@@ -347,7 +350,7 @@ class TaskPollingMonitor implements TaskMonitor {
             throw new IllegalArgumentException("Invalid submit-rate-limit value: $limit -- It must be provide using the following format `num request / duration` eg. 10/1s")
 
         final num = Integer.parseInt(X)
-        final duration = Y.isInteger() ? Duration.of( Y+'sec' ) : Duration.of(Y)
+        final duration = Y.isInteger() ? Duration.of( Y+'sec' ) : ( Y[0].isInteger() ? Duration.of(Y) : Duration.of('1'+Y) )
         long seconds = duration.toSeconds()
         if( !seconds )
             throw new IllegalArgumentException("Invalid submit-rate-limit value: $limit -- The interval must be at least 1 second")
@@ -387,12 +390,14 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     protected void pollLoop() {
 
+        int iteration=0
         while( true ) {
-            long time = System.currentTimeMillis()
-            log.trace "Scheduler queue size: ${runningQueue.size()}"
+            final long time = System.currentTimeMillis()
+            final tasks = new ArrayList(runningQueue)
+            log.trace "Scheduler queue size: ${tasks.size()} (iteration: ${++iteration})"
 
             // check all running tasks for termination
-            checkAllTasks()
+            checkAllTasks(tasks)
 
             if( (session.isTerminated() && runningQueue.size()==0 && pendingQueue.size()==0) || session.isAborted() ) {
                 break
@@ -483,9 +488,10 @@ class TaskPollingMonitor implements TaskMonitor {
         }
     }
 
-    protected void setupBatchCollector() {
+    protected void setupBatchCollector(List<TaskHandler> queue) {
         Map<Class,BatchContext> collectors
-        for( TaskHandler handler : runningQueue ) {
+        for( int i=0; i<queue.size(); i++ ) {
+            final TaskHandler handler = queue.get(i)
             // ignore tasks but BatchHandler
             if( handler instanceof BatchHandler ) {
                 // create the main collectors map
@@ -502,14 +508,15 @@ class TaskPollingMonitor implements TaskMonitor {
     /**
      * Check and update the status of queued tasks
      */
-    protected void checkAllTasks() {
+    protected void checkAllTasks(List<TaskHandler> queue) {
 
         // -- find all task handlers that are *batch* aware
         //    this allows to group multiple calls to a remote system together
-        setupBatchCollector()
+        setupBatchCollector(queue)
 
         // -- iterate over the task and check the status
-        for( TaskHandler handler : runningQueue ) {
+        for( int i=0; i<queue.size(); i++ ) {
+            final handler = queue.get(i)
             try {
                 checkTaskStatus(handler)
             }
@@ -535,13 +542,12 @@ class TaskPollingMonitor implements TaskMonitor {
             try {
                 submitRateLimit?.acquire()
 
-                if( !canSubmit(handler))
+                if( !canSubmit(handler) )
                     continue
 
-                if( !session.aborted && !session.cancelled ) {
+                if( session.isSuccess() ) {
                     itr.remove(); count++   // <-- remove the task in all cases
                     submit(handler)
-                    session.notifyTaskSubmit(handler)
                 }
                 else
                     break
@@ -564,7 +570,7 @@ class TaskPollingMonitor implements TaskMonitor {
         finally {
             // abort the session if a task task was returned
             if (fault instanceof TaskFault) {
-                session.fault(fault)
+                session.fault(fault, handler)
             }
         }
     }
@@ -601,7 +607,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
             // abort the execution in case of task failure
             if (fault instanceof TaskFault) {
-                session.fault(fault)
+                session.fault(fault, handler)
             }
         }
 

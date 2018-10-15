@@ -266,13 +266,15 @@ AWS Batch
 =========
 
 .. warning:: This is an experimental feature and it may change in a future release. It requires Nextflow
-  version `0.26.0` or higher.
+  version `0.26.0` or later.
 
 `AWS Batch <https://aws.amazon.com/batch/>`_ is a managed computing service that allows the execution of containerised
 workloads in the Amazon cloud infrastructure.
 
 Nextflow provides a built-in support for AWS Batch which allows the seamless deployment of a Nextflow pipeline
 in the cloud offloading the process executions as Batch jobs.
+
+.. _awscloud-batch-config:
 
 Configuration
 -------------
@@ -290,11 +292,8 @@ Batch queues allow you to bind the execution of a process to a specific computin
 type of instances (On-demand or Spot), scaling ability, etc. See the `AWS Batch documentation <http://docs.aws.amazon.com/batch/latest/userguide/create-job-queue.html>`_ to learn
 how to setup Batch queues.
 
-5 (optional) - Nextflow automatically creates the Batch `Job definitions <http://docs.aws.amazon.com/batch/latest/userguide/job_definitions.html>`_
-needed to execute your pipeline processes. However you may still need to specify a custom `Job Definition` to fine control
-the configuration settings of a specific job. In this case you can associate a process execution with a *Job definition* of your choice by using the
-:ref:`process-container` directive and specifing, in place of the Docker image name, the Job definition name
-prefixed by the ``job-definition://`` string.
+5 - Make sure the container image includes the `AWS CLI tool <https://aws.amazon.com/cli>`_ i.e. ``aws``.
+Alternatively, it can also be installed in a custom AMI image. See the note below for details.
 
 An example ``nextflow.config`` file is shown below::
 
@@ -302,7 +301,9 @@ An example ``nextflow.config`` file is shown below::
     process.queue = 'my-batch-queue'
     process.container = 'quay.io/biocontainers/salmon'
     aws.region = 'eu-west-1'
-
+    
+    // NOTE: this setting is only required if the AWS CLI tool is installed in a custom AMI
+    executor.awscli = '/home/ec2-user/miniconda/bin/aws'
 
 .. note:: Nextflow requires to access the AWS command line tool (``aws``) from the container in which the job runs
   in order to stage the required input files and to copy back the resulting output files in the
@@ -313,12 +314,13 @@ installed in a custom AMI that needs to used in place of the default AMI when co
 `Computing environment <http://docs.aws.amazon.com/batch/latest/userguide/compute_environments.html>`_.
 
 The latter approach is preferred  because it allows the use of existing Docker images without the need to add
-the AWS CLI tool to them.
+the AWS CLI tool to them. See the sections below to learn how create a custom AMI and install the AWS CLI tool
+to it.
 
 .. warning:: AWS Batch uses the default ECS instance AMI, which has only a 22 GB storage volume which may not
   be enough for real world data analysis pipelines.
 
-See the section below to learn how to create a custom AWS Batch custom AMI.
+See the section below to learn how to create a custom AWS Batch custom AMI with a larger storage.
 
 Custom AMI
 ----------
@@ -369,11 +371,18 @@ Once done that, create a new AMI by using the *Create Image* option in the EC2 D
 The new AMI ID needs to be specified when creating the Batch
 `Computing environment <http://docs.aws.amazon.com/batch/latest/userguide/compute_environments.html>`_.
 
+.. _aws-cli:
 
 AWS CLI installation
 --------------------
 
-The AWS cli tool needs to be installed by using a self-contained package manager such as `Conda <https://conda.io>`_.
+.. warning:: The `AWS CLI tool <https://aws.amazon.com/cli>`_ must to be installed in your custom AMI
+  by using a self-contained package manager such as `Conda <https://conda.io>`_.
+
+The reason is that when the AWS CLI tool executes using Conda it will use the version of python supplied by Conda.
+If you don't use Conda and install the AWS CLI using something like `pip <https://pypi.org/project/pip/>`_ the ``aws``
+command will attempt to run using the version of python found in the running container which won't be able to find
+the necessary dependencies.
 
 The following snippet shows how to install AWS CLI with `Miniconda <https://conda.io/miniconda.html>`_::
 
@@ -383,7 +392,7 @@ The following snippet shows how to install AWS CLI with `Miniconda <https://cond
     $HOME/miniconda/bin/conda install -c conda-forge -y awscli
     rm Miniconda3-latest-Linux-x86_64.sh
 
-When complete verifies that the AWS cli package works correctly::
+When complete verifies that the AWS CLI package works correctly::
 
     $ ./miniconda/bin/aws --version
     aws-cli/1.11.120 Python/3.6.3 Linux/4.9.43-17.39.amzn1.x86_64 botocore/1.5.83
@@ -397,7 +406,25 @@ By default Nextflow will assume the AWS CLI tool is directly available in the co
 from the host image specify the ``awscli`` parameter in the Nextflow :ref:`executor <awsbatch-executor>`
 configuration as shown below::
 
-    executor.awscli = '/home/ec2-home/miniconda/bin/aws'
+    executor.awscli = '/home/ec2-user/miniconda/bin/aws'
+
+Replace the path above with the one matching the location where ``aws`` tool is installed in your AMI.
+
+Custom job definition
+---------------------
+
+Nextflow automatically creates the Batch `Job definitions <http://docs.aws.amazon.com/batch/latest/userguide/job_definitions.html>`_
+needed to execute your pipeline processes. Therefore it's not required to define them before run your workflow.
+
+However you may still need to specify a custom `Job Definition` to fine control the configuration settings
+of a specific job e.g. to define custom mount paths or other Batch Job special settings.
+
+To do that first create a *Job Definition* in the AWS Console (or with other means). Note the name of the *Job Definition*
+you created. You can then associate a process execution with this *Job definition* by using the :ref:`process-container`
+directive and specifing, in place of the container image name, the Job definition name prefixed by the
+``job-definition://`` string, as shown below::
+
+  process.container = 'job-definition://your-job-definition-name'
 
 
 Pipeline execution
@@ -407,11 +434,46 @@ The pipeline can be launched either in a local computer or a EC2 instance. The l
 running workloads.
 
 Pipeline input data should to be stored in the Input data `S3 storage <https://aws.amazon.com/s3/>`_. In the same
-manner the pipeline execution must specifies a S3 bucket as working directory. For example::
+manner the pipeline execution must specifies a S3 bucket where jobs intermediate results are stored with the
+``-bucket-dir`` command line options. For example::
 
-  nextflow run my-pipeline -w s3://my-bucket/some/path
+  nextflow run my-pipeline -bucket-dir s3://my-bucket/some/path
 
 
+.. warning::
+  The bucket path should include at least a top level directory name e.g. use ``s3://my-bucket/work``
+  not just ``s3://my-bucket``. 
+
+Hybrid workloads
+----------------
+
+Nextflow allows the use of multiple executors in the same workflow application. This feature enables the deployment
+of hybrid workloads in which some jobs are execute in the local computer or local computing cluster and
+some jobs are offloaded to AWS Batch service.
+
+To enable this feature use one or more :ref:`config-process-selectors` in your Nextflow configuration file to apply
+the AWS Batch `configuration <awscloud-batch-config>`_ only to a subset of processes in your workflow.
+For example::
+
+
+  aws {
+      region = 'eu-west-1'
+  }
+  executor {
+    awscli = '/home/ec2-user/miniconda/bin/aws'
+  }
+
+  process {
+      withLabel: bigTask {
+        executor = 'awsbatch'
+        queue = 'my-batch-queue'
+        container = 'my/image:tag'
+    }
+  }
+
+
+The above configuration snippet will deploy the execution with AWS Batch only for processes annotated
+with the :ref:`process-label` ``bigTask``, the remaining process with run in the local computer.
 
 Troubleshooting
 ---------------
@@ -432,7 +494,13 @@ This may happen when Batch is unable to execute the process script. A common cau
 Docker container image you have specified uses a non standard `entrypoint <https://docs.docker.com/engine/reference/builder/#entrypoint>`_
 which does not allow the execution of the BASH launcher script required by Nextflow to run the job.
 
-Check also the Job execution log in the AWS Batch dashboard for further error details.
+This may also happen if the AWS CLI doesn't run correctly.
+
+Other places to check for error information:
+
+- The ``.nextflow.log`` file.
+- The Job execution log in the AWS Batch dashboard.
+- The `CloudWatch <https://aws.amazon.com/cloudwatch/>`_ logs found in the ``/aws/batch/job`` log group.
 
 
 

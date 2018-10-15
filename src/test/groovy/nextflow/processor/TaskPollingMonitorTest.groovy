@@ -23,6 +23,7 @@ import java.util.concurrent.ArrayBlockingQueue
 
 import nextflow.Session
 import nextflow.util.Duration
+import nextflow.util.RateUnit
 import spock.lang.Specification
 /**
  *
@@ -69,9 +70,26 @@ class TaskPollingMonitorTest extends Specification {
         '100 min'       | 100 / 60                  // 100 per minute
         '100 / 1 s'     | 100                       // 100 per second
         '100 / 2 s'     | 50                        // 100 per 2 seconds
+        '200 / sec'     | 200                       // 200 per second
         '600 / 5'       | 600i / 5l as double       // 600 per 5 seconds
         '600 / 5min'    | 600 / (5 * 60)            // 600 per 5 minutes
 
+    }
+
+
+    def 'check equals and hash code' () {
+        expect:
+        new RateUnit(2.1) == new RateUnit(2.1)
+        new RateUnit(2.1).hashCode() == new RateUnit(2.1).hashCode()
+        new RateUnit(2.1) != new RateUnit(3.3)
+        new RateUnit(2.1).hashCode() != new RateUnit(3.3).hashCode()
+    }
+
+    def 'should stringify' () {
+        expect:
+        new RateUnit(0.1).toString() == '0.10/sec'
+        new RateUnit(2.1).toString() == '2.10/sec'
+        new RateUnit(123.4).toString() == '123.40/sec'
     }
 
 }

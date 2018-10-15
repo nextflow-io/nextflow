@@ -19,7 +19,7 @@
 #  along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'0.30.1'}
+NXF_VER=${NXF_VER:-'0.32.0'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -100,8 +100,10 @@ function resolve_link() {
       realpath "$1"
     elif command -v readlink &>/dev/null; then
       local target="$1"
+      cd $(dirname $target); target=$(basename $target)
       while [ -L "$target" ]; do
         target="$(readlink "$target")"
+        cd $(dirname $target); target=$(basename $target)
       done
       echo "$(cd "$(dirname "$target")"; pwd -P)/$target"
     else
@@ -129,10 +131,13 @@ function install() {
 
 function launch_nextflow() {
     # the launch command line
-    local cmdline="${launcher[@]} "
-    for x in "${args[@]}"; do
-        cmdline+="'$x' "
-    done
+    local cmdline=()
+    # remove leading and trailing double-quotes 
+    for x in "${launcher[@]}"; do
+        x="${x%\"}"
+        x="${x#\"}"
+        cmdline+=("$x") 
+    done 
 
     if [[ $NXF_MPIRUN ]]; then
         local rank=''
@@ -152,19 +157,20 @@ function launch_nextflow() {
             export NXF_EXECUTOR='ignite'
             export NXF_CLUSTER_SHUTDOWNONCOMPLETE='true'
         else
-            cmdline="${launcher[@]} -log .nextflow_node_${rank}.log node ignite"
+            args=(-log .nextflow_node_${rank}.log node ignite)
         fi
     # start in daemon mode
     elif [[ "$bg" ]]; then
       local pid_file="${NXF_PID_FILE:-.nextflow.pid}"
-      bash -c "exec $cmdline" &
+      cmdline+=("${args[@]}")
+      exec "${cmdline[@]}" &
       disown
       echo $! > "$pid_file"
       exit 0
     fi
 
-    # trampoline syntax -- https://github.com/puniverse/capsule/pull/71
-    exec bash -c "exec $cmdline"
+    cmdline+=("${args[@]}")
+    exec "${cmdline[@]}"
     exit 1
 }
 
@@ -187,7 +193,7 @@ bg=''
 dockerize=''
 declare -a jvmopts=()
 declare -a args=("$@")
-declare -a commands=(clone config drop help history info ls pull run view node console kube-run)
+declare -a commands=(clone config drop help history info ls pull run view node console kuberun)
 cmd=''
 while [[ $# != 0 ]]; do
     case $1 in
@@ -224,11 +230,6 @@ while [[ $# != 0 ]]; do
       if [[ $2 && $2 == 'ignite' ]]; then
       NXF_MODE='ignite'; shift;
       fi
-      ;;
-    -with-extrae)
-      export EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}
-      rm -f TRACE.*
-      rm -rf set-0
       ;;
     -with-mpi)
       NXF_MODE='ignite'

@@ -141,6 +141,24 @@ class MemoryUnit implements Comparable<MemoryUnit>, Serializable, Cloneable {
         return this.size <=> that.size
     }
 
+    static int compareTo(MemoryUnit left, Object right) {
+        assert left
+
+        if( right==null )
+            throw new IllegalArgumentException("Not a valid memory value: null")
+
+        if( right instanceof MemoryUnit )
+            return left <=> (MemoryUnit)right
+
+        if( right instanceof Number )
+            return left.size <=> right.toLong()
+
+        if( right instanceof CharSequence )
+            return left <=> MemoryUnit.of(right.toString())
+
+        throw new IllegalArgumentException("Not a valid memory value: $right")
+    }
+
     static MemoryUnit of( String value ) {
         new MemoryUnit(value)
     }

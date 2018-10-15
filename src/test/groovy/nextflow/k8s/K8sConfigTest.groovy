@@ -21,9 +21,9 @@
 package nextflow.k8s
 
 import nextflow.Const
-import nextflow.k8s.K8sConfig
 import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.model.PodEnv
+import nextflow.k8s.model.PodSecurityContext
 import nextflow.k8s.model.PodVolumeClaim
 import spock.lang.Specification
 /**
@@ -95,6 +95,14 @@ class K8sConfigTest extends Specification {
                 new PodVolumeClaim('bar', '/there')
         ] as Set
 
+
+        when:
+        cfg = new K8sConfig(storageClaimName: 'pvc-3', storageMountPath: '/some/path', storageSubPath: '/bar')
+        then:
+        cfg.getStorageClaimName() == 'pvc-3'
+        cfg.getStorageMountPath() == '/some/path'
+        cfg.getStorageSubPath() == '/bar'
+        cfg.getPodOptions().getVolumeClaims() == [ new PodVolumeClaim('pvc-3', '/some/path', '/bar') ] as Set
 
     }
 
@@ -172,7 +180,7 @@ class K8sConfigTest extends Specification {
         when:
         opts = new K8sConfig(pod: [ [pullPolicy: 'Always'], [env: 'HELLO', value: 'WORLD'] ]).getPodOptions()
         then:
-        opts.getPullPolicy() == 'Always'
+        opts.getImagePullPolicy() == 'Always'
         opts.getEnvVars() == [ PodEnv.value('HELLO','WORLD') ] as Set
     }
 
@@ -193,17 +201,17 @@ class K8sConfigTest extends Specification {
         when:
         def cfg = new K8sConfig()
         then:
-        cfg.getUserDir() == '/workspace/' + System.properties.get('user.name')
+        cfg.getLaunchDir() == '/workspace/' + System.properties.get('user.name')
 
         when:
         cfg = new K8sConfig(storageMountPath: '/this/path', userName: 'foo')
         then:
-        cfg.getUserDir() == '/this/path/foo'
+        cfg.getLaunchDir() == '/this/path/foo'
 
         when:
-        cfg = new K8sConfig(storageMountPath: '/this/path', userName: 'foo', userDir: '/my/path')
+        cfg = new K8sConfig(storageMountPath: '/this/path', userName: 'foo', launchDir: '/my/path')
         then:
-        cfg.getUserDir() == '/my/path'
+        cfg.getLaunchDir() == '/my/path'
 
     }
 
@@ -214,12 +222,12 @@ class K8sConfigTest extends Specification {
         cfg.getWorkDir() == "/workspace/${System.properties.get('user.name')}/work"
 
         when:
-        cfg = new K8sConfig(userDir: '/my/dir')
+        cfg = new K8sConfig(launchDir: '/my/dir')
         then:
         cfg.getWorkDir() == "/my/dir/work"
 
         when:
-        cfg = new K8sConfig(userDir: '/my/dir', workDir: '/the/wor/dir')
+        cfg = new K8sConfig(launchDir: '/my/dir', workDir: '/the/wor/dir')
         then:
         cfg.getWorkDir() == "/the/wor/dir"
     }
@@ -267,4 +275,58 @@ class K8sConfigTest extends Specification {
         cfg.getStorageClaimName() == 'xxx'
     }
 
+    def 'should create k8s config with one volume claim' () {
+
+        when:
+        def cfg = new K8sConfig( pod: [runAsUser: 1000] )
+        then:
+        cfg.getPodOptions().getSecurityContext() == new PodSecurityContext(1000)
+        cfg.getPodOptions().getVolumeClaims().size() == 0
+
+        when:
+        cfg = new K8sConfig( pod: [volumeClaim: 'nf-0001', mountPath: '/workspace'] )
+        then:
+        cfg.getPodOptions().getSecurityContext() == null
+        cfg.getPodOptions().getVolumeClaims() == [new PodVolumeClaim('nf-0001', '/workspace')] as Set
+
+
+        when:
+        cfg = new K8sConfig( pod: [
+                [runAsUser: 1000],
+                [volumeClaim: 'nf-0001', mountPath: '/workspace'],
+                [volumeClaim: 'nf-0002', mountPath: '/data', subPath: '/home']
+        ])
+        then:
+        cfg.getPodOptions().getSecurityContext() == new PodSecurityContext(1000)
+        cfg.getPodOptions().getVolumeClaims() == [
+                    new PodVolumeClaim('nf-0001', '/workspace'),
+                    new PodVolumeClaim('nf-0002', '/data', '/home')
+        ] as Set
+        
+    }
+
+
+    def 'should set the sec context'( ) {
+
+        given:
+        def ctx = [runAsUser: 500, fsGroup: 200, allowPrivilegeEscalation: true, seLinuxOptions: [level: "s0:c123,c456"]]
+
+        when:
+        def cfg = new K8sConfig( runAsUser: 500 )
+        then:
+        cfg.getPodOptions().getSecurityContext() == new PodSecurityContext(500)
+
+        when:
+        cfg = new K8sConfig( securityContext: ctx )
+        then:
+        cfg.getPodOptions().getSecurityContext() == new PodSecurityContext(ctx)
+
+    }
+
+    def 'should set the image pull policy' () {
+        when:
+        def cfg = new K8sConfig( pullPolicy: 'always' )
+        then:
+        cfg.getPodOptions().getImagePullPolicy() == 'always'
+    }
 }

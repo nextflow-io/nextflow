@@ -36,6 +36,7 @@ import nextflow.executor.NopeExecutor
 import nextflow.file.FileHolder
 import nextflow.script.BaseScript
 import nextflow.script.FileOutParam
+import nextflow.script.ScriptType
 import nextflow.script.TaskBody
 import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
@@ -158,13 +159,13 @@ class TaskProcessorTest extends Specification {
 
         when:
         def list = [ FileHolder.get(path1, 'x_file_1') ]
-        def result = processor.singleItemOrList(list)
+        def result = processor.singleItemOrList(list, ScriptType.SCRIPTLET)
         then:
         result.toString() == 'x_file_1'
 
         when:
         list = [ FileHolder.get(path1, 'x_file_1'), FileHolder.get(path2, 'x_file_2'), FileHolder.get(path3, 'x_file_3') ]
-        result = processor.singleItemOrList(list)
+        result = processor.singleItemOrList(list, ScriptType.SCRIPTLET)
         then:
         result*.toString() == [ 'x_file_1',  'x_file_2',  'x_file_3']
 

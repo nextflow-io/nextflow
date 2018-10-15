@@ -20,7 +20,8 @@
 
 package nextflow.daemon
 
-import static nextflow.Const.*
+import java.util.logging.Level
+import java.util.logging.Logger
 
 import com.amazonaws.auth.BasicAWSCredentials
 import groovy.transform.CompileStatic
@@ -39,15 +40,15 @@ import org.apache.ignite.Ignite
 import org.apache.ignite.Ignition
 import org.apache.ignite.cache.CacheMode
 import org.apache.ignite.configuration.CacheConfiguration
-import org.apache.ignite.configuration.FileSystemConfiguration
 import org.apache.ignite.configuration.IgniteConfiguration
-import org.apache.ignite.igfs.IgfsMode
 import org.apache.ignite.logger.slf4j.Slf4jLogger
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi
 import org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.s3.TcpDiscoveryS3IpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.sharedfs.TcpDiscoverySharedFsIpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder
+import static nextflow.Const.ROLE_MASTER
+import static nextflow.Const.ROLE_WORKER
 /**
  * Grid factory class. It can be used to create a {@link IgniteConfiguration} or the {@link Ignite} instance directly
  *
@@ -113,6 +114,10 @@ class IgGridFactory {
      * @return
      */
     IgniteConfiguration config() {
+        // required by
+        // https://issues.apache.org/jira/browse/IGNITE-8899
+        // https://issues.apache.org/jira/browse/IGNITE-8426
+        Logger.getLogger('').setLevel(Level.OFF)
 
         System.setProperty('IGNITE_UPDATE_NOTIFIER','false')
         System.setProperty('IGNITE_NO_ASCII', 'true')
@@ -122,7 +127,6 @@ class IgGridFactory {
         IgniteConfiguration cfg = new IgniteConfiguration()
         discoveryConfig(cfg)
         cacheConfig(cfg)
-        fileSystemConfig(cfg)
 
         final groupName = clusterConfig.getAttribute( 'group', GRID_NAME ) as String
         log.debug "Apache Ignite config > group name: $groupName"
@@ -136,6 +140,16 @@ class IgGridFactory {
         // this is not really used -- just set to avoid it complaining
         cfg.setWorkDirectory( FileHelper.getLocalTempPath().resolve('ignite').toString() )
 
+        def timeout = clusterConfig.getAttribute('failureDetectionTimeout') as Duration
+        if( timeout )
+            cfg.setFailureDetectionTimeout(timeout.millis)
+
+        timeout = clusterConfig.getAttribute('clientFailureDetectionTimeout') as Duration
+        if( timeout )
+            cfg.setClientFailureDetectionTimeout(timeout.millis)
+
+        log.debug "Apache Ignite config > $clusterConfig"
+        
         return cfg
     }
 
@@ -157,24 +171,6 @@ class IgGridFactory {
                 .setCacheMode(CacheMode.REPLICATED)
 
         cfg.setCacheConfiguration( configs as CacheConfiguration[] )
-    }
-
-
-    /*
-     * igfs configuration
-     */
-    protected void fileSystemConfig( IgniteConfiguration cfg ) {
-
-        def ggfsCfg = new FileSystemConfiguration()
-        ggfsCfg.with {
-            name = 'igfs'
-            defaultMode = IgfsMode.PRIMARY
-            blockSize = clusterConfig.getAttribute('igfs.blockSize', 128 * 1024) as int
-            perNodeBatchSize = clusterConfig.getAttribute('igfs.perNodeBatchSize', 512) as int
-            perNodeParallelBatchCount = clusterConfig.getAttribute('igfs.perNodeParallelBatchCount', 16) as int
-        }
-        cfg.setFileSystemConfiguration(ggfsCfg)
-
     }
 
 

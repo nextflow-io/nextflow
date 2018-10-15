@@ -37,7 +37,7 @@ class PodVolumeClaimTest extends Specification {
         vol1.mountPath == '/bar'
 
         when:
-        def vol2 = new PodVolumeClaim(claimName: 'alpha', mountPath: '/gamma')
+        def vol2 = new PodVolumeClaim(volumeClaim: 'alpha', mountPath: '/gamma')
         then:
         vol2.claimName == 'alpha'
         vol2.mountPath == '/gamma'

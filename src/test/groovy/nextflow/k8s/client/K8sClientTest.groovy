@@ -690,4 +690,87 @@ class K8sClientTest extends Specification {
         def e = thrown(PodUnschedulableException)
         e.message == 'K8s pod cannot be scheduled -- 0/4 nodes are available: 4 Insufficient cpu, 4 Insufficient memory.'
     }
+
+    def 'client should fail when config fail' () {
+        given:
+        def JSON = '''
+             {
+                 "kind": "Pod",
+                 "apiVersion": "v1",
+                 "metadata": {
+                     "name": "angry-blackwell",
+                     "namespace": "default",
+                     "selfLink": "/api/v1/namespaces/default/pods/angry-blackwell/status",
+                     "uid": "83a35c1e-73b6-11e8-8259-025000000001",
+                     "resourceVersion": "465382",
+                     "creationTimestamp": "2018-06-19T11:47:16Z",
+                     "labels": {
+                         "app": "nextflow",
+                         "runName": "angry-blackwell"
+                     }
+                 },
+                 "spec": {
+            
+                 },
+                 "status": {
+                     "phase": "Pending",
+                     "conditions": [
+                         {
+                             "type": "Initialized",
+                             "status": "True",
+                             "lastProbeTime": null,
+                             "lastTransitionTime": "2018-06-19T11:47:16Z"
+                         },
+                         {
+                             "type": "Ready",
+                             "status": "False",
+                             "lastProbeTime": null,
+                             "lastTransitionTime": "2018-06-19T11:47:16Z",
+                             "reason": "ContainersNotReady",
+                             "message": "containers with unready status: [angry-blackwell]"
+                         },
+                         {
+                             "type": "PodScheduled",
+                             "status": "True",
+                             "lastProbeTime": null,
+                             "lastTransitionTime": "2018-06-19T11:47:16Z"
+                         }
+                     ],
+                     "hostIP": "192.168.65.3",
+                     "podIP": "10.1.4.20",
+                     "startTime": "2018-06-19T11:47:16Z",
+                     "containerStatuses": [
+                         {
+                             "name": "angry-blackwell",
+                             "state": {
+                                 "waiting": {
+                                     "reason": "CreateContainerConfigError",
+                                     "message": "secrets \\"my-env\\" not found"
+                                 }
+                             },
+                             "lastState": {
+                                 
+                             },
+                             "ready": false,
+                             "restartCount": 0,
+                             "image": "nextflow/nextflow:0.30.2",
+                             "imageID": ""
+                         }
+                     ],
+                     "qosClass": "BestEffort"
+                 }
+             }
+            '''
+
+        def client = Spy(K8sClient)
+        final POD_NAME = 'angry-blackwell'
+
+        when:
+        client.podState(POD_NAME)
+        then:
+        1 * client.podStatus(POD_NAME) >> new K8sResponseJson(JSON)
+        def e = thrown(PodUnschedulableException)
+        e.message == 'K8s pod configuration failed -- secrets "my-env" not found'
+
+    }
 }

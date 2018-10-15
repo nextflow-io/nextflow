@@ -179,14 +179,14 @@ class Mailer {
      * @return The SMTP host name or IP address
      */
     protected String getHost() {
-        config('host')
+        getConfig('host')
     }
 
     /**
      * @return The SMTP host port
      */
     protected int getPort() {
-        def port = config('port')
+        def port = getConfig('port')
         port ? port as int : -1
     }
 
@@ -194,17 +194,17 @@ class Mailer {
      * @return The SMTP user name
      */
     protected String getUser() {
-        config('user')
+        getConfig('user')
     }
 
     /**
      * @return The SMTP user password
      */
     protected String getPassword() {
-       config('password')
+        getConfig('password')
     }
 
-    protected config( String name ) {
+    protected getConfig(String name ) {
         def key = "smtp.${name}"
         def value = config.navigate(key)
         if( !value ) {

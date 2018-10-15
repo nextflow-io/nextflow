@@ -27,7 +27,7 @@ Images
 ======
 
 Singularity makes use of a container image file, which physically contains the container. Refer to the `Singularity
-documentation <http://singularity.lbl.gov/user-guide>`_ to learn how create Singularity images.
+documentation <https://www.sylabs.io/docs/>`_ to learn how create Singularity images.
 
 Docker images can automatically be converted to Singularity images by using the
 `docker2singularity <https://github.com/singularityware/docker2singularity>`_ tool.

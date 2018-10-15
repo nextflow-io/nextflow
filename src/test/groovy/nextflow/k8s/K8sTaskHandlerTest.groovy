@@ -74,7 +74,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.getCpus() >> 1
+        1 * config.get('cpus') >> null
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         result == [ apiVersion: 'v1',
@@ -106,7 +106,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.getCpus() >> 1
+        1 * config.get('cpus') >> 1
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         result == [ apiVersion: 'v1',
@@ -119,6 +119,7 @@ class K8sTaskHandlerTest extends Specification {
                                      image:'debian:latest',
                                      command:['/bin/bash', '-ue','.command.run'],
                                      workingDir:'/some/work/dir',
+                                     resources:[ limits:[cpu:1] ],
                                      env: [  [name:'NXF_OWNER', value:'501:502'] ]
                                     ]
                             ]
@@ -136,7 +137,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'user/alpine:1.0'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.getCpus() >> 4
+        1 * config.get('cpus') >> 4
         1 * config.getMemory() >> MemoryUnit.of('16GB')
         1 * client.getConfig() >> new ClientConfig(namespace: 'namespace-x')
         result == [ apiVersion: 'v1',
@@ -280,7 +281,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.getCpus() >> 1
+        1 * config.get('cpus') >> null
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         2 * podOptions.getVolumeClaims() >> CLAIMS
@@ -316,7 +317,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.getCpus() >> 1
+        1 * config.get('cpus') >> null
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
 
@@ -352,10 +353,10 @@ class K8sTaskHandlerTest extends Specification {
         handler.client = client
         handler.task = task
 
-        final POD_NAME = 'new-pod-id'
-        final REQUEST =  [foo: 'bar']
-        final RESPONSE = new K8sResponseJson([metadata: [name:POD_NAME]])
-        final YAML = Paths.get('file.yaml')
+        def POD_NAME = 'new-pod-id'
+        def REQUEST =  [foo: 'bar']
+        def RESPONSE = new K8sResponseJson([metadata: [name:POD_NAME]])
+        def YAML = Paths.get('file.yaml')
         when:
         handler.submit()
         then:
@@ -383,7 +384,7 @@ class K8sTaskHandlerTest extends Specification {
 
     def 'should check if running'  () {
         given:
-        final POD_NAME = 'pod-xyz'
+        def POD_NAME = 'pod-xyz'
         def client = Mock(K8sClient)
         def handler = Spy(K8sTaskHandler)
         handler.client = client
@@ -398,16 +399,22 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.checkIfRunning()
         then:
+        1 * handler.getState() >> null
+        result == false
+
+        when:
+        result = handler.checkIfRunning()
+        then:
         1 * handler.getState() >> [running:["startedAt": "2018-01-13T10:19:16Z"]]
         result == true
     }
 
     def 'should check if completed' () {
         given:
-        final ERR_FILE = Paths.get('err.file')
-        final OUT_FILE = Paths.get('out.filex')
-        final POD_NAME = 'pod-xyz'
-        final EXIT_STATUS = 111
+        def ERR_FILE = Paths.get('err.file')
+        def OUT_FILE = Paths.get('out.filex')
+        def POD_NAME = 'pod-xyz'
+        def EXIT_STATUS = 111
         def task = new TaskRun()
         def client = Mock(K8sClient)
         def handler = Spy(K8sTaskHandler)
@@ -421,6 +428,13 @@ class K8sTaskHandlerTest extends Specification {
         def result = handler.checkIfCompleted()
         then:
         1 * handler.getState() >> [:]
+        handler.status != TaskStatus.COMPLETED
+        result == false
+
+        when:
+        result = handler.checkIfCompleted()
+        then:
+        1 * handler.getState() >> null
         handler.status != TaskStatus.COMPLETED
         result == false
 
@@ -441,7 +455,7 @@ class K8sTaskHandlerTest extends Specification {
 
     def 'should kill a pod' () {
         given:
-        final POD_NAME = 'pod-xyz'
+        def POD_NAME = 'pod-xyz'
         def client = Mock(K8sClient)
         def handler = Spy(K8sTaskHandler)
         handler.client = client
@@ -462,7 +476,7 @@ class K8sTaskHandlerTest extends Specification {
 
     def 'should check task cached state' () {
         given:
-        final POD_NAME = 'pod-xyz'
+        def POD_NAME = 'pod-xyz'
         def client = Mock(K8sClient)
         def handler = Spy(K8sTaskHandler)
         handler.client = client
@@ -535,14 +549,14 @@ class K8sTaskHandlerTest extends Specification {
         given:
         def wrapper = Mock(K8sWrapperBuilder)
         def k8sConfig = Mock(K8sConfig)
-        def handler = new K8sTaskHandler(builder: wrapper)
-        handler.k8sConfig = k8sConfig
+        def handler = Spy(K8sTaskHandler)
+        handler.builder = wrapper
+        handler.getK8sConfig() >> k8sConfig
 
         when:
         def mounts = handler.getContainerMounts()
         then:
         1 * k8sConfig.getAutoMountHostPaths() >> false
-        0 * _   // <-- it should do anything else 
         mounts == []
 
         when:
@@ -575,12 +589,15 @@ class K8sTaskHandlerTest extends Specification {
         proc.getName() >> 'hello-proc'
         exec.getSession() >> sess
         sess.getUniqueId() >> uuid
-        exec.getK8sConfig() >> [labels: [foo:'bar', app: 'snakemake', x:'hello world', y:null ]]
+        exec.getK8sConfig() >> [pod: [
+                [label: 'foo', value: 'bar'],
+                [label: 'app', value: 'nextflow'],
+                [label: 'x', value: 'hello_world']
+        ]]
 
         labels.app == 'nextflow'
         labels.foo == 'bar'
         labels.x == 'hello_world'    
-        labels.y == 'null'
         labels.processName == 'hello-proc'
         labels.taskName ==  'hello-world-1'
         labels.sessionId instanceof String 
@@ -698,7 +715,7 @@ class K8sTaskHandlerTest extends Specification {
 
         def k8sConfig = Mock(K8sConfig)
         def handler = Spy(K8sTaskHandler)
-        handler.k8sConfig = k8sConfig
+        handler.getK8sConfig() >> k8sConfig
         handler.task = task
 
         when:

@@ -82,19 +82,9 @@ class K8sDriverLauncher {
      */
     private K8sConfig k8sConfig
 
-    /**
-     * The current user name
-     */
-    private String userName = System.properties.get('user.name')
-
     private String paramsFile
 
     private boolean interactive
-
-    /**
-     * source code management configuration
-     */
-    private Map scm
 
     /**
      * Workflow script positional parameters
@@ -112,7 +102,6 @@ class K8sDriverLauncher {
         this.args = args
         this.pipelineName = name
         this.interactive = name == 'login'
-        this.scm = makeScmConfig()
         this.config = makeConfig(pipelineName)
         this.k8sConfig = makeK8sConfig(config)
         this.k8sClient = makeK8sClient(k8sConfig)
@@ -146,28 +135,21 @@ class K8sDriverLauncher {
     }
 
     protected ConfigObject loadConfig( String pipelineName ) {
+
         // -- load local config if available
-        final local = new ConfigBuilder()
+        final builder = new ConfigBuilder()
+                .setShowClosures(true)
                 .setOptions(cmd.launcher.options)
+                .setProfile(cmd.profile)
                 .setCmdRun(cmd)
-                .configObject()
 
-        ConfigObject config
-        if( interactive || pipelineName.startsWith('/') ) {
-            // when it's an absolute path the config must be local
-            return local
-        }
-        else {
+        if( !interactive && !pipelineName.startsWith('/') ) {
             // -- check and parse project remote config
-            final remote = new AssetManager(pipelineName, cmd)
-                    .checkValidRemoteRepo()
-                    .readRemoteConfig(cmd.profile)
-            return (ConfigObject) remote.merge(local)
+            final pipelineConfig = new AssetManager(pipelineName, cmd) .getConfigFile()
+            builder.setUserConfigFiles(pipelineConfig)
         }
-    }
 
-    protected Map makeScmConfig() {
-        ProviderConfig.getDefault()
+        return builder.buildConfigObject()
     }
 
     protected K8sConfig makeK8sConfig(Map config) {
@@ -265,7 +247,9 @@ class K8sDriverLauncher {
         if( !config.libDir )
             config.remove('libDir')
         
-        return config.toMap()
+        final result = config.toMap()
+        log.trace "K8s config object:\n${ConfigHelper.toCanonicalString(result).indent('  ')}"
+        return result
     }
 
 
@@ -334,7 +318,7 @@ class K8sDriverLauncher {
         assert pipelineName
 
         if( interactive ) {
-            return 'tail -f /dev/null'
+            return "tail -f /dev/null"
         }
 
         def result = []
@@ -410,6 +394,7 @@ class K8sDriverLauncher {
             .withPodName(runName)
             .withImageName(k8sConfig.getNextflowImageName())
             .withCommand(['/bin/bash', '-c', cmd])
+            .withWorkDir(k8sConfig.getLaunchDir())
             .withLabels([ app: 'nextflow', runName: runName ])
             .withNamespace(k8sClient.config.namespace)
             .withServiceAccount(k8sClient.config.serviceAccount)
@@ -437,6 +422,9 @@ class K8sDriverLauncher {
         return result
     }
 
+    protected Path getScmFile() {
+        ProviderConfig.SCM_FILE.toPath()
+    }
 
     /**
      * Creates a K8s ConfigMap to share the nextflow configuration in the K8s cluster
@@ -444,13 +432,12 @@ class K8sDriverLauncher {
     protected void createK8sConfigMap() {
         Map<String,String> configMap = [:]
 
-        final userDir = k8sConfig.getUserDir()
+        final launchDir = k8sConfig.getLaunchDir()
         // init file
         String initScript = ''
-        initScript += "mkdir -p '$userDir'; if [ -d '$userDir' ]; then cd '$userDir'; else echo 'Cannot create nextflow userDir: $userDir'; exit 1; fi; "
+        initScript += "mkdir -p '$launchDir'; if [ -d '$launchDir' ]; then cd '$launchDir'; else echo 'Cannot create directory: $launchDir'; exit 1; fi; "
         initScript += '[ -f /etc/nextflow/scm ] && ln -s /etc/nextflow/scm $NXF_HOME/scm; '
         initScript += '[ -f /etc/nextflow/nextflow.config ] && cp /etc/nextflow/nextflow.config $PWD/nextflow.config; '
-        initScript += 'echo cd \\"$PWD\\" > /root/.profile; '
         configMap['init.sh'] = initScript
 
         // nextflow config file
@@ -459,8 +446,9 @@ class K8sDriverLauncher {
         }
 
         // scm config file
-        if( scm ) {
-            configMap['scm']  = ConfigHelper.toCanonicalString(scm)
+        final scmFile = getScmFile()
+        if( scmFile.exists() ) {
+            configMap['scm']  = scmFile.text
         }
 
         // params file
@@ -504,7 +492,8 @@ class K8sDriverLauncher {
     protected void launchLogin() {
         def cmd = "kubectl -n ${k8sClient.config.namespace} exec -it $runName -- /bin/bash --login"
         def proc = new ProcessBuilder().command('bash','-c',cmd).inheritIO().start()
-        proc.waitFor()
-        k8sClient.podDelete(runName)
+        def result = proc.waitFor()
+        if( result == 0 )
+            k8sClient.podDelete(runName)
     }
 }

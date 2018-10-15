@@ -29,7 +29,7 @@ import spock.lang.Specification
  */
 class IgGridFactoryTest extends Specification {
 
-    def test() {
+    def 'should set tcp parameters'() {
         when:
         def cfg = new IgGridFactory('master', [cluster: [ tcp:[
                 localAddress:'127.1.2.3',
@@ -52,6 +52,20 @@ class IgGridFactoryTest extends Specification {
         tcp.getSocketTimeout() == 30_000   // def: 2 sec
         tcp.getMaxAckTimeout() == 55_000    // def: 600 sec
         tcp.getJoinTimeout() == 100         // def: 0
+
+    }
+
+    def 'should set failure detection parameters'() {
+
+        when:
+        def cfg = new IgGridFactory('master', [cluster: [
+                failureDetectionTimeout: '20 sec',
+                clientFailureDetectionTimeout: '40 sec'
+        ]]).config()
+        
+        then:
+        cfg.getFailureDetectionTimeout() == 20_000
+        cfg.getClientFailureDetectionTimeout() == 40_000
 
     }
 

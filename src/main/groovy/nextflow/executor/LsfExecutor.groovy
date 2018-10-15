@@ -77,7 +77,12 @@ class LsfExecutor extends AbstractGridExecutor {
                 result << '-M' << String.valueOf(mem.toMega())
             }
 
-            result << '-R' << "select[mem>=${mem.toMega()}] rusage[mem=${mem.toMega()}]"
+            result << '-R' << "select[mem>=${mem.toMega()}] rusage[mem=${mem.toMega()}]".toString()
+        }
+
+        def disk = task.config.getDisk()
+        if( disk ) {
+            result << '-R' << "select[tmp>=$disk.mega] rusage[tmp=$disk.mega]".toString()
         }
 
         // -- the job name

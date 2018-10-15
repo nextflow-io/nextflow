@@ -267,9 +267,15 @@ abstract class AbstractGridExecutor extends Executor {
             process.waitForOrKill( 10 * 1000 )
             def exit = process.exitValue()
 
-            log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status > cmd exit: $exit\n$result"
 
-            return ( exit == 0 ) ? parseQueueStatus( result ) : null
+            if( exit == 0 ) {
+                log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status > cmd exit: $exit\n$result"
+                return parseQueueStatus(result)
+            }
+            else {
+                log.warn "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status cannot be fetched > exit status: $exit\n$result"
+                return null
+            }
 
         }
         catch( Exception e ) {

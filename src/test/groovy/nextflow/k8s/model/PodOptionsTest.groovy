@@ -44,17 +44,35 @@ class PodOptionsTest extends Specification {
         when:
         def options = new PodOptions()
         then:
-        options.getPullPolicy() == null
+        options.getImagePullPolicy() == null
         
         when:
         options = new PodOptions([ [pullPolicy:'Always'] ])
         then:
-        options.getPullPolicy() == 'Always'
+        options.getImagePullPolicy() == 'Always'
 
         when:
         options = new PodOptions([ [imagePullPolicy:'latest'] ])
         then:
-        options.getPullPolicy() == 'latest'
+        options.getImagePullPolicy() == 'latest'
+    }
+
+    def 'should set imagePullSecret' () {
+
+        when:
+        def options = new PodOptions()
+        then:
+        options.imagePullSecret == null
+
+        when:
+        options = new PodOptions([ [imagePullSecret:'foo'] ])
+        then:
+        options.imagePullSecret == 'foo'
+
+        when:
+        options = new PodOptions([ [imagePullSecrets:'bar'] ])
+        then:
+        options.imagePullSecret == 'bar'
     }
 
     def 'should return config mounts' () {
@@ -137,15 +155,17 @@ class PodOptionsTest extends Specification {
         def options = [
                 [volumeClaim:'pvc1', mountPath: '/this/path'],
                 [volumeClaim:'pvc2', mountPath: '/that/path'],
+                [volumeClaim:'pvc3', mountPath: '/some/data', subPath: '/foo']
         ]
 
         when:
         def claims = new PodOptions(options).getVolumeClaims()
         then:
-        claims.size() == 2
+        claims.size() == 3
         claims == [
                 new PodVolumeClaim('pvc1', '/this/path'),
                 new PodVolumeClaim('pvc2', '/that/path'),
+                new PodVolumeClaim('pvc3', '/some/data', '/foo')
         ] as Set
 
     }
@@ -180,7 +200,8 @@ class PodOptionsTest extends Specification {
                 [env: 'HELLO', value: 'WORLD'],
                 [secret: 'secret/key', mountPath: '/etc/secret'],
                 [config: 'data/key', mountPath: '/data/file.txt'],
-                [volumeClaim: 'pvc', mountPath: '/mnt/claim']
+                [volumeClaim: 'pvc', mountPath: '/mnt/claim'],
+                [runAsUser: 500]
         ]
 
         def list2 = [
@@ -205,6 +226,7 @@ class PodOptionsTest extends Specification {
                 [secret: 'x', mountPath: '/x'],
                 [config: 'y', mountPath: '/y'],
                 [volumeClaim: 'z', mountPath: '/z'],
+                [securityContext: [runAsUser: 1000, fsGroup: 200, allowPrivilegeEscalation: true]]
 
         ]
 
@@ -220,22 +242,26 @@ class PodOptionsTest extends Specification {
         opts = new PodOptions(list1) + new PodOptions()
         then:
         opts == new PodOptions(list1)
+        opts.securityContext.toSpec() == [runAsUser:500]
 
         when:
         opts = new PodOptions() + new PodOptions(list1)
         then:
         opts == new PodOptions(list1)
+        opts.securityContext.toSpec() == [runAsUser:500]
 
         when:
         opts = new PodOptions(list1) + new PodOptions(list1)
         then:
         opts == new PodOptions(list1)
+        opts.securityContext.toSpec() == [runAsUser:500]
 
 
         when:
         opts = new PodOptions(list1) + new PodOptions(list2)
         then:
         opts == new PodOptions(list1 + list2)
+        opts.securityContext.toSpec() == [runAsUser:500]
 
         when:
         opts = new PodOptions(list1) + new PodOptions(list3)
@@ -258,6 +284,50 @@ class PodOptionsTest extends Specification {
         opts.getVolumeClaims() == [
                 new PodVolumeClaim('pvc','/mnt/claim'),
                 new PodVolumeClaim('z','/z'),
-        ] as Set 
+        ] as Set
+
+        opts.securityContext.toSpec() == [runAsUser: 1000, fsGroup: 200, allowPrivilegeEscalation: true]
+    }
+
+    def 'should create pod labels' () {
+
+        given:
+        def options = [
+                [label: 'ALPHA', value: 'aaa'],
+                [label: 'DELTA', value: 'bbb'],
+                [label: 'DELTA', value: 'ddd']
+        ]
+        
+        when:
+        def opts = new PodOptions(options)
+        then:
+        opts.labels.size() == 2
+        opts.labels == [ALPHA: 'aaa', DELTA: 'ddd']
+
+    }
+
+    def 'should create user security context' () {
+        when:
+        def opts = new PodOptions([ [runAsUser: 1000] ])
+        then:
+        opts.getSecurityContext() == new PodSecurityContext(1000)
+
+        when:
+        opts = new PodOptions([ [runAsUser: 'foo'] ])
+        then:
+        opts.getSecurityContext() == new PodSecurityContext('foo')
+
+        when:
+        opts = new PodOptions([ [runAsUser: 'foo'] ])
+        then:
+        opts.getSecurityContext() != new PodSecurityContext('bar')
+
+        when:
+        def ctx = [runAsUser: 500, fsGroup: 200, allowPrivilegeEscalation: true, seLinuxOptions: [level: "s0:c123,c456"]]
+        def expected = new PodSecurityContext(ctx)
+        opts = new PodOptions([ [securityContext: ctx] ])
+        then:
+        opts.getSecurityContext() == expected
+        opts.getSecurityContext().toSpec() == ctx
     }
 }
