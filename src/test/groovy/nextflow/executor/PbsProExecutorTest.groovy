@@ -30,7 +30,7 @@ import java.nio.file.Paths
 
 /**
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Lorenz Gerber <lorenzottogerber@gmail.com>
  */
 class PbsProExecutorTest extends Specification {
 
