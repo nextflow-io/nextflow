@@ -21,7 +21,7 @@
 package nextflow.config
 
 import groovy.transform.CompileStatic
-
+import groovy.util.logging.Slf4j
 import static nextflow.Const.DEFAULT_BRANCH
 import static nextflow.Const.DEFAULT_MAIN_FILE_NAME
 
@@ -30,6 +30,7 @@ import static nextflow.Const.DEFAULT_MAIN_FILE_NAME
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class Manifest {
 
@@ -39,7 +40,14 @@ class Manifest {
 
     Manifest(Map object) {
         assert object != null
-        this.target = object
+        this.target = new HashMap(object.size())
+        final validFields = this.metaClass.properties.collect { it.name }.findAll { it!='class' }
+        object.each { key, value ->
+            if( validFields.contains(key) )
+                target.put(key, value)
+            else
+                log.warn("Invalid config manifest attribute `$key`")
+        }
     }
 
     String getHomePage() {
@@ -52,13 +60,11 @@ class Manifest {
     }
 
     String getDescription() {
-        // note: if description is not set it will return an empty ConfigObject
-        // thus use the elvis operator to return null
-        target.description ?: null
+        target.description 
     }
 
     String getAuthor() {
-        target.author ?: null
+        target.author
     }
 
     String getMainScript() {
@@ -75,6 +81,10 @@ class Manifest {
 
     String getVersion() {
         target.version
+    }
+
+    String getName() {
+        target.name
     }
 
 }

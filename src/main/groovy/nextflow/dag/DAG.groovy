@@ -19,6 +19,7 @@
  */
 
 package nextflow.dag
+
 import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
@@ -30,6 +31,7 @@ import nextflow.extension.DataflowHelper
 import nextflow.processor.TaskProcessor
 import nextflow.script.DefaultInParam
 import nextflow.script.DefaultOutParam
+import nextflow.script.EachInParam
 import nextflow.script.InParam
 import nextflow.script.InputsList
 import nextflow.script.OutParam
@@ -216,8 +218,14 @@ class DAG {
 
         inputs
                 .findAll { !( it instanceof DefaultInParam)  }
-                .collect { InParam p -> new ChannelHandler(channel: (DataflowChannel)p.inChannel, label: p instanceof SetInParam ? null : p.name) }
+                .collect { InParam p -> new ChannelHandler(channel: (DataflowChannel)p.inChannel, label: inputName0(p)) }
 
+    }
+
+    static private String inputName0(InParam param) {
+        if( param instanceof SetInParam ) return null
+        if( param instanceof EachInParam ) return null
+        return param.name
     }
 
     static private List<ChannelHandler> normalizeOutputs( OutputsList outputs ) {

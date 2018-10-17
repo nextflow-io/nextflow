@@ -151,10 +151,10 @@ abstract class FileCollector implements Closeable {
             return value.newInputStream()
 
         if( value instanceof CharSequence )
-            return new FastByteArrayInputStream(value.toString().getBytes())
+            return new ByteArrayInputStream(value.toString().getBytes())
 
         if( value instanceof byte[] )
-            return new FastByteArrayInputStream(value as byte[])
+            return new ByteArrayInputStream(value as byte[])
 
         throw new IllegalArgumentException("Not a valid file collector argument [${value.class.name}]: $value")
     }

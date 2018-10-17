@@ -230,7 +230,7 @@ class WorkflowMetadata {
         this.stats = owner.session.workflowStats
         this.userName = System.getProperty('user.name')
         this.homeDir = Paths.get(System.getProperty('user.home'))
-        this.manifest = new Manifest((owner.session.config.manifest as Map) ?: Collections.emptyMap())
+        this.manifest = owner.session.getManifest()
 
         // check if there's a onComplete action in the config file
         registerConfigAction(owner.session.config.workflow as Map)

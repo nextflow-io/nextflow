@@ -225,32 +225,20 @@ The DAG produced by Nextflow for the `Shootstrap <https://github.com/cbcrg/shoot
 Weblog via HTTP
 ===============
 
-In order to enable Nextflow to send detailed trace reports via HTTP POST requests, add the following command line option::
+Nextflow is able to send detailed workflow execution metadata and runtime statistics to a HTTP endpoint.
+To enable this feature use  the ``-with-weblog`` as shown below::
 
   nextflow run <pipeline name> -with-weblog [url]
 
-Nextflow will then take trace information and send it as JSON object to the given URL. An example JSON message can look like this::
+Workflow events are sent as HTTP POST requests to the given URL. The message is formatted using the
+following JSON structure::
 
    {
-        "runName": "mighty_jones",
-        "runId": "f6b21633-af1e-4fe2-8328-39e70b110c83",
-        "runStatus": "process_started",
-        "utcTime": "2018-05-14T08:28:48Z",
-        "trace": {
-            "task_id": 2,
-            "status": "RUNNING",
-            "hash": "e9/9efab9",
-            "name": "printHello (3)",
-            "exit": 2147483647,
-            "submit": 1526313056637,
-            "start": 1526313056715,
-            "process": "printHello",
-            "tag": null,
-            "module": [
-
-            ],
-            "container": "nextflow/examples",
-            ...
+        "runName": <run name>,
+        "runId": <uuid>,
+        "event": <started|process_submitted|process_started|process_completed|error|completed>,
+        "utcTime": <UTC timestamp>,
+        "trace": { ... }
    }
 
 The JSON object contains the following attributes:
@@ -258,12 +246,82 @@ The JSON object contains the following attributes:
 ================== ================
 Attribute          Description
 ================== ================
-runName            The worklow run name. Nextflow creates an own, if you do not provide one explicitly.
-runId              The unique workflow id Nextflow creates for every workflow.
-runStatus          The current status of the workflow. One of ``["started", "process_submitted", "process_started", "process_completed", "error", "completed"]``.
+runName            The workflow execution run name.
+runId              The workflow execution unique ID.
+event              The workflow execution event. One of ``started``, ``process_submitted``, ``process_started``, ``process_completed``, ``error``, ``completed``.
 utcTime            The UTC timestamp in ISO 8601 format.
-(trace)            Provided only on process submission, process start, process complete and workflow error.
+trace              A process runtime information as described in the :ref:`trace fields<trace-fields>` section. This attribute is only provided for the following events: ``process_submitted``, ``process_started``, ``process_completed``, ``error``.
 ================== ================
 
-The ``trace`` attribute contains a list of trace information fields, which you can look up in the :ref:`trace fields<trace-fields>` description.
+.. warning::
+  The content of the ``trace`` attribute depends on the settings for the `Trace report <trace-report>`_ defined in the
+  ``nextflow.config`` file. See the :ref:`Trace configuration<config-trace>` section to learn more.
 
+
+Weblog Submit example message
+-----------------------------
+
+When a workflow execution is a started a message like the following is posted to the specified end-point::
+
+
+  {
+    "runName": "friendly_pesquet",
+    "runId": "170aa09c-105f-49d0-99b4-8eb6a146e4a7",
+    "event": "started",
+    "utcTime": "2018-10-07T11:42:08Z"
+  }
+
+
+Weblog Completed example message
+--------------------------------
+
+Once a process is completed, a message like the following is posted to the specified end-point::
+
+  {
+    "runName": "friendly_pesquet",
+    "runId": "170aa09c-105f-49d0-99b4-8eb6a146e4a7",
+    "event": "process_completed",
+    "utcTime": "2018-10-07T11:45:30Z",
+    "trace": {
+        "task_id": 2,
+        "status": "COMPLETED",
+        "hash": "a1/0024fd",
+        "name": "make_ot_config",
+        "exit": 0,
+        "submit": 1538912529498,
+        "start": 1538912529629,
+        "process": "make_ot_config",
+        "tag": null,
+        "module": [
+
+        ],
+        "container": "nfcore/hlatyping:1.1.1",
+        "attempt": 1,
+        "script": "\n    configbuilder --max-cpus 2 --solver glpk > config.ini\n    ",
+        "scratch": null,
+        "workdir": "/home/sven1103/git/hlatyping-workflow/work/a1/0024fd028375e2b601aaed44d112e3",
+        "queue": null,
+        "cpus": 1,
+        "memory": 7516192768,
+        "disk": null,
+        "time": 7200000,
+        "env": "PATH=/home/sven1103/git/hlatyping-workflow/bin:$PATH\n",
+        "error_action": null,
+        "complete": 1538912730599,
+        "duration": 201101,
+        "realtime": 69,
+        "%cpu": 0.0,
+        "%mem": 0.1,
+        "vmem": 54259712,
+        "rss": 10469376,
+        "peak_vmem": 20185088,
+        "peak_rss": 574972928,
+        "rchar": 7597,
+        "wchar": 162,
+        "syscr": 16,
+        "syscw": 4083712,
+        "read_bytes": 4096,
+        "write_bytes": 0,
+        "native_id": 27185
+    }
+  }

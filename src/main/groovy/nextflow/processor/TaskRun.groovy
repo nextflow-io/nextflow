@@ -36,6 +36,7 @@ import nextflow.container.ContainerScriptTokens
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessTemplateException
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.script.EnvInParam
 import nextflow.script.FileInParam
@@ -504,6 +505,10 @@ class TaskRun implements Cloneable {
         if( !workDir )
             return null
         return workDir.toUriString()
+    }
+
+    Path getWorkDirFor(HashCode hash) {
+        FileHelper.getWorkFolder(processor.executor.getWorkDir(), hash)
     }
 
     static final public String CMD_LOG = '.command.log'

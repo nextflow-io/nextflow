@@ -347,14 +347,17 @@ class SessionTest extends Specification {
     def 'should get manifest object' () {
 
         given:
-        def MAN = [author: 'pablo', nextflowVersion: '1.2.3']
+        def MAN = [author: 'pablo', nextflowVersion: '1.2.3', name: 'foo']
 
         when:
         def session = new Session([manifest: MAN])
         then:
-        session.manifest.author == 'pablo'
-        session.manifest.nextflowVersion == '1.2.3'
-
+        session.manifest.with {
+            author == 'pablo'
+            nextflowVersion == '1.2.3'
+            name == 'foo'
+            description == null
+        }
     }
 
     def 'should get config attribute' () {

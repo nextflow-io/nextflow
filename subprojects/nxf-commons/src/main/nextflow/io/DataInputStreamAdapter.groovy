@@ -44,7 +44,7 @@ class DataInputStreamAdapter extends InputStream {
         }
     }
 
-    public long skip(long n) {
+    long skip(long n) {
         target.skipBytes(n as int)
     }
 }

@@ -20,19 +20,13 @@
 
 package nextflow.daemon
 
-import static nextflow.Const.*
-
 import groovy.util.logging.Slf4j
 import nextflow.cli.CmdInfo
-import nextflow.file.FileHelper
-import nextflow.file.igfs.IgFileSystemProvider
-import nextflow.file.igfs.IgPath
 import nextflow.scheduler.SchedulerAgent
-import nextflow.util.KryoHelper
-import nextflow.util.PathSerializer
 import nextflow.util.ServiceName
 import sun.misc.Signal
 import sun.misc.SignalHandler
+import static nextflow.Const.ROLE_WORKER
 /**
  * Launch the Ignite daemon
  *
@@ -48,23 +42,13 @@ class IgDaemon implements DaemonLauncher {
         log.info "Configuring Apache Ignite cluster daemon"
         def info = CmdInfo.status( log.isTraceEnabled() )
         log.debug( '\n'+info )
-        
-        /*
-         * register path serializer
-         */
-        KryoHelper.register(IgPath, PathSerializer)
+
 
         /*
          * Launch grid instance
          */
         def factory = new IgGridFactory(ROLE_WORKER, config)
         final grid = factory.start()
-
-        /*
-         * configure the file system
-         */
-        log.debug "Configuring Apache Ignite file system"
-        FileHelper.getOrCreateFileSystemFor(IgFileSystemProvider.SCHEME, [grid: grid])
 
         /*
          * Scheduler agent

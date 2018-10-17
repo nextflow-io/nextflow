@@ -35,18 +35,18 @@ class ByteBufferBackedInputStream extends InputStream {
 
     ByteBuffer buf;
 
-    public ByteBufferBackedInputStream(ByteBuffer buf) {
+    ByteBufferBackedInputStream(ByteBuffer buf) {
         this.buf = buf;
     }
 
-    public int read() throws IOException {
+    int read() throws IOException {
         if (!buf.hasRemaining()) {
             return -1;
         }
         return buf.get() & 0xFF;
     }
 
-    public int read(byte[] bytes, int off, int len) throws IOException {
+    int read(byte[] bytes, int off, int len) throws IOException {
         if (!buf.hasRemaining()) {
             return -1;
         }

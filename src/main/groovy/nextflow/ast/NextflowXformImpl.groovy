@@ -62,18 +62,18 @@ class NextflowXformImpl implements ASTTransformation {
 
             @Override
             Expression transform(Expression expr) {
-                if (expr == null) return null
+                if (expr == null)
+                    return null
 
-                if( expr.class == BinaryExpression ) {
-                    def newExpr = replaceBinaryExpression(expr as BinaryExpression)
-                    if( newExpr )
-                        return newExpr
+                def newExpr = transformBinaryExpression(expr)
+                if( newExpr ) {
+                    return newExpr
                 }
                 else if( expr instanceof ClosureExpression) {
                     visitClosureExpression(expr)
                 }
 
-                super.transform(expr)
+                return super.transform(expr)
             }
 
             /**
@@ -88,19 +88,20 @@ class NextflowXformImpl implements ASTTransformation {
              *  https://stackoverflow.com/questions/28355773/in-groovy-why-does-the-behaviour-of-change-for-interfaces-extending-compar#comment45123447_28387391
              *
              */
-            protected Expression replaceBinaryExpression(BinaryExpression expr) {
+            protected Expression transformBinaryExpression(Expression expr) {
 
-                final binary = expr as BinaryExpression
-                final left = binary.getLeftExpression()
-                final right = binary.getRightExpression()
+                if( expr.class != BinaryExpression )
+                    return null
 
-                if( '=='.equals(binary.operation.text) ) {
+                def binary = expr as BinaryExpression
+                def left = binary.getLeftExpression()
+                def right = binary.getRightExpression()
+
+                if( '=='.equals(binary.operation.text) )
                     return call('compareEqual',left,right)
-                }
 
-                if( '!='.equals(binary.operation.text) ) {
+                if( '!='.equals(binary.operation.text) )
                     return new NotExpression(call('compareEqual',left,right))
-                }
 
                 if( '<'.equals(binary.operation.text) )
                     return call('compareLessThan', left,right)
@@ -118,11 +119,15 @@ class NextflowXformImpl implements ASTTransformation {
             }
 
 
-            private static MethodCallExpression call(String method, Expression left, Expression right) {
+            private MethodCallExpression call(String method, Expression left, Expression right) {
+
+                final a = transformBinaryExpression(left) ?: left
+                final b = transformBinaryExpression(right) ?: right
+
                 GeneralUtils.callX(
                         GeneralUtils.classX(LangHelpers),
                         method,
-                        GeneralUtils.args(left,right))
+                        GeneralUtils.args(a,b))
             }
 
         }

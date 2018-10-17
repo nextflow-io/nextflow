@@ -875,6 +875,31 @@ class DataflowExtensionsTest extends Specification {
 
     }
 
+    def testCollateWithValueChannel() {
+        when:
+        def result = Channel.value(1).collate(1)
+        then:
+        result.val == [1]
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.value(1).collate(10)
+        then:
+        result.val == [1]
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.value(1).collate(10, true)
+        then:
+        result.val == [1]
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.value(1).collate(10, false)
+        then:
+        result.val == Channel.STOP
+    }
+
     def testMix() {
         when:
         def c1 = Channel.from( 1,2,3 )
