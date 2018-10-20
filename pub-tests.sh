@@ -20,7 +20,7 @@ for x in $(find . -path \*build/reports/tests/test); do
 aws --region $AWS_DEFAULT_REGION s3 sync $x $base/${x#./} \
  --cache-control max-age=0 \
  --metadata-directive REPLACE \
- --storage-class REDUCED_REDUNDANCY \
+ --storage-class STANDARD \
  --acl public-read \
  --delete
 done

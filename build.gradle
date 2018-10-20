@@ -324,7 +324,7 @@ ext.ossrhEmail = project.findProperty('ossrhEmail')
 ext.homeDir = System.properties['user.home']
 ext.nextflowDir = "$homeDir/.nextflow/framework/$version"
 ext.releaseDir = "$buildDir/releases"
-ext.s3CmdOpts="--acl public-read --storage-class REDUCED_REDUNDANCY --region eu-west-1"
+ext.s3CmdOpts="--acl public-read --storage-class STANDARD --region eu-west-1"
 // `signing.keyId` property needs to be defined in the `gradle.properties` file
 ext.enableSignArchives = project.findProperty('signing.keyId')
 
