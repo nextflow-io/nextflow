@@ -19,8 +19,6 @@
  */
 
 package nextflow.util
-import static nextflow.Const.MAIN_PACKAGE
-import static nextflow.Const.S3_UPLOADER_CLASS
 
 import java.lang.reflect.Field
 import java.nio.file.NoSuchFileException
@@ -29,9 +27,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder
+import ch.qos.logback.classic.net.SyslogAppender
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.classic.spi.ThrowableProxy
-import ch.qos.logback.classic.net.SyslogAppender
+import ch.qos.logback.core.Appender
+import ch.qos.logback.core.AppenderBase
 import ch.qos.logback.core.ConsoleAppender
 import ch.qos.logback.core.CoreConstants
 import ch.qos.logback.core.FileAppender
@@ -56,6 +56,8 @@ import nextflow.file.FileHelper
 import org.apache.commons.lang.exception.ExceptionUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import static nextflow.Const.MAIN_PACKAGE
+import static nextflow.Const.S3_UPLOADER_CLASS
 /**
  * Helper class to setup the logging subsystem
  *
@@ -84,11 +86,11 @@ class LoggerHelper {
 
     private LoggerContext loggerContext
 
-    private ConsoleAppender consoleAppender
+    private Appender consoleAppender
 
-    private SyslogAppender syslogAppender
+    private Appender syslogAppender
 
-    private FileAppender fileAppender
+    private Appender fileAppender
 
     LoggerHelper setRolling( boolean value ) {
         this.rolling = value
@@ -195,22 +197,36 @@ class LoggerHelper {
         return logger
     }
 
-    protected ConsoleAppender createConsoleAppender() {
+    protected Appender createConsoleAppender() {
 
-        final ConsoleAppender result = daemon && opts.isBackground() ? null : new ConsoleAppender()
-        if( result )  {
-
+        if( opts.ansiLog ) {
+            final result = new CaptureAppender()
             final filter = new ConsoleLoggerFilter( packages )
             filter.setContext(loggerContext)
             filter.start()
 
             result.setContext(loggerContext)
-            result.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
             result.addFilter(filter)
             result.start()
+            return result
+        }
+        else {
+            final ConsoleAppender result = daemon && opts.isBackground() ? null : new ConsoleAppender()
+            if( result )  {
+
+                final filter = new ConsoleLoggerFilter( packages )
+                filter.setContext(loggerContext)
+                filter.start()
+
+                result.setContext(loggerContext)
+                result.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
+                result.addFilter(filter)
+                result.start()
+            }
+
+            return result
         }
 
-        return result
     }
 
     protected SyslogAppender createSyslogAppender() {
@@ -349,40 +365,48 @@ class LoggerHelper {
      * Do not print INFO level prefix, used to print logging information
      * to the application stdout
      */
-    static class PrettyConsoleLayout extends LayoutBase<ILoggingEvent> {
+    static private class PrettyConsoleLayout extends LayoutBase<ILoggingEvent> {
 
-        PrettyConsoleLayout() {
-        }
-
-        public String doLayout(ILoggingEvent event) {
-            StringBuilder buffer = new StringBuilder(128);
-            if( event.level == Level.INFO ) {
-                buffer .append(event.getFormattedMessage()) .append(CoreConstants.LINE_SEPARATOR)
-            }
-
-            else if( event.level == Level.ERROR ) {
-                def error = ( event.getThrowableProxy() instanceof ThrowableProxy
-                            ? (event.getThrowableProxy() as ThrowableProxy).throwable
-                            : null) as Throwable
-
-                appendFormattedMessage(buffer, event, error, (Session)Global.session)
-            }
-            else {
-                buffer
-                        .append( event.getLevel().toString() ) .append(": ")
-                        .append(event.getFormattedMessage())
-                        .append(CoreConstants.LINE_SEPARATOR)
-            }
-
-            return buffer.toString()
+        @Override
+        String doLayout(ILoggingEvent event) {
+            final session = (Session)Global.session
+            fmtEvent(event, session)
         }
     }
 
+    /**
+     * Format a logging event
+     *
+     * @param event The logging event
+     * @param session Nextflow session object
+     * @return the formatted logging message
+     */
+    static protected String fmtEvent(ILoggingEvent event, Session session) {
+        final buffer = new StringBuilder(512);
+        if( event.level == Level.INFO ) {
+            buffer .append(event.getFormattedMessage()) .append(CoreConstants.LINE_SEPARATOR)
+        }
+        else if( event.level == Level.ERROR ) {
+            def error = ( event.getThrowableProxy() instanceof ThrowableProxy
+                    ? (event.getThrowableProxy() as ThrowableProxy).throwable
+                    : null) as Throwable
+
+            appendFormattedMessage(buffer, event, error, session)
+        }
+        else {
+            buffer
+                    .append( event.getLevel().toString() ) .append(": ")
+                    .append(event.getFormattedMessage())
+                    .append(CoreConstants.LINE_SEPARATOR)
+        }
+
+        return buffer.toString()
+    }
 
     /**
      * Find out the script line where the error has thrown
      */
-    static void appendFormattedMessage( StringBuilder buffer, ILoggingEvent event, Throwable fail, Session session) {
+    static protected void appendFormattedMessage( StringBuilder buffer, ILoggingEvent event, Throwable fail, Session session) {
 
         final scriptName = session?.scriptName
         final className = session?.scriptClassName
@@ -482,7 +506,7 @@ class LoggerHelper {
         private final AtomicBoolean firstTime = new AtomicBoolean(true);
 
         @Override
-        public boolean isTriggeringEvent(File activeFile, E event) {
+        boolean isTriggeringEvent(File activeFile, E event) {
 
             if ( !firstTime.get() ) { // fast path
                 return false;
@@ -496,5 +520,35 @@ class LoggerHelper {
 
     }
 
+    /**
+     * Capture logging events and forward them to
+     */
+    static private class CaptureAppender extends AppenderBase<ILoggingEvent> {
+
+        @Override
+        protected void append(ILoggingEvent event) {
+            final session = (Session)Global.session
+
+            try {
+                final message = fmtEvent(event, session).trim()
+                final renderer = session?.ansiLogObserver
+                if( !renderer )
+                    System.out.println(message)
+
+                else if( event.level==Level.ERROR )
+                    renderer.appendError(message)
+
+                else if( event.level==Level.WARN )
+                    renderer.appendWarning(message)
+
+                else
+                    renderer.appendInfo(message)
+            }
+            catch (Throwable e) {
+                e.printStackTrace()
+            }
+
+        }
+    }
 
 }
