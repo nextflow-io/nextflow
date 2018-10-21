@@ -27,10 +27,6 @@ buildscript {
     }
 }
 
-plugins {
-    id "com.vanniktech.dependency.graph.generator" version "0.2.0"
-}
-
 apply plugin: 'groovy'
 apply plugin: "jacoco"
 apply plugin: 'idea'
