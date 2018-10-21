@@ -2,6 +2,16 @@
 
 Shortcuts to recurrent Git commands 
 
+## Sync remote fork 
+
+```bash
+git fetch public
+git checkout master
+git merge public/master
+```
+
+Read more [here](https://help.github.com/articles/syncing-a-fork/).
+
 ## Subtree  
 
 The `tests` directory is a Git subtree created with the 
