@@ -1,14 +1,13 @@
 package nextflow.cloud.gce.pipelines
 
-
+import com.google.api.services.genomics.v2alpha1.model.Operation
+import com.google.api.services.genomics.v2alpha1.model.Pipeline
 import nextflow.Session
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.processor.TaskId
 import nextflow.processor.TaskRun
 import spock.lang.Shared
 import spock.lang.Specification
-
-import java.nio.file.Paths
 
 class GooglePipelinesTaskHandlerTest extends Specification {
 
@@ -25,7 +24,7 @@ class GooglePipelinesTaskHandlerTest extends Specification {
 
     GooglePipelinesExecutor stubExecutor = GroovyStub() {
         getSession() >> stubSession
-        getHelper() >> new GooglePipelinesHelper()
+        getHelper() >> GroovyMock(GooglePipelinesHelper)
     }
 
 
@@ -34,7 +33,7 @@ class GooglePipelinesTaskHandlerTest extends Specification {
         getId() >> new TaskId(12345)
         getContainer() >> "testContainer"
         getScript() >> "echo testScript"
-        getWorkDir() >> Paths.get("/")
+        getWorkDir() >> File.createTempDir().toPath()
     }
 
     def 'should throw an error if container is not specified'() {
@@ -62,4 +61,50 @@ class GooglePipelinesTaskHandlerTest extends Specification {
         handler.taskName == "nf-task-$uuid-$handler.task.name"
         handler.taskInstanceName == "nf-task-$uuid-$handler.task.name-$handler.task.id"
     }
+
+    def 'should submit a task'() {
+        given:
+        def handler = new GooglePipelinesTaskHandler(stubTaskRunner ,stubExecutor,pipeConfig)
+
+        when:
+        handler.submit()
+
+        then:
+        1 * stubExecutor.helper.createPipeline(_,_) >> new Pipeline()
+        1* stubExecutor.helper.runPipeline(_) >> new Operation().setName("testOperation")
+        handler.stagingCommands.size() == 3
+        handler.unstagingCommands.size() == 4
+    }
+
+    def 'should check if it is running'(){
+        given:
+        def handler = new GooglePipelinesTaskHandler(stubTaskRunner,stubExecutor,pipeConfig)
+
+        when:
+        def stillRunning = handler.checkIfRunning()
+        def notRunning = handler.checkIfRunning()
+
+        then:
+        2 * stubExecutor.helper.checkOperationStatus(_) >>> [new Operation().setName("incomplete").setDone(false),new Operation().setName("complete").setDone(true)]
+
+        stillRunning
+        !notRunning
+    }
+
+    def 'should check if it is complete'() {
+        given:
+        def handler = new GooglePipelinesTaskHandler(stubTaskRunner,stubExecutor,pipeConfig)
+
+        when:
+        def notComplete = handler.checkIfCompleted()
+        def complete = handler.checkIfCompleted()
+
+        then:
+        2 * stubExecutor.helper.checkOperationStatus(_) >>> [new Operation().setName("incomplete").setDone(false),new Operation().setName("complete").setDone(true)]
+
+        !notComplete
+        complete
+    }
+
+
 }

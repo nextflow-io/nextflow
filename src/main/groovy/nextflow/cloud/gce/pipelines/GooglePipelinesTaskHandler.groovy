@@ -18,7 +18,6 @@ class GooglePipelinesTaskHandler extends TaskHandler {
     final GooglePipelinesExecutor executor
     final TaskBean taskBean
     final GooglePipelinesConfiguration pipeConfig
-    GooglePipelinesScriptLauncher launcher
 
     final String taskName
     final String taskInstanceName
@@ -72,8 +71,6 @@ class GooglePipelinesTaskHandler extends TaskHandler {
 
         validateConfiguration()
 
-        launcher = new GooglePipelinesScriptLauncher(this.taskBean, this)
-
         log.debug "[GOOGLE PIPELINE] Created handler for task '${task.name}'."
     }
 
@@ -95,12 +92,12 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         operation = executor.helper.checkOperationStatus(operation)
 
         def events = extractRuntimeDataFromOperation()
-        events.reverse().each {
+        events?.reverse()?.each {
             log.trace "[GOOGLE PIPELINE] New event for task '$task.name' - time: ${it.get("timestamp")} - ${it.get("description")}"
         }
 
         if (operation.getDone()) {
-            log.debug "[GOOGLE PIPELINE] Task '$task.name' complete. Start Time: ${metadata.getStartTime()} - End Time: ${metadata.getEndTime()}"
+            log.debug "[GOOGLE PIPELINE] Task '$task.name' complete. Start Time: ${metadata?.getStartTime()} - End Time: ${metadata?.getEndTime()}"
 
             // finalize the task
             task.exitStatus = readExitFile()
@@ -116,7 +113,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         def metadata = operation.getMetadata() as Metadata
         if (!this.metadata) {
             this.metadata = metadata
-            return metadata.getEvents()
+            return metadata?.getEvents()
         } else {
             //Get the new events
             def delta = metadata.getEvents().size() - this.metadata.getEvents().size()
@@ -144,12 +141,12 @@ class GooglePipelinesTaskHandler extends TaskHandler {
     @Override
     void submit() {
 
-        //final launcher = new GooglePipelinesScriptLauncher(this.taskBean, this)
+        final launcher = new GooglePipelinesScriptLauncher(this.taskBean, this)
         launcher.build()
 
         //TODO: chmod 777 is bad m'kay
         //TODO: eliminate cd command as well as wildcard +x
-        def stagingScript = """
+        String stagingScript = """
            mkdir -p $task.workDir ;
            chmod 777 $task.workDir ;
            ${stagingCommands.join(" ; ")} ;
@@ -157,7 +154,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
            chmod 777 ${TaskRun.CMD_SCRIPT} ${TaskRun.CMD_RUN}            
         """.stripIndent().leftTrim()
 
-        def mainScript = "cd ${task.workDir} ; echo \$(./${TaskRun.CMD_RUN}) | bash 2>&1 | tee ${TaskRun.CMD_LOG}".toString()
+        String mainScript = "cd ${task.workDir} ; echo \$(./${TaskRun.CMD_RUN}) | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
 
         /*
          * -m = run in parallel
@@ -184,7 +181,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         }
 
         //Copy nextflow task progress files as well as the files we need to unstage
-        def unstagingScript = """                                                
+        String unstagingScript = """                                                
             ${unstagingCommands.join(" ; ")}                        
         """.stripIndent().leftTrim()
 
@@ -198,11 +195,12 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         //need the cloud-platform scope so that we can execute gsutil cp commands
         def resources = executor.helper.configureResources(pipeConfig.vmInstanceType, pipeConfig.project, pipeConfig.zone, diskName, [GooglePipelinesHelper.SCOPE_CLOUD_PLATFORM], pipeConfig.preemptible)
 
-        def stagingAction = executor.helper.createAction("$taskInstanceName-staging", fileCopyImage, ["bash", "-c", stagingScript], [sharedMount], [GooglePipelinesHelper.ActionFlags.ALWAYS_RUN, GooglePipelinesHelper.ActionFlags.IGNORE_EXIT_STATUS])
+        def stagingAction = executor.helper.createAction("$taskInstanceName-staging".toString(), fileCopyImage, ["bash", "-c", stagingScript], [sharedMount], [GooglePipelinesHelper.ActionFlags.ALWAYS_RUN, GooglePipelinesHelper.ActionFlags.IGNORE_EXIT_STATUS])
+
         //TODO: Do we really want to override the entrypoint?
         def mainAction = executor.helper.createAction(taskInstanceName, task.container, ['-o', 'pipefail', '-c', mainScript], [sharedMount], [], "bash")
 
-        def unstagingAction = executor.helper.createAction("$taskInstanceName-unstaging", fileCopyImage, ["bash", "-c", unstagingScript], [sharedMount], [GooglePipelinesHelper.ActionFlags.ALWAYS_RUN, GooglePipelinesHelper.ActionFlags.IGNORE_EXIT_STATUS])
+        def unstagingAction = executor.helper.createAction("$taskInstanceName-unstaging".toString(), fileCopyImage, ["bash", "-c", unstagingScript], [sharedMount], [GooglePipelinesHelper.ActionFlags.ALWAYS_RUN, GooglePipelinesHelper.ActionFlags.IGNORE_EXIT_STATUS])
 
         taskPipeline = executor.helper.createPipeline([stagingAction, mainAction, unstagingAction], resources)
 
