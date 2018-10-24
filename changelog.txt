@@ -1,6 +1,37 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+18.10.0 - 24 Oct 2018
+- Added lenient cache mode #828 [ba907a2f]
+- Added support for java 11 [60da50b5]
+- Added support for Singularity 3.0 library #898
+- Added support for AWS Batch hybrid executions #744
+- Added weblog JSON format docs #882
+- Added weblog example documentation #891
+- Added PbsPro executor [33ae1104]
+- Added support for ANSI console logging [9c14a947]
+- Fixed License prevents scientific use #788
+- Fixed process submitter slow-down [495e900a]
+- Fixed Comparing duration and memory units with null throws an exception #872
+- Fixed Html format dag fails when 'each' qualifier is used #887
+- Fixed Collate/Buffer hangs with one emission after Collect operator #868
+- Fixed Option checkIfExists should be applied when a glob pattern does not match any file #874
+- Fixed Add name to manifest and reject other attributes #871
+- Fixed warning message grammar when resuming on new project #885
+- Fixed Missing DSL Xform transformation in console execution [9621f8c6]
+- Fixed Enum declared in nextflow script causes error #878
+- Fixed Report a warning message when queue status fetch fails [39aae6a2]
+- Fixed Pbs executor may return nonzero exit code when checking queue status #904
+- Renamed weblog `runStatus` to `event` #892
+- Renamed K8s config attribute userDir to launchDir #895
+- Merged tests as subtree [a03eb59a]
+- Refactored service discovery
+- Removed FastXxxYyyyStream
+- Demoted igfs subsystem
+- Upgraded Groovy to version 2.5.3 [119300b3]
+- Upgrade Gradle to version 4.10
+- Updated AWS batch docs
+
 0.32.0 - 8 Aug 2018
 - Fixed CPU usage metrics can be wrongly reported #858
 - Fixed Allow a process to access input file metadata #731
