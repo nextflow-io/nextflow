@@ -39,7 +39,7 @@ It creates the ``nextflow`` executable file in the current directory. You may wa
 
 Create a file named `hello.nf` with the following content and copy it to the path where you downloaded the Nextflow package.
 
-```groovy
+```nextflow
 process sayHello {
 
     """
@@ -64,7 +64,7 @@ Let's see a more real example: execute a BLAST search, get the top 10 hits, extr
 
 Copy the following example into a file named `pipeline.nf` .
 
-```groovy
+```nextflow
 params.query = "$HOME/sample.fa"
 params.db = "$HOME/tools/blast-db/pdb/pdb"
 
@@ -116,7 +116,7 @@ Processes in your pipeline can be written in any scripting language supported by
 other than Linux BASH (e.g. Perl, Python, Ruby, R, etc), simply start your process script with the corresponding
 <a href='http://en.wikipedia.org/wiki/Shebang_(Unix)' target='_bank'>shebang</a> declaration. For example:
 
-```groovy
+```nextflow
 process perlStuff {
 
     """
@@ -159,7 +159,7 @@ By default processes are parallelized by spanning multiple threads in the machin
 To submit the execution to a SGE cluster create a file named `nextflow.config`, in the directory
 where the pipeline is going to be launched, with the following content: 
 
-```groovy
+```nextflow
 process {
   executor='sge'
   queue='<your execution queue>'
