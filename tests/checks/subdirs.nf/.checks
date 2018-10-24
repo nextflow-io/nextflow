@@ -1,0 +1,27 @@
+set -e
+
+#
+# run normal mode 
+#
+$NXF_RUN | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process'` == 1 ]] || false
+< stdout grep 'link_1.fasta' 
+< stdout grep 'link_2.fasta'
+< stdout grep 'link_3.fasta'  
+< stdout grep 'alpha.txt'
+< stdout grep 'beta.txt'
+ 
+
+#
+# run resume mode 
+#
+$NXF_RUN -resume | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Cached process'` == 1 ]] || false
+< stdout grep 'link_1.fasta' 
+< stdout grep 'link_2.fasta'
+< stdout grep 'link_3.fasta'  
+< stdout grep 'alpha.txt'
+< stdout grep 'beta.txt'
+

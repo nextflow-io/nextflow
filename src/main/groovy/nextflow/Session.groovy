@@ -20,8 +20,6 @@
 
 package nextflow
 
-import static nextflow.Const.S3_UPLOADER_CLASS
-
 import java.lang.reflect.Method
 import java.nio.file.Files
 import java.nio.file.Path
@@ -55,6 +53,7 @@ import nextflow.script.ScriptBinding
 import nextflow.trace.GraphObserver
 import nextflow.trace.ReportObserver
 import nextflow.trace.StatsObserver
+import nextflow.trace.AnsiLogObserver
 import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceObserver
@@ -68,6 +67,7 @@ import nextflow.util.HistoryFile
 import nextflow.util.NameGenerator
 import sun.misc.Signal
 import sun.misc.SignalHandler
+import static nextflow.Const.S3_UPLOADER_CLASS
 /**
  * Holds the information on the current execution
  *
@@ -106,6 +106,11 @@ class Session implements ISession {
      * The folder where tasks temporary files are stored
      */
     Path workDir
+
+    /**
+     * Bucket work directory for cloud based executors
+     */
+    Path bucketDir
 
     /**
      * The folder where the main script is contained
@@ -197,6 +202,12 @@ class Session implements ISession {
     Throwable getError() { error }
 
     WorkflowStats getWorkflowStats() { workflowStats }
+
+    boolean ansiLog
+
+    private AnsiLogObserver ansiLogObserver
+
+    AnsiLogObserver getAnsiLogObserver() { ansiLogObserver }
 
     /**
      * Creates a new session with an 'empty' (default) configuration
@@ -304,7 +315,12 @@ class Session implements ISession {
         this.setLibDir( config.libDir as String )
 
         if(!workDir.mkdirs()) throw new AbortOperationException("Cannot create work-dir: $workDir -- Make sure you have write permissions or specify a different directory by using the `-w` command line option")
-        log.debug "Work-dir: ${workDir} [${FileHelper.getPathFsType(workDir)}]"
+        log.debug "Work-dir: ${workDir.toUriString()} [${FileHelper.getPathFsType(workDir)}]"
+
+        if( config.bucketDir ) {
+            this.bucketDir = config.bucketDir as Path
+            log.debug "Bucket-dir: ${bucketDir.toUriString()}"
+        }
 
         if( scriptPath ) {
             // the folder that contains the main script
@@ -335,8 +351,16 @@ class Session implements ISession {
         createTimelineObserver(result)
         createDagObserver(result)
         createWebLogObserver(result)
+        createAnsiLogObserver(result)
 
         return result
+    }
+
+    protected void createAnsiLogObserver(Collection<TraceObserver> result) {
+        if( ansiLog ) {
+            this.ansiLogObserver = new AnsiLogObserver()
+            result << ansiLogObserver
+        }
     }
 
     /**
@@ -547,8 +571,16 @@ class Session implements ISession {
         return libDir
     }
 
+    @Memoized
     Manifest getManifest() {
-        config.manifest instanceof Map ? new Manifest(config.manifest as Map) : new Manifest()
+        if( !config.manifest )
+            return new Manifest()
+        if( config.manifest instanceof Map )
+            return new Manifest(config.manifest as Map)
+        else {
+            log.warn "Invalid config manifest definition [${this.getClass().getName()}]"
+            return new Manifest()
+        }
     }
 
     /**
@@ -896,7 +928,7 @@ class Session implements ISession {
      */
     void notifyError( TaskHandler handler ) {
 
-        for ( int i=0; i<observers.size(); i++){
+        for ( int i=0; i<observers?.size(); i++){
             try{
                 final observer = observers.get(i)
                 observer.onFlowError(handler, handler?.getTraceRecord())

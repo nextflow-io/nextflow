@@ -20,21 +20,21 @@
 
 package nextflow.extension
 
-import static nextflow.extension.DataflowHelper.newOperator
-import static nextflow.util.CheckHelper.checkParams
-
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
+import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
-
+import static nextflow.extension.DataflowHelper.newOperator
+import static nextflow.util.CheckHelper.checkParams
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -158,15 +158,26 @@ class BufferOp {
 
         // the list holding temporary collected elements
         def buffer = []
+        final stopOnFirst = source instanceof DataflowExpression
 
         // -- intercepts the PoisonPill and sent out the items remaining in the buffer when the 'remainder' flag is true
-        def listener = new DataflowEventAdapter() {
+        final listener = new DataflowEventAdapter() {
 
+            @Override
             Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
                 if( message instanceof PoisonPill && remainder && buffer.size() ) {
                     target.bind(buffer)
                 }
                 return message
+            }
+
+            @Override
+            void afterRun(DataflowProcessor processor, List<Object> messages) {
+                if( !stopOnFirst )
+                    return
+                if( remainder && buffer)
+                    target.bind(buffer)
+                target.bind(Channel.STOP)
             }
 
             @Override
@@ -196,6 +207,7 @@ class BufferOp {
                 // when a *startingCriteria* is defined, close the open frame flag
                 isOpen = (startingCriteria == null)
             }
+
         }
     }
 

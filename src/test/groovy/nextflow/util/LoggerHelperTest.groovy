@@ -20,8 +20,10 @@
 
 package nextflow.util
 
-import nextflow.cli.CliOptions
 import spock.lang.Specification
+
+import ch.qos.logback.classic.Level
+import nextflow.cli.CliOptions
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -72,5 +74,10 @@ class LoggerHelperTest extends Specification {
                 .stripIndent().leftTrim()
     }
 
+    def 'should compare logger levels' () {
+
+        expect:
+        assert Level.INFO.levelInt > Level.DEBUG.levelInt
+    }
 
 }

@@ -40,9 +40,7 @@ import org.apache.ignite.Ignite
 import org.apache.ignite.Ignition
 import org.apache.ignite.cache.CacheMode
 import org.apache.ignite.configuration.CacheConfiguration
-import org.apache.ignite.configuration.FileSystemConfiguration
 import org.apache.ignite.configuration.IgniteConfiguration
-import org.apache.ignite.igfs.IgfsMode
 import org.apache.ignite.logger.slf4j.Slf4jLogger
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi
 import org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder
@@ -129,7 +127,6 @@ class IgGridFactory {
         IgniteConfiguration cfg = new IgniteConfiguration()
         discoveryConfig(cfg)
         cacheConfig(cfg)
-        fileSystemConfig(cfg)
 
         final groupName = clusterConfig.getAttribute( 'group', GRID_NAME ) as String
         log.debug "Apache Ignite config > group name: $groupName"
@@ -174,24 +171,6 @@ class IgGridFactory {
                 .setCacheMode(CacheMode.REPLICATED)
 
         cfg.setCacheConfiguration( configs as CacheConfiguration[] )
-    }
-
-
-    /*
-     * igfs configuration
-     */
-    protected void fileSystemConfig( IgniteConfiguration cfg ) {
-
-        def ggfsCfg = new FileSystemConfiguration()
-        ggfsCfg.with {
-            name = 'igfs'
-            defaultMode = IgfsMode.PRIMARY
-            blockSize = clusterConfig.getAttribute('igfs.blockSize', 128 * 1024) as int
-            perNodeBatchSize = clusterConfig.getAttribute('igfs.perNodeBatchSize', 512) as int
-            perNodeParallelBatchCount = clusterConfig.getAttribute('igfs.perNodeParallelBatchCount', 16) as int
-        }
-        cfg.setFileSystemConfiguration(ggfsCfg)
-
     }
 
 

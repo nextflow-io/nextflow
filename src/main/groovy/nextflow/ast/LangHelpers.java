@@ -54,16 +54,20 @@ class LangHelpers {
         }
         // -- compare memory unit
         if( left instanceof MemoryUnit ) {
+            if( right == null ) return false;
             return MemoryUnit.compareTo((MemoryUnit)left, right)==0;
         }
         if( right instanceof MemoryUnit ) {
+            if( left == null ) return false;
             return MemoryUnit.compareTo((MemoryUnit)right, left)==0;
         }
         // -- compare duration
         if( left instanceof Duration) {
+            if( right == null ) return false;
             return Duration.compareTo((Duration)left, right)==0;
         }
         if( right instanceof Duration ) {
+            if( left == null ) return false;
             return Duration.compareTo((Duration)right, left)==0;
         }
 
@@ -93,16 +97,20 @@ class LangHelpers {
 
         // -- compare memory unit
         if( left instanceof MemoryUnit ) {
+            if( right == null ) return false;
             return MemoryUnit.compareTo((MemoryUnit)left, right)<0;
         }
         if( right instanceof MemoryUnit ) {
+            if( left == null ) return false;
             return MemoryUnit.compareTo((MemoryUnit)right, left)>0;
         }
         // -- compare duration
         if( left instanceof Duration ) {
+            if( right == null ) return false;
             return Duration.compareTo((Duration)left, right)<0;
         }
         if( right instanceof Duration ) {
+            if( left == null ) return false;
             return Duration.compareTo((Duration)right, left)>0;
         }
 
@@ -132,16 +140,20 @@ class LangHelpers {
 
         // -- compare memory unit
         if( left instanceof MemoryUnit ) {
+            if( right == null ) return false;
             return MemoryUnit.compareTo((MemoryUnit)left, right)<=0;
         }
         if( right instanceof MemoryUnit ) {
+            if( left == null ) return false;
             return MemoryUnit.compareTo((MemoryUnit)right, left)>=0;
         }
         // -- compare duration
         if( left instanceof Duration ) {
+            if( right == null ) return false;
             return Duration.compareTo((Duration)left, right)<=0;
         }
         if( right instanceof Duration ) {
+            if( left == null ) return false;
             return Duration.compareTo((Duration)right, left)>=0;
         }
 
@@ -171,16 +183,20 @@ class LangHelpers {
 
         // -- compare memory unit
         if( left instanceof MemoryUnit ) {
+            if( right == null ) return false;
             return MemoryUnit.compareTo((MemoryUnit)left, right)>0;
         }
         if( right instanceof MemoryUnit ) {
+            if( left == null ) return false;
             return MemoryUnit.compareTo((MemoryUnit)right, left)<0;
         }
         // -- compare duration
         if( left instanceof Duration ) {
+            if( right == null ) return false;
             return Duration.compareTo((Duration)left, right)>0;
         }
         if( right instanceof Duration ) {
+            if( left == null ) return false;
             return Duration.compareTo((Duration)right, left)<0;
         }
         // -- fallback on default
@@ -209,16 +225,20 @@ class LangHelpers {
 
         // -- compare memory unit
         if( left instanceof MemoryUnit ) {
+            if( right == null ) return false;
             return MemoryUnit.compareTo((MemoryUnit)left, right)>=0;
         }
         else if( right instanceof MemoryUnit ) {
+            if( left == null ) return false;
             return MemoryUnit.compareTo((MemoryUnit)right, left)<=0;
         }
         // -- compare duration
         if( left instanceof Duration ) {
+            if( right == null ) return false;
             return Duration.compareTo((Duration)left, right)>=0;
         }
         else if( right instanceof Duration ) {
+            if( left == null ) return false;
             return Duration.compareTo((Duration)right, left)<=0;
         }
 

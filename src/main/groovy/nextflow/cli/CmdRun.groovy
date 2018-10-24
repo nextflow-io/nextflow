@@ -97,6 +97,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate result files are stored')
     String workDir
 
+    @Parameter(names=['-bucket-dir'], description = 'Remote bucket where intermediate result files are stored')
+    String bucketDir
+
     /**
      * Defines the parameters to be passed to the pipeline script
      */
@@ -129,6 +132,11 @@ class CmdRun extends CmdBase implements HubOptions {
 
     @Parameter(names='-stdin', hidden = true)
     boolean stdin
+
+    @Parameter(names = ['-ansi'], hidden = true, arity = 0)
+    boolean setAnsiLog(boolean value) {
+        launcher.options.ansiLog = value
+    }
 
     @Parameter(names = ['-with-weblog'], description = 'Send workflow status messages via HTTP to target URL')
     String withWebLog
@@ -219,6 +227,7 @@ class CmdRun extends CmdBase implements HubOptions {
         final runner = new ScriptRunner(config)
         runner.script = scriptFile
         runner.profile = profile
+        runner.session.ansiLog = launcher.options.ansiLog
 
         if( this.test ) {
             runner.test(this.test, scriptArgs)

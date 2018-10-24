@@ -83,4 +83,6 @@ class CliOptions {
     @Parameter(names = ['-d','-dockerize'], description = 'Launch nextflow via Docker (experimental)', arity = 0)
     boolean dockerize
 
+    boolean ansiLog
+
 }

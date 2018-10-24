@@ -20,6 +20,8 @@
 
 package nextflow.executor
 
+import java.nio.file.Path
+
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -85,6 +87,14 @@ abstract class Executor {
         }
     }
 
+    /**
+     * The path where workflow scratch data is written.
+     *
+     * @return The workflow base work directory
+     */
+    Path getWorkDir() {
+       session.getWorkDir()
+    }
 
     /**
      * @return Create a new instance of the {@code TaskQueueHolder} component

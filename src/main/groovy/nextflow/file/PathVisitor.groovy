@@ -23,15 +23,16 @@ package nextflow.file
 import java.nio.file.FileSystem
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Global
 import nextflow.Session
+import nextflow.util.CustomThreadFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import static nextflow.Channel.STOP
@@ -48,7 +49,7 @@ class PathVisitor {
     private static Logger log = LoggerFactory.getLogger(PathVisitor)
 
     @Lazy
-    static ExecutorService singleThread = createExecutorService()
+    private static ExecutorService executor = createExecutor()
 
     DataflowQueue target
 
@@ -74,6 +75,9 @@ class PathVisitor {
         return target
     }
 
+    CompletableFuture applyAsync(final CompletableFuture future, final Object filePattern ) {
+        future.thenRunAsync({ apply(filePattern) } as Runnable, executor)
+    }
 
     private void applyRegexPattern0( Pattern filePattern ) {
         assert filePattern
@@ -136,40 +140,38 @@ class PathVisitor {
         if( !opts.type )
             opts.type = 'file'
 
-        singleThread.execute {
-            try {
-                visitFiles(opts, path, pattern) { Path file ->
-                    if( bindPayload == null )
-                        target.bind(file)
+        int count=0
+        try {
+            visitFiles(opts, path, pattern) { Path file ->
+                count++
+                if( bindPayload == null )
+                    target.bind(file)
 
-                    else {
-                        def pair = new ArrayList<>(2)
-                        pair[0] = file
-                        pair[1] = bindPayload
-                        target.bind(pair)
-                    }
+                else {
+                    def pair = new ArrayList<>(2)
+                    pair[0] = file
+                    pair[1] = bindPayload
+                    target.bind(pair)
                 }
             }
-            catch (NoSuchFileException e) {
-                log.debug "No such file: $folder -- Skipping visit"
-            }
-            finally {
-                if( closeChannelOnComplete )
-                    target.bind(STOP)
-            }
         }
+        catch (NoSuchFileException e) {
+            log.debug "No such file: $folder -- Skipping visit"
+        }
+        finally {
+            if( !count && opts.checkIfExists as boolean )
+                throw new IllegalArgumentException("No files match pattern `$pattern` at path: $folder")
+            if( closeChannelOnComplete )
+                target.bind(STOP)
+        }
+
     }
 
-    static private ExecutorService createExecutorService() {
-        final result = Executors.newSingleThreadExecutor()
-        def session = Global.session as Session
-        if( !session ) return result
-
-        session.onShutdown {
-            result.shutdown()
-            result.awaitTermination(5,TimeUnit.MINUTES)
-        }
-        
+    private static ExecutorService createExecutor() {
+        final result = Executors.newCachedThreadPool(new CustomThreadFactory('PathVisitor'))
+        final session = Global.session as Session
+        if( session )
+            session.onShutdown { result.shutdown() }
         return result
     }
 

@@ -281,4 +281,100 @@ class NextflowXformImplTest extends Specification {
         reads?.delete()
     }
 
+    def 'should allow enum casting' () {
+
+        given:
+        def config = new CompilerConfiguration()
+        config.scriptBaseClass = BaseScript.class.name
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+        def shell = new GroovyShell(config)
+
+        when:
+        shell.evaluate '''
+        enum MyEnum { FOO, BAR, BAZ }
+        def stage = 'FOO' as MyEnum
+        assert stage == MyEnum.FOO 
+        assert stage.is(MyEnum.FOO) 
+        '''
+        then:
+        noExceptionThrown()
+
+    }
+
+    def 'should allow memory comparison with nulls' () {
+
+        given:
+        def config = new CompilerConfiguration()
+        config.scriptBaseClass = BaseScript.class.name
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+        def shell = new GroovyShell(config)
+
+        when:
+        shell.evaluate '''
+        assert 1.gb >  null == false
+        assert 1.gb <= null == false
+        assert 1.gb <  null == false
+        assert 1.gb >= null == false
+        assert 1.gb == null == false 
+        assert 1.gb != null == true
+
+        assert null >  1.gb == false        
+        assert null >= 1.gb == false
+        assert null <  1.gb == false        
+        assert null <= 1.gb == false
+        assert null == 1.gb == false
+        assert null != 1.gb == true      
+        '''
+        then:
+        noExceptionThrown()
+
+    }
+
+    def 'should allow duration comparison with nulls' () {
+
+        given:
+        def config = new CompilerConfiguration()
+        config.scriptBaseClass = BaseScript.class.name
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+        def shell = new GroovyShell(config)
+
+        when:
+        shell.evaluate '''
+        assert 1.min >  null == false
+        assert 1.min <= null == false
+        assert 1.min <  null == false
+        assert 1.min >= null == false
+        assert 1.min == null == false 
+        assert 1.min != null == true
+
+        assert null >  1.min == false        
+        assert null >= 1.min == false
+        assert null <  1.min == false        
+        assert null <= 1.min == false
+        assert null == 1.min == false
+        assert null != 1.min == true      
+        '''
+        then:
+        noExceptionThrown()
+
+    }
+
+    def 'should ignore array binary expression' () {
+
+        given:
+        def config = new CompilerConfiguration()
+        config.scriptBaseClass = BaseScript.class.name
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+        def shell = new GroovyShell(config)
+
+        when:
+        shell.evaluate '''
+          System.properties['os.name'] == 'Mac OS X'    
+          System.properties['os.name'] == 'Mac OS X' ? 'gcsplit' : 'csplit' 
+        '''
+        then:
+        noExceptionThrown()
+
+    }
+
 }

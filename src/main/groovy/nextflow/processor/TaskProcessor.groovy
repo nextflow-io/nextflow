@@ -690,7 +690,7 @@ class TaskProcessor {
             hash = CacheHelper.defaultHasher().newHasher().putBytes(hash.asBytes()).putInt(tries).hash()
 
             boolean exists
-            final folder = FileHelper.getWorkFolder(session.workDir, hash)
+            final folder = task.getWorkDirFor(hash)
             exists = folder.exists()
             if( !exists && !folder.mkdirs() )
                 throw new IOException("Unable to create folder=$folder -- check file system permission")
@@ -1282,7 +1282,7 @@ class TaskProcessor {
         }
 
         // -- finally prints out the task output when 'echo' is true
-        if( task.config.echo ) {
+        if( task.config.echo && !session.ansiLog ) {
             task.echoStdout()
         }
     }
