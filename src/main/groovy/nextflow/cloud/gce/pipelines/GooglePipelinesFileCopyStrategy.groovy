@@ -24,8 +24,9 @@ class GooglePipelinesFileCopyStrategy extends SimpleFileCopyStrategy {
     @Override
     String getStageInputFilesScript(Map<String, Path> inputFiles) {
 
-        def stagingCommands = inputFiles.collect {
-            "gsutil -m  -q cp -P -c -r ${it.value.toUriString()} ${task.workDir}/${it.value.toString().endsWith(it.key) ? "" : it.key} || true".toString()
+        def stagingCommands = inputFiles.collect { stageName, storePath ->
+            def absStorePath = storePath.toAbsolutePath()
+            "gsutil -m  -q cp -P -c -r ${absStorePath.toUriString()} ${task.workDir}/${absStorePath.toString().endsWith(stageName) ? "" : stageName} || true".toString()
         }
 
         log.debug "[GOOGLE PIPELINE] Constructed the following file copy staging commands: $stagingCommands"

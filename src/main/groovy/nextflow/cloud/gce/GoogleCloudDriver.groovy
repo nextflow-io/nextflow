@@ -310,20 +310,20 @@ class GoogleCloudDriver implements CloudDriver {
     }
 
     def toNextflow(Instance instance) {
-        NetworkInterface iface
+        NetworkInterface networkInterface
         AccessConfig accessConfig
         def labels = instance.getLabels() ?: {}
 
         if (instance.getNetworkInterfaces() != null && !instance.getNetworkInterfaces().isEmpty()) {
-            iface = instance.getNetworkInterfaces()[0]
-            if (iface.getAccessConfigs() != null && !iface.getAccessConfigs()?.isEmpty()) {
-                accessConfig = iface.getAccessConfigs()[0]
+            networkInterface = instance.getNetworkInterfaces()[0]
+            if (networkInterface.getAccessConfigs() != null && !networkInterface.getAccessConfigs()?.isEmpty()) {
+                accessConfig = networkInterface.getAccessConfigs()[0]
             }
         }
 
         new CloudInstance(
                 id: instance.getName(),
-                privateIpAddress: iface?.getNetworkIP(),
+                privateIpAddress: networkInterface?.getNetworkIP(),
                 privateDnsName: helper.instanceIdToPrivateDNS(instance.getName()),
                 publicIpAddress: accessConfig?.getNatIP(),
                 publicDnsName: accessConfig?.getPublicPtrDomainName() ?: helper.publicIpToDns(accessConfig?.getNatIP()),
@@ -364,6 +364,7 @@ class GoogleCloudDriver implements CloudDriver {
     /**
      * @TODO: This is mostly a copy paste from AmazonCloudDriver
      */
+    @PackageScope
     @CompileDynamic
     String cloudInitScript(LaunchConfig cfg) {
         // load init script template

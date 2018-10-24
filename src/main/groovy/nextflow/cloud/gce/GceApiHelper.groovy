@@ -23,10 +23,7 @@ import java.security.GeneralSecurityException
 //TODO: Make most utility functions static. (Unit tests need to stub static methods)
 @CompileStatic
 class GceApiHelper {
-
     private static final String PROJECT_PREFIX = "https://www.googleapis.com/compute/v1/projects/"
-    public static final String GAC_ENV = "GOOGLE_APPLICATION_CREDENTIALS"
-
     final String project
     final String zone
     final Compute compute

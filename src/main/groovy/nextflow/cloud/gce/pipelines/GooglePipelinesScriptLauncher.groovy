@@ -2,15 +2,15 @@ package nextflow.cloud.gce.pipelines
 
 import groovy.transform.CompileStatic
 import nextflow.executor.BashWrapperBuilder
-import nextflow.file.FileHelper
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
+
+import java.nio.file.Path
 
 /**
  * Implements BASH launcher script for Google Pipeline
  */
-//TODO: This code is copied nearly 100% from AWS batch.  Need to grok it and rewrite it
-//TODO: Scratch stuff and changing the targetDir are both unsuitable to trigger getUnstageOutputFilesScript
+//TODO: Need to use the scratch directory "more cleaner"
 @CompileStatic
 class GooglePipelinesScriptLauncher extends BashWrapperBuilder {
 
@@ -18,10 +18,8 @@ class GooglePipelinesScriptLauncher extends BashWrapperBuilder {
         super(bean, new GooglePipelinesFileCopyStrategy(bean, handler))
 
         // enable the copying of output file to the GS work dir
-        //scratch = false
+        scratch = "/work/scratch/"
 
-        //TODO: here lies a hackdragon, 'YARR!!!!
-        bean.targetDir = FileHelper.asPath("/work")
 
         // include task script as an input to force its staging in the container work directory
         bean.inputFiles[TaskRun.CMD_SCRIPT] = bean.workDir.resolve(TaskRun.CMD_SCRIPT)
@@ -35,5 +33,15 @@ class GooglePipelinesScriptLauncher extends BashWrapperBuilder {
         if (bean.input != null) {
             bean.inputFiles[TaskRun.CMD_INFILE] = bean.workDir.resolve(TaskRun.CMD_INFILE)
         }
+    }
+
+    @Override
+    protected String getScratchDirectoryCommand() {
+        "NXF_SCRATCH=\$(mkdir $scratch)"
+    }
+
+    @Override
+    String copyFile(String name, Path target) {
+        "echo 'Google Pipelines file staging/unstaging happens in pre/post actions'"
     }
 }

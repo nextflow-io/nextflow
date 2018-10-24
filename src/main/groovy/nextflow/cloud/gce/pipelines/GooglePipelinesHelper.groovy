@@ -41,7 +41,7 @@ class GooglePipelinesHelper {
         DISABLE_STANDARD_ERROR_CAPTURE
     }
 
-    GooglePipelinesHelper(GoogleCredential credential = null,String name ="Nextflow GooglePipelinesExecutor") {
+    GooglePipelinesHelper(GoogleCredential credential = null, String name = "Nextflow GooglePipelinesExecutor") {
         this.credential = credential
         this.applicationName = name
     }
@@ -51,7 +51,7 @@ class GooglePipelinesHelper {
     }
 
     void init() {
-        if(!genomicsClient) {
+        if (!genomicsClient) {
 
             if (!credential)
                 credential = GoogleCredential.applicationDefault
@@ -66,8 +66,8 @@ class GooglePipelinesHelper {
         }
     }
 
-    Map<String,String> getEnvironment() {
-        System.getenv().findAll {it ->
+    Map<String, String> getEnvironment() {
+        System.getenv().findAll { it ->
             ENV_VAR_TO_INCLUDE.contains(it.key)
         }
     }
@@ -78,7 +78,7 @@ class GooglePipelinesHelper {
                 .setImageUri(imageUri)
                 .setCommands(commands)
                 .setMounts(mounts)
-                .setFlags(flags.collect{flag -> flag.toString()})
+                .setFlags(flags.collect { flag -> flag.toString() })
                 .setEntrypoint(entrypoint)
                 .setEnvironment(getEnvironment())
     }
@@ -88,7 +88,7 @@ class GooglePipelinesHelper {
     }
 
     //TODO: Do we want to configure this via nextflow config?
-    Resources configureResources(String instanceType, String projectId, String zone, String diskName, List<String> scopes = null,boolean preEmptible = false) {
+    Resources configureResources(String instanceType, String projectId, String zone, String diskName, List<String> scopes = null, boolean preEmptible = false) {
 
         def disk = new Disk()
         disk.setName(diskName)

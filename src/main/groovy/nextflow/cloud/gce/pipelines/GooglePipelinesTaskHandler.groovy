@@ -1,7 +1,10 @@
 package nextflow.cloud.gce.pipelines
 
-import com.google.api.services.genomics.v2alpha1.model.*
-import groovy.transform.CompileStatic
+import com.google.api.services.genomics.v2alpha1.model.Event
+import com.google.api.services.genomics.v2alpha1.model.Metadata
+import com.google.api.services.genomics.v2alpha1.model.Mount
+import com.google.api.services.genomics.v2alpha1.model.Operation
+import com.google.api.services.genomics.v2alpha1.model.Pipeline
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessUnrecoverableException
@@ -36,7 +39,6 @@ class GooglePipelinesTaskHandler extends TaskHandler {
     final static String mountPath = "/work"
     final static String diskName = "nf-pipeline-work"
     final static String fileCopyImage = "google/cloud-sdk:alpine"
-
 
 
     Mount sharedMount
@@ -87,7 +89,6 @@ class GooglePipelinesTaskHandler extends TaskHandler {
     }
 
     @Override
-    //TODO: Catch pipeline errors and report them back
     boolean checkIfCompleted() {
         operation = executor.helper.checkOperationStatus(operation)
 
@@ -100,9 +101,11 @@ class GooglePipelinesTaskHandler extends TaskHandler {
             log.debug "[GOOGLE PIPELINE] Task '$task.name' complete. Start Time: ${metadata?.getStartTime()} - End Time: ${metadata?.getEndTime()}"
 
             // finalize the task
-            task.exitStatus = readExitFile()
+            Integer xs = readExitFile()
+            //Use the status from the exitStatus file if it exists. Else use the exit code from the pipeline operation
             task.stdout = outputFile
-            task.stderr = errorFile
+            task.exitStatus = xs != null ? xs :  operation.getError().getCode()
+            task.stderr = xs  != null ?  errorFile : operation.getError().getMessage()
             status = TaskStatus.COMPLETED
             return true
         } else
@@ -122,13 +125,13 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         }
     }
 
-    private int readExitFile() {
+    private Integer readExitFile() {
         try {
             exitFile.text as Integer
         }
         catch (Exception e) {
             log.debug "[GOOGLE PIPELINE] Cannot read exitstatus for task: `$task.name`", e
-            return Integer.MAX_VALUE
+            null
         }
     }
 
@@ -155,6 +158,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         """.stripIndent().leftTrim()
 
         String mainScript = "cd ${task.workDir} ; echo \$(./${TaskRun.CMD_RUN}) | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
+        //String mainScript = "echo \$(./${TaskRun.CMD_RUN}) | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
 
         /*
          * -m = run in parallel
@@ -166,7 +170,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
          */
         def gsCopyPrefix = "gsutil -m -q cp -P -c"
 
-        //Copy the logs provided by Google Pipelines for the pipline to our work dir.
+        //Copy the logs provided by Google Pipelines for the pipeline to our work dir.
         if (System.getenv().get("NXF_DEBUG")) {
             unstagingCommands << "$gsCopyPrefix -r /google/ ${task.workDir.toUriString()} || true".toString()
         }
@@ -198,7 +202,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         def stagingAction = executor.helper.createAction("$taskInstanceName-staging".toString(), fileCopyImage, ["bash", "-c", stagingScript], [sharedMount], [GooglePipelinesHelper.ActionFlags.ALWAYS_RUN, GooglePipelinesHelper.ActionFlags.IGNORE_EXIT_STATUS])
 
         //TODO: Do we really want to override the entrypoint?
-        def mainAction = executor.helper.createAction(taskInstanceName, task.container, ['-o', 'pipefail', '-c', mainScript], [sharedMount], [], "bash")
+        def mainAction = executor.helper.createAction(taskInstanceName, task.container, ['-o', 'pipefail', '-c', mainScript], [sharedMount], [GooglePipelinesHelper.ActionFlags.IGNORE_EXIT_STATUS], "bash")
 
         def unstagingAction = executor.helper.createAction("$taskInstanceName-unstaging".toString(), fileCopyImage, ["bash", "-c", unstagingScript], [sharedMount], [GooglePipelinesHelper.ActionFlags.ALWAYS_RUN, GooglePipelinesHelper.ActionFlags.IGNORE_EXIT_STATUS])
 
