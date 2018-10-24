@@ -82,7 +82,7 @@ class PbsProExecutor extends PbsExecutor {
     protected List<String> queueStatusCommand(Object queue) {
         String cmd = 'qstat -f'
         if( queue ) cmd += ' ' + queue
-        return ['sh','-c', "$cmd | egrep '(Job Id:|job_state =)'".toString()]
+        return ['sh','-c', "set -o pipefail; $cmd | { egrep '(Job Id:|job_state =)' || true; }".toString()]
     }
 
 }

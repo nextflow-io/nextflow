@@ -151,8 +151,8 @@ class PbsProExecutorTest extends Specification {
         def executor = [:] as PbsProExecutor
 
         expect:
-        executor.queueStatusCommand(null) == ['sh','-c', "qstat -f | egrep '(Job Id:|job_state =)'"]
-        executor.queueStatusCommand('xxx') == ['sh','-c', "qstat -f xxx | egrep '(Job Id:|job_state =)'"]
+        executor.queueStatusCommand(null) == ['sh','-c', "set -o pipefail; qstat -f | { egrep '(Job Id:|job_state =)' || true; }"]
+        executor.queueStatusCommand('xxx') == ['sh','-c', "set -o pipefail; qstat -f xxx | { egrep '(Job Id:|job_state =)' || true; }"]
         executor.queueStatusCommand('xxx').each { assert it instanceof String }
     }
 
