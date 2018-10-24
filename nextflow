@@ -323,7 +323,7 @@ else
   version_check="^(1.8|9|10|11)"
   version_message="Java 8"
   # legacy version - Java 7/8 only
-  if [[ $major==0 && $minor<26 ]]; then
+  if [ $major -eq 0 ] && [ $minor -lt 26 ]; then
     version_check="^(1.7|1.8)"
     version_message="Java 7 or 8"
   fi
