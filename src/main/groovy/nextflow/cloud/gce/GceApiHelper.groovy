@@ -6,9 +6,9 @@ import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.services.compute.Compute
 import com.google.api.services.compute.model.*
+import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovyjarjarcommonscli.MissingArgumentException
-import nextflow.cloud.LaunchConfig
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 
@@ -20,10 +20,12 @@ import java.security.GeneralSecurityException
  *
  * @author Vilmundur Pálmason <vilmundur@wuxinextcode.com>
  */
+//TODO: Make most utility functions static. (Unit tests need to stub static methods)
 @CompileStatic
 class GceApiHelper {
 
     private static final String PROJECT_PREFIX = "https://www.googleapis.com/compute/v1/projects/"
+    public static final String GAC_ENV = "GOOGLE_APPLICATION_CREDENTIALS"
 
     final String project
     final String zone
@@ -68,7 +70,7 @@ class GceApiHelper {
     /**
      * Full name of machine type
      * @param shortName Short name such as "n1-standard-1"
-     * @return Fully qualifie machine type
+     * @return Fully qualified machine type
      */
     String instanceType(String shortName) {
         "${projectZonePrefix()}machineTypes/$shortName"
@@ -123,21 +125,27 @@ class GceApiHelper {
         new BigInteger(bytes).abs().toString(16)
     }
 
+    List<Instance> getInstanceList(String filter) {
+        def listRequest = compute.instances().list(project,zone)
+        listRequest.setFilter(filter)
+        listRequest.execute().getItems()
+    }
+
     /**
      * Block until all operations are complete or if any results in an error.
      */
-    Operation.Error blockUntilComplete(Iterable<Operation> ops, long timeoutMs) {
+    Operation.Error blockUntilComplete(Iterable<Operation> ops, long timeoutMs = 20000, long pollingIntervalMs = 5000) {
         long start = System.currentTimeMillis()
         for (Operation op : ops) {
-            Operation.Error result = blockUntilComplete(op, timeoutMs - (System.currentTimeMillis() - start))
+            Operation.Error result = blockUntilComplete(op, timeoutMs - (System.currentTimeMillis() - start),pollingIntervalMs)
             if (result != null) return result
         }
         null
     }
 
-    Operation.Error blockUntilComplete(Operation operation, long timeoutMs) {
+    Operation.Error blockUntilComplete(Operation operation, long timeoutMs = 10000, long pollingIntervalMs = 5000) {
         def start = System.currentTimeMillis()
-        def pollInterval = 5 * 1000
+
         def opZone = operation.getZone()  // null for global/regional operations
 
         if (opZone != null) {
@@ -146,7 +154,7 @@ class GceApiHelper {
         def status = operation.getStatus()
         def opId = operation.getName()
         while (operation != null && status != "DONE") {
-            Thread.sleep(pollInterval)
+            Thread.sleep(pollingIntervalMs)
             long elapsed = System.currentTimeMillis() - start
             if (elapsed >= timeoutMs) {
                 throw new InterruptedException("Timed out waiting for operation to complete")
@@ -206,21 +214,6 @@ class GceApiHelper {
         null
     }
 
-    String getCredentialsFile() {
-        String credFileLocation =  System.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-
-        if(!credFileLocation)
-            throw new MissingArgumentException("GOOGLE_APPLICATION_CREDENTIALS is not defined in your environment" )
-
-        Path credFile = FileHelper.asPath(credFileLocation)
-        if (credFile) {
-            credFile.toFile().text
-        } else {
-            throw new FileNotFoundException("Could not find Google credentials file '$credFileLocation'")
-        }
-    }
-
-
     def setStartupScript(Instance instance, String script) {
         addMetadataItem(instance, "startup-script", script)
     }
@@ -250,7 +243,12 @@ class GceApiHelper {
     }
 
     String readProject() {
-        readGoogleMetadata('project/project-id')
+        if(isCredentialLocationDefined()) {
+            def cred = new JsonSlurper().parseText(getCredentialsFile())
+            cred['project_id']
+        } else {
+            readGoogleMetadata('project/project-id')
+        }
     }
 
     String readZone() {
@@ -263,5 +261,27 @@ class GceApiHelper {
 
     Scheduling createScheduling(boolean preemptible) {
         new Scheduling().setPreemptible(preemptible)
+    }
+
+    String getCredentialsFile() {
+        String credFileLocation =  credentialFileLocation()
+
+        if(!credFileLocation)
+            throw new MissingArgumentException("$GAC_ENV is not defined in your environment" )
+
+        Path credFile = FileHelper.asPath(credFileLocation)
+        if (credFile) {
+            credFile.toFile().text
+        } else {
+            throw new FileNotFoundException("Could not find Google credentials file '$credFileLocation'")
+        }
+    }
+
+    boolean isCredentialLocationDefined() {
+        credentialFileLocation()
+    }
+
+    String credentialFileLocation() {
+        System.getenv(GAC_ENV)
     }
 }

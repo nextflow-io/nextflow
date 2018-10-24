@@ -1,13 +1,8 @@
 package nextflow.cloud.gce
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
+
 import com.google.api.services.compute.Compute
-import com.google.api.services.compute.model.AccessConfig
-import com.google.api.services.compute.model.Instance
-import com.google.api.services.compute.model.InstancesSetLabelsRequest
-import com.google.api.services.compute.model.MachineType
-import com.google.api.services.compute.model.NetworkInterface
-import com.google.api.services.compute.model.Operation
+import com.google.api.services.compute.model.*
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -48,13 +43,13 @@ class GoogleCloudDriver implements CloudDriver {
      * The GCE zone eg. {@code us-central1-f}. If it's not specified the current region is retrieved from
      * the GCE instance metadata
      */
-    private String group = "inst"
+    static final String TERMINATION_FILENAME = "/tmp/shutdown.begin"
+    static final String GCE_CREDENTIAL_FILE = '$HOME/.nextflow/gce_credentials.json'
+
+    static long OPS_WAIT_TIMEOUT_MS = 300000 //5 minutes
+    static long POLL_WAIT = 1000
 
     private GceApiHelper helper
-
-    static long OPS_WAIT_TIMEOUT_MS = 5 * 60 * 1000
-
-    static long POLL_WAIT = 1000
 
     /**
      * Only use for testing
@@ -81,10 +76,8 @@ class GoogleCloudDriver implements CloudDriver {
      */
     @CompileDynamic
     GoogleCloudDriver(Map config) {
-        log.debug("Config: {}", config)
-        log.debug("Global config: {}", Global.getConfig())
-        String zone = config.zone ?: Global.getConfig()?.gce?.zone
-        String project = config.project ?: Global.getConfig()?.gce?.project
+        String zone = config.zone ?: Global.config?.gce?.zone
+        String project = config.project ?: Global.config?.gce?.project
         this.helper = new GceApiHelper(project, zone)
         log.debug("Starting GoogleCloudDriver in project {} and zone {}", helper.project, helper.zone)
     }
@@ -108,6 +101,7 @@ class GoogleCloudDriver implements CloudDriver {
         if (!config.instanceType)
             throw new AbortOperationException("Missing mandatory cloud `instanceType` setting")
 
+        //TODO: Try to get this validation to work
         //if (!helper.lookupImage(config.imageId))
         //    throw new AbortOperationException("Unknown GCE ImageId: ${config.imageId}")
 
@@ -129,7 +123,7 @@ class GoogleCloudDriver implements CloudDriver {
         List<String> result = []
         List<Operation> ops = []
         instanceCount.times {
-            Instance inst = new Instance();
+            Instance inst = new Instance()
             inst.setName(helper.randomName(config.getClusterName() + "-"))
             inst.setMachineType(helper.instanceType(config.getInstanceType()))
             if(config.preemptible) {
@@ -146,7 +140,7 @@ class GoogleCloudDriver implements CloudDriver {
             result << inst.getName()
             ops << insert.execute()
         }
-        helper.blockUntilComplete(ops, OPS_WAIT_TIMEOUT_MS);
+        helper.blockUntilComplete(ops, OPS_WAIT_TIMEOUT_MS)
         return result
     }
 
@@ -181,9 +175,7 @@ class GoogleCloudDriver implements CloudDriver {
         Set<String> remaining = new HashSet<>(instanceIds)
         while (!remaining.isEmpty()) {
             def filter = instanceIds.collect(this.&instanceIdToFilterExpression).join(" OR ")
-            def listRequest = helper.compute.instances().list(helper.project, helper.zone)
-            listRequest.setFilter(filter)
-            List<Instance> instances = listRequest.execute().getItems()
+            List<Instance> instances = helper.getInstanceList(filter)
             if (instances != null && !instances.isEmpty()) {
                 for (Instance instance : instances) {
                     if (instanceStatusList.contains(instance.status)) {
@@ -253,9 +245,7 @@ class GoogleCloudDriver implements CloudDriver {
     }
 
     void eachInstanceWithFilter(String filter, @ClosureParams(value = SimpleType, options = ['nextflow.cloud.types.CloudInstance']) Closure callback) {
-        def listRequest = helper.compute.instances().list(helper.project, helper.zone)
-        listRequest.setFilter(filter)
-        listRequest.execute().getItems()?.each { inst -> callback.call(toNextflow(inst)) }
+        helper.getInstanceList(filter)?.each { inst -> callback.call(toNextflow(inst)) }
     }
 
     @Override
@@ -284,7 +274,7 @@ class GoogleCloudDriver implements CloudDriver {
 
     @Override
     String getLocalTerminationNotice() {
-        Path shutdownFile = FileHelper.asPath("/tmp/shutdown.begin")
+        Path shutdownFile = FileHelper.asPath(TERMINATION_FILENAME)
 
         if(Files.exists(shutdownFile)) {
             shutdownFile.toFile().text
@@ -307,15 +297,15 @@ class GoogleCloudDriver implements CloudDriver {
     /**
      * @TODO: This method will be removed once all methods are implemented
      */
-    def unsupported(String msg) {
+    static def unsupported(String msg) {
         log.warn("UNSUPPORTED: " + msg)
     }
 
-    def tagToFilterExpression(String k, v) {
+    static def tagToFilterExpression(String k, v) {
         '(labels.' + k.toLowerCase() + '= "' + (v ?: '*') + '")'
     }
 
-    def instanceIdToFilterExpression(instanceId) {
+    static def instanceIdToFilterExpression(String instanceId) {
         '(name = "' + instanceId + '")'
     }
 
@@ -344,11 +334,10 @@ class GoogleCloudDriver implements CloudDriver {
     }
 
     @PackageScope
-    //TODO: Contantinize the file name and location
     String gceShutdownScript() {
         """
             #!/bin/bash            
-            date >> /tmp/shutdown.begin                                               
+            date >> $TERMINATION_FILENAME                                               
         """.stripIndent().leftTrim()
     }
 
@@ -372,12 +361,9 @@ class GoogleCloudDriver implements CloudDriver {
         builder.join('\n')
     }
 
-    def GCE_CREDENTIAL_FILE = '$HOME/.nextflow/gce_credentials.json'
-
     /**
      * @TODO: This is mostly a copy paste from AmazonCloudDriver
      */
-    @PackageScope
     @CompileDynamic
     String cloudInitScript(LaunchConfig cfg) {
         // load init script template
