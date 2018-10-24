@@ -2,5 +2,5 @@ set +e
 $NXF_RUN | tee stdout
 set -e
 
-< stdout grep "Check script 'error-message.nf' at line: 2"
+< stdout grep "Check script 'error-message.nf' at line: 19"
 
