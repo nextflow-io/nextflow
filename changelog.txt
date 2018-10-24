@@ -1,6 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+18.10.1 - 24 Oct 2018
+- Fixed test [011e8e23]
+- Fixed version number check [fb780347]
+
 18.10.0 - 24 Oct 2018
 - Added lenient cache mode #828 [ba907a2f]
 - Added support for java 11 [60da50b5]
