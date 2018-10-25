@@ -23,8 +23,8 @@ class GceApiHelperTest extends Specification {
     def setupSpec() {
 
         sharedHelper = runAgainstGce() ?
-                Spy(GceApiHelper, constructorArgs: [null,"us-central1-f"])  :
-                Spy(GceApiHelper, constructorArgs: [testProject,testZone,Stub(Compute)])
+                Spy(GceApiHelper, constructorArgs: [null,"us-central1-f"]) as GceApiHelper  :
+                Spy(GceApiHelper, constructorArgs: [testProject,testZone,Stub(Compute)]) as GceApiHelper
 
         sharedHelper.readGoogleMetadata(_) >> "metadata"
     }
