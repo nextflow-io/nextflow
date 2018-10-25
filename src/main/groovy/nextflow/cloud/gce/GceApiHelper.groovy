@@ -23,7 +23,6 @@ import java.security.GeneralSecurityException
 //TODO: Make most utility functions static. (Unit tests need to stub static methods)
 @CompileStatic
 class GceApiHelper {
-
     private static final String PROJECT_PREFIX = "https://www.googleapis.com/compute/v1/projects/"
     public static final String GAC_ENV = "GOOGLE_APPLICATION_CREDENTIALS"
 
@@ -171,8 +170,13 @@ class GceApiHelper {
         operation?.getError()
     }
 
-    Image lookupImage(String imagePath) throws IOException {
-        compute.images().get(project, imageName(imagePath)).execute()
+    Image lookupImage(String imageId) {
+
+        def img = imageId.split("/")[0]
+
+        def list =compute.images().list(img).execute()
+
+        list.getItems().find {it.getSelfLink().endsWith(imageId)}
     }
 
     MachineType lookupMachineType(String machineType) {

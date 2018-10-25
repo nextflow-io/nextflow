@@ -95,26 +95,29 @@ class GoogleCloudDriver implements CloudDriver {
 
     @Override
     void validate(LaunchConfig config) {
-        if (!config.imageId)
-            throw new AbortOperationException("Missing mandatory cloud `imageId` setting")
+        try {
+            if (!config.imageId)
+                throw new AbortOperationException("Missing mandatory cloud `imageId` setting")
 
-        if (!config.instanceType)
-            throw new AbortOperationException("Missing mandatory cloud `instanceType` setting")
+            if (!config.instanceType)
+                throw new AbortOperationException("Missing mandatory cloud `instanceType` setting")
 
-        //TODO: Try to get this validation to work
-        //if (!helper.lookupImage(config.imageId))
-        //    throw new AbortOperationException("Unknown GCE ImageId: ${config.imageId}")
+            if (!helper.lookupImage(config.imageId))
+                throw new AbortOperationException("Unknown GCE ImageId: ${config.imageId}")
 
-        if (!helper.lookupMachineType(config.instanceType))
-            throw new AbortOperationException("Unknown GCE machine type: ${config.instanceType}")
+            if (!helper.lookupMachineType(config.instanceType))
+                throw new AbortOperationException("Unknown GCE machine type: ${config.instanceType}")
 
-        String validationError = helper.validateLabelValue(config.clusterName)
-        if (validationError != null) {
-            throw new AbortOperationException("Invalid cluster name '" + config.clusterName + "': " + validationError)
-        }
+            String validationError = helper.validateLabelValue(config.clusterName)
+            if (validationError != null) {
+                throw new AbortOperationException("Invalid cluster name '" + config.clusterName + "': " + validationError)
+            }
 
-        if (config.sharedStorageId && config.sharedStorageMount) {
-            throw new AbortOperationException("Shared storage not supported in Google Cloud")
+            if (config.sharedStorageId && config.sharedStorageMount) {
+                throw new AbortOperationException("Shared storage not supported in Google Cloud")
+            }
+        } catch (Exception e) { //Abort the operation if we get an unhandled exception
+            throw new AbortOperationException(e)
         }
     }
 
@@ -310,20 +313,20 @@ class GoogleCloudDriver implements CloudDriver {
     }
 
     def toNextflow(Instance instance) {
-        NetworkInterface iface
+        NetworkInterface networkInterface
         AccessConfig accessConfig
         def labels = instance.getLabels() ?: {}
 
         if (instance.getNetworkInterfaces() != null && !instance.getNetworkInterfaces().isEmpty()) {
-            iface = instance.getNetworkInterfaces()[0]
-            if (iface.getAccessConfigs() != null && !iface.getAccessConfigs()?.isEmpty()) {
-                accessConfig = iface.getAccessConfigs()[0]
+            networkInterface = instance.getNetworkInterfaces()[0]
+            if (networkInterface.getAccessConfigs() != null && !networkInterface.getAccessConfigs()?.isEmpty()) {
+                accessConfig = networkInterface.getAccessConfigs()[0]
             }
         }
 
         new CloudInstance(
                 id: instance.getName(),
-                privateIpAddress: iface?.getNetworkIP(),
+                privateIpAddress: networkInterface?.getNetworkIP(),
                 privateDnsName: helper.instanceIdToPrivateDNS(instance.getName()),
                 publicIpAddress: accessConfig?.getNatIP(),
                 publicDnsName: accessConfig?.getPublicPtrDomainName() ?: helper.publicIpToDns(accessConfig?.getNatIP()),
@@ -364,6 +367,7 @@ class GoogleCloudDriver implements CloudDriver {
     /**
      * @TODO: This is mostly a copy paste from AmazonCloudDriver
      */
+    @PackageScope
     @CompileDynamic
     String cloudInitScript(LaunchConfig cfg) {
         // load init script template

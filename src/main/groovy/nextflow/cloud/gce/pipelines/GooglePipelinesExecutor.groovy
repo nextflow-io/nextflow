@@ -22,10 +22,10 @@ class GooglePipelinesExecutor extends Executor {
     static GooglePipelinesConfiguration pipelineConfig
     final GooglePipelinesHelper helper
 
-
     /*
      * Used for testing purposes
      */
+
     GooglePipelinesExecutor(GooglePipelinesHelper helper) {
         this.helper = helper
     }
