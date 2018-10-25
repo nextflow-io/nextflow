@@ -384,7 +384,7 @@ class Channel  {
             future = factory.applyAsync( future, allPatterns.get(index) )
         }
         // abort the execution when an exception is raised
-        future.exceptionally(Channel.&handlerException)
+        fromPath0Future = future.exceptionally(Channel.&handlerException)
 
         // -- map the files to a tuple like ( ID, filePath )
         def mapper = { path, int index ->
