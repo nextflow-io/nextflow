@@ -39,7 +39,7 @@ It creates the ``nextflow`` executable file in the current directory. You may wa
 
 Create a file named `hello.nf` with the following content and copy it to the path where you downloaded the Nextflow package.
 
-```groovy
+```nextflow
 process sayHello {
 
     """
@@ -64,7 +64,7 @@ Let's see a more real example: execute a BLAST search, get the top 10 hits, extr
 
 Copy the following example into a file named `pipeline.nf` .
 
-```groovy
+```nextflow
 params.query = "$HOME/sample.fa"
 params.db = "$HOME/tools/blast-db/pdb/pdb"
 
@@ -116,7 +116,7 @@ Processes in your pipeline can be written in any scripting language supported by
 other than Linux BASH (e.g. Perl, Python, Ruby, R, etc), simply start your process script with the corresponding
 <a href='http://en.wikipedia.org/wiki/Shebang_(Unix)' target='_bank'>shebang</a> declaration. For example:
 
-```groovy
+```nextflow
 process perlStuff {
 
     """
@@ -159,7 +159,7 @@ By default processes are parallelized by spanning multiple threads in the machin
 To submit the execution to a SGE cluster create a file named `nextflow.config`, in the directory
 where the pipeline is going to be launched, with the following content: 
 
-```groovy
+```nextflow
 process {
   executor='sge'
   queue='<your execution queue>'
@@ -306,13 +306,17 @@ Documentation
 
 Nextflow documentation is available at this link http://docs.nextflow.io
 
+Contributing 
+------------
+
+Project contribution are more than welcome. See the [CONTRIBUTING](CONTRIBUTING.md) file for details.
+
 Community
 ----------
 
-You can post questions, or report problems by using the Nextflow Google group available
-at this link https://groups.google.com/forum/#!forum/nextflow
+You can post questions, or report problems by using the Nextflow [discussion forum](https://groups.google.com/forum/#!forum/nextflow)
+or the [Nextflow channel on Gitter](https://gitter.im/nextflow-io/nextflow).
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/nextflow-io/nextflow?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 Build servers 
 --------------
@@ -323,7 +327,7 @@ Build servers
 License
 -------
 
-The *Nextflow* framework is released under the GNU GPLv3 License.
+The *Nextflow* framework is released under the Apache 2.0 license.
 
 Citations
 ----------
@@ -336,7 +340,7 @@ Credits
 -------
 
 Nextflow is built on two great pieces of open source software, namely <a href='http://groovy-lang.org' target='_blank'>Groovy</a>
-and <a href='http://www.gpars.org/' target='_blank'>Gpars</a>
+and <a href='http://www.gpars.org/' target='_blank'>Gpars</a>.
 
 YourKit is kindly supporting this open source project with its full-featured Java Profiler.
 Read more http://www.yourkit.com

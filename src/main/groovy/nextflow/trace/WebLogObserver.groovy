@@ -1,22 +1,18 @@
 /*
- * Copyright (c) 2018, University of Tübingen, Quantitative Biology Center (QBiC).
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2018, University of Tübingen, Quantitative Biology Center (QBiC)
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.trace
@@ -62,11 +58,6 @@ class WebLogObserver implements TraceObserver{
      * The default url is localhost
      */
     static public String DEF_URL = 'http://localhost'
-
-    /**
-     * Contains server request response
-     */
-    private String response
 
     /**
      * Simple http client object that will send out messages
@@ -181,42 +172,45 @@ class WebLogObserver implements TraceObserver{
      * Little helper method that sends a HTTP POST message as JSON with
      * the current run status, ISO 8601 UTC timestamp, run name and the TraceRecord
      * object, if present.
-     * @param runStatus The current run status. One of {'started', 'process_submit', 'process_start',
+     * @param event The current run status. One of {'started', 'process_submit', 'process_start',
      * 'process_complete', 'error', 'completed'}
      * @param trace A TraceRecord object that contains current process information
      */
-    protected void sendHttpMessage(String runStatus, TraceRecord trace = null){
+    protected void sendHttpMessage(String event, TraceRecord trace = null){
 
         // Set the message info
-        def time = new Date().format("yyyy-MM-dd'T'HH:mm:ss'Z'", UTC)
-        def messageJson = SLURPER.parseText(
-                """{ "runName": "$runName", "runId": "$runId", "runStatus":"$runStatus", "utcTime":"$time" }""")
+        final time = new Date().format("yyyy-MM-dd'T'HH:mm:ss'Z'", UTC)
+
+        final message = new HashMap(5)
+        message.runName = runName
+        message.runId = runId
+        message.event = event
+        message.runStatus = event // deprecated to be removed
+        message.utcTime = time
 
         // Append the trace object if present
         if (trace)
-            messageJson["trace"] = SLURPER.parseText(JsonOutput.toJson(trace.store))
+            message.trace = trace.store
 
         // The actual HTTP request
-        httpClient.sendHttpMessage(JsonOutput.toJson(messageJson))
+        httpClient.sendHttpMessage(JsonOutput.toJson(message))
         logHttpResponse()
-
-        this.response = httpClient.getResponse()
     }
 
     /**
      * Asynchronous HTTP POST request wrapper.
-     * @param runStatus The workflow run status
+     * @param event The workflow run status
      * @param trace A TraceRecord object with workflow information
      * @return A Java string, that contains the HTTP request response
      */
-    protected void asyncHttpMessage(String runStatus, TraceRecord trace = null){
-        webLogAgent.send{sendHttpMessage(runStatus, trace)}
+    protected void asyncHttpMessage(String event, TraceRecord trace = null){
+        webLogAgent.send{sendHttpMessage(event, trace)}
     }
 
     /**
      * Little helper function that can be called for logging upon an incoming HTTP response
      */
-    private void logHttpResponse(){
+    protected void logHttpResponse(){
         def statusCode = httpClient.getResponseCode()
         if (statusCode == 200)
             log.debug "Successfully send message to ${httpClient.getUrl()} -- received status code 200"

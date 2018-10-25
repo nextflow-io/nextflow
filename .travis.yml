@@ -17,6 +17,7 @@ env:
   - TEST_JDK=
   - TEST_JDK=9
   - TEST_JDK=10
+  - TEST_JDK=11
   global:
   - GRADLE_OPTS='-Dorg.gradle.daemon=false'
 before_script:

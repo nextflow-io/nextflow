@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.k8s
@@ -115,15 +111,19 @@ class K8sConfig implements Map<String,Object> {
     /**
      * @return the path where the workflow is launched and the user data is stored
      */
-    String getUserDir() {
-       target.userDir ?: "${getStorageMountPath()}/${getUserName()}" as String
+    String getLaunchDir() {
+        if( target.userDir ) {
+            log.warn "K8s `userDir` has been deprecated -- Use `launchDir` instead"
+            return target.userDir
+        }
+        target.launchDir ?: "${getStorageMountPath()}/${getUserName()}" as String
     }
 
     /**
      * @return Defines the path where the workflow temporary data is stored. This must be a path in a shared K8s persistent volume (default:<user-dir>/work).
      */
     String getWorkDir() {
-        target.workDir ?: "${getUserDir()}/work" as String
+        target.workDir ?: "${getLaunchDir()}/work" as String
     }
 
     /**
@@ -218,14 +218,14 @@ class K8sConfig implements Map<String,Object> {
             }
         }
 
-        if( !findVolumeClaimByPath(getUserDir()) )
-            throw new AbortOperationException("Kubernetes `userDir` must be a path mounted as a persistent volume -- userDir=$userDir; volumes=${getClaimPaths().join(', ')}")
+        if( !findVolumeClaimByPath(getLaunchDir()) )
+            throw new AbortOperationException("Kubernetes `launchDir` must be a path mounted as a persistent volume -- launchDir=$launchDir; volumes=${getClaimPaths().join(', ')}")
 
         if( !findVolumeClaimByPath(getWorkDir()) )
-            throw new AbortOperationException("Kubernetes workDir must be a path mounted as a persistent volume -- workDir=$workDir; volumes=${getClaimPaths().join(', ')}")
+            throw new AbortOperationException("Kubernetes `workDir` must be a path mounted as a persistent volume -- workDir=$workDir; volumes=${getClaimPaths().join(', ')}")
 
         if( !findVolumeClaimByPath(getProjectDir()) )
-            throw new AbortOperationException("Kubernetes projectDir must be a path mounted as a persistent volume -- projectDir=$projectDir; volumes=${getClaimPaths().join(', ')}")
+            throw new AbortOperationException("Kubernetes `projectDir` must be a path mounted as a persistent volume -- projectDir=$projectDir; volumes=${getClaimPaths().join(', ')}")
 
 
     }

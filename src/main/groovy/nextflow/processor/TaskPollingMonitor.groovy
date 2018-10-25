@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.processor
@@ -81,7 +77,7 @@ class TaskPollingMonitor implements TaskMonitor {
     /**
      * Locks the queue of pending tasks buffer
      */
-    private Lock pendingQueueLock
+    private Lock pendingLock
 
     /**
      * Condition to signal a new task has been added in the {@link #pendingQueue}
@@ -144,7 +140,7 @@ class TaskPollingMonitor implements TaskMonitor {
         this.dumpInterval = (params.dumpInterval as Duration) ?: Duration.of('5min')
         this.capacity = (params.capacity ?: 0) as int
 
-        this.pendingQueue = new ArrayDeque<>()
+        this.pendingQueue = new LinkedBlockingQueue()
         this.runningQueue = capacity ? new ArrayBlockingQueue<TaskHandler>(capacity) : new LinkedBlockingQueue<TaskHandler>()
     }
 
@@ -236,11 +232,14 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     @Override
     void schedule(TaskHandler handler) {
-        pendingQueueLock.withLock {
+        pendingLock.lock()
+        try{
             pendingQueue << handler
             taskAvail.signal()  // signal that a new task is available for execution
-            slotAvail.signal()  // signal that a slot in the processing queue
             log.trace "Scheduled task > $handler"
+        }
+        finally {
+            pendingLock.unlock()
         }
     }
 
@@ -259,14 +258,18 @@ class TaskPollingMonitor implements TaskMonitor {
             return false
         }
 
-        pendingQueueLock.withLock {
-            if( remove(handler) ) {
+        if( remove(handler) ) {
+            pendingLock.lock()
+            try {
                 slotAvail.signal()
                 return true
             }
-
-            return false
+            finally {
+                pendingLock.unlock()
+            }
         }
+
+        return false
     }
 
     /**
@@ -283,9 +286,9 @@ class TaskPollingMonitor implements TaskMonitor {
         this.taskCompleteLock = new ReentrantLock()
         this.taskComplete = taskCompleteLock.newCondition()
 
-        this.pendingQueueLock = new ReentrantLock()
-        this.taskAvail = pendingQueueLock.newCondition()
-        this.slotAvail = pendingQueueLock.newCondition()
+        this.pendingLock = new ReentrantLock()
+        this.taskAvail = pendingLock.newCondition()
+        this.slotAvail = pendingLock.newCondition()
 
         //
         this.submitRateLimit = createSubmitRateLimit()
@@ -359,28 +362,43 @@ class TaskPollingMonitor implements TaskMonitor {
         return RateLimiter.create( num / seconds as double )
     }
 
+    private void awaitTasks() {
+        pendingLock.lock()
+        try {
+            if( pendingQueue.size()==0 ) {
+                taskAvail.await()
+            }
+        }
+        finally {
+            pendingLock.unlock()
+        }
+    }
+
+    private void awaitSlots() {
+        pendingLock.lock()
+        try {
+            slotAvail.await()
+        }
+        finally {
+            pendingLock.unlock()
+        }
+    }
+
     /**
      * Wait for new tasks and submit for execution when a slot is available
      */
     protected void submitLoop() {
         while( true ) {
-            pendingQueueLock.lock()
-            try {
-                // wait for at least at to be available
-                if( pendingQueue.size()==0 )
-                    taskAvail.await()
+            // wait for at least at to be available
+            awaitTasks()
 
-                // try to submit all pending tasks
-                int processed = submitPendingTasks()
+            // try to submit all pending tasks
+            int processed = submitPendingTasks()
 
-                // if no task has been submitted wait for a new slot to be available
-                if( !processed ) {
-                    Throttle.after(dumpInterval) { dumpSubmitQueue() }
-                    slotAvail.await()
-                }
-            }
-            finally {
-                pendingQueueLock.unlock()
+            // if no task has been submitted wait for a new slot to be available
+            if( !processed ) {
+                Throttle.after(dumpInterval) { dumpSubmitQueue() }
+                awaitSlots()
             }
         }
     }
@@ -457,7 +475,7 @@ class TaskPollingMonitor implements TaskMonitor {
             log.debug msg.join('\n')
         }
         catch (Throwable e) {
-            log.debug "Oops.. expected exception", e
+            log.debug "Oops.. unexpected exception", e
         }
     }
 

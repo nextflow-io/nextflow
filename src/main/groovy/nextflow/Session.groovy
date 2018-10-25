@@ -1,26 +1,20 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow
-
-import static nextflow.Const.S3_UPLOADER_CLASS
 
 import java.lang.reflect.Method
 import java.nio.file.Files
@@ -55,6 +49,7 @@ import nextflow.script.ScriptBinding
 import nextflow.trace.GraphObserver
 import nextflow.trace.ReportObserver
 import nextflow.trace.StatsObserver
+import nextflow.trace.AnsiLogObserver
 import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceObserver
@@ -68,6 +63,7 @@ import nextflow.util.HistoryFile
 import nextflow.util.NameGenerator
 import sun.misc.Signal
 import sun.misc.SignalHandler
+import static nextflow.Const.S3_UPLOADER_CLASS
 /**
  * Holds the information on the current execution
  *
@@ -106,6 +102,11 @@ class Session implements ISession {
      * The folder where tasks temporary files are stored
      */
     Path workDir
+
+    /**
+     * Bucket work directory for cloud based executors
+     */
+    Path bucketDir
 
     /**
      * The folder where the main script is contained
@@ -197,6 +198,12 @@ class Session implements ISession {
     Throwable getError() { error }
 
     WorkflowStats getWorkflowStats() { workflowStats }
+
+    boolean ansiLog
+
+    private AnsiLogObserver ansiLogObserver
+
+    AnsiLogObserver getAnsiLogObserver() { ansiLogObserver }
 
     /**
      * Creates a new session with an 'empty' (default) configuration
@@ -304,7 +311,12 @@ class Session implements ISession {
         this.setLibDir( config.libDir as String )
 
         if(!workDir.mkdirs()) throw new AbortOperationException("Cannot create work-dir: $workDir -- Make sure you have write permissions or specify a different directory by using the `-w` command line option")
-        log.debug "Work-dir: ${workDir} [${FileHelper.getPathFsType(workDir)}]"
+        log.debug "Work-dir: ${workDir.toUriString()} [${FileHelper.getPathFsType(workDir)}]"
+
+        if( config.bucketDir ) {
+            this.bucketDir = config.bucketDir as Path
+            log.debug "Bucket-dir: ${bucketDir.toUriString()}"
+        }
 
         if( scriptPath ) {
             // the folder that contains the main script
@@ -335,8 +347,16 @@ class Session implements ISession {
         createTimelineObserver(result)
         createDagObserver(result)
         createWebLogObserver(result)
+        createAnsiLogObserver(result)
 
         return result
+    }
+
+    protected void createAnsiLogObserver(Collection<TraceObserver> result) {
+        if( ansiLog ) {
+            this.ansiLogObserver = new AnsiLogObserver()
+            result << ansiLogObserver
+        }
     }
 
     /**
@@ -547,8 +567,16 @@ class Session implements ISession {
         return libDir
     }
 
+    @Memoized
     Manifest getManifest() {
-        config.manifest instanceof Map ? new Manifest(config.manifest as Map) : new Manifest()
+        if( !config.manifest )
+            return new Manifest()
+        if( config.manifest instanceof Map )
+            return new Manifest(config.manifest as Map)
+        else {
+            log.warn "Invalid config manifest definition [${this.getClass().getName()}]"
+            return new Manifest()
+        }
     }
 
     /**
@@ -896,7 +924,7 @@ class Session implements ISession {
      */
     void notifyError( TaskHandler handler ) {
 
-        for ( int i=0; i<observers.size(); i++){
+        for ( int i=0; i<observers?.size(); i++){
             try{
                 final observer = observers.get(i)
                 observer.onFlowError(handler, handler?.getTraceRecord())

@@ -1,0 +1,1 @@
+/Users/olafurh/git/nextflow/nextflow-private/tests/data/data'3.txt

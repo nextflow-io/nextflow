@@ -1,0 +1,4 @@
+  File "/Users/olafurh/git/nextflow/nextflow-private/tests/checks/scratch/7b/18435f5a76ba7d8565a1679f07f1a2/.command.sh", line 13
+    print "avg: %s - %s" % ( x/lines, y/lines )
+                       ^
+SyntaxError: invalid syntax

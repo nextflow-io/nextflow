@@ -1,0 +1,7 @@
+indx: 2
+proc: printVars
+exec: local
+cpus: 2
+penv: mpi
+time: 1d
+memory: 1 GB

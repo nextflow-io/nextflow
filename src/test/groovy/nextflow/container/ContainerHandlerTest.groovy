@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.container
@@ -28,7 +24,7 @@ import java.nio.file.Files
 import spock.lang.Unroll
 
 /**
- * @author Emilio Palumbo <emiliopalumbo@gmail.com>
+ * @author Emilio Palumbo <emilio.palumbo@crg.eu>
  */
 class ContainerHandlerTest extends Specification {
 
@@ -110,6 +106,7 @@ class ContainerHandlerTest extends Specification {
         'foo:2.0'                  | 'docker://foo:2.0'
         'foo.img'                  | 'docker://foo.img'
         'quay.io/busybox'          | 'docker://quay.io/busybox'
+        'library://library/default/debian:7'    | 'library://library/default/debian:7'
     }
 
     def 'test singularity relative path exists' () {
@@ -131,6 +128,7 @@ class ContainerHandlerTest extends Specification {
 
     }
 
+    @Unroll
     def 'test normalize method for docker' () {
         given:
         def n = Spy(ContainerHandler,constructorArgs:[[engine: 'docker', enabled: true, registry: registry]])
@@ -153,6 +151,7 @@ class ContainerHandlerTest extends Specification {
         'registry:5000/cbcrg/hello' | 'd.reg'   | 'registry:5000/cbcrg/hello'
     }
 
+    @Unroll
     def 'test normalize method for shifter' () {
 
         given:
@@ -177,29 +176,31 @@ class ContainerHandlerTest extends Specification {
         'docker:busybox'              | 'docker:busybox:latest'
     }
 
+    @Unroll
     def 'test normalize method for singularity' () {
         given:
         def handler = Spy(ContainerHandler,constructorArgs:[[engine: 'singularity', enabled: true]])
 
         when:
         handler.baseDir = Paths.get('/abs/path/')
-        def result = handler.normalizeImageName(image)
+        def result = handler.normalizeImageName(IMAGE)
 
         then:
-        1 * handler.normalizeSingularityImageName(image) >> normalized
-        X * handler.createCache(handler.config, normalized) >> expected
-        result == expected
+        1 * handler.normalizeSingularityImageName(IMAGE) >> NORMALIZED
+        X * handler.createCache(handler.config, NORMALIZED) >> EXPECTED
+        result == EXPECTED
 
         where:
-        image                      | normalized                                       | X           | expected
-        null                       | null                                             |           0 | null
-        ''                         | null                                             |           0 | null
-        '/abs/path/bar.img'        | '/abs/path/bar.img'                              |           0 | '/abs/path/bar.img'
-        'file:///abs/path/bar.img' | '/abs/path/bar.img'                              |           0 | '/abs/path/bar.img'
-        'foo.img'                  | Paths.get('foo.img').toAbsolutePath().toString() |           0 | Paths.get('foo.img').toAbsolutePath().toString()
-        'shub://busybox'           | 'shub://busybox'                                 |           1 | '/path/to/busybox'
-        'docker://library/busybox' | 'docker://library/busybox'                       |           1 | '/path/to/busybox'
-        'foo'                      | 'docker://foo'                                   |           1 | '/path/to/foo'
+        IMAGE                                       | NORMALIZED                                        | X           | EXPECTED
+        null                                        | null                                              |           0 | null
+        ''                                          | null                                              |           0 | null
+        '/abs/path/bar.img'                         | '/abs/path/bar.img'                               |           0 | '/abs/path/bar.img'
+        'file:///abs/path/bar.img'                  | '/abs/path/bar.img'                               |           0 | '/abs/path/bar.img'
+        'foo.img'                                   | Paths.get('foo.img').toAbsolutePath().toString() |       0 | Paths.get('foo.img').toAbsolutePath().toString()
+        'shub://busybox'                            | 'shub://busybox'                                  |           1 | '/path/to/busybox'
+        'docker://library/busybox'                  | 'docker://library/busybox'                        |           1 | '/path/to/busybox'
+        'foo'                                       | 'docker://foo'                                    |           1 | '/path/to/foo'
+        'library://pditommaso/foo/bar.sif:latest'   | 'library://pditommaso/foo/bar.sif:latest'         |           1 | '/path/to/foo-bar-latest.img'
     }
 
     def 'should not invoke caching when engine is disabled' () {

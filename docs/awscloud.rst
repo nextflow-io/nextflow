@@ -274,6 +274,8 @@ workloads in the Amazon cloud infrastructure.
 Nextflow provides a built-in support for AWS Batch which allows the seamless deployment of a Nextflow pipeline
 in the cloud offloading the process executions as Batch jobs.
 
+.. _awscloud-batch-config:
+
 Configuration
 -------------
 
@@ -300,8 +302,8 @@ An example ``nextflow.config`` file is shown below::
     process.container = 'quay.io/biocontainers/salmon'
     aws.region = 'eu-west-1'
     
-    // NOTE: the following line only if the `aws` tool is installed in a custom AMI
-    executor.awscli = '/home/ec2-home/miniconda/bin/aws'
+    // NOTE: this setting is only required if the AWS CLI tool is installed in a custom AMI
+    executor.awscli = '/home/ec2-user/miniconda/bin/aws'
 
 .. note:: Nextflow requires to access the AWS command line tool (``aws``) from the container in which the job runs
   in order to stage the required input files and to copy back the resulting output files in the
@@ -404,7 +406,9 @@ By default Nextflow will assume the AWS CLI tool is directly available in the co
 from the host image specify the ``awscli`` parameter in the Nextflow :ref:`executor <awsbatch-executor>`
 configuration as shown below::
 
-    executor.awscli = '/home/ec2-home/miniconda/bin/aws'
+    executor.awscli = '/home/ec2-user/miniconda/bin/aws'
+
+Replace the path above with the one matching the location where ``aws`` tool is installed in your AMI.
 
 Custom job definition
 ---------------------
@@ -430,11 +434,46 @@ The pipeline can be launched either in a local computer or a EC2 instance. The l
 running workloads.
 
 Pipeline input data should to be stored in the Input data `S3 storage <https://aws.amazon.com/s3/>`_. In the same
-manner the pipeline execution must specifies a S3 bucket as working directory. For example::
+manner the pipeline execution must specifies a S3 bucket where jobs intermediate results are stored with the
+``-bucket-dir`` command line options. For example::
 
-  nextflow run my-pipeline -w s3://my-bucket/some/path
+  nextflow run my-pipeline -bucket-dir s3://my-bucket/some/path
 
 
+.. warning::
+  The bucket path should include at least a top level directory name e.g. use ``s3://my-bucket/work``
+  not just ``s3://my-bucket``. 
+
+Hybrid workloads
+----------------
+
+Nextflow allows the use of multiple executors in the same workflow application. This feature enables the deployment
+of hybrid workloads in which some jobs are execute in the local computer or local computing cluster and
+some jobs are offloaded to AWS Batch service.
+
+To enable this feature use one or more :ref:`config-process-selectors` in your Nextflow configuration file to apply
+the AWS Batch `configuration <awscloud-batch-config>`_ only to a subset of processes in your workflow.
+For example::
+
+
+  aws {
+      region = 'eu-west-1'
+  }
+  executor {
+    awscli = '/home/ec2-user/miniconda/bin/aws'
+  }
+
+  process {
+      withLabel: bigTask {
+        executor = 'awsbatch'
+        queue = 'my-batch-queue'
+        container = 'my/image:tag'
+    }
+  }
+
+
+The above configuration snippet will deploy the execution with AWS Batch only for processes annotated
+with the :ref:`process-label` ``bigTask``, the remaining process with run in the local computer.
 
 Troubleshooting
 ---------------

@@ -1,0 +1,29 @@
+#
+# run normal mode
+#
+echo ''
+$NXF_RUN -process.echo | tee stdout
+
+[[ `< .nextflow.log grep -c 'Submitted process > foo'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Submitted process > bar (1)'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Submitted process > bar (2)'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Submitted process > bar (3)'` == 1 ]] || false
+
+[[ `< stdout grep -c 'Hello1'` == 1 ]] || false
+[[ `< stdout grep -c 'Hello2'` == 1 ]] || false
+[[ `< stdout grep -c 'Hello3'` == 1 ]] || false
+
+#
+# RESUME mode
+#
+echo ''
+$NXF_RUN -resume -process.echo | tee stdout
+
+[[ `< .nextflow.log grep -c 'Cached process > foo'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Cached process > bar (1)'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Cached process > bar (2)'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Cached process > bar (3)'` == 1 ]] || false
+
+[[ `< stdout grep -c 'Hello1'` == 1 ]] || false
+[[ `< stdout grep -c 'Hello2'` == 1 ]] || false
+[[ `< stdout grep -c 'Hello3'` == 1 ]] || false

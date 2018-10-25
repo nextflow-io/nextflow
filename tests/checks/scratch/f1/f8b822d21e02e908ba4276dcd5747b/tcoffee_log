@@ -1,0 +1,227 @@
+
+PROGRAM: T-COFFEE Version_11.00.8cbe486 (2014-08-12 22:05:29 - Revision 8cbe486 - Build 477)
+-full_log      	S	[0] 
+-genepred_score	S	[0] 	nsd
+-run_name      	S	[0] 
+-mem_mode      	S	[0] 	mem
+-extend        	D	[1] 	1 
+-extend_mode   	S	[0] 	very_fast_triplet
+-max_n_pair    	D	[0] 	10 
+-seq_name_for_quadruplet	S	[0] 	all
+-compact       	S	[0] 	default
+-clean         	S	[0] 	no
+-do_self       	FL	[0] 	0
+-do_normalise  	D	[0] 	1000 
+-template_file 	S	[0] 
+-setenv        	S	[0] 	0
+-template_mode 	S	[0] 
+-flip          	D	[0] 	0 
+-remove_template_file	D	[0] 	0 
+-profile_template_file	S	[0] 
+-in            	S	[1] 	sample.fa
+-seq           	S	[0] 
+-aln           	S	[0] 
+-method_limits 	S	[0] 
+-method        	S	[0] 
+-lib           	S	[0] 
+-profile       	S	[0] 
+-profile1      	S	[0] 
+-profile2      	S	[0] 
+-pdb           	S	[0] 
+-relax_lib     	D	[0] 	1 
+-filter_lib    	D	[0] 	0 
+-shrink_lib    	D	[0] 	0 
+-out_lib       	W_F	[0] 	no
+-out_lib_mode  	S	[0] 	primary
+-lib_only      	D	[0] 	0 
+-outseqweight  	W_F	[0] 	no
+-dpa           	FL	[0] 	0
+-seq_source    	S	[0] 	ANY
+-cosmetic_penalty	D	[0] 	0 
+-gapopen       	D	[0] 	0 
+-gapext        	D	[0] 	0 
+-fgapopen      	D	[0] 	0 
+-fgapext       	D	[0] 	0 
+-nomatch       	D	[0] 	0 
+-newtree       	W_F	[0] 	default
+-tree          	W_F	[0] 	NO
+-usetree       	R_F	[0] 
+-tree_mode     	S	[0] 	nj
+-distance_matrix_mode	S	[0] 	ktup
+-distance_matrix_sim_mode	S	[0] 	idmat_sim1
+-quicktree     	FL	[0] 	0
+-outfile       	W_F	[0] 	default
+-maximise      	FL	[1] 	1
+-output        	S	[0] 	aln	html
+-len           	D	[0] 	0 
+-infile        	R_F	[0] 
+-matrix        	S	[0] 	default
+-tg_mode       	D	[0] 	1 
+-profile_mode  	S	[0] 	cw_profile_profile
+-profile_comparison	S	[0] 	profile
+-dp_mode       	S	[0] 	linked_pair_wise
+-ktuple        	D	[0] 	1 
+-ndiag         	D	[0] 	0 
+-diag_threshold	D	[0] 	0 
+-diag_mode     	D	[0] 	0 
+-sim_matrix    	S	[0] 	vasiliky
+-transform     	S	[0] 
+-extend_seq    	FL	[0] 	0
+-outorder      	S	[0] 	input
+-inorder       	S	[0] 	aligned
+-seqnos        	S	[0] 	off
+-case          	S	[0] 	keep
+-cpu           	D	[0] 	0 
+-ulimit        	D	[0] 	-1 
+-maxnseq       	D	[0] 	-1 
+-maxlen        	D	[0] 	-1 
+-sample_dp     	D	[0] 	0 
+-weight        	S	[0] 	default
+-seq_weight    	S	[0] 	no
+-align         	FL	[1] 	1
+-mocca         	FL	[0] 	0
+-domain        	FL	[0] 	0
+-start         	D	[0] 	0 
+-len           	D	[0] 	0 
+-scale         	D	[0] 	0 
+-mocca_interactive	FL	[0] 	0
+-method_evaluate_mode	S	[0] 	default
+-evaluate_mode 	S	[0] 	triplet
+-get_type      	FL	[0] 	0
+-clean_aln     	D	[0] 	0 
+-clean_threshold	D	[1] 	1 
+-clean_iteration	D	[1] 	1 
+-clean_evaluate_mode	S	[0] 	t_coffee_fast
+-extend_matrix 	FL	[0] 	0
+-prot_min_sim  	D	[40] 	40 
+-prot_max_sim  	D	[90] 	90 
+-prot_min_cov  	D	[40] 	40 
+-pdb_type      	S	[0] 	d
+-pdb_min_sim   	D	[35] 	35 
+-pdb_max_sim   	D	[100] 	100 
+-pdb_min_cov   	D	[50] 	50 
+-pdb_blast_server	W_F	[0] 	EBI
+-blast         	W_F	[0] 
+-blast_server  	W_F	[0] 	EBI
+-pdb_db        	W_F	[0] 	pdb
+-protein_db    	W_F	[0] 	uniprot
+-method_log    	W_F	[0] 	no
+-struc_to_use  	S	[0] 
+-cache         	W_F	[0] 	use
+-align_pdb_param_file	W_F	[0] 	no
+-align_pdb_hasch_mode	W_F	[0] 	hasch_ca_trace_bubble
+-external_aligner	S	[0] 	NO
+-msa_mode      	S	[0] 	tree
+-master        	S	[0] 	no
+-blast_nseq    	D	[0] 	0 
+-lalign_n_top  	D	[0] 	10 
+-iterate       	D	[0] 	0 
+-trim          	D	[0] 	0 
+-split         	D	[0] 	0 
+-trimfile      	S	[0] 	default
+-split         	D	[0] 	0 
+-split_nseq_thres	D	[0] 	0 
+-split_score_thres	D	[0] 	0 
+-check_pdb_status	D	[0] 	0 
+-clean_seq_name	D	[0] 	0 
+-seq_to_keep   	S	[0] 
+-dpa_master_aln	S	[0] 
+-dpa_maxnseq   	D	[0] 	0 
+-dpa_min_score1	D	[0] 
+-dpa_min_score2	D	[0] 
+-dpa_keep_tmpfile	FL	[0] 	0
+-dpa_debug     	D	[0] 	0 
+-multi_core    	S	[1] 	1
+-n_core        	D	[0] 	0 
+-max_n_proc    	D	[0] 	0 
+-lib_list      	S	[0] 
+-prune_lib_mode	S	[0] 	5
+-tip           	S	[0] 	none
+-rna_lib       	S	[0] 
+-no_warning    	D	[0] 	0 
+-run_local_script	D	[0] 	0 
+-plugins       	S	[0] 	default
+-proxy         	S	[0] 	unset
+-email         	S	[0] 
+-clean_overaln 	D	[0] 	0 
+-overaln_param 	S	[0] 
+-overaln_mode  	S	[0] 
+-overaln_model 	S	[0] 
+-overaln_threshold	D	[0] 	0 
+-overaln_target	D	[0] 	0 
+-overaln_P1    	D	[0] 	0 
+-overaln_P2    	D	[0] 	0 
+-overaln_P3    	D	[0] 	0 
+-overaln_P4    	D	[0] 	0 
+-exon_boundaries	S	[0] 
+-dump          	S	[0] 	no
+-display       	D	[0] 	100 
+
+INPUT FILES
+	Input File (S) sample.fa  Format fasta_seq
+	Input File (M) proba_pair 
+
+Identify Master Sequences [no]:
+
+Master Sequences Identified
+INPUT SEQUENCES: 5 SEQUENCES  [PROTEIN]
+  Input File sample.fa Seq 1aboA Length   57 type PROTEIN Struct Unchecked
+  Input File sample.fa Seq 1ihvA Length   49 type PROTEIN Struct Unchecked
+  Input File sample.fa Seq 1pht  Length   80 type PROTEIN Struct Unchecked
+  Input File sample.fa Seq 1vie  Length   51 type PROTEIN Struct Unchecked
+  Input File sample.fa Seq 1ycsB Length   60 type PROTEIN Struct Unchecked
+
+	Multi Core Mode: 4 processors:
+
+	--- Process Method/Library/Aln Ssample.fa
+	--- Process Method/Library/Aln Mproba_pair
+	xxx Retrieved Ssample.fa
+	xxx Retrieved Mproba_pair
+
+	All Methods Retrieved
+
+MANUAL PENALTIES: gapopen=0 gapext=0
+
+	Library Total Size: [3944]
+
+Library Relaxation: Multi_proc [1]
+ 
+!		[Relax Library][TOT=    5][  0 %][ ELAPSED  TIME:    0 sec.]!		[Relax Library][TOT=    5][ 40 %][REMAINING TIME:    0 sec.]!		[Relax Library][TOT=    5][ 60 %][REMAINING TIME:    0 sec.]!		[Relax Library][TOT=    5][ 80 %][REMAINING TIME:    0 sec.]!		[Relax Library][TOT=    5][100 %][ ELAPSED  TIME:    0 sec.]
+
+Relaxation Summary: [3944]--->[2268]
+
+
+
+UN-WEIGHTED MODE: EVERY SEQUENCE WEIGHTS 1
+
+MAKE GUIDE TREE 
+	[MODE=nj][DONE]
+
+PROGRESSIVE_ALIGNMENT [Tree Based]
+Group    1: 1aboA
+Group    2: 1ihvA
+Group    3: 1pht
+Group    4: 1vie
+Group    5: 1ycsB
+
+
+	Group    6: [Group    2 (   1 seq)] with [Group    1 (   1 seq)]-->[Len=   61][PID:8]
+	Group    7: [Group    3 (   1 seq)] with [Group    6 (   2 seq)]-->[Len=   83][PID:8]
+	Group    8: [Group    5 (   1 seq)] with [Group    7 (   3 seq)]-->[Len=   83][PID:8]
+	Group    9: [Group    4 (   1 seq)] with [Group    8 (   4 seq)]-->[Len=   83][PID:8]
+
+
+!		[Final Evaluation][TOT=   83][  0 %][ ELAPSED  TIME:    0 sec.]!		[Final Evaluation][TOT=   83][  2 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][  3 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][  4 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][  6 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][  7 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][  8 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][  9 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 10 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 12 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 13 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 14 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 15 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 16 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 18 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 19 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 20 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 21 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 22 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 24 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 25 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 26 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 27 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 28 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 30 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 31 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 32 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 33 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 34 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 36 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 37 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 38 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 39 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 40 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 42 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 43 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 44 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 45 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 46 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 48 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 49 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 50 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 51 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 53 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 54 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 55 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 56 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 57 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 59 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 60 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 61 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 62 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 63 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 65 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 66 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 67 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 68 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 69 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 71 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 72 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 73 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 74 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 75 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 77 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 78 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 79 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 80 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 81 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 83 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 84 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 85 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 86 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 87 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 89 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 90 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 91 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 92 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 93 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 95 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 96 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 97 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][ 98 %][REMAINING TIME:    0 sec.]!		[Final Evaluation][TOT=   83][100 %][ ELAPSED  TIME:    0 sec.]
+
+
+
+OUTPUT RESULTS
+	#### File Type= GUIDE_TREE      Format= newick          Name= sample.dnd
+	#### File Type= MSA             Format= aln             Name= sample.aln
+	#### File Type= MSA             Format= html            Name= sample.html
+
+# Command Line: t_coffee -multi_core 1 -in sample.fa  [PROGRAM:T-COFFEE]
+# T-COFFEE Memory Usage: Current= 29.408 Mb, Max= 30.321 Mb
+# Results Produced with T-COFFEE Version_11.00.8cbe486 (2014-08-12 22:05:29 - Revision 8cbe486 - Build 477)
+# T-COFFEE is available from http://www.tcoffee.org
+# Register on: https://groups.google.com/group/tcoffee/

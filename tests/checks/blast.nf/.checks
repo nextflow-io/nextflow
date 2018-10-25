@@ -1,0 +1,20 @@
+set -e
+
+#
+# run normal mode
+#
+$NXF_RUN $WITH_DOCKER | tee .stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process > blast'` == 5 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process > sort'` == 1 ]] || false
+diff .expected .stdout || false
+
+#
+# run resume mode
+#
+$NXF_RUN $WITH_DOCKER -resume | tee .stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > blast'` == 5 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > sort'` == 1 ]] || false
+diff .expected .stdout || false
+
