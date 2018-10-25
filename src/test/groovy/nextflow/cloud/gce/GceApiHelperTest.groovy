@@ -23,7 +23,7 @@ class GceApiHelperTest extends Specification {
     def setupSpec() {
 
         sharedHelper = runAgainstGce() ?
-                Spy(GceApiHelper, constructorArgs: [testProject,testZone])  :
+                Spy(GceApiHelper, constructorArgs: [null,"us-central1-f"])  :
                 Spy(GceApiHelper, constructorArgs: [testProject,testZone,Stub(Compute)])
 
         sharedHelper.readGoogleMetadata(_) >> "metadata"
@@ -52,7 +52,6 @@ class GceApiHelperTest extends Specification {
         thrown(AbortOperationException)
     }
 
-    //TODO: See is we can also read this data form the credentials file
     def 'should read metadata if it is available'() {
         when:
         def project = sharedHelper.readProject()
@@ -292,6 +291,19 @@ class GceApiHelperTest extends Specification {
 
         instList.size() == 1
         instList.get(0).getName() == "instance"
+    }
+
+    @IgnoreIf({!GceApiHelperTest.runAgainstGce()})
+    def 'should return an Image details'() {
+        given:
+        def imageId = "centos-cloud/global/images/centos-7-v20180815"
+
+        when:
+        def image = sharedHelper.lookupImage(imageId)
+
+        then:
+        image.getSelfLink() == sharedHelper.imageName(imageId)
+
     }
 
 

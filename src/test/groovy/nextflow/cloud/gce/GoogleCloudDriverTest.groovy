@@ -42,7 +42,7 @@ import spock.lang.Specification
 @SuppressWarnings("UnnecessaryQualifiedReference")
 class GoogleCloudDriverTest extends Specification {
 
-    final static String VALID_IMAGE_ID = "VALID_IMAGE_ID"
+    final static String VALID_IMAGE_ID = "centos-cloud/global/images/centos-7-v20180815"
     final static String VALID_INSTANCETYPE = "n1-standard-1"
     final static String INVALID_INSTANCETYPE = "n1337-standard-1337"
     final static String ILLEGAL_NAME = "!\tINVALID\t!"
@@ -340,7 +340,6 @@ class GoogleCloudDriverTest extends Specification {
 
     }
 
-    //TODO: Split up into multiple :and blocks
     def 'should validate a config'() {
         given:
         GoogleCloudDriver driver = new GoogleCloudDriver(sharedHelper)
@@ -352,13 +351,11 @@ class GoogleCloudDriverTest extends Specification {
         then:
         thrown AbortOperationException
 
-        //TODO: Fix the validation and set this again
-        /*
         when: 'ImageId is invalid'
         cfg = CloudConfig.create(cloud: [instanceType: VALID_INSTANCETYPE, imageId: ILLEGAL_NAME])
         driver.validate(cfg)
         then:
-        thrown AbortOperationException*/
+        thrown AbortOperationException
 
         when: 'instanceType is missing'
         cfg = CloudConfig.create(cloud: [imageId: VALID_IMAGE_ID])
@@ -366,12 +363,11 @@ class GoogleCloudDriverTest extends Specification {
         then:
         thrown AbortOperationException
 
-        /* TODO: Make this work properly in real and stubbed gce
         when: 'illegal instance type name'
         cfg = CloudConfig.create(cloud: [imageId: VALID_IMAGE_ID, instanceType: ILLEGAL_NAME])
         driver.validate(cfg)
         then:
-        thrown IllegalArgumentException*/
+        thrown AbortOperationException
 
         when: 'invalid instance type'
         cfg = CloudConfig.create(cloud: [imageId: VALID_IMAGE_ID, instanceType: INVALID_INSTANCETYPE])

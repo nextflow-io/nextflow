@@ -24,6 +24,8 @@ import java.security.GeneralSecurityException
 @CompileStatic
 class GceApiHelper {
     private static final String PROJECT_PREFIX = "https://www.googleapis.com/compute/v1/projects/"
+    public static final String GAC_ENV = "GOOGLE_APPLICATION_CREDENTIALS"
+
     final String project
     final String zone
     final Compute compute
@@ -168,8 +170,13 @@ class GceApiHelper {
         operation?.getError()
     }
 
-    Image lookupImage(String imagePath) throws IOException {
-        compute.images().get(project, imageName(imagePath)).execute()
+    Image lookupImage(String imagePath) {
+
+        def img = imagePath.split("/")[0]
+
+        def list =compute.images().list(img).execute()
+
+        list.getItems().find {it.getSelfLink().endsWith(imagePath)}
     }
 
     MachineType lookupMachineType(String machineType) {

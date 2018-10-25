@@ -44,7 +44,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
     Mount sharedMount
     Pipeline taskPipeline
 
-    private Operation operation
+    Operation operation
     private Metadata metadata
 
     @PackageScope
@@ -104,8 +104,8 @@ class GooglePipelinesTaskHandler extends TaskHandler {
             Integer xs = readExitFile()
             //Use the status from the exitStatus file if it exists. Else use the exit code from the pipeline operation
             task.stdout = outputFile
-            task.exitStatus = xs != null ? xs :  operation.getError().getCode()
-            task.stderr = xs  != null ?  errorFile : operation.getError().getMessage()
+            task.exitStatus = xs != null ? xs :  operation.getError()?.getCode()
+            task.stderr = xs  != null ?  errorFile : operation.getError()?.getMessage()
             status = TaskStatus.COMPLETED
             return true
         } else
