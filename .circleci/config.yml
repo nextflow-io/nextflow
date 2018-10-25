@@ -12,12 +12,7 @@ jobs:
       - run: make assemble
       - run: make test
       - run: make install
-      - run: |
-          echo ignite.nf >>tests/checks/.ignore
-          echo s3-files.nf >>tests/checks/.ignore
-          echo files.nf >>tests/checks/.ignore
-          echo mixing-langs.nf >>tests/checks/.ignore
-      - run: ./integration-tests.sh
+#      - run: ./integration-tests.sh
 #     - run: bash pub-tests.sh circle
 
   build-jdk11:
@@ -33,14 +28,9 @@ jobs:
       - run: make test
       - run: make install
       - run: |
-          echo ignite.nf >>tests/checks/.ignore
-          echo s3-files.nf >>tests/checks/.ignore
-          echo files.nf >>tests/checks/.ignore
-          echo mixing-langs.nf >>tests/checks/.ignore
-      - run: |
           wget -q https://raw.githubusercontent.com/sormuras/bach/master/install-jdk.sh
           source ./install-jdk.sh -f 9 -c
-          ./integration-tests.sh
+#          ./integration-tests.sh
 #     - run: bash pub-tests.sh circle
 
 workflows:
