@@ -170,13 +170,13 @@ class GceApiHelper {
         operation?.getError()
     }
 
-    Image lookupImage(String imagePath) {
+    Image lookupImage(String imageId) {
 
-        def img = imagePath.split("/")[0]
+        def img = imageId.split("/")[0]
 
         def list =compute.images().list(img).execute()
 
-        list.getItems().find {it.getSelfLink().endsWith(imagePath)}
+        list.getItems().find {it.getSelfLink().endsWith(imageId)}
     }
 
     MachineType lookupMachineType(String machineType) {
