@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.file
@@ -23,9 +19,8 @@ package nextflow.file
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
-
 /**
- * A buffered storage. When data written is greater than the local buffer teh content is save to a file.
+ * A buffered storage. When data written is greater than the local buffer the content is save to a file.
  *
  * <p>
  * Usage idiom:
@@ -49,124 +44,100 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class SequentialFileStore implements Closeable {
 
-    private static final int KB = 1024
-
-    private static final int DEFAULT_BUFFER_SIZE = 80 * KB
-
     final private Path path
 
-    private int limit
+    private RandomAccessFile store
 
-    private RandomAccessFile file
-
-    private DataOutputStream outputStream
-
-    private DataInputStream inputStream
-
-    private byte[] buffer
-
-    SequentialFileStore(Path path, int size = 0) {
+    SequentialFileStore(Path path) {
         this.path = path
-        this.limit = size ?: DEFAULT_BUFFER_SIZE
-        this.buffer = new byte[ size ?: this.limit ]
-        this.file = new RandomAccessFile(path.toFile(), 'rw')
-        this.outputStream = new DataOutputStream(new FastBufferedOutputStream(new FileOutputStream(file.getFD()), buffer))
+        this.store = new RandomAccessFile(path.toFile(), 'rw')
     }
 
     SequentialFileStore writeBool( boolean value ) {
-        outputStream.writeBoolean(value)
+        store.writeBoolean(value)
         return this
     }
 
     SequentialFileStore writeByte( byte value ) {
-        outputStream.writeByte(value)
+        store.writeByte(value)
         return this
     }
 
     SequentialFileStore writeChar( char value ) {
-        outputStream.writeChar(value as int)
+        store.writeChar((int)value)
         return this
     }
 
     SequentialFileStore writeShort( short value ) {
-        outputStream.writeShort(value as short)
+        store.writeShort(value as short)
         return this
     }
 
     SequentialFileStore writeInt( int v ) {
-        outputStream.writeInt(v)
+        store.writeInt(v)
         return this
     }
 
     SequentialFileStore writeLong( long v ) {
-        outputStream.writeLong(v)
+        store.writeLong(v)
         return this
     }
 
 
     SequentialFileStore writeBytes( byte[] bytes ) {
-        outputStream.write(bytes)
+        store.write(bytes)
         return this
     }
 
     void readBytes( byte[] bytes ) {
-        inputStream.read(bytes)
+        store.read(bytes)
     }
 
     byte[] readBytes( int len ) {
         def bytes = new byte[len]
-        inputStream.read(bytes)
+        store.read(bytes)
         return bytes
     }
 
     boolean readBool() {
-        inputStream.readBoolean()
+        store.readBoolean()
     }
 
     byte readByte() {
-        inputStream.readByte()
+        store.readByte()
     }
 
     char readChar() {
-        inputStream.readChar()
+        store.readChar()
     }
 
     short readShort() {
-        inputStream.readShort()
+        store.readShort()
     }
 
     int readInt() {
-        inputStream.readInt()
+        store.readInt()
     }
 
     long readLong() {
-        inputStream.readLong()
+        store.readLong()
     }
 
     long size() {
-        outputStream.size()
+        store.length()
     }
 
     /**
      * Turn the buffer in read mode
      */
     void flip() {
-
-        if( outputStream.size() > limit ) {
-            // flush the content to the file
-            outputStream.flush()
-            file.seek(0)
-            inputStream = new DataInputStream(new FastBufferedInputStream(new FileInputStream(file.getFD()), buffer))
-        }
-        else {
-            // do not flush the buffer and use directly it's content
-            inputStream = new DataInputStream( new FastBufferedInputStream(new FastByteArrayInputStream(buffer, 0, outputStream.size())))
-        }
-
+        // flush the content to the file
+        store.getFD().sync()
+        store.seek(0)
     }
 
     @Override
     void close() throws IOException {
-        file.close()
+        store.close()
     }
 }

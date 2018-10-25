@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.util
@@ -26,10 +22,8 @@ import java.util.concurrent.PriorityBlockingQueue
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.RunnableFuture
 import java.util.concurrent.Semaphore
-import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
 
 import com.google.common.util.concurrent.RateLimiter
 import groovy.transform.CompileStatic
@@ -38,7 +32,6 @@ import groovy.transform.ToString
 import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.SimpleType
 import groovy.util.logging.Slf4j
-
 /**
  * Implements the throttling and retry logic
  *
@@ -52,32 +45,6 @@ import groovy.util.logging.Slf4j
 @CompileStatic
 class ThrottlingExecutor extends ThreadPoolExecutor {
 
-    /**
-     * A customised thread factory 
-     */
-    @CompileStatic
-    static private class ThreadFactory0 implements ThreadFactory {
-
-        private ThreadGroup group
-        private AtomicInteger threadNumber = new AtomicInteger(1)
-        private ExceptionHandler0 handler = new ExceptionHandler0();
-        private prefix
-
-        ThreadFactory0(String prefix) {
-            this.prefix = prefix ?: ThrottlingExecutor.simpleName
-            this.group = System.getSecurityManager()?.getThreadGroup() ?: Thread.currentThread().getThreadGroup()
-        }
-
-        Thread newThread(Runnable r) {
-            def thread = new Thread(group, r, "${prefix}-${threadNumber.getAndIncrement()}", 0)
-            if (thread.isDaemon())
-                thread.setDaemon(false);
-            if (thread.getPriority() != Thread.NORM_PRIORITY)
-                thread.setPriority(Thread.NORM_PRIORITY);
-            thread.setUncaughtExceptionHandler(handler)
-            return thread
-        }
-    }
 
     /**
      * Redirect uncaught exceptionHandler to logging subsystem
@@ -525,7 +492,7 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
                 opts.maxPoolSize,
                 opts.keepAlive.millis, TimeUnit.MILLISECONDS,
                 new PriorityBlockingQueue<Runnable>(),
-                new ThreadFactory0(opts.poolName))
+                new CustomThreadFactory(opts.poolName, new ExceptionHandler0()))
 
         // the executor options
         this.opts = opts

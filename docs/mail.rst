@@ -128,7 +128,7 @@ For example::
         smtp.user = 'my-user'
     }
 
-See the :ref:`mail scope <scope-mail>` section to learn more the mail server configuration options.
+See the :ref:`mail scope <config-mail>` section to learn more the mail server configuration options.
 
 
 Mail notification

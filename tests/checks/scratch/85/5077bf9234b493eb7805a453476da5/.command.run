@@ -1,0 +1,84 @@
+#!/bin/bash
+# NEXTFLOW TASK: reverse
+set -e
+set -u
+NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 1 ]] && set -x
+
+nxf_env() {
+    echo '============= task environment ============='
+    env | sort | sed "s/\(.*\)AWS\(.*\)=\(.\{6\}\).*/\1AWS\2=\3xxxxxxxxxxxxx/"
+    echo '============= task output =================='
+}
+
+nxf_kill() {
+    declare -a ALL_CHILD
+    while read P PP;do
+        ALL_CHILD[$PP]+=" $P"
+    done < <(ps -e -o pid= -o ppid=)
+
+    walk() {
+        [[ $1 != $$ ]] && kill $1 2>/dev/null || true
+        for i in ${ALL_CHILD[$1]:=}; do walk $i; done
+    }
+
+    walk $1
+}
+
+nxf_mktemp() {
+    local base=${1:-/tmp}
+    if [[ $(uname) = Darwin ]]; then mktemp -d $base/nxf.XXXXXXXXXX
+    else TMPDIR="$base" mktemp -d -t nxf.XXXXXXXXXX
+    fi
+}
+
+on_exit() {
+  exit_status=${ret:=$?}
+  printf $exit_status > /Users/olafurh/git/nextflow/nextflow-private/tests/checks/scratch/85/5077bf9234b493eb7805a453476da5/.exitcode
+  set +u
+  [[ "$tee1" ]] && kill $tee1 2>/dev/null
+  [[ "$tee2" ]] && kill $tee2 2>/dev/null
+  [[ "$ctmp" ]] && rm -rf $ctmp || true
+  exit $exit_status
+}
+
+on_term() {
+    set +e
+    [[ "$pid" ]] && nxf_kill $pid
+}
+
+trap on_exit EXIT
+trap on_term TERM INT USR1 USR2
+
+NXF_SCRATCH=''
+[[ $NXF_DEBUG > 0 ]] && nxf_env
+touch /Users/olafurh/git/nextflow/nextflow-private/tests/checks/scratch/85/5077bf9234b493eb7805a453476da5/.command.begin
+# task environment
+export PATH="/Users/olafurh/git/nextflow/nextflow-private/tests/bin:$PATH"
+
+[[ $NXF_SCRATCH ]] && echo "nxf-scratch-dir $HOSTNAME:$NXF_SCRATCH" && cd $NXF_SCRATCH
+# stage input files
+rm -f seq_1
+rm -f seq_2
+rm -f seq_3
+rm -f seq_4
+rm -f seq_5
+ln -s /Users/olafurh/git/nextflow/nextflow-private/tests/checks/scratch/dd/ec0f29881fb0ddf09a8a6b26252742/seq_1 seq_1
+ln -s /Users/olafurh/git/nextflow/nextflow-private/tests/checks/scratch/dd/ec0f29881fb0ddf09a8a6b26252742/seq_2 seq_2
+ln -s /Users/olafurh/git/nextflow/nextflow-private/tests/checks/scratch/dd/ec0f29881fb0ddf09a8a6b26252742/seq_3 seq_3
+ln -s /Users/olafurh/git/nextflow/nextflow-private/tests/checks/scratch/dd/ec0f29881fb0ddf09a8a6b26252742/seq_4 seq_4
+ln -s /Users/olafurh/git/nextflow/nextflow-private/tests/checks/scratch/dd/ec0f29881fb0ddf09a8a6b26252742/seq_5 seq_5
+
+set +e
+ctmp=$(set +u; nxf_mktemp /dev/shm 2>/dev/null || nxf_mktemp $TMPDIR)
+cout=$ctmp/.command.out; mkfifo $cout
+cerr=$ctmp/.command.err; mkfifo $cerr
+tee .command.out < $cout &
+tee1=$!
+tee .command.err < $cerr >&2 &
+tee2=$!
+(
+/bin/bash -ue /Users/olafurh/git/nextflow/nextflow-private/tests/checks/scratch/85/5077bf9234b493eb7805a453476da5/.command.sh
+) >$cout 2>$cerr &
+pid=$!
+wait $pid || ret=$?
+wait $tee1 $tee2

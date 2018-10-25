@@ -1,6 +1,69 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+18.10.1 - 24 Oct 2018
+- Fixed test [011e8e23]
+- Fixed version number check [fb780347]
+
+18.10.0 - 24 Oct 2018
+- Added lenient cache mode #828 [ba907a2f]
+- Added support for java 11 [60da50b5]
+- Added support for Singularity 3.0 library #898
+- Added support for AWS Batch hybrid executions #744
+- Added weblog JSON format docs #882
+- Added weblog example documentation #891
+- Added PbsPro executor [33ae1104]
+- Added support for ANSI console logging [9c14a947]
+- Fixed License prevents scientific use #788
+- Fixed process submitter slow-down [495e900a]
+- Fixed Comparing duration and memory units with null throws an exception #872
+- Fixed Html format dag fails when 'each' qualifier is used #887
+- Fixed Collate/Buffer hangs with one emission after Collect operator #868
+- Fixed Option checkIfExists should be applied when a glob pattern does not match any file #874
+- Fixed Add name to manifest and reject other attributes #871
+- Fixed warning message grammar when resuming on new project #885
+- Fixed Missing DSL Xform transformation in console execution [9621f8c6]
+- Fixed Enum declared in nextflow script causes error #878
+- Fixed Report a warning message when queue status fetch fails [39aae6a2]
+- Fixed Pbs executor may return nonzero exit code when checking queue status #904
+- Renamed weblog `runStatus` to `event` #892
+- Renamed K8s config attribute userDir to launchDir #895
+- Merged tests as subtree [a03eb59a]
+- Refactored service discovery
+- Removed FastXxxYyyyStream
+- Demoted igfs subsystem
+- Upgraded Groovy to version 2.5.3 [119300b3]
+- Upgrade Gradle to version 4.10
+- Updated AWS batch docs
+
+0.32.0 - 8 Aug 2018
+- Fixed CPU usage metrics can be wrongly reported #858
+- Fixed Allow a process to access input file metadata #731
+- Fixed Completed jobs are detected with a big delay #799
+- Fixed Misleading message is shown when pulling a project with a invalid config #863
+- Fixed Allow groupTuple operator to handle multi-size tuples #796
+- Fixed Ignite executor fills up logs when node is disconnected #810
+- Fixed Log filter option is misinterpreted when enclosed in double quotes #846
+- Fixed Metrics collector process may cause the main process to report a false non-zero exit status #836
+- Fixed K8s imagePullPolicy is not included in the pod spec #815
+- Fixed Splitter caching is too eager when caching path is specified #835
+- Fixed Improve error message for missing git provider configuration #847
+- Fixed Byte hashing is never reached in CacheHelper class 9ac81153
+- Fixed K8s launcher should not delete pod when `login` command fails (5175942a)
+- Fixed Dump operator should nicely print ArrayBag content (91e371ba)
+- Added manifest data in workflow metadata object #841
+- Added support for K8s imagePullSecrets pod attribute #800
+- Added option "checkIfExists" to Channel.fromPath method #666
+- Upgraded Apache Groovy to version 2.5.1
+- Upgraded Apache Ignite to version 2.6
+- Upgraded Slf4j to version 1.7.25
+- Upgraded Logback to version 1.1.11
+- Upgraded Grengine to version 1.3.0
+- Upgraded LevelDB to version 0.10
+- Upgraded Guava to version 21.0
+- Upgraded Spock to version 1.2 
+- Using javax.activation:activation:1.1.1 (from com.sun.activation:javax.activation:1.2.0)
+
 0.31.1 - 7 Aug 2018
 - Fixed AWS Batch execution hangs when running on 1 cpu machine #825 
 - Fixed AWS Batch fails if process tag length is too long #822

@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.executor
@@ -212,7 +208,7 @@ class BashWrapperBuilder {
         
         nxf_pcpu() {
             local pid=$1
-            local proc_time=$(2> /dev/null < /proc/$pid/stat awk '{sum=$14+$15+$16+$17; printf "%.0f",sum}' || echo -n 0)
+            local proc_time=$(2> /dev/null < /proc/$pid/stat awk '{sum=$14+$15; printf "%.0f",sum}' || echo -n 0)
             local cpu_usage=$(echo -n $proc_time ${prev_time[pid]:-0} $total_time $prev_total $num_cpus | awk '{ pct=($1-$2)/($3-$4)*$5 *100; printf "%.1f", pct }' )
             prev_time[pid]=$proc_time
             nxf_pcpu_ret=$cpu_usage
@@ -281,13 +277,14 @@ class BashWrapperBuilder {
           declare -a max=(); for i in {0..13}; do max[i]=0; done
           while [[ -d /proc/$pid ]]; do
             nxf_pstat $pid
-            [[ ! "$nxf_pstat_ret" ]] && break
+            if [[ "$nxf_pstat_ret" ]]; then
             IFS=' ' read -a val <<< "$nxf_pstat_ret"; unset IFS
             for i in {0..13}; do
               [ ${val[i]} -gt ${max[i]} ] && max[i]=${val[i]}
             done
             echo "pid state %cpu %mem vmem rss peak_vmem peak_rss rchar wchar syscr syscw read_bytes write_bytes" > $trg
             echo "${max[@]}" >> $trg
+            fi
             nxf_sleep $count
             count=$((count+1))
           done
