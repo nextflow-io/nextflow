@@ -85,4 +85,12 @@ class PbsProExecutor extends PbsExecutor {
         return ['/bin/bash','-c', "set -o pipefail; $cmd | { egrep '(Job Id:|job_state =)' || true; }".toString()]
     }
 
+    static private Map DECODE_STATUS = [
+            'F': QueueStatus.DONE,
+            'R': QueueStatus.RUNNING,
+            'Q': QueueStatus.PENDING,
+            'H': QueueStatus.HOLD,
+            'S': QueueStatus.HOLD
+    ]
+
 }
