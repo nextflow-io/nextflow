@@ -325,7 +325,7 @@ class PublishDir {
 
     @Memoized // <-- this guarantees that the same executor is used across different publish dir in the same session
     @CompileStatic
-    static synchronized private ExecutorService createExecutor(Session session) {
+    static synchronized ExecutorService createExecutor(Session session) {
         final result = new ThreadPoolExecutor(0, Runtime.runtime.availableProcessors(),
                 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<Runnable>());
