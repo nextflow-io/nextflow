@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import groovy.transform.Memoized
 import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
@@ -44,8 +45,6 @@ import nextflow.exception.ProcessStageException
 @Slf4j
 @CompileStatic
 class FilePorter {
-
-    static protected ExecutorService executor
 
     static Random rnd = Random.newInstance()
 
@@ -186,26 +185,28 @@ class FilePorter {
     /**
      * @return Creates lazily the executor service used to stage remote files
      */
-    static synchronized private ExecutorService getExecutor() {
-        if( !executor ) {
-            executor = new ThreadPoolExecutor(
-                    0,
-                    getMaxThreads(),
-                    60L,
-                    TimeUnit.SECONDS,
-                    new LinkedBlockingQueue<Runnable>(),
-                    new DownloaderThreadFactory() )
+    static private ExecutorService getExecutor() {
+        createExecutor(Global.session as Session)
+    }
 
-            // register the shutdown on termination
-            def session = Global.session as Session
-            if( session ) {
-                session.onShutdown {
-                    executor.shutdown()
-                    executor.awaitTermination(1,TimeUnit.MINUTES)
-                }
-            }
+    // note: memoized guarantees to use the same executor during the same session
+    @Memoized
+    static synchronized private ExecutorService createExecutor(Session session) {
+        final result = new ThreadPoolExecutor(
+                0,
+                getMaxThreads(),
+                60L,
+                TimeUnit.SECONDS,
+                new LinkedBlockingQueue<Runnable>(),
+                new DownloaderThreadFactory() )
+
+        // register the shutdown on termination
+        session?.onShutdown {
+            executor.shutdown()
+            executor.awaitTermination(1,TimeUnit.MINUTES)
         }
-        return executor
+
+        return result
     }
 
     /**

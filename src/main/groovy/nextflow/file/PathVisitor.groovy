@@ -172,10 +172,9 @@ class PathVisitor {
     // it return the same ExecutorService instance
     @Memoized
     @PackageScope
-    static ExecutorService createExecutor(Session session) {
+    static private ExecutorService createExecutor(Session session) {
         final result = Executors.newCachedThreadPool(new CustomThreadFactory('PathVisitor'))
-        if( session )
-            session.onShutdown { result.shutdown() }
+        session?.onShutdown { result.shutdown() }
         return result
     }
 

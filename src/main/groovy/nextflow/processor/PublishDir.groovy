@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
@@ -86,8 +87,6 @@ class PublishDir {
     private Path sourceDir
 
     private String stageInMode
-
-    private static ExecutorService executor
 
     void setPath( Closure obj ) {
         setPath( obj.call() as Path )
@@ -170,10 +169,6 @@ class PublishDir {
 
         if( pattern ) {
             this.matcher = FileHelper.getPathMatcherFor("glob:${pattern}", sourceFileSystem)
-        }
-
-        if( !inProcess ) {
-            createExecutor()
         }
 
         /*
@@ -328,24 +323,23 @@ class PublishDir {
         }
     }
 
+    @Memoized // <-- this guarantees that the same executor is used across different publish dir in the same session
     @CompileStatic
-    static synchronized private void createExecutor() {
-        if( !executor ) {
-            executor = new ThreadPoolExecutor(0, Runtime.runtime.availableProcessors(),
-                    60L, TimeUnit.SECONDS,
-                    new LinkedBlockingQueue<Runnable>());
+    static synchronized private ExecutorService createExecutor(Session session) {
+        final result = new ThreadPoolExecutor(0, Runtime.runtime.availableProcessors(),
+                60L, TimeUnit.SECONDS,
+                new LinkedBlockingQueue<Runnable>());
 
-            // register the shutdown on termination
-            def session = Global.session as Session
-            if( session ) {
-                session.onShutdown {
-                    executor.shutdown()
-                    executor.awaitTermination(36,TimeUnit.HOURS)
-                }
-            }
+        session?.onShutdown {
+            result.shutdown()
+            result.awaitTermination(36,TimeUnit.HOURS)
         }
+
+        return result
     }
 
     @PackageScope
-    static ExecutorService getExecutor() { executor }
+    static ExecutorService getExecutor() {
+        createExecutor(Global.session as Session)
+    }
 }
