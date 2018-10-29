@@ -241,8 +241,10 @@ class GceApiHelper {
     String readGoogleMetadata(String meta) {
         try {
             def payload = "http://metadata/computeMetadata/v1/$meta".toURL().getText(requestProperties: ['Metadata-Flavor': 'Google'])
-            if(!payload) {
+            if(!payload || payload?.isEmpty()) {
                 throw new AbortOperationException("Could not find google metadata: $meta")
+            } else {
+                return payload
             }
         } catch (Exception e) {
             throw new AbortOperationException("Cannot read Google metadata $meta: ${e.getClass()}(${e.getMessage()})", e)
