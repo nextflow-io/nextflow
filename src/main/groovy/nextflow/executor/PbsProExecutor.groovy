@@ -93,4 +93,29 @@ class PbsProExecutor extends PbsExecutor {
             'S': QueueStatus.HOLD
     ]
 
+    @Override
+    protected Map<String, QueueStatus> parseQueueStatus(String text) {
+
+        final JOB_ID = 'Job Id:'
+        final JOB_STATUS = 'job_state '
+        final result = [:]
+
+        String id = null
+        String status = null
+        text.eachLine { line ->
+            if( line.startsWith(JOB_ID) ) {
+                id = fetchValue(JOB_ID, line)
+            }
+            else if( id ) {
+                status = fetchValue(JOB_STATUS, line)
+            }
+            result.put( id, DECODE_STATUS[status] ?: AbstractGridExecutor.QueueStatus.UNKNOWN )
+        }
+
+        return result
+    }
+
+
+
+
 }

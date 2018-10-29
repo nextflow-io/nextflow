@@ -161,4 +161,38 @@ class PbsExecutor extends AbstractGridExecutor {
         return p!=-1 ? line.substring(p+prefix.size()).trim() : null
     }
 
+    /**
+     * @return The status for all the scheduled and running jobs
+     */
+    Map<String,QueueStatus> getQueueStatus(queue) {
+
+        List cmd = queueStatusCommand(queue)
+        if( !cmd ) return null
+
+        try {
+            log.trace "[${name.toUpperCase()}] getting queue ${queue?"($queue) ":''}status > cmd: ${cmd.join(' ')}"
+
+            def process = new ProcessBuilder(cmd).start()
+            def result = process.text
+            process.waitForOrKill( 10 * 1000 )
+            def exit = process.exitValue()
+
+
+            if( exit == 0 ) {
+                log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status > cmd exit: $exit\n$result"
+                return parseQueueStatus(result)
+            }
+            else {
+                log.warn "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status cannot be fetched > exit status: $exit\n$result"
+                return null
+            }
+
+        }
+        catch( Exception e ) {
+            log.warn "[${name.toUpperCase()}] failed to retrieve queue ${queue?"($queue) ":''}status -- See the log file for details", e
+            return null
+        }
+
+    }
+
 }
