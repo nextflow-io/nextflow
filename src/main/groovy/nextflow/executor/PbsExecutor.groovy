@@ -164,6 +164,7 @@ class PbsExecutor extends AbstractGridExecutor {
     /**
      * @return The status for all the scheduled and running jobs
      */
+    @Override
     Map<String,QueueStatus> getQueueStatus(queue) {
 
         List cmd = queueStatusCommand(queue)
