@@ -254,7 +254,13 @@ class GceApiHelper {
     String readProject() {
         if(isCredentialLocationDefined()) {
             def cred = new JsonSlurper().parseText(getCredentialsFile())
-            cred['project_id']
+            def project = cred['project_id']
+            if(!project) {
+                throw new AbortOperationException("Could not read project from Credential file")
+            } else
+            {
+                project
+            }
         } else {
             readGoogleMetadata('project/project-id')
         }
