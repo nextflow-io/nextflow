@@ -250,8 +250,8 @@ abstract class AbstractGridExecutor extends Executor {
     /**
      * @return The status for all the scheduled and running jobs
      */
-    Map<String,QueueStatus> getQueueStatus(queue) {
-
+    protected abstract Map<String,QueueStatus> getQueueStatus(queue)
+    
         List cmd = queueStatusCommand(queue)
         if( !cmd ) return null
 
