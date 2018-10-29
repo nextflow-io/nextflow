@@ -30,7 +30,7 @@ class GceApiHelperTest extends Specification {
         sharedHelper.readGoogleMetadata(_) >> "metadata"
     }
 
-    //@Ignore
+    @Ignore
     def 'should report error when region and zone are null'() {
         when:
         new GceApiHelper(null,null)
@@ -40,7 +40,7 @@ class GceApiHelperTest extends Specification {
 
     @IgnoreIf({GceApiHelperTest.runAgainstGce()})
     //If we have a google credentials file, we can read the project name from it
-    //@Ignore
+    @Ignore
     def 'should report error when project is missing in initialization'() {
         when:
         new GceApiHelper(null,testZone)
@@ -48,7 +48,7 @@ class GceApiHelperTest extends Specification {
         thrown(AbortOperationException)
     }
 
-    //@Ignore
+    @Ignore
     def 'should report error when zone is missing in initialization'() {
         when:
         new GceApiHelper(testProject,null)
