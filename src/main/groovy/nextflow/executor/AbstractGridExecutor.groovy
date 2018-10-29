@@ -250,14 +250,14 @@ abstract class AbstractGridExecutor extends Executor {
     /**
      * @return The status for all the scheduled and running jobs
      */
-    protected abstract Map<String,QueueStatus> getQueueStatus(queue)
-    
+    protected Map<String,QueueStatus> getQueueStatus(queue) {
+
         List cmd = queueStatusCommand(queue)
         if( !cmd ) return null
 
         try {
             log.trace "[${name.toUpperCase()}] getting queue ${queue?"($queue) ":''}status > cmd: ${cmd.join(' ')}"
-
+            
             final buf = new StringBuilder()
             final process = new ProcessBuilder(cmd).redirectErrorStream(true).start()
             process.consumeProcessOutputStream(buf)
