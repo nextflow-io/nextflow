@@ -25,6 +25,8 @@ import java.util.concurrent.Executors
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
+import groovy.transform.PackageScope
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Global
 import nextflow.Session
@@ -43,9 +45,6 @@ import static nextflow.file.FileHelper.visitFiles
 class PathVisitor {
 
     private static Logger log = LoggerFactory.getLogger(PathVisitor)
-
-    @Lazy
-    private static ExecutorService executor = createExecutor()
 
     DataflowQueue target
 
@@ -163,11 +162,19 @@ class PathVisitor {
 
     }
 
-    private static ExecutorService createExecutor() {
+
+    @PackageScope
+    static ExecutorService getExecutor() {
+        createExecutor(Global.session as Session)
+    }
+
+    // note: the memoized annotation guarantee that for the same session
+    // it return the same ExecutorService instance
+    @Memoized
+    @PackageScope
+    static ExecutorService createExecutor(Session session) {
         final result = Executors.newCachedThreadPool(new CustomThreadFactory('PathVisitor'))
-        final session = Global.session as Session
-        if( session )
-            session.onShutdown { result.shutdown() }
+        session?.onShutdown { result.shutdown() }
         return result
     }
 
