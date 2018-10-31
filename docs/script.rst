@@ -163,7 +163,7 @@ Strings can be concatenated with ``+``::
 String interpolation
 --------------------
 
-There is an important difference between single- and double-quoted strings:
+There is an important difference between single-quoted and double-quoted strings:
 Double-quoted strings support variable interpolations, while single-quoted strings do not.
 
 In practice, double-quoted strings can contain the value of an arbitrary variable by prefixing its name with the ``$`` character,
@@ -228,8 +228,10 @@ More formally, you can create functions that are defined as `first class objects
 
 
 The curly brackets around the expression ``it * it`` tells the script interpreter to treat this expression as code.
-In this case, the designator ``it`` refers to whatever value is passed to the function when it is called. This compiled function is
-assigned to the variable ``square``, much like variable assignments shown previously. Now we can do something like this::
+The `it` identifier is an implicit variable that represents the value that is passed to the function when it is invoked.
+
+Once compiled the function object is assigned to the variable ``square`` as any other variable assignments shown previously.
+Now we can do something like this::
 
     println square(9)
 
@@ -261,7 +263,7 @@ for each key-value pair in the ``Map``. Here, we use the obvious variable names 
         println "$key = $value"
     }
 
-    [ "Yue" : "Wu", "Mark" : "Williams", "sudha" : "Kumari" ].each(printMapClosure)
+    [ "Yue" : "Wu", "Mark" : "Williams", "Sudha" : "Kumari" ].each(printMapClosure)
 
 
 Prints::
