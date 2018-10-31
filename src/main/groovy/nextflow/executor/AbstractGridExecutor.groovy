@@ -258,18 +258,24 @@ abstract class AbstractGridExecutor extends Executor {
         try {
             log.trace "[${name.toUpperCase()}] getting queue ${queue?"($queue) ":''}status > cmd: ${cmd.join(' ')}"
 
-            def process = new ProcessBuilder(cmd).start()
-            def result = process.text
+            final process = new ProcessBuilder(cmd).redirectErrorStream(true).start()
             process.waitForOrKill( 10 * 1000 )
-            def exit = process.exitValue()
-
+            final exit = process.exitValue()
+            final result = process.getText()
 
             if( exit == 0 ) {
                 log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status > cmd exit: $exit\n$result"
                 return parseQueueStatus(result)
             }
             else {
-                log.warn "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status cannot be fetched > exit status: $exit\n$result"
+                def m = """\
+                [${name.toUpperCase()}] queue ${queue?"($queue) ":''}status cannot be fetched
+                - cmd executed: ${cmd.join(' ')}
+                - exit status : $exit
+                - output      :
+                """.stripIndent()
+                m += result.indent('  ')
+                log.warn1(m, firstOnly: true)
                 return null
             }
 
