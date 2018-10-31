@@ -322,4 +322,58 @@ class TextSplitterTest extends Specification {
     }
 
 
+    def testKeepHeaderWithString(){
+        given:
+        def TEXT = '''\
+        HEADER
+        1
+        2
+        3
+        4
+        5
+        6
+        7
+        '''.stripIndent()
+
+        when:
+        def ts = new TextSplitter().options(by: 3, keepHeader: true)
+        def lines = ts.target(TEXT).list()
+        then:
+        lines[0] == 'HEADER\n1\n2\n3\n'
+        lines[1] == 'HEADER\n4\n5\n6\n'
+        lines[2] == 'HEADER\n7\n'
+        lines.size()==3
+
+    }
+
+    def testKeepHeaderWithFile() {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+
+        def session = new Session()
+        session.workDir = folder.resolve('work')
+
+        def file = folder.resolve('lines.txt')
+        file.text = '''\
+        HEADER
+        1
+        2
+        3
+        4
+        5
+        6
+        7
+        '''.stripIndent()
+
+        when:
+        def ts = new TextSplitter().options(by: 3, keepHeader: true, file:true)
+        def lines = ts.target(file).list()
+
+        then:
+        lines[0].text == 'HEADER\n1\n2\n3\n'
+        lines[1].text == 'HEADER\n4\n5\n6\n'
+        lines[2].text == 'HEADER\n7\n'
+        lines.size()==3
+
+    }
 }

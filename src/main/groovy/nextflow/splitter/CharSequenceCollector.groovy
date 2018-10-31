@@ -24,7 +24,7 @@ import groovy.transform.CompileStatic
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class CharSequenceCollector implements CollectorStrategy {
+class CharSequenceCollector implements CollectorStrategy, HeaderCollector {
 
     private static final int INITIAL_SIZE = 10 * 1024 * 1024
 
@@ -32,11 +32,20 @@ class CharSequenceCollector implements CollectorStrategy {
 
     private long count
 
+    private String header
+
+    void setHeader(String value) {
+        this.header = value
+    }
+
     @Override
     void add(Object record) {
         if( record==null )
             return
 
+        if( count==0 && header ) {
+            holder.append(header)
+        }
         def str = record.toString()
         count += str.length()
         holder.append(str)
