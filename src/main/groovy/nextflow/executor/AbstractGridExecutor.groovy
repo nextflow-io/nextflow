@@ -258,10 +258,11 @@ abstract class AbstractGridExecutor extends Executor {
         try {
             log.trace "[${name.toUpperCase()}] getting queue ${queue?"($queue) ":''}status > cmd: ${cmd.join(' ')}"
 
+            final buf = new StringBuilder()
             final process = new ProcessBuilder(cmd).redirectErrorStream(true).start()
-            process.waitForOrKill( 10 * 1000 )
-            final exit = process.exitValue()
-            final result = process.getText()
+            process.consumeProcessOutputStream(buf)
+            final exit = process.waitFor()
+            final result = buf.toString()
 
             if( exit == 0 ) {
                 log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status > cmd exit: $exit\n$result"
