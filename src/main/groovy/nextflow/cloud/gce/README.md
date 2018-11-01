@@ -66,7 +66,7 @@ Create nextflow.config file in project root directory. The config must specify t
 * workDir - *Must be a GS bucket*
 * process.executor - **googlepipelines**
 * cloud.instanceType - *valid GCE instance type*
-* gce.project - *gve project to run in*
+* gce.project - *gce project to run in*
 * gce.zone - *gce zone to run in*
 
 Example:

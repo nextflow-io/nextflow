@@ -38,7 +38,7 @@ class GceApiHelperTest extends Specification {
         thrown(AbortOperationException)
     }
 
-    //@IgnoreIf({GceApiHelperTest.runAgainstGce()})
+    @IgnoreIf({GceApiHelperTest.runAgainstGce()})
     //If we have a google credentials file, we can read the project name from it
     @Ignore
     def 'should report error when project is missing in initialization'() {

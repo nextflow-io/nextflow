@@ -241,8 +241,10 @@ class GceApiHelper {
     String readGoogleMetadata(String meta) {
         try {
             def payload = "http://metadata/computeMetadata/v1/$meta".toURL().getText(requestProperties: ['Metadata-Flavor': 'Google'])
-            if(!payload) {
+            if(!payload || payload?.isEmpty()) {
                 throw new AbortOperationException("Could not find google metadata: $meta")
+            } else {
+                return payload
             }
         } catch (Exception e) {
             throw new AbortOperationException("Cannot read Google metadata $meta: ${e.getClass()}(${e.getMessage()})", e)
@@ -252,7 +254,13 @@ class GceApiHelper {
     String readProject() {
         if(isCredentialLocationDefined()) {
             def cred = new JsonSlurper().parseText(getCredentialsFile())
-            cred['project_id']
+            def project = cred['project_id']
+            if(!project) {
+                throw new AbortOperationException("Could not read project from Credential file")
+            } else
+            {
+                project
+            }
         } else {
             readGoogleMetadata('project/project-id')
         }

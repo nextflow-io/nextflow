@@ -26,12 +26,21 @@ class GooglePipelinesFileCopyStrategy extends SimpleFileCopyStrategy {
 
         def stagingCommands = inputFiles.collect { stageName, storePath ->
             def absStorePath = storePath.toAbsolutePath()
-            "gsutil -m  -q cp -P -c -r ${absStorePath.toUriString()} ${task.workDir}/${absStorePath.toString().endsWith(stageName) ? "" : stageName} || true".toString()
+            "gsutil -m  -q cp -P -r ${absStorePath.toUriString()} ${task.workDir}/${absStorePath.toString().endsWith(stageName) ? "" : stageName}".toString()
         }
 
         log.debug "[GOOGLE PIPELINE] Constructed the following file copy staging commands: $stagingCommands"
 
         handler.stagingCommands.addAll(stagingCommands)
+
+        //copy the remoteBinDir if it ia defined
+        if(handler.pipelineConfiguration.remoteBinDir) {
+            def createRemoteBinDir = "mkdir -p ${task.workDir}/nextflow-bin".toString()
+            def remoteBinCopy = "gsutil -m -q cp -P -r ${handler.pipelineConfiguration.remoteBinDir.toUriString()}/* ${task.workDir}/nextflow-bin".toString()
+            handler.stagingCommands << createRemoteBinDir << remoteBinCopy
+        }
+
+        //handler.stagingCommands << "ls -haltR $task.workDir".toString()
 
         //Insert this comment into the task run script to note that the staging is done differently
         "# Google pipeline staging is done in a pipeline action step that is run prior to the main pipeline action"
@@ -60,5 +69,30 @@ class GooglePipelinesFileCopyStrategy extends SimpleFileCopyStrategy {
             "# Google pipeline touchFile is done in a pipeline action step that is run prior to the main pipeline action"
         } else
             return super.touchFile(file)
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    String getEnvScript(Map environment, String wrapper) {
+        if( wrapper )
+            throw new IllegalArgumentException("Parameter `wrapHandler` not supported by ${this.class.simpleName}")
+
+        final result = new StringBuilder()
+        final copy = environment ? new HashMap<String,String>(environment) : Collections.<String,String>emptyMap()
+        // remove any external PATH
+        if( copy.containsKey('PATH') )
+            copy.remove('PATH')
+        // when a remote bin directory is provide managed it properly
+        if( handler.pipelineConfiguration.remoteBinDir ) {
+            result << "chmod +x $task.workDir/nextflow-bin/*\n"
+            result << "export PATH=$task.workDir/nextflow-bin:\$PATH\n"
+        }
+        // finally render the environment
+        final envSnippet = super.getEnvScript(copy,null)
+        if( envSnippet )
+            result << envSnippet
+        return result.toString()
     }
 }
