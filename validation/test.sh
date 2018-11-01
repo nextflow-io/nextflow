@@ -13,7 +13,7 @@ export TRAVIS_PULL_REQUEST=${TRAVIS_PULL_REQUEST:=false}
 # Tests
 #
 (
-  cd ../tests/checks;
+  cd ../tests/checks; 
   bash run.sh
 )
 
