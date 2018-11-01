@@ -351,25 +351,41 @@ class LsfExecutorTest extends Specification {
         setup:
         def executor = [:] as LsfExecutor
         def text =
-                """
-                6795348,RUN,Feb 17 13:26
-                6795349,RUN,Feb 17 13:26
-                6795351,PEND,Feb 17 13:26
-                6795353,PSUSP,Feb 17 13:26
-                6795354,EXIT,Feb 17 13:26
+                """\
+                JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
+                5085109 pluskal RUN   normal     it-c01b13   it-c01b11   /lab/solexa_weng/xtal_data/Data_processing/Tomas_Pluskal/20181031_KLR1_autobuild/AutoBuild_run_1_/TEMP0/RUN_FILE_4 Oct 31 13:00
+                5085585 pluskal RUN   normal     tak         it-c05b12   phenix.autobuild autobuild_config.eff Oct 31 14:05
+                5085604 pluskal PEND  normal     it-c05b12   it-c05b12   /lab/solexa_weng/xtal_data/Data_processing/Tomas_Pluskal/20181031_KLR1_autobuild_not_in_place/AutoBuild_run_1_/TEMP0/RUN_FILE_1 Oct 31 14:44
+                5085611 pluskal PSUSP normal     it-c05b12   it-c05b12   /lab/solexa_weng/xtal_data/Data_processing/Tomas_Pluskal/20181031_KLR1_autobuild_not_in_place/AutoBuild_run_1_/TEMP0/RUN_FILE_8 Oct 31 14:44
+                5085107 pluskal EXIT  normal     it-c01b13   it-c01b07   /lab/solexa_weng/xtal_data/Data_processing/Tomas_Pluskal/20181031_KLR1_autobuild/AutoBuild_run_1_/TEMP0/RUN_FILE_2 Oct 31 13:00
+                5085607 pluskal UNKWN normal     it-c05b12   it-c01b07   /lab/solexa_weng/xtal_data/Data_processing/Tomas_Pluskal/20181031_KLR1_autobuild_not_in_place/AutoBuild_run_1_/TEMP0/RUN_FILE_4 Oct 31 14:44
+                5085608 pluskal ZOMBI normal     it-c05b12   it-c01b05   /lab/solexa_weng/xtal_data/Data_processing/Tomas_Pluskal/20181031_KLR1_autobuild_not_in_place/AutoBuild_run_1_/TEMP0/RUN_FILE_5 Oct 31 14:44
+                5085609 pluskal RUN   normal     it-c05b12   it-c01b14   /lab/solexa_weng/xtal_data/Data_processing/Tomas_Pluskal/20181031_KLR1_autobuild_not_in_place/AutoBuild_run_1_/TEMP0/RUN_FILE_6 Oct 31 14:44
+                5085702 pluskal RUN   normal     tak         it-c01b14   ./assemble.nf Oct 31 15:08
+                5085606 pluskal DONE  normal     it-c05b12   it-c01b12   /lab/solexa_weng/xtal_data/Data_processing/Tomas_Pluskal/20181031_KLR1_autobuild_not_in_place/AutoBuild_run_1_/TEMP0/RUN_FILE_3 Oct 31 14:44
+                5085034 pluskal RUN   normal     tak         it-c01b13   phenix.autobuild autobuild_config.eff Oct 31 12:56
+                5085612 pluskal RUN   normal     it-c05b12   it-c01b13   /lab/solexa_weng/xtal_data/Data_processing/Tomas_Pluskal/20181031_KLR1_autobuild_not_in_place/AutoBuild_run_1_/TEMP0/RUN_FILE_9 Oct 31 14:44
+                5085703 pluskal RUN   normal     it-c01b14   it-r16u31:it-r16u31:it-r16u31:it-r16u31:it-r16u31:it-r16u31:it-r16u31:it-r16u31:it-r16u31:it-r16u31 nf-trinityInchwormChrysalis Oct 31 15:08
                 """.stripIndent().trim()
 
 
         when:
         def result = executor.parseQueueStatus(text)
         then:
-        result.size() == 5
-        result['6795348'] == AbstractGridExecutor.QueueStatus.RUNNING
-        result['6795349'] == AbstractGridExecutor.QueueStatus.RUNNING
-        result['6795351'] == AbstractGridExecutor.QueueStatus.PENDING
-        result['6795353'] == AbstractGridExecutor.QueueStatus.HOLD
-        result['6795354'] == AbstractGridExecutor.QueueStatus.ERROR
-
+        result['5085109'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result['5085585'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result['5085604'] == AbstractGridExecutor.QueueStatus.PENDING
+        result['5085611'] == AbstractGridExecutor.QueueStatus.HOLD
+        result['5085107'] == AbstractGridExecutor.QueueStatus.ERROR
+        result['5085607'] == AbstractGridExecutor.QueueStatus.ERROR
+        result['5085608'] == AbstractGridExecutor.QueueStatus.ERROR
+        result['5085609'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result['5085702'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result['5085606'] == AbstractGridExecutor.QueueStatus.DONE
+        result['5085034'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result['5085612'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result['5085703'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result.size()==13
     }
 
 
@@ -379,8 +395,8 @@ class LsfExecutorTest extends Specification {
         def executor = [:] as LsfExecutor
 
         expect:
-        executor.queueStatusCommand(null) == ['bjobs', '-o',  'JOBID STAT SUBMIT_TIME delimiter=\',\'', '-noheader']
-        executor.queueStatusCommand('long') == ['bjobs', '-o',  'JOBID STAT SUBMIT_TIME delimiter=\',\'', '-noheader', '-q', 'long']
+        executor.queueStatusCommand(null) == ['bjobs', '-w']
+        executor.queueStatusCommand('long') == ['bjobs', '-w', '-q', 'long']
 
     }
 
@@ -399,5 +415,18 @@ class LsfExecutorTest extends Specification {
 
         executor.pipeLauncherScript() == true
         executor.getSubmitCommandLine(Mock(TaskRun), Mock(Path)) == ['bsub']
+    }
+
+    def 'should parse col value' () {
+
+        given:
+        def HEADER = 'JOBID   USER    STAT  QUEUE'
+        def executor = [:] as LsfExecutor
+        def buf = new StringBuilder()
+
+        expect:
+        executor.col(HEADER,0,buf) == 'JOBID'
+        executor.col(HEADER,8,buf) == 'USER'
+        executor.col(HEADER,16,buf) == 'STAT'
     }
 }
