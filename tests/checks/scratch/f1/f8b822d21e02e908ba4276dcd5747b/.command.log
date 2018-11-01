@@ -1,5 +1,0 @@
-+ set -o nounset
-+ TASK=normal
-+ CONT_THREADS=1
-+ case $TASK in
-+ t_coffee -multi_core=1 -in=sample.fa

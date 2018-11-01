@@ -1,4 +1,0 @@
-barcode: alpha
-seq_ids: [three, two, one]
-bam : bam1 bam2 bam3
-bai : bai1 bai2 bai3
