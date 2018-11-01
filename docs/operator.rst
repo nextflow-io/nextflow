@@ -1076,13 +1076,14 @@ Available parameters:
 =========== ============================
 Field       Description
 =========== ============================
-by          Defines the number of lines in each `chunk` (default: ``1``)
+by          Defines the number of lines in each `chunk` (default: ``1``).
 limit       Limits the number of retrieved lines for each file to the specified value.
-charset     Parse the content by using the specified charset e.g. ``UTF-8``
+charset     Parse the content by using the specified charset e.g. ``UTF-8``.
 compress    When ``true`` resulting file chunks are GZIP compressed. The ``.gz`` suffix is automatically added to chunk file names.
-decompress  When ``true``, decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
+decompress  When ``true``, decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically).
 file        When ``true`` saves each split to a file. Use a string instead of ``true`` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in oder to save the split files into the specified folder.
-elem        The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)
+elem        The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element).
+keepHeader  Parses the first line as header and prepends it to each emitted chunk.
 =========== ============================
 
 

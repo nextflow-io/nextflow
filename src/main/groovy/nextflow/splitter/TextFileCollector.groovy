@@ -34,7 +34,7 @@ import groovy.transform.TupleConstructor
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class TextFileCollector implements CollectorStrategy, CacheableCollector, Closeable {
+class TextFileCollector implements CollectorStrategy, CacheableCollector, HeaderCollector, Closeable {
 
     @ToString
     @EqualsAndHashCode
@@ -54,6 +54,10 @@ class TextFileCollector implements CollectorStrategy, CacheableCollector, Closea
     private Path currentPath
 
     private boolean compress
+
+    private int count
+
+    private String header
 
     TextFileCollector(CachePath base, Charset charset = Charset.defaultCharset(), boolean compress=false ) {
         assert base
@@ -75,6 +79,10 @@ class TextFileCollector implements CollectorStrategy, CacheableCollector, Closea
         return file.resolveSibling( fileName )
     }
 
+    void setHeader(String value) {
+        this.header = value
+    }
+
     @Override
     void add(Object record) {
 
@@ -87,6 +95,9 @@ class TextFileCollector implements CollectorStrategy, CacheableCollector, Closea
             writer = getOutputWriter(currentPath, charset, compress)
         }
 
+        if( count++==0 && header ) {
+            writer.write(header)
+        }
         def str = record.toString()
         writer.write(str, 0, str.length())
 
@@ -106,6 +117,7 @@ class TextFileCollector implements CollectorStrategy, CacheableCollector, Closea
     @Override
     def nextChunk() {
         closeWriter()
+        count = 0
         def result = currentPath
         currentPath = null
         return result
