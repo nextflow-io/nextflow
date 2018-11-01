@@ -10,9 +10,10 @@ class GooglePipelinesConfigurationTest extends Specification {
         def testZone = "testZone"
         def instanceType = "testInstanceType"
         def preemp = true
+        def remoteBinDir = null
 
         when:
-        def config1 = new GooglePipelinesConfiguration(name,testZone,instanceType,preemp)
+        def config1 = new GooglePipelinesConfiguration(name,testZone,instanceType,remoteBinDir,preemp)
         def config2 = new GooglePipelinesConfiguration(name,testZone,instanceType)
 
         then:
@@ -30,13 +31,4 @@ class GooglePipelinesConfigurationTest extends Specification {
             !preemptible
         }
     }
-
-    def 'should display correctly'() {
-        when:
-        def config = new GooglePipelinesConfiguration("p","z","vm",true)
-
-        then:
-        config.toString() == "GooglePipelinesConfiguration{project='p', zone='z', vmInstanceType='vm', preemptible=true}"
-    }
-
 }

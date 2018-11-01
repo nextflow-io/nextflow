@@ -90,7 +90,7 @@ class GooglePipelinesExecutor extends Executor {
          */
         def disableBinDir = session.getExecConfigProp(name, 'disableRemoteBinDir', false)
         Path remoteBinDir = null
-        if( session.binDir && !session.binDir.empty() && !disableBinDir ) {
+        if( session.binDir && !disableBinDir ) {
             def cloudPath = Nextflow.tempDir() + "/" //need the ending slash to mark it as a directory since it doesn't exist yet
             log.info "Uploading local `bin` scripts folder to ${cloudPath.toUriString()}bin"
             remoteBinDir = FilesEx.copyTo(session.binDir, cloudPath)
