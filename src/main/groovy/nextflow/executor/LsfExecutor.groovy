@@ -21,7 +21,7 @@ import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 import nextflow.util.MemoryUnit
 /**
- * Processor for LSF resource manager (DRAFT)
+ * Processor for LSF resource manager
  *
  * See
  * http://en.wikipedia.org/wiki/Platform_LSF
@@ -32,6 +32,8 @@ import nextflow.util.MemoryUnit
  */
 @Slf4j
 class LsfExecutor extends AbstractGridExecutor {
+
+    private static char BLANK = ' ' as char
 
     /**
      * Gets the directives to submit the specified task to the cluster for execution
@@ -138,16 +140,17 @@ class LsfExecutor extends AbstractGridExecutor {
 
     @Override
     protected List<String> queueStatusCommand( queue ) {
-
-        def result = ['bjobs', '-o',  'JOBID STAT SUBMIT_TIME delimiter=\',\'', '-noheader']
+        // note: use the `-w` option to avoid that the printed jobid maybe truncated when exceed 7 digits
+        // see https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsb_jobid_disp_length.5.html
+        final result = ['bjobs', '-w']
 
         if( queue )
             result << '-q' << queue.toString()
 
         return result
-
     }
 
+    // https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_command_ref/bjobs.zz4category.description.1.html
     private static Map DECODE_STATUS = [
             'PEND': QueueStatus.PENDING,
             'RUN': QueueStatus.RUNNING,
@@ -164,20 +167,37 @@ class LsfExecutor extends AbstractGridExecutor {
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
         def result = [:]
+        def col1 = -1
+        def col2 = -1
+        def buf = new StringBuilder()
+        for( String line : text.readLines() ) {
+            if( !line )
+                continue
 
-        text.eachLine { String line ->
-            def cols = line.split(',')
-            if( cols.size() == 3 ) {
-                result.put( cols[0], DECODE_STATUS.get(cols[1]) )
+            if( col1==-1 && col2==-1 ) {
+                col1 = line.indexOf('JOBID')
+                col2 = line.indexOf("STAT")
+                continue
             }
-            else {
-                log.debug "[LSF] invalid status line: `$line`"
-            }
+
+            def jobId = col(line,col1,buf)
+            def status = col(line,col2,buf)
+            if( jobId )
+            result[jobId] = DECODE_STATUS.get(status)
         }
 
         return result
     }
 
+    protected String col(String line, int p, StringBuilder buf) {
+        buf.setLength(0)
+        for( int i=p; i<line.size(); i++ ) {
+            def ch = line.charAt(i)
+            if( ch == BLANK ) break
+            buf.append(ch)
+        }
+        return buf.toString()
+    }
 
     private static String SPECIAL_CHARS = ' []|&!<>'
 

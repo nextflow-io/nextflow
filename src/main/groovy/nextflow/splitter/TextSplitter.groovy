@@ -15,6 +15,7 @@
  */
 
 package nextflow.splitter
+
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
@@ -28,6 +29,22 @@ import groovy.util.logging.Slf4j
 @InheritConstructors
 class TextSplitter extends AbstractTextSplitter {
 
+    private boolean keepHeader
+
+    @Override
+    protected Map<String,Object> validOptions() {
+        def result = super.validOptions()
+        result.keepHeader = [Boolean]
+        return result
+    }
+
+    @Override
+    TextSplitter options(Map opts) {
+        super.options(opts)
+        this.keepHeader = opts.keepHeader == true
+        return this
+    }
+
     /**
      * A record is a text line
      *
@@ -39,5 +56,26 @@ class TextSplitter extends AbstractTextSplitter {
         def line = reader.readLine()
         if( line != null ) line+='\n'
         return line
+    }
+
+    protected void parseHeader(Reader reader) {
+        if( !keepHeader )
+            return
+        
+        def line = reader.readLine()
+        if( line==null )
+            return
+
+        def collector = getCollector()
+        if( collector instanceof HeaderCollector ) {
+            collector.setHeader(line+'\n')
+        }
+    }
+
+    @Override
+    protected process( Reader targetObject ) {
+        final reader = wrapReader(targetObject)
+        parseHeader(reader)
+        super.process(reader)
     }
 }

@@ -279,8 +279,8 @@ class PbsExecutorTest extends Specification {
         def executor = [:] as PbsExecutor
 
         expect:
-        executor.queueStatusCommand(null) == ['sh','-c', "set -o pipefail; qstat -f -1 | { egrep '(Job Id:|job_state =)' || true; }"]
-        executor.queueStatusCommand('xxx') == ['sh','-c', "set -o pipefail; qstat -f -1 xxx | { egrep '(Job Id:|job_state =)' || true; }"]
+        executor.queueStatusCommand(null) == ['bash','-c', "set -o pipefail; qstat -f -1 | { egrep '(Job Id:|job_state =)' || true; }"]
+        executor.queueStatusCommand('xxx') == ['bash','-c', "set -o pipefail; qstat -f -1 xxx | { egrep '(Job Id:|job_state =)' || true; }"]
         executor.queueStatusCommand('xxx').each { assert it instanceof String }
     }
 
