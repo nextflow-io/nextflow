@@ -20,7 +20,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
 
     final GooglePipelinesExecutor executor
     final TaskBean taskBean
-    final GooglePipelinesConfiguration pipeConfig
+    final GooglePipelinesConfiguration pipelineConfiguration
 
     final String taskName
     final String taskInstanceName
@@ -52,11 +52,11 @@ class GooglePipelinesTaskHandler extends TaskHandler {
     @PackageScope
     final List<String> unstagingCommands = []
 
-    GooglePipelinesTaskHandler(TaskRun task, GooglePipelinesExecutor executor, GooglePipelinesConfiguration pipeConfig) {
+    GooglePipelinesTaskHandler(TaskRun task, GooglePipelinesExecutor executor, GooglePipelinesConfiguration pipelineConfiguration) {
         super(task)
         this.executor = executor
         this.taskBean = new TaskBean(task)
-        this.pipeConfig = pipeConfig
+        this.pipelineConfiguration = pipelineConfiguration
 
         this.logFile = task.workDir.resolve(TaskRun.CMD_LOG)
         this.scriptFile = task.workDir.resolve(TaskRun.CMD_SCRIPT)
@@ -197,7 +197,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         sharedMount = executor.helper.configureMount(diskName, mountPath)
 
         //need the cloud-platform scope so that we can execute gsutil cp commands
-        def resources = executor.helper.configureResources(pipeConfig.vmInstanceType, pipeConfig.project, pipeConfig.zone, diskName, [GooglePipelinesHelper.SCOPE_CLOUD_PLATFORM], pipeConfig.preemptible)
+        def resources = executor.helper.configureResources(pipelineConfiguration.vmInstanceType, pipelineConfiguration.project, pipelineConfiguration.zone, diskName, [GooglePipelinesHelper.SCOPE_CLOUD_PLATFORM], pipelineConfiguration.preemptible)
 
         def stagingAction = executor.helper.createAction("$taskInstanceName-staging".toString(), fileCopyImage, ["bash", "-c", stagingScript], [sharedMount], [GooglePipelinesHelper.ActionFlags.ALWAYS_RUN, GooglePipelinesHelper.ActionFlags.IGNORE_EXIT_STATUS])
 
