@@ -40,8 +40,6 @@ class GooglePipelinesFileCopyStrategy extends SimpleFileCopyStrategy {
             handler.stagingCommands << createRemoteBinDir << remoteBinCopy
         }
 
-        //handler.stagingCommands << "ls -haltR $task.workDir".toString()
-
         //Insert this comment into the task run script to note that the staging is done differently
         "# Google pipeline staging is done in a pipeline action step that is run prior to the main pipeline action"
     }

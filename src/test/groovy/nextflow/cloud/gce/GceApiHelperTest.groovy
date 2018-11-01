@@ -134,7 +134,6 @@ class GceApiHelperTest extends Specification {
         Pre.getPreemptible()
     }
 
-    //TODO: Need to discover if there is "official" instructions how to do this correctly
     def 'should convert public ip to google dns name correctly'() {
         when:
         def ret = sharedHelper.publicIpToDns("192.168.1.254")

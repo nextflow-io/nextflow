@@ -87,7 +87,6 @@ class GooglePipelinesHelper {
         new Pipeline().setActions(actions).setResources(resources)
     }
 
-    //TODO: Do we want to configure this via nextflow config?
     Resources configureResources(String instanceType, String projectId, String zone, String diskName, List<String> scopes = null, boolean preEmptible = false) {
 
         def disk = new Disk()

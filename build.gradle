@@ -192,8 +192,8 @@ dependencies {
 
     // GCE libraries
     compile 'com.google.apis:google-api-services-compute:v1-rev199-1.25.0'
-    compile 'com.google.apis:google-api-services-genomics:v2alpha1-rev32-1.25.0'
-    compile 'com.google.cloud:google-cloud-nio:0.67.0-alpha'
+    compile 'com.google.apis:google-api-services-genomics:v2alpha1-rev37-1.25.0'
+    compile 'com.google.cloud:google-cloud-nio:0.68.0-alpha'
 
 
     // include Ivy at runtime in order to have Grape @Grab work correctly
