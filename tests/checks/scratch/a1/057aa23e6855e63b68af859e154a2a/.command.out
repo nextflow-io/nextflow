@@ -1,4 +1,0 @@
-barcode: gamma
-seq_ids: [one, three, two]
-bam : bam1 bam2 bam3
-bai : bai1 bai2 bai3

@@ -1,1 +1,0 @@
-/Users/olafurh/git/nextflow/nextflow-private/tests/checks/scratch/tmp/0a/302391429f41aed76aa48b6bd6ef38/input.1
