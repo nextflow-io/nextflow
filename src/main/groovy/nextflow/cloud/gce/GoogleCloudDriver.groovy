@@ -297,9 +297,6 @@ class GoogleCloudDriver implements CloudDriver {
         }
     }
 
-    /**
-     * @TODO: This method will be removed once all methods are implemented
-     */
     static def unsupported(String msg) {
         log.warn("UNSUPPORTED: " + msg)
     }
@@ -344,9 +341,6 @@ class GoogleCloudDriver implements CloudDriver {
         """.stripIndent().leftTrim()
     }
 
-    /**
-     * @TODO: This is mostly a copy paste from AmazonCloudDriver
-     */
     @PackageScope
     String gceStartupScript(LaunchConfig cfg) {
         def builder = []
@@ -364,9 +358,6 @@ class GoogleCloudDriver implements CloudDriver {
         builder.join('\n')
     }
 
-    /**
-     * @TODO: This is mostly a copy paste from AmazonCloudDriver
-     */
     @PackageScope
     @CompileDynamic
     String cloudInitScript(LaunchConfig cfg) {
@@ -390,9 +381,6 @@ class GoogleCloudDriver implements CloudDriver {
 
     }
 
-    /**
-     * @TODO: This is mostly a copy paste from AmazonCloudDriver
-     */
     String scriptBashEnv(LaunchConfig cfg) {
         def profile = """\
         export NXF_VER='${cfg.nextflow.version}'

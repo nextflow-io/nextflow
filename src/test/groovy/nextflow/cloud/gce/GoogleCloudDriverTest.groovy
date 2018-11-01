@@ -187,31 +187,6 @@ class GoogleCloudDriverTest extends Specification {
         then:
         script == '''
                     #!/bin/bash
-                    
-
-                    # Install java and docker.
-                    # TODO: have this configured as an option in gce config block or remove altogether
-
-                    if ! which java; then
-                      if which apt-get; then
-                        which add-apt-repository || apt-get -y install software-properties-common
-                        which add-apt-repository || apt-get -y install python-software-properties
-                        add-apt-repository -y ppa:openjdk-r/ppa
-                        apt-get update
-                        apt-get install -y openjdk-8-jdk
-                      elif which yum; then
-                        yum install -y java-1.8.0-openjdk
-                      else
-                        echo "Neither apt-get nor yum available, cannot install java"
-                      fi
-                    fi
-
-                    if ! which docker; then
-                    \tcurl -fsSL get.docker.com -o get-docker.sh
-                    \tsh get-docker.sh
-
-                    fi
-                    usermod -aG docker testUser
 
                     su - testUser << 'EndOfScript'
                     (
@@ -289,24 +264,6 @@ class GoogleCloudDriverTest extends Specification {
 
                     ) &> ~testUser/boot.log
                     EndOfScript
-                    
-                    # NFS share work folder
-                    userhome=$(echo ~testUser)
-                    sudo -u testUser mkdir -p $userhome/work
-
-                    # TODO: Have automatic NFS support configurable or remove altogether
-                    # TODO: apt-get/yum auto
-                    yum -y install nfs-utils
-                    echo "Userhome: ${userhome}"
-                    if [[ 'master' == master ]]; then
-                      systemctl enable nfs-server.service
-                      systemctl start nfs-server.service
-                      echo "${userhome}/work           *(rw,sync,no_root_squash,no_subtree_check)" >/etc/exports
-                      exportfs -a
-                    else
-                      master=$(su - testUser ./nextflow cloud list my-cluster -driver gce | grep master | sed 's/ .*//')
-                      mount $master:/$userhome/work $userhome/work
-                    fi
                     '''
                 .stripIndent().leftTrim()
 

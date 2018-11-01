@@ -10,7 +10,7 @@ import java.nio.file.Path
 /**
  * Implements BASH launcher script for Google Pipeline
  */
-//TODO: Need to use the scratch directory "more cleaner"
+//TODO: Check if we can use bucketDir instead.
 @CompileStatic
 class GooglePipelinesScriptLauncher extends BashWrapperBuilder {
 

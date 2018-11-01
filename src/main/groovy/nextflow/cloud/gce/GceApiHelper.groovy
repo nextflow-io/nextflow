@@ -20,7 +20,6 @@ import java.security.GeneralSecurityException
  *
  * @author Vilmundur Pálmason <vilmundur@wuxinextcode.com>
  */
-//TODO: Make most utility functions static. (Unit tests need to stub static methods)
 @CompileStatic
 class GceApiHelper {
     private static final String PROJECT_PREFIX = "https://www.googleapis.com/compute/v1/projects/"
@@ -198,7 +197,6 @@ class GceApiHelper {
         String[] parts = ip.split("\\.")
         if (parts.length != 4) throw new IllegalArgumentException("Expected IPv4 Public IP address instead of '" + ip + "'")
 
-        // TODO: Is this domain name stable ?
         parts.reverse().join(".") + ".bc.googleusercontent.com"
     }
 

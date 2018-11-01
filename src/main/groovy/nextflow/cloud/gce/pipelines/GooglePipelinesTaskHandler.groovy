@@ -147,8 +147,6 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         final launcher = new GooglePipelinesScriptLauncher(this.taskBean, this)
         launcher.build()
 
-        //TODO: chmod 777 is bad m'kay
-        //TODO: eliminate cd command as well as wildcard +x
         String stagingScript = """
            mkdir -p $task.workDir ;
            chmod 777 $task.workDir ;
@@ -158,7 +156,6 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         """.stripIndent().leftTrim()
 
         String mainScript = "cd ${task.workDir} ; echo \$(./${TaskRun.CMD_RUN}) | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
-        //String mainScript = "echo \$(./${TaskRun.CMD_RUN}) | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
 
         /*
          * -m = run in parallel
