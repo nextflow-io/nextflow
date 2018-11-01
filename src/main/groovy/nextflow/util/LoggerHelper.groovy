@@ -16,8 +16,11 @@
 
 package nextflow.util
 
+import nextflow.Const
+
 import java.lang.reflect.Field
 import java.nio.file.NoSuchFileException
+import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
 
 import ch.qos.logback.classic.Level
@@ -64,6 +67,10 @@ class LoggerHelper {
 
     static private String STARTUP_ERROR = 'startup failed:\n'
 
+    static private String DEFAULT_LOG_CONFIG = 'log.config'
+
+    static private String DEFAULT_LOG_FORMAT = 'MMM-dd HH:mm:ss.SSS'
+
     static private String logFileName
 
     private CliOptions opts
@@ -77,6 +84,10 @@ class LoggerHelper {
     private int minIndex = 1
 
     private int maxIndex = 9
+
+    private String logDateFormat
+
+    private Path homedir
 
     private Map<String,Level> packages = [:]
 
@@ -112,6 +123,17 @@ class LoggerHelper {
 
     LoggerHelper setMaxIndex( int value ) {
         this.maxIndex = value
+        return this
+    }
+
+    LoggerHelper setLogDateFormat(){
+        homedir = Const.APP_HOME_DIR.complete()
+        Path thisFile = homedir.resolve(DEFAULT_LOG_CONFIG)
+        this.logDateFormat = DEFAULT_LOG_FORMAT
+        if(thisFile.exists()) {
+            def logConfig = new ConfigSlurper().parse(thisFile.toFile().getText())
+            this.logDateFormat = logConfig.get('logDateFormat')
+        }
         return this
     }
 
@@ -287,7 +309,7 @@ class LoggerHelper {
 
     protected PatternLayoutEncoder createEncoder() {
         def result = new PatternLayoutEncoder()
-        result.setPattern('%d{MMM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n')
+        result.setPattern('%d{' + logDateFormat +'} [%t] %-5level %logger{36} - %msg%n')
         result.setContext(loggerContext)
         result.start()
         return result
@@ -311,6 +333,7 @@ class LoggerHelper {
                 .setDaemon(launcher.isDaemon())
                 .setRolling(true)
                 .setSyslog(launcher.options.syslog)
+                .setLogDateFormat()
                 .setup()
     }
 
@@ -319,6 +342,7 @@ class LoggerHelper {
                 .setDaemon(daemon)
                 .setRolling(true)
                 .setSyslog(opts.syslog)
+                .setLogDateFormat()
                 .setup()
     }
 
