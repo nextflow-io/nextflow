@@ -7,6 +7,7 @@ import nextflow.executor.SimpleFileCopyStrategy
 import nextflow.processor.TaskBean
 
 import java.nio.file.Path
+import java.nio.file.Paths
 
 @Slf4j
 @CompileStatic
@@ -24,19 +25,46 @@ class GooglePipelinesFileCopyStrategy extends SimpleFileCopyStrategy {
     @Override
     String getStageInputFilesScript(Map<String, Path> inputFiles) {
 
-        def stagingCommands = inputFiles.collect { stageName, storePath ->
+        /* TODO:  gsutil can't create intermediate directories on the local system.  We need to create them by hand using mkdir -p and some magic.......
+         * TODO:  if that fails then it's time summon the hackdragon
+         */
+
+        def createDirectories  = []
+        def stagingCommands = []
+
+        inputFiles.each { stageName, storePath ->
             def absStorePath = storePath.toAbsolutePath()
-            "gsutil -m  -q cp -P -r ${absStorePath.toUriString()} ${task.workDir}/${absStorePath.toString().endsWith(stageName) ? "" : stageName}".toString()
+            def storePathIsDir = absStorePath.isDirectory()
+            def stagePath = Paths.get(stageName)
+            def parent = stagePath.parent
+
+            //check if we need to create paretn dirs for stagin file since gsutil doesn't create them for us
+            if(parent) {
+                createDirectories << "mkdir -p $workDir/$parent".toString()
+            }
+
+            if(storePathIsDir) {
+                stagingCommands << "gsutil -m -q cp -P -r ${absStorePath.toUriString()}/ $workDir".toString()
+                //check if we need to move the directory (gsutil doesn't support renaming directories on copy)
+                if(parent || !absStorePath.toString().endsWith(stageName)) {
+                    def newLocation = "$workDir/$stageName"
+                    stagingCommands << "mv $workDir/${absStorePath.name} $newLocation".toString()
+                }
+            } else {
+                stagingCommands << "gsutil -m -q cp -P ${absStorePath.toUriString()} $workDir/$stageName".toString()
+            }
         }
 
-        log.debug "[GOOGLE PIPELINE] Constructed the following file copy staging commands: $stagingCommands"
-
+        handler.stagingCommands.addAll(createDirectories)
         handler.stagingCommands.addAll(stagingCommands)
+
+        log.debug "[GOOGLE PIPELINE] Constructed the following directory creation commands: $createDirectories"
+        log.debug "[GOOGLE PIPELINE] Constructed the following file copy staging commands: $stagingCommands"
 
         //copy the remoteBinDir if it ia defined
         if(handler.pipelineConfiguration.remoteBinDir) {
-            def createRemoteBinDir = "mkdir -p ${task.workDir}/nextflow-bin".toString()
-            def remoteBinCopy = "gsutil -m -q cp -P -r ${handler.pipelineConfiguration.remoteBinDir.toUriString()}/* ${task.workDir}/nextflow-bin".toString()
+            def createRemoteBinDir = "mkdir -p $workDir/nextflow-bin".toString()
+            def remoteBinCopy = "gsutil -m -q cp -P -r ${handler.pipelineConfiguration.remoteBinDir.toUriString()}/* $workDir/nextflow-bin".toString()
             handler.stagingCommands << createRemoteBinDir << remoteBinCopy
         }
 
@@ -48,7 +76,7 @@ class GooglePipelinesFileCopyStrategy extends SimpleFileCopyStrategy {
     String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
 
         def unstagingCommands = outputFiles.collect {
-            "gsutil -m -q cp -P -r -c ${task.workDir}/$it ${task.workDir.toUriString()} || true".toString()
+            "gsutil -m -q cp -P -r -c $workDir/$it ${workDir.toUriString()}".toString()
         }
 
         log.debug "[GOOGLE PIPELINE] Constructed the following file copy staging commands: $unstagingCommands"
@@ -84,8 +112,8 @@ class GooglePipelinesFileCopyStrategy extends SimpleFileCopyStrategy {
             copy.remove('PATH')
         // when a remote bin directory is provide managed it properly
         if( handler.pipelineConfiguration.remoteBinDir ) {
-            result << "chmod +x $task.workDir/nextflow-bin/*\n"
-            result << "export PATH=$task.workDir/nextflow-bin:\$PATH\n"
+            result << "chmod +x $workDir/nextflow-bin/*\n"
+            result << "export PATH=$workDir/nextflow-bin:\$PATH\n"
         }
         // finally render the environment
         final envSnippet = super.getEnvScript(copy,null)
