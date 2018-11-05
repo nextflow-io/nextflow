@@ -52,10 +52,10 @@ By default Nextflow creates in each GCE instance a user with the same name as th
     cloud {
         userName = 'the-user-name'
         keyFile = '/path/to/ssh/key.pub'
+        driver = 'gce'
     }
 
-If you want to use a *key-pair* defined in your AWS account and the default user configured in the AMI, specify the
-attribute ``keyName`` in place of ``keyFile`` and the name of the existing user specifying the ``userName`` attribute.
+.. note:: The configuration of your instance on GCP requires a driver parameter as shown in the example above.
 
 
 Cluster deployment
@@ -63,14 +63,12 @@ Cluster deployment
 
 Once you have defined the configuration settings in the ``nextflow.config`` file you can create the cloud cluster by using the following command::
 
-    ./nextflow cloud create my-cluster -c <num-of-nodes> -driver gce
+    ./nextflow cloud create my-cluster -c <num-of-nodes>
 
 The string ``my-cluster`` identifies the cluster instance. Replace it with a name of your choice.
 
 Finally replace ``<num-of-nodes>`` with the actual number of instances that will make-up the cluster. One node is created as master, the remaining as workers. If the option ``-c`` is omitted only the **master** node
 is created.
-
-Note that there is ``-driver`` parameter at the end of the command that indicates that the GCE driver should be used.
 
 .. warning:: You will be charged accordingly the type and the number of instances chosen.
 
@@ -131,7 +129,7 @@ The above example enables automatic cluster scale-out i.e. new instances are aut
 cluster when tasks remain too long in wait status because there aren't enough computing resources available. The
 ``maxInstances`` attribute defines the upper limit to which the cluster can grow.
 
-By default unused instances are not removed when are not utilised. If you want to enable automatic cluster scale-down
+By default unused instances are not removed when they are not utilised. If you want to enable automatic cluster scale-down
 specify the ``terminateWhenIdle`` attribute in the ``autoscale`` configuration group.
 
 It is also possible to define a different AMI image ID, type and spot price for instances launched by the Nextflow autoscaler.
