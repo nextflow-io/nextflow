@@ -48,7 +48,6 @@ class GooglePipelinesExecutor extends Executor {
 
         pipelineConfig = validateConfiguration()
 
-        log.debug "[GOOGLE PIPELINE] Pipeline config: $pipelineConfig"
         log.debug "[GOOGLE PIPELINE] Finished registration for executor $name"
     }
 

@@ -10,7 +10,6 @@ import java.nio.file.Path
 /**
  * Implements BASH launcher script for Google Pipeline
  */
-//TODO: Check if we can use bucketDir instead.
 @CompileStatic
 class GooglePipelinesScriptLauncher extends BashWrapperBuilder {
 
@@ -19,7 +18,6 @@ class GooglePipelinesScriptLauncher extends BashWrapperBuilder {
 
         // enable the copying of output file to the GS work dir
         scratch = "/work/scratch/"
-
 
         // include task script as an input to force its staging in the container work directory
         bean.inputFiles[TaskRun.CMD_SCRIPT] = bean.workDir.resolve(TaskRun.CMD_SCRIPT)
