@@ -243,7 +243,7 @@ class GoogleCloudDriverTest extends Specification {
                     #
                     version="v0.23.0"
                     
-                    download_url=${NEXFLOW_DOWNLOAD_URL:-http://www.nextflow.io/releases}
+                    download_url=${NEXTFLOW_DOWNLOAD_URL:-http://www.nextflow.io/releases}
                     curl -fsSL ${download_url}/${version}/nextflow  > $HOME/nextflow
                     chmod +x $HOME/nextflow
                     $HOME/nextflow -download
