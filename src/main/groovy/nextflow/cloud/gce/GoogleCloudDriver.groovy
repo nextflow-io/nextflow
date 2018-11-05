@@ -403,8 +403,8 @@ class GoogleCloudDriver implements CloudDriver {
 
         profile += 'export GOOGLE_APPLICATION_CREDENTIALS='+GCE_CREDENTIAL_FILE+"\n"
 
-        if (System.getenv("NEXFLOW_DOWNLOAD_URL")) {
-            profile += 'export NEXFLOW_DOWNLOAD_URL='+System.getenv("NEXFLOW_DOWNLOAD_URL")+"\n"
+        if (System.getenv("NEXTFLOW_DOWNLOAD_URL")) {
+            profile += 'export NEXTFLOW_DOWNLOAD_URL='+System.getenv("NEXTFLOW_DOWNLOAD_URL")+"\n"
         }
 
         return profile
