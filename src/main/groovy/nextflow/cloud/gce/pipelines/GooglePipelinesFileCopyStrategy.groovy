@@ -25,10 +25,6 @@ class GooglePipelinesFileCopyStrategy extends SimpleFileCopyStrategy {
     @Override
     String getStageInputFilesScript(Map<String, Path> inputFiles) {
 
-        /* TODO:  gsutil can't create intermediate directories on the local system.  We need to create them by hand using mkdir -p and some magic.......
-         * TODO:  if that fails then it's time summon the hackdragon
-         */
-
         def createDirectories  = []
         def stagingCommands = []
 
@@ -38,7 +34,7 @@ class GooglePipelinesFileCopyStrategy extends SimpleFileCopyStrategy {
             def stagePath = Paths.get(stageName)
             def parent = stagePath.parent
 
-            //check if we need to create paretn dirs for stagin file since gsutil doesn't create them for us
+            //check if we need to create parent dirs for staging file since gsutil doesn't create them for us
             if(parent) {
                 createDirectories << "mkdir -p $workDir/$parent".toString()
             }

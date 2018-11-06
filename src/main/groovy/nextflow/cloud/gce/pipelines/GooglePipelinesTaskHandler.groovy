@@ -5,9 +5,11 @@ import com.google.api.services.genomics.v2alpha1.model.Metadata
 import com.google.api.services.genomics.v2alpha1.model.Mount
 import com.google.api.services.genomics.v2alpha1.model.Operation
 import com.google.api.services.genomics.v2alpha1.model.Pipeline
+import com.google.rpc.Code
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
@@ -35,7 +37,6 @@ class GooglePipelinesTaskHandler extends TaskHandler {
     private final Path stubFile
     private final Path traceFile
 
-    //Constants
     final static String mountPath = "/work"
     final static String diskName = "nf-pipeline-work"
     final static String fileCopyImage = "google/cloud-sdk:alpine"
@@ -106,6 +107,16 @@ class GooglePipelinesTaskHandler extends TaskHandler {
             task.stdout = outputFile
             task.exitStatus = xs != null ? xs :  operation.getError()?.getCode()
             task.stderr = xs  != null ?  errorFile : operation.getError()?.getMessage()
+
+            /* If we get error 10 or 14 from the pipelines api we'll retry
+             * since it means that the vm instance was probably preemptied.
+             *
+             * This retry method is a bit crude, find a cleaner method if it is available
+             */
+            if(!xs && (task.exitStatus == 10 || task.exitStatus == 14)) {
+                task.config.setProperty("maxRetries",task.failCount+1)
+                task.config.setProperty("errorStrategy","retry")
+            }
             status = TaskStatus.COMPLETED
             return true
         } else
@@ -186,9 +197,9 @@ class GooglePipelinesTaskHandler extends TaskHandler {
             ${unstagingCommands.join(" ; ")}                        
         """.stripIndent().leftTrim()
 
-        log.debug "Staging script for task $task.name -> $stagingScript"
-        log.debug "Main script for task $task.name -> $mainScript"
-        log.debug "Unstaging script for task $task.name -> $unstagingScript"
+        log.debug "Staging script for task '$task.name' -> $stagingScript"
+        log.debug "Main script for task '$task.name' -> $mainScript"
+        log.debug "Unstaging script for task '$task.name' -> $unstagingScript"
 
         //Create the mount for out work files.
         sharedMount = executor.helper.configureMount(diskName, mountPath)
@@ -205,7 +216,8 @@ class GooglePipelinesTaskHandler extends TaskHandler {
 
         taskPipeline = executor.helper.createPipeline([stagingAction, mainAction, unstagingAction], resources)
 
-        operation = executor.helper.runPipeline(taskPipeline)
+        //Run the operation and att a label with the name of the task
+        operation = executor.helper.runPipeline(taskPipeline,["taskName" : taskName])
 
         log.trace "[GOOGLE PIPELINE] Submitted task '$task.name. Assigned Pipeline operation name = '${operation.getName()}'"
     }

@@ -123,8 +123,8 @@ class GooglePipelinesHelper {
         genomicsClient.projects().operations().cancel(operation.getName(), new CancelOperationRequest()).execute()
     }
 
-    Operation runPipeline(Pipeline pipeline) {
+    Operation runPipeline(Pipeline pipeline, Map<String,String> labels = [:]) {
         init()
-        genomicsClient.pipelines().run(new RunPipelineRequest().setPipeline(pipeline)).execute()
+        genomicsClient.pipelines().run(new RunPipelineRequest().setPipeline(pipeline).setLabels(labels)).execute()
     }
 }
