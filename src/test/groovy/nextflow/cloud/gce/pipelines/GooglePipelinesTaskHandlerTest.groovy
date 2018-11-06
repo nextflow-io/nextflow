@@ -71,7 +71,7 @@ class GooglePipelinesTaskHandlerTest extends Specification {
 
         then:
         1 * stubExecutor.helper.createPipeline(_,_) >> new Pipeline()
-        1* stubExecutor.helper.runPipeline(_) >> new Operation().setName("testOperation")
+        1* stubExecutor.helper.runPipeline(_,_) >> new Operation().setName("testOperation")
         handler.stagingCommands.size() == 3
         handler.unstagingCommands.size() == 4
     }
