@@ -810,7 +810,8 @@ The following methods can be used on a file variable created by using the ``file
 Name                Description
 ==================  ================
 getName             Gets the file name e.g. ``/some/path/file.txt`` -> ``file.txt``
-getBaseName         Gets the file name without its extension e.g. ``/some/path/file.txt`` -> ``file``
+getBaseName         Gets the file name without its extension e.g. ``/some/path/file.tar.gz`` -> ``file.tar``
+getSimpleName       Gets the file name without any extension e.g. ``/some/path/file.tar.gz`` -> ``file``
 getExtension        Gets the file extension e.g. ``/some/path/file.txt`` -> ``txt``
 getParent           Gets the file parent path e.g. ``/some/path/file.txt`` -> ``/some/path``
 size                Gets the file size in bytes
