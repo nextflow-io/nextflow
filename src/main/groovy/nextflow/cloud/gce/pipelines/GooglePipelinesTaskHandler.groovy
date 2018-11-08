@@ -203,7 +203,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         sharedMount = executor.helper.configureMount(diskName, mountPath)
 
         //need the cloud-platform scope so that we can execute gsutil cp commands
-        def resources = executor.helper.configureResources(pipelineConfiguration.vmInstanceType, pipelineConfiguration.project, pipelineConfiguration.zone, diskName, [GooglePipelinesHelper.SCOPE_CLOUD_PLATFORM], pipelineConfiguration.preemptible)
+        def resources = executor.helper.configureResources(pipelineConfiguration.vmInstanceType, pipelineConfiguration.project, pipelineConfiguration.zone,pipelineConfiguration.region, diskName, [GooglePipelinesHelper.SCOPE_CLOUD_PLATFORM], pipelineConfiguration.preemptible)
 
         def stagingAction = executor.helper.createAction("$taskInstanceName-staging".toString(), fileCopyImage, ["bash", "-c", stagingScript], [sharedMount], [GooglePipelinesHelper.ActionFlags.ALWAYS_RUN, GooglePipelinesHelper.ActionFlags.IGNORE_EXIT_STATUS])
 

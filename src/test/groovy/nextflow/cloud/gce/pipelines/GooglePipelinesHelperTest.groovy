@@ -107,21 +107,24 @@ class GooglePipelinesHelperTest extends Specification {
         given:
         def type = "testType"
         def projectId = "testProject"
-        def zone = "testZone"
+        def zone = ["testZone1","testZone2"]
+        def region = ["testRegion1","testRegion2"]
         def diskName = "testDisk"
         def scopes = ["scope1","scope2"]
         def preEmptible = true
         def helper = new GooglePipelinesHelper()
 
         when:
-        def resources1 = helper.configureResources(type,projectId,zone,diskName,scopes,preEmptible)
-        def resources2 = helper.configureResources(type,projectId,zone,diskName)
+        def resources1 = helper.configureResources(type,projectId,zone,null,diskName,scopes,preEmptible)
+        def resources2 = helper.configureResources(type,projectId,null,region,diskName,scopes,preEmptible)
+        def resources3 = helper.configureResources(type,projectId,zone,null,diskName)
 
         then:
         with(resources1) {
             getVirtualMachine().getMachineType() == type
             getProjectId() == projectId
-            getZones() == [zone]
+            getZones() == zone
+            getRegions() == null
             getVirtualMachine().getDisks().get(0).getName() == diskName
             getVirtualMachine().getServiceAccount().getScopes() == scopes
             getVirtualMachine().getPreemptible() == preEmptible
@@ -130,7 +133,17 @@ class GooglePipelinesHelperTest extends Specification {
         with(resources2) {
             getVirtualMachine().getMachineType() == type
             getProjectId() == projectId
-            getZones() == [zone]
+            getZones() == null
+            getRegions() == region
+            getVirtualMachine().getDisks().get(0).getName() == diskName
+            getVirtualMachine().getServiceAccount().getScopes() == scopes
+            getVirtualMachine().getPreemptible() == preEmptible
+        }
+
+        with(resources3) {
+            getVirtualMachine().getMachineType() == type
+            getProjectId() == projectId
+            getZones() == zone
             getVirtualMachine().getDisks().get(0).getName() == diskName
             !getVirtualMachine().getServiceAccount().getScopes()
             !getVirtualMachine().getPreemptible()

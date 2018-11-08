@@ -87,7 +87,7 @@ class GooglePipelinesHelper {
         new Pipeline().setActions(actions).setResources(resources)
     }
 
-    Resources configureResources(String instanceType, String projectId, String zone, String diskName, List<String> scopes = null, boolean preEmptible = false) {
+    Resources configureResources(String instanceType, String projectId, List<String> zone,List<String> region, String diskName, List<String> scopes = null, boolean preEmptible = false) {
 
         def disk = new Disk()
         disk.setName(diskName)
@@ -105,7 +105,8 @@ class GooglePipelinesHelper {
 
         new Resources()
                 .setProjectId(projectId)
-                .setZones([zone])
+                .setZones(zone)
+                .setRegions(region)
                 .setVirtualMachine(vm)
     }
 

@@ -12,7 +12,7 @@ import spock.lang.Specification
 class GooglePipelinesTaskHandlerTest extends Specification {
 
     @Shared
-    GooglePipelinesConfiguration pipeConfig = new GooglePipelinesConfiguration("testProject","testZone","instanceType")
+    GooglePipelinesConfiguration pipeConfig = new GooglePipelinesConfiguration("testProject",["testZone"],["testRegion"],"instanceType")
 
     @Shared
     UUID uuid = new UUID(4,4)
