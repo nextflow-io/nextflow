@@ -5,11 +5,9 @@ import com.google.api.services.genomics.v2alpha1.model.Metadata
 import com.google.api.services.genomics.v2alpha1.model.Mount
 import com.google.api.services.genomics.v2alpha1.model.Operation
 import com.google.api.services.genomics.v2alpha1.model.Pipeline
-import com.google.rpc.Code
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessUnrecoverableException
-import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
