@@ -48,6 +48,7 @@ class GooglePipelinesExecutor extends Executor {
 
         pipelineConfig = validateConfiguration()
 
+        log.debug "[GOOGLE PIPELINE] Pipelines Configuration: '$pipelineConfig'."
         log.debug "[GOOGLE PIPELINE] Finished registration for executor $name"
     }
 
@@ -70,7 +71,7 @@ class GooglePipelinesExecutor extends Executor {
         }
 
         //Check for the existence of all required configuration for our executor
-        def requiredConfig = ["gce.project", "gce.zone"]
+        def requiredConfig = ["gce.project"]
 
         requiredConfig.each {
             if (!session.config.navigate(it)) {
@@ -78,6 +79,19 @@ class GooglePipelinesExecutor extends Executor {
                 throw new AbortOperationException("Required config value '$it' for executor $name is not defined. Please add it to your process or nextflow configuration file.")
             }
         }
+
+        //check if we have one of the mutual exclusive zone or region specified
+        if(!session.config.navigate("gce.zone") && !session.config.navigate("gce.region")){
+            session.abort()
+            throw new AbortOperationException("Missing configuration value 'gce.zone' or 'gce.region'")
+        }
+
+        //check if we have one of the mutual exclusive zone or region specified
+        if(session.config.navigate("gce.zone") && session.config.navigate("gce.region")){
+            session.abort()
+            throw new AbortOperationException("You can't specify both 'gce.zone' and 'gce.region' configuration parameters. Please remove one of them from your configuration.")
+        }
+
 
         def path = session.config.navigate('env.PATH')
         if( path ) {
@@ -95,9 +109,14 @@ class GooglePipelinesExecutor extends Executor {
             remoteBinDir = FilesEx.copyTo(session.binDir, cloudPath)
         }
 
+        def zones = (session.config.navigate("gce.zone") as String)?.split(",")?.toList()
+        def regions = (session.config.navigate("gce.region") as String)?.split(",")?.toList()
+
+
         return new GooglePipelinesConfiguration(
                 session.config.navigate("gce.project") as String,
-                session.config.navigate("gce.zone") as String,
+                zones,
+                regions,
                 session.config.navigate("cloud.instanceType") as String,
                 remoteBinDir,
                 session.config.navigate("cloud.preemptible") as boolean
