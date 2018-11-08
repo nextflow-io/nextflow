@@ -191,7 +191,7 @@ Create a nextflow.config file in the project root directory. The config must spe
 * process.executor - **googlepipelines**
 * cloud.instanceType - **valid GCE instance type**
 * gce.project - **GCP project to run in**
-* gce.zone - **GCP zone to run in**
+* gce.zone or gce.region - You need to specify either one, *not* both. You can specify multiple zones or regions by separating them by a comma (,).
 
 Example::
 
@@ -207,7 +207,7 @@ Example::
      
     gce {
         project = 'your-project-id'
-        zone = 'us-central1-f'
+        zone = 'us-central1-f,us-central-1-b'
     }
 
 Note that all tasks defined in your Nextflow scripts must define a container to run in, or you can configure it globally with the process.container option in your ``nextflow.config``::
