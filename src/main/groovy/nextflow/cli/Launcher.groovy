@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.cli
@@ -229,6 +225,10 @@ class Launcher {
                 normalized << '-'
             }
 
+            else if( current == '-with-weblog' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
+            }
+
             else if( (current == '-N' || current == '-with-notification') && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << 'true'
             }
@@ -278,10 +278,10 @@ class Launcher {
         return normalized
     }
 
-    private boolean isValue( String x ) {
+    static private boolean isValue( String x ) {
         if( !x ) return false                   // an empty string -> not a value
         if( x.size() == 1 ) return true         // a single char is not an option -> value true
-        !x.startsWith('-') || x.isNumber()      // if not start with `-` or is a number -> value true
+        !x.startsWith('-') || x.isNumber() || x.contains(' ')
     }
 
     CmdBase findCommand( String cmdName ) {
@@ -449,7 +449,11 @@ class Launcher {
         }
 
         catch( ConfigParseException e )  {
-            log.error("${e.message}\n\n${e.cause?.message?.toString()?.indent('  ')}", e.cause ?: e)
+            def message = e.message
+            if( e.cause?.message ) {
+                message += "\n\n${e.cause.message.toString().indent('  ')}"
+            }
+            log.error(message, e.cause ?: e)
             return(1)
         }
 

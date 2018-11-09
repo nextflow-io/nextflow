@@ -52,7 +52,7 @@ and many other runtime metrics. You can see an example below:
 
 
 .. note:: Nextflow collect these metrics running a background process for each job in the target environment.
-  Make sure the following tools are available ``ps``, ``date``, ``sed``, ``egrep``, ``awk`` in the system where
+  Make sure the following tools are available ``ps``, ``date``, ``sed``, ``grep``, ``egrep``, ``awk`` in the system where
   the jobs are executed. Moreover some of these metrics are not reported when using a Mac OSX system. See the note
   message about that in the `Trace report`_ below.
 
@@ -220,3 +220,108 @@ The DAG produced by Nextflow for the `Shootstrap <https://github.com/cbcrg/shoot
 
 .. image:: images/dag.png
 
+.. _weblog-service:
+
+Weblog via HTTP
+===============
+
+Nextflow is able to send detailed workflow execution metadata and runtime statistics to a HTTP endpoint.
+To enable this feature use  the ``-with-weblog`` as shown below::
+
+  nextflow run <pipeline name> -with-weblog [url]
+
+Workflow events are sent as HTTP POST requests to the given URL. The message is formatted using the
+following JSON structure::
+
+   {
+        "runName": <run name>,
+        "runId": <uuid>,
+        "event": <started|process_submitted|process_started|process_completed|error|completed>,
+        "utcTime": <UTC timestamp>,
+        "trace": { ... }
+   }
+
+The JSON object contains the following attributes:
+
+================== ================
+Attribute          Description
+================== ================
+runName            The workflow execution run name.
+runId              The workflow execution unique ID.
+event              The workflow execution event. One of ``started``, ``process_submitted``, ``process_started``, ``process_completed``, ``error``, ``completed``.
+utcTime            The UTC timestamp in ISO 8601 format.
+trace              A process runtime information as described in the :ref:`trace fields<trace-fields>` section. This attribute is only provided for the following events: ``process_submitted``, ``process_started``, ``process_completed``, ``error``.
+================== ================
+
+.. warning::
+  The content of the ``trace`` attribute depends on the settings for the `Trace report <trace-report>`_ defined in the
+  ``nextflow.config`` file. See the :ref:`Trace configuration<config-trace>` section to learn more.
+
+
+Weblog Submit example message
+-----------------------------
+
+When a workflow execution is a started a message like the following is posted to the specified end-point::
+
+
+  {
+    "runName": "friendly_pesquet",
+    "runId": "170aa09c-105f-49d0-99b4-8eb6a146e4a7",
+    "event": "started",
+    "utcTime": "2018-10-07T11:42:08Z"
+  }
+
+
+Weblog Completed example message
+--------------------------------
+
+Once a process is completed, a message like the following is posted to the specified end-point::
+
+  {
+    "runName": "friendly_pesquet",
+    "runId": "170aa09c-105f-49d0-99b4-8eb6a146e4a7",
+    "event": "process_completed",
+    "utcTime": "2018-10-07T11:45:30Z",
+    "trace": {
+        "task_id": 2,
+        "status": "COMPLETED",
+        "hash": "a1/0024fd",
+        "name": "make_ot_config",
+        "exit": 0,
+        "submit": 1538912529498,
+        "start": 1538912529629,
+        "process": "make_ot_config",
+        "tag": null,
+        "module": [
+
+        ],
+        "container": "nfcore/hlatyping:1.1.1",
+        "attempt": 1,
+        "script": "\n    configbuilder --max-cpus 2 --solver glpk > config.ini\n    ",
+        "scratch": null,
+        "workdir": "/home/sven1103/git/hlatyping-workflow/work/a1/0024fd028375e2b601aaed44d112e3",
+        "queue": null,
+        "cpus": 1,
+        "memory": 7516192768,
+        "disk": null,
+        "time": 7200000,
+        "env": "PATH=/home/sven1103/git/hlatyping-workflow/bin:$PATH\n",
+        "error_action": null,
+        "complete": 1538912730599,
+        "duration": 201101,
+        "realtime": 69,
+        "%cpu": 0.0,
+        "%mem": 0.1,
+        "vmem": 54259712,
+        "rss": 10469376,
+        "peak_vmem": 20185088,
+        "peak_rss": 574972928,
+        "rchar": 7597,
+        "wchar": 162,
+        "syscr": 16,
+        "syscw": 4083712,
+        "read_bytes": 4096,
+        "write_bytes": 0,
+        "native_id": 27185
+    }
+  }

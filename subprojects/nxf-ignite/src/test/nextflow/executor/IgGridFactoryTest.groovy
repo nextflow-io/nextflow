@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.executor
@@ -29,16 +25,14 @@ import spock.lang.Specification
  */
 class IgGridFactoryTest extends Specification {
 
-    def test() {
+    def 'should set tcp parameters'() {
         when:
-        def cfg = new IgGridFactory('master', [cluster: [tcp:[
+        def cfg = new IgGridFactory('master', [cluster: [ tcp:[
                 localAddress:'127.1.2.3',
                 localPort:8888,
                 ackTimeout: '11s',
                 socketTimeout: '30s',
                 maxAckTimeout: 55_000,
-                heartbeatFrequency: '3sec',
-                maxMissedHeartbeats: 3,
                 reconnectCount: 20,
                 networkTimeout: '10s',
                 joinTimeout: 100
@@ -49,13 +43,25 @@ class IgGridFactoryTest extends Specification {
         tcp.getLocalAddress() == '127.1.2.3'
         //tcp.getLocalPort() == 8888
         tcp.getAckTimeout() == 11_000       // 5 sec
-        tcp.getHeartbeatFrequency() == 3_000    // 2 sec
-        tcp.getMaxMissedHeartbeats() == 3       // 1
         tcp.getReconnectCount() == 20       // def: 10
         tcp.getNetworkTimeout() == 10_000   // def: 5 sec
         tcp.getSocketTimeout() == 30_000   // def: 2 sec
         tcp.getMaxAckTimeout() == 55_000    // def: 600 sec
         tcp.getJoinTimeout() == 100         // def: 0
+
+    }
+
+    def 'should set failure detection parameters'() {
+
+        when:
+        def cfg = new IgGridFactory('master', [cluster: [
+                failureDetectionTimeout: '20 sec',
+                clientFailureDetectionTimeout: '40 sec'
+        ]]).config()
+        
+        then:
+        cfg.getFailureDetectionTimeout() == 20_000
+        cfg.getClientFailureDetectionTimeout() == 40_000
 
     }
 

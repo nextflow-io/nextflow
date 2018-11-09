@@ -1,24 +1,21 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.k8s.client
+
 import javax.net.ssl.HostnameVerifier
 import javax.net.ssl.HttpsURLConnection
 import javax.net.ssl.SSLContext
@@ -33,11 +30,9 @@ import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 
 import groovy.json.JsonOutput
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.yaml.snakeyaml.Yaml
-
 /**
  * Kubernetes API client
  *
@@ -208,8 +203,8 @@ class K8sClient {
      *
      * @param podName The pod name
      * @return
-     *  A {@link Map} representing the pod state at shown below
-     *  <code>
+     *      A {@link Map} representing the container state object as shown below
+     *      <code>
      *       {
      *                "terminated": {
      *                    "exitCode": 127,
@@ -219,27 +214,73 @@ class K8sClient {
      *                    "finishedAt": "2018-01-12T22:04:25Z",
      *                    "containerID": "docker://730ef2e05be72ffc354f2682b4e8300610812137b9037b726c21e5c4e41b6dda"
      *                }
-     *  </code>
+     *      </code>
+     *      See the following link for details https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.10/#containerstate-v1-core
+     *      An empty map is return if the pod is a `Pending` status and the container state is not
+     *      yet available
+     *
+     *
      */
-    @CompileDynamic
     Map podState( String podName ) {
         assert podName
 
         final resp = podStatus(podName)
+        final status = resp.status as Map
+        final containerStatuses = status?.containerStatuses as List<Map>
 
-        if( resp.status?.containerStatuses instanceof List && resp.status.containerStatuses.size()>0 ) {
-            final container = resp.status.containerStatuses.get(0)
+        if( containerStatuses?.size()>0 ) {
+            final container = containerStatuses.get(0)
             if( container.name != podName )
-                throw new K8sResponseException("Invalid pod status -- name does not match", resp)
+                throw new K8sResponseException("K8s invalid pod status (name does not match)", resp)
 
             if( !container.state )
-                throw new K8sResponseException("Invalid pod status -- missing state object", resp)
+                throw new K8sResponseException("K8s invalid pod status (missing state object)", resp)
 
-            return container.state
+            final state = container.state as Map
+            if( state.waiting instanceof Map ) {
+                def waiting = state.waiting as Map
+                checkInvalidWaitingState(waiting, resp)
+            }
+            return state
         }
-        else
-            throw new K8sResponseException("Invalid pod status -- missing container statuses", resp)
+
+        if( status?.phase == 'Pending' && status.conditions instanceof List ) {
+            final allConditions = status.conditions as List<Map>
+            final cond = allConditions.find { cond -> cond.type == 'PodScheduled' }
+            if( cond.reason == 'Unschedulable' ) {
+                def message = "K8s pod cannot be scheduled"
+                if( cond.message ) message += " -- $cond.message"
+                def cause = new K8sResponseException(resp)
+                throw new PodUnschedulableException(message,cause)
+            }
+            // undetermined status -- return an empty response
+            return Collections.emptyMap()
+        }
+
+        throw new K8sResponseException("K8s invalid pod status (missing container status)", resp)
     }
+
+    protected void checkInvalidWaitingState( Map waiting, K8sResponseJson resp ) {
+        if( waiting.reason == 'ErrImagePull' || waiting.reason == 'ImagePullBackOff') {
+            def message = "K8s pod image cannot be pulled"
+            if( waiting.message ) message += " -- $waiting.message"
+            final cause = new K8sResponseException(resp)
+            throw new PodUnschedulableException(message, cause)
+        }
+        if( waiting.reason == 'CreateContainerConfigError' ) {
+            def message = "K8s pod configuration failed"
+            if( waiting.message ) message += " -- $waiting.message"
+            final cause = new K8sResponseException(resp)
+            throw new PodUnschedulableException(message, cause)
+        }
+        if( waiting.reason =~ /.+Error$/ ) {
+            def message = "K8s pod waiting on unknown error state"
+            if( waiting.message ) message += " -- $waiting.message"
+            final cause = new K8sResponseException(resp)
+            throw new PodUnschedulableException(message, cause)
+        }
+    }
+
     /*
      * https://v1-8.docs.kubernetes.io/docs/api-reference/v1.8/#read-log
      */
@@ -278,9 +319,7 @@ class K8sClient {
             sslContext.init(config.keyManagers, trustManagers, new SecureRandom());
             conn.setSSLSocketFactory(sslContext.getSocketFactory())
         }
-        else {
-            conn.setSSLSocketFactory(null)
-        }
+
         if( hostnameVerifier )
             conn.setHostnameVerifier(hostnameVerifier)
     }

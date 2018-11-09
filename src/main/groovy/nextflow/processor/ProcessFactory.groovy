@@ -1,28 +1,24 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.processor
 
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.executor.AwsBatchExecutor
+import nextflow.cloud.aws.batch.AwsBatchExecutor
 import nextflow.executor.CondorExecutor
 import nextflow.executor.CrgExecutor
 import nextflow.executor.Executor
@@ -31,6 +27,7 @@ import nextflow.executor.LsfExecutor
 import nextflow.executor.NopeExecutor
 import nextflow.executor.NqsiiExecutor
 import nextflow.executor.PbsExecutor
+import nextflow.executor.PbsProExecutor
 import nextflow.executor.SgeExecutor
 import nextflow.executor.SlurmExecutor
 import nextflow.executor.SupportedScriptTypes
@@ -61,6 +58,7 @@ class ProcessFactory {
             'uge':  SgeExecutor,
             'lsf': LsfExecutor,
             'pbs': PbsExecutor,
+            'pbspro': PbsProExecutor,
             'slurm': SlurmExecutor,
             'crg': CrgExecutor,
             'bsc': LsfExecutor,
@@ -87,9 +85,9 @@ class ProcessFactory {
         this.config = config != null ? config : session.config
 
         // discover non-core executors
-        for( Class<Executor> exec : ServiceDiscover.load(Executor).iterator() ) {
-            log.debug "Discovered executor class: ${exec.name}"
-            executorsMap.put(findNameByClass(exec), exec.name)
+        for( Class<Executor> clazz : ServiceDiscover.load(Executor) ) {
+            log.debug "Discovered executor class: ${clazz.name}"
+            executorsMap.put(findNameByClass(clazz), clazz)
         }
     }
 
@@ -205,7 +203,7 @@ class ProcessFactory {
         Map legacySettings = null
         if( config.process['$'+name] instanceof Map ) {
             legacySettings = (Map)config.process['$'+name]
-            //log.warn "Process configuration syntax \$<process-name> has been deprecated -- Replace `process.\$$name = .. ` with a configuration label annotation"
+            log.warn "Process configuration syntax \$processName has been deprecated -- Replace `process.\$$name = <value>` with a process selector"
         }
 
         // -- the config object
@@ -239,6 +237,12 @@ class ProcessFactory {
 
         // -- Apply defaults
         processConfig.applyConfigDefaults( config.process as Map )
+
+        // -- check for conflicting settings
+        if( processConfig.scratch && processConfig.stageInMode == 'rellink' ) {
+            log.warn("Directives `scratch` and `stageInMode=rellink` conflict each other -- Enforcing default stageInMode for process `$name`")
+            processConfig.remove('stageInMode')
+        }
 
         // -- load the executor to be used
         def execName = getExecutorName(processConfig) ?: DEFAULT_EXECUTOR

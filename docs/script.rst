@@ -163,7 +163,7 @@ Strings can be concatenated with ``+``::
 String interpolation
 --------------------
 
-There is an important difference between single- and double-quoted strings:
+There is an important difference between single-quoted and double-quoted strings:
 Double-quoted strings support variable interpolations, while single-quoted strings do not.
 
 In practice, double-quoted strings can contain the value of an arbitrary variable by prefixing its name with the ``$`` character,
@@ -228,8 +228,10 @@ More formally, you can create functions that are defined as `first class objects
 
 
 The curly brackets around the expression ``it * it`` tells the script interpreter to treat this expression as code.
-In this case, the designator ``it`` refers to whatever value is passed to the function when it is called. This compiled function is
-assigned to the variable ``square``, much like variable assignments shown previously. Now we can do something like this::
+The `it` identifier is an implicit variable that represents the value that is passed to the function when it is invoked.
+
+Once compiled the function object is assigned to the variable ``square`` as any other variable assignments shown previously.
+Now we can do something like this::
 
     println square(9)
 
@@ -261,7 +263,7 @@ for each key-value pair in the ``Map``. Here, we use the obvious variable names 
         println "$key = $value"
     }
 
-    [ "Yue" : "Wu", "Mark" : "Williams", "sudha" : "Kumari" ].each(printMapClosure)
+    [ "Yue" : "Wu", "Mark" : "Williams", "Sudha" : "Kumari" ].each(printMapClosure)
 
 
 Prints::
@@ -442,6 +444,7 @@ type            Type of paths returned, either ``file``, ``dir`` or ``any`` (def
 hidden          When ``true`` includes hidden files in the resulting paths (default: ``false``)
 maxDepth        Maximum number of directory levels to visit (default: `no limit`)
 followLinks     When ``true`` follows symbolic links during directory tree traversal, otherwise treats them as files (default: ``true``)
+checkIfExists   When ``true`` throws an exception of the specified path do not exist in the file system (default: ``false``)
 =============== ===================
 
 
@@ -807,7 +810,8 @@ The following methods can be used on a file variable created by using the ``file
 Name                Description
 ==================  ================
 getName             Gets the file name e.g. ``/some/path/file.txt`` -> ``file.txt``
-getBaseName         Gets the file name without its extension e.g. ``/some/path/file.txt`` -> ``file``
+getBaseName         Gets the file name without its extension e.g. ``/some/path/file.tar.gz`` -> ``file.tar``
+getSimpleName       Gets the file name without any extension e.g. ``/some/path/file.tar.gz`` -> ``file``
 getExtension        Gets the file extension e.g. ``/some/path/file.txt`` -> ``txt``
 getParent           Gets the file parent path e.g. ``/some/path/file.txt`` -> ``/some/path``
 size                Gets the file size in bytes

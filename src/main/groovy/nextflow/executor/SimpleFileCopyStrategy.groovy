@@ -1,24 +1,21 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.executor
+
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -26,6 +23,8 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
+import nextflow.cloud.aws.batch.AwsOptions
+import nextflow.cloud.aws.batch.S3Helper
 import nextflow.file.FilePorter
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
@@ -166,10 +165,44 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         return result.join(separatorChar)
     }
 
+    /**
+     * Prepare a bash command for staging input files for a task.
+     *
+     * This method should only be called when workDir is defined, and with a
+     * relative target path.
+     *
+     * NB: 'target' and 'source' are the opposite from the ln command
+     *
+     * Methods:
+     * * symlink: Create a symbolic link to source from target using an
+     *   absolute path.
+     * * rellink: Create a symbolic link to source from target using
+     *   a relative path.
+     * * link: Create a hard link to source from target.
+     * * copy: Copy the file at source to target.
+     * 
+     * @param source The original file that is to be staged.
+     * @param target The new path to create.
+     * @param mode The method to use for staging the file. See Methods above.
+     * @return The command to issue to stage the specified file.
+     */ 
     protected String stageInCommand( String source, String target, String mode ) {
+        if( !target || target.startsWith('/') )
+            throw new IllegalArgumentException("Process input file target path must be relative: $target")
 
         if( mode == 'symlink' || !mode )
             return "ln -s ${Escape.path(source)} ${Escape.path(target)}"
+
+        if( mode == 'rellink' ) {
+            // GNU ln has the '-r' flag, but BSD ln doesn't, so we have to
+            // manually resolve the relative path.
+
+            def targetPath = workDir.resolve(target)
+            def sourcePath = workDir.resolve(source)
+            source = targetPath.getParent().relativize(sourcePath).toString()
+
+            return "ln -s ${Escape.path(source)} ${Escape.path(target)}"
+        }
 
         if( mode == 'link' )
             return "ln ${Escape.path(source)} ${Escape.path(target)}"
@@ -339,7 +372,10 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
 
     @Override
     String getEnvScript(Map environment, String handler=null) {
+        getEnvScript0(environment,handler)
+    }
 
+    static String getEnvScript0(Map environment, String handler=null) {
         if( !environment )
             return null
 

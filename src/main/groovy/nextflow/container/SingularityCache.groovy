@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.container
@@ -51,7 +47,7 @@ class SingularityCache {
 
     private boolean missingCacheDir
 
-    private Duration pullTimeout = Duration.of('10min')
+    private Duration pullTimeout = Duration.of('20min')
 
     /** Only for debugging purpose - do not use */
     @PackageScope
@@ -82,9 +78,17 @@ class SingularityCache {
     String simpleName(String imageUrl) {
         def p = imageUrl.indexOf('://')
         def name = p != -1 ? imageUrl.substring(p+3) : imageUrl
+        String extension = '.img'
+        if( name.contains('.sif:') ) {
+            extension = '.sif'
+            name = name.replace('.sif:','-')
+        }
+        else if( name.endsWith('.sif') ) {
+            extension = '.sif'
+            name = name.substring(0,name.length()-4)
+        }
         name = name.replace(':','-').replace('/','-')
-        name += ".img"
-        return name
+        return name + extension
     }
 
     /**
@@ -105,7 +109,7 @@ class SingularityCache {
     }
 
     /**
-     * Retried the directory where store the singularity images once downloaded.
+     * Retrieve the directory where store the singularity images once downloaded.
      * If tries these setting in the following order:
      * 1) {@code singularity.cacheDir} setting in the nextflow config file;
      * 2) the {@code NXF_SINGULARITY_CACHEDIR} environment variable

@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.scm
@@ -23,13 +19,13 @@ import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.Const
 import nextflow.exception.AbortOperationException
 /**
  *
  * Base class for a generic source repository provider
  *
- * @author Maria Chatzou
- * @author Paolo Di Tommaso
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
@@ -202,19 +198,19 @@ abstract class RepositoryProvider {
             readBytes(scriptName)
         }
         catch( IOException e1 ) {
-
-            try {
-                invokeAndParseResponse( getEndpointUrl() )
-            }
-            catch( IOException e2 ) {
-                throw new AbortOperationException("Cannot find `$project` -- Make sure exists a ${name.capitalize()} repository at this address `${getRepositoryUrl()}`", e2)
-            }
-
-            throw new AbortOperationException("Not a valid Nextflow project -- The repository `${getRepositoryUrl()}` must contain a the script `${AssetManager.DEFAULT_MAIN_FILE_NAME}` or the file `${AssetManager.MANIFEST_FILE_NAME}`", e1)
+            validateRepo()
+            throw new AbortOperationException("Not a valid Nextflow project -- The repository `${getRepositoryUrl()}` must contain a the script `${Const.DEFAULT_MAIN_FILE_NAME}` or the file `${Const.MANIFEST_FILE_NAME}`", e1)
         }
-
     }
 
+    void validateRepo() {
+        try {
+            invokeAndParseResponse( getEndpointUrl() )
+        }
+        catch( IOException e ) {
+            throw new AbortOperationException("Cannot find `$project` -- Make sure exists a ${name.capitalize()} repository at this address `${getRepositoryUrl()}`", e)
+        }
+    }
     /**
      * Factory method
      *

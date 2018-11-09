@@ -1,24 +1,22 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.config
+
+import java.nio.file.Path
 
 import ch.grengine.Grengine
 import com.google.common.hash.Hashing
@@ -61,7 +59,7 @@ import org.codehaus.groovy.runtime.InvokerHelper
  *
  * See http://naleid.com/blog/2009/07/30/modularizing-groovy-config-files-with-a-dash-of-meta-programming
  *
- * @author Paolo Di Tommaso
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  *
  */
 
@@ -259,6 +257,7 @@ class ConfigParser {
      * @param script The script to parse
      * @return A Map of maps that can be navigating with dot de-referencing syntax to obtain configuration entries
      */
+    @Deprecated
     ConfigObject parse(Script script) {
         return parse(script, null)
     }
@@ -269,12 +268,17 @@ class ConfigParser {
      * @param location The location of the script to parse
      * @return The ConfigObject instance
      */
+    @Deprecated
     ConfigObject parse(URL location) {
-        return parse(loadScript(location.text), location)
+        return parse(loadScript(location.text), FileHelper.asPath(location.toURI()))
     }
 
     ConfigObject parse(File file) {
-        return parse(loadScript(file.text), file.toURI().toURL())
+        return parse(file.toPath())
+    }
+
+    ConfigObject parse(Path path) {
+        return parse(loadScript(path.text), path)
     }
 
     /**
@@ -285,10 +289,10 @@ class ConfigParser {
      * @param location The original location of the Script as a URL
      * @return The ConfigObject instance
      */
-    ConfigObject parse(Script _script, URL location) {
+    ConfigObject parse(Script _script, Path location) {
         final script = (ConfigBase)_script
         Stack<String> currentConditionalBlock = new Stack<String>()
-        def config = location ? new ConfigObject(location) : new ConfigObject()
+        def config = location ? new ConfigObject(location.toUri().toURL()) : new ConfigObject()
         GroovySystem.metaClassRegistry.removeMetaClass(script.class)
         def mc = script.class.metaClass
         def prefix = ""
@@ -356,20 +360,25 @@ class ConfigParser {
                         } finally {
                             currentConditionalBlock.push(conditionalBlockKey)
                         }
-                        stack.pop()
+                        stack.removeLast()
                     }
                 } else {
+                    def current = stack.last
                     def co
-                    if (stack.last.config.get(name) instanceof ConfigObject) {
-                        co = stack.last.config.get(name)
-                    } else {
+                    if (current.config.get(name) instanceof ConfigObject) {
+                        co = current.config.get(name)
+                    }
+                    else if (current.scope.get(name) instanceof ConfigObject) {
+                        co = current.scope.get(name)
+                    }
+                    else {
                         co = new ConfigObject()
                     }
 
                     assignName.call(name, co)
                     pushStack.call(co)
                     args[0].call()
-                    stack.pop()
+                    stack.removeLast()
                 }
             } else if (args.length == 2 && args[1] instanceof Closure) {
                 try {
@@ -399,8 +408,7 @@ class ConfigParser {
 
         // add the script file location into the binding
         if( location ) {
-            final configPath = FileHelper.asPath(location.toURI())
-            script.setConfigPath(configPath)
+            script.setConfigPath(location)
         }
 
         // disable include parsing when required
@@ -421,7 +429,7 @@ class ConfigParser {
      * @param value A boolean value, when {@code true} includes are disabled
      * @return The {@link ConfigParser} object itself
      */
-    ConfigParser setIgnoreIncludes(boolean value ) {
+    ConfigParser setIgnoreIncludes(boolean value) {
         this.ignoreIncludes = value
         return this
     }

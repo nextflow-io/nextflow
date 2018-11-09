@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.processor
@@ -63,6 +59,7 @@ class ProcessConfig implements Map<String,Object> {
             'beforeScript',
             'echo',
             'cache',
+            'conda',
             'cpus',
             'container',
             'containerOptions',
@@ -82,6 +79,7 @@ class ProcessConfig implements Map<String,Object> {
             'memory',
             'module',
             'penv',
+            'pod',
             'publishDir',
             'scratch',
             'shell',
@@ -105,7 +103,7 @@ class ProcessConfig implements Map<String,Object> {
      * Names of directives that can be used more than once in the process definition
      */
     @PackageScope
-    static final List<String> repeatableDirectives = ['label','module','publishDir']
+    static final List<String> repeatableDirectives = ['label','module','pod','publishDir']
 
     /**
      * Default directives values
@@ -395,16 +393,16 @@ class ProcessConfig implements Map<String,Object> {
         for( String key : processDefaults.keySet() ) {
             if( key == 'params' )
                 continue
-            def value = processDefaults.get(key)
-            def current = this.getProperty(key)
+            final value = processDefaults.get(key)
+            final current = this.getProperty(key)
             if( key == 'ext' ) {
                 if( value instanceof Map && current instanceof Map ) {
-                    def ext = current as Map
+                    final ext = current as Map
                     value.each { k,v -> if(!ext.containsKey(k)) ext.put(k,v) }
                 }
             }
-            else if( current==null || current == ProcessConfig.DEFAULT_CONFIG.get(key) ) {
-                this.put( key, value )
+            else if( !this.containsKey(key) || (DEFAULT_CONFIG.containsKey(key) && current==DEFAULT_CONFIG.get(key)) ) {
+                this.put(key, value)
             }
         }
     }
@@ -513,7 +511,7 @@ class ProcessConfig implements Map<String,Object> {
     }
 
     HashMode getHashMode() {
-        configProperties.cache == 'deep' ? HashMode.DEEP : HashMode.STANDARD
+        HashMode.of(configProperties.cache) ?: HashMode.STANDARD
     }
 
     protected boolean isValidLabel(String lbl) {
@@ -613,7 +611,7 @@ class ProcessConfig implements Map<String,Object> {
      * @return
      *      The {@link ProcessConfig} instance itself
      */
-    ProcessConfig publishDir(Map params ) {
+    ProcessConfig publishDir(Map params) {
         if( !params )
             return this
 
@@ -639,7 +637,7 @@ class ProcessConfig implements Map<String,Object> {
      * @return
      *      The {@link ProcessConfig} instance itself
      */
-    ProcessConfig publishDir(Map params, target ) {
+    ProcessConfig publishDir(Map params, target) {
         params.put('path', target)
         publishDir( params )
     }
@@ -665,5 +663,31 @@ class ProcessConfig implements Map<String,Object> {
             publishDir([path: target])
         }
         return this
+    }
+
+    private static final Map POD_OPTIONS = [secret:String, mountPath:String, envName: String]
+
+    /**
+     * Allow use to specify K8s `pod` options
+     *
+     * @param entry
+     *      A map object representing pod config options
+     * @return
+     *      The {@link ProcessConfig} instance itself
+     */
+    ProcessConfig pod( Map entry ) {
+
+        if( !entry )
+            return this
+
+        def allOptions = (List)configProperties.get('pod')
+        if( !allOptions ) {
+            allOptions = new ConfigList()
+            configProperties.put('pod', allOptions)
+        }
+
+        allOptions.add(entry)
+        return this
+
     }
 }

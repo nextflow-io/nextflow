@@ -1,24 +1,21 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.file
+
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.Callable
@@ -31,8 +28,11 @@ import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
-import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.Memoized
+import groovy.transform.ToString
+import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
@@ -45,8 +45,6 @@ import nextflow.exception.ProcessStageException
 @Slf4j
 @CompileStatic
 class FilePorter {
-
-    static protected ExecutorService executor
 
     static Random rnd = Random.newInstance()
 
@@ -145,7 +143,9 @@ class FilePorter {
         return FileHelper.copyPath(source, target)
     }
 
-    @Canonical
+    @ToString
+    @EqualsAndHashCode
+    @TupleConstructor
     static private class NamePathPair {
         String name
         Path path
@@ -185,26 +185,28 @@ class FilePorter {
     /**
      * @return Creates lazily the executor service used to stage remote files
      */
-    static synchronized private ExecutorService getExecutor() {
-        if( !executor ) {
-            executor = new ThreadPoolExecutor(
-                    0,
-                    getMaxThreads(),
-                    60L,
-                    TimeUnit.SECONDS,
-                    new LinkedBlockingQueue<Runnable>(),
-                    new DownloaderThreadFactory() )
+    static private ExecutorService getExecutor() {
+        createExecutor(Global.session as Session)
+    }
 
-            // register the shutdown on termination
-            def session = Global.session as Session
-            if( session ) {
-                session.onShutdown {
-                    executor.shutdown()
-                    executor.awaitTermination(1,TimeUnit.MINUTES)
-                }
-            }
+    // note: memoized guarantees to use the same executor during the same session
+    @Memoized
+    static synchronized private ExecutorService createExecutor(Session session) {
+        final result = new ThreadPoolExecutor(
+                0,
+                getMaxThreads(),
+                60L,
+                TimeUnit.SECONDS,
+                new LinkedBlockingQueue<Runnable>(),
+                new DownloaderThreadFactory() )
+
+        // register the shutdown on termination
+        session?.onShutdown {
+            executor.shutdown()
+            executor.awaitTermination(1,TimeUnit.MINUTES)
         }
-        return executor
+
+        return result
     }
 
     /**

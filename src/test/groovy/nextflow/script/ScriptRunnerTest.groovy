@@ -1,29 +1,28 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.script
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Session
+import nextflow.config.Manifest
+import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.processor.ProcessConfig
+import nextflow.util.VersionNumber
 import spock.lang.Specification
 import test.TestParser
 /**
@@ -667,5 +666,48 @@ class ScriptRunnerTest extends Specification {
 
     }
 
+    def 'should validate version'() {
+
+        given:
+        def session = Mock(Session)
+        def manifest = Mock(Manifest)
+        def runner = Spy(ScriptRunner)
+        runner.session = session
+
+        when:
+        runner.checkVersion()
+        then:
+        session.getManifest() >> manifest
+        1 * runner.getCurrentVersion() >> new VersionNumber('1.1')
+        1 * manifest.getNextflowVersion() >> '>= 1.0'
+        0 * runner.showVersionWarning(_)
+
+        when:
+        runner.checkVersion()
+        then:
+        session.getManifest() >> manifest
+        1 * runner.getCurrentVersion() >> new VersionNumber('1.1')
+        1 * manifest.getNextflowVersion() >> '>= 1.2'
+        1 * runner.showVersionWarning('>= 1.2')
+
+        when:
+        runner.checkVersion()
+        then:
+        session.getManifest() >> manifest
+        1 * runner.getCurrentVersion() >> new VersionNumber('1.1')
+        1 * manifest.getNextflowVersion() >> '! >= 1.2'
+        1 * runner.showVersionError('>= 1.2')   
+        thrown(AbortOperationException)
+
+        when:
+        runner.checkVersion()
+        then:
+        session.getManifest() >> manifest
+        1 * manifest.getNextflowVersion() >> null
+        0 * runner.getCurrentVersion() >> null
+        0 * runner.showVersionWarning(_)
+        0 * runner.showVersionError(_)
+
+    }
 
 }

@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.mail
@@ -47,7 +43,7 @@ import org.jsoup.safety.Whitelist
  * This class implements the send mail functionality
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
- * @author Edgar Garriga <edgano@@gmail.com>
+ * @author Edgar Garriga <edgano@gmail.com>
  */
 @Slf4j
 @CompileStatic
@@ -179,14 +175,14 @@ class Mailer {
      * @return The SMTP host name or IP address
      */
     protected String getHost() {
-        config('host')
+        getConfig('host')
     }
 
     /**
      * @return The SMTP host port
      */
     protected int getPort() {
-        def port = config('port')
+        def port = getConfig('port')
         port ? port as int : -1
     }
 
@@ -194,17 +190,17 @@ class Mailer {
      * @return The SMTP user name
      */
     protected String getUser() {
-        config('user')
+        getConfig('user')
     }
 
     /**
      * @return The SMTP user password
      */
     protected String getPassword() {
-       config('password')
+        getConfig('password')
     }
 
-    protected config( String name ) {
+    protected getConfig(String name ) {
         def key = "smtp.${name}"
         def value = config.navigate(key)
         if( !value ) {
@@ -220,7 +216,9 @@ class Mailer {
      * @param message A {@link MimeMessage} object representing the email to send
      */
     protected void sendViaJavaMail(MimeMessage message) {
-
+        if( !message.getAllRecipients() )
+            throw new IllegalArgumentException("Missing mail message recipient")
+        
         final transport = getSession().getTransport()
         transport.connect(host, port as int, user, password)
         log.trace("Connected to host=$host port=$port")

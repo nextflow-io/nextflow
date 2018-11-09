@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow
@@ -29,6 +25,7 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.StopSplitIterationException
+import nextflow.extension.GroupKey
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
 import nextflow.mail.Mailer
@@ -38,9 +35,7 @@ import nextflow.util.ArrayTuple
 import nextflow.util.CacheHelper
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-
 import static nextflow.file.FileHelper.isGlobAllowed
-
 /**
  * Defines the main methods imported by default in the script scope
  *
@@ -142,13 +137,13 @@ class Nextflow {
      */
     static file( Map options = null, def filePattern ) {
 
-        if( filePattern == null )
-            return null
+        if( !filePattern )
+            throw new IllegalArgumentException("Argument of `file` function cannot be ${filePattern==null?'null':'empty'}")
 
         final path = filePattern as Path
         final glob = options?.containsKey('glob') ? options.glob as boolean : isGlobAllowed(path)
         if( !glob ) {
-            return path.complete()
+            return FileHelper.checkIfExists(path, options)
         }
 
         // if it isn't a glob pattern simply return it a normalized absolute Path object
@@ -156,10 +151,10 @@ class Nextflow {
         if( !splitter.isPattern() ) {
             def normalised = splitter.strip(path.toString())
             if( path instanceof Path )  {
-                return path.fileSystem.getPath(normalised).complete()
+                return FileHelper.checkIfExists(path.fileSystem.getPath(normalised), options)
             }
             else {
-                return FileHelper.asPath(normalised).complete()
+                return FileHelper.checkIfExists(FileHelper.asPath(normalised), options)
             }
         }
 
@@ -171,6 +166,7 @@ class Nextflow {
         def result = file(options, path)
         return result instanceof List ? result : [result]
     }
+
 
     /**
      * Creates a {@link ArrayTuple} object with the given open array items
@@ -366,6 +362,7 @@ class Nextflow {
 
     /**
      * Implements built-in send mail functionality
+     *
      * @param params
      *    A closure representing the mail message to send eg
      *    <code>
@@ -387,4 +384,14 @@ class Nextflow {
                 .send(params)
     }
 
+    /**
+     * Creates a groupTuple dynamic key
+     *
+     * @param key
+     * @param size
+     * @return
+     */
+    static GroupKey groupKey(key, int size) {
+        new GroupKey(key,size)
+    }
 }

@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.util
@@ -82,7 +78,7 @@ class ConfigHelperTest extends Specification {
 
     }
 
-    def 'should properties notation' () {
+    def 'should render config using properties notation' () {
 
         given:
         def mem = { return 0 }
@@ -94,20 +90,20 @@ class ConfigHelperTest extends Specification {
         config.process.omega = "Hi' there"
 
         when:
-        def result = ConfigHelper.toPropertiesString(config)
+        def result = ConfigHelper.toPropertiesString(config,true)
 
         then:
         result == """
                 docker.enabled=true
+                process.executor=slurm
+                process.memory=${mem.toString()}
                 process.omega=Hi' there
                 process.queue=long
-                process.memory=${mem.toString()}
-                process.executor=slurm
                 """
                 .stripIndent().leftTrim()
 
     }
-    def 'should canonical notation' () {
+    def 'should render config using canonical notation' () {
 
         given:
         def config = new ConfigObject()
@@ -193,7 +189,7 @@ class ConfigHelperTest extends Specification {
                     .stripIndent().leftTrim()
     }
 
-    def 'should flatten notation' () {
+    def 'should render config using flatten notation' () {
 
         given:
         def config = new ConfigObject()
@@ -232,47 +228,6 @@ class ConfigHelperTest extends Specification {
         then:
         result == "foo = 'Hi\\' there'\n"
 
-    }
-
-
-    def 'should sort property keys' () {
-
-        given:
-        def props = new ConfigHelper.OrderedProperties()
-        props.setProperty('omega', '1')
-        props.setProperty('beta',  '3')
-        props.setProperty('delta', '2')
-        props.setProperty('alpha', '4')
-
-
-        when:
-        def e = props.keys()
-        then:
-        e.nextElement() == 'alpha'
-        e.nextElement() == 'beta'
-        e.nextElement() == 'delta'
-        e.nextElement() == 'omega'
-
-    }
-
-
-    def 'should create from a properties object' () {
-
-        given:
-        def config = new Properties()
-        config.'omega' = 1
-        config.'alpha' = 4
-        config.'delta.y' = 'Hello'
-        config.'delta.z' = 'world'
-
-        when:
-        def props = new ConfigHelper.OrderedProperties(config)
-        then:
-        props.'omega' == 1
-        props.'alpha' == 4
-        props.'delta.y' == 'Hello'
-        props.'delta.z' == 'world'
-        props.keys().toSet() == ['alpha', 'delta.y', 'delta.z','omega'] as Set
     }
 
     def 'should verify valid identifiers' () {

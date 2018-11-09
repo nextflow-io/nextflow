@@ -1,22 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
-  ~ Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+  ~ Copyright 2013-2018, Centre for Genomic Regulation (CRG)
   ~
-  ~   This file is part of 'Nextflow'.
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
   ~
-  ~   Nextflow is free software: you can redistribute it and/or modify
-  ~   it under the terms of the GNU General Public License as published by
-  ~   the Free Software Foundation, either version 3 of the License, or
-  ~   (at your option) any later version.
+  ~     http://www.apache.org/licenses/LICENSE-2.0
   ~
-  ~   Nextflow is distributed in the hope that it will be useful,
-  ~   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  ~   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  ~   GNU General Public License for more details.
-  ~
-  ~   You should have received a copy of the GNU General Public License
-  ~   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
   -->
 
 <beans xmlns="http://www.springframework.org/schema/beans"
@@ -40,81 +36,6 @@
                 <property name="localAddress" value="127.0.0.1"/>
             </bean>
         </property>
-
-        <property name="fileSystemConfiguration">
-            <list>
-                <bean class="org.apache.ignite.configuration.FileSystemConfiguration">
-                    <property name="name" value="igfs"/>
-                    <property name="defaultMode" value="PRIMARY" />
-                    <property name="metaCacheName" value="igfs-meta"/>
-                    <property name="dataCacheName" value="igfs-data"/>
-
-                    <!-- Must correlate with cache affinity mapper. -->
-                    <property name="blockSize" value="#{128 * 1024}"/>
-                    <property name="perNodeBatchSize" value="512"/>
-                    <property name="perNodeParallelBatchCount" value="16"/>
-
-                    <!-- Set number of prefetch blocks.
-                    <property name="prefetchBlocks" value="32"/>
-                    -->
-
-                    <!--
-                        This will disable IPC endpoint binding thus preventing Hadoop clients from connecting to IgniteFs.
-                        With this option set to false the only possible way to interact with IgniteFs is through
-                        Ignite API.
-                    -->
-                    <property name="ipcEndpointEnabled" value="false"/>
-
-                    <!--
-                        Example of configured IPC loopback endpoint.
-                    -->
-                    <!--
-                    <property name="ipcEndpointConfiguration">
-                        <bean class="org.apache.ignite.igfs.IgfsIpcEndpointConfiguration">
-                            <property name="type" value="TCP" />
-                        </bean>
-                    </property>
-                    -->
-
-                    <!--
-                        Example of configured shared memory endpoint.
-                    -->
-                    <!--
-                    <property name="ipcEndpointConfiguration">
-                        <bean class="org.apache.ignite.igfs.IgfsIpcEndpointConfiguration">
-                            <property name="type" value="SHMEM" />
-                        </bean>
-                    </property>
-                    -->
-                </bean>
-            </list>
-        </property>
-
-        <property name="cacheConfiguration">
-            <list>
-                <bean class="org.apache.ignite.configuration.CacheConfiguration">
-                    <property name="name" value="igfs-data"/>
-                    <property name="cacheMode" value="PARTITIONED"/>
-                    <property name="atomicityMode" value="TRANSACTIONAL"/>
-                    <property name="writeSynchronizationMode" value="FULL_SYNC"/>
-                    <property name="backups" value="0"/>
-                    <property name="affinityMapper">
-                        <bean class="org.apache.ignite.igfs.IgfsGroupDataBlocksKeyMapper">
-                            <!-- Haw many blocks in row will be stored on the same node. -->
-                            <constructor-arg value="512"/>
-                        </bean>
-                    </property>
-                </bean>
-
-                <bean class="org.apache.ignite.configuration.CacheConfiguration">
-                    <property name="name" value="igfs-meta"/>
-                    <property name="cacheMode" value="REPLICATED"/>
-                    <property name="atomicityMode" value="TRANSACTIONAL"/>
-                    <property name="writeSynchronizationMode" value="FULL_SYNC"/>
-                </bean>
-            </list>
-        </property>
-
 
 </bean>
 </beans>

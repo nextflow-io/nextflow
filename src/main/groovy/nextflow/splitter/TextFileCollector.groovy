@@ -1,39 +1,49 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.splitter
+
 import java.nio.charset.Charset
 import java.nio.charset.CharsetEncoder
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.GZIPOutputStream
 
+import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
+import groovy.transform.ToString
+import groovy.transform.TupleConstructor
 /**
  * A collector strategy that creates a chunks as text files
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class TextFileCollector implements CollectorStrategy, CacheableCollector, Closeable {
+class TextFileCollector implements CollectorStrategy, CacheableCollector, HeaderCollector, Closeable {
+
+    @ToString
+    @EqualsAndHashCode
+    @TupleConstructor
+    @PackageScope
+    static class CachePath {
+        Path path
+        HashCode hash
+    }
 
     final private Charset charset
 
@@ -45,10 +55,16 @@ class TextFileCollector implements CollectorStrategy, CacheableCollector, Closea
 
     private boolean compress
 
-    TextFileCollector(Path baseFile, Charset charset = Charset.defaultCharset(), boolean compress=false ) {
-        assert baseFile
+    private int count
 
-        this.baseFile = baseFile
+    private String header
+
+    TextFileCollector(CachePath base, Charset charset = Charset.defaultCharset(), boolean compress=false ) {
+        assert base
+        assert base.path
+
+        this.baseFile = base.path
+        this.hashCode = base.hash
         this.charset = charset
         this.compress = compress
     }
@@ -63,6 +79,10 @@ class TextFileCollector implements CollectorStrategy, CacheableCollector, Closea
         return file.resolveSibling( fileName )
     }
 
+    void setHeader(String value) {
+        this.header = value
+    }
+
     @Override
     void add(Object record) {
 
@@ -75,6 +95,9 @@ class TextFileCollector implements CollectorStrategy, CacheableCollector, Closea
             writer = getOutputWriter(currentPath, charset, compress)
         }
 
+        if( count++==0 && header ) {
+            writer.write(header)
+        }
         def str = record.toString()
         writer.write(str, 0, str.length())
 
@@ -94,6 +117,7 @@ class TextFileCollector implements CollectorStrategy, CacheableCollector, Closea
     @Override
     def nextChunk() {
         closeWriter()
+        count = 0
         def result = currentPath
         currentPath = null
         return result

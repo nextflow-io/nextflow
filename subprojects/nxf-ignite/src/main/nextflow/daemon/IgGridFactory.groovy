@@ -1,24 +1,24 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.daemon
+
+import java.util.logging.Level
+import java.util.logging.Logger
+
 import com.amazonaws.auth.BasicAWSCredentials
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -34,27 +34,17 @@ import org.apache.commons.lang.StringUtils
 import org.apache.commons.lang.reflect.MethodUtils
 import org.apache.ignite.Ignite
 import org.apache.ignite.Ignition
-import org.apache.ignite.cache.CacheAtomicityMode
-import org.apache.ignite.cache.CacheMemoryMode
 import org.apache.ignite.cache.CacheMode
-import org.apache.ignite.cache.CacheWriteSynchronizationMode
-import org.apache.ignite.cache.eviction.lru.LruEvictionPolicy
 import org.apache.ignite.configuration.CacheConfiguration
-import org.apache.ignite.configuration.FileSystemConfiguration
 import org.apache.ignite.configuration.IgniteConfiguration
-import org.apache.ignite.igfs.IgfsGroupDataBlocksKeyMapper
-import org.apache.ignite.igfs.IgfsMode
 import org.apache.ignite.logger.slf4j.Slf4jLogger
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi
 import org.apache.ignite.spi.discovery.tcp.ipfinder.multicast.TcpDiscoveryMulticastIpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.s3.TcpDiscoveryS3IpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.sharedfs.TcpDiscoverySharedFsIpFinder
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder
-
-
 import static nextflow.Const.ROLE_MASTER
 import static nextflow.Const.ROLE_WORKER
-
 /**
  * Grid factory class. It can be used to create a {@link IgniteConfiguration} or the {@link Ignite} instance directly
  *
@@ -120,19 +110,23 @@ class IgGridFactory {
      * @return
      */
     IgniteConfiguration config() {
+        // required by
+        // https://issues.apache.org/jira/browse/IGNITE-8899
+        // https://issues.apache.org/jira/browse/IGNITE-8426
+        Logger.getLogger('').setLevel(Level.OFF)
 
         System.setProperty('IGNITE_UPDATE_NOTIFIER','false')
         System.setProperty('IGNITE_NO_ASCII', 'true')
         System.setProperty('IGNITE_NO_SHUTDOWN_HOOK', 'true')
+        System.setProperty('IGNITE_QUIET', 'false')
 
         IgniteConfiguration cfg = new IgniteConfiguration()
         discoveryConfig(cfg)
         cacheConfig(cfg)
-        fileSystemConfig(cfg)
 
         final groupName = clusterConfig.getAttribute( 'group', GRID_NAME ) as String
         log.debug "Apache Ignite config > group name: $groupName"
-        cfg.setGridName(groupName)
+        cfg.setIgniteInstanceName(groupName)
         cfg.setUserAttributes( (NODE_ROLE): role )
         cfg.setGridLogger( new Slf4jLogger() )
 
@@ -142,6 +136,16 @@ class IgGridFactory {
         // this is not really used -- just set to avoid it complaining
         cfg.setWorkDirectory( FileHelper.getLocalTempPath().resolve('ignite').toString() )
 
+        def timeout = clusterConfig.getAttribute('failureDetectionTimeout') as Duration
+        if( timeout )
+            cfg.setFailureDetectionTimeout(timeout.millis)
+
+        timeout = clusterConfig.getAttribute('clientFailureDetectionTimeout') as Duration
+        if( timeout )
+            cfg.setClientFailureDetectionTimeout(timeout.millis)
+
+        log.debug "Apache Ignite config > $clusterConfig"
+        
         return cfg
     }
 
@@ -152,79 +156,17 @@ class IgGridFactory {
 
         List<CacheConfiguration> configs = []
 
-        def sessionCfg = new CacheConfiguration()
-        sessionCfg.with {
-            name = SESSIONS_CACHE
-            startSize = 64
-            offHeapMaxMemory = 0
-        }
-        configs << sessionCfg
-
-        /*
-         * set the data cache for this ggfs
-         */
-        // TODO improve config setting by using a map holding default values and set all of them with an iteration
-        def dataCfg = new CacheConfiguration()
-        dataCfg.with {
-            name = 'igfs-data'
-            cacheMode = CacheMode.PARTITIONED
-            evictionPolicy = new LruEvictionPolicy()
-            atomicityMode  = CacheAtomicityMode.TRANSACTIONAL   // note: transactional is mandatory
-            //queryIndexEnabled = false
-            writeSynchronizationMode = clusterConfig.getAttribute('igfs.data.writeSynchronizationMode', CacheWriteSynchronizationMode.PRIMARY_SYNC) as CacheWriteSynchronizationMode
-            //distributionMode = GridCacheDistributionMode.PARTITIONED_ONLY
-            affinityMapper = new IgfsGroupDataBlocksKeyMapper(512)
-            backups = clusterConfig.getAttribute('igfs.data.backups', 0) as int
-            // configure Off-heap memory
-            offHeapMaxMemory = clusterConfig.getAttribute('igfs.data.offHeapMaxMemory', 0) as long
-            // When storing directly off-heap it throws an exception
-            // See http://stackoverflow.com/q/23399264/395921
-            memoryMode = clusterConfig.getAttribute('igfs.data.memoryMode', CacheMemoryMode.ONHEAP_TIERED) as CacheMemoryMode
-        }
-        configs << dataCfg
-
-        /*
-         * set the meta cache for this igfs
-         */
-        def metaCfg = new CacheConfiguration()
-        metaCfg.with {
-            name = 'igfs-meta'
-            cacheMode = CacheMode.REPLICATED
-            atomicityMode  = CacheAtomicityMode.TRANSACTIONAL   // note: transactional is mandatory
-            writeSynchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC
-            //queryIndexEnabled = false
-        }
-        configs << metaCfg
+        configs << new CacheConfiguration()
+                .setName(SESSIONS_CACHE)
 
         /*
          * set scheduler resources cache
          */
-        def schedulerCacheCfg = new CacheConfiguration()
-        schedulerCacheCfg.name = Protocol.PENDING_TASKS_CACHE
-        schedulerCacheCfg.cacheMode = CacheMode.REPLICATED
-        configs << schedulerCacheCfg
+        configs << new CacheConfiguration()
+                .setName(Protocol.PENDING_TASKS_CACHE)
+                .setCacheMode(CacheMode.REPLICATED)
 
         cfg.setCacheConfiguration( configs as CacheConfiguration[] )
-    }
-
-
-    /*
-     * igfs configuration
-     */
-    protected void fileSystemConfig( IgniteConfiguration cfg ) {
-
-        def ggfsCfg = new FileSystemConfiguration()
-        ggfsCfg.with {
-            name = 'igfs'
-            defaultMode = IgfsMode.PRIMARY
-            metaCacheName = 'igfs-meta'
-            dataCacheName = 'igfs-data'
-            blockSize = clusterConfig.getAttribute('igfs.blockSize', 128 * 1024) as int
-            perNodeBatchSize = clusterConfig.getAttribute('igfs.perNodeBatchSize', 512) as int
-            perNodeParallelBatchCount = clusterConfig.getAttribute('igfs.perNodeParallelBatchCount', 16) as int
-        }
-        cfg.setFileSystemConfiguration(ggfsCfg)
-
     }
 
 

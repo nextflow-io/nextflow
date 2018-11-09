@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.extension
@@ -91,7 +87,7 @@ class FilesEx {
      * @see File#delete()
      */
 
-    def static boolean delete( Path path ) {
+    static boolean delete( Path path ) {
         try {
             Files.delete(path)
             return true
@@ -114,7 +110,7 @@ class FilesEx {
      * @param path
      * @return
      */
-    def static boolean deleteDir(Path path) {
+    static boolean deleteDir(Path path) {
         def attr = FileHelper.readAttributes(path)
         if( !attr )
              return true
@@ -151,7 +147,7 @@ class FilesEx {
      * @param target The target file or directory
      * @return The target {@link Path} file
      */
-    def static File copyTo( File source, File target ) {
+    static File copyTo( File source, File target ) {
         copyTo(source.toPath(), target.toPath()).toFile()
     }
 
@@ -163,7 +159,7 @@ class FilesEx {
      * @param target The target file or directory
      * @return The target {@link Path} file
      */
-    def static Path copyTo( Path source, Path target ) {
+    static Path copyTo( Path source, Path target ) {
         assert source
         assert target
 
@@ -216,7 +212,7 @@ class FilesEx {
      * @param target The target file or directory
      * @return The target {@link Path} file
      */
-    def static File copyTo( File source, String target ) {
+    static File copyTo( File source, String target ) {
         copyTo(source.toPath(), FileHelper.asPath(target)).toFile()
     }
 
@@ -228,7 +224,7 @@ class FilesEx {
      * @param target The target file or directory
      * @return The target {@link Path} file
      */
-    def static Path copyTo( Path source, String target ) {
+    static Path copyTo( Path source, String target ) {
         copyTo(source, FileHelper.asPath(target))
     }
 
@@ -239,7 +235,7 @@ class FilesEx {
      * @param target
      * @return
      */
-    def static File moveTo( File source, File target ) {
+    static File moveTo( File source, File target ) {
         moveTo(source.toPath(), target.toPath()).toFile()
     }
 
@@ -250,7 +246,7 @@ class FilesEx {
      * @param target
      * @return
      */
-    def static File moveTo( File source, String target ) {
+    static File moveTo( File source, String target ) {
         moveTo(source.toPath(), FileHelper.asPath(target)).toFile()
     }
 
@@ -261,7 +257,7 @@ class FilesEx {
      * @param target
      * @return
      */
-    def static Path moveTo( Path source, Path target ) {
+    static Path moveTo( Path source, Path target ) {
 
         if( source.isDirectory() ) {
             if( target.isDirectory() ) {
@@ -292,7 +288,7 @@ class FilesEx {
         return FileHelper.movePath(source, target, REPLACE_EXISTING)
     }
 
-    def static Path moveTo( Path source, String target ) {
+    static Path moveTo( Path source, String target ) {
         moveTo(source, FileHelper.asPath(target) )
     }
 
@@ -312,7 +308,7 @@ class FilesEx {
      * @param times The number of times it checks for the extension to be removed (useful for files with multiple extensions)
      * @return The name of the file without the path, or an empty string if none exists
      */
-    def static String getBaseName( File file, int times=1 ) {
+    static String getBaseName( File file, int times=1 ) {
         getBaseName(file.toPath(), times)
     }
 
@@ -332,7 +328,7 @@ class FilesEx {
      * @param times The number of times it checks for the extension to be removed (useful for files with multiple extensions)
      * @return The name of the file without the path, or an empty string if none exists
      */
-    def static String getBaseName( Path self, int times=1 ) {
+    static String getBaseName( Path self, int times=1 ) {
         assert self
 
         String name = self.getFileName()
@@ -408,7 +404,7 @@ class FilesEx {
      *
      * @return The name of the path as string
      */
-    def static String getName( Path self ) {
+    static String getName( Path self ) {
        return self.getFileName()?.toString() ?: ''
     }
 
@@ -429,7 +425,7 @@ class FilesEx {
      * @param file  The file to retrieve the extension of.
      * @return the Extension of the file or an empty string if none exists
      */
-    def static String getExtension( File file ) {
+    static String getExtension( File file ) {
         getExtension(file.toPath())
     }
 
@@ -439,7 +435,7 @@ class FilesEx {
      * @param file A {@code Path} referencing a file
      * @return The file name extension (not including the dot) or an empty string if the file has not extension
      */
-    def static String getExtension( Path file ) {
+    static String getExtension( Path file ) {
         assert file
         String name = file.getFileName()
         if( !name ) return ''
@@ -450,7 +446,7 @@ class FilesEx {
         return name.substring(pos+1)
     }
 
-    def static boolean exists(Path self, LinkOption... options) {
+    static boolean exists(Path self, LinkOption... options) {
 
         return options ? Files.exists(self,options) : Files.exists(self)
 
@@ -465,7 +461,7 @@ class FilesEx {
      *          creating the directory
      * @return {@code true} if the directory is created successfully, or {@code false} otherwise
      */
-    def static boolean mkdir(Path self, FileAttribute<?>... attr) {
+    static boolean mkdir(Path self, FileAttribute<?>... attr) {
 
         try {
             Files.createDirectory(self,attr)
@@ -486,7 +482,7 @@ class FilesEx {
      *          creating the directory
      * @return {@code true} if the directory is created successfully, or {@code false} otherwise
      */
-    def static boolean mkdirs(Path self, FileAttribute<?>... attr) {
+    static boolean mkdirs(Path self, FileAttribute<?>... attr) {
 
         try {
             Files.createDirectories(self,attr)
@@ -507,7 +503,7 @@ class FilesEx {
      *          application; <code>false</code> otherwise
      *
      */
-    def static boolean canRead(Path self) {
+    static boolean canRead(Path self) {
         try {
             Files.isReadable(self)
         }
@@ -528,7 +524,7 @@ class FilesEx {
      *          <code>false</code> otherwise.
      *
      */
-    def static boolean canWrite(Path self) {
+    static boolean canWrite(Path self) {
         try {
             Files.isWritable(self)
         }
@@ -552,7 +548,7 @@ class FilesEx {
      *          method denies execute access to the file
      *
      */
-    def static boolean canExecute(Path self) {
+    static boolean canExecute(Path self) {
         try {
             Files.isExecutable(self)
         }
@@ -582,7 +578,7 @@ class FilesEx {
      * @param options
      * @return
      */
-    def static long lastModified(Path self,LinkOption...options) {
+    static long lastModified(Path self,LinkOption...options) {
         try {
             Files.getLastModifiedTime(self,options).toMillis()
         }
@@ -592,27 +588,27 @@ class FilesEx {
         }
     }
 
-    def static boolean isHidden(Path self) {
+    static boolean isHidden(Path self) {
         Files.isHidden(self)
     }
 
-    def static boolean isDirectory(Path self,LinkOption... options) {
+    static boolean isDirectory(Path self,LinkOption... options) {
         Files.isDirectory(self,options)
     }
 
-    def static boolean isFile(Path self, LinkOption...options) {
+    static boolean isFile(Path self, LinkOption...options) {
         Files.isRegularFile(self,options)
     }
 
-    def static boolean isLink(Path self) {
+    static boolean isLink(Path self) {
         Files.isSymbolicLink(self)
     }
 
-    def static boolean renameTo(Path self, Path target) {
+    static boolean renameTo(Path self, Path target) {
         Files.move(self,target)
     }
 
-    def static boolean renameTo(Path self, String target) {
+    static boolean renameTo(Path self, String target) {
         renameTo( self, FileHelper.asPath(target) )
     }
 
@@ -623,7 +619,7 @@ class FilesEx {
      * @param self The folder to list
      * @return A list of strings or {@code null} if the path is not a folder
      */
-    def static String[] list(Path self) {
+    static String[] list(Path self) {
         listFiles(self).collect { getName(it) } as String[]
     }
 
@@ -634,7 +630,7 @@ class FilesEx {
      * @param self The folder to list
      * @return A list of {@code Path} or {@code null} if the path is not a folder
      */
-    def static Path[] listFiles(Path self, @ClosureParams(value = FromString.class, options = ["java.nio.file.Path", "java.nio.file.Path,java.nio.file.attribute.BasicFileAttributes"]) Closure<Boolean> filter=null) {
+    static Path[] listFiles(Path self, @ClosureParams(value = FromString.class, options = ["java.nio.file.Path", "java.nio.file.Path,java.nio.file.attribute.BasicFileAttributes"]) Closure<Boolean> filter=null) {
 
         if( !self.isDirectory() )
             return null
@@ -642,13 +638,13 @@ class FilesEx {
         def result = []
         Files.walkFileTree(self, new SimpleFileVisitor<Path>() {
 
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+            FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
                 if( filter==null || invokeFilter(filter,file,attrs) )
                     result.add( file )
                 FileVisitResult.CONTINUE
             }
 
-            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+            FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
                 if( self == dir )
                     FileVisitResult.CONTINUE
 
@@ -1246,7 +1242,7 @@ class FilesEx {
      * Create a folder if not already exists
      * @param target The folder to be created
      */
-    static public void createDirIfNotExists( Path target ) {
+    static void createDirIfNotExists( Path target ) {
         assert target
 
         try {
@@ -1260,7 +1256,7 @@ class FilesEx {
         }
     }
 
-    static public void createDirIfNotExists( File target ) {
+    static void createDirIfNotExists( File target ) {
         createDirIfNotExists(target.toPath())
     }
 

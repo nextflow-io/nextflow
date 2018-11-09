@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.util
@@ -36,12 +32,17 @@ class Escape {
 
     private static List<String> WILDCARDS = ["*", "?", "{", "}", "[", "]", "'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':']
 
-    private static String replace(List<String> special, String str) {
+    private static String replace(List<String> special, String str, boolean doNotEscapeComplement=false) {
         def copy = new StringBuilder(str.size() +10)
         for( int i=0; i<str.size(); i++) {
-            def p = special.indexOf(str[i])
+            def ch = str[i]
+            def p = special.indexOf(ch)
             if( p != -1 ) {
-                copy.append('\\')
+                // when ! is the first character after a `[` it should not be escaped
+                // see http://man7.org/linux/man-pages/man7/glob.7.html
+                final isComplement = doNotEscapeComplement && ch=='!' && ( i>0 && str[i-1]=='[' && (i==1 || str[i-2]!='\\') && str.substring(i).contains(']'))
+                if( !isComplement )
+                    copy.append('\\')
             }
             copy.append(str[i])
         }
@@ -53,7 +54,7 @@ class Escape {
     }
 
     static String path(String val) {
-        replace(SPECIAL_CHARS, val)
+        replace(SPECIAL_CHARS, val, true)
     }
 
     static String path(Path val) {

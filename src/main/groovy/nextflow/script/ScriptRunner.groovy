@@ -1,25 +1,20 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.script
-import static nextflow.util.ConfigHelper.parseValue
 
 import java.nio.file.Path
 
@@ -29,19 +24,23 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Channel
+import nextflow.Const
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.ast.NextflowDSL
+import nextflow.ast.NextflowXform
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.file.FileHelper
 import nextflow.util.ConfigHelper
 import nextflow.util.HistoryFile
+import nextflow.util.VersionNumber
 import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
+import static nextflow.util.ConfigHelper.parseValue
 /**
  * Application main class
  *
@@ -116,7 +115,7 @@ class ScriptRunner {
         this.session = new Session(builder.build())
         // note config files are collected during the build process
         // this line should be after `ConfigBuilder#build`
-        this.session.configFiles = builder.configFiles
+        this.session.configFiles = builder.parsedConfigFiles
     }
 
     ScriptRunner setScript( String text ) {
@@ -278,6 +277,7 @@ class ScriptRunner {
         config.addCompilationCustomizers( importCustomizer )
         config.scriptBaseClass = BaseScript.class.name
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
 
         // extend the class-loader if required
         def gcl = new GroovyClassLoader()
@@ -325,7 +325,42 @@ class ScriptRunner {
      * Check preconditions before run the main script
      */
     protected void validate() {
+        checkConfig()
+        checkVersion()
+    }
+
+    @PackageScope void checkConfig() {
         session.validateConfig(script.getProcessNames())
+    }
+
+    @PackageScope VersionNumber getCurrentVersion() {
+        new VersionNumber(Const.APP_VER)
+    }
+
+    @PackageScope void checkVersion() {
+        def version = session.manifest.getNextflowVersion()?.trim()
+        if( !version )
+            return
+
+        // when the version string is prefix with a `!`
+        // an exception is thrown is the version does not match
+        boolean important = false
+        if( version.startsWith('!') ) {
+            important = true
+            version = version.substring(1).trim()
+        }
+
+        if( !getCurrentVersion().matches(version) ) {
+            important ? showVersionError(version) : showVersionWarning(version)
+        }
+    }
+
+    @PackageScope void showVersionError(String ver) {
+        throw new AbortOperationException("Nextflow version $Const.APP_VER does not match workflow required version: $ver")
+    }
+
+    @PackageScope void showVersionWarning(String ver) {
+        log.warn "Nextflow version $Const.APP_VER does not match workflow required version: $ver -- Execution will continue, but things may break!"
     }
 
     /**

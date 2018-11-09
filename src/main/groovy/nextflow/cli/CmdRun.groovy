@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.cli
@@ -97,6 +93,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate result files are stored')
     String workDir
 
+    @Parameter(names=['-bucket-dir'], description = 'Remote bucket where intermediate result files are stored')
+    String bucketDir
+
     /**
      * Defines the parameters to be passed to the pipeline script
      */
@@ -129,6 +128,14 @@ class CmdRun extends CmdBase implements HubOptions {
 
     @Parameter(names='-stdin', hidden = true)
     boolean stdin
+
+    @Parameter(names = ['-ansi'], hidden = true, arity = 0)
+    boolean setAnsiLog(boolean value) {
+        launcher.options.ansiLog = value
+    }
+
+    @Parameter(names = ['-with-weblog'], description = 'Send workflow status messages via HTTP to target URL')
+    String withWebLog
 
     @Parameter(names = ['-with-trace'], description = 'Create processes execution tracing file')
     String withTrace
@@ -177,6 +184,12 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-N','-with-notification'], description = 'Send a notification email on workflow completion to the specified recipients')
     String withNotification
 
+    @Parameter(names=['-with-conda'], description = 'Use the specified Conda environment package or file (must end with .yml|.yaml suffix)')
+    String withConda
+
+    @Parameter(names=['-offline'], description = 'Do not check for remote project updates')
+    boolean offline = System.getenv('NXF_OFFLINE') as boolean
+
     @Override
     String getName() { NAME }
 
@@ -189,6 +202,9 @@ class CmdRun extends CmdBase implements HubOptions {
 
         if( withDocker && withoutDocker )
             throw new AbortOperationException("Command line options `-with-docker` and `-without-docker` cannot be specified at the same time")
+
+        if( offline && latest )
+            throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
 
         checkRunName()
 
@@ -207,6 +223,7 @@ class CmdRun extends CmdBase implements HubOptions {
         final runner = new ScriptRunner(config)
         runner.script = scriptFile
         runner.profile = profile
+        runner.session.ansiLog = launcher.options.ansiLog
 
         if( this.test ) {
             runner.test(this.test, scriptArgs)
@@ -277,6 +294,8 @@ class CmdRun extends CmdBase implements HubOptions {
 
         boolean checkForUpdate = true
         if( !manager.isRunnable() || latest ) {
+            if( offline )
+                throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
             log.info "Pulling $repo ..."
             def result = manager.download()
             if( result )
@@ -289,7 +308,7 @@ class CmdRun extends CmdBase implements HubOptions {
             manager.updateModules()
             def scriptFile = manager.getScriptFile()
             log.info "Launching `$repo` [$runName] - revision: ${scriptFile.revisionInfo}"
-            if( checkForUpdate )
+            if( checkForUpdate && !offline )
                 manager.checkRemoteStatus(scriptFile.revisionInfo)
             // return the script file
             return scriptFile

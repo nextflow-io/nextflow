@@ -1,25 +1,19 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package nextflow.processor
-
-import static nextflow.processor.ErrorStrategy.*
 
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
@@ -28,8 +22,6 @@ import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicIntegerArray
-import java.util.concurrent.locks.Lock
-import java.util.concurrent.locks.ReentrantLock
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
@@ -60,8 +52,8 @@ import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
-import nextflow.exception.ProcessStageException
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.exception.ShowOnlyExceptionMessage
 import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
 import nextflow.extension.DataflowHelper
@@ -90,6 +82,10 @@ import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.CollectionHelper
+import static nextflow.processor.ErrorStrategy.FINISH
+import static nextflow.processor.ErrorStrategy.IGNORE
+import static nextflow.processor.ErrorStrategy.RETRY
+import static nextflow.processor.ErrorStrategy.TERMINATE
 /**
  * Implement nextflow process execution logic
  *
@@ -97,139 +93,6 @@ import nextflow.util.CollectionHelper
  */
 @Slf4j
 class TaskProcessor {
-
-    /**
-     * Implements the closure which *combines* all the iteration
-     *
-     * @param numOfInputs Number of in/out channel
-     * @param indexes The list of indexes which identify the position of iterators in the input channels
-     * @return The closure implementing the iteration/forwarding logic
-     */
-    static class ForwardClosure extends Closure {
-
-        final private Integer len
-
-        final private int numOfParams
-
-        final private List<Integer> indexes
-
-        ForwardClosure(int len, List<Integer> indexes) {
-            super(null, null);
-            assert len>=1
-            this.len = len
-            this.numOfParams = len+1
-            this.indexes = indexes
-        }
-
-        @Override
-        public int getMaximumNumberOfParameters() {
-            numOfParams
-        }
-
-        @Override
-        public Class[] getParameterTypes() {
-            def result = new Class[numOfParams]
-            for( int i=0; i<result.size(); i++ )
-                result[i] = Object
-            return result
-        }
-
-        @Override
-        public Object call(final Object... args) {
-            final target = ((DataflowProcessor) getDelegate())
-            /*
-             * Explaining the following code:
-             *
-             * - 'out' holds the list of all input values which need to be forwarded (bound) to output as many
-             *   times are the items in the iteration list
-             *
-             * - the iteration list(s) is (are) passed like in the closure inputs like the other values,
-             *   the *indexes* argument defines the which of them are the iteration lists
-             *
-             * - 'itr' holds the list of all iteration lists
-             *
-             * - using the groovy method a combination of all values is create (cartesian product)
-             *   see http://groovy.codehaus.org/groovy-jdk/java/util/Collection.html#combinations()
-             *
-             * - the resulting values are replaced in the 'out' array of values and forwarded out
-             *
-             */
-
-            def out = args[0..-2]
-            def itr = indexes.collect { args[it] }
-            List<List> cmb = itr.combinations()
-
-            for( int i=0; i<cmb.size(); i++ ) {
-                List entries = cmb[i]
-                int count = 0
-                for( int j=0; j<len; j++ ) {
-                    if( j in this.indexes ) {
-                        out[j] = entries[count++]
-                    }
-                }
-
-                target.bindAllOutputValues( out as Object[] )
-            }
-
-            return null
-        }
-
-        @Override
-        public Object call(final Object arguments) {
-            throw new UnsupportedOperationException()
-        }
-
-        @Override
-        public Object call() {
-            throw new UnsupportedOperationException()
-        }
-    }
-
-    /**
-     * Adapter closure to call the {@link #invokeTask(java.lang.Object)} method
-     */
-    static class InvokeTaskAdapter extends Closure {
-
-        private int numOfParams
-
-        private TaskProcessor processor
-
-        InvokeTaskAdapter(TaskProcessor p, int n) {
-            super(null, null);
-            processor = p
-            numOfParams = n
-        }
-
-        @Override
-        public int getMaximumNumberOfParameters() {
-            numOfParams
-        }
-
-        @Override
-        public Class[] getParameterTypes() {
-            def result = new Class[numOfParams]
-            for( int i=0; i<result.size(); i++ )
-                result[i] = Object
-            return result
-        }
-
-        @Override
-        public Object call(final Object arguments) {
-            processor.invokeTask(arguments)
-            return null
-        }
-
-        @Override
-        public Object call(final Object... args) {
-            processor.invokeTask(args as List)
-            return null
-        }
-
-        @Override
-        public Object call() {
-            throw new UnsupportedOperationException()
-        }
-    }
 
     static enum RunType {
         SUBMIT('Submitted process'),
@@ -305,10 +168,6 @@ class TaskProcessor {
      */
     private volatile int errorCount
 
-    /**
-     * Lock the work dir creation process
-     */
-    private static Lock lockWorkDirCreation = new ReentrantLock()
 
     /**
      * Set to true the very first time the error is shown.
@@ -826,17 +685,11 @@ class TaskProcessor {
         while( true ) {
             hash = CacheHelper.defaultHasher().newHasher().putBytes(hash.asBytes()).putInt(tries).hash()
 
-            boolean exists=false
-            final folder = FileHelper.getWorkFolder(session.workDir, hash)
-            lockWorkDirCreation.lock()
-            try {
-                exists = folder.exists()
-                if( !exists && !folder.mkdirs() )
-                    throw new IOException("Unable to create folder=$folder -- check file system permission")
-            }
-            finally {
-                lockWorkDirCreation.unlock()
-            }
+            boolean exists
+            final folder = task.getWorkDirFor(hash)
+            exists = folder.exists()
+            if( !exists && !folder.mkdirs() )
+                throw new IOException("Unable to create folder=$folder -- check file system permission")
 
             log.trace "[${task.name}] Cacheable folder=$folder -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache"
             def cached = shouldTryCache && exists && checkCachedOutput(task.clone(), folder, hash)
@@ -1115,6 +968,7 @@ class TaskProcessor {
                     message << formatErrorCause(error)
                     dumpStackTrace = true
             }
+
             if( dumpStackTrace )
                 log.error(message.join('\n'), error)
             else
@@ -1293,20 +1147,16 @@ class TaskProcessor {
         }
     }
 
-
     private String formatErrorCause( Throwable error ) {
 
         def result = new StringBuilder()
         result << '\nCaused by:\n'
 
         def message
-        if( error instanceof ProcessStageException || error instanceof MissingFileException || !error.cause )
-            message = error.getMessage()
+        if( error instanceof ShowOnlyExceptionMessage || !error.cause )
+            message = error.getErrMessage()
         else
-            message = error.cause.getMessage()
-
-        if( !message )
-            message = error.toString()
+            message = error.cause.getErrMessage()
 
         result
             .append('  ')
@@ -1428,7 +1278,7 @@ class TaskProcessor {
         }
 
         // -- finally prints out the task output when 'echo' is true
-        if( task.config.echo ) {
+        if( task.config.echo && !session.ansiLog ) {
             task.echoStdout()
         }
     }
@@ -1717,18 +1567,29 @@ class TaskProcessor {
         return files
     }
 
-    protected singleItemOrList( List<FileHolder> items ) {
+    protected singleItemOrList( List<FileHolder> items, ScriptType type ) {
         assert items != null
 
         if( items.size() == 1 ) {
-            return Paths.get(items[0].stageName)
+            return makePath(items[0],type)
         }
 
         def result = new ArrayList(items.size())
         for( int i=0; i<items.size(); i++ ) {
-            result.add( Paths.get(items[i].stageName) )
+            result.add( makePath(items[i],type) )
         }
         return new BlankSeparatedList(result)
+    }
+
+    private Path makePath( FileHolder holder, ScriptType type ) {
+        if( type == ScriptType.SCRIPTLET ) {
+            return new TaskPath(holder)
+        }
+        if( type == ScriptType.GROOVY) {
+            // the real path for the native task needs to be fixed -- see #378
+            return Paths.get(holder.stageName)
+        }
+        throw new IllegalStateException("Unknown task type: $type")
     }
 
 
@@ -1900,7 +1761,7 @@ class TaskProcessor {
             def fileParam = param as FileInParam
             def normalized = normalizeInputToFiles(val,count)
             def resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
-            ctx.put( param.name, singleItemOrList(resolved) )
+            ctx.put( param.name, singleItemOrList(resolved, task.type) )
             count += resolved.size()
             for( FileHolder item : resolved ) {
                 Integer num = allNames.getOrCreate(item.stageName, 0) +1
@@ -1964,6 +1825,11 @@ class TaskProcessor {
         final modules = task.getConfig().getModule()
         if( modules ) {
             keys.addAll(modules)
+        }
+        
+        final conda = task.getCondaEnv()
+        if( conda ) {
+            keys.add(conda)
         }
 
         final mode = config.getHashMode()
@@ -2191,10 +2057,12 @@ class TaskProcessor {
         for( int i=0; i<openPorts.length(); i++ ) {
             def last = i == openPorts.length()-1
             def param = config.getInputs()[i]
-            def isValue = param?.inChannel instanceof DataflowExpression
+            def chnnl = param?.inChannel
+            def isValue = chnnl instanceof DataflowExpression
             def type = last ? '(cntrl)' : (isValue ? '(value)' : '(queue)')
             def channel = param && !(param instanceof SetInParam) ? param.getName() : '-'
-            def status = type != '(value)' ? (openPorts.get(i) ? 'OPEN' : 'CLOSED') : '-   '
+            def status; if( isValue ) { status = !chnnl.isBound() ? 'OPEN  ' : 'bound ' }
+            else status = type == '(queue)' ? (openPorts.get(i) ? 'OPEN  ' : 'closed') : '-     '
             result << "  port $i: $type ${status}; channel: $channel\n"
         }
 

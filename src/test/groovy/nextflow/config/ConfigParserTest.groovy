@@ -1,27 +1,29 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.config
 
+import java.nio.file.Files
 import java.nio.file.NoSuchFileException
+import java.nio.file.Path
 
+import com.sun.net.httpserver.Headers
+import com.sun.net.httpserver.HttpExchange
+import com.sun.net.httpserver.HttpHandler
+import com.sun.net.httpserver.HttpServer
 import spock.lang.Specification
 /**
  *
@@ -463,5 +465,69 @@ class ConfigParserTest extends Specification {
 
     }
 
+
+    def 'should parse a config from an http server' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('conf').mkdir()
+        // launch web server
+        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
+        server.createContext("/", new ConfigFileHandler(folder));
+        server.start()
+
+        // main `nextflow.config` file
+        folder.resolve('nextflow.config').text = '''
+        includeConfig 'conf/base.config'
+        includeConfig 'http://localhost:9900/conf/remote.config'
+        '''
+
+        folder.resolve('conf/base.config').text = '''
+        params.foo = 'Hello'
+        params.bar = 'world!'
+        '''
+
+        folder.resolve('conf/remote.config').text = '''
+        process {
+            cpus = 4 
+            memory = '10GB'
+        }
+        '''
+        
+        when:
+        def url = 'http://localhost:9900/nextflow.config' as Path
+        def cfg = new ConfigBuilder().buildGivenFiles(url)
+        then:
+        cfg.params.foo == 'Hello'
+        cfg.params.bar == 'world!'
+        cfg.process.cpus == 4
+        cfg.process.memory == '10GB'
+
+        cleanup:
+        server?.stop(0)
+        folder?.deleteDir()
+    }
+
+
+    static class ConfigFileHandler implements HttpHandler {
+
+        Path folder
+
+        ConfigFileHandler(Path folder) {
+             this.folder = folder
+        }
+
+        void handle(HttpExchange request) throws IOException {
+            def path = request.requestURI.toString().substring(1)
+            def file = folder.resolve(path)
+
+            Headers header = request.getResponseHeaders()
+            header.add("Content-Type", "text/plain")
+            request.sendResponseHeaders(200, file.size())
+
+            OutputStream os = request.getResponseBody();
+            os.write(file.getBytes());
+            os.close();
+        }
+    }
 
 }

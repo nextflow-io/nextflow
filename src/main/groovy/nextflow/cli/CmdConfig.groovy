@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.cli
@@ -25,6 +21,7 @@ import java.nio.file.Paths
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
@@ -82,18 +79,18 @@ class CmdConfig extends CmdBase {
         def config = new ConfigBuilder()
                 .setShowClosures(true)
                 .setOptions(launcher.options)
-                .setBaseDir(base.complete())
+                .setBaseDir(base)
                 .setCmdConfig(this)
-                .configObject()
+                .buildConfigObject()
 
         if( printProperties ) {
-            printProperties(config, stdout)
+            printProperties0(config, stdout)
         }
         else if( printFlatten ) {
-            printFlatten(config, stdout)
+            printFlatten0(config, stdout)
         }
         else {
-            printCanonical(config, stdout)
+            printCanonical0(config, stdout)
         }
     }
 
@@ -104,7 +101,7 @@ class CmdConfig extends CmdBase {
      * @param config The {@link ConfigObject} representing the parsed workflow configuration
      * @param output The stream where output the formatted configuration notation
      */
-    protected void printCanonical(ConfigObject config, OutputStream output) {
+    @PackageScope void printCanonical0(ConfigObject config, OutputStream output) {
         output << ConfigHelper.toCanonicalString(config, sort)
     }
 
@@ -114,7 +111,7 @@ class CmdConfig extends CmdBase {
      * @param config The {@link ConfigObject} representing the parsed workflow configuration
      * @param output The stream where output the formatted configuration notation
      */
-    protected void printProperties(ConfigObject config, OutputStream output) {
+    @PackageScope void printProperties0(ConfigObject config, OutputStream output) {
         output << ConfigHelper.toPropertiesString(config, sort)
     }
 
@@ -125,7 +122,7 @@ class CmdConfig extends CmdBase {
      * @param config The {@link ConfigObject} representing the parsed workflow configuration
      * @param output The stream where output the formatted configuration notation
     */
-    protected void printFlatten(ConfigObject config, OutputStream output) {
+    @PackageScope void printFlatten0(ConfigObject config, OutputStream output) {
         output << ConfigHelper.toFlattenString(config, sort)
     }
 
@@ -135,7 +132,7 @@ class CmdConfig extends CmdBase {
      * @param config The {@link ConfigObject} representing the parsed workflow configuration
      * @param output The stream where output the formatted configuration notation
      */
-    protected void printDefault(ConfigObject config, OutputStream output) {
+    @PackageScope void printDefault0(ConfigObject config, OutputStream output) {
         def writer = new PrintWriter(output,true)
         config.writeTo( writer )
     }

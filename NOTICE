@@ -1,0 +1,131 @@
+NEXTFLOW
+
+Copyright 2013-2018, Centre for Genomic Regulation (CRG)
+
+
+This software includes source code and libraries developed by:
+
+    Lorenz Gerber
+    Licensed under Apache License, Version 2.0
+
+    SciLifeLab
+    Licensed under Apache License, Version 2.0
+
+    Synthetic Genomics
+    Licensed under Apache License, Version 2.0
+
+    University of Tübingen, Quantitative Biology Center (QBiC)
+    Licensed under Apache License, Version 2.0
+
+    Apache Commons Lang
+    Copyright Apache Software Foundation
+    Licensed under Apache License, Version 2.0
+
+    Apache Commons Codec
+    Copyright Apache Software Foundation
+    Licensed under Apache License, Version 2.0
+
+    Apache Http Components
+    Copyright Apache Software Foundation
+    Licensed under Apache License, Version 2.0
+
+    Apache Groovy
+    Copyright 2003-2018 Apache Software Foundation
+    Licensed under Apache License, Version 2.0
+
+    Apache Ignite
+    Copyright 2018 The Apache Software Foundation
+    Licensed under Apache License, Version 2.0
+
+    AWS SDK for Java
+    Copyright 2010-2014 Amazon.com, Inc. or its affiliates
+    Licensed under Apache License, Version 2.0
+
+    Gpars
+    Copyright (c) 2008-2011, The Gpars authors
+    Licensed under the Apache License, Version 2.0
+
+    Grengine
+    https://gitlab.com/jexler/grengine
+    Copyright (c) 2014-now, Alain Stalder
+    Licensed under the Apache License, Version 2.0
+
+    Gson
+    https://github.com/google/gson
+    Copyright 2008 Google Inc.
+    Licensed under the Apache License, Version 2.0
+
+    Guava
+    https://github.com/google/guava
+    Copyright 2008 The Guava Authors
+    Licensed under Apache License, Version 2.0
+
+    JGit
+    Copyright JGit authors
+    Licensed under the EPL v1.0 license
+
+    Javaewah
+    https://github.com/lemire/javaewah
+    Copyright 2009-2016, Daniel Lemire, Cliff Moon, David McIntosh, Robert Becho, Google Inc., Veronika Zenz, Owen Kaser, Gregory Ssi-Yan-Kai, Rory Graves
+    Licensed under Apache License, Version 2.0
+
+    Jackson
+    https://github.com/FasterXML/jackson-core
+    https://github.com/FasterXML/jackson-annotations
+    https://github.com/FasterXML/jackson-databind
+    Copyright The Jackson authors
+    Licensed under Apache License, Version 2.0
+    
+    JCommander
+    Copyright (c) 2010 Cedric Beust
+    Licensed under Apache License, Version 2.0
+
+    Jsch
+    http://www.jcraft.com/jsch/
+    Copyright (c) 2002-2015 Atsuhiko Yamanaka, JCraft, Inc
+    Licensed under BSD style license
+
+    Jsoup
+    https://github.com/jhy/jsoup
+    Copyright 2009-2018 Jonathan Hedley
+    Licensed under the MIT license
+
+    Kryo
+    Copyright (c) 2008-2018, Nathan Sweet
+    Licensed under BSD 3-Clause license
+
+    Kryo serializers
+    https://github.com/magro/kryo-serializers
+    Copyright 2010 Martin Grotzke
+    Licensed under Apache License, Version 2.0
+
+    Leveldb, https://github.com/dain/leveldb
+    Copyright 2011 Dain Sundstrom dain@iq80.com
+    Copyright 2011 FuseSource Corp. http://fusesource.com
+    Licensed under Apache License, Version 2.0
+
+    Logback
+    Copyright 1999-2017, QOS.ch
+    Licensed under the EPL v1.0 license
+
+    Objenesis
+    https://github.com/easymock/objenesis
+    Copyright 2006-2018 the original author or authors
+    Licensed under Apache License, Version 2.0
+
+    Okhttp
+    Copyright 2013-2016 Square, Inc.
+    Licensed under Apache License, Version 2.0
+
+    SLF4J
+    Copyright 2004-2018 QOS.ch
+    Licensed under the MIT license
+
+    Snakeyaml
+    Copyright 2008, http://www.snakeyaml.org
+    Licensed under Apache License, Version 2.0
+
+
+
+Nextflow is a registered trademark of Centre for Genomic Regulation, Spain (CRG).
+See the trademark policy for details https://github.com/nextflow-io/trademark

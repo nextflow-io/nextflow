@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow
@@ -54,17 +50,17 @@ class Const {
     /**
      * The application version
      */
-    static public final String APP_VER = "0.29.0"
+    static public final String APP_VER = "18.10.1"
 
     /**
      * The app build time as linux/unix timestamp
      */
-    static public final long APP_TIMESTAMP = 1524557352936
+    static public final long APP_TIMESTAMP = 1540389820532
 
     /**
      * The app build number
      */
-    static public final int APP_BUILDNUM = 4803
+    static public final int APP_BUILDNUM = 5003
 
 
     /**
@@ -134,5 +130,17 @@ class Const {
     static public final String ROLE_WORKER = 'worker'
 
     static public final String ROLE_MASTER = 'master'
+
+    static public final String MANIFEST_FILE_NAME = 'nextflow.config'
+
+    static public final String DEFAULT_MAIN_FILE_NAME = 'main.nf'
+
+    static public final String DEFAULT_ORGANIZATION = System.getenv('NXF_ORG') ?: 'nextflow-io'
+
+    static public final String DEFAULT_HUB = System.getenv('NXF_HUB') ?: 'github'
+
+    static public final File DEFAULT_ROOT = System.getenv('NXF_ASSETS') ? new File(System.getenv('NXF_ASSETS')) : Const.APP_HOME_DIR.resolve('assets').toFile()
+
+    static public final String DEFAULT_BRANCH = 'master'
 
 }

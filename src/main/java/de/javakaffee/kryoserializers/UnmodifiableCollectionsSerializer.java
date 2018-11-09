@@ -41,7 +41,7 @@ import com.esotericsoftware.kryo.io.Output;
  * A kryo {@link Serializer} for unmodifiable {@link Collection}s and {@link Map}s
  * created via {@link Collections}.
  *
- * @author <a href="mailto:martin.grotzke@javakaffee.de">Martin Grotzke</a>
+ * @author Martin Grotzke <martin.grotzke@javakaffee.de>
  *
  * @link https://github.com/magro/kryo-serializers
  */

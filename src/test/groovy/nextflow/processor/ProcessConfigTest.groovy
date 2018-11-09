@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.processor
@@ -450,6 +446,89 @@ class ProcessConfigTest extends Specification {
         then:
         process.cpus == 4
         process.size() == 1
+    }
+
+
+    def 'should apply config process defaults' () {
+
+        when:
+        def process = new ProcessConfig(Mock(BaseScript))
+
+        // set process specific settings
+        process.queue = 'cn-el6'
+        process.memory = '10 GB'
+
+        // apply config defaults
+        process.applyConfigDefaults(
+                queue: 'def-queue',
+                container: 'ubuntu:latest'
+        )
+
+        then:
+        process.queue == 'cn-el6'
+        process.container == 'ubuntu:latest'
+        process.memory == '10 GB'
+        process.cacheable == true
+
+
+
+        when:
+        process = new ProcessConfig(Mock(BaseScript))
+        // set process specific settings
+        process.container = null
+        // apply process defaults
+        process.applyConfigDefaults(
+                queue: 'def-queue',
+                container: 'ubuntu:latest',
+                maxRetries: 5
+        )
+        then:
+        process.queue == 'def-queue'
+        process.container == null
+        process.maxRetries == 5
+
+
+
+        when:
+        process = new ProcessConfig(Mock(BaseScript))
+        // set process specific settings
+        process.maxRetries = 10
+        // apply process defaults
+        process.applyConfigDefaults(
+                queue: 'def-queue',
+                container: 'ubuntu:latest',
+                maxRetries: 5
+        )
+        then:
+        process.queue == 'def-queue'
+        process.container == 'ubuntu:latest'
+        process.maxRetries == 10
+    }
+
+
+    def 'should apply pod configs' () {
+
+        when:
+        def process =  new ProcessConfig([:])
+        process.applyConfigDefaults( pod: [secret: 'foo', mountPath: '/there'] )
+        then:
+        process.pod == [
+                [secret: 'foo', mountPath: '/there']
+        ]
+
+        when:
+        process =  new ProcessConfig([:])
+        process.applyConfigDefaults( pod: [
+                [secret: 'foo', mountPath: '/here'],
+                [secret: 'bar', mountPath: '/there']
+        ] )
+
+        then:
+        process.pod == [
+                [secret: 'foo', mountPath: '/here'],
+                [secret: 'bar', mountPath: '/there']
+        ]
+
     }
 
 }

@@ -1,24 +1,21 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.config
+
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -85,21 +82,31 @@ abstract class ConfigBase extends Script {
         log.trace "Include config file: $includeFile [parent: $owner]"
 
         if( !includePath.isAbsolute() && owner ) {
-            includePath = owner.resolveSibling(includePath)
+            includePath = owner.resolveSibling(includeFile.toString())
         }
 
-        if( !includePath.exists() )
-            throw new NoSuchFileException("Config file does not exist: ${includePath}")
+        def configText
+        try {
+            configText = includePath.getText()
+        }
+        catch( IOException e ) {
+            if( !includePath.exists() )
+                throw new NoSuchFileException("Config file does not exist: ${includePath.toUriString()}")
+            else
+                throw new IOException("Cannot read config file include: ${includePath.toUriString()}", e)
+        }
 
         // -- set the required base script
         def config = new CompilerConfiguration()
         config.scriptBaseClass = ConfigBase.class.name
+        def params = [:]
         if( renderClosureAsString )
-            config.addCompilationCustomizers(new ASTTransformationCustomizer(ConfigTransform))
+            params.put('renderClosureAsString', true)
+        config.addCompilationCustomizers(new ASTTransformationCustomizer(params, ConfigTransform))
 
         // -- setup the grengine instance
         def engine = new Grengine(this.class.classLoader,config)
-        def clazz = engine.load(includePath.toUri().toURL())
+        def clazz = engine.load(configText)
 
         // -- push this file on the stack
         this.configStack.push(includePath)

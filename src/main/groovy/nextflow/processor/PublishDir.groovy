@@ -1,27 +1,24 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.processor
 
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
@@ -33,6 +30,7 @@ import java.util.concurrent.TimeUnit
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
@@ -51,7 +49,7 @@ import nextflow.file.FileHelper
 @EqualsAndHashCode
 class PublishDir {
 
-    enum Mode { SYMLINK, LINK, COPY, MOVE, COPY_NO_FOLLOW }
+    enum Mode { SYMLINK, LINK, COPY, MOVE, COPY_NO_FOLLOW, RELLINK }
 
     private Map<Path,Boolean> makeCache = new HashMap<>()
 
@@ -88,7 +86,7 @@ class PublishDir {
 
     private Path sourceDir
 
-    private static ExecutorService executor
+    private String stageInMode
 
     void setPath( Closure obj ) {
         setPath( obj.call() as Path )
@@ -157,7 +155,7 @@ class PublishDir {
         this.processor = task.processor
         this.sourceDir = task.targetDir
         this.sourceFileSystem = sourceDir.fileSystem
-
+        this.stageInMode = task.config.stageInMode
         createPublishDir()
 
         validatePublishMode()
@@ -167,14 +165,10 @@ class PublishDir {
          * otherwise copy and moving file can take a lot of time, thus
          * apply the operation using an external thread
          */
-        final inProcess = mode == Mode.LINK || mode == Mode.SYMLINK
+        final inProcess = mode == Mode.LINK || mode == Mode.SYMLINK || mode == Mode.RELLINK
 
         if( pattern ) {
             this.matcher = FileHelper.getPathMatcherFor("glob:${pattern}", sourceFileSystem)
-        }
-
-        if( !inProcess ) {
-            createExecutor()
         }
 
         /*
@@ -264,6 +258,10 @@ class PublishDir {
         if( !mode || mode == Mode.SYMLINK ) {
             Files.createSymbolicLink(destination, source)
         }
+        else if( mode == Mode.RELLINK ) {
+            def sourceRelative = destination.getParent().relativize(source)
+            Files.createSymbolicLink(destination, sourceRelative)
+        }
         else if( mode == Mode.LINK ) {
             FilesEx.mklink(source, [hard:true], destination)
         }
@@ -310,39 +308,38 @@ class PublishDir {
     @PackageScope
     void validatePublishMode() {
 
-        if( sourceFileSystem != path.fileSystem ) {
+        if( sourceFileSystem != path.fileSystem || path.fileSystem != FileSystems.default ) {
             if( !mode ) {
                 mode = Mode.COPY
             }
-            else if( mode == Mode.SYMLINK || mode == Mode.LINK ) {
+            else if( mode == Mode.SYMLINK || mode == Mode.LINK || mode == Mode.RELLINK ) {
                 log.warn1("Cannot use mode `${mode.toString().toLowerCase()}` to publish files to path: $path -- Using mode `copy` instead", firstOnly:true)
                 mode = Mode.COPY
             }
         }
 
         if( !mode ) {
-            mode = Mode.SYMLINK
+            mode = stageInMode=='rellink' ? Mode.RELLINK : Mode.SYMLINK
         }
     }
 
+    @Memoized // <-- this guarantees that the same executor is used across different publish dir in the same session
     @CompileStatic
-    static synchronized private void createExecutor() {
-        if( !executor ) {
-            executor = new ThreadPoolExecutor(0, Runtime.runtime.availableProcessors(),
-                    60L, TimeUnit.SECONDS,
-                    new LinkedBlockingQueue<Runnable>());
+    static synchronized ExecutorService createExecutor(Session session) {
+        final result = new ThreadPoolExecutor(0, Runtime.runtime.availableProcessors(),
+                60L, TimeUnit.SECONDS,
+                new LinkedBlockingQueue<Runnable>());
 
-            // register the shutdown on termination
-            def session = Global.session as Session
-            if( session ) {
-                session.onShutdown {
-                    executor.shutdown()
-                    executor.awaitTermination(36,TimeUnit.HOURS)
-                }
-            }
+        session?.onShutdown {
+            result.shutdown()
+            result.awaitTermination(36,TimeUnit.HOURS)
         }
+
+        return result
     }
 
     @PackageScope
-    static ExecutorService getExecutor() { executor }
+    static ExecutorService getExecutor() {
+        createExecutor(Global.session as Session)
+    }
 }

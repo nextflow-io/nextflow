@@ -1,6 +1,156 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+18.10.1 - 24 Oct 2018
+- Fixed test [011e8e23]
+- Fixed version number check [fb780347]
+
+18.10.0 - 24 Oct 2018
+- Added lenient cache mode #828 [ba907a2f]
+- Added support for java 11 [60da50b5]
+- Added support for Singularity 3.0 library #898
+- Added support for AWS Batch hybrid executions #744
+- Added weblog JSON format docs #882
+- Added weblog example documentation #891
+- Added PbsPro executor [33ae1104]
+- Added support for ANSI console logging [9c14a947]
+- Fixed License prevents scientific use #788
+- Fixed process submitter slow-down [495e900a]
+- Fixed Comparing duration and memory units with null throws an exception #872
+- Fixed Html format dag fails when 'each' qualifier is used #887
+- Fixed Collate/Buffer hangs with one emission after Collect operator #868
+- Fixed Option checkIfExists should be applied when a glob pattern does not match any file #874
+- Fixed Add name to manifest and reject other attributes #871
+- Fixed warning message grammar when resuming on new project #885
+- Fixed Missing DSL Xform transformation in console execution [9621f8c6]
+- Fixed Enum declared in nextflow script causes error #878
+- Fixed Report a warning message when queue status fetch fails [39aae6a2]
+- Fixed Pbs executor may return nonzero exit code when checking queue status #904
+- Renamed weblog `runStatus` to `event` #892
+- Renamed K8s config attribute userDir to launchDir #895
+- Merged tests as subtree [a03eb59a]
+- Refactored service discovery
+- Removed FastXxxYyyyStream
+- Demoted igfs subsystem
+- Upgraded Groovy to version 2.5.3 [119300b3]
+- Upgrade Gradle to version 4.10
+- Updated AWS batch docs
+
+0.32.0 - 8 Aug 2018
+- Fixed CPU usage metrics can be wrongly reported #858
+- Fixed Allow a process to access input file metadata #731
+- Fixed Completed jobs are detected with a big delay #799
+- Fixed Misleading message is shown when pulling a project with a invalid config #863
+- Fixed Allow groupTuple operator to handle multi-size tuples #796
+- Fixed Ignite executor fills up logs when node is disconnected #810
+- Fixed Log filter option is misinterpreted when enclosed in double quotes #846
+- Fixed Metrics collector process may cause the main process to report a false non-zero exit status #836
+- Fixed K8s imagePullPolicy is not included in the pod spec #815
+- Fixed Splitter caching is too eager when caching path is specified #835
+- Fixed Improve error message for missing git provider configuration #847
+- Fixed Byte hashing is never reached in CacheHelper class 9ac81153
+- Fixed K8s launcher should not delete pod when `login` command fails (5175942a)
+- Fixed Dump operator should nicely print ArrayBag content (91e371ba)
+- Added manifest data in workflow metadata object #841
+- Added support for K8s imagePullSecrets pod attribute #800
+- Added option "checkIfExists" to Channel.fromPath method #666
+- Upgraded Apache Groovy to version 2.5.1
+- Upgraded Apache Ignite to version 2.6
+- Upgraded Slf4j to version 1.7.25
+- Upgraded Logback to version 1.1.11
+- Upgraded Grengine to version 1.3.0
+- Upgraded LevelDB to version 0.10
+- Upgraded Guava to version 21.0
+- Upgraded Spock to version 1.2 
+- Using javax.activation:activation:1.1.1 (from com.sun.activation:javax.activation:1.2.0)
+
+0.31.1 - 7 Aug 2018
+- Fixed AWS Batch execution hangs when running on 1 cpu machine #825 
+- Fixed AWS Batch fails if process tag length is too long #822
+- Fixed AWS Batch executor creates timeline report with missing time data #816
+- Added Ignite failure detection timeout configuration parameters #820
+- Added VersionNumber class to CacheHelper handler [90fb69fa]
+- Added CONTRIBUTING file #564
+
+0.31.0 - 25 Jul 2018
+- Fixed CLI parameter value starting with a `-` is misinterpreted #808
+- Added keep-logs option to clean command #775
+
+0.31.0-RC1 - 19 Jul 2018
+- Fixed K8s pod request should include resources spec when 1 cpu is specified #806
+- Fixed PBS executor should fail when submit response contains invalid data #753
+- Fixed SLURM executor fail to submit jobs when cluster option is specified #805
+- Fixed Allow the use relative paths for symlinks process input files #296
+- Fixed AWS batch jobs are not properly stopped when execution is interrupted #782
+- Fixed splitCsv is not properly handling blank lines #795
+- Fixed K8s pod runAsUser definition #707
+- Fixed Prevent NPE when K8s reports an empty pod state [dcc7ec5f]
+- Fixed Allow list of patterns for fromPath and fromFilePairs channel factories #732
+- Fixed K8s execution hangs if an invalid pod secret file is specified #754
+- Fixed Correctly shutdown executor service #732
+- Fixed bug in dot rendering due to unquoted graph name when DOT language keyword used #783
+- Fixed Execution hangs if one or more inputs evaluate to null #764
+- Fixed Method `file` should thrown an error null is given as input #765
+- Fixed invalid relative link resolution with `readlink`
+- Added AWS batch requests throttling handling #710 #709
+- Added AWS Batch parallel downloads/uploads [codefest] [8ba1716b,ba5ad7a8]
+- Added K8s pod config and security context definition #707
+- Added Container env variables whitelist #803
+- Added support for K8s pod labels #762
+- Added support for K8s volume mount subPath #758
+- Added Nextflow required version in the config manifest #752
+- Added disk resource requirement in LSF executor #747
+- Added GA4GH TES executor [experimental] #794
+- Added System info to workflow metadata object #759
+- Added weblog feature #681
+- Deprecated process.$name syntax to define process specific settings #713
+- Upgrade to Gradle 4.9
+
+0.30.2 - 16 Jun 2018
+- Fixed Output declarations with a glob pattern fail when AWS Batch executor is used #748
+- Fixed Scratch directive not working for AWS Batch executor #740
+- Fixed K8s launcher does not parse remote config files #738
+- Minor refactoring to enable Groovy 2.5 compilation 20b6d933 a8b994f1
+
+0.30.1 - 11 Jun 2018
+- Use a daemon thread for watchPath method #735
+- Fixed Gitlab API v3 has been deprecated and does not work any more #734
+- Fixed Unable to access params defined in the top scope from a nested profile #733
+- Fixed Process config selectors do not work when the config is included #729
+- Fixed Improve the error message when a missing property is used in the config file #730
+- Added Travis build support for jdk10
+- Added documentation for `until` operator #736
+- Added mailer recipients check
+- Increased Singularity pull timeout to 20 minutes
+- Updated build to Gradle 4.8
+
+0.30.0 - 5 Jun 2018
+- Added the support for Bioconda #493
+- Added support for AWS Batch job timeout #648
+- Added jobs submit rate limit #198
+- Added offline option #665
+- Enabling Java 9/10 support for build and launcher scripts #674
+- Fixed Expose Kubernetes Secrets to worker pods #651
+- Fixed K8s execution hangs when a non-existing docker image is specified #697
+- Fixed K8s execution terminates abruptly if a pod requires more resources than available ones #676
+- Fixed K8s executor does not report command log when a task fail #699
+- Fixed Configuration profile is not handled properly by the kuberun command #696
+- Fixed Enhance process metrics to avoid usage of ps tool #499
+- Fixed PublishDir should use copy mode by default when the target is a S3 path #718
+- Fixed Unbounded variable breaks task launcher script #722
+- Fixed Escape filenames when copying from S3 #717
+- Fixed AWS executor should use putObject API to upload job scripts to S3 #712
+- Fixed Exception is thrown when an output folder contains a circular symlink path #701
+
+0.29.1 - 10 May 2018
+- Fixed Default ext property are not included in process context #673
+- Fixed Operator concat throws a ConcurrentModificationException #675
+- Fixed Output file is not recognised when it's created into a subdir and the name matches an input #688 
+- Fixed Empty container definition being ignored when default one is specified #691
+- Fixed K8s client fails to connect the cluster when client key nor certificate is specified #692
+- Fixed K8s executor hang on pod creation failure
+- Added select in -R for memory for LSF executor #683
+
 0.29.0  - 24 Apr 2018
 - Fixed Buffer operator fails to recognise optional parameter when a closing condition is specified #652
 - Fixed PublishDir mode "copyNoFollow" does not work for directories #658

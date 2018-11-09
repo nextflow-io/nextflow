@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.file
@@ -23,12 +19,14 @@ package nextflow.file
 import java.lang.reflect.Field
 import java.nio.file.CopyOption
 import java.nio.file.FileSystem
+import java.nio.file.FileSystemLoopException
 import java.nio.file.FileSystemNotFoundException
 import java.nio.file.FileSystems
 import java.nio.file.FileVisitOption
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.LinkOption
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.nio.file.Paths
@@ -731,7 +729,7 @@ class FileHelper {
         Files.walkFileTree(folder, walkOptions, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
 
             @Override
-            public FileVisitResult preVisitDirectory(Path fullPath, BasicFileAttributes attrs) throws IOException {
+            FileVisitResult preVisitDirectory(Path fullPath, BasicFileAttributes attrs) throws IOException {
                 final int depth = fullPath.nameCount - folder.nameCount
                 final path = folder.relativize(fullPath)
                 log.trace "visitFiles > dir=$path; depth=$depth; includeDir=$includeDir; matches=${matcher.matches(path)}; isDir=${attrs.isDirectory()}"
@@ -745,7 +743,7 @@ class FileHelper {
             }
 
             @Override
-            public FileVisitResult visitFile(Path fullPath, BasicFileAttributes attrs) throws IOException {
+            FileVisitResult visitFile(Path fullPath, BasicFileAttributes attrs) throws IOException {
                 final path = folder.relativize(fullPath)
                 log.trace "visitFiles > file=$path; includeFile=$includeFile; matches=${matcher.matches(path)}; isRegularFile=${attrs.isRegularFile()}"
 
@@ -754,7 +752,24 @@ class FileHelper {
                     singleParam ? action.call(result) : action.call(result,attrs)
                 }
 
-                return FileVisitResult.CONTINUE;
+                return FileVisitResult.CONTINUE
+            }
+
+            FileVisitResult visitFileFailed(Path currentPath, IOException e) {
+                if( e instanceof FileSystemLoopException ) {
+                    final path = folder.relativize(currentPath).toString()
+                    final capture = FilePatternSplitter.glob().parse(filePattern).getParent()
+                    final message = "Circular file path detected -- Files in the following directory will be ignored: $currentPath"
+                    // show a warning message only when offending path is contained
+                    // by the capture path specified by the user
+                    if( capture=='./' || path.startsWith(capture) )
+                        log.warn(message)
+                    else
+                        log.debug(message)
+
+                    return FileVisitResult.SKIP_SUBTREE
+                }
+                throw  e
             }
       })
 
@@ -923,6 +938,18 @@ class FileHelper {
             log.trace "Unable to read attributes for file: $path"
             return null
         }
+    }
+
+    static Path checkIfExists(Path path, Map opts) throws NoSuchFileException {
+
+        final result = FilesEx.complete(path)
+        final checkIfExists = opts?.checkIfExists as boolean
+        final followLinks = opts?.followLinks == false ? [LinkOption.NOFOLLOW_LINKS] : Collections.emptyList()
+        if( !checkIfExists || FilesEx.exists(result, followLinks as LinkOption[]) ) {
+            return result
+        }
+
+        throw new NoSuchFileException(FilesEx.toUriString(result))
     }
 
 }

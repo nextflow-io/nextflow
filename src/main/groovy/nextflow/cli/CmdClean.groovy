@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.cli
@@ -40,6 +36,7 @@ import nextflow.util.HistoryFile.Record
  * Implements cache clean up command
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Lorenz Gerber <lorenzottogerber@gmail.com>
  */
 @Slf4j
 @CompileStatic
@@ -65,6 +62,9 @@ class CmdClean extends CmdBase implements CacheBase {
 
     @Parameter(names='-but', description = 'Clean up all runs except the specified one')
     String but
+
+    @Parameter(names=['-k', '-keep-logs'], description = 'Removes only temporary files but retains execution log entries and metadata')
+    boolean keepLogs
 
     @Parameter
     List<String> args
@@ -117,7 +117,7 @@ class CmdClean extends CmdBase implements CacheBase {
         currentCacheDb.close()
 
         // -- STOP HERE !
-        if( dryRun ) return
+        if( dryRun || keepLogs ) return
 
         // -- remove the index file
         currentCacheDb.deleteIndex()
@@ -167,17 +167,27 @@ class CmdClean extends CmdBase implements CacheBase {
     private void removeRecord(HashCode hash, TraceRecord record, int refCount) {
         if( dryRun ) {
             if( wouldRemove(hash,refCount) )
-                println "Would remove ${record.workDir}"
+                printMessage(record.workDir,true)
             return
         }
 
         // decrement the ref count in the db
-        def deleted = currentCacheDb.removeTaskEntry(hash)
-        if( deleted ) {
+        def proceed = keepLogs || currentCacheDb.removeTaskEntry(hash)
+        if( proceed ) {
             // delete folder
-            if( deleteFolder(FileHelper.asPath(record.workDir))) {
-                if(!quiet) println "Removed ${record.workDir}"
+            if( deleteFolder(FileHelper.asPath(record.workDir), keepLogs)) {
+                if(!quiet) printMessage(record.workDir,false)
             }
+
+        }
+    }
+
+    private printMessage(String path, boolean dryRun) {
+        if( dryRun ) {
+            println keepLogs ? "Would remove temp files from ${path}" : "Would remove ${path}"
+        }
+        else {
+            println keepLogs ? "Removed temp files from ${path}" : "Removed ${path}"
         }
     }
 
@@ -189,7 +199,7 @@ class CmdClean extends CmdBase implements CacheBase {
      * @return
      *      {@code true} in the directory was removed, {@code false}  otherwise
      */
-    private boolean deleteFolder( Path folder ) {
+    private boolean deleteFolder( Path folder, boolean keepLogs ) {
 
         def result = true
         Files.walkFileTree(folder, new FileVisitor<Path>() {
@@ -201,7 +211,9 @@ class CmdClean extends CmdBase implements CacheBase {
 
             @Override
             FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                if( !file.delete() ) {
+
+                final canDelete = !keepLogs || ( keepLogs &&  !(file.name.startsWith('.command.')  || file.name == '.exitcode'))
+                if( canDelete && !file.delete() ) {
                     result = false
                     if(!quiet) System.err.println "Failed to remove $file"
                 }
@@ -216,11 +228,11 @@ class CmdClean extends CmdBase implements CacheBase {
 
             @Override
             FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                if( result && !dir.delete() ) {
+                if( !keepLogs && result && !dir.delete() ) {
                     result = false
                     if(!quiet) System.err.println "Failed to remove $dir"
                 }
-
+                
                 result ? FileVisitResult.CONTINUE : FileVisitResult.TERMINATE
             }
         })

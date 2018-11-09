@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.splitter
@@ -43,37 +39,45 @@ class AbstractTextSplitterTest extends Specification {
         when:
         splitter = [:] as AbstractTextSplitter
         splitter.options(file: folder, by: 2)
+        result = splitter.getCollectorBaseFile()
         then:
-        splitter.getCollectorBaseFile() == folder.resolve('chunk')
+        result.path == folder.resolve('chunk')
+        result.hash != null
 
         when:
         splitter = [:] as AbstractTextSplitter
         splitter.options(file: folder, by: 2, elem:2)
         splitter.multiSplit = true
+        result = splitter.getCollectorBaseFile()
         then:
-        splitter.getCollectorBaseFile() == folder.resolve('chunk_2')
+        result.path == folder.resolve('chunk_2')
+        result.hash != null
 
         when:
         splitter = [:] as AbstractTextSplitter
         splitter.options(file: Paths.get('/some/file.txt'), by: 2)
+        result = splitter.getCollectorBaseFile()
         then:
-        splitter.getCollectorBaseFile() == Paths.get('/some/file.txt')
+        result.path == Paths.get('/some/file.txt')
+        result.hash != null
 
         when:
         splitter = [:] as AbstractTextSplitter
         splitter.options(file: true, by: 2)
         result = splitter.getCollectorBaseFile()
         then:
-        result.name == 'chunk'
-        result.toString().startsWith( folder.toString() )
+        result.path.name == 'chunk'
+        result.path.toString().startsWith( folder.toString() )
+        result.hash == null
 
         when:
         splitter = [:] as AbstractTextSplitter
         splitter.options(file: 'chunk_name', by:2)
         result = splitter.getCollectorBaseFile()
         then:
-        result.name == 'chunk_name'
-        result.toString().startsWith( folder.toString() )
+        result.path.name == 'chunk_name'
+        result.path.toString().startsWith( folder.toString() )
+        result.hash == null
 
         when:
         splitter = [:] as AbstractTextSplitter
@@ -81,8 +85,9 @@ class AbstractTextSplitterTest extends Specification {
         splitter.multiSplit = true
         result = splitter.getCollectorBaseFile()
         then:
-        result.name == 'chunk_name_3'
-        result.toString().startsWith( folder.toString() )
+        result.path.name == 'chunk_name_3'
+        result.path.toString().startsWith( folder.toString() )
+        result.hash == null
 
         when:
         splitter = [:] as AbstractTextSplitter
@@ -90,8 +95,9 @@ class AbstractTextSplitterTest extends Specification {
         splitter.options(file: true, by: 2)
         result = splitter.getCollectorBaseFile()
         then:
-        result.name == 'file.txt'
-        result.toString().startsWith( folder.toString() )
+        result.path.name == 'file.txt'
+        result.path.toString().startsWith( folder.toString() )
+        result.hash == null
 
         when:
         splitter = [:] as AbstractTextSplitter
@@ -99,8 +105,9 @@ class AbstractTextSplitterTest extends Specification {
         splitter.options(file: true, by: 2)
         result = splitter.getCollectorBaseFile()
         then:
-        result.name == 'file.fasta'
-        result.toString().startsWith( folder.toString() )
+        result.path.name == 'file.fasta'
+        result.path.toString().startsWith( folder.toString() )
+        result.hash == null
 
         when:
         splitter = [:] as AbstractTextSplitter
@@ -108,8 +115,9 @@ class AbstractTextSplitterTest extends Specification {
         splitter.options(file: 'my_file_name', by: 2)
         result = splitter.getCollectorBaseFile()
         then:
-        result.name == 'my_file_name'
-        result.toString().startsWith( folder.toString() )
+        result.path.name == 'my_file_name'
+        result.path.toString().startsWith( folder.toString() )
+        result.hash == null
 
         when:
         splitter = [:] as AbstractTextSplitter
@@ -117,8 +125,9 @@ class AbstractTextSplitterTest extends Specification {
         splitter.options(file: folder, by: 2)
         result = splitter.getCollectorBaseFile()
         then:
-        result.name == 'file.fa'
-        result.toString().startsWith( folder.toString() )
+        result.path.name == 'file.fa'
+        result.path.toString().startsWith( folder.toString() )
+        result.hash != null
 
         when:
         splitter = [:] as AbstractTextSplitter
@@ -127,6 +136,45 @@ class AbstractTextSplitterTest extends Specification {
         result = splitter.createCollector()
         then:
         result != null
+    }
+
+    def 'should change cache hash when using a different session' () {
+
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def result
+        def splitter = [:] as AbstractTextSplitter
+        splitter.options(file: folder, by: 2)
+
+        when:
+        new Session()
+        result = splitter.getCollectorBaseFile()
+        then:
+        result.path == folder.resolve('chunk')
+        result.hash != null
+
+        when:
+        // copy current hash
+        def hash = result.hash
+        // invoke with using the SAME session
+        result = splitter.getCollectorBaseFile()
+        then:
+        result.path == folder.resolve('chunk')
+        result.hash != null
+        // hash is the SAME
+        result.hash.toString() == hash.toString()
+
+        when:
+        // create NEW session
+        new Session()
+        // invoke with using DIFFERENT session
+        result = splitter.getCollectorBaseFile()
+        then:
+        result.path == folder.resolve('chunk')
+        result.hash != null
+        // hashes are DIFFERENT
+        result.hash.toString() != hash.toString()
+
     }
 
 }

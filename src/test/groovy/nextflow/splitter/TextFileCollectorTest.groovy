@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.splitter
@@ -25,7 +21,10 @@ import java.nio.file.Paths
 
 import spock.lang.Specification
 
+import com.google.common.hash.HashCode
 import static test.TestHelper.gunzip
+
+import nextflow.splitter.TextFileCollector.CachePath
 
 /**
  *
@@ -36,7 +35,8 @@ class TextFileCollectorTest extends Specification {
     def 'test next name' () {
 
         given:
-        def buffer = new TextFileCollector(Paths.get('.'))
+        def base = new TextFileCollector.CachePath(Paths.get('.'))
+        def buffer = new TextFileCollector(base)
 
         expect:
         buffer.getNextNameFor(Paths.get('/some/file.fa'),1) == Paths.get('/some/file.1.fa')
@@ -48,7 +48,7 @@ class TextFileCollectorTest extends Specification {
 
         given:
         def base = Files.createTempDirectory('test').resolve('sample.fasta')
-        def buffer = new TextFileCollector(base)
+        def buffer = new TextFileCollector(new CachePath(base))
 
         when:
         buffer.add('>seq1\n')
@@ -88,9 +88,8 @@ class TextFileCollectorTest extends Specification {
         given:
         def base = Files.createTempDirectory('test').resolve('chunk.fasta')
 
-
         when:
-        def buffer = new TextFileCollector(base)
+        def buffer = new TextFileCollector(new CachePath(base))
         then:
         !buffer.hasChunk()
 
@@ -122,7 +121,7 @@ class TextFileCollectorTest extends Specification {
 
         given:
         def base = Files.createTempDirectory('test').resolve('sample.fasta')
-        def collector = new TextFileCollector(base, Charset.defaultCharset(), true)
+        def collector = new TextFileCollector(new CachePath(base), Charset.defaultCharset(), true)
 
         when:
         collector.add('>seq1\n')
@@ -156,5 +155,31 @@ class TextFileCollectorTest extends Specification {
         base?.parent?.deleteDir()
     }
 
+    def 'should create unique cache marker file' () {
+        given:
+        def hash = HashCode.fromLong(89323923l)
+        def base = Files.createTempDirectory('test').resolve('sample.fasta')
+        def collector = new TextFileCollector(new CachePath(base, hash), Charset.defaultCharset(), false)
+
+        when:
+        collector.add('xxx')
+        assert collector.nextChunk() == base.resolveSibling('sample.1.fasta')
+
+        collector.add('yyy')
+        assert collector.nextChunk() == base.resolveSibling('sample.2.fasta')
+
+        collector.add('zzz')
+        assert collector.nextChunk() == base.resolveSibling('sample.3.fasta')
+
+        collector.close()
+
+        then:
+        base.resolveSibling(".chunks.sample.fasta.$hash").exists()
+        collector.checkCached()
+        collector.getAllChunks()*.name == ['sample.1.fasta','sample.2.fasta','sample.3.fasta']
+
+        cleanup:
+        base?.parent?.deleteDir()
+    }
 
 }

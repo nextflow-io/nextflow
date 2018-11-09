@@ -1,25 +1,22 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.extension
 
+import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Channel
@@ -31,11 +28,13 @@ import nextflow.util.CheckHelper
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 class GroupTupleOp {
 
     static private Map GROUP_TUPLE_PARAMS = [ by: [Integer, List], sort: [Boolean, 'true','natural','deep','hash',Closure,Comparator], size: Integer, remainder: Boolean ]
 
     static private List<Integer> GROUP_DEFAULT_INDEX = [0]
+
 
     /**
      * Comparator used to sort tuple entries (when required)
@@ -52,7 +51,7 @@ class GroupTupleOp {
 
     private boolean remainder
 
-    private Map groups = [:]
+    private Map<List,List> groups = [:]
 
     private sort
 
@@ -63,7 +62,7 @@ class GroupTupleOp {
         channel = source
         target = new DataflowQueue()
         indices = getGroupTupleIndices(params)
-        size = params?.size ?: -1
+        size = params?.size ?: 0
         remainder = params?.remainder ?: false
         sort = params?.sort
 
@@ -90,10 +89,10 @@ class GroupTupleOp {
      */
     private void collect(List tuple) {
 
-        final key = tuple[indices]                        // the actual grouping key
+        final key = tuple[indices]                      // the actual grouping key
         final len = tuple.size()
 
-        final List items = groups.getOrCreate(key) {     // get the group for the specified key
+        final List items = groups.getOrCreate(key) {    // get the group for the specified key
             def result = new ArrayList(len)             // create if does not exists
             for( int i=0; i<len; i++ )
                 result[i] = (i in indices ? tuple[i] : new ArrayBag())
@@ -109,8 +108,9 @@ class GroupTupleOp {
             }
         }
 
-        if( size>0 && size==count ) {
-            bindTuple(items)
+        final sz = size ?: sizeBy(key)
+        if( sz>0 && sz==count ) {
+            bindTuple(items, sz)
             groups.remove(key)
         }
     }
@@ -120,21 +120,21 @@ class GroupTupleOp {
      * finalize the grouping binding the remaining values
      */
     private void finalise(nop) {
-        groups.values().each { List items -> bindTuple(items) }
+        groups.each { keys, items -> bindTuple(items, size ?: sizeBy(keys)) }
         target.bind(Channel.STOP)
     }
 
     /*
      * bind collected items to the target channel
      */
-    private void bindTuple ( List items ) {
+    private void bindTuple( List items, int sz ) {
 
         def tuple = new ArrayList(items)
 
-        if( !remainder && size>0 ) {
+        if( !remainder && sz>0 ) {
             // verify exist it contains 'size' elements
             List list = items.find { it instanceof List }
-            if( list.size() != size ) {
+            if( list.size() != sz ) {
                 return
             }
         }
@@ -225,6 +225,17 @@ class GroupTupleOp {
             Collections.sort(entry as List, c)
         }
 
+    }
+
+    static protected int sizeBy(List target)  {
+        if( target.size()==1 && target[0] instanceof GroupKey ) {
+            final group = (GroupKey)target[0]
+            final size = group.getGroupSize()
+            log.debug "GroupTuple dynamic size: key=${group} size=$size"
+            return size
+        }
+        else
+            return 0
     }
 
 }

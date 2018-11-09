@@ -1,24 +1,22 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.executor
+
+import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.PackageScope
@@ -32,6 +30,8 @@ import nextflow.container.UdockerBuilder
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import nextflow.util.Escape
+
 /**
  * Builder to create the BASH script which is used to
  * wrap and launch the user task
@@ -123,27 +123,8 @@ class BashWrapperBuilder {
         trap on_term TERM INT USR1 USR2
         '''.stripIndent().leftTrim()
 
-    // note: keep local 'xps' declaration separated by the variable assignment
-    // see http://stackoverflow.com/a/4421282/395921
-    // resources record:
-    // 1    2      3     4     5      5    6       7      8      9      10     11     12          13           14
-    // PID, STATE, %CPU, %MEM, VSIZE, RSS; VmPeak, VmHWM; RCHAR, WCHAR, syscr, syscw, READ_BYTES, WRITE_BYTES, CANCEL_W_BYTES
     @PackageScope
-    static final String SCRIPT_TRACE = '''
-        nxf_kill() {
-            declare -a ALL_CHILD
-            while read P PP;do
-                ALL_CHILD[$PP]+=" $P"
-            done < <(ps -e -o pid= -o ppid=)
-
-            walk() {
-                [[ $1 != $$ ]] && kill $1 2>/dev/null || true
-                for i in ${ALL_CHILD[$1]:=}; do walk $i; done
-            }
-
-            walk $1
-        }
-
+    static final String SCRIPT_LEGACY = '''
         nxf_tree() {
             declare -a ALL_CHILD
             while read P PP;do
@@ -196,6 +177,7 @@ class BashWrapperBuilder {
           local count=0;
           declare -a max=(); for i in {0..13}; do max[i]=0; done
           while [[ true ]]; do
+            if ! kill -0 $pid 2>/dev/null; then exit 0; fi
             tot=$(nxf_pstat $pid)
             [[ ! $tot ]] && break
             IFS=' ' read -a val <<< "$tot"; unset IFS
@@ -208,6 +190,105 @@ class BashWrapperBuilder {
             count=$((count+1))
           done
         }
+
+        '''.stripIndent().leftTrim()
+
+    // see http://stackoverflow.com/a/4421282/395921
+    //     https://github.com/nextflow-io/nextflow/issues/499
+    // resources record:
+    // 1    2      3     4     5      5    6       7      8      9      10     11     12          13           14
+    // PID, STATE, %CPU, %MEM, VSIZE, RSS, VmPeak, VmHWM, RCHAR, WCHAR, syscr, syscw, READ_BYTES, WRITE_BYTES, CANCEL_W_BYTES
+    @PackageScope
+    static final String SCRIPT_TRACE = '''   
+        set -o pipefail
+        prev_total=0
+        declare -a prev_time
+        mem_tot=$(< /proc/meminfo grep MemTotal | awk '{print $2}')
+        num_cpus=$(< /proc/cpuinfo grep '^processor' -c)
+        
+        nxf_pcpu() {
+            local pid=$1
+            local proc_time=$(2> /dev/null < /proc/$pid/stat awk '{sum=$14+$15; printf "%.0f",sum}' || echo -n 0)
+            local cpu_usage=$(echo -n $proc_time ${prev_time[pid]:-0} $total_time $prev_total $num_cpus | awk '{ pct=($1-$2)/($3-$4)*$5 *100; printf "%.1f", pct }' )
+            prev_time[pid]=$proc_time
+            nxf_pcpu_ret=$cpu_usage
+        }
+        
+        nxf_tree() {
+            declare -a ALL_CHILD
+            while read P PP;do
+                ALL_CHILD[$PP]+=" $P"
+            done < <(ps -e -o pid= -o ppid=)
+        
+            stat() {
+                nxf_pcpu $1 
+                local x_pid=$1
+                local x_stat=$(2> /dev/null < /proc/$1/stat awk '{print $3}' || echo -n X)
+                local x_pcpu=$nxf_pcpu_ret
+                
+                local x_vsz=$(2> /dev/null < /proc/$1/stat awk '{printf "%.0f", $23/1024}' || echo -n 0)
+                local x_rss=$(2> /dev/null < /proc/$1/status grep VmRSS | awk '{print $2}' || echo -n 0)
+                local x_pmem=$(echo $x_rss | awk -v mem_tot=$mem_tot '{printf "%.1f", $1/mem_tot*100}')
+        
+                local x_io=$(2> /dev/null < /proc/$1/io sed 's/^.*:\\s*//' | tr '\\n' ' ' || echo -n 0)
+                local x_vm=$(2> /dev/null < /proc/$1/status egrep 'VmPeak|VmHWM' | sed 's/^.*:\\s*//' | sed 's/[\\sa-zA-Z]*$//' | tr '\\n' ' ' || echo -n 0)
+        
+                stat_ret+="$x_pid $x_stat $x_pcpu $x_pmem $x_vsz $x_rss"
+                if [[ $x_vm ]]; then stat_ret+=" $x_vm"; else stat_ret+=" 0 0"; fi
+                if [[ $x_io ]]; then stat_ret+=" $x_io"; fi
+                stat_ret+='\\n\'
+            }
+        
+            walk() {
+                stat $1 
+                for i in ${ALL_CHILD[$1]:=}; do walk $i; done
+            }
+        
+            stat_ret=\'\'
+            total_time=$(grep '^cpu ' /proc/stat |awk '{sum=$2+$3+$4+$5+$6+$7+$8+$9+$10; printf "%.0f",sum}')
+            walk $1
+            prev_total=$total_time
+            nxf_tree_ret=$stat_ret  
+        }
+        
+        nxf_pstat() {
+            nxf_tree $1
+            if [[ "$nxf_tree_ret" ]]; then
+              nxf_pstat_ret=$(printf "$nxf_tree_ret" | awk '{ t3+=($3*10); t4+=($4*10); t5+=$5; t6+=$6; t7+=$7; t8+=$8; t9+=$9; t10+=$10; t11+=$11; t12+=$12; t13+=$13; t14+=$14 } END { printf "%d 0 %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f\\n", NR,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14 }')
+            else
+              nxf_pstat_ret=''  
+            fi
+        }
+        
+        nxf_sleep() {
+          if [[ $1 < 0 ]]; then sleep 5;
+          elif [[ $1 < 10 ]]; then sleep 0.1 2>/dev/null || sleep 1;
+          elif [[ $1 < 130 ]]; then sleep 1;
+          else sleep 5; fi
+        }
+        
+        nxf_date() {
+            local ts=$(date +%s%3N); [[ $ts == *3N ]] && date +%s000 || echo $ts
+        }
+        
+        nxf_trace() {
+          local pid=$1; local trg=$2;
+          local count=0;
+          declare -a max=(); for i in {0..13}; do max[i]=0; done
+          while [[ -d /proc/$pid ]]; do
+            nxf_pstat $pid
+            if [[ "$nxf_pstat_ret" ]]; then
+            IFS=' ' read -a val <<< "$nxf_pstat_ret"; unset IFS
+            for i in {0..13}; do
+              [ ${val[i]} -gt ${max[i]} ] && max[i]=${val[i]}
+            done
+            echo "pid state %cpu %mem vmem rss peak_vmem peak_rss rchar wchar syscr syscw read_bytes write_bytes" > $trg
+            echo "${max[@]}" >> $trg
+            fi
+            nxf_sleep $count
+            count=$((count+1))
+          done
+        } 
 
         '''.stripIndent().leftTrim()
 
@@ -324,7 +405,7 @@ class BashWrapperBuilder {
          * save the input when required
          */
         if( input != null ) {
-            inputFile.text = input
+            Files.write(inputFile, input.toString().getBytes())
         }
 
         // whenever it has to change to the scratch directory
@@ -344,7 +425,7 @@ class BashWrapperBuilder {
         /*
          * create the container launcher command if needed
          */
-        containerBuilder = runWithContainer ? createContainerBuilder(environment,changeDir) : null
+        containerBuilder = runWithContainer ? createContainerBuilder(changeDir) : null
 
         /*
          * reformat the task script to include the container launch command when it's a executable container eg:
@@ -358,7 +439,7 @@ class BashWrapperBuilder {
         /*
          * save the script file
          */
-        scriptFile.text = taskScript
+        Files.write(scriptFile, taskScript.getBytes())
 
         /*
          * fetch the script interpreter i.e. BASH, Perl, Python, etc
@@ -412,21 +493,13 @@ class BashWrapperBuilder {
         // -- start creating a file to signal that task has began
         wrapper << touchFile(startedFile) << ENDL
 
-        if( beforeScript ) {
-            wrapper << '# user `beforeScript`' << ENDL
-            wrapper << beforeScript << ENDL
-        }
-
-        /*
-         * add modules to the environment file
-         * note: singularity engine can be loaded by using module
-         */
-        if( moduleNames ) {
-            wrapper << MODULE_LOAD << ENDL << ENDL
-            moduleNames.each {
-                wrapper << moduleLoad(it) << ENDL
-            }
-            wrapper << ENDL
+        def customEnv = createCustomEnvironment()
+        if( customEnv ) {
+            // -- enable unbound variables
+            wrapper << 'set +u' << ENDL
+            wrapper << customEnv 
+            // -- disable unbound variables
+            wrapper << 'set -u' << ENDL
         }
 
         /*
@@ -495,8 +568,40 @@ class BashWrapperBuilder {
             wrapper << afterScript << ENDL
         }
 
-        wrapperFile.text = wrapperScript = wrapper.toString()
+        wrapperScript = wrapper.toString()
+        Files.write(wrapperFile, wrapperScript.getBytes())
         return wrapperFile
+    }
+
+    protected String createCustomEnvironment() {
+
+        def result = new StringBuilder()
+        if( beforeScript ) {
+            result << '# user `beforeScript`' << ENDL
+            result << beforeScript << ENDL
+        }
+
+        /*
+         * add modules to the environment file
+         * note: singularity engine can be loaded by using module
+         */
+        if( moduleNames ) {
+            result << MODULE_LOAD << ENDL << ENDL
+            moduleNames.each {
+                result << moduleLoad(it) << ENDL
+            }
+            result << ENDL
+        }
+
+        /*
+         * activate conda environment
+         */
+        if( condaEnv ) {
+            result << '# conda environment' << ENDL
+            result << 'source activate ' << Escape.path(condaEnv) << ENDL
+        }
+
+        return result.toString()
     }
 
     protected String createTaskEnvironment(Map environment) {
@@ -552,35 +657,49 @@ class BashWrapperBuilder {
         copyFile(fileName, workDir.resolve(fileName))
     }
 
-    private Path createStubScript(String interpreter) {
+    private void newLine( StringBuilder builder, String line ) {
+        builder.append(line).append(ENDL)
+    }
+
+    protected isMacOS() {
+        systemOsName.startsWith('Mac')
+    }
+
+    protected boolean isLegacyStubScript() {
+        isMacOS() && !isContainerEnabled()
+    }
+
+    protected Path createStubScript(String interpreter) {
         final stub = new StringBuilder()
-        stub << '#!/bin/bash' << ENDL
-        stub << 'set -e' << ENDL
-        stub << 'set -u' << ENDL
-        stub << 'NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 2 ]] && set -x' << ENDL << ENDL
-        stub << SCRIPT_TRACE << ENDL
-        stub << 'trap \'exit ${ret:=$?}\' EXIT' << ENDL
-        stub << 'touch ' << TaskRun.CMD_TRACE << ENDL
-        stub << 'start_millis=$(nxf_date)'  << ENDL
-        stub << '(' << ENDL
-        stub << interpreter << " " << fileStr(scriptFile)
-        if( input != null ) stub << pipeInputFile(inputFile)
-        stub << ENDL
-        stub << ') &' << ENDL
-        stub << 'pid=$!' << ENDL                     // get the PID of the main job
-        stub << 'nxf_trace "$pid" ' << TaskRun.CMD_TRACE << ' &' << ENDL
-        stub << 'mon=$!' << ENDL                     // get the pid of the monitor process
-        stub << 'wait $pid || ret=$?' << ENDL        // wait for main job completion and get its exit status
-        stub << 'end_millis=$(nxf_date)' << ENDL    // get the ending time
-        stub << 'nxf_kill $mon || wait $mon' << ENDL     // kill the monitor and wait for its ending
-        stub << 'echo $((end_millis-start_millis)) >> ' << TaskRun.CMD_TRACE << ENDL
+        newLine stub, '#!/bin/bash'
+        newLine stub, 'set -e'
+        newLine stub, 'set -u'
+        newLine stub, 'NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 2 ]] && set -x'
+        newLine stub, ''
+        newLine stub, ( isLegacyStubScript() ? SCRIPT_LEGACY : SCRIPT_TRACE )
+        newLine stub, 'trap \'exit ${ret:=$?}\' EXIT'
+        newLine stub, 'touch ' + TaskRun.CMD_TRACE
+        newLine stub, 'start_millis=$(nxf_date)'
+        newLine stub, '('
+        String command = "${interpreter} ${fileStr(scriptFile)}"
+        if( input != null )
+            command += pipeInputFile(inputFile)
+        newLine stub, command
+        newLine stub, ') &'
+        newLine stub, 'pid=$!'                      // get the PID of the main job
+        newLine stub, 'nxf_trace "$pid" ' + TaskRun.CMD_TRACE + ' &'
+        newLine stub, 'mon=$!'                      // get the pid of the monitor process
+        newLine stub, 'wait $pid || ret=$?'         // wait for main job completion and get its exit status
+        newLine stub, 'end_millis=$(nxf_date)'      // get the ending time
+        newLine stub, 'wait $mon'                   // wait for stats monitor termination
+        newLine stub, 'echo $((end_millis-start_millis)) >> ' + TaskRun.CMD_TRACE
 
         // append to script file chown command to change `root` owner of files created by docker
         if( this.fixOwnership() )
-            stub << "\n# patch root ownership problem of files created with docker\n[ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*} || true\n"
+            newLine stub, "\n# patch root ownership problem of files created with docker\n[ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*} || true"
 
         // save to file
-        stubFile.text = stub.toString()
+        Files.write(stubFile, stub.toString().getBytes())
         return stubFile
     }
 
@@ -626,7 +745,7 @@ class BashWrapperBuilder {
      * @return A {@link DockerBuilder} instance
      */
     @PackageScope
-    ContainerBuilder createContainerBuilder(Map environment, String changeDir) {
+    ContainerBuilder createContainerBuilder(String changeDir) {
 
         final engine = containerConfig.getEngine()
         ContainerBuilder builder
@@ -668,29 +787,32 @@ class BashWrapperBuilder {
         if( this.containerCpuset )
             builder.addRunOptions(containerCpuset)
 
-        // set the environment
-        if( this.environment ) {
-            // export the nextflow script debug variable
+        // export the nextflow script debug variable
+        if( statsEnabled || fixOwnership() )
             builder.addEnv( 'NXF_DEBUG=${NXF_DEBUG:=0}')
 
-            // add the user owner variable in order to patch root owned files problem
-            if( containerConfig.fixOwnership )
-                builder.addEnv( 'NXF_OWNER=$(id -u):$(id -g)' )
+        // add the user owner variable in order to patch root owned files problem
+        if( fixOwnership() )
+            builder.addEnv( 'NXF_OWNER=$(id -u):$(id -g)' )
 
-            if( this.containerExecutable ) {
-                // PATH variable cannot be extended in an executable container
-                // make sure to not include it to avoid to override the container PATH
-                environment.remove('PATH')
+        // set the environment
+        if( this.environment && this.containerExecutable ) {
+            // PATH variable cannot be extended in an executable container
+            // make sure to not include it to avoid to override the container PATH
+            environment.remove('PATH')
 
-                // NOTE: the task environment is added only for executable container
-                // for *plain* container the environment is passed through the special
-                // `nxf_taskenv` bash function wrapper
-                builder.addEnv( environment )
-            }
+            // NOTE: the task environment is added only for executable container
+            // for *plain* container the environment is passed through the special
+            // `nxf_taskenv` bash function wrapper
+            builder.addEnv( environment )
         }
 
         if( engine=='docker' && System.getenv('NXF_DOCKER_OPTS') ) {
             builder.addRunOptions(System.getenv('NXF_DOCKER_OPTS'))
+        }
+
+        for( String var : containerConfig.getEnvWhitelist() ) {
+            builder.addEnv(var)
         }
 
         // set up run docker params

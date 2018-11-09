@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow
@@ -343,5 +339,69 @@ class SessionTest extends Specification {
         'udocker'   | [enabled: true, x:'alpha', y: 'beta']
         'shifter'   | [enabled: true, x:'delta', y: 'gamma']
     }
+
+    def 'should get manifest object' () {
+
+        given:
+        def MAN = [author: 'pablo', nextflowVersion: '1.2.3', name: 'foo']
+
+        when:
+        def session = new Session([manifest: MAN])
+        then:
+        session.manifest.with {
+            author == 'pablo'
+            nextflowVersion == '1.2.3'
+            name == 'foo'
+            description == null
+        }
+    }
+
+    def 'should get config attribute' () {
+
+        given:
+        def session = Spy(Session)
+
+        when:
+        def result = session.getConfigAttribute('alpha', 'hello')
+        then:
+        result == 'hello'
+
+        when:
+        result = session.getConfigAttribute('delta', 'hello')
+        then:
+        session.getConfig() >> [delta: '1234']
+        result == '1234'
+
+        when:
+        result = session.getConfigAttribute('omega', 'hello')
+        then:
+        session.getSystemEnv() >> [NXF_OMEGA: '6789']
+        result == '6789'
+    }
+
+    def 'should get config nested attribute' () {
+
+        given:
+        def session = Spy(Session)
+
+        when:
+        def result = session.getConfigAttribute('alpha.beta.delta', 'hello')
+        then:
+        result == 'hello'
+
+        when:
+        result = session.getConfigAttribute('alpha.beta.gamma', 'hello')
+        then:
+        session.getConfig() >> [alpha: [beta: [gamma: 'abc']]]
+        result == 'abc'
+
+        when:
+        result = session.getConfigAttribute('alpha.beta.omega', 'hello')
+        then:
+        session.getSystemEnv() >> [NXF_ALPHA_BETA_OMEGA: 'OK']
+        result == 'OK'
+
+    }
+
 
 }

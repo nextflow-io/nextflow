@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.k8s.client
@@ -309,76 +305,8 @@ class K8sClientTest extends Specification {
                      "app": "nextflow"
                  }
              },
-             "spec": {
-                 "volumes": [
-                     {
-                         "name": "vol-1",
-                         "hostPath": {
-                             "path": "/Users/pditommaso/projects/nextflow",
-                             "type": ""
-                         }
-                     },
-                     {
-                         "name": "default-token-zv6gb",
-                         "secret": {
-                             "secretName": "default-token-zv6gb",
-                             "defaultMode": 420
-                         }
-                     }
-                 ],
-                 "containers": [
-                     {
-                         "name": "pod-xyz",
-                         "image": "debian:latest",
-                         "command": [
-                             "bash",
-                             ".command.run"
-                         ],
-                         "workingDir": "/Users/pditommaso/projects/nextflow/work/a8/d8e76afef8d5bb73d115bc8f474ec2",
-                         "resources": {
-
-                         },
-                         "volumeMounts": [
-                             {
-                                 "name": "vol-1",
-                                 "mountPath": "/Users/pditommaso/projects/nextflow"
-                             },
-                             {
-                                 "name": "default-token-zv6gb",
-                                 "readOnly": true,
-                                 "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
-                             }
-                         ],
-                         "terminationMessagePath": "/dev/termination-log",
-                         "terminationMessagePolicy": "File",
-                         "imagePullPolicy": "Always"
-                     }
-                 ],
-                 "restartPolicy": "Never",
-                 "terminationGracePeriodSeconds": 30,
-                 "dnsPolicy": "ClusterFirst",
-                 "serviceAccountName": "default",
-                 "serviceAccount": "default",
-                 "nodeName": "docker-for-desktop",
-                 "securityContext": {
-
-                 },
-                 "schedulerName": "default-scheduler",
-                 "tolerations": [
-                     {
-                         "key": "node.alpha.kubernetes.io/notReady",
-                         "operator": "Exists",
-                         "effect": "NoExecute",
-                         "tolerationSeconds": 300
-                     },
-                     {
-                         "key": "node.alpha.kubernetes.io/unreachable",
-                         "operator": "Exists",
-                         "effect": "NoExecute",
-                         "tolerationSeconds": 300
-                     }
-                 ]
-             },
+             
+             
              "status": {
                  "phase": "Succeeded",
                  "conditions": [
@@ -450,6 +378,54 @@ class K8sClientTest extends Specification {
 
     }
 
+    def 'should return undetermined status' () {
+        given:
+        def JSON = '''
+             {
+                 "kind": "Pod",
+                 "apiVersion": "v1",
+                 "metadata": {
+                     "name": "nf-eb853c8010b8e173b23d8d15489d1a31",
+                     "namespace": "default",
+                     "selfLink": "/api/v1/namespaces/default/pods/nf-eb853c8010b8e173b23d8d15489d1a31/status",
+                     "uid": "5ccdeb23-4f69-11e8-89b1-fa163e31bb09",
+                     "resourceVersion": "2847182",
+                     "creationTimestamp": "2018-05-04T07:04:18Z",
+                     "labels": {
+                         "app": "nextflow",
+                         "processName": "markDuplicates",
+                         "runName": "grave-jones",
+                         "sessionId": "uuid-f51cd941-c21c-447b-86ca-eaebafa5ad9b",
+                         "taskName": "markDuplicates_22028_2_118_1AlignedByCoord.out"
+                     }
+                 },
+              
+                 "status": {
+                     "phase": "Pending",
+                     "conditions": [
+                         {
+                             "type": "PodScheduled",
+                             "status": "True",
+                             "lastProbeTime": null,
+                             "lastTransitionTime": "2018-05-04T07:04:18Z"
+                         }
+                     ],
+                     "qosClass": "Guaranteed"
+                 }
+             }        
+        '''
+
+        def client = Spy(K8sClient)
+        final POD_NAME = 'nf-eb853c8010b8e173b23d8d15489d1a31'
+        
+        when:
+        def result = client.podState(POD_NAME)
+        then:
+        1 * client.podStatus(POD_NAME) >> new K8sResponseJson(JSON)
+
+        result == [:]
+    }
+
     def 'should fail to get pod state' () {
 
         given:
@@ -463,28 +439,28 @@ class K8sClientTest extends Specification {
         then:
         1 * client.podStatus(POD_NAME) >> new K8sResponseJson([:])
         e = thrown(K8sResponseException)
-        e.message.startsWith('Invalid pod status -- missing container statuses')
+        e.message.startsWith('K8s invalid pod status (missing container status)')
 
         when:
         client.podState(POD_NAME)
         then:
         1 * client.podStatus(POD_NAME) >> new K8sResponseJson([status:[containerStatuses: []]])
         e = thrown(K8sResponseException)
-        e.message.startsWith('Invalid pod status -- missing container statuses')
+        e.message.startsWith('K8s invalid pod status (missing container status)')
 
         when:
         client.podState(POD_NAME)
         then:
         1 * client.podStatus(POD_NAME) >> new K8sResponseJson([status:[containerStatuses: [ [name: 'foo'] ]]])
         e = thrown(K8sResponseException)
-        e.message.startsWith('Invalid pod status -- name does not match')
+        e.message.startsWith('K8s invalid pod status (name does not match)')
 
         when:
         client.podState(POD_NAME)
         then:
         1 * client.podStatus(POD_NAME) >> new K8sResponseJson([status:[containerStatuses: [ [name: POD_NAME] ]]])
         e = thrown(K8sResponseException)
-        e.message.startsWith('Invalid pod status -- missing state object')
+        e.message.startsWith('K8s invalid pod status (missing state object)')
 
         when:
         def result = client.podState(POD_NAME)
@@ -493,5 +469,304 @@ class K8sClientTest extends Specification {
         result == STATE
     }
 
+    def 'client should throw an exception when container status returns ErrImagePull' () {
+        given:
+        def JSON = '''
+             {
+                 "kind": "Pod",
+                 "apiVersion": "v1",
+                 "metadata": {
+                     "name": "nf-c6e49ee9ebc79486f774a47924a743d7",
+                     "namespace": "default",
+                     "selfLink": "/api/v1/namespaces/default/pods/nf-c6e49ee9ebc79486f774a47924a743d7/status",
+                     "uid": "18954b48-5811-11e8-8e71-025000000001",
+                     "resourceVersion": "3615842",
+                     "creationTimestamp": "2018-05-15T07:25:08Z",
+                     "labels": {
+                         "app": "nextflow",
+                         "processName": "sayHello",
+                         "runName": "lethal-jones",
+                         "sessionId": "uuid-b6243a3d-5c07-44f4-97eb-9de499747800",
+                         "taskName": "sayHello_2"
+                     }
+                 },
+                 "spec": {
+ 
+                 },
+                 "status": {
+                     "phase": "Pending",
+                     "conditions": [
+                         {
+                             "type": "Initialized",
+                             "status": "True",
+                             "lastProbeTime": null,
+                             "lastTransitionTime": "2018-05-15T07:25:08Z"
+                         },
+                         {
+                             "type": "Ready",
+                             "status": "False",
+                             "lastProbeTime": null,
+                             "lastTransitionTime": "2018-05-15T07:25:08Z",
+                             "reason": "ContainersNotReady",
+                             "message": "containers with unready status: [nf-c6e49ee9ebc79486f774a47924a743d7]"
+                         },
+                         {
+                             "type": "PodScheduled",
+                             "status": "True",
+                             "lastProbeTime": null,
+                             "lastTransitionTime": "2018-05-15T07:25:08Z"
+                         }
+                     ],
+                     "hostIP": "192.168.65.3",
+                     "podIP": "10.1.3.173",
+                     "startTime": "2018-05-15T07:25:08Z",
+                     "containerStatuses": [
+                         {
+                             "name": "nf-c6e49ee9ebc79486f774a47924a743d7",
+                             "state": {
+                                 "waiting": {
+                                     "reason": "ErrImagePull",
+                                     "message": "rpc error: code = Unknown desc = Error response from daemon: pull access denied for nextflow/foo, repository does not exist or may require 'docker login'"
+                                 }
+                             },
+                             "lastState": {
+                                 
+                             },
+                             "ready": false,
+                             "restartCount": 0,
+                             "image": "nextflow/foo",
+                             "imageID": ""
+                         }
+                     ],
+                     "qosClass": "BestEffort"
+                 }
+             }
+'''
 
+        def client = Spy(K8sClient)
+        final POD_NAME = 'nf-c6e49ee9ebc79486f774a47924a743d7'
+
+        when:
+        client.podState(POD_NAME)
+        then:
+        1 * client.podStatus(POD_NAME) >> new K8sResponseJson(JSON)
+        def e = thrown(PodUnschedulableException)
+        e.message == "K8s pod image cannot be pulled -- rpc error: code = Unknown desc = Error response from daemon: pull access denied for nextflow/foo, repository does not exist or may require 'docker login'"
+    }
+
+    def 'client should throw an exception when container status returns ImagePullBackOff' () {
+        def JSON = '''
+            {
+                 "kind": "Pod",
+                 "apiVersion": "v1",
+                 "metadata": {
+                     "name": "nf-c6e49ee9ebc79486f774a47924a743d7",
+                     "namespace": "default",
+                     "selfLink": "/api/v1/namespaces/default/pods/nf-c6e49ee9ebc79486f774a47924a743d7/status",
+                     "uid": "18954b48-5811-11e8-8e71-025000000001",
+                     "resourceVersion": "3615866",
+                     "creationTimestamp": "2018-05-15T07:25:08Z",
+                     "labels": {
+                         "app": "nextflow",
+                         "processName": "sayHello",
+                         "runName": "lethal-jones",
+                         "sessionId": "uuid-b6243a3d-5c07-44f4-97eb-9de499747800",
+                         "taskName": "sayHello_2"
+                     }
+                 },
+                 "spec": { },
+                 "status": {
+                     "phase": "Pending",
+                     "conditions": [
+                         {
+                             "type": "Initialized",
+                             "status": "True",
+                             "lastProbeTime": null,
+                             "lastTransitionTime": "2018-05-15T07:25:08Z"
+                         },
+                         {
+                             "type": "Ready",
+                             "status": "False",
+                             "lastProbeTime": null,
+                             "lastTransitionTime": "2018-05-15T07:25:08Z",
+                             "reason": "ContainersNotReady",
+                             "message": "containers with unready status: [nf-c6e49ee9ebc79486f774a47924a743d7]"
+                         },
+                         {
+                             "type": "PodScheduled",
+                             "status": "True",
+                             "lastProbeTime": null,
+                             "lastTransitionTime": "2018-05-15T07:25:08Z"
+                         }
+                     ],
+                     "hostIP": "192.168.65.3",
+                     "podIP": "10.1.3.173",
+                     "startTime": "2018-05-15T07:25:08Z",
+                     "containerStatuses": [
+                         {
+                             "name": "nf-c6e49ee9ebc79486f774a47924a743d7",
+                             "state": {
+                                 "waiting": {
+                                     "reason": "ImagePullBackOff",
+                                     "message": "Back-off pulling image \\"nextflow/foo\\""
+                                 }
+                             },
+                             "lastState": {
+                                 
+                             },
+                             "ready": false,
+                             "restartCount": 0,
+                             "image": "nextflow/foo",
+                             "imageID": ""
+                         }
+                     ],
+                     "qosClass": "BestEffort"
+                 }
+             }
+'''
+        def client = Spy(K8sClient)
+        final POD_NAME = 'nf-c6e49ee9ebc79486f774a47924a743d7'
+
+        when:
+        client.podState(POD_NAME)
+        then:
+        1 * client.podStatus(POD_NAME) >> new K8sResponseJson(JSON)
+        def e = thrown(PodUnschedulableException)
+        e.message == "K8s pod image cannot be pulled -- Back-off pulling image \"nextflow/foo\""
+
+    }
+
+    def 'client should throw an exception when pod is Unschedulable' () {
+
+        given:
+        def JSON = '''
+             {
+                 "kind": "Pod",
+                 "apiVersion": "v1",
+                 "metadata": {
+                     "name": "nf-52b131a30381b0b88926a9c12e5b1ff1",
+                     "namespace": "default",
+                     "selfLink": "/api/v1/namespaces/default/pods/nf-52b131a30381b0b88926a9c12e5b1ff1/status",
+                     "uid": "7f17fea0-4e47-11e8-89b1-fa163e31bb09",
+                     "resourceVersion": "2674905",
+                     "creationTimestamp": "2018-05-02T20:29:21Z",
+                     "labels": {
+                         "app": "nextflow",
+                         "processName": "star",
+                         "runName": "pedantic-legentil",
+                         "sessionId": "uuid-bb3f1a1f-ad9a-4e5f-a2f1-46a4d3fbd2a1",
+                         "taskName": "star_22028_2_118_1"
+                     }
+                 },
+                 "spec": { },
+                 "status": {
+                     "phase": "Pending",
+                     "conditions": [
+                         {
+                             "type": "PodScheduled",
+                             "status": "False",
+                             "lastProbeTime": null,
+                             "lastTransitionTime": "2018-05-02T20:29:21Z",
+                             "reason": "Unschedulable",
+                             "message": "0/4 nodes are available: 4 Insufficient cpu, 4 Insufficient memory."
+                         }
+                     ],
+                     "qosClass": "Guaranteed"
+                 }
+             }
+        '''
+
+        def client = Spy(K8sClient)
+        final POD_NAME = 'nf-52b131a30381b0b88926a9c12e5b1ff1'
+
+        when:
+        client.podState(POD_NAME)
+        then:
+        1 * client.podStatus(POD_NAME) >> new K8sResponseJson(JSON)
+        def e = thrown(PodUnschedulableException)
+        e.message == 'K8s pod cannot be scheduled -- 0/4 nodes are available: 4 Insufficient cpu, 4 Insufficient memory.'
+    }
+
+    def 'client should fail when config fail' () {
+        given:
+        def JSON = '''
+             {
+                 "kind": "Pod",
+                 "apiVersion": "v1",
+                 "metadata": {
+                     "name": "angry-blackwell",
+                     "namespace": "default",
+                     "selfLink": "/api/v1/namespaces/default/pods/angry-blackwell/status",
+                     "uid": "83a35c1e-73b6-11e8-8259-025000000001",
+                     "resourceVersion": "465382",
+                     "creationTimestamp": "2018-06-19T11:47:16Z",
+                     "labels": {
+                         "app": "nextflow",
+                         "runName": "angry-blackwell"
+                     }
+                 },
+                 "spec": {
+            
+                 },
+                 "status": {
+                     "phase": "Pending",
+                     "conditions": [
+                         {
+                             "type": "Initialized",
+                             "status": "True",
+                             "lastProbeTime": null,
+                             "lastTransitionTime": "2018-06-19T11:47:16Z"
+                         },
+                         {
+                             "type": "Ready",
+                             "status": "False",
+                             "lastProbeTime": null,
+                             "lastTransitionTime": "2018-06-19T11:47:16Z",
+                             "reason": "ContainersNotReady",
+                             "message": "containers with unready status: [angry-blackwell]"
+                         },
+                         {
+                             "type": "PodScheduled",
+                             "status": "True",
+                             "lastProbeTime": null,
+                             "lastTransitionTime": "2018-06-19T11:47:16Z"
+                         }
+                     ],
+                     "hostIP": "192.168.65.3",
+                     "podIP": "10.1.4.20",
+                     "startTime": "2018-06-19T11:47:16Z",
+                     "containerStatuses": [
+                         {
+                             "name": "angry-blackwell",
+                             "state": {
+                                 "waiting": {
+                                     "reason": "CreateContainerConfigError",
+                                     "message": "secrets \\"my-env\\" not found"
+                                 }
+                             },
+                             "lastState": {
+                                 
+                             },
+                             "ready": false,
+                             "restartCount": 0,
+                             "image": "nextflow/nextflow:0.30.2",
+                             "imageID": ""
+                         }
+                     ],
+                     "qosClass": "BestEffort"
+                 }
+             }
+            '''
+
+        def client = Spy(K8sClient)
+        final POD_NAME = 'angry-blackwell'
+
+        when:
+        client.podState(POD_NAME)
+        then:
+        1 * client.podStatus(POD_NAME) >> new K8sResponseJson(JSON)
+        def e = thrown(PodUnschedulableException)
+        e.message == 'K8s pod configuration failed -- secrets "my-env" not found'
+
+    }
 }
