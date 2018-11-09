@@ -190,6 +190,12 @@ dependencies {
     compile ('org.jsoup:jsoup:1.11.2')
     compile 'jline:jline:2.9'
 
+    // GCE libraries
+    compile 'com.google.apis:google-api-services-compute:v1-rev199-1.25.0'
+    compile 'com.google.apis:google-api-services-genomics:v2alpha1-rev37-1.25.0'
+    compile 'com.google.cloud:google-cloud-nio:0.68.0-alpha'
+
+
     // include Ivy at runtime in order to have Grape @Grab work correctly
     runtime "org.apache.ivy:ivy:2.3.0"
 

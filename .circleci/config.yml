@@ -12,7 +12,7 @@ jobs:
       - run: make assemble
       - run: make test
       - run: make install
-      - run: ./integration-tests.sh
+#      - run: ./integration-tests.sh
 #     - run: bash pub-tests.sh circle
 
   build-jdk11:
@@ -30,7 +30,7 @@ jobs:
       - run: |
           wget -q https://raw.githubusercontent.com/sormuras/bach/master/install-jdk.sh
           source ./install-jdk.sh -f 9 -c
-          ./integration-tests.sh
+#          ./integration-tests.sh
 #     - run: bash pub-tests.sh circle
 
 workflows:

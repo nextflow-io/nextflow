@@ -19,6 +19,7 @@ package nextflow.processor
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.cloud.aws.batch.AwsBatchExecutor
+import nextflow.cloud.gce.pipelines.GooglePipelinesExecutor
 import nextflow.executor.CondorExecutor
 import nextflow.executor.CrgExecutor
 import nextflow.executor.Executor
@@ -65,7 +66,8 @@ class ProcessFactory {
             'condor': CondorExecutor,
             'k8s': K8sExecutor,
             'nqsii': NqsiiExecutor,
-            'awsbatch': AwsBatchExecutor
+            'awsbatch': AwsBatchExecutor,
+            'googlepipelines': GooglePipelinesExecutor
     ]
 
     private final Session session

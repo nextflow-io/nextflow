@@ -75,6 +75,9 @@ class CmdCloud extends CmdBase implements UsageAware {
     @Parameter(names='-spot-price', description = 'Price for spot/preemptive instances')
     String spotPrice
 
+    @Parameter(names='-preemptible', description = "Sets if the instances can be preemptied or not")
+    boolean preemptible
+
     @Parameter(names=['-p','-profile'], description='Configuration profile')
     String profile
 
@@ -131,11 +134,21 @@ class CmdCloud extends CmdBase implements UsageAware {
         if( !availDrivers )
             throw new AbortOperationException("No cloud drivers are available")
 
+        // -- create the config object
+        this.config = new ConfigBuilder()
+                .setOptions(launcher.options)
+                .setBaseDir(Paths.get('.'))
+                .setProfile(profile)
+                .build()
+
+        if (!driverName) driverName=config.cloud?.driver
+
         // no driver was specified -- choose the first available
         if( !driverName ) {
             if( availDrivers.size()>1 ) throw new AbortOperationException("No cloud driver was specified -- Use option -driver to choose one of the following: ${availDrivers.collect { ',' }}")
             driverName = availDrivers[0]
         }
+
         // check that an existing driver was specified
         else if( !availDrivers.contains(driverName) ) {
             def matches = availDrivers.closest(driverName)
@@ -144,13 +157,6 @@ class CmdCloud extends CmdBase implements UsageAware {
                 msg += " -- Did you mean one of these?\n" + matches.collect { "  $it"}.join('\n')
             throw new AbortOperationException(msg)
         }
-
-        // -- create the config object
-        this.config = new ConfigBuilder()
-                .setOptions(launcher.options)
-                .setBaseDir(Paths.get('.'))
-                .setProfile(profile)
-                .build()
 
         Global.setConfig(config)
         this.driver = CloudDriverFactory.getDriver(driverName, [region: this.region])
@@ -191,6 +197,7 @@ class CmdCloud extends CmdBase implements UsageAware {
         if( instanceType) result.setInstanceType(instanceType)
         if( imageId ) result.setImageId(imageId)
         if( spotPrice ) result.setSpotPrice(spotPrice)
+        if( preemptible) result.setPreemptible(true)
 
         result.build()
         result.validate(driver)
