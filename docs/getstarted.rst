@@ -10,7 +10,7 @@ Requirements
 ============
 
 `Nextflow` can be used on any POSIX compatible system (Linux, OS X, etc).
-It requires BASH and `Java 8 (or higher) <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_ to be installed.
+It requires Bash and `Java 8 (or later) <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_ to be installed.
 
 Windows systems may be supported using a POSIX compatibility layer like `Cygwin <http://www.cygwin.com>`_ (unverified) or,
 alternatively, installing it into a Linux VM using virtualization software like `VirtualBox <http://www.virtualbox.org>`_
@@ -89,7 +89,7 @@ Execute the script by entering the following command in your terminal::
 
 It will output something similar to the text shown below::
 
-    N E X T F L O W  ~  version 0.9.0
+    N E X T F L O W  ~  version 18.10.1
     [warm up] executor > local
     [22/7548fa] Submitted process > splitLetters (1)
     [e2/008ee9] Submitted process > convertToUpper (1)
@@ -148,7 +148,7 @@ Then save the file with the same name, and execute it by adding the ``-resume`` 
 
 It will print output similar to this::
 
-    N E X T F L O W  ~  version 0.9.0
+    N E X T F L O W  ~  version 18.10.1
     [warm up] executor > local
     [22/7548fa] Cached process > splitLetters (1)
     [d0/7b79a3] Submitted process > convertToUpper (1)
@@ -181,7 +181,7 @@ string parameter, as shown below::
 The string specified on the command line will override the default value of the parameter. The output
 will look like this::
 
-    N E X T F L O W  ~  version 0.7.0
+    N E X T F L O W  ~  version 18.10.1
     [warm up] executor > local
     [6d/54ab39] Submitted process > splitLetters (1)
     [a1/88716d] Submitted process > convertToUpper (2)

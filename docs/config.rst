@@ -56,13 +56,6 @@ not defined in the Nextflow configuration file(s) is supposed to be a reference 
 So, in the above example the property ``customPath`` is defined as the current system ``PATH`` to which
 the string ``/my/app/folder`` is appended.
 
-.. warning:: If you are accessing an environment variable that may not exist in the system, your property may contain
-    an undefined value. You can avoid this by using a conditional expression in your property definition as shown below.
-
-::
-
-    mySafeProperty = "${MY_FANCY_VARIABLE?:''}"
-
 
 Config comments
 ------------------
@@ -105,8 +98,8 @@ following example::
 Scope `env`
 -----------
 
-The ``env`` scope allows you to define one or more environment variables that will be exported to the system environment
-where pipeline processes need to be executed.
+The ``env`` scope allows the definition one or more variable that will be exported in the environment where the
+workflow tasks will be executed.
 
 Simply prefix your variable names with the ``env`` scope or surround them by curly brackets, as shown below::
 

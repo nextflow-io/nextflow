@@ -120,7 +120,7 @@ For example::
     }
 
 The docker image name can be preceded by one or more lines containing comments or variables definition i.e. ``NAME=VALUE``
-and can be followed by one or more lines containing BASH commands.
+and can be followed by one or more lines containing Bash commands.
 
 
 
