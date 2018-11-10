@@ -29,7 +29,7 @@ The process that follows, receives these files and it simply `reverses` their co
 In more detail:
 
 * line 1: The script starts with a `shebang <http://en.wikipedia.org/wiki/Shebang_(Unix)>`_ declaration. This allows you
-  to launch your pipeline, as any other BASH script
+  to launch your pipeline, as any other Bash script
 
 * line 3: Declares a pipeline parameter named ``params.in`` that is initialized with the value ``$HOME/sample.fa``.This value
   can be overridden when launching the pipeline, by simply adding the option ``--in <value>`` to the script command line
@@ -91,7 +91,7 @@ named ``dataset/``, you can execute it by entering this command::
 
 
 .. warning:: Make sure you enclose the ``dataset/*.fa`` parameter value in single-quotation characters,
-  otherwise the BASH environment will expand the ``*`` symbol to the actual file names and the example won't work.
+  otherwise the Bash environment will expand the ``*`` symbol to the actual file names and the example won't work.
 
 More examples
 -------------
