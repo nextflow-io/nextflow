@@ -31,3 +31,14 @@ To push changes to to [tests repo](https://github.com/nextflow-io/tests) use thi
 
 
 Read more [here](https://andrey.nering.com.br/2016/git-submodules-vs-subtrees/).
+
+## GPG keys 
+
+To sign Git commits with a GPG key on Mac use [GPG Suite](https://gpgtools.org/), import your key, then: 
+
+    git config --global gpg.program /usr/local/MacGPG2/bin/gpg2
+    git config --global user.signingkey <your key> 
+    git config --global commit.gpgsign true 
+
+Read more: 
+https://gist.github.com/danieleggert/b029d44d4a54b328c0bac65d46ba4c65
