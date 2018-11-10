@@ -499,6 +499,7 @@ class Launcher {
      * <li>https_proxy</li>
      * <li>HTTP_PROXY</li>
      * <li>HTTPS_PROXY</li>
+     * <li>NO_PROXY</li>
      */
     private void setupEnvironment() {
 
@@ -508,7 +509,25 @@ class Launcher {
         setProxy('http',System.getenv())
         setProxy('https',System.getenv())
 
+        setNoProxy(System.getenv())
     }
+
+    /**
+     * Set no proxy property if defined in the launching env
+     *
+     * See for details
+     * https://docs.oracle.com/javase/8/docs/technotes/guides/net/proxies.html
+     *
+     * @param env
+     */
+    @PackageScope
+    static void setNoProxy(Map<String,String> env) {
+        final noProxy = env.get('NO_PROXY') ?: env.get('no_proxy')
+        if(noProxy) {
+            System.setProperty('http.nonProxyHosts', noProxy.tokenize(',').join('|'))
+        }
+    }
+
 
     /**
      * Setup proxy system properties
