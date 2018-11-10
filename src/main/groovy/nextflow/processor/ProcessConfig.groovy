@@ -321,14 +321,10 @@ class ProcessConfig implements Map<String,Object> {
         for( String rule : configDirectives.keySet() ) {
             if( !rule.startsWith(category) )
                 continue
-            def isLabel = category=='withLabel:'
-            def pattern = rule.substring(category.size()).trim()
-            final isNegated = pattern.startsWith('!')
-            if( isNegated )
-                pattern = pattern.substring(1).trim()
+            final isLabel = category=='withLabel:'
+            final pattern = rule.substring(category.size()).trim()
             final target = isLabel ? processLabel : processName
-            final matches = Pattern.compile(pattern).matcher(target).matches() ^ isNegated
-            if( !matches )
+            if( !matchesSelector(target, pattern) )
                 continue
 
             log.debug "Config settings `$rule` matches ${isLabel ? "label `$target` for process with name $processName" : "process $processName"}"
@@ -340,6 +336,13 @@ class ProcessConfig implements Map<String,Object> {
                 throw new ConfigParseException("Unknown config settings for label `$processLabel` -- settings=$settings ")
             }
         }
+    }
+
+    static boolean matchesSelector( String target, String pattern ) {
+        final isNegated = pattern.startsWith('!')
+        if( isNegated )
+            pattern = pattern.substring(1).trim()
+        return Pattern.compile(pattern).matcher(target).matches() ^ isNegated
     }
 
     /**
