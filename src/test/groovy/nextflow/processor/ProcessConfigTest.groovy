@@ -15,6 +15,9 @@
  */
 
 package nextflow.processor
+
+import spock.lang.Unroll
+
 import static nextflow.util.CacheHelper.HashMode
 
 import nextflow.exception.IllegalDirectiveException
@@ -345,6 +348,24 @@ class ProcessConfigTest extends Specification {
         'a='        | false
         'a=1'       | false
 
+    }
+
+    @Unroll
+    def 'should match selector: #SELECTOR with #TARGET' () {
+        expect:
+        ProcessConfig.matchesSelector(TARGET, SELECTOR) == EXPECTED
+
+        where:
+        SELECTOR        | TARGET    | EXPECTED
+        'foo'           | 'foo'     | true
+        'foo'           | 'bar'     | false
+        '!foo'          | 'bar'     | true
+        'a|b'           | 'a'       | true
+        'a|b'           | 'b'       | true
+        'a|b'           | 'z'       | false
+        'a*'            | 'a'       | true
+        'a*'            | 'aaaa'    | true
+        'a*'            | 'bbbb'    | false
     }
 
     def 'should apply config setting for a process label' () {

@@ -319,7 +319,7 @@ class SessionTest extends Specification {
         def session = new Session([process: ['$foo': [cpus:1], '$bar':[mem:'10GB']]])
         expect:
         session.validateConfig0(['foo','bar','baz']) == []
-        session.validateConfig0(['foo','baz']) == ['The config file defines settings for an unknown process: bar -- Did you mean: baz?']
+        session.validateConfig0(['foo','baz']) == ["There's no process matching config selector: bar -- Did you mean: baz?"]
     }
 
     @Unroll
@@ -401,6 +401,28 @@ class SessionTest extends Specification {
         session.getSystemEnv() >> [NXF_ALPHA_BETA_OMEGA: 'OK']
         result == 'OK'
 
+    }
+
+    @Unroll
+    def 'should check valid process name with selector=#SELECTOR' () {
+
+        given:
+        def session = new Session()
+
+        when:
+        def error = []
+        session.isValidProcessName(NAMES, SELECTOR, error)
+        then:
+        error[0] == MSG
+        
+        where:
+        SELECTOR    | NAMES         | MSG
+        'foo'       | ['foo','bar'] | null
+        'bar'       | ['foo','bar'] | null
+        'baz'       | ['foo','bar'] | "There's no process matching config selector: baz -- Did you mean: bar?"
+        'ba.*'      | ['foo','bar'] | null
+        'foo|bar'   | ['foo','bar'] | null
+        'foo|bar'   | ['baz']       | "There's no process matching config selector: foo|bar"
     }
 
 
