@@ -354,7 +354,7 @@ dependencies on the hosting environment. By using Nextflow you can achieve this 
 Third party scripts
 --------------------
 
-Any third party script that does not need to be compiled (BASH, Python, Perl, etc) can be included in the pipeline
+Any third party script that does not need to be compiled (Bash, Python, Perl, etc) can be included in the pipeline
 project repository, so that they are distributed with it.
 
 Grant the execute permission to these files and copy them into a folder named ``bin/`` in the root directory of your
