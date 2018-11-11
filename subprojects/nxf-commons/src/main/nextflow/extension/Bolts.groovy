@@ -409,6 +409,13 @@ class Bolts {
         locker.lock(closure)
     }
 
+    static Duration toDuration(Number number) {
+        new Duration(number.toLong())
+    }
+
+    static MemoryUnit toMemory(Number number) {
+        new MemoryUnit(number.toLong())
+    }
 
     /**
      * Converts a {@code String} to a {@code Duration} object

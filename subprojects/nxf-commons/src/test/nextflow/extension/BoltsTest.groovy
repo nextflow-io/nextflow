@@ -244,4 +244,16 @@ class BoltsTest extends Specification {
         [a:1, b:[2,4], c:[3,9]].pairs(flat:true) == [['a',1], ['b',2], ['b',4], ['c',3], ['c',9]]
     }
 
+    def 'should convert num to memory' () {
+        expect:
+        2_048.toMemory() instanceof MemoryUnit
+        1_048_576.toMemory() == MemoryUnit.of('1 MB')
+    }
+
+    def 'should convert num to duration' () {
+        expect:
+        1_000.toDuration() instanceof Duration
+        60_000.toDuration() == Duration.of('1 min')
+    }
+
 }
