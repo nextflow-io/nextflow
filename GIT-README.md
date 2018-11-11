@@ -39,6 +39,7 @@ To sign Git commits with a GPG key on Mac use [GPG Suite](https://gpgtools.org/)
     git config --global gpg.program /usr/local/MacGPG2/bin/gpg2
     git config --global user.signingkey <your key> 
     git config --global commit.gpgsign true 
+    git config --global format.signoff true ## TO AVOID TO SPECIFY -S option each time
 
 Read more: 
 https://gist.github.com/danieleggert/b029d44d4a54b328c0bac65d46ba4c65
