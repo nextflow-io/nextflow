@@ -169,7 +169,7 @@ class Bolts {
      * @param stripChars  the characters to remove, null treated as whitespace
      * @return the stripped String, <code>null</code> if null String input
      */
-    static strip( String self, String stripChars = null ) {
+    static String strip( String self, String stripChars = null ) {
         StringUtils.strip(self, stripChars)
     }
 
@@ -234,7 +234,7 @@ class Bolts {
      * <p>Capitalizes a String changing the first letter to title case as
      * per {@link Character#toTitleCase(char)}. No other letters are changed.</p>
      *
-     * <p>For a word based algorithm, see {@link WordUtils#capitalize(String)}.
+     * <p>For a word based algorithm, see {@link org.apache.commons.lang.WordUtils#capitalize(String)}.
      * A <code>null</code> input String returns <code>null</code>.</p>
      *
      * <pre>
@@ -253,7 +253,7 @@ class Bolts {
      * <p>Uncapitalizes a String changing the first letter to title case as
      * per {@link Character#toLowerCase(char)}. No other letters are changed.</p>
      *
-     * <p>For a word based algorithm, see {@link WordUtils#uncapitalize(String)}.
+     * <p>For a word based algorithm, see {@link org.apache.commons.lang.WordUtils#uncapitalize(String)}.
      * A <code>null</code> input String returns <code>null</code>.</p>
      *
      * <pre>
@@ -311,31 +311,6 @@ class Bolts {
     static boolean isAllUpperCase(String self) {
         StringUtils.isAllUpperCase(self)
     }
-
-    static private Pattern getPattern( obj ) {
-
-        if( obj instanceof Map ) {
-            if( obj.containsKey('pattern') )
-                obj = obj.pattern
-            else
-                return null
-        }
-
-        if( obj instanceof Pattern ) {
-            return (Pattern)obj
-        }
-
-        if( obj instanceof String ) {
-            Pattern.compile(Pattern.quote(obj))
-        }
-
-        if( obj != null )
-            throw new IllegalArgumentException()
-
-        return null
-    }
-
-
 
     /**
      * Invokes the specify closure including it with a lock/unlock calls pair
@@ -442,7 +417,7 @@ class Bolts {
      * @param type
      * @return
      */
-    static def asType( String self, Class type ) {
+    static Object asType( String self, Class type ) {
         if( type == Duration ) {
             return new Duration(self)
         }
@@ -466,7 +441,7 @@ class Bolts {
      * @param type
      * @return
      */
-    static def asType( GString self, Class type ) {
+    static Object asType( GString self, Class type ) {
         if( type == Duration ) {
             return new Duration(self.toString())
         }
@@ -487,7 +462,7 @@ class Bolts {
      * @param type
      * @return
      */
-    static def asType( Number self, Class type ) {
+    static Object asType( Number self, Class type ) {
         if( type == Duration ) {
             return new Duration(self.longValue())
         }
@@ -504,7 +479,7 @@ class Bolts {
      * @param type
      * @return
      */
-    static def asType( File self, Class type ) {
+    static Object asType( File self, Class type ) {
         if( Path.isAssignableFrom(type) ) {
             return self.toPath()
         }
@@ -513,7 +488,7 @@ class Bolts {
     }
 
 
-    static def <T> T getOrCreate( Map self, key, factory ) {
+    static <T> T getOrCreate( Map self, key, factory ) {
 
         if( self.containsKey(key) )
             return (T)self.get(key)
@@ -625,7 +600,7 @@ class Bolts {
      * @param prefix
      * @return The string indented
      */
-    public static String indent( String text, String prefix = ' ' ) {
+    static String indent( String text, String prefix = ' ' ) {
         def result = new StringBuilder()
         def lines = text ? text.readLines() : Collections.emptyList()
         for( int i=0; i<lines.size(); i++ ) {
