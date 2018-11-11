@@ -35,7 +35,9 @@ import nextflow.cli.CmdRun
 import nextflow.script.BaseScript
 import nextflow.config.ConfigBuilder
 import nextflow.script.ScriptBinding
+import nextflow.util.Duration
 import nextflow.util.LoggerHelper
+import nextflow.util.MemoryUnit
 import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -101,6 +103,8 @@ class Nextflow extends Console {
         importCustomizer.addImports( StringUtils.name, Field.name )
         importCustomizer.addImports( Path.name )
         importCustomizer.addImports( Channel.name )
+        importCustomizer.addImports( Duration.name )
+        importCustomizer.addImports( MemoryUnit.name )
         importCustomizer.addStaticStars( nextflow.Nextflow.name )
 
         def config = new CompilerConfiguration()

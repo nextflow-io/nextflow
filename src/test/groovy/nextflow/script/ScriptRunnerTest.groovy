@@ -22,6 +22,8 @@ import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.processor.ProcessConfig
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 import nextflow.util.VersionNumber
 import spock.lang.Specification
 import test.TestParser
@@ -615,6 +617,34 @@ class ScriptRunnerTest extends Specification {
         runner.fetchContainers() == 'ngi/rnaseq:1.2'
     }
 
+    def 'should parse mem and duration units' () {
+        given:
+        def script = '''  
+            def result = [:] 
+            result.mem1 = 1.GB
+            result.mem2 = 1_000_000.toMemory()
+            result.mem3 = MemoryUnit.of(2_000)
+            result.time1 = 2.hours
+            result.time2 = 60_000.toDuration()
+            result.time3 = Duration.of(120_000)
+            result.flag = 10000 < 1.GB 
+            result // return result object
+           '''
+
+        when:
+        def runner = new ScriptRunner([executor:'nope'])
+        def result = (Map)runner.setScript(script).execute()
+        then:
+        result.mem1 instanceof MemoryUnit
+        result.mem1 == MemoryUnit.of('1 GB')
+        result.mem2 == MemoryUnit.of(1_000_000)
+        result.mem3 == MemoryUnit.of(2_000)
+        result.time1 instanceof Duration
+        result.time1 == Duration.of('2 hours')
+        result.time2 == Duration.of(60_000)
+        result.time3 == Duration.of(120_000)
+        result.flag == true
+    }
 
     static Map cfg(String config) {
         new ConfigSlurper().parse(config).toMap()
