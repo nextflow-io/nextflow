@@ -21,10 +21,15 @@ import java.nio.file.Path
 import ch.grengine.Grengine
 import com.google.common.hash.Hashing
 import groovy.transform.PackageScope
+import nextflow.ast.NextflowXform
 import nextflow.file.FileHelper
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
+import org.codehaus.groovy.control.customizers.ImportCustomizer
 import org.codehaus.groovy.runtime.InvokerHelper
+
 /*
  * Copyright 2003-2013 the original author or authors.
  *
@@ -158,6 +163,12 @@ class ConfigParser {
         if( renderClosureAsString )
             params.put('renderClosureAsString', true)
         config.addCompilationCustomizers(new ASTTransformationCustomizer(params, ConfigTransform))
+        config.addCompilationCustomizers(new ASTTransformationCustomizer(NextflowXform))
+        //  add implicit types
+        def importCustomizer = new ImportCustomizer()
+        importCustomizer.addImports( Duration.name )
+        importCustomizer.addImports( MemoryUnit.name )
+        config.addCompilationCustomizers(importCustomizer)
         grengine = new Grengine(config)
     }
 

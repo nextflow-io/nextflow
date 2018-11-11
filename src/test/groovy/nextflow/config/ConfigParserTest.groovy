@@ -25,6 +25,10 @@ import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
 import spock.lang.Specification
+
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -463,6 +467,33 @@ class ConfigParserTest extends Specification {
         result.map1.foo == 'hello'
         result.map1.bar == new ConfigClosurePlaceholder('{ world }')
 
+    }
+
+    def 'should handle extend mem and duration units' () {
+        ConfigObject result
+        def CONFIG = '''   
+            mem1 = 1.GB
+            mem2 = 1_000_000.toMemory()
+            mem3 = MemoryUnit.of(2_000)
+            time1 = 2.hours
+            time2 = 60_000.toDuration()
+            time3 = Duration.of(120_000)
+            flag = 10000 < 1.GB 
+           '''
+
+        when:
+        result = new ConfigParser()
+                .parse(CONFIG)   
+        then:
+        result.mem1 instanceof MemoryUnit
+        result.mem1 == MemoryUnit.of('1 GB')
+        result.mem2 == MemoryUnit.of(1_000_000)
+        result.mem3 == MemoryUnit.of(2_000)
+        result.time1 instanceof Duration
+        result.time1 == Duration.of('2 hours')
+        result.time2 == Duration.of(60_000)
+        result.time3 == Duration.of(120_000)
+        result.flag == true
     }
 
 

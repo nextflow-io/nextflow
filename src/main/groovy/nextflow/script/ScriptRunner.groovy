@@ -34,7 +34,9 @@ import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.file.FileHelper
 import nextflow.util.ConfigHelper
+import nextflow.util.Duration
 import nextflow.util.HistoryFile
+import nextflow.util.MemoryUnit
 import nextflow.util.VersionNumber
 import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.control.CompilerConfiguration
@@ -271,6 +273,8 @@ class ScriptRunner {
         importCustomizer.addImports( StringUtils.name, groovy.transform.Field.name )
         importCustomizer.addImports( Path.name )
         importCustomizer.addImports( Channel.name )
+        importCustomizer.addImports( Duration.name )
+        importCustomizer.addImports( MemoryUnit.name )
         importCustomizer.addStaticStars( Nextflow.name )
 
         def config = new CompilerConfiguration()
