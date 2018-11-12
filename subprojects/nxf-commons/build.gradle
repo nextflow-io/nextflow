@@ -26,8 +26,8 @@ sourceSets {
 
 dependencies {
     compile "ch.qos.logback:logback-classic:1.1.11"
-    compile "org.codehaus.groovy:groovy:2.5.3"
-    compile "org.codehaus.groovy:groovy-nio:2.5.3"
+    compile "org.codehaus.groovy:groovy:2.5.4"
+    compile "org.codehaus.groovy:groovy-nio:2.5.4"
     compile "commons-lang:commons-lang:2.6"
     compile 'com.google.guava:guava:21.0'
 

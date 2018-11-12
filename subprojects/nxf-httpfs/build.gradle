@@ -28,11 +28,11 @@ sourceSets {
 
 dependencies {
     compile "ch.qos.logback:logback-classic:1.1.11"
-    compile "org.codehaus.groovy:groovy:2.5.3"
-    compile "org.codehaus.groovy:groovy-nio:2.5.3"
+    compile "org.codehaus.groovy:groovy:2.5.4"
+    compile "org.codehaus.groovy:groovy-nio:2.5.4"
 
     /* testCompile inherited from top gradle build file */
-    testCompile "org.codehaus.groovy:groovy-json:2.5.3" // needed by wiremock
+    testCompile "org.codehaus.groovy:groovy-json:2.5.4" // needed by wiremock
     testCompile ('com.github.tomakehurst:wiremock:1.57') { exclude module: 'groovy-all' }
     testCompile ('com.github.tomjankes:wiremock-groovy:0.2.0') { exclude module: 'groovy-all' }
 }
