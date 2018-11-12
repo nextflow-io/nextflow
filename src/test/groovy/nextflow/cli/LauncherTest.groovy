@@ -17,7 +17,6 @@
 package nextflow.cli
 
 import spock.lang.Specification
-import spock.lang.Unroll
 
 import java.nio.file.Files
 
@@ -305,10 +304,12 @@ class LauncherTest extends Specification {
 
     }
 
-    @Unroll
     @RestoreSystemProperties
     def 'should set no proxy property' () {
 
+        given:
+        System.properties.remove('http.nonProxyHosts')
+        
         when:
         Launcher.setNoProxy(ENV)
         then:
