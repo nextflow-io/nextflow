@@ -54,7 +54,7 @@ refresh:
 
 test:
 ifndef class
-	./gradlew ${mm}test --stacktrace
+	./gradlew ${mm}test
 else
 	./gradlew ${mm}test --tests ${class}
 endif
