@@ -76,7 +76,7 @@ EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}
 # classpath when the application is compiled with gradle
 #
 if [ -e "$base_dir/build/libs" ]; then
-  CLASSPATH=`ls $base_dir/build/libs/* | egrep 'nextflow-[0-9]+\.[0-9]+\.[0-9a-z]+(-[A-Z0-9]+)?.jar$'`
+  CLASSPATH=`ls $base_dir/build/libs/* | egrep 'nextflow-[0-9]+\.[0-9]+\.[0-9a-z]+(-[a-zA-Z0-9]+)?.jar$'`
 
   # -- append runtime libraries
   [[ ! -f "$base_dir/.launch.classpath" ]] && echo "Missing '.launch.classpath' file -- create it by running: ./gradlew exportClasspath" && exit 1

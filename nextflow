@@ -108,9 +108,13 @@ function resolve_link() {
     fi
 }
 
+function current_ver() {
+  [[ $NXF_EDGE == 1 ]] && printf 'edge' || printf 'latest'
+}
+
 function install() {
     local tmpfile=$(make_temp)
-    local version=$(set +u; [[ $NXF_VER ]] && printf "v$NXF_VER" || printf 'latest')
+    local version=$(set +u; [[ $NXF_VER ]] && printf "v$NXF_VER" || current_ver)
     local action="a=${2:-default}"
     get "$NXF_BASE/$version/nextflow?$action" "$tmpfile" "$1" || exit $?
     mv "$tmpfile" "$1" || exit $?
@@ -217,6 +221,7 @@ while [[ $# != 0 ]]; do
       ;;
     -self-update|self-update)
       if [[ ! "$cmd" ]]; then
+      [[ -z $NXF_EDGE && $NXF_VER = *-edge ]] && NXF_EDGE=1
       unset NXF_VER
       install "$0" update
       exit 0
