@@ -20,6 +20,7 @@ Contents:
    executor
    config
    awscloud
+   googlecloud
    amazons3
    conda
    docker
