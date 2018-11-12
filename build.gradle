@@ -577,8 +577,9 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
     def launcherSha256 = file('nextflow.sha256').absoluteFile
     def nextflowAllFile = file("$releaseDir/nextflow-${version}-all")
 
-    def snapshot = version ==~ /^.+(-RC\d+|\-SNAPSHOT)$/
-    def isLatest = !snapshot
+    def snapshot = version ==~ /^.+(-RC\d+|-SNAPSHOT)$/
+    def edge = version ==~ /^.+(-edge|-EDGE)$/
+    def isLatest = !snapshot && !edge
     def cmd =  """\
     # tag the release
     git push || exit \$?
@@ -589,7 +590,18 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
     github-release upload -u nextflow-io -r nextflow -t v$version --file ${nextflowAllFile} --name ${nextflowAllFile.name}
     """.stripIndent()
 
-    if( isLatest )
+    if( edge )
+        cmd += """
+        # publish the script as the latest
+        export AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS}
+        export AWS_SECRET_ACCESS_KEY=${System.env.NXF_AWS_SECRET}
+        aws s3 cp $launcherFile s3://www.nextflow.io/releases/edge/nextflow $s3CmdOpts
+        aws s3 cp $launcherSha1 s3://www.nextflow.io/releases/edge/nextflow.sha1 $s3CmdOpts
+        aws s3 cp $launcherSha256 s3://www.nextflow.io/releases/edge/nextflow.sha256 $s3CmdOpts
+        aws s3 cp $launcherSha256 s3://www.nextflow.io/releases/edge/nextflow.md5 $s3CmdOpts
+        """.stripIndent()
+        
+    else if( isLatest )
         cmd += """
         # publish the script as the latest
         export AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS}
