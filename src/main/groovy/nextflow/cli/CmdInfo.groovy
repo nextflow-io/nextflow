@@ -30,7 +30,7 @@ import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.scm.AssetManager
 import nextflow.util.MemoryUnit
-
+import groovy.json.*
 /**
  * CLI sub-command INFO
  *
@@ -56,6 +56,8 @@ class CmdInfo extends CmdBase {
 
     @Override
     void run() {
+        def infoMap=[:]
+
         int level = moreDetailed ? 2 : ( detailed ? 1 : 0 )
         if( !args ) {
             println getInfo(level)
@@ -67,34 +69,61 @@ class CmdInfo extends CmdBase {
             throw new AbortOperationException("Unknown project `${args[0]}`")
 
         final manifest = manager.getManifest()
-        println " project name: ${manager.project}"
-        println " repository  : ${manager.repositoryUrl}"
-        println " local path  : ${manager.localPath}"
-        println " main script : ${manager.mainScriptName}"
+        infoMap.put('projectName', "${manager.project}")
+        infoMap.put('repository', "${manager.repositoryUrl}")
+        infoMap.put('localPath', "${manager.localPath}")
+        infoMap.put('mainScript', "${manager.mainScriptName}")
+
         if( manager.homePage && manager.homePage != manager.repositoryUrl )
-            println " home page   : ${manager.homePage}"
+            infoMap.put('homePage', "${manager.homePage}")
         if( manifest.description )
-            println " description : ${manifest.description}"
+            infoMap.put('description', "${manifest.description}")
         if( manifest.author )
-            println " author      : ${manifest.author}"
+            infoMap.put('author', "${manifest.author}")
 
         def revs = manager.getRevisions(level)
         if( revs.size() == 1 )
-            println " revision    : ${revs[0]}"
+            infoMap.put('revision', "${revs[0]}")
         else {
-            println " revisions   : "
-            revs.each { println " $it" }
+            def revisionList = new ArrayList<String>()
+            revs.each {
+                revisionList.add(it)
+            }
+            infoMap.put('revisions',revisionList)
+
         }
 
         def updates = manager.getUpdates(level)
         if( updates ) {
             if( updates.size() == 1 && revs.size() == 1 )
-                println " updates     : ${updates[0]}"
+                infoMap.put('updates', "${updates[0]}")
+
             else {
-                println " updates     : "
-                updates.each { println " $it" }
+                def updatesList = new ArrayList<String>()
+                updates.each {
+                    updatesList.add(it)
+                }
+                infoMap.put('updates',updatesList)
+
             }
         }
+        mapToJson(infoMap)
+    }
+    /**
+     * Print the Map without any special format
+     * @param map
+     */
+    private void printMap(Map map){
+        map.each{ k, v -> println "${k}\t:\t${v}" }
+    }
+    /**
+     * Convert the Map<String,String> to Json format
+     * @param map
+     */
+    private void mapToJson(Map map){
+        def mapAsJson = JsonOutput.toJson(map)
+
+        println JsonOutput.prettyPrint(mapAsJson)
 
     }
 
@@ -133,11 +162,11 @@ class CmdInfo extends CmdBase {
                 .getRuntimeMXBean()
                 .getInputArguments()
                 .each { String it ->
-                        if( it.startsWith('-Dcapsule.'))
-                            capsule << it.substring(2)
-                        else
-                            args << it
-                    }
+            if( it.startsWith('-Dcapsule.'))
+                capsule << it.substring(2)
+            else
+                args << it
+        }
 
         // file system
         result << BLANK << "File systems: "
