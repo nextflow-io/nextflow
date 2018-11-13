@@ -569,6 +569,8 @@ task dockerPack(type: Exec, dependsOn: ['pack']) {
 
 /*
  * Tag and upload the release
+ * 
+ * https://github.com/aktau/github-release/
  */
 task release(type: Exec, dependsOn: [pack, dockerImage]) {
 
