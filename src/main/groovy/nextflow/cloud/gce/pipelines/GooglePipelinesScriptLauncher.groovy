@@ -24,7 +24,9 @@ import nextflow.processor.TaskRun
 import java.nio.file.Path
 
 /**
- * Implements BASH launcher script for Google Pipeline
+ * Implements BASH launcher script for Google Pipelines.
+ *
+ * @author Ólafur Haukur Flygenring <olafurh@wuxinextcode.com>
  */
 @CompileStatic
 class GooglePipelinesScriptLauncher extends BashWrapperBuilder {

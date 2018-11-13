@@ -32,7 +32,7 @@ import java.nio.file.Path
 import java.security.GeneralSecurityException
 
 /**
- * Helper class for Google Compute Engine
+ * Helper class for Google Compute Engine.
  *
  * @author Vilmundur Pálmason <vilmundur@wuxinextcode.com>
  */

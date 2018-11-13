@@ -37,6 +37,13 @@ import java.nio.file.Path
 @Slf4j
 @SupportedScriptTypes(ScriptType.SCRIPTLET)
 @CompileStatic
+/**
+ * Google Pipelines Executor.
+ *
+ * https://cloud.google.com/genomics/
+ *
+ * @author Ólafur Haukur Flygenring <olafurh@wuxinextcode.com>
+ */
 class GooglePipelinesExecutor extends Executor {
 
     static GooglePipelinesConfiguration pipelineConfig

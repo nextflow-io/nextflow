@@ -27,6 +27,11 @@ import java.nio.file.Paths
 
 @Slf4j
 @CompileStatic
+/**
+ * Defines the file/script copy strategies for Google Pipelines.
+ *
+ * @author Ólafur Haukur Flygenring <olafurh@wuxinextcode.com>
+ */
 class GooglePipelinesFileCopyStrategy extends SimpleFileCopyStrategy {
 
     GooglePipelinesTaskHandler handler

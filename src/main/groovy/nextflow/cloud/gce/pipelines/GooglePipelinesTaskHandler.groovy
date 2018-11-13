@@ -32,6 +32,11 @@ import nextflow.processor.TaskStatus
 import java.nio.file.Path
 
 @Slf4j
+/**
+ * Task handler for Google Pipelines.
+ *
+ * @author Ólafur Haukur Flygenring <olafurh@wuxinextcode.com>
+ */
 class GooglePipelinesTaskHandler extends TaskHandler {
 
     final GooglePipelinesExecutor executor

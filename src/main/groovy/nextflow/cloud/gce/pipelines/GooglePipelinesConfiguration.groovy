@@ -21,6 +21,11 @@ import groovy.transform.CompileStatic
 import java.nio.file.Path
 
 @CompileStatic
+/**
+ * Helper class wrapping configuration required for Google Pipelines.
+ *
+ * @author Ólafur Haukur Flygenring <olafurh@wuxinextcode.com>
+ */
 class GooglePipelinesConfiguration {
     String project
     List<String> zone

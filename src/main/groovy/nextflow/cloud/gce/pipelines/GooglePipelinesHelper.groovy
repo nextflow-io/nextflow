@@ -36,6 +36,11 @@ import groovy.util.logging.Slf4j
 @Slf4j
 @CompileStatic
 @SuppressWarnings("GrMethodMayBeStatic")
+/**
+ * Helper class for Google Pipelines.
+ *
+ * @author Ólafur Haukur Flygenring <olafurh@wuxinextcode.com>
+ */
 class GooglePipelinesHelper {
 
     static final String SCOPE_CLOUD_PLATFORM = "https://www.googleapis.com/auth/cloud-platform"

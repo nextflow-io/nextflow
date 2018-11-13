@@ -49,7 +49,7 @@ import static nextflow.cloud.CloudConst.TAG_CLUSTER_ROLE
 @CompileStatic
 @ServiceName('gce')
 /**
- * Cloud driver implementation for Google Compute Engine
+ * Cloud driver implementation for Google Compute Engine.
  *
  * @author Vilmundur Pálmason <vilmundur@wuxinextcode.com>
  */
