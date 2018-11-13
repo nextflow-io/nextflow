@@ -28,7 +28,6 @@ import nextflow.config.CascadingConfig
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@PackageScope
 @CompileStatic
 class CloudBootTemplateBinding implements Map<String,Object> {
 

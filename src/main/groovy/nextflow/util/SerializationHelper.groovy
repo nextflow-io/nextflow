@@ -15,6 +15,9 @@
  */
 
 package nextflow.util
+
+import com.google.cloud.storage.contrib.nio.CloudStoragePath
+
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
@@ -53,6 +56,7 @@ class KryoHelper {
         serializers.put( UUID, UUIDSerializer )
         serializers.put( File, FileSerializer )
         serializers.put( S3Path, PathSerializer )
+        serializers.put(CloudStoragePath,CloudStoragePathSerializer)
         serializers.put( XPath, XPathSerializer )
         serializers.put( Pattern, PatternSerializer )
         serializers.put( ArrayTuple, ArrayTupleSerializer )
@@ -67,6 +71,7 @@ class KryoHelper {
 
     /**
      * Register a new class - serializer pair
+     *
      *
      * @param clazz
      * @param item
@@ -266,6 +271,35 @@ class PathSerializer extends Serializer<Path> {
         def fs = FileHelper.getOrCreateFileSystemFor(uri)
         return fs.provider().getPath(uri)
 
+    }
+}
+
+@Slf4j
+@CompileStatic
+class CloudStoragePathSerializer extends Serializer<CloudStoragePath> {
+
+    @Override
+    void write(Kryo kryo, Output output, CloudStoragePath target) {
+        final scheme = target.getFileSystem().provider().getScheme()
+        final host = target.bucket()
+        final path = target.toString()
+        log.trace "Path serialization > scheme: $scheme; host: $host; path: $path"
+
+        output.writeString(scheme)
+        output.writeString(host)
+        output.writeString(path)
+    }
+
+    @Override
+    CloudStoragePath read(Kryo kryo, Input input, Class<CloudStoragePath> type) {
+        final scheme = input.readString()
+        final host = input.readString()
+        final path = input.readString()
+        log.trace "CloudStoragePath de-serialization > scheme: $scheme; host: $host; path: $path"
+
+        def uri = URI.create("$scheme://$host$path")
+        def fs = FileHelper.getOrCreateFileSystemFor(uri)
+        fs.provider().getPath(uri) as CloudStoragePath
     }
 }
 

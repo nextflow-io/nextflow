@@ -346,6 +346,11 @@ class CloudConfig extends LaunchConfig {
         return this
     }
 
+    CloudConfig setPreemptible(boolean preemptible) {
+        setAttribute('preemptible', preemptible)
+        return this
+    }
+
     CloudConfig setKeyName(String keyName) {
         setAttribute('keyName', keyName)
         return this
@@ -362,7 +367,7 @@ class CloudConfig extends LaunchConfig {
     }
 
     String toString() {
-        "imageId=$imageId, instanceType=$instanceType, spotPrice=$spotPrice"
+        "imageId=$imageId, instanceType=$instanceType, spotPrice=$spotPrice, preemptible=$preemptible"
     }
 
     /**

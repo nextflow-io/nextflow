@@ -107,6 +107,7 @@ trait CloudDriver {
      *
      * @param tags
      *      One or more tag given as a {@link Map} object
+     *      A null value means that tag must exist but can have any value
      * @param callback
      *      A closure getting a single parameter of type {@link nextflow.cloud.types.CloudInstance}
      *      describing the properties for the current instance

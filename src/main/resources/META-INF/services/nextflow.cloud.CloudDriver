@@ -19,3 +19,4 @@
 #
 
 nextflow.cloud.aws.AmazonCloudDriver
+nextflow.cloud.gce.GoogleCloudDriver

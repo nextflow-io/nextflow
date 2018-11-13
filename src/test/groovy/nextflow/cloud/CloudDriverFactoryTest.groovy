@@ -35,7 +35,7 @@ class CloudDriverFactoryTest extends Specification {
 
     def 'should return a set of names'() {
         expect:
-        CloudDriverFactory.getDriverNames()  == ['fake','aws'] as Set
+        CloudDriverFactory.getDriverNames()  == ['fake','aws','gce'] as Set
     }
 
     def 'should return the driver instance' () {
