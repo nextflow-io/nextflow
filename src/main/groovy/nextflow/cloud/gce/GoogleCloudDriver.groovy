@@ -318,7 +318,7 @@ class GoogleCloudDriver implements CloudDriver {
     }
 
     static def tagToFilterExpression(String k, v) {
-        '(labels.' + k.toLowerCase() + '= "' + (v ?: '*') + '")'
+        '(labels.' + k.toLowerCase() + ' = "' + (v ?: '*') + '")'
     }
 
     static def instanceIdToFilterExpression(String instanceId) {

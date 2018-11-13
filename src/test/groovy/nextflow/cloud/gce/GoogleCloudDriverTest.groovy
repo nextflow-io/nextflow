@@ -451,4 +451,33 @@ class GoogleCloudDriverTest extends Specification {
         1 * driver.waitInstanceStatus(_ ,_)
         1 * helper.getInstanceList(_) >> {[] as List<Instance>}
     }
+
+    def 'should run closure against instances'() {
+        given:
+        def inst1 = new Instance().setName("Inst1").setLabels(["a" : "b"])
+        def inst2 = new Instance().setName("Inst2").setLabels(["a" : "b"])
+        List<Instance> instances = [inst1,inst2]
+        def allCount = 0
+        GceApiHelper helper = GroovyMock()
+        def driver = new GoogleCloudDriver(helper)
+
+
+        when: 'should run against all instances'
+        driver.eachInstance {allCount++}
+
+        then:
+        1 * helper.getInstanceList(_) >> {instances}
+        allCount == instances.size()
+
+        when: 'filter, tag and Id for each should also call getInstanceList'
+        driver.eachInstanceWithTags(["a" : "a"]){}
+        driver.eachInstanceWithFilter("filter"){}
+        driver.eachInstanceWithIds(["1"]){}
+
+        then:
+        1 * helper.getInstanceList('(labels.a = "a")')
+        1 * helper.getInstanceList("filter")
+        1 * helper.getInstanceList('(name = "1")')
+
+    }
 }
