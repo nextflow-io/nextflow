@@ -212,8 +212,11 @@ class GridTaskHandler extends TaskHandler {
 
             // -- if the job is active, this means that it is still running and thus the exit file cannot exist
             //    returns null to continue to wait
-            if( active )
+            if( active ) {
+                // make sure to reset exit time if the task is active -- see #927
+                exitTimestampMillis1 = 0
                 return null
+            }
 
             // -- if the job is not active, something is going wrong
             //  * before returning an error code make (due to NFS latency) the file status could be in a incoherent state
