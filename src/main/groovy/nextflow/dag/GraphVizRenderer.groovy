@@ -54,7 +54,7 @@ class GraphvizRenderer implements DagRenderer {
             log.warn "To render the execution DAG in the required format it is required to install Graphviz -- See http://www.graphviz.org for more info."
         }
         else if( exitStatus>0 ) {
-            log.debug("Graphviz error -- command `$cmd` -- exist status: $exitStatus")
+            log.debug("Graphviz error -- command `$cmd` -- exit status: $exitStatus")
             log.warn "Failed to render DAG file: $file"
         }
     }

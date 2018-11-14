@@ -177,7 +177,7 @@ class IgTaskHandler extends TaskHandler {
         if( delta > timeout ) {
             // game-over
             def errMessage = []
-            errMessage << "Failed to get exist status for process ${this} -- exit-status-read-timeout=${Duration.of(timeout)}; delta=${Duration.of(delta)}"
+            errMessage << "Failed to get exit status for process ${this} -- exit-status-read-timeout=${Duration.of(timeout)}; delta=${Duration.of(delta)}"
             // -- dump current queue stats
             errMessage << "Current queue status:"
             errMessage << executor.dumpQueueStatus()?.indent('> ')
