@@ -386,11 +386,11 @@ class K8sDriverLauncher {
         // -- setup config file
         String cmd = "source /etc/nextflow/init.sh; ${getLaunchCli()}"
 
+        // create the launcher pod
         new PodSpecBuilder()
             .withPodName(runName)
             .withImageName(k8sConfig.getNextflowImageName())
             .withCommand(['/bin/bash', '-c', cmd])
-            .withWorkDir(k8sConfig.getLaunchDir())
             .withLabels([ app: 'nextflow', runName: runName ])
             .withNamespace(k8sClient.config.namespace)
             .withServiceAccount(k8sClient.config.serviceAccount)
@@ -399,6 +399,8 @@ class K8sDriverLauncher {
             .withEnv( PodEnv.value('NXF_ASSETS', k8sConfig.getProjectDir()) )
             .withEnv( PodEnv.value('NXF_EXECUTOR', 'k8s'))
             .build()
+
+        // note: do *not* set the work directory because it may need to be created  by the init script
     }
 
     /**
