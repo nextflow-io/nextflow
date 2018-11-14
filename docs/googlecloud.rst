@@ -13,8 +13,8 @@ Configuration
 Cloud configuration attributes are provided in the ``nextflow.config`` file as shown in the example below::
 
     cloud {
-        imageId = ‘centos-cloud/global/images/centos-7-v20181011’
-        instanceType = ‘n1-highcpu-8’
+        imageId = 'centos-cloud/global/images/centos-7-v20181011'
+        instanceType = 'n1-highcpu-8'
     }
 
     gce {
@@ -100,8 +100,8 @@ Preemptible instances
 An optional parameter allows you to set the instance to be preemptible. Both master and worker instances can be set to be preemptible. The following example shows a cluster configuration with a preemptible setting::
 
     cloud {
-        imageId = ‘centos-cloud/global/images/centos-7-v20181011’
-        instanceType = ‘n1-highcpu-8’
+        imageId = 'centos-cloud/global/images/centos-7-v20181011'
+        instanceType = 'n1-highcpu-8'
         preemptible = true
     }
 
@@ -136,16 +136,16 @@ It is also possible to define a different AMI image ID, type and spot price for 
 For example::
 
     cloud {
-        imageId = ‘instance-xxx’
-        instanceType = ‘n1-highcpu-8’
+        imageId = 'instance-xxx'
+        instanceType = 'n1-highcpu-8'
         preemptible = false
         autoscale {
             enable = true
             preemptible = true
             minInstances = 5
             maxInstances = 10
-            imageId = ‘instance-yyy’
-            instanceType = ‘n1-highcpu-8’
+            imageId = 'instance-yyy'
+            instanceType = 'n1-highcpu-8'
             terminateWhenIdle = true
         }
     }
