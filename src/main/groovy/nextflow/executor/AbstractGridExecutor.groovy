@@ -207,7 +207,7 @@ abstract class AbstractGridExecutor extends Executor {
             return
 
         def m = """\
-                Unable to killing pending jobs
+                Unable to kill pending jobs
                 - cmd executed: ${cmd.join(' ')}
                 - exit status : $ret
                 - output      :
