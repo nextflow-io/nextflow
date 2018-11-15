@@ -112,8 +112,8 @@ Read the :ref:`Process scope <config-process>` section to learn more about proce
 Singularity & Docker Hub
 ========================
 
-Nextflow is able to transparently pull remote container images stored in the `Singularity-Hub <https://singularity-hub.org/>`_
-or any Docker compatible registry.
+Nextflow is able to transparently pull remote container images stored in the `Singularity-Hub <https://singularity-hub.org/>`_,
+`Singularity Libary <https://cloud.sylabs.io/library/>`_, or any Docker compatible registry.
 
 .. note:: This feature requires you have installed Singularity 2.3.x or higher
 
@@ -137,6 +137,10 @@ with the ``shub://`` or ``docker://`` pseudo-protocol as required by the Singula
     singularity.enabled = true
     
 .. note:: As of Nextflow v0.27 you no longer need to specify `docker://` to pull from a Docker repository. Nextflow will automatically add it to your image name when Singularity is enabled. Additionally, the Docker engine will not work with containers specified as `docker://`. 
+
+Nextflow version 18.10 introduced support for the `Singularity Libary <https://cloud.sylabs.io/library/>`_ repository. This feature also requires Singularity 3.0::
+   
+   process.container = 'library://library/default/alpine:3.8'
   
 .. note:: This feature requires the availability of the ``singularity`` tool in the computer
   where the workflow execution is launched (other than the computing nodes).
