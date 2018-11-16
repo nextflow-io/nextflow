@@ -56,7 +56,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
     private final Path stubFile
     private final Path traceFile
 
-    final static String mountPath = "/work"
+    final String mountPath
     final static String diskName = "nf-pipeline-work"
     final static String fileCopyImage = "google/cloud-sdk:alpine"
 
@@ -87,6 +87,8 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
         this.stubFile = task.workDir.resolve(TaskRun.CMD_STUB)
         this.traceFile = task.workDir.resolve(TaskRun.CMD_TRACE)
+
+        this.mountPath = task.workDir.parent.parent.toString()
 
         this.taskName = GooglePipelinesHelper.sanitizeName("nf-task-${executor.session.uniqueId}-${task.name}")
         this.taskInstanceName = GooglePipelinesHelper.sanitizeName("$taskName-$task.id")
@@ -182,10 +184,11 @@ class GooglePipelinesTaskHandler extends TaskHandler {
            chmod 777 $task.workDir ;
            ${stagingCommands.join(" ; ")} ;
            cd $task.workDir ;
-           chmod 777 ${TaskRun.CMD_SCRIPT} ${TaskRun.CMD_RUN}            
+           chmod 777 ${TaskRun.CMD_SCRIPT} ${TaskRun.CMD_RUN} ;
+           ls -haltr $mountPath             
         """.stripIndent().leftTrim()
 
-        String mainScript = "cd ${task.workDir} ; echo \$(./${TaskRun.CMD_RUN}) | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
+        String mainScript = "cd $task.workDir ; echo \$(./${TaskRun.CMD_RUN}) | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
 
         /*
          * -m = run in parallel
@@ -208,7 +211,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
          TaskRun.CMD_EXIT,
          TaskRun.CMD_LOG
         ].each {
-            unstagingCommands << "$gsCopyPrefix ${task.workDir}/$it ${task.workDir.toUriString()} || true".toString()
+            unstagingCommands << "$gsCopyPrefix $task.workDir/$it ${task.workDir.toUriString()} || true".toString()
         }
 
         //Copy nextflow task progress files as well as the files we need to unstage
