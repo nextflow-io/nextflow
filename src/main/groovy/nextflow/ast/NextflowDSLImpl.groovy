@@ -852,7 +852,8 @@ public class NextflowDSLImpl implements ASTTransformation {
         def name = nested.getMethodAsString()
         // check the process name is not defined yet
         if( !processNames.add(name) ) {
-            log.warn "Process `$name` is defined two or more times"
+            unit.addError( new SyntaxException("Process `$name` is already define", methodCall.lineNumber, methodCall.columnNumber+8) )
+            return
         }
 
         // the nested method arguments are the arguments to be passed
