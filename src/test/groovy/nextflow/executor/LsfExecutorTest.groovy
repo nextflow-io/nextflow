@@ -388,6 +388,34 @@ class LsfExecutorTest extends Specification {
         result.size()==13
     }
 
+    def 'should parse bjobs stats with extra headers' () {
+        setup:
+        def executor = [:] as LsfExecutor
+        def TEXT = '''
+            LSF is processing your request. Please wait ...
+            LSF is processing your request. Please wait ...
+            JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
+            5157393 pluskal RUN   normal     it-c05b07   it-c05b10   *l_cmd_bd) Nov 14 13:00
+            5157493 pluskal RUN   normal     it-c05b07   it-c05b10   *l_cmd_cn) Nov 14 13:00
+            5157552 pluskal RUN   normal     it-c05b07   it-c05b10   *l_cmd_dl) Nov 14 13:00
+            5157610 pluskal RUN   normal     it-c05b07   it-c05b10   *l_cmd_fe) Nov 14 13:00
+            5157674 pluskal RUN   normal     it-c05b07   it-c05b10   *l_cmd_gf) Nov 14 13:00
+            5157710 pluskal RUN   normal     it-c05b07   it-c05b10   *l_cmd_fv) Nov 14 13:00
+            '''.stripIndent().trim()
+
+        when:
+        def result = executor.parseQueueStatus(TEXT)
+        then:
+        result['5157393'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result['5157493'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result['5157552'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result['5157610'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result['5157674'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result['5157710'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result.size() == 6 
+
+    }
+
 
     def testQueueStatusCommand() {
 
