@@ -156,5 +156,39 @@ class PbsProExecutorTest extends Specification {
         executor.queueStatusCommand('xxx').each { assert it instanceof String }
     }
 
-   
+    def 'should parse queue status'() {
+
+        setup:
+        def executor = [:] as PbsProExecutor
+        def text =
+                """
+                Job Id: 12.localhost
+                    job_state = F
+                Job Id: 13.localhost
+                    job_state = R
+                Job Id: 14.localhost
+                    job_state = Q
+                Job Id: 15.localhost
+                    job_state = S
+                Job Id: 16.localhost
+                    job_state = E
+                Job Id: 17.localhost
+                    job_state = H
+
+                """.stripIndent().trim()
+
+        when:
+        def result = executor.parseQueueStatus(text)
+        then:
+        result.size() == 6
+        result['12.localhost'] == AbstractGridExecutor.QueueStatus.DONE
+        result['13.localhost'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result['14.localhost'] == AbstractGridExecutor.QueueStatus.PENDING
+        result['15.localhost'] == AbstractGridExecutor.QueueStatus.HOLD
+        result['16.localhost'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result['17.localhost'] == AbstractGridExecutor.QueueStatus.HOLD
+
+    }
+
+
 }

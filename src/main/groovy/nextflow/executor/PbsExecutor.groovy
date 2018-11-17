@@ -134,6 +134,10 @@ class PbsExecutor extends AbstractGridExecutor {
             'S': QueueStatus.HOLD
     ]
 
+    protected QueueStatus decode(String status) {
+        DECODE_STATUS.get(status)
+    }
+
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
@@ -150,7 +154,7 @@ class PbsExecutor extends AbstractGridExecutor {
             else if( id ) {
                 status = fetchValue(JOB_STATUS, line)
             }
-            result.put( id, DECODE_STATUS[status] ?: AbstractGridExecutor.QueueStatus.UNKNOWN )
+            result.put( id, decode(status) ?: QueueStatus.UNKNOWN )
         }
 
         return result
