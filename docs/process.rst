@@ -2058,7 +2058,7 @@ The ``tag`` directive allows you to associate each process executions with a cus
 to identify them in the log file or in the trace execution report. For example::
 
     process foo {
-      tag { code }
+      tag "$code"
 
       input:
       val code from 'alpha', 'gamma', 'omega'
