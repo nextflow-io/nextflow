@@ -85,4 +85,24 @@ class PbsProExecutor extends PbsExecutor {
         return ['bash','-c', "set -o pipefail; $cmd | { egrep '(Job Id:|job_state =)' || true; }".toString()]
     }
 
+    // see https://www.pbsworks.com/pdfs/PBSRefGuide18.2.pdf
+    // table 8.1
+    static private Map DECODE_STATUS = [
+            'F': QueueStatus.DONE,      // job is finished
+            'E': QueueStatus.RUNNING,   // job is exiting (therefore still running)
+            'R': QueueStatus.RUNNING,   // job is running 
+            'Q': QueueStatus.PENDING,   // job is queued 
+            'H': QueueStatus.HOLD,      // job is held
+            'S': QueueStatus.HOLD,      // job is suspended 
+            'U': QueueStatus.HOLD,      // job is suspended due to workstation becoming busy
+            'W': QueueStatus.HOLD,      // job is waiting 
+            'T': QueueStatus.HOLD,      // job is in transition
+            'M': QueueStatus.HOLD,      // job was moved to another server
+    ]
+
+    @Override
+    protected QueueStatus decode(String status) {
+        DECODE_STATUS.get(status)
+    }
+
 }
