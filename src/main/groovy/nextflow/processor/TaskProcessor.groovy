@@ -925,7 +925,7 @@ class TaskProcessor {
             // -- when is a task level error and the user has chosen to ignore error,
             //    just report and error message and DO NOT stop the execution
             if( task && error instanceof ProcessException ) {
-                // expose current task exist status
+                // expose current task exit status
                 task.config.exitStatus = task.exitStatus
                 task.config.errorCount = procErrCount
                 task.config.retryCount = taskErrCount
@@ -1972,7 +1972,7 @@ class TaskProcessor {
 
         def fault = null
         try {
-            // -- verify task exist status
+            // -- verify task exit status
             if( task.error )
                 throw new ProcessFailedException("Process `${task.name}` failed", task.error)
 

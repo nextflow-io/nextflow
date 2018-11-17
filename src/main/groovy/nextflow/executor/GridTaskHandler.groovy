@@ -231,7 +231,7 @@ class GridTaskHandler extends TaskHandler {
             }
 
             def errMessage = []
-            errMessage << "Failed to get exist status for process ${this} -- exitStatusReadTimeoutMillis: $exitStatusReadTimeoutMillis; delta: $delta"
+            errMessage << "Failed to get exit status for process ${this} -- exitStatusReadTimeoutMillis: $exitStatusReadTimeoutMillis; delta: $delta"
             // -- dump current queue stats
             errMessage << "Current queue status:"
             errMessage << executor.dumpQueueStatus()?.indent('> ')
