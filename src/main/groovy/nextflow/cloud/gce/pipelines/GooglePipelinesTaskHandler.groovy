@@ -88,6 +88,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         this.stubFile = task.workDir.resolve(TaskRun.CMD_STUB)
         this.traceFile = task.workDir.resolve(TaskRun.CMD_TRACE)
 
+        //Set the mount path to be the workdir that is parent of the hashed directories.
         this.mountPath = task.workDir.parent.parent.toString()
 
         this.taskName = GooglePipelinesHelper.sanitizeName("nf-task-${executor.session.uniqueId}-${task.name}")

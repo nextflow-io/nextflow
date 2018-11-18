@@ -191,7 +191,7 @@ Create a nextflow.config file in the project root directory. The config must spe
 * process.executor - **googlepipelines**
 * cloud.instanceType - **valid GCE instance type**
 * gce.project - **GCP project to run in**
-* gce.zone *or* gce.region - You need to specify either one, **not** both. You can specify multiple zones or regions by separating them with a comma (,).
+* gce.zone *or* gce.region - You need to specify either one, **not** both. Multiple regions og zones can be specified by separating them with a comma (,).
 
 Example::
 
