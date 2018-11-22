@@ -12,7 +12,7 @@ import spock.lang.Specification
 class GooglePipelinesTaskHandlerTest extends Specification {
 
     @Shared
-    GooglePipelinesConfiguration pipeConfig = new GooglePipelinesConfiguration("testProject",["testZone"],["testRegion"],"instanceType")
+    GooglePipelinesConfiguration pipeConfig = new GooglePipelinesConfiguration("testProject",["testZone"],["testRegion"])
 
     @Shared
     UUID uuid = new UUID(4,4)
@@ -20,6 +20,7 @@ class GooglePipelinesTaskHandlerTest extends Specification {
     @Shared
     Session stubSession = Stub {
         getUniqueId() >> uuid
+        getConfig() >> ["cloud" : ["instanceType": "instanceType"]]
     }
 
     GooglePipelinesExecutor stubExecutor = GroovyStub() {
@@ -47,7 +48,7 @@ class GooglePipelinesTaskHandlerTest extends Specification {
 
         then: 'we should get an error stating that container definition is missing'
         def error = thrown(ProcessUnrecoverableException)
-        error.getMessage() == "No container is specified for process $noContainerTaskRunner.name . Either specify the container to use in the process definition or with 'process.container' value in your config"
+        error.getMessage() == "No container specified for process $noContainerTaskRunner.name. Either specify the container to use in the process definition or with 'process.container' value in your config."
         !handler
 
     }
