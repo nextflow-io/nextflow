@@ -189,7 +189,6 @@ Create a nextflow.config file in the project root directory. The config must spe
 
 * workDir - **Must be a GS bucket**
 * process.executor - **googlepipelines**
-* cloud.instanceType - **valid GCE instance type**
 * gce.project - **GCP project to run in**
 * gce.zone *or* gce.region - You need to specify either one, **not** both. Multiple regions og zones can be specified by separating them with a comma (,).
 
@@ -210,9 +209,14 @@ Example::
         zone = 'us-central1-f,us-central-1-b'
     }
 
-Note that all tasks defined in your Nextflow scripts must define a container to run in, or you can configure it globally with the process.container option in your ``nextflow.config``::
+Note that all processes defined in your Nextflow scripts must define the following directives (or you can configure it globally for all processes in your ``nextflow.config``:
 
-    process.container = 'ubuntu:latest'
+============ ===================================== ==================================================
+Directive    Global Value                          Description
+============ ===================================== ==================================================
+container    process.container                      The docker container image to run the process in.
+instanceType process.instanceType/gce.instanceType  The vm instanceType to run the process in.
+============ ===================================== ==================================================
 
 Finally, run your Nextflow script.
 
