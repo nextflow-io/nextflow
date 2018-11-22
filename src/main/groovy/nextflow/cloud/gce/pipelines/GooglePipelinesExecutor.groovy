@@ -140,7 +140,6 @@ class GooglePipelinesExecutor extends Executor {
                 session.config.navigate("gce.project") as String,
                 zones,
                 regions,
-                session.config.navigate("cloud.instanceType") as String,
                 remoteBinDir,
                 session.config.navigate("cloud.preemptible") as boolean
         )
