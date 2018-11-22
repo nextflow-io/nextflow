@@ -56,6 +56,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
     private final Path stubFile
     private final Path traceFile
 
+    final String instanceType
     final String mountPath
     final static String diskName = "nf-pipeline-work"
     final static String fileCopyImage = "google/cloud-sdk:alpine"
@@ -91,6 +92,9 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         //Set the mount path to be the workdir that is parent of the hashed directories.
         this.mountPath = task.workDir.parent.parent.toString()
 
+        //Get the instanceType to use for this task
+        instanceType = task.config.instanceType ?: executor.session.config.navigate("cloud.instanceType")
+
         this.taskName = GooglePipelinesHelper.sanitizeName("nf-task-${executor.session.uniqueId}-${task.name}")
         this.taskInstanceName = GooglePipelinesHelper.sanitizeName("$taskName-$task.id")
 
@@ -101,7 +105,10 @@ class GooglePipelinesTaskHandler extends TaskHandler {
 
     void validateConfiguration() {
         if (!task.container) {
-            throw new ProcessUnrecoverableException("No container is specified for process $task.name . Either specify the container to use in the process definition or with 'process.container' value in your config")
+            throw new ProcessUnrecoverableException("No container specified for process $task.name. Either specify the container to use in the process definition or with 'process.container' value in your config.")
+        }
+        if (!instanceType) {
+            throw new ProcessUnrecoverableException("No instanceType specified for process $task.name. Specify the instanceType with a process directive or either a 'process.instanceType' or a 'cloud.instanceType' definition in your config.")
         }
     }
 
@@ -228,7 +235,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         sharedMount = executor.helper.configureMount(diskName, mountPath)
 
         //need the cloud-platform scope so that we can execute gsutil cp commands
-        def resources = executor.helper.configureResources(pipelineConfiguration.vmInstanceType, pipelineConfiguration.project, pipelineConfiguration.zone,pipelineConfiguration.region, diskName, [GooglePipelinesHelper.SCOPE_CLOUD_PLATFORM], pipelineConfiguration.preemptible)
+        def resources = executor.helper.configureResources(instanceType, pipelineConfiguration.project, pipelineConfiguration.zone,pipelineConfiguration.region, diskName, [GooglePipelinesHelper.SCOPE_CLOUD_PLATFORM], pipelineConfiguration.preemptible)
 
         def stagingAction = executor.helper.createAction("$taskInstanceName-staging".toString(), fileCopyImage, ["bash", "-c", stagingScript], [sharedMount], [GooglePipelinesHelper.ActionFlags.ALWAYS_RUN, GooglePipelinesHelper.ActionFlags.IGNORE_EXIT_STATUS])
 
