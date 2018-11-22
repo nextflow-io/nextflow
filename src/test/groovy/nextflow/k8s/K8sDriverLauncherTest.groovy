@@ -179,6 +179,54 @@ class K8sDriverLauncherTest extends Specification {
 
     }
 
+    def 'should use user provided pod image' () {
+
+        given:
+        def pod = Mock(PodOptions)
+        pod.getVolumeClaims() >> [ new PodVolumeClaim('pvc-1', '/mnt/path/data') ]
+        pod.getMountConfigMaps() >> [ new PodMountConfig('cfg-2', '/mnt/path/cfg') ]
+
+        def k8s = Mock(K8sConfig)
+        k8s.getLaunchDir() >> '/the/user/dir'
+        k8s.getWorkDir() >> '/the/work/dir'
+        k8s.getProjectDir() >> '/the/project/dir'
+        k8s.getPodOptions() >> pod
+
+        def driver = Spy(K8sDriverLauncher)
+        driver.runName = 'foo-boo'
+        driver.k8sClient = new K8sClient(new ClientConfig(namespace: 'foo', serviceAccount: 'bar'))
+        driver.k8sConfig = k8s
+        driver.podImage = 'foo/bar'
+
+        when:
+        def spec = driver.makeLauncherSpec()
+        then:
+        driver.getLaunchCli() >> 'nextflow run foo'
+
+        spec == [apiVersion: 'v1',
+                 kind: 'Pod',
+                 metadata: [name:'foo-boo', namespace:'foo', labels:[app:'nextflow', runName:'foo-boo']],
+                 spec: [restartPolicy:'Never',
+                        containers:[
+                                [name:'foo-boo',
+                                 image:'foo/bar',
+                                 command:['/bin/bash', '-c', "source /etc/nextflow/init.sh; nextflow run foo"],
+                                 env:[
+                                         [name:'NXF_WORK', value:'/the/work/dir'],
+                                         [name:'NXF_ASSETS', value:'/the/project/dir'],
+                                         [name:'NXF_EXECUTOR', value:'k8s']],
+                                 volumeMounts:[
+                                         [name:'vol-1', mountPath:'/mnt/path/data'],
+                                         [name:'vol-2', mountPath:'/mnt/path/cfg']]]
+                        ],
+                        serviceAccountName:'bar',
+                        volumes:[[name:'vol-1', persistentVolumeClaim:[claimName:'pvc-1']],
+                                 [name:'vol-2', configMap:[name:'cfg-2'] ]]
+                 ]
+        ]
+
+    }
+
     def 'should create config map' () {
 
         given:

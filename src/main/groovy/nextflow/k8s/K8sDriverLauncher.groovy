@@ -49,6 +49,11 @@ import org.codehaus.groovy.runtime.MethodClosure
 class K8sDriverLauncher {
 
     /**
+     * Container image to be used for the Nextflow driver pod
+     */
+    private String podImage
+
+    /**
      * Nextflow execution run name
      */
     private String runName
@@ -389,7 +394,7 @@ class K8sDriverLauncher {
         // create the launcher pod
         new PodSpecBuilder()
             .withPodName(runName)
-            .withImageName(k8sConfig.getNextflowImageName())
+            .withImageName(podImage ?: k8sConfig.getNextflowImageName())
             .withCommand(['/bin/bash', '-c', cmd])
             .withLabels([ app: 'nextflow', runName: runName ])
             .withNamespace(k8sClient.config.namespace)

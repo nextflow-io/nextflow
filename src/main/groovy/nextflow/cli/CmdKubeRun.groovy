@@ -43,6 +43,9 @@ class CmdKubeRun extends CmdRun {
     @Parameter(names = ['-n','-namespace'], description = 'Specify the K8s namespace to use')
     String namespace
 
+    @Parameter(names = '-pod-image', description = 'Specify the container image for the Nextflow pod')
+    String podImage
+
     @Override
     String getName() { 'kuberun' }
 
@@ -62,7 +65,7 @@ class CmdKubeRun extends CmdRun {
             throw new AbortOperationException("No project name was specified")
 
         checkRunName()
-        new K8sDriverLauncher(cmd: this, runName: runName).run(pipeline, scriptArgs)
+        new K8sDriverLauncher(cmd: this, runName: runName, podImage: podImage).run(pipeline, scriptArgs)
     }
 
 }
