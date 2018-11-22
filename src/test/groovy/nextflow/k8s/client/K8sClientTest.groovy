@@ -636,56 +636,6 @@ class K8sClientTest extends Specification {
 
     }
 
-    def 'client should throw an exception when pod is Unschedulable' () {
-
-        given:
-        def JSON = '''
-             {
-                 "kind": "Pod",
-                 "apiVersion": "v1",
-                 "metadata": {
-                     "name": "nf-52b131a30381b0b88926a9c12e5b1ff1",
-                     "namespace": "default",
-                     "selfLink": "/api/v1/namespaces/default/pods/nf-52b131a30381b0b88926a9c12e5b1ff1/status",
-                     "uid": "7f17fea0-4e47-11e8-89b1-fa163e31bb09",
-                     "resourceVersion": "2674905",
-                     "creationTimestamp": "2018-05-02T20:29:21Z",
-                     "labels": {
-                         "app": "nextflow",
-                         "processName": "star",
-                         "runName": "pedantic-legentil",
-                         "sessionId": "uuid-bb3f1a1f-ad9a-4e5f-a2f1-46a4d3fbd2a1",
-                         "taskName": "star_22028_2_118_1"
-                     }
-                 },
-                 "spec": { },
-                 "status": {
-                     "phase": "Pending",
-                     "conditions": [
-                         {
-                             "type": "PodScheduled",
-                             "status": "False",
-                             "lastProbeTime": null,
-                             "lastTransitionTime": "2018-05-02T20:29:21Z",
-                             "reason": "Unschedulable",
-                             "message": "0/4 nodes are available: 4 Insufficient cpu, 4 Insufficient memory."
-                         }
-                     ],
-                     "qosClass": "Guaranteed"
-                 }
-             }
-        '''
-
-        def client = Spy(K8sClient)
-        final POD_NAME = 'nf-52b131a30381b0b88926a9c12e5b1ff1'
-
-        when:
-        client.podState(POD_NAME)
-        then:
-        1 * client.podStatus(POD_NAME) >> new K8sResponseJson(JSON)
-        def e = thrown(PodUnschedulableException)
-        e.message == 'K8s pod cannot be scheduled -- 0/4 nodes are available: 4 Insufficient cpu, 4 Insufficient memory.'
-    }
 
     def 'client should fail when config fail' () {
         given:

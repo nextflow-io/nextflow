@@ -250,8 +250,8 @@ class K8sClient {
             if( cond.reason == 'Unschedulable' ) {
                 def message = "K8s pod cannot be scheduled"
                 if( cond.message ) message += " -- $cond.message"
-                def cause = new K8sResponseException(resp)
-                throw new PodUnschedulableException(message,cause)
+                //def cause = new K8sResponseException(resp)
+                log.warn1(message)
             }
             // undetermined status -- return an empty response
             return Collections.emptyMap()
