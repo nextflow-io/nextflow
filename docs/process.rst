@@ -1158,6 +1158,7 @@ The directives are:
 * `afterScript`_
 * `beforeScript`_
 * `cache`_
+* `cleanup`_
 * `cpus`_
 * `conda`_
 * `container`_
@@ -1244,6 +1245,15 @@ Value                 Description
 ``'lenient'``         Enable caching. Cache keys are created indexing input files path and size attributes (this policy provides a workaround for incorrect caching invalidation observed on shared file systems due to inconsistent files timestamps; requires version 0.32.x or later).
 ===================== =================
 
+
+.. _process-cleanup:
+
+cleanup
+-------
+
+The `cleanup` directive allows for cleanup of the `workDir` automatically after pipeline finish. Nextflow then removes the entire `workDir` folder.
+
+.. warning:: This means that files that were not published using the `publishDir` directive are gone.
 
 .. _process-conda:
 
