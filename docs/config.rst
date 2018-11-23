@@ -752,9 +752,10 @@ Config parameters
 =================
 
 Users can specify either a JSON or YAML based file containing parameters for a Nextflow workflow using the option ``-params-file``. The YAML format should follow a key - value pattern, e.g. 
-
-    foo = bar
-    baz = 1.0
+    foo:
+    - bar: "2.0"
+    baz:
+    - type: "test"
 
 Similar to this, you could specify a JSON file with parameters:
 
