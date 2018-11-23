@@ -748,6 +748,23 @@ when no other profile is specified by the user.
 
 The above feature requires version 0.28.x or higher.
 
+Config parameters
+=================
+
+Users can specify either a JSON or YAML based file containing parameters for a Nextflow workflow using the option ``-params-file``. The YAML format should follow a key - value pattern, e.g. 
+
+    foo = bar
+    baz = 1.0
+
+Similar to this, you could specify a JSON file with parameters:
+
+    {
+     "foo": "bar",
+    "baz": "1.0"
+    }
+
+The above feature requires version 0.24.0 or higher.
+
 Environment variables
 =====================
 
