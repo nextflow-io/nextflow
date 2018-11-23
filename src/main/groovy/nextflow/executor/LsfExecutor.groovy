@@ -142,7 +142,8 @@ class LsfExecutor extends AbstractGridExecutor {
     protected List<String> queueStatusCommand( queue ) {
         // note: use the `-w` option to avoid that the printed jobid maybe truncated when exceed 7 digits
         // see https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsb_jobid_disp_length.5.html
-        final result = ['bjobs', '-w']
+        // use the `-a` option to include recently finished jobs
+        final result = ['bjobs', '-w', '-a']
 
         if( queue )
             result << '-q' << queue.toString()
