@@ -495,7 +495,7 @@ task deploy( type: Exec, dependsOn: [clean, pack, deployable.uploadArchives, mak
         def script = []
         script << "export AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS}"
         script << "export AWS_SECRET_ACCESS_KEY=${System.env.NXF_AWS_SECRET}"
-        script.addAll( files.collect { "aws s3 cp ${it} s3://www.nextflow.io/releases/v${version}/${it.name} ${s3CmdOpts}"})
+        script.addAll( files.collect { "aws s3 cp ${it} s3://www2.nextflow.io/releases/v${version}/${it.name} ${s3CmdOpts}"})
 
         temp.text = script.join('\n')
     }
@@ -597,10 +597,10 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
         # publish the script as the latest
         export AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS}
         export AWS_SECRET_ACCESS_KEY=${System.env.NXF_AWS_SECRET}
-        aws s3 cp $launcherFile s3://www.nextflow.io/releases/edge/nextflow $s3CmdOpts
-        aws s3 cp $launcherSha1 s3://www.nextflow.io/releases/edge/nextflow.sha1 $s3CmdOpts
-        aws s3 cp $launcherSha256 s3://www.nextflow.io/releases/edge/nextflow.sha256 $s3CmdOpts
-        aws s3 cp $launcherSha256 s3://www.nextflow.io/releases/edge/nextflow.md5 $s3CmdOpts
+        aws s3 cp $launcherFile s3://www2.nextflow.io/releases/edge/nextflow $s3CmdOpts
+        aws s3 cp $launcherSha1 s3://www2.nextflow.io/releases/edge/nextflow.sha1 $s3CmdOpts
+        aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/edge/nextflow.sha256 $s3CmdOpts
+        aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/edge/nextflow.md5 $s3CmdOpts
         """.stripIndent()
         
     else if( isLatest )
@@ -608,10 +608,10 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
         # publish the script as the latest
         export AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS}
         export AWS_SECRET_ACCESS_KEY=${System.env.NXF_AWS_SECRET}
-        aws s3 cp $launcherFile s3://www.nextflow.io/releases/latest/nextflow $s3CmdOpts
-        aws s3 cp $launcherSha1 s3://www.nextflow.io/releases/latest/nextflow.sha1 $s3CmdOpts
-        aws s3 cp $launcherSha256 s3://www.nextflow.io/releases/latest/nextflow.sha256 $s3CmdOpts
-        aws s3 cp $launcherSha256 s3://www.nextflow.io/releases/latest/nextflow.md5 $s3CmdOpts
+        aws s3 cp $launcherFile s3://www2.nextflow.io/releases/latest/nextflow $s3CmdOpts
+        aws s3 cp $launcherSha1 s3://www2.nextflow.io/releases/latest/nextflow.sha1 $s3CmdOpts
+        aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/latest/nextflow.sha256 $s3CmdOpts
+        aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/latest/nextflow.md5 $s3CmdOpts
         """.stripIndent()
 
     def temp = File.createTempFile('upload',null)
