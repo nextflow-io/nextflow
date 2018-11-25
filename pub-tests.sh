@@ -10,7 +10,7 @@ export AWS_DEFAULT_REGION=eu-west-1
 
 # use the java version as target context
 ver=$(java -version 2>&1 | awk '/version/ {gsub(/"/, "", $3); print $3}')
-base=s3://www.nextflow.io/tests/$1/$ver
+base=s3://www2.nextflow.io/tests/$1/$ver
 
 # delete previous run
 aws --region $AWS_DEFAULT_REGION s3 rm --quiet --recursive $base
