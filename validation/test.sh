@@ -17,6 +17,11 @@ export TRAVIS_PULL_REQUEST=${TRAVIS_PULL_REQUEST:=false}
   bash run.sh
 )
 
+if [[ $TRAVIS_PULL_REQUEST == true ]]; then
+echo Skipping tests requiring secret vars
+exit 0
+fi 
+
 #
 # Hello 
 #
@@ -45,15 +50,8 @@ echo nextflow-io/rnaseq-nf
 $NXF_CMD run nextflow-io/rnaseq-nf -with-docker
 $NXF_CMD run nextflow-io/rnaseq-nf -with-docker -resume
 
-
-if [[ $TRAVIS_PULL_REQUEST == false ]]; then
-
 #
 # AWS Batch tests
 #
 echo aws batch tests
 ./await.sh bash awsbatch.sh
-
-else
-echo Skipping tests requiring AWS credentials
-fi
