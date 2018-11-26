@@ -423,8 +423,8 @@ class LsfExecutorTest extends Specification {
         def executor = [:] as LsfExecutor
 
         expect:
-        executor.queueStatusCommand(null) == ['bjobs', '-w']
-        executor.queueStatusCommand('long') == ['bjobs', '-w', '-q', 'long']
+        executor.queueStatusCommand(null) == ['bjobs', '-w', '-a']
+        executor.queueStatusCommand('long') == ['bjobs', '-w', '-a', '-q', 'long']
 
     }
 

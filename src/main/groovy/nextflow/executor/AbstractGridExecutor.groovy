@@ -345,10 +345,9 @@ abstract class AbstractGridExecutor extends Executor {
             return true
         }
 
-        if( !status.containsKey(jobId) ) { // in case the status of the job was not found, we should assume it is still running 
-                                           // (see https://github.com/nextflow-io/nextflow/issues/927)
+        if( !status.containsKey(jobId) ) {
             log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status > map does not contain jobId: `$jobId`"
-            return true
+            return false
         }
 
         final result = status[jobId.toString()] == QueueStatus.RUNNING || status[jobId.toString()] == QueueStatus.HOLD

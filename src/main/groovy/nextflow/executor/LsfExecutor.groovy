@@ -190,6 +190,36 @@ class LsfExecutor extends AbstractGridExecutor {
         return result
     }
 
+    @Override
+    boolean checkActiveStatus( jobId, queue ) {
+        assert jobId
+
+        // -- fetch the queue status
+        Map<String,QueueStatus>status = Throttle.cache(queue, queueInterval) {
+            final result = getQueueStatus(queue)
+            log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status >\n" + dumpQueueStatus(result)
+            return result
+        }
+        // track the last status for debugging purpose
+        lastQueueStatus = status
+
+        if( status == null ) { // no data is returned, so return true
+            return true
+        }
+
+        if( !status.containsKey(jobId) ) { // in case the status of the job was not found, we should assume it is still running 
+                                           // occasionally, LSF v8 fails to return status of running jobs 
+                                           // (see https://github.com/nextflow-io/nextflow/issues/927)
+            log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status > map does not contain jobId: `$jobId`"
+            return true
+        }
+
+        final result = status[jobId.toString()] == QueueStatus.RUNNING || status[jobId.toString()] == QueueStatus.HOLD
+        log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status > jobId `$jobId` active status: $result"
+        return result
+    }
+
+
     protected String col(String line, int p, StringBuilder buf) {
         buf.setLength(0)
         for( int i=p; i<line.size(); i++ ) {
