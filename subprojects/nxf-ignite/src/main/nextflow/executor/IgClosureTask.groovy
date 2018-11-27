@@ -98,7 +98,7 @@ class IgClosureTask extends IgBaseTask<IgResultData> {
 
         (ClassLoader)classLoaderCache.getOrCreate(sessionId) {
 
-            final allSessions = (IgniteCache<UUID, RemoteSession>)IgGridFactory.ignite().cache( IgGridFactory.SESSIONS_CACHE )
+            IgniteCache<UUID, RemoteSession> allSessions = IgGridFactory.ignite().cache( IgGridFactory.SESSIONS_CACHE )
             if( !allSessions )
                 throw new IllegalStateException('Missing session cache object')
 
