@@ -39,28 +39,27 @@ import java.nio.file.Path
  */
 class GooglePipelinesTaskHandler extends TaskHandler {
 
-    final GooglePipelinesExecutor executor
-    final TaskBean taskBean
-    final GooglePipelinesConfiguration pipelineConfiguration
+    GooglePipelinesExecutor executor
+    TaskBean taskBean
+    GooglePipelinesConfiguration pipelineConfiguration
 
-    final String taskName
-    final String taskInstanceName
+    String taskName
+    String taskInstanceName
 
-    private final Path exitFile
-    private final Path wrapperFile
-    private final Path outputFile
-    private final Path errorFile
-    private final Path logFile
-    private final Path scriptFile
-    private final Path inputFile
-    private final Path stubFile
-    private final Path traceFile
+    private Path exitFile
+    private Path wrapperFile
+    private Path outputFile
+    private Path errorFile
+    private Path logFile
+    private Path scriptFile
+    private Path inputFile
+    private Path stubFile
+    private Path traceFile
 
     final String instanceType
     final String mountPath
     final static String diskName = "nf-pipeline-work"
     final static String fileCopyImage = "google/cloud-sdk:alpine"
-
 
     Mount sharedMount
     Pipeline taskPipeline
@@ -75,6 +74,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
 
     GooglePipelinesTaskHandler(TaskRun task, GooglePipelinesExecutor executor, GooglePipelinesConfiguration pipelineConfiguration) {
         super(task)
+
         this.executor = executor
         this.taskBean = new TaskBean(task)
         this.pipelineConfiguration = pipelineConfiguration
@@ -103,6 +103,12 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         log.debug "[GOOGLE PIPELINE] Created handler for task '${task.name}'"
     }
 
+
+    /* ONLY FOR TESTING PURPOSE */
+    protected GooglePipelinesTaskHandler() {
+
+    }
+
     void validateConfiguration() {
         if (!task.container) {
             throw new ProcessUnrecoverableException("No container specified for process $task.name. Either specify the container to use in the process definition or with 'process.container' value in your config")
@@ -112,14 +118,34 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         }
     }
 
+    /**
+     * @return
+     *      It should return {@code true} only the very first time the
+     *      the task status transitions from SUBMITTED to RUNNING, in all other
+     *      cases if should return {@code false}
+     */
     @Override
     boolean checkIfRunning() {
-        operation = executor.helper.checkOperationStatus(operation)
-        return !operation.getDone()
+        if( operation==null || !isSubmitted() )
+            return false
+
+        // note, according to the semantic of this method
+        // the handler status has to be changed to RUNNING either
+        // if the operation is still running or it has completed
+        def result = executor.helper.checkOperationStatus(operation)
+        if( result!=null ) {
+            status = TaskStatus.RUNNING
+            operation = result
+            return true
+        }
+        return false
     }
 
     @Override
     boolean checkIfCompleted() {
+        if( !isRunning() )
+            return false
+        
         operation = executor.helper.checkOperationStatus(operation)
 
         def events = extractRuntimeDataFromOperation()
@@ -165,7 +191,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         }
     }
 
-    private Integer readExitFile() {
+    @PackageScope Integer readExitFile() {
         try {
             exitFile.text as Integer
         }
@@ -224,9 +250,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         }
 
         //Copy nextflow task progress files as well as the files we need to unstage
-        String unstagingScript = """                                                
-            ${unstagingCommands.join(" ; ")}                        
-        """.stripIndent().leftTrim()
+        String unstagingScript = unstagingCommands.join("; ").leftTrim()
 
         log.debug """\
             Staging script for task '$task.name' -> $stagingScript
@@ -250,6 +274,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
 
         //Run the operation and att a label with the name of the task
         operation = executor.helper.runPipeline(taskPipeline,["taskName" : taskName])
+        status = TaskStatus.SUBMITTED
 
         log.trace "[GOOGLE PIPELINE] Submitted task '$task.name. Assigned Pipeline operation name = '${operation.getName()}'"
     }

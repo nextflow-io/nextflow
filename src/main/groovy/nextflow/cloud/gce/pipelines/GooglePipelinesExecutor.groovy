@@ -46,8 +46,9 @@ import java.nio.file.Path
  */
 class GooglePipelinesExecutor extends Executor {
 
-    static GooglePipelinesConfiguration pipelineConfig
-    final GooglePipelinesHelper helper
+    static private GooglePipelinesConfiguration pipelineConfig
+
+    GooglePipelinesHelper helper
 
     /*
      * Used for testing purposes
