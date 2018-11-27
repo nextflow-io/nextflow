@@ -44,19 +44,17 @@ class RemoteSession implements Serializable, Closeable {
 
     private static final long serialVersionUID = 8675142190223473251L ;
 
-    final UUID sessionId
+    private UUID sessionId
 
-    final List<byte[]> libs = []
+    private final List<byte[]> serializedClasspath = []
 
-    final boolean statsEnabled
-
-    transient boolean isLibInitialized
+    private transient boolean isDeserialized
 
     @Lazy
-    transient List<Path> libDir = lazyLibDir()
+    private transient List<Path> localPaths = deserialiseClasspath()
 
     @Lazy
-    transient List<Path> classpath = { ConfigHelper.resolveClassPaths(libDir) }()
+    private transient List<Path> resolvedClasspath = ConfigHelper.resolveClassPaths(localPaths)
 
     protected RemoteSession() { }
 
@@ -67,15 +65,16 @@ class RemoteSession implements Serializable, Closeable {
      */
     RemoteSession(Session session) {
         sessionId = session.getUniqueId()
-        statsEnabled = session.statsEnabled
         // the main dir containing script classes
-        zip(session.classesDir)
+        serializedClasspath.add( zip(session.classesDir) )
         // add all libs path
         for( Path entry : session.getLibDir() ) {
-            libs.add( zip(entry) )
+            serializedClasspath.add( zip(entry) )
         }
     }
 
+    List<Path> getClasspath() { resolvedClasspath }
+    
     /**
      * @param path A {@link File} representing either a regular file or a directory
      * @return The source path as a string. It guarantees that a directory path ends with a slash character
@@ -169,9 +168,12 @@ class RemoteSession implements Serializable, Closeable {
     /**
      * @return The list of folder containing the unzip libraries
      */
-    protected List<Path> lazyLibDir() {
-        def result = (List<Path>)libs.collect { byte[] it -> unzip(it) }
-        isLibInitialized = true
+    protected List<Path> deserialiseClasspath() {
+        def result = new ArrayList<Path>(serializedClasspath.size())
+        for(int i=0; i<serializedClasspath.size(); i++ ) {
+            result.add(unzip(serializedClasspath[i]))
+        }
+        isDeserialized = true
         return result
     }
 
@@ -182,7 +184,7 @@ class RemoteSession implements Serializable, Closeable {
      */
     @Override
     void close() throws IOException {
-        if(!isLibInitialized) return
-        libDir.each { Path it -> it.deleteDir() }
+        if(!isDeserialized) return
+        localPaths.each { Path it -> it.deleteDir() }
     }
 }

@@ -15,10 +15,12 @@
  */
 
 package nextflow.util
+
+import spock.lang.Specification
+
 import java.nio.file.Files
 
 import nextflow.Session
-import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -80,15 +82,47 @@ class RemoteSessionTest extends Specification {
         when:
         def remote = new RemoteSession(session)
         then:
-        remote.getLibDir().size() == 2
+        remote.getLocalPaths().size() == 2
         remote.getClasspath().size() == 4
-        remote.isLibInitialized
+        remote.isDeserialized
 
         cleanup:
         remote?.close()
         path1?.deleteDir()
         path2?.deleteDir()
         session?.classesDir?.deleteDir()
+    }
+
+    def 'should zip classpath and lib paths' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def cp = folder.resolve('classpath'); cp.mkdir(); Files.createFile(cp.resolve('Main.class'))
+        def lib1 = folder.resolve('lib1'); lib1.mkdir(); Files.createFile(lib1.resolve('Lib1.class'))
+        def lib2 = folder.resolve('lib2'); lib2.mkdir(); Files.createFile(lib2.resolve('Lib2.class'))
+
+        def session = Mock(Session)
+
+        when:
+        def remote = new RemoteSession(session)
+        def classpath = remote.getClasspath()
+
+        then:
+        1 * session.getClassesDir() >> cp
+        1 * session.getLibDir() >> [ lib1, lib2 ]
+        classpath.size() == 3
+        classpath[0].resolve('Main.class').exists()
+        classpath[1].resolve('Lib1.class').exists()
+        classpath[2].resolve('Lib2.class').exists()
+
+        when:
+        remote.close()
+        then:
+        !classpath[0].exists()
+        !classpath[1].exists()
+        !classpath[2].exists()
+
+        cleanup:
+        folder?.deleteDir()
     }
 
 }
