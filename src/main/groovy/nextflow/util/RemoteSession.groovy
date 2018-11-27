@@ -68,6 +68,9 @@ class RemoteSession implements Serializable, Closeable {
     RemoteSession(Session session) {
         sessionId = session.getUniqueId()
         statsEnabled = session.statsEnabled
+        // the main dir containing script classes
+        zip(session.classesDir)
+        // add all libs path
         for( Path entry : session.getLibDir() ) {
             libs.add( zip(entry) )
         }
