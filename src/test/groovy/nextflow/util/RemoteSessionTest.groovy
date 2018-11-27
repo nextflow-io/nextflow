@@ -82,8 +82,8 @@ class RemoteSessionTest extends Specification {
         when:
         def remote = new RemoteSession(session)
         then:
-        remote.getLocalPaths().size() == 2
-        remote.getClasspath().size() == 4
+        remote.localPaths.size() == 3
+        remote.getClasspath().size() == 5
         remote.isDeserialized
 
         cleanup:
