@@ -92,11 +92,9 @@ class NqsiiExecutor extends AbstractGridExecutor {
         return result
     }
 
-    @Override
-    String getJobNameFor( TaskRun task ) {
-        def result = super.getJobNameFor(task)
+    String sanitizeJobName( String name ) {
         // NQSII does not allow more than 63 characters for the job name string
-        result && result.size()>63 ? result.substring(0,63) : result
+        name.size()>63 ? name.substring(0,63) : name
     }
 
     /**
