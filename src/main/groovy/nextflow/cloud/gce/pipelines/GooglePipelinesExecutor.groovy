@@ -68,11 +68,8 @@ class GooglePipelinesExecutor extends Executor {
     @Override
     void register() {
         super.register()
-
         pipelineConfig = validateConfiguration()
-
-        log.debug "[GOOGLE PIPELINE] Pipelines Configuration: '$pipelineConfig'."
-        log.debug "[GOOGLE PIPELINE] Finished registration for executor $name"
+        log.debug "[GOOGLE PIPELINE] Pipelines Configuration: '$pipelineConfig'"
     }
 
     @Override
@@ -118,7 +115,7 @@ class GooglePipelinesExecutor extends Executor {
 
         def path = session.config.navigate('env.PATH')
         if( path ) {
-            log.warn "Environment PATH defined in config file is ignored by AWS Batch executor"
+            log.warn "Environment PATH defined in config file is ignored by Google Pipeline executor"
         }
 
         /*

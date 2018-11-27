@@ -100,15 +100,15 @@ class GooglePipelinesTaskHandler extends TaskHandler {
 
         validateConfiguration()
 
-        log.debug "[GOOGLE PIPELINE] Created handler for task '${task.name}'."
+        log.debug "[GOOGLE PIPELINE] Created handler for task '${task.name}'"
     }
 
     void validateConfiguration() {
         if (!task.container) {
-            throw new ProcessUnrecoverableException("No container specified for process $task.name. Either specify the container to use in the process definition or with 'process.container' value in your config.")
+            throw new ProcessUnrecoverableException("No container specified for process $task.name. Either specify the container to use in the process definition or with 'process.container' value in your config")
         }
         if (!instanceType) {
-            throw new ProcessUnrecoverableException("No instanceType specified for process $task.name. Specify the instanceType with a process directive or either a 'process.instanceType' or a 'cloud.instanceType' definition in your config.")
+            throw new ProcessUnrecoverableException("No instanceType specified for process $task.name. Specify the instanceType with a process directive or either a 'process.instanceType' or a 'cloud.instanceType' definition in your config")
         }
     }
 
@@ -177,7 +177,8 @@ class GooglePipelinesTaskHandler extends TaskHandler {
 
     @Override
     void kill() {
-        log.debug "[GOOGLE PIPELINE] Killing pipeline '$operation.name'"
+        if( !operation ) return
+        log.debug "[GOOGLE PIPELINE] Killing pipeline '${operation.name}'"
         executor.helper.cancelOperation(operation)
     }
 
@@ -227,9 +228,10 @@ class GooglePipelinesTaskHandler extends TaskHandler {
             ${unstagingCommands.join(" ; ")}                        
         """.stripIndent().leftTrim()
 
-        log.debug "Staging script for task '$task.name' -> $stagingScript"
-        log.debug "Main script for task '$task.name' -> $mainScript"
-        log.debug "Unstaging script for task '$task.name' -> $unstagingScript"
+        log.debug """\
+            Staging script for task '$task.name' -> $stagingScript
+            Main script for task '$task.name' -> $mainScript
+            Unstaging script for task '$task.name' -> $unstagingScript""".stripIndent()
 
         //Create the mount for out work files.
         sharedMount = executor.helper.configureMount(diskName, mountPath)

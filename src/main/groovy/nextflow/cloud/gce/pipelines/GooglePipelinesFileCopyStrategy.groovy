@@ -75,8 +75,10 @@ class GooglePipelinesFileCopyStrategy extends SimpleFileCopyStrategy {
         handler.stagingCommands.addAll(createDirectories)
         handler.stagingCommands.addAll(stagingCommands)
 
-        log.debug "[GOOGLE PIPELINE] Constructed the following directory creation commands: $createDirectories"
-        log.debug "[GOOGLE PIPELINE] Constructed the following file copy staging commands: $stagingCommands"
+        log.debug """\
+            [GOOGLE PIPELINE] Constructed the following commands
+            directory creation: $createDirectories
+            copy staging commands: $stagingCommands""".stripIndent()
 
         //copy the remoteBinDir if it ia defined
         if(handler.pipelineConfiguration.remoteBinDir) {
