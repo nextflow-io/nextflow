@@ -139,7 +139,7 @@ abstract class AbstractGridExecutor extends Executor {
         // -- check for a custom `jobName` defined in the nextflow config file
         def customName = resolveCustomJobName(task)
         if( customName )
-            return customName
+            return customName.substring(0,256)
 
         // -- if not available fallback on the custom naming strategy
 
@@ -149,7 +149,7 @@ abstract class AbstractGridExecutor extends Executor {
             final ch = name[i]
             result.append( INVALID_NAME_CHARS.contains(ch) ? "_" : ch )
         }
-        result.toString()
+        result.toString().substring(0,256)
     }
 
     /**
