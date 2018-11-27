@@ -101,4 +101,14 @@ class AbstractGridExecutorTest extends Specification {
         name.size() == 256
         name == ( 'nf-' + 'abcd' * 100 ).substring(0,256)
     }
+
+    def 'should sanitize job name' () {
+        given:
+        def LONG = 'abcd' * 100
+        def exec = [:] as AbstractGridExecutor
+        
+        expect:
+        exec.sanitizeJobName('foo') == 'foo'
+        exec.sanitizeJobName(LONG) == LONG.substring(0,256)
+    }
 }
