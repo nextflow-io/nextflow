@@ -20,6 +20,7 @@ import java.nio.file.Path
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 import nextflow.util.MemoryUnit
+import nextflow.util.Throttle
 /**
  * Processor for LSF resource manager
  *

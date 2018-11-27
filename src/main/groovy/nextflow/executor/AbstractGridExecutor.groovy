@@ -41,7 +41,7 @@ abstract class AbstractGridExecutor extends Executor {
 
     private final static List<String> INVALID_NAME_CHARS = [ " ", "/", ":", "@", "*", "?", "\\n", "\\t", "\\r" ]
 
-    private Map lastQueueStatus
+    protected Map lastQueueStatus
 
     /**
      * Initialize the executor class
