@@ -75,6 +75,7 @@ class RemoteSessionTest extends Specification {
 
         def session = new Session()
         session.@libDir = [ path1, path2 ]
+        session.classesDir = Files.createTempDirectory('test')
 
         when:
         def remote = new RemoteSession(session)
@@ -87,6 +88,7 @@ class RemoteSessionTest extends Specification {
         remote?.close()
         path1?.deleteDir()
         path2?.deleteDir()
+        session?.classesDir?.deleteDir()
     }
 
 }

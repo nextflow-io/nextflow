@@ -32,7 +32,6 @@ import nextflow.ast.NextflowXform
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
-import nextflow.file.FileHelper
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
@@ -60,7 +59,7 @@ class ScriptRunner {
     /**
      * The interpreted script object
      */
-    private BaseScript script
+    private BaseScript scriptObj
 
     /**
      * The pipeline file (it may be null when it's provided as string)
@@ -86,6 +85,11 @@ class ScriptRunner {
      * The launcher command line
      */
     private String commandLine
+
+    /**
+     * Groovy compiler config object used to parse the nextflow script
+     */
+    private CompilerConfiguration compilerConfig
 
     /**
      * The used configuration profile
@@ -130,7 +134,7 @@ class ScriptRunner {
     /**
      * @return The interpreted script object
      */
-    BaseScript getScriptObj() { script }
+    BaseScript getScriptObj() { scriptObj }
 
     /**
      * @return The result produced by the script execution
@@ -153,13 +157,13 @@ class ScriptRunner {
         assert scriptText
 
         // init session
-        session.init(scriptFile?.main)
+        init(scriptFile?.main, args)
 
         // start session
         session.start()
         try {
             // parse the script
-            script = parseScript(scriptText, args)
+            parseScript(scriptText)
             // validate the config
             validate()
             // run the code
@@ -191,14 +195,14 @@ class ScriptRunner {
         assert methodName
 
         // init session
-        session.init(scriptFile.main)
+        init(scriptFile.main, args)
 
-        script = parseScript(scriptText, args)
+        parseScript(scriptText)
         def values = args ? args.collect { parseValue(it) } : null
 
         def methodsToTest
         if ( methodName == '%all' ) {
-            methodsToTest = script.metaClass.getMethods().findAll { it.name.startsWith('test') }.collect { it.name }.unique()
+            methodsToTest = scriptObj.metaClass.getMethods().findAll { it.name.startsWith('test') }.collect { it.name }.unique()
         }
         else {
             methodsToTest = methodName.split(',') *.trim()
@@ -211,13 +215,13 @@ class ScriptRunner {
 
         for( String name: methodsToTest ) {
             try {
-                def metaMethod = script.metaClass.getMethods().find { it.name == name }
+                def metaMethod = scriptObj.metaClass.getMethods().find { it.name == name }
 
                 if( !metaMethod ) {
                     log.error "Unknown function '$name' -- Check the name spelling"
                 }
                 else {
-                    def result = metaMethod.invoke(script, values as Object[] )
+                    def result = metaMethod.invoke(scriptObj, values as Object[] )
                     if( result != null ) {
                         log.info "SUCCESS: '$name' == $result"
                     }
@@ -247,13 +251,10 @@ class ScriptRunner {
         }
     }
 
-    protected BaseScript parseScript( File file, List<String> args = null ) {
-        assert file
-        parseScript( file.text, args )
-    }
+    protected void init(Path scriptPath, List<String> args = null) {
 
-    protected BaseScript parseScript( String scriptText, List<String> args = null) {
-        log.debug "> Script parsing"
+        session.init(scriptPath)
+
         session.binding.setArgs( new ArgsList(args) )
         session.binding.setParams( (Map)session.config.params )
         // TODO add test for this property
@@ -277,11 +278,22 @@ class ScriptRunner {
         importCustomizer.addImports( MemoryUnit.name )
         importCustomizer.addStaticStars( Nextflow.name )
 
-        def config = new CompilerConfiguration()
-        config.addCompilationCustomizers( importCustomizer )
-        config.scriptBaseClass = BaseScript.class.name
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+        compilerConfig = new CompilerConfiguration()
+        compilerConfig.addCompilationCustomizers( importCustomizer )
+        compilerConfig.scriptBaseClass = BaseScript.class.name
+        compilerConfig.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+        compilerConfig.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+
+        compilerConfig.setTargetDirectory(session.classesDir.toFile())
+    }
+
+    protected BaseScript parseScript( File file ) {
+        assert file
+        parseScript( file.text )
+    }
+
+    protected BaseScript parseScript( String scriptText ) {
+        log.debug "> Script parsing"
 
         // extend the class-loader if required
         def gcl = new GroovyClassLoader()
@@ -292,23 +304,13 @@ class ScriptRunner {
             gcl.addClasspath(path.toString())
         }
 
-        // set the byte-code target directory
-        def targetDir = FileHelper.createLocalDir()
-        config.setTargetDirectory(targetDir.toFile())
-        // add the directory of generated classes to the lib path
-        // so that it can be propagated to remote note (when necessary)
-        session.getLibDir().add(targetDir)
-
         // set the script class-loader
         session.classLoader = gcl
 
         // run and wait for termination
         BaseScript result
-        def groovy = new GroovyShell(gcl, session.binding, config)
-        result = groovy.parse(scriptText, session.scriptClassName) as BaseScript
-
-        session.onShutdown { targetDir.deleteDir() }
-        return result
+        def groovy = new GroovyShell(gcl, session.binding, compilerConfig)
+        scriptObj = groovy.parse(scriptText, session.scriptClassName) as BaseScript
     }
 
     /**
@@ -334,7 +336,7 @@ class ScriptRunner {
     }
 
     @PackageScope void checkConfig() {
-        session.validateConfig(script.getProcessNames())
+        session.validateConfig(scriptObj.getProcessNames())
     }
 
     @PackageScope VersionNumber getCurrentVersion() {
@@ -374,10 +376,9 @@ class ScriptRunner {
      */
     protected run() {
         log.debug "> Launching execution"
-        assert script, "Missing script instance to run"
-
+        assert scriptObj, "Missing script instance to run"
         // -- launch the script execution
-        output = script.run()
+        output = scriptObj.run()
     }
 
     protected terminate() {

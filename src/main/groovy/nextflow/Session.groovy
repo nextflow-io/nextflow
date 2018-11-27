@@ -139,6 +139,11 @@ class Session implements ISession {
      */
     List<Path> configFiles
 
+    /**
+     * Local path where script generated classes are saved
+     */
+    private Path classesDir
+
     private Path binDir
 
     private Map<String,Path> binEntries = [:]
@@ -199,6 +204,8 @@ class Session implements ISession {
     Throwable getError() { error }
 
     WorkflowStats getWorkflowStats() { workflowStats }
+
+    Path getClassesDir() { classesDir }
 
     boolean ansiLog
 
@@ -325,6 +332,9 @@ class Session implements ISession {
             // set the script name attribute
             this.setScriptName(scriptPath.name)
         }
+
+        // set the byte-code target directory
+        this.classesDir = FileHelper.createLocalDir()
 
         this.observers = createObservers()
         this.statsEnabled = observers.any { it.enableMetrics() }
@@ -612,6 +622,9 @@ class Session implements ISession {
 
             // -- shutdown s3 uploader
             shutdownS3Uploader()
+
+            // -- cleanup script classes dir
+            classesDir.deleteDir()
         }
         finally {
             // -- update the history file
