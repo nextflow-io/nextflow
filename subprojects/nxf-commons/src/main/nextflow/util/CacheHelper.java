@@ -228,6 +228,15 @@ public class CacheHelper {
                 hasher = hasher.putLong( attrs.lastModifiedTime().toMillis() );
             }
         }
+
+        if( log.isTraceEnabled() ) {
+            log.trace("Hashing file meta: path={}; size={}, lastModified={}, mode={}",
+                    file.toAbsolutePath().toString(),
+                    attrs!=null ? attrs.size() : "--",
+                    attrs!=null && attrs.lastModifiedTime() != null && mode != HashMode.LENIENT ? attrs.lastModifiedTime().toMillis() : "--",
+                    mode
+            );
+        }
         return hasher;
     }
 
