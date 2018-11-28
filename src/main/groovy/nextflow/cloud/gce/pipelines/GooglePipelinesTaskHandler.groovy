@@ -1,5 +1,6 @@
 /*
  * Copyright 2018, WuxiNextcode
+ * Copyright 2018, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,8 +37,11 @@ import java.nio.file.Path
  * Task handler for Google Pipelines.
  *
  * @author Ólafur Haukur Flygenring <olafurh@wuxinextcode.com>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class GooglePipelinesTaskHandler extends TaskHandler {
+
+    static private List<String> UNSTAGE_CONTROL_FILES = [TaskRun.CMD_ERRFILE, TaskRun.CMD_OUTFILE, TaskRun.CMD_EXIT, TaskRun.CMD_LOG ]
 
     GooglePipelinesExecutor executor
     TaskBean taskBean
@@ -214,16 +218,9 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         final launcher = new GooglePipelinesScriptLauncher(this.taskBean, this)
         launcher.build()
 
-        String stagingScript = """
-           mkdir -p $task.workDir ;
-           chmod 777 $task.workDir ;
-           ${stagingCommands.join(" ; ")} ;
-           cd $task.workDir ;
-           chmod 777 ${TaskRun.CMD_SCRIPT} ${TaskRun.CMD_RUN} ;
-           ls -haltr $mountPath             
-        """.stripIndent().leftTrim()
+        String stagingScript = "mkdir -p $task.workDir\n" + stagingCommands.join("\n")
 
-        String mainScript = "cd $task.workDir ; echo \$(./${TaskRun.CMD_RUN}) | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
+        String mainScript = "cd $task.workDir; bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
 
         /*
          * -m = run in parallel
@@ -241,21 +238,13 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         }
 
         //add the task output files to unstaging command list
-        [TaskRun.CMD_ERRFILE,
-         TaskRun.CMD_OUTFILE,
-         TaskRun.CMD_EXIT,
-         TaskRun.CMD_LOG
-        ].each {
+        for( String it : UNSTAGE_CONTROL_FILES ) {
             unstagingCommands << "$gsCopyPrefix $task.workDir/$it ${task.workDir.toUriString()} || true".toString()
         }
 
         //Copy nextflow task progress files as well as the files we need to unstage
         String unstagingScript = unstagingCommands.join("; ").leftTrim()
 
-        log.debug """\
-            Staging script for task '$task.name' -> $stagingScript
-            Main script for task '$task.name' -> $mainScript
-            Unstaging script for task '$task.name' -> $unstagingScript""".stripIndent()
 
         //Create the mount for out work files.
         sharedMount = executor.helper.configureMount(diskName, mountPath)
