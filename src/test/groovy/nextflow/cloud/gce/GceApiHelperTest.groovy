@@ -15,7 +15,12 @@ class GceApiHelperTest extends Specification {
     static String testZone = "testZone"
 
     static boolean runAgainstGce() {
-        System.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        def path = System.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        if( !path ) return false
+        def exists = new File(path).exists()
+        if( exists ) return true
+        println "Google credentials file is missing: $path"
+        return false
     }
 
     @Shared

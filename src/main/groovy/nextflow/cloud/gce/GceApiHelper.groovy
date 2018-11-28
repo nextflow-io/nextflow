@@ -299,7 +299,7 @@ class GceApiHelper {
             throw new MissingArgumentException("$GAC_ENV is not defined in your environment" )
 
         Path credFile = FileHelper.asPath(credFileLocation)
-        if (credFile) {
+        if (credFile && credFile.exists() ) {
             credFile.toFile().text
         } else {
             throw new FileNotFoundException("Could not find Google credentials file '$credFileLocation'")
