@@ -1,24 +1,79 @@
 .. _cli-page:
 
-*************
+**********************
 Command Line Interface
-*************
+**********************
 
 Command line
-==================
+============
 
 Nextflow has different command line arguments that can be used to modify the execution of workflows or interact with existing runs.  
 
 
 Nextflow Docker
---------------
+---------------
 
 Nextflow can be launched using a provided Docker container. This container has been modified to allow additional sibling containers to be launched from within the Nextflow container. Running Nextflow in this manner::
 
     nextflow -d run main.nf
 
-Nextflow log
---------------
+clean
+-----
+
+Clean up project cache and work directories
+
+
+
+clone
+-----
+
+Clone a project into a folder
+
+
+cloud
+-----
+
+Manage Nextflow clusters in the cloud
+
+
+config
+------
+
+Show a project configuration
+
+drop
+----
+
+Delete the local copy of a project
+
+
+help
+----
+
+Print the usage help for a command
+
+
+
+info
+----
+
+Print a project and system runtime information
+
+
+
+list
+----
+
+List all downloaded projects
+
+
+
+
+log
+---
+
+Print executions log and runtime info
+
 
 The logs from previous Nextflow runs can be viewed using::
 
@@ -61,4 +116,21 @@ the template file can then by specified::
     
     nextflow log <run_name> -t template.md
 
+
+pull
+----
+
+Download or update a project
+
+
+
+run
+---
+
+Launch the execution of workflow script or project
+
+self-update
+-----------
+
+Update nextflow runtime to the latest available version
 

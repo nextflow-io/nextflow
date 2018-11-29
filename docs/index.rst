@@ -19,6 +19,7 @@ Contents:
    operator
    executor
    config
+   cli
    awscloud
    amazons3
    conda
