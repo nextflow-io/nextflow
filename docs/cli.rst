@@ -86,7 +86,7 @@ Name            Description
 -user           Private repository user name.
 =============== =============
 
-**Example**
+**Examples**
 ::
 
     nextflow clone nextflow-io/rnaseq-nf foo
@@ -105,10 +105,44 @@ config
 
 Show a project configuration
 
+**Usage**
+::
+
+    nextflow config [options] [script or project]
+
+
+======================= =============
+Name                    Description
+======================= =============
+-flat                   Print config using flat notation
+-profile                Choose the configuration profile
+-properties             Prints config using Java properties notation
+-a, -show-profiles      Show all configuration profiles
+-sort                   Sort config attributes
+======================= =============
+
+**Examples**
+::
+
+    nextflow config nextflow-io/rnaseq-nf
+
 drop
 ====
 
 Delete the local copy of a project
+
+**Usage**
+::
+
+    nextflow drop [options] <project name>
+
+**Options**
+
+=============== =============
+Name            Description
+=============== =============
+-force          Delete the repository without taking care of local changes
+=============== =============
 
 
 help
@@ -123,13 +157,58 @@ info
 
 Print a project and system runtime information
 
+**Usage**
+::
+
+    nextflow info [options] [project name]
+
+When no project name is specified the ``info`` command print
+the Nextflow runtime information::
+
+    $ nextflow info
+      Version: 18.11.0-edge build 5016
+      Modified: 12-11-2018 17:04 UTC (18:04 CEST)
+      System: Mac OS X 10.14
+      Runtime: Groovy 2.5.4 on Java HotSpot(TM) 64-Bit Server VM 1.8.0_161-b12
+      Encoding: UTF-8 (UTF-8)
+
+
+When it's specified the name of a project previously downloaded either with the command ``run`` or ``pull``,
+the command ``info`` prints the project information::
+    
+    $ nextflow info nextflow-io/rnaseq-nf
+     project name: nextflow-io/rnaseq-nf
+     repository  : https://github.com/nextflow-io/rnaseq-nf
+     local path  : /Users/pditommaso/.nextflow/assets/nextflow-io/rnaseq-nf
+     main script : main.nf
+     description : Proof of concept of a RNA-seq pipeline implemented with Nextflow
+     author      : Paolo Di Tommaso
+     revisions   :
+     * master (default)
+       dev
+       hybrid
+       k8s-demo
+       v1.0 [t]
+       v1.1 [t]
+
+**Options**
+
+=============== =============
+Name            Description
+=============== =============
+-d              Show detailed information
+=============== =============
 
 
 list
 ====
 
-List all downloaded projects
+List all projects downloaded::
 
+    $ nextflow list
+    nextflow-io/rnaseq-nf
+    nextflow-io/hello
+    CRG-CNAG/CalliNGS-NF
 
 
 
@@ -184,8 +263,32 @@ the template file can then by specified::
 pull
 ====
 
-Download or update a project
+Download a workflow from the source code management platform given the project name::
 
+    nextflow pull <project name>
+
+The project name should is composed by the `owner` name (or organisation name) and the `repository` name
+separated by a ``/`` character e.g. ``nextflow-io/rnaseq-nf``. When the owner names is omitted the
+value defined by environment variable ``NXF_ORG`` is used (default: ``nextflow-io``)::
+
+    nextflow pull nextflow-io/rnaseq-nf
+
+By default Nextflow checks for the specific project on `GitHub <https://github.com>`_ hosting platform.
+Use the ``-hub`` option to use a different platform. Alternatively the full URL can be specified::
+
+    nextflow pull https://github.com/nextflow-io/rnaseq-nf
+
+
+**Options**
+
+=============== =============
+Name            Description
+=============== =============
+-all            Update all downloaded projects
+-hub            Service hub where the project is hosted: ``github``, ``gitlab`` or ``bitbucket`` (default: ``github``).
+-r              Revision to clone - It can be a git branch, tag or revision number.
+-user           Private repository user name.
+=============== =============
 
 
 run
