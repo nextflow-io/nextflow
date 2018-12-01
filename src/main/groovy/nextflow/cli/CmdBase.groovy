@@ -27,7 +27,7 @@ abstract class CmdBase implements Runnable {
 
     private Launcher launcher
 
-    abstract def String getName()
+    abstract String getName()
 
     Launcher getLauncher() { launcher }
 

@@ -16,11 +16,11 @@
 
 package nextflow.config
 
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import static nextflow.Const.DEFAULT_BRANCH
 import static nextflow.Const.DEFAULT_MAIN_FILE_NAME
-
 /**
  * Models the nextflow config manifest settings
  *
@@ -83,4 +83,16 @@ class Manifest {
         target.name
     }
 
+    Map toMap() {
+        final result = new HashMap(10)
+        result.author = getAuthor()
+        result.defaultBranch = getDefaultBranch()
+        result.description = getDescription()
+        result.homePage = homePage
+        result.gitmodules = getGitmodules()
+        result.mainScript = getMainScript()
+        result.version = getVersion()
+        result.nextflowVersion = getNextflowVersion()
+        return result
+    }
 }
