@@ -696,6 +696,7 @@ class AssetManager {
      *  ticks that it is the default working branch (usually the master branch), while the string {@code (t)}
      *  shows that the revision is a git tag (instead of a branch)
      */
+    @Deprecated
     List<String> getRevisions(int level) {
 
         def current = getCurrentRevision()
@@ -704,16 +705,57 @@ class AssetManager {
         List<String> branches = getBranchList()
             .findAll { it.name.startsWith('refs/heads/') || it.name.startsWith('refs/remotes/origin/') }
             .unique { shortenRefName(it.name) }
-            .collect { Ref it -> formatRef(it,current,master,false,level) }
+            .collect { Ref it -> refToString(it,current,master,false,level) }
 
         List<String> tags = getTagList()
                 .findAll  { it.name.startsWith('refs/tags/') }
-                .collect { formatRef(it,current,master,true,level) }
+                .collect { refToString(it,current,master,true,level) }
 
         def result = new ArrayList<String>(branches.size() + tags.size())
         result.addAll(branches)
         result.addAll(tags)
         return result
+    }
+
+    Map getBranchesAndTags(boolean checkForUpdates) {
+        final result = [:]
+        final current = getCurrentRevision()
+        final master = getDefaultBranch()
+
+        final branches = []
+        final tags = []
+
+        Map<String, Ref> remote = checkForUpdates ? git.lsRemote().callAsMap() : null
+        getBranchList()
+                .findAll { it.name.startsWith('refs/heads/') || it.name.startsWith('refs/remotes/origin/') }
+                .unique { shortenRefName(it.name) }
+                .each { Ref it -> branches << refToMap(it,remote)  }
+
+        remote = checkForUpdates ? git.lsRemote().setTags(true).callAsMap() : null
+        getTagList()
+                .findAll  { it.name.startsWith('refs/tags/') }
+                .each { Ref it -> tags << refToMap(it,remote) }
+
+        result.current = current    // current branch name
+        result.master = master      // master branch name
+        result.branches = branches  // collection of branches
+        result.tags = tags          // collect of tags 
+        return result
+    }
+
+    protected Map refToMap(Ref ref, Map<String,Ref> remote) {
+        final entry = new HashMap(2)
+        final peel = git.getRepository().peel(ref)
+        final objId = peel.getPeeledObjectId() ?: peel.getObjectId()
+        // the branch or tag name
+        entry.name = shortenRefName(ref.name)
+        // the local commit it
+        entry.commitId = objId.name()
+        // the remote commit Id for this branch or tag
+        if( remote && hasRemoteChange(ref,remote) ) {
+            entry.latestId = remote.get(ref.name).objectId.name()
+        }
+        return entry
     }
 
     @Memoized
@@ -727,10 +769,10 @@ class AssetManager {
     }
 
     protected formatObjectId(ObjectId obj, boolean human) {
-        return human ? obj.name.substring(0,10) : obj
+        return human ? obj.name.substring(0,10) : obj.name
     }
 
-    protected String formatRef( Ref ref, String current, String master, boolean tag, int level ) {
+    protected String refToString(Ref ref, String current, String master, boolean tag, int level ) {
 
         def result = new StringBuilder()
         def name = shortenRefName(ref.name)
@@ -777,6 +819,7 @@ class AssetManager {
         ref.objectId.name != remote[ref.name].objectId.name
     }
 
+    @Deprecated
     List<String> getUpdates(int level) {
 
         def remote = git.lsRemote().callAsMap()

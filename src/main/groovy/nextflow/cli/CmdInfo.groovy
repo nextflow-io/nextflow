@@ -15,17 +15,20 @@
  */
 
 package nextflow.cli
+
 import java.lang.management.ManagementFactory
 import java.nio.file.spi.FileSystemProvider
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import com.sun.management.OperatingSystemMXBean
+import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.scm.AssetManager
 import nextflow.util.MemoryUnit
+import org.yaml.snakeyaml.Yaml
 
 /**
  * CLI sub-command INFO
@@ -38,6 +41,8 @@ class CmdInfo extends CmdBase {
 
     static final public NAME = 'info'
 
+    private PrintStream out = System.out
+
     @Parameter(description = 'project name')
     List<String> args
 
@@ -47,11 +52,18 @@ class CmdInfo extends CmdBase {
     @Parameter(names='-dd', hidden = true, arity = 0)
     boolean moreDetailed
 
+    @Parameter(names='-o', description = 'Output format, either: text (default), json, yaml')
+    String format
+
+    @Parameter(names=['-u','-check-updates'], description = 'Check for remote updates')
+    boolean checkForUpdates
+
     @Override
     final String getName() { NAME }
 
     @Override
     void run() {
+
         int level = moreDetailed ? 2 : ( detailed ? 1 : 0 )
         if( !args ) {
             println getInfo(level)
@@ -62,36 +74,79 @@ class CmdInfo extends CmdBase {
         if( !manager.isLocal() )
             throw new AbortOperationException("Unknown project `${args[0]}`")
 
+        if( !format || format == 'text' ) {
+            printText(manager,level)
+            return
+        }
+
+        def map = createMap(manager)
+        if( format == 'json' ) {
+            printJson(map)
+        }
+        else if( format == 'yaml' ) {
+            printYaml(map)
+        }
+        else
+            throw new AbortOperationException("Unknown output format: $format");
+
+    }
+
+    protected printText(AssetManager manager, int level) {
         final manifest = manager.getManifest()
-        println " project name: ${manager.project}"
-        println " repository  : ${manager.repositoryUrl}"
-        println " local path  : ${manager.localPath}"
-        println " main script : ${manager.mainScriptName}"
+
+        out.println " project name: ${manager.project}"
+        out.println " repository  : ${manager.repositoryUrl}"
+        out.println " local path  : ${manager.localPath}"
+        out.println " main script : ${manager.mainScriptName}"
         if( manager.homePage && manager.homePage != manager.repositoryUrl )
-            println " home page   : ${manager.homePage}"
+            out.println " home page   : ${manager.homePage}"
         if( manifest.description )
-            println " description : ${manifest.description}"
+            out.println " description : ${manifest.description}"
         if( manifest.author )
-            println " author      : ${manifest.author}"
+            out.println " author      : ${manifest.author}"
 
         def revs = manager.getRevisions(level)
         if( revs.size() == 1 )
-            println " revision    : ${revs[0]}"
+            out.println " revision    : ${revs[0]}"
         else {
-            println " revisions   : "
-            revs.each { println " $it" }
+            out.println " revisions   : "
+            revs.each { out.println " $it" }
         }
+
+        if( !checkForUpdates )
+            return
 
         def updates = manager.getUpdates(level)
         if( updates ) {
             if( updates.size() == 1 && revs.size() == 1 )
-                println " updates     : ${updates[0]}"
+                out.println " updates     : ${updates[0]}"
             else {
-                println " updates     : "
-                updates.each { println " $it" }
+                out.println " updates     : "
+                updates.each { out.println " $it" }
             }
         }
 
+        out.flush()
+    }
+
+    protected Map createMap(AssetManager manager) {
+        def result = [:]
+        result.projectName = manager.project
+        result.repository = manager.repositoryUrl
+        result.localPath = manager.localPath?.toString()
+        result.manifest = manager.manifest.toMap()
+        result.revisions = manager.getBranchesAndTags(checkForUpdates)
+        return result
+    }
+
+    protected printJson(Map map) {
+        out.println JsonOutput.prettyPrint(JsonOutput.toJson(map))
+        out.flush()
+    }
+
+    protected printYaml(Map map) {
+        out.println new Yaml().dump(map).toString()
+        out.flush()
     }
 
     final static private BLANK = '  '
