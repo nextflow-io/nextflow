@@ -212,5 +212,59 @@ class CmdConfigTest extends Specification {
         folder.deleteDir()
     }
 
+    def 'should handle variables' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def CONFIG = folder.resolve('nextflow.config')
+
+        CONFIG.text = '''
+        X1 = 'SOMETHING'
+        X2 = [X1]
+        X3 = [p:111, q:'bbb']
+        
+        params {
+          alpha = ["${X1}/a", "b", "c"]
+          delta = [ X2, 'z' ]
+          gamma = [p: "${X1}/a", q: X2]
+          omega = X3 
+        }
+        '''
+
+        def buffer = new ByteArrayOutputStream()
+        // command definition
+        def cmd = new CmdConfig()
+        cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
+        cmd.stdout = buffer
+        cmd.args = [ '.' ]
+
+        when:
+        cmd.run()
+
+        then:
+        buffer.toString() == '''\
+        X1 = 'SOMETHING'
+        X2 = ['SOMETHING']
+        X3 = [p:111, q:'bbb']
+        
+        params {
+           alpha = ['SOMETHING/a', 'b', 'c']
+           delta = [['SOMETHING'], 'z']
+           gamma = [p:'SOMETHING/a', q:['SOMETHING']]
+           omega = [p:111, q:'bbb']
+        }
+        '''.stripIndent()
+
+        when:
+        def result = new ConfigSlurper().parse(buffer.toString())
+        then:
+        result.X1 == 'SOMETHING'
+        result.X2 == ['SOMETHING']
+        result.X3 == [p:111, q:'bbb']
+        result.params.alpha == ['SOMETHING/a', 'b', 'c']
+        result.params.delta == [['SOMETHING'], 'z']
+        result.params.gamma == [p:'SOMETHING/a', q:['SOMETHING']]
+        result.params.omega == [p:111, q:'bbb']
+
+    }
 
 }

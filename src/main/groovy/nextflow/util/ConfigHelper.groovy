@@ -211,7 +211,7 @@ class ConfigHelper {
 
     }
 
-    private static String render0( val ) {
+    private static String render0( Object val ) {
         if( val == null )
             return 'null'
         if( val instanceof GString )
@@ -220,8 +220,36 @@ class ConfigHelper {
             return "'$val'"
         if( val instanceof Duration )
             return "'$val'"
+        if( val instanceof Collection )
+            return render0(val)
+        if( val instanceof Map )
+            return render0(val)
 
         InvokerHelper.inspect(val)
+    }
+
+    private static String render0( Collection collection ) {
+        def result = new StringBuilder('[')
+        int i=0
+        for( Object o : collection ) {
+            if( i++>0 ) result.append(', ')
+            result.append(render0(o))
+        }
+        result.append(']')
+        result.toString()
+    }
+
+    private static String render0( Map map ) {
+        def result = new StringBuilder('[')
+        int i=0
+        for( Map.Entry entry : map.entrySet() ) {
+            if( i++>0 ) result.append(', ')
+            result.append(entry.key)
+            result.append(":")
+            result.append(render0(entry.value))
+        }
+        result.append(']')
+        result.toString()
     }
 
     static String toCanonicalString(ConfigObject object, boolean sort=false) {
