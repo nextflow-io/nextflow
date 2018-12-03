@@ -21,6 +21,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.executor.SimpleFileCopyStrategy
 import nextflow.processor.TaskBean
+import nextflow.util.Escape
 
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -54,6 +55,10 @@ class GooglePipelinesFileCopyStrategy extends SimpleFileCopyStrategy {
             def storePathIsDir = absStorePath.isDirectory()
             def stagePath = Paths.get(stageName)
             def parent = stagePath.parent
+            //we can't simply use the handy ToUriString function since it also URL encodes spaces and gsutil doesn't like that
+            //TODO: Find a cleaner way of doing this
+            def escapedStoreUri = Escape.path(absStorePath.getFileSystem().toString()+absStorePath.toString())
+            def escapedStageName = Escape.path(stageName)
 
             //check if we need to create parent dirs for staging file since gsutil doesn't create them for us
             if(parent) {
@@ -61,14 +66,14 @@ class GooglePipelinesFileCopyStrategy extends SimpleFileCopyStrategy {
             }
 
             if(storePathIsDir) {
-                stagingCommands << "gsutil -m -q cp -P -r ${absStorePath.toUriString()}/ $workDir".toString()
+                stagingCommands << "gsutil -m -q cp -P -r $escapedStoreUri/ $workDir".toString()
                 //check if we need to move the directory (gsutil doesn't support renaming directories on copy)
                 if(parent || !absStorePath.toString().endsWith(stageName)) {
-                    def newLocation = "$workDir/$stageName"
-                    stagingCommands << "mv $workDir/${absStorePath.name} $newLocation".toString()
+                    def newLocation = "$workDir/$escapedStageName"
+                    stagingCommands << "mv $workDir/${Escape.path(absStorePath.name)} $newLocation".toString()
                 }
             } else {
-                stagingCommands << "gsutil -m -q cp -P ${absStorePath.toUriString()} $workDir/$stageName".toString()
+                stagingCommands << "gsutil -m -q cp -P $escapedStoreUri $workDir/$escapedStageName".toString()
             }
         }
 
@@ -93,7 +98,8 @@ class GooglePipelinesFileCopyStrategy extends SimpleFileCopyStrategy {
     String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
 
         def unstagingCommands = outputFiles.collect {
-            "gsutil -m -q cp -P -r -c $workDir/$it ${workDir.toUriString()}".toString()
+            def escaped = Escape.path(it)
+            "gsutil -m -q cp -r -c $workDir/$escaped ${workDir.toUriString()} || true".toString()
         }
 
         log.debug "[GOOGLE PIPELINE] Constructed the following file copy staging commands: $unstagingCommands"

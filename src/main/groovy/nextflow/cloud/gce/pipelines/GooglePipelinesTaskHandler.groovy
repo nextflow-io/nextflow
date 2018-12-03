@@ -28,6 +28,7 @@ import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.util.Escape
 
 import java.nio.file.Path
 
@@ -193,10 +194,9 @@ class GooglePipelinesTaskHandler extends TaskHandler {
            ${stagingCommands.join(" ; ")} ;
            cd $task.workDir ;
            chmod 777 ${TaskRun.CMD_SCRIPT} ${TaskRun.CMD_RUN} ;
-           ls -haltr $mountPath             
         """.stripIndent().leftTrim()
 
-        String mainScript = "cd $task.workDir ; echo \$(./${TaskRun.CMD_RUN}) | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
+        String mainScript = "cd $task.workDir ; ./${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
 
         /*
          * -m = run in parallel
@@ -206,12 +206,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
          * -c = continues on errors
          * -r = recursive copy
          */
-        def gsCopyPrefix = "gsutil -m -q cp -P -c"
-
-        //Copy the logs provided by Google Pipelines for the pipeline to our work dir.
-        if (System.getenv().get("NXF_DEBUG")) {
-            unstagingCommands << "$gsCopyPrefix -r /google/ ${task.workDir.toUriString()} || true".toString()
-        }
+        def gsCopyPrefix = "gsutil -m -q cp -c -P"
 
         //add the task output files to unstaging command list
         [TaskRun.CMD_ERRFILE,
@@ -219,11 +214,16 @@ class GooglePipelinesTaskHandler extends TaskHandler {
          TaskRun.CMD_EXIT,
          TaskRun.CMD_LOG
         ].each {
-            unstagingCommands << "$gsCopyPrefix $task.workDir/$it ${task.workDir.toUriString()} || true".toString()
+            def escFile = Escape.path(it)
+            unstagingCommands.add(0,"$gsCopyPrefix $task.workDir/$escFile ${task.workDir.toUriString()} || true".toString())
         }
 
+        //Copy the logs provided by Google Pipelines for the pipeline to our work dir.
+        if (System.getenv().get("NXF_DEBUG")) {
+            unstagingCommands.add(0,"$gsCopyPrefix -r /google/ ${task.workDir.toUriString()} || true".toString())
+        }
         //Copy nextflow task progress files as well as the files we need to unstage
-        String unstagingScript = """                                                
+        String unstagingScript = """                                                           
             ${unstagingCommands.join(" ; ")}                        
         """.stripIndent().leftTrim()
 
