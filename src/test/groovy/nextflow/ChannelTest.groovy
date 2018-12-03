@@ -454,9 +454,10 @@ class ChannelTest extends Specification {
     def 'should check if pattern exists' () {
 
         given:
+        def folder = Files.createTempDirectory('test'); folder.deleteDir()
         def session = new Session()
         when:
-        Channel.fromPath('foo/*.txt', checkIfExists: true)
+        Channel.fromPath("$folder/*.txt", checkIfExists: true)
         Channel.fromPath0Future.get()
         then:
         session.isAborted()
