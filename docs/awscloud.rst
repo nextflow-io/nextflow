@@ -386,7 +386,7 @@ the necessary dependencies.
 
 The following snippet shows how to install AWS CLI with `Miniconda <https://conda.io/miniconda.html>`_::
 
-    sudo yum install -y wget
+    sudo yum install -y bzip2 wget
     wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
     bash Miniconda3-latest-Linux-x86_64.sh -b -f -p $HOME/miniconda
     $HOME/miniconda/bin/conda install -c conda-forge -y awscli
