@@ -251,7 +251,7 @@ class ScriptRunner {
         }
     }
 
-    protected void init(Path scriptPath, List<String> args = null) {
+    protected ScriptRunner init(Path scriptPath, List<String> args = null) {
 
         session.init(scriptPath)
 
@@ -285,6 +285,7 @@ class ScriptRunner {
         compilerConfig.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
 
         compilerConfig.setTargetDirectory(session.classesDir.toFile())
+        return this
     }
 
     protected BaseScript parseScript( File file ) {
