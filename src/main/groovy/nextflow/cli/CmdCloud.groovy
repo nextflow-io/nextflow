@@ -133,7 +133,7 @@ class CmdCloud extends CmdBase implements UsageAware {
 
         // no driver was specified -- choose the first available
         if( !driverName ) {
-            if( availDrivers.size()>1 ) throw new AbortOperationException("No cloud driver was specified -- Use option -driver to choose one of the following: ${availDrivers.collect { ',' }}")
+            if( availDrivers.size()>1 ) throw new AbortOperationException("No cloud driver was specified -- Use option -driver to choose one of the following: ${availDrivers.join(', ')}")
             driverName = availDrivers[0]
         }
         // check that an existing driver was specified
