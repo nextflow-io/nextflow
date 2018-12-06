@@ -294,7 +294,57 @@ Name            Description
 run
 ===
 
-Launch the execution of workflow script or project
+Launch the execution of a workflow script or project. If the workflow has not been downloaded before, Nextflow will automatically pull the workflow from the respective hub platform and store it in `~/.nextflow/assets/URI`. 
+
+=============== =============
+Name            Description
+=============== =============
+-E              Exports all current system environment
+-bucket_dir     Remote bucket where intermediate result files are stored
+-cache          Enable/disable processes caching
+-dump-channels  Dump channels for debugging purposes
+-dump-hashes    Dump task hash keys for debugging purposes
+-e.key          Add the specified variable <key> to execution environment
+-h              Print the command usage
+-hub            Service hub where the project is hosted
+-latest         Pull latest changes before run
+-lib            Library extension path
+-name           Assign a mnemonic name to the a pipeline run
+-offline        Do not check for remote project updates
+-params-file    Load script parameters from a JSON/YAML file
+-process.       Set process options, Syntax: -process.key=value        
+-profile        Choose a configuration profile
+-qs/-queue-size Max number of processes that can be executed in parallel by each executor
+-resume         Execute the script using the cached results, useful to continue executions that was stopped by an error
+-r              Revision of the project to run (either a git branch, tag or commit SHA number)
+-test           Test a script function with the name specified
+-user           Private repository user name
+-with-conda     Use the specified Conda environment package or file (must end with .yml|.yaml suffix)
+-with-dag       Create pipeline DAG file
+-with-docker    Enable process execution in a Docker container
+-N              Send a notification email on workflow completion to the specified recipients
+-with-report    Create processes execution html report
+-with-singularity   Enable process execution in a Singularity container
+-with-timeline  Create processes execution timeline file
+-with-trace     Create processes execution tracing file
+-with-weblog    Send workflow status messages via HTTP to target URL
+-without-docker Disable process execution with Docker
+-w              Directory where intermediate result files are stored
+
+**** params-file ****
+
+Users can specify either a JSON or YAML based file containing parameters for a Nextflow workflow using the option ``-params-file``. The YAML format should follow a key - value pattern, e.g. 
+    foo:
+    - bar: "2.0"
+    baz:
+    - type: "test"
+Similar to this, you could specify a JSON file with parameters:
+    {
+     "foo": "bar",
+    "baz": "1.0"
+    }
+The above feature requires version 0.24.0 or higher.
+
 
 self-update
 ===========
