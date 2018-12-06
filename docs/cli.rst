@@ -296,6 +296,8 @@ run
 
 Launch the execution of a workflow script or project. If the workflow has not been downloaded before, Nextflow will automatically pull the workflow from the respective hub platform and store it in `~/.nextflow/assets/URI`. 
 
+**Options**
+
 =============== =============
 Name            Description
 =============== =============
