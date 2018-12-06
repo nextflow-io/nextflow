@@ -94,7 +94,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * Given a map of the input file parameters with respective values,
      * create the BASH script to stage them into the task working space
      *
-     * @param inputFiles All the input files as a map of {@code <stage name, store path>} pairs
+     * @param inputFiles All the input files as a map of <stage name, store path> pairs
      * @return The BASH script to stage them
      */
     String getStageInputFilesScript(Map<String,Path> inputFiles) {
