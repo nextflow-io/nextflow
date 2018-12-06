@@ -120,7 +120,8 @@ class Launcher {
      */
     @PackageScope
     Launcher parseMainArgs(String... args) {
-        this.cliString = System.getenv('NXF_CLI')
+        // when using a fat jar "*-all.jar" NXF_CLI is null
+        this.cliString = System.getenv('NXF_CLI') ?: "nextflow"
         this.colsString = System.getenv('COLUMNS')
 
         def cols = getColumns()
