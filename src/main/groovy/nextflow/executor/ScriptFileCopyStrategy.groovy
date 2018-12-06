@@ -39,7 +39,7 @@ interface ScriptFileCopyStrategy {
     Map<String,Path> resolveForeignFiles(Map<String,Path> inputFiles)
 
     /**
-     * @param inputFiles All the input files as a map of {@code <stage name, store path>} pairs
+     * @param inputFiles All the input files as a map of <stage name, store path> pairs
      * @return A BASH snippet included in the wrapper script that stages the task input files
      */
     String getStageInputFilesScript(Map<String,Path> inputFiles)
