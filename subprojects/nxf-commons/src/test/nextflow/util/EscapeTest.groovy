@@ -69,4 +69,16 @@ class EscapeTest extends Specification {
         Escape.wildcards('file_[!a].txt') == 'file_\\[\\!a\\].txt'
     }
 
+    def 'should escape cli' () {
+        expect: 
+        Escape.cli('nextflow','run','this') == 'nextflow run this'
+        Escape.cli('nextflow','--foo','file.txt') == 'nextflow --foo file.txt'
+        Escape.cli('nextflow','--foo','*.txt') == "nextflow --foo '*.txt'"
+        Escape.cli('nextflow','--foo','*_{1,2}.fq') == "nextflow --foo '*_{1,2}.fq'"
+        Escape.cli('nextflow','--foo','a b c') == "nextflow --foo 'a b c'"
+        Escape.cli('nextflow','--foo','ab\'c') == "nextflow --foo ab\\'c"
+        Escape.cli('nextflow','--foo','a[b-c]') == "nextflow --foo 'a[b-c]'"
+        Escape.cli('nextflow','--foo','a[!b-c]') == "nextflow --foo 'a[!b-c]'"
+    }
+
 }

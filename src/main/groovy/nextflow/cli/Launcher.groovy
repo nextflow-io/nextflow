@@ -15,6 +15,8 @@
  */
 
 package nextflow.cli
+
+import nextflow.util.Escape
 import static nextflow.Const.APP_BUILDNUM
 import static nextflow.Const.APP_NAME
 import static nextflow.Const.APP_VER
@@ -120,7 +122,7 @@ class Launcher {
      */
     @PackageScope
     Launcher parseMainArgs(String... args) {
-        this.cliString = System.getenv('NXF_CLI')
+        this.cliString = makeCli(System.getenv('NXF_CLI'), args)
         this.colsString = System.getenv('COLUMNS')
 
         def cols = getColumns()
@@ -137,6 +139,21 @@ class Launcher {
         checkLogFileName()
 
         return this
+    }
+
+    protected String makeCli(String cli, String... args) {
+        if( !cli )
+            cli = 'nextflow'
+        if( !args )
+            return cli
+        def cmd = ' ' + args[0]
+        int p = cli.indexOf(cmd)
+        if( p!=-1 )
+            cli = cli.substring(0,p)
+        if( cli.endsWith('nextflow') )
+            cli = 'nextflow'
+        cli += ' ' + Escape.cli(args)
+        return cli
     }
 
     private void checkLogFileName() {

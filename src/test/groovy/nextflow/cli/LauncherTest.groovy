@@ -324,6 +324,16 @@ class LauncherTest extends Specification {
 
     }
 
+    def 'should make cli' () {
+        given:
+        def launcher = new Launcher()
+        expect:
+        launcher.makeCli('nextflow','run','foo.nf') == 'nextflow run foo.nf'
+        launcher.makeCli('nextflow','run','foo.nf', '*.txt') == "nextflow run foo.nf '*.txt'"
+        launcher.makeCli('/this/that/nextflow run foo.nf','run','foo.nf', 'a{1,2}.z') == "nextflow run foo.nf 'a{1,2}.z'"
+        launcher.makeCli('/this/that/launch run bar.nf','run','bar.nf') == '/this/that/launch run bar.nf'
+    }
+
     def 'should print Parameter and DynamicParameter annotation'() {
 
         given:
