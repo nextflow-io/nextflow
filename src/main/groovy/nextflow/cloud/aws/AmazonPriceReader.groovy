@@ -39,6 +39,8 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class AmazonPriceReader {
 
+    final static private String WAIT_MESSAGE = "Fetching EC2 prices (it can take a few seconds depending your internet connection) .."
+
     final static public String ENDPOINT = 'https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/index.csv'
 
     final static private int CACHE_MAX_DAYS = 7
@@ -60,18 +62,24 @@ class AmazonPriceReader {
 
     static {
         REGIONS.'ap-south-1' = 'Asia Pacific (Mumbai)'
+        REGIONS.'ap-northeast-2' = 'Asia Pacific (Seoul)'
+        REGIONS.'ap-northeast-3' = 'Asia Pacific (Osaka-Local)'
         REGIONS.'eu-west-1' = "EU (Ireland)"
         REGIONS.'eu-west-2' = "EU (London)"
+        REGIONS.'eu-west-3' = 'EU (Paris)'
         REGIONS.'eu-central-1' = "EU (Frankfurt)"
         REGIONS.'ap-southeast-1' = "Asia Pacific (Singapore)"
         REGIONS.'ap-southeast-2' = "Asia Pacific (Sydney)"
         REGIONS.'ap-northeast-1' = "Asia Pacific (Tokyo)"
         REGIONS.'ap-northeast-2' = "Asia Pacific (Seoul)"
         REGIONS.'us-east-1' = "US East (N. Virginia)"
+        REGIONS.'us-east-2' = "US East (Ohio)"
         REGIONS.'us-west-1' = "US West (N. California)"
         REGIONS.'us-west-2' = "US West (Oregon)"
         REGIONS.'sa-east-1' = "South America (Sao Paulo)"
         REGIONS.'ca-central-1' = "Canada (Central)"
+        REGIONS.'cn-north-1' = 'China (Beijing)'
+        REGIONS.'cn-northwest-1' = 'China (Ningxia)'
 
     }
 
@@ -119,6 +127,7 @@ class AmazonPriceReader {
             return (Map<String,CloudInstanceType>)KryoHelper.deserialize(path)
         }
 
+        log.info1 WAIT_MESSAGE
         final result = parse(ENDPOINT)
         KryoHelper.serialize(result, path)
         return result
@@ -146,7 +155,7 @@ class AmazonPriceReader {
             return priceFile
         }
 
-        log.info "Fetching EC2 prices (it can take a few seconds depending your internet connection) .."
+        log.info1 WAIT_MESSAGE
         // download the file
         def _in = new URL(url).openStream()
         try {
