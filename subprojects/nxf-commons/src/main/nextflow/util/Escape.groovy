@@ -69,4 +69,15 @@ class Escape {
         path(val.toString())
     }
 
+    static String cli(String[] args) {
+        args.collect { cli(it) }.join(' ')
+    }
+
+    static String cli(String arg) {
+        if( arg.contains("'") )
+            return wildcards(arg)
+        def x = wildcards(arg)
+        x == arg ? arg : "'" + arg + "'"
+    }
+
 }
