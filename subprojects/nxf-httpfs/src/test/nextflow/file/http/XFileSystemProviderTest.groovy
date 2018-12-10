@@ -49,6 +49,26 @@ class XFileSystemProviderTest extends Specification {
         attrs.size() == -1
     }
 
+    def "should read file attributes with german lang"() {
+        given:
+        def defLocale = Locale.getDefault(Locale.Category.FORMAT)
+        // set german as current language
+        def GERMAN = new Locale.Builder().setLanguage("de").setRegion("DE").build()
+        Locale.setDefault(Locale.Category.FORMAT, GERMAN)
+        def fs = new HttpFileSystemProvider()
+        def attrMap = ['Last-Modified': ['Fri, 04 Nov 2016 21:50:34 GMT'], 'Content-Length': ['21729'] ]
+
+        when:
+        def attrs = fs.readHttpAttributes(attrMap)
+        then:
+        attrs.lastModifiedTime().toString() == '2016-11-04T21:50:34Z'
+        attrs.size() == 21729
+
+        cleanup:
+        Locale.setDefault(Locale.Category.FORMAT, defLocale)
+    }
+
+
     def "should read file attributes from HttpPath"() {
         given:
         def fsp = new HttpFileSystemProvider()
