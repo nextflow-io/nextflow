@@ -55,7 +55,6 @@ class ProcessFactoryTest extends Specification {
         factory.loadExecutorClass('k8s') == K8sExecutor
         factory.loadExecutorClass('awsbatch') == AwsBatchExecutor
         factory.loadExecutorClass('AwsBatch') == AwsBatchExecutor
-        factory.loadExecutorClass('aws-batch') == AwsBatchExecutor
         factory.loadExecutorClass('x') == XExecutor  // <-- this is loaded by the name
 
         when:

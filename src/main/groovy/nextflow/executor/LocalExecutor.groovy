@@ -50,7 +50,7 @@ class LocalExecutor extends Executor {
     }
 
     @Override
-    def TaskHandler createTaskHandler(TaskRun task) {
+    TaskHandler createTaskHandler(TaskRun task) {
         assert task
         assert task.workDir
 
@@ -107,7 +107,7 @@ class LocalTaskHandler extends TaskHandler {
     }
 
     @Override
-    def void submit() {
+    void submit() {
         // create the wrapper script
         new BashWrapperBuilder(task) .build()
 
@@ -257,7 +257,7 @@ class LocalTaskHandler extends TaskHandler {
 @CompileStatic
 class NativeTaskHandler extends TaskHandler {
 
-    def Future<Object> result
+    Future<Object> result
 
     private Session session
 

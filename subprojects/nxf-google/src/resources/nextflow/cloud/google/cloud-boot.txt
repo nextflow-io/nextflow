@@ -1,0 +1,62 @@
+#!/bin/bash
+
+su - !{userName} << 'EndOfScript'
+(
+set -e
+set -x
+
+mkdir -p $HOME/.nextflow
+cat <<EOF >> $HOME/.nextflow/config
+!{nextflowConfig}
+EOF
+
+mkdir -p $HOME/bin
+profile=$(mktemp)
+cat <<EOF > $profile
+!{bashProfile}
+EOF
+
+source $profile
+cat $profile >> $HOME/.bash_profile
+rm $profile
+
+#
+# Create credentials for Google cloud
+#
+if [[ -n "!{gceCredentialsFile}" ]]; then
+cat <<EOF >!{gceCredentialsFile}
+!{gceCredentials}
+EOF
+fi
+
+#
+# Launch docker and pull the container when DOCKER variable is defined
+#
+[[ '!{dockerPull}' ]] && for x in '!{dockerPull}'; do docker pull $x || true; done
+
+#
+# Install NEXTFLOW and launch it
+#
+version="v!{nextflow.version}"
+
+download_url=${NEXTFLOW_DOWNLOAD_URL:-http://www.nextflow.io/releases}
+curl -fsSL ${download_url}/${version}/nextflow  > $HOME/nextflow
+chmod +x $HOME/nextflow
+$HOME/nextflow -download
+
+# pull the nextflow pipeline repo
+[[ '!{nextflow.pull}' ]] && $HOME/nextflow pull '!{nextflow.pull}'
+
+# launch the nextflow daemon
+if [[ '!{role}' == worker ]]; then
+  $HOME/nextflow node -cluster.join "$NXF_CLUSTER_JOIN" -cluster.interface eth0 -bg
+fi
+
+# save the environment for debugging
+env | sort > boot.env
+
+# just a marker file
+touch READY
+
+) &> ~!{userName}/boot.log
+EndOfScript

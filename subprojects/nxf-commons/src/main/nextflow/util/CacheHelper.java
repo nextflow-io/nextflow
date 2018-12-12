@@ -203,7 +203,7 @@ public class CacheHelper {
             attrs = Files.readAttributes(path, BasicFileAttributes.class);
         }
         catch(IOException e) {
-            log.debug("Unable to get file attributes file: {} -- Cause: {}", path, e.toString());
+            log.debug("Unable to get file attributes file: {} -- Cause: {}", FilesEx.toUriString(path), e.toString());
         }
 
         if( mode==HashMode.DEEP && attrs!=null && attrs.isRegularFile() )

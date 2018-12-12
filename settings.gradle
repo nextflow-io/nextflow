@@ -20,6 +20,7 @@ include 'nxf-console'
 include 'nxf-ignite'
 include 'nxf-httpfs'
 include 'nxf-ga4gh'
+include 'nxf-google'
 
 rootProject.children.each { prj ->
     prj.projectDir = new File("$rootDir/subprojects/$prj.name")

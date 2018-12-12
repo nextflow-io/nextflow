@@ -15,6 +15,7 @@
  */
 
 package nextflow.util
+
 import nextflow.container.ContainerConfig
 import nextflow.file.FileHelper
 import spock.lang.Specification

@@ -30,7 +30,7 @@ import org.apache.ignite.lang.IgniteCallable
 /**
  * Models a task executed remotely in a Ignite cluster node
  *
- * @param < T > The type of the value returned by the {@code #call} method
+ * @param <T> The type of the value returned by the {@code #call} method
  */
 @Slf4j
 @CompileStatic

@@ -59,7 +59,7 @@ abstract class CascadingConfig<K,V> {
             clazz = clazz.getSuperclass()
         }
 
-        return result ?: Collections.emptySet()
+        return result ?: Collections.<String>emptySet()
     }
 
     @Memoized

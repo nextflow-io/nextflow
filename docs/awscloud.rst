@@ -23,7 +23,7 @@ The above attributes define the virtual machine ID and type to be used and the V
 in you cluster. Replace these values with the ones of your choice.
 
 Nextflow only requires a Linux image that provides support for `Cloud-init <http://cloudinit.readthedocs.io/>`_
-bootstrapping mechanism and includes a Java runtime (version 8) and a Docker engine (version 1.11 or higher).
+bootstrapping mechanism and includes a Java runtime (version 8) and a Docker engine (version 1.11 or later).
 
 For your convenience the following pre-configured Amazon Linux AMI is available in the *EU Ireland* region:
 ``ami-4b7daa32``.
@@ -97,7 +97,7 @@ The mount path can be any of your choice.
 .. note:: When the selected instance provides more than one ephemeral storage volume, Nextflow automatically groups all
   of them together in a single logical volume and mounts it to the specified path. Therefore the resulting instance
   storage size is equals to the sum of the sizes of all ephemeral volumes provided by the actual instance
-  (this feature requires Nextflow version 0.27.0 or higher).
+  (this feature requires Nextflow version 0.27.0 or later).
 
 If you want to mount a specific instance storage volume, specify the corresponding device name by using
 the ``instanceStorageDevice`` setting in the above configuration. See the Amazon documentation for details on
@@ -433,8 +433,8 @@ Pipeline execution
 The pipeline can be launched either in a local computer or a EC2 instance. The latter is suggested for heavy or long
 running workloads.
 
-Pipeline input data should to be stored in the Input data `S3 storage <https://aws.amazon.com/s3/>`_. In the same
-manner the pipeline execution must specifies a S3 bucket where jobs intermediate results are stored with the
+Pipeline input data can be stored to be stored either locally or in a `S3 <https://aws.amazon.com/s3/>`_ bucket.
+The pipeline execution must specifies a Google Storage bucket where jobs intermediate results are stored with the
 ``-bucket-dir`` command line options. For example::
 
   nextflow run my-pipeline -bucket-dir s3://my-bucket/some/path
