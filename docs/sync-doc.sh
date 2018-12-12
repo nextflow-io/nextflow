@@ -1,8 +1,13 @@
 #!/bin/bash
 TARGET=../../nextflow-website/assets
-LATEST=$TARGET/docs/latest/
+if egrep "^release = '.*edge'$" -c conf.py >/dev/null; then
+MODE=edge
+else 
+MODE=latest
+fi
+LATEST=$TARGET/docs/$MODE/
 
-mkdir -p $TARGET/docs/latest/
+mkdir -p $TLATEST
 
 rsync -r _build/html/* $LATEST
 
