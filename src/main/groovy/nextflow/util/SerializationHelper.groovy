@@ -15,6 +15,7 @@
  */
 
 package nextflow.util
+
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
@@ -34,13 +35,11 @@ import nextflow.file.FileHelper
 import nextflow.file.http.XPath
 import org.codehaus.groovy.runtime.GStringImpl
 import org.objenesis.instantiator.ObjectInstantiator
-
 /**
  * Helper class to get a {@code Kryo} object ready to be used
  */
+@Slf4j
 class KryoHelper {
-
-    static private Class<Path> PATH_CLASS = Paths.get('.').class
 
     static final Map<Class,Object> serializers
 
@@ -48,21 +47,18 @@ class KryoHelper {
 
     static {
         serializers = [:]
-        serializers.put( PATH_CLASS, PathSerializer )
-        serializers.put( URL, URLSerializer )
-        serializers.put( UUID, UUIDSerializer )
-        serializers.put( File, FileSerializer )
-        serializers.put( S3Path, PathSerializer )
-        serializers.put( XPath, XPathSerializer )
-        serializers.put( Pattern, PatternSerializer )
-        serializers.put( ArrayTuple, ArrayTupleSerializer )
+
+        for( SerializerRegistrant s : ServiceLoader.load(SerializerRegistrant).iterator() ) {
+            log.trace "Registering serializer: ${s.class.name}"
+            s.register(serializers)
+        }
 
         threadLocal = new ThreadLocal<Kryo>() {
             @Override
             protected Kryo initialValue() {
                 newInstance()
             }
-        };
+        }
     }
 
     /**
@@ -94,7 +90,9 @@ class KryoHelper {
         UnmodifiableCollectionsSerializer.registerSerializers(kryo)
 
         // users serializers
-        serializers.each { k, v ->
+        for( Map.Entry entry : serializers ) {
+            final k = (Class)entry.key
+            final v = entry.value
             if( v instanceof Class )
                 kryo.register(k,(Serializer)v.newInstance())
 
@@ -103,6 +101,7 @@ class KryoHelper {
 
             else
                 kryo.register(k)
+
         }
 
         // Register default serializers
@@ -201,6 +200,44 @@ class KryoHelper {
 }
 
 /**
+ * Register a serializer class in the Kryo serializers list
+ */
+@CompileStatic
+interface SerializerRegistrant {
+
+    /**
+     * Serializer should implement this method adding the
+     * serialized class and the serializer class to the
+     * map passed as argument
+     *
+     * @param
+     *      serializers The serializer map, where the key element
+     *      represent the class to be serialized and the value
+     *      the serialization object
+     */
+    void register(Map<Class,Object> serializers)
+
+}
+
+@CompileStatic
+class DefaultSerializers implements SerializerRegistrant {
+
+    static private Class<Path> PATH_CLASS = (Class<Path>)Paths.get('.').class
+
+    @Override
+    void register(Map<Class, Object> serializers) {
+        serializers.put( PATH_CLASS, PathSerializer )
+        serializers.put( URL, URLSerializer )
+        serializers.put( UUID, UUIDSerializer )
+        serializers.put( File, FileSerializer )
+        serializers.put( S3Path, PathSerializer )
+        serializers.put( XPath, XPathSerializer )
+        serializers.put( Pattern, PatternSerializer )
+        serializers.put( ArrayTuple, ArrayTupleSerializer )
+    }
+}
+
+/**
  * Kryo throws an IllegalAccessError when deserializing a {@link Matcher} object,
  * thus implements a custom instantiator object
  */
@@ -221,7 +258,7 @@ class MatcherInstantiator implements ObjectInstantiator {
 class InstantiationStrategy extends Kryo.DefaultInstantiatorStrategy {
 
     @Override
-    public ObjectInstantiator newInstantiatorOf (final Class type) {
+    ObjectInstantiator newInstantiatorOf (final Class type) {
         if( type == Matcher ) {
             MatcherInstantiator.instance
         }
@@ -252,7 +289,7 @@ class PathSerializer extends Serializer<Path> {
     }
 
     @Override
-    Path  read(Kryo kryo, Input input, Class<Path> type) {
+    Path read(Kryo kryo, Input input, Class<Path> type) {
         final scheme = input.readString()
         final path = input.readString()
         log.trace "Path de-serialization > scheme: $scheme; path: $path"
@@ -265,26 +302,25 @@ class PathSerializer extends Serializer<Path> {
         def uri = URI.create("$scheme://$path")
         def fs = FileHelper.getOrCreateFileSystemFor(uri)
         return fs.provider().getPath(uri)
-
     }
 }
 
 @Slf4j
 @CompileStatic
-class XPathSerializer extends Serializer<Path> {
+class XPathSerializer extends Serializer<XPath> {
 
     @Override
-    void write(Kryo kryo, Output output, Path target) {
+    void write(Kryo kryo, Output output, XPath target) {
         final uri = target.toUri().toString()
         log.trace "XPath serialization > uri=$uri"
         output.writeString(uri)
     }
 
     @Override
-    Path read(Kryo kryo, Input input, Class<Path> type) {
+    XPath read(Kryo kryo, Input input, Class<XPath> type) {
         final uri = input.readString()
         log.trace "Path de-serialization > uri=$uri"
-        FileHelper.asPath(new URI(uri))
+        (XPath)FileHelper.asPath(new URI(uri))
     }
 }
 

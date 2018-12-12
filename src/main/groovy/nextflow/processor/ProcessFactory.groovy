@@ -86,7 +86,7 @@ class ProcessFactory {
 
         // discover non-core executors
         for( Class<Executor> clazz : ServiceDiscover.load(Executor) ) {
-            log.debug "Discovered executor class: ${clazz.name}"
+            log.trace "Discovered executor class: ${clazz.name}"
             executorsMap.put(findNameByClass(clazz), clazz)
         }
     }
@@ -113,7 +113,7 @@ class ProcessFactory {
      * @param clazz
      * @return
      */
-    def static String findNameByClass( Class<Executor> clazz ) {
+    static String findNameByClass( Class<Executor> clazz ) {
         def annotation = clazz.getAnnotation(ServiceName)
         if( annotation )
             return annotation.value()
@@ -131,7 +131,7 @@ class ProcessFactory {
         if( !executorName )
             return LocalExecutor
 
-        def clazz =  executorsMap[executorName.toLowerCase().replace('-','')]
+        def clazz =  executorsMap[executorName.toLowerCase()]
         if( !clazz )
             throw new IllegalArgumentException("Unknown executor name: $executorName")
 

@@ -155,6 +155,7 @@ configurations {
     ignite.extendsFrom runtime
     console.extendsFrom runtime
     ga4gh.extendsFrom runtime
+    google.extendsFrom runtime
 }
 
 
@@ -208,6 +209,10 @@ dependencies {
     }
 
     ga4gh(project(':nxf-ga4gh')) {
+        exclude module: 'nextflow'
+    }
+
+    google(project(':nxf-google')) {
         exclude module: 'nextflow'
     }
 
@@ -328,6 +333,7 @@ ext.deployable << project(':nxf-ignite')
 ext.deployable << project(':nxf-console')
 ext.deployable << project(':nxf-httpfs')
 ext.deployable << project(':nxf-ga4gh')
+ext.deployable << project(':nxf-google')
 
 protected error(String message) {
     logger.error message
@@ -357,6 +363,8 @@ protected resolveDeps( String configName, String... x ) {
         conflicts.each { name, count -> err += "\n- $name: " + deps.findAll{ it.startsWith(name) }.collect{ it.tokenize(':')[2] } }
         throw new IllegalStateException(err)
     }
+
+    //println ">> Config: $configName \n${deps.sort().join('\n')}\n\n"
 
     return deps.collect{ "$it(*:*)" }.join(' ')
 }
@@ -420,6 +428,12 @@ task packOne(type: Jar) {
      */
     deps = resolveDeps('ga4gh')
     manifest.attributes('Dependencies': deps, 'ga4gh')
+
+    /*
+     * `google` dependencies
+     */
+    deps = resolveDeps('google')
+    manifest.attributes('Dependencies': deps, 'google')
 
     doLast {
         ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: releaseDir, overwrite: true)
@@ -625,10 +639,10 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
  * Save the runtime classpath
  */
 task exportClasspath {
-    dependsOn configurations.ignite, configurations.console, configurations.ga4gh
+    dependsOn configurations.ignite, configurations.console, configurations.ga4gh, configurations.google
 
     def home = System.getProperty('user.home')
-    def all = configurations.ignite + configurations.console + configurations.ga4gh
+    def all = configurations.ignite + configurations.console + configurations.ga4gh + configurations.google
     def libs = all.collect { File file -> /* println file.canonicalPath.replace(home, '$HOME'); */ file.canonicalPath;  }
     new File('.launch.classpath').text = libs.join(':')
 }

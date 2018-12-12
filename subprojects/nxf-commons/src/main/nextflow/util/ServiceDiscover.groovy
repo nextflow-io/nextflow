@@ -97,7 +97,7 @@ class ServiceDiscover<S> {
             stream = u.openStream();
             reader = new BufferedReader(new InputStreamReader(stream, "utf-8"));
             int lc = 1;
-            while ((lc = parseLine(service, u, reader, lc, names)) >= 0);
+            while ((lc = parseLine(service, u, reader, lc, names)) >= 0) { /*empty*/ }
         }
         catch (IOException x) {
             fail(service, "Error reading configuration file", x);

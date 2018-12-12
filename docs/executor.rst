@@ -238,6 +238,25 @@ running workloads. Moreover a S3 bucket must be used as pipeline work directory.
 
 See the :ref:`AWS Batch<awscloud-batch>` page for further configuration details.
 
+.. _google-pipelines-executor:
+
+Google Pipelines
+================
+
+`Genomics Pipelines <https://cloud.google.com/genomics/>`_ is a managed computing service that allows the execution of
+containerized workloads in the Google Cloud Platform infrastructure.
+
+Nextflow provides built-in support for Genomics Pipelines API which allows the seamless deployment of a Nextflow pipeline
+in the cloud, offloading the process executions as pipelines (it requires Nextflow 19.1.0 or later).
+
+The pipeline processes must specify the Docker image to use by defining the ``container`` directive, either in the pipeline
+script or the ``nextflow.config`` file. Moreover the pipeline work directory must be located in a Google Storage
+bucket.
+
+To enable this executor set the property ``process.executor = 'google-pipelines'`` in the ``nextflow.config`` file.
+
+See the :ref:`Google Pipelines <google-pipelines>` page for further configuration details.
+
 .. _ga4ghtes-executor:
 
 GA4GH TES

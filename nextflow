@@ -272,6 +272,8 @@ NXF_MPIRUN=${NXF_MPIRUN:=''}
 NXF_HOST=${HOSTNAME:-localhost}
 [[ $NXF_LAUNCHER ]] || NXF_LAUNCHER=${NXF_HOME}/tmp/launcher/nextflow-${NXF_PACK}_${NXF_VER}/${NXF_HOST}
 
+[ ! $NXF_MODE ] && [ $GOOGLE_APPLICATION_CREDENTIALS ] && NXF_MODE='google'
+
 if [[ $NXF_MODE == ignite ]]; then
     # Fix JDK bug when there's a limit on the OS virtual memory
     # https://bugs.openjdk.java.net/browse/JDK-8044054

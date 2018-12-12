@@ -15,6 +15,7 @@
  */
 
 package nextflow.file.http
+
 import java.nio.file.FileSystem
 import java.nio.file.LinkOption
 import java.nio.file.Path
@@ -25,15 +26,12 @@ import java.nio.file.WatchKey
 import java.nio.file.WatchService
 
 import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
-
 /**
  * Implements a {@link Path} for http/ftp protocols
  *
  * @author Emilio Palumbo <emilio.palumbo@crg.eu>
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@PackageScope
 @CompileStatic
 class XPath implements Path {
 
