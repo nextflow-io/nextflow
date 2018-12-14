@@ -41,7 +41,7 @@ credentials file just downloaded::
 Compute Engine
 ==============
 
-When using this feature Nextflow allows you set up an ephemeral computing cluster in in the Google Cloud platform
+When using this feature Nextflow allows you set up an ephemeral computing cluster in the Google Cloud platform
 and use it to deploy your pipeline execution.
 
 Configuration
