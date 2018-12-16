@@ -66,33 +66,28 @@ class GooglePipelinesFileCopyStrategy extends SimpleFileCopyStrategy {
             }
 
             if(storePathIsDir) {
-                stagingCommands << "gsutil -m -q cp -P -r $escapedStoreUri/ $workDir".toString()
+                stagingCommands << "gsutil -m -q cp -R $escapedStoreUri/ $workDir".toString()
                 //check if we need to move the directory (gsutil doesn't support renaming directories on copy)
                 if(parent || !absStorePath.toString().endsWith(stageName)) {
                     def newLocation = "$workDir/$escapedStageName"
                     stagingCommands << "mv $workDir/${Escape.path(absStorePath.name)} $newLocation".toString()
                 }
             } else {
-                stagingCommands << "gsutil -m -q cp -P $escapedStoreUri $workDir/$escapedStageName".toString()
+                stagingCommands << "gsutil -m -q cp $escapedStoreUri $workDir/$escapedStageName".toString()
             }
         }
 
         handler.stagingCommands.addAll(createDirectories)
         handler.stagingCommands.addAll(stagingCommands)
 
-        log.debug """\
-            [GPAPI] Constructed the following commands
-            directory creation: $createDirectories
-            copy staging commands: $stagingCommands""".stripIndent()
-
-        //copy the remoteBinDir if it ia defined
+        // copy the remoteBinDir if it ia defined
         if(handler.pipelineConfiguration.remoteBinDir) {
             def createRemoteBinDir = "mkdir -p $workDir/nextflow-bin".toString()
             def remoteBinCopy = "gsutil -m -q cp -P -r ${handler.pipelineConfiguration.remoteBinDir.toUriString()}/* $workDir/nextflow-bin".toString()
             handler.stagingCommands << createRemoteBinDir << remoteBinCopy
         }
 
-        //Insert this comment into the task run script to note that the staging is done differently
+        // Insert this comment into the task run script to note that the staging is done differently
         "# Google pipeline staging is done in a pipeline action step that is run prior to the main pipeline action"
     }
 
@@ -101,7 +96,7 @@ class GooglePipelinesFileCopyStrategy extends SimpleFileCopyStrategy {
 
         def unstagingCommands = outputFiles.collect {
             def escaped = Escape.path(it)
-            "gsutil -m -q cp -r -c $workDir/$escaped ${workDir.toUriString()} || true".toString()
+            "gsutil -m -q cp -R $escaped ${workDir.toUriString()} || true".toString()
         }
 
         log.debug "[GPAPI] Constructed the following file copy staging commands: $unstagingCommands"

@@ -23,6 +23,8 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.spi.FileSystemProvider
 
+import com.google.api.services.genomics.v2alpha1.model.Event
+import com.google.api.services.genomics.v2alpha1.model.Metadata
 import com.google.api.services.genomics.v2alpha1.model.Operation
 import nextflow.Session
 import nextflow.exception.ProcessUnrecoverableException
@@ -103,8 +105,10 @@ class GooglePipelinesTaskHandlerTest extends Specification {
         1 * handler.createTaskWrapper() >> null
         1 * handler.createPipelineRequest() >> req
         1 * handler.submitPipeline(req) >> operation
+        1 * handler.getPipelineIdFromOp(operation) >> '123'
 
         handler.operation == operation
+        handler.pipelineId == '123'
         handler.status == TaskStatus.SUBMITTED
 
     }
@@ -186,12 +190,14 @@ class GooglePipelinesTaskHandlerTest extends Specification {
         // check main script
         req.mainScript == 'cd /work/dir; bash .command.run 2>&1 | tee -a .command.log'
         // check unstaging script
-        req.unstagingScript.tokenize(';')[0] == '[[ $GOOGLE_PIPELINE_FAILED == 1 ]] && gsutil -m -q cp -c -P -r /google/ gs://work/dir || true'
-        req.unstagingScript.tokenize(';')[1] == ' gsutil -m -q cp -c -P /work/dir/.command.err gs://work/dir || true'
-        req.unstagingScript.tokenize(';')[2] == ' gsutil -m -q cp -c -P /work/dir/.command.out gs://work/dir || true'
-        req.unstagingScript.tokenize(';')[3] == ' gsutil -m -q cp -c -P /work/dir/.command.log gs://work/dir || true'
-        req.unstagingScript.tokenize(';')[4] == ' gsutil -m -q cp -c -P /work/dir/.exitcode gs://work/dir || true'
-        req.unstagingScript.tokenize(';').size() == 5 
+        req.unstagingScript.tokenize(';')[0] == 'cd /work/dir'
+        req.unstagingScript.tokenize(';')[1] == ' [[ $GOOGLE_PIPELINE_FAILED == 1 || $NXF_DEBUG ]] && gsutil -m -q cp -R /google/ gs://work/dir || true'
+        req.unstagingScript.tokenize(';')[2] == ' [[ -f .command.trace ]] && gsutil -m -q cp -R .command.trace gs://work/dir || true'
+        req.unstagingScript.tokenize(';')[3] == ' gsutil -m -q cp -R .command.err gs://work/dir || true'
+        req.unstagingScript.tokenize(';')[4] == ' gsutil -m -q cp -R .command.out gs://work/dir || true'
+        req.unstagingScript.tokenize(';')[5] == ' gsutil -m -q cp -R .command.log gs://work/dir || true'
+        req.unstagingScript.tokenize(';')[6] == ' gsutil -m -q cp -R .exitcode gs://work/dir || true'
+        req.unstagingScript.tokenize(';').size() == 7
     }
 
     def 'should create pipeline request with stage and unstage commands' () {
@@ -230,14 +236,17 @@ class GooglePipelinesTaskHandlerTest extends Specification {
         // check main script
         req.mainScript == 'cd /work/dir; bash .command.run 2>&1 | tee -a .command.log'
         // check unstaging script
-        req.unstagingScript.tokenize(';')[0] == '[[ $GOOGLE_PIPELINE_FAILED == 1 ]] && gsutil -m -q cp -c -P -r /google/ gs://work/dir || true'
-        req.unstagingScript.tokenize(';')[1] == ' foo'
-        req.unstagingScript.tokenize(';')[2] == ' bar'
-        req.unstagingScript.tokenize(';')[3] == ' gsutil -m -q cp -c -P /work/dir/.command.err gs://work/dir || true'
-        req.unstagingScript.tokenize(';')[4] == ' gsutil -m -q cp -c -P /work/dir/.command.out gs://work/dir || true'
-        req.unstagingScript.tokenize(';')[5] == ' gsutil -m -q cp -c -P /work/dir/.command.log gs://work/dir || true'
-        req.unstagingScript.tokenize(';')[6] == ' gsutil -m -q cp -c -P /work/dir/.exitcode gs://work/dir || true'
-        req.unstagingScript.tokenize(';').size() == 7
+        req.unstagingScript.tokenize(';')[0] == 'cd /work/dir'
+        req.unstagingScript.tokenize(';')[1] == ' [[ $GOOGLE_PIPELINE_FAILED == 1 || $NXF_DEBUG ]] && gsutil -m -q cp -R /google/ gs://work/dir || true'
+        req.unstagingScript.tokenize(';')[2] == ' foo'
+        req.unstagingScript.tokenize(';')[3] == ' bar'
+        req.unstagingScript.tokenize(';')[4] == ' [[ -f .command.trace ]] && gsutil -m -q cp -R .command.trace gs://work/dir || true'
+        req.unstagingScript.tokenize(';')[5] == ' gsutil -m -q cp -R .command.err gs://work/dir || true'
+        req.unstagingScript.tokenize(';')[6] == ' gsutil -m -q cp -R .command.out gs://work/dir || true'
+        req.unstagingScript.tokenize(';')[7] == ' gsutil -m -q cp -R .command.log gs://work/dir || true'
+        req.unstagingScript.tokenize(';')[8] == ' gsutil -m -q cp -R .exitcode gs://work/dir || true'
+
+        req.unstagingScript.tokenize(';').size() == 9
     }
     
     def 'should check if it is running'(){
@@ -325,5 +334,39 @@ class GooglePipelinesTaskHandlerTest extends Specification {
         isComplete
     }
 
+    def 'should get jobId from operation' () {
+        given:
+        def operation = new Operation().setName('projects/rare-lattice-222412/operations/16737869387120678662')
+        def handler = [:] as GooglePipelinesTaskHandler
+        expect:
+        handler.getPipelineIdFromOp(operation) == '16737869387120678662'
+    }
+
+    def 'should get events from operation' () {
+        given:
+        def handler = [:] as GooglePipelinesTaskHandler
+
+        when:
+        def op = new Operation()
+        def events = handler.getEventsFromOp(op)
+        then:
+        events == []
+
+        when:
+        def e1 = new Event().setDescription('foo').setTimestamp('2018-12-15T12:50:30.743109Z')
+        op.setMetadata(new Metadata().setEvents([e1]))
+        events = handler.getEventsFromOp(op)
+        then:
+        events == [e1]
+
+        when:
+        def e2 = new Event().setDescription('bar').setTimestamp('2018-12-15T12:52:30.743109Z')
+        def e3 = new Event().setDescription('baz').setTimestamp('2018-12-15T12:55:30.743109Z')
+        op.setMetadata(new Metadata().setEvents([e3, e2, e1]))
+        events = handler.getEventsFromOp(op)
+        then:
+        events == [e2, e3]
+
+    }
 
 }
