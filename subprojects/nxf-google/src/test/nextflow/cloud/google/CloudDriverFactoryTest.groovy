@@ -16,6 +16,7 @@
 
 package nextflow.cloud.google
 
+import spock.lang.Requires
 import spock.lang.Specification
 
 import nextflow.cloud.CloudDriverFactory
@@ -32,6 +33,7 @@ class CloudDriverFactoryTest extends Specification {
         CloudDriverFactory.getDriverNames().contains('google')
     }
 
+    @Requires({ System.getenv('GOOGLE_APPLICATION_CREDENTIALS') })
     def 'should return the driver instance' () {
         given:
         def cfg = [project:'rare-lattice-222412', zone:'europe-west1-b']
