@@ -21,6 +21,7 @@ import java.nio.file.Path
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.file.FileHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
@@ -84,12 +85,28 @@ abstract class Executor {
     }
 
     /**
-     * The path where workflow scratch data is written.
+     * The path where scratch data is written for the current executor.
      *
-     * @return The workflow base work directory
+     * @return The executor base work directory
      */
     Path getWorkDir() {
        session.getWorkDir()
+    }
+
+    /**
+     * Temporary work directory relative to the executor work directory
+     *
+     * @return The temporary directory path
+     */
+    Path getTempDir( String name = null, boolean create = true ) {
+        def path = FileHelper.createTempFolder(getWorkDir())
+        if( name )
+            path = path.resolve(name)
+
+        if( !path.exists() && create && !path.mkdirs() )
+            throw new IOException("Unable to create folder: $path -- Check file system permission" )
+
+        return path
     }
 
     /**

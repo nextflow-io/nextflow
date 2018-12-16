@@ -21,7 +21,6 @@ import java.nio.file.Path
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.Nextflow
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
 import nextflow.executor.SupportedScriptTypes
@@ -33,7 +32,6 @@ import nextflow.processor.TaskRun
 import nextflow.script.ScriptType
 import nextflow.util.Duration
 import nextflow.util.ServiceName
-
 /**
  * Google Pipelines Executor.
  *
@@ -112,7 +110,6 @@ class GooglePipelinesExecutor extends Executor {
             throw new AbortOperationException("You can't specify both 'google.zone' and 'google.region' configuration parameters -- Please remove one of them from your configuration")
         }
 
-
         def path = session.config.navigate('env.PATH')
         if( path ) {
             log.warn "Environment PATH defined in config file is ignored by Google Pipeline executor"
@@ -124,8 +121,8 @@ class GooglePipelinesExecutor extends Executor {
         def disableBinDir = session.getExecConfigProp(name, 'disableRemoteBinDir', false)
         Path remoteBinDir = null
         if( session.binDir && !disableBinDir ) {
-            def cloudPath = Nextflow.tempDir() + "/" //need the ending slash to mark it as a directory since it doesn't exist yet
-            log.info "Uploading local `bin` scripts folder to ${cloudPath.toUriString()}bin"
+            def cloudPath = getTempDir()
+            log.info "Uploading local `bin` scripts folder to ${cloudPath.toUriString()}/bin"
             remoteBinDir = FilesEx.copyTo(session.binDir, cloudPath)
         }
 
