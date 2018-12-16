@@ -66,7 +66,7 @@ class Channel  {
      * @return The channel instance
      */
     static <T> DataflowChannel<T> create() {
-        new DataflowQueue()
+        new DataflowQueue<T>()
     }
 
     /**
@@ -227,7 +227,7 @@ class Channel  {
         session?.abort(error)
     }
 
-    static private DataflowChannel<Path> watchImpl( String syntax, String folder, String pattern, boolean skipHidden, String events, FileSystem fs ) {
+    static private DataflowChannel watchImpl( String syntax, String folder, String pattern, boolean skipHidden, String events, FileSystem fs ) {
         final result = create()
 
         new DirWatcher(syntax,folder,pattern,skipHidden,events, fs)
@@ -253,7 +253,7 @@ class Channel  {
      * @return  A dataflow channel that will emit the matching files
      *
      */
-    static DataflowChannel<Path> watchPath( Pattern filePattern, String events = 'create' ) {
+    static DataflowChannel watchPath( Pattern filePattern, String events = 'create' ) {
         assert filePattern
         // split the folder and the pattern
         final splitter = FilePatternSplitter.regex().parse(filePattern.toString())
@@ -280,7 +280,7 @@ class Channel  {
      * @return  A dataflow channel that will emit the matching files
      *
      */
-    static DataflowChannel<Path> watchPath( String filePattern, String events = 'create' ) {
+    static DataflowChannel watchPath( String filePattern, String events = 'create' ) {
 
         if( filePattern.endsWith('/') )
             filePattern += '*'
@@ -297,7 +297,7 @@ class Channel  {
         return result
     }
 
-    static DataflowChannel<Path> watchPath( Path path, String events = 'create' ) {
+    static DataflowChannel watchPath( Path path, String events = 'create' ) {
         final fs = path.getFileSystem()
         final splitter = FilePatternSplitter.glob().parse(path.toString())
         final folder = splitter.parent
