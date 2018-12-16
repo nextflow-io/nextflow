@@ -1190,18 +1190,19 @@ class TaskProcessor {
         }
 
         List<Path> files = []
-        task.getOutputsByType(FileOutParam).each { param, value ->
+        def outputs = task.getOutputsByType(FileOutParam)
+        for( Map.Entry entry : outputs ) {
+            final value = entry.value
             if( value instanceof Path ) {
-                files << ((Path)value)
+                files.add((Path)value)
             }
             else if( value instanceof Collection<Path> ) {
-                value.each { Path it -> files << it }
+                files.addAll(value)
             }
             else if( value != null ) {
                 throw new IllegalArgumentException("Unknown output file object [${value.class.name}]: ${value}")
             }
         }
-
 
         publish.apply(files, task)
     }
@@ -1301,7 +1302,7 @@ class TaskProcessor {
     final protected void collectOutputs( TaskRun task, Path workDir, def stdout, Map context ) {
         log.trace "<$name> collecting output: ${task.outputs}"
 
-        task.outputs.keySet().each { OutParam param ->
+        for( OutParam param : task.outputs.keySet() ) {
 
             switch( param ) {
                 case StdOutParam:
@@ -1354,7 +1355,7 @@ class TaskProcessor {
         def entries = param.getFilePatterns(context, task.workDir)
 
         // for each of them collect the produced files
-        entries.each { String filePattern ->
+        for( String filePattern : entries ) {
             List<Path> result = null
 
             def splitter = param.glob ? FilePatternSplitter.glob().parse(filePattern) : null
