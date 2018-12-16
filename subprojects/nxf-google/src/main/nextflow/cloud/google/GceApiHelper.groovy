@@ -25,6 +25,7 @@ import com.google.api.services.compute.model.*
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovyjarjarcommonscli.MissingArgumentException
+import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 
@@ -73,7 +74,7 @@ class GceApiHelper {
         }
 
         new Compute.Builder(httpTransport, jsonFactory, credential)
-                .setApplicationName("NextCode-Experiments/0.1")
+                .setApplicationName("nextflow/${Const.APP_VER}")
                 .build()
     }
 
