@@ -307,8 +307,11 @@ class Nextflow {
     }
 
     /**
+     * This method is exposed as a public API to script, it should be removed
+     *
      * @return Create a temporary directory
      */
+    @Deprecated
     static Path tempDir( String name = null, boolean create = true ) {
         final session = (ISession)Global.session
         if( !session )
@@ -325,8 +328,11 @@ class Nextflow {
     }
 
     /**
+     * This method is exposed as a public API to script, it should be removed
+     *
      * @return Create a temporary file
      */
+    @Deprecated
     static Path tempFile( String name = null, boolean create = false ) {
 
         if( !name )

@@ -659,11 +659,14 @@ class ChannelTest extends Specification {
     }
 
     def 'should return an empty channel when watching a missing path' () {
-
+        given:
+        def folder = Files.createTempDirectory('test')
         when:
-        def result = Channel.watchPath("foo/*")
+        def result = Channel.watchPath("$folder/foo/*")
         then:
         result.val == Channel.STOP
+        cleanup:
+        folder?.deleteDir()
     }
 
 }
