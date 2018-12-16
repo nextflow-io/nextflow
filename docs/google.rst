@@ -11,11 +11,20 @@ The execution can be done either deploying a Nextflow managed cluster using `Goo
 instances or via the `Genomics Pipelines <https://cloud.google.com/genomics/>`_ managed service.
 
 .. warning:: This is an experimental feature and it may change in a future release. It requires Nextflow
-  version `19.1.0` or later.
+  version `18.12.0-edge` or later.
 
 
 Requirements
 ============
+
+Nextflow
+--------
+Install Nextflow version `18.12.0-edge` download it from the GitHub release page [link], then
+give execute permission to the downloaded file and move it in a directory in your ``PATH`` (optional).
+
+
+Credentials
+-----------
 
 To allow the deployment in the Google Cloud you need to configure the security credentials using
 a *Security account key* JSON file.
@@ -23,7 +32,7 @@ a *Security account key* JSON file.
 Nextflow looks for this file using the ``GOOGLE_APPLICATION_CREDENTIALS`` variable that
 has to be defined in the launching environment.
 
-If you don't have it, download the credentials file from the Google Cloud Console following this produce:
+If you don't have it, download the credentials file from the Google Cloud Console following this steps:
 
 * Open the `Google Cloud Console <https://console.cloud.google.com>`_
 * Go to APIs & Services → Credentials
@@ -67,6 +76,9 @@ Replace these values with the ones of your choice.
 
 Nextflow requires a Linux image that provides support for `Cloud-init <http://cloudinit.readthedocs.io/>`_
 bootstrapping mechanism and includes the Java runtime (version 8 or later) and the Docker engine (version 1.11 or later).
+
+The very first time you will need to create a custom machine image containing these two software packages and use it
+to deploy your pipeline execution.
 
 Refer to the Google cloud documentation to learn `how to create a custom image <https://cloud.google.com/compute/docs/images/create-delete-deprecate-private-images>`_.
 
@@ -129,10 +141,12 @@ binaries dependencies in a Docker container as described in the :ref:`Pipeline s
 
 Then, you can run Nextflow as usual. For example::
 
-    nextflow run rnaseq-nf -profile gcp -w gs://my-bucket/work
+    ./nextflow run rnaseq-nf -profile gcp -work-dir gs://my-bucket/work
 
 
-.. tip:: Make sure to use Google Storage bucket as Nextflow work directory and as location for pipeline input data.
+.. tip:: Make sure to use a Google Storage bucket as Nextflow work directory and as location for pipeline input data.
+
+.. note:: The ``nextflow`` launcher script is created in the instance ``HOME`` directory.
 
 Cluster shutdown
 ----------------
@@ -140,6 +154,8 @@ Cluster shutdown
 When completed shutdown the cluster instances by using the following command::
 
     nextflow cloud shutdown my-cluster
+
+Replace ``my-cluster`` with the name used in your execution.
 
 Preemptible instances 
 ---------------------
@@ -183,8 +199,8 @@ cluster when tasks remain too long in wait status because there aren't enough co
 By default unused instances are not removed when they are not utilised. If you want to enable automatic cluster scale-down
 specify the ``terminateWhenIdle`` attribute in the ``autoscale`` configuration group.
 
-It is also possible to define a different AMI image ID, type and spot price for instances launched by the Nextflow autoscaler.
-For example::
+It is also possible to define a different machine image IDs, type and spot price for instances launched by the Nextflow
+autoscaler. For example::
 
     cloud {
         imageId = 'your-project/global/images/xxx'
@@ -205,6 +221,16 @@ By doing that it's is possible to create a cluster with a single node i.e. the m
 automatically add the missing instances, up to the number defined by the ``minInstances`` attributes. 
 
 
+Limitation
+----------
+
+* Pipeline input data must and work directory must be located in the `Google Storage <https://cloud.google.com/storage/>`_.
+  Other local or remote data sources are not supported at this time.
+
+* Compute nodes local storage is the default assigned by the Compute Engine service for the chosen machine (instance) type.
+  Currently it's not possible to specify a custom disk size for local storage.
+
+
 Advanced configuration
 ----------------------
 
@@ -220,7 +246,7 @@ Genomics Pipelines
 containerized workloads in the Google Cloud Platform infrastructure.
 
 Nextflow provides built-in support for Genomics Pipelines API which allows the seamless deployment of a Nextflow pipeline
-in the cloud, offloading the process executions as pipelines.
+in the cloud, offloading the process executions through the Pipelines service.
 
 .. warning:: This API works well for coarse-grained workloads i.e. long running jobs. It's not suggested the use
   this feature for pipelines spawning many short lived tasks.
@@ -252,40 +278,41 @@ Example::
         executor = 'google-pipelines'
         container = 'your/container:latest'
     }
-    
+
     cloud {
         instanceType = 'n1-standard-1'
     }
-     
+
     google {
         project = 'your-project-id'
         zone = 'europe-west1-b'
     }
 
 
-.. tip:: You can use a different Docker image for each process using one or more :ref:`config-process-selectors`.
-  The use of multiple instance types is not yet supported.
+.. Note:: A container image must be specified to deploy the process execution. You can use a different Docker image for
+  each process using one or more :ref:`config-process-selectors`. 
 
 
 Pipeline execution
 ------------------
 
-The pipeline can be launched either in a local computer or a cloud instance.
+The pipeline can be launched either in a local computer or a cloud instance. Pipeline input data can be stored either
+locally or in a Google Storage bucket.
 
-Pipeline input data can be stored to be stored either locally or in a Google Storage bucket. The latter is preferred
-to avoid unnecessary data transfer.
+The pipeline execution must specify a Google Storage bucket where workflow intermediate results are stored using
+the ``-work-dir`` command line options. For example::
 
-The pipeline execution must specifies a S3 bucket where jobs intermediate results are stored with the ``-bucket-dir``
-command line options. For example::
+    nextflow run <script or project name> -work-dir gs://my-bucket/some/path
 
-    nextflow run <script or project name> -bucket-dir gs://my-bucket/some/path
 
+.. tip:: Any input data **not** stored in a Google Storage bucket will automatically be transferred in the
+  pipeline work bucket. Use with feature cautionary to avoid unnecessary data transfers.
 
 Hybrid execution
 ----------------
 
 Nextflow allows the use of multiple executors in the same workflow application. This feature enables the deployment
-of hybrid workloads in which some jobs are execute in the local computer or local computing cluster and
+of hybrid workloads in which some jobs are executed in the local computer or local computing cluster and
 some other jobs are offloaded to Google Pipelines service.
 
 To enable this feature use one or more :ref:`config-process-selectors` in your Nextflow configuration file to apply
@@ -310,8 +337,39 @@ For example::
     }
 
 
-Then run your application as before specifying the Google Storage bucket
-for the remote execution as a command line option::
+Then deploy the workflow execution using the ``-bucket-dir`` to specify a Google Storage path
+for the jobs computed by the Google Pipeline service and, optionally, the ``-work-dir`` to
+specify the local storage for the jobs computed locally::
 
     nextflow run <script or project name> -bucket-dir gs://my-bucket/some/path
+
+
+Limitation
+----------
+
+* All processes use the same instance (machine) type specified in the configuration.
+  Make sure to use a instance type having enough resources to fulfill the computing resources
+  needed (i.e. cpus, memory and local storage) for the jobs in your pipeline.
+
+* Currently it's not possible to specify a disk type and size different from the default ones assigned
+  by the service depending the chosen instance type.
+
+
+Troubleshooting
+===============
+
+* Make sure to have enabled Compute Engine API, Genomics API and Cloud Storage Service in the
+  `APIs & Services Dashboard <https://console.cloud.google.com/apis/dashboard>`_ page.
+
+* Make sure to have enough compute resources to run your pipeline in your project
+  `Quotas <https://console.cloud.google.com/iam-admin/quotas>`_ (i.e. Compute Engine CPUs,
+  Compute Engine Persistent Disk, Compute Engine In-use IP addresses, etc).
+
+* Make sure your security credentials allows you to access any Google Storage bucket
+  where input data and temporary files are stored.
+
+Google Pipelines debugging information can be enabled using the ``-trace`` command line option
+as shown below::
+
+    nextflow -trace nextflow.cloud.google.pipelines run <your_project_or_script_name>
 
