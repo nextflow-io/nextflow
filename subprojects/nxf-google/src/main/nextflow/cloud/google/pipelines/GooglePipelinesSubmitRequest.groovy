@@ -18,6 +18,7 @@ package nextflow.cloud.google.pipelines
 
 import com.google.api.services.genomics.v2alpha1.model.Mount
 import groovy.transform.CompileStatic
+import groovy.transform.ToString
 
 /**
  * Models Google pipeline request for a Nextflow task executor
@@ -25,6 +26,7 @@ import groovy.transform.CompileStatic
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
+@ToString(includeNames = true)
 class GooglePipelinesSubmitRequest {
 
     String instanceType

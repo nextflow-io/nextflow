@@ -23,6 +23,7 @@ import com.google.api.services.genomics.v2alpha1.model.Event
 import com.google.api.services.genomics.v2alpha1.model.Metadata
 import com.google.api.services.genomics.v2alpha1.model.Mount
 import com.google.api.services.genomics.v2alpha1.model.Operation
+import groovy.json.JsonOutput
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessUnrecoverableException
@@ -30,6 +31,7 @@ import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.trace.TraceRecord
 import nextflow.util.Escape
 
 /**
@@ -52,19 +54,17 @@ class GooglePipelinesTaskHandler extends TaskHandler {
     private TaskBean taskBean
 
     private Path exitFile
-    private Path wrapperFile
+
     private Path outputFile
+
     private Path errorFile
-    private Path logFile
-    private Path scriptFile
-    private Path inputFile
-    private Path stubFile
-    private Path traceFile
 
     private String instanceType
+
     private String mountPath
 
     final static String diskName = "nf-pipeline-work"
+
     final static String fileCopyImage = "google/cloud-sdk:alpine"
 
     private Mount sharedMount
@@ -72,6 +72,8 @@ class GooglePipelinesTaskHandler extends TaskHandler {
     private Operation operation
 
     private Metadata metadata
+
+    private String pipelineId
 
     @PackageScope List<String> stagingCommands = []
 
@@ -84,15 +86,9 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         this.taskBean = new TaskBean(task)
         this.pipelineConfiguration = pipelineConfiguration
 
-        this.logFile = task.workDir.resolve(TaskRun.CMD_LOG)
-        this.scriptFile = task.workDir.resolve(TaskRun.CMD_SCRIPT)
-        this.inputFile = task.workDir.resolve(TaskRun.CMD_INFILE)
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
-        this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
-        this.stubFile = task.workDir.resolve(TaskRun.CMD_STUB)
-        this.traceFile = task.workDir.resolve(TaskRun.CMD_TRACE)
 
         //Set the mount path to be the workdir that is parent of the hashed directories.
         this.mountPath = task.workDir.parent.parent.toString()
@@ -101,8 +97,6 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         instanceType = executor.getSession().config.navigate("cloud.instanceType") ?: DEFAULT_INSTANCE_TYPE
 
         validateConfiguration()
-
-        log.debug "[GPAPI] Created handler for task '${task.name}'"
     }
 
 
@@ -120,6 +114,28 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         }
     }
 
+    protected void logEvents(Operation operation) {
+        final events = getEventsFromOp(operation)
+        if( !events )
+            return
+
+        final warns = new HashSet()
+        for( Event e : events ) {
+            def d = e.getDescription()
+            if( d?.contains('resource_exhausted') )
+                warns << d
+        }
+
+        if( warns ) {
+            log.debug "[GPAPI] New event > $task.name - Pipeline Id: $pipelineId\n${prettyPrint(events)}"
+            for( String w : warns ) log.warn1("Google Pipelines > $w")
+        }
+        else if( log.isTraceEnabled() ) {
+            log.trace "[GPAPI] New event > $task.name - Pipeline Id: $pipelineId\n${prettyPrint(events)}"
+        }
+
+    }
+
     /**
      * @return
      *      It should return {@code true} only the very first time the
@@ -135,6 +151,8 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         // the handler status has to be changed to RUNNING either
         // if the operation is still running or it has completed
         def result = executor.helper.checkOperationStatus(operation)
+        logEvents(result)
+
         if( result!=null ) {
             status = TaskStatus.RUNNING
             operation = result
@@ -149,14 +167,10 @@ class GooglePipelinesTaskHandler extends TaskHandler {
             return false
         
         operation = executor.helper.checkOperationStatus(operation)
-
-        def events = extractRuntimeDataFromOperation()
-        events?.reverse()?.each {
-            log.trace "[GPAPI] New event for task '$task.name' - time: ${it.get("timestamp")} - ${it.get("description")}"
-        }
+        logEvents(operation)
 
         if (operation.getDone()) {
-            log.debug "[GPAPI] Task '$task.name' complete. Start Time: ${metadata?.getStartTime()} - End Time: ${metadata?.getEndTime()}"
+            log.debug "[GPAPI] Task complete > $task.name - Start Time: ${metadata?.getStartTime()} - End Time: ${metadata?.getEndTime()}"
 
             // finalize the task
             Integer xs = readExitFile()
@@ -180,17 +194,21 @@ class GooglePipelinesTaskHandler extends TaskHandler {
             return false
     }
 
-    private List<Event> extractRuntimeDataFromOperation() {
-        def metadata = operation.getMetadata() as Metadata
+    @PackageScope
+    List<Event> getEventsFromOp(Operation operation) {
+        final metadata = (Metadata)operation.getMetadata()
+        List<Event> result
         if (!this.metadata) {
             this.metadata = metadata
-            return metadata?.getEvents()
-        } else {
+            result = metadata != null ? metadata.getEvents() : Collections.<Event>emptyList()
+        }
+        else {
             //Get the new events
             def delta = metadata.getEvents().size() - this.metadata.getEvents().size()
             this.metadata = metadata
-            return delta > 0 ? metadata.getEvents().take(delta) : [] as List<Event>
+            result = delta > 0 ? metadata.getEvents().take(delta) : Collections.<Event>emptyList()
         }
+        return result.reverse()
     }
 
     @PackageScope Integer readExitFile() {
@@ -206,7 +224,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
     @Override
     void kill() {
         if( !operation ) return
-        log.debug "[GPAPI] Killing pipeline '${operation.name}'"
+        log.debug "[GPAPI] Killing task > $task.name - Pipeline Id: $pipelineId"
         executor.helper.cancelOperation(operation)
     }
 
@@ -214,9 +232,24 @@ class GooglePipelinesTaskHandler extends TaskHandler {
     void submit() {
         createTaskWrapper()
         final req = createPipelineRequest()
+        log.trace "[GPAPI] Task created > $task.name - Request: $req"
+
         operation = submitPipeline(req)
+        pipelineId = getPipelineIdFromOp(operation)
         status = TaskStatus.SUBMITTED
-        log.trace "[GPAPI] Submitted task '$task.name. Assigned Pipeline operation name = '${operation.getName()}'"
+
+        if( log.isTraceEnabled() ) {
+            log.trace "[GPAPI] Task submitted > $task.name - Pipeline Id: $pipelineId; Operation:\n${prettyPrint(operation)}"
+        }
+        else {
+            log.debug "[GPAPI] Task submitted > $task.name - Pipeline Id: $pipelineId"
+        }
+    }
+
+    @PackageScope
+    String getPipelineIdFromOp(Operation operation) {
+        assert operation?.getName()
+        operation.getName().tokenize('/')[-1]
     }
 
     @PackageScope
@@ -237,24 +270,16 @@ class GooglePipelinesTaskHandler extends TaskHandler {
 
         String mainScript = "cd $task.workDir; bash ${TaskRun.CMD_RUN} 2>&1 | tee -a ${TaskRun.CMD_LOG}"
 
-        /*
-         * -m = run in parallel
-         * -q = quiet mode
-         * cp = copy
-         * -P = preserve POSIX attributes
-         * -c = continues on errors
-         * -r = recursive copy
-         */
-        def gsCopyPrefix = "gsutil -m -q cp -c -P"
-
-        //Copy the logs provided by Google Pipelines for the pipeline to our work dir.
+        // Copy the logs provided by Google Pipelines for the pipeline to our work dir.
         def unstaging = []
-        unstaging << "[[ \$GOOGLE_PIPELINE_FAILED == 1 ]] && $gsCopyPrefix -r /google/ ${task.workDir.toUriString()} || true".toString()
+        unstaging << "cd $task.workDir"
+        unstaging << '[[ $GOOGLE_PIPELINE_FAILED == 1 || $NXF_DEBUG ]] && ' + unstage('/google/')
         unstaging.addAll(unstagingCommands)
-
-        //add the task output files to unstaging command list
+        // unstage trace file
+        unstaging << "[[ -f $TaskRun.CMD_TRACE ]] && ${unstage(TaskRun.CMD_TRACE)}"
+        // add the task output files to unstaging command list
         for( String it : UNSTAGE_CONTROL_FILES ) {
-            unstaging << "$gsCopyPrefix $task.workDir/${Escape.path(it)} ${task.workDir.toUriString()} || true".toString()
+            unstaging << unstage(it)
         }
 
         //Create the mount for out work files.
@@ -272,10 +297,34 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         req.fileCopyImage = fileCopyImage
         req.stagingScript = stagingScript
         req.mainScript = mainScript
-        req.unstagingScript = unstaging.join("; ").leftTrim()
+        req.unstagingScript = unstaging.join("; ").trim()
         req.sharedMount = sharedMount
         return req
     }
 
+    @PackageScope
+    String unstage(String local){
+        /*
+         * -m = run in parallel
+         * -q = quiet mode
+         * cp = copy
+         * -R = recursive copy
+         */
+        "gsutil -m -q cp -R ${Escape.path(local)} ${task.workDir.toUriString()} || true"
+    }
+
+    TraceRecord getTraceRecord() {
+        def result = super.getTraceRecord()
+        result.put('native_id', pipelineId)
+        return result
+    }
+
+    String prettyPrint(Operation op) {
+        JsonOutput.prettyPrint( JsonOutput.toJson(op) )
+    }
+
+    static String prettyPrint(List<Event> events) {
+        JsonOutput.prettyPrint( JsonOutput.toJson(events) )
+    }
 
 }
