@@ -70,7 +70,7 @@ class FilePorter {
         for( Map.Entry<String,Path> entry : filesMap ) {
             def name = entry.getKey()
             def path = entry.getValue()
-            if( path.fileSystem == stagingDir.fileSystem )
+            if( path.scheme == stagingDir.scheme )
                 continue
             // copy the path with a thread pool
             actions << { new NamePathPair(name, stageForeignFile(path)) } as Callable<NamePathPair>
