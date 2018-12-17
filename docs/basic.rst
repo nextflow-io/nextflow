@@ -34,7 +34,8 @@ A Nextflow script looks like this::
 
   
     // Create a channel
-    query_ch = fromPath(params.query)
+    query_ch = Channel
+                 .fromPath(params.query)
 
 
     process blastSearch {
