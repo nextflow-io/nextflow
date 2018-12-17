@@ -16,37 +16,28 @@
 
 package nextflow.k8s.model
 
-import groovy.transform.CompileStatic
-import groovy.transform.EqualsAndHashCode
-import groovy.transform.ToString
+import spock.lang.Specification
 
 /**
- * Models K8s pod security context
- *
- * See
- * https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CompileStatic
-@ToString(includeNames = true)
-@EqualsAndHashCode(includeFields = true)
-class PodSecurityContext {
+class PodNodeSelectorTest extends Specification {
 
-    private Map spec
+    def 'should create node selector' () {
 
-    PodSecurityContext(def user) {
-        spec = [runAsUser: user]
+        expect: 
+        new PodNodeSelector(selector).toSpec() == spec
+
+        where:
+        selector            | spec
+        ''                  | [:]
+        'foo=1'             | [foo:'1']
+        'x=a,y=2,z=9'       | [x:'a',y:'2',z:'9']
+        'x= a , y=2 , z =9' | [x:'a',y:'2',z:'9']
+        'gpu,intel'         | [gpu:'true',intel: 'true']
+        [foo:1, bar: 'two'] | [foo:'1', bar:'two']
     }
 
-    PodSecurityContext(Map ctx) {
-        assert ctx
-        spec = ctx
-    }
 
-    Map toSpec() { spec }
-
-    String toString() {
-        "PodSecurityContext[ ${spec?.toString()} ]"
-    }
 }
