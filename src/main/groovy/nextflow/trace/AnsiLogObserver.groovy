@@ -212,12 +212,12 @@ class AnsiLogObserver implements TraceObserver {
     } 
 
     protected String line(String name, ProcessStats stats) {
-        final int tot = stats.submitted + stats.cached
-        final int com = stats.completed + stats.cached
-        def x = Math.round((float)(com / tot) * 100)
+        final float tot = stats.submitted + stats.cached
+        final float com = stats.completed + stats.cached
+        final x = tot ? Math.round(com / tot * 100f) : 0
         final pct = "[${String.valueOf(x).padLeft(3)}%]".toString()
         final label = name.padRight(maxNameLength)
-        final numbs = "${com} of ${tot}".toString()
+        final numbs = "${(int)com} of ${(int)tot}".toString()
         def result = "[$stats.hash] $label: $pct $numbs"
         if( stats.cached )
             result += ", cached: $stats.cached"
