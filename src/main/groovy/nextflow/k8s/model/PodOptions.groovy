@@ -46,6 +46,8 @@ class PodOptions {
 
     private Map<String,String> labels = [:]
 
+    private PodNodeSelector nodeSelector
+
     private PodSecurityContext securityContext
 
     PodOptions( List<Map> options=null ) {
@@ -98,6 +100,9 @@ class PodOptions {
         else if( entry.securityContext instanceof Map ) {
             this.securityContext = new PodSecurityContext(entry.securityContext as Map)
         }
+        else if( entry.nodeSelector ) {
+            this.nodeSelector = new PodNodeSelector(entry.nodeSelector)
+        }
         else 
             throw new IllegalArgumentException("Unknown pod options: $entry")
     }
@@ -115,7 +120,14 @@ class PodOptions {
 
     PodSecurityContext getSecurityContext() { securityContext }
 
-    PodOptions setSecurityContext( PodSecurityContext ctx) {
+    PodNodeSelector getNodeSelector() { nodeSelector }
+
+    PodOptions setNodeSelector( PodNodeSelector sel ) {
+        nodeSelector = sel
+        return this
+    }
+
+    PodOptions setSecurityContext( PodSecurityContext ctx ) {
         this.securityContext = ctx
         return this
     }
@@ -147,10 +159,14 @@ class PodOptions {
         result.volumeClaims.addAll( volumeClaims )
         result.volumeClaims.addAll( other.volumeClaims )
 
+        // sec context
         if( other.securityContext )
             result.securityContext = other.securityContext
         else
             result.securityContext = securityContext
+
+        // node select
+        result.nodeSelector = other.nodeSelector ?: this.nodeSelector
 
         return result
     }

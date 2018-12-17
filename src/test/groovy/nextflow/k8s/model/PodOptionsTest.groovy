@@ -222,8 +222,9 @@ class PodOptionsTest extends Specification {
                 [secret: 'x', mountPath: '/x'],
                 [config: 'y', mountPath: '/y'],
                 [volumeClaim: 'z', mountPath: '/z'],
-                [securityContext: [runAsUser: 1000, fsGroup: 200, allowPrivilegeEscalation: true]]
+                [securityContext: [runAsUser: 1000, fsGroup: 200, allowPrivilegeEscalation: true]],
 
+                [nodeSelector: 'foo=X, bar=Y']
         ]
 
         PodOptions opts
@@ -283,6 +284,8 @@ class PodOptionsTest extends Specification {
         ] as Set
 
         opts.securityContext.toSpec() == [runAsUser: 1000, fsGroup: 200, allowPrivilegeEscalation: true]
+
+        opts.nodeSelector.toSpec() == [foo: 'X', bar: "Y"]
     }
 
     def 'should create pod labels' () {
@@ -325,5 +328,13 @@ class PodOptionsTest extends Specification {
         then:
         opts.getSecurityContext() == expected
         opts.getSecurityContext().toSpec() == ctx
+    }
+
+    def 'should create pod node select' () {
+        when:
+        def opts = new PodOptions([ [nodeSelector: 'foo=1, bar=true, baz=Z'] ])
+        then:
+        opts.nodeSelector.toSpec() == [foo: '1', bar: 'true', baz: 'Z']
+
     }
 }

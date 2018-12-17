@@ -69,6 +69,8 @@ class PodSpecBuilder {
 
     PodSecurityContext securityContext
 
+    PodNodeSelector nodeSelector
+
     /**
      * @return A sequential volume unique identifier
      */
@@ -222,6 +224,8 @@ class PodSpecBuilder {
         // -- security context
         if( opts.securityContext )
             securityContext = opts.securityContext
+        if( opts.nodeSelector )
+            nodeSelector = opts.nodeSelector
 
         return this
     }
@@ -265,6 +269,9 @@ class PodSpecBuilder {
                 restartPolicy: restart,
                 containers: [ container ],
         ]
+
+        if( nodeSelector )
+            spec.nodeSelector = nodeSelector.toSpec()
 
         if( this.serviceAccount )
             spec.serviceAccountName = this.serviceAccount
