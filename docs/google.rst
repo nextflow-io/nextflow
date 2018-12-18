@@ -4,7 +4,7 @@
 Google Cloud
 ************
 
-Nextflow provides out of the box support for the `Google Cloud Platform <https://cloud.google.com/>`_
+Nextflow provides out-of-the-box support for the `Google Cloud Platform <https://cloud.google.com/>`_
 enabling the seamless deployment and execution of Nextflow pipelines over Google cloud services.
 
 The execution can be done either deploying a Nextflow managed cluster using `Google Compute Engine <https://cloud.google.com/compute/>`_
@@ -41,7 +41,7 @@ a *Security account key* JSON file.
 Nextflow looks for this file using the ``GOOGLE_APPLICATION_CREDENTIALS`` variable that
 has to be defined in the launching environment.
 
-If you don't have it, download the credentials file from the Google Cloud Console following this steps:
+If you don't have it, download the credentials file from the Google Cloud Console following these steps:
 
 * Open the `Google Cloud Console <https://console.cloud.google.com>`_
 * Go to APIs & Services → Credentials
@@ -109,7 +109,7 @@ Storage
 -------
 
 Both input data and the pipeline work directory must be located in one or more `Google Storage <https://cloud.google.com/storage/>`_ buckets.
-Make sure your security credentials allows you to access those buckets.
+Make sure your security credentials allows you to access these buckets.
 
 Cluster deployment
 ------------------
@@ -145,7 +145,7 @@ that command to connect to the cluster.
 The suggested approach is to run your pipeline downloading it from a public repository such as GitHub and to pack the
 binaries dependencies in a Docker container as described in the :ref:`Pipeline sharing <sharing-page>` section.
 
-.. warning:: Before run any Nextflow command, make sure the file ``READY`` has been create in the home directory.
+.. warning:: Before running any Nextflow command, make sure the file ``READY`` has been created in the home directory.
   If you can't find it, it means that the initialisation process is still on-going. Wait a few seconds until it completes.
 
 Then, you can run Nextflow as usual. For example::
@@ -153,14 +153,14 @@ Then, you can run Nextflow as usual. For example::
     ./nextflow run rnaseq-nf -profile gcp -work-dir gs://my-bucket/work
 
 
-.. tip:: Make sure to use a Google Storage bucket as Nextflow work directory and as location for pipeline input data.
+.. tip:: Make sure to use a Google Storage bucket as the Nextflow work directory and as a location for pipeline input data.
 
 .. note:: The ``nextflow`` launcher script is created in the instance ``HOME`` directory.
 
 Cluster shutdown
 ----------------
 
-When completed shutdown the cluster instances by using the following command::
+When completed, shutdown the cluster instances by using the following command::
 
     nextflow cloud shutdown my-cluster
 
@@ -185,10 +185,10 @@ Cluster auto-scaling
 --------------------
 
 Nextflow integration for Google Cloud Engine provides a native support auto-scaling that allows the computing cluster
-to scale out or scale down i.e., add or remove computing nodes dynamically at runtime.
+to scale up or scale down i.e., add or remove computing nodes dynamically at runtime.
 
 This is a critical feature, especially for pipelines crunching non-homogeneous datasets, because it allows the cluster
-to adapt dynamically to the actual workload computing resources need as they change over the time.
+to adapt dynamically to the actual workload computing resources needed as they change over time.
 
 Cluster auto-scaling is enabled by adding the autoscale option group in the configuration file as shown below::
 
@@ -226,18 +226,18 @@ autoscaler. For example::
         }
     }
 
-By doing that it's is possible to create a cluster with a single node i.e. the master node. Then the autoscaler will
+By doing so it is possible to create a cluster with a single node i.e. the master node. The autoscaler will then
 automatically add the missing instances, up to the number defined by the ``minInstances`` attributes. 
 
 
 Limitation
 ----------
 
-* Pipeline input data must and work directory must be located in the `Google Storage <https://cloud.google.com/storage/>`_.
+* Pipeline input data must and work directory must be located on `Google Storage <https://cloud.google.com/storage/>`_.
   Other local or remote data sources are not supported at this time.
 
-* Compute nodes local storage is the default assigned by the Compute Engine service for the chosen machine (instance) type.
-  Currently it's not possible to specify a custom disk size for local storage.
+* The compute nodes local storage is the default assigned by the Compute Engine service for the chosen machine (instance) type.
+  Currently it is not possible to specify a custom disk size for local storage.
 
 
 Advanced configuration
@@ -308,14 +308,14 @@ Pipeline execution
 The pipeline can be launched either in a local computer or a cloud instance. Pipeline input data can be stored either
 locally or in a Google Storage bucket.
 
-The pipeline execution must specify a Google Storage bucket where workflow intermediate results are stored using
+The pipeline execution must specify a Google Storage bucket where the workflow's intermediate results are stored using
 the ``-work-dir`` command line options. For example::
 
     nextflow run <script or project name> -work-dir gs://my-bucket/some/path
 
 
-.. tip:: Any input data **not** stored in a Google Storage bucket will automatically be transferred in the
-  pipeline work bucket. Use with feature cautionary to avoid unnecessary data transfers.
+.. tip:: Any input data **not** stored in a Google Storage bucket will automatically be transferred to the
+  pipeline work bucket. Use this feature with caution being careful to avoid unnecessary data transfers.
 
 Hybrid execution
 ----------------
@@ -357,7 +357,7 @@ Limitation
 ----------
 
 * All processes use the same instance (machine) type specified in the configuration.
-  Make sure to use a instance type having enough resources to fulfill the computing resources
+  Make sure to use an instance type having enough resources to fulfill the computing resources
   needed (i.e. cpus, memory and local storage) for the jobs in your pipeline.
 
 * Currently it's not possible to specify a disk type and size different from the default ones assigned
