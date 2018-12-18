@@ -483,7 +483,7 @@ storageEncryption           The S3 server side encryption to be used when saving
 userAgent                   The HTTP user agent header passed with all HTTP requests.
 uploadMaxThreads            The maximum number of threads used for multipart upload.
 uploadChunkSize             The size of a single part in a multipart upload (default: `10 MB`).
-uploadStorageClass          The S3 storage class applied to stored objects, one of [`STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, `INTELLIGENT_TIERING`, `REDUCED_REDUNDANCY`] (default: `STANDARD`).
+uploadStorageClass          The S3 storage class applied to stored objects, one of [`STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, `INTELLIGENT_TIERING`] (default: `STANDARD`).
 uploadMaxAttempts           The maximum number of upload attempts after which a multipart upload returns an error (default: `5`).
 uploadRetrySleep            The time to wait after a failed upload attempt to retry the part upload (default: `100ms`).
 =========================== ================

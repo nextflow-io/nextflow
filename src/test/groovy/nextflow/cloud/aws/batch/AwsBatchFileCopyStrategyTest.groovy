@@ -168,7 +168,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         script = copy.getBeforeStartScript()
         then:
         1 * opts.getAwsCli() >> '/foo/aws'
-        1 * opts.getStorageClass() >> 'REDUCED_REDUNDANCY'
+        1 * opts.getStorageClass() >> 'STANDARD_IA'
         2 * opts.getStorageEncryption() >> 'AES256'
 
         script == '''
@@ -179,9 +179,9 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                     IFS=$'\\n'
                     for name in $(eval "ls -1d $pattern");do
                       if [[ -d "$name" ]]; then
-                        /foo/aws s3 cp --only-show-errors --recursive --sse AES256 --storage-class REDUCED_REDUNDANCY "$name" "$s3path/$name"
+                        /foo/aws s3 cp --only-show-errors --recursive --sse AES256 --storage-class STANDARD_IA "$name" "$s3path/$name"
                       else
-                        /foo/aws s3 cp --only-show-errors --sse AES256 --storage-class REDUCED_REDUNDANCY "$name" "$s3path/$name"
+                        /foo/aws s3 cp --only-show-errors --sse AES256 --storage-class STANDARD_IA "$name" "$s3path/$name"
                       fi
                     done
                     unset IFS
