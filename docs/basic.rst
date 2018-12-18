@@ -4,7 +4,7 @@ Basic concepts
 
 
 `Nextflow` is a reactive workflow framework and a programming `DSL <http://en.wikipedia.org/wiki/Domain-specific_language>`_
-that eases the writing of computational pipelines.
+that eases the writing of data-intensive computational pipelines.
 
 It is designed around the idea that the Linux platform is the lingua franca of data science. Linux provides many
 simple but powerful command-line and scripting tools that, when chained together, facilitate complex
@@ -28,29 +28,25 @@ and ultimately the pipeline execution flow itself, is implicitly defined by thes
 
 A Nextflow script looks like this::
 
-    // Parameters
-    params.query = "sample.fa"
-    params.db = "pdb"
+    // Script parameters
+    params.query = "/some/data/sample.fa"
+    params.db = "/some/path/pdb"
 
-  
-    // Create a channel
-    query_ch = Channel
-                 .fromPath(params.query)
-
+    db = file(params.db)
+    query_ch = Channel.fromPath(params.query)
 
     process blastSearch {
         input:
-        file (query) from query_ch
+        file query from query_ch
 
         output:
-        file("top_hits.txt") into top_hits_ch
+        file "top_hits.txt" into top_hits_ch
 
         """
-        blastp -db ${params.db} -query ${query} -outfmt 6 > blast_result
+        blastp -db $db -query $query -outfmt 6 > blast_result
         cat blast_result | head -n 10 | cut -f 2 > top_hits.txt
         """
     }
-
 
     process extractTopHits {
         input:
@@ -60,21 +56,20 @@ A Nextflow script looks like this::
         file "sequences.txt" into sequences_ch
 
         """
-        blastdbcmd -db ${params.db} -entry_batch ${top_hits} > sequences.txt
+        blastdbcmd -db $db -entry_batch $top_hits > sequences.txt
         """
     }
 
 
 
-The above example defines two processes. Their execution order is not determined by the fact that the ``blastSearch`` process comes
-before ``extractTopHits`` in the script (it could also be written the other way around).
+The above example defines two processes. Their execution order is not determined by the fact that the ``blastSearch``
+process comes before ``extractTopHits`` in the script (it could also be written the other way around).
 
-Instead, because the first process defines
-the channel ``top_hits_ch`` in its output declarations, and the process ``extractTopHits`` defines the channel in its
-input declaration, a communication link in established. 
+Instead, because the first process defines the channel ``top_hits_ch`` in its output declarations, and the
+process ``extractTopHits`` defines the channel in its input declaration, a communication link is established.
 
-This linking via the channels means that `extractTopHits` is waiting for the output of `blastSearch`, and then runs `reactively`
-when the channel has contents.
+This linking via the channels means that `extractTopHits` is waiting for the output of `blastSearch`, and then
+runs `reactively` when the channel has contents.
 
 .. TODO describe that both processes are launched at the same time
 
@@ -94,7 +89,7 @@ In other words, `Nextflow` provides an abstraction between the pipeline's functi
 Thus it is possible to write a pipeline once and to seamlessly run it on your computer, a grid platform, or the cloud,
 without modifying it, by simply defining the target execution platform in the configuration file.
 
-The following HPC platforms are supported:
+The following batch schedulers are supported:
 
 * `Open grid engine <http://gridscheduler.sourceforge.net/>`_
 * `Univa grid engine <http://www.univa.com/>`_
@@ -108,9 +103,7 @@ The following HPC platforms are supported:
 The following cloud platforms are supported:
 
 * `Amazon Web Services (AWS) <https://aws.amazon.com/>`_
-* `AWS Batch <https://aws.amazon.com/batch/>`_
 * `Google Cloud Platform (GCP) <https://cloud.google.com/>`_
-* `Google Pipelines <https://cloud.google.com/genomics/docs/quickstart>`_
 * `Kubernetes <https://kubernetes.io/>`_
 
 Read the :ref:`executor-page` to learn more about the Nextflow executors.
