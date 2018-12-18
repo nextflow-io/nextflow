@@ -1202,7 +1202,7 @@ For example::
 
     process foo {
 
-      beforeScript 'source /cluster/bin/setup'
+      beforeScript = 'source /cluster/bin/setup'
 
       """
       echo bar
