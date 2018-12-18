@@ -1,14 +1,15 @@
-.. _pipeline-page:
+.. _script-page:
 
 *****************
-Pipeline script
+Nextflow scripting
 *****************
 
 
-The Nextflow scripting language is an extension of the Groovy programming language whose syntax has been
+The Nextflow scripting language is an extension of the Groovy programming language. Groovy is an
+increasingly popular language that can be considered a kind of 'Python for Java'. The Nextflow syntax has been
 specialized to ease the writing of computational pipelines in a declarative manner.
 
-This means that Nextflow can execute any piece of Groovy code or use any library for the JVM platform.
+Nextflow can execute any piece of Groovy code or use any library for the JVM platform.
 
 For a detailed description of the Groovy programming language, reference these links:
 
