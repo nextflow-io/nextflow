@@ -51,7 +51,7 @@ class AwsOptions {
     }
 
     void setStorageClass(String value) {
-        if( value in [null, 'STANDARD', 'REDUCED_REDUNDANCY'])
+        if( value in [null, 'STANDARD', 'STANDARD_IA', 'ONEZONE_IA', 'INTELLIGENT_TIERING', 'REDUCED_REDUNDANCY' ])
             this.storageClass = value
         else
             log.warn "Unsupported AWS storage-class: $value"
