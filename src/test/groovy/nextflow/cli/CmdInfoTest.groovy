@@ -26,11 +26,11 @@ import java.nio.file.Path
 import groovy.json.JsonSlurper
 import nextflow.scm.AssetManager
 import org.yaml.snakeyaml.Yaml
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
 class CmdInfoTest extends Specification {
 
     @Shared Path tempDir
@@ -48,7 +48,6 @@ class CmdInfoTest extends Specification {
         tempDir?.deleteDir()
     }
 
-    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'should print project info' () {
 
         given:
