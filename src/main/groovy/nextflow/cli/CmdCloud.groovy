@@ -138,7 +138,13 @@ class CmdCloud extends CmdBase implements UsageAware {
                 .setProfile(profile)
                 .build()
 
-        if (!driverName) driverName=config.cloud?.driver
+        if (!driverName)
+            driverName = config.cloud?.driver
+
+        if (!driverName) {
+            log.debug "Using cloud driver: $driverName as specified by NXF_CLOUD_DRIVER env variable"
+            driverName = System.getenv('NXF_CLOUD_DRIVER')
+        }
 
         // no driver was specified -- choose the first available
         if( !driverName ) {
