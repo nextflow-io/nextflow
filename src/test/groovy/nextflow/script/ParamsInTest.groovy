@@ -15,7 +15,8 @@
  */
 
 package nextflow.script
-import static test.TestParser.parseAndReturnProcess
+
+import spock.lang.Specification
 
 import java.nio.file.Paths
 
@@ -23,7 +24,7 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
 import nextflow.processor.TaskProcessor
-import spock.lang.Specification
+import static test.TestParser.parseAndReturnProcess
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -723,6 +724,44 @@ class ParamsInTest extends Specification {
         then:
         e = thrown(IllegalArgumentException)
         e.message == 'A process input channel evaluates to null -- Invalid declaration `file foo`'
+
+    }
+
+    def testInterpolateGlobalVars() {
+
+        given:
+        def TEXT = '''
+            foo = 1
+            bar = 2
+            baz = 3 
+            alpha = [beta: 'hello']
+            
+            process foo {
+              input:
+              val x from "$foo"
+              val y from "${alpha.beta}"
+              val x from Channel.value("$bar")
+              val z from Channel.from("$baz")
+              
+              script:
+              """
+              echo $x
+              """
+            }
+            '''
+        
+        when:
+        def process = parseAndReturnProcess(TEXT)
+        def in0 = (ValueInParam)process.config.getInputs().get(0)
+        def in1 = (ValueInParam)process.config.getInputs().get(1)
+        def in2 = (ValueInParam)process.config.getInputs().get(2)
+        def in3 = (ValueInParam)process.config.getInputs().get(3)
+        then:
+        in0.inChannel.val == "1"
+        in1.inChannel.val == "hello"
+        in2.inChannel.val == '2'
+        in3.inChannel.val == '3'
+
 
     }
 
