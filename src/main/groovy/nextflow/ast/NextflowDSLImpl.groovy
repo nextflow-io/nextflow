@@ -93,8 +93,6 @@ class NextflowDSLImpl implements ASTTransformation {
 
         private String currentLabel
 
-        private GStringToLazyVisitor makeGStringLazyVisitor
-
         private Set<String> processNames = []
 
         protected SourceUnit getSourceUnit() { unit }
@@ -197,8 +195,6 @@ class NextflowDSLImpl implements ASTTransformation {
             if( isClosure ) {
                 // the block holding all the statements defined in the process (closure) definition
                 final block = (lastArg as ClosureExpression).code as BlockStatement
-
-                makeGStringLazyVisitor = new GStringToLazyVisitor(unit)
 
                 /*
                  * iterate over the list of statements to:
@@ -432,7 +428,7 @@ class NextflowDSLImpl implements ASTTransformation {
 
         protected void fixLazyGString( Statement stm ) {
             if( stm instanceof ExpressionStatement && stm.getExpression() instanceof MethodCallExpression ) {
-                makeGStringLazyVisitor.visitExpressionStatement(stm)
+                new GStringToLazyVisitor(unit).visitExpressionStatement(stm)
             }
         }
 
@@ -1011,14 +1007,16 @@ class NextflowDSLImpl implements ASTTransformation {
 
         final SourceUnit sourceUnit
 
-        private withinClosure
+        private boolean withinClosure
+
+        private List<String> names = []
 
         GStringToLazyVisitor(SourceUnit unit) {
             this.sourceUnit = unit
         }
 
         @Override
-        public void visitClosureExpression(ClosureExpression expression) {
+        void visitClosureExpression(ClosureExpression expression) {
             withinClosure = true
             try {
                 super.visitClosureExpression(expression)
@@ -1029,8 +1027,19 @@ class NextflowDSLImpl implements ASTTransformation {
         }
 
         @Override
+        void visitMethodCallExpression(MethodCallExpression call) {
+            call.getObjectExpression().visit(this)
+            call.getMethod().visit(this)
+            names.push(call.methodAsString)
+            call.getArguments().visit(this)
+            names.pop()
+        }
+
+        @Override
         void visitGStringExpression(GStringExpression expression) {
-            if( !withinClosure ) {
+            // channels values are not supposed to be lazy evaluated
+            // therefore stop visiting when reaching `from` keyword
+            if( !withinClosure && names.last()!='from' ) {
                 xformToLazy(expression)
             }
         }
