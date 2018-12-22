@@ -1978,7 +1978,7 @@ In more detail, it affects the process execution in two main ways:
    the ``storeDir`` directive. When the files exist the process execution is skipped and these files are used as
    the actual process result.
 
-#. Whenever a process is successfully completed the files listed in the `output` declaration block are copied into the directory
+#. Whenever a process is successfully completed the files listed in the `output` declaration block are moved into the directory
    specified by the ``storeDir`` directive.
 
 The following example shows how to use the ``storeDir`` directive to create a directory containing a BLAST database
