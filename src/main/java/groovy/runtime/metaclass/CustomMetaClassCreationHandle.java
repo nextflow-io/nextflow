@@ -17,7 +17,6 @@
 package groovy.runtime.metaclass;
 
 import java.io.File;
-import java.io.InputStream;
 import java.io.Reader;
 import java.nio.file.Path;
 
@@ -58,7 +57,7 @@ public class CustomMetaClassCreationHandle extends MetaClassRegistry.MetaClassCr
             log.trace("Registering number meta-class for: {}", theClass);
              return new NumberDelegatingMetaClass(metaClass);
         }
-        else if (isSplitterClass(theClass)) {
+        else if (isExtensionClass(theClass)) {
             log.trace("Registering custom meta-class for: {}", theClass);
             return new NextflowDelegatingMetaClass(metaClass);
         }
@@ -66,12 +65,9 @@ public class CustomMetaClassCreationHandle extends MetaClassRegistry.MetaClassCr
         return metaClass;
     }
 
-    protected boolean isSplitterClass( Class theClass ) {
-        return  String.class == theClass ||
-                File.class == theClass ||
+    protected boolean isExtensionClass(Class theClass ) {
+        return  File.class == theClass ||
                 Path.class.isAssignableFrom(theClass) ||
-                InputStream.class.isAssignableFrom(theClass) ||
-                Reader.class.isAssignableFrom(theClass) ||
                 DataflowVariable.class.isAssignableFrom(theClass) ||
                 DataflowQueue.class.isAssignableFrom(theClass);
     }
