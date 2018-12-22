@@ -164,7 +164,7 @@ class SimpleFileCopyStrategyTest extends Specification {
         given:
         def strategy = [:] as SimpleFileCopyStrategy
         expect:
-        strategy.stageOutCommand(source, target) == result
+        strategy.stageOutCommand(source, target, 'copy') == result
 
         where:
         source              | target    | result
@@ -263,7 +263,7 @@ class SimpleFileCopyStrategyTest extends Specification {
         given:
         def outputs =  [ 'simple.txt', 'my/path/file.bam' ]
         def target = Paths.get('/target/work dir')
-        def task = new TaskBean()
+        def task = new TaskBean(workDir: target)
 
         when:
         def strategy = new SimpleFileCopyStrategy(task)
@@ -278,12 +278,33 @@ class SimpleFileCopyStrategyTest extends Specification {
 
     }
 
+    def 'should return mv script to unstage output files when storeDir used' () {
+
+        given:
+        def outputs =  [ 'simple.txt', 'my/path/file.bam' ]
+        def workDir = Paths.get('/target/work')
+        def storeDir = Paths.get('/target/store')
+        def task = new TaskBean(workDir: workDir)
+
+        when:
+        def strategy = new SimpleFileCopyStrategy(task)
+        def script = strategy.getUnstageOutputFilesScript(outputs, storeDir)
+        then:
+        script == '''
+                mkdir -p /target/store
+                mv -f simple.txt /target/store || true
+                mkdir -p /target/store/my/path && mv -f my/path/file.bam /target/store/my/path || true
+                '''
+                .stripIndent().trim()
+
+    }
+
     def 'should return rsync script to unstage output files' () {
 
         given:
         def outputs = [ 'simple.txt', 'my/path/file.bam' ];
         def target = Paths.get("/target/work's")
-        def task = new TaskBean(stageOutMode: 'rsync')
+        def task = new TaskBean(stageOutMode: 'rsync', workDir: target)
 
         when:
         def strategy = new SimpleFileCopyStrategy(task)

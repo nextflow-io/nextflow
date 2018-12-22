@@ -152,12 +152,13 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         // create a bash script that will copy the out file to the working directory
         log.trace "Unstaging file path: $normalized"
         if( normalized ) {
+            final mode = stageoutMode ?: ( workDir==targetDir ? 'copy' : 'move' )
             def prefix = getUnstagePrefix(targetDir)
             if( prefix )
                 result << prefix
             for( int i=0; i<normalized.size(); i++ ) {
                 final path = normalized[i]
-                final cmd = stageOutCommand(path, targetDir, stageoutMode) + ' || true' // <-- add true to avoid it stops on errors
+                final cmd = stageOutCommand(path, targetDir, mode) + ' || true' // <-- add true to avoid it stops on errors
                 result << cmd
             }
         }
@@ -239,7 +240,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * @return A shell copy or move command string
      */
 
-    protected String stageOutCommand( String source, Path targetDir, String mode = null) {
+    protected String stageOutCommand( String source, Path targetDir, String mode ) {
         def scheme = getPathScheme(targetDir)
         if( scheme == 'file' )
             return stageOutCommand(source, targetDir.toString(), mode)
@@ -250,10 +251,11 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         throw new IllegalArgumentException("Unsupported target path: ${targetDir.toUriString()}")
     }
 
-    protected String stageOutCommand( String source, String target, String mode = null) {
+    protected String stageOutCommand( String source, String target, String mode ) {
+        assert mode
 
         def cmd
-        if( mode == 'copy' || !mode )
+        if( mode == 'copy' )
             cmd = 'cp -fRL'
         else if( mode == 'move' )
             cmd = 'mv -f'
