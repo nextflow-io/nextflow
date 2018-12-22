@@ -16,12 +16,6 @@
 
 package nextflow.extension
 
-import static DataflowHelper.chainImpl
-import static DataflowHelper.newOperator
-import static DataflowHelper.reduceImpl
-import static DataflowHelper.subscribeImpl
-import static nextflow.util.CheckHelper.checkParams
-
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -45,9 +39,17 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
 import nextflow.dag.NodeMarker
+import nextflow.splitter.FastaSplitter
+import nextflow.splitter.FastqSplitter
+import nextflow.splitter.TextSplitter
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
-
+import static DataflowHelper.chainImpl
+import static DataflowHelper.newOperator
+import static DataflowHelper.reduceImpl
+import static DataflowHelper.subscribeImpl
+import static nextflow.splitter.SplitterFactory.countOverChannel
+import static nextflow.util.CheckHelper.checkParams
 /**
  * A set of operators inspired to RxJava extending the methods available on DataflowChannel
  * data structure
@@ -1710,5 +1712,58 @@ class DataflowExtensions {
             return source
         }
     }
+
+
+    static DataflowReadChannel splitText(DataflowReadChannel source, Map opts=null) {
+        final result = new SplitOp( source, 'splitText', opts ).apply()
+        NodeMarker.addOperatorNode('splitText', source, result)
+        return result
+    }
+
+    static DataflowReadChannel splitCsv(DataflowReadChannel source, Map opts=null) {
+        final result = new SplitOp( source, 'splitCsv', opts ).apply()
+        NodeMarker.addOperatorNode('splitCsv', source, result)
+        return result
+    }
+
+    static DataflowReadChannel splitFasta(DataflowReadChannel source, Map opts=null) {
+        final result = new SplitOp( source, 'splitFasta', opts ).apply()
+        NodeMarker.addOperatorNode('splitFasta', source, result)
+        return result
+    }
+
+    static DataflowReadChannel splitFastq(DataflowReadChannel source, Map opts=null) {
+        final result = new SplitOp( source, 'splitFastq', opts ).apply()
+        NodeMarker.addOperatorNode('splitFastq', source, result)
+        return result
+    }
+
+    static DataflowReadChannel countLines(DataflowReadChannel source, Map opts=null) {
+        final splitter = new TextSplitter()
+        final result = countOverChannel( source, splitter, opts )
+        NodeMarker.addOperatorNode('countLines', source, result)
+        return result
+    }
+
+    static DataflowReadChannel countFasta(DataflowReadChannel source, Map opts=null) {
+        final splitter = new FastaSplitter()
+        final result = countOverChannel( source, splitter, opts )
+        NodeMarker.addOperatorNode('countFasta', source, result)
+        return result
+    }
+
+    static DataflowReadChannel countFastq(DataflowReadChannel source, Map opts=null) {
+        final splitter = new FastqSplitter()
+        final result = countOverChannel( source, splitter, opts )
+        NodeMarker.addOperatorNode('countFastq', source, result)
+        return result
+    }
+
+
+    static DataflowReadChannel countText(DataflowReadChannel source) {
+        log.warn "Method `countText` has been deprecated -- Use `countLines` instead"
+        countLines(source)
+    }
+
 
 }

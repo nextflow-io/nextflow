@@ -15,7 +15,6 @@
  */
 
 package nextflow.extension
-import static java.util.Arrays.asList
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -33,7 +32,7 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
 import nextflow.dag.NodeMarker
-
+import static java.util.Arrays.asList
 /**
  * This class provides helper methods to implement nextflow operators
  *
@@ -188,7 +187,7 @@ class DataflowHelper {
      * @param closure
      * @return
      */
-    static public final <V> DataflowProcessor subscribeImpl(final DataflowReadChannel<V> source, final Map<String,Closure> events ) {
+    static final <V> DataflowProcessor subscribeImpl(final DataflowReadChannel<V> source, final Map<String,Closure> events ) {
         checkSubscribeHandlers(events)
 
         def error = false
@@ -196,7 +195,7 @@ class DataflowHelper {
         def listener = new DataflowEventAdapter() {
 
             @Override
-            public void afterStop(final DataflowProcessor processor) {
+            void afterStop(final DataflowProcessor processor) {
                 if( !events.onComplete || error ) return
                 try {
                     events.onComplete.call(processor)
@@ -208,7 +207,7 @@ class DataflowHelper {
             }
 
             @Override
-            public boolean onException(final DataflowProcessor processor, final Throwable e) {
+            boolean onException(final DataflowProcessor processor, final Throwable e) {
                 error = true
                 if( !events.onError ) {
                     log.error("@unknown", e)

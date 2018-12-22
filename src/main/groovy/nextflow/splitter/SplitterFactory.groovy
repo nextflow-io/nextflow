@@ -15,13 +15,13 @@
  */
 
 package nextflow.splitter
+
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
-import nextflow.dag.NodeMarker
 import nextflow.extension.DataflowHelper
-import nextflow.extension.SplitOp
 /**
  * Factory class for splitter objects
  *
@@ -73,73 +73,6 @@ class SplitterFactory {
                 : strategy.newInstance())
     }
 
-    /**
-     * This method try to invoke a splitter or a counter method dynamically
-     *
-     * @param obj The target object
-     * @param methodName
-     *      The splitter or counter method to be invoked. It must start with splitXxx or countXxx
-     *      where Xxx represents the splitting format/strategy. For example {@code splitFasta} will invoke
-     *      the split method by using the {@link FastaSplitter} class
-     * @param args Splitter arguments. See {@link SplitterStrategy#options(java.util.Map)}
-     * @param e Exception object to raise if the method is not available
-     * @return the splitter result
-     */
-    static tryFallbackWithSplitter( obj, String methodName, Object[] args, Exception e ) {
-
-        // verifies that is a splitter method and get splitter qualifier
-        if( !methodName.startsWith('split') && !methodName.startsWith('count') )
-            throw e
-
-        if( methodName.size() == 5 )
-            throw e
-
-        // load the splitter class
-        def splitter = create(methodName)
-        if( !splitter )
-            throw e
-
-        // converts args array to options map
-        def opt = argsToOpt(args)
-
-        /*
-         * call the 'split'
-         */
-        if( methodName.startsWith('split') ) {
-            // when the  target obj is a channel use call
-            if( obj instanceof DataflowReadChannel ) {
-                def outbound = new SplitOp( obj, methodName, opt ).apply()
-                NodeMarker.addOperatorNode(methodName, obj, outbound)
-                return outbound
-            }
-            // invokes the splitter
-            else {
-                splitter.options(opt) .target(obj) .split()
-            }
-        }
-
-        /*
-         * otherwise handle 'count'
-         */
-        else {
-            // DEPRECATED TO BE REMOVED
-            log.warn "Method `$methodName` has been deprecated and it will be removed in a future release"
-            // when the  target obj is a channel use call
-            if( obj instanceof DataflowReadChannel ) {
-                def outbound = countOverChannel( obj, splitter, opt )
-                NodeMarker.addOperatorNode(methodName, obj, outbound)
-                return outbound
-            }
-            // invokes the splitter
-            else {
-                splitter.options(opt) .target(obj) .count()
-            }
-
-        }
-
-    }
-
-
 
     /**
      *  Implements dynamic method extension for counter operators
@@ -149,8 +82,8 @@ class SplitterFactory {
      * @param opt
      * @return
      */
-    static protected countOverChannel( DataflowReadChannel source, SplitterStrategy splitter, Map opt )  {
-
+    @PackageScope
+    static countOverChannel( DataflowReadChannel source, SplitterStrategy splitter, Map opt )  {
 
         // create a new DataflowChannel that will receive the splitter entries
         DataflowVariable result = new DataflowVariable ()
@@ -163,47 +96,14 @@ class SplitterFactory {
         opt.each = { count++ }
         strategy.options(opt)
 
-        def splitEntry = { entry ->
-            strategy.target(entry).apply()
-        }
+        def events = new HashMap(2)
+        events.onNext = { entry -> strategy.target(entry).apply() }
+        events.onComplete = { result.bind(count) }
 
-        DataflowHelper.subscribeImpl ( source, [onNext: splitEntry, onComplete: { result.bind(count) }] )
+        DataflowHelper.subscribeImpl ( source, events )
 
         // return the resulting channel
         return result
-    }
-
-
-
-    static protected Map argsToOpt( Object[] args ) {
-
-        Closure closure = null
-        Map opt = null
-
-        if( args.size() == 1 ) {
-            if( args[0] instanceof Closure )
-                closure = args[0] as Closure
-
-            else if( args[0] instanceof Map )
-                opt = args[0] as Map
-
-            else
-                throw new IllegalArgumentException()
-        }
-        else if( args.size() == 2 ) {
-            opt = args[0] as Map
-            closure = args[1] as Closure
-        }
-        else if( args.size()>2 )
-            throw new IllegalArgumentException()
-
-        if( opt == null )
-            opt = [:]
-
-        if( closure )
-            opt.each = closure
-
-        return opt
     }
 
 

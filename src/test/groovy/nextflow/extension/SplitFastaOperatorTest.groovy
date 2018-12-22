@@ -98,9 +98,10 @@ class SplitFastaOperatorTest extends Specification {
     def 'should split tuple in fasta records' () {
 
         given:
-        def result = Channel.from( [fasta1, 'one'], [fasta2,'two'] ).splitFasta(record:[id:true]) { record, code ->
-            [record.id, code]
-        }
+        def result = Channel
+                .from( [fasta1, 'one'], [fasta2,'two'] )
+                .splitFasta(record:[id:true])
+                .map{ record, code -> [record.id, code] }
 
         expect:
         result.val == ['1aboA', 'one']

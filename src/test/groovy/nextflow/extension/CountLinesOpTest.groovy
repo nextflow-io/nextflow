@@ -14,23 +14,47 @@
  * limitations under the License.
  */
 
-package nextflow.splitter
+package nextflow.extension
 
 import spock.lang.Specification
+
+import nextflow.Channel
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class SplitterFactoryTest extends Specification {
+class CountLinesOpTest extends Specification {
 
-    def testCreateSplitter() {
+    def 'should count lines' () {
 
-        expect:
-        SplitterFactory.create('text') instanceof TextSplitter
-        SplitterFactory.create('fasta') instanceof FastaSplitter
+        when:
+        def str = '''
+            line 1
+            line 2
+            line 3
+            line 4
+            line 5
+            '''
+                .stripIndent().strip()
+
+        def str2 = '''
+            line 6
+            line 7
+            line 8
+            '''
+                .stripIndent().strip()
+
+        def str3 = '''
+            line 9
+            line 10
+            line 11
+            '''
+                .stripIndent().strip()
+
+        def result = Channel.from(str, str2, str3).countLines()
+        then:
+        result.val == 11
 
     }
-
-
 }

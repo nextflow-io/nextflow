@@ -29,7 +29,6 @@ import groovyx.gpars.dataflow.DataflowReadChannel;
 import groovyx.gpars.dataflow.DataflowWriteChannel;
 import nextflow.extension.DataflowExtensions;
 import nextflow.file.FileHelper;
-import nextflow.splitter.SplitterFactory;
 
 /**
  * Provides the "dynamic" splitter methods and {@code isEmpty} method for {@link File} and {@link Path} classes.
@@ -89,8 +88,8 @@ public class NextflowDelegatingMetaClass extends groovy.lang.DelegatingMetaClass
                 Object[] newArgs = new Object[] { toListOfChannel(args), args[len - 1] };
                 return delegate.invokeMethod(obj, methodName, newArgs);
             }
-
-            return SplitterFactory.tryFallbackWithSplitter(obj, methodName, args, e1);
+            else
+                throw e1;
         }
     }
 

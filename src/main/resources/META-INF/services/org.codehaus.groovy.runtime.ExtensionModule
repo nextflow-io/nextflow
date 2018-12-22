@@ -17,4 +17,4 @@
 
 moduleName=nextflow
 moduleVersion=1.0
-extensionClasses=nextflow.extension.DataflowExtensions
+extensionClasses=nextflow.extension.DataflowExtensions,nextflow.splitter.SplitterEx
