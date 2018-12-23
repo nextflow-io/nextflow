@@ -25,7 +25,7 @@ sourceSets {
 }
 
 dependencies {
-    compile project(':')
+    compile project(':nextflow')
     compile 'io.swagger:swagger-annotations:1.5.15'
     compile 'com.squareup.okhttp:okhttp:2.7.5'
     compile 'com.squareup.okhttp:logging-interceptor:2.7.5'

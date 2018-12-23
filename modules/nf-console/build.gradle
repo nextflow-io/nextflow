@@ -25,9 +25,7 @@ sourceSets {
 }
 
 dependencies {
-    compile project(':')
-    compile project(':nxf-ignite')
-    compile 'com.google.apis:google-api-services-compute:v1-rev199-1.25.0'
-    compile 'com.google.apis:google-api-services-genomics:v2alpha1-rev40-1.25.0'
-    compile 'com.google.cloud:google-cloud-nio:0.72.0-alpha'
+    compile project(':nextflow')
+    compile "org.codehaus.groovy:groovy-console:2.5.4"
 }
+
