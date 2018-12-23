@@ -1,2 +1,0 @@
-rule com.google.common.** embed.@0
-keep com.google.common.hash.**

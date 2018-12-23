@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
+rootProject.name = 'nextflow-prj'
+
 include 'my-capsule'
-include 'nxf-commons'
-include 'nxf-console'
-include 'nxf-ignite'
-include 'nxf-httpfs'
-include 'nxf-ga4gh'
-include 'nxf-google'
+include 'nextflow'
+include 'nf-commons'
+include 'nf-console'
+include 'nf-ignite'
+include 'nf-httpfs'
+include 'nf-ga4gh'
+include 'nf-google'
 
 rootProject.children.each { prj ->
-    prj.projectDir = new File("$rootDir/subprojects/$prj.name")
+    prj.projectDir = new File("$rootDir/modules/$prj.name")
 }

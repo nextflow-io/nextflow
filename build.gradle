@@ -23,8 +23,6 @@ buildscript {
     }
 }
 
-apply plugin: 'groovy'
-apply plugin: "jacoco"
 apply plugin: 'idea'
 apply plugin: 'io.codearte.nexus-staging'   // See https://github.com/Codearte/gradle-nexus-staging-plugin/
 
@@ -160,92 +158,28 @@ configurations {
 
 
 dependencies {
-    compile(project(':nxf-commons'))
-    compile(project(':nxf-httpfs'))
-    compile "org.codehaus.groovy:groovy:2.5.4"
-    compile "org.codehaus.groovy:groovy-nio:2.5.4"
-    compile "org.codehaus.groovy:groovy-json:2.5.4"
-    compile "org.codehaus.groovy:groovy-templates:2.5.4"
-    compile "org.slf4j:jcl-over-slf4j:1.7.25"
-    compile "org.slf4j:jul-to-slf4j:1.7.25"
-    compile "org.slf4j:log4j-over-slf4j:1.7.25"
-    compile "ch.qos.logback:logback-classic:1.1.11"
-    compile "ch.qos.logback:logback-core:1.1.11"
-    compile "org.codehaus.gpars:gpars:1.2.1"
-    compile("ch.grengine:grengine:1.3.0") { exclude group: 'org.codehaus.groovy'  }
-    compile "commons-lang:commons-lang:2.6"
-    compile "com.beust:jcommander:1.35"
-    compile("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
-    compile('org.iq80.leveldb:leveldb:0.10')
-    compile('org.eclipse.jgit:org.eclipse.jgit:4.8.0.201706111038-r')
-    compile('io.nextflow:nxf-s3fs:1.0.4') {
-        exclude group: 'org.apache.tika', module: 'tika-core'
-        exclude group: 'com.amazonaws', module: 'aws-java-sdk-s3'
-    }
-    compile ('com.amazonaws:aws-java-sdk-s3:1.11.470')
-    compile ('com.amazonaws:aws-java-sdk-ec2:1.11.470')
-    compile ('com.amazonaws:aws-java-sdk-batch:1.11.470')
-    compile ('javax.activation:activation:1.1.1')
-    compile ('javax.mail:mail:1.4.7')
-    compile ('org.yaml:snakeyaml:1.18')
-    compile ('org.jsoup:jsoup:1.11.2')
-    compile 'jline:jline:2.9'
-
+    compile project(':nextflow')
     // include Ivy at runtime in order to have Grape @Grab work correctly
     runtime "org.apache.ivy:ivy:2.3.0"
-
     // library used to compile but not included in the final jar
     compileOnly ('javax.xml.bind:jaxb-api:2.3.0')
-    
     // Capsule manages the fat jar building process
-    capsule(project(':my-capsule'))
-
-    ignite(project(':nxf-ignite')) {
-        exclude module: 'nextflow'
-    }
-
-    console(project(':nxf-console')) {
-        exclude module: 'nextflow'
-    }
-
-    ga4gh(project(':nxf-ga4gh')) {
-        exclude module: 'nextflow'
-    }
-
-    google(project(':nxf-google')) {
-        exclude module: 'nextflow'
-    }
-
+    capsule project(':my-capsule')
+    ignite  project(':nf-ignite')
+    console project(':nf-console')
+    ga4gh   project(':nf-ga4gh')
+    google  project(':nf-google')
 }
 
-
-//sourceSets.main.compileClasspath += configurations.provided
-sourceSets.main.java.srcDirs = []
-sourceSets.main.groovy.srcDirs = ['src/main/java', 'src/main/groovy']
-sourceSets.main.resources.srcDirs = ['src/main/resources']
-
-compileGroovy {
-    options.compilerArgs = ['-XDignore.symbol.file']
-}
-
-
-/*
- * http://www.gradle.org/docs/current/dsl/org.gradle.plugins.ide.idea.model.IdeaModule.html
- * http://stackoverflow.com/questions/20421681/provided-dependencies-using-gradle-jetgradle-and-intellij-idea-13
- * http://forums.gradle.org/gradle/topics/gradle_2_0_idea_plugin_adding_a_custom_configuration_to_scope_throws_classcastexception
- */
-//idea {
-//    module {
-//        scopes.PROVIDED.plus += [configurations.provided]
-//    }
-//}
+// disable jar for root project
+jar.enabled = false
 
 /*
  * Update the build timestamp in the source source file
  */
 task buildInfo { doLast {
 
-    def file = new File('./src/main/groovy/nextflow/Const.groovy')
+    def file = new File('./modules/nextflow/src/main/groovy/nextflow/Const.groovy')
     def buildNum = 0
     def src = file.text
     src.find(/APP_BUILDNUM *= *([0-9]*)/) { buildNum = it[1]?.toInteger()+1 }
@@ -327,13 +261,13 @@ ext.s3CmdOpts="--acl public-read --storage-class STANDARD --region eu-west-1"
 ext.enableSignArchives = project.findProperty('signing.keyId')
 
 ext.deployable = []
-ext.deployable << project(':')
-ext.deployable << project(':nxf-commons')
-ext.deployable << project(':nxf-ignite')
-ext.deployable << project(':nxf-console')
-ext.deployable << project(':nxf-httpfs')
-ext.deployable << project(':nxf-ga4gh')
-ext.deployable << project(':nxf-google')
+ext.deployable << project(':nextflow')
+ext.deployable << project(':nf-commons')
+ext.deployable << project(':nf-ignite')
+ext.deployable << project(':nf-console')
+ext.deployable << project(':nf-httpfs')
+ext.deployable << project(':nf-ga4gh')
+ext.deployable << project(':nf-google')
 
 protected error(String message) {
     logger.error message
@@ -344,10 +278,7 @@ protected resolveDeps( String configName, String... x ) {
 
     final deps = [] as Set
     final config = configurations.getByName(configName)
-    final incoming = config.getIncoming()
-
-    deps << incoming.getResolutionResult().root.moduleVersion.toString()
-
+    //final root = config.getIncoming().getResolutionResult().root.moduleVersion.toString()
     config.getResolvedConfiguration().getResolvedArtifacts().each{ deps << coordinates(it) }
 
     if( x )
@@ -363,6 +294,8 @@ protected resolveDeps( String configName, String... x ) {
         conflicts.each { name, count -> err += "\n- $name: " + deps.findAll{ it.startsWith(name) }.collect{ it.tokenize(':')[2] } }
         throw new IllegalStateException(err)
     }
+    
+    //println "** $configName\n${deps.sort().collect{"- $it"}.join('\n')}\n"
 
     //println ">> Config: $configName \n${deps.sort().join('\n')}\n\n"
 
@@ -734,17 +667,3 @@ configure(deployable) {
     signArchives.onlyIf { enableSignArchives }
 }
 
-//test {
-//    testLogging {
-//        events "passed", "skipped", "failed", "standardOut", "standardError"
-//    }
-//}
-
-
-//task allFiles {
-//    doLast {
-//        configurations.compile.files.sort{ it.name }.each { file ->
-//            println file.name
-//        }
-//    }
-//}
