@@ -36,6 +36,7 @@ import groovyx.gpars.dataflow.Dataflow
 import groovyx.gpars.dataflow.DataflowChannel
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowOperator
@@ -1133,7 +1134,7 @@ class TaskProcessor {
     final protected synchronized void sendPoisonPill() {
         log.trace "<$name> Sending a poison pill(s)"
 
-        config.getOutputs().getChannels().each { channel ->
+        for( DataflowWriteChannel channel : config.getOutputs().getChannels() ){
 
             if( channel instanceof DataflowQueue ) {
                 channel.bind( PoisonPill.instance )
