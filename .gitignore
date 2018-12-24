@@ -9,8 +9,8 @@
 build/**
 modules/**/build/
 modules/**/*.iml
+modules/nextflow/work/
 out/**
-piper/**
 tmp/*
 work/*
 nextflow.eml
@@ -23,10 +23,8 @@ other
 docs/_build/
 ./*.txt
 cache/
-extrae_files/**
 errors/
 misc/
-logo/
 cloud/my-*
 docker-test
 docker/dist
