@@ -16,6 +16,8 @@
 
 package nextflow.cli
 
+import spock.lang.IgnoreIf
+
 import java.nio.file.Files
 
 import spock.lang.Requires
@@ -24,6 +26,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@IgnoreIf({System.getenv('NXF_SMOKE')})
 class CmdPullTest extends Specification {
 
     @Requires({ System.getenv('NXF_GITHUB_ACCESS_TOKEN') })
