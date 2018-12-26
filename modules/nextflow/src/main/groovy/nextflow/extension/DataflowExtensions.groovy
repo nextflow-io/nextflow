@@ -892,7 +892,7 @@ class DataflowExtensions {
      * @return
      */
     static final DataflowReadChannel<Map> groupBy(final DataflowReadChannel source, final params = null ) {
-
+        log.warn "Operator `groupBy` is deprecated and it will be removed in a future release"
         int index = 0
         Closure mapper = DEFAULT_MAPPING_CLOSURE
 
@@ -956,6 +956,7 @@ class DataflowExtensions {
 
     static final DataflowReadChannel route( final DataflowReadChannel source, final Closure mapper = DEFAULT_MAPPING_CLOSURE ) {
         assert !(source instanceof DataflowExpression)
+        log.warn "Operator `route` is deprecated and it will be removed in a future release"
 
         def allChannels = new ConcurrentHashMap()
         DataflowQueue target = new DataflowQueue()
