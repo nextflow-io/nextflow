@@ -30,7 +30,7 @@ import test.TestHelper
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@IgnoreIf({System.getenv('NXF_QUICK')})
+@IgnoreIf({System.getenv('NXF_SMOKE')})
 class AmazonPriceReaderTest extends Specification {
 
     static String REGION = 'eu-west-1'

@@ -16,6 +16,7 @@
 
 package nextflow.scm
 
+import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
 
@@ -23,6 +24,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@IgnoreIf({System.getenv('NXF_SMOKE')})
 class GitlabRepositoryProviderTest extends Specification {
 
     def 'should return repo url' () {

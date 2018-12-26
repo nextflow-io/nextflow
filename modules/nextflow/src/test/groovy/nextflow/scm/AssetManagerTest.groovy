@@ -15,6 +15,9 @@
  */
 
 package nextflow.scm
+
+import spock.lang.IgnoreIf
+
 import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.Git
 import org.junit.Rule
@@ -25,6 +28,7 @@ import test.TemporaryPath
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@IgnoreIf({System.getenv('NXF_SMOKE')})
 class AssetManagerTest extends Specification {
 
     static String GIT_CONFIG_TEXT = '''

@@ -30,7 +30,7 @@ import javax.mail.internet.MimeMultipart
 import org.subethamail.wiser.Wiser
 import spock.util.environment.RestoreSystemProperties
 
-@IgnoreIf({System.getenv('NXF_QUICK')})
+@IgnoreIf({System.getenv('NXF_SMOKE')})
 class MailerTest extends Specification {
 
 
