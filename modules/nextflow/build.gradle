@@ -1,9 +1,13 @@
 apply plugin: 'groovy'
 
-//sourceSets.main.compileClasspath += configurations.provided
-sourceSets.main.java.srcDirs = []
-sourceSets.main.groovy.srcDirs = ['src/main/java', 'src/main/groovy']
-sourceSets.main.resources.srcDirs = ['src/main/resources']
+sourceSets {
+    main.java.srcDirs = []
+    main.groovy.srcDirs = ['src/main/java', 'src/main/groovy']
+    main.resources.srcDirs = ['src/main/resources']
+    test.java.srcDirs = []
+    test.groovy.srcDirs = ['src/test/groovy']
+    test.resources.srcDirs = ['src/test/resources']
+}
 
 compileGroovy {
     options.compilerArgs = ['-XDignore.symbol.file']
