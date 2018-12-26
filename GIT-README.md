@@ -32,6 +32,18 @@ To push changes to to [tests repo](https://github.com/nextflow-io/tests) use thi
 
 Read more [here](https://andrey.nering.com.br/2016/git-submodules-vs-subtrees/).
 
+## Stash shortcuts
+
+    git stash list
+    git stash pop
+    git stash pop stash@{1}
+    git stash drop
+    git stash drop stash@{1}
+    git stash clear
+    git diff stash
+    git diff stash@{1} [other]
+
+
 ## GPG keys 
 
 To sign Git commits with a GPG key on Mac use [GPG Suite](https://gpgtools.org/), import your key, then: 
@@ -43,3 +55,4 @@ To sign Git commits with a GPG key on Mac use [GPG Suite](https://gpgtools.org/)
 
 Read more: 
 https://gist.github.com/danieleggert/b029d44d4a54b328c0bac65d46ba4c65
+
