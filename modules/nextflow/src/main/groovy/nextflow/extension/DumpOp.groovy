@@ -75,17 +75,17 @@ class DumpOp {
         }
 
         final target = DataflowExtensions.newChannelBy(source)
-
-        final next = {
+        final events = new HashMap(2)
+        events.onNext = {
             def marker = 'DUMP'
             if( tag ) marker += ": $tag"
             log.info "[$marker] " + ( renderer ? renderer.call(it) : InvokerHelper.inspect(it) )
             target.bind(it)
         }
 
-        final done = { DataflowExtensions.close(target) }
+        events.onComplete = { DataflowExtensions.close(target) }
 
-        DataflowHelper.subscribeImpl(source, [onNext: next, onComplete: done])
+        DataflowHelper.subscribeImpl(source, events)
         return target
     }
 }

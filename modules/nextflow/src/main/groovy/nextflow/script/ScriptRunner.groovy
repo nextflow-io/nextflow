@@ -478,7 +478,7 @@ class ScriptRunner {
             super( values ?: [] )
         }
 
-        def String get( int pos ) {
+        String get( int pos ) {
             if( pos < 0 ) {
                 throw new AbortOperationException("Argument array index cannot be lower than zero")
             }
@@ -490,7 +490,7 @@ class ScriptRunner {
             super.get(pos)
         }
 
-        def String getAt(int pos) {
+        String getAt(int pos) {
             get(pos)
         }
 

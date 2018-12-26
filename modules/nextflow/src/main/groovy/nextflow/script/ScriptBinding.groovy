@@ -211,7 +211,7 @@ class ScriptBinding extends Binding {
 
         @Override
         void putAll(Map other) {
-            for( Map.Entry<String,Object> entry : other.entrySet() ) {
+            for( Entry<String,Object> entry : other.entrySet() ) {
                 put0(entry.getKey(), entry.getValue())
             }
         }
