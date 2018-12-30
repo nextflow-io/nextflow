@@ -165,30 +165,28 @@ class LsfExecutor extends AbstractGridExecutor {
 
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
-
         def result = [:]
         def col1 = -1
         def col2 = -1
-        def buf = new StringBuilder()
         for( String line : text.readLines() ) {
             if( !line )
                 continue
 
             if( col1==-1 && col2==-1 ) {
-                col1 = line.indexOf('JOBID')
-                col2 = line.indexOf("STAT")
+                col1 = line.tokenize(' ').findIndexOf{ name -> name == 'JOBID'}
+                col2 = line.tokenize(' ').findIndexOf{ name -> name == "STAT"}
                 continue
             }
 
-            def jobId = col(line,col1,buf)
-            def status = col(line,col2,buf)
+            def jobId = line.tokenize(' ')[col1]
+            def status = line.tokenize(' ')[col2]
             if( jobId )
             result[jobId] = DECODE_STATUS.get(status)
-        }
+         }
 
-        return result
+         return result
     }
-
+ 
     protected String col(String line, int p, StringBuilder buf) {
         buf.setLength(0)
         for( int i=p; i<line.size(); i++ ) {

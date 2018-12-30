@@ -366,7 +366,8 @@ class LsfExecutorTest extends Specification {
                 5085034 pluskal RUN   normal     tak         it-c01b13   phenix.autobuild autobuild_config.eff Oct 31 12:56
                 5085612 pluskal RUN   normal     it-c05b12   it-c01b13   /lab/solexa_weng/xtal_data/Data_processing/Tomas_Pluskal/20181031_KLR1_autobuild_not_in_place/AutoBuild_run_1_/TEMP0/RUN_FILE_9 Oct 31 14:44
                 5085703 pluskal RUN   normal     it-c01b14   it-r16u31:it-r16u31:it-r16u31:it-r16u31:it-r16u31:it-r16u31:it-r16u31:it-r16u31:it-r16u31:it-r16u31 nf-trinityInchwormChrysalis Oct 31 15:08
-                """.stripIndent().trim()
+                5085704 longusername RUN   normal     it-c01b15   it-r16u31:it-r16u31:it-r16u31:it-r16u31:it-r16u31:it-r16u31:it-r16u31:it-r16u31:it-r16u31:it-r16u31 nf-trinityInchwormChrysalis Oct 31 16:08
+ """.stripIndent().trim()
 
 
         when:
@@ -385,7 +386,8 @@ class LsfExecutorTest extends Specification {
         result['5085034'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['5085612'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['5085703'] == AbstractGridExecutor.QueueStatus.RUNNING
-        result.size()==13
+        result['5085704'] == AbstractGridExecutor.QueueStatus.RUNNING
+        result.size()==14
     }
 
     def 'should parse bjobs stats with extra headers' () {
