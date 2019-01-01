@@ -209,12 +209,16 @@ class TimelineObserver implements TraceObserver {
         def result = []
         def duration = record.getFmtStr('duration')
         def memory = record.getFmtStr('vmem')
+        def memoryrss = record.getFmtStr('peak_rss')	
 
         if( duration )
             result << duration.toString()
 
         if( memory )
             result <<  memory.toString()
+
+        if( memoryrss )
+            result <<  memoryrss.toString()
 
         if( record.cached )
             result << 'CACHED'
