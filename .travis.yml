@@ -28,11 +28,6 @@ script:
   - |
     set -e;
     make test install;
-    [[ $TEST_JDK ]] \
-      && curl -o install-jdk.sh https://raw.githubusercontent.com/sormuras/bach/master/install-jdk.sh \
-      && chmod +x install-jdk.sh \
-      && source ./install-jdk.sh --cacerts --feature $TEST_JDK;
-    export WITH_DOCKER='-with-docker';
     ./integration-tests.sh
 after_script:
   - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then bash pub-tests.sh travis; fi
