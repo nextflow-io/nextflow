@@ -53,6 +53,12 @@ class ProviderConfig {
                 if( !attr.server ) attr.server = 'https://gitlab.com'
                 break
 
+            case 'gitea':
+                attr.platform = name
+                if( !attr.server ) attr.server = 'https://try.gitea.io'
+                if( !attr.endpoint ) attr.endpoint = attr.server.toString() + '/api/v1'
+                break
+
             case 'bitbucket':
                 attr.platform = name
                 if( !attr.server ) attr.server = 'https://bitbucket.org'
@@ -249,6 +255,9 @@ class ProviderConfig {
 
         if( !result.find{ it.name == 'gitlab' })
             result << new ProviderConfig('gitlab')
+
+        if( !result.find{ it.name == 'gitea' })
+            result << new ProviderConfig('gitea')
 
         if( !result.find{ it.name == 'bitbucket' })
             result << new ProviderConfig('bitbucket')

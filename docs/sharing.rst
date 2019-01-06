@@ -250,7 +250,7 @@ that can be found in your GitLab `account page <https://gitlab.com/profile/accou
 Private server configuration
 ============================
 
-Nextflow is able to access repositories hosted on private BitBucket, GitHub and GitLab server installations.
+Nextflow is able to access repositories hosted on private BitBucket, GitHub, GitLab and Gitea server installations.
 
 In order to use a private SCM installation you will need to set the server name and access credentials
 in your `SCM configuration file`_ .

@@ -228,6 +228,9 @@ abstract class RepositoryProvider {
             case 'gitlab':
                 return new GitlabRepositoryProvider(project, config)
 
+            case 'gitea':
+                return new GiteaRepositoryProvider(project, config)
+
             case 'file':
                 // remove the 'local' prefix for the file provider
                 def localName = project.tokenize('/').last()
