@@ -32,6 +32,10 @@ compile:
 	@echo "DONE `date`"
 
 clean:
+	rm -rf .nextflow*
+	rm -rf work 
+	rm -rf modules/nextflow/.nextflow*
+	rm -rf modules/nextflow/work
 	./gradlew clean
 
 assemble:
