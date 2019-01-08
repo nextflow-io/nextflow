@@ -25,10 +25,13 @@ import spock.lang.Specification
 
 class MemoryUnitTest extends Specification {
 
-    def 'test toString'() {
+    def 'should convert mem unit to string'() {
 
         expect:
+        new MemoryUnit(1000).toString() == '1000 B'
         new MemoryUnit(1024).toString() == '1 KB'
+        new MemoryUnit(1500).toString() == '1.5 KB'
+
         new MemoryUnit(2 * 1024 * 1024).toString() == '2 MB'
         new MemoryUnit(3 * 1024L * 1024L * 1024L).toString() == '3 GB'
         new MemoryUnit(4 * 1024L * 1024L * 1024L * 1024L).toString() == '4 TB'
@@ -38,7 +41,7 @@ class MemoryUnitTest extends Specification {
     }
 
 
-    def 'test create' () {
+    def 'should create mem unit from string' () {
 
         expect:
         new MemoryUnit('1').toBytes() == 1
@@ -70,6 +73,12 @@ class MemoryUnitTest extends Specification {
         new MemoryUnit('3.5 PB').toBytes() == 3.5 * 1024 * 1024 * 1024L* 1024L* 1024L
         new MemoryUnit('35 P').toBytes() == 35 * 1024 * 1024 * 1024L* 1024L* 1024L
 
+        new MemoryUnit('1000 KB').toBytes() == 1000 * 1024
+
+        when:
+        new MemoryUnit('1,000 KB')
+        then:
+        thrown(IllegalArgumentException)
     }
 
     def 'test getters' () {
