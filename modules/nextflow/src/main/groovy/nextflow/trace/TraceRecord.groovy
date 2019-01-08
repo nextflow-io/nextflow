@@ -383,8 +383,49 @@ class TraceRecord implements Serializable {
     TraceRecord parseTraceFile( Path file ) {
 
         final text = file.text
-        String[] header = null
+
         final lines = text.readLines()
+        if( !lines )
+            return this
+        if( lines[0] != 'nextflow.trace/v2' )
+            return parseLegacy(file, lines)
+
+        for( int i=0; i<lines.size(); i++ ) {
+            final pair = lines[i].tokenize('=')
+            final name = pair[0]
+            final value = pair[1]
+            if( value == null )
+                continue
+
+            switch (name) {
+                case '%cpu':
+                case '%mem':
+                    // fields '%cpu' and '%mem' are expressed as percent value
+                    this.put(name, parseInt(value, file, name) / 10F)
+                    break
+
+                case 'rss':
+                case 'vmem':
+                case 'peak_rss':
+                case 'peak_vmem':
+                    // these fields are provided in KB, so they are normalized to bytes
+                    def val = parseLong(value, file, name) * 1024
+                    this.put(name, val)
+                    break
+
+                default:
+                    def val = parseLong(value, file, name)
+                    this.put(name, val)
+                    break
+            }
+
+        }
+
+        return this
+    }
+
+    private TraceRecord parseLegacy( Path file, List<String> lines) {
+        String[] header = null
         for( int count=0; count<lines.size(); count++ ) {
             String row = lines[count]
 
@@ -433,6 +474,27 @@ class TraceRecord implements Serializable {
         return this
     }
 
+    private long parseInt( String str, Path file, String row )  {
+        try {
+            str.toInteger()
+        }
+        catch( NumberFormatException e ) {
+            log.debug "[WARN] Not a valid integer number `$str` -- offending row: $row in file `$file`"
+            return 0
+        }
+    }
+
+    private long parseLong( String str, Path file , String row )  {
+        try {
+            str.toLong()
+        }
+        catch( NumberFormatException e ) {
+            log.debug "[WARN] Not a valid long number `$str` -- offending row: $row in file `$file`"
+            return 0
+        }
+    }
+
+    @Deprecated
     private long parseInt( String str, Path file, int index )  {
         try {
             str.toInteger()
@@ -443,6 +505,7 @@ class TraceRecord implements Serializable {
         }
     }
 
+    @Deprecated
     private long parseLong( String str, Path file, int index )  {
         try {
             str.toLong()

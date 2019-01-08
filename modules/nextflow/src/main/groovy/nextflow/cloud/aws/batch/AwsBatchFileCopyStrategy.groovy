@@ -56,8 +56,8 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      * {@inheritDoc}
      */
     @Override
-    String getEnvScript(Map environment, String handler) {
-        if( handler )
+    String getEnvScript(Map environment, boolean container) {
+        if( container )
             throw new IllegalArgumentException("Parameter `wrapHandler` not supported by ${this.class.simpleName}")
 
         final result = new StringBuilder()
@@ -73,7 +73,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
             result << "export PATH=\$PWD/nextflow-bin:\$PATH\n"
         }
         // finally render the environment
-        final envSnippet = super.getEnvScript(copy,null)
+        final envSnippet = super.getEnvScript(copy,false)
         if( envSnippet )
             result << envSnippet
         return result.toString()

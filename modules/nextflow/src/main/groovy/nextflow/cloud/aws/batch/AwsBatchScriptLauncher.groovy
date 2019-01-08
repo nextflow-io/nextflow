@@ -34,10 +34,6 @@ class AwsBatchScriptLauncher extends BashWrapperBuilder {
             scratch = true
         // include task script as an input to force its staging in the container work directory
         bean.inputFiles[TaskRun.CMD_SCRIPT] = bean.workDir.resolve(TaskRun.CMD_SCRIPT)
-        // add the wrapper file when stats are enabled
-        if( bean.statsEnabled ) {
-            bean.inputFiles[TaskRun.CMD_STUB] = bean.workDir.resolve(TaskRun.CMD_STUB)
-        }
         // include task stdin file
         if( bean.input != null ) {
             bean.inputFiles[TaskRun.CMD_INFILE] = bean.workDir.resolve(TaskRun.CMD_INFILE)

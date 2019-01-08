@@ -82,8 +82,9 @@ class ShifterBuilder extends ContainerBuilder<ShifterBuilder> {
         return this
     }
 
-    StringBuilder appendHelpers( StringBuilder wrapper ) {
-        wrapper << SHIFTER_HELPERS << '\n'
+    @Override
+    String getScriptHelpers() {
+        return SHIFTER_HELPERS + '\n'
     }
 
     @Override

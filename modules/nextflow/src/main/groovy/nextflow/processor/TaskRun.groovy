@@ -28,7 +28,6 @@ import nextflow.conda.CondaCache
 import nextflow.conda.CondaConfig
 import nextflow.container.ContainerConfig
 import nextflow.container.ContainerHandler
-import nextflow.container.ContainerScriptTokens
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessTemplateException
 import nextflow.exception.ProcessUnrecoverableException
@@ -515,7 +514,7 @@ class TaskRun implements Cloneable {
     static final public String CMD_EXIT = '.exitcode'
     static final public String CMD_START = '.command.begin'
     static final public String CMD_RUN = '.command.run'
-    static final public String CMD_STUB = '.command.stub'
+    @Deprecated static final public String CMD_STUB = '.command.stub'
     static final public String CMD_TRACE = '.command.trace'
 
 
@@ -563,10 +562,7 @@ class TaskRun implements Cloneable {
     String getContainer() {
         // set the docker container to be used
         String imageName
-        if( isContainerExecutable() ) {
-            imageName = ContainerScriptTokens.parse(script.toString()).image
-        }
-        else if( !config.container ) {
+        if( !config.container ) {
             return null
         }
         else {
@@ -590,18 +586,8 @@ class TaskRun implements Cloneable {
      * @return {@true} when the process must run within a container and the docker engine is enabled
      */
     boolean isDockerEnabled() {
-        if( isContainerExecutable() )
-            return true
-
         def config = getContainerConfig()
         return config && config.engine == 'docker' && config.enabled
-    }
-
-    /**
-     * @return {@true} when the process runs an *executable* container
-     */
-    boolean isContainerExecutable() {
-        getConfig().container == true
     }
 
     boolean isContainerNative() {
@@ -609,7 +595,7 @@ class TaskRun implements Cloneable {
     }
 
     boolean isContainerEnabled() {
-        getConfig().container && (isContainerExecutable() || getContainerConfig().enabled || isContainerNative())
+        getConfig().container && (getContainerConfig().enabled || isContainerNative())
     }
 
     boolean isSuccess( status = exitStatus ) {

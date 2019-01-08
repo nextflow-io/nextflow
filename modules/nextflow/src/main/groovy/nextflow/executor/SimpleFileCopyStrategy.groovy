@@ -373,28 +373,23 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
     }
 
     @Override
-    String getEnvScript(Map environment, String handler=null) {
-        getEnvScript0(environment,handler)
-    }
-
-    static String getEnvScript0(Map environment, String handler=null) {
+    String getEnvScript(Map environment, boolean container) {
         if( !environment )
             return null
 
         // create the *bash* environment script
-        def wrapper = new StringBuilder()
-        if( !handler ) {
-            wrapper << TaskProcessor.bashEnvironmentScript(environment)
+        if( !container ) {
+            return TaskProcessor.bashEnvironmentScript(environment)
         }
         else {
-            wrapper << "${handler}() {\n"
+            final wrapper = new StringBuilder()
+            wrapper << "nxf_container_env() {\n"
             wrapper << 'cat << EOF\n'
             wrapper << TaskProcessor.bashEnvironmentScript(environment, true)
             wrapper << 'EOF\n'
             wrapper << '}\n'
+            return wrapper.toString()
         }
-
-        return wrapper.toString()
     }
 
 }

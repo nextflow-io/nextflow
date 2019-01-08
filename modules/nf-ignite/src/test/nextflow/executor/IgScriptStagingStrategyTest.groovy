@@ -41,6 +41,6 @@ class IgScriptStagingStrategyTest extends Specification {
         strategy.copyFile('foo.txt', PATH) == delegate.copyFile('foo.txt', PATH)
         strategy.exitFile(PATH) == delegate.exitFile(PATH)
         strategy.pipeInputFile(PATH) == delegate.pipeInputFile(PATH)
-        strategy.getEnvScript([FOO:1],null) == delegate.getEnvScript([FOO:1],null)
+        strategy.getEnvScript([FOO:1],false) == delegate.getEnvScript([FOO:1],false)
     }
 }

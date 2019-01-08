@@ -96,33 +96,6 @@ Alternatively, the same containers definitions can be provided by using the ``ne
 
 Read the :ref:`Process scope <config-process>` section to learn more about processes configuration.
 
-Executable containers
-======================
-
-.. warning:: This feature has been deprecated. It will removed in future Nextflow release.
-
-An executable container is a Docker image which defines a command `entry point <https://docs.docker.com/reference/builder/#entrypoint>`_
-i.e. a command that is executed by default when the container start.
-
-In order to use an executable container with Nextflow set the process' directive ``container`` to the value ``true`` and
-use the Docker image name (including the user/organisation name) as the first command in the process script, followed
-eventually by any command parameters.
-
-For example::
-
-    process runImage {
-      container true
-
-      '''
-      docker/image --foo --bar
-      '''
-
-    }
-
-The docker image name can be preceded by one or more lines containing comments or variables definition i.e. ``NAME=VALUE``
-and can be followed by one or more lines containing Bash commands.
-
-
 
 Advanced settings 
 ==================

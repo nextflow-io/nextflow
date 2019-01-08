@@ -20,6 +20,8 @@ import groovy.transform.CompileStatic
 
 import java.nio.file.Path
 
+import groovy.transform.PackageScope
+
 /**
  * Helper class wrapping configuration required for Google Pipelines.
  *
@@ -41,6 +43,7 @@ class GooglePipelinesConfiguration {
         this.preemptible = preemptible
     }
 
+    @PackageScope GooglePipelinesConfiguration() {}
 
     @Override
     String toString() {

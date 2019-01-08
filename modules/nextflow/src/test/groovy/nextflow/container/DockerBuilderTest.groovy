@@ -212,44 +212,6 @@ class DockerBuilderTest extends Specification {
 
     }
 
-    def 'should add docker run to shell script' () {
-
-        when:
-        def script = '''
-            #!/bin/bash
-            FOO=bar
-            busybox --foo --bar
-            do_this
-            do_that
-            '''
-        def tokens = ContainerScriptTokens.parse(script)
-        def docker = new DockerBuilder('busybox').addEnv(tokens.variables)
-        docker.build()
-
-        then:
-        docker.addContainerRunCommand(tokens) == '''
-            #!/bin/bash
-            FOO=bar
-            docker run -i -e "FOO=bar" -v "$PWD":"$PWD" -w "$PWD" busybox --foo --bar
-            do_this
-            do_that
-            '''
-                .stripIndent().leftTrim()
-
-        when:
-        tokens = ContainerScriptTokens.parse('#!/bin/bash\nbusybox')
-        docker = new DockerBuilder('busybox')
-        docker.build()
-        then:
-        docker.addContainerRunCommand(tokens) == '''
-            #!/bin/bash
-            docker run -i -v "$PWD":"$PWD" -w "$PWD" busybox
-            '''
-                .stripIndent().leftTrim()
-
-
-    }
-
 
     def 'should get run command line' () {
 

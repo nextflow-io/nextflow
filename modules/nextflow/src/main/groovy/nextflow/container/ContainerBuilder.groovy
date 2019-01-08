@@ -123,8 +123,15 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
     String getRemoveCommand() { return null }
 
-    StringBuilder appendHelpers( StringBuilder wrapper ) {
+    @Deprecated
+    final StringBuilder appendHelpers( StringBuilder wrapper ) {
+        final result = getScriptHelpers()
+        if( result ) wrapper.append(result)
         return wrapper
+    }
+
+    String getScriptHelpers() {
+        return null
     }
 
     V build() {
@@ -159,26 +166,6 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
         return files
     }
 
-    /**
-     * Given a normalised shell script (starting with a she-bang line)
-     * replace the first token on the first line with a docker run command
-     *
-     * @param script
-     * @param docker
-     * @return
-     */
-    String addContainerRunCommand( ContainerScriptTokens script ) {
-
-        final result = new ArrayList<String>(script.lines)
-        final i = script.index
-        final main = result[i].trim()
-        final p = main.indexOf(' ')
-        result[i] = ( p != -1
-                ? runCommand + main.substring(p)
-                : runCommand )
-        result.add('')
-        return result.join('\n')
-    }
 
     protected CharSequence appendEnv( StringBuilder result ) {
         for( Object e : env ) {

@@ -161,7 +161,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                         done
                         ((${#pid[@]}>0)) && wait ${pid[@]}
                         )
-                    }     
+                    }
                     '''.stripIndent()
 
         when:
@@ -224,7 +224,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                     done
                     ((${#pid[@]}>0)) && wait ${pid[@]}
                     )
-                }     
+                }
             '''.stripIndent()
     }
 
@@ -237,7 +237,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         def copy = Spy(AwsBatchFileCopyStrategy, constructorArgs: [bean, opts])
 
         when:
-        def script = copy.getEnvScript(ENV)
+        def script = copy.getEnvScript(ENV,false)
         then:
         // note: PATH is always removed
         opts.getRemoteBinDir() >> null
@@ -248,7 +248,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
             '''.stripIndent().leftTrim()
 
         when:
-        script = copy.getEnvScript(ENV)
+        script = copy.getEnvScript(ENV,false)
         then:
         opts.getRemoteBinDir() >> '/foo/bar'
         opts.getAwsCli() >> 'aws'
@@ -261,7 +261,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
             '''.stripIndent().leftTrim()
 
         when:
-        script = copy.getEnvScript(ENV)
+        script = copy.getEnvScript(ENV,false)
         then:
         opts.getAwsCli() >> '/conda/bin/aws'
         opts.getRemoteBinDir() >> '/foo/bar'
@@ -274,7 +274,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
             '''.stripIndent().leftTrim()
 
         when:
-        script = copy.getEnvScript(ENV)
+        script = copy.getEnvScript(ENV,false)
         then:
         opts.getAwsCli() >> '/conda/bin/aws'
         opts.getRemoteBinDir() >> '/foo/bar'

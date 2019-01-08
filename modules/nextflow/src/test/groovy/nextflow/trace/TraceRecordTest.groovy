@@ -145,9 +145,51 @@ class TraceRecordTest extends Specification {
     }
 
 
-    def static final long KB = 1024L
+    static final long KB = 1024L
 
     def 'should parse a trace file and return a TraceRecord object'() {
+
+        given:
+        def file = TestHelper.createInMemTempFile('trace')
+        file.text =  '''
+        nextflow.trace/v2
+        realtime=9988
+        %cpu=10
+        rchar=37985
+        wchar=205
+        syscr=116
+        syscw=12
+        read_bytes=4096
+        write_bytes=2048
+        %mem=20
+        vmem=22900
+        rss=3796
+        peak_vmem=22908
+        peak_rss=3796
+        '''
+         .stripIndent().leftTrim()
+
+        when:
+        def handler = [:] as TraceRecord
+        def trace = handler.parseTraceFile(file)
+        then:
+        trace.'%cpu' == 1.0
+        trace.'%mem' == 2.0
+        trace.rss == 3796 * KB
+        trace.vmem == 22900 * KB
+        trace.peak_rss == 3796 * KB
+        trace.peak_vmem == 22908 * KB
+        trace.rchar == 37985
+        trace.wchar == 205
+        trace.syscr == 116
+        trace.syscw ==  12
+        trace.read_bytes == 4096
+        trace.write_bytes == 2048
+        trace.realtime == 9988
+
+    }
+
+    def 'should parse a legacy trace file and return a TraceRecord object'() {
 
         given:
         def file = TestHelper.createInMemTempFile('trace')

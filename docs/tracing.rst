@@ -52,8 +52,8 @@ and many other runtime metrics. You can see an example below:
 
 
 .. note:: Nextflow collect these metrics running a background process for each job in the target environment.
-  Make sure the following tools are available ``ps``, ``date``, ``sed``, ``grep``, ``egrep``, ``awk`` in the system where
-  the jobs are executed. Moreover some of these metrics are not reported when using a Mac OSX system. See the note
+  Make sure the following tools are available ``ps``, ``date``, ``sed``, ``grep``, ``egrep``, ``awk``, ``tail`` in the
+  system where the jobs are executed. Moreover some of these metrics are not reported when using a Mac OSX system. See the note
   message about that in the `Trace report`_ below.
 
 .. warning:: A common problem when using a third party container image is that it does not ship one or more of the
