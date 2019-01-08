@@ -516,6 +516,12 @@ class ChannelTest extends Specification {
         Channel.readPrefix(Paths.get('/some/path/abc_1.fa'), 'abc_{1,2}.fa') == 'abc'
         Channel.readPrefix(Paths.get('/some/path/abc_1.fa'), 'abc_[1-9].fa') == 'abc'
         Channel.readPrefix(Paths.get('/some/path/foo_abc_1.fa'), 'foo_*_{1,2}.fa') == 'foo_abc'
+        Channel.readPrefix(Paths.get('/some/path/abc_1.fa'), 'abc_1.fa') == 'abc_1'
+
+        when:
+        Channel.readPrefix(Paths.get('/some/path/abc_1.fa'), 'foo')
+        then:
+        thrown(IllegalArgumentException)
     }
 
     def 'should group files with the same prefix' () {
@@ -634,6 +640,44 @@ class ChannelTest extends Specification {
         pairs.val == ['gamma', [g1, g2]]
         pairs.val == Channel.STOP
 
+    }
+
+    def 'should return singleton group' () {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def a1 = Files.createFile(folder.resolve('alpha_1.fa'))
+        def a2 = Files.createFile(folder.resolve('alpha_2.fa'))
+
+        when:
+        def files = Channel.fromFilePairs(folder.resolve('*.fa'), size:1)
+        then:
+        files.val == ['alpha_1', [a1]]
+        files.val == ['alpha_2', [a2]]
+        files.val == Channel.STOP
+    }
+
+    def 'should return singleton' () {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def a1 = Files.createFile(folder.resolve('alpha_1.fa'))
+
+        when:
+        def files = Channel.fromFilePairs(a1, size:1)
+        then:
+        files.val == ['alpha_1', [a1]]
+        files.val == Channel.STOP
+    }
+
+    def 'should use size one by default' () {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def a1 = Files.createFile(folder.resolve('alpha_1.fa'))
+
+        when:
+        def files = Channel.fromFilePairs(a1)
+        then:
+        files.val == ['alpha_1', [a1]]
+        files.val == Channel.STOP
     }
 
     def 'should watch and emit a file' () {

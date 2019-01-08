@@ -30,11 +30,11 @@ class MapOp {
 
     private DataflowReadChannel source
 
-    private Closure closure
+    private Closure mapper
 
-    MapOp( final DataflowReadChannel<?> source, final Closure closure ) {
+    MapOp( final DataflowReadChannel<?> source, final Closure mapper ) {
         this.source = source
-        this.closure = closure
+        this.mapper = mapper
     }
 
     DataflowChannel apply() {
@@ -43,7 +43,7 @@ class MapOp {
         final target = DataflowExtensions.newChannelBy(source)
         DataflowHelper.newOperator(source, target) { it ->
 
-            def result = closure.call(it)
+            def result = mapper.call(it)
             def proc = (DataflowProcessor) getDelegate()
 
             // bind the result value

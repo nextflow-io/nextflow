@@ -54,6 +54,8 @@ class PathVisitor {
 
     def bindPayload
 
+    boolean forcePattern
+
     DataflowQueue apply(Object filePattern) {
         if( opts == null )
             opts = [:]
@@ -96,7 +98,7 @@ class PathVisitor {
         final path = filePattern.toString()
         final splitter = FilePatternSplitter.glob().parse(path)
 
-        if( !splitter.isPattern() ) {
+        if( !splitter.isPattern() && !forcePattern ) {
             final result = fs.getPath( splitter.strip(path) )
             target << FileHelper.checkIfExists(result, opts)
             if( closeChannelOnComplete ) target << STOP
