@@ -229,7 +229,7 @@
 
     </div>
 
-    <h4>Memory Usage</h4>
+    <h4>Memory Usage (vmem)</h4>
     <ul class="nav nav-tabs" id="memplot_tabs" role="tablist">
       <li class="nav-item">
         <a class="nav-link active" id="memplotlot_tablink" data-toggle="tab" href="#memplotlot_tabpanel" role="tab" aria-controls="memplotlot_tabpanel" aria-expanded="false">
@@ -250,6 +250,30 @@
         <div id="pctmemplot"></div>
       </div>
     </div>
+
+    <h4>Memory Usage (peak_rss)</h4>
+    <ul class="nav nav-tabs" id="memrssplot_tabs" role="tablist">
+      <li class="nav-item">
+        <a class="nav-link active" id="memrssplotlot_tablink" data-toggle="tab" href="#memrssplotlot_tabpanel" role="tab" aria-controls="memrssplotlot_tabpanel" aria-expanded="false">
+          Raw Usage
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="pctmemrssplot_tablink" data-toggle="tab" href="#pctmemrssplot_tabpanel" role="tab" aria-controls="pctmemrssplot_tabpanel" aria-expanded="true">
+          % Allocated
+        </a>
+      </li>
+    </ul>
+    <div class="tab-content" id="memrssplot_tabcontent">
+      <div class="tab-pane fade show active" id="memrssplotlot_tabpanel" role="tabpanel">
+        <div id="memrssplot"></div>
+      </div>
+      <div class="tab-pane fade" id="pctmemrssplot_tabpanel" role="tabpanel">
+        <div id="pctmemrssplot"></div>
+      </div>
+    </div>
+
+
 
     <h4 id="timeplot_header">Job Duration</h4>
     <ul class="nav nav-tabs" id="timeplot_tabs" role="tablist">
