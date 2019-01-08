@@ -182,5 +182,36 @@ class FilePatternSplitterTest extends Specification {
         'hello\\[a-b\\]'| 'hello\\Xa-b\\X'
     }
 
+    def 'should return if it is a glob pattern' () {
+
+        expect:
+        !FilePatternSplitter.isMatchingPattern(null)
+        FilePatternSplitter.isMatchingPattern('*')
+        FilePatternSplitter.isMatchingPattern('*xxx')
+        FilePatternSplitter.isMatchingPattern('aaa*xxx')
+        !FilePatternSplitter.isMatchingPattern('aaa\\*xxx')
+        !FilePatternSplitter.isMatchingPattern('\\*')
+
+        FilePatternSplitter.isMatchingPattern('?')
+        FilePatternSplitter.isMatchingPattern('a?b')
+        !FilePatternSplitter.isMatchingPattern('a\\?b')
+        !FilePatternSplitter.isMatchingPattern('\\?')
+
+        FilePatternSplitter.isMatchingPattern('{a,b}')
+        FilePatternSplitter.isMatchingPattern('{a,b,c,d}')
+        FilePatternSplitter.isMatchingPattern('xx{a,b,c,d}yy')
+        !FilePatternSplitter.isMatchingPattern('{ab}')
+        !FilePatternSplitter.isMatchingPattern('\\{a,b}')
+
+        FilePatternSplitter.isMatchingPattern('[a-b]')
+        FilePatternSplitter.isMatchingPattern('xx[a-d]yy')
+        !FilePatternSplitter.isMatchingPattern('\\[a-b]')
+
+        FilePatternSplitter.isMatchingPattern('foo*_{1,2}.txt')
+        !FilePatternSplitter.isMatchingPattern('foo.txt')
+
+        FilePatternSplitter.isMatchingPattern( ~/foo.*/ )
+    }
+
 
 }

@@ -373,15 +373,17 @@ class Channel  {
         if( !allPatterns ) throw new AbortOperationException("Missing `fromFilePairs` parameter")
         if( !grouping ) throw new AbortOperationException("Missing `fromFilePairs` grouping parameter")
 
+        boolean anyPattern=false
         // -- a channel from the path
         final fromOpts = fetchParams(VALID_FROM_PATH_PARAMS, options)
         final files = new DataflowQueue()
         def future = CompletableFuture.completedFuture(null)
         for( int index=0; index<allPatterns.size(); index++ )  {
-            def factory = new PathVisitor(opts: fromOpts, target: files)
+            def factory = new PathVisitor(opts: fromOpts, target: files, forcePattern: true)
             factory.bindPayload = index
             factory.closeChannelOnComplete = index == allPatterns.size()-1
             future = factory.applyAsync( future, allPatterns.get(index) )
+            anyPattern |= FilePatternSplitter.isMatchingPattern(allPatterns.get(index))
         }
         // abort the execution when an exception is raised
         fromPath0Future = future.exceptionally(Channel.&handlerException)
@@ -394,7 +396,8 @@ class Channel  {
         def mapChannel = new MapOp(files, mapper).apply()
 
         // -- result the files having the same ID
-        def size = (options?.size ?: 2)
+        def DEF_SIZE = anyPattern ? 2 : 1
+        def size = (options?.size ?: DEF_SIZE)
         def groupOpts = [sort: true, size: size]
         def groupChannel = new GroupTupleOp(groupOpts, mapChannel).apply()
 
@@ -450,8 +453,14 @@ class Channel  {
 
         final indexOfWildcards = filePattern.findIndexOf { it=='*' || it=='?' }
         final indexOfBrackets = filePattern.findIndexOf { it=='{' || it=='[' }
-        if( indexOfWildcards==-1 && indexOfBrackets==-1 )
-            filePattern = '*' + filePattern
+        if( indexOfWildcards==-1 && indexOfBrackets==-1 ) {
+            // when the pattern does not contain any glob characters
+            // then it can only have been used only to filter files with exactly
+            // that name, therefore if the name is matching return it (without suffix)
+            if( fileName == filePattern )
+                return actual.getSimpleName()
+            throw new IllegalArgumentException("Not a valid file pair globbing pattern: pattern=$filePattern file=$fileName")
+        }
 
         // count the `*` and `?` wildcard before any {} and [] glob pattern
         int groupCount = 0

@@ -15,6 +15,7 @@
  */
 
 package nextflow.file
+
 import java.nio.file.Path
 import java.util.regex.Pattern
 
@@ -31,9 +32,13 @@ class FilePatternSplitter {
 
     static enum Syntax { GLOB, REGEX }
 
-    static final public Pattern GLOB_CURLY_BRACKETS = Pattern.compile(/(.*)(\{.*,.*\})(.*)/)
+    static final public Pattern QUESTION_MARK_REGEX = ~/(?<!\\)\?/
 
-    static final public Pattern GLOB_SQUARE_BRACKETS = Pattern.compile(/(.*)(\[.+\])(.*)/)
+    static final public Pattern STAR_CHAR_REGEX = ~/(?<!\\)\*/
+
+    static final public Pattern GLOB_CURLY_BRACKETS = Pattern.compile(/(.*)(?<!\\)(\{.*,.*\})(.*)/)
+
+    static final public Pattern GLOB_SQUARE_BRACKETS = Pattern.compile(/(.*)(?<!\\)(\[.+\])(.*)/)
 
     static final private char BACK_SLASH = '\\' as char
 
@@ -62,6 +67,26 @@ class FilePatternSplitter {
     static FilePatternSplitter glob() { new FilePatternSplitter(Syntax.GLOB) }
 
     static FilePatternSplitter regex() { new FilePatternSplitter(Syntax.REGEX) }
+
+
+    static boolean isMatchingPattern(pattern) {
+        if( !pattern )
+            return false
+        if( pattern instanceof Pattern )
+            return true
+        def str = pattern.toString()
+        if( STAR_CHAR_REGEX.matcher(str).find() )
+            return true
+        if( QUESTION_MARK_REGEX.matcher(str).find() )
+            return true
+        if( GLOB_CURLY_BRACKETS.matcher(str).find() )
+            return true
+        if( GLOB_SQUARE_BRACKETS.matcher(str).find() )
+            return true
+
+        return false
+    }
+
 
     FilePatternSplitter( Syntax syntax ) {
         this.syntax = syntax
