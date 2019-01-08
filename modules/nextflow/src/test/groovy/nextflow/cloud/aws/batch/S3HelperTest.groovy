@@ -89,7 +89,7 @@ class S3HelperTest extends Specification {
                         done
                         ((${#pid[@]}>0)) && wait ${pid[@]}
                         )
-                    }     
+                    }
                     '''
                     .stripIndent()
     }
@@ -159,7 +159,7 @@ class S3HelperTest extends Specification {
                         done
                         ((${#pid[@]}>0)) && wait ${pid[@]}
                         )
-                    }     
+                    }
                     '''
                 .stripIndent()
 

@@ -90,8 +90,9 @@ interface ScriptFileCopyStrategy {
 
     /**
      * @param environment The task environment
+     * @param container Whenever the environment needs to be exported by a container engine
      * @return The environment initialisation snippet
      */
-    String getEnvScript(Map environment, String wrapName)
+    String getEnvScript(Map environment, boolean container)
 
 }

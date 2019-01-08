@@ -327,7 +327,6 @@ class TaskRunTest extends Specification {
         task.processor.getSession() >> sess
         then:
         task.getContainer() == expected
-        !task.isContainerExecutable()
 
         where:
         sess                                            | expected
@@ -369,42 +368,17 @@ class TaskRunTest extends Specification {
         task.config = new TaskConfig([container: CONTAINER])
         def image = task.getContainer()
         then:
-        task.isContainerExecutable() >> EXECUTABLE
         task.getContainerConfig() >> [docker:[enabled: true]]
         image == EXPECTED
 
         where:
-        EXECUTABLE  | CONTAINER         | EXPECTED
-        false       | null              | null
-        false       | false             | null
-        false       | 'debian:latest'   | 'debian:latest'
-        true        | 'xxx'             | 'bwa-mem'
+        CONTAINER         | EXPECTED
+        null              | null
+        false             | null
+        'debian:latest'   | 'debian:latest'
 
     }
 
-    def 'should return the container name defined in the script block' () {
-
-        given:
-        def task = [:] as TaskRun
-        task.processor = Mock(TaskProcessor)
-        task.script= '''
-                busybox --foo --bar
-                mv result to/dir
-                '''
-
-        when:
-        task.config = [container: true]
-        task.processor.session >> { sess }
-        then:
-        task.getContainer() == expected
-        task.isContainerExecutable()
-
-        where:
-        sess                                                | expected
-        new Session()                                       | 'busybox'
-        new Session( docker: [registry:'my.registry'] )     | 'my.registry/busybox'
-
-    }
 
 
     def 'should render template and set task attributes'() {
@@ -619,7 +593,6 @@ class TaskRunTest extends Specification {
         then:
         // NO container image is specified => NOT enable even if `enabled` flag is set to true
         _ * task.getConfig() >> new TaskConfig()
-        _ * task.isContainerExecutable() >> false
         _ * task.getContainerConfig() >> new ContainerConfig([enabled: true])
         _ * task.isContainerNative() >> false
         !enabled
@@ -629,7 +602,6 @@ class TaskRunTest extends Specification {
         then:
         // container is specified, not enabled
         _ * task.getConfig() >> new TaskConfig(container:'foo/bar')
-        _ * task.isContainerExecutable() >> false
         _ * task.getContainerConfig() >> new ContainerConfig([:])
         _ * task.isContainerNative() >> false
         !enabled
@@ -637,19 +609,8 @@ class TaskRunTest extends Specification {
         when:
         enabled = task.isContainerEnabled()
         then:
-        // container is specified AND executable => enabled
-        _ * task.getConfig() >> new TaskConfig(container:'foo/bar')
-        _ * task.isContainerExecutable() >> true
-        _ * task.getContainerConfig() >> new ContainerConfig([:])
-        _ * task.isContainerNative() >> false
-        enabled
-
-        when:
-        enabled = task.isContainerEnabled()
-        then:
         // container is specified AND native executor (eg kubernetes) => enabled
         _ * task.getConfig() >> new TaskConfig(container:'foo/bar')
-        _ * task.isContainerExecutable() >> false
         _ * task.getContainerConfig() >> new ContainerConfig([:])
         _ * task.isContainerNative() >> true
         enabled
@@ -659,7 +620,6 @@ class TaskRunTest extends Specification {
         then:
         // container is specified AND enabled => enabled
         _ * task.getConfig() >> new TaskConfig(container:'foo/bar')
-        _ * task.isContainerExecutable() >> false
         _ * task.getContainerConfig() >> new ContainerConfig([enabled: true])
         _ * task.isContainerNative() >> false
         enabled

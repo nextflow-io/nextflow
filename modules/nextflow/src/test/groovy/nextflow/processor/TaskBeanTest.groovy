@@ -65,7 +65,6 @@ class TaskBeanTest extends Specification {
         task.getEnvironment() >> [alpha: 'one', beta: 'xxx', gamma: 'yyy']
         task.getContainer() >> 'busybox:latest'
         task.getContainerConfig() >> [docker: true, registry: 'x']
-        task.isContainerExecutable() >> true
 
         when:
         def bean = new TaskBean(task)
@@ -87,7 +86,6 @@ class TaskBeanTest extends Specification {
         bean.containerImage == 'busybox:latest'
         bean.containerConfig == [docker: true, registry: 'x'] as ContainerConfig
         bean.containerMemory == new MemoryUnit('1GB')
-        bean.containerExecutable
         bean.statsEnabled
 
         bean.inputFiles == [file_1: Paths.get('/file/one'), file_2: Paths.get('/file/two')]

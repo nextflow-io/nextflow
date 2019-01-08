@@ -31,20 +31,17 @@ import java.nio.file.Path
 @CompileStatic
 class GooglePipelinesScriptLauncher extends BashWrapperBuilder {
 
+    private GooglePipelinesConfiguration pipelineConfiguration
+
     GooglePipelinesScriptLauncher(TaskBean bean, GooglePipelinesTaskHandler handler) {
         super(bean, new GooglePipelinesFileCopyStrategy(bean, handler))
-
+        this.pipelineConfiguration = handler.pipelineConfiguration
         // enable the copying of output file to the GS work dir
         scratch = "$bean.workDir/scratch".toString()
-
         // include task script as an input to force its staging in the container work directory
         bean.inputFiles[TaskRun.CMD_SCRIPT] = bean.workDir.resolve(TaskRun.CMD_SCRIPT)
         // include the wrapper script as in input to force its staging in the container work directory
         bean.inputFiles[TaskRun.CMD_RUN] = bean.workDir.resolve(TaskRun.CMD_RUN)
-        // add the wrapper file when stats are enabled
-        if (bean.statsEnabled) {
-            bean.inputFiles[TaskRun.CMD_STUB] = bean.workDir.resolve(TaskRun.CMD_STUB)
-        }
         // include task stdin file
         if (bean.input != null) {
             bean.inputFiles[TaskRun.CMD_INFILE] = bean.workDir.resolve(TaskRun.CMD_INFILE)
@@ -60,4 +57,5 @@ class GooglePipelinesScriptLauncher extends BashWrapperBuilder {
     String copyFile(String name, Path target) {
         "echo 'Google Pipelines file staging/unstaging happens in pre/post actions'"
     }
+
 }

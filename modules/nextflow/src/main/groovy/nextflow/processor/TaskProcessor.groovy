@@ -603,9 +603,8 @@ class TaskProcessor {
      * @return The interpreter as defined in the she-bang declaration, for example {@code /usr/bin/env perl}
      */
     static String fetchInterpreter( String script ) {
-        assert script != null
 
-        if( script[0] == '#' && script[1] == '!') {
+        if( script && script[0] == '#' && script[1] == '!') {
             return script.readLines()[0].substring(2)
         }
 
@@ -1701,7 +1700,8 @@ class TaskProcessor {
             return null
 
         final List script = []
-        environment.each { name, value ->
+        for( String name : environment.keySet() ) {
+            String value = environment.get(name)
             if( !ENV_VAR_NAME.matcher(name).matches() )
                 log.trace "Illegal environment variable name: '${name}' -- This variable definition is ignored"
             else if( !value ) {

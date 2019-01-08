@@ -20,9 +20,8 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import nextflow.executor.ScriptFileCopyStrategy
-import nextflow.executor.SimpleFileCopyStrategy
+import nextflow.processor.TaskProcessor
 import nextflow.util.Escape
-
 /**
  * Implements file inputs/outputs staging strategy for tasks executed
  * by TES executor
@@ -105,7 +104,8 @@ class TesFileCopyStrategy implements ScriptFileCopyStrategy {
      * {@inheritDoc}
      */
     @Override
-    String getEnvScript(Map env, String wrapName=null) {
-        return SimpleFileCopyStrategy.getEnvScript0(env,wrapName)
+    String getEnvScript(Map env, boolean container) {
+        if(container) throw new UnsupportedOperationException()
+        TaskProcessor.bashEnvironmentScript(env,false)
     }
 }

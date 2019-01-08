@@ -30,7 +30,7 @@ class TesFileCopyStrategyTest extends Specification {
         def strategy = new TesFileCopyStrategy()
 
         when:
-        def script = strategy.getEnvScript([ALPHA:'xx', BETA:'yy'])
+        def script = strategy.getEnvScript([ALPHA:'xx', BETA:'yy'],false)
         then:
         script == '''\
             export ALPHA="xx"
@@ -38,15 +38,8 @@ class TesFileCopyStrategyTest extends Specification {
             '''.stripIndent()
 
         when:
-        script = strategy.getEnvScript([ALPHA:'xx', BETA:'yy'], 'foo')
+        script = strategy.getEnvScript([ALPHA:'xx', BETA:'yy'], true)
         then:
-        script == '''\
-            foo() {
-            cat << EOF
-            export ALPHA="xx"
-            export BETA="yy"
-            EOF
-            }
-            '''.stripIndent()
+        thrown(UnsupportedOperationException)
     }
 }

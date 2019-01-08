@@ -79,7 +79,7 @@ class S3Helper {
             done
             ((\${#pid[@]}>0)) && wait \${pid[@]}
             )
-        }     
+        }
         """.stripIndent()
     }
 

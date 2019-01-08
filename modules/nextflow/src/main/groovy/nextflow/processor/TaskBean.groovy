@@ -43,8 +43,6 @@ class TaskBean implements Serializable, Cloneable {
 
     String headerScript
 
-    String wrapperScript
-
     String containerImage
 
     Path condaEnv
@@ -73,6 +71,7 @@ class TaskBean implements Serializable, Cloneable {
 
     String afterScript
 
+    @Deprecated
     boolean containerExecutable
 
     boolean containerNative
@@ -127,7 +126,6 @@ class TaskBean implements Serializable, Cloneable {
         this.containerImage = task.getContainer()
         this.containerConfig = task.getContainerConfig()
         this.containerMemory = task.config.getMemory()
-        this.containerExecutable = task.isContainerExecutable()
         this.containerNative = task.isContainerNative()
         this.containerEnabled = task.isContainerEnabled()
         this.containerOptions = task.config.containerOptions

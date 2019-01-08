@@ -121,8 +121,8 @@ class GooglePipelinesFileCopyStrategy extends SimpleFileCopyStrategy {
      * {@inheritDoc}
      */
     @Override
-    String getEnvScript(Map environment, String wrapper) {
-        if( wrapper )
+    String getEnvScript(Map environment, boolean container) {
+        if( container )
             throw new IllegalArgumentException("Parameter `wrapHandler` not supported by ${this.class.simpleName}")
 
         final result = new StringBuilder()
@@ -136,7 +136,7 @@ class GooglePipelinesFileCopyStrategy extends SimpleFileCopyStrategy {
             result << "export PATH=$workDir/nextflow-bin:\$PATH\n"
         }
         // finally render the environment
-        final envSnippet = super.getEnvScript(copy,null)
+        final envSnippet = super.getEnvScript(copy,false)
         if( envSnippet )
             result << envSnippet
         return result.toString()
