@@ -129,7 +129,7 @@ class MemoryUnit implements Comparable<MemoryUnit>, Serializable, Cloneable {
 
         // see http://stackoverflow.com/questions/2510434/format-bytes-to-kilobytes-megabytes-gigabytes
         int digitGroups = (int) (Math.log10(size) / Math.log10(1024))
-        new DecimalFormat("#,##0.#").format(size / Math.pow(1024, digitGroups)) + " " + UNITS[digitGroups]
+        new DecimalFormat("0.#").format(size / Math.pow(1024, digitGroups)) + " " + UNITS[digitGroups]
     }
 
     @Override
