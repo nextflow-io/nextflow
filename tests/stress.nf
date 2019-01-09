@@ -32,3 +32,19 @@ process stress_300mega {
   stress -m 2 --vm-bytes 150000000 -t 5
   """
 }
+
+process io_write_100mega {
+  """
+  write.pl file.txt 104857600
+  """
+}
+
+process io_write_200mega {
+  cpus 2
+  """
+  write.pl file1.txt 104857600 &
+  pid=\$!
+  write.pl file2.txt 104857600
+  read.pl file2.txt
+  """
+}

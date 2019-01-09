@@ -55,8 +55,7 @@ $(function() {
   var cpu_usage_data = [];
   var mem_raw_data = [];
   var mem_usage_data = [];
-  var memrss_raw_data = [];
-  var memrss_usage_data = [];  
+  var rss_raw_data = [];
   var time_raw_data = [];
   var time_usage_data = [];
   var reads_raw_data = [];
@@ -69,8 +68,7 @@ $(function() {
     cpu_usage_data.push({y: smry.cpuUsage, name: pname, type:'box', boxmean: true, boxpoints: false});
     mem_raw_data.push({y: smry.mem, name: pname, type:'box', boxmean: true, boxpoints: false});
     mem_usage_data.push({y: smry.memUsage, name: pname, type:'box', boxmean: true, boxpoints: false});
-    memrss_raw_data.push({y: smry.memrss, name: pname, type:'box', boxmean: true, boxpoints: false});
-    memrss_usage_data.push({y: smry.memrssUsage, name: pname, type:'box', boxmean: true, boxpoints: false});  
+    rss_raw_data.push({y: smry.rss, name: pname, type:'box', boxmean: true, boxpoints: false});
     time_raw_data.push({y: smry.time, name: pname, type:'box', boxmean: true, boxpoints: false});
     time_usage_data.push({y: smry.timeUsage, name: pname, type:'box', boxmean: true, boxpoints: false});
     reads_raw_data.push({y: smry.reads, name: pname, type:'box', boxmean: true, boxpoints: false});
@@ -79,9 +77,8 @@ $(function() {
 
   Plotly.newPlot('cpuplot', cpu_raw_data, { title: 'CPU Usage', yaxis: {title: '% single core CPU usage', tickformat: '.1f', rangemode: 'tozero'} });
   Plotly.newPlot('memplot', mem_raw_data, { title: 'Memory Usage (vmem)', yaxis: {title: 'Memory', tickformat: '.4s', rangemode: 'tozero'} });
-  Plotly.newPlot('memrssplot', memrss_raw_data, { title: 'Memory Usage (peak rss)', yaxis: {title: 'Memory', tickformat: '.4s', rangemode: 'tozero'} });
   Plotly.newPlot('timeplot', time_raw_data, { title: 'Task execution real-time', yaxis: {title: 'Execution time (minutes)', tickformat: '.1f', rangemode: 'tozero'} });
-  Plotly.newPlot('readplot', reads_raw_data, { title: 'Number of bytes read from disk', yaxis: {title: 'Read bytes', tickformat: '.4s', rangemode: 'tozero'} });
+  Plotly.newPlot('readplot', reads_raw_data, { title: 'Number of bytes read', yaxis: {title: 'Read bytes', tickformat: '.4s', rangemode: 'tozero'} });
 
   // Only plot tabbed plots when shown
   $('#pctcpuplot_tablink').on('shown.bs.tab', function (e) {
@@ -94,9 +91,9 @@ $(function() {
         Plotly.newPlot('pctmemplot', mem_usage_data, { title: '% Requested Memory Used', yaxis: {title: '% Allocated Memory Used', tickformat: '.1f', rangemode: 'tozero'} });
     }
   });
-  $('#pctmemrssplot_tablink').on('shown.bs.tab', function (e) {
-    if($('#pctmemrssplot').is(':empty')){
-        Plotly.newPlot('pctmemrssplot', memrss_usage_data, { title: '% Requested Memory Used', yaxis: {title: '% Allocated Memory Used', tickformat: '.1f', rangemode: 'tozero'} });
+  $('#rssplot_tablink').on('shown.bs.tab', function (e) {
+    if($('#rssplot').is(':empty')){
+        Plotly.newPlot('rssplot', rss_raw_data, { title: 'Resident Set Size', yaxis: {title: 'Memory', tickformat: '.4s', rangemode: 'tozero'} });
     }
   });
   $('#pcttimeplot_tablink').on('shown.bs.tab', function (e) {
@@ -106,7 +103,7 @@ $(function() {
   });
   $('#writeplot_tablink').on('shown.bs.tab', function (e) {
     if($('#writeplot').is(':empty')){
-        Plotly.newPlot('writeplot', writes_raw_data, { title: 'Number of bytes written to disk', yaxis: {title: 'Written bytes', tickformat: '.4s', rangemode: 'tozero'}});
+        Plotly.newPlot('writeplot', writes_raw_data, { title: 'Number of bytes written', yaxis: {title: 'Written bytes', tickformat: '.4s', rangemode: 'tozero'}});
     }
   });
 
@@ -161,7 +158,7 @@ $(function() {
         bytes /= thresh;
         ++u;
     } while(Math.abs(bytes) >= thresh && u < units.length - 1);
-    return bytes.toFixed(1)+' '+units[u];
+    return bytes.toFixed(3)+' '+units[u];
   }
   function make_tasks_table(){
     // reset

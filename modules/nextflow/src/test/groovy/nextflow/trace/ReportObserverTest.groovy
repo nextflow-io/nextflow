@@ -250,11 +250,11 @@ class ReportObserverTest extends Specification {
         given:
         def observer = [:] as ReportObserver
         observer.executor = Executors.newCachedThreadPool()
-        def r1 = new TraceRecord([process: 'bwa-mem', name: 'bwa-mem-1',          '%cpu':1_000, vmem:2_000,                   realtime:3_000,  time: 5_000,  read_bytes:4_000, write_bytes:5_000 ])
-        def r2 = new TraceRecord([process: 'bwa-mem', name: 'bwa-mem-2',          '%cpu':6_000, vmem:7_000,   memory: 10_000, realtime:8_000,  time: 10_000, read_bytes:9_000, write_bytes:10_000 ])
-        def r3 = new TraceRecord([process: 'bwa-mem', name: 'bwa-mem-3', cpus: 2, '%cpu':10_000, vmem:12_000, memory: 10_000, realtime:13_000, time: 10_000, read_bytes:14_000, write_bytes:15_000 ])
-        def r4 = new TraceRecord([process: 'multiqc', name: 'multiqc-1',          '%cpu':16_000, vmem:17_000, memory: 20_000, realtime:18_000, time: 20_000, read_bytes:19_000, write_bytes:20_000 ])
-        def r5 = new TraceRecord([process: 'multiqc', name: 'multiqc-2', cpus: 2, '%cpu':21_000, vmem:22_000, memory: 20_000, realtime:23_000, time: 20_000, read_bytes:24_000, write_bytes:25_000 ])
+        def r1 = new TraceRecord([process: 'bwa-mem', name: 'bwa-mem-1',          '%cpu':1_000, vmem:2_000,                   realtime:3_000,  time: 5_000,  rchar:4_000, wchar:5_000 ])
+        def r2 = new TraceRecord([process: 'bwa-mem', name: 'bwa-mem-2',          '%cpu':6_000, vmem:7_000,   memory: 10_000, realtime:8_000,  time: 10_000, rchar:9_000, wchar:10_000 ])
+        def r3 = new TraceRecord([process: 'bwa-mem', name: 'bwa-mem-3', cpus: 2, '%cpu':10_000, vmem:12_000, memory: 10_000, realtime:13_000, time: 10_000, rchar:14_000, wchar:15_000 ])
+        def r4 = new TraceRecord([process: 'multiqc', name: 'multiqc-1',          '%cpu':16_000, vmem:17_000, memory: 20_000, realtime:18_000, time: 20_000, rchar:19_000, wchar:20_000 ])
+        def r5 = new TraceRecord([process: 'multiqc', name: 'multiqc-2', cpus: 2, '%cpu':21_000, vmem:22_000, memory: 20_000, realtime:23_000, time: 20_000, rchar:24_000, wchar:25_000 ])
 
         observer.aggregate(r1)
         observer.aggregate(r2)
