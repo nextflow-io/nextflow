@@ -86,8 +86,8 @@ class ReportSummaryTest extends Specification {
             '%cpu': CPU,
             'vmem': MEM,
             realtime: TIME,
-            'read_bytes': READS,
-            'write_bytes': WRITES,
+            'rchar': READS,
+            'wchar': WRITES,
         ]
 
         def report = new ReportSummary()

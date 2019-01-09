@@ -78,7 +78,15 @@ function c0(index) { return "#9c9c9c"; }
 function c1(index) { return "#bdbdbd"; }
 function c2(index) { return colors[index % 16]; } // <-- note: uses only the first 16 colors
 
-/*REPLACE_WITH_TIMELINE_DATA*/
+var elapsed="2.5s"
+var beginningMillis=1000;
+var endingMillis=3500;
+var data=[
+{"label": "foo", "times": []},
+{"label": "bar", "times": [{"starting_time": 1429821425141, "ending_time": 1429821425241, "color":c1(0)}, {"starting_time": 1429821425241, "ending_time": 1429821425641, "color":c2(0), "label": "500ms \/ 57.2 MB (2.9 MB)"}]},
+{"label": "baz", "times": [{"starting_time": 1429821425141, "ending_time": 1429821425341, "color":c1(1)}, {"starting_time": 1429821425341, "ending_time": 1429821425841, "color":c2(1), "label": "700ms \/ 66.8 MB (3.8 MB)"}]}
+]
+
 
 function getTickFormat() {
   var MIN = 1000 * 60
