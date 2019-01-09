@@ -181,5 +181,24 @@ class MustacheTemplateEngineTest extends Specification {
                 '''.stripIndent()
     }
 
+    def 'should strip comments from template' () {
+
+        given:
+        def engine = new MustacheTemplateEngine() {
+            @Override protected boolean accept(String line) { line.endsWith('2')}
+        }
+        def template = '''\
+            line 1
+            line 2
+            line 3
+            '''.stripIndent()
+
+        expect:
+        engine.render(template, [:]) == '''\
+                line 2
+                '''.stripIndent()
+
+    }
+
 
 }

@@ -5,6 +5,7 @@ process stress_1cpu {
 }
 
 process stress_2cpu {
+  cpus 2
   """
   stress -c 2 -t 10
   """
@@ -25,6 +26,7 @@ process stress_200mega {
 }
 
 process stress_300mega {
+  cpus 2
   // note: two parallel workers of 150MB => 300 MB
   """
   stress -m 2 --vm-bytes 150000000 -t 5

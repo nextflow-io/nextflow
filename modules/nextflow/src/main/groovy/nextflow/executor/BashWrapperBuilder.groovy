@@ -31,7 +31,6 @@ import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Escape
-import nextflow.util.MustacheTemplateEngine
 /**
  * Builder to create the BASH script which is used to
  * wrap and launch the user task
@@ -91,7 +90,7 @@ class BashWrapperBuilder {
 
     private Path wrapperFile
 
-    private MustacheTemplateEngine engine = new MustacheTemplateEngine()
+    private BashTemplateEngine engine = new BashTemplateEngine()
 
     BashWrapperBuilder( TaskRun task ) {
         this(new TaskBean(task))
@@ -134,6 +133,10 @@ class BashWrapperBuilder {
 
     protected boolean fixOwnership() {
         systemOsName == 'Linux' && containerConfig?.fixOwnership && runWithContainer && containerConfig.engine == 'docker' // <-- note: only for docker (shifter is not affected)
+    }
+
+    protected isMacOS() {
+        systemOsName.startsWith('Mac')
     }
 
     protected Map<String,Path> getResolvedInputs() {
@@ -276,6 +279,9 @@ class BashWrapperBuilder {
         assert workDir, "Missing 'workDir' property in BashWrapperBuilder object"
         assert script, "Missing 'script' property in BashWrapperBuilder object"
 
+        if( statsEnabled && isMacOS() && !isContainerEnabled() )
+            log.warn1("Task runtime metrics are not reported when using macOS without a container engine")
+
         final wrapper = buildNew0()
         Files.write(wrapperFile, wrapper.getBytes())
         Files.write(scriptFile, script.getBytes())
@@ -291,7 +297,7 @@ class BashWrapperBuilder {
         if( s1 )
             result.append(s1).append('\n')
 
-        def s2 = moduleNames ? BashWrapperBuilder.class.getResource('modules-env.txt').text : null
+        def s2 = moduleNames ? engine.render(BashWrapperBuilder.class.getResource('modules-env.txt').newReader(), Collections.emptyMap()) : null
         if( s2 )
             result.append(s2).append('\n')
 

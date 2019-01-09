@@ -1,3 +1,18 @@
+##
+##  Copyright 2013-2018, Centre for Genomic Regulation (CRG)
+##
+##  Licensed under the Apache License, Version 2.0 (the "License");
+##  you may not use this file except in compliance with the License.
+##  You may obtain a copy of the License at
+##
+##      http://www.apache.org/licenses/LICENSE-2.0
+##
+##  Unless required by applicable law or agreed to in writing, software
+##  distributed under the License is distributed on an "AS IS" BASIS,
+##  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+##  See the License for the specific language governing permissions and
+##  limitations under the License.
+##
 nxf_tree() {
     local pid=$1
 
@@ -15,7 +30,7 @@ nxf_tree() {
         local  x_rss=$(echo "$STATUS" | grep VmRSS | awk '{print $2}' || echo -n '0')
         local x_peak=$(echo "$STATUS" | egrep 'VmPeak|VmHWM' | sed 's/^.*:\s*//' | sed 's/[\sa-zA-Z]*$//' | tr '\n' ' ' || echo -n '0 0')
         local x_pmem=$(awk -v rss=$x_rss -v mem_tot=$mem_tot 'BEGIN {printf "%.0f", rss/mem_tot*100*10}' || echo -n '0')
-        # record struct: pid %mem vmem rss peak_vmem peak_rss
+        ## record struct: pid %mem vmem rss peak_vmem peak_rss
         cpu_stat[x_pid]="$x_pid $x_pmem $x_vsz $x_rss $x_peak"
         fi
     }
@@ -38,7 +53,7 @@ nxf_stat() {
     for pid in "${!cpu_stat[@]}"; do
         local row=(${cpu_stat[pid]})
         [ $NXF_DEBUG = 1 ] && echo "++ stat mem=${row[*]}"
-        # aggregate metrics for all procs
+        ## aggregate metrics for all procs
         for i in "${!row[@]}"; do
         if [ $i != 0 ]; then
             sum[i]=$((sum[i]+row[i]))
@@ -48,7 +63,7 @@ nxf_stat() {
 
     [ $NXF_DEBUG = 1 ] && echo -e "++ stat SUM=${sum[*]}"
 
-    # calc peaks
+    ## calc peaks
     for i in {1..5}; do
         if [ ${sum[i]} -lt ${cpu_peak[i]} ]; then
             sum[i]=${cpu_peak[i]}
@@ -77,14 +92,14 @@ nxf_mem_watch() {
 
     while true; do
         nxf_stat $pid
-        # compute time
+        ## compute time
         if [ $count -lt 10 ]; then timeout=1;
         elif [ $count -lt 120 ]; then timeout=5;
         else timeout=30;
         fi
-        # wait for termination message
+        ## wait for termination message
         read -t $timeout -r DONE || true
-        # make sure to not enter an infite loop
+        ## make sure to not enter an infite loop
         [[ $DONE ]] && break
         if [ ! -e /proc/$pid ]; then
             [ ! $STOP ] && STOP=$(nxf_date)
@@ -93,7 +108,7 @@ nxf_mem_watch() {
         count=$((count+1))
     done
 
-    # result struct: pid %mem vmem rss peak_vmem peak_rss
+    ## result struct: pid %mem vmem rss peak_vmem peak_rss
     echo "%mem=${nxf_stat_ret[1]}"      >> $trace_file
     echo "vmem=${nxf_stat_ret[2]}"      >> $trace_file
     echo "rss=${nxf_stat_ret[3]}"       >> $trace_file
@@ -116,7 +131,7 @@ nxf_write_trace() {
 nxf_trace_mac() {
     local start_millis=$(nxf_date)
 
-    # run task script
+    ## run task script
     {{trace_cmd}}
 
     local end_millis=$(nxf_date)
@@ -127,25 +142,30 @@ nxf_trace_mac() {
 }
 
 nxf_trace_linux() {
-    local pid=$BASHPID
-
+    local pid=$$
+    ## see
+    ##  https://github.com/Leo-G/DevopsWiki/wiki/How-Linux-CPU-Usage-Time-and-Percentage-is-calculated
+    ##  https://stackoverflow.com/questions/27508531/calculate-cpu-per-process/27514562##27514562
+    ##  https://stackoverflow.com/questions/16726779/how-do-i-get-the-total-cpu-usage-of-an-application-from-proc-pid-stat
     local num_cpus=$(< /proc/cpuinfo grep '^processor' -c)
     local tot_time0=$(grep '^cpu ' /proc/stat | awk '{sum=$2+$3+$4+$5+$6+$7+$8+$9; printf "%.0f",sum}')
     local cpu_time0=$(2> /dev/null < /proc/$pid/stat awk '{printf "%.0f", ($16+$17)*10 }' || echo -n 'X')
     local io_stat0=($(2> /dev/null < /proc/$pid/io sed 's/^.*:\s*//' | head -n 6 | tr '\n' ' ' || echo -n '0 0 0 0 0 0'))
     local start_millis=$(nxf_date)
 
-    # run task script
+    command -v ps &>/dev/null || { >&2 echo "Command 'ps' required by nextflow to collect task metrics cannot be found"; exit 1; }
+
+    ## run task script
     {{trace_cmd}} &
     local task=$!
 
-    # run mem stat
+    ## run mem stat
     exec 10> >(nxf_mem_watch $task)
     local mem_proc=$!
 
     wait $task
 
-    # compute cpu usage time for processes
+    ## compute cpu usage time for processes
     local end_millis=$(nxf_date)
     local tot_time1=$(grep '^cpu ' /proc/stat | awk '{sum=$2+$3+$4+$5+$6+$7+$8+$9; printf "%.0f",sum}')
     local cpu_time1=$(2> /dev/null < /proc/$pid/stat awk '{printf "%.0f", ($16+$17)*10 }' || echo -n 'X')
@@ -153,7 +173,7 @@ nxf_trace_linux() {
 
     local io_stat1=($(2> /dev/null < /proc/$pid/io sed 's/^.*:\s*//' | head -n 6 | tr '\n' ' ' || echo -n '0 0 0 0 0 0'))
     local i
-    for i in {0..6}; do
+    for i in {0..5}; do
         io_stat1[i]=$((io_stat1[i]-io_stat0[i]))
     done
 
@@ -170,9 +190,9 @@ nxf_trace_linux() {
     echo "read_bytes=${io_stat1[4]}"   >> $trace_file
     echo "write_bytes=${io_stat1[5]}"  >> $trace_file
 
-    # join mem watcher
+    ## join mem watcher
     echo 'DONE' >&10
-    # use `tail` because with some bash version `wait` returns an error
+    ## use `tail` because with some bash version `wait` returns an error
     tail --pid=$mem_proc -f /dev/null
 
     {{fix_ownership}}
