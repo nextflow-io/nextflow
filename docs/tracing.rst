@@ -100,7 +100,6 @@ task_id hash      native_id   name          status      exit     submit         
 98      de/d6c0a6 2099      matrix (1)      COMPLETED   0        2014-10-23 17:14:27.139 30s         1s          0.0%    4.8 MB      42 MB       240.6 MB    79 KB
 ======= ========= ========= =============== =========== ======== ======================= =========== =========== ======= =========== =========== =========== ===========
 
-
 .. _trace-fields:
 
 The following table shows the fields that can be included in the execution report:
@@ -133,23 +132,19 @@ queue                   The queue that the executor attempted to run the process
 %mem                    Percentage of memory used by the process.
 rss                     Real memory (resident set) size of the process. Equivalent to ``ps -o rss`` .
 vmem                    Virtual memory size of the process. Equivalent to ``ps -o vsize`` .
-:sup:`*` peak_rss       Peak of real memory. This data is read from field ``VmHWM`` in ``/proc/$pid/status`` file.
-:sup:`*` peak_vmem      Peak of virtual memory. This data is read from field ``VmPeak`` in ``/proc/$pid/status`` file.
-:sup:`*` rchar          Number of bytes the process read, using any read-like system call from files, pipes, tty, etc. This data is read from file ``/proc/$pid/io``.
-:sup:`*` wchar          Number of bytes the process wrote, using any write-like system call. This data is read from file ``/proc/$pid/io``.
-:sup:`*` syscr          Number of read-like system call invocations that the process performed. This data is read from file ``/proc/$pid/io``.
-:sup:`*` syscw          Number of write-like system call invocations that the process performed. This data is read from file ``/proc/$pid/io``.
-:sup:`*` read_bytes     Number of bytes the process directly read from disk. This data is read from file ``/proc/$pid/io``.
-:sup:`*` write_bytes    Number of bytes the process originally dirtied in the page-cache (assuming they will go to disk later). This data is read from file ``/proc/$pid/io``.
+peak_rss                Peak of real memory. This data is read from field ``VmHWM`` in ``/proc/$pid/status`` file.
+peak_vmem               Peak of virtual memory. This data is read from field ``VmPeak`` in ``/proc/$pid/status`` file.
+rchar                   Number of bytes the process read, using any read-like system call from files, pipes, tty, etc. This data is read from file ``/proc/$pid/io``.
+wchar                   Number of bytes the process wrote, using any write-like system call. This data is read from file ``/proc/$pid/io``.
+syscr                   Number of read-like system call invocations that the process performed. This data is read from file ``/proc/$pid/io``.
+syscw                   Number of write-like system call invocations that the process performed. This data is read from file ``/proc/$pid/io``.
+read_bytes              Number of bytes the process directly read from disk. This data is read from file ``/proc/$pid/io``.
+write_bytes             Number of bytes the process originally dirtied in the page-cache (assuming they will go to disk later). This data is read from file ``/proc/$pid/io``.
 ======================= ===============
 
-.. note:: Fields marked with (*) are not available when running the tracing on Mac OSX. Also note that the Mac OSX default ``date`` utility,
-  has a time resolution limited to seconds. For a more detailed time tracing it is suggested to install
-  `GNU coreutils <http://www.gnu.org/software/coreutils/>`_ package that includes the standard one.
-
-.. warning:: These numbers provide an estimation of the resources used by running tasks. They should not be intended as an alternative
-  to low level performance analysis provided by other tools and they may not be fully accurate, in particular for very short tasks
-  (taking less than one minute).
+.. note:: These numbers provide an estimation of the resources used by running tasks. They should not be intended as an alternative
+  to low level performance analysis provided by other tools and they may not be fully accurate, in particular for very short-lived tasks
+  (running for less than one second).
 
 Trace report layout and other configuration settings can be specified by using the ``nextflow.config`` configuration file.
 

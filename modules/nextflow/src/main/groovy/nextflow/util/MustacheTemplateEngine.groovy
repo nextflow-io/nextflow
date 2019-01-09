@@ -44,6 +44,10 @@ class MustacheTemplateEngine {
         }
     }
 
+    protected boolean accept(String line) {
+        return true
+    }
+
     String render(String template, Map<String,String> binding) {
         render(new StringReader(template), binding)
     }
@@ -54,6 +58,8 @@ class MustacheTemplateEngine {
         final reader = template instanceof BufferedReader ? (BufferedReader)template : new BufferedReader(template)
         String line
         while( (line=reader.readLine()) != null ) {
+            if( !accept(line) )
+                continue
             def newLine = replace0(line, binding)
             if( newLine == null )
                 continue

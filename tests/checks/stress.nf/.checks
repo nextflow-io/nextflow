@@ -5,8 +5,12 @@ check_range() {
 
 #
 # Run with Ignite executor standalone mode
-# 
-$NXF_CMD run $NXF_SCRIPT -qs 1 -with-docker nextflow/stress -c .config | tee stdout
+#
+# NOTE: allows only one task a time because the CI test environment
+# provides only 4 cpus. Therefore it should not be used all the available
+# CPUs otherwise the reported cpu stats won't match the expected values
+#
+$NXF_CMD run $NXF_SCRIPT -qs 1 nextflow/stress -c .config | tee stdout
 
 # column to check
 CPU=10
