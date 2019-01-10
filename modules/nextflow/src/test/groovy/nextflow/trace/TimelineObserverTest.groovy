@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -200,7 +200,6 @@ class TimelineObserverTest extends Specification {
         then:
         Files.exists(file)
         file.text == Paths.get('src/test/groovy/nextflow/trace/timeline-expected.html').text
-
 
     }
 
