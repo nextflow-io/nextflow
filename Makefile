@@ -66,7 +66,7 @@ deploy:
 	./gradlew deploy
 
 close:
-	./gradlew closeRepository promoteRepository
+	./gradlew closeAndReleaseRepository
 	
 release:
 	./gradlew release	

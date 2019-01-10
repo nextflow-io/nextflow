@@ -19,7 +19,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:0.5.1"
+        classpath "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:0.20.0"
     }
 }
 
@@ -248,10 +248,10 @@ task compile {
  * @link https://github.com/puniverse/capsule
  */
 
-ext.ossrhUserName = project.findProperty('ossrhUserName')
-ext.ossrhPassword = project.findProperty('ossrhPassword')
-ext.ossrhFullName = project.findProperty('ossrhFullName')
-ext.ossrhEmail = project.findProperty('ossrhEmail')
+ext.nexusUsername = project.findProperty('nexusUsername')
+ext.nexusPassword = project.findProperty('nexusPassword')
+ext.nexusFullName = project.findProperty('nexusFullName')
+ext.nexusEmail = project.findProperty('nexusEmail')
 
 ext.homeDir = System.properties['user.home']
 ext.nextflowDir = "$homeDir/.nextflow/framework/$version"
@@ -584,7 +584,8 @@ task exportClasspath {
  * Configure Nextflow staging plugin -- https://github.com/Codearte/gradle-nexus-staging-plugin
  * It adds the tasks
  * - closeRepository
- * - promoteRepository
+ * - releaseRepository
+ * - closeAndReleaseRepository
  */
 nexusStaging {
     packageGroup = 'io.nextflow'
@@ -624,11 +625,11 @@ configure(deployable) {
                 beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
 
                 repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-                    authentication(userName: ossrhUserName, password: ossrhPassword)
+                    authentication(userName: nexusUsername, password: nexusPassword)
                 }
 
                 snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-                    authentication(userName: ossrhUserName, password: ossrhPassword)
+                    authentication(userName: nexusUsername, password: nexusPassword)
                 }
 
                 pom.project {
@@ -653,9 +654,9 @@ configure(deployable) {
 
                     developers {
                         developer {
-                            id ossrhUserName
-                            name ossrhFullName
-                            email ossrhEmail
+                            id nexusUsername
+                            name nexusFullName
+                            email nexusEmail
                         }
                     }
 
