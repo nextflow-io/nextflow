@@ -1,5 +1,26 @@
 NEXTFLOW CHANGE-LOG
 ===================
+19.01.0-edge - 10 Jab 2019
+- Enhanced timeline and execution reports #985 #986 [fb00c3a6] [092f0b9e]
+- Enhanced BashWrapperBuilder using template file [7d7e116a] [c62b9dff]
+- Fixed CPU usage accounting #982 [7d7e116a] [c62b9dff]
+- Fixed Move output files to storeDir instead of copying them #745
+- Fixed Interpolated strings in a from statement are misinterpreted #978
+- Fixed Launcher fails with Java 10 or later #953
+- Fixed LSF long user names breaks jobs status parsing [b4306151] #988
+- Fixed Memory unit should contain thousand separator [e6ec4c84] #989
+- Fixed Allows fromFilePairs to handle non globs #946
+- Added an env variable to define default cloud driver #973
+- Added countLines, countFasta and countFastq methods #972
+- Added NXF_DIST launcher variable #954
+- Added NXF_SMOKE var to disable long running tests
+- Deprecated groupBy and route operators [b7ca53d2]
+- Updated S3 storage classes #977
+- Updated groovy to version 2.5.5
+- Updated copyright disclaimer
+- Refactored project structure [516294e7]
+- Speed-up CI tests [3320dcec]
+
 18.12.0-edge - 18 Dic 2018
 - Add Google Cloud Platform integration
 - Added support for K8s nodeSelector #955
