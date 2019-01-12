@@ -97,6 +97,15 @@ class GitUrl {
         throw new IllegalArgumentException("Malformed repository url: $url")
     }
 
+    private indicesOf(String s, String c) {
+        def indices = []
+        int index = s.indexOf(c)
+        while (index >= 0) {
+            indices += index
+                index = s.indexOf(c, index + 1)
+        }
+        return(indices)
+    }
 
     private parse0( String url, int p ) {
         // split protocol and url
@@ -109,9 +118,17 @@ class GitUrl {
         }
 
         // remove the remaining part
-        p = url.indexOf('/')
-        if( p != -1 ) {
-            project = url.substring(p)
+        int q = -1
+        def iSep = indicesOf(url,'/')
+        int nSep = iSep.size()
+        switch (nSep) {
+            case 0:  p = -1; q = -1; break;
+            case 1:  p = iSep[0]; q = iSep[0]; break;
+            default: p = iSep[0]; q = iSep[nSep-2]; break;
+        }
+
+        if( nSep > 0 ) {
+            project = url.substring(q)
             if( project.endsWith('.git'))
                 project = project.substring(0,project.size()-4)
             if( project.startsWith('/') )
@@ -143,7 +160,6 @@ class GitUrl {
         }
 
     }
-
 
     private parseFile( String str ) {
         if( str.endsWith('.git') ) {

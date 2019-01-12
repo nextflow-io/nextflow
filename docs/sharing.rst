@@ -247,6 +247,38 @@ that can be found in your GitLab `account page <https://gitlab.com/profile/accou
     }
 
 
+Gitea credentials
+-----------------
+
+`Gitea <https://gitea.io>`_ is a git repository server with Github-like GUI access. Since Gitea's installation is quite easy, it is suitable for building a private development environment in your network. To access your Gitea searver, you have to provide all the credential information below::
+
+    providers {
+
+        mygitea {
+            server = 'http://your-domain.org'
+            platform = 'gitea'
+            user = 'your-user'
+            password = 'your-password'
+            token = 'your-api-token'
+        }
+
+    }
+
+If your server hosts multiple services and your gitea service is provided under a subdirectory, such as ``http://your-domain.org/gitea``, you must specify your ``endpoint`` explicitry::
+
+    providers {
+
+        mygitea {
+            ..
+            endpoint = 'http://your-domain.org/gitea/api/v1'
+            ..
+        }
+
+    }
+
+See `Gitea document <https://docs.gitea.io/en-us/api-usage/>`_ about how to enable API access on your server and how to issue a token. For its usage with Nextflow, follow the instructions described in the next section, `Private server configuration`_ .
+
+
 Private server configuration
 ============================
 

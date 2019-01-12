@@ -38,18 +38,23 @@ class GitUrlTest extends Specification {
         result == new GitUrl(protocol, user, domain, project)
 
         where:
-        url                                             | protocol  | user  | domain            | project
-        'https://example.com/gitproject.git'            | 'https'   | null  | 'example.com'     | 'gitproject'
-        'https://gitlab.com/pditommaso/hello.git'       | 'https'   | null  | 'gitlab.com'      | 'pditommaso/hello'
-        'http://github.com/pditommaso/hello.git'        | 'http'    | null  | 'github.com'      | 'pditommaso/hello'
-        'https://yo@github.com/pditommaso/hola.git'     | 'https'   | 'yo'  | 'github.com'      | 'pditommaso/hola'
-        'git@gitlab.com:pditommaso/hello.git'           | 'git'     | null  | 'gitlab.com'      | 'pditommaso/hello'
-        'ssh://me@server/project.git'                   | 'ssh'     | 'me'  | 'server'          | 'project'
-        'me@server:project.git'                         | 'ssh'     | 'me'  | 'server'          | 'project'
-        'file:///opt/git/project.git'                   | 'file'    | null  | '/opt/git'        | 'project'
-        'file:/opt/git/project.git'                     | 'file'    | null  | '/opt/git'        | 'project'
-        '/opt/git/project.git'                          | 'file'    | null  | '/opt/git'        | 'project'
-        '/opt/git/project/.git'                         | 'file'    | null  | '/opt/git'        | 'project'
+        url                                                       | protocol  | user  | domain            | project
+        'https://example.com/gitproject.git'                      | 'https'   | null  | 'example.com'     | 'gitproject'
+        'https://gitlab.com/pditommaso/hello.git'                 | 'https'   | null  | 'gitlab.com'      | 'pditommaso/hello'
+        'https://gitlab.com/sub1/pditommaso/hello.git'            | 'https'   | null  | 'gitlab.com'      | 'pditommaso/hello'
+        'https://gitlab.com/sub1/sub2/pditommaso/hello.git'       | 'https'   | null  | 'gitlab.com'      | 'pditommaso/hello'
+        'https://gitlab.com/sub1/sub2/sub3/pditommaso/hello.git'  | 'https'   | null  | 'gitlab.com'      | 'pditommaso/hello'
+        'http://github.com/pditommaso/hello.git'                  | 'http'    | null  | 'github.com'      | 'pditommaso/hello'
+        'https://yo@github.com/pditommaso/hola.git'               | 'https'   | 'yo'  | 'github.com'      | 'pditommaso/hola'
+        'https://yo@github.com/sub1/pditommaso/hola.git'          | 'https'   | 'yo'  | 'github.com'      | 'pditommaso/hola'
+        'https://yo@github.com/sub1/sub2/pditommaso/hola.git'     | 'https'   | 'yo'  | 'github.com'      | 'pditommaso/hola'
+        'git@gitlab.com:pditommaso/hello.git'                     | 'git'     | null  | 'gitlab.com'      | 'pditommaso/hello'
+        'ssh://me@server/project.git'                             | 'ssh'     | 'me'  | 'server'          | 'project'
+        'me@server:project.git'                                   | 'ssh'     | 'me'  | 'server'          | 'project'
+        'file:///opt/git/project.git'                             | 'file'    | null  | '/opt/git'        | 'project'
+        'file:/opt/git/project.git'                               | 'file'    | null  | '/opt/git'        | 'project'
+        '/opt/git/project.git'                                    | 'file'    | null  | '/opt/git'        | 'project'
+        '/opt/git/project/.git'                                   | 'file'    | null  | '/opt/git'        | 'project'
 
     }
 
