@@ -168,8 +168,8 @@ nxf_trace_linux() {
     echo "write_bytes=${io_stat1[5]}"  >> $trace_file
 
     echo 'DONE' >&10
-    tail --pid=$mem_proc -f /dev/null
-
+    wait $mem_proc 2>/dev/null || true
+    while [ -e /proc/$mem_proc ]; do sleep 0.1; done
 }
 
 nxf_trace() {
