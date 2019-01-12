@@ -192,9 +192,10 @@ nxf_trace_linux() {
 
     ## join mem watcher
     echo 'DONE' >&10
-    ## use `tail` because with some bash version `wait` returns an error
-    tail --pid=$mem_proc -f /dev/null
-
+    wait $mem_proc 2>/dev/null || true
+    ## Bash prior 4.4 wait on a process substitution returns an error
+    ## fallback on a while loop checking the proc pseudo file system
+    while [ -e /proc/$mem_proc ]; do sleep 0.1; done
     {{fix_ownership}}
 }
 
