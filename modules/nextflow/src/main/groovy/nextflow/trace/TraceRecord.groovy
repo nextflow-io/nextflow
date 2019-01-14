@@ -185,13 +185,15 @@ class TraceRecord implements Serializable {
      * @return
      */
     @PackageScope
-    static String fmtMemory( def value, String fmt) {
+    static String fmtMemory( def value, String fmt ) {
         if( value == null ) return NA
+
+        if( value instanceof Number )
+            return new MemoryUnit(value.toLong()).toString()
 
         String str = value.toString()
         if( str.isLong() ) {
-            str = new MemoryUnit(str.toLong()).toString()
-            str = str.replaceAll(/,/,'')
+            return new MemoryUnit(str.toLong()).toString()
         }
 
         return str

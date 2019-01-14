@@ -17,18 +17,18 @@
 package nextflow.util
 
 import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
-
 /**
  * Represent a memory unit
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-@EqualsAndHashCode(includes = 'size')
+@EqualsAndHashCode(includes = 'size', includeFields = true)
 class MemoryUnit implements Comparable<MemoryUnit>, Serializable, Cloneable {
 
     final static public MemoryUnit ZERO = new MemoryUnit(0)
@@ -37,7 +37,14 @@ class MemoryUnit implements Comparable<MemoryUnit>, Serializable, Cloneable {
 
     final static public List UNITS = [ "B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB" ]
 
-    final long size
+    private long size
+
+    static final private DecimalFormatSymbols formatSymbols
+
+    static {
+        formatSymbols = new DecimalFormatSymbols()
+        formatSymbols.setDecimalSeparator('.' as char)
+    }
 
     /**
      * Default constructor is required by Kryo serializer
@@ -129,7 +136,9 @@ class MemoryUnit implements Comparable<MemoryUnit>, Serializable, Cloneable {
 
         // see http://stackoverflow.com/questions/2510434/format-bytes-to-kilobytes-megabytes-gigabytes
         int digitGroups = (int) (Math.log10(size) / Math.log10(1024))
-        new DecimalFormat("0.#").format(size / Math.pow(1024, digitGroups)) + " " + UNITS[digitGroups]
+        final formatter = new DecimalFormat("0.#", formatSymbols)
+        formatter.setGroupingUsed(false)
+        formatter.format(size / Math.pow(1024, digitGroups)) + " " + UNITS[digitGroups]
     }
 
     @Override
