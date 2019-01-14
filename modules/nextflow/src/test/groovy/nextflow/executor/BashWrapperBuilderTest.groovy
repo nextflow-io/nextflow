@@ -578,6 +578,21 @@ class BashWrapperBuilderTest extends Specification {
 
     }
 
+    def 'should cleanup scratch dir' () {
+
+        when:
+        def binding = newBashWrapperBuilder().makeBinding()
+        then:
+        binding.cleanup_cmd == ''
+        binding.containsKey('cleanup_cmd')
+
+
+        when:
+        binding = newBashWrapperBuilder(scratch: true).makeBinding()
+        then:
+        binding.cleanup_cmd == 'rm -rf $NXF_SCRATCH || true\n'
+    }
+
     def 'should create wrapper with docker' () {
         when:
         def binding = newBashWrapperBuilder(
