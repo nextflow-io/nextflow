@@ -1,5 +1,47 @@
 NEXTFLOW CHANGE-LOG
 ===================
+19.01.0 - 21 Jan 2019
+- Fixed Memory unit should contain thousand separator [e6ec4c84] #989
+- Fixed LSF long user names breaks jobs status parsing [b4306151] #988
+- Fixed Move output files to storeDir instead of copying them #745
+- Fixed Interpolated strings in a from statement are misinterpreted #978
+- Fixed ConcurrentModificationException when publishing output files #971
+- Fixed Launcher fails with Java 10 or later #953
+- Added countLines, countFasta and countFastq methods #972
+- Added an env variable to define default cloud driver #973
+- Add Google Cloud Platform integration
+- Added support for K8s nodeSelector #955
+- Added new AWS regions #935
+- Added json/yaml output to info command #657
+- Fixed remote bin directory when using buckerDir option [6d796783]
+- Fixed foreign file system detection [1489cc72]
+- Fixed Ansi logger division by zero [ae2b1380]
+- Fixed Unparseable Data format on http file #962
+- Fixed Log command history #405
+- Fixed Too long process tag name can cause SLURM failure #941
+- Fixed LSF can return an inconsistent jobs status #927
+- Fixed dump last queue status on failure [36e80242]
+- Fixed Allow the usage of a custom docker image for K8s driver pod #877
+- Fixed K8s executor when the cluster has no available cpus #824
+- Fixed Prevent duplicate process definitions #920
+- Fixed Update queue statuses used by PBS Pro #908
+- Fixed K8s launcher fails to set pod work directory [dc8bfead]
+- Fixed cmd cloud error message [14d603b9]
+- Improved script runner api [da4a6c17]
+- Revert "Apache Ignite to version 2.6" #909
+- Fixed Invalid config rendering #801
+- Improved file hashing logging [0d35b2b4]
+- Refactored ScriptRunner class [15ee2f1c]
+- Refactored DSL code visitor [67904c1f]
+- Added More duration and memory unit syntax sugar #921
+- Added NO_PROXY env variable should be honoured #864
+- Added keepHeader option to splitText operator #912
+- Fixed Invalid warning message for config selector #905
+- Fixed Queue status command fail on LSF version 8 #910
+- Fixed Use `bash` instead of `sh` to fetch queue status
+- Better report warning when grid status command fails [3ac8b972]
+- Fixed RejectedExecutionException on successive Console executions #906
+
 19.01.0-edge - 10 Jab 2019
 - Enhanced timeline and execution reports #985 #986 [fb00c3a6] [092f0b9e]
 - Enhanced BashWrapperBuilder using template file [7d7e116a] [c62b9dff]
