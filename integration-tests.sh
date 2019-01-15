@@ -20,7 +20,8 @@ if [ ${X_JDK} -gt 8 ]; then
 fi
 
 export WITH_DOCKER='-with-docker'
-export NXF_CMD=$PWD/nextflow; 
+export NXF_ANSI_LOG=false
+export NXF_CMD=$PWD/nextflow;
 (
  $NXF_CMD info
  cd validation

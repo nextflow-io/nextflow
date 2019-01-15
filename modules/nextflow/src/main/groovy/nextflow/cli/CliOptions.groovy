@@ -18,11 +18,15 @@ package nextflow.cli
 
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
+import groovy.util.logging.Slf4j
+import org.fusesource.jansi.Ansi
+
 /**
  * Main application command line options
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 class CliOptions {
 
     /**
@@ -79,6 +83,25 @@ class CliOptions {
     @Parameter(names = ['-d','-dockerize'], description = 'Launch nextflow via Docker (experimental)', arity = 0)
     boolean dockerize
 
-    boolean ansiLog
+    Boolean ansiLog
+
+    boolean getAnsiLog() {
+        if( ansiLog != null )
+            return ansiLog
+
+        if( background )
+            return ansiLog = false
+
+        final env = System.getenv('NXF_ANSI_LOG')
+        if( env ) try {
+            return Boolean.parseBoolean(env)
+        }
+        catch (Exception e) {
+            log.warn "Invalid boolean value for variable NXF_ANSI_LOG: $env -- it must be 'true' or 'false'"
+        }
+        return Ansi.isEnabled()
+    }
+
+
 
 }

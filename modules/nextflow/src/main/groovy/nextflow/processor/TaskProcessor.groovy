@@ -2036,6 +2036,7 @@ class TaskProcessor {
     protected void terminateProcess() {
         log.trace "<${name}> Sending poison pills and terminating process"
         sendPoisonPill()
+        session.notifyProcessTerminate(this)
         session.processDeregister(this)
     }
 
@@ -2120,7 +2121,7 @@ class TaskProcessor {
         }
 
         @Override
-        public List<Object> beforeRun(final DataflowProcessor processor, final List<Object> messages) {
+        List<Object> beforeRun(final DataflowProcessor processor, final List<Object> messages) {
             log.trace "<${name}> Before run -- messages: ${messages}"
             // the counter must be incremented here, otherwise it won't be consistent
             state.update { StateObj it -> it.incSubmitted() }
@@ -2135,7 +2136,7 @@ class TaskProcessor {
         }
 
         @Override
-        public Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+        Object messageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
             if( log.isTraceEnabled() ) {
                 def channelName = config.getInputs()?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
@@ -2146,7 +2147,7 @@ class TaskProcessor {
         }
 
         @Override
-        public Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+        Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
             if( log.isTraceEnabled() ) {
                 def channelName = config.getInputs()?.names?.get(index)
                 def taskName = currentTask.get()?.name ?: name
@@ -2165,7 +2166,7 @@ class TaskProcessor {
         }
 
         @Override
-        public void afterStop(final DataflowProcessor processor) {
+        void afterStop(final DataflowProcessor processor) {
             log.trace "<${name}> After stop"
         }
 
@@ -2178,7 +2179,7 @@ class TaskProcessor {
          * @param error
          * @return
          */
-        public boolean onException(final DataflowProcessor processor, final Throwable error) {
+        boolean onException(final DataflowProcessor processor, final Throwable error) {
             // return `true` to terminate the dataflow processor
             handleException( error, currentTask.get() )
         }

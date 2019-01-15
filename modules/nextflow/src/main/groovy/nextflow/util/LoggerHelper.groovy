@@ -195,34 +195,20 @@ class LoggerHelper {
 
     protected Appender createConsoleAppender() {
 
-        if( opts.ansiLog ) {
-            final result = new CaptureAppender()
+        final Appender result = daemon && opts.isBackground() ? null : ( opts.ansiLog ? new CaptureAppender() : new ConsoleAppender())
+        if( result )  {
             final filter = new ConsoleLoggerFilter( packages )
             filter.setContext(loggerContext)
             filter.start()
 
             result.setContext(loggerContext)
+            if( result instanceof ConsoleAppender )
+                result.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
             result.addFilter(filter)
             result.start()
-            return result
-        }
-        else {
-            final ConsoleAppender result = daemon && opts.isBackground() ? null : new ConsoleAppender()
-            if( result )  {
-
-                final filter = new ConsoleLoggerFilter( packages )
-                filter.setContext(loggerContext)
-                filter.start()
-
-                result.setContext(loggerContext)
-                result.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
-                result.addFilter(filter)
-                result.start()
-            }
-
-            return result
         }
 
+        return result
     }
 
     protected SyslogAppender createSyslogAppender() {

@@ -43,6 +43,11 @@ trait TraceObserver {
      */
     void onProcessCreate( TaskProcessor process ){}
 
+    /*
+      * Invoked when all tak have been executed and process ends.
+      */
+    void onProcessTerminate( TaskProcessor process ){}
+
     /**
      * This method is invoked before a process run is going to be submitted
      * @param handler
