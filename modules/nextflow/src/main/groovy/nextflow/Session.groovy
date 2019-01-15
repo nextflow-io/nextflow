@@ -856,6 +856,17 @@ class Session implements ISession {
         }
     }
 
+    void notifyProcessTerminate(TaskProcessor process) {
+        for( int i=0; i<observers.size(); i++ ) {
+            final observer = observers.get(i)
+            try {
+                observer.onProcessTerminate(process)
+            }
+            catch( Exception e ) {
+                log.debug(e.getMessage(), e)
+            }
+        }
+    }
 
     /**
      * Notifies that a task has been submitted

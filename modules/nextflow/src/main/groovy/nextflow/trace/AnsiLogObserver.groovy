@@ -19,12 +19,12 @@ package nextflow.trace
 import groovy.transform.CompileStatic
 import nextflow.Session
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskProcessor
 import nextflow.util.Duration
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import static org.fusesource.jansi.Ansi.Color
 import static org.fusesource.jansi.Ansi.ansi
-
 /**
  * Implements an observer which display workflow
  * execution progress and notifications using
@@ -42,6 +42,7 @@ class AnsiLogObserver implements TraceObserver {
         int cached
         int failed
         int completed
+        boolean terminated
         String hash
         boolean error
         boolean changed
@@ -80,24 +81,23 @@ class AnsiLogObserver implements TraceObserver {
 
     private int maxNameLength
 
-    private WorkflowStats stats
-
     private long startTimestamp
 
     private long endTimestamp
 
     synchronized void appendInfo(String message) {
-        if( message.startsWith('[') )
+        boolean warn
+        if( message.startsWith('[') && !(warn=message.indexOf('NOTE:')>0) )
             return
         
         if( !started || !processes ) {
             println message
         }
+        else if( warn ) {
+            warnings << new Event(message)
+        }
         else {
-            if( message.indexOf('NOTE:')!=-1 )
-                warnings << new Event(message)
-            else
-                infos << new Event(message)
+            infos << new Event(message)
         }
     }
 
@@ -120,6 +120,8 @@ class AnsiLogObserver implements TraceObserver {
             renderProgress()
             sleep 150
         }
+        renderProgress()
+        renderEpilog()
     }
 
     protected void renderMessages( Ansi term, List<Event> allMessages, Color color=null )  {
@@ -176,6 +178,11 @@ class AnsiLogObserver implements TraceObserver {
         else
             printedLines = 0
 
+        AnsiConsole.out.flush()
+    }
+
+    protected void renderEpilog() {
+        WorkflowStats stats = session.isSuccess() ? session.getWorkflowStats() : null
         if( stats ) {
             final delta = endTimestamp-startTimestamp
             def report = ""
@@ -191,9 +198,8 @@ class AnsiLogObserver implements TraceObserver {
                 report += "Failed      : ${stats.failedCountFmt}\n"
 
             printAnsi(report, Color.GREEN, true)
+            AnsiConsole.out.flush()
         }
-
-        AnsiConsole.out.flush()
     }
 
     protected void printAnsi(String message, Ansi.Color color=null, boolean bold=false) {
@@ -218,11 +224,13 @@ class AnsiLogObserver implements TraceObserver {
         final pct = "[${String.valueOf(x).padLeft(3)}%]".toString()
         final label = name.padRight(maxNameLength)
         final numbs = "${(int)com} of ${(int)tot}".toString()
-        def result = "[$stats.hash] $label: $pct $numbs"
+        def result = "> process $label $pct $numbs"
         if( stats.cached )
             result += ", cached: $stats.cached"
         if( stats.failed )
             result += ", failed: $stats.failed"
+        if( stats.terminated )
+            result += stats.error ? ' \u2717' : ' \u2713'
         return result
     }
 
@@ -252,10 +260,9 @@ class AnsiLogObserver implements TraceObserver {
 
     @Override
     void onFlowComplete(){
-        this.stopped = true
-        this.stats = session.isSuccess() ? session.getWorkflowStats() : null
-        this.endTimestamp = System.currentTimeMillis()
-        renderProgress()
+        stopped = true
+        endTimestamp = System.currentTimeMillis()
+        renderer.join()
     }
 
     /**
@@ -276,10 +283,16 @@ class AnsiLogObserver implements TraceObserver {
         process.completed++
         process.hash = handler.task.hashLog
         process.changed = true
-        if( handler.getStatusString() != 'COMPLETED' ) {
+        if( handler.task.aborted || handler.task.failed ) {
             process.failed++
-            process.error = true
+            process.error |= !handler.task.errorAction?.soft
         }
+    }
+
+    @Override
+    synchronized void onProcessTerminate(TaskProcessor processor) {
+        final process = p0(processor.name)
+        process.terminated = true
     }
 
     @Override

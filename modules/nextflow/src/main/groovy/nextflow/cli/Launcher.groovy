@@ -246,6 +246,10 @@ class Launcher {
                 normalized << '-'
             }
 
+            else if( current == '-ansi-log' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << 'true'
+            }
+
             else if( (current == '-N' || current == '-with-notification') && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << 'true'
             }
