@@ -58,6 +58,7 @@ class PbsExecutor extends AbstractGridExecutor {
 
         // task max memory
         if( task.config.memory ) {
+            // https://www.osc.edu/documentation/knowledge_base/out_of_memory_oom_or_excessive_memory_usage
             result << "-l" << "mem=${task.config.memory.toString().replaceAll(/[\s]/,'').toLowerCase()}"
         }
 
