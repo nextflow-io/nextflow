@@ -56,6 +56,11 @@ class SlurmExecutor extends AbstractGridExecutor {
         }
 
         if( task.config.getMemory() ) {
+            //NOTE: Enforcement of memory limits currently relies upon the task/cgroup plugin or
+            // enabling of accounting, which samples memory use on a periodic basis (data need not
+            // be stored, just collected). In both cases memory use is based upon the job's
+            // Resident Set Size (RSS). A task may exceed the memory limit until the next periodic
+            // accounting sample. -- https://slurm.schedmd.com/sbatch.html
             result << '--mem' << task.config.getMemory().toMega().toString()
         }
 
