@@ -40,12 +40,6 @@ class SgeExecutor extends AbstractGridExecutor {
         result << '-j' << 'y'
         result << '-terse' << ''    // note: directive need to be returned as pairs
 
-        /*
-         * By using command line option -notify SIGUSR1 will be sent to your script prior to SIGSTOP
-         * and SIGUSR2 will be sent to your script prior to SIGKILL
-         */
-        result << '-notify' << ''
-
         // the requested queue name
         if( task.config.queue ) {
             result << '-q' << (task.config.queue as String)

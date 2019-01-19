@@ -89,7 +89,7 @@ nxf_unstage() {
 
 nxf_main() {
     trap on_exit EXIT
-    trap on_term TERM INT USR1 USR2
+    trap on_term TERM INT USR2
 
     {{container_boxid}}
     {{scratch_cmd}}
