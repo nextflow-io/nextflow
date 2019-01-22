@@ -1,7 +1,7 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-19.01.0 - 21 Jan 2019
+19.01.0 - 22 Jan 2019
 - Added Google Cloud Platform integration
 - Added support for K8s nodeSelector #955
 - Added new AWS regions #935
