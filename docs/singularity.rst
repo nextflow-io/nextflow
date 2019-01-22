@@ -110,7 +110,7 @@ Singularity & Docker Hub
 ========================
 
 Nextflow is able to transparently pull remote container images stored in the `Singularity-Hub <https://singularity-hub.org/>`_,
-`Singularity Libary <https://cloud.sylabs.io/library/>`_, or any Docker compatible registry.
+`Singularity Library <https://cloud.sylabs.io/library/>`_, or any Docker compatible registry.
 
 .. note:: This feature requires you have installed Singularity 2.3.x or higher
 
