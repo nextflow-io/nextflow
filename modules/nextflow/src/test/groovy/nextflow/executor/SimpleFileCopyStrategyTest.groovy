@@ -15,15 +15,19 @@
  */
 
 package nextflow.executor
+
+import spock.lang.Specification
+import spock.lang.Unroll
+
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
+import nextflow.Global
 import nextflow.Session
 import nextflow.processor.TaskBean
-import spock.lang.Specification
-import spock.lang.Unroll
 import test.TestHelper
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -322,18 +326,27 @@ class SimpleFileCopyStrategyTest extends Specification {
     def 'should resolve foreign files' () {
         given:
         new Session()
-        def bean = Mock(TaskBean)
         def workDir = Files.createTempDirectory('test')
-        bean.getWorkDir() >> workDir
+        Global.session.workDir = workDir
         def INPUTS = [
                 'foo.txt': Paths.get('/some/foo.txt'),
                 'bar.txt': Paths.get('/some/bar.txt'),
                 'hello.txt': TestHelper.createInMemTempFile('any.name','Hello world')
         ]
-        def strategy = new SimpleFileCopyStrategy(bean)
+        def strategy = new SimpleFileCopyStrategy()
 
         when:
         def result = strategy.resolveForeignFiles(INPUTS)
+        then:
+        result.size() == 3
+        result['foo.txt'] == Paths.get('/some/foo.txt')
+        result['bar.txt'] == Paths.get('/some/bar.txt')
+        result['hello.txt'].text == 'Hello world'
+        result['hello.txt'].toString().startsWith(workDir.resolve('download').toString())
+
+        when:
+        new Session([filePorter: [donwloadPath: workDir]])
+        result = strategy.resolveForeignFiles(INPUTS)
         then:
         result.size() == 3
         result['foo.txt'] == Paths.get('/some/foo.txt')

@@ -86,7 +86,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
     @Memoized
     private Map<String,Path> resolveForeignFiles0(Map<String,Path> files) {
         if( !porter )
-            porter = new FilePorter(workDir)
+            porter = new FilePorter()
         porter.stageForeignFiles(files)
     }
 
