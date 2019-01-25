@@ -106,7 +106,7 @@ class CopyMoveHelper {
      *
      * @param source The source file path
      * @param target The target file path
-     * @param foreign When {@code true} create a copy on the remote fiel system
+     * @param foreign When {@code true} create a copy on the remote file system
      * @param options Copy options
      * @throws IOException
      */
