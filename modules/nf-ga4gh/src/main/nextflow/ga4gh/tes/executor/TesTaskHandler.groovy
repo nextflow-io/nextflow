@@ -66,8 +66,6 @@ class TesTaskHandler extends TaskHandler {
 
     private final Path inputFile
 
-    private final Path stubFile
-
     private final Path traceFile
 
     private TaskServiceApi client
@@ -86,7 +84,6 @@ class TesTaskHandler extends TaskHandler {
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
         this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
-        this.stubFile = task.workDir.resolve(TaskRun.CMD_STUB)
         this.traceFile = task.workDir.resolve(TaskRun.CMD_TRACE)
     }
 
@@ -177,7 +174,6 @@ class TesTaskHandler extends TaskHandler {
 
         // add task input files
         if(inputFile.exists()) body.addInputsItem(inItem(inputFile))
-        if(stubFile.exists()) body.addInputsItem(inItem(stubFile))
 
         task.getInputFilesMap()?.each { String name, Path path ->
             body.addInputsItem(inItem(path,name))
