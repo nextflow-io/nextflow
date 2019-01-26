@@ -56,8 +56,7 @@ class GooglePipelinesFileCopyStrategy extends SimpleFileCopyStrategy {
             def stagePath = Paths.get(stageName)
             def parent = stagePath.parent
             //we can't simply use the handy ToUriString function since it also URL encodes spaces and gsutil doesn't like that
-            //TODO: Find a cleaner way of doing this
-            def escapedStoreUri = Escape.path(absStorePath.getFileSystem().toString()+absStorePath.toString())
+            def escapedStoreUri = "${absStorePath.getFileSystem()}${Escape.path(absStorePath)}"
             def escapedStageName = Escape.path(stageName)
 
             //check if we need to create parent dirs for staging file since gsutil doesn't create them for us

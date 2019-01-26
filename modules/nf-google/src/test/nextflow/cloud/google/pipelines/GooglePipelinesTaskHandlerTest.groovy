@@ -16,24 +16,21 @@
 package nextflow.cloud.google.pipelines
 
 import spock.lang.Shared
-import spock.lang.Specification
 
-import java.nio.file.FileSystem
-import java.nio.file.Path
 import java.nio.file.Paths
-import java.nio.file.spi.FileSystemProvider
 
 import com.google.api.services.genomics.v2alpha1.model.Event
 import com.google.api.services.genomics.v2alpha1.model.Metadata
 import com.google.api.services.genomics.v2alpha1.model.Operation
 import nextflow.Session
+import nextflow.cloud.google.GoogleSpecification
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.processor.TaskId
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.util.CacheHelper
 
-class GooglePipelinesTaskHandlerTest extends Specification {
+class GooglePipelinesTaskHandlerTest extends GoogleSpecification {
 
     @Shared
     GooglePipelinesConfiguration pipeConfig = new GooglePipelinesConfiguration("testProject",["testZone"],["testRegion"])
@@ -129,30 +126,13 @@ class GooglePipelinesTaskHandlerTest extends Specification {
         op == operation
     }
 
-    private Path mockPath(String path) {
-        def provider = Mock(FileSystemProvider)
-        provider.getScheme() >> 'gs'
-        def fs = Mock(FileSystem)
-        fs.provider() >> provider
-        def uri = GroovyMock(URI)
-        uri.toString() >> 'gs:/' + path
-
-        def result = Mock(Path)
-        result.toString() >> path
-        result.toUriString() >> 'gs:/' + path
-        result.getFileSystem() >> fs
-        result.toUri() >> uri
-
-        return result
-    }
-
     def 'should create pipeline request' () {
         given:
 
         def helper = Mock(GooglePipelinesHelper)
         def executor = new GooglePipelinesExecutor(helper: helper)
         def config = Mock(GooglePipelinesConfiguration)
-        def workDir = mockPath('/work/dir')
+        def workDir = mockGsPath('gs://my-bucket/work/dir')
 
         def task = Mock(TaskRun)
         task.getName() >> 'foo'
@@ -191,12 +171,12 @@ class GooglePipelinesTaskHandlerTest extends Specification {
         req.mainScript == 'cd /work/dir; bash .command.run 2>&1 | tee -a .command.log'
         // check unstaging script
         req.unstagingScript.tokenize(';')[0] == 'cd /work/dir'
-        req.unstagingScript.tokenize(';')[1] == ' [[ $GOOGLE_PIPELINE_FAILED == 1 || $NXF_DEBUG ]] && gsutil -m -q cp -R /google/ gs://work/dir || true'
-        req.unstagingScript.tokenize(';')[2] == ' [[ -f .command.trace ]] && gsutil -m -q cp -R .command.trace gs://work/dir || true'
-        req.unstagingScript.tokenize(';')[3] == ' gsutil -m -q cp -R .command.err gs://work/dir || true'
-        req.unstagingScript.tokenize(';')[4] == ' gsutil -m -q cp -R .command.out gs://work/dir || true'
-        req.unstagingScript.tokenize(';')[5] == ' gsutil -m -q cp -R .command.log gs://work/dir || true'
-        req.unstagingScript.tokenize(';')[6] == ' gsutil -m -q cp -R .exitcode gs://work/dir || true'
+        req.unstagingScript.tokenize(';')[1] == ' [[ $GOOGLE_PIPELINE_FAILED == 1 || $NXF_DEBUG ]] && gsutil -m -q cp -R /google/ gs://my-bucket/work/dir || true'
+        req.unstagingScript.tokenize(';')[2] == ' [[ -f .command.trace ]] && gsutil -m -q cp -R .command.trace gs://my-bucket/work/dir || true'
+        req.unstagingScript.tokenize(';')[3] == ' gsutil -m -q cp -R .command.err gs://my-bucket/work/dir || true'
+        req.unstagingScript.tokenize(';')[4] == ' gsutil -m -q cp -R .command.out gs://my-bucket/work/dir || true'
+        req.unstagingScript.tokenize(';')[5] == ' gsutil -m -q cp -R .command.log gs://my-bucket/work/dir || true'
+        req.unstagingScript.tokenize(';')[6] == ' gsutil -m -q cp -R .exitcode gs://my-bucket/work/dir || true'
         req.unstagingScript.tokenize(';').size() == 7
     }
 
@@ -206,7 +186,7 @@ class GooglePipelinesTaskHandlerTest extends Specification {
         def helper = Mock(GooglePipelinesHelper)
         def executor = new GooglePipelinesExecutor(helper: helper)
         def config = Mock(GooglePipelinesConfiguration)
-        def workDir = mockPath('/work/dir')
+        def workDir = mockGsPath('gs://my-bucket/work/dir')
 
         def task = Mock(TaskRun)
         task.getName() >> 'foo'
@@ -237,14 +217,14 @@ class GooglePipelinesTaskHandlerTest extends Specification {
         req.mainScript == 'cd /work/dir; bash .command.run 2>&1 | tee -a .command.log'
         // check unstaging script
         req.unstagingScript.tokenize(';')[0] == 'cd /work/dir'
-        req.unstagingScript.tokenize(';')[1] == ' [[ $GOOGLE_PIPELINE_FAILED == 1 || $NXF_DEBUG ]] && gsutil -m -q cp -R /google/ gs://work/dir || true'
+        req.unstagingScript.tokenize(';')[1] == ' [[ $GOOGLE_PIPELINE_FAILED == 1 || $NXF_DEBUG ]] && gsutil -m -q cp -R /google/ gs://my-bucket/work/dir || true'
         req.unstagingScript.tokenize(';')[2] == ' foo'
         req.unstagingScript.tokenize(';')[3] == ' bar'
-        req.unstagingScript.tokenize(';')[4] == ' [[ -f .command.trace ]] && gsutil -m -q cp -R .command.trace gs://work/dir || true'
-        req.unstagingScript.tokenize(';')[5] == ' gsutil -m -q cp -R .command.err gs://work/dir || true'
-        req.unstagingScript.tokenize(';')[6] == ' gsutil -m -q cp -R .command.out gs://work/dir || true'
-        req.unstagingScript.tokenize(';')[7] == ' gsutil -m -q cp -R .command.log gs://work/dir || true'
-        req.unstagingScript.tokenize(';')[8] == ' gsutil -m -q cp -R .exitcode gs://work/dir || true'
+        req.unstagingScript.tokenize(';')[4] == ' [[ -f .command.trace ]] && gsutil -m -q cp -R .command.trace gs://my-bucket/work/dir || true'
+        req.unstagingScript.tokenize(';')[5] == ' gsutil -m -q cp -R .command.err gs://my-bucket/work/dir || true'
+        req.unstagingScript.tokenize(';')[6] == ' gsutil -m -q cp -R .command.out gs://my-bucket/work/dir || true'
+        req.unstagingScript.tokenize(';')[7] == ' gsutil -m -q cp -R .command.log gs://my-bucket/work/dir || true'
+        req.unstagingScript.tokenize(';')[8] == ' gsutil -m -q cp -R .exitcode gs://my-bucket/work/dir || true'
 
         req.unstagingScript.tokenize(';').size() == 9
     }
