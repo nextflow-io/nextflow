@@ -70,8 +70,6 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     private final Path inputFile
 
-    private final Path stubFile
-
     private final Path traceFile
 
     private TaskBean bean
@@ -114,7 +112,6 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
         this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
-        this.stubFile = task.workDir.resolve(TaskRun.CMD_STUB)
         this.traceFile = task.workDir.resolve(TaskRun.CMD_TRACE)
     }
 
