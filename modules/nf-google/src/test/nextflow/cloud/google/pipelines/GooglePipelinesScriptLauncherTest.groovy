@@ -16,23 +16,21 @@
 
 package nextflow.cloud.google.pipelines
 
-import spock.lang.Specification
-
-import java.nio.file.Path
-import java.nio.file.Paths
-
+import nextflow.cloud.google.GoogleSpecification
 import nextflow.processor.TaskBean
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class GooglePipelinesScriptLauncherTest extends Specification {
+class GooglePipelinesScriptLauncherTest extends GoogleSpecification {
+
 
     def 'should create task env' () {
 
         given:
-        def bucket = Paths.get('/bucket/work')
-        def config = new GooglePipelinesConfiguration(remoteBinDir: 'gs://bucket/bin' as Path)
+        def bucket = mockGsPath('gs://bucket/work')
+        def binDir = mockGsPath('gs://bucket/bin')
+        def config = new GooglePipelinesConfiguration(remoteBinDir: binDir)
         def handler = [:] as GooglePipelinesTaskHandler
         handler.pipelineConfiguration = config
         def bean = [
@@ -46,8 +44,8 @@ class GooglePipelinesScriptLauncherTest extends Specification {
         def binding = new GooglePipelinesScriptLauncher(bean, handler).makeBinding()
         then:
         binding.task_env == '''\
-                chmod +x /bucket/work/nextflow-bin/*
-                export PATH=/bucket/work/nextflow-bin:$PATH
+                chmod +x /work/nextflow-bin/*
+                export PATH=/work/nextflow-bin:$PATH
                 export FOO="xxx"
                 '''.stripIndent()
     }
