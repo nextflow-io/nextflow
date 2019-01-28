@@ -73,6 +73,8 @@ class AnsiLogObserver implements TraceObserver {
 
     private Map<String,ProcessStats> processes = new LinkedHashMap()
 
+    private Map<String,Integer> executors = new LinkedHashMap<>()
+
     private volatile boolean stopped
 
     private volatile boolean started
@@ -144,6 +146,20 @@ class AnsiLogObserver implements TraceObserver {
         }
     }
 
+    protected void renderExecutors(Ansi term) {
+        int count=0
+        def line = ''
+        for( Map.Entry<String,Integer> entry : executors ) {
+            if( count++ ) line += ","
+            line += " $entry.key ($entry.value)"
+        }
+
+        if( count ) {
+            term.a("> executor" + line)
+            term.newline()
+        }
+    }
+
     protected void renderProcesses(Ansi term) {
         for( Map.Entry<String,ProcessStats> entry : processes ) {
             term.a(line(entry.key,entry.value))
@@ -165,6 +181,7 @@ class AnsiLogObserver implements TraceObserver {
 
         // -- print processes
         final term = ansi()
+        renderExecutors(term)
         renderProcesses(term)
         renderMessages(term, infos)
         renderMessages(term, warnings, Color.YELLOW)
@@ -230,7 +247,7 @@ class AnsiLogObserver implements TraceObserver {
         if( stats.failed )
             result += ", failed: $stats.failed"
         if( stats.terminated )
-            result += stats.error ? ' \u2717' : ' \u2713'
+            result += stats.error ? ' \u2718' : ' \u2714'
         return result
     }
 
@@ -275,6 +292,10 @@ class AnsiLogObserver implements TraceObserver {
         process.submitted++
         process.hash = handler.task.hashLog
         process.changed = true
+        // executor counter
+        final exec = handler.task.processor.executor.name
+        Integer count = executors[exec] ?: 0
+        executors[exec] = count+1
     }
 
     @Override
