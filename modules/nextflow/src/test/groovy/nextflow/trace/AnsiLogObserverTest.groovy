@@ -47,8 +47,8 @@ class AnsiLogObserverTest extends Specification {
         10      | 5         | 0     | false | false | '> process foo [ 50%] 5 of 10'
         0       | 0         | 5     | false | false | '> process foo [100%] 5 of 5, cached: 5'
         2       | 1         | 3     | false | false | '> process foo [ 80%] 4 of 5, cached: 3'
-        2       | 2         | 0     | true  | false | '> process foo [100%] 2 of 2 ✓'
-        2       | 2         | 0     | true  | true  | '> process foo [100%] 2 of 2 ✗'
+        2       | 2         | 0     | true  | false | '> process foo [100%] 2 of 2 ✔'
+        2       | 2         | 0     | true  | true  | '> process foo [100%] 2 of 2 ✘'
 
     }
 
