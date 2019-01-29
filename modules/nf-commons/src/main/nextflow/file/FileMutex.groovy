@@ -75,7 +75,7 @@ class FileMutex {
     }
 
 
-    def lock(Closure closure) {
+    def <T> T lock(Closure<T> closure) {
         assert target
         final file = new RandomAccessFile(target, "rw")
         try {

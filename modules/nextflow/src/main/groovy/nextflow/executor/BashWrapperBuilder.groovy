@@ -20,6 +20,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.container.ContainerBuilder
@@ -139,6 +140,8 @@ class BashWrapperBuilder {
         systemOsName.startsWith('Mac')
     }
 
+    // memoize the result to avoid to multiple time the same input files
+    @Memoized
     protected Map<String,Path> getResolvedInputs() {
         copyStrategy.resolveForeignFiles(inputFiles)
     }

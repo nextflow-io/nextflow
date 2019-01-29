@@ -19,7 +19,6 @@ package nextflow.executor
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
@@ -77,17 +76,18 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
 
     @Override
     Map<String,Path> resolveForeignFiles(Map<String,Path> files) {
-        resolveForeignFiles0(files)
+        if( !files  )
+            return files
+        if( !porter )
+            porter = ((Session)Global.session).getFilePorter()
+        porter.stageForeignFiles(files, getStagingDir())
     }
 
-    /*
-     * implements as memoized method to avoid to download/upload multiple times the same file
-     */
-    @Memoized
-    private Map<String,Path> resolveForeignFiles0(Map<String,Path> files) {
-        if( !porter )
-            porter = new FilePorter(workDir)
-        porter.stageForeignFiles(files)
+    Path getStagingDir() {
+        def result = workDir.parent?.parent?.resolve('stage')
+        if( !result )
+            throw new IllegalArgumentException("Cannot resolve staging directory for task work dir: ${workDir.toUriString()}")
+        return result
     }
 
     /**

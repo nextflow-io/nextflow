@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
+
+import spock.lang.Shared
+import spock.lang.Specification
+
 import nextflow.config.ConfigParser
 import nextflow.processor.TaskProcessor
 import nextflow.script.ScriptRunner
 import nextflow.util.MemoryUnit
-import spock.lang.Shared
-import spock.lang.Specification
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
