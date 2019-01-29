@@ -227,6 +227,15 @@ class FileHelper {
         return localTempBasePath
     }
 
+    final static Path getLocalTempLockPath() {
+        def prefix = 'nxf-locks'
+        def lockPath = localTempBasePath.resolve(prefix)
+        if (!FilesEx.mkdirs(lockPath)) {
+            throw new IOException("Unable to create locks directory: $lockPath -- Verify file system access permissions or if a folder having the same name exists")
+        }
+        return lockPath
+    }
+
     static boolean isGlobAllowed( Path path ) {
         return !(path.getFileSystem().provider().scheme in UNSUPPORTED_GLOB_WILDCARDS)
     }

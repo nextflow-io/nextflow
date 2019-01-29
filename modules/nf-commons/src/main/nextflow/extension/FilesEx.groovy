@@ -1493,7 +1493,7 @@ class FilesEx {
             final bucket = InvokerHelper.invokeMethod(path, 'bucket', InvokerHelper.EMPTY_ARGS)
             return "$scheme://$bucket$path".toString()
         }
-            return path.toUri().toString()
+        return path.toUri().toString()
     }
 
     static String getScheme(Path path) {

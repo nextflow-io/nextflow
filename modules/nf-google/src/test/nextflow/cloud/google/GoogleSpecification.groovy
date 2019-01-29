@@ -58,9 +58,10 @@ abstract class GoogleSpecification extends Specification {
         result.toString() >> file
         result.getFileSystem() >> fs
         result.toUri() >> uri
-        result.resolve(_) >> { mockGsPath("$path/${it[0]}")}
+        result.resolve(_) >> { mockGsPath("$path/${it[0]}") }
         result.toAbsolutePath() >> result
         result.asBoolean() >> true
+        result.getParent() >> { def p=path.lastIndexOf('/'); p!=-1 ? mockGsPath("${path.substring(0,p)}", true) : null }
         return result
     }
 

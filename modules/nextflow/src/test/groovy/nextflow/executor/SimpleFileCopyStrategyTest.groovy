@@ -15,14 +15,16 @@
  */
 
 package nextflow.executor
+
+import spock.lang.Specification
+import spock.lang.Unroll
+
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
 import nextflow.Session
 import nextflow.processor.TaskBean
-import spock.lang.Specification
-import spock.lang.Unroll
 import test.TestHelper
 /**
  *
@@ -321,16 +323,15 @@ class SimpleFileCopyStrategyTest extends Specification {
 
     def 'should resolve foreign files' () {
         given:
-        new Session()
-        def bean = Mock(TaskBean)
-        def workDir = Files.createTempDirectory('test')
-        bean.getWorkDir() >> workDir
+        def folder = Files.createTempDirectory('test')
+        def session = new Session(workDir: folder)
+
         def INPUTS = [
                 'foo.txt': Paths.get('/some/foo.txt'),
                 'bar.txt': Paths.get('/some/bar.txt'),
                 'hello.txt': TestHelper.createInMemTempFile('any.name','Hello world')
         ]
-        def strategy = new SimpleFileCopyStrategy(bean)
+        def strategy = new SimpleFileCopyStrategy(workDir: folder.resolve('xx/yy'))
 
         when:
         def result = strategy.resolveForeignFiles(INPUTS)
@@ -339,10 +340,10 @@ class SimpleFileCopyStrategyTest extends Specification {
         result['foo.txt'] == Paths.get('/some/foo.txt')
         result['bar.txt'] == Paths.get('/some/bar.txt')
         result['hello.txt'].text == 'Hello world'
-        result['hello.txt'].toString().startsWith(workDir.toString())
+        result['hello.txt'].toString().startsWith(folder.resolve('stage').toString())
 
         cleanup:
-        workDir.deleteDir()
+        folder.deleteDir()
     }
 
     def 'should return cp script to unstage output files to S3' () {
@@ -366,5 +367,13 @@ class SimpleFileCopyStrategyTest extends Specification {
 
     }
 
+    def 'should return staging dir' () {
+
+        given:
+        def strategy = new SimpleFileCopyStrategy(workDir: Paths.get('/work/foo/bar'))
+        expect:
+        strategy.getStagingDir() == Paths.get('/work/stage')
+
+    }
 
 }
