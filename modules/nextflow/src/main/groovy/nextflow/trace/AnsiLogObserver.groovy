@@ -246,7 +246,7 @@ class AnsiLogObserver implements TraceObserver {
             result += ", cached: $stats.cached"
         if( stats.failed )
             result += ", failed: $stats.failed"
-        if( stats.terminated )
+        if( stats.terminated && tot )
             result += stats.error ? ' \u2718' : ' \u2714'
         return result
     }
