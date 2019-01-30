@@ -62,7 +62,7 @@ class FilePorter {
 
     static final private Duration POLL_TIMEOUT = Duration.of('5sec')
 
-    @Lazy private CompletionService stageExecutor = createExecutor()
+    @Lazy private CompletionService stagingExecutor = createExecutor()
 
     private Duration keepAlive
 
@@ -133,13 +133,13 @@ class FilePorter {
     protected ArrayList<Future> submitStagingActions(List<Callable> actions, List<Path> paths) {
         // submit actions
         for ( def action : actions ) {
-            stageExecutor.submit(action)
+            stagingExecutor.submit(action)
         }
 
         final futures = new ArrayList<Future>(actions.size())
         // display a message if staging takes more than the defined timeout
         while ( futures.size() < actions.size() ) {
-            def future = stageExecutor.poll(pollTimeout.millis, TimeUnit.MILLISECONDS)
+            def future = stagingExecutor.poll(pollTimeout.millis, TimeUnit.MILLISECONDS)
             if ( !future ) {
                 log.info1(getStagingMessage(paths))
                 continue

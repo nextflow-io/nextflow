@@ -83,8 +83,8 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         porter.stageForeignFiles(files, getStagingDir())
     }
 
-    Path getStagingDir() {
-        def result = workDir.parent?.parent?.resolve('stage')
+    protected Path getStagingDir() {
+        final result = workDir.parent?.parent?.resolve('stage')
         if( !result )
             throw new IllegalArgumentException("Cannot resolve staging directory for task work dir: ${workDir.toUriString()}")
         return result
