@@ -55,7 +55,7 @@ $(function() {
   var cpu_usage_data = [];
   var mem_raw_data = [];
   var mem_usage_data = [];
-  var rss_raw_data = [];
+  var vmem_raw_data = [];
   var time_raw_data = [];
   var time_usage_data = [];
   var reads_raw_data = [];
@@ -68,7 +68,7 @@ $(function() {
     cpu_usage_data.push({y: smry.cpuUsage, name: pname, type:'box', boxmean: true, boxpoints: false});
     mem_raw_data.push({y: smry.mem, name: pname, type:'box', boxmean: true, boxpoints: false});
     mem_usage_data.push({y: smry.memUsage, name: pname, type:'box', boxmean: true, boxpoints: false});
-    rss_raw_data.push({y: smry.rss, name: pname, type:'box', boxmean: true, boxpoints: false});
+    vmem_raw_data.push({y: smry.vmem, name: pname, type:'box', boxmean: true, boxpoints: false});
     time_raw_data.push({y: smry.time, name: pname, type:'box', boxmean: true, boxpoints: false});
     time_usage_data.push({y: smry.timeUsage, name: pname, type:'box', boxmean: true, boxpoints: false});
     reads_raw_data.push({y: smry.reads, name: pname, type:'box', boxmean: true, boxpoints: false});
@@ -76,7 +76,7 @@ $(function() {
   }
 
   Plotly.newPlot('cpuplot', cpu_raw_data, { title: 'CPU Usage', yaxis: {title: '% single core CPU usage', tickformat: '.1f', rangemode: 'tozero'} });
-  Plotly.newPlot('memplot', mem_raw_data, { title: 'Memory Usage (vmem)', yaxis: {title: 'Memory', tickformat: '.4s', rangemode: 'tozero'} });
+  Plotly.newPlot('memplot', mem_raw_data, { title: 'Physical Memory Usage', yaxis: {title: 'Memory', tickformat: '.4s', rangemode: 'tozero'} });
   Plotly.newPlot('timeplot', time_raw_data, { title: 'Task execution real-time', yaxis: {title: 'Execution time (minutes)', tickformat: '.1f', rangemode: 'tozero'} });
   Plotly.newPlot('readplot', reads_raw_data, { title: 'Number of bytes read', yaxis: {title: 'Read bytes', tickformat: '.4s', rangemode: 'tozero'} });
 
@@ -88,12 +88,12 @@ $(function() {
   });
   $('#pctmemplot_tablink').on('shown.bs.tab', function (e) {
     if($('#pctmemplot').is(':empty')){
-        Plotly.newPlot('pctmemplot', mem_usage_data, { title: '% Requested Memory Used', yaxis: {title: '% Allocated Memory Used', tickformat: '.1f', rangemode: 'tozero'} });
+        Plotly.newPlot('pctmemplot', mem_usage_data, { title: '% Requested Physical Memory Used', yaxis: {title: '% Memory', tickformat: '.1f', rangemode: 'tozero'} });
     }
   });
-  $('#rssplot_tablink').on('shown.bs.tab', function (e) {
-    if($('#rssplot').is(':empty')){
-        Plotly.newPlot('rssplot', rss_raw_data, { title: 'Resident Set Size', yaxis: {title: 'Memory', tickformat: '.4s', rangemode: 'tozero'} });
+  $('#vmemplot_tablink').on('shown.bs.tab', function (e) {
+    if($('#vmemplot').is(':empty')){
+        Plotly.newPlot('vmemplot', vmem_raw_data, { title: 'Virtual Memory Usage', yaxis: {title: 'Memory', tickformat: '.4s', rangemode: 'tozero'} });
     }
   });
   $('#pcttimeplot_tablink').on('shown.bs.tab', function (e) {

@@ -83,8 +83,8 @@ var beginningMillis=1000;
 var endingMillis=3500;
 var data=[
 {"label": "foo", "times": []},
-{"label": "bar", "times": [{"starting_time": 1429821425141, "ending_time": 1429821425241, "color":c1(0)}, {"starting_time": 1429821425241, "ending_time": 1429821425641, "color":c2(0), "label": "500ms \/ 57.2 MB (2.9 MB)"}]},
-{"label": "baz", "times": [{"starting_time": 1429821425141, "ending_time": 1429821425341, "color":c1(1)}, {"starting_time": 1429821425341, "ending_time": 1429821425841, "color":c2(1), "label": "700ms \/ 66.8 MB (3.8 MB)"}]}
+{"label": "bar", "times": [{"starting_time": 1429821425141, "ending_time": 1429821425241, "color":c1(0)}, {"starting_time": 1429821425241, "ending_time": 1429821425641, "color":c2(0), "label": "500ms \/ 57.2 MB"}]},
+{"label": "baz", "times": [{"starting_time": 1429821425141, "ending_time": 1429821425341, "color":c1(1)}, {"starting_time": 1429821425341, "ending_time": 1429821425841, "color":c2(1), "label": "700ms \/ 66.8 MB"}]}
 ]
 
 
@@ -184,7 +184,7 @@ $(window).resize(hrz); // resize the applet on window resize
   <p>
     Launch time: <span id='label_launch'> </span><br>
     Elapsed time: <span id='label_elapsed'> </span><br>
-    Legend: job wall time / memory usage (memory RSS) <span id='label_legend'> </span>
+    Legend: job wall time / memory usage (RAM) <span id='label_legend'> </span>
   </p>
   <div id="timeline"></div>
 </div>
