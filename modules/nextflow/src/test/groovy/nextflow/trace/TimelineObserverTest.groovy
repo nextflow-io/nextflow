@@ -51,8 +51,7 @@ class TimelineObserverTest extends Specification {
         r1.task_id = '1'
         r1.name = 'foo'
         r1.process = 'alpha'
-        r1.vmem = 50_000_000
-        r1.peak_rss = 2_000_000
+        r1.peak_rss = 50_000_000
 
         def r2 = new TraceRecord()
         r2.task_id = '2'
@@ -63,8 +62,7 @@ class TimelineObserverTest extends Specification {
         r2.realtime = 400
         r2.duration = 500
         r2.process = 'alpha'
-        r2.vmem = 60_000_000
-        r2.peak_rss = 3_000_000
+        r2.peak_rss = 60_000_000
 
         def r3 = new TraceRecord()
         r3.task_id = '3'
@@ -75,8 +73,7 @@ class TimelineObserverTest extends Specification {
         r3.realtime = 500
         r3.duration = 700
         r3.process = 'beta'
-        r3.vmem = 70_000_000
-        r3.peak_rss = 4_000_000
+        r3.peak_rss = 70_000_000
 
         def observer = [:] as TimelineObserver
         observer.beginMillis = 1000
@@ -93,8 +90,8 @@ class TimelineObserverTest extends Specification {
             var endingMillis=3500;
             var data=[
             {"label": "foo", "times": []},
-            {"label": "bar", "times": [{"starting_time": 1429821425141, "ending_time": 1429821425241, "color":c1(0)}, {"starting_time": 1429821425241, "ending_time": 1429821425641, "color":c2(0), "label": "500ms \\/ 57.2 MB (2.9 MB)"}]},
-            {"label": "baz", "times": [{"starting_time": 1429821425141, "ending_time": 1429821425341, "color":c1(1)}, {"starting_time": 1429821425341, "ending_time": 1429821425841, "color":c2(1), "label": "700ms \\/ 66.8 MB (3.8 MB)"}]}
+            {"label": "bar", "times": [{"starting_time": 1429821425141, "ending_time": 1429821425241, "color":c1(0)}, {"starting_time": 1429821425241, "ending_time": 1429821425641, "color":c2(0), "label": "500ms \\/ 57.2 MB"}]},
+            {"label": "baz", "times": [{"starting_time": 1429821425141, "ending_time": 1429821425341, "color":c1(1)}, {"starting_time": 1429821425341, "ending_time": 1429821425841, "color":c2(1), "label": "700ms \\/ 66.8 MB"}]}
             ]
             /
             .stripIndent().leftTrim()
@@ -171,8 +168,7 @@ class TimelineObserverTest extends Specification {
         r2.realtime = 400
         r2.duration = 500
         r2.process = 'alpha'
-        r2.vmem = 60_000_000
-        r2.peak_rss = 3_000_000
+        r2.peak_rss = 60_000_000
 
         def r3 = new TraceRecord()
         r3.task_id = '3'
@@ -183,8 +179,7 @@ class TimelineObserverTest extends Specification {
         r3.realtime = 500
         r3.duration = 700
         r3.process = 'beta'
-        r3.vmem = 70_000_000
-        r3.peak_rss = 4_000_000
+        r3.peak_rss = 70_000_000
 
         def file = TestHelper.createInMemTempFile('report.html')
         def observer = new TimelineObserver(file)
