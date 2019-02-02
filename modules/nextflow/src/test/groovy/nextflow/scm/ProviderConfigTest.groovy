@@ -111,6 +111,15 @@ class ProviderConfigTest extends Specification {
         config.endpoint == 'http://local.host'
 
         when:
+        config = new ProviderConfig('my-git',[platform: 'gitea', server:'http://my-domain.org/gitea/'])
+        then:
+        config.name == 'my-git'
+        config.platform == 'gitea'
+        config.domain == 'my-domain.org'
+        config.server == 'http://my-domain.org/gitea'
+        config.endpoint == 'http://my-domain.org/gitea'
+
+        when:
         config = new ProviderConfig('github')
         config.setPassword('abc')
         then:
@@ -167,7 +176,7 @@ class ProviderConfigTest extends Specification {
         when:
         def result = ProviderConfig.createFromText(CONFIG)
         then:
-        result.size() == 5
+        result.size() == 6
 
         result.find { it.name == 'github' }.server == 'https://github.com'
         result.find { it.name == 'github' }.auth == '12732:35454'

@@ -25,8 +25,8 @@ import groovy.transform.ToString
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 
-@ToString(includeFields=true, includes='protocol,user,domain,project')
-@EqualsAndHashCode(includeFields=true, includes='protocol,user,domain,project')
+@ToString(includeFields=true, includes='protocol,user,domain,path')
+@EqualsAndHashCode(includeFields=true, includes='protocol,user,domain,path')
 class GitUrl {
 
     private String protocol
@@ -35,7 +35,7 @@ class GitUrl {
 
     private String domain
 
-    private String project
+    private String path
 
     /**
      * Creates a git url object specifying the url components
@@ -45,11 +45,11 @@ class GitUrl {
      * @param domain Either the server domain {@code http} or the path location for local file URL {@code /usr/local/repo}
      * @param project The git project name i.e. {@code foo/bar}
      */
-    GitUrl( String protocol, String user, String domain, String project ) {
+    GitUrl(String protocol, String user, String domain, String path) {
         this.protocol = protocol
         this.user = user
         this.domain = domain
-        this.project = project
+        this.path = path
     }
 
     /**
@@ -111,11 +111,11 @@ class GitUrl {
         // remove the remaining part
         p = url.indexOf('/')
         if( p != -1 ) {
-            project = url.substring(p)
-            if( project.endsWith('.git'))
-                project = project.substring(0,project.size()-4)
-            if( project.startsWith('/') )
-                project = project.substring(1)
+            path = url.substring(p)
+            if( path.endsWith('.git'))
+                path = path.substring(0,path.size()-4)
+            if( path.startsWith('/') )
+                path = path.substring(1)
             url = url.substring(0,p)
         }
         // remove the user name
@@ -133,9 +133,9 @@ class GitUrl {
         url = url.substring(p+1)
         p = url.indexOf(':')
         if( p != -1 ) {
-            project = url.substring(p+1)
-            if( project.endsWith('.git'))
-                project = project.substring(0,project.size()-4)
+            path = url.substring(p+1)
+            if( path.endsWith('.git'))
+                path = path.substring(0,path.size()-4)
             this.domain = url.substring(0,p)
         }
         else {
@@ -149,7 +149,7 @@ class GitUrl {
         if( str.endsWith('.git') ) {
             str = str.substring(0, str.size()-4)
             def items = str.tokenize('/')
-            project = items[-1]
+            path = items[-1]
             if( items.size()>1 ) {
                 this.domain = '/' + items[0..-2].join('/')
             }
@@ -181,9 +181,9 @@ class GitUrl {
 
     /**
      * @return
-     *      The repository qualified name e.g. given the project repository {@code https://github.com/cbcrg/piper-nf.git}
+     *      The repository project project path eg. {@code https://github.com/cbcrg/piper-nf.git}
      *      returns the string {@code cbcrg/piper-nf}.
      */
-    String getProject() { project }
+    String getPath() { path }
 
 }

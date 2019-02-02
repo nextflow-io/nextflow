@@ -199,7 +199,7 @@ class Bolts {
      * @param stripChars  the characters to remove, null treated as whitespace
      * @return the stripped String, <code>null</code> if null String input
      */
-    static stripStart( String self, String stripChars = null ) {
+    static String stripStart( String self, String stripChars = null ) {
         StringUtils.stripStart(self, stripChars)
     }
 
@@ -228,7 +228,7 @@ class Bolts {
      * @param stripChars  the set of characters to remove, null treated as whitespace
      * @return the stripped String, <code>null</code> if null String input
      */
-    static stripEnd( String self, String stripChars = null ) {
+    static String stripEnd( String self, String stripChars = null ) {
         StringUtils.stripEnd(self, stripChars)
     }
 
