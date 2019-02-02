@@ -74,6 +74,25 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         this.workDir = bean.workDir
     }
 
+    /**
+     * Copies foreign files in the pipeline work directory so that
+     * those files can be accessed as regular local files.
+     *
+     * Foreign files are all files that are hosted in a storage remote
+     * to the current work directory file system, therefore when
+     * using a remote bucket as work directory local files are
+     * *uploaded* to the remote bucket work directory.
+     *
+     * WARNING: A file upload race condition may arise if multiple
+     * concurrent nextflow instances use the same pipeline work directory.
+     * Therefore concurrent runs are expected to use different work
+     * directory when automatic remote input file staging feature is used.
+     *
+     * @param files
+     *      The map on input file, holds ( local file name, storage path ) pairs
+     * @return
+     *      A map containing remote file paths resolved as local paths 
+     */
     @Override
     Map<String,Path> resolveForeignFiles(Map<String,Path> files) {
         if( !files  )

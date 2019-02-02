@@ -19,18 +19,19 @@ package nextflow.file
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.Callable
-import java.util.concurrent.CompletionService
 import java.util.concurrent.ExecutionException
-import java.util.concurrent.ExecutorCompletionService
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
@@ -39,7 +40,6 @@ import nextflow.exception.ProcessStageException
 import nextflow.extension.FilesEx
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
-
 /**
  * Move foreign (ie. remote) files to the staging work area
  *
@@ -60,9 +60,11 @@ class FilePorter {
 
     static final private Duration KEEP_ALIVE = Duration.of('60sec')
 
-    static final private Duration POLL_TIMEOUT = Duration.of('5sec')
+    static final private Duration POLL_TIMEOUT = Duration.of('2sec')
 
-    @Lazy private CompletionService stagingExecutor = createExecutor()
+    final Map<FileStageAction,Future<NamePathPair>> stagingFutures = new WeakHashMap<>()
+
+    @Lazy private ExecutorService stagingExecutor = createExecutor()
 
     private Duration keepAlive
 
@@ -93,7 +95,7 @@ class FilePorter {
      * @return A new files map in which all foreign {@link Path} are replaced with local paths
      */
     Map<String,Path> stageForeignFiles(Map<String, Path> filesMap, Path stageDir) {
-        final List<Callable<NamePathPair>> actions = []
+        final List<FileStageAction> actions = []
         final List<Path> paths = []
         final scheme = stageDir.scheme
 
@@ -104,8 +106,8 @@ class FilePorter {
             if( path.scheme == scheme )
                 continue
             // copy the path with a thread pool
-            actions << { new NamePathPair(name, stageForeignFile(path,stageDir)) } as Callable<NamePathPair>
-            paths << path
+            actions.add( new FileStageAction(name, path, stageDir, maxRetries) )
+            paths.add(path)
         }
 
         // no foreign file to copy, just return the original map
@@ -115,122 +117,154 @@ class FilePorter {
         log.trace "Stage foreign files: $paths"
         final result = new HashMap(filesMap)
 
-        final futures = submitStagingActions(actions, paths)
+        final futures = submitStagingActions(actions)
         log.trace "Stage foreign files completed: $paths"
 
-        try {
-            for( Future<NamePathPair> fut : futures ) {
-                final pair = fut.get()
-                result.put( pair.name, pair.path )
-            }
-        }
-        catch( ExecutionException e ) {
-            throw e.cause ?: e
+        for( Future<NamePathPair> fut : futures ) {
+            final pair = fut.get()
+            result.put( pair.name, pair.path )
         }
         return result
     }
 
-    protected ArrayList<Future> submitStagingActions(List<Callable> actions, List<Path> paths) {
-        // submit actions
+    protected List<Future<NamePathPair>> submitStagingActions(List<FileStageAction> actions) {
+
+        String msg = null
+        final result = new ArrayList<Future<NamePathPair>>(actions.size())
         for ( def action : actions ) {
-            stagingExecutor.submit(action)
+            // here's the magic: use a Map to check if a future for the staging action already exist
+            // - if exists take it to wait to the submit action termination
+            // - otherwise create a new future submitting the action operation
+            final future = stagingFutures.getOrCreate(action) {
+                msg = "Staging foreign file: ${action.path.toUriString()}"
+                return stagingExecutor.submit(action)
+            }
+            result.add(future)
         }
 
-        final futures = new ArrayList<Future>(actions.size())
-        // display a message if staging takes more than the defined timeout
-        while ( futures.size() < actions.size() ) {
-            def future = stagingExecutor.poll(pollTimeout.millis, TimeUnit.MILLISECONDS)
-            if ( !future ) {
-                log.info1(getStagingMessage(paths))
-                continue
-            }
-            futures << future
-        }
-        return futures
-    }
-
-    /**
-     * Download a foreign file (ie. remote) storing it the current pipeline execution directory
-     *
-     * @param filePath The {@link Path} of the remote file to copy
-     * @return The path of a local copy of the remote file
-     */
-    protected Path stageForeignFile(Path filePath, Path stageDir) {
-        int count = 0
-
-        // create cache directory
-        final hash = CacheHelper.hasher(filePath).hash().toString()
-        final target = getCacheDir(stageDir, hash).resolve(filePath.getName())
-
-        // Synchronize download for multiple Nextflow instances running at the same time
-        final lockFile = FileHelper.getLocalTempLockPath().resolve("${hash}.lock").toFile()
-        final wait = "Another Nextflow instance is staging the foreign file $filePath -- please wait the process completes"
-        final err =  "Unable to acquire exclusive lock on file: $lockFile"
-        final mutex = new FileMutex(target: lockFile, waitMessage: wait, errorMessage: err)
-
-        while( true ) {
-            try {
-                return mutex.lock { stageForeignFile0(filePath, target) }
-            }
-            catch( IOException e ) {
-                if( count++ < maxRetries && !(e instanceof NoSuchFileException )) {
-                    def message = "Unable to stage foreign file: ${filePath.toUriString()} (try ${count}) -- Cause: $e.message"
-                    log.isDebugEnabled() ? log.warn(message, e) : log.warn(message)
-
-                    sleep (10 + RND.nextInt(300))
-                    continue
+        // wait for staging actions completion
+        // note: make a copy of the list to avoid a ConcurrentModificationException
+        final futures = new ArrayList<Future<NamePathPair>>(result)
+        while( futures.size() ) {
+            final itr = futures.iterator()
+            while( itr.hasNext() ) {
+                try {
+                    final fut = itr.next()
+                    fut.get(pollTimeout.millis, TimeUnit.MILLISECONDS)
+                    itr.remove()
                 }
-
-                throw new ProcessStageException(fmtError(filePath,e), e)
+                catch( TimeoutException e ) {
+                    // the timeout event is used to report an info message that
+                    // a download is taking place only the very first time
+                    if( msg ) {
+                        log.info((String)msg)
+                        msg = null
+                    }
+                }
+                catch( ExecutionException e ) {
+                    throw e.cause ?: e
+                }
             }
-            finally {
-                lockFile.delete()
+        }
+
+        return result
+    }
+
+    @ToString
+    @CompileStatic
+    @EqualsAndHashCode
+    @PackageScope
+    @TupleConstructor
+    static class FileStageAction implements Callable<NamePathPair> {
+
+        final String name
+        final Path path
+        final Path stageDir
+        final int maxRetries
+
+        @Override
+        NamePathPair call() throws Exception {
+            final stagedPath = stageForeignFile(path,stageDir)
+            return new NamePathPair(name, stagedPath)
+        }
+
+        /**
+         * Download a foreign file (ie. remote) storing it the current pipeline execution directory
+         *
+         * @param filePath The {@link Path} of the remote file to copy
+         * @return The path of a local copy of the remote file
+         */
+        protected Path stageForeignFile(Path filePath, Path stageDir) {
+            // create cache directory
+            final hash = CacheHelper.hasher([filePath, stageDir]).hash().toString()
+            final target = getCacheDir(stageDir, hash).resolve(filePath.getName())
+
+            int count = 0
+            while( true ) {
+                try {
+                    return stageForeignFile0(filePath, target)
+                }
+                catch( IOException e ) {
+                    if( count++ < maxRetries && !(e instanceof NoSuchFileException )) {
+                        def message = "Unable to stage foreign file: ${filePath.toUriString()} (try ${count}) -- Cause: $e.message"
+                        log.isDebugEnabled() ? log.warn(message, e) : log.warn(message)
+
+                        sleep (10 + RND.nextInt(300))
+                        continue
+                    }
+
+                    throw new ProcessStageException(fmtError(filePath,e), e)
+                }
             }
         }
-    }
 
-    protected String getStagingMessage(List<Path> filePaths) {
-        def msg = 'Staging foreign file'
-        if (filePaths.size() > 1)
-            msg += 's:\n'
-        else
-            msg += ': '
-        msg += filePaths.collect() { it.toUriString() }.join('\n')
-        return msg
-    }
 
-    private String fmtError(Path filePath, Exception e) {
-        def message = "Can't stage file ${filePath.toUri().toString()}"
-        if( e instanceof NoSuchFileException )
-            message += " -- file does not exist"
-        else if( e.message )
-            message += " -- reason: ${e.message}"
-        return message
-    }
-
-    private Path stageForeignFile0(Path source, Path target) {
-        if( target.exists() ) {
-            log.debug "Local cache found for foreign file ${source.toUriString()} at ${target.toUriString()}"
-            return target
+        protected String getStagingMessage(List<Path> filePaths) {
+            def msg = 'Staging foreign file'
+            if (filePaths.size() > 1)
+                msg += 's:\n'
+            else
+                msg += ': '
+            msg += filePaths.collect() { it.toUriString() }.join('\n')
+            return msg
         }
-        log.debug "Copying foreign file ${source.toUriString()} to work dir: ${target.toUriString()}"
-        return FileHelper.copyPath(source, target)
-    }
 
-    private Path getCacheDir(Path workDir, String hash) {
-        def bucket = hash.substring(0,2)
-        def result = workDir.resolve( "$bucket/${hash.substring(2)}")
-
-        if( !FilesEx.mkdirs(result) ) {
-            throw new IOException("Unable to create cache directory: $result -- Verify file system access permissions or if a file having the same name exists")
+        private String fmtError(Path filePath, Exception e) {
+            def message = "Can't stage file ${filePath.toUri().toString()}"
+            if( e instanceof NoSuchFileException )
+                message += " -- file does not exist"
+            else if( e.message )
+                message += " -- reason: ${e.message}"
+            return message
         }
-        return result.toAbsolutePath()
+
+        private Path stageForeignFile0(Path source, Path target) {
+            if( target.exists() ) {
+                log.debug "Local cache found for foreign file ${source.toUriString()} at ${target.toUriString()}"
+                return target
+            }
+            log.debug "Copying foreign file ${source.toUriString()} to work dir: ${target.toUriString()}"
+            return FileHelper.copyPath(source, target)
+        }
+
+        private Path getCacheDir(Path workDir, String hash) {
+            def bucket = hash.substring(0,2)
+            def result = workDir.resolve( "$bucket/${hash.substring(2)}")
+
+            if( !FilesEx.mkdirs(result) ) {
+                throw new IOException("Unable to create cache directory: $result -- Verify file system access permissions or if a file having the same name exists")
+            }
+            return result.toAbsolutePath()
+        }
+
     }
+
 
     @ToString
     @EqualsAndHashCode
     @TupleConstructor
-    static private class NamePathPair {
+    @PackageScope
+    static class NamePathPair {
         String name
         Path path
 
@@ -239,10 +273,10 @@ class FilePorter {
         }
     }
 
-    private CompletionService createExecutor() {
+    private ExecutorService createExecutor() {
         log.debug "Creating executor service for $this"
 
-        final pool = new ThreadPoolExecutor(
+        final result = new ThreadPoolExecutor(
                 coreThreads,
                 maxThreads,
                 keepAlive.millis,
@@ -250,15 +284,15 @@ class FilePorter {
                 new LinkedBlockingQueue<Runnable>(),
                 new DownloaderThreadFactory() )
 
-        pool.allowCoreThreadTimeOut(true);
+        result.allowCoreThreadTimeOut(true);
 
         // register the shutdown on termination
         session.onShutdown {
-            pool.shutdown()
-            pool.awaitTermination(1, TimeUnit.MINUTES)
+            result.shutdown()
+            result.awaitTermination(1, TimeUnit.MINUTES)
         }
 
-        return new ExecutorCompletionService<>(pool)
+        return result
     }
 
     /**
