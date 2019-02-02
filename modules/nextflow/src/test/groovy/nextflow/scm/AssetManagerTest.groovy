@@ -458,21 +458,21 @@ class AssetManagerTest extends Specification {
 
         when:
         manager = new AssetManager()
-        result = manager.checkForGitUrl('nextflow/pipe')
+        result = manager.resolveNameFromGitUrl('nextflow/pipe')
         then:
         result == null
         manager.hub == null
 
         when:
         manager = new AssetManager()
-        result = manager.checkForGitUrl('https://gitlab.com/pditommaso/hello.git')
+        result = manager.resolveNameFromGitUrl('https://gitlab.com/pditommaso/hello.git')
         then:
         result == 'pditommaso/hello'
         manager.hub == 'gitlab'
 
         when:
         manager = new AssetManager()
-        result = manager.checkForGitUrl('file:/user/repo/projects/hello.git')
+        result = manager.resolveNameFromGitUrl('file:/user/repo/projects/hello.git')
         then:
         result == 'local/hello'
         manager.hub == 'file:/user/repo/projects'
@@ -480,14 +480,35 @@ class AssetManagerTest extends Specification {
         when:
         manager = new AssetManager()
         manager.providerConfigs.add( new ProviderConfig('local-scm', [platform: 'github', server: 'http://foo.bar.com']) )
-        result = manager.checkForGitUrl('https://foo.bar.com/project/xyz.git')
+        result = manager.resolveNameFromGitUrl('https://foo.bar.com/project/xyz.git')
         then:
         result == 'project/xyz'
         manager.hub == 'local-scm'
 
+        when:
+        manager = new AssetManager()
+        manager.providerConfigs.add( new ProviderConfig('gitea', [platform: 'gitea', server: 'http://my-server.org/sub1']) )
+        result = manager.resolveNameFromGitUrl('http://my-server.org/sub1/foo/bar.git')
+        then:
+        result == 'foo/bar'
+        manager.hub == 'gitea'
 
+    }
 
+    def 'should resolve project name' () {
+        given:
+        def manager = new AssetManager()
 
+        expect:
+        manager.resolveProjectName0(PATH,SERVER) == EXPECTED
+
+        where:
+        PATH          | SERVER                  | EXPECTED
+        'a/b/c'       | null                    | 'a/b/c'
+        'a/b/c'       | 'http://dot.com'        | 'a/b/c'
+        'a/b/c'       | 'http://dot.com/'       | 'a/b/c'
+        'a/b/c'       | 'http://dot.com/a'      | 'b/c'
+        'a/b/c'       | 'http://dot.com/a/'     | 'b/c'
     }
 
 }
