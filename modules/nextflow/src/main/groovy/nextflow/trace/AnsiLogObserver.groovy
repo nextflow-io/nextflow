@@ -16,6 +16,7 @@
 
 package nextflow.trace
 
+
 import groovy.transform.CompileStatic
 import nextflow.Session
 import nextflow.processor.TaskHandler
@@ -120,16 +121,25 @@ class AnsiLogObserver implements TraceObserver {
     protected void render0(dummy) {
         while(!stopped) {
             renderProgress()
-            sleep 150
+            sleep 200
         }
         renderProgress()
         renderEpilog()
     }
 
     protected void renderMessages( Ansi term, List<Event> allMessages, Color color=null )  {
+        int BLANKS=0
         def itr = allMessages.iterator()
         while( itr.hasNext() ) {
             final event = itr.next()
+
+            // evict old warnings
+            final delta = System.currentTimeMillis()-event.timestamp
+            if( delta>35_000 ) {
+                BLANKS += event.message.count(NEWLINE)+1
+                itr.remove()
+                continue
+            }
 
             if( color ) {
                 term.fg(color).a(event.message).fg(Color.DEFAULT)
@@ -138,12 +148,10 @@ class AnsiLogObserver implements TraceObserver {
                 term.a(event.message)
             }
             term.newline()
-
-            // evict old warnings
-            final delta = System.currentTimeMillis()-event.timestamp
-            if( delta>60_000 )
-                itr.remove()
         }
+
+        for( int i=0; i<BLANKS; i++ )
+            term.newline()
     }
 
     protected void renderExecutors(Ansi term) {
@@ -155,7 +163,7 @@ class AnsiLogObserver implements TraceObserver {
         }
 
         if( count ) {
-            term.a("> executor" + line)
+            term.a("+ executor" + line)
             term.newline()
         }
     }
