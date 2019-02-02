@@ -30,17 +30,51 @@ other workflow metadata. You can see an example below:
 .. image:: images/report-summary-min.png
 
 
-Resources
----------
+Resource Usage
+---------------
 
 The `Resources` sections plots the distributions of resource usages for each workflow process
-using the interactive `HighCharts <https://www.highcharts.com/>`_ plotting library.
+using the interactive `plotly.js  <https://plot.ly/javascript/>`_ plotting library.
 
-Plots are shown for CPU, memory, time and disk read+write. The first three have two tabs with
-the raw values and a percentage representation showing what proportion of the allocated resources
-were used. This is helpful to check that job pipeline requests are efficient.
+Plots are shown for CPU, memory, job duration and disk I/O. These plots are very helpful to check that job pipeline requests are efficient.
 
-.. image:: images/report-resources-min.png
+
+CPU Usage
++++++++++
+
+The plot has two tabs with the raw values and a percentage representation showing what proportion of the allocated resources
+were used. 
+
+.. image:: images/report-resource-cpu.png
+
+Let's illustrate how this plot behaves with several examples.
+
+In the first example, let's consider the simple use case in which a process performs one task of pure computation using one CPU. Then, you expect the `Raw Usage` tab to report 100%. If the task is distributed over, 2, 3, 4, etc. CPUs the `Raw Usage` wil be 200%, 300%, 400%, etc. respectively.
+
+
+For example, let
+test code::
+
+ #!/usr/bin/env nextflow
+
+    params.str = 'Hello world!'
+
+
+Memory Usage
+++++++++++++
+
+.. image:: images/report-resource-memory.png
+
+Job Duration
+++++++++++++
+
+.. image:: images/report-resource-job-duration.png
+
+I/O
+---
+
+.. image:: images/report-resource-io.png
+
 
 Tasks
 -----
