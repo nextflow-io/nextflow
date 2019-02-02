@@ -26,6 +26,8 @@ import java.util.regex.Pattern
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import groovy.transform.stc.ClosureParams
+import groovy.transform.stc.FirstParam
 import nextflow.file.FileHelper
 import nextflow.util.CheckHelper
 import nextflow.util.Duration
@@ -494,21 +496,26 @@ class Bolts {
         ResourceGroovyMethods.asType(self, type);
     }
 
+    static <K,V> V getOrCreate( Map<K,V> self, K key, @ClosureParams(FirstParam.FirstGenericType) Closure <V> value ) {
+        getOrCreate0(self,key,value)
+    }
 
-    static <T> T getOrCreate( Map self, key, factory ) {
+    static <K,V> V getOrCreate( Map<K,V> self, K key, V value ) {
+        getOrCreate0(self,key,value)
+    }
 
+    static private <K,V> V getOrCreate0(Map<K,V> self, K key, value) {
         if( self.containsKey(key) )
-            return (T)self.get(key)
+            return self.get(key)
 
         synchronized (self) {
             if( self.containsKey(key) )
-                return (T)self.get(key)
+                return self.get(key)
 
-            def result = factory instanceof Closure ? factory.call(key) : factory
+            final result = (V)(value instanceof Closure ? value.call(key) : value)
             self.put(key,result)
-            return (T)result
+            return result
         }
-
     }
 
     /**
