@@ -11,7 +11,7 @@ The execution can be done either deploying a Nextflow managed cluster using `Goo
 instances or via the `Genomics Pipelines <https://cloud.google.com/genomics/>`_ managed service.
 
 .. warning:: This is an experimental feature and it may change in a future release. It requires Nextflow
-  version ``18.12.0-edge`` or later.
+  version ``19.01.0`` or later.
 
 
 Requirements
@@ -19,13 +19,13 @@ Requirements
 
 Nextflow
 --------
-The support for Google Cloud requires Nextflow version ``18.12.0-edge``. To install it define the following variables
+The support for Google Cloud requires Nextflow version ``19.01.0``. To install it define the following variables
 in your system environment::
 
-    export NXF_VER=18.12.0-edge
+    export NXF_VER=19.01.0
     export NXF_MODE=google
 
-Then run the following command:
+Then run the following command::
 
     curl https://get.nextflow.io | bash
 
