@@ -247,10 +247,35 @@ that can be found in your GitLab `account page <https://gitlab.com/profile/accou
     }
 
 
+Gitea credentials
+-----------------
+
+`Gitea <https://gitea.io>`_ is a Git repository server with GitHub-like GUI access. Since Gitea installation is quite 
+easy, it is suitable for building a private development environment in your network. To access your Gitea server, you 
+have to provide all the credential information below::
+
+    providers {
+
+        mygitea {
+            server = 'http://your-domain.org/gitea'
+            endpoint = 'http://your-domain.org/gitea/api/v1'
+            platform = 'gitea'
+            user = 'your-user'
+            password = 'your-password'
+            token = 'your-api-token'
+        }
+
+    }
+
+
+See `Gitea documentation <https://docs.gitea.io/en-us/api-usage/>`_ about how to enable API access on your 
+server and how to issue a token. 
+
+
 Private server configuration
 ============================
 
-Nextflow is able to access repositories hosted on private BitBucket, GitHub and GitLab server installations.
+Nextflow is able to access repositories hosted on private BitBucket, GitHub, GitLab and Gitea server installations.
 
 In order to use a private SCM installation you will need to set the server name and access credentials
 in your `SCM configuration file`_ .

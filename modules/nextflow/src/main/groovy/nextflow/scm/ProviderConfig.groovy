@@ -53,6 +53,12 @@ class ProviderConfig {
                 if( !attr.server ) attr.server = 'https://gitlab.com'
                 break
 
+            case 'gitea':
+                attr.platform = name
+                if( !attr.server ) attr.server = 'https://try.gitea.io'
+                if( !attr.endpoint ) attr.endpoint = attr.server.toString().stripEnd('/') + '/api/v1'
+                break
+
             case 'bitbucket':
                 attr.platform = name
                 if( !attr.server ) attr.server = 'https://bitbucket.org'
@@ -92,9 +98,7 @@ class ProviderConfig {
             result = 'https://' + result
 
         // remove ending slash
-        while( result.endsWith('/')  )
-            result = result.substring(0,result.size()-1)
-        return result
+        return result.stripEnd('/')
     }
 
     /**
@@ -104,7 +108,12 @@ class ProviderConfig {
     String getDomain() {
         def result = server ?: path
         def p = result.indexOf('://')
-        p != -1 ? result.substring(p+3) : result
+        if( p != -1 )
+            result = result.substring(p+3)
+        p = result.indexOf('/')
+        if( p != -1 )
+            result = result.substring(0,p)
+        return result
     }
 
     /**
@@ -161,7 +170,7 @@ class ProviderConfig {
      *      the {@link #getServer()} if not defined
      */
     String getEndpoint() {
-        attr.endpoint ?: attr.server
+        attr.endpoint ? attr.endpoint.toString().stripEnd('/') : server
     }
 
     ProviderConfig setUser(String user) {
@@ -249,6 +258,9 @@ class ProviderConfig {
 
         if( !result.find{ it.name == 'gitlab' })
             result << new ProviderConfig('gitlab')
+
+        if( !result.find{ it.name == 'gitea' })
+            result << new ProviderConfig('gitea')
 
         if( !result.find{ it.name == 'bitbucket' })
             result << new ProviderConfig('bitbucket')

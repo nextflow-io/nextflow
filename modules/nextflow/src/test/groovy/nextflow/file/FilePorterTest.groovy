@@ -16,22 +16,27 @@
 
 package nextflow.file
 
+import spock.lang.Ignore
 import spock.lang.Specification
 
 import java.nio.file.FileSystems
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.Callable
-import java.util.concurrent.ExecutorCompletionService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
+import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.util.Duration
+import nextflow.exception.ProcessStageException
 import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 class FilePorterTest extends Specification {
 
     def 'should get the core threads value' () {
@@ -112,35 +117,88 @@ class FilePorterTest extends Specification {
         folder?.deleteDir()
     }
 
+
+    static class DummyStage extends FilePorter.FileStageAction {
+        int secs
+        DummyStage(String name, Path file, int secs ) {
+            super(name,file,Paths.get('/work/dir'),0)
+            this.secs = secs
+        }
+
+        @Override
+        FilePorter.NamePathPair call() throws Exception {
+            log.debug "Dummy staging $path"
+            sleep secs
+            return new FilePorter.NamePathPair(name, path.resolve(name))
+        }
+    }
+
+    static class ErrorStage extends FilePorter.FileStageAction {
+
+        @Override
+        FilePorter.NamePathPair call() throws Exception {
+            throw new ProcessStageException('Cannot stage gile')
+        }
+    }
+
     def 'should submit actions' () {
 
         given:
         def folder = Files.createTempDirectory('test')
         def session = new Session(workDir: folder)
+        def porter = new FilePorter(session)
 
-        def executor = new ExecutorCompletionService(Executors.newFixedThreadPool(2))
+        when:
         def actions = [
-                { sleep(500) } as Callable,
-                { sleep(2000) } as Callable
+                new DummyStage('foo', Paths.get('/data/foo'), 500),
+                new DummyStage('bar', Paths.get('/data/bat'), 3000)
         ]
-        def paths = [Paths.get('/foo/bar')]
-        FilePorter porter = Spy(FilePorter, constructorArgs:[session])
 
-        when:
-        def futures = porter.submitStagingActions(actions, paths)
+        def futures = porter.submitStagingActions(actions)
         then:
         futures.size() == 2
-        0 * porter.getStagingMessage(paths)
+        futures[0].isDone()
+        futures[1].isDone()
 
         when:
-        porter.@pollTimeout = Duration.of('1sec')
-        futures = porter.submitStagingActions(actions, paths)
+        porter.submitStagingActions([ new ErrorStage() ])
         then:
-        futures.size() == 2
-        1 * porter.getStagingMessage(paths)
-        porter.getStagingMessage(paths) == 'Staging foreign file: /foo/bar'
+        thrown(ProcessStageException)
 
         cleanup:
         folder?.deleteDir()
+    }
+
+
+    @Ignore
+    def 'should access future' () {
+
+        given:
+        def exec = Executors.newFixedThreadPool(2)
+        when:
+        def fut = exec.submit( { log.info 'start'; sleep 5000; log.info 'done'; return 'Hello' } as Callable )
+
+        def wait = {
+            while( true ) {
+                try {
+                    def str = fut.get(1, TimeUnit.SECONDS)
+                    log.info "message => $str"
+                    break
+                }
+                catch( TimeoutException e ) {
+                    //
+                    log.info('timeout')
+                }
+            }
+        }
+
+        def t1 = Thread.start(wait)
+        def t2 = Thread.start(wait)
+
+        t1.join()
+        t2.join()
+
+        then:
+        noExceptionThrown()
     }
 }

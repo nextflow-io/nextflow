@@ -32,18 +32,20 @@ class GitUrlTest extends Specification {
         def result = new GitUrl(url)
         then:
         result.protocol == protocol
-        result.project == project
+        result.path == path
         result.domain == domain
         result.user == user
-        result == new GitUrl(protocol, user, domain, project)
+        result == new GitUrl(protocol, user, domain, path)
 
         where:
-        url                                             | protocol  | user  | domain            | project
+        url                                             | protocol  | user  | domain            | path
         'https://example.com/gitproject.git'            | 'https'   | null  | 'example.com'     | 'gitproject'
         'https://gitlab.com/pditommaso/hello.git'       | 'https'   | null  | 'gitlab.com'      | 'pditommaso/hello'
         'http://github.com/pditommaso/hello.git'        | 'http'    | null  | 'github.com'      | 'pditommaso/hello'
+        'https://gitlab.com/sub1/pditommaso/hello.git'  | 'https'   | null  | 'gitlab.com'      | 'sub1/pditommaso/hello'
         'https://yo@github.com/pditommaso/hola.git'     | 'https'   | 'yo'  | 'github.com'      | 'pditommaso/hola'
         'git@gitlab.com:pditommaso/hello.git'           | 'git'     | null  | 'gitlab.com'      | 'pditommaso/hello'
+        'git@gitlab.com:dir1/pditommaso/hello.git'      | 'git'     | null  | 'gitlab.com'      | 'dir1/pditommaso/hello'
         'ssh://me@server/project.git'                   | 'ssh'     | 'me'  | 'server'          | 'project'
         'me@server:project.git'                         | 'ssh'     | 'me'  | 'server'          | 'project'
         'file:///opt/git/project.git'                   | 'file'    | null  | '/opt/git'        | 'project'

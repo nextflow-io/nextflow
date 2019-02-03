@@ -231,7 +231,7 @@ class AssetManager {
     String resolveName( String name ) {
         assert name
 
-        def project = checkForGitUrl(name)
+        def project = resolveNameFromGitUrl(name)
         if( project )
             return project
 
@@ -278,7 +278,7 @@ class AssetManager {
     String getHub() { hub }
 
     @PackageScope
-    String checkForGitUrl( String repository ) {
+    String resolveNameFromGitUrl( String repository ) {
 
         if( repository.startsWith('http://') || repository.startsWith('https://') || repository.startsWith('file:/')) {
             try {
@@ -288,12 +288,13 @@ class AssetManager {
                 if( url.protocol == 'file' ) {
                     this.hub = "file:${url.domain}"
                     providerConfigs << new ProviderConfig(this.hub, [path:url.domain])
-                    result = "local/${url.project}"
+                    result = "local/${url.path}"
                 }
                 else {
                     // find the provider config for this server
-                    this.hub = providerConfigs.find { it.domain == url.domain } ?.name
-                    result = url.project
+                    def config = providerConfigs.find { it.domain == url.domain }
+                    this.hub = config?.name
+                    result = resolveProjectName0(url.path, config?.server)
                 }
                 log.debug "Repository URL: $repository; Project: $result; Hub provider: $hub"
 
@@ -305,6 +306,22 @@ class AssetManager {
         }
 
         return null
+    }
+
+    protected String resolveProjectName0(String path, String server) {
+        assert path
+        assert !path.startsWith('/')
+
+        def project = path
+        if( server ) {
+            // fetch prefix from the server url
+            def prefix = new URL(server).path?.stripStart('/')
+            if( path.startsWith(prefix) ) {
+                project = path.substring(prefix.length())
+            }
+        }
+
+        return project.stripStart('/')
     }
 
     /**
@@ -1003,17 +1020,17 @@ class AssetManager {
         assert localPath
         
         // find the repository remote URL from the git project config file
-        final server = getGitConfigRemoteDomain()
-        if( !server && failFast ) {
+        final domain = getGitConfigRemoteDomain()
+        if( !domain && failFast ) {
             def message = (localGitConfig.exists()
                             ? "Can't find git repository remote host -- Check config file at path: $localGitConfig"
                             : "Can't find git repository config file -- Repository may be corrupted: $localPath" )
             throw new AbortOperationException(message)
         }
 
-        final result = providerConfigs.find { it -> it.domain == server }
+        final result = providerConfigs.find { it -> it.domain == domain }
         if( !result && failFast ) {
-            def message = "Can't find any configured provider for git server `$server` -- Make sure to have specified it in your `scm` file. For details check https://www.nextflow.io/docs/latest/sharing.html#scm-configuration-file"
+            def message = "Can't find any configured provider for git server `$domain` -- Make sure to have specified it in your `scm` file. For details check https://www.nextflow.io/docs/latest/sharing.html#scm-configuration-file"
             throw new AbortOperationException(message)
         }
 

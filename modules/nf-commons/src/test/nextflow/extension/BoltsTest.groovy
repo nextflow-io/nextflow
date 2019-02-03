@@ -15,15 +15,16 @@
  */
 
 package nextflow.extension
+
+import spock.lang.Specification
+import spock.lang.Unroll
+
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.text.SimpleDateFormat
 
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-import spock.lang.Specification
-import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -254,6 +255,48 @@ class BoltsTest extends Specification {
         expect:
         1_000.toDuration() instanceof Duration
         60_000.toDuration() == Duration.of('1 min')
+    }
+
+    def 'should get or create a value' () {
+
+        given:
+        def map = [X: 1]
+
+        when:
+        def val = map.getOrCreate('X', 9)
+        then:
+        val == 1
+        map.size() == 1
+
+        when:
+        val = map.getOrCreate('Y', 9)
+        then:
+        val == 9
+        map.size() == 2
+        map.X == 1
+        map.Y == 9
+
+    }
+
+    def 'should get or create a value with closure' () {
+
+        given:
+        def map = [X: 1]
+
+        when:
+        def val = map.getOrCreate('X') { return 9 }
+        then:
+        val == 1
+        map.size() == 1
+
+        when:
+        val = map.getOrCreate('Y') { return 9 }
+        then:
+        val == 9
+        map.size() == 2
+        map.X == 1
+        map.Y == 9
+
     }
 
 }
