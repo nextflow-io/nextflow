@@ -1,14 +1,15 @@
-.. _pipeline-page:
+.. _script-page:
 
-*****************
-Pipeline script
-*****************
+******************
+Nextflow scripting
+******************
 
 
-The Nextflow scripting language is an extension of the Groovy programming language whose syntax has been
-specialized to ease the writing of computational pipelines in a declarative manner.
+The Nextflow scripting language is an extension of the Groovy programming language.
+Groovy is a powerful programming language for the Java virtual machine. The Nextflow
+syntax has been specialized to ease the writing of computational pipelines in a declarative manner.
 
-This means that Nextflow can execute any piece of Groovy code or use any library for the JVM platform.
+Nextflow can execute any piece of Groovy code or use any library for the JVM platform.
 
 For a detailed description of the Groovy programming language, reference these links:
 
@@ -163,7 +164,7 @@ Strings can be concatenated with ``+``::
 String interpolation
 --------------------
 
-There is an important difference between single- and double-quoted strings:
+There is an important difference between single-quoted and double-quoted strings:
 Double-quoted strings support variable interpolations, while single-quoted strings do not.
 
 In practice, double-quoted strings can contain the value of an arbitrary variable by prefixing its name with the ``$`` character,
@@ -228,8 +229,10 @@ More formally, you can create functions that are defined as `first class objects
 
 
 The curly brackets around the expression ``it * it`` tells the script interpreter to treat this expression as code.
-In this case, the designator ``it`` refers to whatever value is passed to the function when it is called. This compiled function is
-assigned to the variable ``square``, much like variable assignments shown previously. Now we can do something like this::
+The `it` identifier is an implicit variable that represents the value that is passed to the function when it is invoked.
+
+Once compiled the function object is assigned to the variable ``square`` as any other variable assignments shown previously.
+Now we can do something like this::
 
     println square(9)
 
@@ -261,7 +264,7 @@ for each key-value pair in the ``Map``. Here, we use the obvious variable names 
         println "$key = $value"
     }
 
-    [ "Yue" : "Wu", "Mark" : "Williams", "sudha" : "Kumari" ].each(printMapClosure)
+    [ "Yue" : "Wu", "Mark" : "Williams", "Sudha" : "Kumari" ].each(printMapClosure)
 
 
 Prints::
@@ -450,7 +453,9 @@ checkIfExists   When ``true`` throws an exception of the specified path do not e
   `Path <http://docs.oracle.com/javase/7/docs/api/java/nio/file/Path.html>`_ object, which allows
   you to use the usual methods you would in a Java program.
 
-See also: :ref:`Channel.fromPath <channel-path>` .
+See also: :ref:`Channel.fromPath <channel-path>`.
+
+.. _glob: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
 
 Basic read/write
 ------------------
@@ -808,7 +813,8 @@ The following methods can be used on a file variable created by using the ``file
 Name                Description
 ==================  ================
 getName             Gets the file name e.g. ``/some/path/file.txt`` -> ``file.txt``
-getBaseName         Gets the file name without its extension e.g. ``/some/path/file.txt`` -> ``file``
+getBaseName         Gets the file name without its extension e.g. ``/some/path/file.tar.gz`` -> ``file.tar``
+getSimpleName       Gets the file name without any extension e.g. ``/some/path/file.tar.gz`` -> ``file``
 getExtension        Gets the file extension e.g. ``/some/path/file.txt`` -> ``txt``
 getParent           Gets the file parent path e.g. ``/some/path/file.txt`` -> ``/some/path``
 size                Gets the file size in bytes
@@ -868,4 +874,47 @@ showing how to stream or copy the content of files.
 
 .. note:: Write and list operations are not supported for HTTP/S and FTP files.
 
-.. _glob: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
+
+Counting records
+----------------
+
+countLines
+^^^^^^^^^^
+
+The ``countLines`` methods counts the lines in a text files.
+::
+
+    def sample = file('/data/sample.txt')
+    println sample.countLines()
+
+
+Files whose name ends with the ``.gz`` suffix are expected to be GZIP compressed and
+automatically uncompressed.
+
+countFasta
+^^^^^^^^^^
+
+The ``countFasta`` method counts the number of records in `FASTA <https://en.wikipedia.org/wiki/FASTA_format>`_
+formatted file.
+::
+
+    def sample = file('/data/sample.fasta')
+    println sample.countFasta()
+
+Files whose name ends with the ``.gz`` suffix are expected to be GZIP compressed and
+automatically uncompressed.
+
+countFastq
+^^^^^^^^^^
+
+The ``countFastq`` method counts the number of records in a `FASTQ <https://en.wikipedia.org/wiki/FASTQ_format>`_
+formatted file.
+::
+
+    def sample = file('/data/sample.fastq')
+    println sample.countFastq()
+
+Files whose name ends with the ``.gz`` suffix are expected to be GZIP compressed and
+automatically uncompressed.
+
+

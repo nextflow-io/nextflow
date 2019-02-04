@@ -152,8 +152,8 @@ creates a channel emitting three entries each of which is a list containing two 
 value
 -----
 
-This method creates a dataflow `variable` that is a channel to which one entry, at most, can be bound. An optional
-not ``null`` value can be specified as a parameters, which is bound to the newly created channel. For example::
+The `value` factory method is used to create a *value* channel. An optional not ``null`` argument
+can be specified to bind the channel to a specific value. For example::
 
 
     expl1 = Channel.value()
@@ -200,7 +200,7 @@ The first line returns a channel emitting the files ending with the suffix ``.fa
 in all its sub-folders. While the second one only emits the files which have the same suffix in `any` sub-folder in the ``data`` path.
 Finally the last example emits two files: ``data/file_1.fq`` and ``data/file_2.fq``.
 
-.. note:: As in Linux BASH the ``*`` wildcard does not match against hidden files (i.e. files whose name start with a ``.`` character).
+.. note:: As in Linux Bash the ``*`` wildcard does not match against hidden files (i.e. files whose name start with a ``.`` character).
 
 In order to include hidden files, you need to start your pattern with a period character or specify the ``hidden: true`` option. For example::
 
@@ -289,6 +289,7 @@ maxDepth        Maximum number of directory levels to visit (default: `no limit`
 followLinks     When ``true`` it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: ``true``)
 size            Defines the number of files each emitted item is expected to hold (default: 2). Set to ``-1`` for any.
 flat            When ``true`` the matching files are produced as sole elements in the emitted tuples (default: ``false``).
+checkIfExists   When ``true`` throws an exception of the specified path do not exist in the file system (default: ``false``)
 =============== ===================
 
 .. note:: More than one glob pattern can be specified using a list as argument::

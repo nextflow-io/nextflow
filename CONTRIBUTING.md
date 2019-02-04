@@ -64,10 +64,18 @@ This is important to identify possible overlaps with other planned features and 
 
 ## Contributing Code Changes
 
-IMPORTANT: When you contribute code, you affirm that the contribution is your original work and that you license
-the work to the project under the project's open source license. Whether or not you state this explicitly,
-by submitting any copyrighted material via pull request, via email, or other means you agree to license the
-material under the project's open source license and warrant that you have the legal authority to do so.
+When submitting a contribution, you will be required to sign a [Developer Certificate of Origin (DCO)](https://developercertificate.org/) to certify that you are the author of the source code or otherwise you have the right to submit it to the project. 
+
+Contributor signatures are provided by adding a `Signed-off-by` line to the commit message 
+as shown below, or by using the `-S` option for the [git commit command](https://help.github.com/articles/signing-commits/).
+
+```
+This is my commit message
+
+Signed-off-by: Random J Developer <random@developer.example.org>
+```
+
+The process is automatically managed by the [Probot](https://probot.github.io/apps/dco/) app for GitHub.
 
 
 ## IDE settings

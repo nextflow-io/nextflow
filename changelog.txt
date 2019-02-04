@@ -1,5 +1,139 @@
 NEXTFLOW CHANGE-LOG
 ===================
+19.01.0 - 22 Jan 2019
+- Added Google Cloud Platform integration
+- Added support for K8s nodeSelector #955
+- Added new AWS regions #935
+- Added json/yaml output to info command #657
+- Added More duration and memory unit syntax sugar #921
+- Added NO_PROXY env variable should be honoured #864
+- Added keepHeader option to splitText operator #912
+- Added countLines, countFasta and countFastq methods #972
+- Added an env variable to define default cloud driver #973
+- Fixed Unable to find JVM 1.8 err message #1000
+- Fixed Memory unit should contain thousand separator [e6ec4c84] #989
+- Fixed LSF long user names breaks jobs status parsing [b4306151] #988
+- Fixed Move output files to storeDir instead of copying them #745
+- Fixed Interpolated strings in a from statement are misinterpreted #978
+- Fixed ConcurrentModificationException when publishing output files #971
+- Fixed Launcher fails with Java 10 or later #953
+- Fixed remote bin directory when using bucketDir option [6d796783]
+- Fixed foreign file system detection [1489cc72]
+- Fixed Ansi logger division by zero [ae2b1380]
+- Fixed Unparseable Data format on http file #962
+- Fixed Log command history #405
+- Fixed Too long process tag name can cause SLURM failure #941
+- Fixed LSF can return an inconsistent jobs status #927
+- Fixed dump last queue status on failure [36e80242]
+- Fixed Allow the usage of a custom docker image for K8s driver pod #877
+- Fixed K8s executor when the cluster has no available cpus #824
+- Fixed Prevent duplicate process definitions #920
+- Fixed Update queue statuses used by PBS Pro #908
+- Fixed K8s launcher fails to set pod work directory [dc8bfead]
+- Fixed cmd cloud error message [14d603b9]
+- Fixed RejectedExecutionException on successive Console executions #906
+- Fixed Invalid config rendering #801
+- Fixed Invalid warning message for config selector #905
+- Fixed Queue status command fail on LSF version 8 #910
+- Fixed Use `bash` instead of `sh` to fetch queue status
+- Improved script runner api [da4a6c17]
+- Improved file hashing logging [0d35b2b4]
+- Refactored ScriptRunner class [15ee2f1c]
+- Refactored DSL code visitor [67904c1f]
+- Revert "Apache Ignite to version 2.6" #909
+- Better report warning when grid status command fails [3ac8b972]
+
+19.01.0-edge - 10 Jan 2019
+- Enhanced timeline and execution reports #985 #986 [fb00c3a6] [092f0b9e]
+- Enhanced BashWrapperBuilder using template file [7d7e116a] [c62b9dff]
+- Fixed CPU usage accounting #982 [7d7e116a] [c62b9dff]
+- Fixed Move output files to storeDir instead of copying them #745
+- Fixed Interpolated strings in a from statement are misinterpreted #978
+- Fixed Launcher fails with Java 10 or later #953
+- Fixed LSF long user names breaks jobs status parsing [b4306151] #988
+- Fixed Memory unit should contain thousand separator [e6ec4c84] #989
+- Fixed Allows fromFilePairs to handle non globs #946
+- Added an env variable to define default cloud driver #973
+- Added countLines, countFasta and countFastq methods #972
+- Added NXF_DIST launcher variable #954
+- Added NXF_SMOKE var to disable long running tests
+- Deprecated groupBy and route operators [b7ca53d2]
+- Updated S3 storage classes #977
+- Updated groovy to version 2.5.5
+- Updated copyright disclaimer
+- Refactored project structure [516294e7]
+- Speed-up CI tests [3320dcec]
+
+18.12.0-edge - 18 Dic 2018
+- Add Google Cloud Platform integration
+- Added support for K8s nodeSelector #955
+- Added new AWS regions #935
+- Added json/yaml output to info command #657
+- Fixed remote bin directory when using buckerDir option [6d796783]
+- Fixed foreign file system detection [1489cc72]
+- Fixed Ansi logger division by zero [ae2b1380]
+- Fixed Unparseable Data format on http file #962
+- Fixed Log command history #405
+- Fixed Too long process tag name can cause SLURM failure #941
+- Fixed LSF can return an inconsistent jobs status #927
+- Fixed dump last queue status on failure [36e80242]
+- Fixed Allow the usage of a custom docker image for K8s driver pod #877
+- Fixed K8s executor when the cluster has no available cpus #824
+- Fixed Prevent duplicate process definitions #920
+- Fixed Update queue statuses used by PBS Pro #908
+- Fixed K8s launcher fails to set pod work directory [dc8bfead]
+- Fixed cmd cloud error message [14d603b9]
+- Improved script runner api [da4a6c17]
+- Revert "Apache Ignite to version 2.6" #909
+- Fixed Invalid config rendering #801
+- Improved file hashing logging [0d35b2b4]
+- Refactored ScriptRunner class [15ee2f1c]
+- Refactored DSL code visitor [67904c1f]
+
+18.11.0-edge - 12 Nov 2018
+- Added More duration and memory unit syntax sugar #921
+- Added NO_PROXY env variable should be honoured #864
+- Added keepHeader option to splitText operator #912
+- Fixed Invalid warning message for config selector #905
+- Fixed Queue status command fail on LSF version 8 #910
+- Fixed Use `bash` instead of `sh` to fetch queue status
+- Better report warning when grid status command fails [3ac8b972]
+- Fixed RejectedExecutionException on successive Console executions #906
+
+18.10.1 - 24 Oct 2018
+- Fixed test [011e8e23]
+- Fixed version number check [fb780347]
+
+18.10.0 - 24 Oct 2018
+- Added lenient cache mode #828 [ba907a2f]
+- Added support for java 11 [60da50b5]
+- Added support for Singularity 3.0 library #898
+- Added support for AWS Batch hybrid executions #744
+- Added weblog JSON format docs #882
+- Added weblog example documentation #891
+- Added PbsPro executor [33ae1104]
+- Added support for ANSI console logging [9c14a947]
+- Fixed License prevents scientific use #788
+- Fixed process submitter slow-down [495e900a]
+- Fixed Comparing duration and memory units with null throws an exception #872
+- Fixed Html format dag fails when 'each' qualifier is used #887
+- Fixed Collate/Buffer hangs with one emission after Collect operator #868
+- Fixed Option checkIfExists should be applied when a glob pattern does not match any file #874
+- Fixed Add name to manifest and reject other attributes #871
+- Fixed warning message grammar when resuming on new project #885
+- Fixed Missing DSL Xform transformation in console execution [9621f8c6]
+- Fixed Enum declared in nextflow script causes error #878
+- Fixed Report a warning message when queue status fetch fails [39aae6a2]
+- Fixed Pbs executor may return nonzero exit code when checking queue status #904
+- Renamed weblog `runStatus` to `event` #892
+- Renamed K8s config attribute userDir to launchDir #895
+- Merged tests as subtree [a03eb59a]
+- Refactored service discovery
+- Removed FastXxxYyyyStream
+- Demoted igfs subsystem
+- Upgraded Groovy to version 2.5.3 [119300b3]
+- Upgrade Gradle to version 4.10
+- Updated AWS batch docs
 
 0.32.0 - 8 Aug 2018
 - Fixed CPU usage metrics can be wrongly reported #858
@@ -423,7 +557,7 @@ NEXTFLOW CHANGE-LOG
 - Added new CLI option `-params-file` to load parameters from a json/yaml file #208
 - Fixed SCM user name is not set accessing private repository #300
 - Fixed Infer singleton process outputs from inputs declaration #301
-- Fixed Use exist status 1 for all NF errors #304
+- Fixed Use exit status 1 for all NF errors #304
 - Fixed Invalid SGE job name as defined in `sge_types` #299
 - Added `skip` parameter to collectFile operator #306
 - Added experimental `fs` command

@@ -46,14 +46,13 @@ $NXF_CMD run nextflow-io/rnaseq-nf -with-docker
 $NXF_CMD run nextflow-io/rnaseq-nf -with-docker -resume
 
 
-if [[ $TRAVIS_PULL_REQUEST == false ]]; then
+if [[ $TRAVIS_PULL_REQUEST == true ]]; then
+echo Skipping tests requiring secret vars
+exit 0
+fi
 
 #
 # AWS Batch tests
 #
 echo aws batch tests
 ./await.sh bash awsbatch.sh
-
-else
-echo Skipping tests requiring AWS credentials
-fi

@@ -30,17 +30,18 @@ other workflow metadata. You can see an example below:
 .. image:: images/report-summary-min.png
 
 
-Resources
----------
+Resource Usage
+---------------
 
 The `Resources` sections plots the distributions of resource usages for each workflow process
-using the interactive `HighCharts <https://www.highcharts.com/>`_ plotting library.
+using the interactive `plotly.js  <https://plot.ly/javascript/>`_ plotting library.
 
-Plots are shown for CPU, memory, time and disk read+write. The first three have two tabs with
-the raw values and a percentage representation showing what proportion of the allocated resources
-were used. This is helpful to check that job pipeline requests are efficient.
+Plots are shown for CPU, memory, job duration and disk I/O. They have two (or three) tabs with the raw values and a percentage representation showing what proportion of the requested resources
+were used. These plots are very helpful to check that job pipeline requests are efficient.
 
-.. image:: images/report-resources-min.png
+.. image:: images/report-resource-cpu.png
+
+Learn more about how resource usage are computed in the :ref:`Metrics documentation <metrics-page>`.
 
 Tasks
 -----
@@ -52,8 +53,8 @@ and many other runtime metrics. You can see an example below:
 
 
 .. note:: Nextflow collect these metrics running a background process for each job in the target environment.
-  Make sure the following tools are available ``ps``, ``date``, ``sed``, ``grep``, ``egrep``, ``awk`` in the system where
-  the jobs are executed. Moreover some of these metrics are not reported when using a Mac OSX system. See the note
+  Make sure the following tools are available ``ps``, ``date``, ``sed``, ``grep``, ``egrep``, ``awk``, ``tail`` in the
+  system where the jobs are executed. Moreover some of these metrics are not reported when using a Mac OSX system. See the note
   message about that in the `Trace report`_ below.
 
 .. warning:: A common problem when using a third party container image is that it does not ship one or more of the
@@ -100,7 +101,6 @@ task_id hash      native_id   name          status      exit     submit         
 98      de/d6c0a6 2099      matrix (1)      COMPLETED   0        2014-10-23 17:14:27.139 30s         1s          0.0%    4.8 MB      42 MB       240.6 MB    79 KB
 ======= ========= ========= =============== =========== ======== ======================= =========== =========== ======= =========== =========== =========== ===========
 
-
 .. _trace-fields:
 
 The following table shows the fields that can be included in the execution report:
@@ -133,23 +133,19 @@ queue                   The queue that the executor attempted to run the process
 %mem                    Percentage of memory used by the process.
 rss                     Real memory (resident set) size of the process. Equivalent to ``ps -o rss`` .
 vmem                    Virtual memory size of the process. Equivalent to ``ps -o vsize`` .
-:sup:`*` peak_rss       Peak of real memory. This data is read from field ``VmHWM`` in ``/proc/$pid/status`` file.
-:sup:`*` peak_vmem      Peak of virtual memory. This data is read from field ``VmPeak`` in ``/proc/$pid/status`` file.
-:sup:`*` rchar          Number of bytes the process read, using any read-like system call from files, pipes, tty, etc. This data is read from file ``/proc/$pid/io``.
-:sup:`*` wchar          Number of bytes the process wrote, using any write-like system call. This data is read from file ``/proc/$pid/io``.
-:sup:`*` syscr          Number of read-like system call invocations that the process performed. This data is read from file ``/proc/$pid/io``.
-:sup:`*` syscw          Number of write-like system call invocations that the process performed. This data is read from file ``/proc/$pid/io``.
-:sup:`*` read_bytes     Number of bytes the process directly read from disk. This data is read from file ``/proc/$pid/io``.
-:sup:`*` write_bytes    Number of bytes the process originally dirtied in the page-cache (assuming they will go to disk later). This data is read from file ``/proc/$pid/io``.
+peak_rss                Peak of real memory. This data is read from field ``VmHWM`` in ``/proc/$pid/status`` file.
+peak_vmem               Peak of virtual memory. This data is read from field ``VmPeak`` in ``/proc/$pid/status`` file.
+rchar                   Number of bytes the process read, using any read-like system call from files, pipes, tty, etc. This data is read from file ``/proc/$pid/io``.
+wchar                   Number of bytes the process wrote, using any write-like system call. This data is read from file ``/proc/$pid/io``.
+syscr                   Number of read-like system call invocations that the process performed. This data is read from file ``/proc/$pid/io``.
+syscw                   Number of write-like system call invocations that the process performed. This data is read from file ``/proc/$pid/io``.
+read_bytes              Number of bytes the process directly read from disk. This data is read from file ``/proc/$pid/io``.
+write_bytes             Number of bytes the process originally dirtied in the page-cache (assuming they will go to disk later). This data is read from file ``/proc/$pid/io``.
 ======================= ===============
 
-.. note:: Fields marked with (*) are not available when running the tracing on Mac OSX. Also note that the Mac OSX default ``date`` utility,
-  has a time resolution limited to seconds. For a more detailed time tracing it is suggested to install
-  `GNU coreutils <http://www.gnu.org/software/coreutils/>`_ package that includes the standard one.
-
-.. warning:: These numbers provide an estimation of the resources used by running tasks. They should not be intended as an alternative
-  to low level performance analysis provided by other tools and they may not be fully accurate, in particular for very short tasks
-  (taking less than one minute).
+.. note:: These numbers provide an estimation of the resources used by running tasks. They should not be intended as an alternative
+  to low level performance analysis provided by other tools and they may not be fully accurate, in particular for very short-lived tasks
+  (running for less than one second).
 
 Trace report layout and other configuration settings can be specified by using the ``nextflow.config`` configuration file.
 

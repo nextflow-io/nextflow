@@ -56,13 +56,6 @@ not defined in the Nextflow configuration file(s) is supposed to be a reference 
 So, in the above example the property ``customPath`` is defined as the current system ``PATH`` to which
 the string ``/my/app/folder`` is appended.
 
-.. warning:: If you are accessing an environment variable that may not exist in the system, your property may contain
-    an undefined value. You can avoid this by using a conditional expression in your property definition as shown below.
-
-::
-
-    mySafeProperty = "${MY_FANCY_VARIABLE?:''}"
-
 
 Config comments
 ------------------
@@ -105,8 +98,8 @@ following example::
 Scope `env`
 -----------
 
-The ``env`` scope allows you to define one or more environment variables that will be exported to the system environment
-where pipeline processes need to be executed.
+The ``env`` scope allows the definition one or more variable that will be exported in the environment where the
+workflow tasks will be executed.
 
 Simply prefix your variable names with the ``env`` scope or surround them by curly brackets, as shown below::
 
@@ -490,7 +483,7 @@ storageEncryption           The S3 server side encryption to be used when saving
 userAgent                   The HTTP user agent header passed with all HTTP requests.
 uploadMaxThreads            The maximum number of threads used for multipart upload.
 uploadChunkSize             The size of a single part in a multipart upload (default: `10 MB`).
-uploadStorageClass          The S3 storage class applied to stored objects, either `STANDARD` or `REDUCED_REDUNDANCY` (default: `STANDARD`).
+uploadStorageClass          The S3 storage class applied to stored objects, one of [`STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, `INTELLIGENT_TIERING`] (default: `STANDARD`).
 uploadMaxAttempts           The maximum number of upload attempts after which a multipart upload returns an error (default: `5`).
 uploadRetrySleep            The time to wait after a failed upload attempt to retry the part upload (default: `100ms`).
 =========================== ================
@@ -501,7 +494,7 @@ For example::
         client {
             maxConnections = 20
             connectionTimeout = 10000
-            uploadStorageClass = 'REDUCED_REDUNDANCY'
+            uploadStorageClass = 'INTELLIGENT_TIERING'
             storageEncryption = 'AES256'
         }
     }
@@ -780,6 +773,8 @@ NXF_CONDA_CACHEDIR          Directory where Conda environments are store. When u
 NXF_SINGULARITY_CACHEDIR    Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all computing nodes.
 NXF_JAVA_HOME               Defines the path location of the Java VM installation used to run Nextflow. This variable overrides the ``JAVA_HOME`` variable if defined.
 NXF_OFFLINE                 When ``true`` disables the project automatic download and update from remote repositories (default: ``false``).
+NXF_CLOUD_DRIVER            Defines the default cloud driver to be used if not specified in the config file or as command line option, either ``aws`` or ``google``.
+NXF_ANSI_LOG                Enables/disables ANSI console output (default ``true`` when ANSI terminal is detected).
 JAVA_HOME                   Defines the path location of the Java VM installation used to run Nextflow.
 JAVA_CMD                    Defines the path location of the Java binary command used to launch Nextflow.
 HTTP_PROXY                  Defines the HTTP proxy server

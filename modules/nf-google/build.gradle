@@ -1,0 +1,33 @@
+/*
+ * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+apply plugin: 'groovy'
+
+sourceSets {
+    main.java.srcDirs = []
+    main.groovy.srcDirs = ['src/main']
+    main.resources.srcDirs = ['src/resources']
+    test.groovy.srcDirs = ['src/test']
+    test.java.srcDirs = []
+    test.resources.srcDirs = []
+}
+
+dependencies {
+    compile project(':nextflow')
+    compile project(':nf-ignite')
+    compile 'com.google.apis:google-api-services-compute:v1-rev199-1.25.0'
+    compile 'com.google.apis:google-api-services-genomics:v2alpha1-rev40-1.25.0'
+    compile 'com.google.cloud:google-cloud-nio:0.72.0-alpha'
+}

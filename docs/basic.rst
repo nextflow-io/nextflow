@@ -4,7 +4,7 @@ Basic concepts
 
 
 `Nextflow` is a reactive workflow framework and a programming `DSL <http://en.wikipedia.org/wiki/Domain-specific_language>`_
-that eases writing computational pipelines with complex data.
+that eases the writing of data-intensive computational pipelines.
 
 It is designed around the idea that the Linux platform is the lingua franca of data science. Linux provides many
 simple but powerful command-line and scripting tools that, when chained together, facilitate complex
@@ -17,55 +17,59 @@ parallel computational environment based on the `dataflow` programming model.
 Processes and channels
 ----------------------
 
-In practice a Nextflow pipeline script is made by joining together many different processes.
+In practice a Nextflow pipeline script is made by joining together different processes.
 Each process can be written in any scripting language that can be executed by the Linux platform (Bash, Perl, Ruby, Python, etc.).
 
 Processes are executed independently and are isolated from each other, i.e. they do not share a common (writable) state.
-The only way they can communicate is via asynchronous FIFO queues, called `channels` in the Nextflow lingo.
+The only way they can communicate is via asynchronous FIFO queues, called `channels` in Nextflow.
 
 Any process can define one or more channels as `input` and `output`. The interaction between these processes,
 and ultimately the pipeline execution flow itself, is implicitly defined by these input and output declarations.
 
 A Nextflow script looks like this::
 
-    params.query = "$HOME/sample.fa"
-    params.db = "$HOME/tools/blast-db/pdb/pdb"
+    // Script parameters
+    params.query = "/some/data/sample.fa"
+    params.db = "/some/path/pdb"
 
     db = file(params.db)
-    query = file(params.query)
+    query_ch = Channel.fromPath(params.query)
 
     process blastSearch {
         input:
-        file query
+        file query from query_ch
 
         output:
-        file top_hits
+        file "top_hits.txt" into top_hits_ch
 
         """
         blastp -db $db -query $query -outfmt 6 > blast_result
-        cat blast_result | head -n 10 | cut -f 2 > top_hits
+        cat blast_result | head -n 10 | cut -f 2 > top_hits.txt
         """
     }
-
 
     process extractTopHits {
         input:
-        file top_hits
+        file top_hits from top_hits_ch
 
         output:
-        file sequences
+        file "sequences.txt" into sequences_ch
 
         """
-        blastdbcmd -db ${db} -entry_batch $top_hits > sequences
+        blastdbcmd -db $db -entry_batch $top_hits > sequences.txt
         """
     }
 
 
 
-The above example defines two processes. Their execution order is not determined by the fact that the ``blastSearch`` process comes
-before the ``extractTopHits`` in the script (it could also be written the other way around), but because the first defines
-the channel ``top_hits`` in its output declarations while the ``extractTopHits`` process defines the same channel in its
-input declaration, thus establishing a communication link from the `blastSearch` task towards the `extractTopHits` task.
+The above example defines two processes. Their execution order is not determined by the fact that the ``blastSearch``
+process comes before ``extractTopHits`` in the script (it could also be written the other way around).
+
+Instead, because the first process defines the channel ``top_hits_ch`` in its output declarations, and the
+process ``extractTopHits`` defines the channel in its input declaration, a communication link is established.
+
+This linking via the channels means that `extractTopHits` is waiting for the output of `blastSearch`, and then
+runs `reactively` when the channel has contents.
 
 .. TODO describe that both processes are launched at the same time
 
@@ -79,13 +83,13 @@ While a process defines `what` command or script has to be executed, the `execut
 that script is actually run on the target system.
 
 If not otherwise specified, processes are executed on the local computer. The local executor is very useful for pipeline
-development and test purposes, but for real world computational pipelines an HPC or cloud platform is required.
+development and testing purposes, but for real world computational pipelines an HPC or cloud platform is often required.
 
 In other words, `Nextflow` provides an abstraction between the pipeline's functional logic and the underlying execution system.
 Thus it is possible to write a pipeline once and to seamlessly run it on your computer, a grid platform, or the cloud,
 without modifying it, by simply defining the target execution platform in the configuration file.
 
-The following HPC and cloud platforms are supported:
+The following batch schedulers are supported:
 
 * `Open grid engine <http://gridscheduler.sourceforge.net/>`_
 * `Univa grid engine <http://www.univa.com/>`_
@@ -96,21 +100,27 @@ The following HPC and cloud platforms are supported:
 * `HTCondor <https://research.cs.wisc.edu/htcondor/>`_
 
 
-Read the :ref:`executor-page` section to learn more about Nextflow executors.
+The following cloud platforms are supported:
+
+* `Amazon Web Services (AWS) <https://aws.amazon.com/>`_
+* `Google Cloud Platform (GCP) <https://cloud.google.com/>`_
+* `Kubernetes <https://kubernetes.io/>`_
+
+Read the :ref:`executor-page` to learn more about the Nextflow executors.
 
 
 Scripting language
 ------------------
 
-Although `Nextflow` is designed to be used with a minimal learning curve, without having to study
-a new programming language and using your current skills, it also provides a powerful scripting DSL.
+`Nextflow` is designed to have a minimal learning curve, without having to pick up
+a new programming language. In most cases, users can utilise their current skills to develop
+Nextflow workflows. However, it also provides a powerful scripting DSL.
 
 Nextflow scripting is an extension of the `Groovy programming language <http://en.wikipedia.org/wiki/Groovy_(programming_language)>`_,
-which in turn is a super-set of the Java programming language. Thus if you have some knowledge of these languages,
-or even just some confidence with the `C/C++` syntax, you will be comfortable using it.
+which in turn is a super-set of the Java programming language. Groovy can be considered as Python for Java
+in that is simplifies the writing of code and is more approachable.
 
-Read the :ref:`pipeline-page` section to learn about the Nextflow scripting language.
-
+Read the :ref:`script-page` section to learn about the Nextflow scripting language.
 
 
 .. TODO Running pipeline
@@ -133,9 +143,6 @@ A basic configuration file might look like this::
 	  queue = 'cn-el6' 
 	}
 
-	env {
-	  PATH="$PWD/bowtie2:$PWD/tophat2:$PATH"
-	}
 
 Read the :ref:`config-page` section to learn more about the Nextflow configuration file and settings.
 

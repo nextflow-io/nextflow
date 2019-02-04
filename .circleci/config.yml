@@ -1,0 +1,41 @@
+version: 2
+jobs:
+  build-jdk8:
+    machine: true
+    environment:
+        GRADLE_OPTS: -Dorg.gradle.daemon=false
+        WITH_DOCKER: -with-docker
+    steps:
+      - checkout
+      - run: rm $HOME/.gitconfig
+      - run: mkdir -p "$HOME/.nextflow" && echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
+      - run: make assemble
+      - run: make test
+      - run: make install
+      - run: ./integration-tests.sh
+#     - run: bash pub-tests.sh circle
+
+  build-jdk11:
+    machine: true
+    environment:
+        GRADLE_OPTS: -Dorg.gradle.daemon=false
+        WITH_DOCKER: -with-docker
+    steps:
+      - checkout
+      - run: rm $HOME/.gitconfig
+      - run: mkdir -p "$HOME/.nextflow" && echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
+      - run: make assemble
+      - run: make test
+      - run: make install
+      - run: |
+          wget -q https://raw.githubusercontent.com/sormuras/bach/master/install-jdk.sh
+          source ./install-jdk.sh -f 9 -c
+          ./integration-tests.sh
+#     - run: bash pub-tests.sh circle
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - "build-jdk8"
+      - "build-jdk11"

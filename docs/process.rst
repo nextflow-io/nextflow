@@ -19,7 +19,7 @@ a script that is executed by it. A basic process looks like the following exampl
   }
 
 
-more specifically a process may contain five definition blocks, respectively: directives,
+A process may contain five definition blocks, respectively: directives,
 inputs, outputs, when clause and finally the process script. The syntax is defined as follows:
 
 ::
@@ -53,9 +53,9 @@ The `script` block is a string statement that defines the command that is execut
 A process contains one and only one script block, and it must be the last statement when the process contains
 input and output declarations.
 
-The entered string is executed as a `BASH <http://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ script in the
+The entered string is executed as a `Bash <http://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ script in the
 `host` system. It can be any command, script or combination of them, that you would normally use in terminal shell
-or in a common BASH script.
+or in a common Bash script.
 
 The only limitation to the commands that can be used in the script statement is given by the availability of those
 programs in the target execution system.
@@ -77,14 +77,14 @@ composed by multiple commands spanning over multiple lines. For example::
 As explained in the script tutorial section, strings can be defined by using a single-quote
 or a double-quote, and multi-line strings are defined by three single-quote or three double-quote characters.
 
-There is a subtle but important difference between them. Like in BASH, strings delimited by a ``"`` character support
+There is a subtle but important difference between them. Like in Bash, strings delimited by a ``"`` character support
 variable substitutions, while strings delimited by ``'`` do not.
 
 In the above code fragment the ``$db`` variable is replaced by the actual value defined somewhere in the
 pipeline script.
 
-.. warning:: Since Nextflow uses the same BASH syntax for variable substitutions in strings, you need to manage them
-  carefully depending on if you want to evaluate a variable in the Nextflow context - or - in the BASH environment execution.
+.. warning:: Since Nextflow uses the same Bash syntax for variable substitutions in strings, you need to manage them
+  carefully depending on if you want to evaluate a variable in the Nextflow context - or - in the Bash environment execution.
 
 When you need to access a system environment variable  in your script you have two options. The first choice is as
 easy as defining your script block by using a single-quote string. For example::
@@ -116,16 +116,16 @@ prefixing them with a back-slash ``\`` character, as shown in the following exam
 
 In this example the ``$MAX`` variable has to be defined somewhere before, in the pipeline script.
 `Nextflow` replaces it with the actual value before executing the script. Instead, the ``$DB`` variable
-must exist in the script execution environment and the BASH interpreter will replace it with the actual value.
+must exist in the script execution environment and the Bash interpreter will replace it with the actual value.
 
 .. tip::
   Alternatively you can use the :ref:`process-shell` block definition which allows a script to contain both
-  BASH and Nextflow variables without having to escape the first.
+  Bash and Nextflow variables without having to escape the first.
 
 Scripts `à la carte`
 --------------------
 
-The process script is interpreted by Nextflow as a BASH script by default, but you are not limited to it.
+The process script is interpreted by Nextflow as a Bash script by default, but you are not limited to it.
 
 You can use your favourite scripting language (e.g. Perl, Python, Ruby, R, etc), or even mix them in the same pipeline.
 
@@ -133,7 +133,7 @@ A pipeline may be composed by processes that execute very different tasks. Using
 language that better fits the task carried out by a specified process. For example for some processes `R` could be
 more useful than `Perl`, in other you may need to use `Python` because it provides better access to a library or an API, etc.
 
-To use a scripting other than BASH, simply start your process script with the corresponding
+To use a scripting other than Bash, simply start your process script with the corresponding
 `shebang <http://en.wikipedia.org/wiki/Shebang_(Unix)>`_ declaration. For example::
 
     process perlStuff {
@@ -247,8 +247,8 @@ The template script can contain any piece of code that can be executed by the un
 
 .. tip::
   Note that the dollar character (``$``) is interpreted as a Nextflow variable placeholder, when the script is run as a
-  Nextflow template, while it is evaluated as a BASH variable when it is run alone. This can be very useful to test
-  your script autonomously, i.e. independently from Nextflow execution. You only need to provide a BASH environment
+  Nextflow template, while it is evaluated as a Bash variable when it is run alone. This can be very useful to test
+  your script autonomously, i.e. independently from Nextflow execution. You only need to provide a Bash environment
   variable for each the Nextflow variable existing in your script. For example, it would be possible to execute the above
   script entering the following command in the shell terminal: ``STR='foo' bash templates/my_script.sh``
 
@@ -265,7 +265,7 @@ The ``shell`` block is a string statement that defines the *shell* command execu
 It is an alternative to the :ref:`process-script` definition with an important difference, it uses
 the exclamation mark ``!`` character as the variable placeholder for Nextflow variables in place of the usual dollar character.
 
-In this way it is possible to use both Nextflow and BASH variables in the same piece of code without having to escape
+In this way it is possible to use both Nextflow and Bash variables in the same piece of code without having to escape
 the latter and making process scripts more readable and easy to maintain. For example::
 
     process myTask {
@@ -282,7 +282,7 @@ the latter and making process scripts more readable and easy to maintain. For ex
 
 
 
-In the above trivial example the ``$USER`` variable is managed by the BASH interpreter, while ``!{str}`` is handled 
+In the above trivial example the ``$USER`` variable is managed by the Bash interpreter, while ``!{str}`` is handled
 as a process input variable managed by Nextflow.
 
 .. note::
@@ -411,8 +411,8 @@ Thus the above example can be written as shown below::
 Input of files
 --------------
 
-The ``file`` qualifier allows you to receive a value as a file in the process execution context. This means that
-Nextflow will stage it in the process execution directory, and you can access it in the script by using the name
+The ``file`` qualifier allows the handling of file values in the process execution context. This means that
+Nextflow will stage it in the process execution directory, and it can be access in the script by using the name
 specified in the input declaration. For example::
 
     proteins = Channel.fromPath( '/some/path/*.fa' )
@@ -965,7 +965,7 @@ Some caveats on glob pattern behavior:
 
 * Input files are not included in the list of possible matches.
 * Glob pattern matches against both files and directories path.
-* When a two stars pattern ``**`` is used to recurse across directories, only file paths are matched
+* When a two stars pattern ``**`` is used to recourse across directories, only file paths are matched
   i.e. directories are not included in the result list.
 
 
@@ -1189,13 +1189,13 @@ The directives are:
 afterScript
 -----------
 
-The ``afterScript`` directive allows you to execute a custom (BASH) snippet immediately *after* the main process has run.
+The ``afterScript`` directive allows you to execute a custom (Bash) snippet immediately *after* the main process has run.
 This may be useful to clean up your staging area.
 
 beforeScript
 ------------
 
-The ``beforeScript`` directive allows you to execute a custom (BASH) snippet *before* the main process script is run.
+The ``beforeScript`` directive allows you to execute a custom (Bash) snippet *before* the main process script is run.
 This may be useful to initialise the underlying cluster environment or for other custom initialisation.
 
 For example::
@@ -1978,7 +1978,7 @@ In more detail, it affects the process execution in two main ways:
    the ``storeDir`` directive. When the files exist the process execution is skipped and these files are used as
    the actual process result.
 
-#. Whenever a process is successfully completed the files listed in the `output` declaration block are copied into the directory
+#. Whenever a process is successfully completed the files listed in the `output` declaration block are moved into the directory
    specified by the ``storeDir`` directive.
 
 The following example shows how to use the ``storeDir`` directive to create a directory containing a BLAST database
@@ -2058,7 +2058,7 @@ The ``tag`` directive allows you to associate each process executions with a cus
 to identify them in the log file or in the trace execution report. For example::
 
     process foo {
-      tag { code }
+      tag "$code"
 
       input:
       val code from 'alpha', 'gamma', 'omega'

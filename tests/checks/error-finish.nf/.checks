@@ -9,7 +9,7 @@ echo ''
 $NXF_RUN > stdout
 status=$?
 set -e
-# the exist status must NOT be zero because the pipeline throws an error
+# the exit status must NOT be zero because the pipeline throws an error
 [ $status -ne 0 ] || false
 
 [[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > foo'` == 3 ]] || false

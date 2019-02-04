@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<!--
+  ~ Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="Nextflow workflow report for run id [${workflow.runName}]">
+  <meta name="author" content="Paolo Di Tommaso, Phil Ewels">
+  <link rel="icon" type="image/png" href="https://www.nextflow.io/img/favicon.png" />
+
+  <title>[${workflow.runName}] Nextflow Workflow Report</title>
+
+  <style type="text/css">
+  ${ assets_css.join("\n\n\n\n") }
+
+  /* Nextflow Report Custom CSS */
+  body {
+    padding-top: 56px;
+  }
+  .navbar-brand img {
+    width: 20px;
+    height: 20px;
+    margin: 0 10px 5px 0;
+  }
+  pre {
+    margin-bottom: 0;
+  }
+  pre.nfcommand {
+    white-space: pre-wrap;
+    border: 1px solid #ccc;
+    padding: 10px 15px;
+    border-radius: 5px;
+    background-color: #F0F2F4;
+    font-size: 0.8rem;
+  }
+  table td {
+    max-width: 200px;
+    overflow-x: auto;
+  }
+  .script_block.short {
+    max-height: 30px;
+    overflow-y: hidden;
+    cursor: pointer;
+  }
+  footer {
+    background-color: #ededed;
+    margin: 50px 0 0;
+    padding: 20px 0;
+    border-top: 1px solid #cccccc;
+    color: #999999;
+    font-size: 0.8rem;
+  }
+  footer a {
+    color: #999999;
+    text-decoration: underline;
+  }
+  #nf-form-humanreadable {
+    margin-bottom: 1rem;
+  }
+  #tasks_table_filter {
+    display: flex;
+  }
+  #tasks_table_filter>.btn-group {
+    vertical-align: top;
+    margin-right: 1rem;
+    height: calc(1.8125rem + 3px);
+  }
+  #tasks_table_filter .buttons-colvisGroup {
+    padding: 0.2rem 0.75rem;
+  }
+  #tasks_table_filter .dt-buttons::before {
+    content: "Filter: ";
+    padding: 0.2rem 0.5rem;
+    font-size: 1.1rem;
+  }
+  </style>
+
+</head>
+<body>
+  <nav id="nf-report-navbar" class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+    <a class="navbar-brand" href="#">
+      <img src="data:image/png;base64,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">
+      Nextflow Report
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarCollapse">
+      <ul class="navbar-nav mr-auto">
+        <li class="nav-item"><a class="nav-link" href="#">Summary</a></li>
+        <li class="nav-item"><a class="nav-link" href="#resources">Resources</a></li>
+        <li class="nav-item"><a class="nav-link" href="#tasks">Tasks</a></li>
+      </ul>
+      <span class="navbar-text">
+        [${workflow.runName}]
+      </span>
+    </div>
+  </nav>
+
+  <div class="jumbotron mb-0">
+    <div class="container">
+
+      <h1 class="display-3">Nextflow workflow report</h1>
+      <h2 class="text-muted mb-4"><samp>[${workflow.runName}]</samp> ${workflow.resume ? '<em>(resumed run)</em>' : ''}</h2>
+
+      <% if ( workflow.success && workflow.stats.ignoredCount ){ %>
+          <div class="alert alert-warning mb-4">
+              Workflow execution completed successfully. One or more tasks reported an error condition.
+          </div>
+      <% } else if ( workflow.success ) { %>
+          <div class="alert alert-success mb-4">
+              Workflow execution completed successfully!
+          </div>
+      <% } else { %>
+          <div class="alert alert-danger mb-4">
+              <h4>Workflow execution completed unsuccessfully!</h4>
+              <p>The exit status of the task that caused the workflow execution to fail was: <code>${workflow.exitStatus}</code>.</p>
+              <p>The full error message was:</p>
+              <pre>${workflow.errorReport}</pre>
+          </div>
+      <% } %>
+
+      <dl>
+        <dt>Run times</dt>
+        <dd>
+          <span id="workflow_start">${workflow.start}</span> - <span id="workflow_complete">${workflow.complete}</span>
+          (<span id="completed_fromnow"></span>duration: <strong>${workflow.duration}</strong>)
+        </dd>
+
+        <dl>
+          <div class="progress" style="height: 1.6rem; margin: 1.2rem auto; border-radius: 0.20rem;">
+            <div style="width: ${workflow.stats.succeedPct}%" class="progress-bar bg-success" data-toggle="tooltip" data-placement="top" title="$workflow.stats.succeedCount tasks succeeded"><span class="text-truncate">&nbsp; $workflow.stats.succeedCount succeeded &nbsp;</span></div>
+            <div style="width: ${workflow.stats.cachedPct}%" class="progress-bar bg-secondary" data-toggle="tooltip" data-placement="top" title="$workflow.stats.cachedCount tasks were cached"><span class="text-truncate">&nbsp; $workflow.stats.cachedCount cached &nbsp;</span></div>
+            <div style="width: ${workflow.stats.ignoredPct}%" class="progress-bar bg-warning" data-toggle="tooltip" data-placement="top" title="$workflow.stats.ignoredCount tasks reported and error and were ignored"><span class="text-truncate">&nbsp; $workflow.stats.ignoredCount ignored &nbsp;</span></div>
+            <div style="width: ${workflow.stats.failedPct}%" class="progress-bar bg-danger" data-toggle="tooltip" data-placement="top" title="$workflow.stats.failedCount tasks failed"><span class="text-truncate">&nbsp; $workflow.stats.failedCount failed &nbsp;</span></div>
+          </div>
+        </dl>
+
+        <dt>Nextflow command</dt>
+        <dd><pre class="nfcommand"><code>${workflow.commandLine}</code></pre></dd>
+      </dl>
+
+      <dl class="row small">
+        <dt class="col-sm-3">CPU-Hours</dt>
+        <dd class="col-sm-9"><samp>${workflow.stats.computeTimeFmt}</samp></dd>
+
+        <dt class="col-sm-3">Launch directory</dt>
+        <dd class="col-sm-9"><samp>${workflow.launchDir}</samp></dd>
+
+        <dt class="col-sm-3">Work directory</dt>
+        <dd class="col-sm-9"><samp>${workflow.workDir.toUriString()}</samp></dd>
+
+        <dt class="col-sm-3">Project directory</dt>
+        <dd class="col-sm-9"><samp>${workflow.projectDir}</samp></dd>
+
+        <% if (workflow.scriptName) { %>
+          <dt class="col-sm-3">Script name</dt>
+          <dd class="col-sm-9"><samp>${workflow.scriptName}</samp></dd>
+        <% } %>
+
+        <% if (workflow.scriptId) { %>
+          <dt class="col-sm-3">Script ID</dt>
+          <dd class="col-sm-9"><code>${workflow.scriptId}</code></dd>
+        <% } %>
+
+        <dt class="col-sm-3">Workflow session</dt>
+        <dd class="col-sm-9"><code>${workflow.sessionId}</code></dd>
+
+        <% if (workflow.repository) { %>
+          <dt class="col-sm-3">Workflow repository</dt>
+          <dd class="col-sm-9"><code>${workflow.repository}</code>, revision <code>${workflow.revision}</code> (commit hash <code>${workflow.commitId}</code>)</dd>
+        <% } %>
+
+        <dt class="col-sm-3">Workflow profile</dt>
+        <dd class="col-sm-9">${workflow.profile}</dd>
+
+        <% if (workflow.container) { %>
+        <dt class="col-sm-3">Workflow container</dt>
+        <dd class="col-sm-9"><samp>${workflow.container}</samp></dd>
+
+        <dt class="col-sm-3">Container engine</dt>
+        <dd class="col-sm-9"><samp>${workflow.containerEngine?:'-'}</samp></dd>
+        <% } %>
+
+        <dt class="col-sm-3">Nextflow version</dt>
+        <dd class="col-sm-9">version ${workflow.nextflow.version}, build ${workflow.nextflow.build} (${workflow.nextflow.timestamp})</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="container">
+    <h2 id="resources" style="padding-top: 80px;">Resource Usage</h2>
+    <p>These plots give an overview of the distribution of resource usage for each process.</p>
+
+    <h4>CPU</h4>
+    <ul class="nav nav-tabs" id="cpuplot_tabs" role="tablist">
+      <li class="nav-item">
+        <a class="nav-link active" id="cpuplot_tablink" data-toggle="tab" href="#cpuplot_tabpanel" role="tab" aria-controls="pctcpuplot_tabpanel" aria-expanded="false">
+          Raw Usage
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="pctcpuplot_tablink" data-toggle="tab" href="#pctcpuplot_tabpanel" role="tab" aria-controls="cpuplot_tabpanel" aria-expanded="true">
+          % Allocated
+        </a>
+      </li>
+    </ul>
+    <div class="tab-content" id="cpuplot_tabcontent">
+      <div class="tab-pane fade show active" id="cpuplot_tabpanel" role="tabpanel">
+        <div id="cpuplot"></div>
+      </div>
+      <div class="tab-pane fade" id="pctcpuplot_tabpanel" role="tabpanel">
+        <div id="pctcpuplot"></div>
+      </div>
+
+    </div>
+
+    <h4>Memory</h4>
+    <ul class="nav nav-tabs" id="memplot_tabs" role="tablist">
+      <li class="nav-item">
+        <a class="nav-link active" id="memplotlot_tablink" data-toggle="tab" href="#memplotlot_tabpanel" role="tab" aria-controls="memplotlot_tabpanel" aria-expanded="false">
+          Physical (RAM)
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="vmemplot_tablink" data-toggle="tab" href="#vmemplot_tabpanel" role="tab" aria-controls="vmemplot_tabpanel" aria-expanded="true">
+          Virtual (RAM + Disk swap)
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="pctmemplot_tablink" data-toggle="tab" href="#pctmemplot_tabpanel" role="tab" aria-controls="pctmemplot_tabpanel" aria-expanded="true">
+          % RAM Allocated
+        </a>
+      </li>
+    </ul>
+    <div class="tab-content" id="memplot_tabcontent">
+      <div class="tab-pane fade show active" id="memplotlot_tabpanel" role="tabpanel">
+        <div id="memplot"></div>
+      </div>
+      <div class="tab-pane fade" id="pctmemplot_tabpanel" role="tabpanel">
+        <div id="pctmemplot"></div>
+      </div>
+      <div class="tab-pane fade" id="vmemplot_tabpanel" role="tabpanel">
+        <div id="vmemplot"></div>
+      </div>
+    </div>
+
+    <h4 id="timeplot_header">Job Duration</h4>
+    <ul class="nav nav-tabs" id="timeplot_tabs" role="tablist">
+      <li class="nav-item">
+        <a class="nav-link active" id="timeplot_tablink" data-toggle="tab" href="#timeplot_tabpanel" role="tab" aria-controls="timeplot_tabpanel" aria-expanded="false">
+          Raw Usage
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="pcttimeplot_tablink" data-toggle="tab" href="#pcttimeplot_tabpanel" role="tab" aria-controls="pcttimeplot_tabpanel" aria-expanded="true">
+          % Allocated
+        </a>
+      </li>
+    </ul>
+    <div class="tab-content" id="timeplot_tabcontent">
+      <div class="tab-pane fade show active" id="timeplot_tabpanel" role="tabpanel">
+        <div id="timeplot"></div>
+      </div>
+      <div class="tab-pane fade" id="pcttimeplot_tabpanel" role="tabpanel">
+        <div id="pcttimeplot"></div>
+      </div>
+    </div>
+
+    <h4 id="readwriteplot_header">I/O</h4>
+    <ul class="nav nav-tabs" id="readwriteplot_tabs" role="tablist">
+      <li class="nav-item">
+        <a class="nav-link active" id="readplot_tablink" data-toggle="tab" href="#readplot_tabpanel" role="tab" aria-controls="readplot_tabpanel" aria-expanded="true">
+          Read
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="writeplot_tablink" data-toggle="tab" href="#writeplot_tabpanel" role="tab" aria-controls="writeplot_tabpanel" aria-expanded="false">
+          Write
+        </a>
+      </li>
+    </ul>
+    <div class="tab-content" id="readwriteplot_tabcontent">
+      <div class="tab-pane fade show active" id="readplot_tabpanel" role="tabpanel">
+        <div id="readplot"></div>
+      </div>
+      <div class="tab-pane fade" id="writeplot_tabpanel" role="tabpanel">
+        <div id="writeplot"></div>
+      </div>
+    </div>
+
+    <div id="table-container">
+    <h2 id="tasks" style="padding-top: 80px;">Tasks</h2>
+    <p>This table shows information about each task in the workflow. Use the search box on the right
+      to filter rows for specific values. Clicking headers will sort the table by that value and
+      scrolling side to side will reveal more columns.</p>
+    <form class="form-inline" id="nf-form-humanreadable">
+      <label class="mr-sm-2" for="nf-table-humanreadable">Values shown as:</label>
+      <select class="custom-select mb-2 mr-sm-2 mb-sm-0" id="nf-table-humanreadable">
+        <option value="true">Human readable</option>
+        <option value="false">Raw values</option>
+      </select>
+    </form>
+  </div>
+  <div class="container-fluid">
+    <table class="table small table-striped" id="tasks_table"></table>
+  </div>
+  </div>
+  <div id="no-table-container" class="container">
+    (tasks table omitted because the dataset is too big)
+  </div>
+
+  <footer>
+    <div class="container-fluid">
+      Generated by <a href="https://www.nextflow.io" target="_blank">Nextflow</a>, version ${workflow.nextflow.version}
+    </div>
+  </footer>
+
+  <script type="text/javascript">
+  ${ assets_js.join("\n\n\n\n") }
+
+  // Nextflow report data
+  window.data = $payload;
+
+  </script>
+
+</body>
+</html>

@@ -1,21 +1,17 @@
 /*
- * Copyright (c) 2013-2018, Centre for Genomic Regulation (CRG).
- * Copyright (c) 2013-2018, Paolo Di Tommaso and the respective authors.
+ * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
- *   This file is part of 'Nextflow'.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   Nextflow is free software: you can redistribute it and/or modify
- *   it under the terms of the GNU General Public License as published by
- *   the Free Software Foundation, either version 3 of the License, or
- *   (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Nextflow is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with Nextflow.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 buildscript {
@@ -23,16 +19,10 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:0.5.1"
+        classpath "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:0.20.0"
     }
 }
 
-plugins {
-    id "com.vanniktech.dependency.graph.generator" version "0.2.0"
-}
-
-apply plugin: 'groovy'
-apply plugin: "jacoco"
 apply plugin: 'idea'
 apply plugin: 'io.codearte.nexus-staging'   // See https://github.com/Codearte/gradle-nexus-staging-plugin/
 
@@ -69,7 +59,7 @@ allprojects {
     apply plugin: 'java'
     apply plugin: 'idea'
 
-    version = /0.33.0-SNAPSHOT/
+    version = /19.02.0-SNAPSHOT/
     group = 'io.nextflow'
 
     sourceCompatibility = 1.8
@@ -97,7 +87,7 @@ allprojects {
 
     dependencies {
         // test configuration
-        testCompile ("org.codehaus.groovy:groovy-test:2.5.1") { exclude group: 'org.codehaus.groovy' }
+        testCompile ("org.codehaus.groovy:groovy-test:2.5.5") { exclude group: 'org.codehaus.groovy' }
         testCompile ("cglib:cglib-nodep:2.2")
         testCompile ("org.objenesis:objenesis:2.1")
         testCompile ("org.spockframework:spock-core:1.2-groovy-2.5") { exclude group: 'org.codehaus.groovy' }
@@ -110,8 +100,8 @@ allprojects {
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:1.11'
-        groovyDoc "org.codehaus.groovy:groovy-groovydoc:2.5.1"
-        groovyDoc "org.codehaus.groovy:groovy-ant:2.5.1"
+        groovyDoc "org.codehaus.groovy:groovy-groovydoc:2.5.5"
+        groovyDoc "org.codehaus.groovy:groovy-ant:2.5.5"
     }
 
     // this is required due to this IDEA bug
@@ -163,91 +153,33 @@ configurations {
     ignite.extendsFrom runtime
     console.extendsFrom runtime
     ga4gh.extendsFrom runtime
+    google.extendsFrom runtime
 }
 
 
 dependencies {
-    compile(project(':nxf-commons'))
-    compile(project(':nxf-httpfs'))
-    compile "org.codehaus.groovy:groovy:2.5.1"
-    compile "org.codehaus.groovy:groovy-nio:2.5.1"
-    compile "org.codehaus.groovy:groovy-json:2.5.1"
-    compile "org.codehaus.groovy:groovy-templates:2.5.1"
-    compile "org.slf4j:jcl-over-slf4j:1.7.25"
-    compile "org.slf4j:jul-to-slf4j:1.7.25"
-    compile "org.slf4j:log4j-over-slf4j:1.7.25"
-    compile "ch.qos.logback:logback-classic:1.1.11"
-    compile "ch.qos.logback:logback-core:1.1.11"
-    compile "org.codehaus.gpars:gpars:1.2.1"
-    compile("ch.grengine:grengine:1.3.0") { exclude group: 'org.codehaus.groovy'  }
-    compile "commons-lang:commons-lang:2.6"
-    compile "com.beust:jcommander:1.35"
-    compile("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
-    compile('org.iq80.leveldb:leveldb:0.10')
-    compile('org.eclipse.jgit:org.eclipse.jgit:4.8.0.201706111038-r')
-    compile('io.nextflow:nxf-s3fs:1.0.4') {
-        exclude group: 'org.apache.tika', module: 'tika-core'
-        exclude group: 'com.amazonaws', module: 'aws-java-sdk-s3'
-    }
-    compile ('com.amazonaws:aws-java-sdk-s3:1.11.324')
-    compile ('com.amazonaws:aws-java-sdk-ec2:1.11.324')
-    compile ('com.amazonaws:aws-java-sdk-batch:1.11.324')
-    compile ('javax.activation:activation:1.1.1')
-    compile ('javax.mail:mail:1.4.7')
-    compile ('org.yaml:snakeyaml:1.18')
-    compile ('org.jsoup:jsoup:1.11.2')
-
+    compile project(':nextflow')
     // include Ivy at runtime in order to have Grape @Grab work correctly
     runtime "org.apache.ivy:ivy:2.3.0"
-
     // library used to compile but not included in the final jar
     compileOnly ('javax.xml.bind:jaxb-api:2.3.0')
-    
     // Capsule manages the fat jar building process
-    capsule(project(':my-capsule'))
-
-    ignite(project(':nxf-ignite')) {
-        exclude module: 'nextflow'
-    }
-
-    console(project(':nxf-console')) {
-        exclude module: 'nextflow'
-    }
-
-    ga4gh(project(':nxf-ga4gh')) {
-        exclude module: 'nextflow'
-    }
-
+    capsule project(':my-capsule')
+    ignite  project(':nf-ignite')
+    console project(':nf-console')
+    ga4gh   project(':nf-ga4gh')
+    google  project(':nf-google')
 }
 
-
-//sourceSets.main.compileClasspath += configurations.provided
-sourceSets.main.java.srcDirs = []
-sourceSets.main.groovy.srcDirs = ['src/main/java', 'src/main/groovy']
-sourceSets.main.resources.srcDirs = ['src/main/resources']
-
-compileGroovy {
-    options.compilerArgs = ['-XDignore.symbol.file']
-}
-
-
-/*
- * http://www.gradle.org/docs/current/dsl/org.gradle.plugins.ide.idea.model.IdeaModule.html
- * http://stackoverflow.com/questions/20421681/provided-dependencies-using-gradle-jetgradle-and-intellij-idea-13
- * http://forums.gradle.org/gradle/topics/gradle_2_0_idea_plugin_adding_a_custom_configuration_to_scope_throws_classcastexception
- */
-//idea {
-//    module {
-//        scopes.PROVIDED.plus += [configurations.provided]
-//    }
-//}
+// disable jar for root project
+jar.enabled = false
 
 /*
  * Update the build timestamp in the source source file
  */
 task buildInfo { doLast {
 
-    def file = new File('./src/main/groovy/nextflow/Const.groovy')
+    def file = new File('./modules/nextflow/src/main/groovy/nextflow/Const.groovy')
     def buildNum = 0
     def src = file.text
     src.find(/APP_BUILDNUM *= *([0-9]*)/) { buildNum = it[1]?.toInteger()+1 }
@@ -316,25 +248,26 @@ task compile {
  * @link https://github.com/puniverse/capsule
  */
 
-ext.ossrhUserName = project.findProperty('ossrhUserName')
-ext.ossrhPassword = project.findProperty('ossrhPassword')
-ext.ossrhFullName = project.findProperty('ossrhFullName')
-ext.ossrhEmail = project.findProperty('ossrhEmail')
+ext.nexusUsername = project.findProperty('nexusUsername')
+ext.nexusPassword = project.findProperty('nexusPassword')
+ext.nexusFullName = project.findProperty('nexusFullName')
+ext.nexusEmail = project.findProperty('nexusEmail')
 
 ext.homeDir = System.properties['user.home']
 ext.nextflowDir = "$homeDir/.nextflow/framework/$version"
 ext.releaseDir = "$buildDir/releases"
-ext.s3CmdOpts="--acl public-read --storage-class REDUCED_REDUNDANCY --region eu-west-1"
+ext.s3CmdOpts="--acl public-read --storage-class STANDARD --region eu-west-1"
 // `signing.keyId` property needs to be defined in the `gradle.properties` file
 ext.enableSignArchives = project.findProperty('signing.keyId')
 
 ext.deployable = []
-ext.deployable << project(':')
-ext.deployable << project(':nxf-commons')
-ext.deployable << project(':nxf-ignite')
-ext.deployable << project(':nxf-console')
-ext.deployable << project(':nxf-httpfs')
-ext.deployable << project(':nxf-ga4gh')
+ext.deployable << project(':nextflow')
+ext.deployable << project(':nf-commons')
+ext.deployable << project(':nf-ignite')
+ext.deployable << project(':nf-console')
+ext.deployable << project(':nf-httpfs')
+ext.deployable << project(':nf-ga4gh')
+ext.deployable << project(':nf-google')
 
 protected error(String message) {
     logger.error message
@@ -345,10 +278,7 @@ protected resolveDeps( String configName, String... x ) {
 
     final deps = [] as Set
     final config = configurations.getByName(configName)
-    final incoming = config.getIncoming()
-
-    deps << incoming.getResolutionResult().root.moduleVersion.toString()
-
+    //final root = config.getIncoming().getResolutionResult().root.moduleVersion.toString()
     config.getResolvedConfiguration().getResolvedArtifacts().each{ deps << coordinates(it) }
 
     if( x )
@@ -364,6 +294,10 @@ protected resolveDeps( String configName, String... x ) {
         conflicts.each { name, count -> err += "\n- $name: " + deps.findAll{ it.startsWith(name) }.collect{ it.tokenize(':')[2] } }
         throw new IllegalStateException(err)
     }
+    
+    //println "** $configName\n${deps.sort().collect{"- $it"}.join('\n')}\n"
+
+    //println ">> Config: $configName \n${deps.sort().join('\n')}\n\n"
 
     return deps.collect{ "$it(*:*)" }.join(' ')
 }
@@ -427,6 +361,12 @@ task packOne(type: Jar) {
      */
     deps = resolveDeps('ga4gh')
     manifest.attributes('Dependencies': deps, 'ga4gh')
+
+    /*
+     * `google` dependencies
+     */
+    deps = resolveDeps('google')
+    manifest.attributes('Dependencies': deps, 'google')
 
     doLast {
         ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: releaseDir, overwrite: true)
@@ -502,7 +442,7 @@ task deploy( type: Exec, dependsOn: [clean, pack, deployable.uploadArchives, mak
         def script = []
         script << "export AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS}"
         script << "export AWS_SECRET_ACCESS_KEY=${System.env.NXF_AWS_SECRET}"
-        script.addAll( files.collect { "aws s3 cp ${it} s3://www.nextflow.io/releases/v${version}/${it.name} ${s3CmdOpts}"})
+        script.addAll( files.collect { "aws s3 cp ${it} s3://www2.nextflow.io/releases/v${version}/${it.name} ${s3CmdOpts}"})
 
         temp.text = script.join('\n')
     }
@@ -576,6 +516,8 @@ task dockerPack(type: Exec, dependsOn: ['pack']) {
 
 /*
  * Tag and upload the release
+ * 
+ * https://github.com/aktau/github-release/
  */
 task release(type: Exec, dependsOn: [pack, dockerImage]) {
 
@@ -584,8 +526,9 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
     def launcherSha256 = file('nextflow.sha256').absoluteFile
     def nextflowAllFile = file("$releaseDir/nextflow-${version}-all")
 
-    def snapshot = version ==~ /^.+(-RC\d+|\-SNAPSHOT)$/
-    def isLatest = !snapshot
+    def snapshot = version ==~ /^.+(-RC\d+|-SNAPSHOT)$/
+    def edge = version ==~ /^.+(-edge|-EDGE)$/
+    def isLatest = !snapshot && !edge
     def cmd =  """\
     # tag the release
     git push || exit \$?
@@ -596,15 +539,26 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
     github-release upload -u nextflow-io -r nextflow -t v$version --file ${nextflowAllFile} --name ${nextflowAllFile.name}
     """.stripIndent()
 
-    if( isLatest )
+    if( edge )
         cmd += """
         # publish the script as the latest
         export AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS}
         export AWS_SECRET_ACCESS_KEY=${System.env.NXF_AWS_SECRET}
-        aws s3 cp $launcherFile s3://www.nextflow.io/releases/latest/nextflow $s3CmdOpts
-        aws s3 cp $launcherSha1 s3://www.nextflow.io/releases/latest/nextflow.sha1 $s3CmdOpts
-        aws s3 cp $launcherSha256 s3://www.nextflow.io/releases/latest/nextflow.sha256 $s3CmdOpts
-        aws s3 cp $launcherSha256 s3://www.nextflow.io/releases/latest/nextflow.md5 $s3CmdOpts
+        aws s3 cp $launcherFile s3://www2.nextflow.io/releases/edge/nextflow $s3CmdOpts
+        aws s3 cp $launcherSha1 s3://www2.nextflow.io/releases/edge/nextflow.sha1 $s3CmdOpts
+        aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/edge/nextflow.sha256 $s3CmdOpts
+        aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/edge/nextflow.md5 $s3CmdOpts
+        """.stripIndent()
+        
+    else if( isLatest )
+        cmd += """
+        # publish the script as the latest
+        export AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS}
+        export AWS_SECRET_ACCESS_KEY=${System.env.NXF_AWS_SECRET}
+        aws s3 cp $launcherFile s3://www2.nextflow.io/releases/latest/nextflow $s3CmdOpts
+        aws s3 cp $launcherSha1 s3://www2.nextflow.io/releases/latest/nextflow.sha1 $s3CmdOpts
+        aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/latest/nextflow.sha256 $s3CmdOpts
+        aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/latest/nextflow.md5 $s3CmdOpts
         """.stripIndent()
 
     def temp = File.createTempFile('upload',null)
@@ -618,10 +572,10 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
  * Save the runtime classpath
  */
 task exportClasspath {
-    dependsOn configurations.ignite, configurations.console, configurations.ga4gh
+    dependsOn configurations.ignite, configurations.console, configurations.ga4gh, configurations.google
 
     def home = System.getProperty('user.home')
-    def all = configurations.ignite + configurations.console + configurations.ga4gh
+    def all = configurations.ignite + configurations.console + configurations.ga4gh + configurations.google
     def libs = all.collect { File file -> /* println file.canonicalPath.replace(home, '$HOME'); */ file.canonicalPath;  }
     new File('.launch.classpath').text = libs.join(':')
 }
@@ -630,7 +584,8 @@ task exportClasspath {
  * Configure Nextflow staging plugin -- https://github.com/Codearte/gradle-nexus-staging-plugin
  * It adds the tasks
  * - closeRepository
- * - promoteRepository
+ * - releaseRepository
+ * - closeAndReleaseRepository
  */
 nexusStaging {
     packageGroup = 'io.nextflow'
@@ -670,11 +625,11 @@ configure(deployable) {
                 beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
 
                 repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-                    authentication(userName: ossrhUserName, password: ossrhPassword)
+                    authentication(userName: nexusUsername, password: nexusPassword)
                 }
 
                 snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-                    authentication(userName: ossrhUserName, password: ossrhPassword)
+                    authentication(userName: nexusUsername, password: nexusPassword)
                 }
 
                 pom.project {
@@ -692,16 +647,16 @@ configure(deployable) {
 
                     licenses {
                         license {
-                            name 'GPLv3'
-                            url 'http://www.gnu.org/licenses/gpl-3.0.txt'
+                            name 'Apache 2.0'
+                            url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
                         }
                     }
 
                     developers {
                         developer {
-                            id ossrhUserName
-                            name ossrhFullName
-                            email ossrhEmail
+                            id nexusUsername
+                            name nexusFullName
+                            email nexusEmail
                         }
                     }
 
@@ -713,17 +668,3 @@ configure(deployable) {
     signArchives.onlyIf { enableSignArchives }
 }
 
-//test {
-//    testLogging {
-//        events "passed", "skipped", "failed", "standardOut", "standardError"
-//    }
-//}
-
-
-//task allFiles {
-//    doLast {
-//        configurations.compile.files.sort{ it.name }.each { file ->
-//            println file.name
-//        }
-//    }
-//}
