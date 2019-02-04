@@ -30,17 +30,18 @@ other workflow metadata. You can see an example below:
 .. image:: images/report-summary-min.png
 
 
-Resources
----------
+Resource Usage
+---------------
 
 The `Resources` sections plots the distributions of resource usages for each workflow process
-using the interactive `HighCharts <https://www.highcharts.com/>`_ plotting library.
+using the interactive `plotly.js  <https://plot.ly/javascript/>`_ plotting library.
 
-Plots are shown for CPU, memory, time and disk read+write. The first three have two tabs with
-the raw values and a percentage representation showing what proportion of the allocated resources
-were used. This is helpful to check that job pipeline requests are efficient.
+Plots are shown for CPU, memory, job duration and disk I/O. They have two (or three) tabs with the raw values and a percentage representation showing what proportion of the requested resources
+were used. These plots are very helpful to check that job pipeline requests are efficient.
 
-.. image:: images/report-resources-min.png
+.. image:: images/report-resource-cpu.png
+
+Learn more about how resource usage are computed in the :ref:`Metrics documentation <metrics-page>`.
 
 Tasks
 -----
