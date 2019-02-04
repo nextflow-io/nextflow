@@ -1,9 +1,9 @@
 
 .. _metrics-page:
 
-***********************
+*******
 Metrics
-***********************
+*******
 
 This section details how the resource usage from the :ref:`Execution report <execution-report>` are computed.
 
@@ -49,7 +49,7 @@ In the second example, some time will be spent performing pure computation and s
   }
 
 
-Indeed, the percentage of the CPU that this process got is a weighted average taking into account the percentage of the CPU and duration of each individual program over the job duration (`aka` elapsed real time, real time or wall time ) as follows:
+Indeed, the percentage of the CPU that this process got is a weighted average taking into account the percentage of the CPU and duration of each individual program over the job duration (a.k.a. elapsed real time, real time or wall time ) as follows:
 
 
 .. math::
@@ -98,32 +98,147 @@ The plot has three tabs showing the usage of the physical memory (RAM), the virt
   - the ``memory`` directive sets the RAM requested by the process.
 
 
-Let's illustrate how this plot behaves with one example which relies on two C programs `memory-vmem_1GiB_ram_0Gib` and `memory-vmem_1GiB_ram_1Gib`. 
+Let's illustrate how this plot behaves with one example which relies on two C programs. 
 
+The first program just allocates a variable of 1 GiB:
 
-The first program `memory-vmem_1GiB_ram_0Gib` just allocates a variable of 1GiB **but does not use it**:
-
-.. literalinclude:: doctests/memory-vmem_1GiB_ram_0Gib.c
-   :language: c
+.. code-block:: c
+   :linenos:
    :emphasize-lines: 32,44
 
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <sys/resource.h>
+    #include <sys/time.h>
+    #include <sys/types.h>
+    #include <unistd.h>
+    #include <time.h>
+
+    /* Get vmem and rss usage from /proc/<pid>/statm */
+    static int mem_used(pid_t pid, unsigned long* vmem, unsigned long* rss) {
+        FILE* file;
+        char path[40];
+        unsigned int page_size;
+
+        snprintf(path, 40, "/proc/%ld/statm", (long) pid);
+        file = fopen(path, "r");
+        // vmem and rss are the first values in the file
+        fscanf(file, "%lu %lu", vmem, rss);
+        // values in statm are in pages so to get bytes we need to know page size
+        page_size = (unsigned) getpagesize();
+        *vmem = *vmem * page_size;
+        *rss = *rss * page_size;
+
+        fclose(file);
+        return 0;
+    }
+
+    int main(int argc, char **argv) {
+        unsigned char *address;
+        char input;
+        size_t size = 1024*1024*1024;  // 1 GiB
+        unsigned long i;
+        unsigned long vmem = 0;
+        unsigned long rss = 0;
+        pid_t pid;
+
+        pid = getpid();
+        printf("Pid: %ld\n", (long) pid);
+
+        mem_used(pid, &vmem, &rss);
+        printf("VMEM: %lu RSS: %lu\n", vmem, rss);
+
+        address = malloc(size);
+        printf("Allocated %d Bytes of memory\n", (int) size);
+
+        mem_used(pid, &vmem, &rss);
+        printf("VMEM: %lu RSS: %lu\n", vmem, rss);
+
+        // Leave time for nextflow to get information
+        sleep(15);
+        
+        free(address);
+        return 0;
+    }
 
 
 
-The second program `memory-vmem_1GiB_ram_1Gib` allocates a variable of 1GiB and **fills it with data**:
+The second program allocates a variable of 1 GiB and fills it with data:
 
-
-.. literalinclude:: doctests/memory-vmem_1GiB_ram_1Gib.c
-   :language: c
+.. code-block:: c
+   :linenos:
    :emphasize-lines: 32,44,50-54
 
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <sys/resource.h>
+    #include <sys/time.h>
+    #include <sys/types.h>
+    #include <unistd.h>
+    #include <time.h>
+
+    /* Get vmem and rss usage from /proc/<pid>/statm */
+    static int mem_used(pid_t pid, unsigned long* vmem, unsigned long* rss) {
+        FILE* file;
+        char path[40];
+        unsigned int page_size;
+
+        snprintf(path, 40, "/proc/%ld/statm", (long) pid);
+        file = fopen(path, "r");
+        // vmem and rss are the first values in the file
+        fscanf(file, "%lu %lu", vmem, rss);
+        // values in statm are in pages so to get bytes we need to know page size
+        page_size = (unsigned) getpagesize();
+        *vmem = *vmem * page_size;
+        *rss = *rss * page_size;
+
+        fclose(file);
+        return 0;
+    }
+
+    int main(int argc, char **argv) {
+        unsigned char *address;
+        char input;
+        size_t size = 1024*1024*1024;  // 1 GiB
+        unsigned long i;
+        unsigned long vmem = 0;
+        unsigned long rss = 0;
+        pid_t pid;
+
+        pid = getpid();
+        printf("Pid: %ld\n", (long) pid);
+
+        mem_used(pid, &vmem, &rss);
+        printf("VMEM: %lu RSS: %lu\n", vmem, rss);
+
+        address = malloc(size);
+        printf("Allocated %d Bytes of memory\n", (int) size);
+
+        mem_used(pid, &vmem, &rss);
+        printf("VMEM: %lu RSS: %lu\n", vmem, rss);
+
+        printf("Filling memory with data...");
+        fflush(stdout);  
+        for (i = 0; i < size; i++) {
+            *(address + i) = 123;
+        }
+
+        mem_used(pid, &vmem, &rss);
+        printf("\nVMEM: %lu RSS: %lu\n", vmem, rss);
+
+        // Leave time for nextflow to get information
+        sleep(15);
+        
+        free(address);
+        return 0;
+    }
 
 
-The two programs are exectuted in the following nextflow script::
+The two programs are executed in the following Nextflow script::
 
   #!/usr/bin/env nextflow
 
-  process vmem_1GiB_ram_0Gib {
+  process foo {
   
       memory '1.5 GB'
   
@@ -133,7 +248,7 @@ The two programs are exectuted in the following nextflow script::
 
   }
 
-  process vmem_1GiB_ram_1Gib {
+  process bar {
 
       memory '1.5 GB'
 
@@ -143,31 +258,32 @@ The two programs are exectuted in the following nextflow script::
 
   }
 
-The `Virtual (RAM + Disk swap)` tab shows that both `vmem_1GiB_ram_0Gib` and `vmem_1GiB_ram_1Gib` processes use the same amount of virtual memory (~1GiB):
+The `Virtual (RAM + Disk swap)` tab shows that both ``foo`` and ``bar`` processes use the same amount of virtual memory (~1 GiB):
 
 .. image:: images/report-resource-memory-vmem.png
 
-However, the `Virtual (RAM)` tab shows that only the `vmem_1GiB_ram_1Gib` process uses ~1GiB of RAM while `vmem_1GiB_ram_0Gib` process uses  ~0GiB:
+However, the `Physical (RAM)` tab shows that only the ``bar`` process uses ~1 GiB of RAM while ``foo`` process uses  ~0 GiB:
 
 .. image:: images/report-resource-memory-ram.png
 
 
-As expected, the `% RAM Allocated` tab shows that ~0% of the resource set in the ``memory`` directive was used for `vmem_1GiB_ram_0Gib` process while ~67% (= 1 / 1.5) of the resource were used for `vmem_1GiB_ram_0Gib` process:
+As expected, the `% RAM Allocated` tab shows that 0% of the resource set in the ``memory`` directive was used for ``foo`` process while 67% (= 1 / 1.5) of the resource were used for ``bar`` process:
 
 .. image:: images/report-resource-memory-pctram.png
 
-.. warning:: Binary unit are used to report memory raw values. This means that 1KB = :math:`1024` bytes, 1MB = :math:`1024^2` bytes, 1GB = :math:`1024^3` bytes, `etc.`
+.. warning:: Binary unit are used to report memory raw values. This means that 1KB = :math:`1024` bytes, 1 MB = :math:`1024^2` bytes, 1 GB = :math:`1024^3` bytes, `etc.`
+
 
 Job Duration
 ============
 
-The plot has two tabs the job duration (`aka` elapsed real time, real time or wall time ) in the `Raw Usage` tag and the percentage  of requested time used in the `% Allocated` tab with respect to the duration set in the ``time`` directive of the process.
+The plot has two tabs the job duration (a.k.a. elapsed real time, real time or wall time ) in the `Raw Usage` tag and the percentage  of requested time used in the `% Allocated` tab with respect to the duration set in the ``time`` directive of the process.
 
 .. image:: images/report-resource-job-duration.png
 
 
-I/O
-===
+I/O Usage
+=========
 
 The plot has two tabs showing how many data were read and/or written each process. For example, the following processes read and write 1GB and 256MB of data respectively::
 

@@ -28,7 +28,6 @@ Contents:
    ignite
    kubernetes
    tracing
-   metrics
    sharing
    metadata
    mail
