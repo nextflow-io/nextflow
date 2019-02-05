@@ -104,7 +104,7 @@ The first program just allocates a variable of 1 GiB:
 
 .. code-block:: c
    :linenos:
-   :emphasize-lines: 32,44
+   :emphasize-lines: 31,43
 
     #include <stdio.h>
     #include <stdlib.h>
@@ -167,7 +167,7 @@ The second program allocates a variable of 1 GiB and fills it with data:
 
 .. code-block:: c
    :linenos:
-   :emphasize-lines: 32,44,50-54
+   :emphasize-lines: 31,43,49-53
 
     #include <stdio.h>
     #include <stdlib.h>
@@ -234,7 +234,7 @@ The second program allocates a variable of 1 GiB and fills it with data:
     }
 
 
-The two programs are executed in the following Nextflow script::
+The first and second programs are executed in ``foo`` and ``bar`` processes respectively as follows::
 
   #!/usr/bin/env nextflow
 
@@ -253,7 +253,7 @@ The two programs are executed in the following Nextflow script::
       memory '1.5 GB'
 
       """
-      memory_vmem1GiB_ram_1Gib
+      memory_vmem_1GiB_ram_1Gib
       """
 
   }
