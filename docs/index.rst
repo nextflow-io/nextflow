@@ -28,11 +28,9 @@ Contents:
    ignite
    kubernetes
    tracing
+   metrics
    sharing
    metadata
    mail
    example
    faq
-
-
-
