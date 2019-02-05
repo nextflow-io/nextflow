@@ -166,6 +166,7 @@ $(function() {
     if (bytes == '-' || bytes == 0){
       return bytes;
     }
+    bytes = norm_mem([bytes]);
     // https://stackoverflow.com/a/14919494
     var thresh = 1000;
     if(Math.abs(bytes) < thresh) {
