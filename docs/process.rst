@@ -290,7 +290,7 @@ as a process input variable managed by Nextflow.
     - Shell script definition requires the use of single-quote ``'`` delimited strings. When using double-quote ``"``
       delimited strings, dollar variables are interpreted as Nextflow variables as usual. See :ref:`string-interpolation`.
 
-    - Exclamation mark prefixed variables always need to be enclosed in curly brackets i.e. ``!{str}`` is a valid 
+    - Exclamation mark prefixed variables always need to be enclosed in curly brackets i.e. ``!{str}`` is a valid
       variable while ``!str`` is ignored.
 
     - Shell script supports the use of the file :ref:`process-template` mechanism. The same rules are applied to the variables
@@ -575,8 +575,8 @@ In the above example, the input file name is set by using the current value of t
 This allows the input files to be staged in the script working directory with a name that is coherent
 with the current execution context.
 
-.. tip:: In most cases, you won't need to use dynamic file names, because each process is executed in its 
-  own private temporary directory, and input files are automatically staged to this directory by Nextflow. 
+.. tip:: In most cases, you won't need to use dynamic file names, because each process is executed in its
+  own private temporary directory, and input files are automatically staged to this directory by Nextflow.
   This guarantees that input files with the same name won't overwrite each other.
 
 
@@ -1021,17 +1021,17 @@ For example::
 In the above example, each time the process is executed an alignment file is produced whose name depends
 on the actual value of the ``x`` input.
 
-.. tip:: The management of output files is a very common misunderstanding when using Nextflow. 
-  With other tools, it is generally necessary to organize the outputs files into some kind of directory 
-  structure or to guarantee a unique file name scheme, so that result files won't overwrite each other 
+.. tip:: The management of output files is a very common misunderstanding when using Nextflow.
+  With other tools, it is generally necessary to organize the outputs files into some kind of directory
+  structure or to guarantee a unique file name scheme, so that result files won't overwrite each other
   and that they can be referenced univocally by downstream tasks.
 
-  With Nextflow, in most cases, you don't need to take care of naming output files, because each task is executed 
+  With Nextflow, in most cases, you don't need to take care of naming output files, because each task is executed
   in its own unique temporary directory, so files produced by different tasks can never override each other.
   Also meta-data can be associated with outputs by using the :ref:`set output <process-set>` qualifier, instead of
   including them in the output file name.
 
-  To sum up, the use of output files with static names over dynamic ones is preferable whenever possible, 
+  To sum up, the use of output files with static names over dynamic ones is preferable whenever possible,
   because it will result in a simpler and more portable code.
 
 
@@ -1110,7 +1110,7 @@ In most cases a process is expected to generate output that is added to the outp
     output:
         file("output.txt") optional true into outChannel
 
-In this example, the process is normally expected to generate an ``output.txt`` file, but in the cases where the file is legitimately missing, the process does not fail. ``outChannel`` is only populated by those processes that do generate ``output.txt``. 
+In this example, the process is normally expected to generate an ``output.txt`` file, but in the cases where the file is legitimately missing, the process does not fail. ``outChannel`` is only populated by those processes that do generate ``output.txt``.
 
 
 When
@@ -1146,7 +1146,7 @@ Directives
 Using the `directive` declarations block you can provide optional settings that will affect the execution of the current
 process.
 
-They must be entered at the top of the process `body`, before any other declaration blocks (i.e. ``input``, ``output``, etc) 
+They must be entered at the top of the process `body`, before any other declaration blocks (i.e. ``input``, ``output``, etc)
 and have the following syntax::
 
     name value [, value2 [,..]]
@@ -1224,7 +1224,7 @@ identify univocally the outputs produced by the process execution.
 
 
 The cache is enabled by default, you can disable it for a specific process by setting the ``cache``
-directive to ``false``. For example:: 
+directive to ``false``. For example::
 
   process noCacheThis {
     cache false
@@ -1558,7 +1558,7 @@ By default this directive is disabled, you can set it as shown in the example be
       echo 'do this as that .. '
       """
     }
-    
+
 .. note:: This setting considers the **total** errors accumulated for a given process, across all instances. If you want
   to control the number of times a process **instance** (aka task) can fail, use ``maxRetries``.
 
@@ -1814,7 +1814,7 @@ symlink         Creates an absolute `symbolic link` in the published directory f
 rellink         Creates a relative `symbolic link` in the published directory for each process output file.
 link            Creates a `hard link` in the published directory for each process output file.
 copy            Copies the output files into the published directory.
-copyNoFollow    Copies the output files into the published directory without following symlinks ie. copies the links themselves. 
+copyNoFollow    Copies the output files into the published directory without following symlinks ie. copies the links themselves.
 move            Moves the output files into the published directory. **Note**: this is only supposed to be used for a `terminating` process i.e. a process whose output is not consumed by any other downstream process.
 =============== =================
 
@@ -1964,6 +1964,13 @@ $YOUR_VAR   Creates a scratch folder in the directory defined by the ``$YOUR_VAR
 /my/tmp     Creates a scratch folder in the specified directory.
 ram-disk    Creates a scratch folder in the RAM disk ``/dev/shm/`` (experimental).
 =========== ==================
+
+.. warning:: If the declared output is a glob which captures one or more of the input files, then depending
+  on the combination of settings used for `stageInMode`_ and `stageOutMode`_, these files may be copied
+  from `scratch` to the working directory resulting in unnecessary consumption of disk space.
+  To avoid that, when using `scratch` with the default `stageInMode`_ (``symlink``), the user should set
+  `stageOutMode`_ to ``move`` or ``rsync``, while for `stageInMode`_ ``link``, `stageOutMode`_ ``move`` should be set.
+
 
 .. _process-storeDir:
 
@@ -2198,8 +2205,8 @@ For example::
 Dynamic computing resources
 ---------------------------
 
-It's a very common scenario that different instances of the same process may have very different needs in terms of computing resources. 
-In such situations requesting, for example, an amount of memory too low will cause some tasks to fail. 
+It's a very common scenario that different instances of the same process may have very different needs in terms of computing resources.
+In such situations requesting, for example, an amount of memory too low will cause some tasks to fail.
 Instead, using a higher limit that fits all the tasks in your execution could significantly decrease the execution priority of your jobs.
 
 The `Dynamic directives`_ evaluation feature can be used to modify the amount of computing resources requested in case
