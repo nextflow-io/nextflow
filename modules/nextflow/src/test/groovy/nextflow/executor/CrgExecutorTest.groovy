@@ -166,7 +166,7 @@ class CrgExecutorTest extends Specification {
         // config
         task.config = new TaskConfig(
                         queue: 'short',
-                        memory: '4 GB',
+                        memory: '200 MB',
                         time: '1d',
                         disk: '2G'
                     )
@@ -181,7 +181,7 @@ class CrgExecutorTest extends Specification {
                     #$ -notify
                     #$ -q short
                     #$ -l h_rt=24:00:00
-                    #$ -l virtual_free=4G
+                    #$ -l h_vmem=200M,virtual_free=200M
                     #$ -l disk=2048M
                     '''
                     .stripIndent().leftTrim()
@@ -205,7 +205,7 @@ class CrgExecutorTest extends Specification {
                     #$ -notify
                     #$ -q short
                     #$ -l h_rt=24:00:00
-                    #$ -l virtual_free=4G
+                    #$ -l h_vmem=4096M,virtual_free=4096M
                     '''
                 .stripIndent().leftTrim()
 
@@ -230,7 +230,7 @@ class CrgExecutorTest extends Specification {
                     #$ -notify
                     #$ -q short
                     #$ -l h_rt=24:00:00
-                    #$ -l virtual_free=4G
+                    #$ -l h_vmem=4096M,virtual_free=4096M
                     #$ -binding env linear:1
                     #$ -soft -l docker_images=*;ubuntu;*
                     '''
@@ -259,7 +259,7 @@ class CrgExecutorTest extends Specification {
                     #$ -q long
                     #$ -pe mpi 2
                     #$ -l h_rt=72:00:00
-                    #$ -l virtual_free=3G
+                    #$ -l h_vmem=3072M,virtual_free=3072M
                     #$ -binding env linear:2
                     #$ -R y
                     #$ -soft -l docker_images=*;busybox;*
@@ -292,7 +292,7 @@ class CrgExecutorTest extends Specification {
                     #$ -q long
                     #$ -pe mpi 4
                     #$ -l h_rt=72:00:00
-                    #$ -l virtual_free=3G
+                    #$ -l h_vmem=3072M,virtual_free=3072M
                     #$ -binding env linear:4
                     #$ -R y
                     #$ -soft -l docker_images=*;busybox;*

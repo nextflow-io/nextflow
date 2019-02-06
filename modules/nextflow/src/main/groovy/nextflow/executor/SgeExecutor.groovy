@@ -67,7 +67,8 @@ class SgeExecutor extends AbstractGridExecutor {
 
         // task max memory
         if( task.config.memory ) {
-            result << "-l" << "virtual_free=${task.config.memory.toString().replaceAll(/[\sB]/,'')}"
+            final mem = "${task.config.getMemory().mega}M"
+            result << "-l" << "h_rss=$mem,mem_free=$mem"
         }
 
         // -- at the end append the command script wrapped file name
