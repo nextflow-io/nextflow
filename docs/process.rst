@@ -968,6 +968,12 @@ Some caveats on glob pattern behavior:
 * When a two stars pattern ``**`` is used to recourse across directories, only file paths are matched
   i.e. directories are not included in the result list.
 
+.. warning:: Although the input files matching a glob output declaration are not included in the
+   resulting output channel, these files may still be transferred from the task scratch directory
+   to the target task work directory. Therefore, to avoid unnecessary file copies it is recommended
+   to avoid the usage of loose wildcards when defining output files e.g. ``file '*'`` .
+   Instead, use a prefix or a postfix naming notation to restrict the set of matching files to
+   only the expected ones e.g. ``file 'prefix_*.sorted.bam'``. 
 
 .. tip::
     By default all the files matching the specified glob pattern are emitted by the channel as a sole (list) item.
