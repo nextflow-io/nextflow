@@ -49,7 +49,7 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     TaskConfig clone() {
         def copy = (TaskConfig)super.clone()
-        copy.target = new HashMap<>(this.target)
+        copy.setTarget(new HashMap<>(this.getTarget()))
         copy.newCache()
         return copy
     }
@@ -116,7 +116,12 @@ class TaskConfig extends LazyMap implements Cloneable {
             cache.remove(key)
         if( key == 'module' && value instanceof List ) {
             // 'module' directive can be defined as a list of dynamic values
-            for( Object it : value ) { if (it instanceof Closure) super.dynamic |= true }
+            for( Object it : value ) {
+                if (it instanceof Closure) {
+                    final flag = super.isDynamic() | true
+                    super.setDynamic(flag)
+                }
+            }
             target.put(key, value)
         }
         else if( key == 'ext' && value instanceof Map ) {
@@ -130,11 +135,11 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     @PackageScope
     boolean isDynamic() {
-        if( dynamic )
+        if( super.isDynamic() )
             return true
 
         if( target.ext instanceof LazyMap )
-            return (target.ext as LazyMap).dynamic
+            return (target.ext as LazyMap).isDynamic()
 
         return false
     }
@@ -360,7 +365,7 @@ class TaskConfig extends LazyMap implements Cloneable {
         try {
             if( code instanceof Closure ) {
                 if( code instanceof TaskClosure ) source = code.getSource()
-                return code.cloneWith(binding).call()
+                return code.cloneWith(getBinding()).call()
             }
             // try to convert to a boolean value
             return code as Boolean
@@ -381,12 +386,24 @@ class LazyMap implements Map<String,Object> {
 
     /** The target map holding the values */
     @Delegate
-    protected Map<String,Object> target
+    private Map<String,Object> target
 
     /** The context map against which dynamic properties are resolved */
-    protected Map binding
+    private Map binding
 
-    boolean dynamic
+    private boolean dynamic
+
+    protected boolean isDynamic() { dynamic }
+
+    protected void setDynamic(boolean val) { dynamic = val }
+
+    protected Map getBinding() { binding }
+
+    protected void setBinding(Map map) { this.binding = map }
+
+    protected Map<String,Object> getTarget() { target }
+
+    protected void setTarget(Map<String,Object> obj) { this.target = obj }
 
     LazyMap() {
         target = new HashMap<>()
@@ -467,7 +484,7 @@ class LazyMap implements Map<String,Object> {
     private resolveImpl( String name, value, boolean param=false ) {
 
         if( value instanceof Closure ) {
-            def copy = value.cloneWith(binding)
+            def copy = value.cloneWith(getBinding())
             if( param ) {
                 return copy
             }
@@ -476,13 +493,13 @@ class LazyMap implements Map<String,Object> {
                 return copy.call()
             }
             catch( MissingPropertyException e ) {
-                if( binding == null ) throw new IllegalStateException("Directive `$name` doesn't support dynamic value (or context not yet initialized)")
+                if( getBinding() == null ) throw new IllegalStateException("Directive `$name` doesn't support dynamic value (or context not yet initialized)")
                 else throw e
             }
         }
 
         else if( value instanceof GString ) {
-            return value.cloneWith(binding).toString()
+            return value.cloneWith(getBinding()).toString()
         }
 
         return value
