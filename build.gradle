@@ -536,6 +536,7 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
     sleep 1
     github-release release -u nextflow-io -r nextflow -t v$version --pre-release
     github-release upload -u nextflow-io -r nextflow -t v$version --file ${launcherFile} --name ${launcherFile.name}
+    sleep 5
     github-release upload -u nextflow-io -r nextflow -t v$version --file ${nextflowAllFile} --name ${nextflowAllFile.name}
     """.stripIndent()
 
