@@ -47,7 +47,7 @@ class JoinOp {
 
     private boolean remainder
 
-    private boolean singleton = true
+    private Boolean[] singleton = [null,null] as Boolean[]
 
     JoinOp( DataflowReadChannel source, DataflowReadChannel target, Map params = null ) {
         CheckHelper.checkParams('join', params, JOIN_PARAMS)
@@ -93,27 +93,26 @@ class JoinOp {
      * @param mapper A closure mapping a value to its key
      * @return A map with {@code OnNext} and {@code onComplete} methods entries
      */
-    private final Map handler( Map<Object,Map<Integer,List>> buffer, int size, int index, DataflowWriteChannel target, AtomicInteger stopCount, boolean remainder ) {
+    private final Map<String,Closure> handler( Map<Object,Map<Integer,List>> buffer, int size, int index, DataflowWriteChannel target, AtomicInteger stopCount, boolean remainder ) {
 
-        [
-                onNext: {
-                    synchronized (buffer) {
-                        def entries = join0(buffer, size, index, it)
-                        if( entries ) {
-                            this.singleton &= entries.size()==1
-                            target.bind( entries.size()==1 ? entries[0] : entries )
-                        }
-                    }},
+        final Map<String,Closure> result = new HashMap<>(2)
 
-                onComplete: {
-                    if( stopCount.decrementAndGet()==0) {
-                        if( remainder )
-                            remainder0(buffer,size,target)
-                        target << Channel.STOP
-                    }}
+        result.onNext = {
+            synchronized (buffer) {
+                def entries = join0(buffer, size, index, it)
+                if( entries ) {
+                    target.bind( entries.size()==1 ? entries[0] : entries )
+                }
+            }}
 
-        ]
-
+        result.onComplete = {
+            if( stopCount.decrementAndGet()==0) {
+                if( remainder )
+                    remainder0(buffer,size,target)
+                target << Channel.STOP
+            }}
+        
+        return result
     }
 
 
@@ -162,6 +161,7 @@ class JoinOp {
         // add the received item to the list
         // when it is used in the gather op add always as the first item
         entries << item0.values
+        setSingleton(index, item0.values.size()==0)
 
         // now check if it has received an element matching for each channel
         if( channels.size() != size )  {
@@ -172,9 +172,9 @@ class JoinOp {
         // add the key
         addToList(result, item0.keys)
 
-        Iterator<Map.Entry<Integer,List>> itr = channels.iterator()
+        final itr = channels.iterator()
         while( itr.hasNext() ) {
-            def entry = itr.next()
+            def entry = (Map.Entry<Integer,List>)itr.next()
 
             def list = entry.getValue()
             addToList(result, list[0])
@@ -191,7 +191,8 @@ class JoinOp {
     private final void remainder0( Map<Object,Map<Integer,List>> buffers, int count, DataflowWriteChannel target ) {
        log.trace "Operator `join` remainder buffer: ${-> buffers}"
 
-        buffers.each { Object key, Map<Integer,List> entry ->
+        for( Object key : buffers.keySet() ) {
+            Map<Integer,List> entry = buffers.get(key)
 
             while( true ) {
 
@@ -206,18 +207,33 @@ class JoinOp {
                         fill |= true
                         values.remove(0)
                     }
-                    else if( !singleton ) {
+                    else if( !singleton(i) ) {
                         addToList(result, null)
                     }
                 }
 
                 if( fill )
-                    target.bind( singleton ? result[0] : result )
+                    target.bind( singleton() ? result[0] : result )
                 else
                     break
             }
 
         }
+    }
+
+    private boolean singleton(int i=-1) {
+        if(i==-1)
+            return singleton[0]!=false && singleton[1]!=false
+
+        def result = singleton[i]
+        if( result == null )
+            result = singleton[ (i+1)%2 ]
+
+        return result
+    }
+
+    private void setSingleton(int index, boolean flag) {
+        singleton[index] = singleton[index]==null ? flag : singleton[index] || flag
     }
 
 }
