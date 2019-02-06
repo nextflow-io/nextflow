@@ -1,5 +1,20 @@
 NEXTFLOW CHANGE-LOG
 ===================
+19.02.0-edge - 6 Feb 2019
+- Added foreign files caching ability #686
+- Added Ansi logging as default console output
+- Added Gitea source code provider [ae04fc37]
+- Fixed Join operator returns invalid remainder values #1015
+- Fixed Invalid trigger of integration tests [7aa5908a]
+- Fixed memory allocation for SGE executor [29353c90]
+- Fixed properties access for TaskConfig and LazyMap [09b74a52]
+- Fixed Invalid decimal separator in mem unit string #999
+- Fixed tail error on launcher script [38afea6c]
+- Improved Execution and Timeline memory reporting #980 #986 #1012 #1014 #1016 #1018 [01426097] [7d6c29f0]
+- Improved Google pipelines file copy strategy [678405b2]
+- Improved output file stage out behaviour docs #961 #1013
+- Upgraded Groovy runtime to version 2.5.6
+
 19.01.0 - 22 Jan 2019
 - Added Google Cloud Platform integration
 - Added support for K8s nodeSelector #955
