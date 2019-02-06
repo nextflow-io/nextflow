@@ -126,7 +126,7 @@ class SgeExecutorTest extends Specification {
                 #$ -notify
                 #$ -q my-queue
                 #$ -l h_rt=00:10:00
-                #$ -l virtual_free=1M
+                #$ -l h_rss=1M,mem_free=1M
                 '''
                 .stripIndent().leftTrim()
 
@@ -151,7 +151,7 @@ class SgeExecutorTest extends Specification {
                 #$ -q my-queue
                 #$ -pe smp 1
                 #$ -l h_rt=00:02:00
-                #$ -l virtual_free=2M
+                #$ -l h_rss=2M,mem_free=2M
                 '''
                 .stripIndent().leftTrim()
 
@@ -174,7 +174,7 @@ class SgeExecutorTest extends Specification {
                 #$ -q my-queue
                 #$ -pe mpi 2
                 #$ -l h_rt=72:00:00
-                #$ -l virtual_free=3G
+                #$ -l h_rss=3072M,mem_free=3072M
                 '''
                 .stripIndent().leftTrim()
 
@@ -197,7 +197,7 @@ class SgeExecutorTest extends Specification {
                 #$ -q my-queue
                 #$ -pe orte 4
                 #$ -l h_rt=27:00:00
-                #$ -l virtual_free=4G
+                #$ -l h_rss=4096M,mem_free=4096M
                 '''
                 .stripIndent().leftTrim()
 

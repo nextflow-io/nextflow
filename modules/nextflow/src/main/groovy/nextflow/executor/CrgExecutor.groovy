@@ -39,7 +39,42 @@ class CrgExecutor extends SgeExecutor {
             task.config.penv = 'smp'
         }
 
-        super.getDirectives(task, result)
+        result << '-wd' << quote(task.workDir)
+        result << '-N' << getJobNameFor(task)
+        result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
+        result << '-j' << 'y'
+        result << '-terse' << ''    // note: directive need to be returned as pairs
+
+        /*
+         * By using command line option -notify SIGUSR1 will be sent to your script prior to SIGSTOP
+         * and SIGUSR2 will be sent to your script prior to SIGKILL
+         */
+        result << '-notify' << ''
+
+        // the requested queue name
+        if( task.config.queue ) {
+            result << '-q' << (task.config.queue as String)
+        }
+
+        //number of cpus for multiprocessing/multi-threading
+        if ( task.config.penv ) {
+            result << "-pe" << "${task.config.penv} ${task.config.cpus}"
+        }
+        else if( task.config.cpus>1 ) {
+            result << "-l" << "slots=${task.config.cpus}"
+        }
+
+        // max task duration
+        if( task.config.time ) {
+            final time = task.config.getTime()
+            result << "-l" << "h_rt=${time.format('HH:mm:ss')}"
+        }
+
+        // task max memory
+        if( task.config.getMemory() ) {
+            final mem = "${task.config.getMemory().mega}M"
+            result << "-l" << "h_vmem=$mem,virtual_free=$mem"
+        }
 
         if( task.config.getDisk() ) {
             result << "-l" << "disk=${task.config.getDisk().toMega()}M"
@@ -56,6 +91,11 @@ class CrgExecutor extends SgeExecutor {
 
             // request the docker image as a soft resource
             result << '-soft' << "-l docker_images=*;${task.container};*"
+        }
+
+        // -- at the end append the command script wrapped file name
+        if( task.config.clusterOptions ) {
+            result << task.config.clusterOptions.toString() << ''
         }
 
         return result
