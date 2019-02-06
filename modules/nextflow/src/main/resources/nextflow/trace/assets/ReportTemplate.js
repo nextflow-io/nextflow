@@ -167,7 +167,7 @@ $(function() {
       return bytes;
     }
     // https://stackoverflow.com/a/14919494
-    var thresh = 1000;
+    var thresh = 1024;
     if(Math.abs(bytes) < thresh) {
       return bytes + ' B';
     }
