@@ -1,21 +1,21 @@
 #!/usr/bin/env nextflow
 
-process vmem_1GiB_ram_0Gib {
+process foo {
 
     memory '1.5 GB'
-    
+
     """
-    memory-vmem_1GiB_ram_0Gib
+    memory_vmem_1GiB_ram_0Gib
     """
 
 }
 
-process vmem_1GiB_ram_1Gib {
+process bar {
 
     memory '1.5 GB'
 
     """
-    memory-vmem_1GiB_ram_1Gib
+    memory_vmem_1GiB_ram_1Gib
     """
 
 }
