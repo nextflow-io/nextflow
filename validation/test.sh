@@ -46,7 +46,7 @@ $NXF_CMD run nextflow-io/rnaseq-nf -with-docker
 $NXF_CMD run nextflow-io/rnaseq-nf -with-docker -resume
 
 
-if [[ $TRAVIS_PULL_REQUEST == true ]]; then
+if [[ $TRAVIS_PULL_REQUEST != false ]]; then
 echo Skipping tests requiring secret vars
 exit 0
 fi

@@ -3,7 +3,7 @@ X_JDK=${TEST_JDK:=8}
 X_BRANCH=${TRAVIS_BRANCH:-${CIRCLE_BRANCH:-'master'}}
 X_PULL_REQUEST=${TRAVIS_PULL_REQUEST:-false}
 
-if [[ $X_PULL_REQUEST == true ]] && [ ${X_JDK} -gt 8 ]; then
+if [[ $X_PULL_REQUEST != false ]] && [ ${X_JDK} -gt 8 ]; then
   echo "Skipping integration tests on PR and JDK>8"
   exit 0
 fi
