@@ -119,6 +119,33 @@ class JoinOpTest extends Specification {
         result == [1, 2, 3, 0, 0, 7, 8, 9]
     }
 
+    def 'should join empty channel and remainder' () {
+
+        when:
+        def left = Channel.from(1,2,3)
+        def right = Channel.empty()
+        def result = left.join(right, remainder: true)
+        then:
+        result.val == 1
+        result.val == 2
+        result.val == 3
+        result.val == Channel.STOP
+
+    }
+
+    def 'should join empty channel with pairs and remainder' () {
+
+        when:
+        def left = Channel.from(['X', 1], ['Y', 2], ['Z', 3])
+        def right = Channel.empty()
+        def result = left.join(right, remainder: true)
+        then:
+        result.val == ['X', 1, null]
+        result.val == ['Y', 2, null]
+        result.val == ['Z', 3, null]
+        result.val == Channel.STOP
+    }
+
     def 'should join a singleton value' () {
 
         when:
@@ -134,5 +161,30 @@ class JoinOpTest extends Specification {
     }
 
 
+    def 'should join pair with singleton and reminder' () {
+
+        when:
+        def left = Channel.from(['P', 0], ['X', 1], ['Y', 2], ['Z', 3])
+        def right = Channel.from('X', 'Y', 'Z', 'Q')
+        def result = left.join(right)
+        then:
+        result.val == ['X', 1]
+        result.val == ['Y', 2]
+        result.val == ['Z', 3]
+        result.val == Channel.STOP
+
+        when:
+        left = Channel.from(['P', 0], ['X', 1], ['Y', 2], ['Z', 3])
+        right = Channel.from('X', 'Y', 'Z', 'Q')
+        result = left.join(right, remainder: true)
+        then:
+        result.val == ['X', 1]
+        result.val == ['Y', 2]
+        result.val == ['Z', 3]
+        result.val == ['P', 0]
+        result.val == ['Q', null]
+        result.val == Channel.STOP
+
+    }
 
 }
