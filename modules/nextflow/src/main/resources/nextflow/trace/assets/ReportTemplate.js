@@ -102,6 +102,7 @@ $(function() {
 
   // Global information
 
+  // Graph data
    var data = [{
     values: [19, 26, 55],
     labels: ['Residential', 'Non-Residential', 'Utility'],
@@ -115,6 +116,31 @@ $(function() {
   
   // Graph placeholder
   Plotly.newPlot('myDiv1', data, layout);
+
+
+  //Table data
+  var values = [
+    ['Field1', 'Field2', 'Field3', 'Field4', 'Field4'],
+    [1400000, 20000, 90000, 2000, 14102000]]
+
+var data = [{
+type: 'table',
+header: {
+  values: [["Info"], ["value"]],
+  align: "left",
+  line: {width: 1, color: 'black'},
+  fill: {color: "grey"},
+  font: {family: "Arial", size: 12, color: "white"}
+},
+cells: {
+  values: values,
+  align: "right",
+  line: {color: "black", width: 1},
+  font: {family: "Arial", size: 11, color: ["black"]}
+}
+}]
+
+  // Table placeholder
 
   Plotly.newPlot('myDiv2', data, layout);
 
