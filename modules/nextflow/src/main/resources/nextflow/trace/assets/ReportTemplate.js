@@ -36,7 +36,7 @@ $(function() {
   if(completed_date.isValid()){
     $('#completed_fromnow').html('completed ' + completed_date.fromNow() + ', ');
   }
-
+  
   // Collect metrics by process
   for(proc in window.data.summary){
     if(!window.data_byprocess.hasOwnProperty(proc)){
@@ -98,6 +98,25 @@ $(function() {
   Plotly.newPlot('memplot', mem_raw_data, { title: 'Physical Memory Usage', yaxis: {title: 'Memory', tickformat: '.4s', rangemode: 'tozero'} });
   Plotly.newPlot('timeplot', time_raw_data, { title: 'Task execution real-time', yaxis: {title: 'Execution time (minutes)', tickformat: '.1f', rangemode: 'tozero'} });
   Plotly.newPlot('readplot', reads_raw_data, { title: 'Number of bytes read', yaxis: {title: 'Read bytes', tickformat: '.4s', rangemode: 'tozero'} });
+
+
+  // Global information
+
+   var data = [{
+    values: [19, 26, 55],
+    labels: ['Residential', 'Non-Residential', 'Utility'],
+    type: 'pie'
+  }];
+  
+  var layout = {
+    height: 400,
+    width: 500
+  };
+  
+  // Graph placeholder
+  Plotly.newPlot('myDiv1', data, layout);
+
+  Plotly.newPlot('myDiv2', data, layout);
 
   // Only plot tabbed plots when shown
   $('#pctcpuplot_tablink').on('shown.bs.tab', function (e) {

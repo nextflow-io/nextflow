@@ -87,6 +87,18 @@
     padding: 0.2rem 0.5rem;
     font-size: 1.1rem;
   }
+
+  .column {
+  float: left;
+  width: 50%;
+}
+
+/* Clear floats after the columns */
+.row:after {
+  content: "";
+  display: table;
+  clear: both;
+}
   </style>
 
 </head>
@@ -227,7 +239,12 @@
         <div id="pctcpuplot"></div>
       </div>
 
-    </div>
+      <div class="row">
+          <div class="column" id="myDiv1"></div>
+          <div class="column" id="myDiv2"></div>
+       </div>
+       
+    </div> 
 
     <h4>Memory</h4>
     <ul class="nav nav-tabs" id="memplot_tabs" role="tablist">
