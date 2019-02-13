@@ -36,7 +36,7 @@ $(function() {
   if(completed_date.isValid()){
     $('#completed_fromnow').html('completed ' + completed_date.fromNow() + ', ');
   }
-  
+
   // Collect metrics by process
   for(proc in window.data.summary){
     if(!window.data_byprocess.hasOwnProperty(proc)){
@@ -99,50 +99,134 @@ $(function() {
   Plotly.newPlot('timeplot', time_raw_data, { title: 'Task execution real-time', yaxis: {title: 'Execution time (minutes)', tickformat: '.1f', rangemode: 'tozero'} });
   Plotly.newPlot('readplot', reads_raw_data, { title: 'Number of bytes read', yaxis: {title: 'Read bytes', tickformat: '.4s', rangemode: 'tozero'} });
 
-
+  ////////////////////////////
   // Global information
+  ////////////////////////////
+
+  var pname_order_in_cpuplot = [];
+  for (pname in window.data.summary) {
+    pname_order_in_cpuplot.push(pname);
+  }
+
+
+  nb_task = window.data.trace.length;
+  nb_completed_task = 0;
+
+  completed_task = { pctcpu: [], cpus: [], realtime: [] };
+  completed_task_byprocess = {};
+
+  var i;
+  var pname;
+
+  console.log(window.data.trace);
+  for (i = 0; i < nb_task; i++) {
+    if (window.data.trace[i]["status"] == "COMPLETED") {
+
+      nb_completed_task++;
+
+      completed_task["pctcpu"].push(Number(window.data.trace[i]["%cpu"]));
+      completed_task["cpus"].push(Number(window.data.trace[i]["cpus"]));
+      completed_task["realtime"].push(Number(window.data.trace[i]["realtime"]));
+
+      pname = window.data.trace[i]["process"];
+
+      if (!completed_task_byprocess[pname]) {
+
+        completed_task_byprocess[pname] = { cputime: [], cputimerequested: [] };
+        completed_task_byprocess[pname]["cputime"] = 0;
+        completed_task_byprocess[pname]["cputimerequested"] = 0;
+
+      }
+      completed_task_byprocess[pname]["cputime"] += Number(window.data.trace[i]["realtime"]) * Number(window.data.trace[i]["%cpu"]) / 100;
+      completed_task_byprocess[pname]["cputimerequested"] += Number(window.data.trace[i]["realtime"]) * Number(window.data.trace[i]["cpus"]);
+
+    }
+  }
+
+
+  function add(x, y) {
+    return x + y;
+  }
+
+  completed_task_cputime = [];
+  completed_task_cputimerequested = [];
+  completed_task_cputime_pname = [];
+
+  var pname;
+
+  for (var i = 0; i < pname_order_in_cpuplot.length; i++) {
+
+    pname = pname_order_in_cpuplot[i];
+    completed_task_cputime.push(completed_task_byprocess[pname]["cputime"]);
+    completed_task_cputimerequested.push(completed_task_byprocess[pname]["cputimerequested"]);
+    completed_task_cputime_pname.push(pname)
+
+  }
+
+
+  var completed_task_sum_cputime = completed_task_cputime.reduce(add, 0);
+  var completed_task_sum_cpus = completed_task["cpus"].reduce(add, 0);
+  var completed_task_sum_cputimerequested = completed_task_cputimerequested.reduce(add, 0);
+  var workflow_pctcpu_efficiency = 100 * completed_task_sum_cputime / completed_task_sum_cputimerequested;
+
+  var completed_task_cputime_humanized = [];
+
+  for (i = 0; i < completed_task_cputime.length; i++) {
+    completed_task_cputime_humanized.push(make_duration(completed_task_cputime[i]));
+  }
+
 
   // Graph data
-   var data = [{
-    values: [19, 26, 55],
-    labels: ['Residential', 'Non-Residential', 'Utility'],
+  var completed_task_cputime_data = [{
+    values: completed_task_cputime,
+    labels: completed_task_cputime_pname,
+    text: completed_task_cputime_humanized,
+    textinfo: 'percent',
+    hoverinfo: 'label+text+percent',
+    sort: false,
+    opacity: 0.6,
     type: 'pie'
   }];
-  
+
+
   var layout = {
     height: 400,
     width: 500
   };
-  
-  // Graph placeholder
-  Plotly.newPlot('myDiv1', data, layout);
 
 
   //Table data
   var values = [
-    ['Field1', 'Field2', 'Field3', 'Field4', 'Field4'],
-    [1400000, 20000, 90000, 2000, 14102000]]
+    ['# completed tasks', 'Total number of CPUs requested', 'Total CPU time', 'Total CPU time requested', 'CPU efficiency'],
+    [nb_completed_task, completed_task_sum_cpus, make_duration(completed_task_sum_cputime), make_duration(completed_task_sum_cputimerequested), workflow_pctcpu_efficiency.toFixed(1)]]
 
-var data = [{
-type: 'table',
-header: {
-  values: [["Info"], ["value"]],
-  align: "left",
-  line: {width: 1, color: 'black'},
-  fill: {color: "grey"},
-  font: {family: "Arial", size: 12, color: "white"}
-},
-cells: {
-  values: values,
-  align: "right",
-  line: {color: "black", width: 1},
-  font: {family: "Arial", size: 11, color: ["black"]}
-}
-}]
+  var data = [{
+    type: 'table',
+    header: {
+      values: [["Info"], ["value"]],
+      align: "left",
+      line: { width: 1, color: 'black' },
+      fill: { color: "grey" },
+      //  font: { family: "Arial", size: 12, color: "white" }
+    },
+    cells: {
+      values: values,
+      align: "right",
+      line: { color: "black", width: 1 },
+      //  font: { family: "Arial", size: 11, color: ["black"] }
+    }
+  }]
 
-  // Table placeholder
-
+  // Draw Table CPU infos
   Plotly.newPlot('myDiv2', data, layout);
+
+  // Draw Graph CPU pie chart
+  Plotly.newPlot('piechart_completed_task_cputime_data', completed_task_cputime_data, layout);
+
+
+//////////////////////  
+// fin insert test code
+///////////////////////
 
   // Only plot tabbed plots when shown
   $('#pctcpuplot_tablink').on('shown.bs.tab', function (e) {
