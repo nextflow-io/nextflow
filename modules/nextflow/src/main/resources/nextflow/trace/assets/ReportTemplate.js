@@ -109,17 +109,20 @@ $(function() {
   }
 
 
-  nb_task = window.data.trace.length;
-  nb_completed_task = 0;
+  var nb_task = window.data.trace.length;
+  var nb_completed_task = 0;
 
-  completed_task = { pctcpu: [], cpus: [], realtime: [] };
-  completed_task_byprocess = {};
+  var completed_task = { pctcpu: [], cpus: [], realtime: [] };
+  var completed_task_byprocess = {};
 
-  var i;
-  var pname;
+  var mem_box = [];
+  //mem_box.push({y: smry.cpu, name: pname, type:'box', boxmean: true, boxpoints: false});
 
   console.log(window.data.trace);
-  for (i = 0; i < nb_task; i++) {
+  for (var i = 0; i < nb_task; i++) {
+
+    var pname;
+
     if (window.data.trace[i]["status"] == "COMPLETED") {
 
       nb_completed_task++;
@@ -132,62 +135,77 @@ $(function() {
 
       if (!completed_task_byprocess[pname]) {
 
-        completed_task_byprocess[pname] = { cputime: [], cputimerequested: [] };
-        completed_task_byprocess[pname]["cputime"] = 0;
-        completed_task_byprocess[pname]["cputimerequested"] = 0;
+        completed_task_byprocess[pname] = { sum_cputime: 0, sum_cputimerequested: 0, peak_rss_per_cpu: [], pctcpu: [], cpus: [] };
 
       }
-      completed_task_byprocess[pname]["cputime"] += Number(window.data.trace[i]["realtime"]) * Number(window.data.trace[i]["%cpu"]) / 100;
-      completed_task_byprocess[pname]["cputimerequested"] += Number(window.data.trace[i]["realtime"]) * Number(window.data.trace[i]["cpus"]);
+
+      completed_task_byprocess[pname]["pctcpu"].push(Number(window.data.trace[i]["%cpu"]));
+      completed_task_byprocess[pname]["cpus"].push(Number(window.data.trace[i]["cpus"]));
+      completed_task_byprocess[pname]["sum_cputime"] += Number(window.data.trace[i]["realtime"]) * Number(window.data.trace[i]["%cpu"]) / 100;
+      completed_task_byprocess[pname]["sum_cputimerequested"] += Number(window.data.trace[i]["realtime"]) * Number(window.data.trace[i]["cpus"]);
+      completed_task_byprocess[pname]["peak_rss_per_cpu"].push(Number(window.data.trace[i]["peak_rss"]) / Number(window.data.trace[i]["cpus"]));
 
     }
   }
 
 
+  console.log(completed_task_byprocess);
+
   function add(x, y) {
     return x + y;
   }
 
-  completed_task_cputime = [];
-  completed_task_cputimerequested = [];
-  completed_task_cputime_pname = [];
-
+  var completed_task_cputime = [];
+  var completed_task_cputimerequested = [];
+  var completed_task_cputime_pname = [];
+  var completed_task_sum_cputime = 0;
+  var completed_task_sum_cputimerequested = 0;
+  var completed_task_sum_cpus = 0;
+  var completed_task_cputime_humanized = [];
   var pname;
+
+  var d3colors = Plotly.d3.scale.category10();
+  var completed_task_cputime_color = [];
 
   for (var i = 0; i < pname_order_in_cpuplot.length; i++) {
 
+    var i_color = (i % 10) ;
+   
+    completed_task_cputime_color.push(d3colors(i_color));
+
     pname = pname_order_in_cpuplot[i];
-    completed_task_cputime.push(completed_task_byprocess[pname]["cputime"]);
-    completed_task_cputimerequested.push(completed_task_byprocess[pname]["cputimerequested"]);
-    completed_task_cputime_pname.push(pname)
+    completed_task_cputime.push(moment.duration(completed_task_byprocess[pname]["sum_cputime"]).asMinutes());
+    completed_task_cputime_humanized.push(make_duration(completed_task_byprocess[pname]["sum_cputime"]));
+    completed_task_cputimerequested.push(moment.duration(completed_task_byprocess[pname]["sum_cputimerequested"]).asMinutes());
+    completed_task_cputime_pname.push(pname);
+    completed_task_sum_cputime += completed_task_byprocess[pname]["sum_cputime"];
+    completed_task_sum_cpus = completed_task_byprocess[pname]["cpus"].reduce(add, completed_task_sum_cpus);
+    completed_task_sum_cputimerequested += completed_task_byprocess[pname]["sum_cputimerequested"]
+    //mem_box.push({y: norm_mem(completed_task_byprocess[pname]["peak_rss_per_cpu"]), name: pname, type:'box', boxmean: true, boxpoints: false});
 
   }
 
-
-  var completed_task_sum_cputime = completed_task_cputime.reduce(add, 0);
-  var completed_task_sum_cpus = completed_task["cpus"].reduce(add, 0);
-  var completed_task_sum_cputimerequested = completed_task_cputimerequested.reduce(add, 0);
   var workflow_pctcpu_efficiency = 100 * completed_task_sum_cputime / completed_task_sum_cputimerequested;
 
-  var completed_task_cputime_humanized = [];
-
-  for (i = 0; i < completed_task_cputime.length; i++) {
-    completed_task_cputime_humanized.push(make_duration(completed_task_cputime[i]));
-  }
-
-
+  
+  console.log("color");
+  console.log(completed_task_cputime_color);
   // Graph data
-  var completed_task_cputime_data = [{
-    values: completed_task_cputime,
-    labels: completed_task_cputime_pname,
+  var completed_task_cputime_graph = [{
+    x: completed_task_cputime_pname,
+    y: completed_task_cputime,
     text: completed_task_cputime_humanized,
-    textinfo: 'percent',
-    hoverinfo: 'label+text+percent',
-    sort: false,
-    opacity: 0.6,
-    type: 'pie'
+    textinfo: 'text',
+    marker: {
+      color: completed_task_cputime_color,
+    },
+    //hoverinfo: 'label+text+percent',
+    //sort: false,
+    //opacity: 0.6,
+    type: 'bar'
   }];
 
+  console.log(completed_task_cputime_graph);
 
   var layout = {
     height: 400,
@@ -200,7 +218,7 @@ $(function() {
     ['# completed tasks', 'Total number of CPUs requested', 'Total CPU time', 'Total CPU time requested', 'CPU efficiency'],
     [nb_completed_task, completed_task_sum_cpus, make_duration(completed_task_sum_cputime), make_duration(completed_task_sum_cputimerequested), workflow_pctcpu_efficiency.toFixed(1)]]
 
-  var data = [{
+  var completed_task_cpuinfo_table = [{
     type: 'table',
     header: {
       values: [["Info"], ["value"]],
@@ -218,10 +236,12 @@ $(function() {
   }]
 
   // Draw Table CPU infos
-  Plotly.newPlot('myDiv2', data, layout);
+  Plotly.newPlot('myDiv2', completed_task_cpuinfo_table, layout);
+//Plotly.newPlot('myDiv2', mem_box, layout);
+
 
   // Draw Graph CPU pie chart
-  Plotly.newPlot('piechart_completed_task_cputime_data', completed_task_cputime_data, layout);
+  Plotly.newPlot('piechart_completed_task_cputime_data', completed_task_cputime_graph, { title: 'CPU time', yaxis: {title: 'CPU time (minutes)',  tickformat: '.1f', rangemode: 'tozero'} });
 
 
 //////////////////////  
