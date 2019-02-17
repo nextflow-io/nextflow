@@ -1,7 +1,15 @@
+dist: xenial
 sudo: required
 language: groovy
 jdk:
   - openjdk8
+  - openjdk9
+  - openjdk10
+  - openjdk11
+matrix:
+  allow_failures:
+    jdk: openjdk11
+  fast_finish: true
 services:
   - docker
 before_install:
@@ -13,13 +21,9 @@ install:
 git:
   submodules: true
 env:
-  matrix:
-  - TEST_JDK=
-  - TEST_JDK=9
-  - TEST_JDK=10
-  - TEST_JDK=11
   global:
-  - GRADLE_OPTS='-Dorg.gradle.daemon=false'
+    - GRADLE_OPTS='-Dorg.gradle.daemon=false'
+    - TEST_JDK=
 before_script:
   - rm $HOME/.gitconfig
   - mkdir -p "$HOME/.nextflow" && echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
