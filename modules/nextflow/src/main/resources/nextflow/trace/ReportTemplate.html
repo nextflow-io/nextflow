@@ -88,17 +88,6 @@
     font-size: 1.1rem;
   }
 
-  .column {
-  float: left;
-  width: 50%;
-}
-
-/* Clear floats after the columns */
-.row:after {
-  content: "";
-  display: table;
-  clear: both;
-}
   </style>
 
 </head>
@@ -229,6 +218,16 @@
         <a class="nav-link" id="pctcpuplot_tablink" data-toggle="tab" href="#pctcpuplot_tabpanel" role="tab" aria-controls="cpuplot_tabpanel" aria-expanded="true">
           % Allocated
         </a>
+      </li>      
+      <li class="nav-item">
+        <a class="nav-link" id="cputimeplot_tablink" data-toggle="tab" href="#cputimeplot_tabpanel" role="tab" aria-controls="cpuplot_tabpanel" aria-expanded="true">
+          CPU time
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="cpuinfos_tablink" data-toggle="tab" href="#cpuinfos_tabpanel" role="tab" aria-controls="cpuinfos_tabpanel" aria-expanded="true">
+          Infos
+        </a>
       </li>
     </ul>
     <div class="tab-content" id="cpuplot_tabcontent">
@@ -237,19 +236,14 @@
       </div>
       <div class="tab-pane fade" id="pctcpuplot_tabpanel" role="tabpanel">
         <div id="pctcpuplot"></div>
+      </div>     
+      <div class="tab-pane fade" id="cputimeplot_tabpanel" role="tabpanel">
+        <div id="cputimeplot"></div>
       </div>
-
-      <div class="row">
-          <div class="column" id="piechart_completed_task_cputime_data"></div>
-          <div class="column" id="myDiv2"></div>
-       </div>
-       
+      <div class="tab-pane fade" id="cpuinfos_tabpanel" role="tabpanel">
+        <div id="cpuinfos"></div>
+      </div>
     </div> 
-
-    <div id="myDivbarplot"></div>
-    <div id="myDivbarplot2"></div>
-    <div id="myDivbarplot3"></div>
-
 
     <h4>Memory</h4>
     <ul class="nav nav-tabs" id="memplot_tabs" role="tablist">
@@ -267,7 +261,17 @@
         <a class="nav-link" id="pctmemplot_tablink" data-toggle="tab" href="#pctmemplot_tabpanel" role="tab" aria-controls="pctmemplot_tabpanel" aria-expanded="true">
           % RAM Allocated
         </a>
+      </li>          
+      <li class="nav-item">
+        <a class="nav-link" id="mempercore_tablink" data-toggle="tab" href="#mempercore_tabpanel" role="tab" aria-controls="mempercore_tabpanel" aria-expanded="true">
+          RAM per CPU
+        </a>
       </li>
+      <li class="nav-item">
+        <a class="nav-link" id="meminfos_tablink" data-toggle="tab" href="#meminfos_tabpanel" role="tab" aria-controls="meminfos_tabpanel" aria-expanded="true">
+          Infos
+        </a>
+      </li>         
     </ul>
     <div class="tab-content" id="memplot_tabcontent">
       <div class="tab-pane fade show active" id="memplotlot_tabpanel" role="tabpanel">
@@ -275,10 +279,16 @@
       </div>
       <div class="tab-pane fade" id="pctmemplot_tabpanel" role="tabpanel">
         <div id="pctmemplot"></div>
-      </div>
+      </div>        
       <div class="tab-pane fade" id="vmemplot_tabpanel" role="tabpanel">
         <div id="vmemplot"></div>
       </div>
+      <div class="tab-pane fade" id="mempercore_tabpanel" role="tabpanel">
+        <div id="mempercore"></div>
+      </div>
+      <div class="tab-pane fade" id="meminfos_tabpanel" role="tabpanel">
+        <div id="meminfos"></div>
+      </div>      
     </div>
 
     <h4 id="timeplot_header">Job Duration</h4>
@@ -306,15 +316,30 @@
     <h4 id="readwriteplot_header">I/O</h4>
     <ul class="nav nav-tabs" id="readwriteplot_tabs" role="tablist">
       <li class="nav-item">
-        <a class="nav-link active" id="readplot_tablink" data-toggle="tab" href="#readplot_tabpanel" role="tab" aria-controls="readplot_tabpanel" aria-expanded="true">
+        <a class="nav-link active" id="readplot_tablink" data-toggle="tab" href="#readplot_tabpanel" role="tab" aria-controls="readplot_tabpanel" aria-expanded="false">
           Read
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" id="writeplot_tablink" data-toggle="tab" href="#writeplot_tabpanel" role="tab" aria-controls="writeplot_tabpanel" aria-expanded="false">
+        <a class="nav-link" id="writeplot_tablink" data-toggle="tab" href="#writeplot_tabpanel" role="tab" aria-cont  rols="writeplot_tabpanel" aria-expanded="true">
           Write
         </a>
       </li>
+      <li class="nav-item">
+        <a class="nav-link" id="totalreadplot_tablink" data-toggle="tab" href="#totalreadplot_tabpanel" role="tab" aria-controls="totalreadplot_tabpanel" aria-expanded="true">
+          Total Read
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="totalwriteplot_tablink" data-toggle="tab" href="#totalwriteplot_tabpanel" role="tab" aria-controls="totalwriteplot_tabpanel" aria-expanded="true">
+          Total Write
+        </a>
+      </li>      
+      <li class="nav-item">
+        <a class="nav-link" id="ioinfos_tablink" data-toggle="tab" href="#ioinfos_tabpanel" role="tab" aria-controls="ioinfos_tabpanel" aria-expanded="true">
+          Infos
+        </a>
+      </li>        
     </ul>
     <div class="tab-content" id="readwriteplot_tabcontent">
       <div class="tab-pane fade show active" id="readplot_tabpanel" role="tabpanel">
@@ -323,6 +348,15 @@
       <div class="tab-pane fade" id="writeplot_tabpanel" role="tabpanel">
         <div id="writeplot"></div>
       </div>
+      <div class="tab-pane fade" id="totalreadplot_tabpanel" role="tabpanel">
+        <div id="totalreadplot"></div>
+      </div>
+      <div class="tab-pane fade" id="totalwriteplot_tabpanel" role="tabpanel">
+        <div id="totalwriteplot"></div>
+      </div>      
+      <div class="tab-pane fade" id="ioinfos_tabpanel" role="tabpanel">
+        <div id="ioinfos"></div>
+      </div>      
     </div>
 
     <div id="table-container">
