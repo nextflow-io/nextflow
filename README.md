@@ -1,6 +1,8 @@
 Nextflow
 ========
 
+[![Build Status](https://travis-ci.org/nextflow-io/nextflow.svg?branch=master)](https://travis-ci.org/nextflow-io/nextflow)
+
 *"Dataflow variables are spectacularly expressive in concurrent programming"*
 <br>[Henri E. Bal , Jennifer G. Steiner , Andrew S. Tanenbaum](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.145.7873)
 
