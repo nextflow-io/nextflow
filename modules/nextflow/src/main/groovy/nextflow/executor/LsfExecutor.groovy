@@ -35,6 +35,27 @@ class LsfExecutor extends AbstractGridExecutor {
 
     private static char BLANK = ' ' as char
 
+    // parse the memory units from $LSF_ENVDIR/lsf.conf
+    def getLSF_memoryUnit() {
+        // assuming $LSF_ENVDIR/lsf.conf exists
+        def lsf_config = new File(System.getenv("$LSF_ENVDIR").toString() + "/lsf.conf")   // should write check to throw informative error if $$LSF_ENVDIR/lsf.conf not found
+        def lines = file1.readLines()
+        def found = lines.find{ line-> line =~ /LSF_UNIT_FOR_LIMITS/ }
+        def memory_units = found.split('LSF_UNIT_FOR_LIMITS=')[1]
+        return memory_units
+    }
+
+    /**
+     * Add an init method in the LsfExecutor overriding the base init() in AbstractGridExecutor.groovy
+    */
+    @Override
+    void init() {
+        super.init()
+        queueInterval = session.getQueueStatInterval(name)
+        log.debug "Creating executor '$name' > queue-stat-interval: ${queueInterval}"
+        def memory_lsf_unit_for_limits = getLSF_mermoryUnit()
+    }
+
     /**
      * Gets the directives to submit the specified task to the cluster for execution
      *
@@ -69,18 +90,57 @@ class LsfExecutor extends AbstractGridExecutor {
             // is divided by the number of used cpus (processes)
             if( task.config.cpus > 1 && !perJobMemLimit ) {
                 long bytes = mem.toBytes().intdiv(task.config.cpus as int)
-                result << '-M' << String.valueOf(MemoryUnit.of(bytes).toMega())
+                // patch in order to check memory units
+                // check memory_lsf_unit_for_limits whether ['KB', 'MB', 'GB', 'TB']
+                if (memory_lsf_unit_for_limits.toUpperCase() in ['KB']){
+                    result << '-M' << String.valueOf(MemoryUnit.of(bytes).toKilo())
+                    result << '-R' << "select[mem>=${mem.toKilo()}] rusage[mem=${mem.toKilo()}]".toString()
+                }
+                else if (memory_lsf_unit_for_limits.toUpperCase() in ['MB']){
+                    result << '-M' << String.valueOf(MemoryUnit.of(bytes).toMega())
+                    result << '-R' << "select[mem>=${mem.toMega()}] rusage[mem=${mem.toMega()}]".toString()
+                }
+                else if (memory_lsf_unit_for_limits.toUpperCase() in ['GB']){
+                    result << '-M' << String.valueOf(MemoryUnit.of(bytes).toGiga())
+                    result << '-R' << "select[mem>=${mem.toGiga()}] rusage[mem=${mem.toGiga()}]".toString()
+                }
+                else { 
+                    new throw Exception ("LSF_UNIT_FOR_LIMITS not in KB, MB, or GB. Check variable $LSF_ENVDIR/lsf.conf")
+                }
             }
             else {
-                result << '-M' << String.valueOf(mem.toMega())
+                if (memory_lsf_unit_for_limits.toUpperCase() in ['KB']){
+                    result << '-M' << String.valueOf(MemoryUnit.of(bytes).toKilo())
+                    result << '-R' << "select[mem>=${mem.toKilo()}] rusage[mem=${mem.toKilo()}]".toString()
+                }
+                else if (memory_lsf_unit_for_limits.toUpperCase() in ['MB']){
+                    result << '-M' << String.valueOf(MemoryUnit.of(bytes).toMega())
+                    result << '-R' << "select[mem>=${mem.toMega()}] rusage[mem=${mem.toMega()}]".toString()
+                }
+                else if (memory_lsf_unit_for_limits.toUpperCase() in ['GB']){
+                    result << '-M' << String.valueOf(MemoryUnit.of(bytes).toGiga())
+                    result << '-R' << "select[mem>=${mem.toGiga()}] rusage[mem=${mem.toGiga()}]".toString()
+                }
+                else { 
+                    new throw Exception ("LSF_UNIT_FOR_LIMITS not in KB, MB, or GB. Check variable $LSF_ENVDIR/lsf.conf")
+                }
             }
-
-            result << '-R' << "select[mem>=${mem.toMega()}] rusage[mem=${mem.toMega()}]".toString()
         }
 
         def disk = task.config.getDisk()
         if( disk ) {
-            result << '-R' << "select[tmp>=$disk.mega] rusage[tmp=$disk.mega]".toString()
+            if (memory_lsf_unit_for_limits.toUpperCase() in ['KB']){
+                result << '-R' << "select[tmp>=$disk.kilo] rusage[tmp=$disk.kilo]".toString()
+            }
+            else if (memory_lsf_unit_for_limits.toUpperCase() in ['MB']){
+                result << '-R' << "select[tmp>=$disk.mega] rusage[tmp=$disk.mega]".toString()
+            }
+            else if (memory_lsf_unit_for_limits.toUpperCase() in ['GB']){
+                result << '-R' << "select[tmp>=$disk.giga] rusage[tmp=$disk.giga]".toString()
+            }
+            else { 
+                new throw Exception ("LSF_UNIT_FOR_LIMITS not in KB, MB, or GB. Check variable $LSF_ENVDIR/lsf.conf")
+            }
         }
 
         // -- the job name
