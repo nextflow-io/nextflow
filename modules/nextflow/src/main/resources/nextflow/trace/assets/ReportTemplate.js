@@ -302,7 +302,7 @@ $(function() {
 
   // cpuinfos table
   var cpuinfos_values = [
-    ['#_completed_tasks', '#_CPUs_requested', 'CPU_time_used', 'CPU_time_allocated', 'CPU_efficiency_(%)'],
+    ['# completed tasks', '# CPUs requested', 'CPU time used', 'CPU time allocated', 'CPU efficiency (%)'],
     [nb_completed_task, completed_task_sum_cpus, make_duration(completed_task_sum_cputime), make_duration(completed_task_sum_cputimerequested), workflow_pctcpu_efficiency.toFixed(1)]]
 
   var completed_task_cpuinfos_table = [{
@@ -318,8 +318,8 @@ $(function() {
   
   // meminfos table
   var meminfos_values = [
-    ['#_completed_tasks', 'Overall_memory_used', 'Overall_memory_requested', 'Number_of_processes', 'Number_of_processes_with_unset_memory'],
-    [nb_completed_task, make_memory(norm_mem([completed_task_sum_peak_rss])).toString().replace(' ', '_'), make_memory(norm_mem([completed_task_sum_memoryrequested])).toString().replace(' ', '_'), number_of_processes, completed_task_sum_memory_not_set]]
+    ['# completed_tasks', 'Overall memory used', 'Overall memory requested', 'Number of processes', 'Number of processes with unset memory'],
+    [nb_completed_task, make_memory(norm_mem([completed_task_sum_peak_rss])), make_memory(norm_mem([completed_task_sum_memoryrequested])), number_of_processes, completed_task_sum_memory_not_set]]
     
 
   var completed_task_meminfos_table = [{
@@ -329,14 +329,13 @@ $(function() {
       values: meminfos_values,
       align: "right",
       line: { color: "black", width: 1 },
-      font: {family: "Arial", size: 10, color: ["red"]}
     }
   }]
 
  // ioinfos table
  var ioinfos_values = [
-  ['#_completed_tasks', 'Overall_read', 'Overall_write'],
-  [nb_completed_task, make_memory(norm_mem([completed_task_sum_rchar])).toString().replace(' ', '_'), make_memory(norm_mem([completed_task_sum_rchar])).toString().replace(' ', '_')]]
+  ['# completed tasks', 'Overall read', 'Overall write'],
+  [nb_completed_task, make_memory(norm_mem([completed_task_sum_rchar])), make_memory(norm_mem([completed_task_sum_rchar]))]]
   
 
 var completed_task_ioinfos_table = [{
