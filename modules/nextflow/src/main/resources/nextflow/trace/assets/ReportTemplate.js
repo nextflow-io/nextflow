@@ -99,26 +99,17 @@ $(function() {
   Plotly.newPlot('timeplot', time_raw_data, { title: 'Task execution real-time', yaxis: {title: 'Execution time (minutes)', tickformat: '.1f', rangemode: 'tozero'} });
   Plotly.newPlot('readplot', reads_raw_data, { title: 'Number of bytes read', yaxis: {title: 'Read bytes', tickformat: '.4s', rangemode: 'tozero'} });
 
-  ////////////////////////////
-  // Global information
-  ////////////////////////////
 
   var pname_order_in_cpuplot = [];
   for (pname in window.data.summary) {
     pname_order_in_cpuplot.push(pname);
   }
 
-
   var nb_task = window.data.trace.length;
   var nb_completed_task = 0;
-
- // var completed_task = { pctcpu: [], cpus: [], realtime: [] };
   var completed_task_byprocess = {};
 
-  //var mem_box = [];
-  //mem_box.push({y: smry.cpu, name: pname, type:'box', boxmean: true, boxpoints: false});
 
-  console.log(window.data.trace);
   for (var i = 0; i < nb_task; i++) {
 
     var pname;
@@ -127,48 +118,48 @@ $(function() {
 
       nb_completed_task++;
 
-      // completed_task["pctcpu"].push(Number(window.data.trace[i]["%cpu"]));
-      // completed_task["cpus"].push(Number(window.data.trace[i]["cpus"]));
-      // completed_task["realtime"].push(Number(window.data.trace[i]["realtime"]));
-
       pname = window.data.trace[i]["process"];
 
       if (!completed_task_byprocess[pname]) {
 
-        completed_task_byprocess[pname] = { 
-          sum_cputime: 0, 
+        completed_task_byprocess[pname] = {
+          sum_cputime: 0,
           sum_cputimerequested: 0,
           pctcpu: [],
           cpus: [],
-          peak_rss_per_cpu: [],
           peak_rss: [],
-          memory: [],
-          sum_wchar: 0,
-          sum_rchar: 0,
+          peak_rss_per_cpu: [],
           memory: [],
           memory_not_set: 0,
+          sum_rchar: 0,
+          sum_wchar: 0,
           nb_task: 0
         };
-
       }
 
-      completed_task_byprocess[pname]["pctcpu"].push(Number(window.data.trace[i]["%cpu"]));
-      completed_task_byprocess[pname]["cpus"].push(Number(window.data.trace[i]["cpus"]));
-      completed_task_byprocess[pname]["sum_cputime"] += Number(window.data.trace[i]["realtime"]) * Number(window.data.trace[i]["%cpu"]) / 100;
-      completed_task_byprocess[pname]["sum_cputimerequested"] += Number(window.data.trace[i]["realtime"]) * Number(window.data.trace[i]["cpus"]);
-      completed_task_byprocess[pname]["peak_rss_per_cpu"].push(Number(window.data.trace[i]["peak_rss"]) / Number(window.data.trace[i]["cpus"]));
-      completed_task_byprocess[pname]["peak_rss"].push(Number(window.data.trace[i]["peak_rss"]));
-      completed_task_byprocess[pname]["sum_wchar"] += Number(window.data.trace[i]["wchar"]);
-      completed_task_byprocess[pname]["sum_rchar"] += Number(window.data.trace[i]["rchar"]);
       completed_task_byprocess[pname]["nb_task"] += 1;
 
+      // cpu
+      completed_task_byprocess[pname]["sum_cputime"] += Number(window.data.trace[i]["realtime"]) * Number(window.data.trace[i]["%cpu"]) / 100;
+      completed_task_byprocess[pname]["sum_cputimerequested"] += Number(window.data.trace[i]["realtime"]) * Number(window.data.trace[i]["cpus"]);
+      completed_task_byprocess[pname]["pctcpu"].push(Number(window.data.trace[i]["%cpu"]));
+      completed_task_byprocess[pname]["cpus"].push(Number(window.data.trace[i]["cpus"]));
 
-      if(window.data.trace[i]["memory"] == '-' ){
+      // mem
+      completed_task_byprocess[pname]["peak_rss"].push(Number(window.data.trace[i]["peak_rss"]));
+      completed_task_byprocess[pname]["peak_rss_per_cpu"].push(Number(window.data.trace[i]["peak_rss"]) / Number(window.data.trace[i]["cpus"]));
+
+      if (window.data.trace[i]["memory"] == '-') {
         completed_task_byprocess[pname]["memory_not_set"] = 1;
         completed_task_byprocess[pname]["memory"] = [0];
       } else {
         completed_task_byprocess[pname]["memory"].push(Number(window.data.trace[i]["memory"]));
       }
+
+      // io
+      completed_task_byprocess[pname]["sum_rchar"] += Number(window.data.trace[i]["rchar"]);
+      completed_task_byprocess[pname]["sum_wchar"] += Number(window.data.trace[i]["wchar"]);
+
     }
   }
 
@@ -177,75 +168,81 @@ $(function() {
     return x + y;
   }
 
-  var completed_task_sum_wchar = 0;
-  var completed_task_sum_rchar = 0;
-  var completed_task_sum_memory = 0; 
-  var completed_task_sum_peak_rss = 0;
-  var completed_task_peak_rss_per_cpu = [];
-  var completed_task_wchar = [];
-  var completed_task_rchar = [];
 
+  //cpu
   var completed_task_cputime = [];
   var completed_task_cputimerequested = [];
   var completed_task_pname = [];
   var completed_task_sum_cputime = 0;
   var completed_task_sum_cputimerequested = 0;
   var completed_task_sum_cpus = 0;
+  var completed_task_cputime_humanized = [];
+
+  // mem
+  var completed_task_sum_memory = 0;
+  var completed_task_sum_peak_rss = 0;
+  var completed_task_peak_rss_per_cpu = [];
   var completed_task_sum_memory_not_set = 0;
   var completed_task_sum_memoryrequested = 0;
-  var completed_task_cputime_humanized = [];
+
+  // io
+  var completed_task_wchar = [];
+  var completed_task_rchar = [];
+  var completed_task_sum_wchar = 0;
+  var completed_task_sum_rchar = 0;
+
+
   var pname;
-
-  completed_task_prpc_boxplot = [];
-
   var d3colors = Plotly.d3.scale.category10();
   var completed_task_color = [];
-
-  //var memory_not_set;
-
   var number_of_processes = pname_order_in_cpuplot.length;
 
   for (var i = 0; i < number_of_processes; i++) {
 
-    var i_color = (i % 10) ;
-   
+    var i_color = (i % 10);
+
     completed_task_color.push(d3colors(i_color));
 
     pname = pname_order_in_cpuplot[i];
-    completed_task_wchar.push(completed_task_byprocess[pname]["sum_wchar"]);
-    completed_task_rchar.push(completed_task_byprocess[pname]["sum_rchar"]);
+    completed_task_pname.push(pname);
 
+    // cpu
     completed_task_cputime.push(moment.duration(completed_task_byprocess[pname]["sum_cputime"]).asMinutes());
     completed_task_cputime_humanized.push(make_duration(completed_task_byprocess[pname]["sum_cputime"]));
     completed_task_cputimerequested.push(moment.duration(completed_task_byprocess[pname]["sum_cputimerequested"]).asMinutes());
-    completed_task_pname.push(pname);
+    completed_task_sum_cputimerequested += completed_task_byprocess[pname]["sum_cputimerequested"];
     completed_task_sum_cputime += completed_task_byprocess[pname]["sum_cputime"];
     completed_task_sum_cpus = completed_task_byprocess[pname]["cpus"].reduce(add, completed_task_sum_cpus);
-    completed_task_sum_cputimerequested += completed_task_byprocess[pname]["sum_cputimerequested"];
-    completed_task_sum_memory_not_set += completed_task_byprocess[pname]["memory_not_set"];
- 
-    completed_task_sum_memoryrequested += completed_task_byprocess[pname]["memory"].reduce(add, completed_task_sum_memoryrequested);
 
+    // mem
+    completed_task_sum_memory_not_set += completed_task_byprocess[pname]["memory_not_set"];
+    completed_task_sum_memoryrequested += completed_task_byprocess[pname]["memory"].reduce(add, completed_task_sum_memoryrequested);
     completed_task_sum_peak_rss = completed_task_byprocess[pname]["peak_rss"].reduce(add, completed_task_sum_peak_rss);
+    completed_task_peak_rss_per_cpu.push(completed_task_byprocess[pname]["peak_rss_per_cpu"].reduce(add, 0) / completed_task_byprocess[pname]["peak_rss_per_cpu"].length);
+
+    // io
+    completed_task_wchar.push(completed_task_byprocess[pname]["sum_wchar"]);
+    completed_task_rchar.push(completed_task_byprocess[pname]["sum_rchar"]);
     completed_task_sum_wchar += completed_task_byprocess[pname]["sum_wchar"];
     completed_task_sum_rchar += completed_task_byprocess[pname]["sum_rchar"];
-    completed_task_prpc_boxplot.push({y: norm_mem(completed_task_byprocess[pname]["peak_rss_per_cpu"]), name: pname, type:'box', boxmean: true, boxpoints: false});
 
   }
 
-
+  console.log(completed_task_peak_rss_per_cpu);
 
   var completed_task_cputime_text = [];
-  var completed_task_wchar_text = [];
+  var completed_task_peak_rss_per_cpu_text = [];
   var completed_task_rchar_text = [];
+  var completed_task_wchar_text = [];
 
   for (var i = 0; i < completed_task_cputime_humanized.length; i++) {
 
     var pctcputime;
     pctcputime = 100 * completed_task_cputime[i] / moment.duration(completed_task_sum_cputime).asMinutes();
     completed_task_cputime_text[i] = completed_task_cputime_humanized[i] + ' (' + pctcputime.toFixed(1).toString() + '%)';
-    completed_task_wchar_text[i] = make_memory(completed_task_wchar[i]);
-    completed_task_rchar_text[i] = make_memory(completed_task_rchar[i]);
+    completed_task_peak_rss_per_cpu_text[i] = make_memory(completed_task_peak_rss_per_cpu[i]) 
+    completed_task_rchar_text[i] = make_memory(completed_task_rchar[i]) + ' (' + (100 * completed_task_rchar[i] / completed_task_sum_rchar).toFixed(1).toString() + '%)';
+    completed_task_wchar_text[i] = make_memory(completed_task_wchar[i]) + ' (' + (100 * completed_task_wchar[i] / completed_task_sum_wchar).toFixed(1).toString() + '%)';
 
   }
 
@@ -254,103 +251,71 @@ $(function() {
 
 
   // Graph data
-  var completed_task_cputime_plot = [{
-    x: completed_task_pname,
-    y: completed_task_cputime,
-    text: completed_task_cputime_text,
-    textinfo: 'text',
-    hoverinfo: 'text',
-    marker: {
-      color: completed_task_color,
-    },
-    type: 'bar'
-  }];
 
-  var completed_task_wchar_plot = [{
-    x: completed_task_pname,
-    y: completed_task_wchar,
-    text: completed_task_wchar_text,
-    textinfo: 'text',
-    hoverinfo: 'text',
-    marker: {
-      color: completed_task_color,
-    },
-    type: 'bar'
-  }];
+  function make_plot_data(x, y, text, color) {
 
-  var completed_task_rchar_plot = [{
-    x: completed_task_pname,
-    y: completed_task_rchar,
-    text: completed_task_rchar_text,
-    textinfo: 'text',
-    hoverinfo: 'text',
-    marker: {
-      color: completed_task_color,
-    },
-    type: 'bar'
-  }];
+    return [{
+      x: x,
+      y: y,
+      text: text,
+      textinfo: 'text',
+      hoverinfo: 'text',
+      marker: {
+        color: color,
+      },
+      type: 'bar',
+      opacity: 0.8
+    }];
 
-
-  var header_format;
-
-  header_format = {
-    values: [["Info"], ["value"]],
-    align: "left",
-    line: { width: 1, color: 'black' },
-    fill: { color: "grey" },
   }
 
-  // cpuinfos table
+  var completed_task_cputime_plot = make_plot_data(completed_task_pname, completed_task_cputime, completed_task_cputime_text, completed_task_color);
+  var completed_task_rchar_plot = make_plot_data(completed_task_pname, completed_task_rchar, completed_task_rchar_text, completed_task_color);
+  var completed_task_wchar_plot = make_plot_data(completed_task_pname, completed_task_wchar, completed_task_wchar_text, completed_task_color);
+  var completed_task_peak_rss_per_cpu_plot = make_plot_data(completed_task_pname, completed_task_peak_rss_per_cpu, completed_task_peak_rss_per_cpu_text, completed_task_color);
+
+
+  function make_table_data(infos_values) {
+
+    return [{
+      type: 'table',
+      columnorder: [1, 2],
+      columnwidth: [200, 100],
+      header: {
+        values: [["Info"], ["value"]],
+        align: "left",
+        line: { width: 1, color: 'black' },
+        fill: { color: "grey" },
+        height: 30,
+        font: {size: 14}
+      },
+      cells: {
+        values: infos_values,
+        align: "right",
+        line: { color: "black", width: 1 },
+        height: 30,
+        font: {size: 14}
+      }
+    }]
+
+  }
+
+  // Table data
   var cpuinfos_values = [
     ['# completed tasks', '# CPUs requested', 'CPU time used', 'CPU time allocated', 'CPU efficiency (%)'],
-    [nb_completed_task, completed_task_sum_cpus, make_duration(completed_task_sum_cputime), make_duration(completed_task_sum_cputimerequested), workflow_pctcpu_efficiency.toFixed(1)]]
+    [nb_completed_task, completed_task_sum_cpus, make_duration(completed_task_sum_cputime), make_duration(completed_task_sum_cputimerequested), workflow_pctcpu_efficiency.toFixed(1)]];
+  var completed_task_cpuinfos_table = make_table_data(cpuinfos_values);
 
-  var completed_task_cpuinfos_table = [{
-    type: 'table',
-    header: header_format,
-    cells: {
-      values: cpuinfos_values,
-      align: "right",
-      line: { color: "black", width: 1 },
-    }
-  }]
-
-  
-  // meminfos table
   var meminfos_values = [
-    ['# completed_tasks', 'Overall memory used', 'Overall memory requested', 'Number of processes', 'Number of processes with unset memory'],
-    [nb_completed_task, make_memory([completed_task_sum_peak_rss]), make_memory([completed_task_sum_memoryrequested]), number_of_processes, completed_task_sum_memory_not_set]]
+    ['# completed_tasks', '# processes', '# processes without memory directive', 'RAM used', 'RAM requested'],
+    [nb_completed_task, number_of_processes, completed_task_sum_memory_not_set, make_memory([completed_task_sum_peak_rss]), make_memory([completed_task_sum_memoryrequested])]];
+  var completed_task_meminfos_table = make_table_data(meminfos_values);
 
-  var completed_task_meminfos_table = [{
-    type: 'table',
-    header: header_format,
-    cells: {
-      values: meminfos_values,
-      align: "right",
-      line: { color: "black", width: 1 },
-    }
-  }]
+  var ioinfos_values = [
+    ['# completed tasks', 'Total of read data', 'Total of written data'],
+    [nb_completed_task, make_memory([completed_task_sum_rchar]), make_memory([completed_task_sum_wchar])]];
+  var completed_task_ioinfos_table = make_table_data(ioinfos_values);
 
- // ioinfos table
- var ioinfos_values = [
-  ['# completed tasks', 'Overall read', 'Overall write'],
-  [nb_completed_task, make_memory([completed_task_sum_rchar]), make_memory([completed_task_sum_wchar])]]
-  
-
-var completed_task_ioinfos_table = [{
-  type: 'table',
-  header: header_format,
-  cells: {
-    values: ioinfos_values,
-    align: "right",
-    line: { color: "black", width: 1 },
-  }
-}]
-
-
-//////////////////////  
-// fin insert test code
-///////////////////////
 
   // Only plot tabbed plots when shown
   $('#pctcpuplot_tablink').on('shown.bs.tab', function (e) {
@@ -360,12 +325,12 @@ var completed_task_ioinfos_table = [{
   });
   $('#cputimeplot_tablink').on('shown.bs.tab', function (e) {
     if($('#cputimeplot').is(':empty')){
-      Plotly.newPlot('cputimeplot', completed_task_cputime_plot, { title: 'CPU time', yaxis: { title: 'CPU time (minutes)', tickformat: '.1f', rangemode: 'tozero' } });
+      Plotly.newPlot('cputimeplot', completed_task_cputime_plot, { title: 'Total CPU Time', yaxis: { title: 'CPU time (minutes)', tickformat: '.1f', rangemode: 'tozero' } });
     }
   });
   $('#cpuinfos_tablink').on('shown.bs.tab', function (e) {
     if($('#cpuinfos').is(':empty')){
-      Plotly.newPlot('cpuinfos', completed_task_cpuinfos_table, { title: 'Worflow information'});
+      Plotly.newPlot('cpuinfos', completed_task_cpuinfos_table, { title: 'Workflow Statistics Summary'});
     }
   });
   $('#pctmemplot_tablink').on('shown.bs.tab', function (e) {
@@ -380,13 +345,13 @@ var completed_task_ioinfos_table = [{
   });
   $('#mempercore_tablink').on('shown.bs.tab', function (e) {
     if($('#mempercore').is(':empty')){
-      Plotly.newPlot('mempercore', completed_task_prpc_boxplot, { title: 'RAM per core', yaxis: { title: 'Memory', tickformat: '.4s', rangemode: 'tozero' } });
+      Plotly.newPlot('mempercore', completed_task_peak_rss_per_cpu_plot, { title: 'RAM per Core', yaxis: { title: 'Memory', tickformat: '.4s', rangemode: 'tozero' } });
 
     }
   });
   $('#meminfos_tablink').on('shown.bs.tab', function (e) {
     if($('#meminfos').is(':empty')){
-      Plotly.newPlot('meminfos', completed_task_meminfos_table, { title: 'Worflow information'});
+      Plotly.newPlot('meminfos', completed_task_meminfos_table, { title: 'Workflow Statistics Summary'});
     }
   });
   $('#pcttimeplot_tablink').on('shown.bs.tab', function (e) {
@@ -399,19 +364,19 @@ var completed_task_ioinfos_table = [{
         Plotly.newPlot('writeplot', writes_raw_data, { title: 'Number of bytes written', yaxis: {title: 'Written bytes', tickformat: '.4s', rangemode: 'tozero'}});
     }
   });
-  $('#totalwriteplot_tablink').on('shown.bs.tab', function (e) {
-    if($('#totalwriteplot').is(':empty')){
-      Plotly.newPlot('totalwriteplot', completed_task_wchar_plot, { title: 'Number of bytes written', yaxis: { title: 'witten bytes', tickformat: '.4s', rangemode: 'tozero' } });
-    }
-  });
   $('#totalreadplot_tablink').on('shown.bs.tab', function (e) {
     if($('#totalreadplot').is(':empty')){
-      Plotly.newPlot('totalreadplot', completed_task_rchar_plot, { title: 'Number of bytes read', yaxis: { title: 'Read bytes', tickformat: '.4s', rangemode: 'tozero' } });
+      Plotly.newPlot('totalreadplot', completed_task_rchar_plot, { title: 'Total number of bytes read', yaxis: { title: 'Read bytes', tickformat: '.4s', rangemode: 'tozero' } });
     }
-  }); 
+  });
+  $('#totalwriteplot_tablink').on('shown.bs.tab', function (e) {
+    if($('#totalwriteplot').is(':empty')){
+      Plotly.newPlot('totalwriteplot', completed_task_wchar_plot, { title: 'Total number of bytes written', yaxis: { title: 'witten bytes', tickformat: '.4s', rangemode: 'tozero' } });
+    }
+  });
   $('#ioinfos_tablink').on('shown.bs.tab', function (e) {
     if($('#ioinfos').is(':empty')){
-      Plotly.newPlot('ioinfos', completed_task_ioinfos_table, { title: 'Worflow information'});
+      Plotly.newPlot('ioinfos', completed_task_ioinfos_table, { title: 'Workflow Statistics Summary'});
     }
   });
 
