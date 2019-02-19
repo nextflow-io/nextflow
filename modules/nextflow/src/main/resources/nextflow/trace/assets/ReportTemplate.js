@@ -319,8 +319,7 @@ $(function() {
   // meminfos table
   var meminfos_values = [
     ['# completed_tasks', 'Overall memory used', 'Overall memory requested', 'Number of processes', 'Number of processes with unset memory'],
-    [nb_completed_task, make_memory(norm_mem([completed_task_sum_peak_rss])), make_memory(norm_mem([completed_task_sum_memoryrequested])), number_of_processes, completed_task_sum_memory_not_set]]
-    
+    [nb_completed_task, make_memory([completed_task_sum_peak_rss]), make_memory([completed_task_sum_memoryrequested]), number_of_processes, completed_task_sum_memory_not_set]]
 
   var completed_task_meminfos_table = [{
     type: 'table',
@@ -335,7 +334,7 @@ $(function() {
  // ioinfos table
  var ioinfos_values = [
   ['# completed tasks', 'Overall read', 'Overall write'],
-  [nb_completed_task, make_memory(norm_mem([completed_task_sum_rchar])), make_memory(norm_mem([completed_task_sum_rchar]))]]
+  [nb_completed_task, make_memory([completed_task_sum_rchar]), make_memory([completed_task_sum_wchar])]]
   
 
 var completed_task_ioinfos_table = [{
