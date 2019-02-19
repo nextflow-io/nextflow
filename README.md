@@ -77,7 +77,7 @@ A key goal of *Nextflow* is to enable portable and reproducible workflows. Both 
 
 
 ```nextflow
-process{
+process samtools {
   container='biocontainers/samtools:1.3.1'
 
   """
@@ -114,9 +114,9 @@ process {
 }
 ```
 
-In doing that, processes will be executed as SGE jobs by using the `qsub` command, and so your pipeline will behave like any
-other SGE job script, with the benefit that *Nextflow* will automatically and transparently manage the processes
-synchronisation, file(s) staging/un-staging, etc.  
+In doing that, processes will be executed by Nextflow as SGE jobs using the `qsub` command. Your 
+pipeline will behave like any other SGE job script, with the benefit that *Nextflow* will 
+automatically and transparently manage the processes synchronisation, file(s) staging/un-staging, etc.  
 
 
 Cloud support
