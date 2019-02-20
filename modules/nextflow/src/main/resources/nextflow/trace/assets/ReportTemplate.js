@@ -179,7 +179,6 @@ $(function() {
   var completed_task_cputime_humanized = [];
 
   // mem
-  var completed_task_sum_memory = 0;
   var completed_task_sum_peak_rss = 0;
   var completed_task_peak_rss_per_cpu = [];
   var completed_task_sum_memory_not_set = 0;
@@ -216,7 +215,7 @@ $(function() {
 
     // mem
     completed_task_sum_memory_not_set += completed_task_byprocess[pname]["memory_not_set"];
-    completed_task_sum_memoryrequested += completed_task_byprocess[pname]["memory"].reduce(add, completed_task_sum_memoryrequested);
+    completed_task_sum_memoryrequested = completed_task_byprocess[pname]["memory"].reduce(add, completed_task_sum_memoryrequested);
     completed_task_sum_peak_rss = completed_task_byprocess[pname]["peak_rss"].reduce(add, completed_task_sum_peak_rss);
     completed_task_peak_rss_per_cpu.push(completed_task_byprocess[pname]["peak_rss_per_cpu"].reduce(add, 0) / completed_task_byprocess[pname]["peak_rss_per_cpu"].length);
 
@@ -248,7 +247,11 @@ $(function() {
 
 
   var workflow_pctcpu_efficiency = 100 * completed_task_sum_cputime / completed_task_sum_cputimerequested;
+  var workflow_pctram_efficiency = '-';
 
+  if (completed_task_sum_memoryrequested != 0){
+    workflow_pctram_efficiency = 100 * completed_task_sum_peak_rss / completed_task_sum_memoryrequested;
+  }
 
   // Graph data
 
@@ -307,8 +310,8 @@ $(function() {
   var completed_task_cpuinfos_table = make_table_data(cpuinfos_values);
 
   var meminfos_values = [
-    ['# completed_tasks', '# processes', '# processes without memory directive', 'RAM used', 'RAM requested'],
-    [nb_completed_task, number_of_processes, completed_task_sum_memory_not_set, make_memory([completed_task_sum_peak_rss]), make_memory([completed_task_sum_memoryrequested])]];
+    ['# completed_tasks', '# processes', '# processes without memory directive', 'RAM used', 'RAM requested', 'RAM efficiency (%)'],
+    [nb_completed_task, number_of_processes, completed_task_sum_memory_not_set, make_memory([completed_task_sum_peak_rss]), make_memory([completed_task_sum_memoryrequested]), workflow_pctram_efficiency.toFixed(1)]];
   var completed_task_meminfos_table = make_table_data(meminfos_values);
 
   var ioinfos_values = [
