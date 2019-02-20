@@ -50,8 +50,8 @@ class LsfExecutor extends AbstractGridExecutor {
             if ( line.startsWith("LSF_UNIT_FOR_LIMITS=") ){
                 def memoryUnits = line.split("LSF_UNIT_FOR_LIMITS=")[1]
             }
+            return(memoryUnits) 
         }
-        return(memoryUnits)
     }
 
 
@@ -63,7 +63,7 @@ class LsfExecutor extends AbstractGridExecutor {
         super.init()
         queueInterval = session.getQueueStatInterval(name)
         log.debug "Creating executor '$name' > queue-stat-interval: ${queueInterval}"
-        def memoryUnitLSF = getLSFmemoryUnits()
+        def memoryUnitLSF = getLSFmemoryUnits() ? : 'MB' 
     }
 
     /**
@@ -94,41 +94,22 @@ class LsfExecutor extends AbstractGridExecutor {
 
         if( task.config.getMemory() ) {
 
-            if ( memoryUnitLSF ){   // if LSF_UNIT_FOR_LIMITS is set by $LSF_ENVDIR/lsf.conf and accessible
-                // parse this unit and use this
-                def mem = task.config.getMemory()
-                // LSF mem limit can be both per-process and per-job
-                if( task.config.cpus > 1 && !perJobMemLimit ) {
-                    long bytes = mem.toBytes().intdiv(task.config.cpus as int)
-                    result << '-M' << String.valueOf(MemoryUnit.of(bytes).toUnit(memoryUnitLSF))
-                }
-                else {
-                    result << '-M' << String.valueOf(mem.toUnit(memoryUnitLSF))
-                }
-                result << '-R' << "select[mem>=${mem.toUnit(memoryUnitLSF)}] rusage[mem=${mem.toUnit(memoryUnitLSF)}]".toString()
-            } else{
-                // use default KB
-                def mem = task.config.getMemory()
-                // LSF mem limit can be both per-process and per-job
-                if( task.config.cpus > 1 && !perJobMemLimit ) {
-                    long bytes = mem.toBytes().intdiv(task.config.cpus as int)
-                    result << '-M' << String.valueOf(MemoryUnit.of(bytes).toKilo())
-                }
-                else {
-                    result << '-M' << String.valueOf(mem.toKilo())
-                }
-                result << '-R' << "select[mem>=${mem.toKilo()}] rusage[mem=${mem.toKilo()}]".toString()
+            // memoryUnitLSF is KB by default or uses unit in LSF_UNIT_FOR_LIMITS set by $LSF_ENVDIR/lsf.conf
+            def mem = task.config.getMemory()
+            // LSF mem limit can be both per-process and per-job
+            if( task.config.cpus > 1 && !perJobMemLimit ) {
+                long bytes = mem.toBytes().intdiv(task.config.cpus as int)
+                result << '-M' << String.valueOf(MemoryUnit.of(bytes).toUnit(memoryUnitLSF))
             }
+            else {
+                result << '-M' << String.valueOf(mem.toUnit(memoryUnitLSF))
+            }
+            result << '-R' << "select[mem>=${mem.toUnit(memoryUnitLSF)}] rusage[mem=${mem.toUnit(memoryUnitLSF)}]".toString()
         }
 
         def disk = task.config.getDisk()
         if( disk ) {
-            if ( memoryUnitLSF ){ 
-                result << '-R' << "select[tmp>=$disk.toUnit(memoryUnitLSF)] rusage[tmp=$disk.toUnit(memoryUnitLSF)]".toString()
-            }
-            else {
-                result << '-R' << "select[tmp>=$disk.kilo] rusage[tmp=$disk.kilo]".toString()   // using the default as kilo              
-            }
+            result << '-R' << "select[tmp>=$disk.toUnit(memoryUnitLSF)] rusage[tmp=$disk.toUnit(memoryUnitLSF)]".toString()
         }
 
         // -- the job name
