@@ -1580,7 +1580,7 @@ For example::
     [B, 2, y]
 
 
-See also `cross`_, `spread`_ and `phase`_.
+See also `join`_, `cross`_, `spread`_ and `phase`_.
 
 .. _operator-concat:
 
