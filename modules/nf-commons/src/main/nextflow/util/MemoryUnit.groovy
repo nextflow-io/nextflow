@@ -95,6 +95,17 @@ class MemoryUnit implements Comparable<MemoryUnit>, Serializable, Cloneable {
 
     }
 
+    /**
+    * Function to parse/convert given memory unit 
+    *
+    * @param unit String expressing memory unit in bytes, e.g. KB, MB, GB
+    */
+    long toUnit(String unit){
+        int p = UNITS.indexOf(unit)
+        return Math.round( size/Math.pow(1024, p) )
+    }
+
+
     long toBytes() {
         size
     }
