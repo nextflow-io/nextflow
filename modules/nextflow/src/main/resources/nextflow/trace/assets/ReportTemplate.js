@@ -246,11 +246,11 @@ $(function() {
   }
 
 
-  var workflow_pctcpu_efficiency = 100 * completed_task_sum_cputime / completed_task_sum_cputimerequested;
+  var workflow_pctcpu_efficiency = (100 * completed_task_sum_cputime / completed_task_sum_cputimerequested).toFixed(1);
   var workflow_pctram_efficiency = '-';
-
+  
   if (completed_task_sum_memoryrequested != 0){
-    workflow_pctram_efficiency = 100 * completed_task_sum_peak_rss / completed_task_sum_memoryrequested;
+    workflow_pctram_efficiency = (100 * completed_task_sum_peak_rss / completed_task_sum_memoryrequested).toFixed(1);
   }
 
   // Graph data
@@ -306,12 +306,12 @@ $(function() {
   // Table data
   var cpuinfos_values = [
     ['# completed tasks', '# CPUs requested', 'CPU time used', 'CPU time allocated', 'CPU efficiency (%)'],
-    [nb_completed_task, completed_task_sum_cpus, make_duration(completed_task_sum_cputime), make_duration(completed_task_sum_cputimerequested), workflow_pctcpu_efficiency.toFixed(1)]];
+    [nb_completed_task, completed_task_sum_cpus, make_duration(completed_task_sum_cputime), make_duration(completed_task_sum_cputimerequested), workflow_pctcpu_efficiency]];
   var completed_task_cpuinfos_table = make_table_data(cpuinfos_values);
 
   var meminfos_values = [
     ['# completed_tasks', '# processes', '# processes without memory directive', 'RAM used', 'RAM requested', 'RAM efficiency (%)'],
-    [nb_completed_task, number_of_processes, completed_task_sum_memory_not_set, make_memory([completed_task_sum_peak_rss]), make_memory([completed_task_sum_memoryrequested]), workflow_pctram_efficiency.toFixed(1)]];
+    [nb_completed_task, number_of_processes, completed_task_sum_memory_not_set, make_memory([completed_task_sum_peak_rss]), make_memory([completed_task_sum_memoryrequested]), workflow_pctram_efficiency]];
   var completed_task_meminfos_table = make_table_data(meminfos_values);
 
   var ioinfos_values = [
