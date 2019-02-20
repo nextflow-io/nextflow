@@ -40,7 +40,7 @@ class LsfExecutor extends AbstractGridExecutor {
     * which should be accessible via all nodes. Otherwise, default is KB
     * -- see https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsf_unit_for_limits.5.html
     */
-    def getLSFmemoryUnits() {
+    protected String getLSFmemoryUnits() {
         // check environment variable exists
         def envDir = System.getenv("LSF_ENVDIR") 
         if ( !envDir ) return null
@@ -49,9 +49,10 @@ class LsfExecutor extends AbstractGridExecutor {
         for (def line : envFile.readLines() ){
             if ( line.startsWith("LSF_UNIT_FOR_LIMITS=") ){
                 def memoryUnits = line.split("LSF_UNIT_FOR_LIMITS=")[1]
-            }
-            return(memoryUnits) 
+                return(memoryUnits)
+            } 
         }
+        if ( !memoryUnits.exists() ) return null   // throw null is cannot parse LSF_UNIT_FOR_LIMITS in $LSF_ENVDIR/lsf.conf
     }
 
 
@@ -63,7 +64,7 @@ class LsfExecutor extends AbstractGridExecutor {
         super.init()
         queueInterval = session.getQueueStatInterval(name)
         log.debug "Creating executor '$name' > queue-stat-interval: ${queueInterval}"
-        def memoryUnitLSF = getLSFmemoryUnits() ? : 'MB' 
+        def memoryUnitLSF = LsfExecutor.getLSFmemoryUnits() ? : 'MB' 
     }
 
     /**
