@@ -42,6 +42,7 @@ class AnsiLogObserverTest extends Specification {
 
         where:
         SUBMIT  | COMPLETED | CACHE | DONE  | ERR   | EXPECTED
+        0       | 0         | 0     | false | false | '> process foo -'
         1       | 0         | 0     | false | false | '> process foo [  0%] 0 of 1'
         1       | 1         | 0     | false | false | '> process foo [100%] 1 of 1'
         10      | 5         | 0     | false | false | '> process foo [ 50%] 5 of 10'
