@@ -55,7 +55,7 @@ class ContainerHandler {
             final normalizedImageName = normalizeSingularityImageName(imageName)
             if( !config.isEnabled() || !normalizedImageName )
                 return normalizedImageName
-            final formats = ['docker', 'shub', 'library']
+            final formats = ['docker', 'docker-daemon', 'shub', 'library']
             final requiresCaching =  formats.any { normalizedImageName.startsWith(it) }
             return requiresCaching ? createCache(this.config, normalizedImageName) : normalizedImageName
         }
