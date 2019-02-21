@@ -192,6 +192,9 @@ $(function() {
   var d3colors = Plotly.d3.scale.category10();
   var completed_task_color = [];
   var number_of_processes = pname_order_in_cpuplot.length;
+  var completed_task_tasknb = [];
+
+  console.log(completed_task_byprocess);
 
   for (var i = 0; i < number_of_processes; i++) {
 
@@ -201,7 +204,7 @@ $(function() {
 
     pname = pname_order_in_cpuplot[i];
 
-    if(completed_task_byprocess[pname]["nb_completed_tasks"] > 0){
+    if(completed_task_byprocess[pname]["nb_task_completed"] > 0){
 
       completed_task_pname.push(pname);
 
@@ -225,6 +228,8 @@ $(function() {
       completed_task_sum_wchar += completed_task_byprocess[pname]["sum_wchar"];
       completed_task_sum_rchar += completed_task_byprocess[pname]["sum_rchar"];
 
+      completed_task_tasknb.push(completed_task_byprocess[pname]["nb_task_completed"]);
+
     }
   }
 
@@ -234,14 +239,17 @@ $(function() {
   var completed_task_rchar_text = [];
   var completed_task_wchar_text = [];
 
+
+  completed_task_sum_peak_rss
+
   for (var i = 0; i < completed_task_cputime_humanized.length; i++) {
 
     var pctcputime;
     pctcputime = 100 * completed_task_cputime[i] / moment.duration(completed_task_sum_cputime).asMinutes();
-    completed_task_cputime_text[i] = completed_task_cputime_humanized[i] + ' (' + pctcputime.toFixed(1).toString() + '%)';
-    completed_task_peak_rss_per_cpu_text[i] = make_memory(completed_task_peak_rss_per_cpu[i]) 
-    completed_task_rchar_text[i] = make_memory(completed_task_rchar[i]) + ' (' + (100 * completed_task_rchar[i] / completed_task_sum_rchar).toFixed(1).toString() + '%)';
-    completed_task_wchar_text[i] = make_memory(completed_task_wchar[i]) + ' (' + (100 * completed_task_wchar[i] / completed_task_sum_wchar).toFixed(1).toString() + '%)';
+    completed_task_cputime_text[i] = completed_task_cputime_humanized[i] + '<br>' + pctcputime.toFixed(1).toString() + '%<br># tasks: ' + completed_task_tasknb[i];
+    completed_task_peak_rss_per_cpu_text[i] = make_memory(completed_task_peak_rss_per_cpu[i]);
+    completed_task_rchar_text[i] = make_memory(completed_task_rchar[i]) + '<br>' + (100 * completed_task_rchar[i] / completed_task_sum_rchar).toFixed(1).toString() + '%<br># tasks: ' + completed_task_tasknb[i];
+    completed_task_wchar_text[i] = make_memory(completed_task_wchar[i]) + '<br>' + (100 * completed_task_wchar[i] / completed_task_sum_wchar).toFixed(1).toString() + '%<br># tasks: ' + completed_task_tasknb[i];
 
   }
 
