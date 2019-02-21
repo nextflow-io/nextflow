@@ -78,9 +78,9 @@ your pipeline execution.
    how to enable Nextflow auto mounts.
 
 .. warning::
-    When a process input is a *symbolic link* file, make sure the linked file **must** is stored in a host folder
-    that is accessible from a bind path defined in your Singularity installation. Otherwise the process execution
-    will fail because the launched container won't be able to access the linked file.
+    When a process input is a *symbolic link* file, make sure the linked file **is** stored in a host folder that is
+    accessible from a bind path defined in your Singularity installation. Otherwise the process execution will fail
+    because the launched container won't be able to access the linked file.
 
 
 Multiple containers
