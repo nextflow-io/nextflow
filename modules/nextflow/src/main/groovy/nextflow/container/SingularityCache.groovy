@@ -199,9 +199,9 @@ class SingularityCache {
 
         log.info "Pulling Singularity image $imageUrl [cache $localPath]"
 
-        final pullOptions = (config.pullOptions)? config.pullOptions : ''
+        final noHttpsOption = (config.noHttps)? '--nohttps' : ''
 
-        String cmd = "singularity pull ${pullOptions} --name ${Escape.path(localPath.getFileName())} $imageUrl > /dev/null"
+        String cmd = "singularity pull ${noHttpsOption} --name ${Escape.path(localPath.getFileName())} $imageUrl > /dev/null"
         try {
             runCommand( cmd, localPath.parent )
             log.debug "Singularity pull complete image=$imageUrl path=$localPath"
