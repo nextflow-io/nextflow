@@ -137,7 +137,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
             return script.getBinding().getVariable(property.toString())
         }
 
-        throw new MissingPropertyException("Unknown variable '$property' -- Make sure you didn't misspell it or define somewhere in the script before use it", property as String, null)
+        throw new MissingPropertyException("Unknown variable '$property' -- Make sure it is not misspelt and defined somewhere in the script before using it", property as String, null)
     }
 
     Object invokeMethod(String name, Object args) {

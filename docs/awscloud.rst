@@ -265,8 +265,7 @@ Read :ref:`Cloud configuration<config-cloud>` section to learn more about advanc
 AWS Batch
 =========
 
-.. warning:: This is an experimental feature and it may change in a future release. It requires Nextflow
-  version `0.26.0` or later.
+.. warning:: Requires Nextflow version `0.26.0` or later.
 
 `AWS Batch <https://aws.amazon.com/batch/>`_ is a managed computing service that allows the execution of containerised
 workloads in the Amazon cloud infrastructure.
