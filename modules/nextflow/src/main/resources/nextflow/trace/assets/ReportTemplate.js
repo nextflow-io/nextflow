@@ -179,6 +179,7 @@ $(function() {
   // mem
   var completed_task_sum_peak_rss = 0;
   var completed_task_peak_rss_per_cpu = [];
+  var completed_task_peak_rss = [];
   var completed_task_sum_memory_not_set = 0;
   var completed_task_sum_memoryrequested = 0;
 
@@ -219,7 +220,8 @@ $(function() {
       // mem
       completed_task_sum_memory_not_set += completed_task_byprocess[pname]["memory_not_set"];
       completed_task_sum_memoryrequested = completed_task_byprocess[pname]["memory"].reduce(add, completed_task_sum_memoryrequested);
-      completed_task_sum_peak_rss = completed_task_byprocess[pname]["peak_rss"].reduce(add, completed_task_sum_peak_rss);
+      completed_task_peak_rss.push(completed_task_byprocess[pname]["peak_rss"].reduce(add, 0));
+      completed_task_sum_peak_rss += completed_task_peak_rss[i];
       completed_task_peak_rss_per_cpu.push(completed_task_byprocess[pname]["peak_rss_per_cpu"].reduce(add, 0) / completed_task_byprocess[pname]["peak_rss_per_cpu"].length);
   
       // io
@@ -236,6 +238,7 @@ $(function() {
 
   var completed_task_cputime_text = [];
   var completed_task_peak_rss_per_cpu_text = [];
+  var completed_task_peak_rss_text = [];
   var completed_task_rchar_text = [];
   var completed_task_wchar_text = [];
 
@@ -248,6 +251,7 @@ $(function() {
     pctcputime = 100 * completed_task_cputime[i] / moment.duration(completed_task_sum_cputime).asMinutes();
     completed_task_cputime_text[i] = completed_task_cputime_humanized[i] + '<br>' + pctcputime.toFixed(1).toString() + '%<br># tasks: ' + completed_task_tasknb[i];
     completed_task_peak_rss_per_cpu_text[i] = make_memory(completed_task_peak_rss_per_cpu[i]);
+    completed_task_peak_rss_text[i] = make_memory(completed_task_peak_rss[i]) + '<br>' + (100 * completed_task_peak_rss[i] / completed_task_sum_peak_rss).toFixed(1).toString() + '%<br># tasks: ' + completed_task_tasknb[i];;
     completed_task_rchar_text[i] = make_memory(completed_task_rchar[i]) + '<br>' + (100 * completed_task_rchar[i] / completed_task_sum_rchar).toFixed(1).toString() + '%<br># tasks: ' + completed_task_tasknb[i];
     completed_task_wchar_text[i] = make_memory(completed_task_wchar[i]) + '<br>' + (100 * completed_task_wchar[i] / completed_task_sum_wchar).toFixed(1).toString() + '%<br># tasks: ' + completed_task_tasknb[i];
 
@@ -288,7 +292,9 @@ $(function() {
   var completed_task_rchar_plot = make_plot_data(completed_task_pname, completed_task_rchar, completed_task_rchar_text, completed_task_color);
   var completed_task_wchar_plot = make_plot_data(completed_task_pname, completed_task_wchar, completed_task_wchar_text, completed_task_color);
   var completed_task_peak_rss_per_cpu_plot = make_plot_data(completed_task_pname, completed_task_peak_rss_per_cpu, completed_task_peak_rss_per_cpu_text, completed_task_color);
+  var completed_task_peak_rss_plot = make_plot_data(completed_task_pname, completed_task_peak_rss, completed_task_peak_rss_text, completed_task_color);
 
+  console.log(completed_task_peak_rss);
 
   function make_table_data(infos_values) {
 
@@ -297,7 +303,7 @@ $(function() {
       columnorder: [1, 2],
       columnwidth: [200, 100],
       header: {
-        values: [["Info"], ["value"]],
+        values: [["Information"], ["Value"]],
         align: "left",
         line: { width: 1, color: 'black' },
         fill: { color: "grey" },
@@ -349,7 +355,7 @@ $(function() {
   });
   $('#cputimeplot_tablink').on('shown.bs.tab', function (e) {
     if($('#cputimeplot').is(':empty')){
-      Plotly.newPlot('cputimeplot', completed_task_cputime_plot, { title: 'Total CPU Time (over completed tasks)', yaxis: { title: 'CPU time (minutes)', tickformat: '.1f', rangemode: 'tozero' } });
+      Plotly.newPlot('cputimeplot', completed_task_cputime_plot, { title: 'Total CPU Time Used (over completed tasks)', yaxis: { title: 'CPU time (minutes)', tickformat: '.1f', rangemode: 'tozero' } });
     }
   });
   $('#cpuinfos_tablink').on('shown.bs.tab', function (e) {
@@ -367,10 +373,14 @@ $(function() {
         Plotly.newPlot('vmemplot', vmem_raw_data, { title: 'Virtual Memory Usage', yaxis: {title: 'Memory', tickformat: '.4s', rangemode: 'tozero'} });
     }
   });
+  $('#totalmem_tablink').on('shown.bs.tab', function (e) {
+    if($('#totalmem').is(':empty')){
+      Plotly.newPlot('totalmem', completed_task_peak_rss_plot, { title: 'Total RAM Used (over completed tasks)', yaxis: { title: 'Memory', tickformat: '.4s', rangemode: 'tozero' } });
+    }
+  });
   $('#mempercore_tablink').on('shown.bs.tab', function (e) {
     if($('#mempercore').is(':empty')){
-      Plotly.newPlot('mempercore', completed_task_peak_rss_per_cpu_plot, { title: 'RAM per Core (average over completed tasks)', yaxis: { title: 'Memory', tickformat: '.4s', rangemode: 'tozero' } });
-
+      Plotly.newPlot('mempercore', completed_task_peak_rss_per_cpu_plot, { title: 'RAM per Core Used (average over completed tasks)', yaxis: { title: 'Memory', tickformat: '.4s', rangemode: 'tozero' } });
     }
   });
   $('#meminfos_tablink').on('shown.bs.tab', function (e) {
@@ -390,12 +400,12 @@ $(function() {
   });
   $('#totalreadplot_tablink').on('shown.bs.tab', function (e) {
     if($('#totalreadplot').is(':empty')){
-      Plotly.newPlot('totalreadplot', completed_task_rchar_plot, { title: 'Total number of bytes read', yaxis: { title: 'Read bytes', tickformat: '.4s', rangemode: 'tozero' } });
+      Plotly.newPlot('totalreadplot', completed_task_rchar_plot, { title: 'Total number of bytes read (over completed tasks)', yaxis: { title: 'Read bytes', tickformat: '.4s', rangemode: 'tozero' } });
     }
   });
   $('#totalwriteplot_tablink').on('shown.bs.tab', function (e) {
     if($('#totalwriteplot').is(':empty')){
-      Plotly.newPlot('totalwriteplot', completed_task_wchar_plot, { title: 'Total number of bytes written', yaxis: { title: 'witten bytes', tickformat: '.4s', rangemode: 'tozero' } });
+      Plotly.newPlot('totalwriteplot', completed_task_wchar_plot, { title: 'Total number of bytes written (over completed tasks)', yaxis: { title: 'witten bytes', tickformat: '.4s', rangemode: 'tozero' } });
     }
   });
   $('#ioinfos_tablink').on('shown.bs.tab', function (e) {
