@@ -64,7 +64,7 @@ class LsfExecutor extends AbstractGridExecutor {
         super.init()
         queueInterval = session.getQueueStatInterval(name)
         log.debug "Creating executor '$name' > queue-stat-interval: ${queueInterval}"
-        def memoryUnitLSF = LsfExecutor.getLSFmemoryUnits() ? : 'MB' 
+        memoryUnitLSF = LsfExecutor.getLSFmemoryUnits() ?: 'MB' 
     }
 
     /**
