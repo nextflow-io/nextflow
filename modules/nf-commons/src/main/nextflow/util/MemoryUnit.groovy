@@ -105,7 +105,6 @@ class MemoryUnit implements Comparable<MemoryUnit>, Serializable, Cloneable {
         int p = UNITS.indexOf(unit) 
         if (p==-1)
             throw new IllegalArgumentException("Not a valid memory unit: $unit")
-        }
         return Math.round( size/Math.pow(1024, p) )
     }
 
