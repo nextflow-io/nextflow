@@ -23,6 +23,8 @@ through built-in support for Conda, Docker, Singularity, and Modules.
 - [Documentation](#documentation)
 - [Tool Management](#tool-management)
   - [Docker and Singularity](#containers)
+  - [Conda environments](#conda-environemnts)
+  - [Modules](#modules)
 - [HPC Schedulers](#hpc-schedulers)
   - [SGE](#hpc-schedulers)
   - [Univa Grid Engine](#hpc-schedulers)
@@ -72,13 +74,14 @@ Nextflow documentation is available at this link http://docs.nextflow.io
 Tool management
 ================
 
-A key goal of *Nextflow* is to enable portable and reproducible workflows. Both Docker and Singularity container engines are supported. 
+Containers
+----------------
 
-
+*Nextflow* supports both [Docker](https://www.nextflow.io/docs/latest/docker.html) and [Singularity](https://www.nextflow.io/docs/latest/singularity.html) container engines. Additionally, *Nextflow* can easily switch between container engines enabling workflow portability. 
 
 ```nextflow
 process samtools {
-  container='biocontainers/samtools:1.3.1'
+  container 'biocontainers/samtools:1.3.1'
 
   """
   samtools --version 
@@ -87,7 +90,26 @@ process samtools {
 }
 ```
 
+Conda environments
+------------------
 
+[Conda environments](https://www.nextflow.io/docs/latest/conda.html) provide another option for managing software packages in your workflow. 
+
+```nextflow
+process samtools {
+  conda 'samtools'
+
+  """
+  samtools --version 
+  """
+
+}
+```
+
+Modules
+-------
+
+[Environment modules](https://www.nextflow.io/docs/latest/process.html#module) commonly found in HPC environments can also be used to manage the tools used in a *Nextflow* workflow. 
 
 
 HPC Schedulers
