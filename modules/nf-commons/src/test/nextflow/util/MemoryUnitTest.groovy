@@ -163,4 +163,21 @@ class MemoryUnitTest extends Specification {
         new MemoryUnit(1)
     }
 
+
+    // test added for toUnit()
+    def 'test toUnit()' () {
+
+        // check error thrown
+        // when:
+        // new MemoryUnit('1GB').toBytes().toUnit("foobar")
+        // then:
+        // IllegalArgumentException
+
+
+        new MemoryUnit('1GB').toBytes().toUnit('GB') == 1
+        new MemoryUnit('2 GB').toBytes().toUnit('GB') == 2 
+        new MemoryUnit('3.5 GB').toBytes().toUnit('GB') == 3.5 
+        new MemoryUnit('4G').toBytes().toUnit('GB') == 4 
+    }
+
 }
