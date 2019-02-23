@@ -355,6 +355,7 @@ enabled             Turn this flag to ``true`` to enable Singularity execution (
 engineOptions       This attribute can be used to provide any option supported by the Singularity engine i.e. ``singularity [OPTIONS]``.
 envWhitelist        Comma separated list of environment variable names to be included in the container environment.
 runOptions          This attribute can be used to provide any extra command line options supported by the ``singularity exec``.
+noHttps             Turn this flag to ``true`` to pull the Singularity image with http protocol (default: ``false``).
 autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed contained. It requires the `user bind control` feature enabled in your Singularity installation (default: ``false``).
 cacheDir            The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
 pullTimeout         The amount of time the Singularity pull can last, exceeding which the process is terminated (default: ``20 min``).
