@@ -80,6 +80,8 @@ class AnsiLogObserver implements TraceObserver {
 
     private volatile boolean started
 
+    private volatile boolean dirty
+
     private int printedLines
 
     private int maxNameLength
@@ -98,29 +100,35 @@ class AnsiLogObserver implements TraceObserver {
         }
         else if( warn ) {
             warnings << new Event(message)
+            dirty = true
         }
         else {
             infos << new Event(message)
+            dirty = true
         }
     }
 
     synchronized void appendWarning(String message) {
         if( !started || !processes )
             printAnsi(message, Color.YELLOW)
-        else
+        else {
             warnings << new Event(message)
+            dirty = true
+        }
     }
 
     synchronized void appendError(String message) {
         if( !started || !processes )
             printAnsi(message, Color.RED)
-        else
+        else {
             errors << new Event(message)
+            dirty = true
+        }
     }
 
     protected void render0(dummy) {
         while(!stopped) {
-            renderProgress()
+            if( dirty ) renderProgress()
             sleep 200
         }
         renderProgress()
@@ -163,7 +171,7 @@ class AnsiLogObserver implements TraceObserver {
         }
 
         if( count ) {
-            term.a("+ executor" + line)
+            term.a("executor > " + line)
             term.newline()
         }
     }
@@ -184,6 +192,7 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     synchronized protected void renderProgress() {
+        dirty = false
         if( printedLines )
             AnsiConsole.out.println ansi().cursorUp(printedLines+1)
 
@@ -247,14 +256,11 @@ class AnsiLogObserver implements TraceObserver {
         final float com = stats.completed + stats.cached
         final label = name.padRight(maxNameLength)
 
-        if( tot==0 )
-            return "> process $label -"
-
         final x = tot ? Math.round(com / tot * 100f) : 0
         final pct = "[${String.valueOf(x).padLeft(3)}%]".toString()
 
         final numbs = "${(int)com} of ${(int)tot}".toString()
-        def result = "> process $label $pct $numbs"
+        def result = "[$stats.hash] process > $label $pct $numbs"
         if( stats.cached )
             result += ", cached: $stats.cached"
         if( stats.failed )
@@ -309,6 +315,7 @@ class AnsiLogObserver implements TraceObserver {
         final exec = handler.task.processor.executor.name
         Integer count = executors[exec] ?: 0
         executors[exec] = count+1
+        dirty = true
     }
 
     @Override
@@ -321,12 +328,16 @@ class AnsiLogObserver implements TraceObserver {
             process.failed++
             process.error |= !handler.task.errorAction?.soft
         }
+        dirty = true
     }
 
     @Override
     synchronized void onProcessTerminate(TaskProcessor processor) {
-        final process = p0(processor.name)
-        process.terminated = true
+        final process = processes.get(processor.name)
+        if( process ) {
+            process.terminated = true
+            dirty = true
+        }
     }
 
     @Override
@@ -335,6 +346,7 @@ class AnsiLogObserver implements TraceObserver {
         process.cached++
         process.hash = handler.task.hashLog
         process.changed = true
+        dirty = true
     }
 
 }
