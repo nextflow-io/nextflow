@@ -65,6 +65,10 @@ nxf_stat() {
     nxf_stat_ret=(${sum[*]})
 }
 
+nxf_sleep() {
+  sleep $1 2>/dev/null || sleep 1;
+}
+
 nxf_mem_watch() {
     set -o pipefail
     local pid=$1
@@ -77,7 +81,7 @@ nxf_mem_watch() {
     local DONE
     local STOP=''
 
-    [ $NXF_DEBUG = 1 ] && sleep 0.2 && ps fx
+    [ $NXF_DEBUG = 1 ] && nxf_sleep 0.2 && ps fx
 
     while true; do
         nxf_stat $pid
@@ -169,7 +173,7 @@ nxf_trace_linux() {
 
     echo 'DONE' >&10
     wait $mem_proc 2>/dev/null || true
-    while [ -e /proc/$mem_proc ]; do sleep 0.1; done
+    while [ -e /proc/$mem_proc ]; do nxf_sleep 0.1; done
 }
 
 nxf_trace() {
