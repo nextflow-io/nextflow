@@ -22,12 +22,17 @@ import spock.lang.Specification
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import nextflow.Session
 import nextflow.processor.TaskBean
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class AwsBatchScriptLauncherTest extends Specification {
+
+    def setup() {
+        new Session()
+    }
 
     def 'test bash wrapper with input'() {
 
@@ -49,6 +54,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                 nxf_s3_upload .command.err s3://work/dir || true
                 '''.stripIndent()
 
+        binding.launch_cmd == '/bin/bash -ue .command.sh < .command.in'
         binding.unstage_outputs == ''
 
         binding.helpers_script == '''
@@ -163,8 +169,10 @@ class AwsBatchScriptLauncherTest extends Specification {
                 # stage input files
                 downloads=()
                 rm -f .command.sh
+                rm -f .command.run
                 rm -f .command.in
                 downloads+=("nxf_s3_download s3://bucket/work/.command.sh .command.sh")
+                downloads+=("nxf_s3_download s3://bucket/work/.command.run .command.run")
                 downloads+=("nxf_s3_download s3://bucket/work/.command.in .command.in")
                 nxf_parallel "${downloads[@]}"
                 '''.stripIndent()
@@ -176,6 +184,8 @@ class AwsBatchScriptLauncherTest extends Specification {
                   nxf_parallel "${uploads[@]}"
                   '''.stripIndent().rightTrim()
 
+        binding.launch_cmd == '/bin/bash .command.run nxf_trace'
+        
         binding.task_env == ''
 
         binding.helpers_script == '''
