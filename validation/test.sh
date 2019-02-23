@@ -27,6 +27,11 @@ git clone https://github.com/nextflow-io/hello
   $NXF_CMD run . -resume
 )
 
+if [[ $TRAVIS_PULL_REQUEST != false ]]; then
+echo Skipping tests requiring secret vars
+exit 0
+fi
+
 #
 # AMPA-NF
 #
@@ -44,12 +49,6 @@ docker pull cbcrg/ampa-nf
 echo nextflow-io/rnaseq-nf
 $NXF_CMD run nextflow-io/rnaseq-nf -with-docker
 $NXF_CMD run nextflow-io/rnaseq-nf -with-docker -resume
-
-
-if [[ $TRAVIS_PULL_REQUEST != false ]]; then
-echo Skipping tests requiring secret vars
-exit 0
-fi
 
 #
 # AWS Batch tests
