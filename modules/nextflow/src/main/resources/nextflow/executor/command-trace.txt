@@ -23,15 +23,17 @@ nxf_tree() {
 
     pstat() {
         local x_pid=$1
-        local STATUS=$(2> /dev/null < /proc/$1/status grep Vm)
+        local STATUS=$(2> /dev/null < /proc/$1/status egrep 'Vm|ctxt')
 
         if [ $? = 0 ]; then
         local  x_vsz=$(echo "$STATUS" | grep VmSize | awk '{print $2}' || echo -n '0')
         local  x_rss=$(echo "$STATUS" | grep VmRSS | awk '{print $2}' || echo -n '0')
         local x_peak=$(echo "$STATUS" | egrep 'VmPeak|VmHWM' | sed 's/^.*:\s*//' | sed 's/[\sa-zA-Z]*$//' | tr '\n' ' ' || echo -n '0 0')
         local x_pmem=$(awk -v rss=$x_rss -v mem_tot=$mem_tot 'BEGIN {printf "%.0f", rss/mem_tot*100*10}' || echo -n '0')
-        ## record struct: pid %mem vmem rss peak_vmem peak_rss
-        cpu_stat[x_pid]="$x_pid $x_pmem $x_vsz $x_rss $x_peak"
+        local vol_ctxt=$(echo "$STATUS" | grep '\bvoluntary_ctxt_switches' | awk '{print $2}' || echo -n '0')
+        local inv_ctxt=$(echo "$STATUS" | grep '\bnonvoluntary_ctxt_switches' | awk '{print $2}' || echo -n '0')
+        ## record struct: pid - %mem - vmem - rss - peak_vmem - peak_rss - voluntary_ctxt_switches - nonvoluntary_ctxt_switches
+        cpu_stat[x_pid]="$x_pid $x_pmem $x_vsz $x_rss $x_peak $vol_ctxt $inv_ctxt"
         fi
     }
 
@@ -47,7 +49,7 @@ nxf_stat() {
     cpu_stat=()
     nxf_tree $1
 
-    declare -a sum=(0 0 0 0 0 0)
+    declare -a sum=(0 0 0 0 0 0 0 0)
     local pid
     local i
     for pid in "${!cpu_stat[@]}"; do
@@ -64,7 +66,7 @@ nxf_stat() {
     [ $NXF_DEBUG = 1 ] && echo -e "++ stat SUM=${sum[*]}"
 
     ## calc peaks
-    for i in {1..5}; do
+    for i in {1..7}; do
         if [ ${sum[i]} -lt ${cpu_peak[i]} ]; then
             sum[i]=${cpu_peak[i]}
         else
@@ -118,6 +120,8 @@ nxf_mem_watch() {
     echo "rss=${nxf_stat_ret[3]}"       >> $trace_file
     echo "peak_vmem=${nxf_stat_ret[4]}" >> $trace_file
     echo "peak_rss=${nxf_stat_ret[5]}"  >> $trace_file
+    echo "vol_ctxt=${nxf_stat_ret[6]}"  >> $trace_file
+    echo "inv_ctxt=${nxf_stat_ret[7]}"  >> $trace_file
 }
 
 nxf_write_trace() {
