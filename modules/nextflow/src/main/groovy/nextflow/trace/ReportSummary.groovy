@@ -55,6 +55,13 @@ class ReportSummary {
             return mem / request * 100 as Double
         }
 
+        mappers.mempercore = { TraceRecord record ->
+            final mem = record.get('peak_rss') as Double
+            final int ncpu = (record.get('cpus') ?: 1) as int
+            if( !mem ) return null
+            return mem / ncpu as Double
+        }
+
         mappers.timeUsage = { TraceRecord record ->
             final realtime = record.get('realtime') as Long
             final request = record.get('time') as Long
