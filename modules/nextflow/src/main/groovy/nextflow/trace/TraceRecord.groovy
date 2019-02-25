@@ -89,7 +89,9 @@ class TraceRecord implements Serializable {
             disk:       'mem',
             time:       'time',
             env:        'str',
-            error_action:'str'
+            error_action:'str',
+            vol_ctxt: 'num',
+            inv_ctxt: 'num'
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [
@@ -250,8 +252,11 @@ class TraceRecord implements Serializable {
         store.get(name)
     }
 
-    def void put( String name, def value ) {
-        assert keySet().contains(name), "Not a valid TraceRecord field: '$name'"
+    void put( String name, def value ) {
+        if( !keySet().contains(name) ) {
+            log.warn1 "Unknown trace record field: $name"
+            return
+        }
 
         // vmpeak: Peak virtual memory size
         // this is a synonym of 'max_vmem' field

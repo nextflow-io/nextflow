@@ -141,6 +141,8 @@ syscr                   Number of read-like system call invocations that the pro
 syscw                   Number of write-like system call invocations that the process performed. This data is read from file ``/proc/$pid/io``.
 read_bytes              Number of bytes the process directly read from disk. This data is read from file ``/proc/$pid/io``.
 write_bytes             Number of bytes the process originally dirtied in the page-cache (assuming they will go to disk later). This data is read from file ``/proc/$pid/io``.
+vol_ctxt                Number of voluntary context switches.
+inv_ctxt                Number of involuntary context switches.
 ======================= ===============
 
 .. note:: These numbers provide an estimation of the resources used by running tasks. They should not be intended as an alternative
