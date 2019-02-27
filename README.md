@@ -13,7 +13,7 @@
 
 Quick overview
 ==============
-Nextflow is a bioinformatics workflow manager that provides tools for developing portable and reproducible workflows.
+Nextflow is a bioinformatics workflow manager that enables the development of portable and reproducible workflows.
 It supports deploying workflows on a variety of execution platforms including local, HPC schedulers, AWS Batch,
 Google Genomics Pipelines API, and Kubernetes. Additionally, it provides support for manage your workflow dependencies
 through built-in support for Conda, Docker, Singularity, and Modules.
@@ -71,6 +71,47 @@ Documentation
 Nextflow documentation is available at this link http://docs.nextflow.io
 
 
+HPC Schedulers
+==============
+
+*Nextflow* supports common HPC schedulers, abstracting the submission of jobs from the user. 
+
+Currently the following clusters are supported:
+
+  + [SGE](https://www.nextflow.io/docs/latest/executor.html#sge)
+  + [Univa Grid Engine](https://www.nextflow.io/docs/latest/executor.html#sge)
+  + [LSF](https://www.nextflow.io/docs/latest/executor.html#lsf)
+  + [SLURM](https://www.nextflow.io/docs/latest/executor.html#slurm)
+  + [PBS/Torque](https://www.nextflow.io/docs/latest/executor.html#pbs-torque)
+  + [HTCondor (experimental)](https://www.nextflow.io/docs/latest/executor.html#htcondor)
+
+For example to submit the execution to a SGE cluster create a file named `nextflow.config`, in the directory
+where the pipeline is going to be launched, with the following content:
+
+```nextflow
+process {
+  executor='sge'
+  queue='<your execution queue>'
+}
+```
+
+In doing that, processes will be executed by Nextflow as SGE jobs using the `qsub` command. Your 
+pipeline will behave like any other SGE job script, with the benefit that *Nextflow* will 
+automatically and transparently manage the processes synchronisation, file(s) staging/un-staging, etc.  
+
+
+Cloud support
+=============
+*Nextflow* also supports running workflows across various clouds and cloud technologies. *Nextflow* can create AWS EC2 or Google GCE clusters and deploy your workflow. Managed solutions from both Amazon and Google are also supported through AWS Batch and Google Genomics Pipelines. Additionally, *Nextflow* can run workflows on either on-prem or managed Kubernetes clusters. 
+
+Currently supported cloud platforms:
+  + [Kubernetes](https://www.nextflow.io/docs/latest/kubernetes.html)
+  + [AWS Batch](https://www.nextflow.io/docs/latest/awscloud.html#aws-batch)
+  + [Amazon AWS](https://www.nextflow.io/docs/latest/awscloud.html)
+  + [Google GCE](https://www.nextflow.io/docs/latest/google.html)
+  + [Google Genomics Pipelines API](https://www.nextflow.io/docs/latest/google.html#google-pipelines)
+
+
 Tool management
 ================
 
@@ -110,47 +151,6 @@ Modules
 -------
 
 [Environment modules](https://www.nextflow.io/docs/latest/process.html#module) commonly found in HPC environments can also be used to manage the tools used in a *Nextflow* workflow. 
-
-
-HPC Schedulers
-==============
-
-*Nextflow* supports common HPC schedulers, abstracting the submission of jobs from the user. 
-
-Currently the following clusters are supported:
-
-  + [SGE](https://www.nextflow.io/docs/latest/executor.html#sge)
-  + [Univa Grid Engine](https://www.nextflow.io/docs/latest/executor.html#sge)
-  + [LSF](https://www.nextflow.io/docs/latest/executor.html#lsf)
-  + [SLURM](https://www.nextflow.io/docs/latest/executor.html#slurm)
-  + [PBS/Torque](https://www.nextflow.io/docs/latest/executor.html#pbs-torque)
-  + [HTCondor (experimental)](https://www.nextflow.io/docs/latest/executor.html#htcondor)
-
-For example to submit the execution to a SGE cluster create a file named `nextflow.config`, in the directory
-where the pipeline is going to be launched, with the following content:
-
-```nextflow
-process {
-  executor='sge'
-  queue='<your execution queue>'
-}
-```
-
-In doing that, processes will be executed by Nextflow as SGE jobs using the `qsub` command. Your 
-pipeline will behave like any other SGE job script, with the benefit that *Nextflow* will 
-automatically and transparently manage the processes synchronisation, file(s) staging/un-staging, etc.  
-
-
-Cloud support
-=============
-*Nextflow* also supports running workflows through various cloud platforms. This includes creation of clusters on both Amazon AWS and Google GCE. 
-
-Currently supported cloud platforms:
-  + [Kubernetes](https://www.nextflow.io/docs/latest/kubernetes.html)
-  + [AWS Batch](https://www.nextflow.io/docs/latest/awscloud.html#aws-batch)
-  + [Amazon AWS](https://www.nextflow.io/docs/latest/awscloud.html)
-  + [Google GCE](https://www.nextflow.io/docs/latest/google.html)
-  + [Google Genomics Pipelines API](https://www.nextflow.io/docs/latest/google.html#google-pipelines)
 
 
 
