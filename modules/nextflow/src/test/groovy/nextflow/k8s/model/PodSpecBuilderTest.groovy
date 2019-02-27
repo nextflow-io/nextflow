@@ -124,6 +124,34 @@ class PodSpecBuilderTest extends Specification {
         ]
     }
 
+    def 'should set pod limits' () {
+
+        when:
+        def spec = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand('echo hello')
+                .withCpus(8)
+                .withMemory('100Gi')
+                .build()
+
+        then:
+        spec ==  [ apiVersion: 'v1',
+                   kind: 'Pod',
+                   metadata: [name:'foo', namespace:'default'],
+                   spec: [
+                           restartPolicy:'Never',
+                           containers:[
+                                   [name:'foo',
+                                    image:'busybox',
+                                    command:['/bin/bash', '-c', 'echo hello'],
+                                    resources:[limits:[cpu:8, memory:'100Gi'] ]
+                                   ]
+                           ]
+                   ]
+        ]
+    }
+
     def 'should get storage spec for volume claims' () {
 
         when:
