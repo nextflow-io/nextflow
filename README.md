@@ -102,7 +102,7 @@ automatically and transparently manage the processes synchronisation, file(s) st
 
 Cloud support
 =============
-*Nextflow* also supports running workflows across various clouds and cloud technologies. *Nextflow* can create AWS EC2 or Google GCE clusters and deploy your workflow. Managed solutions from both Amazon and Google are also supported through AWS Batch and Google Genomics Pipelines. Additionally, *Nextflow* can run workflows on either on-prem or managed Kubernetes clusters. 
+*Nextflow* also supports running workflows across various clouds and cloud technologies. *Nextflow* can create AWS EC2 or Google GCE clusters and deploy your workflow. Managed solutions from both Amazon and Google are also supported through AWS Batch and Google Genomics Pipelines. Additionally, *Nextflow* can run workflows on either on-prem or managed cloud Kubernetes clusters. 
 
 Currently supported cloud platforms:
   + [Kubernetes](https://www.nextflow.io/docs/latest/kubernetes.html)
