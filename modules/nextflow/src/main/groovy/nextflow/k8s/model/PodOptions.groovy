@@ -48,6 +48,8 @@ class PodOptions {
 
     private PodNodeSelector nodeSelector
 
+    private PodLimit podLimit
+
     private PodSecurityContext securityContext
 
     PodOptions( List<Map> options=null ) {

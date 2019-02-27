@@ -71,6 +71,9 @@ class PodSpecBuilder {
 
     PodNodeSelector nodeSelector
 
+    PodLimit podLimit
+
+
     /**
      * @return A sequential volume unique identifier
      */
@@ -226,6 +229,7 @@ class PodSpecBuilder {
             securityContext = opts.securityContext
         if( opts.nodeSelector )
             nodeSelector = opts.nodeSelector
+
 
         return this
     }
