@@ -36,19 +36,20 @@ class AnsiLogObserverTest extends Specification {
         stats.cached    = CACHE
         stats.terminated = DONE
         stats.error = ERR
+        stats.hash = '4e/486876'
 
         expect:
         o.line('foo', stats) == EXPECTED
 
         where:
         SUBMIT  | COMPLETED | CACHE | DONE  | ERR   | EXPECTED
-        1       | 0         | 0     | false | false | '> process foo [  0%] 0 of 1'
-        1       | 1         | 0     | false | false | '> process foo [100%] 1 of 1'
-        10      | 5         | 0     | false | false | '> process foo [ 50%] 5 of 10'
-        0       | 0         | 5     | false | false | '> process foo [100%] 5 of 5, cached: 5'
-        2       | 1         | 3     | false | false | '> process foo [ 80%] 4 of 5, cached: 3'
-        2       | 2         | 0     | true  | false | '> process foo [100%] 2 of 2 ✔'
-        2       | 2         | 0     | true  | true  | '> process foo [100%] 2 of 2 ✘'
+        1       | 0         | 0     | false | false | '[4e/486876] process > foo [  0%] 0 of 1'
+        1       | 1         | 0     | false | false | '[4e/486876] process > foo [100%] 1 of 1'
+        10      | 5         | 0     | false | false | '[4e/486876] process > foo [ 50%] 5 of 10'
+        0       | 0         | 5     | false | false | '[4e/486876] process > foo [100%] 5 of 5, cached: 5'
+        2       | 1         | 3     | false | false | '[4e/486876] process > foo [ 80%] 4 of 5, cached: 3'
+        2       | 2         | 0     | true  | false | '[4e/486876] process > foo [100%] 2 of 2 ✔'
+        2       | 2         | 0     | true  | true  | '[4e/486876] process > foo [100%] 2 of 2 ✘'
 
     }
 

@@ -30,3 +30,10 @@ $NXF_CMD run awsbatch.nf -resume -c awsbatch.config
 [[ -e 'foo/sample.html' ]] || false
 [[ -e 'foo/sample.zip' ]] || false
 [[ -e 'foo/sample_(1 2).vcf' ]] || false
+
+
+$NXF_CMD run nextflow-io/rnaseq-nf \
+    -profile batch \
+    -with-docker \
+    -with-report \
+    -with-trace

@@ -1721,6 +1721,16 @@ class DataflowExtensions {
         return result
     }
 
+    static DataflowReadChannel splitText(DataflowReadChannel source, Map opts=null, Closure action) {
+        if( opts==null && action ) {
+            opts = new HashMap<>(5)
+        }
+        opts.put('each', action)
+        final result = new SplitOp( source, 'splitText', opts ).apply()
+        NodeMarker.addOperatorNode('splitText', source, result)
+        return result
+    }
+
     static DataflowReadChannel splitCsv(DataflowReadChannel source, Map opts=null) {
         final result = new SplitOp( source, 'splitCsv', opts ).apply()
         NodeMarker.addOperatorNode('splitCsv', source, result)

@@ -1,3 +1,4 @@
+package groovy.runtime.metaclass
 /*
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *

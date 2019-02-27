@@ -36,13 +36,13 @@ class LsfExecutor extends AbstractGridExecutor {
     private static char BLANK = ' ' as char
 
     /**
-    * parse the memory units from $LSF_ENVDIR/lsf.conf, 
-    * which should be accessible via all nodes. Otherwise, default is KB
-    * -- see https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsf_unit_for_limits.5.html
-    */
+     * parse the memory units from $LSF_ENVDIR/lsf.conf,
+     * which should be accessible via all nodes. Otherwise, default is KB
+     * -- see https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsf_unit_for_limits.5.html
+     */
     protected String getLSFmemoryUnits() {
         // check environment variable exists
-        def envDir = System.getenv("LSF_ENVDIR") 
+        def envDir = System.getenv("LSF_ENVDIR")
         if ( !envDir ) return null
         def envFile = new File(envDir, "lsf.conf")
         if ( !envFile.exists() ) return null
@@ -50,22 +50,11 @@ class LsfExecutor extends AbstractGridExecutor {
             if ( line.startsWith("LSF_UNIT_FOR_LIMITS=") ){
                 def memoryUnits = line.split("LSF_UNIT_FOR_LIMITS=")[1]
                 return(memoryUnits)
-            } 
+            }
         }
         if ( !memoryUnits.exists() ) return null   // throw null is cannot parse LSF_UNIT_FOR_LIMITS in $LSF_ENVDIR/lsf.conf
     }
 
-
-    /**
-     * Add an init method in the LsfExecutor overriding the base init() in AbstractGridExecutor.groovy
-    */
-    @Override
-    void init() {
-        super.init()
-        queueInterval = session.getQueueStatInterval(name)
-        log.debug "Creating executor '$name' > queue-stat-interval: ${queueInterval}"
-        memoryUnitLSF = LsfExecutor.getLSFmemoryUnits() ?: 'MB' 
-    }
 
     /**
      * Gets the directives to submit the specified task to the cluster for execution
