@@ -78,8 +78,8 @@ lists the required packages and channels structured using the YAML format. For e
 
     name: my-env
     channels:
-      - bioconda
       - conda-forge
+      - bioconda
       - defaults
     dependencies:
       - star=2.5.4a
