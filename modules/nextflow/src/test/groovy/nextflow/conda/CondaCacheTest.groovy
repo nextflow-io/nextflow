@@ -255,18 +255,18 @@ class CondaCacheTest extends Specification {
     def 'should get options from the config' () {
 
         when:
-        def cache = new CondaCache(new CondaConfig(), [ALPHA: 'aaa', BRAVO: 'bbb'])
+        def cache = new CondaCache(new CondaConfig())
         then:
         cache.createTimeout.minutes == 20
         cache.createOptions == null
-        cache.env.ALPHA == 'aaa'
-        cache.env.BRAVO == 'bbb'
-
+        cache.configCacheDir0 == null
+        
         when:
-        cache = new CondaCache(new CondaConfig(createTimeout: '5 min', createOptions: '--foo --bar'))
+        cache = new CondaCache(new CondaConfig(createTimeout: '5 min', createOptions: '--foo --bar', cacheDir: '/conda/cache'))
         then:
         cache.createTimeout.minutes == 5
         cache.createOptions == '--foo --bar'
+        cache.configCacheDir0 == Paths.get('/conda/cache')
     }
 
     def 'should define cache dir from config' () {
@@ -311,12 +311,12 @@ class CondaCacheTest extends Specification {
         given:
         def folder = Files.createTempDirectory('test'); folder.deleteDir()
         def config = new CondaConfig()
-        def env = [NXF_CONDA_CACHEDIR: folder.toString()]
-        CondaCache cache = Spy(CondaCache, constructorArgs: [config, env])
+        CondaCache cache = Spy(CondaCache, constructorArgs: [config])
 
         when:
         def result = cache.getCacheDir()
         then:
+        2 * cache.getEnv() >> [NXF_CONDA_CACHEDIR: folder.toString()]
         0 * cache.getSessionWorkDir()
         result == folder
         result.exists()
