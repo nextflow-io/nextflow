@@ -509,7 +509,7 @@ class AssetManager {
     static List<String> list() {
         log.debug "Listing projects in folder: $root"
 
-        def result = []
+        def result = new LinkedList()
         if( !root.exists() )
             return result
 
