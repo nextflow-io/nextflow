@@ -23,6 +23,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
+import nextflow.Session
 import nextflow.cloud.aws.batch.AwsOptions
 import nextflow.container.ContainerConfig
 import nextflow.container.SingularityBuilder
@@ -34,6 +35,10 @@ import nextflow.util.MustacheTemplateEngine
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class BashWrapperBuilderTest extends Specification {
+
+    def setupSpec() {
+        new Session()
+    }
 
     private String load(String name, Map<String,String> binding=[:]) {
         def template = new File("src/test/groovy/nextflow/executor/$name").text

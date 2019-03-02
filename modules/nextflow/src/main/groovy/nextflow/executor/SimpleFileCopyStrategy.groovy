@@ -301,7 +301,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     protected List<String> normalizeGlobStarPaths( List<String> files ) {
 
-        def result = []
+        def result = new ArrayList(files.size())
         for( int i=0; i<files.size(); i++ ) {
             def item = removeGlobStar(files.get(i))
             if( !result.contains(item) )
