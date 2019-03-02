@@ -53,11 +53,6 @@ class CondaCache {
     private CondaConfig config
 
     /**
-     * The current system environment
-     */
-    private Map<String,String> env
-
-    /**
      * Timeout after which the environment creation is aborted
      */
     private Duration createTimeout = Duration.of('20min')
@@ -70,7 +65,9 @@ class CondaCache {
 
     @PackageScope Duration getCreateTimeout() { createTimeout }
 
-    @PackageScope Map<String,String> getEnv() { env }
+    @PackageScope Map<String,String> getEnv() { System.getenv() }
+
+    @PackageScope Path getConfigCacheDir0() { configCacheDir0 }
 
     /** Only for debugging purpose - do not use */
     @PackageScope
@@ -80,11 +77,9 @@ class CondaCache {
      * Create a Conda env cache object
      *
      * @param config A {@link Map} object
-     * @param env The environment configuration object. Specifying {@code null} the current system environment is used
      */
-    CondaCache(CondaConfig config, Map<String,String> env=null) {
+    CondaCache(CondaConfig config) {
         this.config = config
-        this.env = env ?: System.getenv()
 
         if( config.createTimeout )
             createTimeout = config.createTimeout as Duration
@@ -93,11 +88,8 @@ class CondaCache {
             createOptions = config.createOptions
 
         if( config.cacheDir )
-            configCacheDir0 = config.cacheDir as Path
-        else if( env?.NXF_CONDA_CACHEDIR )
-            configCacheDir0 = env.NXF_CONDA_CACHEDIR as Path
+            configCacheDir0 = (config.cacheDir as Path).toAbsolutePath()
     }
-
 
     /**
      * Retrieve the directory where store the conda environment.
@@ -112,7 +104,11 @@ class CondaCache {
     @PackageScope
     Path getCacheDir() {
 
-        def cacheDir = configCacheDir0?.toAbsolutePath()
+        def cacheDir = configCacheDir0
+
+        if( !cacheDir && getEnv().NXF_CONDA_CACHEDIR )
+            cacheDir = getEnv().NXF_CONDA_CACHEDIR as Path
+
         if( !cacheDir )
             cacheDir = getSessionWorkDir().resolve('conda')
 
