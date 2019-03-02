@@ -416,7 +416,7 @@ task pack( dependsOn: [packOne, packAll]) {
 }
 
 
-task deploy( type: Exec, dependsOn: [clean, pack, deployable.uploadArchives, makeDigest]) {
+task deploy( type: Exec, dependsOn: [clean, compile, pack, deployable.uploadArchives, makeDigest]) {
 
     def temp = File.createTempFile('upload',null)
     temp.deleteOnExit()
