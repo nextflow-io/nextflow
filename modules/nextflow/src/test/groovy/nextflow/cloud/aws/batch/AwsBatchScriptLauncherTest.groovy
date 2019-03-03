@@ -139,6 +139,23 @@ class AwsBatchScriptLauncherTest extends Specification {
                     '''.stripIndent()
     }
 
+    def 'should cleanup temp files' () {
+
+        when:
+        def bucket = Paths.get('/bucket/work')
+        def opts = new AwsOptions(remoteBinDir: '/bucket/bin')
+
+        def binding = new AwsBatchScriptLauncher([
+                name: 'Hello 1',
+                workDir: bucket,
+                targetDir: bucket,
+                environment: [PATH:'/this:/that', FOO: 'xxx'],
+                script: 'echo Hello world!' ] as TaskBean, opts) .makeBinding()
+
+        then:
+        binding.cleanup_cmd == 'rm -rf $NXF_SCRATCH || true\n'
+    }
+
     def 'test bash wrapper with outputs and stats'() {
 
         /*
