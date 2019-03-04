@@ -201,8 +201,8 @@ class TraceFileObserverTest extends Specification {
         result[9] == '17.5%'                    // cpu
         result[10] == '9.8 MB'                  // peak_rss
         result[11] == '29.3 MB'                 // peak_vmem
-        result[12] == '19.5 MB'                 // rchar
-        result[13] == '29.3 MB'                 // wchar
+        result[12] == '29.3 MB'                 // rchar
+        result[13] == '9.8 MB'                  // wchar
 
     }
 
