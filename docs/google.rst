@@ -153,7 +153,8 @@ Then, you can run Nextflow as usual. For example::
     ./nextflow run rnaseq-nf -profile gcp -work-dir gs://my-bucket/work
 
 
-.. tip:: Make sure to use a Google Storage bucket as the Nextflow work directory and as a location for pipeline input data.
+.. tip:: Make sure to specify a Google Storage path, containing at a bucket sub-directory, as the Nextflow work directory
+  and as a location for pipeline input data.
 
 .. note:: The ``nextflow`` launcher script is created in the instance ``HOME`` directory.
 
@@ -352,6 +353,8 @@ specify the local storage for the jobs computed locally::
 
     nextflow run <script or project name> -bucket-dir gs://my-bucket/some/path
 
+.. warning:: The Google Storage path needs to contain at least sub-directory. Don't use only the
+  bucket name e.g. ``gs://my-bucket``. 
 
 Limitation
 ----------
