@@ -180,8 +180,8 @@ class TraceFileObserverTest extends Specification {
         record.duration = 1408714912000 - 1408714874000
         record.realtime = 1408714912000 - 1408714875000
         record.'%cpu' = 17.50f
-        record.rss = 10_000 * 1024
-        record.vmem = 20_000 * 1024
+        record.peak_rss = 10_000 * 1024
+        record.peak_vmem = 30_000 * 1024
         record.rchar = 30_000 * 1024
         record.wchar = 10_000 * 1024
 
@@ -197,11 +197,12 @@ class TraceFileObserverTest extends Specification {
         result[5] == '99'                       // exit status
         result[6] == '2014-08-22 13:41:14.000'  // submit
         result[7] == '38s'                      // wall-time
-        result[8] == '37s'                     // run-time
-        result[9] == '17.5%'                   // cpu
-        result[10] == '9.8 MB'                  // vmem
-        result[11] == '19.5 MB'                 // rchar
-        result[12] == '29.3 MB'                 // wchar
+        result[8] == '37s'                      // run-time
+        result[9] == '17.5%'                    // cpu
+        result[10] == '9.8 MB'                  // peak_rss
+        result[11] == '29.3 MB'                 // peak_vmem
+        result[12] == '29.3 MB'                 // rchar
+        result[13] == '9.8 MB'                  // wchar
 
     }
 
