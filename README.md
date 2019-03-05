@@ -22,8 +22,8 @@ through built-in support for Conda, Docker, Singularity, and Modules.
 - [Installation](#installation)
 - [Documentation](#documentation)
 - [Tool Management](#tool-management)
-  - [Docker and Singularity](#containers)
   - [Conda environments](#conda-environemnts)
+  - [Docker and Singularity](#containers)
   - [Modules](#modules)
 - [HPC Schedulers](#hpc-schedulers)
   - [SGE](#hpc-schedulers)
@@ -33,19 +33,34 @@ through built-in support for Conda, Docker, Singularity, and Modules.
   - [PBS/Torque](#hpc-schedulers)
   - [HTCondor (experimental)](#hpc-schedulers)
 - [Cloud Support](#cloud-support)
-  - [Kubernetes](#cloud-support)
-  - [Google Cloud](#cloud-support)
   - [AWS Batch](#cloud-support)
-  - [Amazon Cloud](#cloud-support)
+  - [AWS EC2](#cloud-support)
+  - [Google Cloud](#cloud-support)
   - [Google Genomics Pipelines API](#cloud-support)
+  - [Kubernetes](#cloud-support)
+
 - [Build from source](#build-from-source)
 - [Contributing](#contributing)
 - [License](#license)
 - [Citations](#citations)
 - [Credits](#credits)
 
+Rationale
+=========
 
-Installation
+With the rise of big data, techniques to analyse and run experiments on large datasets are increasingly necessary.
+
+Parallelization and distributed computing are the best ways to tackle this problem, but the tools commonly available to the bioinformatics community often lack good support for these techniques, or provide a model that fits badly with the specific requirements in the bioinformatics domain and, most of the time, require the knowledge of complex tools or low-level APIs.
+
+Nextflow framework is based on the dataflow programming model, which greatly simplifies writing parallel and distributed pipelines without adding unnecessary complexity and letting you concentrate on the flow of data, i.e. the functional logic of the application/algorithm.
+
+It doesn't aim to be another pipeline scripting language yet, but it is built around the idea that the Linux platform is the *lingua franca* of data science, since it provides many simple command line and scripting tools, which by themselves are powerful, but when chained together facilitate complex data manipulations.
+
+In practice, this means that a Nextflow script is defined by composing many different processes. Each process can execute a given bioinformatics tool or scripting language, to which is added the ability to coordinate and synchronize the processes execution by simply specifying their inputs and outputs.
+
+
+
+Quick start
 ============
 
 Download the package
@@ -105,11 +120,12 @@ Cloud support
 *Nextflow* also supports running workflows across various clouds and cloud technologies. *Nextflow* can create AWS EC2 or Google GCE clusters and deploy your workflow. Managed solutions from both Amazon and Google are also supported through AWS Batch and Google Genomics Pipelines. Additionally, *Nextflow* can run workflows on either on-prem or managed cloud Kubernetes clusters. 
 
 Currently supported cloud platforms:
-  + [Kubernetes](https://www.nextflow.io/docs/latest/kubernetes.html)
   + [AWS Batch](https://www.nextflow.io/docs/latest/awscloud.html#aws-batch)
-  + [Amazon AWS](https://www.nextflow.io/docs/latest/awscloud.html)
+  + [AWS EC2](https://www.nextflow.io/docs/latest/awscloud.html)
   + [Google GCE](https://www.nextflow.io/docs/latest/google.html)
   + [Google Genomics Pipelines API](https://www.nextflow.io/docs/latest/google.html#google-pipelines)
+  + [Kubernetes](https://www.nextflow.io/docs/latest/kubernetes.html)
+
 
 
 Tool management
@@ -118,7 +134,7 @@ Tool management
 Containers
 ----------------
 
-*Nextflow* supports both [Docker](https://www.nextflow.io/docs/latest/docker.html) and [Singularity](https://www.nextflow.io/docs/latest/singularity.html) container engines. Additionally, *Nextflow* can easily switch between container engines enabling workflow portability. 
+*Nextflow* has first class support for containerization. It supports both [Docker](https://www.nextflow.io/docs/latest/docker.html) and [Singularity](https://www.nextflow.io/docs/latest/singularity.html) container engines. Additionally, *Nextflow* can easily switch between container engines enabling workflow portability. 
 
 ```nextflow
 process samtools {
@@ -136,16 +152,6 @@ Conda environments
 
 [Conda environments](https://www.nextflow.io/docs/latest/conda.html) provide another option for managing software packages in your workflow. 
 
-```nextflow
-process samtools {
-  conda 'samtools'
-
-  """
-  samtools --version 
-  """
-
-}
-```
 
 Modules
 -------
