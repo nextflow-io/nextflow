@@ -48,7 +48,7 @@ class PodOptions {
 
     private PodNodeSelector nodeSelector
 
-    private PodLimit podLimit
+    private Map<String, String> limits = [:]
 
     private PodSecurityContext securityContext
 
@@ -105,6 +105,9 @@ class PodOptions {
         else if( entry.nodeSelector ) {
             this.nodeSelector = new PodNodeSelector(entry.nodeSelector)
         }
+        else if( entry.limits && entry.value ){
+            this.limits.put( entry.limits as String, entry.value as String )
+        }
         else 
             throw new IllegalArgumentException("Unknown pod options: $entry")
     }
@@ -124,10 +127,13 @@ class PodOptions {
 
     PodNodeSelector getNodeSelector() { nodeSelector }
 
+    Map<String,String> getLimits() { limits }
+
     PodOptions setNodeSelector( PodNodeSelector sel ) {
         nodeSelector = sel
         return this
     }
+
 
     PodOptions setSecurityContext( PodSecurityContext ctx ) {
         this.securityContext = ctx

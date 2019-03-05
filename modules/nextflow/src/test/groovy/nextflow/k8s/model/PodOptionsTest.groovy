@@ -337,4 +337,12 @@ class PodOptionsTest extends Specification {
         opts.nodeSelector.toSpec() == [foo: '1', bar: 'true', baz: 'Z']
 
     }
+
+    def 'should create pod limit' () {
+        when:
+        def opts = new PodOptions([ [limits: 'nvidia.com/gpu', value: '1']])
+        then:
+        opts.limits == ['nvidia.com/gpu': '1']
+
+    }
 }

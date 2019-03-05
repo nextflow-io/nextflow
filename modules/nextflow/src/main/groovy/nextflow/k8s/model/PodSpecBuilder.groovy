@@ -71,8 +71,7 @@ class PodSpecBuilder {
 
     PodNodeSelector nodeSelector
 
-    PodLimit podLimit
-
+    Map<String,String> limits = [:]
 
     /**
      * @return A sequential volume unique identifier
@@ -145,6 +144,16 @@ class PodSpecBuilder {
 
     PodSpecBuilder withLabels(Map labels) {
         this.labels.putAll(labels)
+        return this
+    }
+
+    PodSpecBuilder withLimit( String limit, String value ) {
+        this.limits.put(limit, value)
+        return this
+    }
+
+    PodSpecBuilder withLimits(Map limits) {
+        this.limits.putAll(limits)
         return this
     }
 
@@ -229,7 +238,8 @@ class PodSpecBuilder {
             securityContext = opts.securityContext
         if( opts.nodeSelector )
             nodeSelector = opts.nodeSelector
-
+        if( opts.limits )
+            limits.putAll( opts.limits )
 
         return this
     }
@@ -256,6 +266,11 @@ class PodSpecBuilder {
             res.cpu = this.cpus
         if( this.memory )
             res.memory = this.memory
+        if( this.limits )
+           this.limits.each{
+               key, value ->  res[key] = value
+           }
+
 
         final container = [
                 name: this.podName,
