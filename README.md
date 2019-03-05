@@ -19,6 +19,7 @@ Google Genomics Pipelines API, and Kubernetes. Additionally, it provides support
 through built-in support for Conda, Docker, Singularity, and Modules.
 
 ## Contents
+- [Rationale](#rationale)
 - [Installation](#installation)
 - [Documentation](#documentation)
 - [Tool Management](#tool-management)
@@ -38,12 +39,12 @@ through built-in support for Conda, Docker, Singularity, and Modules.
   - [Google Cloud](#cloud-support)
   - [Google Genomics Pipelines API](#cloud-support)
   - [Kubernetes](#cloud-support)
-
 - [Build from source](#build-from-source)
 - [Contributing](#contributing)
 - [License](#license)
 - [Citations](#citations)
 - [Credits](#credits)
+
 
 Rationale
 =========
