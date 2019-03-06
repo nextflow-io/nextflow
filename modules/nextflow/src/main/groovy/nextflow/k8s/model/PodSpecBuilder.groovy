@@ -280,7 +280,7 @@ class PodSpecBuilder {
             spec.securityContext = securityContext.toSpec()
 
         if( imagePullSecret )
-            spec.imagePullSecrets = ((Map)[name: imagePullSecret])
+            spec.imagePullSecrets = [((Map)[name: imagePullSecret])]
 
         // add labels
         if( labels )

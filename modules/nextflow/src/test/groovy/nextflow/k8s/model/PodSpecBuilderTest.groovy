@@ -444,7 +444,7 @@ class PodSpecBuilderTest extends Specification {
                 spec: [
                         restartPolicy:'Never',
                         securityContext: [ runAsUser: 1000 ],
-                        imagePullSecrets: [ name: 'myPullSecret' ],
+                        imagePullSecrets: [[ name: 'myPullSecret' ]],
                         nodeSelector: [gpu: 'true', queue: 'fast'],
                         
                         containers:[
