@@ -288,6 +288,30 @@ class PodOptionsTest extends Specification {
         opts.nodeSelector.toSpec() == [foo: 'X', bar: "Y"]
     }
 
+    def 'imagePullSecret, imagePullPolicy and label are copied to merged object' (){
+	given:
+	def data = [
+		[imagePullPolicy : 'FOO'],
+		[imagePullSecret : 'BAR'],
+		[label: "LABEL", value: 'VALUE']
+	]
+
+	when:
+	def opts = new PodOptions() + new PodOptions(data)
+	then:
+	opts.labels == ["LABEL": "VALUE"]
+	opts.imagePullPolicy == 'FOO'
+	opts.imagePullSecret == 'BAR'
+
+	when:
+	opts = new PodOptions(data) + new PodOptions()
+	then:
+	opts.labels == ["LABEL": "VALUE"]
+	opts.imagePullPolicy == 'FOO'
+	opts.imagePullSecret == 'BAR'
+
+    }
+
     def 'should create pod labels' () {
 
         given:
