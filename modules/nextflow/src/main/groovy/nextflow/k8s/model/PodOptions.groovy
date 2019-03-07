@@ -134,10 +134,15 @@ class PodOptions {
 
     String getImagePullSecret() { imagePullSecret }
 
+    PodOptions setImagePullSecret( String secret ) {
+        this.imagePullSecret = secret
+        return this
+    }
+
     String getImagePullPolicy() { imagePullPolicy }
 
-    PodOptions setImagePullPolicy(String p ) {
-        this.imagePullPolicy = p
+    PodOptions setImagePullPolicy( String policy ) {
+        this.imagePullPolicy = policy
         return this
     }
 
@@ -167,6 +172,22 @@ class PodOptions {
 
         // node select
         result.nodeSelector = other.nodeSelector ?: this.nodeSelector
+
+        // pull policy
+        if (other.imagePullPolicy)
+            result.imagePullPolicy = other.imagePullPolicy
+        else
+            result.imagePullPolicy = imagePullPolicy
+
+        // image secret
+        if (other.imagePullSecret)
+            result.imagePullSecret = other.imagePullSecret
+        else
+            result.imagePullSecret = imagePullSecret
+
+        // labels
+        result.labels.putAll(labels)
+        result.labels.putAll(other.labels)
 
         return result
     }
