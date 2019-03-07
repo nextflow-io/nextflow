@@ -444,7 +444,7 @@ class PodSpecBuilderTest extends Specification {
                 spec: [
                         restartPolicy:'Never',
                         securityContext: [ runAsUser: 1000 ],
-                        imagePullSecrets: [ name: 'myPullSecret' ],
+                        imagePullSecrets: [[ name: 'myPullSecret' ]],
                         nodeSelector: [gpu: 'true', queue: 'fast'],
                         
                         containers:[
@@ -468,5 +468,16 @@ class PodSpecBuilderTest extends Specification {
 
         ]
 
+    }
+
+
+    def 'should create image pull request map' () {
+        given:
+        def builder = new PodSpecBuilder(imagePullSecret: 'MySecret')
+        when:
+        def result = builder.createPullSecret()
+        then:
+        result.size() == 1 
+        result.get(0).name == 'MySecret'
     }
 }

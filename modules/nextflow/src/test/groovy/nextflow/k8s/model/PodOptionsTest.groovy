@@ -288,6 +288,62 @@ class PodOptionsTest extends Specification {
         opts.nodeSelector.toSpec() == [foo: 'X', bar: "Y"]
     }
 
+    def 'should copy image pull policy' (){
+        given:
+        def data = [
+            [imagePullPolicy : 'FOO']
+        ]
+
+        when:
+        def opts = new PodOptions() + new PodOptions(data)
+        then:
+        opts.imagePullPolicy == 'FOO'
+
+        when:
+        opts = new PodOptions(data) + new PodOptions()
+        then:
+        opts.imagePullPolicy == 'FOO'
+    }
+
+    def 'should copy image pull secret' (){
+        given:
+        def data = [
+                [imagePullSecret : 'BAR']
+        ]
+
+        when:
+        def opts = new PodOptions() + new PodOptions(data)
+        then:
+        opts.imagePullSecret == 'BAR'
+
+        when:
+        opts = new PodOptions(data) + new PodOptions()
+        then:
+        opts.imagePullSecret == 'BAR'
+    }
+
+    def 'should copy pod labels' (){
+        given:
+        def data = [
+                [label: "LABEL", value: 'VALUE']
+        ]
+
+        when:
+        def opts = new PodOptions() + new PodOptions(data)
+        then:
+        opts.labels == ["LABEL": "VALUE"]
+
+        when:
+        opts = new PodOptions(data) + new PodOptions()
+        then:
+        opts.labels == ["LABEL": "VALUE"]
+
+        when:
+        opts = new PodOptions([[label:"FOO", value:'one']]) + new PodOptions([[label:"BAR", value:'two']])
+        then:
+        opts.labels == [FOO: 'one', BAR: 'two']
+    }
+
     def 'should create pod labels' () {
 
         given:
