@@ -16,14 +16,11 @@
 
 package nextflow
 
-import java.util.concurrent.CompletableFuture
-
-import static nextflow.util.CheckHelper.checkParams
-
 import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.CompletableFuture
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
@@ -32,9 +29,11 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowChannel
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.ControlMessage
 import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.dag.NodeMarker
+import nextflow.datasource.SraExplorer
 import nextflow.exception.AbortOperationException
 import nextflow.extension.GroupTupleOp
 import nextflow.extension.MapOp
@@ -42,8 +41,10 @@ import nextflow.file.DirWatcher
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
 import nextflow.file.PathVisitor
+import nextflow.util.CheckHelper
 import nextflow.util.Duration
 import org.codehaus.groovy.runtime.NullObject
+import static nextflow.util.CheckHelper.checkParams
 /**
  * Channel factory object
  *
@@ -492,6 +493,24 @@ class Channel  {
         }
 
         return null
+    }
+
+
+    static DataflowWriteChannel fromSRA(query) {
+        fromSRA( Collections.emptyMap(), query )
+    }
+
+    static DataflowWriteChannel fromSRA(Map opts, query) {
+        CheckHelper.checkParams('fromSRA', opts, SraExplorer.PARAMS)
+
+        def target = new DataflowQueue()
+        def slurper = new SraExplorer(target, opts).setQuery(query)
+
+        def future = CompletableFuture.runAsync ({ slurper.apply() } as Runnable)
+        fromPath0Future = future.exceptionally(Channel.&handlerException)
+
+        NodeMarker.addSourceNode('Channel.fromSRA', target)
+        return target
     }
 
 }

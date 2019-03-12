@@ -89,6 +89,7 @@ The available factory methods are:
 * `from`_
 * `fromPath`_
 * `fromFilePairs`_
+* `fromSRA`_
 * `value`_
 * `watchPath`_
 
@@ -297,6 +298,59 @@ checkIfExists   When ``true`` throws an exception of the specified path do not e
       Channel.fromFilePairs( ['/some/data/SRR*_{1,2}.fastq', '/other/data/QFF*_{1,2}.fastq'] )
 
   (requires version 0.31.x or later)
+
+
+.. _channel-fromsra:
+
+fromSRA
+-------
+
+The ``fromSRA`` method queries the `NCBI SRA <https://www.ncbi.nlm.nih.gov/sra>`_ database and returns a channel emitting
+the FASTQ files matching the specified criteria i.e project or accession number(s). For example::
+
+    Channel
+        .fromSRA('SRP043510')
+        .println()
+
+
+It returns::
+
+    [SRR1448794, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR144/004/SRR1448794/SRR1448794.fastq.gz]
+    [SRR1448795, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR144/005/SRR1448795/SRR1448795.fastq.gz]
+    [SRR1448792, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR144/002/SRR1448792/SRR1448792.fastq.gz]
+    [SRR1448793, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR144/003/SRR1448793/SRR1448793.fastq.gz]
+    [SRR1910483, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR191/003/SRR1910483/SRR1910483.fastq.gz]
+    [SRR1910482, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR191/002/SRR1910482/SRR1910482.fastq.gz]
+    (remaining omitted)
+
+Multiple accession IDs can be specified using a list object::
+
+    ids = ['ERR908507', 'ERR908506', 'ERR908505']
+    Channel
+        .fromSRA(ids)
+        .println()
+
+::
+
+    [ERR908507, [ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908507/ERR908507_1.fastq.gz, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908507/ERR908507_2.fastq.gz]]
+    [ERR908506, [ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908506/ERR908506_1.fastq.gz, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908506/ERR908506_2.fastq.gz]]
+    [ERR908505, [ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908505/ERR908505_1.fastq.gz, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908505/ERR908505_2.fastq.gz]]
+
+
+.. note:: Read pairs are implicitly managed are returned as a list of files.
+
+.. tip:: Behind the scene it's uses the NCBI `ESearch <https://www.ncbi.nlm.nih.gov/books/NBK25499/#chapter4.ESearch>`_
+  API, therefore the ``fromSRA`` method allow the usage of any query term supported by this API.
+
+Table of optional parameters available:
+
+=============== ===================
+Name            Description
+=============== ===================
+apiKey          NCBI user API key. Learn more at `this link <https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities>`_.
+cache           Enable/disable the caching API requests (default: ``true``).
+max             Maximum number of entries that can be retried (default: unlimited) .
+=============== ===================
 
 
 .. _channel-watch:
