@@ -18,6 +18,7 @@ dependencies {
     compile(project(':nf-httpfs'))
     compile "org.codehaus.groovy:groovy:2.5.6"
     compile "org.codehaus.groovy:groovy-nio:2.5.6"
+    compile "org.codehaus.groovy:groovy-xml:2.5.6"
     compile "org.codehaus.groovy:groovy-json:2.5.6"
     compile "org.codehaus.groovy:groovy-templates:2.5.6"
     compile "org.slf4j:jcl-over-slf4j:1.7.25"
