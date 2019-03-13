@@ -352,6 +352,7 @@ cache           Enable/disable the caching API requests (default: ``true``).
 max             Maximum number of entries that can be retried (default: unlimited) .
 =============== ===================
 
+.. note:: This feature requires Nextflow version 19.04.0 or later.
 
 .. _channel-watch:
 
