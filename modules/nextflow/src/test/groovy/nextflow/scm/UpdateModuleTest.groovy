@@ -142,11 +142,11 @@ class UpdateModuleTest extends Specification {
         target.resolve('local/pipe_2/.git').exists()
         target.resolve('local/pipe_2/main.nf').exists()
 
-        !target.resolve('local/pipe_2/prj_aaa').exists()
-        !target.resolve('local/pipe_2/prj_bbb').exists()
+        target.resolve('local/pipe_2/prj_aaa').list().size()==0
+        target.resolve('local/pipe_2/prj_bbb').list().size()==0
     }
 
-    def 'should selected submodules' () {
+    def 'should clone selected submodules' () {
 
         setup:
         // create the main project
@@ -175,7 +175,7 @@ class UpdateModuleTest extends Specification {
         target.resolve('local/pipe_3/.git').exists()
         target.resolve('local/pipe_3/main.nf').exists()
 
-        !target.resolve('local/pipe_3/prj_aaa').exists()
+        target.resolve('local/pipe_3/prj_aaa').list().size()==0
 
         target.resolve('local/pipe_3/prj_bbb').exists()
         target.resolve('local/pipe_3/prj_bbb/file1.txt').text == 'Ciao'
