@@ -1748,6 +1748,7 @@ The ``pod`` directive allows the definition of the following options:
 ``imagePullPolicy: <V>``                          Specifies the strategy to be used to pull the container image e.g. ``imagePullPolicy: 'Always'``.
 ``imagePullSecret: <V>``                          Specifies the secret name to access a private container image registry. See `Kubernetes documentation <https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod>`_ for details.
 ``runAsUser: <UID>``                              Specifies the user ID to be used to run the container.
+``nodeSelector: <V>``                             Specifies which node the process will run on. See `Kubernetes nodeSelector <https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector>`_ for details.
 ================================================= =================================================
 
 When defined in the Nextflow configuration file, a pod setting can be defined using the canonical
@@ -2016,7 +2017,7 @@ for each species specified by an input parameter::
     In these cases you may use the `publishDir`_ directive instead.
 
 .. note:: The use of AWS S3 path is supported however it requires the installation of the `AWS CLI tool <https://aws.amazon.com/cli/>`_
-  (ie. ``aws``) in the target computing node.
+  (i.e. ``aws``) in the target computing node.
 
 .. _process-stageInMode:
 
