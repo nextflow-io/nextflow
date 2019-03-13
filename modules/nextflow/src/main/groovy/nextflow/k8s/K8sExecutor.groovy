@@ -15,12 +15,12 @@
  */
 
 package nextflow.k8s
+
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.executor.Executor
-import nextflow.k8s.client.ConfigDiscovery
 import nextflow.k8s.client.K8sClient
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
@@ -28,7 +28,6 @@ import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.ServiceName
-
 /**
  * Implement the Kubernetes executor
  *
@@ -62,7 +61,7 @@ class K8sExecutor extends Executor {
      */
     void register() {
         super.register()
-        final config = new ConfigDiscovery().discover()
+        final config = k8sConfig.getClient()
         client = new K8sClient(config)
         log.debug "[K8s] API client config=$config"
     }

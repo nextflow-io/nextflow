@@ -68,8 +68,9 @@ class ConfigDiscovery {
         throw new IllegalStateException("Unable to lookup Kubernetes cluster configuration")
     }
 
-
     protected ClientConfig fromCluster(Map<String,String> env) {
+
+        // See https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster/#accessing-the-api-from-a-pod
 
         final host = env.get('KUBERNETES_SERVICE_HOST')
         final port = env.get('KUBERNETES_SERVICE_PORT')
