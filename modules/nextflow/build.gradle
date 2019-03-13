@@ -32,7 +32,7 @@ dependencies {
     compile "com.beust:jcommander:1.35"
     compile("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
     compile('org.iq80.leveldb:leveldb:0.10')
-    compile('org.eclipse.jgit:org.eclipse.jgit:4.8.0.201706111038-r')
+    compile('org.eclipse.jgit:org.eclipse.jgit:5.2.1.201812262042-r')
     compile('io.nextflow:nxf-s3fs:1.0.4') {
         exclude group: 'org.apache.tika', module: 'tika-core'
         exclude group: 'com.amazonaws', module: 'aws-java-sdk-s3'
