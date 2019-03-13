@@ -493,7 +493,8 @@ class K8sDriverLauncher {
     }
 
     protected void launchLogin() {
-        def cmd = "kubectl -n ${k8sClient.config.namespace} exec -it $runName -- /bin/bash --login"
+        def launchDir = k8sConfig.getLaunchDir()
+        def cmd = "kubectl -n ${k8sClient.config.namespace} exec -it $runName -- /bin/bash -c 'cd $launchDir; exec bash --login -i'"
         def proc = new ProcessBuilder().command('bash','-c',cmd).inheritIO().start()
         def result = proc.waitFor()
         if( result == 0 )
