@@ -437,7 +437,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @return The fully qualified Batch job definition name eg {@code my-job-definition:3}
      */
     protected String createJobDef(RegisterJobDefinitionRequest req) {
-        final res = client.registerJobDefinition(req)
+        final res = bypassProxy(client).registerJobDefinition(req) // bypass the client proxy! see #1024
         return "${res.jobDefinitionName}:$res.revision"
     }
 
