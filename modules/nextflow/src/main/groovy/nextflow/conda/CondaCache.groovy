@@ -273,10 +273,11 @@ class CondaCache {
         final builder = new ProcessBuilder(['bash','-c',cmd])
         final proc = builder.start()
         final err = new StringBuilder()
-        proc.consumeProcessErrorStream(err)
+        final consumer = proc.consumeProcessErrorStream(err)
         proc.waitForOrKill(max)
         def status = proc.exitValue()
         if( status != 0 ) {
+            consumer.join()
             def msg = "Failed to create Conda environment\n  command: $cmd\n  status : $status\n  message:\n"
             msg += err.toString().trim().indent('    ')
             throw new IllegalStateException(msg)

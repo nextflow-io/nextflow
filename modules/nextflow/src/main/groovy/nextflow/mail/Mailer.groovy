@@ -253,10 +253,11 @@ class Mailer {
         message.writeTo(stdin);
         stdin.close()   // <-- don't forget otherwise it hangs
         // wait for the sending to complete
-        proc.consumeProcessOutputStream(stdout)
+        final consumer = proc.consumeProcessOutputStream(stdout)
         proc.waitForOrKill(sendTimeout)
         def status = proc.exitValue()
         if( status != 0 ) {
+            consumer.join()
             throw new MessagingException("Unable to send mail message\n  $mailer exit status: $status\n  reported error: $stdout")
         }
     }
