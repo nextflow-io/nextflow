@@ -1,5 +1,25 @@
 NEXTFLOW CHANGE-LOG
 ===================
+
+19.03.0-edge - 14 Mar 2019
+- Fix Nextflow hangs submitting jobs to AWS batch #1024
+- Fix process builder incomplete output [2fe1052c]
+- Fix Grid executor reports invalid queue status #1045
+- Fix Script execute permission is lost in container #1060
+- Fix K8s serviceAccount is not honoured #1049
+- Fix K8s kuberun login path #1072
+- Fix K8s imagePullSecret and imagePullPolicy #1062
+- Fix Google Storage docs #1023
+- Fix Env variable NXF_CONDA_CACHEDIR is ignored #1051
+- Fix failing task due to legacy sleep command [3e150b56]
+- Fix SplitText operator should accept a closure parameter #1021
+- Add Channel.fromSRA factory method #1070
+- Add voluntary/involuntary context switches to metrics #1047
+- Add noHttps option to singularity config #1041)
+- Add docker-daemon Singularity support #1043 [dfef1391]
+- Use peak_vmem and peak_rss as default output in the trace file instead of rss and vmem #1020
+- Improve ansi log rendering #996 [33038a18]
+
 19.02.0-edge - 6 Feb 2019
 - Added foreign files caching ability #686
 - Added Ansi logging as default console output
