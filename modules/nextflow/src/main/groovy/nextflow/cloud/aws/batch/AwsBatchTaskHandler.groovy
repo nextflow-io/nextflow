@@ -129,7 +129,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                 storageClass: executor.getSession().config.navigate('aws.client.uploadStorageClass') as String,
                 storageEncryption: executor.getSession().config.navigate('aws.client.storageEncryption') as String,
                 remoteBinDir: executor.remoteBinDir as String,
-                region: executor.getSession().config.navigate('aws.region') as String
+                region: executor.getSession().config.navigate('aws.region') as String,
+                jobRoleArn: executor.getSession().config.navigate('aws.jobRoleArn') as String,
+                temp: executor.getSession().config.navigate('docker.temp') as String
         )
 
     }
@@ -383,26 +385,53 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                 .withCommand('true')
                 .withMemory(1024)
                 .withVcpus(1)
+        // list of volume and mount points
+        def volume_list = new ArrayList()
+        def mount_list = new ArrayList()
+
+        // Add the mount point for the AWS CLI, if specified by executor.awscli
         def awscli = getAwsOptions().cliPath
         if( awscli ) {
-            def mountName = 'aws-cli'
+            def mountNameAwsCli = 'aws-cli'
             def path = Paths.get(awscli).parent.parent.toString()
-            def mount = new MountPoint()
-                    .withSourceVolume(mountName)
+            def mountAwsCli = new MountPoint()
+                    .withSourceVolume(mountNameAwsCli)
                     .withContainerPath(path)
                     .withReadOnly(true)
-            container.setMountPoints([mount])
+            mount_list.add(mountAwsCli)
 
-            def vol = new Volume()
-                    .withName(mountName)
+            def volAwsCli = new Volume()
+                    .withName(mountNameAwsCli)
                     .withHost(new Host()
                     .withSourcePath(path))
-            container.setVolumes([vol])
+            volume_list.add(volAwsCli)
+        }
+
+        // Add the mount point for the temp folder, if specified by docker.temp
+        def tempPath = getAwsOptions().temp
+        if( tempPath ) {
+            def mountNameTemp = 'temp'
+            def mountTemp = new MountPoint()
+                    .withSourceVolume(mountNameTemp)
+                    .withContainerPath('/tmp')
+            mount_list.add(mountTemp)
+
+            def volTemp = new Volume()
+                    .withName(mountNameTemp)
+                    .withHost(new Host()
+                    .withSourcePath(tempPath))
+            volume_list.add(volTemp)
+        }
+        container.setMountPoints(mount_list)
+        container.setVolumes(volume_list)
+        def jobRoleArn = getAwsOptions().jobRoleArn
+        if( jobRoleArn ) {
+            container.setJobRoleArn(jobRoleArn)
         }
         result.setContainerProperties(container)
 
         // create a job marker uuid
-        def uuid = CacheHelper.hasher([name, image, awscli]).hash().toString()
+        def uuid = CacheHelper.hasher([name, image, awscli, tempPath, jobRoleArn]).hash().toString()
         result.setParameters(['nf-token':uuid])
 
         return result
