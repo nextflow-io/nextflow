@@ -457,7 +457,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def result = handler.makeJobDefRequest(IMAGE)
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
-        1 * handler.getAwsOptions() >> new AwsOptions()
+        3 * handler.getAwsOptions() >> new AwsOptions()
         result.jobDefinitionName == JOB_NAME
         result.type == 'container'
         result.parameters.'nf-token' == 'fdb5ef295f566138a43252b2ea272282'
@@ -467,7 +467,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         result = handler.makeJobDefRequest(IMAGE)
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
-        1 * handler.getAwsOptions() >> new AwsOptions(cliPath: '/home/conda/bin/aws')
+        3 * handler.getAwsOptions() >> new AwsOptions(cliPath: '/home/conda/bin/aws')
         result.jobDefinitionName == JOB_NAME
         result.type == 'container'
         result.parameters.'nf-token' == '9c56fd073d32e0c29f51f12afdfe4750'
