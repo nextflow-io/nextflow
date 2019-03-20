@@ -160,6 +160,15 @@ Modules
 [Environment modules](https://www.nextflow.io/docs/latest/process.html#module) commonly found in HPC environments can also be used to manage the tools used in a *Nextflow* workflow. 
 
 
+Community
+=========
+
+You can post questions, or report problems by using the Nextflow [discussion forum](https://groups.google.com/forum/#!forum/nextflow)
+or the [Nextflow channel on Gitter](https://gitter.im/nextflow-io/nextflow).
+
+*Nextflow* also hosts a yearly workshop showcasing researcher's workflows and advancements in the langauge. Talks from the past workshops are available on the [Nextflow YouTube Channel](https://www.youtube.com/channel/UCB-5LCKLdTKVn2F4V4KlPbQ)
+
+The [nf-core](https://nf-co.re/) project is a community effort aggregating high quality *Nextflow* workflows which can be used by the community. 
 
 
 Build from source
@@ -256,12 +265,6 @@ Contributing
 Project contribution are more than welcome. See the [CONTRIBUTING](CONTRIBUTING.md) file for details.
 
 Information on setting up your development environment to work on *Nextflow* can be found [here](BuildFromSource.md)
-
-Community
-=========
-
-You can post questions, or report problems by using the Nextflow [discussion forum](https://groups.google.com/forum/#!forum/nextflow)
-or the [Nextflow channel on Gitter](https://gitter.im/nextflow-io/nextflow).
 
 
 Build servers
