@@ -352,6 +352,19 @@ cache           Enable/disable the caching API requests (default: ``true``).
 max             Maximum number of entries that can be retried (default: unlimited) .
 =============== ===================
 
+One can specify the NCBI API key in a number of ways:
+
+1. In the ``Channel.fromSRA`` call with ``Channel.fromSRA(ids, apiKey="0123456789abcdef")``
+1. In the local directory-level ``nextflow.config`` or global ``~/.nextflow/config`` files with:
+
+::
+    ncbi {
+         apiKey = '0123456789abcdef'
+    }
+
+1. Export to the environment with ``export NXF_NCBI_APIKEY=0123456789abcdef ; nextflow run workflow.nf``
+
+
 .. note:: This feature requires Nextflow version 19.04.0 or later.
 
 .. _channel-watch:
