@@ -39,6 +39,7 @@ through built-in support for Conda, Docker, Singularity, and Modules.
   - [Google Cloud](#cloud-support)
   - [Google Genomics Pipelines API](#cloud-support)
   - [Kubernetes](#cloud-support)
+- [Community](#community)
 - [Build from source](#build-from-source)
 - [Contributing](#contributing)
 - [License](#license)
