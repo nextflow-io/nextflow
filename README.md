@@ -11,12 +11,14 @@
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?colorB=26af64&style=popout)](http://bioconda.github.io/recipes/nextflow/README.html)
 [![Nextflow license](https://img.shields.io/github/license/nextflow-io/nextflow.svg?colorB=26af64&style=popout)](https://github.com/nextflow-io/nextflow/blob/master/COPYING)
 
+https://img.shields.io/twitter/url/https/twitter.com/nextflowio.svg?style=social
+
 
 Quick overview
 ==============
 Nextflow is a bioinformatics workflow manager that enables the development of portable and reproducible workflows.
 It supports deploying workflows on a variety of execution platforms including local, HPC schedulers, AWS Batch,
-Google Genomics Pipelines API, and Kubernetes. Additionally, it provides support for manage your workflow dependencies
+Google Genomics Pipelines, and Kubernetes. Additionally, it provides support for manage your workflow dependencies
 through built-in support for Conda, Docker, Singularity, and Modules.
 
 ## Contents
@@ -38,7 +40,7 @@ through built-in support for Conda, Docker, Singularity, and Modules.
   - [AWS Batch](#cloud-support)
   - [AWS EC2](#cloud-support)
   - [Google Cloud](#cloud-support)
-  - [Google Genomics Pipelines API](#cloud-support)
+  - [Google Genomics Pipelines](#cloud-support)
   - [Kubernetes](#cloud-support)
 - [Community](#community)
 - [Build from source](#build-from-source)
@@ -81,7 +83,11 @@ It creates the ``nextflow`` executable file in the current directory. You may wa
 Download from Conda
 -------------------
 
-Nextflow can also be installed from Bioconda [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat-square)](http://bioconda.github.io/recipes/nextflow/README.html)
+Nextflow can also be installed from Bioconda
+
+```
+conda install -c bioconda nextflow 
+```
 
 Documentation
 =============
@@ -126,7 +132,7 @@ Currently supported cloud platforms:
   + [AWS Batch](https://www.nextflow.io/docs/latest/awscloud.html#aws-batch)
   + [AWS EC2](https://www.nextflow.io/docs/latest/awscloud.html)
   + [Google GCE](https://www.nextflow.io/docs/latest/google.html)
-  + [Google Genomics Pipelines API](https://www.nextflow.io/docs/latest/google.html#google-pipelines)
+  + [Google Genomics Pipelines](https://www.nextflow.io/docs/latest/google.html#google-pipelines)
   + [Kubernetes](https://www.nextflow.io/docs/latest/kubernetes.html)
 
 
@@ -156,7 +162,7 @@ Conda environments
 [Conda environments](https://www.nextflow.io/docs/latest/conda.html) provide another option for managing software packages in your workflow. 
 
 
-Modules
+Environment Modules
 -------
 
 [Environment modules](https://www.nextflow.io/docs/latest/process.html#module) commonly found in HPC environments can also be used to manage the tools used in a *Nextflow* workflow. 
@@ -246,7 +252,7 @@ Read more at these links:
 IntelliJ IDEA
 ---------------
 
-Nextflow development with [IntelliJ IDEA](https://www.jetbrains.com/idea/) requires the latest version of the IDE (2017.3 or higher).
+Nextflow development with [IntelliJ IDEA](https://www.jetbrains.com/idea/) requires the latest version of the IDE (2018.3 or higher).
 
 If you have it installed in your computer, follow the steps below in order to use it with Nextflow:
 
