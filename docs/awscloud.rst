@@ -294,6 +294,8 @@ how to setup Batch queues.
 5 - Make sure the container image includes the `AWS CLI tool <https://aws.amazon.com/cli>`_ i.e. ``aws``.
 Alternatively, it can also be installed in a custom AMI image. See the note below for details.
 
+6 - If you require the `jobRoleArn` to manage S3 access, specify that value by using `aws.jobRoleArn` in the pipeline configuration.
+
 An example ``nextflow.config`` file is shown below::
 
     process.executor = 'awsbatch'

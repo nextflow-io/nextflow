@@ -236,6 +236,8 @@ To enable this executor set the property ``process.executor = 'awsbatch'`` in th
 The pipeline can be launched either in a local computer or a EC2 instance. The latter is suggested for heavy or long
 running workloads. Moreover a S3 bucket must be used as pipeline work directory.
 
+If you require the `jobRoleArn` to manage S3 access, specify that value by using `aws.jobRoleArn` in the pipeline configuration.
+
 See the :ref:`AWS Batch<awscloud-batch>` page for further configuration details.
 
 .. _google-pipelines-executor:
