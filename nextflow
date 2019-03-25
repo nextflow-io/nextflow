@@ -329,12 +329,13 @@ else
   fi
   major=${BASH_REMATCH[1]}
   minor=${BASH_REMATCH[2]}
-  version_check="^(1.8|9|10|11)"
-  version_message="Java 8"
   # legacy version - Java 7/8 only
   if [ $major -eq 0 ] && [ $minor -lt 26 ]; then
     version_check="^(1.7|1.8)"
     version_message="Java 7 or 8"
+  else
+    version_check="^(1.8|9|10|11|12|13|14)"
+    version_message="Java 8 or later"
   fi
   if [[ ! $JAVA_VER =~ $version_check ]]; then
       echo_red "ERROR: Cannot find Java or it's a wrong version -- please make sure that $version_message is installed"
@@ -344,6 +345,9 @@ else
       echo_yellow "NOTE: Nextflow is trying to use the Java VM defined by the following environment variables:\n JAVA_CMD: $JAVA_CMD\n JAVA_HOME: $JAVA_HOME\n"
       fi
       exit 1
+  fi
+  if [[ ! $JAVA_VER =~ ^(1.8|9) && $JAVA_VER -gt 11 ]]; then
+      echo_yellow "NOTE: Nextflow is not tested with Java $JAVA_VER -- It's recommended the use of version 8 up to 11\n"
   fi
   mkdir -p $(dirname "$JAVA_KEY")
   [[ -f $JAVA_VER ]] && echo $JAVA_VER > "$JAVA_KEY"
