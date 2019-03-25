@@ -11,9 +11,6 @@
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?colorB=26af64&style=popout)](http://bioconda.github.io/recipes/nextflow/README.html)
 [![Nextflow license](https://img.shields.io/github/license/nextflow-io/nextflow.svg?colorB=26af64&style=popout)](https://github.com/nextflow-io/nextflow/blob/master/COPYING)
 
-https://img.shields.io/twitter/url/https/twitter.com/nextflowio.svg?style=social
-
-
 Quick overview
 ==============
 Nextflow is a bioinformatics workflow manager that enables the development of portable and reproducible workflows.
@@ -23,12 +20,12 @@ through built-in support for Conda, Docker, Singularity, and Modules.
 
 ## Contents
 - [Rationale](#rationale)
-- [Installation](#installation)
+- [Quick start](#quick-start)
 - [Documentation](#documentation)
 - [Tool Management](#tool-management)
-  - [Conda environments](#conda-environemnts)
+  - [Conda environments](#conda-environments)
   - [Docker and Singularity](#containers)
-  - [Modules](#modules)
+  - [Environment Modules](#environment-modules)
 - [HPC Schedulers](#hpc-schedulers)
   - [SGE](#hpc-schedulers)
   - [Univa Grid Engine](#hpc-schedulers)
