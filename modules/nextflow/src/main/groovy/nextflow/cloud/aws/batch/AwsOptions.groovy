@@ -42,12 +42,19 @@ class AwsOptions {
 
     String region
 
+    String jobRoleArn
+
+    String temp
+
+
     AwsOptions() { }
 
     AwsOptions(Session session) {
         storageClass = session.config.navigate('aws.client.uploadStorageClass') as String
         storageEncryption = session.config.navigate('aws.client.storageEncryption') as String
         region = session.config.navigate('aws.region') as String
+	jobRoleArn = session.config.navigate('aws.jobRoleArn') as String
+        temp = session.config.navigate('docker.temp') as String
     }
 
     void setStorageClass(String value) {
