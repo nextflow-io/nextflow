@@ -122,9 +122,9 @@ class SraExplorer {
         def session = Global.session as Session
         def result = session ?.config ?. navigate('ncbi.apiKey')
         if( !result )
-            result = getEnv().get('NXF_NCBI_APIKEY')
-        if( !result)
-            log.warn1("Missing NCBI API key -- Read more https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities/")
+            result = getEnv().get('NCBI_API_KEY')
+        if( !result )
+            log.warn1("Define the NCBI_API_KEY env variable to use NCBI search service -- Read more https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities/")
         return result
     }
 

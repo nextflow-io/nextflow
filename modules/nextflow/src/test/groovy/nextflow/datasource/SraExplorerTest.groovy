@@ -179,10 +179,10 @@ class SraExplorerTest extends Specification {
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
-    @Requires({System.getenv('NXF_NCBI_APIKEY')})
+    @Requires({System.getenv('NCBI_API_KEY')})
     def 'should explore sra' () {
         given:
-        def key = System.getenv('NXF_NCBI_APIKEY')
+        def key = System.getenv('NCBI_API_KEY')
         def slurper = new SraExplorer(query: 'SRP043510', apiKey: key, maxResults: 10)
         when:
         def target = slurper.apply()
@@ -190,4 +190,14 @@ class SraExplorerTest extends Specification {
         target.count().val == 10
     }
 
+    def 'should retrieve NCBI api env' () {
+        given:
+        def slurper = Spy(SraExplorer)
+        when:
+        def result = slurper.getConfigApiKey()
+        then:
+        1 * slurper.getEnv() >> [NCBI_API_KEY: '1bc']
+        then:
+        result == '1bc'
+    }
 }

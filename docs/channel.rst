@@ -347,10 +347,17 @@ Table of optional parameters available:
 =============== ===================
 Name            Description
 =============== ===================
-apiKey          NCBI user API key. Learn more at `this link <https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities>`_.
+apiKey          NCBI user API key.
 cache           Enable/disable the caching API requests (default: ``true``).
 max             Maximum number of entries that can be retried (default: unlimited) .
 =============== ===================
+
+
+To access the NCBI search service the `NCBI API keys <https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities>`_
+should be provided either:
+
+* Using the ``apiKey`` optional parameter e.g. ``Channel.fromSRA(ids, apiKey:'0123456789abcdef')``.
+* Exporting the ``NCBI_API_KEY`` variable in your environment e.g. ``export NCBI_API_KEY=0123456789abcdef``.
 
 .. note:: This feature requires Nextflow version 19.04.0 or later.
 
