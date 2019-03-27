@@ -66,11 +66,43 @@ class DataflowHelper {
     @PackageScope
     static DEF_ERROR_LISTENER = new DataflowEventAdapter() {
         @Override
-        public boolean onException(final DataflowProcessor processor, final Throwable e) {
+        boolean onException(final DataflowProcessor processor, final Throwable e) {
             DataflowExtensions.log.error("@unknown", e)
             session.abort(e)
             return true;
         }
+    }
+
+    @PackageScope
+    static DataflowEventAdapter stopErrorListener(DataflowReadChannel source, DataflowWriteChannel target) {
+
+        new DataflowEventAdapter() {
+            @Override
+            void afterRun(final DataflowProcessor processor, final List<Object> messages) {
+                if( source instanceof DataflowExpression ) {
+                    if( !(target instanceof DataflowExpression) )
+                        processor.bindOutput( Channel.STOP )
+                    processor.terminate()
+                }
+            }
+
+            @Override
+            boolean onException(final DataflowProcessor processor, final Throwable e) {
+                DataflowExtensions.log.error("@unknown", e)
+                session.abort(e)
+                return true
+            }
+        }
+
+    }
+
+    @PackageScope
+    static Map createOpParams(inputs, outputs, listeners) {
+        final params = new HashMap(3)
+        params.inputs = inputs instanceof List ? inputs : [inputs]
+        params.outputs = outputs instanceof List ? outputs : [outputs]
+        params.listeners = listeners instanceof List ? listeners : [listeners]
+        return params
     }
 
     /**
