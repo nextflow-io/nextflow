@@ -217,7 +217,7 @@ class AnsiLogObserver implements TraceObserver {
 
     protected void renderEpilog() {
         WorkflowStats stats = session.isSuccess() ? session.getWorkflowStats() : null
-        if( stats ) {
+        if( stats && processes.size() ) {
             final delta = endTimestamp-startTimestamp
             def report = ""
             report += "Completed at: ${new Date(endTimestamp).format('dd-MMM-yyyy HH:mm:ss')}\n"
