@@ -79,7 +79,7 @@ class Bolts {
      * @param tz The timezone to be used eg. {@code UTC}. If {@code null} the current timezone is used.
      * @return The date-time formatted as a string
      */
-    static format(Date self, String format=null, String tz=null) {
+    static String format(Date self, String format=null, String tz=null) {
         TimeZone zone = tz ? TimeZone.getTimeZone(tz) : null
         getLocalDateFormat(format ?: DATETIME_FORMAT, zone).get().format(self)
     }
@@ -92,7 +92,7 @@ class Bolts {
      * @param tz The timezone to be used. If {@code null} the current timezone is used.
      * @return The date-time formatted as a string
      */
-    static format(Date self, String format, TimeZone tz) {
+    static String format(Date self, String format, TimeZone tz) {
         getLocalDateFormat(format ?: DATETIME_FORMAT, tz).get().format(self)
     }
 
