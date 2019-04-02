@@ -1490,20 +1490,22 @@ defined globally in the ``nextflow.config`` file.
 The ``executor`` directive allows you to configure what executor has to be used by the process, overriding the default
 configuration. The following values can be used:
 
-============== ==================
-Name            Executor
-============== ==================
-``local``      The process is executed in the computer where `Nextflow` is launched.
-``sge``        The process is executed using the Sun Grid Engine / `Open Grid Engine <http://gridscheduler.sourceforge.net/>`_.
-``uge``        The process is executed using the `Univa Grid Engine <https://en.wikipedia.org/wiki/Univa_Grid_Engine/>`_ job scheduler.
-``lsf``        The process is executed using the `Platform LSF <http://en.wikipedia.org/wiki/Platform_LSF>`_ job scheduler.
-``slurm``      The process is executed using the SLURM job scheduler.
-``pbs``        The process is executed using the `PBS/Torque <http://en.wikipedia.org/wiki/Portable_Batch_System>`_ job scheduler.
-``condor``     The process is executed using the `HTCondor <https://research.cs.wisc.edu/htcondor/>`_ job scheduler.
-``nqsii``      The process is executed using the `NQSII <https://www.rz.uni-kiel.de/en/our-portfolio/hiperf/nec-linux-cluster>`_ job scheduler.
-``ignite``     The process is executed using the `Apache Ignite <https://ignite.apache.org/>`_ cluster.
-``k8s``        The process is executed using the `Kubernetes <https://kubernetes.io/>`_ cluster.
-============== ==================
+=====================  ==================
+Name                   Executor
+=====================  ==================
+``local``              The process is executed in the computer where `Nextflow` is launched.
+``sge``                The process is executed using the Sun Grid Engine / `Open Grid Engine <http://gridscheduler.sourceforge.net/>`_.
+``uge``                The process is executed using the `Univa Grid Engine <https://en.wikipedia.org/wiki/Univa_Grid_Engine/>`_ job scheduler.
+``lsf``                The process is executed using the `Platform LSF <http://en.wikipedia.org/wiki/Platform_LSF>`_ job scheduler.
+``slurm``              The process is executed using the SLURM job scheduler.
+``pbs``                The process is executed using the `PBS/Torque <http://en.wikipedia.org/wiki/Portable_Batch_System>`_ job scheduler.
+``condor``             The process is executed using the `HTCondor <https://research.cs.wisc.edu/htcondor/>`_ job scheduler.
+``nqsii``              The process is executed using the `NQSII <https://www.rz.uni-kiel.de/en/our-portfolio/hiperf/nec-linux-cluster>`_ job scheduler.
+``ignite``             The process is executed using the `Apache Ignite <https://ignite.apache.org/>`_ cluster.
+``k8s``                The process is executed using the `Kubernetes <https://kubernetes.io/>`_ cluster.
+``awsbatch``           The process is executed using the `AWS Batch <https://aws.amazon.com/batch/>`_ service.
+``google-pipelines``   The process is executed using the `Google Genomics Pipelines <https://cloud.google.com/genomics/>`_ service.
+=====================  ==================
 
 The following example shows how to set the process's executor::
 
