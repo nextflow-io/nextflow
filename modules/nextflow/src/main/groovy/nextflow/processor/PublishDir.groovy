@@ -148,9 +148,11 @@ class PublishDir {
     @CompileStatic
     void apply( List<Path> files, TaskRun task ) {
 
-        if( !files ) {
+        if( !files )
             return
-        }
+
+        if( !path )
+            throw new IllegalStateException("Target path for directive publishDir cannot be null")
 
         this.processor = task.processor
         this.sourceDir = task.targetDir
@@ -174,7 +176,7 @@ class PublishDir {
         /*
          * iterate over the file parameter and publish each single file
          */
-        files.each { value ->
+        for( Path value : files ) {
             apply(value, inProcess)
         }
     }
