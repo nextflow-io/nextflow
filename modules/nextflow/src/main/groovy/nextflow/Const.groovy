@@ -28,6 +28,8 @@ import static nextflow.extension.Bolts.DATETIME_FORMAT
  */
 class Const {
 
+    static final public String ISO_8601_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss'Z'"
+
     static final public transient BOOL_YES = ['true','yes','on']
 
     static final public transient BOOL_NO = ['false','no','off']
