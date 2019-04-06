@@ -156,7 +156,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
     static List<Path> inputFilesToPaths( Map<String,Path> inputFiles ) {
 
-        def List<Path> files = []
+        List<Path> files = []
         inputFiles.each { name, storePath ->
 
             def path = storePath.getParent()
