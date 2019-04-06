@@ -17,6 +17,7 @@
 package nextflow.splitter
 
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -99,28 +100,6 @@ class CsvSplitterTest extends Specification {
 
     }
 
-    def testStrip( ) {
-
-        when:
-        def splitter = new CsvSplitter().options(quote: '"')
-        then:
-        splitter.strip('hello') == 'hello'
-        splitter.strip('"hello"') == 'hello'
-        splitter.strip('\'hello\'') == '\'hello\''
-        splitter.strip('""') == ''
-        splitter.strip('"') == '"'
-
-        when:
-        splitter = new CsvSplitter().options(quote: '"', strip: true)
-        then:
-        splitter.stripBlanks
-        splitter.strip('hello ') == 'hello'
-        splitter.strip('"hello"') == 'hello'
-        splitter.strip('" hello "  ') == ' hello '
-        splitter.strip(' " " ') == ' '
-        splitter.strip(' "" ') == ''
-
-    }
 
     def testSplitCsvWithHeaderCols() {
 
@@ -212,6 +191,88 @@ class CsvSplitterTest extends Specification {
         items[1] == ['gamma', '', 'zeta']
         items[2] == ['eta', 'theta', 'iota']
         items[3] == ['pi', 'rho', 'sigma']
+    }
+
+    def 'should handle values with commas' () {
+
+        given:
+        def LINES = '''
+            value_1,value_2,value_3
+            100,10.1%,300
+            "9,600",98.9%,"24,155"
+            '''
+                .stripIndent().trim()
+
+        when:
+        def items = new CsvSplitter().options(header: true,quote: '"').target(LINES).list()
+        then:
+        items.size()==2
+        items[0].value_1 == '100'
+        items[0].value_2 == '10.1%'
+        items[0].value_3 == '300'
+        items[1].value_1 == '9,600'
+        items[1].value_2 == '98.9%'
+        items[1].value_3 == '24,155'
+    }
+
+    def 'should parse a line' () {
+        given:
+        def splitter = new CsvSplitter().options(quote: '"')
+
+        when:
+        def cols = splitter.fetchRecord(new BufferedReader(new StringReader(LINE)))
+        then:
+        cols == EXPECTED
+
+        where:
+        LINE                        | EXPECTED
+        'a,b,c'                     | ['a','b','c']
+        'a, ,c'                     | ['a',' ','c']
+        'a," ",c'                   | ['a',' ','c']
+        '"1","2","3"'               | ['1','2','3']
+        '"1,0","2.1","3,3"'         | ['1,0','2.1','3,3']
+
+    }
+
+    @Unroll
+    def 'should strip blanks' () {
+
+        given:
+        def opts = [strip: STRIP]
+        if( QUOTE ) opts.quote = QUOTE
+        def splitter = new CsvSplitter().options(opts)
+
+        when:
+        def cols = splitter.fetchRecord(new BufferedReader(new StringReader(LINE)))
+        then:
+        cols == EXPECTED
+
+        where:
+        LINE                    | QUOTE | STRIP | EXPECTED
+        'a,b,c'                 | null  | false | ['a','b','c']
+        'a,b , c'               | null  | false | ['a','b ',' c']
+        'a, ,c'                 | null  | false | ['a',' ','c']
+        'a," ",c'               | null  | false | ['a','" "','c']
+        'a, " " ,c'             | null  | false | ['a',' " " ','c']
+
+        'a,b,c'                 | null  | true | ['a','b','c']
+        'a,b , c'               | null  | true | ['a','b','c']
+        'a, ,c'                 | null  | true | ['a','','c']
+        'a," ",c'               | null  | true | ['a','" "','c']
+        'a, " " ,c'             | null  | true | ['a','" "','c']
+
+        'a,b,c'                 | '"'  | false | ['a','b','c']
+        'a,b , c'               | '"'  | false | ['a','b ',' c']
+        'a, ,c'                 | '"'  | false | ['a',' ','c']
+        'a," ",c'               | '"'  | false | ['a',' ','c']
+        'a, " " ,c'             | '"'  | false | ['a',' " " ','c']
+
+        'a,b,c'                 | '"'  | true | ['a','b','c']
+        'a,b , c'               | '"'  | true | ['a','b','c']
+        'a, ,c'                 | '"'  | true | ['a','','c']
+        'a," ",c'               | '"'  | true | ['a','','c']
+        'a, " " ,c'             | '"'  | true | ['a',' ','c']
+
     }
 
 }

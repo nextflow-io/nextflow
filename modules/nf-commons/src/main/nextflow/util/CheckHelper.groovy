@@ -72,7 +72,7 @@ class CheckHelper {
      * @return {@code true} is the match is satisfied or {@code false} otherwise
      */
     static boolean isValid( value, range ) {
-        if( range instanceof Class )
+        if( range instanceof Class && value != null )
             return range.isAssignableFrom(value.class)
 
         if( range instanceof Collection )
