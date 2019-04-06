@@ -96,6 +96,22 @@ Alternatively, the same containers definitions can be provided by using the ``ne
 
 Read the :ref:`Process scope <config-process>` section to learn more about processes configuration.
 
+Common issues
+=============
+
+If you get this error:
+
+```
+Command error:
+WARNING: Your kernel does not support swap limit capabilities or the cgroup is not mounted. Memory limited without swap.
+```
+
+This is due to some permissions errors with memory access. To give the docker image access to your user and group permissions, add this line to your `nextflow.config` file:
+
+```
+docker.runOptions = '-u $(id -u):$(id -g)'
+```
+
 
 Advanced settings 
 ==================
