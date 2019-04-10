@@ -279,4 +279,15 @@ class PublishDirTest extends Specification {
         then:
         publisher.mode == PublishDir.Mode.COPY
     }
+
+    def 'should check null path' () {
+        given:
+        def pub = new PublishDir()
+
+        expect:
+        !pub.checkNull('ciao')
+        pub.checkNull('null')
+        pub.checkNull('null-x')
+        pub.checkNull(' null')
+    }
 }
