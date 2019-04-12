@@ -7,7 +7,7 @@ Operators
 Nextflow `operators` are methods that allow you to connect channels to each other or to transform values
 emitted by a channel applying some user provided rules.
 
-Operators can be separated in to five groups:
+Operators can be separated in to seven groups:
 
 * `Filtering operators`_
 * `Transforming operators`_
@@ -16,6 +16,17 @@ Operators can be separated in to five groups:
 * `Forking operators`_
 * `Maths operators`_
 * `Other operators`_
+
+.. note:: The operators :ref:`operator-print`, :ref:`operator-println`, :ref:`operator-set` and ``operator-subscribe``
+  consume a channel and therefore need to be the last operator in a chain of combined operators. For example, you can't
+  connect operators in a way like::
+
+    Channel
+        .from( 'a', 'b', 'aa', 'bc', 3, 4.5 )
+        .println { it }
+        .filter( ~/^a.*/ )
+
+  ::
 
 
 Filtering operators
