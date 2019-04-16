@@ -346,7 +346,7 @@ else
       fi
       exit 1
   fi
-  if [[ ! $JAVA_VER =~ ^(1.8|9) && $JAVA_VER -gt 11 ]]; then
+  if [[ ! $JAVA_VER =~ ^(1.8|9|10|11) ]]; then
       echo_yellow "NOTE: Nextflow is not tested with Java $JAVA_VER -- It's recommended the use of version 8 up to 11\n"
   fi
   mkdir -p $(dirname "$JAVA_KEY")
