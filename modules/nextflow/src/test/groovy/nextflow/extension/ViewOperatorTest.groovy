@@ -18,6 +18,8 @@ package nextflow.extension
 
 import nextflow.Channel
 import spock.lang.Specification
+
+import nextflow.Session
 import test.OutputCapture
 
 /**
@@ -25,6 +27,10 @@ import test.OutputCapture
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ViewOperatorTest extends Specification{
+
+    def setupSpec() {
+        new Session()
+    }
 
     /*
      * Read more http://mrhaki.blogspot.com.es/2015/02/spocklight-capture-and-assert-system.html

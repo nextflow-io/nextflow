@@ -1279,8 +1279,8 @@ class TaskProcessor {
         }
 
         // -- finally prints out the task output when 'echo' is true
-        if( task.config.echo && !session.ansiLog ) {
-            task.echoStdout()
+        if( task.config.echo ) {
+            task.echoStdout(session)
         }
     }
 

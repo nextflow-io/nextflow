@@ -16,7 +16,7 @@
 
 package nextflow.processor
 
-import java.nio.file.Files
+
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -24,6 +24,7 @@ import com.google.common.hash.HashCode
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Session
 import nextflow.conda.CondaCache
 import nextflow.conda.CondaConfig
 import nextflow.container.ContainerConfig
@@ -177,12 +178,12 @@ class TaskRun implements Cloneable {
     /**
      * Print to the current system console the task produced stdout
      */
-    void echoStdout() {
+    void echoStdout(Session session) {
 
         // print the stdout
         if( stdout instanceof Path ) {
             try {
-                Files.copy(stdout, System.out)
+                session.printConsole(stdout)
             }
             catch( NoSuchFileException e ) {
                 log.trace "Echo file does not exist: ${stdout}"
@@ -194,9 +195,8 @@ class TaskRun implements Cloneable {
         }
 
         if( stdout != null ) {
-            print stdout.toString()
+            session.printConsole(stdout.toString())
         }
-
     }
 
     /**

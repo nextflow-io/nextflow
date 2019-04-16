@@ -1166,5 +1166,17 @@ class Session implements ISession {
         return find.invoke(ClassLoader.getSystemClassLoader(), className)
     }
 
+    void printConsole(String str, boolean newLine=false) {
+        if( ansiLogObserver )
+            ansiLogObserver.appendInfo(str)
+        else if( newLine )
+            System.out.println(str)
+        else
+            System.out.print(str)
+    }
+
+    void printConsole(Path file) {
+        ansiLogObserver ? ansiLogObserver.appendInfo(file.text) : Files.copy(file, System.out)
+    }
 
 }
