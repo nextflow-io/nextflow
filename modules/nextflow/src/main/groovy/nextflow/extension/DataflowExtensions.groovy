@@ -1509,7 +1509,8 @@ class DataflowExtensions {
      * @param closure
      */
     static void print(final DataflowReadChannel<?> source, Closure closure = null) {
-        subscribeImpl(source, [onNext: { System.out.print( closure ? closure.call(it) : it ) }])
+        final print0 = { def obj = closure ? closure.call(it) : it; session.printConsole(obj?.toString(),false) }
+        subscribeImpl(source, [onNext: print0])
         NodeMarker.addOperatorNode('print', source, null)
     }
 
@@ -1519,7 +1520,8 @@ class DataflowExtensions {
      * @param closure
      */
     static void println(final DataflowReadChannel<?> source, Closure closure = null) {
-        subscribeImpl(source, [onNext: { System.out.println( closure ? closure.call(it) : it ) }])
+        final print0 = { def obj = closure ? closure.call(it) : it; session.printConsole(obj?.toString(),true) }
+        subscribeImpl(source, [onNext: print0])
         NodeMarker.addOperatorNode('println', source, null)
     }
 
@@ -1540,13 +1542,12 @@ class DataflowExtensions {
 
         final target = newChannelBy(source);
 
-        final printHandle = newLine ? System.out.&println : System.out.&print
-
         final apply = [
 
                 onNext:
                         {
-                            printHandle ( closure != null ? closure.call(it) : it )
+                            final obj = closure != null ? closure.call(it) : it
+                            session.printConsole(obj?.toString(), newLine)
                             target.bind(it)
                         },
 
