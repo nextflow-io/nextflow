@@ -1,8 +1,21 @@
 NEXTFLOW CHANGE-LOG
 ===================
+19.04.0 - 15 Apr 2019
+
+- Added support for NCBI_API_KEY variable [e4d9b62c]
+- Added warning message when using untested Java version [35acd1cb]
+- Added parameter and workflow metadata to weblog payload #1077
+- Added warning on publish with a null var [7d58bfb7] [95c219fb]
+- Fixed Echo directive when Ansi log is enabled #1112 #996
+- Fixed Do not mount inputs when `stageInMode == copy` #1105
+- Fixed `splitCsv` operator fails to parse values containing commas #1102 
+- Fixed missing return type for Date.format method
+- Fixed Channel operations `toList` followed by `merge` hang execution #1083
+- Avoid printing execution summary when no processes are computed #996
+- Improved error reporting for null publishDir [0b9b52f0]
 
 19.03.0-edge - 14 Mar 2019
-- Fix Nextflow hangs submitting jobs to AWS batch #1024
+- Fix Nextflow hangs submitting jobs to AWS Batch #1024
 - Fix process builder incomplete output [2fe1052c]
 - Fix Grid executor reports invalid queue status #1045
 - Fix Script execute permission is lost in container #1060
