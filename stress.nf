@@ -12,13 +12,15 @@ process stress_2cpu {
 }
 
 process stress_100mega {
+  memory 150.MB
   """
   stress -m 1 --vm-bytes 100000000 -t 10
   """
 }
 
 process stress_200mega {
-  // note: mem usage is not aggregated 
+  memory 250.MB
+  // note: mem usage should not be aggregated 
   """
   stress -m 1 --vm-bytes 200000000 -t 5
   stress -m 1 --vm-bytes 100000000 -t 5
@@ -26,6 +28,7 @@ process stress_200mega {
 }
 
 process stress_300mega {
+  memory 350.MB
   cpus 2
   // note: two parallel workers of 150MB => 300 MB
   """
