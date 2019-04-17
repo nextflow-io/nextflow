@@ -1,0 +1,42 @@
+
+check_range() {
+    < trace.txt grep $1 | awk -v col=$2 -v val=$3 -F $'\t'  '{ x=$col*1; a=val*0.9; b=val*1.1; err=!(x>=a && x<=b); if(err==1) {printf("Value %.1f not in range %.1f %.1f\n",x,a,b)}}; END {exit err} '
+}
+
+#
+# Run with Ignite executor standalone mode
+#
+# NOTE: allows only one task a time because the CI test environment
+# provides only 4 cpus. Therefore it should not be used all the available
+# CPUs otherwise the reported cpu stats won't match the expected values
+#
+$NXF_CMD run $NXF_SCRIPT -qs 1 nextflow/stress -c .config | tee stdout
+
+# column to check
+CPU=10
+TIME=9
+MEM=12
+RCHAR=15
+WCHAR=16 
+
+check_range stress_1cpu $CPU 100
+check_range stress_2cpu $CPU 200
+
+check_range stress_1cpu $TIME 5
+check_range stress_2cpu $TIME 10
+
+check_range stress_100mega $MEM 100
+check_range stress_200mega $MEM 200
+check_range stress_300mega $MEM 300
+
+check_range stress_100mega $TIME 10
+check_range stress_200mega $TIME 10
+check_range stress_300mega $TIME 5
+
+check_range stress_100mega $CPU 100
+check_range stress_200mega $CPU 100
+check_range stress_300mega $CPU 200
+
+check_range io_write_100mega $WCHAR 100
+check_range io_write_200mega $WCHAR 200
+check_range io_write_200mega $RCHAR 100
