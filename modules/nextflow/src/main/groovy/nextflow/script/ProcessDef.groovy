@@ -21,6 +21,10 @@ import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
 import nextflow.extension.ChannelFactory
+import nextflow.script.params.EachInParam
+import nextflow.script.params.InputsList
+import nextflow.script.params.OutputsList
+
 /**
  * Models a nextflow process definition
  *
