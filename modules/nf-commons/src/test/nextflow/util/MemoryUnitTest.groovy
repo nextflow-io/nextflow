@@ -163,4 +163,17 @@ class MemoryUnitTest extends Specification {
         new MemoryUnit(1)
     }
 
+    def 'should validate to unit method' () {
+        expect:
+        MemoryUnit.of(STR).toUnit(UNIT) == EXPECT
+        
+        where:
+        STR         | UNIT  | EXPECT
+        '2 MB'      | 'B'   | 2 * 1024 * 1024
+        '2 MB'      | 'KB'  | 2 * 1024
+        '2 MB'      | 'MB'  | 2
+        '2 MB'      | 'GB'  | 0
+        '3.5 GB'    | 'KB'  | 3.5 * 1024 * 1024
+    }
+
 }
