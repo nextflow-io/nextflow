@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.script
+package nextflow.script.params
 
 import spock.lang.Specification
 import spock.lang.Timeout

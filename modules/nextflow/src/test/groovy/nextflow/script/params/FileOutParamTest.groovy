@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.script
+package nextflow.script.params
 
 import java.nio.file.Paths
 

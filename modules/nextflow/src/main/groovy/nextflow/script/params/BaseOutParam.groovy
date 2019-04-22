@@ -1,0 +1,184 @@
+/*
+ * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package nextflow.script.params
+
+import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.extension.ChannelFactory
+import nextflow.script.ProcessConfig
+import nextflow.script.TokenVar
+
+/**
+ * Model a process generic output parameter
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@Slf4j
+abstract class BaseOutParam extends BaseParam implements OutParam {
+
+    /** The out parameter name */
+    protected nameObj
+
+    protected intoObj
+
+    private List<DataflowWriteChannel> outChannels = []
+
+    protected OutParam.Mode mode = BasicMode.standard
+
+    @PackageScope
+    boolean singleton
+
+    BaseOutParam( Binding binding, List list, short ownerIndex = -1) {
+        super(binding,list,ownerIndex)
+    }
+
+    BaseOutParam(ProcessConfig config ) {
+        super(config.getOwnerScript().getBinding(), config.getOutputs())
+    }
+
+    void lazyInit() {
+
+        if( intoObj instanceof TokenVar[] ) {
+            intoObj.each { lazyInitImpl(it) }
+        }
+        else if( intoObj != null ) {
+            lazyInitImpl(intoObj)
+        }
+        else if( nameObj instanceof String ) {
+            lazyInitImpl(nameObj)
+        }
+
+    }
+
+    @PackageScope
+    void setSingleton( boolean value ) {
+        this.singleton = value
+    }
+
+    @PackageScope
+    void lazyInitImpl( def target ) {
+        def channel = null
+        if( target instanceof TokenVar ) {
+            channel = outputValToChannel(target.name)
+        }
+        else if( target != null ) {
+            channel = outputValToChannel(target)
+        }
+
+        if( channel ) {
+            outChannels.add(channel)
+        }
+    }
+
+    /**
+     * Creates a channel variable in the script context
+     *
+     * @param channel it can be a string representing a channel variable name in the script context. If
+     *      the variable does not exist it creates a {@code DataflowVariable} in the script with that name.
+     *      If the specified {@code value} is a {@code DataflowWriteChannel} object, use this object
+     *      as the output channel
+     *
+     * @param factory The type of the channel to create, either {@code DataflowVariable} or {@code DataflowQueue}
+     * @return The created (or specified) channel instance
+     */
+    final protected DataflowWriteChannel outputValToChannel( Object channel ) {
+
+        if( channel instanceof String ) {
+            // the channel is specified by name
+            def local = channel
+
+            // look for that name in the 'script' context
+            channel = binding.hasVariable(local) ? binding.getVariable(local) : null
+            if( channel instanceof DataflowWriteChannel ) {
+                // that's OK -- nothing to do
+            }
+            else {
+                if( channel == null ) {
+                    log.trace "Creating new output channel > $local"
+                }
+                else {
+                    log.warn "Output channel `$local` overrides another variable with the same name declared in the script context -- Rename it to avoid possible conflicts"
+                }
+
+                // instantiate the new channel
+                channel = ChannelFactory.create( singleton && mode==BasicMode.standard )
+
+                // bind it to the script on-fly
+                if( local != '-' && binding ) {
+                    // bind the outputs to the script scope
+                    binding.setVariable(local, channel)
+                }
+            }
+        }
+
+        if( channel instanceof DataflowWriteChannel ) {
+            return channel
+        }
+
+        throw new IllegalArgumentException("Invalid output channel reference")
+    }
+
+
+    BaseOutParam bind( def obj ) {
+        if( obj instanceof TokenVar )
+            this.nameObj = obj.name
+
+        else
+            this.nameObj = ( obj?.toString() ?: null )
+
+        return this
+    }
+
+    BaseOutParam into( def value ) {
+        intoObj = value
+        return this
+    }
+
+    BaseOutParam into( TokenVar... vars ) {
+        intoObj = vars
+        return this
+    }
+
+    @Deprecated
+    DataflowWriteChannel getOutChannel() {
+        init()
+        return outChannels ? outChannels.get(0) : null
+    }
+
+    List<DataflowWriteChannel> getOutChannels() {
+        init()
+        return outChannels
+    }
+
+    def String getName() {
+
+        if( nameObj != null )
+            return nameObj.toString()
+
+        throw new IllegalStateException("Missing 'name' property in output parameter")
+    }
+
+
+    def BaseOutParam mode( def mode ) {
+        this.mode = BasicMode.parseValue(mode)
+        return this
+    }
+
+    OutParam.Mode getMode() { mode }
+
+}
