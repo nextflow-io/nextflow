@@ -27,16 +27,16 @@ import nextflow.Session
 import nextflow.container.ContainerConfig
 import nextflow.executor.Executor
 import nextflow.file.FileHolder
-import nextflow.script.EnvInParam
-import nextflow.script.FileInParam
-import nextflow.script.FileOutParam
+import nextflow.script.params.EnvInParam
+import nextflow.script.params.FileInParam
+import nextflow.script.params.FileOutParam
 import nextflow.script.ScriptBinding
-import nextflow.script.StdInParam
-import nextflow.script.StdOutParam
+import nextflow.script.params.StdInParam
+import nextflow.script.params.StdOutParam
 import nextflow.script.TaskBody
 import nextflow.script.TokenVar
-import nextflow.script.ValueInParam
-import nextflow.script.ValueOutParam
+import nextflow.script.params.ValueInParam
+import nextflow.script.params.ValueOutParam
 import test.TestHelper
 /**
  *

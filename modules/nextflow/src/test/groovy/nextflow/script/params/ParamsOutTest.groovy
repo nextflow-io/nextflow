@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package nextflow.script
+package nextflow.script.params
 import static test.TestParser.parseAndReturnProcess
 
 import java.nio.file.Path
 
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.processor.TaskContext
+import nextflow.script.TokenVar
 import nextflow.util.BlankSeparatedList
 import spock.lang.Specification
 /**
@@ -811,11 +812,11 @@ class ParamsOutTest extends Specification {
         p.getMode() == expected
 
         where:
-        value                       | expected
-        'combine'                   | SetOutParam.CombineMode.combine
-        new TokenVar('combine')     | SetOutParam.CombineMode.combine
-        'flatten'                   | BasicMode.flatten
-        new TokenVar('flatten')     | BasicMode.flatten
+        value                   | expected
+        'combine'               | SetOutParam.CombineMode.combine
+        new TokenVar('combine') | SetOutParam.CombineMode.combine
+        'flatten'               | BasicMode.flatten
+        new TokenVar('flatten') | BasicMode.flatten
 
     }
 

@@ -22,12 +22,12 @@ import spock.lang.Unroll
 import nextflow.exception.IllegalDirectiveException
 import nextflow.processor.ErrorStrategy
 import nextflow.script.BaseScript
-import nextflow.script.FileInParam
+import nextflow.script.params.FileInParam
 import nextflow.script.ProcessConfig
-import nextflow.script.StdInParam
-import nextflow.script.StdOutParam
+import nextflow.script.params.StdInParam
+import nextflow.script.params.StdOutParam
 import nextflow.script.TokenVar
-import nextflow.script.ValueInParam
+import nextflow.script.params.ValueInParam
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import static nextflow.util.CacheHelper.HashMode

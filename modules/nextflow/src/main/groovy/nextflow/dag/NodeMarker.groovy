@@ -20,8 +20,8 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Global
 import nextflow.Session
 import nextflow.processor.TaskProcessor
-import nextflow.script.InputsList
-import nextflow.script.OutputsList
+import nextflow.script.params.InputsList
+import nextflow.script.params.OutputsList
 /**
  * Helper class to mark DAG node with the proper labels
  *

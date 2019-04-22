@@ -29,6 +29,7 @@ import nextflow.processor.ConfigList
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskConfig
 import static nextflow.util.CacheHelper.HashMode
+import nextflow.script.params.*
 
 /**
  * Holds the process configuration properties

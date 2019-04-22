@@ -30,15 +30,15 @@ import nextflow.NF
 import nextflow.extension.ChannelFactory
 import nextflow.extension.DataflowHelper
 import nextflow.processor.TaskProcessor
-import nextflow.script.DefaultInParam
-import nextflow.script.DefaultOutParam
-import nextflow.script.EachInParam
-import nextflow.script.InParam
-import nextflow.script.InputsList
-import nextflow.script.OutParam
-import nextflow.script.OutputsList
-import nextflow.script.SetInParam
-import nextflow.script.SetOutParam
+import nextflow.script.params.DefaultInParam
+import nextflow.script.params.DefaultOutParam
+import nextflow.script.params.EachInParam
+import nextflow.script.params.InParam
+import nextflow.script.params.InputsList
+import nextflow.script.params.OutParam
+import nextflow.script.params.OutputsList
+import nextflow.script.params.SetInParam
+import nextflow.script.params.SetOutParam
 /**
  * Model a direct acyclic graph of the pipeline execution.
  *
