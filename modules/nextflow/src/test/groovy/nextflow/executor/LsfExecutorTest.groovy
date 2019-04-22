@@ -15,6 +15,8 @@
  */
 
 package nextflow.executor
+
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -39,12 +41,46 @@ class LsfExecutorTest extends Specification {
 
     }
 
+    def testMemDirectiveMemUnit() {
+        given:
+        def WORK_DIR = Paths.get('/work/dir')
+        def executor = Spy(LsfExecutor)
+        def task = Mock(TaskRun)
+        task.workDir >> WORK_DIR
+
+        when:
+        def result = executor.getDirectives(task, [])
+        then:
+        1 * executor.getJobNameFor(task) >> 'foo'
+        _ * task.config >> new TaskConfig(memory: '10MB')
+        then:
+        result == ['-o', '/work/dir/.command.log',
+                   '-M', '10240', 
+                   '-R', 'select[mem>=10240] rusage[mem=10]',
+                   '-J', 'foo']
+
+        when:
+        executor.memUnit = 'GB'
+        executor.usageUnit = 'GB'
+        result = executor.getDirectives(task, [])
+        then:
+        1 * executor.getJobNameFor(task) >> 'foo'
+        _ * task.config >> new TaskConfig(memory: '100GB')
+        then:
+        result == ['-o', '/work/dir/.command.log',
+                   '-M', '100',
+                   '-R', 'select[mem>=100] rusage[mem=100]',
+                   '-J', 'foo']
+
+    }
 
     def testHeaders() {
 
         setup:
         // LSF executor
         def executor = [:] as LsfExecutor
+        executor.memUnit = 'MB'
+        executor.usageUnit = 'MB'
         executor.session = new Session()
 
         // mock process
@@ -212,6 +248,7 @@ class LsfExecutorTest extends Specification {
         def config = Mock(TaskConfig)
         def WORKDIR = Paths.get('/my/work')
         def lsf = [:] as LsfExecutor
+        lsf.memUnit = 'MB'
         def task = Mock(TaskRun)
 
         when:
@@ -249,6 +286,7 @@ class LsfExecutorTest extends Specification {
         // LSF executor
         def executor = [:] as LsfExecutor
         executor.session = new Session()
+        executor.memUnit = 'MB'
 
         then:
         executor.getHeaders(task) == '''
@@ -262,10 +300,33 @@ class LsfExecutorTest extends Specification {
                 '''
                 .stripIndent().leftTrim()
 
+    }
+
+    def 'should use per job mem limit' () {
+        given:
+        // mock process
+        def proc = Mock(TaskProcessor)
+        // process name
+        proc.getName() >> 'task'
+
+        // task object
+        def task = new TaskRun()
+        task.processor = proc
+        task.workDir = Paths.get('/scratch')
+        task.name = 'mapping hola'
+
+        // config
+        task.config = new TaskConfig()
+        task.config.queue = 'bsc_ls'
+        task.config.cpus = 4
+        task.config.memory = '8GB'
+
         when:
         // LSF executor
-        executor = [:] as LsfExecutor
+        def executor = [:] as LsfExecutor
+        executor.memUnit = 'MB'
         executor.session = new Session([executor: [perJobMemLimit: true]])
+        executor.register()
 
         then:
         executor.getHeaders(task) == '''
@@ -278,7 +339,6 @@ class LsfExecutorTest extends Specification {
                 #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
-
     }
 
     def testWorkDirWithBlanks() {
@@ -287,6 +347,8 @@ class LsfExecutorTest extends Specification {
         // LSF executor
         def executor = Spy(LsfExecutor)
         executor.session = new Session()
+        executor.memUnit = 'MB'
+        executor.usageUnit = 'MB'
 
         // mock process
         def proc = Mock(TaskProcessor)
@@ -445,6 +507,101 @@ class LsfExecutorTest extends Specification {
 
         executor.pipeLauncherScript() == true
         executor.getSubmitCommandLine(Mock(TaskRun), Mock(Path)) == ['bsub']
+    }
+
+    def 'should apply lsf mem unit' () {
+        given:
+        def executor = Spy(LsfExecutor)
+        executor.session = Mock(Session)
+
+        when:
+        executor.register()
+        then:
+        1 * executor.parseLsfConfig() >> [:]
+        executor.memUnit == 'KB'
+        executor.usageUnit == 'MB'
+        
+        when:
+        executor.register()
+        then:
+        1 * executor.parseLsfConfig() >> ['LSF_UNIT_FOR_LIMITS': 'GB']
+        executor.memUnit == 'GB'
+        executor.usageUnit == 'GB'
+    }
+
+    def 'should apply lsf per job limit' () {
+        given:
+        def session = Mock(Session)
+        def executor = Spy(LsfExecutor)
+        executor.session = session
+
+        when:
+        executor.register()
+        then:
+        1 * executor.parseLsfConfig() >> [:]
+        1 * session.getExecConfigProp(_,'perJobMemLimit',_) >> false
+        !executor.perJobMemLimit
+
+        when:
+        executor.register()
+        then:
+        1 * executor.parseLsfConfig() >> [:]
+        1 * session.getExecConfigProp(_,'perJobMemLimit',_) >> true
+        executor.perJobMemLimit
+
+        when:
+        executor.register()
+        then:
+        1 * executor.parseLsfConfig() >> [LSB_JOB_MEMLIMIT:'y']
+        0 * session.getExecConfigProp(_,'perJobMemLimit',_) >> null
+        executor.perJobMemLimit
+    }
+
+
+    def 'should parse lsf.config' () {
+        given:
+        def executor = Spy(LsfExecutor)
+        def folder = Files.createTempDirectory('test')
+        def file = folder.resolve('lsf.conf')
+        file.text = '''
+            LSF_FOO=abc
+            LSF_BAR="x y z"
+            '''.stripIndent()
+
+        when:
+        def conf = executor.parseLsfConfig()
+        then:
+        1 * executor.getEnv0('LSF_ENVDIR') >> null
+        conf == [:]
+
+        when:
+        conf = executor.parseLsfConfig()
+        then:
+        1 * executor.getEnv0('LSF_ENVDIR') >> folder.toString()
+        conf == [LSF_FOO:'abc', LSF_BAR:'x y z']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should parse complex config file' () {
+        given:
+        def executor = Spy(LsfExecutor)
+        def file = new File('src/test/groovy/nextflow/executor/lsf.conf')
+        assert file.exists(), 'Cannot find LSF config test file'
+
+        when:
+        def config = executor.parseLsfConfig()
+        then:
+        1 * executor.getEnv0('LSF_ENVDIR') >> file.absoluteFile.parent
+        then:
+        config.LSF_LOGDIR == '/common/foo/bar/log'
+        config.LSF_LOG_MASK=='LOG_WARNING'
+        config.LSF_LIM_PORT == '7869'
+        config.LSF_UNIT_FOR_LIMITS == 'GB'
+        config.LSF_STRIP_DOMAIN == '.cbio.private:.cbio.delta.org:.delta.org'
+        config.LSF_MASTER_LIST == "omega-sched01 omega-sched02"
+        config.LSF_API_CONNTIMEOUT == '10'
     }
 
 }
