@@ -547,4 +547,27 @@ class TaskConfigTest extends Specification {
 
     }
 
+    def 'should get gpu resources' () {
+
+        given:
+        def script = Mock(BaseScript)
+
+        when:
+        def process = new ProcessConfig(script)
+        process.gpu 5
+        def res = process.createTaskConfig().getGpu()
+        then:
+        res.limit == 5 
+        res.request == 5
+
+        when:
+        process = new ProcessConfig(script)
+        process.gpu 5, limit: 10, type: 'nvidia'
+        res = process.createTaskConfig().getGpu()
+        then:
+        res.request == 5
+        res.limit == 10
+        res.type == 'nvidia'
+    }
+
 }

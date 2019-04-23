@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import nextflow.executor.res.GpuResource
 import nextflow.util.MemoryUnit
 /**
  * Object build for a K8s pod specification
@@ -58,6 +59,8 @@ class PodSpecBuilder {
     String memory
 
     String serviceAccount
+
+    GpuResource gpu 
 
     Collection<PodMountSecret> secrets = []
 
@@ -132,6 +135,11 @@ class PodSpecBuilder {
 
     PodSpecBuilder withMemory(MemoryUnit mem)  {
         this.memory = "${mem.mega}Mi".toString()
+        return this
+    }
+
+    PodSpecBuilder withGpu(GpuResource gpu) {
+        this.gpu = gpu
         return this
     }
 
@@ -311,6 +319,11 @@ class PodSpecBuilder {
             container.resources = limits
         }
 
+        // add gpu settings
+        if( gpu ) {
+            container.resources = addGpuResources(gpu, container.resources as Map)
+        }
+
         // add storage definitions ie. volumes and mounts
         final mounts = []
         final volumes = []
@@ -350,6 +363,32 @@ class PodSpecBuilder {
             container.volumeMounts = mounts
 
         return pod
+    }
+
+    @PackageScope
+    @CompileDynamic
+    Map addGpuResources( GpuResource gpu, Map res ) {
+
+        if( res == null )
+            res = new LinkedHashMap(2)
+
+        // tpu gou custom resource type
+        def type = gpu.type ?: 'nvidia.com'
+        if( !type.contains('.') ) type += '.com'
+        type += '/gpu'
+
+        if( gpu.request ) {
+            final req = res.requests ?: new LinkedHashMap<>(2)
+            req.put(type, gpu.request)
+            res.requests = req
+        }
+        if( gpu.limit ) {
+            final lim = res.limits ?: new LinkedHashMap<>(2)
+            lim.put(type, gpu.limit)
+            res.limits = lim
+        }
+
+        return res
     }
 
     @PackageScope
