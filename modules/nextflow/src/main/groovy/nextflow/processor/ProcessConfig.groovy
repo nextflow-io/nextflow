@@ -281,6 +281,7 @@ class ProcessConfig implements Map<String,Object> {
             return result
         }
         else {
+            if( name == 'gpu' ) gpuWarn()
             return configProperties.put(name,value)
         }
     }
@@ -693,6 +694,7 @@ class ProcessConfig implements Map<String,Object> {
     }
 
     ProcessConfig gpu( Map params, value )  {
+        gpuWarn()
         if( value instanceof Number ) {
             if( params.limit==null )
                 params.limit=value
@@ -706,6 +708,7 @@ class ProcessConfig implements Map<String,Object> {
     }
 
     ProcessConfig gpu( value ) {
+        gpuWarn()
         if( value instanceof Number )
             configProperties.put('gpu', [limit: value])
         else if( value instanceof Map )
@@ -715,4 +718,7 @@ class ProcessConfig implements Map<String,Object> {
         return this
     }
 
+    private void gpuWarn() {
+        log.warn1 "Directive `gpu` is an experimental feature -- it may change in a feature release"
+    }
 }
