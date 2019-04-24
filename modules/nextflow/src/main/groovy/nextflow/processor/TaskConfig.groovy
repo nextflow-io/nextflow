@@ -16,6 +16,7 @@
 
 package nextflow.processor
 
+import nextflow.executor.res.GpuResource
 import static nextflow.processor.TaskProcessor.*
 
 import java.nio.file.Path
@@ -347,6 +348,17 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     PodOptions getPodOptions() {
         new PodOptions((List)get('pod'))
+    }
+
+    GpuResource getGpu() {
+        def value = get('gpu')
+        if( value instanceof Number )
+            return new GpuResource(value)
+        if( value instanceof Map )
+            return new GpuResource(value)
+        if( value != null )
+            throw new IllegalArgumentException("Invalid gpu directive value: $value [${value.getClass().getName()}]")
+        return null
     }
 
     /**
