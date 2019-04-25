@@ -428,7 +428,7 @@ if [ -s "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ]; then
 else
     # otherwise run the capsule and get the result classpath in the 'launcher' and save it to a file
     cli=($("$JAVA_CMD" "${JAVA_OPTS[@]}" -jar "$NXF_BIN"))
-    [[ $? -ne 0 ]] && echo_red 'Unable to initialize nextflow environment' && exit $?
+    [[ $? -ne 0 ]] && echo_red 'Unable to initialize nextflow environment' && exit 1
 
     if [[ "$JAVA_VER" =~ ^(9|10|11) ]]; then
       launcher=("${cli[@]:0:1}")
