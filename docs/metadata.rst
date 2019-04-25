@@ -102,6 +102,8 @@ to access the workflow termination status and other useful information. For exam
         println "Execution status: ${ workflow.success ? 'OK' : 'failed' }"
     }
 
+If you want an e-mail notification on completion, check :ref:`mail-page`.
+
 .. _metadata-error-handler:
 
 Error handler
@@ -118,32 +120,6 @@ For example::
     However the first is called as soon as the error is raised, while the second just before the pipeline execution
     is going terminate. When using the ``finish`` :ref:`process-page-error-strategy`, between the two there could be
     a significant time gap depending by the time required to complete any pending job.
-
-Notification message
---------------------
-
-Nextflow does not provide a built-in mechanism to send emails or other messages. However the ``mail`` standard Linux
-tool (or an equivalent one) can easily be used to send a notification message when the workflow execution is completed,
-as shown below::
-
-
-    workflow.onComplete {
-        def subject = 'My pipeline execution'
-        def recipient = 'me@gmail.com'
-
-        ['mail', '-s', subject, recipient].execute() << """
-
-        Pipeline execution summary
-        ---------------------------
-        Completed at: ${workflow.complete}
-        Duration    : ${workflow.duration}
-        Success     : ${workflow.success}
-        workDir     : ${workflow.workDir}
-        exit status : ${workflow.exitStatus}
-        Error report: ${workflow.errorReport ?: '-'}
-        """
-    }
-
 
 
 Decoupling metadata

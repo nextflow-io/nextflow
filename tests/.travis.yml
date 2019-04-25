@@ -1,9 +1,15 @@
+sudo: required
 language: java
 jdk:
 - oraclejdk8
-before_install:
+services:
+  - docker
+env:
+  global:
+  - NXF_ANSI_LOG=false
+install:
 - sudo apt-get -qq update
-- sudo apt-get -qq -y install graphviz
+- sudo apt-get -qq -y install graphviz realpath
 - sudo pip install awscli
 git:
   submodules: false
@@ -12,8 +18,8 @@ branches:
   - master  
 before_script:
 - rm $HOME/.gitconfig
-- mkdir "$HOME/.nextflow" && echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
-script:
+- mkdir -p "$HOME/.nextflow" && echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
 - curl -fsSL get.nextflow.io | bash
 - docker pull nextflow/examples
+script:
 - export WITH_DOCKER='-with-docker'; export NXF_CMD=$PWD/nextflow; cd checks/ && bash run.sh 

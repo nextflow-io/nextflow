@@ -397,7 +397,7 @@ class BashWrapperBuilder {
         result.readLines().join('\n  ')
     }
 
-
+    @PackageScope
     ContainerBuilder createContainerBuilder0(String engine) {
         /*
          * create a builder instance given the container engine
@@ -413,6 +413,7 @@ class BashWrapperBuilder {
         //
         throw new IllegalArgumentException("Unknown container engine: $engine")
     }
+
     /**
      * Build a {@link DockerBuilder} object to handle Docker commands
      *
@@ -429,7 +430,9 @@ class BashWrapperBuilder {
         /*
          * initialise the builder
          */
-        builder.addMountForInputs(resolvedInputs)
+        // do not mount inputs when they are copied in the task work dir -- see #1105
+        if( stageInMode != 'copy' )
+            builder.addMountForInputs(resolvedInputs)
 
         builder.addMount(binDir)
 

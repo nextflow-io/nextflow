@@ -16,8 +16,6 @@
 
 package nextflow.processor
 
-import static nextflow.util.CacheHelper.*
-
 import java.util.regex.Pattern
 
 import groovy.transform.PackageScope
@@ -44,6 +42,7 @@ import nextflow.script.StdInParam
 import nextflow.script.StdOutParam
 import nextflow.script.ValueInParam
 import nextflow.script.ValueOutParam
+import static nextflow.util.CacheHelper.HashMode
 /**
  * Holds the process configuration properties
  *
@@ -70,6 +69,7 @@ class ProcessConfig implements Map<String,Object> {
             'errorStrategy',
             'executor',
             'ext',
+            'gpu',
             'instanceType',
             'queue',
             'label',
@@ -281,6 +281,7 @@ class ProcessConfig implements Map<String,Object> {
             return result
         }
         else {
+            if( name == 'gpu' ) gpuWarn()
             return configProperties.put(name,value)
         }
     }
@@ -668,8 +669,6 @@ class ProcessConfig implements Map<String,Object> {
         return this
     }
 
-    private static final Map POD_OPTIONS = [secret:String, mountPath:String, envName: String]
-
     /**
      * Allow use to specify K8s `pod` options
      *
@@ -692,5 +691,34 @@ class ProcessConfig implements Map<String,Object> {
         allOptions.add(entry)
         return this
 
+    }
+
+    ProcessConfig gpu( Map params, value )  {
+        gpuWarn()
+        if( value instanceof Number ) {
+            if( params.limit==null )
+                params.limit=value
+            else if( params.request==null )
+                params.request=value
+        }
+        else if( value != null )
+            throw new IllegalArgumentException("Not a valid gpu directive value: $value [${value.getClass().getName()}]")
+        gpu(params)
+        return this
+    }
+
+    ProcessConfig gpu( value ) {
+        gpuWarn()
+        if( value instanceof Number )
+            configProperties.put('gpu', [limit: value])
+        else if( value instanceof Map )
+            configProperties.put('gpu', value)
+        else if( value != null )
+            throw new IllegalArgumentException("Not a valid gpu directive value: $value [${value.getClass().getName()}]")
+        return this
+    }
+
+    private void gpuWarn() {
+        log.warn1 "Directive `gpu` is an experimental feature -- it may change in a feature release"
     }
 }

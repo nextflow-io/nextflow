@@ -15,11 +15,11 @@
  */
 
 package nextflow.splitter
+
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
-import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import org.apache.commons.lang.StringUtils
+import nextflow.util.CsvParser
 /**
  * Split a CSV file in records
  *
@@ -32,19 +32,9 @@ import org.apache.commons.lang.StringUtils
 class CsvSplitter extends AbstractTextSplitter {
 
     /**
-     * The CVS separator
+     * Implement the CSV splitting logic
      */
-    protected String sep = ','
-
-    /**
-     * The character used to wrap values containing a separator char
-     */
-    protected String quote
-
-    /**
-     * When {@code true} remove leading and trailing blanks from a value
-     */
-    protected boolean stripBlanks
+    private CsvParser parser = new CsvParser(empty: '')
 
     /**
      * When {@code true} parse the first line as the columns names
@@ -79,10 +69,10 @@ class CsvSplitter extends AbstractTextSplitter {
 
         // the separator character
         if( options.sep )
-            this.sep = options.sep
+            parser.setSeparator(options.sep as String)
 
         if( options.strip == true )
-            this.stripBlanks = true
+            parser.setStrip(true)
 
         // the header: can be a boolean or the list of columns
         if( options.header ) {
@@ -96,7 +86,7 @@ class CsvSplitter extends AbstractTextSplitter {
 
         // the quote character if used
         if( options.quote )
-            quote = options.quote
+            parser.setQuote(options.quote as String)
 
         if( options.skip )
             skipLines = options.skip as int
@@ -144,10 +134,10 @@ class CsvSplitter extends AbstractTextSplitter {
         if( firstLineAsHeader ) {
             line = reader.readLine()
             if( !line ) throw new IllegalStateException("Missing 'header' in CSV file")
-            String[] allCols = StringUtils.splitPreserveAllTokens(line, sep)
+            List allCols = parser.parse(line)
             columnsHeader = new ArrayList<>(allCols.size())
             for( int i=0; i<allCols.size(); i++ ) {
-                def col = strip(allCols[i])
+                def col = allCols[i]
                 if( !col ) throw new IllegalStateException("Empty header columns are not allowed in CSV file")
                 columnsHeader[i] = col
             }
@@ -171,11 +161,7 @@ class CsvSplitter extends AbstractTextSplitter {
                 return null
         }
 
-        def tokens = StringUtils.splitPreserveAllTokens(line, sep) as List<String>
-        // -- strip blanks and quote
-        for( int i=0; i<tokens.size(); i++ ) {
-            tokens[i] = strip(tokens[i])
-        }
+        final tokens = parser.parse(line)
 
         // -- convert to a map if there's a columns header
         if( !columnsHeader )
@@ -186,26 +172,6 @@ class CsvSplitter extends AbstractTextSplitter {
             map[ columnsHeader[i] ] = i<tokens.size() ? tokens[i] : null
 
         return map
-    }
-
-    /**
-     * Remove the quote characters and extra blanks
-     *
-     * @param str The string to be stripped
-     * @return The resulting string value
-     */
-    @PackageScope
-    final String strip( String str ) {
-        def value = stripBlanks ? StringUtils.strip(str) : str
-
-        if( !quote )
-            return value
-
-        if( value.length()>1 && value.startsWith(quote) && value.endsWith(quote) )
-            return value.substring(1, value.length()-1)
-
-        else
-            return value
     }
 
     protected CollectorStrategy createCollector() {

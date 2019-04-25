@@ -48,6 +48,8 @@ import static DataflowHelper.chainImpl
 import static DataflowHelper.newOperator
 import static DataflowHelper.reduceImpl
 import static DataflowHelper.subscribeImpl
+import static nextflow.extension.DataflowHelper.createOpParams
+import static nextflow.extension.DataflowHelper.stopErrorListener
 import static nextflow.splitter.SplitterFactory.countOverChannel
 import static nextflow.util.CheckHelper.checkParams
 /**
@@ -193,22 +195,7 @@ class DataflowExtensions {
 
         final target = new DataflowQueue()
 
-        def listener = new DataflowEventAdapter() {
-            @Override
-            public void afterRun(final DataflowProcessor processor, final List<Object> messages) {
-                if( source instanceof DataflowExpression ) {
-                    processor.bindOutput( Channel.STOP )
-                    processor.terminate()
-                }
-            }
-
-            @Override
-            public boolean onException(final DataflowProcessor processor, final Throwable e) {
-                DataflowExtensions.log.error("@unknown", e)
-                session.abort(e)
-                return true;
-            }
-        }
+        def listener = stopErrorListener(source,target)
 
         newOperator(source, target, listener) {  item ->
 
@@ -1522,7 +1509,8 @@ class DataflowExtensions {
      * @param closure
      */
     static void print(final DataflowReadChannel<?> source, Closure closure = null) {
-        subscribeImpl(source, [onNext: { System.out.print( closure ? closure.call(it) : it ) }])
+        final print0 = { def obj = closure ? closure.call(it) : it; session.printConsole(obj?.toString(),false) }
+        subscribeImpl(source, [onNext: print0])
         NodeMarker.addOperatorNode('print', source, null)
     }
 
@@ -1532,7 +1520,8 @@ class DataflowExtensions {
      * @param closure
      */
     static void println(final DataflowReadChannel<?> source, Closure closure = null) {
-        subscribeImpl(source, [onNext: { System.out.println( closure ? closure.call(it) : it ) }])
+        final print0 = { def obj = closure ? closure.call(it) : it; session.printConsole(obj?.toString(),true) }
+        subscribeImpl(source, [onNext: print0])
         NodeMarker.addOperatorNode('println', source, null)
     }
 
@@ -1553,13 +1542,12 @@ class DataflowExtensions {
 
         final target = newChannelBy(source);
 
-        final printHandle = newLine ? System.out.&println : System.out.&print
-
         final apply = [
 
                 onNext:
                         {
-                            printHandle ( closure != null ? closure.call(it) : it )
+                            final obj = closure != null ? closure.call(it) : it
+                            session.printConsole(obj?.toString(), newLine)
                             target.bind(it)
                         },
 
@@ -1629,7 +1617,9 @@ class DataflowExtensions {
         final result = newChannelBy(source)
         final inputs = [source, other]
         final action = closure ? new ChainWithClosure<>(closure) : new DefaultMergeClosure(inputs.size())
-        newOperator(inputs, [result], action)
+        final listener = stopErrorListener(source,result)
+        final params = createOpParams(inputs, result, listener)
+        newOperator(params, action)
         NodeMarker.addOperatorNode('merge', inputs, result)
         return result;
     }
@@ -1637,9 +1627,11 @@ class DataflowExtensions {
     static DataflowReadChannel merge(final DataflowReadChannel source, final DataflowReadChannel... others) {
         final result = newChannelBy(source)
         final List<DataflowReadChannel> inputs = new ArrayList<DataflowReadChannel>(1 + others.size())
-        inputs.add(source);
-        inputs.addAll(others);
-        newOperator(inputs, [result], new DefaultMergeClosure(1 + others.size()));
+        inputs.add(source)
+        inputs.addAll(others)
+        final listener = stopErrorListener(source,result)
+        final params = createOpParams(inputs, result, listener)
+        newOperator(params, new DefaultMergeClosure(1 + others.size()))
         NodeMarker.addOperatorNode('merge', inputs, result)
         return result;
     }
@@ -1648,9 +1640,11 @@ class DataflowExtensions {
         final result = newChannelBy(source)
         final List<DataflowReadChannel> inputs = new ArrayList<DataflowReadChannel>(1 + others.size())
         final action = closure ? new ChainWithClosure<>(closure) : new DefaultMergeClosure(1 + others.size())
-        inputs.add(source);
-        inputs.addAll(others);
-        newOperator(inputs, [result], action);
+        inputs.add(source)
+        inputs.addAll(others)
+        final listener = stopErrorListener(source,result)
+        final params = createOpParams(inputs, result, listener)
+        newOperator(params, action)
         NodeMarker.addOperatorNode('merge', inputs, result)
         return result;
     }

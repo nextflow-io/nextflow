@@ -17,6 +17,9 @@
 package nextflow.k8s.model
 
 import spock.lang.Specification
+
+import nextflow.executor.res.GpuResource
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -99,6 +102,7 @@ class PodSpecBuilderTest extends Specification {
                 .withEnv(PodEnv.value('ALPHA','hello'))
                 .withEnv(PodEnv.value('DELTA', 'world'))
                 .withCpus(8)
+                .withGpu( new GpuResource(request: 5, limit:10, type: 'foo.org') )
                 .withMemory('100Gi')
                 .build()
 
@@ -117,7 +121,9 @@ class PodSpecBuilderTest extends Specification {
                                             [name:'ALPHA', value:'hello'],
                                             [name:'DELTA', value:'world']
                                     ],
-                                    resources:[limits:[cpu:8, memory:'100Gi'] ]
+                                    resources:[
+                                            requests: ['foo.org/gpu':5],
+                                            limits:['foo.org/gpu':10, cpu:8, memory:'100Gi'] ]
                                    ]
                            ]
                    ]
@@ -479,5 +485,43 @@ class PodSpecBuilderTest extends Specification {
         then:
         result.size() == 1 
         result.get(0).name == 'MySecret'
+    }
+
+
+    def 'should return the resources map' () {
+
+        given:
+        def builder = new PodSpecBuilder()
+
+        when:
+        def res = builder.addGpuResources(new GpuResource(request:2, limit: 5), null)
+        then:
+        res.requests == ['nvidia.com/gpu': 2]
+        res.limits == ['nvidia.com/gpu': 5]
+
+        when:
+        res = builder.addGpuResources(new GpuResource(limit: 5, type:'foo'), null)
+        then:
+        res.requests == ['foo.com/gpu': 5]
+        res.limits == ['foo.com/gpu': 5]
+
+        when:
+        res = builder.addGpuResources(new GpuResource(request: 5, type:'foo.org'), null)
+        then:
+        res.requests == ['foo.org/gpu': 5]
+        res.limits == null
+
+        when:
+        res = builder.addGpuResources(new GpuResource(request: 5, type:'foo.org'), [limits: [cpus: 2]])
+        then:
+        res.requests == ['foo.org/gpu': 5]
+        res.limits == [cpus:2]
+
+        when:
+        res = builder.addGpuResources(new GpuResource(request: 5, limit: 10, type:'foo.org'), [limits: [cpus: 2]])
+        then:
+        res.requests == ['foo.org/gpu': 5]
+        res.limits == [cpus:2, 'foo.org/gpu': 10]
+
     }
 }

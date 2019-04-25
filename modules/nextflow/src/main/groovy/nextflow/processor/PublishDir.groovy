@@ -88,11 +88,14 @@ class PublishDir {
 
     private String stageInMode
 
+    private boolean nullPathWarn
+
     void setPath( Closure obj ) {
         setPath( obj.call() as Path )
     }
 
     void setPath( String str ) {
+        nullPathWarn = checkNull(str)
         setPath(str as Path)
     }
 
@@ -106,6 +109,10 @@ class PublishDir {
 
     void setMode( Mode mode )  {
         this.mode = mode
+    }
+
+    @PackageScope boolean checkNull(String str) {
+        ( str =~ /\bnull\b/  ).find()
     }
 
     /**
@@ -148,9 +155,14 @@ class PublishDir {
     @CompileStatic
     void apply( List<Path> files, TaskRun task ) {
 
-        if( !files ) {
+        if( !files )
             return
-        }
+
+        if( !path )
+            throw new IllegalStateException("Target path for directive publishDir cannot be null")
+
+        if( nullPathWarn )
+            log.warn "Process `$task.processor.name` publishDir path contains a variable with a null value"
 
         this.processor = task.processor
         this.sourceDir = task.targetDir
@@ -174,7 +186,7 @@ class PublishDir {
         /*
          * iterate over the file parameter and publish each single file
          */
-        files.each { value ->
+        for( Path value : files ) {
             apply(value, inProcess)
         }
     }
