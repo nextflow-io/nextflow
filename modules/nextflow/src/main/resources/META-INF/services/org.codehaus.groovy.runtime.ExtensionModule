@@ -1,4 +1,3 @@
-
 #
 # Copyright 2013-2019, Centre for Genomic Regulation (CRG)
 #
@@ -17,4 +16,4 @@
 
 moduleName=nextflow
 moduleVersion=1.0
-extensionClasses=nextflow.extension.DataflowExtensions,nextflow.splitter.SplitterEx
+extensionClasses=nextflow.extension.ChannelEx,nextflow.splitter.SplitterEx

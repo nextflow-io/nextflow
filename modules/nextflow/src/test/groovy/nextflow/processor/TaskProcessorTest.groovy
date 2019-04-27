@@ -32,6 +32,7 @@ import nextflow.executor.NopeExecutor
 import nextflow.file.FileHolder
 import nextflow.script.BaseScript
 import nextflow.script.FileOutParam
+import nextflow.script.ProcessConfig
 import nextflow.script.ScriptType
 import nextflow.script.TaskBody
 import nextflow.util.ArrayBag

@@ -15,6 +15,7 @@
  */
 
 package nextflow.processor
+
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
@@ -27,6 +28,7 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
 import nextflow.exception.ProcessException
+import nextflow.script.ScriptBinding
 import nextflow.util.KryoHelper
 /**
  * Map used to delegate variable resolution to script scope
@@ -102,7 +104,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
     /**
      * @return The inner map holding the process variables
      */
-    public Map<String,Object> getHolder() { holder }
+    Map<String,Object> getHolder() { holder }
 
     private void setHolder( Map<String,Object> holder ) {
         this.holder = holder
@@ -111,14 +113,14 @@ class TaskContext implements Map<String,Object>, Cloneable {
     /**
      * @return The script instance to which this map reference i.e. the main script object
      */
-    public Script getScript() { script }
+    Script getScript() { script }
 
     /**
      * @return
      *      The set of variable and properties referenced in the user script.
      *      NOTE: it includes properties in the form {@code object.propertyName}
      */
-    public Set<String> getVariableNames() { variableNames }
+    Set<String> getVariableNames() { variableNames }
 
     @Override
     String toString() {
@@ -126,7 +128,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
     }
 
     @Override
-    public Object get(Object property) {
+    Object get(Object property) {
         assert property
 
         if( holder.containsKey(property) ) {
@@ -140,6 +142,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
         throw new MissingPropertyException("Unknown variable '$property' -- Make sure it is not misspelt and defined somewhere in the script before using it", property as String, null)
     }
 
+    @Override
     Object invokeMethod(String name, Object args) {
         if( name == 'template' )
             template(args)
@@ -147,16 +150,18 @@ class TaskContext implements Map<String,Object>, Cloneable {
             script.invokeMethod(name, args)
     }
 
-    public getProperty( String name ) {
+    @Override
+    def getProperty( String name ) {
         get((String)name)
     }
 
-    public void setProperty( String name, def value ) {
+    @Override
+    void setProperty( String name, def value ) {
         put(name, value)
     }
 
     @Override
-    public put(String property, Object newValue) {
+    put(String property, Object newValue) {
 
         if( property == 'task' && !(newValue instanceof TaskConfig ) && !overrideWarnShown.getAndSet(true) ) {
             log.warn "Process $name overrides reserved variable `task`"
@@ -166,7 +171,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
     }
 
 
-    def byte[] serialize() {
+    byte[] serialize() {
         try {
             def map = holder
             if( map.get(TaskProcessor.TASK_CONTEXT_PROPERTY_NAME) instanceof TaskConfig ) {
@@ -201,7 +206,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
     /**
      * Serialize the {@code DelegateMap} instance to a byte array
      */
-    def byte[] dehydrate() {
+    byte[] dehydrate() {
         def kryo = KryoHelper.kryo()
         def buffer = new ByteArrayOutputStream(5*1024)
         def out = new Output(buffer)
@@ -212,21 +217,21 @@ class TaskContext implements Map<String,Object>, Cloneable {
         kryo.writeObject(out, script.class)
 
         // -- only the binding values for which there's an entry in the holder map
-        final copy = new Binding()
+        final copy = new HashMap(20)
         variableNames.each { String it ->
             // name can be a property, in this case use the root object
             def p = it.indexOf('.')
             def var = ( p == -1 ? it : it.substring(0,p) )
             checkAndSet(var, copy)
         }
-        log.trace "Delegate for $name > binding copy: ${copy.getVariables()}"
+        log.trace "Delegate for $name > binding copy: ${copy}"
         kryo.writeObject(out, copy)
 
         out.flush()
         return buffer.toByteArray()
     }
 
-    private void checkAndSet( String name, Binding target ) {
+    private void checkAndSet( String name, Map target ) {
 
         final binding = this.script.getBinding()
         if( !binding.hasVariable(name) )
@@ -237,7 +242,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
             return
 
         if( val instanceof Path || val instanceof Serializable ) {
-            target.setVariable(name, val)
+            target.put(name, val)
         }
 
     }
@@ -257,7 +262,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
         assert binary
         final kryo = KryoHelper.kryo()
 
-        def ClassLoader prev = null
+        ClassLoader prev = null
         if( loader ) {
             prev = kryo.getClassLoader()
             kryo.setClassLoader(loader)
@@ -268,10 +273,9 @@ class TaskContext implements Map<String,Object>, Cloneable {
             def name = input.readString()
             Map holder = (Map)kryo.readClassAndObject(input)
             Class<Script> clazz = kryo.readObject(input,Class)
-            Binding binding = kryo.readObject(input,Binding)
+            def variables = kryo.readObject(input, HashMap)
 
-            Script script = clazz.newInstance()
-            script.setBinding(binding)
+            Script script = clazz.newInstance([new ScriptBinding(variables)] as Object[])
             return new TaskContext(script, holder, name)
         }
         finally {

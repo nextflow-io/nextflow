@@ -15,13 +15,12 @@
  */
 
 package nextflow.extension
-import static nextflow.util.CheckHelper.checkParams
 
 import java.nio.file.Path
 
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.Global
 import nextflow.file.FileCollector
@@ -29,11 +28,10 @@ import nextflow.file.FileHelper
 import nextflow.file.SimpleFileCollector
 import nextflow.file.SortFileCollector
 import nextflow.util.CacheHelper
-
 import static nextflow.util.CacheHelper.HashMode
-
+import static nextflow.util.CheckHelper.checkParams
 /**
- * Implements the body of {@link DataflowExtensions#collectFile(groovyx.gpars.dataflow.DataflowReadChannel)} operator
+ * Implements the body of {@link OperatorEx#collectFile(groovyx.gpars.dataflow.DataflowReadChannel)} operator
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -57,7 +55,7 @@ class CollectFileOp {
 
     private final Map params
 
-    private DataflowQueue result
+    private DataflowWriteChannel result
 
     private DataflowReadChannel channel
 
@@ -75,7 +73,7 @@ class CollectFileOp {
         this.params = params
         this.channel = channel
         this.closure = closure
-        this.result = new DataflowQueue()
+        this.result = ChannelFactory.create()
 
         createFileCollector()
         defineStoreDirAndFileName()
@@ -267,7 +265,7 @@ class CollectFileOp {
     }
 
 
-    DataflowQueue apply() {
+    DataflowWriteChannel apply() {
         DataflowHelper.subscribeImpl( channel, [onNext: this.&processItem, onComplete: this.&emitItems] )
         return result
     }

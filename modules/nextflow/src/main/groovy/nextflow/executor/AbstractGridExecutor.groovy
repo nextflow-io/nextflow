@@ -46,8 +46,9 @@ abstract class AbstractGridExecutor extends Executor {
     /**
      * Initialize the executor class
      */
-    void init() {
-        super.init()
+    @Override
+    protected void register () {
+        super.register()
         queueInterval = session.getQueueStatInterval(name)
         log.debug "Creating executor '$name' > queue-stat-interval: ${queueInterval}"
     }
@@ -56,14 +57,14 @@ abstract class AbstractGridExecutor extends Executor {
      * Create a a queue holder for this executor
      * @return
      */
-    def TaskMonitor createTaskMonitor() {
+    TaskMonitor createTaskMonitor() {
         return TaskPollingMonitor.create(session, name, 100, Duration.of('5 sec'))
     }
 
     /*
      * Prepare and launch the task in the underlying execution platform
      */
-    def GridTaskHandler createTaskHandler(TaskRun task) {
+    GridTaskHandler createTaskHandler(TaskRun task) {
         assert task
         assert task.workDir
 

@@ -20,13 +20,17 @@ import nextflow.Channel
 
 import spock.lang.Specification
 
+import nextflow.Session
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class GroupTupleOpTest extends Specification {
 
-
+    def setup() {
+        new Session()
+    }
 
     def 'should reuse the same key' () {
 

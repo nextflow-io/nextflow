@@ -17,9 +17,12 @@
 package nextflow.extension
 
 import groovy.transform.CompileStatic
-import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
+
+import static DataflowHelper.eventsMap
+import static DataflowHelper.subscribeImpl
 
 /**
  * Implements Reservoir sampling of channel content
@@ -33,7 +36,7 @@ class RandomSampleOp {
 
     private DataflowReadChannel source
 
-    private DataflowQueue result
+    private DataflowWriteChannel result
 
     private int N
 
@@ -75,9 +78,9 @@ class RandomSampleOp {
         result.bind(Channel.STOP)
     }
 
-    DataflowQueue apply() {
-        result = new DataflowQueue()
-        DataflowHelper.subscribeImpl(source, [onNext: this.&sampling, onComplete: this.&emit])
+    DataflowWriteChannel apply() {
+        result = ChannelFactory.create()
+        subscribeImpl(source, eventsMap(this.&sampling, this.&emit))
         return result
     }
 }

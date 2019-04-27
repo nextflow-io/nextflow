@@ -25,7 +25,7 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.SeparationClosure
 
 /**
- * Implements the {@link DataflowExtensions#separate} operator logic
+ * Implements the {@link OperatorEx#separate} operator logic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

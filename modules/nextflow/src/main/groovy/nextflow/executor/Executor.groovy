@@ -17,6 +17,7 @@
 package nextflow.executor
 
 import java.nio.file.Path
+import java.util.concurrent.CountDownLatch
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -51,36 +52,55 @@ abstract class Executor {
      */
     private TaskMonitor monitor
 
-    private static final Map<Class,Boolean> registerFlag = [:]
-
-    /**
-     * Template method executed once for executor class
-     */
-    void register() { }
+    TaskMonitor getMonitor() { monitor }
 
     protected String getDisplayName() { name }
 
     /**
      * Allows to post-initialize the executor
      */
-    void init() {
-        log.debug "Initializing executor: $name"
+    final void init() {
+        log.info "[warm up] executor > ${getDisplayName()}"
+        monitor = createTaskMonitor()
+        monitor.start()
+        register()
+    }
 
-        // -- skip if already assigned, this is only for testing purpose
-        if( monitor )
-            return
+    protected void register() { }
 
-        // -- get the reference to the monitor class for this executor
-        monitor = session.dispatcher.getOrCreateMonitor(this.class) {
-            log.info "[warm up] executor > ${getDisplayName()}"
-            createTaskMonitor()
+    void signal() {
+        monitor.signal()
+    }
+
+    /**
+     * Submit the specified task for execution to the underlying system
+     * and add it to the queue of tasks to be monitored.
+     *
+     * @param task A {@code TaskRun} instance
+     */
+    final void submit( TaskRun task, boolean awaitTermination ) {
+        log.trace "Scheduling process: ${task}"
+
+        if( session.isTerminated() ) {
+            new IllegalStateException("Session terminated - Cannot add process to execution queue: ${task}")
         }
 
-        // call the register template method
-        if( !registerFlag[this.class] ) {
-            log.debug "Invoke register for executor: ${name}"
-            register()
-            registerFlag[this.class] = true
+        final handler = createTaskHandler(task)
+
+        // set a count down latch if the execution is blocking
+        if( awaitTermination )
+            handler.latch = new CountDownLatch(1)
+
+        /*
+         * Add the task to the queue for processing
+         * Note: queue is implemented as a fixed size blocking queue, when
+         * there's not space *put* operation will block until, some other tasks finish
+         */
+        monitor.schedule(handler)
+        if( handler && handler.latch ) {
+            log.trace "Process ${task} > blocking"
+            handler.latch.await()
+            log.trace "Process ${task} > complete"
         }
     }
 

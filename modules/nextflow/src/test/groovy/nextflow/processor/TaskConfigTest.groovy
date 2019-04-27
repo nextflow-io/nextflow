@@ -20,6 +20,7 @@ import java.nio.file.Paths
 import nextflow.exception.FailedGuardException
 import nextflow.k8s.model.PodOptions
 import nextflow.script.BaseScript
+import nextflow.script.ProcessConfig
 import nextflow.script.TaskClosure
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit

@@ -418,8 +418,11 @@ Binding values
 Since in `Nextflow` channels are implemented using `dataflow` variables or queues. Thus sending a message
 is equivalent to `bind` a value to object representing the communication channel.
 
-bind( )
--------
+
+.. _channel-bind1:
+
+bind
+----
 
 Channel objects provide a `bind( )` method which is the basic operation to send a message over the channel.
 For example::
@@ -428,10 +431,12 @@ For example::
     myChannel.bind( 'Hello world' )
 
 
+.. _channel-bind2:
+
 operator <<
 -----------
 
-The operator ``<<`` is just a syntax sugar for the `bind( )` method. Thus, the following example produce
+The operator ``<<`` is just a syntax sugar for the `bind` method. Thus, the following example produce
 an identical result as the previous one::
 
     myChannel = Channel.create()
@@ -445,10 +450,10 @@ Observing events
 
 .. _channel-subscribe:
 
-subscribe( )
-------------
+subscribe
+---------
 
-The ``subscribe( )`` method permits to execute a user define function each time a new value is emitted by the source channel.
+The ``subscribe`` method permits to execute a user define function each time a new value is emitted by the source channel.
 
 The emitted value is passed implicitly to the specified function. For example::
 
@@ -489,10 +494,10 @@ Read :ref:`script-closure` paragraph to learn more about `closure` feature.
 onNext, onComplete, and onError
 -------------------------------
 
-The ``subscribe()`` method may accept one or more of the following event handlers:
+The ``subscribe`` method may accept one or more of the following event handlers:
 
 * ``onNext``: registers a function that is invoked whenever the channel emits a value.
-  This is the same as using the ``subscribe( )`` with a `plain` closure as describe in the examples above.
+  This is the same as using the ``subscribe`` with a `plain` closure as describe in the examples above.
 
 * ``onComplete``: registers a function that is invoked after the `last` value is emitted by the channel.
 
@@ -505,19 +510,14 @@ For example::
 
     Channel
         .from( 1, 2, 3 )
-        .subscribe onNext: { println it }, onComplete: { println 'Done.' }
+        .subscribe onNext: { println it }, onComplete: { println 'Done' }
 
 ::
 
     1
     2
     3
-    Done.
-
-
-.. Special messages
-.. STOP
-.. VOID
+    Done
 
 
 

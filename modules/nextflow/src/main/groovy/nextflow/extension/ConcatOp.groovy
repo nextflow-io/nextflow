@@ -17,13 +17,11 @@
 package nextflow.extension
 
 import groovy.transform.CompileStatic
-import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
-
 /**
- * Implements the {@link DataflowExtensions#concat} operator
+ * Implements the {@link OperatorEx#concat} operator
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -43,8 +41,8 @@ class ConcatOp {
     }
 
 
-    DataflowQueue apply() {
-        final result = new DataflowQueue()
+    DataflowWriteChannel apply() {
+        final result = ChannelFactory.create()
         final allChannels = [source]
         allChannels.addAll(target)
 
@@ -57,12 +55,13 @@ class ConcatOp {
         def current = channels[index++]
         def next = index < channels.size() ? channels[index] : null
 
-        DataflowHelper.subscribeImpl(current, [
-                onNext: { result.bind(it) },
-                onComplete: {
-                    if(next) append(result, channels, index)
-                    else result.bind(Channel.STOP)
-                }
-        ])
+        def events = new HashMap<String,Closure>(2)
+        events.onNext = { result.bind(it) }
+        events.onComplete = {
+            if(next) append(result, channels, index)
+            else result.bind(Channel.STOP)
+        }
+
+        DataflowHelper.subscribeImpl(current, events)
     }
 }

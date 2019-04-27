@@ -19,8 +19,8 @@ package nextflow.extension
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowProcessor
@@ -52,7 +52,7 @@ class BufferOp {
 
     private DataflowReadChannel source
 
-    private DataflowQueue target
+    private DataflowWriteChannel target
 
     private Object openCondition
 
@@ -90,8 +90,8 @@ class BufferOp {
         return this
     }
 
-    DataflowQueue apply() {
-        target = new DataflowQueue()
+    DataflowWriteChannel apply() {
+        target = ChannelFactory.create()
 
         if( params?.skip )
             this.skip = params.skip as int
@@ -149,7 +149,7 @@ class BufferOp {
     }
 
     @CompileDynamic
-    static private <V> void buffer0(DataflowReadChannel<V> source, DataflowQueue target, Closure startingCriteria, Closure closeCriteria, boolean remainder ) {
+    static private <V> void buffer0(DataflowReadChannel<V> source, DataflowWriteChannel target, Closure startingCriteria, Closure closeCriteria, boolean remainder ) {
         assert closeCriteria
 
         // the list holding temporary collected elements
@@ -178,7 +178,7 @@ class BufferOp {
 
             @Override
             boolean onException(DataflowProcessor processor, Throwable e) {
-                DataflowExtensions.log.error("@unknown", e)
+                OperatorEx.log.error("@unknown", e)
                 session.abort(e)
                 return true
             }

@@ -15,9 +15,9 @@
  */
 
 package nextflow.extension
+
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
-import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
@@ -43,7 +43,7 @@ class TransposeOp {
     TransposeOp(DataflowReadChannel source, Map params=null) {
         CheckHelper.checkParams('transpose', params, TRANSPOSE_PARAMS)
         this.source = source
-        this.target = new DataflowQueue()
+        this.target = ChannelFactory.create()
         this.cols = parseByParam(params?.by)
         this.remainder = params?.remainder as Boolean
     }
@@ -63,9 +63,9 @@ class TransposeOp {
             return [value as int]
     }
 
-    DataflowQueue apply() {
-        DataflowHelper.subscribeImpl(source, [onNext: this.&transpose, onComplete: this.&done])
-        return (DataflowQueue)target
+    DataflowWriteChannel apply() {
+        DataflowHelper.subscribeImpl(source, DataflowHelper.eventsMap(this.&transpose, this.&done))
+        return target
     }
 
     protected void transpose(item) {

@@ -15,24 +15,21 @@
  */
 
 package nextflow.extension
+
 import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.Channel
 import nextflow.Nextflow
-
 import static nextflow.extension.DataflowHelper.addToList
 import static nextflow.extension.DataflowHelper.split
-
 /**
- * Implements the {@link DataflowExtensions#spread(groovyx.gpars.dataflow.DataflowReadChannel, java.lang.Object)} operator
+ * Implements the {@link OperatorEx#spread(groovyx.gpars.dataflow.DataflowReadChannel, java.lang.Object)} operator
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -46,7 +43,7 @@ class CombineOp {
 
     private DataflowReadChannel rightChannel
 
-    private DataflowQueue target
+    private DataflowWriteChannel target
 
     private Map<Object,List> leftValues = [:]
 
@@ -63,8 +60,7 @@ class CombineOp {
         leftChannel = left
 
         switch(right) {
-            case DataflowQueue:
-            case DataflowExpression:
+            case DataflowReadChannel:
                 rightChannel = (DataflowReadChannel)right;
                 break
 
@@ -151,9 +147,9 @@ class CombineOp {
         throw new IllegalArgumentException("Not a valid spread operator index: $index")
     }
 
-    public DataflowReadChannel apply() {
+    DataflowWriteChannel apply() {
 
-        target = new DataflowQueue()
+        target = ChannelFactory.create()
 
         if( rightChannel ) {
             final stopCount = new AtomicInteger(2)

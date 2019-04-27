@@ -15,33 +15,26 @@
  */
 
 package nextflow.ui.console
-import javax.swing.*
-import javax.swing.filechooser.FileFilter
+
 import java.nio.file.Path
 import java.nio.file.Paths
+import javax.swing.*
+import javax.swing.filechooser.FileFilter
 
-import groovy.transform.Field
 import groovy.transform.ThreadInterrupt
 import groovy.ui.Console
 import groovy.ui.OutputTransforms
 import groovy.util.logging.Slf4j
-import nextflow.Channel
 import nextflow.Session
-import nextflow.ast.NextflowDSL
-import nextflow.ast.NextflowXform
 import nextflow.cli.CliOptions
 import nextflow.cli.CmdInfo
 import nextflow.cli.CmdRun
-import nextflow.script.BaseScript
 import nextflow.config.ConfigBuilder
 import nextflow.script.ScriptBinding
-import nextflow.util.Duration
+import nextflow.script.ScriptFile
+import nextflow.script.ScriptParser
 import nextflow.util.LoggerHelper
-import nextflow.util.MemoryUnit
-import org.apache.commons.lang.StringUtils
-import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
-import org.codehaus.groovy.control.customizers.ImportCustomizer
 import org.codehaus.groovy.runtime.StackTraceUtils
 /**
  * Implement a REPL console for Nextflow DSL based on Groovy console
@@ -51,7 +44,7 @@ import org.codehaus.groovy.runtime.StackTraceUtils
 @Slf4j
 class Nextflow extends Console {
 
-    static final TITLE = 'Nextflow REPL console'
+    static public final TITLE = 'Nextflow REPL console'
 
     static {
 
@@ -76,44 +69,23 @@ class Nextflow extends Console {
         ];
     }
 
-    private ClassLoader loader
+    private Map scriptConfig
 
     Nextflow(ClassLoader loader) {
-        super(loader, createBinding())
-        this.loader = loader
+        super(loader, new ScriptBinding())
+        this.scriptConfig = createScriptConfig()
     }
 
-    static protected Binding createBinding() {
+    protected Map createScriptConfig() {
+        final script = scriptFile as Path
+        final base = script ? script.parent : Paths.get('.')
 
         // create the config object
-        def config = new ConfigBuilder()
-                        .setOptions( new CliOptions() )
-                        .setBaseDir(Paths.get('.'))
-                        .setCmdRun( new CmdRun() )
-                        .build()
-
-        return new ScriptBinding(config)
-    }
-
-
-    protected CompilerConfiguration createCompilerConfig() {
-
-        // define the imports
-        def importCustomizer = new ImportCustomizer()
-        importCustomizer.addImports( StringUtils.name, Field.name )
-        importCustomizer.addImports( Path.name )
-        importCustomizer.addImports( Channel.name )
-        importCustomizer.addImports( Duration.name )
-        importCustomizer.addImports( MemoryUnit.name )
-        importCustomizer.addStaticStars( nextflow.Nextflow.name )
-
-        def config = new CompilerConfiguration()
-        config.addCompilationCustomizers( importCustomizer )
-        config.scriptBaseClass = BaseScript.class.name
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
-
-        return config
+        return new ConfigBuilder()
+                    .setOptions( new CliOptions() )
+                    .setBaseDir(base)
+                    .setCmdRun( new CmdRun() )
+                    .build()
     }
 
     /**
@@ -124,19 +96,21 @@ class Nextflow extends Console {
      */
     @Override
     void newScript(ClassLoader parent, Binding binding) {
+        assert parent
 
-        config = createCompilerConfig()
+        def parser = new ScriptParser(parent)
+        config = parser.getConfig()
 
-        // from super 'newScript' implementation
-        if (threadInterrupt) config.addCompilationCustomizers(new ASTTransformationCustomizer(ThreadInterrupt))
+        if (threadInterrupt)
+            config.addCompilationCustomizers(new ASTTransformationCustomizer(ThreadInterrupt))
 
-        // run and wait for termination
-        shell = new GroovyShell(loader, binding, config)
+        parser.setBinding((ScriptBinding)binding)
+        shell = parser.getInterpreter()
     }
 
     @Override
     void clearContext(EventObject evt = null) {
-        def binding = createBinding()
+        final binding = new ScriptBinding()
         newScript(null, binding)
         // reload output transforms
         binding.variables._outputTransforms = OutputTransforms.loadOutputTransforms()
@@ -154,12 +128,13 @@ class Nextflow extends Console {
 
     private runWith( Closure launcher ) {
 
-        def binding = shell.context as ScriptBinding
-        def session = new Session(binding)
-        session.init(scriptFile as Path)
+        def script = scriptFile ? new ScriptFile((File)scriptFile) : null
+        def path = scriptFile as Path
+        def session = new Session(scriptConfig).init(script)
+        def binding = (ScriptBinding)shell.getContext()
 
-        binding.setVariable( 'baseDir', session.baseDir )
-        binding.setVariable( 'workDir', session.workDir )
+        binding.setSession(session)
+        binding.setScriptPath(path)
 
         beforeExecution = { session.start() }
         afterExecution = { session.await(); session.destroy() }
@@ -242,7 +217,7 @@ class Nextflow extends Console {
         //when starting via main set the look and feel to system
         UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName())
 
-        def console = new Nextflow(Nextflow.class.classLoader?.getRootLoader())
+        def console = new Nextflow(Nextflow.getClassLoader())
         console.useScriptClassLoaderForScriptExecution = true
         console.run()
         if (args.length == 2)

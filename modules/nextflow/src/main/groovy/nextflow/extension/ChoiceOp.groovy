@@ -27,7 +27,7 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
 /**
- * Implements the logic for {@link DataflowExtensions#choice} operator(s)
+ * Implements the logic for {@link OperatorEx#choice} operator(s)
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

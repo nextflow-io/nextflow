@@ -40,10 +40,10 @@ import nextflow.util.ServiceName
 @ServiceName('tes')
 class TesExecutor extends Executor {
 
-    static private TaskServiceApi client
+    private TaskServiceApi client
 
     @Override
-    void register() {
+    protected void register() {
         if( session.binDir && !session.binDir.empty() ) {
             session.abort()
             throw new AbortOperationException("ERROR: TES executor does not allow the use of custom scripts in the `bin` folder")

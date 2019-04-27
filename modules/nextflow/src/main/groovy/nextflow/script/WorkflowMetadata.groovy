@@ -16,8 +16,6 @@
 
 package nextflow.script
 
-import nextflow.config.Manifest
-
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -25,11 +23,13 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
-import nextflow.Const
+import nextflow.NF
+import nextflow.NextflowMeta
+import nextflow.Session
 import nextflow.config.ConfigBuilder
+import nextflow.config.Manifest
 import nextflow.trace.WorkflowStats
 import nextflow.util.Duration
-import nextflow.util.VersionNumber
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Models workflow metadata properties and notification handler
@@ -109,7 +109,7 @@ class WorkflowMetadata {
      * <li>build: runtime build number
      * <li>timestamp: runtime compile timestamp
      */
-    Map nextflow
+    NextflowMeta nextflow
 
     /**
      * Reports if the execution completed successfully
@@ -191,7 +191,7 @@ class WorkflowMetadata {
      */
     Manifest manifest
 
-    final private ScriptRunner owner
+    final private Session session
 
     final private List<Closure> onCompleteActions = []
 
@@ -202,36 +202,36 @@ class WorkflowMetadata {
      *
      * @param owner An instance of {@link ScriptRunner}
      */
-    WorkflowMetadata( ScriptRunner owner ) {
-        this.owner = owner
-        this.scriptId = owner.scriptFile.scriptId
-        this.scriptFile = owner.scriptFile.main
-        this.scriptName = owner.scriptFile.main?.fileName
-        this.repository = owner.scriptFile.repository
-        this.commitId = owner.scriptFile.commitId
-        this.revision = owner.scriptFile.revision
-        this.projectDir = owner.scriptFile.localPath
+    WorkflowMetadata( Session session, ScriptFile scriptFile ) {
+        this.session = session
+        this.scriptId = scriptFile?.scriptId
+        this.scriptFile = scriptFile?.main
+        this.scriptName = scriptFile?.main?.fileName
+        this.repository = scriptFile?.repository
+        this.commitId = scriptFile?.commitId
+        this.revision = scriptFile?.revision
+        this.projectDir = scriptFile?.localPath
         this.start = new Date()
-        this.container = owner.fetchContainers()
-        this.commandLine = owner.commandLine
-        this.nextflow = [version: new VersionNumber(Const.APP_VER), build: Const.APP_BUILDNUM, timestamp: Const.APP_TIMESTAMP_UTC]
-        this.workDir = owner.session.workDir
+        this.container = session.fetchContainers()
+        this.commandLine = session.commandLine
+        this.nextflow = NextflowMeta.instance
+        this.workDir = session.workDir
         this.launchDir = Paths.get('.').complete()
-        this.profile = owner.profile ?: ConfigBuilder.DEFAULT_PROFILE
-        this.sessionId = owner.session.uniqueId
-        this.resume = owner.session.resumeMode
-        this.runName = owner.session.runName
-        this.containerEngine = owner.session.containerConfig.with { isEnabled() ? getEngine() : null }
-        this.configFiles = owner.session.configFiles?.collect { it.toAbsolutePath() }
-        this.stats = owner.session.workflowStats
+        this.profile = session.profile ?:  ConfigBuilder.DEFAULT_PROFILE
+        this.sessionId = session.uniqueId
+        this.resume = session.resumeMode
+        this.runName = session.runName
+        this.containerEngine = session.containerConfig.with { isEnabled() ? getEngine() : null }
+        this.configFiles = session.configFiles?.collect { it.toAbsolutePath() }
+        this.stats = session.workflowStats
         this.userName = System.getProperty('user.name')
         this.homeDir = Paths.get(System.getProperty('user.home'))
-        this.manifest = owner.session.getManifest()
+        this.manifest = session.getManifest()
 
         // check if there's a onComplete action in the config file
-        registerConfigAction(owner.session.config.workflow as Map)
-        owner.session.onShutdown { invokeOnComplete() }
-        owner.session.onError( this.&invokeOnError )
+        registerConfigAction(session.config.workflow as Map)
+        session.onShutdown { invokeOnComplete() }
+        session.onError( this.&invokeOnError )
     }
 
     /**
@@ -253,7 +253,7 @@ class WorkflowMetadata {
     void onComplete( Closure action ) {
 
         final clone = (Closure)action.clone()
-        clone.delegate = owner.session.binding.variables
+        clone.delegate = NF.binding.variables
         clone.resolveStrategy = Closure.DELEGATE_FIRST
 
         onCompleteActions.add(clone)
@@ -285,7 +285,7 @@ class WorkflowMetadata {
     void onError( Closure action ) {
 
         final clone = (Closure)action.clone()
-        clone.delegate = owner.session.binding.variables
+        clone.delegate = NF.binding.variables
         clone.resolveStrategy = Closure.DELEGATE_FIRST
 
         onErrorActions.add(clone)
@@ -333,9 +333,9 @@ class WorkflowMetadata {
     }
 
     private void setErrorAttributes() {
-        if( owner.session.fault ) {
-            errorReport = owner.session.fault.report
-            def task = owner.session.fault.task
+        if( session.fault ) {
+            errorReport = session.fault.report
+            def task = session.fault.task
             if( task ) {
                 exitStatus = task.exitStatus != Integer.MAX_VALUE ? task.exitStatus : null
                 def err = task.dumpStderr()
@@ -343,8 +343,8 @@ class WorkflowMetadata {
                 if( err ) errorMessage = err.join('\n')
             }
         }
-        else if( owner.session.error ) {
-            def msg = owner.session.error.message ?: owner.session.error.toString()
+        else if( session.error ) {
+            def msg = session.error.message ?: session.error.toString()
             errorMessage = msg
             errorReport = msg
         }
@@ -360,7 +360,7 @@ class WorkflowMetadata {
     void invokeOnComplete() {
         this.complete = new Date()
         this.duration = Duration.of( complete.time - start.time )
-        this.success = !(owner.session.aborted || owner.session.cancelled)
+        this.success = !(session.aborted || session.cancelled)
 
         setErrorAttributes()
 
@@ -419,8 +419,8 @@ class WorkflowMetadata {
         try {
             def notifier = new WorkflowNotifier()
             notifier.workflow = this
-            notifier.config = owner.session.config
-            notifier.variables = owner.session.binding.variables
+            notifier.config = session.config
+            notifier.variables = NF.binding.variables
             notifier.sendNotification()
         }
         catch (Exception e) {

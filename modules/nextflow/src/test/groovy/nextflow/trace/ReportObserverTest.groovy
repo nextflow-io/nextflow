@@ -20,6 +20,7 @@ import java.nio.file.Paths
 import java.util.concurrent.Executors
 
 import groovy.json.JsonSlurper
+import nextflow.NextflowMeta
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.script.WorkflowMetadata
@@ -116,7 +117,7 @@ class ReportObserverTest extends Specification {
         def workflow = new WorkflowMetadata(
                 workDir: workDir,
                 stats: new WorkflowStats(),
-                nextflow: [version: '0.27.9', build: '3232', timestamp: '2017-12-12']
+                nextflow: new NextflowMeta('0.27.9', 3232, '2017-12-12')
         )
 
         def file = TestHelper.createInMemTempFile('report.html')
@@ -140,7 +141,7 @@ class ReportObserverTest extends Specification {
         def workflow = new WorkflowMetadata(
                 workDir: Paths.get('/work/dir'),
                 stats: new WorkflowStats(),
-                nextflow: [version: '0.27.9', build: '3232', timestamp: '2017-12-12']
+                nextflow: new NextflowMeta('0.27.9', 3232, '2017-12-12')
         )
 
         def file = TestHelper.createInMemTempFile('report.html')

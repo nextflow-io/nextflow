@@ -17,7 +17,7 @@
 package nextflow.splitter
 
 import groovy.transform.CompileStatic
-import groovyx.gpars.dataflow.DataflowQueue
+import groovyx.gpars.dataflow.DataflowWriteChannel
 /**
  * Interface that splitters object must implements
  *
@@ -46,6 +46,6 @@ interface SplitterStrategy {
 
     List list()
 
-    DataflowQueue channel()
+    DataflowWriteChannel channel()
 
 }

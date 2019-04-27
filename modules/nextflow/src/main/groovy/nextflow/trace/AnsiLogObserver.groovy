@@ -18,6 +18,8 @@ package nextflow.trace
 
 
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
+import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
@@ -33,20 +35,22 @@ import static org.fusesource.jansi.Ansi.ansi
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class AnsiLogObserver implements TraceObserver {
 
     static final private String NEWLINE = System.getProperty("line.separator")
 
+    @EqualsAndHashCode
     static class ProcessStats {
         int submitted
         int cached
+        int stored
         int failed
         int completed
         boolean terminated
         String hash
         boolean error
-        boolean changed
     }
 
     static class Event {
@@ -81,6 +85,8 @@ class AnsiLogObserver implements TraceObserver {
     private volatile boolean started
 
     private volatile boolean dirty
+
+    private volatile boolean rendered
 
     private int printedLines
 
@@ -123,13 +129,16 @@ class AnsiLogObserver implements TraceObserver {
         else {
             errors << new Event(message)
             dirty = true
+            notify()
         }
     }
 
     protected void render0(dummy) {
         while(!stopped) {
             if( dirty ) renderProgress()
-            sleep 200
+            synchronized (this) {
+                wait(200)
+            }
         }
         renderProgress()
         renderEpilog()
@@ -177,10 +186,17 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     protected void renderProcesses(Ansi term) {
+        if( !processes || (!session.isSuccess() && errors && !rendered) ) {
+            // prevent to show a useless process progress if there's an error
+            // on startup and the execution is terminated
+            return
+        }
+
         for( Map.Entry<String,ProcessStats> entry : processes ) {
             term.a(line(entry.key,entry.value))
             term.newline()
         }
+        rendered = true
     }
 
     protected void renderErrors( Ansi term ) {
@@ -252,17 +268,23 @@ class AnsiLogObserver implements TraceObserver {
     } 
 
     protected String line(String name, ProcessStats stats) {
-        final float tot = stats.submitted + stats.cached
-        final float com = stats.completed + stats.cached
+        final float tot = stats.submitted +stats.cached +stats.stored
+        final float com = stats.completed +stats.cached +stats.stored
         final label = name.padRight(maxNameLength)
+        final hh = (stats.hash && tot>0 ? stats.hash : '-').padRight(9)
+
+        if( tot == 0  )
+            return "[$hh] process > $label -"
 
         final x = tot ? Math.round(com / tot * 100f) : 0
         final pct = "[${String.valueOf(x).padLeft(3)}%]".toString()
 
         final numbs = "${(int)com} of ${(int)tot}".toString()
-        def result = "[$stats.hash] process > $label $pct $numbs"
+        def result = "[${hh}] process > $label $pct $numbs"
         if( stats.cached )
             result += ", cached: $stats.cached"
+        if( stats.stored )
+            result += ", stored: $stats.stored"
         if( stats.failed )
             result += ", failed: $stats.failed"
         if( stats.terminated && tot )
@@ -271,7 +293,7 @@ class AnsiLogObserver implements TraceObserver {
     }
 
 
-    private ProcessStats p0(String name) {
+    private ProcessStats proc0(String name) {
         def result = processes.get(name)
         if( !result ) {
             result = new ProcessStats()
@@ -281,8 +303,8 @@ class AnsiLogObserver implements TraceObserver {
         return result
     }
 
-    private ProcessStats p0(TaskHandler handler) {
-        p0(handler.task.processor.name)
+    private ProcessStats proc0(TaskHandler handler) {
+        proc0(handler.task.processor.name)
     }
 
     @Override
@@ -301,16 +323,21 @@ class AnsiLogObserver implements TraceObserver {
         renderer.join()
     }
 
+    @Override
+    synchronized void onProcessCreate(TaskProcessor processor) {
+        proc0(processor.name)
+        dirty = true
+    }
+
     /**
      * This method is invoked before a process run is going to be submitted
      * @param handler
      */
     @Override
     synchronized void onProcessSubmit(TaskHandler handler, TraceRecord trace){
-        final process = p0(handler)
+        final process = proc0(handler)
         process.submitted++
         process.hash = handler.task.hashLog
-        process.changed = true
         // executor counter
         final exec = handler.task.processor.executor.name
         Integer count = executors[exec] ?: 0
@@ -320,10 +347,9 @@ class AnsiLogObserver implements TraceObserver {
 
     @Override
     synchronized void onProcessComplete(TaskHandler handler, TraceRecord trace){
-        final process = p0(handler)
+        final process = proc0(handler)
         process.completed++
         process.hash = handler.task.hashLog
-        process.changed = true
         if( handler.task.aborted || handler.task.failed ) {
             process.failed++
             process.error |= !handler.task.errorAction?.soft
@@ -342,10 +368,15 @@ class AnsiLogObserver implements TraceObserver {
 
     @Override
     synchronized void onProcessCached(TaskHandler handler, TraceRecord trace){
-        final process = p0(handler)
-        process.cached++
-        process.hash = handler.task.hashLog
-        process.changed = true
+        final process = proc0(handler)
+        if( trace ) {
+            process.cached++
+            process.hash = handler.task.hashLog
+        }
+        else {
+            process.stored++
+            process.hash = 'skipped'
+        }
         dirty = true
     }
 

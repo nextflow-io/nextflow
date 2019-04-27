@@ -14,30 +14,16 @@
  * limitations under the License.
  */
 
-package nextflow.processor
+package nextflow.script
 
-import nextflow.executor.SgeExecutor
-import spock.lang.Specification
 /**
+ * Marks a workflow component context aware i.e. holding its own
+ * context binding object
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class TaskDispatcherTest extends Specification {
+interface ExecutionContext {
 
-    def testGetMonitor()  {
-
-        setup:
-        def dispatcher = [:] as TaskDispatcher
-        def monitor1 = Mock(TaskPollingMonitor)
-        def monitor2 = Mock(TaskPollingMonitor)
-        def executor = [:] as SgeExecutor
-
-        expect:
-        monitor1 == dispatcher.getOrCreateMonitor(SgeExecutor) { monitor1 }
-        monitor2 != dispatcher.getOrCreateMonitor(SgeExecutor) { monitor1 }
-        monitor1 == dispatcher.getMonitor(SgeExecutor)
-        monitor1 == dispatcher.getMonitor(executor)
-
-    }
+    WorkflowBinding getBinding()
 
 }

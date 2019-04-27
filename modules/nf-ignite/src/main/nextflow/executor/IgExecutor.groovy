@@ -42,9 +42,10 @@ class IgExecutor extends Executor {
     /**
      * Initialize the executor by getting a reference to the Ignite connector
      */
-    void init() {
-        super.init()
+    @Override
+    protected void register() {
         connector = IgConnector.create(taskMonitor)
+        super.register()
     }
 
     /**

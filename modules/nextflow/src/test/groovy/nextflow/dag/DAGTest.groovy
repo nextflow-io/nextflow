@@ -16,15 +16,21 @@
 
 package nextflow.dag
 
+import spock.lang.Specification
+
 import groovyx.gpars.dataflow.DataflowChannel
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
-import spock.lang.Specification
+import nextflow.Session
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class DAGTest extends Specification {
+
+    def setupSpec() {
+        new Session()
+    }
 
     def 'should create a vertex' () {
 
@@ -246,7 +252,7 @@ class DAGTest extends Specification {
         def ch2 = Mock(DataflowChannel)
         def map = [channel_1: ch1, funnel_2: ch2]
 
-        def dag = new DAG()
+        def dag = Spy(DAG)
         dag.addVertex(
                 DAG.Type.PROCESS,
                 'Process 1',
@@ -255,9 +261,11 @@ class DAGTest extends Specification {
 
 
         when:
-        dag.resolveEdgeNames(map)
+        dag.resolveEdgeNames()
 
         then:
+        1 * dag.lookupVariable(ch1) >> 'channel_1'
+        1 * dag.lookupVariable(ch2) >> 'funnel_2'
         dag.edges[0].label == 'channel_1'
         dag.edges[1].label == 'funnel_2'
 

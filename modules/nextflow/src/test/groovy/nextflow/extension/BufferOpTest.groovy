@@ -21,6 +21,8 @@ import spock.lang.Timeout
 import nextflow.Channel
 import spock.lang.Specification
 
+import nextflow.Session
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -28,6 +30,9 @@ import spock.lang.Specification
 @Timeout(10)
 class BufferOpTest extends Specification {
 
+    def setup() {
+        new Session()
+    }
     
     def testBufferClose() {
 
