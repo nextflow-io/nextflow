@@ -28,6 +28,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowChannel
 import groovyx.gpars.dataflow.DataflowQueue
+import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.ControlMessage
@@ -35,6 +36,7 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.dag.NodeMarker
 import nextflow.datasource.SraExplorer
 import nextflow.exception.AbortOperationException
+import nextflow.extension.ChannelFactory
 import nextflow.extension.GroupTupleOp
 import nextflow.extension.MapOp
 import nextflow.file.DirWatcher
@@ -61,13 +63,20 @@ class Channel  {
     // only for testing purpose !
     private static CompletableFuture fromPath0Future
 
+    static private Session getSession() { Global.session as Session }
+    
+
     /**
      * Create an new channel
      *
      * @return The channel instance
      */
-    static <T> DataflowChannel<T> create() {
-        new DataflowQueue<T>()
+    @Deprecated
+    static DataflowChannel create() {
+        if( NF.isDsl2() )
+            throw new DeprecationException("Channel `create` method is not supported any more")
+        log.warn("The channel `create` method is deprecated -- it will be removed in a future release")
+        new DataflowQueue()
     }
 
     /**
@@ -75,8 +84,8 @@ class Channel  {
      *
      * @return The channel instance
      */
-    static <T> DataflowChannel<T> empty() {
-        def result = new DataflowQueue()
+    static DataflowChannel empty() {
+        final result = new DataflowQueue()
         result.bind(STOP)
         NodeMarker.addSourceNode('Channel.empty', result)
         return result
@@ -88,10 +97,32 @@ class Channel  {
      * @param items
      * @return
      */
-    static DataflowChannel from( Collection items ) {
-        final result = Nextflow.channel(items)
+    static DataflowWriteChannel from( Collection items ) {
+        final result = from0(items)
         NodeMarker.addSourceNode('Channel.from', result)
         return result
+    }
+
+    static private DataflowWriteChannel from0( Collection items ) {
+        final result = ChannelFactory.create()
+        if( NF.isDsl2() ) {
+            session.addIgniter { bindValues0(items, result) }
+        }
+        else {
+            bindValues0(items, result)
+        }
+        return result
+    }
+
+    static private void bindValues0(Collection values, DataflowWriteChannel result) {
+        if ( values != null )  {
+            // bind all the items in the provided collection
+            for( def item : values ) {
+                result.bind(item)
+            }
+            // bind a stop signal to 'terminate' the result
+            result.bind(Channel.STOP)
+        }
     }
 
     /**
@@ -100,8 +131,8 @@ class Channel  {
      * @param items
      * @return
      */
-    static DataflowChannel from( Object... items ) {
-        final result = Nextflow.channel(items)
+    static DataflowWriteChannel from( Object... items ) {
+        final result = from0(items as List)
         NodeMarker.addSourceNode('Channel.from', result)
         return result
     }
@@ -132,10 +163,8 @@ class Channel  {
      * @param duration
      * @return
      */
-    static DataflowChannel interval(String duration) {
-
-        final result = interval( duration, { index -> index })
-
+    static DataflowWriteChannel interval(String duration) {
+        final result = interval0( duration, { index -> index })
         NodeMarker.addSourceNode('Channel.interval', result)
         return result
     }
@@ -149,11 +178,16 @@ class Channel  {
      * @return
      */
 
-    static DataflowChannel interval(String duration, Closure closure ) {
+    static DataflowWriteChannel interval(String duration, Closure closure ) {
+        final result = interval0(duration, closure)
+        NodeMarker.addSourceNode('Channel.interval', result)
+        return result
+    }
 
+    static private DataflowWriteChannel interval0(String duration, Closure closure) {
         def millis = Duration.of(duration).toMillis()
         def timer = new Timer()
-        def result = create()
+        def result = ChannelFactory.create()
         long index = 0
 
         def task = {
@@ -164,12 +198,14 @@ class Channel  {
             }
         }
 
-        timer.schedule( task as TimerTask, millis )
-
-        NodeMarker.addSourceNode('Channel.interval', result)
+        if( NF.isDsl2() )
+            session.addIgniter { timer.schedule( task as TimerTask, millis ) }  
+        else 
+            timer.schedule( task as TimerTask, millis )
+        
         return result
     }
-
+    
     /*
      * valid parameters for fromPath operator
      */
@@ -194,7 +230,7 @@ class Channel  {
      * @return
      *      A channel emitting the matching files
      */
-    static DataflowChannel<Path> fromPath( Map opts = null, pattern ) {
+    static DataflowWriteChannel<Path> fromPath( Map opts = null, pattern ) {
         if( !pattern ) throw new AbortOperationException("Missing `fromPath` parameter")
 
         // verify that the 'type' parameter has a valid value
@@ -205,20 +241,29 @@ class Channel  {
         return result
     }
 
-    private static DataflowChannel<Path> fromPath0( Map opts, List allPatterns ) {
+    private static DataflowWriteChannel<Path> fromPath0( Map opts, List allPatterns ) {
 
-        final result = new DataflowQueue()
+        final result = ChannelFactory.create()
+        if( NF.isDsl2() ) {
+            session.addIgniter { pumpFiles0(result, opts, allPatterns) }
+        }
+        else {
+            pumpFiles0(result, opts, allPatterns)
+        }
+        return result
+    }
+    
+    private static void pumpFiles0(DataflowWriteChannel result, Map opts, List allPatterns) {
+        
         def future = CompletableFuture.completedFuture(null)
         for( int index=0; index<allPatterns.size(); index++ ) {
             def factory = new PathVisitor(target: result, opts: opts)
             factory.closeChannelOnComplete = index==allPatterns.size()-1
             future = factory.applyAsync(future, allPatterns[index])
         }
-
+        
         // abort the execution when an exception is raised
         fromPath0Future = future.exceptionally(Channel.&handlerException)
-
-        return result
     }
 
     static private void handlerException(Throwable e) {
@@ -228,12 +273,20 @@ class Channel  {
         session?.abort(error)
     }
 
-    static private DataflowChannel watchImpl( String syntax, String folder, String pattern, boolean skipHidden, String events, FileSystem fs ) {
-        final result = create()
-
-        new DirWatcher(syntax,folder,pattern,skipHidden,events, fs)
-                .setOnComplete { result.bind(STOP) }
-                .apply { Path file -> result.bind(file.toAbsolutePath()) }
+    static private DataflowWriteChannel watchImpl( String syntax, String folder, String pattern, boolean skipHidden, String events, FileSystem fs ) {
+        
+        final result = ChannelFactory.create()
+        final watcher = new DirWatcher(syntax,folder,pattern,skipHidden,events, fs)
+                            .setOnComplete { result.bind(STOP) }
+         
+        if( NF.isDsl2() )  {
+            session.addIgniter {
+                watcher.apply { Path file -> result.bind(file.toAbsolutePath()) }   
+            }   
+        }
+        else {
+            watcher.apply { Path file -> result.bind(file.toAbsolutePath()) }
+        }
 
         return result
     }
@@ -254,7 +307,7 @@ class Channel  {
      * @return  A dataflow channel that will emit the matching files
      *
      */
-    static DataflowChannel watchPath( Pattern filePattern, String events = 'create' ) {
+    static DataflowWriteChannel watchPath( Pattern filePattern, String events = 'create' ) {
         assert filePattern
         // split the folder and the pattern
         final splitter = FilePatternSplitter.regex().parse(filePattern.toString())
@@ -281,7 +334,7 @@ class Channel  {
      * @return  A dataflow channel that will emit the matching files
      *
      */
-    static DataflowChannel watchPath( String filePattern, String events = 'create' ) {
+    static DataflowWriteChannel watchPath( String filePattern, String events = 'create' ) {
 
         if( filePattern.endsWith('/') )
             filePattern += '*'
@@ -298,7 +351,7 @@ class Channel  {
         return result
     }
 
-    static DataflowChannel watchPath( Path path, String events = 'create' ) {
+    static DataflowWriteChannel watchPath( Path path, String events = 'create' ) {
         final fs = path.getFileSystem()
         final splitter = FilePatternSplitter.glob().parse(path.toString())
         final folder = splitter.parent
@@ -325,7 +378,7 @@ class Channel  {
      * @return
      *      A channel emitting the file pairs matching the specified pattern(s)
      */
-    static DataflowChannel fromFilePairs(Map options = null, pattern) {
+    static DataflowWriteChannel fromFilePairs(Map options = null, pattern) {
         final allPatterns = pattern instanceof List ? pattern : [pattern]
         final allGrouping = new ArrayList(allPatterns.size())
         for( int i=0; i<allPatterns.size(); i++ ) {
@@ -357,7 +410,7 @@ class Channel  {
      * @return
      *      A channel emitting the file pairs matching the specified pattern(s)
      */
-    static DataflowChannel fromFilePairs(Map options = null, pattern, Closure grouping) {
+    static DataflowWriteChannel fromFilePairs(Map options = null, pattern, Closure grouping) {
         final allPatterns = pattern instanceof List ? pattern : [pattern]
         final allGrouping = new ArrayList(allPatterns.size())
         for( int i=0; i<allPatterns.size(); i++ ) {
@@ -369,49 +422,54 @@ class Channel  {
         return result
     }
 
-    private static DataflowChannel fromFilePairs0(Map options, List allPatterns, List<Closure> grouping) {
+    private static DataflowWriteChannel fromFilePairs0(Map options, List allPatterns, List<Closure> grouping) {
         assert allPatterns.size() == grouping.size()
         if( !allPatterns ) throw new AbortOperationException("Missing `fromFilePairs` parameter")
         if( !grouping ) throw new AbortOperationException("Missing `fromFilePairs` grouping parameter")
 
-        boolean anyPattern=false
         // -- a channel from the path
-        final fromOpts = fetchParams(VALID_FROM_PATH_PARAMS, options)
+        final fromOpts = fetchParams0(VALID_FROM_PATH_PARAMS, options)
         final files = new DataflowQueue()
-        def future = CompletableFuture.completedFuture(null)
-        for( int index=0; index<allPatterns.size(); index++ )  {
-            def factory = new PathVisitor(opts: fromOpts, target: files, forcePattern: true)
-            factory.bindPayload = index
-            factory.closeChannelOnComplete = index == allPatterns.size()-1
-            future = factory.applyAsync( future, allPatterns.get(index) )
-            anyPattern |= FilePatternSplitter.isMatchingPattern(allPatterns.get(index))
-        }
-        // abort the execution when an exception is raised
-        fromPath0Future = future.exceptionally(Channel.&handlerException)
+        if( NF.isDsl2() )
+            session.addIgniter { pumpFilePairs0(files,fromOpts,allPatterns) }
+        else 
+            pumpFilePairs0(files,fromOpts,allPatterns)
 
         // -- map the files to a tuple like ( ID, filePath )
         def mapper = { path, int index ->
             def prefix = grouping[index].call(path)
             return [ prefix, path ]
         }
-        def mapChannel = new MapOp(files, mapper).apply()
+        def mapChannel = (DataflowReadChannel)new MapOp(files, mapper)
+                            .setTarget(new DataflowQueue())
+                            .apply()
 
-        // -- result the files having the same ID
+        boolean anyPattern=false
+        for( int index=0; index<allPatterns.size(); index++ )  {
+            anyPattern |= FilePatternSplitter.isMatchingPattern(allPatterns.get(index))
+        }
+        
+        // -- result the files having the same ID        
         def DEF_SIZE = anyPattern ? 2 : 1
         def size = (options?.size ?: DEF_SIZE)
+        def isFlat = options?.flat == true
         def groupOpts = [sort: true, size: size]
-        def groupChannel = new GroupTupleOp(groupOpts, mapChannel).apply()
+        def groupChannel = isFlat ? new DataflowQueue<>() : ChannelFactory.create()
+
+        new GroupTupleOp(groupOpts, mapChannel)
+                .setTarget(groupChannel)
+                .apply()
 
         // -- flat the group resulting tuples
-        DataflowChannel result
-        if( options?.flat == true )  {
+        DataflowWriteChannel result
+        if( isFlat )  {
             def makeFlat = {  id, List items ->
                 def tuple = new ArrayList(items.size()+1);
                 tuple.add(id)
                 tuple.addAll(items)
                 return tuple
             }
-            result = new MapOp(groupChannel,makeFlat).apply()
+            result = new MapOp((DataflowReadChannel)groupChannel,makeFlat).apply()
         }
         else {
             result = groupChannel
@@ -420,7 +478,19 @@ class Channel  {
         return result
     }
 
-    static private Map fetchParams( Map valid, Map actual ) {
+    static private void pumpFilePairs0(DataflowWriteChannel files, Map fromOpts, List allPatterns) {
+        def future = CompletableFuture.completedFuture(null)
+        for( int index=0; index<allPatterns.size(); index++ )  {
+            def factory = new PathVisitor(opts: fromOpts, target: files, forcePattern: true)
+            factory.bindPayload = index
+            factory.closeChannelOnComplete = index == allPatterns.size()-1
+            future = factory.applyAsync( future, allPatterns.get(index) )
+        }
+        // abort the execution when an exception is raised
+        fromPath0Future = future.exceptionally(Channel.&handlerException)
+    }
+    
+    static private Map fetchParams0(Map valid, Map actual ) {
         if( actual==null ) return null
         def result = [:]
         def keys = valid.keySet()
@@ -495,7 +565,6 @@ class Channel  {
         return null
     }
 
-
     static DataflowWriteChannel fromSRA(query) {
         fromSRA( Collections.emptyMap(), query )
     }
@@ -504,13 +573,21 @@ class Channel  {
         CheckHelper.checkParams('fromSRA', opts, SraExplorer.PARAMS)
 
         def target = new DataflowQueue()
-        def slurper = new SraExplorer(target, opts).setQuery(query)
-
-        def future = CompletableFuture.runAsync ({ slurper.apply() } as Runnable)
-        fromPath0Future = future.exceptionally(Channel.&handlerException)
+        def explorer = new SraExplorer(target, opts).setQuery(query)
+        if( NF.isDsl2() ) {
+            session.addIgniter { fetchSraFiles0(explorer) }
+        }
+        else {
+            fetchSraFiles0(explorer)
+        }
 
         NodeMarker.addSourceNode('Channel.fromSRA', target)
         return target
+    }
+
+    static private void fetchSraFiles0(SraExplorer explorer) {
+        def future = CompletableFuture.runAsync ({ explorer.apply() } as Runnable)
+        fromPath0Future = future.exceptionally(Channel.&handlerException)
     }
 
 }

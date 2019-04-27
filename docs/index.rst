@@ -19,6 +19,7 @@ Contents:
    operator
    executor
    config
+   dsl2
    awscloud
    amazons3
    google

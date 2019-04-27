@@ -18,6 +18,10 @@ package nextflow.processor
 
 import java.nio.file.Paths
 
+import groovy.transform.InheritConstructors
+import nextflow.script.BaseScript
+import nextflow.script.ProcessConfig
+import nextflow.script.ScriptBinding
 import nextflow.script.TaskBody
 import nextflow.util.BlankSeparatedList
 import nextflow.util.Duration
@@ -65,21 +69,13 @@ class TaskContextTest extends Specification {
         result.getHolder() instanceof Map
         result.getHolder().get('alpha') == 1
 
-
     }
-
 
     def 'should dehydrate rehydrate'() {
 
         setup:
-        def bind = new Binding(x:1, y:2)
-        def script = new Script() {
-            @Override
-            Object run() {
-                return null
-            }
-        }
-        script.setBinding(bind)
+        def bind = new ScriptBinding([x:1, y:2])
+        def script = new MockScript(bind)
 
         def local = [p:3, q:4, path: Paths.get('some/path')]
         def delegate = new TaskContext( script, local, 'hola' )
@@ -142,5 +138,9 @@ class TaskContextTest extends Specification {
 
     }
 
+}
 
+@InheritConstructors
+class MockScript extends BaseScript {
+    @Override Object runScript() { return null }
 }

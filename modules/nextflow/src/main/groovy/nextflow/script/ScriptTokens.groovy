@@ -117,7 +117,7 @@ class TokenValCall {
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class TaskBody {
+class TaskBody implements Cloneable {
 
     /** The actual task code */
     Closure closure
@@ -147,14 +147,21 @@ class TaskBody {
     TaskBody( Closure closure, String source, String section = 'script' ) {
         this.closure = closure
         this.source = source
+        this.valRefs = Collections.emptySet()
         setType(section)
     }
 
     TaskBody( Closure closure, String source, String section, TokenValRef... values ) {
         this(closure, source, section)
-        this.valRefs = values != null ? values as Set : new HashSet<>()
+        this.valRefs = values != null ? values as Set : Collections.<TokenValRef>emptySet()
     }
 
+    TaskBody clone() {
+        def result = (TaskBody) super.clone()
+        result.closure = (Closure) closure.clone()
+        result.valRefs = new HashSet(valRefs)
+        return result
+    }
     /**
      * Given a code section literal sets the task body {@link #type} and {@link #isShell} flag
      *
@@ -177,6 +184,11 @@ class TaskBody {
             case 'shell':
                 this.type = ScriptType.SCRIPTLET
                 isShell = true
+                break
+
+            case 'workflow':
+                type = ScriptType.GROOVY
+                isShell = false
                 break
 
             default:

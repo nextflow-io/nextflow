@@ -26,6 +26,7 @@ import java.util.concurrent.Executors
 
 import com.google.common.hash.HashCode
 import com.upplication.s3fs.S3OutputStream
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
@@ -39,15 +40,21 @@ import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortSignalException
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.MissingLibraryException
+import nextflow.executor.ExecutorFactory
+import nextflow.extension.ChannelFactory
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
 import nextflow.processor.ErrorStrategy
-import nextflow.processor.ProcessConfig
-import nextflow.processor.TaskDispatcher
 import nextflow.processor.TaskFault
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
+import nextflow.script.BaseScript
+import nextflow.script.ProcessConfig
+import nextflow.script.ProcessFactory
 import nextflow.script.ScriptBinding
+import nextflow.script.ScriptFile
+import nextflow.script.ScriptRunner
+import nextflow.script.WorkflowMetadata
 import nextflow.trace.AnsiLogObserver
 import nextflow.trace.GraphObserver
 import nextflow.trace.ReportObserver
@@ -66,7 +73,6 @@ import nextflow.util.NameGenerator
 import sun.misc.Signal
 import sun.misc.SignalHandler
 import static nextflow.Const.S3_UPLOADER_CLASS
-
 /**
  * Holds the information on the current execution
  *
@@ -81,10 +87,17 @@ class Session implements ISession {
      */
     final Collection<DataflowProcessor> allOperators = new ConcurrentLinkedQueue<>()
 
+    final List<Closure> igniters = new ArrayList<>(10)
+
     /**
-     * Dispatch tasks for executions
+     * Creates process executors
      */
-    TaskDispatcher dispatcher
+    ExecutorFactory executorFactory
+
+    /**
+     * Script binding
+     */
+    ScriptBinding binding
 
     /**
      * Holds the configuration object
@@ -126,6 +139,10 @@ class Session implements ISession {
      */
     String scriptClassName
 
+    Class scriptClass
+
+    BaseScript script
+
     /**
      * Mnemonic name of this run instance
      */
@@ -140,6 +157,10 @@ class Session implements ISession {
      * List files that concurrent on the session configuration
      */
     List<Path> configFiles
+
+    String profile
+
+    String commandLine
 
     /**
      * Local path where script generated classes are saved
@@ -175,19 +196,17 @@ class Session implements ISession {
 
     private volatile Throwable error
 
-    private ScriptBinding binding
-
-    private ClassLoader classLoader
-
     private Queue<Closure<Void>> shutdownCallbacks = new ConcurrentLinkedQueue<>()
 
     private int poolSize
 
-    private List<TraceObserver> observers
+    private List<TraceObserver> observers = Collections.emptyList()
 
     private Closure errorAction
 
     private boolean statsEnabled
+
+    private WorkflowMetadata workflowMetadata
 
     private WorkflowStats workflowStats
 
@@ -209,6 +228,8 @@ class Session implements ISession {
 
     WorkflowStats getWorkflowStats() { workflowStats }
 
+    WorkflowMetadata getWorkflowMetadata() { workflowMetadata }
+
     Path getClassesDir() { classesDir }
 
     boolean ansiLog
@@ -223,26 +244,18 @@ class Session implements ISession {
      * Creates a new session with an 'empty' (default) configuration
      */
     Session() {
-        create(new ScriptBinding([:]))
+        create(new LinkedHashMap(10))
     }
 
-    /**
-     * Create a new session given the {@link ScriptBinding} object
-     *
-     * @param binding
-     */
-    Session(ScriptBinding binding) {
-        create(binding)
-    }
 
     /**
      * Create a new session given the configuration specified
      *
      * @param config
      */
-    Session(Map cfg) {
-        final config = cfg instanceof ConfigObject ? cfg.toMap() : cfg
-        create(new ScriptBinding(config))
+    Session(Map obj) {
+        final config = obj instanceof ConfigObject ? obj.toMap() : obj
+        create(config)
     }
 
     /**
@@ -255,11 +268,6 @@ class Session implements ISession {
      */
     int getPoolSize() { poolSize }
 
-    /**
-     * @return The session {@link TaskDispatcher}
-     */
-    TaskDispatcher getDispatcher() { dispatcher }
-
     CacheDB getCache() { cache }
 
     /**
@@ -267,17 +275,19 @@ class Session implements ISession {
      *
      * @param binding
      */
-    private void create( ScriptBinding binding ) {
-        assert binding != null
+    private void create( Map config ) {
+        assert config != null
 
-        this.binding = binding
-        this.config = binding.config
+        this.config = config
         this.dumpHashes = config.dumpHashes
         this.dumpChannels = (List<String>)config.dumpChannels
+        this.binding = new ScriptBinding()
 
         // -- poor man session object dependency injection
         Global.setSession(this)
         Global.setConfig(config)
+        // -- init static structs
+        NF.init()
 
         // -- cacheable flag
         cacheable = config.cacheable
@@ -309,11 +319,8 @@ class Session implements ISession {
         this.poolSize = config.poolSize as int
         log.debug "Executor pool size: ${poolSize}"
 
-        // -- create the task dispatcher instance
-        this.dispatcher = new TaskDispatcher(this)
-
-        // -- DGA object
-        this.dag = new DAG(session:this)
+        // -- DAG object
+        this.dag = new DAG()
 
         // -- init work dir
         this.workDir = ((config.workDir ?: 'work') as Path).complete()
@@ -321,12 +328,13 @@ class Session implements ISession {
 
         // -- file porter config
         this.filePorter = new FilePorter(this)
+
     }
 
     /**
      * Initialize the session workDir, libDir, baseDir and scriptName variables
      */
-    void init( Path scriptPath ) {
+    Session init( ScriptFile scriptFile, List<String> args=null ) {
 
         if(!workDir.mkdirs()) throw new AbortOperationException("Cannot create work-dir: $workDir -- Make sure you have write permissions or specify a different directory by using the `-w` command line option")
         log.debug "Work-dir: ${workDir.toUriString()} [${FileHelper.getPathFsType(workDir)}]"
@@ -336,20 +344,36 @@ class Session implements ISession {
             log.debug "Bucket-dir: ${bucketDir.toUriString()}"
         }
 
-        if( scriptPath ) {
+        if( scriptFile ) {
             // the folder that contains the main script
-            this.setBaseDir(scriptPath.parent)
+            this.setBaseDir(scriptFile.main.parent)
             // set the script name attribute
-            this.setScriptName(scriptPath.name)
+            this.setScriptName(scriptFile.main.name)
         }
 
         // set the byte-code target directory
         this.classesDir = FileHelper.createLocalDir()
-
+        this.executorFactory = new ExecutorFactory()
         this.observers = createObservers()
         this.statsEnabled = observers.any { it.enableMetrics() }
+        this.workflowMetadata = new WorkflowMetadata(this, scriptFile)
+
+        // configure script params
+        binding.setParams( (Map)config.params )
+        binding.setArgs( new ScriptRunner.ArgsList(args) )
 
         cache = new CacheDB(uniqueId,runName).open()
+
+        return this
+    }
+
+    Session setBinding(ScriptBinding binding ) {
+        this.binding = binding
+        return this
+    }
+
+    ProcessFactory newProcessFactory(BaseScript script) {
+        new ProcessFactory(script, this)
     }
 
     /**
@@ -486,6 +510,30 @@ class Session implements ISession {
         Signal.handle( new Signal("HUP"), abort_h)
     }
 
+    void addIgniter( Closure action )  {
+        igniters.add(action)
+    }
+
+    void fireDataflowNetwork() {
+        if( !NextflowMeta.instance.isDsl2() )
+            return
+
+        // bridge any dataflow queue into a broadcast channel
+        ChannelFactory.broadcast()
+
+        log.debug "Ignite dataflow network (${igniters.size()})"
+        for( def action : igniters ) {
+            try {
+                action.call()
+            }
+            catch( Exception e ) {
+                log.error(e.message ?: "Failed to trigger dataflow network", e)
+                abort(e)
+                break
+            }
+        }
+    }
+
     /**
      * Dump the current dataflow network listing
      * the status of active processes and operators
@@ -502,7 +550,6 @@ class Session implements ISession {
         }
     }
 
-
     Session start() {
         log.debug "Session start invoked"
 
@@ -511,8 +558,6 @@ class Session implements ISession {
 
         // create tasks executor
         execService = Executors.newFixedThreadPool(poolSize)
-        // signal start to tasks dispatcher
-        dispatcher.start()
         // signal start to trace observers
         observers.each { trace -> trace.onFlowStart(this) }
 
@@ -521,11 +566,22 @@ class Session implements ISession {
 
     ScriptBinding getBinding() { binding }
 
-    ClassLoader getClassLoader() { classLoader }
+    @Memoized
+    ClassLoader getClassLoader() { getClassLoader0() }
 
-    Session setClassLoader( ClassLoader loader ) {
-        this.classLoader = loader
-        return this
+    @PackageScope
+    ClassLoader getClassLoader0() {
+        // extend the class-loader if required
+        final gcl = new GroovyClassLoader()
+        final libraries = ConfigHelper.resolveClassPaths(getLibDir())
+
+        for( Path lib : libraries ) {
+            def path = lib.complete()
+            log.debug "Adding to the classpath library: ${path}"
+            gcl.addClasspath(path.toString())
+        }
+
+        return gcl
     }
 
     Barrier getBarrier() { monitorsBarrier }
@@ -586,6 +642,14 @@ class Session implements ISession {
             libDir << localLib
         }
         return libDir
+    }
+
+    Map getConfigEnv() {
+        if( !config.env )
+            return Collections.emptyMap()
+        if( config.env instanceof Map )
+            return new LinkedHashMap((Map)config.env)
+        throw new IllegalStateException("Not a valid config env object: $config.env")
     }
 
     @Memoized
@@ -717,7 +781,7 @@ class Session implements ISession {
         log.info "Execution cancelled -- Finishing pending tasks before exit"
         cancelled = true
         notifyError(handler)
-        dispatcher.signal()
+        executorFactory.signalExecutors()
         processesBarrier.forceTermination()
         allOperators *. terminate()
     }
@@ -739,7 +803,7 @@ class Session implements ISession {
                 log.debug(status)
             // force termination
             notifyError(null)
-            dispatcher.signal()
+            executorFactory.signalExecutors()
             processesBarrier.forceTermination()
             monitorsBarrier.forceTermination()
             operatorsForceTermination()
@@ -935,15 +999,18 @@ class Session implements ISession {
         }
     }
 
-
     void notifyTaskCached( TaskHandler handler ) {
-        // -- save a record in the cache index
-        cache.cacheTaskAsync(handler)
+        final trace = handler.getTraceRecord()
+        // save a record in the cache index only the when the trace record is available
+        // otherwise it means that the event is trigger by a `stored dir` driven task
+        if( trace ) {
+            cache.cacheTaskAsync(handler)
+        }
 
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
             try {
-                observer.onProcessCached(handler, handler.getTraceRecord())
+                observer.onProcessCached(handler, trace)
             }
             catch( Exception e ) {
                 log.error(e.getMessage(), e)
@@ -1091,6 +1158,61 @@ class Session implements ISession {
     protected Map<String,String> getSystemEnv() {
         new HashMap<String, String>(System.getenv())
     }
+
+
+    @CompileDynamic
+    def fetchContainers() {
+
+        def result = [:]
+        if( config.process instanceof Map<String,?> ) {
+
+            /*
+             * look for `container` definition at process level
+             */
+            config.process.each { String name, value ->
+                if( name.startsWith('$') && value instanceof Map && value.container ) {
+                    result[name] = resolveClosure(value.container)
+                }
+            }
+
+            /*
+             * default container definition
+             */
+            def container = config.process.container
+            if( container ) {
+                if( result ) {
+                    result['default'] = resolveClosure(container)
+                }
+                else {
+                    result = resolveClosure(container)
+                }
+            }
+
+        }
+
+        return result
+    }
+
+    /**
+     * Resolve dynamically defined attributes to the actual value
+     *
+     * @param val A process container definition either a plain string or a closure
+     * @return The actual container value
+     */
+    protected String resolveClosure( val ) {
+        if( val instanceof Closure ) {
+            try {
+                return val.cloneWith(binding).call()
+            }
+            catch( Exception e ) {
+                log.debug "Unable to resolve dynamic `container` directive -- cause: ${e.message ?: e}"
+                return "(dynamic resolved)"
+            }
+        }
+
+        return String.valueOf(val)
+    }
+
 
     /**
      * Defines the number of tasks the executor will handle in a parallel manner

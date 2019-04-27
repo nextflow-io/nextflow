@@ -24,7 +24,7 @@ import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
 import nextflow.util.ArrayBag
 /**
- * Implements {@link DataflowExtensions#collect(groovyx.gpars.dataflow.DataflowReadChannel)}  operator
+ * Implements {@link OperatorEx#collect(groovyx.gpars.dataflow.DataflowReadChannel)}  operator
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -73,8 +73,6 @@ class CollectOp {
     }
 
     private List normalise(List list) {
-
-
         if( !sort )
             return list
 

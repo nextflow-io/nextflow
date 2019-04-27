@@ -16,23 +16,47 @@
 
 package nextflow.script
 
-import nextflow.util.ReadOnlyMap
 import spock.lang.Specification
+
+import java.nio.file.Paths
+
+import nextflow.Session
+import nextflow.util.ReadOnlyMap
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ScriptBindingTest extends Specification {
 
+    def 'should return context variables' () {
+        given:
+        def session = Mock(Session)
+        def path = Paths.get('/foo/bar')
 
-    def 'test params' () {
+        when:
+        def binding = new ScriptBinding()
+                .setSession(session)
+                .setScriptPath(path)
+                .setModule(true)
 
-        setup:
-        def bindings = new ScriptBinding(env: [HOME:'/this/path'])
+        then:
+        binding.module == true
+        binding.scriptPath == path
+        binding.session == session
+    }
+
+    def 'should test params' () {
+
+        given:
+        def session = Mock(Session)
+        session.getConfigEnv() >> [HOME:'/this/path']
+        def bindings = new ScriptBinding()
+
+        when:
+        bindings.setSession(session)
         bindings.setParams( [field1: 1, field2: 'dos'] )
         bindings.setArgs(['a','b','c'])
 
-        when:
         // set a generic value
         bindings.setVariable('variable_x', 99)
 
@@ -50,6 +74,8 @@ class ScriptBindingTest extends Specification {
 
         // note: BUT it fallback on the local environment
         bindings.getVariable('HOME') == '/this/path'
+        
+        bindings.getVariables().keySet() == ['args','params','variable_x'] as Set
 
     }
 

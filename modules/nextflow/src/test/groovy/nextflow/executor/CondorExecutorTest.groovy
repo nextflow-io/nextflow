@@ -19,7 +19,7 @@ import java.nio.file.Files
 
 import nextflow.Session
 import nextflow.container.ContainerConfig
-import nextflow.processor.ProcessConfig
+import nextflow.script.ProcessConfig
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun

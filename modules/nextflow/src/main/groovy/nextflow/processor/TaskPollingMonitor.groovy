@@ -49,11 +49,6 @@ class TaskPollingMonitor implements TaskMonitor {
     final Session session
 
     /**
-     * The tasks dispatcher
-     */
-    final TaskDispatcher dispatcher
-
-    /**
      * The time interval (in milliseconds) elapsed which execute a new poll
      */
     final long pollIntervalMillis
@@ -135,7 +130,6 @@ class TaskPollingMonitor implements TaskMonitor {
 
         this.name = params.name
         this.session = params.session as Session
-        this.dispatcher = session.dispatcher
         this.pollIntervalMillis = ( params.pollInterval as Duration ).toMillis()
         this.dumpInterval = (params.dumpInterval as Duration) ?: Duration.of('5min')
         this.capacity = (params.capacity ?: 0) as int
@@ -170,11 +164,6 @@ class TaskPollingMonitor implements TaskMonitor {
      * @return The current {@link #runningQueue} instance
      */
     protected Queue<TaskHandler> getRunningQueue() { runningQueue }
-
-    /**
-     * @return The current {@link TaskDispatcher} instance
-     */
-    TaskDispatcher getDispatcher() { dispatcher }
 
     /**
      * @return the current capacity value by the number of slots specified

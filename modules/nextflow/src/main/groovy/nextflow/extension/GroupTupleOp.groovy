@@ -17,14 +17,14 @@
 package nextflow.extension
 
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
 import nextflow.util.CheckHelper
 /**
- * Implements {@link DataflowExtensions#groupTuple} operator logic
+ * Implements {@link OperatorEx#groupTuple} operator logic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -45,7 +45,7 @@ class GroupTupleOp {
 
     private List indices
 
-    private DataflowQueue target
+    private DataflowWriteChannel target
 
     private DataflowReadChannel channel
 
@@ -60,7 +60,6 @@ class GroupTupleOp {
         CheckHelper.checkParams('groupTuple', params, GROUP_TUPLE_PARAMS)
 
         channel = source
-        target = new DataflowQueue()
         indices = getGroupTupleIndices(params)
         size = params?.size ?: 0
         remainder = params?.remainder ?: false
@@ -69,6 +68,10 @@ class GroupTupleOp {
         defineComparator()
     }
 
+    GroupTupleOp setTarget(DataflowWriteChannel target) {
+        this.target = target
+        return this
+    }
 
     static private List<Integer> getGroupTupleIndices( Map params ) {
 
@@ -204,7 +207,10 @@ class GroupTupleOp {
      *
      * @return The resulting channel
      */
-    DataflowQueue apply() {
+    DataflowWriteChannel apply() {
+
+        if( target == null )
+            target = ChannelFactory.create()
 
         /*
          * apply the logic the the source channel

@@ -25,14 +25,16 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class CaptureProperties {
 
-    Set<String> names = []
+    List<String> names = new ArrayList<>(10)
 
-    def propertyMissing(String name) {
+    Object propertyMissing(String name) {
+        if( names.contains(name) )
+            throw new IllegalArgumentException("Duplicate channel definition: $name")
         names.add(name)
         return null
     }
 
-    static Set<String> capture(Closure holder) {
+    static List<String> capture(Closure holder) {
         final recorder = new CaptureProperties()
         holder.setResolveStrategy( Closure.DELEGATE_ONLY )
         holder.delegate = recorder

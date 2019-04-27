@@ -15,10 +15,10 @@
  */
 
 package nextflow.extension
+
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
@@ -103,7 +103,7 @@ class SplitOp {
         // turn off channel auto-close
         params.autoClose = false
 
-        if( params.into && !(params.into instanceof DataflowQueue) )
+        if( params.into && !(ChannelFactory.isChannelQueue(params.into)) )
             throw new IllegalArgumentException('Parameter `into` must reference a channel object')
 
     }
@@ -141,7 +141,7 @@ class SplitOp {
         }
 
         // -- now merge the result
-        def output = new DataflowQueue()
+        def output = ChannelFactory.create()
         applyMergingOperator(splitted, output, indexes)
         return output
     }
@@ -152,7 +152,7 @@ class SplitOp {
     protected DataflowWriteChannel splitSingleEntry(DataflowReadChannel origin, Map params) {
 
         // -- get the output channel
-        final output = getOrCreateDataflowQueue(params)
+        final output = getOrCreateWriteChannel(params)
         // -- the output channel is passed to the splitter by using the `into` parameter
         params.into = output
 
@@ -198,14 +198,14 @@ class SplitOp {
     }
 
     @PackageScope
-    DataflowWriteChannel getOrCreateDataflowQueue(Map params) {
+    DataflowWriteChannel getOrCreateWriteChannel(Map params) {
         def result
         // create a new DataflowChannel that will receive the splitter entries
-        if( params.into instanceof DataflowQueue ) {
-            result = (DataflowQueue)params.into
+        if( params.into instanceof DataflowWriteChannel ) {
+            result = (DataflowWriteChannel)params.into
         }
         else {
-            result = new DataflowQueue<>()
+            result = ChannelFactory.create()
         }
 
         return result

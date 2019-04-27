@@ -20,13 +20,11 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
-
 /**
- * Implements the {@link DataflowExtensions#cross} operator logic
+ * Implements the {@link OperatorEx#cross} operator logic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -38,7 +36,7 @@ class CrossOp {
 
     private DataflowReadChannel target
 
-    private Closure mapper = DataflowExtensions.DEFAULT_MAPPING_CLOSURE
+    private Closure mapper = OperatorEx.DEFAULT_MAPPING_CLOSURE
 
     CrossOp(DataflowReadChannel source, DataflowReadChannel target) {
         assert source
@@ -49,13 +47,13 @@ class CrossOp {
     }
 
     CrossOp setMapper( Closure mapper ) {
-        this.mapper = mapper ?: DataflowExtensions.DEFAULT_MAPPING_CLOSURE
+        this.mapper = mapper ?: OperatorEx.DEFAULT_MAPPING_CLOSURE
         return this
     }
 
-    DataflowQueue apply() {
+    DataflowWriteChannel apply() {
 
-        def result = new DataflowQueue()
+        final result = ChannelFactory.create()
         Map<Object,Map<Integer,List>> state = [:]
 
         final count = 2
@@ -67,36 +65,36 @@ class CrossOp {
         return result
     }
 
-    static private final Map crossHandlers( Map<Object,Map<Integer,List>> buffer, int size, int index, DataflowWriteChannel target, Closure mapper, AtomicInteger stopCount ) {
+    static private final Map<String,Closure> crossHandlers( Map<Object,Map<Integer,List>> buffer, int size, int index, DataflowWriteChannel target, Closure mapper, AtomicInteger stopCount ) {
 
-        [
-                onNext: {
-                    synchronized (buffer) {  // phaseImpl is NOT thread safe, synchronize it !
-                        while( true ) {
-                            def entries = PhaseOp.phaseImpl(buffer, size, index, it, mapper, true)
-                            log.trace "Cross #${target.hashCode()} ($index) > item: $it; entries: $entries "
+        def result = new HashMap<String,Closure>(2)
 
-                            if( entries ) {
-                                target.bind(entries)
-                                // when it is invoked on the 'left' operator channel
-                                // try to invoke it one more time to consume value eventually produced and accumulated by the 'right' channel
-                                if( index == 0 )
-                                    continue
-                            }
-                            break
-                        }
+        result.onNext = {
+            synchronized (buffer) {  // phaseImpl is NOT thread safe, synchronize it !
+                while( true ) {
+                    def entries = PhaseOp.phaseImpl(buffer, size, index, it, mapper, true)
+                    log.trace "Cross #${target.hashCode()} ($index) > item: $it; entries: $entries "
 
-                    }},
+                    if( entries ) {
+                        target.bind(entries)
+                        // when it is invoked on the 'left' operator channel
+                        // try to invoke it one more time to consume value eventually produced and accumulated by the 'right' channel
+                        if( index == 0 )
+                            continue
+                    }
+                    break
+                }
 
-                onComplete: {
-                    log.trace "Cross #${target.hashCode()} ($index) > Complete"
-                    if( stopCount.decrementAndGet()==0) {
-                        log.trace "Cross #${target.hashCode()} ($index) > STOP"
-                        target << Channel.STOP
-                    }}
+            }}
 
-        ]
+        result.onComplete = {
+            log.trace "Cross #${target.hashCode()} ($index) > Complete"
+            if( stopCount.decrementAndGet()==0) {
+                log.trace "Cross #${target.hashCode()} ($index) > STOP"
+                target << Channel.STOP
+            }}
 
+        return result
     }
 
 }

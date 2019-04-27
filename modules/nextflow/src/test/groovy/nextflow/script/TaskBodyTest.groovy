@@ -15,6 +15,8 @@
  */
 
 package nextflow.script
+
+
 import static test.TestParser.parseAndReturnProcess
 
 import spock.lang.Specification
@@ -36,7 +38,7 @@ class TaskBodyTest extends Specification {
         'exec'      | ScriptType.GROOVY     | false
         'script'    | ScriptType.SCRIPTLET  | false
         'shell'     | ScriptType.SCRIPTLET  | true
-
+        'workflow'  | ScriptType.GROOVY     | false
     }
 
 
@@ -49,6 +51,12 @@ class TaskBodyTest extends Specification {
 
     }
 
+    def 'should return empty set'() {
+        when:
+        def body = new TaskBody({->'echo foo'}, 'echo foo')
+        then:
+        body.getValNames() == [] as Set
+    }
 
     def 'should return variable names referenced in task body'( ) {
 
@@ -83,7 +91,7 @@ class TaskBodyTest extends Specification {
     def 'should return property names referenced in task body'() {
 
         when:
-        def runner = new ScriptRunner( process: [executor:'nope'] )
+        def runner = new TestScriptRunner( process: [executor:'nope'] )
         def script =
                 '''
                 class Foo { def foo() { return [x:1] };  }

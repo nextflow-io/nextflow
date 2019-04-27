@@ -128,6 +128,11 @@ class TimelineObserver implements TraceObserver {
     @Override
     void onProcessCached(TaskHandler handler, TraceRecord trace) {
 
+        // event was triggered by a stored task, ignore it
+        if( trace == null ) {
+            return
+        }
+
         // remove the record from the current records
         synchronized (records) {
             records[ trace.taskId ] = trace

@@ -15,11 +15,14 @@
  */
 
 package nextflow.script
+
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.util.ReadOnlyMap
+import nextflow.Session
 import org.apache.commons.lang.StringUtils
 /**
  * Defines the script execution context. By default provided the following variables
@@ -36,9 +39,19 @@ import org.apache.commons.lang.StringUtils
  */
 @Slf4j
 @CompileStatic
-class ScriptBinding extends Binding {
+class ScriptBinding extends WorkflowBinding {
 
-    private Map config
+    private Session session
+
+    private boolean module
+
+    private Path scriptPath
+
+    private List<String> args
+
+    private ParamsMap params
+
+    private Map configEnv = Collections.emptyMap()
 
     /**
      * Creates a new nextflow script binding object
@@ -46,14 +59,61 @@ class ScriptBinding extends Binding {
      * @param config Nextflow configuration object
      * @return A new {@link ScriptBinding} instance
      */
-    def ScriptBinding(Map config) {
-        super( new ReadOnlyMap( [args:[], params: new ParamsMap() ]) )
-        this.config = config != null ? config : [:]
+    ScriptBinding() {
+        this(new LinkedHashMap(20))
     }
 
-    Map getConfig() {
-        return config
+    ScriptBinding(Map vars) {
+        super(vars)
+
+        // create and populate args
+        args = new ArrayList<>()
+        if( vars.args ) {
+            if( !(vars.args instanceof List) ) throw new IllegalArgumentException("ScriptBinding 'args' must be a List value")
+            args.addAll((List)vars.args)
+        }
+        vars.put('args', args)
+        
+        // create and populate args
+        params = new ParamsMap()
+        if( vars.params ) {
+            if( !(vars.params instanceof Map) ) throw new IllegalArgumentException("ScriptBinding 'params' must be a Map value")
+            params.putAll((Map)vars.params)
+        }
+        vars.params = params
     }
+
+    ScriptBinding(Session session) {
+        this()
+        this.session = session
+    }
+
+    ScriptBinding setSession(Session session ) {
+        this.session = session
+        setConfigEnv(session.configEnv)
+        return this
+    }
+
+    ScriptBinding setScriptPath(Path path) {
+        scriptPath = path
+        return this
+    }
+
+    ScriptBinding setModule(boolean value ) {
+        module = value
+        return this
+    }
+
+    private ScriptBinding setConfigEnv(Map map ) {
+        this.configEnv = map != null ? map : Collections.emptyMap()
+        return this
+    }
+
+    Session getSession() { session }
+
+    boolean getModule() { module }
+
+    Path getScriptPath() { scriptPath }
 
     @Memoized
     protected Map<String,String> getSysEnv() {
@@ -61,35 +121,25 @@ class ScriptBinding extends Binding {
     }
 
     /**
-     * The fallback session environment
-     */
-    @Memoized
-    protected Map getConfigEnv() {
-        if( config.env instanceof Map )
-            return (Map)config.env
-        else
-            [:]
-    }
-
-
-    /**
      * The map of the CLI named parameters
      *
      * @param values
      */
-    def void setParams( Map<String,Object> values ) {
-        if( !values )
-            return
-        def params = (ParamsMap)super.getVariable('params')
-        params.putAll(values)
+    ScriptBinding setParams(Map<String,Object> values ) {
+        if( values )
+            params.putAll(values)
+        return this
     }
 
     /**
      * The list of CLI arguments (unnamed)
      * @param values
      */
-    def void setArgs( List<String> values ) {
-        (getVariables() as ReadOnlyMap).force( 'args', values  )
+    ScriptBinding setArgs(List<String> values ) {
+        args.clear()
+        if( values )
+         args.addAll(values)
+        return this
     }
 
     /**
@@ -99,20 +149,18 @@ class ScriptBinding extends Binding {
      * @param name
      * @return
      */
-    def getVariable( String name ) {
+    Object getVariable( String name ) {
 
-        if( super.hasVariable(name) ) {
+        if( super.hasVariable(name) )
             return super.getVariable(name)
-        }
-        else if( configEnv.containsKey(name) ) {
-            configEnv.get(name)
-        }
-        else if( sysEnv.containsKey(name) ) {
+
+        if( configEnv.containsKey(name) )
+            return configEnv.get(name)
+
+        if( sysEnv.containsKey(name) )
             return sysEnv.get(name)
-        }
-        else {
-            throw new MissingPropertyException(name, getClass())
-        }
+
+        super.getVariable(name)
     }
 
     /**
@@ -129,7 +177,8 @@ class ScriptBinding extends Binding {
     void setVariable( String name, Object value ) {
         if( name == 'channel' )
             log.warn 'The use of the identifier `channel` as variable name is discouraged and will be deprecated in a future version'
-        super.setVariable(name, value)
+        if( name != 'args' && name != 'params' )
+            super.setVariable(name, value)
     }
 
     /**

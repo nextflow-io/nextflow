@@ -19,7 +19,7 @@ import java.nio.file.Files
 
 import com.google.common.hash.HashCode
 import nextflow.executor.CachedTaskHandler
-import nextflow.processor.ProcessConfig
+import nextflow.script.ProcessConfig
 import nextflow.processor.TaskContext
 import nextflow.processor.TaskEntry
 import nextflow.processor.TaskProcessor

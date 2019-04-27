@@ -27,8 +27,8 @@ class CapturePropertiesTest extends Specification {
     def 'should capture variable names in a closure' () {
 
         expect:
-        CaptureProperties.capture { alpha } == ['alpha'] as Set
-        CaptureProperties.capture { alpha; beta; gamma } == ['alpha', 'beta', 'gamma'] as Set
+        CaptureProperties.capture { alpha } == ['alpha']
+        CaptureProperties.capture { alpha; beta; gamma } == ['alpha', 'beta', 'gamma']
 
     }
 

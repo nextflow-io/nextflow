@@ -1,4 +1,5 @@
 set -e
+export NXF_ANSI_LOG=false
 
 #
 # run normal mode

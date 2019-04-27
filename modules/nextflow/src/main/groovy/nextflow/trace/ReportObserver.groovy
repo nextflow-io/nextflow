@@ -100,7 +100,7 @@ class ReportObserver implements TraceObserver {
      * @return The {@link WorkflowMetadata} object associated to this execution
      */
     protected WorkflowMetadata getWorkflowMetadata() {
-        session.binding.getVariable('workflow') as WorkflowMetadata
+        session.getWorkflowMetadata()
     }
 
     /**
@@ -208,6 +208,11 @@ class ReportObserver implements TraceObserver {
     @Override
     void onProcessCached(TaskHandler handler, TraceRecord trace) {
         log.trace "Trace report - cached process > $handler"
+
+        // event was triggered by a stored task, ignore it
+        if( trace == null ) {
+            return
+        }
 
         // remove the record from the current records
         synchronized (records) {

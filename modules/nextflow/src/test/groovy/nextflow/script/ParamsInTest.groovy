@@ -17,6 +17,7 @@
 package nextflow.script
 
 import spock.lang.Specification
+import spock.lang.Timeout
 
 import java.nio.file.Paths
 
@@ -29,8 +30,8 @@ import static test.TestParser.parseAndReturnProcess
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(30)
 class ParamsInTest extends Specification {
-
 
     // ==============================================================
     //                  test *input* parameters

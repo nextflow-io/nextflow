@@ -227,7 +227,8 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- create a new runner instance
         final runner = new ScriptRunner(config)
         runner.script = scriptFile
-        runner.profile = profile
+        runner.session.profile = profile
+        runner.session.commandLine = launcher.cliString
         runner.session.ansiLog = launcher.options.ansiLog
 
         if( this.test ) {

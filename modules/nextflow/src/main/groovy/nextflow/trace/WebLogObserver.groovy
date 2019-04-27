@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.agent.Agent
 import nextflow.Const
+import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.processor.TaskHandler
 import nextflow.script.ScriptBinding.ParamsMap
@@ -210,8 +211,7 @@ class WebLogObserver implements TraceObserver{
 
     protected static FlowPayload createFlowPayloadFromSession(Session session) {
         def params = session.binding.getProperty('params') as ParamsMap
-        def workflow = (WorkflowMetadata)session.binding.getVariable('workflow')
-        workflow.nextflow.timestamp = new Date(Const.APP_TIMESTAMP)
+        def workflow = session.getWorkflowMetadata()
         new FlowPayload(params, workflow)
     }
 
@@ -246,6 +246,7 @@ class WebLogObserver implements TraceObserver{
         new JsonGenerator.Options()
                 .addConverter(Path) { Path p, String key -> p.toUriString() }
                 .addConverter(Duration) { Duration d, String key -> d.durationInMillis }
+                .addConverter(NextflowMeta, NextflowMeta.JSON_CONVERTER)
                 .dateFormat(Const.ISO_8601_DATETIME_FORMAT).timezone("UTC")
                 .build()
     }
@@ -259,9 +260,6 @@ class WebLogObserver implements TraceObserver{
         FlowPayload(ParamsMap params, WorkflowMetadata workflow ) {
             this.parameters = params
             this.workflow = workflow
-            this.workflow.nextflow = ["version": Const.APP_VER,
-                                      "build": Const.APP_BUILDNUM,
-                                      "timestamp": new Date(Const.APP_TIMESTAMP)]
         }
     }
 }

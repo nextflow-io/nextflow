@@ -17,15 +17,14 @@
 
 package nextflow.trace
 
-import groovy.json.DefaultJsonGenerator
-import groovy.json.JsonGenerator
-import nextflow.script.ScriptBinding
-import nextflow.script.WorkflowMetadata
 import spock.lang.Specification
 
+import groovy.json.JsonGenerator
 import groovy.json.JsonSlurper
 import nextflow.Session
 import nextflow.processor.TaskHandler
+import nextflow.script.ScriptBinding
+import nextflow.script.WorkflowMetadata
 import nextflow.util.SimpleHttpClient
 
 class WebLogObserverTest extends Specification {
@@ -43,19 +42,16 @@ class WebLogObserverTest extends Specification {
 
         given:
         def httpPostObserver0 = Spy(WebLogObserver, constructorArgs: ["http://localhost"])
-
-        WorkflowMetadata workflowMetadata = new WorkflowMetadata().tap {
-            it.nextflow = [:]
-        }
+        def workflowMeta = Mock(WorkflowMetadata)
 
         def bindingStub = Mock(ScriptBinding){
-            getVariable('workflow') >> workflowMetadata
             getProperty('params') >> new ScriptBinding.ParamsMap()
         }
         def sessionStub = Mock(Session){
             getRunName() >> "testRun"
             getUniqueId() >> UUID.randomUUID()
             getBinding() >> bindingStub
+            getWorkflowMetadata() >> workflowMeta
         }
         def traceStub = Mock(TraceRecord)
         def handlerStub = Mock(TaskHandler)

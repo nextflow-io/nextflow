@@ -45,7 +45,7 @@ import nextflow.util.ServiceName
 @SupportedScriptTypes(ScriptType.SCRIPTLET)
 class GooglePipelinesExecutor extends Executor {
 
-    static private GooglePipelinesConfiguration pipelineConfig
+    private GooglePipelinesConfiguration pipelineConfig
 
     GooglePipelinesHelper helper
 
@@ -64,7 +64,7 @@ class GooglePipelinesExecutor extends Executor {
     }
 
     @Override
-    void register() {
+    protected void register() {
         super.register()
         pipelineConfig = validateConfiguration()
         log.debug "[GPAPI] Pipelines Configuration: '$pipelineConfig'"

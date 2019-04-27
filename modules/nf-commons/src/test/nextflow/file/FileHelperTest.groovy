@@ -15,6 +15,9 @@
  */
 
 package nextflow.file
+
+import spock.lang.Unroll
+
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
 import java.nio.file.Files
@@ -903,5 +906,20 @@ class FileHelperTest extends Specification {
          'ftp'      |  false
          'ftps'     |  false
     }
+
+    @Unroll
+    def 'should return an identifier given file #PATH'() {
+
+        expect:
+        FileHelper.getIdentifier(Paths.get(PATH)) == EXPECTED
+
+        where:
+        PATH                | EXPECTED
+        'foo/bar.nf.txt'    | 'bar'
+        'foo-bar-baz.nf'    | 'foo_bar_baz'
+        '123-fo0'           | '_23_fo0'
+        '--a  b  c'         | '_a_b_c'
+    }
+
 
 }
