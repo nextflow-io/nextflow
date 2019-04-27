@@ -15,17 +15,17 @@
  */
 
 package nextflow.script
+
 import java.nio.file.Path
 
 import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
-import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.exception.IllegalFileException
+import nextflow.extension.ChannelFactory
 import nextflow.file.FilePatternSplitter
-import nextflow.processor.ProcessConfig
 import nextflow.util.BlankSeparatedList
 /**
  * Model a process generic input parameter
@@ -174,7 +174,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
                 }
 
                 // instantiate the new channel
-                channel = singleton && mode==BasicMode.standard ? new DataflowVariable() : new DataflowQueue()
+                channel = ChannelFactory.create( singleton && mode==BasicMode.standard )
 
                 // bind it to the script on-fly
                 if( local != '-' && binding ) {
@@ -192,7 +192,6 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
     }
 
 
-    @PackageScope
     BaseOutParam bind( def obj ) {
         if( obj instanceof TokenVar )
             this.nameObj = obj.name
@@ -633,7 +632,16 @@ final class DefaultOutParam extends StdOutParam {
 /**
  * Container to hold all process outputs
  */
-class OutputsList implements List<OutParam> {
+class OutputsList implements List<OutParam>, Cloneable {
+
+    @Override
+    OutputsList clone() {
+        def result = (OutputsList)super.clone()
+        result.target = new ArrayList<>(target.size())
+        for( OutParam param : target )
+            result.add((OutParam)param.clone())
+        return result
+    }
 
     @Delegate
     private List<OutParam> target = new LinkedList<>()

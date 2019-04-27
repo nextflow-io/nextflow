@@ -16,13 +16,14 @@
 
 package nextflow.extension
 
-import groovyx.gpars.dataflow.DataflowChannel
+
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 /**
- * Implements {@link DataflowExtensions#map(groovyx.gpars.dataflow.DataflowReadChannel, groovy.lang.Closure)} operator
+ * Implements {@link OperatorEx#map(groovyx.gpars.dataflow.DataflowReadChannel, groovy.lang.Closure)} operator
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -32,15 +33,24 @@ class MapOp {
 
     private Closure mapper
 
+    private DataflowWriteChannel target
+
     MapOp( final DataflowReadChannel<?> source, final Closure mapper ) {
         this.source = source
         this.mapper = mapper
     }
 
-    DataflowChannel apply() {
+    MapOp setTarget( DataflowWriteChannel target ) {
+        this.target = target
+        return this
+    }
+
+    DataflowWriteChannel apply() {
+
+        if( target == null )
+            target = ChannelFactory.createBy(source)
 
         final stopOnFirst = source instanceof DataflowExpression
-        final target = DataflowExtensions.newChannelBy(source)
         DataflowHelper.newOperator(source, target) { it ->
 
             def result = mapper.call(it)

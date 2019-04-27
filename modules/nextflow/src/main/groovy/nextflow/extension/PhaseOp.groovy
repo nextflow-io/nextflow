@@ -19,14 +19,13 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
-import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.util.CheckHelper
 
 /**
- * Implements {@link DataflowExtensions#phase} operator logic
+ * Implements {@link OperatorEx#phase} operator logic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -41,7 +40,7 @@ class PhaseOp {
 
     private DataflowReadChannel target
 
-    private Closure mapper = DataflowExtensions.DEFAULT_MAPPING_CLOSURE
+    private Closure mapper = OperatorEx.DEFAULT_MAPPING_CLOSURE
 
     PhaseOp( DataflowReadChannel source, DataflowReadChannel target ) {
         this.source = source
@@ -56,14 +55,14 @@ class PhaseOp {
     }
 
     PhaseOp setMapper( Closure mapper ) {
-        this.mapper = mapper ?: DataflowExtensions.DEFAULT_MAPPING_CLOSURE
+        this.mapper = mapper ?: OperatorEx.DEFAULT_MAPPING_CLOSURE
         return this
     }
 
-    DataflowQueue apply() {
+    DataflowWriteChannel apply() {
 
-        def result = new DataflowQueue()
-        def state = [:]
+        def result = ChannelFactory.create()
+        def state = new LinkedHashMap()
 
         final count = 2
         final stopCount = new AtomicInteger(count)
@@ -84,10 +83,10 @@ class PhaseOp {
      * @param mapper A closure mapping a value to its key
      * @return A map with {@code OnNext} and {@code onComplete} methods entries
      */
-    static private final Map phaseHandler( Map<Object,Map<Integer,List>> buffer, int size, int index, DataflowWriteChannel target, Closure mapper, AtomicInteger stopCount, boolean remainder ) {
+    static private final Map<String,Closure> phaseHandler( Map<Object,Map<Integer,List>> buffer, int size, int index, DataflowWriteChannel target, Closure mapper, AtomicInteger stopCount, boolean remainder ) {
 
-        [
-                onNext: {
+        DataflowHelper.eventsMap(
+                {
                     synchronized (buffer) {
                         def entries = phaseImpl(buffer, size, index, it, mapper, false)
                         if( entries ) {
@@ -95,14 +94,14 @@ class PhaseOp {
                         }
                     }},
 
-                onComplete: {
+                {
                     if( stopCount.decrementAndGet()==0) {
                         if( remainder )
                             phaseRemainder(buffer,size, target)
                         target << Channel.STOP
                     }}
 
-        ]
+        )
 
     }
 
@@ -167,7 +166,7 @@ class PhaseOp {
 
         Iterator<Map.Entry<Integer,List>> itr = channels.iterator()
         while( itr.hasNext() ) {
-            def entry = itr.next()
+            def entry = (Map.Entry<Integer,List>)itr.next()
 
             def list = entry.getValue()
             result << list[0]

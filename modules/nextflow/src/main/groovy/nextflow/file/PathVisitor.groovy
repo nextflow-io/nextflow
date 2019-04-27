@@ -27,9 +27,10 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
-import groovyx.gpars.dataflow.DataflowQueue
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
 import nextflow.Session
+import nextflow.extension.ChannelFactory
 import nextflow.util.CustomThreadFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -46,7 +47,7 @@ class PathVisitor {
 
     private static Logger log = LoggerFactory.getLogger(PathVisitor)
 
-    DataflowQueue target
+    DataflowWriteChannel target
 
     boolean closeChannelOnComplete = true
 
@@ -56,12 +57,12 @@ class PathVisitor {
 
     boolean forcePattern
 
-    DataflowQueue apply(Object filePattern) {
+    DataflowWriteChannel apply(Object filePattern) {
         if( opts == null )
             opts = [:]
 
         if( !target )
-            target = new DataflowQueue()
+            target = ChannelFactory.create()
 
         if( filePattern instanceof Pattern )
             applyRegexPattern0(filePattern)

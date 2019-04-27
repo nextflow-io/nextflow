@@ -15,15 +15,17 @@
  */
 
 package nextflow.extension
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.ChainWithClosure
 import groovyx.gpars.dataflow.operator.CopyChannelsClosure
-import nextflow.Global
+import nextflow.NF
+import static nextflow.extension.DataflowHelper.newOperator
 /**
- * Implements the {@link DataflowExtensions#tap} operator
+ * Implements the {@link OperatorEx#tap} operator
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -57,7 +59,7 @@ class TapOp {
         assert holder != null
 
         this.source = source
-        this.result = DataflowExtensions.newChannelBy(source)
+        this.result = ChannelFactory.createBy(source)
         this.outputs = [result]
 
         // -- set the target variable in the script binding context
@@ -65,9 +67,9 @@ class TapOp {
         if( !names )
             throw new IllegalArgumentException("Missing target channel on `tap` operator")
 
-        final binding = Global.session.binding
+        final binding = NF.binding
         names.each { item ->
-            def channel = DataflowExtensions.newChannelBy(source)
+            def channel = ChannelFactory.createBy(source)
             if( binding.hasVariable(item) )
                 log.warn "A variable named '${item}' already exists in script global context -- Consider renaming it "
 
@@ -91,7 +93,7 @@ class TapOp {
         }
 
         this.source = source
-        this.result = DataflowExtensions.newChannelBy(source)
+        this.result = ChannelFactory.createBy(source)
         this.outputs = [result, target]
     }
 
@@ -105,9 +107,8 @@ class TapOp {
      * @return An instance of {@link TapOp} itself
      */
     TapOp apply() {
-        DataflowHelper.newOperator([source], outputs, new ChainWithClosure(new CopyChannelsClosure()));
+        newOperator([source], outputs, new ChainWithClosure(new CopyChannelsClosure()));
         return this
     }
-
 
 }

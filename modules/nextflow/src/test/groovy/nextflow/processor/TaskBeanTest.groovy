@@ -20,6 +20,7 @@ import java.nio.file.Paths
 
 import nextflow.Session
 import nextflow.container.ContainerConfig
+import nextflow.script.ProcessConfig
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
 /**

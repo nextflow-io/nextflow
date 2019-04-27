@@ -73,9 +73,6 @@ class StatsObserver implements TraceObserver {
         if( trace ) {
             stats.updateTasksCached(trace)
         }
-        else {
-            log.debug "WARN: Unable to find trace record for task id=${handler.task?.id}"
-        }
     }
 
     @Override

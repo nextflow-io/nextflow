@@ -15,24 +15,17 @@
  */
 
 package test
-import java.nio.file.Path
 
 import groovy.transform.InheritConstructors
-import nextflow.Channel
-import nextflow.Nextflow
 import nextflow.Session
-import nextflow.ast.NextflowDSL
-import nextflow.ast.NextflowXform
 import nextflow.executor.Executor
-import nextflow.processor.ProcessConfig
-import nextflow.processor.ProcessFactory
+import nextflow.script.ProcessConfig
+import nextflow.script.ProcessFactory
 import nextflow.processor.TaskProcessor
 import nextflow.script.BaseScript
+import nextflow.script.ScriptBinding
+import nextflow.script.ScriptParser
 import nextflow.script.TaskBody
-import org.apache.commons.lang.StringUtils
-import org.codehaus.groovy.control.CompilerConfiguration
-import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
-import org.codehaus.groovy.control.customizers.ImportCustomizer
 /**
  * An helper class to parse nextflow script snippets
  *
@@ -43,62 +36,46 @@ class TestParser {
     Session session
 
     TestParser( Map config = null ) {
-        session = config ? new Session(config) : new Session()
+        session = config ? new TestSession(config) : new TestSession()
     }
 
     TestParser( Session session1 ) {
         session = session1
     }
 
-    BaseScript parseScript ( String scriptText, Map map = null ) {
-        parseScript(scriptText, new Binding(map))
-    }
 
-    BaseScript parseScript( String scriptText, Binding binding ) {
+    TaskProcessor parseAndGetProcess( String scriptText, Map binding=null ) {
+        if( binding != null ) {
+            session.binding = new ScriptBinding(binding)
+        }
 
-        def importCustomizer = new ImportCustomizer()
-        importCustomizer.addImports( StringUtils.name, groovy.transform.Field.name )
-        importCustomizer.addImports( Path.name )
-        importCustomizer.addImports( Channel.name )
-        importCustomizer.addStaticStars( Nextflow.name )
-
-        def config = new CompilerConfiguration()
-        config.scriptBaseClass = BaseScript.class.name
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
-        config.addCompilationCustomizers(importCustomizer)
-
-        // extend the class-loader if required
-        def gcl = new GroovyClassLoader()
-
-        // run and wait for termination
-        def groovy = new GroovyShell(gcl, binding, config)
-        def script = groovy.parse( scriptText ) as BaseScript
-        // initialize it
-        script.setSession(session)
-        script.setProcessFactory(new MockProcessFactory(script, session))
-        // return it
-        return script
-    }
-
-    TaskProcessor parseAndGetProcess( String scriptText ) {
-        def script = parseScript(scriptText)
-        script.run()
-        return script.getTaskProcessor()
+        session.init(null,null)
+        
+        return new ScriptParser(session)
+                .runScript(scriptText)
+                .getScript()
+                .getTaskProcessor()
     }
 
 
-    static TaskProcessor parseAndReturnProcess( String scriptText, Map map = [:] ) {
-        def script = new TestParser().parseScript(scriptText, map)
-        script.run()
-        return script.getTaskProcessor()
+    static TaskProcessor parseAndReturnProcess( String scriptText, Map map = null ) {
+        new TestParser().parseAndGetProcess(scriptText, map)
     }
 
 
-    @InheritConstructors
-    static class MockProcessFactory extends ProcessFactory  {
+    static class MockProcessFactory extends ProcessFactory {
 
-        TaskProcessor newTaskProcessor( String name, Executor executor, Session session, BaseScript script, ProcessConfig config, TaskBody taskBody ) {
+        BaseScript script
+        Session session
+
+        MockProcessFactory(BaseScript script, Session session) {
+            super(script,session)
+            this.script = script
+            this.session = session
+        }
+
+        @Override
+        TaskProcessor newTaskProcessor( String name, Executor executor, ProcessConfig config, TaskBody taskBody ) {
             new MockTaskProcessor(name, executor, session, script, config, taskBody)
         }
 
@@ -110,4 +87,12 @@ class TestParser {
         def run () { }
     }
 
+    @InheritConstructors
+    static class TestSession extends Session {
+
+        @Override
+        ProcessFactory newProcessFactory(BaseScript script) {
+            return new MockProcessFactory(script, this)
+        }
+    }
 }

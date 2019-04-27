@@ -15,6 +15,10 @@
  */
 
 package nextflow.processor
+
+import spock.lang.Specification
+import spock.lang.Unroll
+
 import java.nio.file.Files
 import java.nio.file.Paths
 
@@ -33,8 +37,6 @@ import nextflow.script.TaskBody
 import nextflow.script.TokenVar
 import nextflow.script.ValueInParam
 import nextflow.script.ValueOutParam
-import spock.lang.Specification
-import spock.lang.Unroll
 import test.TestHelper
 /**
  *
@@ -42,6 +44,10 @@ import test.TestHelper
  */
 
 class TaskRunTest extends Specification {
+
+    def setupSpec() {
+        new Session()
+    }
 
     def testGetInputsByType() {
 

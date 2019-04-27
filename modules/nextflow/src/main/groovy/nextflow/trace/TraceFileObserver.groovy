@@ -269,6 +269,11 @@ class TraceFileObserver implements TraceObserver {
 
     @Override
     void onProcessCached(TaskHandler handler, TraceRecord trace) {
+        // event was triggered by a stored task, ignore it
+        if( trace == null ) {
+            return
+        }
+
         // save to the file
         writer.send { PrintWriter it -> it.println(render( trace )); it.flush() }
     }

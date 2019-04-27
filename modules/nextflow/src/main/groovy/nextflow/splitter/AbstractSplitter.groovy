@@ -15,6 +15,7 @@
  */
 
 package nextflow.splitter
+
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.GZIPInputStream
@@ -22,12 +23,13 @@ import java.util.zip.GZIPInputStream
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.exception.StopSplitIterationException
+import nextflow.extension.ChannelFactory
 import nextflow.util.CheckHelper
-import nextflow.util.MemoryUnit
 /**
  * Generic data splitter, provide main methods/interfaces
  *
@@ -311,7 +313,7 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
         [
                 each: Closure,
                 by: Integer,
-                into: [ Collection, DataflowQueue ],
+                into: [Collection, DataflowQueue, DataflowBroadcast],
                 autoClose: Boolean,
                 limit: Integer,
                 elem: Integer,
@@ -368,9 +370,9 @@ abstract class AbstractSplitter<T> implements SplitterStrategy {
     /**
      * @return Split the target object and return a channel emitting the produced chunks
      */
-    DataflowQueue channel() {
-        into = new DataflowQueue()
-        (DataflowQueue) apply()
+    DataflowWriteChannel channel() {
+        into = ChannelFactory.create()
+        (DataflowWriteChannel) apply()
     }
 
     /**

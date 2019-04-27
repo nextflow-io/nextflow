@@ -19,11 +19,18 @@ import java.nio.file.Files
 
 import groovyx.gpars.dataflow.DataflowQueue
 import spock.lang.Specification
+
+import nextflow.Session
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class DotRendererTest extends Specification {
+
+    def setupSpec() {
+        new Session()
+    }
 
     def 'should remove not alphanumeric chars' (){
 

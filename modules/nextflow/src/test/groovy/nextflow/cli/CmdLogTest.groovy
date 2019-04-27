@@ -19,7 +19,7 @@ import java.nio.file.Files
 
 import nextflow.CacheDB
 import nextflow.executor.CachedTaskHandler
-import nextflow.processor.ProcessConfig
+import nextflow.script.ProcessConfig
 import nextflow.processor.TaskContext
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun

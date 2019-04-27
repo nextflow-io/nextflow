@@ -43,6 +43,8 @@ import static nextflow.file.FileHelper.isGlobAllowed
  */
 class Nextflow {
 
+    static private Session getSession() { Global.session as Session }
+
     // note: groovy `Slf4j` annotation causes a bizarre issue
     // https://issues.apache.org/jira/browse/GROOVY-7371
     // declare public so that can be accessed from the user script
@@ -226,6 +228,11 @@ class Nextflow {
      * @param message The message that will be reported in the log file (optional)
      */
     static void exit(int exitCode, String message = null) {
+        if( session.aborted ) {
+            log.debug "Ignore exit because execution is already aborted -- message=$message"
+            return
+        }
+        
         if ( exitCode && message ) {
             log.error message
         }

@@ -41,7 +41,7 @@ class K8sExecutor extends Executor {
     /**
      * The Kubernetes HTTP client
      */
-    static private K8sClient client
+    private K8sClient client
 
     @PackageScope K8sClient getClient() {
         client
@@ -59,7 +59,8 @@ class K8sExecutor extends Executor {
     /**
      * Initialise the executor setting-up the kubernetes client configuration
      */
-    void register() {
+    @Override
+    protected void register() {
         super.register()
         final config = k8sConfig.getClient()
         client = new K8sClient(config)

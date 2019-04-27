@@ -34,22 +34,26 @@ class AnsiLogObserverTest extends Specification {
         stats.submitted = SUBMIT
         stats.completed = COMPLETED
         stats.cached    = CACHE
+        stats.stored    = STORE
         stats.terminated = DONE
         stats.error = ERR
-        stats.hash = '4e/486876'
+        stats.hash = HASH
 
         expect:
         o.line('foo', stats) == EXPECTED
 
         where:
-        SUBMIT  | COMPLETED | CACHE | DONE  | ERR   | EXPECTED
-        1       | 0         | 0     | false | false | '[4e/486876] process > foo [  0%] 0 of 1'
-        1       | 1         | 0     | false | false | '[4e/486876] process > foo [100%] 1 of 1'
-        10      | 5         | 0     | false | false | '[4e/486876] process > foo [ 50%] 5 of 10'
-        0       | 0         | 5     | false | false | '[4e/486876] process > foo [100%] 5 of 5, cached: 5'
-        2       | 1         | 3     | false | false | '[4e/486876] process > foo [ 80%] 4 of 5, cached: 3'
-        2       | 2         | 0     | true  | false | '[4e/486876] process > foo [100%] 2 of 2 ✔'
-        2       | 2         | 0     | true  | true  | '[4e/486876] process > foo [100%] 2 of 2 ✘'
+        HASH        | SUBMIT  | COMPLETED | CACHE | STORE | DONE  | ERR   | EXPECTED
+        null        | 0       | 0         | 0     | 0     | false | false | '[-        ] process > foo -'
+        '4e/486876' | 1       | 0         | 0     | 0     | false | false | '[4e/486876] process > foo [  0%] 0 of 1'
+        '4e/486876' | 1       | 1         | 0     | 0     | false | false | '[4e/486876] process > foo [100%] 1 of 1'
+        '4e/486876' | 10      | 5         | 0     | 0     | false | false | '[4e/486876] process > foo [ 50%] 5 of 10'
+        '4e/486876' | 0       | 0         | 5     | 0     | false | false | '[4e/486876] process > foo [100%] 5 of 5, cached: 5'
+        '4e/486876' | 2       | 1         | 3     | 0     | false | false | '[4e/486876] process > foo [ 80%] 4 of 5, cached: 3'
+        'skipped'   | 0       | 0         | 0     | 5     | false | false | '[skipped  ] process > foo [100%] 5 of 5, stored: 5'
+        'skipped'   | 2       | 1         | 0     | 3     | false | false | '[skipped  ] process > foo [ 80%] 4 of 5, stored: 3'
+        'ab/123456' | 2       | 2         | 0     | 0     | true  | false | '[ab/123456] process > foo [100%] 2 of 2 ✔'
+        'ef/987654' | 2       | 2         | 0     | 0     | true  | true  | '[ef/987654] process > foo [100%] 2 of 2 ✘'
 
     }
 

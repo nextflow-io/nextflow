@@ -27,15 +27,15 @@ import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.Nextflow
 import nextflow.exception.ProcessException
+import nextflow.extension.ChannelFactory
 import nextflow.extension.ToListOp
-import nextflow.processor.ProcessConfig
 /**
  * Base class for input/output parameters
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-abstract class BaseParam {
+abstract class BaseParam implements Cloneable {
 
     final protected Binding binding
 
@@ -128,6 +128,8 @@ interface InParam {
 
     DataflowReadChannel getInChannel()
 
+    Object getRawChannel()
+
     InParam from( Object value )
 
     InParam from( Object... values )
@@ -185,12 +187,13 @@ abstract class BaseInParam extends BaseParam implements InParam {
     protected DataflowReadChannel inputValToChannel( value ) {
         checkFromNotNull(value)
 
-        if ( value instanceof DataflowBroadcast )  {
-            return value.createReadChannel()
+        if( this instanceof DefaultInParam ) {
+            assert value instanceof DataflowQueue
+            return value
         }
 
-        if( value instanceof DataflowReadChannel ) {
-            return value
+        if ( value instanceof DataflowReadChannel || value instanceof DataflowBroadcast )  {
+            return ChannelFactory.getReadChannel(value)
         }
 
         // wrap any collections with a DataflowQueue
@@ -282,6 +285,14 @@ abstract class BaseInParam extends BaseParam implements InParam {
         checkFromNotNull(obj)
         fromObject = obj
         return this
+    }
+
+    Object getRawChannel() {
+        if( ChannelFactory.isChannel(fromObject) )
+            return fromObject
+        if( ChannelFactory.isChannel(inChannel) )
+            return inChannel
+        throw new IllegalStateException("Missing input channel")
     }
 
     BaseInParam from( Object... obj ) {
@@ -414,7 +425,6 @@ class FileInParam extends BaseInParam  {
             return value
     }
 
-
 }
 
 /**
@@ -507,7 +517,7 @@ class SetInParam extends BaseInParam {
 
     SetInParam bind( Object... obj ) {
 
-        obj.each { item ->
+        for( def item : obj ) {
 
             if( item instanceof TokenVar )
                 newItem(ValueInParam).bind(item)
@@ -567,7 +577,17 @@ final class DefaultInParam extends ValueInParam {
  * Container to hold all process outputs
  */
 @Slf4j
-class InputsList implements List<InParam> {
+class InputsList implements List<InParam>, Cloneable {
+
+    @Override
+    InputsList clone() {
+        def result = (InputsList)super.clone()
+        result.target = new ArrayList<>(target.size())
+        for( InParam param : target ) {
+            result.target.add((InParam)param.clone())
+        }
+        return result
+    }
 
     @Delegate
     private List<InParam> target = new LinkedList<>()
@@ -585,7 +605,7 @@ class InputsList implements List<InParam> {
 
     boolean allScalarInputs() {
         for( InParam param : target ) {
-            if( param.inChannel instanceof DataflowQueue )
+            if( ChannelFactory.isChannelQueue(param.inChannel) )
                 return false
         }
         return true

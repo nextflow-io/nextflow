@@ -50,25 +50,43 @@ trait TraceObserver {
 
     /**
      * This method is invoked before a process run is going to be submitted
+     *
      * @param handler
+     *      The {@link TaskHandler} instance for the current task.
+     * @param trace
+     *      The associated {@link TraceRecord} fot the current task.
      */
     void onProcessSubmit(TaskHandler handler, TraceRecord trace){}
 
     /**
      * This method is invoked when a process run is going to start
+     *
      * @param handler
+     *      The {@link TaskHandler} instance for the current task.
+     * @param trace
+     *      The associated {@link TraceRecord} fot the current task.
      */
     void onProcessStart(TaskHandler handler, TraceRecord trace){}
 
     /**
      * This method is invoked when a process run completes
+     *
      * @param handler
+     *      The {@link TaskHandler} instance for the current task.
+     * @param trace
+     *      The associated {@link TraceRecord} fot the current task.
      */
     void onProcessComplete(TaskHandler handler, TraceRecord trace){}
 
     /**
-     * method invoked when a task execution is skipped because a cached result is found
+     * method invoked when a task execution is skipped because the result is cached (already computed)
+     * or stored (due to the usage of `storeDir` directive)
+     *
      * @param handler
+     *      The {@link TaskHandler} instance for the current task
+     * @param trace
+     *      The trace record for the cached trace. When this event is invoked for a store task
+     *      the {@code trace} record is expected to be {@code null}
      */
     void onProcessCached(TaskHandler handler, TraceRecord trace){}
 
@@ -79,8 +97,11 @@ trait TraceObserver {
 
     /**
      * Method that is invoked, when a workflow fails.
+     *
      * @param handler
+     *      The {@link TaskHandler} instance for the current task.
      * @param trace
+     *      The associated {@link TraceRecord} fot the current task.
      */
     void onFlowError(TaskHandler handler, TraceRecord trace){}
 }

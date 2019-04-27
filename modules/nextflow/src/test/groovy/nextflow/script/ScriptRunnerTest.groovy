@@ -21,12 +21,12 @@ import nextflow.Session
 import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessUnrecoverableException
-import nextflow.processor.ProcessConfig
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import nextflow.util.VersionNumber
 import spock.lang.Specification
 import test.TestParser
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -36,7 +36,7 @@ class ScriptRunnerTest extends Specification {
     def 'test process' () {
 
         setup:
-        def runner = new ScriptRunner([process:[executor:'nope']])
+        def runner = new TestScriptRunner([process:[executor:'nope']])
 
         /*
          * Test a task with a very simple body.
@@ -66,7 +66,7 @@ class ScriptRunnerTest extends Specification {
          * test that the *instanceType* attribute is visible in the taskConfig object
          */
         when:
-        def runner = new ScriptRunner( process: [executor:'nope', instanceType:'alpha'] )
+        def runner = new TestScriptRunner( process: [executor:'nope', instanceType:'alpha'] )
         def script =
             '''
             process simpleTask  {
@@ -90,7 +90,7 @@ class ScriptRunnerTest extends Specification {
          * override the one define in the main config (alpha)
          */
         when:
-        def runner2 = new ScriptRunner( process: [executor:'nope', instanceType:'alpha'] )
+        def runner2 = new TestScriptRunner( process: [executor:'nope', instanceType:'alpha'] )
         def script2 =
             '''
             process otherTask  {
@@ -115,7 +115,7 @@ class ScriptRunnerTest extends Specification {
 
     def 'test process with args' () {
         setup:
-        def runner = new ScriptRunner( executor: 'nope' )
+        def runner = new TestScriptRunner( executor: 'nope' )
 
         when:
         def script =
@@ -145,7 +145,7 @@ class ScriptRunnerTest extends Specification {
     def 'test process echo' () {
 
         setup:
-        def runner = new ScriptRunner( executor: 'nope' )
+        def runner = new TestScriptRunner( executor: 'nope' )
 
         when:
         def script =
@@ -171,7 +171,7 @@ class ScriptRunnerTest extends Specification {
     def 'test process variables' () {
 
         setup:
-        def runner = new ScriptRunner( executor: 'nope' )
+        def runner = new TestScriptRunner( executor: 'nope' )
 
         def script = '''
             X = 1
@@ -193,7 +193,7 @@ class ScriptRunnerTest extends Specification {
     def 'test process variables 2' () {
 
         setup:
-        def runner = new ScriptRunner( executor: 'nope' )
+        def runner = new TestScriptRunner( executor: 'nope' )
 
         def script = '''
             X = 1
@@ -225,7 +225,7 @@ class ScriptRunnerTest extends Specification {
             }
         }
 
-        def runner = new ScriptRunner(session)
+        def runner = new TestScriptRunner(session)
 
         def script = '''
             process test {
@@ -249,7 +249,7 @@ class ScriptRunnerTest extends Specification {
     def 'test process fallback variable' () {
 
         setup:
-        def runner = new ScriptRunner( executor: 'nope', env: [HELLO: 'Hello world!'] )
+        def runner = new TestScriptRunner( executor: 'nope', env: [HELLO: 'Hello world!'] )
 
         def script = '''
             process test {
@@ -270,7 +270,7 @@ class ScriptRunnerTest extends Specification {
 
 
         setup:
-        def runner = new ScriptRunner( executor: 'nope' )
+        def runner = new TestScriptRunner( executor: 'nope' )
 
         def script = '''
             X = file('filename')
@@ -309,9 +309,6 @@ class ScriptRunnerTest extends Specification {
             process hola {
               penv 1
               cpus 2
-
-              input:
-              val x
 
               return ''
             }
@@ -358,9 +355,6 @@ class ScriptRunnerTest extends Specification {
             process hola {
               penv 1
               cpus 2
-
-              input:
-              val x
 
               return ''
             }
@@ -517,7 +511,7 @@ class ScriptRunnerTest extends Specification {
         process.config.time == '6 hour'
 
         when:
-        def result = new ScriptRunner(config)
+        def result = new TestScriptRunner(config)
                     .setScript(script)
                     .execute()
                     .getVal()
@@ -555,7 +549,7 @@ class ScriptRunnerTest extends Specification {
         process.config.cpus == null
 
         when:
-        def result = new ScriptRunner(process: [executor:'nope'])
+        def result = new TestScriptRunner(process: [executor:'nope'])
                 .setScript(script)
                 .execute()
                 .getVal()
@@ -567,54 +561,6 @@ class ScriptRunnerTest extends Specification {
         then:
         result[0] == 'cpus: 1'
 
-    }
-
-    def 'should fetch containers definition' () {
-
-        String text
-
-        when:
-        text = '''
-                process.container = 'beta'
-                '''
-        then:
-        new ScriptRunner(cfg(text)).fetchContainers() == 'beta'
-
-
-        when:
-        text = '''
-                process {
-                    $proc1 { container = 'alpha' }
-                    $proc2 { container ='beta' }
-                }
-                '''
-        then:
-        new ScriptRunner(cfg(text)).fetchContainers() == ['$proc1': 'alpha', '$proc2': 'beta']
-
-
-        when:
-        text = '''
-                process {
-                    $proc1 { container = 'alpha' }
-                    $proc2 { container ='beta' }
-                }
-
-                process.container = 'gamma'
-                '''
-        then:
-        new ScriptRunner(cfg(text)).fetchContainers() == ['$proc1': 'alpha', '$proc2': 'beta', default: 'gamma']
-
-
-        when:
-        text = '''
-                process.container = { "ngi/rnaseq:${workflow.getRevision() ?: 'latest'}" }
-                '''
-
-        def meta = Mock(WorkflowMetadata); meta.getRevision() >> '1.2'
-        def runner = new ScriptRunner(cfg(text))
-        runner.session.binding.setVariable('workflow',meta)
-        then:
-        runner.fetchContainers() == 'ngi/rnaseq:1.2'
     }
 
     def 'should parse mem and duration units' () {
@@ -632,7 +578,7 @@ class ScriptRunnerTest extends Specification {
            '''
 
         when:
-        def runner = new ScriptRunner([executor:'nope'])
+        def runner = new TestScriptRunner([executor:'nope'])
         def result = (Map)runner.setScript(script).execute()
         then:
         result.mem1 instanceof MemoryUnit
@@ -646,11 +592,6 @@ class ScriptRunnerTest extends Specification {
         result.flag == true
     }
 
-    static Map cfg(String config) {
-        new ConfigSlurper().parse(config).toMap()
-    }
-
-
     def 'should define directive with a negative value' () {
 
         when:
@@ -662,7 +603,7 @@ class ScriptRunnerTest extends Specification {
                 ''
             }
             '''
-        def runner = new ScriptRunner([executor:'nope'])
+        def runner = new TestScriptRunner([executor:'nope'])
         runner.setScript(script).execute()
         def processor = runner.scriptObj.taskProcessor
 
@@ -688,7 +629,7 @@ class ScriptRunnerTest extends Specification {
               'touch x.pdf'
             }
                         '''
-        def runner = new ScriptRunner([executor:'nope'])
+        def runner = new TestScriptRunner([executor:'nope'])
         runner.setScript(script).execute()
 
         then:
@@ -701,8 +642,7 @@ class ScriptRunnerTest extends Specification {
         given:
         def session = Mock(Session)
         def manifest = Mock(Manifest)
-        def runner = Spy(ScriptRunner)
-        runner.session = session
+        TestScriptRunner runner = Spy(TestScriptRunner, constructorArgs:[session])
 
         when:
         runner.checkVersion()
