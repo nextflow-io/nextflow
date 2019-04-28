@@ -20,6 +20,7 @@ jobs:
     environment:
         GRADLE_OPTS: -Dorg.gradle.daemon=false
         WITH_DOCKER: -with-docker
+        TEST_JDK: 11
     steps:
       - checkout
       - run: rm $HOME/.gitconfig
@@ -27,10 +28,7 @@ jobs:
       - run: make assemble
       - run: make test
       - run: make install
-      - run: |
-          wget -q https://raw.githubusercontent.com/sormuras/bach/master/install-jdk.sh
-          source ./install-jdk.sh -f 9 -c
-          ./integration-tests.sh
+      - run: ./integration-tests.sh
 #     - run: bash pub-tests.sh circle
 
 workflows:
