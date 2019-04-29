@@ -474,6 +474,36 @@ For example::
 The above configuration snippet will deploy the execution with AWS Batch only for processes annotated
 with the :ref:`process-label` ``bigTask``, the remaining process with run in the local computer.
 
+Volume mounts
+-------------
+
+User provided container volume mounts can be provided as shown below::
+
+  aws {
+    region = 'eu-west-1'
+    batch {
+        volumes = '/tmp'
+    }
+  }
+
+Multiple volumes can be specified using a comma separated paths. The usual Docker volume mount syntax
+can be used to specify complex volumes for which the container paths is different from the host paths
+or to specify *read-only* option. For example::
+
+  aws {
+    region = 'eu-west-1'
+    batch {
+        volumes = ['/tmp', '/host/path:/mnt/path:ro']
+    }
+  }
+
+
+The above snippet defines two volume mounts the jobs executed in your pipeline. The first mounting the
+host path ``/tmp`` in the same path in the container and using *read-write* access mode. The second
+mounts the path ``/host/path`` in the host environment to the ``/mnt/path`` in the container using the
+*read-only* access mode.
+
+
 Troubleshooting
 ---------------
 
@@ -501,6 +531,7 @@ Other places to check for error information:
 - The Job execution log in the AWS Batch dashboard.
 - The `CloudWatch <https://aws.amazon.com/cloudwatch/>`_ logs found in the ``/aws/batch/job`` log group.
 
+Advanced configuration
+----------------------
 
-
-
+Read :ref:`AWS Batch configuration<config-aws-batch>` section to learn more about advanced Batch configuration options.
