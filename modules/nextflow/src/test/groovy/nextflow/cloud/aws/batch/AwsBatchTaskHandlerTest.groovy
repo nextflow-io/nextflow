@@ -16,9 +16,13 @@
 
 package nextflow.cloud.aws.batch
 
+import spock.lang.Specification
+import spock.lang.Unroll
+
 import java.nio.file.Paths
 
 import com.amazonaws.services.batch.AWSBatch
+import com.amazonaws.services.batch.model.ContainerProperties
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsResult
 import com.amazonaws.services.batch.model.DescribeJobsRequest
@@ -39,8 +43,6 @@ import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
-import spock.lang.Specification
-import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -180,10 +182,6 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
         req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "trap \"{ ret=\$?; /bin/aws --region eu-west-1 s3 cp --only-show-errors .command.log s3://bucket/test/.command.log||true; exit \$ret; }\" EXIT; /bin/aws --region eu-west-1 s3 cp --only-show-errors s3://bucket/test/.command.run - | bash 2>&1 | tee .command.log".toString()]
         req.getRetryStrategy() == null  // <-- retry is managed by NF, hence this must be null
-
-    }
-
-    def 'should manage TooManyRequestException' () {
 
     }
 
@@ -446,12 +444,55 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     }
 
+    def 'should add container mounts' () {
+        given:
+        def container = new ContainerProperties()
+        def handler = Spy(AwsBatchTaskHandler)
+        def mounts = [
+                vol0: '/foo',
+                vol1: '/foo:/bar',
+                vol2: '/here:/there:ro',
+                vol3: '/this:/that:rw',
+        ]
+        
+        when:
+        handler.addVolumeMountsToContainer(mounts, container)
+        then:
+        container.volumes.size() == 4
+        container.mountPoints.size() == 4
+
+        container.volumes[0].name == 'vol0'
+        container.volumes[0].host.sourcePath == '/foo'
+        container.mountPoints[0].sourceVolume == 'vol0'
+        container.mountPoints[0].containerPath == '/foo'
+        !container.mountPoints[0].readOnly
+
+        container.volumes[1].name == 'vol1'
+        container.volumes[1].host.sourcePath == '/foo'
+        container.mountPoints[1].sourceVolume == 'vol1'
+        container.mountPoints[1].containerPath == '/bar'
+        !container.mountPoints[1].readOnly
+
+        container.volumes[2].name == 'vol2'
+        container.volumes[2].host.sourcePath == '/here'
+        container.mountPoints[2].sourceVolume == 'vol2'
+        container.mountPoints[2].containerPath == '/there'
+        container.mountPoints[2].readOnly
+
+        container.volumes[3].name == 'vol3'
+        container.volumes[3].host.sourcePath == '/this'
+        container.mountPoints[3].sourceVolume == 'vol3'
+        container.mountPoints[3].containerPath == '/that'
+        !container.mountPoints[3].readOnly
+    }
+
 
     def 'should create a job definition request object' () {
         given:
         def IMAGE = 'foo/bar:1.0'
         def JOB_NAME = 'nf-foo-bar-1-0'
         def handler = Spy(AwsBatchTaskHandler)
+        handler.executor = Mock(AwsBatchExecutor)
 
         when:
         def result = handler.makeJobDefRequest(IMAGE)
@@ -477,6 +518,53 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.containerProperties.volumes[0].host.sourcePath == '/home/conda'
         result.containerProperties.volumes[0].name == 'aws-cli'
 
+    }
+
+    def 'should create user mounts' () {
+        given:
+        def IMAGE = 'foo/bar:1.0'
+        def JOB_NAME = 'nf-foo-bar-1-0'
+        def executor = Mock(AwsBatchExecutor)
+        def handler = Spy(AwsBatchTaskHandler)
+        handler.executor = executor 
+
+        when:
+        def result = handler.makeJobDefRequest(IMAGE)
+        then:
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.getAwsOptions() >> new AwsOptions()
+        1 * executor.getVolumes() >> ['/tmp', '/here:/there:ro']
+        then:
+        result.containerProperties.mountPoints.size() == 2
+        result.containerProperties.volumes.size() == 2
+
+        result.containerProperties.volumes[0].host.sourcePath == '/tmp'
+        result.containerProperties.mountPoints[0].containerPath == '/tmp'
+        !result.containerProperties.mountPoints[0].readOnly
+
+        result.containerProperties.volumes[1].host.sourcePath == '/here'
+        result.containerProperties.mountPoints[1].containerPath == '/there'
+        result.containerProperties.mountPoints[1].readOnly
+    }
+
+    def 'should set job role arn'  () {
+        given:
+        def ROLE = 'aws::foo::bar'
+        def IMAGE = 'foo/bar:1.0'
+        def JOB_NAME = 'nf-foo-bar-1-0'
+        def executor = Mock(AwsBatchExecutor)
+        def handler = Spy(AwsBatchTaskHandler)
+        handler.executor = executor
+
+        when:
+        def result = handler.makeJobDefRequest(IMAGE)
+        then:
+        1 * executor.getJobRole() >> ROLE
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.getAwsOptions() >> new AwsOptions()
+
+        then:
+        result.getContainerProperties().getJobRoleArn() == ROLE
     }
 
     def 'should check task status' () {

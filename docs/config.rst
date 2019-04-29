@@ -413,7 +413,6 @@ This may be useful to ensure that a specific version is used::
     nextflowVersion = '!>=1.2'       // with ! prefix, stop execution if current version
                                         does not match required version.
 
-
 .. _config-trace:
 
 Scope `trace`
@@ -500,6 +499,17 @@ For example::
         }
     }
 
+
+.. _config-aws-batch:
+
+Advanced Batch configuration options can be set by using the ``batch`` attribute. The following properties can be used:
+
+=========================== ================
+Name                        Description
+=========================== ================
+jobRole                     The AWS Job Role ARN that needs to be used to execute the Batch Job
+volumes                     One or more container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. ``/host/path:/mount/path[:ro|rw]``. Multiple mounts can be specifid separating them with a comma or using a list object.
+=========================== ================
 
 .. _config-cloud:
 
