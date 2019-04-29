@@ -68,6 +68,20 @@ class AwsBatchExecutor extends Executor {
     private Path remoteBinDir = null
 
     /**
+     * Volume mounts
+     */
+    private List<String> volumes
+
+    /**
+     * The job role ARN that should be used
+     */
+    private String jobRole
+
+    List<String> getVolumes() { Collections.unmodifiableList(volumes) }
+
+    String getJobRole() { jobRole }
+
+    /**
      * @return {@code true} to signal containers are managed directly the AWS Batch service
      */
     final boolean isContainerNative() {
@@ -108,6 +122,12 @@ class AwsBatchExecutor extends Executor {
             log.info "Uploading local `bin` scripts folder to ${s3.toUriString()}/bin"
             remoteBinDir = FilesEx.copyTo(session.binDir, s3)
         }
+
+        /*
+         * fetch other settings
+         */
+        volumes = makeVols(session.config.navigate('aws.batch.volumes'))
+        jobRole = session.config.navigate('aws.batch.jobRole')
 
         /*
          * retrieve config and credentials and create AWS client
@@ -208,6 +228,16 @@ class AwsBatchExecutor extends Executor {
 
     @PackageScope
     ThrottlingExecutor getReaper() { reaper }
+
+    List<String> makeVols(obj) {
+        if( !obj )
+            return Collections.emptyList()
+        if( obj instanceof List )
+            return obj
+        if( obj instanceof CharSequence )
+            return obj.toString().tokenize(',').collect { it.trim() }
+        throw new IllegalArgumentException("Not a valid `batch.volumes` value: $obj [${obj.getClass().getName()}]")
+    }
 
 }
 
