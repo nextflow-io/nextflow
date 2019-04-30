@@ -500,8 +500,6 @@ class WrRestApi {
 @CompileStatic
 class WrBashBuilder extends BashWrapperBuilder {
 
-	static final private ENDL = '\n'
-
     WrBashBuilder(TaskRun task) {
         super(new TaskBean(task), new WrFileCopyStrategy(new TaskBean(task)))
     }
@@ -510,23 +508,8 @@ class WrBashBuilder extends BashWrapperBuilder {
         super(bean, new WrFileCopyStrategy(bean))
     }
 
-	protected Map<String,String> makeBinding() { 
-		def binding = super.makeBinding()
-		if (! binding.unstage_outputs) {
-			binding.unstage_outputs = copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)
-		}
-		if (binding.unstage_outputs && ! binding.unstage_controls) {
-			def copyScript = copyFileToWorkDir(TaskRun.CMD_OUTFILE) + ' || true' + ENDL
-			copyScript += copyFileToWorkDir(TaskRun.CMD_ERRFILE) + ' || true' + ENDL
-			if( statsEnabled )
-				copyScript += copyFileToWorkDir(TaskRun.CMD_TRACE) + ' || true' + ENDL
-			binding.unstage_controls = copyScript
-		}
-		return binding
-	}
-
-	private String copyFileToWorkDir(String fileName) {
-        copyFile(fileName, workDir.resolve(fileName))
+	protected boolean alwaysTryToUnstage() {
+        return true
     }
 
 }
