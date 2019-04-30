@@ -28,6 +28,9 @@ import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import static org.fusesource.jansi.Ansi.Color
 import static org.fusesource.jansi.Ansi.ansi
+
+import static nextflow.util.LoggerHelper.isHashLogPrefix
+
 /**
  * Implements an observer which display workflow
  * execution progress and notifications using
@@ -98,7 +101,7 @@ class AnsiLogObserver implements TraceObserver {
 
     synchronized void appendInfo(String message) {
         boolean warn
-        if( message.startsWith('[') && !(warn=message.indexOf('NOTE:')>0) )
+        if( isHashLogPrefix(message) && !(warn=message.indexOf('NOTE:')>0) )
             return
         
         if( !started || !processes ) {
