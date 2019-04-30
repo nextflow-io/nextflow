@@ -47,9 +47,9 @@ import groovy.util.logging.Slf4j
 @CompileStatic
 class WrMonitor implements TaskMonitor {
 
-	private static String RATE_FORMAT = ~/^(\d+\.?\d*)\s*([a-zA-Z]*)/
+    private static String RATE_FORMAT = ~/^(\d+\.?\d*)\s*([a-zA-Z]*)/
     final Session session
-	final private WrRestApi client
+    final private WrRestApi client
     final Duration dumpInterval
 
     /**
@@ -402,7 +402,7 @@ class WrMonitor implements TaskMonitor {
                 session.notifyTaskComplete(handler)
             }
         }
-		log.debug("submitPendingTasks looped through $count pending tasks")
+        log.debug("submitPendingTasks looped through $count pending tasks")
         return count
     }
 

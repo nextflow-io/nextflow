@@ -50,11 +50,11 @@ import static groovy.json.JsonOutput.toJson
 @CompileStatic
 class WrExecutor extends Executor {
 
-	static private String token
-	static private String defaultManagerDir
+    static private String token
+    static private String defaultManagerDir
     static private String endpoint
-	static private String cacertPath
-	static private WrRestApi client
+    static private String cacertPath
+    static private WrRestApi client
 
     @Override
     void register() {
@@ -70,37 +70,37 @@ class WrExecutor extends Executor {
         return "$name [$endpoint]"
     }
 
-	WrRestApi getClient() {
-		if (!client) {
-			defaultManagerDir = Paths.get(System.getProperty('user.home'), ".wr_production")
-			endpoint = getEndPoint()
-			client = new WrRestApi(endpoint, getToken(), getCacertPath())
-		}
+    WrRestApi getClient() {
+        if (!client) {
+            defaultManagerDir = Paths.get(System.getProperty('user.home'), ".wr_production")
+            endpoint = getEndPoint()
+            client = new WrRestApi(endpoint, getToken(), getCacertPath())
+        }
         client
     }
 
     protected String getEndPoint() {
-		// default port that wr listens on is 1021 + (uid * 4) + 1
-		// *** note that this will probably only work on linux/mac os, but wr
-		// probably only works fully on those as well...
-		int uid = ["id", "-u"].execute().text.trim() as Integer
-		int port = 1021 + (uid * 4) + 1
+        // default port that wr listens on is 1021 + (uid * 4) + 1
+        // *** note that this will probably only work on linux/mac os, but wr
+        // probably only works fully on those as well...
+        int uid = ["id", "-u"].execute().text.trim() as Integer
+        int port = 1021 + (uid * 4) + 1
 
         def result = session.getConfigAttribute('executor.endpoint', "https://localhost:$port")
         log.debug "[wr] endpoint=$result"
         return result
     }
 
-	protected String getToken() {
+    protected String getToken() {
         String path = session.getConfigAttribute('executor.tokenpath', Paths.get(defaultManagerDir, "client.token"))
-		log.debug "[wr] tokenpath=$path"
-		String result = new File(path).text
+        log.debug "[wr] tokenpath=$path"
+        String result = new File(path).text
         return result
     }
 
-	protected String getCacertPath() {
+    protected String getCacertPath() {
         String path = session.getConfigAttribute('executor.cacertpath', Paths.get(defaultManagerDir, "ca.pem"))
-		log.debug "[wr] cacertpath=$path"
+        log.debug "[wr] cacertpath=$path"
         return path
     }
 
@@ -130,7 +130,7 @@ class WrExecutor extends Executor {
         log.debug "[wr] Launching process > ${task.name} -- work folder: ${task.workDir}"
         new WrTaskHandler(task, this)
     }
-	
+    
 }
 
 
@@ -149,7 +149,7 @@ class WrTaskHandler extends TaskHandler implements BatchHandler<String,Map> {
     public static final List<String> STARTED_STATUSES = ['delayed', 'reserved', 'running'] + COMPLETE_STATUSES
 
     final WrExecutor executor
-	private WrRestApi client
+    private WrRestApi client
     private final Path wrapperFile
     private final Path outputFile
     private final Path errorFile
@@ -159,7 +159,7 @@ class WrTaskHandler extends TaskHandler implements BatchHandler<String,Map> {
     private final Path traceFile
     private String jobId
 
-	/**
+    /**
      * Batch context shared between multiple task handlers
      */
     private BatchContext<String,Map> context
@@ -178,26 +178,26 @@ class WrTaskHandler extends TaskHandler implements BatchHandler<String,Map> {
         this.traceFile = task.workDir.resolve(TaskRun.CMD_TRACE)
     }
 
-	void batch( BatchContext<String,Map> context ) {
+    void batch( BatchContext<String,Map> context ) {
         if( jobId ) {
             context.collect(jobId)
             this.context = context
         }
     }
 
-	private String jobIdsToString(Collection batchIds) {
+    private String jobIdsToString(Collection batchIds) {
         final MAX=10
         final sz = batchIds.size()
         batchIds.size()<=MAX ? batchIds.join(',').toString() : batchIds.take(MAX).join(',').toString() + ", ... other ${sz-MAX} omitted"
     }
 
-	/**
+    /**
      * Retrieve Batch job status information
      *
      * @param jobId The Batch job ID
      * @return The associated job details in a Map or {@code null} if no information is found
      */
-	protected Map getJob(String jobId) {
+    protected Map getJob(String jobId) {
         Collection batchIds
         if( context ) {
             // check if this response is cached in the batch collector
@@ -213,7 +213,7 @@ class WrTaskHandler extends TaskHandler implements BatchHandler<String,Map> {
         }
 
         // retrieve the status for the specified batch of jobs
-		final String ids = jobIdsToString(batchIds)
+        final String ids = jobIdsToString(batchIds)
         log.trace "[wr] getting jobs=${jobIdsToString(batchIds)}"
         List<Map> jobs = client.status(batchIds.join(',').toString())
         if( !jobs ) {
@@ -223,7 +223,7 @@ class WrTaskHandler extends TaskHandler implements BatchHandler<String,Map> {
 
         Map result=null
         jobs.each {
-			String id = it."Key" as String
+            String id = it."Key" as String
             // cache the response in the batch collector
             context?.put( id, it )
             // return the job detail for the specified job
@@ -244,9 +244,9 @@ class WrTaskHandler extends TaskHandler implements BatchHandler<String,Map> {
         final job = getJob(jobId)
         final result = job?.State in STARTED_STATUSES
         if( result ) {
-			log.trace "[wr] Task started > $task.name"
+            log.trace "[wr] Task started > $task.name"
             this.status = TaskStatus.RUNNING
-		}
+        }
         return result
     }
 
@@ -258,12 +258,12 @@ class WrTaskHandler extends TaskHandler implements BatchHandler<String,Map> {
         final done = job?.State in COMPLETE_STATUSES
         if( done ) {
             // finalize the task
-			log.trace "[wr] Task completed > $task.name"
-			if (job.Exited) {
-				task.exitStatus = job.Exitcode as Integer
-			} else {
-				task.exitStatus = Integer.MAX_VALUE
-			}
+            log.trace "[wr] Task completed > $task.name"
+            if (job.Exited) {
+                task.exitStatus = job.Exitcode as Integer
+            } else {
+                task.exitStatus = Integer.MAX_VALUE
+            }
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
@@ -282,15 +282,15 @@ class WrTaskHandler extends TaskHandler implements BatchHandler<String,Map> {
     @Override
     void submit() {
         // create task wrapper
-		final bash = new WrBashBuilder(task)
+        final bash = new WrBashBuilder(task)
         bash.build()
 
-		WrFileCopyStrategy copyStrategy = bash.copyStrategy as WrFileCopyStrategy
-		String wrapperPath = copyStrategy.wrPath(wrapperFile)
+        WrFileCopyStrategy copyStrategy = bash.copyStrategy as WrFileCopyStrategy
+        String wrapperPath = copyStrategy.wrPath(wrapperFile)
 
         // submit the task
         jobId = client.add("/bin/bash $wrapperPath", task, copyStrategy)
-		// log.debug("[wr] submitted job $jobId")
+        // log.debug("[wr] submitted job $jobId")
         status = TaskStatus.SUBMITTED
     }
 
@@ -308,183 +308,183 @@ class WrTaskHandler extends TaskHandler implements BatchHandler<String,Map> {
 class WrRestApi {
     
     static private String endpoint
-	static private String token
-	static private String cacertPath
+    static private String token
+    static private String cacertPath
 
-	static private final String rest = "/rest/v1"
-	static private final String jobs = "/jobs/"
+    static private final String rest = "/rest/v1"
+    static private final String jobs = "/jobs/"
 
     WrRestApi(String endpoint, String token, String cacertPath) {
         this.endpoint = endpoint
-		this.token = token
-		this.cacertPath = cacertPath
+        this.token = token
+        this.cacertPath = cacertPath
 
-		// *** I need to have Groovy trust cacertPath, but I don't know how do
-		// to that. Intead, just to get something working, we DISABLE
-		// CERTIFICATE VERIFICATION! This is BAD.
-		def nullTrustManager = [
-			checkClientTrusted: { chain, authType ->  },
-			checkServerTrusted: { chain, authType ->  },
-			getAcceptedIssuers: { null }
-		]
-		def nullHostnameVerifier = [
-			verify: { hostname, session -> true }
-		]
-		SSLContext sc = SSLContext.getInstance("SSL")
-		sc.init(null, [nullTrustManager as X509TrustManager] as TrustManager[], null)
-		HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory())
-		HttpsURLConnection.setDefaultHostnameVerifier(nullHostnameVerifier as HostnameVerifier)
+        // *** I need to have Groovy trust cacertPath, but I don't know how do
+        // to that. Intead, just to get something working, we DISABLE
+        // CERTIFICATE VERIFICATION! This is BAD.
+        def nullTrustManager = [
+            checkClientTrusted: { chain, authType ->  },
+            checkServerTrusted: { chain, authType ->  },
+            getAcceptedIssuers: { null }
+        ]
+        def nullHostnameVerifier = [
+            verify: { hostname, session -> true }
+        ]
+        SSLContext sc = SSLContext.getInstance("SSL")
+        sc.init(null, [nullTrustManager as X509TrustManager] as TrustManager[], null)
+        HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory())
+        HttpsURLConnection.setDefaultHostnameVerifier(nullHostnameVerifier as HostnameVerifier)
     }
 
-	/**
+    /**
      * Add a new command to the job queue. Returns the job's internal ID.
      */
     String add(String cmd, TaskRun task, WrFileCopyStrategy copyStrategy) {
-		String cwd = ""
-		boolean cwdMatters = true
-		switch (copyStrategy.getPathScheme(task.workDir)) {
-			case "file":
-				cwd = task.getWorkDirStr()
-				break
-			case "s3":
-				cwd = "/tmp"
-				cwdMatters = false
-				break
-			default:
-				throw new IllegalArgumentException("Unsupported scheme for work dir: ${task.getWorkDirStr()}")
-		}
+        String cwd = ""
+        boolean cwdMatters = true
+        switch (copyStrategy.getPathScheme(task.workDir)) {
+            case "file":
+                cwd = task.getWorkDirStr()
+                break
+            case "s3":
+                cwd = "/tmp"
+                cwdMatters = false
+                break
+            default:
+                throw new IllegalArgumentException("Unsupported scheme for work dir: ${task.getWorkDirStr()}")
+        }
 
-		// calculate mounts option. *** Currently we multiplex all S3 input dirs
-		// and the S3 output dir in to the same mount directoy, which is fine
-		// unless the user is working on files with the same basename in
-		// different S3 locations...
-		def reads = copyStrategy.inputBuckets()
-		def write = copyStrategy.outputBucket()
-		List<Map> targets = []
-		for (path in reads) {
-			targets << ["Path":path]
-		}
-		if (write) {
-			targets << ["Path":write,"Write":true]
-		}
-		List<Map> m = []
-		if (targets.size() > 0) {
-			m << ["Mount":copyStrategy.getMountPath(),"Targets":targets]
-		}
+        // calculate mounts option. *** Currently we multiplex all S3 input dirs
+        // and the S3 output dir in to the same mount directoy, which is fine
+        // unless the user is working on files with the same basename in
+        // different S3 locations...
+        def reads = copyStrategy.inputBuckets()
+        def write = copyStrategy.outputBucket()
+        List<Map> targets = []
+        for (path in reads) {
+            targets << ["Path":path]
+        }
+        if (write) {
+            targets << ["Path":write,"Write":true]
+        }
+        List<Map> m = []
+        if (targets.size() > 0) {
+            m << ["Mount":copyStrategy.getMountPath(),"Targets":targets]
+        }
 
-		// *** need to handle resource requirements (time, memory, cpus) and
-		// cloud opts like image and flavor. May also need to do something with
-		// env vars? Not sure what defaults should be
+        // *** need to handle resource requirements (time, memory, cpus) and
+        // cloud opts like image and flavor. May also need to do something with
+        // env vars? Not sure what defaults should be
 
         // curl --cacert ~/.wr_production/ca.pem -H "Content-Type: application/json" -H "Authorization: Bearer [token]" -X POST -d '[{"cmd":"sleep 5 && echo mymsg && false","memory":"5M","cpus":1},{"cmd":"sleep 5","cpus":1}]' 'https://localhost:11302/rest/v1/jobs/?rep_grp=myid&cpus=2&memory=3G&time=5s'
 
-		String grp = "[nextflow] $task.processor.name"
+        String grp = "[nextflow] $task.processor.name"
 
-		def args = [cmd: cmd, cwd: cwd, cwd_matters: cwdMatters, rep_grp: grp, req_grp: grp, override: 0, cpus: 1, mounts: m]
-		
-		// log.debug "[wr] add args: $args"
-		def response = postJson(jobs, args)
-		return parseIdFromJson(response)
+        def args = [cmd: cmd, cwd: cwd, cwd_matters: cwdMatters, rep_grp: grp, req_grp: grp, override: 0, cpus: 1, mounts: m]
+        
+        // log.debug "[wr] add args: $args"
+        def response = postJson(jobs, args)
+        return parseIdFromJson(response)
     }
 
-	/**
+    /**
      * Get the status of a previously add()ed job(s). Returns a List of Map with
-	 * details of each job, including Key, State, Exited and Exitcode.
+     * details of each job, including Key, State, Exited and Exitcode.
      */
     List<Map> status(String ids) {
-		// curl --cacert ~/.wr_production/ca.pem -H "Authorization: Bearer [token]" 'https://localhost:11302/rest/v1/jobs/58cef10e7a340c3b7fa09ea304a3cb98'
+        // curl --cacert ~/.wr_production/ca.pem -H "Authorization: Bearer [token]" 'https://localhost:11302/rest/v1/jobs/58cef10e7a340c3b7fa09ea304a3cb98'
 
-		// log.debug "working on ids $ids"
+        // log.debug "working on ids $ids"
 
-		def get = authenticatedConnection("$jobs/$ids")
-		get.setRequestMethod("GET")
-		def getRC = get.getResponseCode()
-		// log.debug("made a GET request")
-		if (!getRC.equals(200)) {
-			log.debug("[wr] failed to get command details from wr manager")
-			return null
-		}
-		return parseJobsFromJson(get.getInputStream().getText())
+        def get = authenticatedConnection("$jobs/$ids")
+        get.setRequestMethod("GET")
+        def getRC = get.getResponseCode()
+        // log.debug("made a GET request")
+        if (!getRC.equals(200)) {
+            log.debug("[wr] failed to get command details from wr manager")
+            return null
+        }
+        return parseJobsFromJson(get.getInputStream().getText())
     }
 
-	/**
+    /**
      * Cancel the given job. If it's running it will be killed. If it's lost
-	 * it will be buried. If it's otherwise incomplete, it will be removed from
-	 * wr's queue.
+     * it will be buried. If it's otherwise incomplete, it will be removed from
+     * wr's queue.
      */
     void cancel(String id) {
-		// like status, but send DELETE instead of GET. Also state parameter
-		// required to be running|lost|deletable
+        // like status, but send DELETE instead of GET. Also state parameter
+        // required to be running|lost|deletable
 
-		// *** is there a way to avoid needing to get the current state of the
-		// job first? Does our caller only call us for running jobs?
-		List jobs = status(id)
-		Map job = jobs[0]
-		String state
-		if (job.State == 'running') {
-			state = 'running'
-		} else if (job.State == 'lost') {
-			state = 'lost'
-		} else if (job.State != 'complete') {
-			state = 'deletable'
-		}
+        // *** is there a way to avoid needing to get the current state of the
+        // job first? Does our caller only call us for running jobs?
+        List jobs = status(id)
+        Map job = jobs[0]
+        String state
+        if (job.State == 'running') {
+            state = 'running'
+        } else if (job.State == 'lost') {
+            state = 'lost'
+        } else if (job.State != 'complete') {
+            state = 'deletable'
+        }
 
-		def delete = authenticatedConnection("$jobs/$id?state=$state")
-		delete.setRequestMethod("DELETE")
-		def deleteRC = delete.getResponseCode()
-		if (!deleteRC.equals(200) || !deleteRC.equals(202)) {
-			log.debug("[wr] failed to cancel command held in wr manager")
-		}
+        def delete = authenticatedConnection("$jobs/$id?state=$state")
+        delete.setRequestMethod("DELETE")
+        def deleteRC = delete.getResponseCode()
+        if (!deleteRC.equals(200) || !deleteRC.equals(202)) {
+            log.debug("[wr] failed to cancel command held in wr manager")
+        }
     }
 
-	private HttpsURLConnection authenticatedConnection(String leaf) {
-		String url = "$endpoint$rest$leaf"
-		// log.debug("[wr] url: $url")
-		def post = new URL(url).openConnection() as HttpsURLConnection
-		post.setRequestProperty("Content-Type", "application/json")
-		post.setRequestProperty("Authorization", "Bearer $token")
-		return post
-	}
+    private HttpsURLConnection authenticatedConnection(String leaf) {
+        String url = "$endpoint$rest$leaf"
+        // log.debug("[wr] url: $url")
+        def post = new URL(url).openConnection() as HttpsURLConnection
+        post.setRequestProperty("Content-Type", "application/json")
+        post.setRequestProperty("Authorization", "Bearer $token")
+        return post
+    }
 
-	private HttpsURLConnection postConnection(String leaf) {
-		def post = authenticatedConnection(leaf)
-		post.setRequestMethod("POST")
-		post.setDoOutput(true)
-		return post
-	}
+    private HttpsURLConnection postConnection(String leaf) {
+        def post = authenticatedConnection(leaf)
+        post.setRequestMethod("POST")
+        post.setDoOutput(true)
+        return post
+    }
 
-	private String postJson(String leaf, LinkedHashMap args) {
-		def json = toJson([args])
-		// log.debug("[wr] posting JSON: $json")
+    private String postJson(String leaf, LinkedHashMap args) {
+        def json = toJson([args])
+        // log.debug("[wr] posting JSON: $json")
 
-		def post = postConnection(leaf)
-		post.getOutputStream().write(json.getBytes("UTF-8"))
-		def postRC = post.getResponseCode()
-		// log.debug(postRC as String)
-		if (!postRC.equals(201)) {
-			log.debug("[wr] failed to send new command details to wr manager")
-			return null
-		}
-		return post.getInputStream().getText()
-	}
+        def post = postConnection(leaf)
+        post.getOutputStream().write(json.getBytes("UTF-8"))
+        def postRC = post.getResponseCode()
+        // log.debug(postRC as String)
+        if (!postRC.equals(201)) {
+            log.debug("[wr] failed to send new command details to wr manager")
+            return null
+        }
+        return post.getInputStream().getText()
+    }
 
-	private List<Map> parseJobsFromJson(String json) {
-		List<Map> jobs = new JsonSlurper().parseText(json) as List<Map>
-		// log.debug "got ${jobs.size()} jobs"
-		return jobs
-	}
+    private List<Map> parseJobsFromJson(String json) {
+        List<Map> jobs = new JsonSlurper().parseText(json) as List<Map>
+        // log.debug "got ${jobs.size()} jobs"
+        return jobs
+    }
 
-	private String parseIdFromJson(String json) {
-		return extractFirstJob(parseJobsFromJson(json)).Key
-	}
+    private String parseIdFromJson(String json) {
+        return extractFirstJob(parseJobsFromJson(json)).Key
+    }
 
-	private Map extractFirstJob(List<Map> jobs) {
-		if (jobs.size() != 1) {
-			log.debug("[wr] expected 1 job, got ${jobs.size()}")
-		}
-		Map job = jobs[0]
-		return job
-	}
+    private Map extractFirstJob(List<Map> jobs) {
+        if (jobs.size() != 1) {
+            log.debug("[wr] expected 1 job, got ${jobs.size()}")
+        }
+        Map job = jobs[0]
+        return job
+    }
 
 }
 
@@ -505,7 +505,7 @@ class WrBashBuilder extends BashWrapperBuilder {
         super(bean, new WrFileCopyStrategy(bean))
     }
 
-	protected boolean alwaysTryToUnstage() {
+    protected boolean alwaysTryToUnstage() {
         return true
     }
 
@@ -521,20 +521,20 @@ class WrBashBuilder extends BashWrapperBuilder {
 @CompileStatic
 class WrFileCopyStrategy extends SimpleFileCopyStrategy {
 
-	private final String mountLocation = ".mnt"
+    private final String mountLocation = ".mnt"
 
     private Map<String,String> environment
 
-	private final Map<String,Path> inputFiles
+    private final Map<String,Path> inputFiles
 
-	private final Path workDir
+    private final Path workDir
 
     WrFileCopyStrategy(TaskBean task) {
         super(task)
         this.environment = task.environment
-		this.inputFiles = task.inputFiles
-		this.workDir = task.workDir
-		this.mountLocation = ".mnt" + task.workDir.toString().replaceAll('/', '_')
+        this.inputFiles = task.inputFiles
+        this.workDir = task.workDir
+        this.mountLocation = ".mnt" + task.workDir.toString().replaceAll('/', '_')
     }
 
     /**
@@ -559,8 +559,8 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
         if( path )
             copy.remove('PATH')
         // when a remote bin directory is provided manage it properly
-		// *** somehow accept a remoteBinDir opt, and assume it will be mounted
-		// somewhere, and add that relative path to PATH?...
+        // *** somehow accept a remoteBinDir opt, and assume it will be mounted
+        // somewhere, and add that relative path to PATH?...
         // if( opts.remoteBinDir ) {
         //     result << "${opts.getAwsCli()} s3 cp --recursive --only-show-errors s3:/${opts.remoteBinDir} \$PWD/nextflow-bin\n"
         //     result << "chmod +x \$PWD/nextflow-bin/*\n"
@@ -573,57 +573,57 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
         return result.toString()
     }
 
-	/**
+    /**
      * wrPath returns the same paths that SimpleFileCopyStrategy would end
-	 * up using, unless path is in S3, in which case it is the file name in the
-	 * mount location.
+     * up using, unless path is in S3, in which case it is the file name in the
+     * mount location.
     */
-	String wrPath( Path path ) {
-		if( getPathScheme(path) == 's3' ) {
-			if (path == workDir) {
-				return "$mountLocation/"
-			}
-			String baseName = Escape.path(path.getFileName())
+    String wrPath( Path path ) {
+        if( getPathScheme(path) == 's3' ) {
+            if (path == workDir) {
+                return "$mountLocation/"
+            }
+            String baseName = Escape.path(path.getFileName())
             return "$mountLocation/$baseName"
         }
         return Escape.path(path)
-	}
+    }
 
-	/**
+    /**
      * getMountPath tells you where you should mount the S3 locations returned
-	 * by inputBuckets() and outputBucket().
+     * by inputBuckets() and outputBucket().
     */
-	String getMountPath() {
-		return mountLocation
-	}
+    String getMountPath() {
+        return mountLocation
+    }
 
-	/**
+    /**
      * inputBuckets returns all the different S3 bucket directories that would
-	 * need to be mounted at getMountPath() for access to the input files.
+     * need to be mounted at getMountPath() for access to the input files.
     */
-	List<String> inputBuckets() {
-		List<String> result = []
-		inputFiles.each{
-			if (getPathScheme(it.value) == 's3') {
-				final dir = it.value.getParent()
-				if (!result.contains(dir)) {
-					result << dir.toString().substring(1)
-				}
-			}
-		}
-		return result
-	}
+    List<String> inputBuckets() {
+        List<String> result = []
+        inputFiles.each{
+            if (getPathScheme(it.value) == 's3') {
+                final dir = it.value.getParent()
+                if (!result.contains(dir)) {
+                    result << dir.toString().substring(1)
+                }
+            }
+        }
+        return result
+    }
 
-	/**
+    /**
      * outputBucket returns the S3 bucket directory that would need to be
-	 * mounted at mountLocation in order to output files.
+     * mounted at mountLocation in order to output files.
     */
-	String outputBucket() {
-		if (getPathScheme(workDir) == "s3") {
-			return workDir.toString().substring(1)
-		}
-		return ""
-	}
+    String outputBucket() {
+        if (getPathScheme(workDir) == "s3") {
+            return workDir.toString().substring(1)
+        }
+        return ""
+    }
 
     /**
      * {@inheritDoc}
@@ -640,11 +640,11 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
         return cmd
     }
 
-	/**
+    /**
      * {@inheritDoc}
      */
     @Override
-	protected String stageOutCommand( String source, Path targetDir, String mode ) {
+    protected String stageOutCommand( String source, Path targetDir, String mode ) {
         return stageOutCommand(source, wrPath(targetDir), mode)
     }
 
