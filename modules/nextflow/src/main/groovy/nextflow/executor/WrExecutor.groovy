@@ -500,6 +500,8 @@ class WrRestApi {
 @CompileStatic
 class WrBashBuilder extends BashWrapperBuilder {
 
+	static final private ENDL = '\n'
+
     WrBashBuilder(TaskRun task) {
         super(new TaskBean(task), new WrFileCopyStrategy(new TaskBean(task)))
     }
