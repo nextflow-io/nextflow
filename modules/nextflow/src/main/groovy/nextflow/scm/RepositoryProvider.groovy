@@ -139,11 +139,11 @@ abstract class RepositoryProvider {
 
         switch( code ) {
             case 401:
-                log.debug "Response status: $code -- ${connection.getErrorStream().text}"
+                log.debug "Response status: $code -- ${connection.getErrorStream()?.text}"
                 throw new AbortOperationException("Not authorized -- Check that the ${name.capitalize()} user name and password provided are correct")
 
             case 403:
-                log.debug "Response status: $code -- ${connection.getErrorStream().text}"
+                log.debug "Response status: $code -- ${connection.getErrorStream()?.text}"
                 def limit = connection.getHeaderField('X-RateLimit-Remaining')
                 if( limit == '0' ) {
                     def message = config.auth ? "Check ${name.capitalize()}'s API rate limits for more details" : "Provide your ${name.capitalize()} user name and password to get a higher rate limit"
