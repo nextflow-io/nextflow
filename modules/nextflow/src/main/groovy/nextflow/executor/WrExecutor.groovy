@@ -340,6 +340,8 @@ class WrRestApi {
      * Add a new command to the job queue. Returns the job's internal ID.
      */
     String add(String cmd, TaskRun task, WrFileCopyStrategy copyStrategy) {
+        // curl --cacert ~/.wr_production/ca.pem -H "Content-Type: application/json" -H "Authorization: Bearer [token]" -X POST -d '[{"cmd":"sleep 5 && echo mymsg && false","memory":"5M","cpus":1},{"cmd":"sleep 5","cpus":1}]' 'https://localhost:11302/rest/v1/jobs/?rep_grp=myid&cpus=2&memory=3G&time=5s'
+
         String cwd = ""
         boolean cwdMatters = true
         switch (copyStrategy.getPathScheme(task.workDir)) {
@@ -353,6 +355,8 @@ class WrRestApi {
             default:
                 throw new IllegalArgumentException("Unsupported scheme for work dir: ${task.getWorkDirStr()}")
         }
+
+        String grp = "[nextflow] $task.processor.name"
 
         // calculate mounts option. *** Currently we multiplex all S3 input dirs
         // and the S3 output dir in to the same mount directoy, which is fine
@@ -372,17 +376,34 @@ class WrRestApi {
             m << ["Mount":copyStrategy.getMountPath(),"Targets":targets]
         }
 
-        // *** need to handle resource requirements (time, memory, cpus) and
-        // cloud opts like image and flavor. May also need to do something with
-        // env vars? Not sure what defaults should be
+        String mem = "1G"
+        if( task.config.getMemory() ) {
+            mem = String.valueOf(task.config.getMemory().toUnit('MB')) + "M"
+        }
 
-        // curl --cacert ~/.wr_production/ca.pem -H "Content-Type: application/json" -H "Authorization: Bearer [token]" -X POST -d '[{"cmd":"sleep 5 && echo mymsg && false","memory":"5M","cpus":1},{"cmd":"sleep 5","cpus":1}]' 'https://localhost:11302/rest/v1/jobs/?rep_grp=myid&cpus=2&memory=3G&time=5s'
+        String t = "1h"
+        if( task.config.time ) {
+            t = task.config.getTime().format('Hh')
+        }
 
-        String grp = "[nextflow] $task.processor.name"
+        Long d = 0
+        if( task.config.getDisk() ) {
+            def disk = task.config.getDisk()
+            d = disk.toUnit('GB')
+        }
 
-        def args = [cmd: cmd, cwd: cwd, cwd_matters: cwdMatters, rep_grp: grp, req_grp: grp, override: 0, cpus: 1, mounts: m]
-        
+        List<String> limits = []
+        if ( task.config.maxForks ) {
+            limits << sprintf('%s:%d', task.processor.name, task.config.maxForks)
+        }
+
+        // *** what about cloud opts like image and flavor?
+        // Turn on docker monitoring if docker container is being used?
+        // Does BashWrapperBuilder handle everything to do with env vars?
+
+        def args = [cmd: cmd, cwd: cwd, cwd_matters: cwdMatters, rep_grp: grp, req_grp: grp, limit_grps: limits, override: 2, retries: 0, cpus: task.config.cpus, memory: mem, time: t, disk: d, mounts: m]
         // log.debug "[wr] add args: $args"
+
         def response = postJson(jobs, args)
         return parseIdFromJson(response)
     }
