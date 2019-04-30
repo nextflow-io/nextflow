@@ -145,11 +145,8 @@ class WrExecutor extends Executor {
 @CompileStatic
 class WrTaskHandler extends TaskHandler implements BatchHandler<String,Map> {
 
-    // static final private String WORK_DIR = '/work'
-
-    final List<String> COMPLETE_STATUSES = ['complete', 'buried', 'deleted']
-
-    final List<String> STARTED_STATUSES = ['delayed', 'reserved', 'running'] + COMPLETE_STATUSES
+    public static final List<String> COMPLETE_STATUSES = ['complete', 'buried', 'deleted']
+    public static final List<String> STARTED_STATUSES = ['delayed', 'reserved', 'running'] + COMPLETE_STATUSES
 
     final WrExecutor executor
 	private WrRestApi client
