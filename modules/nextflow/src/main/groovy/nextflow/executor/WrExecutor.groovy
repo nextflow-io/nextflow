@@ -530,10 +530,13 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
 
 	private final Map<String,Path> inputFiles
 
+	private final Path workDir
+
     WrFileCopyStrategy(TaskBean task) {
         super(task)
         this.environment = task.environment
 		this.inputFiles = task.inputFiles
+		this.workDir = task.workDir
 		this.mountLocation = ".mnt" + task.workDir.toString().replaceAll('/', '_')
     }
 
@@ -580,6 +583,9 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
     */
 	String wrPath( Path path ) {
 		if( getPathScheme(path) == 's3' ) {
+			if (path == workDir) {
+				return "$mountLocation/"
+			}
 			String baseName = Escape.path(path.getFileName())
             return "$mountLocation/$baseName"
         }
@@ -642,7 +648,7 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
 	protected String stageOutCommand( String source, Path targetDir, String mode ) {
-        return stageOutCommand(source, wrPath(targetDir) + "/", mode)
+        return stageOutCommand(source, wrPath(targetDir), mode)
     }
 
     /**
