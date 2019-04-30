@@ -893,7 +893,11 @@ class AssetManager {
     protected Ref checkoutRemoteBranch( String revision ) {
 
         try {
-            git.fetch().call()
+            def fetch = git.fetch()
+            if(provider.hasCredentials()) {
+                fetch.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
+            }
+            fetch.call()
             git.checkout()
                     .setCreateBranch(true)
                     .setName(revision)
