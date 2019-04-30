@@ -19,6 +19,7 @@ package nextflow.cli
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
 import groovy.util.logging.Slf4j
+import nextflow.exception.AbortOperationException
 import org.fusesource.jansi.Ansi
 
 /**
@@ -86,10 +87,16 @@ class CliOptions {
     Boolean ansiLog
 
     boolean getAnsiLog() {
+        if( ansiLog && quiet )
+            throw new AbortOperationException("Command line options `quiet` and `ansi-log` cannot be used together")
+
         if( ansiLog != null )
             return ansiLog
 
         if( background )
+            return ansiLog = false
+
+        if( quiet )
             return ansiLog = false
 
         final env = System.getenv('NXF_ANSI_LOG')
@@ -101,7 +108,5 @@ class CliOptions {
         }
         return Ansi.isEnabled()
     }
-
-
 
 }

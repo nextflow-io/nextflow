@@ -394,6 +394,10 @@ class Launcher {
             System.exit(1)
 
         }
+        catch ( AbortOperationException e ) {
+            System.err.println (e.message ?: "Unknown abort reason")
+            System.exit(1)
+        }
         catch( Throwable e ) {
             e.printStackTrace(System.err)
             System.exit(1)
@@ -620,7 +624,7 @@ class Launcher {
      *
      * @param args The program options as specified by the user on the CLI
      */
-    public static void main(String... args)  {
+    static void main(String... args)  {
 
         final launcher = DripMain.LAUNCHER ?: new Launcher()
         final status = launcher .command(args) .run()
