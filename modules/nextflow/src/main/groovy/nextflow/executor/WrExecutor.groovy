@@ -548,13 +548,10 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
 
     private final Map<String,Path> inputFiles
 
-    private final Path workDir
-
     WrFileCopyStrategy(TaskBean task) {
         super(task)
         this.environment = task.environment
         this.inputFiles = task.inputFiles
-        this.workDir = task.workDir
         this.mountLocation = ".mnt" + task.workDir.toString().replaceAll('/', '_')
     }
 
