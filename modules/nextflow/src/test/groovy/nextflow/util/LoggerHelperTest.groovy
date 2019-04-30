@@ -76,4 +76,34 @@ class LoggerHelperTest extends Specification {
         assert Level.INFO.levelInt > Level.DEBUG.levelInt
     }
 
+
+    def 'should check if hash log prefix' () {
+
+        expect:
+        LoggerHelper.isHashLogPrefix(STR) == EXPECTED
+
+        where:
+        STR             | EXPECTED
+        null            | false
+        'abc'           | false
+        '[xx'           | false
+        '[12/abcdef]'   | true
+        '[11/xbcdef]'   | false
+        '[11/abcdez]'   | false
+        '[pp/abcdef]'   | false
+    }
+
+    def 'should check hex digit' () {
+        expect:
+        LoggerHelper.isHex(CHAR as char) == EXPECTED
+        where:
+        CHAR    | EXPECTED
+        '0'     | true
+        '5'     | true
+        '9'     | true
+        'a'     | true
+        'f'     | true
+        'g'     | false
+        'z'     | false
+    }
 }
