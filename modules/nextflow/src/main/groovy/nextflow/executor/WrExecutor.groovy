@@ -286,7 +286,7 @@ class WrTaskHandler extends TaskHandler implements BatchHandler<String,Map> {
         bash.build()
 
         WrFileCopyStrategy copyStrategy = bash.copyStrategy as WrFileCopyStrategy
-        String wrapperPath = copyStrategy.wrPath(wrapperFile)
+        String wrapperPath = copyStrategy.wrWorkPath(wrapperFile)
 
         // submit the task
         jobId = client.add("/bin/bash $wrapperPath", task, copyStrategy)
@@ -358,22 +358,15 @@ class WrRestApi {
 
         String grp = "[nextflow] $task.processor.name"
 
-        // calculate mounts option. *** Currently we multiplex all S3 input dirs
-        // and the S3 output dir in to the same mount directoy, which is fine
-        // unless the user is working on files with the same basename in
-        // different S3 locations...
+        // calculate mounts option
         def reads = copyStrategy.inputBuckets()
-        def write = copyStrategy.outputBucket()
-        List<Map> targets = []
-        for (path in reads) {
-            targets << ["Path":path]
-        }
-        if (write) {
-            targets << ["Path":write,"Write":true]
-        }
         List<Map> m = []
-        if (targets.size() > 0) {
-            m << ["Mount":copyStrategy.getMountPath(),"Targets":targets]
+        for (path in reads) {
+            m << ["Mount":copyStrategy.getInputMountPath() + "/" + path, "Targets":[["Path":path]]]
+        }
+        def write = copyStrategy.outputBucket()
+        if (write) {
+            m << ["Mount":copyStrategy.getOutputMountPath(),"Targets":[["Path":write,"Write":true]]]
         }
 
         Integer cpus = 1
@@ -412,7 +405,7 @@ class WrRestApi {
         // Does BashWrapperBuilder handle everything to do with env vars?
 
         def args = [cmd: cmd, cwd: cwd, cwd_matters: cwdMatters, rep_grp: grp, req_grp: grp, limit_grps: limits, override: override, retries: 0, cpus: cpus, memory: mem, time: t, disk: d, mounts: m]
-        log.debug "[wr] add args: $args"
+        // log.debug "[wr] add args: $args"
 
         def response = postJson(jobs, args)
         return parseIdFromJson(response)
@@ -552,7 +545,8 @@ class WrBashBuilder extends BashWrapperBuilder {
 @CompileStatic
 class WrFileCopyStrategy extends SimpleFileCopyStrategy {
 
-    private final String mountLocation = ".mnt"
+    private final String outputMountLocation
+    static final String inputMountLocation = ".inputs"
 
     private Map<String,String> environment
 
@@ -562,7 +556,7 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
         super(task)
         this.environment = task.environment
         this.inputFiles = task.inputFiles
-        this.mountLocation = ".mnt" + task.workDir.toString().replaceAll('/', '_')
+        this.outputMountLocation = ".mnt" + task.workDir.toString()
     }
 
     /**
@@ -602,40 +596,72 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
     }
 
     /**
-     * wrPath returns the same paths that SimpleFileCopyStrategy would end
-     * up using, unless path is in S3, in which case it is the file name in the
-     * mount location.
+     * wrWorkPath returns the same paths that SimpleFileCopyStrategy would end
+     * up using, unless path is in S3, in which case it is the file path in the
+     * output mount location.
     */
-    String wrPath( Path path ) {
+    String wrWorkPath( Path path ) {
+        return wrPath(path, outputMountLocation)
+    }
+
+    /**
+     * wrInputPath returns the same paths that SimpleFileCopyStrategy would end
+     * up using, unless path is in S3, in which case it is the file path in the
+     * input mount location.
+    */
+    String wrInputPath( Path path ) {
+        return wrPath(path, inputMountLocation)
+    }
+
+    /**
+     * wrPath returns the same paths that SimpleFileCopyStrategy would end
+     * up using, unless path is in S3, in which case it is the file path in the
+     * given mount location.
+    */
+    private String wrPath( Path path, String mountLocation ) {
         if( getPathScheme(path) == 's3' ) {
             if (path == workDir) {
                 return "$mountLocation/"
             }
-            String baseName = Escape.path(path.getFileName())
-            return "$mountLocation/$baseName"
+            if (mountLocation == outputMountLocation) {
+                String baseName = Escape.path(path.getFileName())
+                return "$mountLocation/$baseName"
+            }
+            String p = Escape.path(path)
+            return "$mountLocation$p"
         }
         return Escape.path(path)
     }
 
     /**
-     * getMountPath tells you where you should mount the S3 locations returned
-     * by inputBuckets() and outputBucket().
+     * getInputMountPath tells you where you should mount the S3 locations
+     * returned by inputBuckets(). Each different bucket should be mounted on
+     * its own subdirectoy of this path, named after the bucket.
     */
-    String getMountPath() {
-        return mountLocation
+    String getInputMountPath() {
+        return inputMountLocation
     }
 
     /**
-     * inputBuckets returns all the different S3 bucket directories that would
-     * need to be mounted at getMountPath() for access to the input files.
+     * getOutputMountPath tells you where you should mount the S3 location
+     * returned by outputBucket().
+    */
+    String getOutputMountPath() {
+        return outputMountLocation
+    }
+
+    /**
+     * inputBuckets returns all the different S3 buckets that would need to be
+     * mounted at getInputMountPath() for access to the input files.
     */
     List<String> inputBuckets() {
         List<String> result = []
         inputFiles.each{
             if (getPathScheme(it.value) == 's3') {
-                final dir = it.value.getParent()
+                String dir = it.value.getRoot().toString().substring(1)
+                dir = dir.substring(0, dir.length() - 1)
                 if (!result.contains(dir)) {
-                    result << dir.toString().substring(1)
+                    result << dir
                 }
             }
         }
@@ -644,7 +670,7 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
 
     /**
      * outputBucket returns the S3 bucket directory that would need to be
-     * mounted at mountLocation in order to output files.
+     * mounted at getOutputMountPath() in order to output files.
     */
     String outputBucket() {
         if (getPathScheme(workDir) == "s3") {
@@ -663,7 +689,7 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
         if( p>0 ) {
             cmd += "mkdir -p ${Escape.path(targetName.substring(0,p))} && "
         }
-        cmd += stageInCommand(wrPath(path.toAbsolutePath()), targetName, stageinMode)
+        cmd += stageInCommand(wrInputPath(path.toAbsolutePath()), targetName, stageinMode)
 
         return cmd
     }
@@ -673,7 +699,7 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     protected String stageOutCommand( String source, Path targetDir, String mode ) {
-        return stageOutCommand(source, wrPath(targetDir), mode)
+        return stageOutCommand(source, wrWorkPath(targetDir), mode)
     }
 
     /**
@@ -681,7 +707,7 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String touchFile( Path path ) {
-        "touch ${wrPath(path)}"
+        "touch ${wrWorkPath(path)}"
     }
 
     /**
@@ -689,7 +715,7 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String fileStr( Path path ) {
-        wrPath(path)
+        wrWorkPath(path)
     }
 
     /**
@@ -697,14 +723,14 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String copyFile( String name, Path target ) {
-        "cp ${Escape.path(name)} ${wrPath(target)}"
+        "cp ${Escape.path(name)} ${wrWorkPath(target)}"
     }
 
     /**
      * {@inheritDoc}
      */
     String exitFile( Path path ) {
-        "> ${wrPath(path)}"
+        "> ${wrWorkPath(path)}"
     }
 
     /**
@@ -712,6 +738,6 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String pipeInputFile( Path path ) {
-        " < ${wrPath(path)}"
+        " < ${wrInputPath(path)}"
     }
 }
