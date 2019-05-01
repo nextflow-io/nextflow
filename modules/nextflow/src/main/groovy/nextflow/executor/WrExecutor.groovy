@@ -281,6 +281,15 @@ class WrTaskHandler extends TaskHandler implements BatchHandler<String,Map> {
 
     @Override
     void submit() {
+        // this is not actually called by anything since WrMonitor does batched
+        // submits direcly to the client, but this is implemented anyway
+        List<Map> jobs = client.add([submitArgs()])
+        jobId = jobs[0]."Key" as String
+        // log.debug("[wr] submitted job $jobId")
+        status = TaskStatus.SUBMITTED
+    }
+
+    List submitArgs() {
         // create task wrapper
         final bash = new WrBashBuilder(task)
         bash.build()
@@ -288,9 +297,11 @@ class WrTaskHandler extends TaskHandler implements BatchHandler<String,Map> {
         WrFileCopyStrategy copyStrategy = bash.copyStrategy as WrFileCopyStrategy
         String wrapperPath = copyStrategy.wrWorkPath(wrapperFile)
 
-        // submit the task
-        jobId = client.add("/bin/bash $wrapperPath", task, copyStrategy)
-        // log.debug("[wr] submitted job $jobId")
+        return ["/bin/bash $wrapperPath", task, copyStrategy]
+    }
+
+    void submitted(String id) {
+        jobId = id
         status = TaskStatus.SUBMITTED
     }
 
@@ -337,78 +348,90 @@ class WrRestApi {
     }
 
     /**
-     * Add a new command to the job queue. Returns the job's internal ID.
+     * Adds new commands to the job queue. Takes a List of Lists, where the
+     * sub lists are [String cmd, TaskRun task, WrFileCopyStrategy copyStrategy]
+     * Returns the jobs.
      */
-    String add(String cmd, TaskRun task, WrFileCopyStrategy copyStrategy) {
+    List<Map> add(List<List> argList) {
         // curl --cacert ~/.wr_production/ca.pem -H "Content-Type: application/json" -H "Authorization: Bearer [token]" -X POST -d '[{"cmd":"sleep 5 && echo mymsg && false","memory":"5M","cpus":1},{"cmd":"sleep 5","cpus":1}]' 'https://localhost:11302/rest/v1/jobs/?rep_grp=myid&cpus=2&memory=3G&time=5s'
 
-        String cwd = ""
-        boolean cwdMatters = true
-        switch (copyStrategy.getPathScheme(task.workDir)) {
-            case "file":
-                cwd = task.getWorkDirStr()
-                break
-            case "s3":
-                cwd = "/tmp"
-                cwdMatters = false
-                break
-            default:
-                throw new IllegalArgumentException("Unsupported scheme for work dir: ${task.getWorkDirStr()}")
+        List<Map> jsonArgs = []
+
+        argList.each {
+            String cmd = it[0]
+            TaskRun task = it[1]
+            WrFileCopyStrategy copyStrategy = it[2]
+
+            String cwd = ""
+            boolean cwdMatters = true
+            switch (copyStrategy.getPathScheme(task.workDir)) {
+                case "file":
+                    cwd = task.getWorkDirStr()
+                    break
+                case "s3":
+                    cwd = "/tmp"
+                    cwdMatters = false
+                    break
+                default:
+                    throw new IllegalArgumentException("Unsupported scheme for work dir: ${task.getWorkDirStr()}")
+            }
+
+            String grp = "[nextflow] $task.processor.name"
+
+            // calculate mounts option
+            def reads = copyStrategy.inputBuckets()
+            List<Map> m = []
+            for (path in reads) {
+                m << ["Mount":copyStrategy.getInputMountPath() + "/" + path, "Targets":[["Path":path]]]
+            }
+            def write = copyStrategy.outputBucket()
+            if (write) {
+                m << ["Mount":copyStrategy.getOutputMountPath(),"Targets":[["Path":write,"Write":true]]]
+            }
+
+            Integer cpus = 1
+            if ( task.config.cpus && task.config.cpus > 0 ) {
+                cpus = task.config.cpus
+            }
+
+            Integer override = 0
+
+            String mem = ""
+            if( task.config.getMemory() ) {
+                mem = String.valueOf(task.config.getMemory().toUnit('MB')) + "M"
+                override = 2
+            }
+
+            String t = ""
+            if( task.config.time ) {
+                t = task.config.getTime().format('Hh')
+                override = 2
+            }
+
+            Long d = 0
+            if( task.config.getDisk() ) {
+                def disk = task.config.getDisk()
+                d = disk.toUnit('GB')
+                override = 2
+            }
+
+            List<String> limits = []
+            if ( task.config.maxForks ) {
+                limits << sprintf('%s:%d', task.processor.name, task.config.maxForks)
+            }
+
+            // *** what about cloud opts like image and flavor?
+            // Turn on docker monitoring if docker container is being used?
+            // Does BashWrapperBuilder handle everything to do with env vars?
+
+            Map args = [cmd: cmd, cwd: cwd, cwd_matters: cwdMatters, rep_grp: grp, req_grp: grp, limit_grps: limits, override: override, retries: 0, cpus: cpus, memory: mem, time: t, disk: d, mounts: m]
+            // log.debug "[wr] add args: $args"
+            jsonArgs << args
         }
 
-        String grp = "[nextflow] $task.processor.name"
-
-        // calculate mounts option
-        def reads = copyStrategy.inputBuckets()
-        List<Map> m = []
-        for (path in reads) {
-            m << ["Mount":copyStrategy.getInputMountPath() + "/" + path, "Targets":[["Path":path]]]
-        }
-        def write = copyStrategy.outputBucket()
-        if (write) {
-            m << ["Mount":copyStrategy.getOutputMountPath(),"Targets":[["Path":write,"Write":true]]]
-        }
-
-        Integer cpus = 1
-        if ( task.config.cpus && task.config.cpus > 0 ) {
-            cpus = task.config.cpus
-        }
-
-        Integer override = 0
-
-        String mem = ""
-        if( task.config.getMemory() ) {
-            mem = String.valueOf(task.config.getMemory().toUnit('MB')) + "M"
-            override = 2
-        }
-
-        String t = ""
-        if( task.config.time ) {
-            t = task.config.getTime().format('Hh')
-            override = 2
-        }
-
-        Long d = 0
-        if( task.config.getDisk() ) {
-            def disk = task.config.getDisk()
-            d = disk.toUnit('GB')
-            override = 2
-        }
-
-        List<String> limits = []
-        if ( task.config.maxForks ) {
-            limits << sprintf('%s:%d', task.processor.name, task.config.maxForks)
-        }
-
-        // *** what about cloud opts like image and flavor?
-        // Turn on docker monitoring if docker container is being used?
-        // Does BashWrapperBuilder handle everything to do with env vars?
-
-        def args = [cmd: cmd, cwd: cwd, cwd_matters: cwdMatters, rep_grp: grp, req_grp: grp, limit_grps: limits, override: override, retries: 0, cpus: cpus, memory: mem, time: t, disk: d, mounts: m]
-        // log.debug "[wr] add args: $args"
-
-        def response = postJson(jobs, args)
-        return parseIdFromJson(response)
+        def response = postJson(jobs, jsonArgs)
+        // log.debug("made a POST request")
+        return parseJobsFromJson(response)
     }
 
     /**
@@ -477,8 +500,8 @@ class WrRestApi {
         return post
     }
 
-    private String postJson(String leaf, LinkedHashMap args) {
-        def json = toJson([args])
+    private String postJson(String leaf, List<Map> args) {
+        def json = toJson(args)
         // log.debug("[wr] posting JSON: $json")
 
         def post = postConnection(leaf)

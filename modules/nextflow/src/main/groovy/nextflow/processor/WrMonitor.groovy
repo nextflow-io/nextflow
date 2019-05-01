@@ -118,9 +118,10 @@ class WrMonitor implements TaskMonitor {
      * @param handler
      *      A List of {@link WrTaskHandler} instance representing the task to be submitted for execution
      */
-    protected void submit(WrTaskHandler handler) {
-        // submit the job execution -- throws a ProcessException when submit operation fail
-        handler.submit()
+    protected void submit(WrTaskHandler handler, String id) {
+        // we have already done a batched submission by this point, so we're
+        // actually just updating state
+        handler.submitted(id)
         // note: add the 'handler' into the polling queue *after* the submit operation,
         // this guarantees that in the queue are only jobs successfully submitted
         runningQueue.add(handler)
@@ -387,12 +388,16 @@ class WrMonitor implements TaskMonitor {
 
         int count = 0
         def itr = pendingQueue.iterator()
+        List<List> toSubmit = []
+        Map<String,WrTaskHandler> handlers = [:]
         while( itr.hasNext() ) {
             final handler = itr.next()
             try {
                 if( session.isSuccess() ) {
                     itr.remove(); count++   // <-- remove the task in all cases
-                    submit(handler)
+                    List args = handler.submitArgs()
+                    toSubmit << args
+                    handlers[args[0] as String] = handler
                 }
                 else
                     break
@@ -402,6 +407,16 @@ class WrMonitor implements TaskMonitor {
                 session.notifyTaskComplete(handler)
             }
         }
+
+        List<Map> jobs = client.add(toSubmit)
+
+        for ( job in jobs ) {
+            WrTaskHandler handler = handlers[job."Cmd" as String] as WrTaskHandler
+            if (handler) {
+                submit(handler, job."Key" as String)
+            }
+        }
+
         log.debug("submitPendingTasks looped through $count pending tasks")
         return count
     }
