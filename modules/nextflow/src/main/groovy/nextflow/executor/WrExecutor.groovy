@@ -376,6 +376,11 @@ class WrRestApi {
             m << ["Mount":copyStrategy.getMountPath(),"Targets":targets]
         }
 
+        Integer cpus = 1
+        if ( task.config.cpus && task.config.cpus > 0 ) {
+            cpus = task.config.cpus
+        }
+
         String mem = "1G"
         if( task.config.getMemory() ) {
             mem = String.valueOf(task.config.getMemory().toUnit('MB')) + "M"
@@ -401,7 +406,7 @@ class WrRestApi {
         // Turn on docker monitoring if docker container is being used?
         // Does BashWrapperBuilder handle everything to do with env vars?
 
-        def args = [cmd: cmd, cwd: cwd, cwd_matters: cwdMatters, rep_grp: grp, req_grp: grp, limit_grps: limits, override: 2, retries: 0, cpus: task.config.cpus, memory: mem, time: t, disk: d, mounts: m]
+        def args = [cmd: cmd, cwd: cwd, cwd_matters: cwdMatters, rep_grp: grp, req_grp: grp, limit_grps: limits, override: 2, retries: 0, cpus: cpus, memory: mem, time: t, disk: d, mounts: m]
         // log.debug "[wr] add args: $args"
 
         def response = postJson(jobs, args)
