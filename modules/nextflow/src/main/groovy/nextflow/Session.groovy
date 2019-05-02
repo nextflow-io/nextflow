@@ -232,6 +232,8 @@ class Session implements ISession {
 
     Path getClassesDir() { classesDir }
 
+    ScriptBinding.ParamsMap getParams() { binding.getParams() }
+
     boolean ansiLog
 
     private AnsiLogObserver ansiLogObserver

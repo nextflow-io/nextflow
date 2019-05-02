@@ -1,9 +1,12 @@
 package nextflow
 
+import java.text.SimpleDateFormat
+
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.util.VersionNumber
+import static nextflow.extension.Bolts.DATETIME_FORMAT
 
 /**
  * Models nextflow script properties and metadata
@@ -14,8 +17,6 @@ import nextflow.util.VersionNumber
 @ToString(includeNames = true)
 @EqualsAndHashCode
 class NextflowMeta {
-
-    static public final Closure JSON_CONVERTER = { meta, key -> key=='timestamp' ? new Date(Const.APP_TIMESTAMP) : meta.getProperty(key) }
 
     @Slf4j
     static class Preview {
@@ -32,7 +33,12 @@ class NextflowMeta {
 
     final VersionNumber version
     final int build
+
+    /*
+     * Timestamp as dd-MM-yyyy HH:mm UTC formatted string
+     */
     final String timestamp
+
     final Preview preview = new Preview()
 
     private NextflowMeta() {
@@ -45,6 +51,21 @@ class NextflowMeta {
         this.version = new VersionNumber(ver)
         this.build = build
         this.timestamp = timestamp
+    }
+
+    Map toJsonMap() {
+        final result = new LinkedHashMap<>(5)
+        result.version = version.toString()
+        result.build = build
+        result.timestamp = parseDateStr(timestamp)
+        if( isDsl2() )
+            result.preview = [dsl:2i]
+        return result
+    }
+
+    private Date parseDateStr(String str) {
+        def fmt = new SimpleDateFormat(DATETIME_FORMAT + ' Z')
+        fmt.parse(str)
     }
 
     boolean isDsl2() {
