@@ -20,11 +20,23 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import java.nio.file.Path
 import java.nio.file.Paths
-import javax.net.ssl.HostnameVerifier
+
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
+import java.security.SecureRandom;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
 import javax.net.ssl.HttpsURLConnection
-import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManager
-import javax.net.ssl.X509TrustManager
+
 import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
@@ -320,7 +332,6 @@ class WrRestApi {
     
     static private String endpoint
     static private String token
-    static private String cacertPath
 
     static private final String rest = "/rest/v1"
     static private final String jobs = "/jobs/"
@@ -328,23 +339,38 @@ class WrRestApi {
     WrRestApi(String endpoint, String token, String cacertPath) {
         this.endpoint = endpoint
         this.token = token
-        this.cacertPath = cacertPath
 
-        // *** I need to have Groovy trust cacertPath, but I don't know how do
-        // to that. Intead, just to get something working, we DISABLE
-        // CERTIFICATE VERIFICATION! This is BAD.
-        def nullTrustManager = [
-            checkClientTrusted: { chain, authType ->  },
-            checkServerTrusted: { chain, authType ->  },
-            getAcceptedIssuers: { null }
-        ]
+        // have Groovy trust cacertPath
         def nullHostnameVerifier = [
             verify: { hostname, session -> true }
         ]
-        SSLContext sc = SSLContext.getInstance("SSL")
-        sc.init(null, [nullTrustManager as X509TrustManager] as TrustManager[], null)
-        HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory())
         HttpsURLConnection.setDefaultHostnameVerifier(nullHostnameVerifier as HostnameVerifier)
+
+        def is = new File(cacertPath).newInputStream()
+
+        TrustManager[] trustManagers = null;
+        char[] password = null; // any password will work.
+        KeyStore caKeyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+        caKeyStore.load(null, password);
+        CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
+        Collection<? extends Certificate> certificates = certificateFactory.generateCertificates(is);
+        if (certificates.isEmpty()) {
+            throw new IllegalArgumentException("expected non-empty set of trusted certificates");
+        }
+        int index = 0;
+        certificates.each {
+            String certificateAlias = "ca" + Integer.toString(index++);
+            caKeyStore.setCertificateEntry(certificateAlias, it);
+        }
+        TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        trustManagerFactory.init(caKeyStore);
+        trustManagers = trustManagerFactory.getTrustManagers();
+
+        SSLContext sslContext = SSLContext.getInstance("SSL");
+        sslContext.init(null, trustManagers, new SecureRandom());
+        HttpsURLConnection.setDefaultSSLSocketFactory(sslContext.getSocketFactory());
+
+        is.close()
     }
 
     /**
