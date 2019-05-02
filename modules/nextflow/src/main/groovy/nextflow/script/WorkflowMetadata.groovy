@@ -390,6 +390,22 @@ class WorkflowMetadata {
         }
     }
 
+    Map toMap() {
+        final allProperties = this.metaClass.getProperties()
+        final result = new LinkedHashMap(allProperties.size())
+        for( MetaProperty property : allProperties ) {
+            if( property.name == 'class' )
+                continue
+            try {
+                result[property.name] = property.getProperty(this)
+            }
+            catch( GroovyRuntimeException e) {
+                if( !e.message.startsWith('Cannot read write-only property') ) throw e
+            }
+        }
+        return result
+    }
+
     /**
      * @return Render the workflow properties
      */
