@@ -246,7 +246,7 @@ class WebLogObserver implements TraceObserver{
         new JsonGenerator.Options()
                 .addConverter(Path) { Path p, String key -> p.toUriString() }
                 .addConverter(Duration) { Duration d, String key -> d.durationInMillis }
-                .addConverter(NextflowMeta, NextflowMeta.JSON_CONVERTER)
+                .addConverter(NextflowMeta) { meta, key -> meta.toJsonMap() }
                 .dateFormat(Const.ISO_8601_DATETIME_FORMAT).timezone("UTC")
                 .build()
     }

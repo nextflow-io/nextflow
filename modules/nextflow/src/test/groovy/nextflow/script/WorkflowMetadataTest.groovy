@@ -234,4 +234,23 @@ class WorkflowMetadataTest extends Specification {
 
     }
 
+    def 'should convert to map object' () {
+
+        given:
+        def script = Mock(ScriptFile)
+        script.getScriptId() >> '123'
+        script.getCommitId() >> 'abcd'
+        
+        def session = Spy(Session)
+        def metadata = new WorkflowMetadata(session, script)
+
+        when:
+        def result = metadata.toMap()
+        println result
+        then:
+        result.scriptId == '123'
+        result.commitId == 'abcd'
+        result.profile == 'standard'
+    }
+
 }

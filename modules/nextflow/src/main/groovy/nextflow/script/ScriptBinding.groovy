@@ -109,6 +109,8 @@ class ScriptBinding extends WorkflowBinding {
         return this
     }
 
+    ParamsMap getParams() { params }
+
     Session getSession() { session }
 
     boolean getModule() { module }
