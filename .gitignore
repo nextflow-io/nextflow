@@ -6,6 +6,7 @@
 .cache/*
 .nextflow*
 .node-nextflow*
+**/build/**
 build/**
 modules/**/build/
 modules/**/*.iml
