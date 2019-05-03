@@ -10,7 +10,7 @@ Requirements
 ============
 
 `Nextflow` can be used on any POSIX compatible system (Linux, OS X, etc).
-It requires Bash 3.2 (or later) and `Java 8 (or later) <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_ to be installed.
+It requires Bash 3.2 (or later) and `Java 8 (or later, up to 11) <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_ to be installed.
 
 Windows systems may be supported using a POSIX compatibility layer like `Cygwin <http://www.cygwin.com>`_ (unverified) or,
 alternatively, installing it into a Linux VM using virtualization software like `VirtualBox <http://www.virtualbox.org>`_
@@ -71,9 +71,7 @@ Copy the following example into your favourite text editor and save it to a file
         """
     }
 
-    result.subscribe {
-        println it.trim()
-    }
+    result.println { it.trim() }
 
 
 This script defines two processes. The first splits a string in file chunks containing 6 characters,
@@ -89,11 +87,12 @@ Execute the script by entering the following command in your terminal::
 
 It will output something similar to the text shown below::
 
-    N E X T F L O W  ~  version 18.10.1
+    N E X T F L O W  ~  version 19.04.0
+    Launching `t.nf` [serene_mayer] - revision: aa284738a9
     [warm up] executor > local
-    [22/7548fa] Submitted process > splitLetters (1)
-    [e2/008ee9] Submitted process > convertToUpper (1)
-    [1e/165130] Submitted process > convertToUpper (2)
+    executor >  local (3)
+    [69/c8ea4a] process > splitLetters   [100%] 1 of 1 ✔
+    [84/c8b7f1] process > convertToUpper [100%] 2 of 2 ✔
     HELLO
     WORLD!
 
@@ -148,11 +147,12 @@ Then save the file with the same name, and execute it by adding the ``-resume`` 
 
 It will print output similar to this::
 
-    N E X T F L O W  ~  version 18.10.1
+    N E X T F L O W  ~  version 19.04.0
+    Launching `t.nf` [fabulous_ptolemy] - revision: 6bb92f2957
     [warm up] executor > local
-    [22/7548fa] Cached process > splitLetters (1)
-    [d0/7b79a3] Submitted process > convertToUpper (1)
-    [b0/c99ef9] Submitted process > convertToUpper (2)
+    executor >  local (2)
+    [69/c8ea4a] process > splitLetters   [100%] 1 of 1, cached: 1 ✔
+    [d0/e94f07] process > convertToUpper [100%] 2 of 2 ✔
     olleH
     !dlrow
 
@@ -175,19 +175,21 @@ Their value can be specified on the command line by prefixing the parameter name
 For the sake of this tutorial, you can try to execute the previous example specifying a different input
 string parameter, as shown below::
 
-  nextflow run tutorial.nf --str 'Hola mundo'
+  nextflow run tutorial.nf --str 'Bonjour le monde'
 
 
 The string specified on the command line will override the default value of the parameter. The output
 will look like this::
 
-    N E X T F L O W  ~  version 18.10.1
+    N E X T F L O W  ~  version 19.04.0
+    Launching `t.nf` [magical_payne] - revision: 6bb92f2957
     [warm up] executor > local
-    [6d/54ab39] Submitted process > splitLetters (1)
-    [a1/88716d] Submitted process > convertToUpper (2)
-    [7d/3561b6] Submitted process > convertToUpper (1)
-    odnu
-    m aloH
+    executor >  local (4)
+    [8b/16e7d7] process > splitLetters   [100%] 1 of 1 ✔
+    [eb/729772] process > convertToUpper [100%] 3 of 3 ✔
+    m el r
+    edno
+    uojnoB
 
 
 
