@@ -17,6 +17,9 @@ export TRAVIS_PULL_REQUEST=${TRAVIS_PULL_REQUEST:=false}
   bash run.sh
 )
 
+# disable ansi log to make log more readable
+export NXF_ANSI_LOG=false
+
 #
 # Hello 
 #
