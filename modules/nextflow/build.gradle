@@ -37,9 +37,10 @@ dependencies {
         exclude group: 'org.apache.tika', module: 'tika-core'
         exclude group: 'com.amazonaws', module: 'aws-java-sdk-s3'
     }
-    compile ('com.amazonaws:aws-java-sdk-s3:1.11.470')
-    compile ('com.amazonaws:aws-java-sdk-ec2:1.11.470')
-    compile ('com.amazonaws:aws-java-sdk-batch:1.11.470')
+    compile ('com.amazonaws:aws-java-sdk-s3:1.11.542')
+    compile ('com.amazonaws:aws-java-sdk-ec2:1.11.542')
+    compile ('com.amazonaws:aws-java-sdk-batch:1.11.542')
+    compile ('com.amazonaws:aws-java-sdk-iam:1.11.542')
     compile ('javax.activation:activation:1.1.1')
     compile ('javax.mail:mail:1.4.7')
     compile ('org.yaml:snakeyaml:1.18')
