@@ -18,6 +18,8 @@ package nextflow.trace
 
 
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
+import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
@@ -26,6 +28,9 @@ import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
 import static org.fusesource.jansi.Ansi.Color
 import static org.fusesource.jansi.Ansi.ansi
+
+import static nextflow.util.LoggerHelper.isHashLogPrefix
+
 /**
  * Implements an observer which display workflow
  * execution progress and notifications using
@@ -33,6 +38,7 @@ import static org.fusesource.jansi.Ansi.ansi
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class AnsiLogObserver implements TraceObserver {
 
@@ -82,6 +88,8 @@ class AnsiLogObserver implements TraceObserver {
 
     private volatile boolean dirty
 
+    private volatile boolean rendered
+
     private int printedLines
 
     private int maxNameLength
@@ -92,7 +100,7 @@ class AnsiLogObserver implements TraceObserver {
 
     synchronized void appendInfo(String message) {
         boolean warn
-        if( message.startsWith('[') && !(warn=message.indexOf('NOTE:')>0) )
+        if( isHashLogPrefix(message) && !(warn=message.indexOf('NOTE:')>0) )
             return
         
         if( !started || !processes ) {
@@ -123,13 +131,16 @@ class AnsiLogObserver implements TraceObserver {
         else {
             errors << new Event(message)
             dirty = true
+            notify()
         }
     }
 
     protected void render0(dummy) {
         while(!stopped) {
             if( dirty ) renderProgress()
-            sleep 200
+            synchronized (this) {
+                wait(200)
+            }
         }
         renderProgress()
         renderEpilog()
@@ -177,10 +188,17 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     protected void renderProcesses(Ansi term) {
+        if( !processes || (!session.isSuccess() && errors && !rendered) ) {
+            // prevent to show a useless process progress if there's an error
+            // on startup and the execution is terminated
+            return
+        }
+
         for( Map.Entry<String,ProcessStats> entry : processes ) {
             term.a(line(entry.key,entry.value))
             term.newline()
         }
+        rendered = true
     }
 
     protected void renderErrors( Ansi term ) {
@@ -271,7 +289,7 @@ class AnsiLogObserver implements TraceObserver {
     }
 
 
-    private ProcessStats p0(String name) {
+    private ProcessStats proc0(String name) {
         def result = processes.get(name)
         if( !result ) {
             result = new ProcessStats()
@@ -281,8 +299,8 @@ class AnsiLogObserver implements TraceObserver {
         return result
     }
 
-    private ProcessStats p0(TaskHandler handler) {
-        p0(handler.task.processor.name)
+    private ProcessStats proc0(TaskHandler handler) {
+        proc0(handler.task.processor.name)
     }
 
     @Override
@@ -307,7 +325,7 @@ class AnsiLogObserver implements TraceObserver {
      */
     @Override
     synchronized void onProcessSubmit(TaskHandler handler, TraceRecord trace){
-        final process = p0(handler)
+        final process = proc0(handler)
         process.submitted++
         process.hash = handler.task.hashLog
         process.changed = true
@@ -320,7 +338,7 @@ class AnsiLogObserver implements TraceObserver {
 
     @Override
     synchronized void onProcessComplete(TaskHandler handler, TraceRecord trace){
-        final process = p0(handler)
+        final process = proc0(handler)
         process.completed++
         process.hash = handler.task.hashLog
         process.changed = true
@@ -342,7 +360,7 @@ class AnsiLogObserver implements TraceObserver {
 
     @Override
     synchronized void onProcessCached(TaskHandler handler, TraceRecord trace){
-        final process = p0(handler)
+        final process = proc0(handler)
         process.cached++
         process.hash = handler.task.hashLog
         process.changed = true

@@ -533,4 +533,39 @@ class LoggerHelper {
         }
     }
 
+    static private char OPEN_CH = '[' as char
+    static private char CLOSE_CH = ']' as char
+    static private char SLASH_CH = '/' as char
+    static private int ZERO_CH = '0' as char
+    static private int NINE_CH = '9' as char
+    static private int ALPHA_CH = 'a' as char
+    static private int EFFE_CH = 'f' as char
+
+    static boolean isHashLogPrefix(String str) {
+        if( str?.length()<10 )
+            return false
+        if( str.charAt(0) != OPEN_CH )
+            return false
+        if( str.charAt(3) != SLASH_CH )
+            return false
+        if( str.charAt(10) != CLOSE_CH )
+            return false
+        if( !isHex(str.charAt(1)) )
+            return false
+        if( !isHex(str.charAt(2)) )
+            return false
+
+        for( int i=4; i<10; i++ ) {
+            if( !isHex(str.charAt(i)))
+                return false
+        }
+
+        return true
+    }
+
+    static protected boolean isHex(char ch) {
+        (ch >= ZERO_CH && ch <= NINE_CH) || (ch >= ALPHA_CH && ch <= EFFE_CH)
+    }
+
+
 }

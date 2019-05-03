@@ -394,6 +394,10 @@ class Launcher {
             System.exit(1)
 
         }
+        catch ( AbortOperationException e ) {
+            System.err.println (e.message ?: "Unknown abort reason")
+            System.exit(1)
+        }
         catch( Throwable e ) {
             e.printStackTrace(System.err)
             System.exit(1)
