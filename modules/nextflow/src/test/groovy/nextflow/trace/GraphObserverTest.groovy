@@ -19,6 +19,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import groovyx.gpars.dataflow.DataflowQueue
+import nextflow.Session
 import nextflow.dag.CytoscapeHtmlRenderer
 import nextflow.dag.DAG
 import nextflow.dag.DotRenderer
@@ -33,9 +34,10 @@ import test.TestHelper
  */
 class GraphObserverTest extends Specification {
 
-    def DAG test_dag
+    DAG test_dag
 
     def setup() {
+        new Session()
 
         def src = new DataflowQueue()
         def ch1 = new DataflowQueue()
