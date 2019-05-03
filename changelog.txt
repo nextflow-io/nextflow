@@ -1,7 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
-19.04.0 - 15 Apr 2019
+19.04.1 - 3 May 2019
+- Fix Println operator output is not shown with ansi logging #1137
 
+19.04.0 - 15 Apr 2019
 - Added support for NCBI_API_KEY variable [e4d9b62c]
 - Added warning message when using untested Java version [35acd1cb]
 - Added parameter and workflow metadata to weblog payload #1077
