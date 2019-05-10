@@ -1668,6 +1668,7 @@ Name                   Executor
 ``k8s``                The process is executed using the `Kubernetes <https://kubernetes.io/>`_ cluster.
 ``awsbatch``           The process is executed using the `AWS Batch <https://aws.amazon.com/batch/>`_ service.
 ``google-pipelines``   The process is executed using the `Google Genomics Pipelines <https://cloud.google.com/genomics/>`_ service.
+``wr``                 The process is executed using wr <https://github.com/VertebrateResequencing/wr>`_.
 =====================  ==================
 
 The following example shows how to set the process's executor::

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2019, Genome Research Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,20 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+apply plugin: 'groovy'
 
-rootProject.name = 'nextflow-prj'
+sourceSets {
+    main.java.srcDirs = []
+    main.groovy.srcDirs = ['src/main']
+    main.resources.srcDirs = ['src/resources']
+    test.groovy.srcDirs = ['src/test']
+    test.java.srcDirs = []
+    test.resources.srcDirs = []
+}
 
-include 'my-capsule'
-include 'nextflow'
-include 'nf-commons'
-include 'nf-console'
-include 'nf-ignite'
-include 'nf-httpfs'
-include 'nf-ga4gh'
-include 'nf-google'
-include 'nf-tower'
-include 'nf-wr'
-
-rootProject.children.each { prj ->
-    prj.projectDir = new File("$rootDir/modules/$prj.name")
+dependencies {
+    compile project(':nextflow')
 }

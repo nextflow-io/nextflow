@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2019, Genome Research Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,14 @@
  * limitations under the License.
  */
 
-rootProject.name = 'nextflow-prj'
+package nextflow.wr.processor
 
-include 'my-capsule'
-include 'nextflow'
-include 'nf-commons'
-include 'nf-console'
-include 'nf-ignite'
-include 'nf-httpfs'
-include 'nf-ga4gh'
-include 'nf-google'
-include 'nf-tower'
-include 'nf-wr'
+import spock.lang.Specification
+/**
+ * @author Sendu Bala <sb10@sanger.ac.uk>
+ */
+class WrMonitorTest extends Specification {
 
-rootProject.children.each { prj ->
-    prj.projectDir = new File("$rootDir/modules/$prj.name")
+    // *** write tests
+
 }

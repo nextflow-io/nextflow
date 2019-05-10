@@ -155,6 +155,7 @@ configurations {
     console.extendsFrom runtime
     ga4gh.extendsFrom runtime
     google.extendsFrom runtime
+    wr.extendsFrom runtime
 }
 
 
@@ -171,6 +172,7 @@ dependencies {
     console project(':nf-console')
     ga4gh   project(':nf-ga4gh')
     google  project(':nf-google')
+    wr      project(':nf-wr')
 }
 
 // disable jar for root project
@@ -271,6 +273,7 @@ ext.deployable << project(':nf-httpfs')
 ext.deployable << project(':nf-ga4gh')
 ext.deployable << project(':nf-google')
 ext.deployable << project(':nf-tower')
+ext.deployable << project(':nf-wr')
 
 protected error(String message) {
     logger.error message
@@ -384,6 +387,12 @@ task packOne(type: Jar) {
     deps = resolveDeps('google')
     manifest.attributes('Dependencies': deps, 'google')
 
+    /*
+     * `wr` dependencies
+     */
+    deps = resolveDeps('wr')
+    manifest.attributes('Dependencies': deps, 'wr')
+
     doLast {
         ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: releaseDir, overwrite: true)
         ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: nextflowDir, overwrite: true)
@@ -397,6 +406,7 @@ task packAll(type: Jar) {
 
     from jar // embed our application jar
     from (configurations.ignite)
+    from (configurations.wr)
     from (configurations.capsule.collect { zipTree(it) })
 
     manifest.attributes( 'Main-Class'        : 'CapsuleLoader',
@@ -407,6 +417,7 @@ task packAll(type: Jar) {
                           )
 
     manifest.attributes('Main-Class': 'CapsuleLoader', 'ignite')
+    manifest.attributes('Main-Class': 'CapsuleLoader', 'wr')
 
     doLast {
         file(releaseDir).mkdir()
@@ -591,10 +602,10 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
  * Save the runtime classpath
  */
 task exportClasspath {
-    dependsOn configurations.ignite, configurations.console, configurations.ga4gh, configurations.google
+    dependsOn configurations.ignite, configurations.console, configurations.ga4gh, configurations.google, configurations.wr
 
     def home = System.getProperty('user.home')
-    def all = configurations.ignite + configurations.console + configurations.ga4gh + configurations.google
+    def all = configurations.ignite + configurations.console + configurations.ga4gh + configurations.google + configurations.wr
     def libs = all.collect { File file -> /* println file.canonicalPath.replace(home, '$HOME'); */ file.canonicalPath;  }
     new File('.launch.classpath').text = libs.join(':')
 }
