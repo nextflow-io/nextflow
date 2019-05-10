@@ -131,6 +131,10 @@ class BashWrapperBuilder {
         return "NXF_SCRATCH=\"\$(set +u; nxf_mktemp $scratchStr)\""
     }
 
+    protected boolean alwaysTryToUnstage() {
+        return false
+    }
+
     protected boolean fixOwnership() {
         systemOsName == 'Linux' && containerConfig?.fixOwnership && runWithContainer && containerConfig.engine == 'docker' // <-- note: only for docker (shifter is not affected)
     }
@@ -179,6 +183,10 @@ class BashWrapperBuilder {
 
         // whenever it has to change to the scratch directory
         final changeDir = getScratchDirectoryCommand()
+
+        // set true when using a CopyStrategy that wants to handle if unstaging
+        // is done itself
+        final unstageOutputFiles = alwaysTryToUnstage()
 
         /*
          * create the container launcher command if needed
@@ -252,7 +260,7 @@ class BashWrapperBuilder {
         binding.launch_cmd = getLaunchCommand(interpreter,env)
 
         String copyScript = null
-        if( changeDir ) {
+        if( changeDir || unstageOutputFiles ) {
             copyScript = copyFileToWorkDir(TaskRun.CMD_OUTFILE) + ' || true' + ENDL
             copyScript += copyFileToWorkDir(TaskRun.CMD_ERRFILE) + ' || true' + ENDL
             if( statsEnabled )
@@ -262,7 +270,7 @@ class BashWrapperBuilder {
         }
         binding.unstage_controls = copyScript
 
-        if( changeDir || workDir != targetDir ) {
+        if( changeDir || workDir != targetDir || unstageOutputFiles ) {
             binding.unstage_outputs = copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)
         }
         else {
