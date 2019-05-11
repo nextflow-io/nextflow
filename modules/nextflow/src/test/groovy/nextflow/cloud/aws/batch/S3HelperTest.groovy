@@ -105,6 +105,7 @@ class S3HelperTest extends Specification {
         opts.getStorageClass() >> 'S-CLAZZ'
         opts.getStorageEncryption() >> 'S-ENCRYPT'
         opts.getAwsCli() >> '/foo/bin/aws'
+        opts.getMaxParallelTransfers() >> 33
  
         script == '''
                     # aws helper
@@ -137,7 +138,7 @@ class S3HelperTest extends Specification {
                     nxf_parallel() {
                         local cmd=("$@")
                         local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
-                        local max=$(if (( cpus>16 )); then echo 16; else echo $cpus; fi)
+                        local max=$(if (( cpus>33 )); then echo 33; else echo $cpus; fi)
                         local i=0
                         local pid=()
                         (

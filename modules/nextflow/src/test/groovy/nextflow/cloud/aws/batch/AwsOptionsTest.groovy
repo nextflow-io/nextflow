@@ -16,6 +16,7 @@
 
 package nextflow.cloud.aws.batch
 
+import nextflow.Session
 import spock.lang.Specification
 
 /**
@@ -43,5 +44,24 @@ class AwsOptionsTest extends Specification {
         opts = new AwsOptions(cliPath: '/foo/bin/aws', region: 'eu-west-1')
         then:
         opts.awsCli == '/foo/bin/aws --region eu-west-1'
+    }
+
+    def 'should get max connection'  () {
+        given:
+        def sess = Mock(Session)  {
+            getConfig() >> [aws:[batch:[maxParallelTransfers: 5]]]
+        }
+        AwsOptions opts
+
+        when:
+        opts = new AwsOptions()
+        then:
+        opts.maxParallelTransfers == AwsOptions.MAX_TRANSFER
+
+        when:
+        opts = new AwsOptions(sess)
+        then:
+        opts.maxParallelTransfers == 5
+
     }
 }

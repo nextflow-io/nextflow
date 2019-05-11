@@ -25,6 +25,7 @@ class S3Helper {
         def cli = opts.getAwsCli()
         def storage = opts.storageClass ?: 'STANDARD'
         def encryption = opts.storageEncryption ? "--sse $opts.storageEncryption " : ''
+        def maxConnect = opts.maxParallelTransfers ?: AwsOptions.MAX_TRANSFER
 
         """
         # aws helper
@@ -57,7 +58,7 @@ class S3Helper {
         nxf_parallel() {
             local cmd=("\$@")
             local cpus=\$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
-            local max=\$(if (( cpus>16 )); then echo 16; else echo \$cpus; fi)
+            local max=\$(if (( cpus>$maxConnect )); then echo $maxConnect; else echo \$cpus; fi)
             local i=0
             local pid=()
             (
