@@ -758,6 +758,26 @@ when no other profile is specified by the user.
 
         nextflow run <your script> -profile standard,cloud
 
+
+
+.. danger:: When using the *profiles* feature in your config file do NOT set attributes in the same scope both
+  inside and outside a ``profiles`` context. For example::
+
+        process.cpus = 1
+
+        profiles {
+          foo {
+            process.memory = '2 GB'
+          }
+
+          bar {
+            process.memory = '4 GB'
+          }
+        }
+
+  In the above example the ``process.cpus`` attribute is not correctly applied because the ``process`` scope it's also
+  used in the ``foo`` and ``bar`` profile contexts.
+
 The above feature requires version 0.28.x or higher.
 
 Environment variables
