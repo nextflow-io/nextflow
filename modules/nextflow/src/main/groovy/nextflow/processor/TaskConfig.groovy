@@ -508,7 +508,7 @@ class LazyMap implements Map<String,Object> {
         }
 
         else if( value instanceof GString ) {
-            return value.cloneWith(getBinding()).toString()
+            return value.cloneAsLazy(getBinding()).toString()
         }
 
         return value

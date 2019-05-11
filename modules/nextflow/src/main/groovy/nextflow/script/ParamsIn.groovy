@@ -414,7 +414,7 @@ class FileInParam extends BaseInParam  {
 
     private resolve( Map ctx, value ) {
         if( value instanceof GString ) {
-            value.cloneWith(ctx)
+            value.cloneAsLazy(ctx)
         }
 
         else if( value instanceof Closure ) {

@@ -413,7 +413,7 @@ class FileOutParam extends BaseOutParam implements OutParam, OptionalParam {
         else if( gstring != null ) {
             def strict = (getName() == null)
             try {
-                entry = gstring.cloneWith(context)
+                entry = gstring.cloneAsLazy(context)
             }
             catch( MissingPropertyException e ) {
                 if( strict )
@@ -538,7 +538,7 @@ class ValueOutParam extends BaseOutParam {
             return target.cloneWith(context).call()
 
         case GString:
-            return target.cloneWith(context).toString()
+            return target.cloneAsLazy(context).toString()
 
         default:
             return target

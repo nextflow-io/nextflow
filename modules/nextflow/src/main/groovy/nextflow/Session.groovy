@@ -610,7 +610,7 @@ class Session implements ISession {
     }
 
     protected Map<String,Path> findBinEntries(Path path) {
-        def result = [:]
+        Map<String,Path> result = [:]
         path
                 .listFiles { file -> Files.isExecutable(file) }
                 .each { Path file -> result.put(file.name,file)  }
