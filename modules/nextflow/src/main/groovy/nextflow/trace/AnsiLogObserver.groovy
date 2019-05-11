@@ -45,6 +45,8 @@ class AnsiLogObserver implements TraceObserver {
 
     static final private String NEWLINE = System.getProperty("line.separator")
 
+    static final private boolean SUMMARY = System.getenv('NXF_ANSI_SUMMARY') != 'false'
+
     @EqualsAndHashCode
     static class ProcessStats {
         int submitted
@@ -148,7 +150,7 @@ class AnsiLogObserver implements TraceObserver {
             }
         }
         renderProgress()
-        renderEpilog()
+        renderSummary()
     }
 
     protected void renderMessages( Ansi term, List<Event> allMessages, Color color=null )  {
@@ -247,9 +249,9 @@ class AnsiLogObserver implements TraceObserver {
         AnsiConsole.out.flush()
     }
 
-    protected void renderEpilog() {
+    protected void renderSummary() {
         WorkflowStats stats = session.isSuccess() ? session.getWorkflowStats() : null
-        if( stats && processes.size() ) {
+        if( stats && processes.size() && SUMMARY ) {
             final delta = endTimestamp-startTimestamp
             def report = ""
             report += "Completed at: ${new Date(endTimestamp).format('dd-MMM-yyyy HH:mm:ss')}\n"
