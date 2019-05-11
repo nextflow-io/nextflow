@@ -460,7 +460,10 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.containsKey('task_env')
         binding.containsKey('container_env')
-        binding.task_env == 'export FOO="aa"\nexport BAR="bb"\n'
+        binding.task_env == /\
+                export FOO="aa"
+                export BAR="bb"
+                /.stripIndent()
         binding.container_env == null
 
         when:
@@ -469,14 +472,14 @@ class BashWrapperBuilderTest extends Specification {
         binding.containsKey('task_env')
         binding.containsKey('container_env')
         binding.task_env == null
-        binding.container_env == '''\
+        binding.container_env == /\
                 nxf_container_env() {
                 cat << EOF
-                export FOO="aa"
-                export BAR="bb"
+                export FOO=\"aa\"
+                export BAR=\"bb\"
                 EOF
                 }
-                '''.stripIndent()
+                /.stripIndent()
         binding.launch_cmd.contains('nxf_container_env')
 
         when:
@@ -777,9 +780,9 @@ class BashWrapperBuilderTest extends Specification {
         binding.container_env ==  '''
                 nxf_container_env() {
                 cat << EOF
-                export FOO="hello"
-                export BAR="hello world"
-                export PATH="/some/path:\\$PATH"
+                export FOO=\\"hello\\"
+                export BAR=\\"hello world\\"
+                export PATH=\\"/some/path:\\$PATH\\"
                 EOF
                 }
                 '''
