@@ -32,6 +32,8 @@ import nextflow.exception.ProcessUnrecoverableException
 @CompileStatic
 class AwsOptions {
 
+    static final public int MAX_TRANSFER = 16
+
     String cliPath
 
     String storageClass
@@ -42,11 +44,14 @@ class AwsOptions {
 
     String region
 
+    int maxParallelTransfers = MAX_TRANSFER
+
     AwsOptions() { }
 
     AwsOptions(Session session) {
         storageClass = session.config.navigate('aws.client.uploadStorageClass') as String
         storageEncryption = session.config.navigate('aws.client.storageEncryption') as String
+        maxParallelTransfers = session.config.navigate('aws.batch.maxParallelTransfers', MAX_TRANSFER) as int
         region = session.config.navigate('aws.region') as String
     }
 
