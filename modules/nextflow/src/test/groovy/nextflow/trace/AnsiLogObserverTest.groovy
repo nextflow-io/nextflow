@@ -29,7 +29,7 @@ class AnsiLogObserverTest extends Specification {
     def 'should render a process line' () {
 
         given:
-        def o = new AnsiLogObserver()
+        def observer = new AnsiLogObserver()
         def stats = new AnsiLogObserver.ProcessStats()
         stats.submitted = SUBMIT
         stats.completed = COMPLETED
@@ -38,9 +38,12 @@ class AnsiLogObserverTest extends Specification {
         stats.terminated = DONE
         stats.error = ERR
         stats.hash = HASH
+        stats.name = 'foo'
 
-        expect:
-        o.line('foo', stats) == EXPECTED
+        when:
+        observer.@labelWidth = stats.name.size()
+        then:
+        observer.line(stats) == EXPECTED
 
         where:
         HASH        | SUBMIT  | COMPLETED | CACHE | STORE | DONE  | ERR   | EXPECTED
@@ -54,6 +57,47 @@ class AnsiLogObserverTest extends Specification {
         'skipped'   | 2       | 1         | 0     | 3     | false | false | '[skipped  ] process > foo [ 80%] 4 of 5, stored: 3'
         'ab/123456' | 2       | 2         | 0     | 0     | true  | false | '[ab/123456] process > foo [100%] 2 of 2 ✔'
         'ef/987654' | 2       | 2         | 0     | 0     | true  | true  | '[ef/987654] process > foo [100%] 2 of 2 ✘'
+
+    }
+
+    def 'should format name' () {
+        given:
+        def ansi = new AnsiLogObserver()
+
+        expect:
+        ansi.fmtWidth(NAME, WIDTH, MAX) == EXPECTED
+
+        where:
+        NAME        | WIDTH | MAX  | EXPECTED
+
+        'foo'       | 3     | 80   | 'foo'
+        'foo'       | 5     | 80   | 'foo  '
+
+        'long_name' | 9     | 5   | 'lo...'
+        'long_name' | 9     | 2   | 'lo'
+        'long_name' | 9     | 3   | 'lon'
+        'xx'        | 9     | 1   | 'x'
+        'xx'        | 9     | 5   | 'xx   '
+        'abcd'      | 9     | 5   | 'abcd '
+        '12345678'  | 9     | 5   | '12...'
+    }
+
+    def 'should chop a string' () {
+        given:
+        def ansi = new AnsiLogObserver()
+
+        expect:
+        ansi.fmtChop(NAME, COLS) == EXPECTED
+
+        where:
+        NAME        | COLS  | EXPECTED
+        'long_name' | 5     | 'lo...'
+        'long_name' | 2     | 'lo'
+        'long_name' | 3     | 'lon'
+        'xx'        | 1     | 'x'
+        'xx'        | 5     | 'xx'
+        'abcd'      | 5     | 'abcd'
+        '12345678'  | 5     | '12...'
 
     }
 
