@@ -36,6 +36,8 @@ import nextflow.util.Duration
 @CompileStatic
 class WorkflowStats {
 
+    static public final short MIN_SECS = 180
+
     static private final DecimalFormat DECIMAL_FMT
 
     static private final DecimalFormat INTEGER_FMT
@@ -144,7 +146,7 @@ class WorkflowStats {
     String getComputeTimeFmt() {
 
         final total = (succeedMillis + cachedMillis + failedMillis) / 1000
-        if( total < 180 )
+        if( total < MIN_SECS )
             return '(a few seconds)'
 
 
