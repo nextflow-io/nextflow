@@ -20,6 +20,7 @@ package nextflow.trace
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.util.logging.Slf4j
+import jline.TerminalFactory
 import nextflow.Session
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
@@ -54,6 +55,7 @@ class AnsiLogObserver implements TraceObserver {
         boolean terminated
         String hash
         boolean error
+        String name
     }
 
     static class Event {
@@ -93,7 +95,9 @@ class AnsiLogObserver implements TraceObserver {
 
     private int printedLines
 
-    private int maxNameLength
+    private int labelWidth
+
+    private int cols = 80
 
     private long startTimestamp
 
@@ -195,8 +199,17 @@ class AnsiLogObserver implements TraceObserver {
             return
         }
 
+        cols = TerminalFactory.get().getWidth()
+
+        // calc max width
+        labelWidth = 0
         for( Map.Entry<String,ProcessStats> entry : processes ) {
-            term.a(line(entry.key,entry.value))
+            labelWidth = Math.max(labelWidth, entry.value.name.size())
+        }
+
+        // render line
+        for( Map.Entry<String,ProcessStats> entry : processes ) {
+            term.a(line(entry.value))
             term.newline()
         }
         rendered = true
@@ -270,10 +283,26 @@ class AnsiLogObserver implements TraceObserver {
         AnsiConsole.out.print(text)
     } 
 
-    protected String line(String name, ProcessStats stats) {
+    protected String fmtWidth(String name, int width, int cols) {
+        assert name.size() <= width
+        // chop the name string if larger than max cols
+        if( name.size() > cols ) {
+            return fmtChop(name,cols)
+        }
+        // otherwise pad with blanks to the expected width
+        return name.padRight(Math.min(width,cols))
+    }
+
+    protected String fmtChop(String str, int cols) {
+        if( str.size() <= cols )
+            return str
+        return cols>3 ? str[0..(cols-3-1)] + '...' : str[0..cols-1]
+    }
+
+    protected String line(ProcessStats stats) {
         final float tot = stats.submitted +stats.cached +stats.stored
         final float com = stats.completed +stats.cached +stats.stored
-        final label = name.padRight(maxNameLength)
+        final label = fmtWidth(stats.name, labelWidth, Math.max(cols-50, 5))
         final hh = (stats.hash && tot>0 ? stats.hash : '-').padRight(9)
 
         if( tot == 0  )
@@ -292,7 +321,7 @@ class AnsiLogObserver implements TraceObserver {
             result += ", failed: $stats.failed"
         if( stats.terminated && tot )
             result += stats.error ? ' \u2718' : ' \u2714'
-        return result
+        return fmtChop(result, cols)
     }
 
 
@@ -300,8 +329,8 @@ class AnsiLogObserver implements TraceObserver {
         def result = processes.get(name)
         if( !result ) {
             result = new ProcessStats()
+            result.name = name
             processes.put(name, result)
-            maxNameLength = Math.max(maxNameLength, name.size())
         }
         return result
     }
@@ -341,6 +370,7 @@ class AnsiLogObserver implements TraceObserver {
         final process = proc0(handler)
         process.submitted++
         process.hash = handler.task.hashLog
+        process.name = handler.task.name
         // executor counter
         final exec = handler.task.processor.executor.name
         Integer count = executors[exec] ?: 0
@@ -353,6 +383,7 @@ class AnsiLogObserver implements TraceObserver {
         final process = proc0(handler)
         process.completed++
         process.hash = handler.task.hashLog
+        process.name = handler.task.name
         if( handler.task.aborted || handler.task.failed ) {
             process.failed++
             process.error |= !handler.task.errorAction?.soft
@@ -372,6 +403,7 @@ class AnsiLogObserver implements TraceObserver {
     @Override
     synchronized void onProcessCached(TaskHandler handler, TraceRecord trace){
         final process = proc0(handler)
+        process.name = handler.task.name
         if( trace ) {
             process.cached++
             process.hash = handler.task.hashLog
