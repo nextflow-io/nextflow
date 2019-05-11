@@ -1705,8 +1705,13 @@ class TaskProcessor {
                 log.warn "Environment variable `$name` evaluates to an empty value"
                 script << "export $name=''"
             }
-            else
-                script << "export $name=\"${escape ? value.replace('$','\\$') : value}\""
+            else if( !escape ) {
+                script << /export $name="$value"/
+            }
+            else {
+                // escape both wrapping double quotes and the dollar var placeholder
+                script << /export $name=\"${value.replace('$','\\$')}\"/
+            }
         }
         script << ''
 
