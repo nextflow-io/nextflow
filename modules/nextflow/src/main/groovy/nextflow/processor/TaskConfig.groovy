@@ -16,17 +16,16 @@
 
 package nextflow.processor
 
-import nextflow.executor.res.GpuResource
 import static nextflow.processor.TaskProcessor.*
 
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
 import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.exception.FailedGuardException
 import nextflow.executor.BashWrapperBuilder
+import nextflow.executor.res.GpuResource
 import nextflow.k8s.model.PodOptions
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
@@ -133,9 +132,7 @@ class TaskConfig extends LazyMap implements Cloneable {
         }
     }
 
-
-    @PackageScope
-    boolean isDynamic() {
+    protected boolean isDynamic() {
         if( super.isDynamic() )
             return true
 
