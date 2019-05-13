@@ -80,20 +80,20 @@ class WrExecutor extends Executor {
         int uid = ["id", "-u"].execute().text.trim() as Integer
         int port = 1021 + (uid * 4) + 1
 
-        def result = session.getConfigAttribute('executor.endpoint', "https://localhost:$port")
+        def result = session.getConfigAttribute('executor.wr.endpoint', "https://localhost:$port")
         log.debug "[wr] endpoint=$result"
         return result
     }
 
     protected String getToken() {
-        String path = session.getConfigAttribute('executor.tokenpath', Paths.get(defaultManagerDir, "client.token"))
+        String path = session.getConfigAttribute('executor.wr.tokenpath', Paths.get(defaultManagerDir, "client.token"))
         log.debug "[wr] tokenpath=$path"
         String result = new File(path).text
         return result
     }
 
     protected String getCacertPath() {
-        String path = session.getConfigAttribute('executor.cacertpath', Paths.get(defaultManagerDir, "ca.pem"))
+        String path = session.getConfigAttribute('executor.wr.cacertpath', Paths.get(defaultManagerDir, "ca.pem"))
         log.debug "[wr] cacertpath=$path"
         return path
     }
