@@ -29,6 +29,7 @@ import nextflow.wr.client.WrRestApi
 import nextflow.wr.executor.WrTaskHandler
 
 import nextflow.processor.TaskPollingMonitor
+import nextflow.processor.TaskHandler
 import nextflow.processor.TaskFault
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
@@ -170,14 +171,23 @@ class WrMonitor extends TaskPollingMonitor {
     // }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected boolean canSubmit(TaskHandler handler) {
+        return true
+    }
+
+    /**
      * Loop over the queue of pending tasks and submit all
      *
      * @return The number of tasks submitted for execution
      */
+    @Override
     protected int submitPendingTasks() {
 
         int count = 0
-        def itr = pendingQueue.iterator()
+        def itr = getPendingQueue().iterator()
         List<List> toSubmit = []
         Map<String,WrTaskHandler> handlers = [:]
         while( itr.hasNext() ) {
