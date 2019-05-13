@@ -39,11 +39,11 @@ import nextflow.Session
 import nextflow.executor.BatchCleanup
 
 /**
- * Monitors the queued tasks, adding them to wr and waiting for their termination
+ * Monitors the queued tasks, adding them to wr in batches and waiting for their
+ * termination
  *
  * @author Sendu Bala <sb10@sanger.ac.uk>
  * Based on TaskPollingMonitor by Paolo Di Tommaso <paolo.ditommaso@gmail.com>
- * *** currently quite a bit of direct code duplication from TaskPollingMonitor
  */
 @Slf4j
 @CompileStatic
@@ -104,71 +104,6 @@ class WrMonitor extends TaskPollingMonitor {
         // notify task submission
         session.notifyTaskSubmit(handler)
     }
-
-    /**
-     * Evicts a task from the processing tasks queue
-     *
-     * @param handler
-     *      A {@link TaskHandler} instance
-     * @return
-     *      {@code true} when the specified task was successfully removed from polling queue,
-     *      {@code false} otherwise
-     */
-    // @Override
-    // boolean evict(TaskHandler handler) {
-    //     if( !handler ) {
-    //         return false
-    //     }
-    //     return remove(handler)
-    // }
-
-    /**
-     * Launch the monitoring thread
-     *
-     * @return
-     *      The monitor object itself
-     */
-    // @Override
-    // TaskMonitor start() {
-    //     log.debug ">>> barrier register (monitor: wr)"
-    //     session.barrier.register(this)
-
-    //     this.taskCompleteLock = new ReentrantLock()
-    //     this.taskComplete = taskCompleteLock.newCondition()
-
-    //     this.pendingLock = new ReentrantLock()
-    //     this.taskAvail = pendingLock.newCondition()
-
-    //     // remove pending tasks on termination
-    //     session.onShutdown { this.cleanup() }
-
-    //     // launch the thread polling the queue
-    //     Thread.start('Task monitor') {
-    //         try {
-    //             pollLoop()
-    //         }
-    //         finally {
-    //             log.debug "<<< barrier arrives (monitor: wr)"
-    //             session.barrier.arrive(this)
-    //         }
-    //     }
-
-    //     // launch daemon that submits tasks for execution
-    //     Thread.startDaemon('Task submitter', this.&submitLoop)
-
-    //     return this
-    // }
-
-    
-    /**
-     * Wait for new tasks and submit for execution when a slot is available
-     */
-    // protected void submitLoop() {
-    //     while( true ) {
-    //         awaitTasks()
-    //         submitPendingTasks()
-    //     }
-    // }
 
     /**
      * {@inheritDoc}
