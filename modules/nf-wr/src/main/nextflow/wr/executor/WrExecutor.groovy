@@ -44,11 +44,10 @@ import nextflow.util.ServiceName
 @ServiceName('wr')
 class WrExecutor extends Executor {
 
-    static private String token
-    static private String defaultManagerDir
-    static private String endpoint
-    static private String cacertPath
     static private WrRestApi client
+    static private String managerDir
+    static private String deployment
+    static private String endpoint
 
     @Override
     void register() {
@@ -60,25 +59,37 @@ class WrExecutor extends Executor {
         super.register()
     }
 
-    protected String getDisplayName() {
-        return "$name [$endpoint]"
-    }
-
     WrRestApi getClient() {
         if (!client) {
-            defaultManagerDir = Paths.get(System.getProperty('user.home'), ".wr_production")
+            resolveDeployment()
+            resolveManagerDir()
             endpoint = getEndPoint()
             client = new WrRestApi(endpoint, getToken(), getCacertPath())
         }
         client
     }
 
+    protected String getDisplayName() {
+        return "$name [$endpoint]"
+    }
+
+    protected void resolveDeployment() {
+        deployment = session.getConfigAttribute('executor.wr.deployment', "production")
+        log.debug "[wr] deployment=$deployment"
+    }
+
+    protected void resolveManagerDir() {
+        managerDir = Paths.get(System.getProperty('user.home'), ".wr_$deployment")
+    }
+
     protected String getEndPoint() {
-        // default port that wr listens on is 1021 + (uid * 4) + 1
-        // *** note that this will probably only work on linux/mac os, but wr
-        // probably only works fully on those as well...
-        int uid = ["id", "-u"].execute().text.trim() as Integer
+        // default port that wr listens on is 1021 + (uid * 4) + n
+        // where n is 1 for production and 3 for development
+        int uid = ["id", "-u"].execute().text.trim() as Integer // *** is there a groovy/java built-in for getting uid?
         int port = 1021 + (uid * 4) + 1
+        if (deployment == "development") {
+            port += 2
+        }
 
         def result = session.getConfigAttribute('executor.wr.endpoint', "https://localhost:$port")
         log.debug "[wr] endpoint=$result"
@@ -86,14 +97,14 @@ class WrExecutor extends Executor {
     }
 
     protected String getToken() {
-        String path = session.getConfigAttribute('executor.wr.tokenpath', Paths.get(defaultManagerDir, "client.token"))
+        String path = session.getConfigAttribute('executor.wr.tokenpath', Paths.get(managerDir, "client.token"))
         log.debug "[wr] tokenpath=$path"
         String result = new File(path).text
         return result
     }
 
     protected String getCacertPath() {
-        String path = session.getConfigAttribute('executor.wr.cacertpath', Paths.get(defaultManagerDir, "ca.pem"))
+        String path = session.getConfigAttribute('executor.wr.cacertpath', Paths.get(managerDir, "ca.pem"))
         log.debug "[wr] cacertpath=$path"
         return path
     }
