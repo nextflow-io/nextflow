@@ -23,7 +23,7 @@ import spock.lang.Specification
  * @author Sendu Bala <sb10@sanger.ac.uk>
  * based on K8sClientTest by Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class WrExecutorTest extends Specification {
+class WrRestApiTest extends Specification {
 
     // *** write tests
 

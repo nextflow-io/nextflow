@@ -74,23 +74,38 @@ class WrExecutor extends Executor {
     }
 
     protected void resolveDeployment() {
-        deployment = session.getConfigAttribute('executor.wr.deployment', "production")
+        deployment = session.getConfigAttribute('executor.wr.deployment', 'production')
         log.debug "[wr] deployment=$deployment"
     }
 
+    protected String getHomeDir() {
+        System.getProperty('user.home')
+    }
+
+    protected String getManagerDirBaseName() {
+        ".wr_$deployment"
+    }
+
     protected void resolveManagerDir() {
-        managerDir = Paths.get(System.getProperty('user.home'), ".wr_$deployment")
+        managerDir = Paths.get(getHomeDir(), getManagerDirBaseName())
+    }
+
+    protected Integer getUID() {
+        ["id", "-u"].execute().text.trim() as Integer // *** is there a groovy/java built-in for getting uid?
+    }
+
+    protected Integer getPort(int uid) {
+        // default port that wr listens on is 1021 + (uid * 4) + n
+        // where n is 1 for production and 3 for development
+        int port = 1021 + (uid * 4) + 1
+        if (deployment == 'development') {
+            port += 2
+        }
+        return port
     }
 
     protected String getEndPoint() {
-        // default port that wr listens on is 1021 + (uid * 4) + n
-        // where n is 1 for production and 3 for development
-        int uid = ["id", "-u"].execute().text.trim() as Integer // *** is there a groovy/java built-in for getting uid?
-        int port = 1021 + (uid * 4) + 1
-        if (deployment == "development") {
-            port += 2
-        }
-
+        int port = getPort(getUID())
         def result = session.getConfigAttribute('executor.wr.endpoint', "https://localhost:$port")
         log.debug "[wr] endpoint=$result"
         return result
@@ -110,7 +125,7 @@ class WrExecutor extends Executor {
     }
 
     /**
-     * @return {@code false} whenever the containerization is managed by the executor itself
+     * @return {@code false} whenever the containerization is not managed by the executor itself
      */
     boolean isContainerNative() {
         return false
