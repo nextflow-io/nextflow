@@ -122,7 +122,7 @@ class Const {
 """
       N E X T F L O W
       version ${APP_VER} build ${APP_BUILDNUM}
-      last modified ${APP_TIMESTAMP_UTC} ${deltaLocal()}
+      created ${APP_TIMESTAMP_UTC} ${deltaLocal()}
       cite doi:10.1038/nbt.3820
       http://nextflow.io
 """
