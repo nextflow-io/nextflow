@@ -249,7 +249,7 @@ Read more at these links:
 IntelliJ IDEA
 ---------------
 
-Nextflow development with [IntelliJ IDEA](https://www.jetbrains.com/idea/) requires the latest version of the IDE (2018.3 or higher).
+Nextflow development with [IntelliJ IDEA](https://www.jetbrains.com/idea/) requires the latest version of the IDE (2019.1.2 or later).
 
 If you have it installed in your computer, follow the steps below in order to use it with Nextflow:
 
