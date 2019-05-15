@@ -164,7 +164,7 @@ class CmdInfo extends CmdBase {
         def props = System.getProperties()
         def result = new StringBuilder()
         result << BLANK << "Version: ${Const.APP_VER} build ${Const.APP_BUILDNUM}" << NEWLINE
-        result << BLANK << "Modified: ${Const.APP_TIMESTAMP_UTC} ${Const.deltaLocal()}" << NEWLINE
+        result << BLANK << "Created: ${Const.APP_TIMESTAMP_UTC} ${Const.deltaLocal()}" << NEWLINE
         result << BLANK << "System: ${props['os.name']} ${props['os.version']}" << NEWLINE
         result << BLANK << "Runtime: Groovy ${GroovySystem.getVersion()} on ${System.getProperty('java.vm.name')} ${props['java.runtime.version']}" << NEWLINE
         result << BLANK << "Encoding: ${System.getProperty('file.encoding')} (${System.getProperty('sun.jnu.encoding')})" << NEWLINE
