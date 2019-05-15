@@ -36,9 +36,13 @@ import nextflow.processor.TaskRun
 @Slf4j
 class LsfExecutor extends AbstractGridExecutor {
 
+    static private Pattern KEY_REGEX = ~/^[A-Z_0-9]+=.*/
+
     static private Pattern QUOTED_STRING_REGEX = ~/"((?:[^"\\]|\\.)*)"(\s*#.*)?/
 
     @PackageScope boolean perJobMemLimit
+
+    @PackageScope boolean perTaskReserve
 
     /*
      * If LSF_UNIT_FOR_LIMITS is not defined in lsf.conf, then the default setting is in KB, and for RUSAGE it is MB
@@ -80,15 +84,11 @@ class LsfExecutor extends AbstractGridExecutor {
             // depending a system configuration setting -- see https://www.ibm.com/support/knowledgecenter/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsb_job_memlimit.5.dita
             // When per-process is used (default) the amount of requested memory
             // is divided by the number of used cpus (processes)
-            if( task.config.cpus > 1 && !perJobMemLimit ) {
-                final mem1 = mem.div(task.config.cpus as int)
-                result << '-M' << String.valueOf(mem1.toUnit(memUnit))
-            }
-            else {
-                result << '-M' << String.valueOf(mem.toUnit(memUnit))
-            }
+            def mem1 = ( task.config.cpus > 1 && !perJobMemLimit ) ? mem.div(task.config.cpus as int) : mem
+            def mem2 = ( task.config.cpus > 1 && perTaskReserve ) ? mem.div(task.config.cpus as int) : mem
 
-            result << '-R' << "select[mem>=${mem.toUnit(memUnit)}] rusage[mem=${mem.toUnit(usageUnit)}]".toString()
+            result << '-M' << String.valueOf(mem1.toUnit(memUnit))
+            result << '-R' << "select[mem>=${mem.toUnit(memUnit)}] rusage[mem=${mem2.toUnit(usageUnit)}]".toString()
         }
 
         def disk = task.config.getDisk()
@@ -239,7 +239,7 @@ class LsfExecutor extends AbstractGridExecutor {
             return result
 
         for (def line : envFile.readLines() ){
-            if( !line.startsWith('LSF_') )
+            if( !KEY_REGEX.matcher(line).matches() )
                 continue
             def entry = line.tokenize('=')
             if( entry.size() != 2 )
@@ -274,12 +274,19 @@ class LsfExecutor extends AbstractGridExecutor {
         // per job mem limit
         // https://www.ibm.com/support/knowledgecenter/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsb_job_memlimit.5.dita
         if( conf.get('LSB_JOB_MEMLIMIT') ) {
-            final str = conf.get('LSB_JOB_MEMLIMIT')
-            perJobMemLimit = str == 'y'
+            final str = conf.get('LSB_JOB_MEMLIMIT').toUpperCase()
+            perJobMemLimit = str == 'Y'
             log.debug "[LSF] Detected lsf.conf LSB_JOB_MEMLIMIT=$str ($perJobMemLimit)"
         }
         else {
             perJobMemLimit = session.getExecConfigProp(name, 'perJobMemLimit', false)
+        }
+
+        // per task reserve https://github.com/nextflow-io/nextflow/issues/1071#issuecomment-481412239
+        if( conf.get('RESOURCE_RESERVE_PER_TASK') ) {
+            final str = conf.get('RESOURCE_RESERVE_PER_TASK').toUpperCase()
+            perTaskReserve = str == 'Y'
+            log.debug "[LSF] Detected lsf.conf RESOURCE_RESERVE_PER_TASK=$str ($perJobMemLimit)"
         }
     }
 
