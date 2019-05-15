@@ -74,6 +74,47 @@ class LsfExecutorTest extends Specification {
 
     }
 
+    def testReserveMemPerTask() {
+        given:
+        def WORK_DIR = Paths.get('/work/dir')
+        def executor = Spy(LsfExecutor)
+        def task = Mock(TaskRun)
+        task.workDir >> WORK_DIR
+
+        when:
+        executor.usageUnit = 'KB'
+        executor.perJobMemLimit = true
+        def result = executor.getDirectives(task, [])
+        then:
+        1 * executor.getJobNameFor(task) >> 'foo'
+        _ * task.config >> new TaskConfig(memory: '10MB', cpus: 2)
+        then:
+        result == ['-o', '/work/dir/.command.log',
+                   '-n', '2',
+                   '-R', 'span[hosts=1]', 
+                   '-M', '10240',
+                   '-R', 'select[mem>=10240] rusage[mem=10240]',
+                   '-J', 'foo']
+
+        when:
+        executor.perJobMemLimit = true
+        executor.perTaskReserve = true
+        result = executor.getDirectives(task, [])
+        then:
+        1 * executor.getJobNameFor(task) >> 'foo'
+        _ * task.config >> new TaskConfig(memory: '10MB', cpus: 2)
+        then:
+        result == ['-o', '/work/dir/.command.log',
+                   '-n', '2',
+                   '-R', 'span[hosts=1]',
+                   '-M', '10240',
+                   '-R', 'select[mem>=10240] rusage[mem=5120]',
+                   '-J', 'foo']
+
+
+    }
+
+
     def testHeaders() {
 
         setup:
@@ -529,6 +570,32 @@ class LsfExecutorTest extends Specification {
         executor.usageUnit == 'GB'
     }
 
+    def 'should apply per task reserve' () {
+
+        given:
+        def executor = Spy(LsfExecutor)
+        executor.session = Mock(Session)
+
+        when:
+        executor.register()
+        then:
+        1 * executor.parseLsfConfig() >> [:]
+        !executor.perTaskReserve
+
+        when:
+        executor.register()
+        then:
+        1 * executor.parseLsfConfig() >> ['RESOURCE_RESERVE_PER_TASK': 'n']
+        !executor.perTaskReserve
+
+        when:
+        executor.register()
+        then:
+        1 * executor.parseLsfConfig() >> ['RESOURCE_RESERVE_PER_TASK': 'y']
+        executor.perTaskReserve
+
+    }
+
     def 'should apply lsf per job limit' () {
         given:
         def session = Mock(Session)
@@ -602,6 +669,7 @@ class LsfExecutorTest extends Specification {
         config.LSF_STRIP_DOMAIN == '.cbio.private:.cbio.delta.org:.delta.org'
         config.LSF_MASTER_LIST == "omega-sched01 omega-sched02"
         config.LSF_API_CONNTIMEOUT == '10'
+        config.RESOURCE_RESERVE_PER_TASK == 'Y'
     }
 
 }
