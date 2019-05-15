@@ -16,8 +16,10 @@
 
 package nextflow
 
+import nextflow.trace.TraceObserver
 import spock.lang.Specification
 import spock.lang.Unroll
+import test.MockSession
 
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -493,4 +495,70 @@ class SessionTest extends Specification {
         session.fetchContainers() == 'ngi/rnaseq:1.2'
     }
 
+    def 'should call await on all observers when await is called on itself'() {
+
+        given:
+        def session = new MockSession()
+        def testObserver1 = Mock(TraceObserver)
+        def testObserver2 = Mock(TraceObserver)
+        session.observers = [testObserver1,testObserver2]
+
+        when:
+        session.await()
+
+        then:
+        1 * testObserver1.await()
+        1 * testObserver2.await()
+    }
+
+    def 'should call await on all observers when destroyed'() {
+
+        given:
+        def session = new MockSession()
+        def testObserver1 = Mock(TraceObserver)
+        def testObserver2 = Mock(TraceObserver)
+        session.observers = [testObserver1,testObserver2]
+
+        when:
+        session.start()
+        session.destroy()
+
+        then:
+        1 * testObserver1.await()
+        1 * testObserver2.await()
+    }
+
+    def 'should call await on all observers when cancelled'() {
+
+        given:
+        def session = new MockSession()
+        def testObserver1 = Mock(TraceObserver)
+        def testObserver2 = Mock(TraceObserver)
+        session.observers = [testObserver1,testObserver2]
+
+        when:
+        session.start()
+        session.cancel()
+
+        then:
+        1 * testObserver1.await()
+        1 * testObserver2.await()
+    }
+
+    def 'should call await on all observers when aborted'() {
+
+        given:
+        def session = new MockSession()
+        def testObserver1 = Mock(TraceObserver)
+        def testObserver2 = Mock(TraceObserver)
+        session.observers = [testObserver1,testObserver2]
+
+        when:
+        session.start()
+        session.abort()
+
+        then:
+        1 * testObserver1.await()
+        1 * testObserver2.await()
+    }
 }

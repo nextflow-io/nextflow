@@ -104,4 +104,10 @@ trait TraceObserver {
      *      The associated {@link TraceRecord} fot the current task.
      */
     void onFlowError(TaskHandler handler, TraceRecord trace){}
+
+
+    /**
+     * Await until the observer has emitted all events
+     */
+    void await(){}
 }

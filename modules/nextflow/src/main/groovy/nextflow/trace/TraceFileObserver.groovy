@@ -279,6 +279,13 @@ class TraceFileObserver implements TraceObserver {
     }
 
     /**
+     * Await until the observer has emitted all events
+     */
+    @Override
+    void await() {
+        writer.await()
+    }
+/**
      * Render a {@link TraceRecord} object to a string
      *
      * @param trace

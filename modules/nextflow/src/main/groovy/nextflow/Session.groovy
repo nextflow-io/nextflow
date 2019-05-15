@@ -200,7 +200,7 @@ class Session implements ISession {
 
     private int poolSize
 
-    private List<TraceObserver> observers = Collections.emptyList()
+    protected List<TraceObserver> observers = Collections.emptyList()
 
     private Closure errorAction
 
@@ -676,6 +676,8 @@ class Session implements ISession {
         terminated = true
         monitorsBarrier.awaitCompletion()
         log.debug "Session await > all barriers passed"
+        observers *.await()
+        log.debug "Observers await > all observers have finished"
     }
 
     void destroy() {
@@ -693,6 +695,9 @@ class Session implements ISession {
             execService = null
             log.trace "Session > executor shutdown"
 
+            //wait for all observers to finish processing
+            observers *.await()
+
             // -- close db
             cache?.close()
 
@@ -700,7 +705,7 @@ class Session implements ISession {
             shutdownS3Uploader()
 
             // -- cleanup script classes dir
-            classesDir.deleteDir()
+            classesDir?.deleteDir()
         }
         finally {
             // -- update the history file
@@ -786,6 +791,7 @@ class Session implements ISession {
         executorFactory.signalExecutors()
         processesBarrier.forceTermination()
         allOperators *. terminate()
+        observers *. await()
     }
 
     /**
@@ -809,6 +815,8 @@ class Session implements ISession {
             processesBarrier.forceTermination()
             monitorsBarrier.forceTermination()
             operatorsForceTermination()
+            //wait for all observers to finish
+            observers *. await()
         }
         catch( Throwable e ) {
             log.debug "Unexpected error while aborting execution", e

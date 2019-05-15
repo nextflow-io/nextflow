@@ -179,6 +179,13 @@ class WebLogObserver implements TraceObserver{
     }
 
     /**
+     * Wait for the agent responsible for sending messages to finish.
+     */
+    @Override
+    void await() {
+        webLogAgent?.await()
+    }
+/**
      * Little helper method that sends a HTTP POST message as JSON with
      * the current run status, ISO 8601 UTC timestamp, run name and the TraceRecord
      * object, if present.
