@@ -41,8 +41,8 @@ class WebLogObserverTest extends Specification {
     def 'send message on different workflow events' () {
 
         given:
-        def httpPostObserver0 = Spy(WebLogObserver, constructorArgs: ["http://localhost"])
-        def workflowMeta = Mock(WorkflowMetadata)
+        WebLogObserver httpPostObserver0 = Spy(WebLogObserver, constructorArgs: ["http://localhost"])
+        WorkflowMetadata workflowMeta = Mock(WorkflowMetadata)
 
         def bindingStub = Mock(ScriptBinding){
             getProperty('params') >> new ScriptBinding.ParamsMap()
@@ -59,16 +59,15 @@ class WebLogObserverTest extends Specification {
         when:
         def payload = WebLogObserver.createFlowPayloadFromSession(sessionStub)
         httpPostObserver0.onFlowStart(sessionStub)
-        httpPostObserver0.onFlowComplete()
         httpPostObserver0.onProcessSubmit(handlerStub, traceStub)
         httpPostObserver0.onProcessStart(handlerStub, traceStub)
         httpPostObserver0.onProcessComplete(handlerStub, traceStub)
         httpPostObserver0.onFlowError(handlerStub, traceStub)
+        httpPostObserver0.onFlowComplete()
 
         then:
         assert payload.workflow instanceof WorkflowMetadata
-        noExceptionThrown()
-        6 * httpPostObserver0.asyncHttpMessage(!null, !null)
+        6 * httpPostObserver0.asyncHttpMessage(!null, !null) >> null
 
     }
 
