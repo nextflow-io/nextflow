@@ -132,6 +132,7 @@ class WebLogObserver implements TraceObserver{
     @Override
     void onFlowComplete() {
         asyncHttpMessage("completed", createFlowPayloadFromSession(this.session))
+        webLogAgent.await()
     }
 
     /**
