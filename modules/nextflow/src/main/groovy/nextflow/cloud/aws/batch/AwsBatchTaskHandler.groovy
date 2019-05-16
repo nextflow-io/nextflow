@@ -37,7 +37,6 @@ import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.TerminateJobRequest
 import com.amazonaws.services.batch.model.Volume
-import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.processor.BatchContext
@@ -119,20 +118,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     /**
      * @return An instance of {@link AwsOptions} holding Batch specific settings
      */
-    @Memoized
-    protected AwsOptions getAwsOptions() {
-
-        final name = executor.name
-
-        new AwsOptions(
-                cliPath: executor.getSession().getExecConfigProp(name,'awscli',null) as String,
-                storageClass: executor.getSession().config.navigate('aws.client.uploadStorageClass') as String,
-                storageEncryption: executor.getSession().config.navigate('aws.client.storageEncryption') as String,
-                remoteBinDir: executor.remoteBinDir as String,
-                region: executor.getSession().config.navigate('aws.region') as String
-        )
-
-    }
+    protected AwsOptions getAwsOptions() { executor.getAwsOptions() }
 
     /**
      * Set the batch collector object. This has not to be confused AWSBatch.
@@ -373,6 +359,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     protected RegisterJobDefinitionRequest makeJobDefRequest(String image) {
         final name = normalizeJobDefinitionName(image)
         final result = new RegisterJobDefinitionRequest()
+        final opts = getAwsOptions()
         result.setJobDefinitionName(name)
         result.setType(JobDefinitionType.Container)
 
@@ -385,19 +372,19 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                 .withMemory(1024)
                 .withVcpus(1)
 
-        final jobRole = executor.getJobRole()
+        final jobRole = opts.getJobRole()
         if( jobRole )
             container.setJobRoleArn(jobRole)
         
         final mountsMap = new LinkedHashMap( 10)
-        final awscli = getAwsOptions().cliPath
+        final awscli = opts.cliPath
         if( awscli ) {
             def path = Paths.get(awscli).parent.parent.toString()
             mountsMap.put('aws-cli', "$path:$path:ro")
         }
 
         int c=0
-        final volumes = executor.getVolumes()
+        final volumes = opts.getVolumes()
         for( String vol : volumes ) {
             mountsMap.put("vol-"+(++c), vol)
         }

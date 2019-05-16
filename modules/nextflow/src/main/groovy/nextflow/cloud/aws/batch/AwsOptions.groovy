@@ -46,13 +46,46 @@ class AwsOptions {
 
     int maxParallelTransfers = MAX_TRANSFER
 
-    AwsOptions() { }
+    /**
+     * The job role ARN that should be used
+     */
+    String jobRole
+
+    /**
+     * Volume mounts
+     */
+    List<String> volumes
+
+    List<String> getVolumes() { volumes != null ? Collections.unmodifiableList(volumes) : Collections.<String>emptyList() }
+
+    /* Only for testing purpose */
+    protected AwsOptions() { }
+
+    AwsOptions( AwsBatchExecutor executor ) {
+        this(executor.session)
+        this.remoteBinDir = executor.getRemoteBinDir()
+    }
 
     AwsOptions(Session session) {
+        cliPath = getCliPath0(session)
         storageClass = session.config.navigate('aws.client.uploadStorageClass') as String
         storageEncryption = session.config.navigate('aws.client.storageEncryption') as String
         maxParallelTransfers = session.config.navigate('aws.batch.maxParallelTransfers', MAX_TRANSFER) as int
         region = session.config.navigate('aws.region') as String
+        volumes = makeVols(session.config.navigate('aws.batch.volumes'))
+        jobRole = session.config.navigate('aws.batch.jobRole')
+    }
+
+    protected String getCliPath0(Session session) {
+        def result = session.config.navigate('aws.batch.cliPath')
+        if( result )
+            return result
+
+        result = session.getExecConfigProp('awsbatch','awscli',null) as String
+        if( result ) {
+            log.warn "Config setting `executor.awscli` has been deprecated -- Use instead `aws.batch.cliPath`"
+        }
+        return result
     }
 
     void setStorageClass(String value) {
@@ -89,4 +122,15 @@ class AwsOptions {
         if( region ) result += " --region $region"
         return result
     }
+
+    protected List<String> makeVols(obj) {
+        if( !obj )
+            return Collections.emptyList()
+        if( obj instanceof List )
+            return obj
+        if( obj instanceof CharSequence )
+            return obj.toString().tokenize(',').collect { it.trim() }
+        throw new IllegalArgumentException("Not a valid `aws.batch.volumes` value: $obj [${obj.getClass().getName()}]")
+    }
+
 }

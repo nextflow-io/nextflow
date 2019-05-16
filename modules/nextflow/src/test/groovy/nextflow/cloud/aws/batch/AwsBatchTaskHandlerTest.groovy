@@ -16,9 +16,6 @@
 
 package nextflow.cloud.aws.batch
 
-import spock.lang.Specification
-import spock.lang.Unroll
-
 import java.nio.file.Paths
 
 import com.amazonaws.services.batch.AWSBatch
@@ -36,13 +33,13 @@ import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.TerminateJobRequest
-import nextflow.Session
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.processor.BatchContext
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -63,74 +60,6 @@ class AwsBatchTaskHandlerTest extends Specification {
         looong.size() == 150
         result.size() == 128
         result == looong.substring(0,128)
-    }
-
-    @Unroll
-    def 'should return aws options'() {
-        given:
-        def cfg = [
-                aws: [client: [
-                        uploadStorageClass: awsStorClass,
-                        storageEncryption  : awsStorEncrypt]],
-                executor: [
-                        awscli: awscliPath
-                ]
-        ]
-        def session = new Session(cfg)
-        def executor = Mock(AwsBatchExecutor)
-
-        def handler = new AwsBatchTaskHandler(executor: executor)
-
-        when:
-        def opts = handler.getAwsOptions()
-        then:
-        executor.getSession() >> session
-        opts.cliPath == awscliPath
-        opts.storageClass == awsStorClass
-        opts.storageEncryption == awsStorEncrypt
-
-        where:
-        awscliPath      | awsStorClass | awsStorEncrypt
-        null            | null         | null
-        '/foo/bin/aws'  | 'STANDARD'   | 'AES256'
-
-    }
-
-    def 'should validate aws options' () {
-
-        when:
-        def opts = new AwsOptions()
-        then:
-        opts.getCliPath() == null
-        opts.getStorageClass() == null
-        opts.getStorageEncryption() == null
-
-        when:
-        opts = new AwsOptions(cliPath: '/foo/bin/aws', storageClass: 'STANDARD', storageEncryption: 'AES256')
-        then:
-        opts.getCliPath() == '/foo/bin/aws'
-        opts.getStorageClass() == 'STANDARD'
-        opts.getStorageEncryption() == 'AES256'
-
-        when:
-        opts = new AwsOptions(storageClass: 'foo')
-        then:
-        opts.getStorageClass() == null
-
-        when:
-        opts = new AwsOptions(storageEncryption: 'abr')
-        then:
-        opts.getStorageEncryption() == null
-
-        when:
-        new AwsOptions(cliPath: 'bin/aws')
-        then:
-        thrown(ProcessUnrecoverableException)
-
-        when:
-        new AwsOptions(cliPath: '/foo/aws')
-        then:
-        thrown(ProcessUnrecoverableException)
     }
 
 
@@ -525,6 +454,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def IMAGE = 'foo/bar:1.0'
         def JOB_NAME = 'nf-foo-bar-1-0'
         def executor = Mock(AwsBatchExecutor)
+        def opts = Mock(AwsOptions)
         def handler = Spy(AwsBatchTaskHandler)
         handler.executor = executor 
 
@@ -532,8 +462,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         def result = handler.makeJobDefRequest(IMAGE)
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
-        1 * handler.getAwsOptions() >> new AwsOptions()
-        1 * executor.getVolumes() >> ['/tmp', '/here:/there:ro']
+        1 * handler.getAwsOptions() >> opts
+        1 * opts.getVolumes() >> ['/tmp', '/here:/there:ro']
         then:
         result.containerProperties.mountPoints.size() == 2
         result.containerProperties.volumes.size() == 2
@@ -552,6 +482,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def ROLE = 'aws::foo::bar'
         def IMAGE = 'foo/bar:1.0'
         def JOB_NAME = 'nf-foo-bar-1-0'
+        def opts = Mock(AwsOptions)
         def executor = Mock(AwsBatchExecutor)
         def handler = Spy(AwsBatchTaskHandler)
         handler.executor = executor
@@ -559,9 +490,9 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def result = handler.makeJobDefRequest(IMAGE)
         then:
-        1 * executor.getJobRole() >> ROLE
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
-        1 * handler.getAwsOptions() >> new AwsOptions()
+        1 * handler.getAwsOptions() >> opts
+        1 * opts.getJobRole() >> ROLE
 
         then:
         result.getContainerProperties().getJobRoleArn() == ROLE
