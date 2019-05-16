@@ -507,6 +507,7 @@ Advanced Batch configuration options can be set by using the ``batch`` attribute
 =========================== ================
 Name                        Description
 =========================== ================
+cliPath                     The path where the AWS command line tool is installed in the host AMI. 
 jobRole                     The AWS Job Role ARN that needs to be used to execute the Batch Job.
 maxParallelTransfers        Max parallel upload/download transfer operations *per job* (default: ``16``).
 volumes                     One or more container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. ``/host/path:/mount/path[:ro|rw]``. Multiple mounts can be specifid separating them with a comma or using a list object.
