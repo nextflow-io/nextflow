@@ -67,19 +67,9 @@ class AwsBatchExecutor extends Executor {
      */
     private Path remoteBinDir = null
 
-    /**
-     * Volume mounts
-     */
-    private List<String> volumes
+    private AwsOptions awsOptions
 
-    /**
-     * The job role ARN that should be used
-     */
-    private String jobRole
-
-    List<String> getVolumes() { Collections.unmodifiableList(volumes) }
-
-    String getJobRole() { jobRole }
+    AwsOptions getAwsOptions() {  awsOptions  }
 
     /**
      * @return {@code true} to signal containers are managed directly the AWS Batch service
@@ -124,12 +114,6 @@ class AwsBatchExecutor extends Executor {
         }
 
         /*
-         * fetch other settings
-         */
-        volumes = makeVols(session.config.navigate('aws.batch.volumes'))
-        jobRole = session.config.navigate('aws.batch.jobRole')
-
-        /*
          * retrieve config and credentials and create AWS client
          */
         final driver = new AmazonCloudDriver(session.config)
@@ -138,6 +122,9 @@ class AwsBatchExecutor extends Executor {
          * create a proxy for the aws batch client that manages the request throttling 
          */
         client = new AwsBatchProxy(driver.getBatchClient(), submitter)
+
+        // create the options object
+        awsOptions = new AwsOptions(this)
     }
 
     @PackageScope
@@ -228,16 +215,6 @@ class AwsBatchExecutor extends Executor {
 
     @PackageScope
     ThrottlingExecutor getReaper() { reaper }
-
-    List<String> makeVols(obj) {
-        if( !obj )
-            return Collections.emptyList()
-        if( obj instanceof List )
-            return obj
-        if( obj instanceof CharSequence )
-            return obj.toString().tokenize(',').collect { it.trim() }
-        throw new IllegalArgumentException("Not a valid `batch.volumes` value: $obj [${obj.getClass().getName()}]")
-    }
 
 }
 

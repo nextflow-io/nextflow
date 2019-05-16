@@ -16,8 +16,12 @@
 
 package nextflow.cloud.aws.batch
 
+import java.nio.file.Paths
+
 import nextflow.Session
+import nextflow.exception.ProcessUnrecoverableException
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -64,4 +68,126 @@ class AwsOptionsTest extends Specification {
         opts.maxParallelTransfers == 5
 
     }
+
+    def 'should get aws options' () {
+        given:
+        def sess = Mock(Session)  {
+            getConfig() >> [aws:
+                                [
+                                    batch:[
+                                        cliPath: '/foo/bar/aws',
+                                        maxParallelTransfers: 5,
+                                        jobRole: 'aws::foo::bar',
+                                        volumes: '/foo,/this:/that'],
+                                    client: [
+                                        uploadStorageClass: 'my-store-class',
+                                        storageEncryption: 'my-ecrypt-class'],
+                                    region: 'aws-west-2'
+                                ]
+            ]
+        }
+
+        def exec = Mock(AwsBatchExecutor)
+        exec.getSession() >> sess
+        exec.getRemoteBinDir() >> Paths.get('/remote/bin/path')
+
+        when:
+        def opts = new AwsOptions(sess)
+        then:
+        opts.maxParallelTransfers == 5
+        opts.storageClass == 'my-store-class'
+        opts.storageEncryption == 'my-ecrypt-class'
+        opts.region == 'aws-west-2'
+        opts.jobRole == 'aws::foo::bar'
+        opts.volumes == ['/foo','/this:/that']
+
+        when:
+        opts = new AwsOptions(exec)
+        then:
+        opts.remoteBinDir == '/remote/bin/path'
+
+    }
+
+    def 'should parse volumes list' () {
+
+        given:
+        def executor = Spy(AwsOptions)
+
+        expect:
+        executor.makeVols(OBJ) == EXPECTED
+
+        where:
+        OBJ             | EXPECTED
+        null            | []
+        'foo'           | ['foo']
+        'foo, bar'      | ['foo','bar']
+        ['/this','/that'] | ['/this','/that']
+
+    }
+
+
+    @Unroll
+    def 'should return aws options'() {
+        given:
+        def cfg = [
+                aws: [client: [
+                        uploadStorageClass: awsStorClass,
+                        storageEncryption  : awsStorEncrypt]],
+                executor: [
+                        awscli: awscliPath
+                ]
+        ]
+        def session = new Session(cfg)
+
+        when:
+        def opts = new AwsOptions(session)
+        then:
+        opts.cliPath == awscliPath
+        opts.storageClass == awsStorClass
+        opts.storageEncryption == awsStorEncrypt
+
+        where:
+        awscliPath      | awsStorClass | awsStorEncrypt
+        null            | null         | null
+        '/foo/bin/aws'  | 'STANDARD'   | 'AES256'
+
+    }
+
+    def 'should validate aws options' () {
+
+        when:
+        def opts = new AwsOptions()
+        then:
+        opts.getCliPath() == null
+        opts.getStorageClass() == null
+        opts.getStorageEncryption() == null
+
+        when:
+        opts = new AwsOptions(cliPath: '/foo/bin/aws', storageClass: 'STANDARD', storageEncryption: 'AES256')
+        then:
+        opts.getCliPath() == '/foo/bin/aws'
+        opts.getStorageClass() == 'STANDARD'
+        opts.getStorageEncryption() == 'AES256'
+
+        when:
+        opts = new AwsOptions(storageClass: 'foo')
+        then:
+        opts.getStorageClass() == null
+
+        when:
+        opts = new AwsOptions(storageEncryption: 'abr')
+        then:
+        opts.getStorageEncryption() == null
+
+        when:
+        new AwsOptions(cliPath: 'bin/aws')
+        then:
+        thrown(ProcessUnrecoverableException)
+
+        when:
+        new AwsOptions(cliPath: '/foo/aws')
+        then:
+        thrown(ProcessUnrecoverableException)
+    }
+
 }
