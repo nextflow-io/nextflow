@@ -107,7 +107,13 @@ class ProcessDef extends BindableDef implements ChainableDef {
 
     String getName() { name }
 
-    def getOutput() { output }
+    @Deprecated
+    def getOutput() {
+        log.warn "Property output has been deprecated use `${name}.out` instead"
+        output
+    }
+
+    def getOut() { output }
 
     String getType() { 'process' }
 

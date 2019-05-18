@@ -28,7 +28,6 @@ import nextflow.dag.NodeMarker
 import nextflow.script.ChainableDef
 import nextflow.script.ChannelArrayList
 import nextflow.script.CompositeDef
-import nextflow.script.ExecutionStack
 /**
  * Implements dataflow channel extension methods
  *
@@ -139,9 +138,9 @@ class ChannelEx {
     static private void checkContext(String method, Object operand) {
         if( !NF.isDsl2() )
             throw new MissingMethodException(method, operand.getClass())
-
-        if( !ExecutionStack.withinWorkflow() )
-            throw new IllegalArgumentException("Process invocation are only allowed within a workflow context")
+//
+//        if( !ExecutionStack.withinWorkflow() )
+//            throw new IllegalArgumentException("Process invocation are only allowed within a workflow context")
     }
 
     static Object or(DataflowWriteChannel left, ChainableDef right ) {

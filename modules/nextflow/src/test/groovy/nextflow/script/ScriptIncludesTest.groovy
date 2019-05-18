@@ -16,14 +16,12 @@
 
 package nextflow.script
 
-import spock.lang.Specification
-
 import java.nio.file.Files
 
 import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.NextflowMeta
 import nextflow.exception.DuplicateModuleIncludeException
-import nextflow.exception.IllegalInvocationException
+import spock.lang.Specification
 import test.MockScriptRunner
 import test.TestHelper
 /**
@@ -503,7 +501,7 @@ class ScriptIncludesTest extends Specification {
         result.val == 'echo Hola mundo'
     }
 
-    def 'should fail when invoking a process in a module' () {
+    def 'should not fail when invoking a process in a module' () {
         given:
         def folder = TestHelper.createInMemTempDir()
         def MODULE = folder.resolve('module.nf')
@@ -526,7 +524,7 @@ class ScriptIncludesTest extends Specification {
         def runner = new MockScriptRunner()
         runner.setScript(SCRIPT).execute()
         then:
-        thrown(IllegalInvocationException)
+        noExceptionThrown()
     }
 
     def 'should include modules' () {
