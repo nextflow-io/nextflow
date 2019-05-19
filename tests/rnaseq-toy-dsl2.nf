@@ -29,12 +29,12 @@ process buildIndex {
  */
 process mapping {     
     input:
-    file index
     file genome
-    set pair_id, file(reads) from read_pairs
+    file index
+    set pair_id, file(reads)
  
     output:
-    set pair_id, "tophat_out/accepted_hits.bam" into bam_files
+    set pair_id, "tophat_out/accepted_hits.bam"
  
     """
     tophat2 genome.index ${reads}
@@ -49,10 +49,10 @@ process makeTranscript {
     publishDir "results"
     
     input:
-    set pair_id, bam_file from bam_files
+    set pair_id, bam_file
      
     output:
-    set pair_id, 'transcripts.gtf' into transcripts
+    set pair_id, 'transcripts.gtf'
 
     """
     cufflinks ${bam_file}
@@ -65,6 +65,9 @@ process makeTranscript {
 genome_file = file(params.genome)
 read_pairs = Channel.fromFilePairs( params.reads, checkIfExists: true )
 
-buildIndex(genome_file) \
- | mapping(genome_file, read_pairs) \
- | makeTranscript
+/*
+ * main flow
+ */
+buildIndex(genome_file)
+mapping(genome_file, buildIndex.out, read_pairs)
+makeTranscript(mapping.out)

@@ -28,6 +28,8 @@ import nextflow.dag.NodeMarker
 import nextflow.script.ChainableDef
 import nextflow.script.ChannelArrayList
 import nextflow.script.CompositeDef
+import org.codehaus.groovy.runtime.InvokerHelper
+
 /**
  * Implements dataflow channel extension methods
  *
@@ -138,19 +140,101 @@ class ChannelEx {
     static private void checkContext(String method, Object operand) {
         if( !NF.isDsl2() )
             throw new MissingMethodException(method, operand.getClass())
-//
-//        if( !ExecutionStack.withinWorkflow() )
-//            throw new IllegalArgumentException("Process invocation are only allowed within a workflow context")
+        //
+        //if( !ExecutionStack.withinWorkflow() )
+        //    throw new IllegalArgumentException("Process invocation are only allowed within a workflow context")
     }
 
-    static Object or(DataflowWriteChannel left, ChainableDef right ) {
+    /**
+     * Implements pipe operation between a channel and a process or a sub-workflow
+     *
+     * @param left A dataflow channel instance
+     * @param right A {@link ChainableDef} object eg. a nextflow process
+     * @return The channel resulting the pipe operation
+     */
+    static Object or(DataflowWriteChannel left, ChainableDef right) {
         checkContext('or', left)
         return right.invoke_o(left)
     }
 
-    static Object or( DataflowWriteChannel left, OpCall operator ) {
+    /**
+     * Implements pipe operation between a channel WITH a operator
+     *
+     * @param left A {@code DataflowWriteChannel} channel as left operand
+     * @param right A {@code OpCall} object representing a operator call as right operand
+     * @return The resulting channel object
+     */
+    static Object or(DataflowWriteChannel left, OpCall right) {
         checkContext('or', left)
-        operator.setSource(left).call()
+        return right.setSource(left).call()
+    }
+
+    /**
+     * Implements pipe operation between a multi-channels WITH a process or a sub-workflow
+     *
+     * @param left A {@code ChannelArrayList} multi-channel object as left operand
+     * @param right A {@code ChainableDef} object representing a process or sub-workflow call as right operand
+     * @return The resulting channel object
+     */
+    static Object or(ChannelArrayList left, ChainableDef right) {
+        checkContext('or', left)
+        return right.invoke_o(left)
+    }
+
+    /**
+     * Implements pipe operation between a multi-channels WITH a operator
+     *
+     * @param left A {@code ChannelArrayList} multi-channel object as left operand
+     * @param right A {@code OpCall} object representing a operator call as right operand
+     * @return The resulting channel object
+     */
+    static Object or(ChannelArrayList left, OpCall right) {
+        checkContext('or', left)
+        if( right.args.size() )
+            throw new IllegalArgumentException("Process multi-output channel cannot be piped with operator ${right.methodName} for which argument is akready provided")
+
+        right
+            .setSource(left[0] as DataflowWriteChannel)
+            .setArgs(left[1..-1] as Object[])
+            .call()
+    }
+
+    /**
+     * Implements pipe operation between a process or sub-workflow WITH a operator
+     *
+     * @param left A {@code ChainableDef} object representing a process or sub-workflow call as left operand
+     * @param right A {@code OpCall} object representing a operator call as right operand
+     * @return The resulting channel object
+     */
+    static Object or(ChainableDef left, OpCall right) {
+        def out = left.invoke_a(InvokerHelper.EMPTY_ARGS)
+
+        if( out instanceof DataflowWriteChannel )
+            return or(out, right)
+
+        if( out instanceof ChannelArrayList )
+            return or(out, right)
+
+        throw new MissingMethodException('or', out.getClass(), [right] as Object[])
+    }
+
+    /**
+     * Implements pipe operation between a process or sub-workflow WITH another process or sub-workflow
+     *
+     * @param left A {@code ChainableDef} object representing a process or sub-workflow call as left operand
+     * @param right A {@code ChainableDef} object representing a process or sub-workflow call as right operand
+     * @return
+     */
+    static Object or(ChainableDef left, ChainableDef right) {
+        def out = left.invoke_a(InvokerHelper.EMPTY_ARGS)
+
+        if( out instanceof DataflowWriteChannel )
+            return or(out, right)
+
+        if( out instanceof ChannelArrayList )
+            return or(out, right)
+
+        throw new MissingMethodException('or', out.getClass(), [right] as Object[])
     }
 
     static CompositeDef and(ChainableDef left, ChainableDef right) {

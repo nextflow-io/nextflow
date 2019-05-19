@@ -19,6 +19,7 @@ package nextflow.script.params
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.NF
 import nextflow.extension.ChannelFactory
 import nextflow.script.ProcessConfig
 import nextflow.script.TokenVar
@@ -54,7 +55,9 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
     void lazyInit() {
 
         if( intoObj instanceof TokenVar[] ) {
-            intoObj.each { lazyInitImpl(it) }
+            if(NF.isDsl2())
+                throw new IllegalArgumentException("Not a valid output channel argument: intoObj")
+            for( def it : intoObj ) { lazyInitImpl(it) }
         }
         else if( intoObj != null ) {
             lazyInitImpl(intoObj)

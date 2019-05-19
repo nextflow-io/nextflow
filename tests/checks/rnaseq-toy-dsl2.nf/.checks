@@ -1,9 +1,10 @@
 set -e
-
+export NXF_ANSI_LOG=false
+export IMG=nextflow/rnatoy@sha256:9ac0345b5851b2b20913cb4e6d469df77cf1232bafcadf8fd929535614a85c75
 #
 # run normal mode
 #
-$NXF_RUN -with-docker nextflow/rnatoy | tee stdout
+$NXF_RUN -with-docker $IMG | tee stdout
 
 [[ `grep INFO .nextflow.log | grep -c 'Submitted process > mapping'` == 2 ]] || false
 [[ `grep INFO .nextflow.log | grep -c 'Submitted process > buildIndex'` == 1 ]] || false
@@ -13,7 +14,7 @@ $NXF_RUN -with-docker nextflow/rnatoy | tee stdout
 #
 # run resume mode
 #
-$NXF_RUN -with-docker nextflow/rnatoy -resume | tee stdout
+$NXF_RUN -with-docker $IMG -resume | tee stdout
 
 [[ `grep INFO .nextflow.log | grep -c 'Cached process > mapping'` == 2 ]] || false
 [[ `grep INFO .nextflow.log | grep -c 'Cached process > buildIndex'` == 1 ]] || false

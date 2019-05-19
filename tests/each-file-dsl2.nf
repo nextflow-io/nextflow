@@ -3,7 +3,6 @@ nextflow.preview.dsl=2
 
 process foo {
   echo true
-
   tag "$x"
 
   input:
@@ -12,7 +11,6 @@ process foo {
   """
   grep '>' $x
   """
-
 }
 
 
