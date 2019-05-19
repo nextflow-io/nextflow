@@ -67,7 +67,7 @@ This is important to identify possible overlaps with other planned features and 
 When submitting a contribution, you will be required to sign a [Developer Certificate of Origin (DCO)](https://developercertificate.org/) to certify that you are the author of the source code or otherwise you have the right to submit it to the project. 
 
 Contributor signatures are provided by adding a `Signed-off-by` line to the commit message 
-as shown below, or by using the `-S` option for the [git commit command](https://help.github.com/articles/signing-commits/).
+as shown below, or by using the `-s` option for the [git commit command](https://help.github.com/articles/signing-commits/).
 
 ```
 This is my commit message
@@ -102,4 +102,4 @@ Nextflow does not impose a strict code formatting style, however the following s
     * *all other imports*
     * *all other static imports*
 
-New files must include the appropriate license header boilerplate and the author name(s) and contact email(s) ([see for example](https://github.com/nextflow-io/nextflow/blob/master/src/main/groovy/nextflow/Const.groovy)).
+New files must include the appropriate license header boilerplate and the author name(s) and contact email(s) ([see for example](https://github.com/nextflow-io/nextflow/blob/e8945e8b6fc355d3f2eec793d8f288515db2f409/modules/nextflow/src/main/groovy/nextflow/Const.groovy#L1-L15)).
