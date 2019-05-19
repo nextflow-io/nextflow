@@ -20,7 +20,9 @@ import static nextflow.Const.*
 
 import java.lang.reflect.Field
 import java.nio.file.NoSuchFileException
+import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.regex.Pattern
 
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.LoggerContext
@@ -60,6 +62,7 @@ import nextflow.script.ChainableDef
 import nextflow.script.ComponentDef
 import nextflow.script.CompositeDef
 import nextflow.script.FunctionDef
+import nextflow.script.ScriptMeta
 import nextflow.script.WorkflowBinding
 import nextflow.script.WorkflowDef
 import org.apache.commons.lang.exception.ExceptionUtils
@@ -400,13 +403,11 @@ class LoggerHelper {
      * Find out the script line where the error has thrown
      */
     static protected void appendFormattedMessage( StringBuilder buffer, ILoggingEvent event, Throwable fail, Session session) {
-
-        final scriptName = session?.scriptName
-        final className = session?.scriptClassName
+        final className = session?.script?.getClass()?.getName()
         final message = event.getFormattedMessage()
         final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException || ScriptRuntimeException
-        List error = fail ? findErrorLine(fail, className) : null
         final normalize = { String str -> str ?. replace("${className}.", '')}
+        List error = fail ? findErrorLine(fail, ScriptMeta.allScriptNames()) : null
 
         // error string is not shown for abort operation
         if( !quiet ) {
@@ -441,7 +442,7 @@ class LoggerHelper {
 
         // extra formatting
         if( error ) {
-            buffer.append(" -- Check script '${scriptName}' at line: ${error[1]} or see '${logFileName}' file for more details")
+            buffer.append(" -- Check script '${error[0]}' at line: ${error[1]} or see '${logFileName}' file for more details")
             buffer.append(CoreConstants.LINE_SEPARATOR)
         }
         else if( logFileName && !quiet ) {
@@ -504,25 +505,38 @@ class LoggerHelper {
         return msg
     }
 
-    static @PackageScope List<String> findErrorLine( Throwable e, String scriptName ) {
+    static @PackageScope List<String> findErrorLine( Throwable e, Map<String, Path> allNames ) {
         def lines = ExceptionUtils.getStackTrace(e).split('\n')
         List error = null
         for( String str : lines ) {
-            if( (error=getErrorLine(str,scriptName))) {
+            if( (error=getErrorLine(str,allNames))) {
                 break
             }
         }
         return error
     }
 
-    @PackageScope
-    static List<String> getErrorLine( String line, String scriptName = null) {
-        if( scriptName==null )
-            scriptName = /.+\.nf/
+    static private Pattern ERR_LINE_REGEX = ~/\((Script_[0-9a-f]{8}):(\d*)\)$/
 
-        def pattern = ~/.*\(($scriptName):(\d*)\).*/
-        def m = pattern.matcher(line)
-        return m.matches() ? [m.group(1), m.group(2)] : null
+    @PackageScope
+    static List<String> getErrorLine( String str, Map<String,Path> allNames ) {
+        def m = ERR_LINE_REGEX.matcher(str)
+        if( m.find() ) {
+            def name = m.group(1)
+            def line = m.group(2)
+            if( allNames[name] ) {
+                final pwd = System.getProperty("user.dir")
+                def script = allNames[name].toUriString()
+                if( script.startsWith(pwd) ) {
+                    script = script.substring(pwd.length())
+                    while( script.startsWith('/') )
+                        script = script.substring(1)
+                }
+
+                return [ script, line ]
+            }
+        }
+        return null
     }
 
     /**

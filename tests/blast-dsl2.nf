@@ -24,7 +24,7 @@ process sort {
     file 'hits_*'
 
     output:
-    stdout result
+    stdout()
 
     """
     sort hits_*

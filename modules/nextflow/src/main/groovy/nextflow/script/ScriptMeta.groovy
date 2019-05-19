@@ -49,6 +49,13 @@ class ScriptMeta {
         REGISTRY.get(script)
     }
 
+    static Map<String,Path> allScriptNames() {
+        def result = new HashMap(REGISTRY.size())
+        for( Map.Entry<BaseScript,ScriptMeta> entry : REGISTRY )
+            result.put(entry.key.getClass().getName(), entry.value.scriptPath)
+        return result
+    }
+
     static ScriptMeta current() {
         get(ExecutionStack.script())
     }
