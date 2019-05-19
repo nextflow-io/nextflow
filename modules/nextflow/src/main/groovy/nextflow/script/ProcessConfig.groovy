@@ -485,7 +485,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     OutParam _out_stdout( obj = null ) {
         def result = new StdOutParam(this).bind('-')
         if( obj ) {
-            if(NF.isDsl2()) throw new ScriptRuntimeException("Process `stdout` output channel should not be specified when using DSL 2 -- Just use `stdout()`")
+            if(NF.isDsl2()) throw new ScriptRuntimeException("Process `stdout` output channel should not be specified when using DSL 2 -- Use `stdout()` instead")
             result.into(obj)
         }
         result

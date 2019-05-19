@@ -33,7 +33,7 @@ process reverse {
     file x 
     
     output:
-    stdout result
+    stdout()
 
     """
     cat $x | rev
