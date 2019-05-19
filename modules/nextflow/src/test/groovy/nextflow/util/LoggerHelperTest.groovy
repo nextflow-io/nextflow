@@ -16,10 +16,16 @@
 
 package nextflow.util
 
-import spock.lang.Specification
-
 import ch.qos.logback.classic.Level
+import groovyx.gpars.dataflow.DataflowQueue
+import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.cli.CliOptions
+import nextflow.extension.OpCall
+import nextflow.script.BaseScript
+import nextflow.script.ScriptBinding
+import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -105,5 +111,36 @@ class LoggerHelperTest extends Specification {
         'f'     | true
         'g'     | false
         'z'     | false
+    }
+
+    @Unroll
+    def 'should get method error string' () {
+
+        when:
+        def ex = new MissingMethodException(METHOD, CLAZZ)
+        def result = LoggerHelper.getMissingMethodMessage(ex)
+        then:
+        result == MSG
+
+        where:
+        CLAZZ           | METHOD        | MSG
+        ScriptBinding   | 'printx'      | 'Unknown method `printx` invocation'
+        BaseScript      | 'printq'      | 'Unknown method `printq` invocation -- Did you mean?\n  print\n  printf'
+        DataflowQueue   | 'view'        | 'Unknown method `view` invocation on channel type'
+    }
+
+    @Unroll
+    def 'should return type message' () {
+        expect:
+        LoggerHelper.fmtType(TYPE) == MSG
+
+        where:
+        TYPE             | MSG
+        DataflowQueue    | 'channel type'
+        DataflowVariable | 'channel type'
+        OpCall           | 'operator type'
+        String           | 'String type'
+        new DataflowQueue() | 'channel object'
+        'abc'           | 'String object'
     }
 }

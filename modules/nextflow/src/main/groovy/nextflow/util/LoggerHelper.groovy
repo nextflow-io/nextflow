@@ -16,6 +16,8 @@
 
 package nextflow.util
 
+import static nextflow.Const.*
+
 import java.lang.reflect.Field
 import java.nio.file.NoSuchFileException
 import java.util.concurrent.atomic.AtomicBoolean
@@ -42,18 +44,27 @@ import ch.qos.logback.core.spi.FilterReply
 import ch.qos.logback.core.util.FileSize
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
 import nextflow.Session
 import nextflow.cli.CliOptions
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessException
+import nextflow.exception.ScriptRuntimeException
+import nextflow.extension.OpCall
 import nextflow.file.FileHelper
+import nextflow.script.BaseScript
+import nextflow.script.ChainableDef
+import nextflow.script.ComponentDef
+import nextflow.script.CompositeDef
+import nextflow.script.FunctionDef
+import nextflow.script.WorkflowBinding
+import nextflow.script.WorkflowDef
 import org.apache.commons.lang.exception.ExceptionUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import static nextflow.Const.MAIN_PACKAGE
-import static nextflow.Const.S3_UPLOADER_CLASS
 /**
  * Helper class to setup the logging subsystem
  *
@@ -393,7 +404,7 @@ class LoggerHelper {
         final scriptName = session?.scriptName
         final className = session?.scriptClassName
         final message = event.getFormattedMessage()
-        final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException
+        final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException || ScriptRuntimeException
         List error = fail ? findErrorLine(fail, className) : null
         final normalize = { String str -> str ?. replace("${className}.", '')}
 
@@ -406,6 +417,9 @@ class LoggerHelper {
         if( fail instanceof MissingPropertyException ) {
             def name = fail.property ?: getDetailMessage(fail)
             buffer.append("No such variable: ${name}")
+        }
+        else if( fail instanceof MissingMethodException ) {
+            buffer.append(getMissingMethodMessage(fail))
         }
         else if( fail instanceof NoSuchFileException ) {
             buffer.append("No such file: ${normalize(fail.message)}")
@@ -454,6 +468,40 @@ class LoggerHelper {
         catch( Throwable e ) {
             return null
         }
+    }
+
+    static String getMissingMethodMessage(MissingMethodException error) {
+        try {
+            return getMissingMethodMessage0(error)
+        }
+        catch( Throwable e ) {
+            return error?.message
+        }
+    }
+
+    private static String getMissingMethodMessage0(MissingMethodException error) {
+        def name = error.getMethod()
+        def type = error.getType()
+        def args = error.getArguments()
+
+        String left = fmtType(type)
+
+        String right = args?.collect { fmtValue(it) }?.join(', ')
+
+        if( name == 'or' )
+            return "Invalid operator `|` invocation for left operand: $left and right operand: $right"
+
+        left = !WorkflowBinding.isAssignableFrom(type) && !BaseScript.isAssignableFrom(type) ? " on $left" : ''
+        def found = type.getMethods().find { it.name == name }
+        if( found )
+            return "Invalid method `$name` invocation${left} with arguments: $right"
+
+        def msg = "Unknown method `$name` invocation${left}"
+        def tips = type.getMethods().collect { it.name }.closest(name)
+        if( tips )
+            msg += " -- Did you mean?\n" + tips.collect { "  $it"}.join('\n')
+
+        return msg
     }
 
     static @PackageScope List<String> findErrorLine( Throwable e, String scriptName ) {
@@ -568,4 +616,54 @@ class LoggerHelper {
     }
 
 
+    static String fmtValue( obj ) {
+        if( obj instanceof ComponentDef )
+            return obj.getSignature()
+        if( obj != null )
+            return "obj (${obj.getClass().getName()})"
+        return 'null'
+    }
+
+    static String fmtType( ChainableDef obj ) {
+        if( obj instanceof ComponentDef )
+            return obj.getSignature()
+        if( obj != null )
+            return "$obj.type `$obj.name`"
+        else
+            return "null component"
+    }
+
+    static String fmtType( OpCall obj ) {
+        return obj ? "operator `${obj?.getMethodName()}`" : "null operator"
+    }
+
+    static String fmtType( Object type ) {
+        if( type instanceof Class ) {
+            if( DataflowWriteChannel.isAssignableFrom(type) || DataflowReadChannel .isAssignableFrom(type) )
+                return 'channel type'
+            if( ComponentDef.isAssignableFrom(type) )
+                return 'process type'
+            if( FunctionDef.isAssignableFrom(type) )
+                return 'function type'
+            if( WorkflowDef.isAssignableFrom(type) )
+                return 'workflow type'
+            if( CompositeDef.isAssignableFrom(type) )
+                return 'expression type'
+            if( OpCall.isAssignableFrom(type) )
+                return 'operator type'
+
+            return type.getSimpleName() + ' type'
+        }
+
+        if( type instanceof ChainableDef )
+            return fmtType((ChainableDef)type)
+
+        if( type instanceof OpCall )
+            return fmtType((OpCall)type)
+
+        if( type instanceof DataflowWriteChannel || type instanceof DataflowReadChannel )
+            return "channel object"
+
+        type == null ? "null object" : "${type.getClass().getSimpleName()} object"
+    }
 }

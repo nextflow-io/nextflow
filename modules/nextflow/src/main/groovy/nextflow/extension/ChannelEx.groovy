@@ -16,6 +16,8 @@
 
 package nextflow.extension
 
+import static nextflow.util.LoggerHelper.*
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -25,11 +27,11 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.NF
 import nextflow.dag.NodeMarker
+import nextflow.exception.ScriptRuntimeException
 import nextflow.script.ChainableDef
 import nextflow.script.ChannelArrayList
 import nextflow.script.CompositeDef
 import org.codehaus.groovy.runtime.InvokerHelper
-
 /**
  * Implements dataflow channel extension methods
  *
@@ -191,7 +193,7 @@ class ChannelEx {
     static Object or(ChannelArrayList left, OpCall right) {
         checkContext('or', left)
         if( right.args.size() )
-            throw new IllegalArgumentException("Process multi-output channel cannot be piped with operator ${right.methodName} for which argument is akready provided")
+            throw new ScriptRuntimeException("Process multi-output channel cannot be piped with operator ${right.methodName} for which argument is akready provided")
 
         right
             .setSource(left[0] as DataflowWriteChannel)
@@ -210,12 +212,12 @@ class ChannelEx {
         def out = left.invoke_a(InvokerHelper.EMPTY_ARGS)
 
         if( out instanceof DataflowWriteChannel )
-            return or(out, right)
+            return or((DataflowWriteChannel)out, right)
 
         if( out instanceof ChannelArrayList )
-            return or(out, right)
+            return or((ChannelArrayList)out, right)
 
-        throw new MissingMethodException('or', out.getClass(), [right] as Object[])
+        throw new ScriptRuntimeException("Cannot pipe ${fmtType(out)} with ${fmtType(right)}")
     }
 
     /**
@@ -229,12 +231,12 @@ class ChannelEx {
         def out = left.invoke_a(InvokerHelper.EMPTY_ARGS)
 
         if( out instanceof DataflowWriteChannel )
-            return or(out, right)
+            return or((DataflowWriteChannel)out, right)
 
         if( out instanceof ChannelArrayList )
-            return or(out, right)
+            return or((ChannelArrayList)out, right)
 
-        throw new MissingMethodException('or', out.getClass(), [right] as Object[])
+        throw new ScriptRuntimeException("Cannot pipe ${fmtType(out)} with ${fmtType(right)}")
     }
 
     static CompositeDef and(ChainableDef left, ChainableDef right) {

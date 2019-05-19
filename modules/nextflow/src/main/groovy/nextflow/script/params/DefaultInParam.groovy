@@ -31,7 +31,7 @@ final class DefaultInParam extends ValueInParam {
     DefaultInParam(ProcessConfig config) {
         super(config)
         final channel = new DataflowQueue(); channel.bind(Boolean.TRUE)
-        from(channel)
+        setFrom(channel)
         bind('$')
     }
 }

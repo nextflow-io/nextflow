@@ -14,21 +14,19 @@
  * limitations under the License.
  */
 
-package nextflow.script.params
+package nextflow.exception
 
-import groovyx.gpars.dataflow.DataflowQueue
-import nextflow.script.ProcessConfig
+import groovy.transform.CompileStatic
+import groovy.transform.InheritConstructors
 
 /**
- * Model a process default output parameter
+ * Thrown when there a non recoverable execution execution
+ * due to a malformed process invocation or other generic
+ * script syntax problem
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-final class DefaultOutParam extends StdOutParam {
-
-    DefaultOutParam(ProcessConfig config ) {
-        super(config)
-        bind('-')
-        setInto(new DataflowQueue())
-    }
+@CompileStatic
+@InheritConstructors
+class ScriptRuntimeException extends RuntimeException {
 }

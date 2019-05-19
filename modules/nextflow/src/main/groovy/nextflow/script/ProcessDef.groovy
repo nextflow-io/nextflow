@@ -20,7 +20,10 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
+import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.ChannelFactory
+import nextflow.script.params.BaseInParam
+import nextflow.script.params.BaseOutParam
 import nextflow.script.params.EachInParam
 import nextflow.script.params.InputsList
 import nextflow.script.params.OutputsList
@@ -77,7 +80,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
         taskBody = copy.call() as TaskBody
         processConfig.throwExceptionOnMissingProperty(false)
         if ( !taskBody )
-            throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
+            throw new ScriptRuntimeException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
 
         // apply config settings to the process
         ProcessFactory.applyConfig(name, session.config, processConfig)
@@ -123,25 +126,29 @@ class ProcessDef extends BindableDef implements ChainableDef {
         super.invoke_a(args)
     }
 
+    private String missMatchErrMessage(String name, int expected, int actual) {
+        final ch = expected > 1 ? "channels" : "channel"
+        return "Process `$name` declares ${expected} input ${ch} but ${actual} were specified"
+    }
+
     @Override
     Object run(Object[] args) {
         final params = ChannelArrayList.spread(args)
 
         // sanity check
         if( params.size() != declaredInputs.size() )
-            throw new IllegalArgumentException("Process `$name` declares ${declaredInputs.size()} input channels but ${params.size()} were specified")
+            throw new ScriptRuntimeException(missMatchErrMessage(name, declaredInputs.size(), params.size()))
 
         // set input channels
         for( int i=0; i<params.size(); i++ ) {
-            declaredInputs[i].from(params[i])
+            (declaredInputs[i] as BaseInParam).setFrom(params[i])
         }
 
         // set output channels
         // note: the result object must be an array instead of a List to allow process
         // composition ie. to use the process output as the input in another process invocation
-        List result = null
         if( declaredOutputs.size() ) {
-            result = new ArrayList<>(declaredOutputs.size())
+            List result = new ArrayList<>(declaredOutputs.size())
             final allScalarValues = declaredInputs.allScalarInputs()
             final hasEachParams = declaredInputs.any { it instanceof EachInParam }
             final singleton = allScalarValues && !hasEachParams
@@ -149,7 +156,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
             for(int i=0; i<declaredOutputs.size(); i++ ) {
                 final ch = ChannelFactory.create(singleton)
                 result[i] = ch 
-                declaredOutputs[i].into(ch)
+                (declaredOutputs[i] as BaseOutParam).setInto(ch)
             }
         }
 
@@ -164,9 +171,9 @@ class ProcessDef extends BindableDef implements ChainableDef {
                 .newTaskProcessor(name, executor, processConfig, taskBody)
                 .run()
 
-        // the result object
-        if( !result )
-            return output=null
+        // the result channels
+        final result = declaredOutputs.getChannels()
+        assert result.size()>0, "Process output should contains at least one channel"
 
         return output = (result.size()==1
                 ? output=result[0]

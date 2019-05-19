@@ -20,6 +20,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.NF
+import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.ChannelFactory
 import nextflow.script.ProcessConfig
 import nextflow.script.TokenVar
@@ -148,13 +149,21 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
     }
 
     BaseOutParam into( def value ) {
+        if(NF.isDsl2())
+            throw new ScriptRuntimeException("Process clause `into` should not be provided any more when using DSL 2")
         intoObj = value
         return this
     }
 
     BaseOutParam into( TokenVar... vars ) {
+        if(NF.isDsl2())
+            throw new ScriptRuntimeException("Process clause `into` should not be provided any more when using DSL 2")
         intoObj = vars
         return this
+    }
+
+    void setInto( Object obj ) {
+        intoObj = obj
     }
 
     @Deprecated

@@ -39,8 +39,8 @@ class OutputsList implements List<OutParam>, Cloneable {
     private List<OutParam> target = new LinkedList<>()
 
     List<DataflowWriteChannel> getChannels() {
-        final List<DataflowWriteChannel> result = []
-        target.each { OutParam it -> result.addAll(it.getOutChannels()) }
+        final List<DataflowWriteChannel> result = new ArrayList<>(target.size())
+        for(OutParam param : target) { result.addAll(param.getOutChannels()) }
         return result
     }
 
@@ -51,6 +51,6 @@ class OutputsList implements List<OutParam>, Cloneable {
     }
 
     void setSingleton( boolean value ) {
-        target.each { BaseOutParam param -> param.singleton = value }
+        for( OutParam param : target ) { ((BaseOutParam)param).singleton = value }
     }
 }
