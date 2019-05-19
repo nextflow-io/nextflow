@@ -169,7 +169,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
 
     BaseInParam from( def obj ) {
         if(NF.isDsl2())
-            throw new ScriptRuntimeException("Process clause `from` should not be provided any more when using DSL 2")
+            throw new ScriptRuntimeException("Process clause `from` should not be provided when using DSL 2")
         setFrom(obj)
         return this
     }

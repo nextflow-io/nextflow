@@ -150,14 +150,14 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
     BaseOutParam into( def value ) {
         if(NF.isDsl2())
-            throw new ScriptRuntimeException("Process clause `into` should not be provided any more when using DSL 2")
+            throw new ScriptRuntimeException("Process clause `into` should not be provided when using DSL 2")
         intoObj = value
         return this
     }
 
     BaseOutParam into( TokenVar... vars ) {
         if(NF.isDsl2())
-            throw new ScriptRuntimeException("Process clause `into` should not be provided any more when using DSL 2")
+            throw new ScriptRuntimeException("Process clause `into` should not be provided when using DSL 2")
         intoObj = vars
         return this
     }
