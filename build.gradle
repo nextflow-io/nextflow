@@ -35,16 +35,16 @@ if (groovyVer) {
         repositories {
             maven { url repo }
         }
-    }
 
-    configurations.all {
-        resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-            if (details.requested.group == 'org.codehaus.groovy') {
-                if( groovyVer.contains(':') )
-                    details.useTarget(groovyVer)
-                else
-                    details.useVersion(groovyVer)
-                println ">> Overriding $details.requested with version: $groovyVer"
+        configurations.all {
+            resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+                if (details.requested.group == 'org.codehaus.groovy') {
+                    if( groovyVer.contains(':') )
+                        details.useTarget(groovyVer)
+                    else
+                        details.useVersion(groovyVer)
+                    println ">> Overriding $details.requested with version: $groovyVer"
+                }
             }
         }
     }
