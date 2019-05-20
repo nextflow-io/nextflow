@@ -16,11 +16,7 @@
 
 package nextflow.cli
 
-import nextflow.util.Escape
-import static nextflow.Const.APP_BUILDNUM
-import static nextflow.Const.APP_NAME
-import static nextflow.Const.APP_VER
-import static nextflow.Const.SPLASH
+import static nextflow.Const.*
 
 import java.lang.reflect.Field
 
@@ -36,10 +32,12 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
+import nextflow.exception.ScriptRuntimeException
 import nextflow.trace.GraphObserver
 import nextflow.trace.ReportObserver
 import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
+import nextflow.util.Escape
 import nextflow.util.LoggerHelper
 import org.codehaus.groovy.control.CompilationFailedException
 import org.eclipse.jgit.api.errors.GitAPIException
@@ -484,6 +482,11 @@ class Launcher {
 
         catch( CompilationFailedException e ) {
             log.error e.message
+            return(1)
+        }
+
+        catch ( ScriptRuntimeException | IllegalArgumentException e) {
+            log.error(e.message, e)
             return(1)
         }
 

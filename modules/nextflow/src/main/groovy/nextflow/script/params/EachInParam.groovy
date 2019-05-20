@@ -22,9 +22,9 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.expression.DataflowExpression
+import nextflow.extension.ChannelFactory
 import nextflow.extension.ToListOp
 import nextflow.script.TokenFileCall
-
 /**
  * Represents a process input *iterator* parameter
  *
@@ -52,7 +52,7 @@ class EachInParam extends BaseInParam {
     InParam getInner() { inner[0] }
 
     @Override
-    protected DataflowReadChannel inputValToChannel(value ) {
+    protected DataflowReadChannel inputValToChannel( value ) {
         def variable = normalizeToVariable( value )
         super.inputValToChannel(variable)
     }
@@ -63,11 +63,10 @@ class EachInParam extends BaseInParam {
         if( value instanceof DataflowExpression ) {
             result = value
         }
-
-        else if( value instanceof DataflowReadChannel ) {
-            result = ToListOp.apply(value)
+        else if( ChannelFactory.isChannel(value) ) {
+            def read = ChannelFactory.getReadChannel(value)
+            result = new ToListOp(read).apply()
         }
-
         else {
             result = new DataflowVariable()
             result.bind(value)

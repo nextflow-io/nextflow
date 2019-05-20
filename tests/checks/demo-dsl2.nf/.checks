@@ -1,0 +1,32 @@
+set -e
+
+#
+# run normal mode
+#
+echo ''
+echo \$ $NXF_RUN
+$NXF_RUN | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > sayHello'` == 5 ]] || false
+
+[[ `grep 'Hola world!' stdout` ]] || false
+[[ `grep 'Γεια σου world!' stdout` ]] || false
+[[ `grep 'Hello world!' stdout` ]] || false
+[[ `grep 'Bojour world!' stdout` ]] || false
+[[ `grep 'Ciao world!' stdout` ]] || false
+
+
+#
+# RESUME mode
+#
+echo ''
+echo \$ $NXF_RUN -resume
+$NXF_RUN -resume | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Cached process > sayHello'` == 5 ]] || false
+
+[[ `grep 'Hola world!' stdout` ]] || false
+[[ `grep 'Γεια σου world!' stdout` ]] || false
+[[ `grep 'Hello world!' stdout` ]] || false
+[[ `grep 'Bojour world!' stdout` ]] || false
+[[ `grep 'Ciao world!' stdout` ]] || false

@@ -16,10 +16,19 @@
 
 package nextflow.util
 
-import spock.lang.Specification
+import java.nio.file.Path
+import java.nio.file.Paths
 
 import ch.qos.logback.classic.Level
+import groovyx.gpars.dataflow.DataflowQueue
+import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.cli.CliOptions
+import nextflow.extension.OpCall
+import nextflow.script.BaseScript
+import nextflow.script.ScriptBinding
+import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -29,11 +38,26 @@ class LoggerHelperTest extends Specification {
 
     def 'should parse error line'() {
 
+        given:
+        final pwd = System.getProperty("user.dir")
+        Map<String,Path> names = [
+                'Script_f1bbc0ef': Paths.get('/some/path/main.nf'),
+                'Script_1b751fe9': Paths.get('/other/path/module.nf'),
+                'Script_12345678': Paths.get("$pwd/foo/script.nf")
+        ]
+
         expect:
-        LoggerHelper.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]') == ['pfam3d.nf','189']
-        LoggerHelper.getErrorLine('at pfam3d.run(JavaClass.java:189) ~[na:na]') == null
-        LoggerHelper.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]','pfam3d.nf') == ['pfam3d.nf','189']
-        LoggerHelper.getErrorLine('at pfam3d.run(pfam3d.nf:189) ~[na:na]','hola') == null
+        LoggerHelper.getErrorLine(LINE, names) == EXPECTED
+        
+        where:
+        EXPECTED                        | LINE
+        null                            | 'at nextflow.script.ScriptRunner.run(ScriptRunner.groovy:289)'
+        null                            | 'at nextflow.script.BaseScript.run(BaseScript.groovy:151)'
+        ['/some/path/main.nf', '63']    | 'at Script_f1bbc0ef.runScript(Script_f1bbc0ef:63)'
+        null                            | 'at Script_1b751fe9$_runScript_closure1.doCall(Script_1b751fe9)'
+        ['/other/path/module.nf', '10'] | 'at Script_1b751fe9$_runScript_closure1.doCall(Script_1b751fe9:10)'
+        ['foo/script.nf', '55']         | 'at Script_12345678.runScript(Script_12345678:55)'
+        null                            | 'at Script_12345678.runScript(Script_xxxxxxxx:63)'
     }
 
 
@@ -105,5 +129,36 @@ class LoggerHelperTest extends Specification {
         'f'     | true
         'g'     | false
         'z'     | false
+    }
+
+    @Unroll
+    def 'should get method error string' () {
+
+        when:
+        def ex = new MissingMethodException(METHOD, CLAZZ)
+        def result = LoggerHelper.getMissingMethodMessage(ex)
+        then:
+        result == MSG
+
+        where:
+        CLAZZ           | METHOD        | MSG
+        ScriptBinding   | 'printx'      | 'Unknown method `printx`'
+        BaseScript      | 'printq'      | 'Unknown method `printq` -- Did you mean?\n  print\n  printf'
+        DataflowQueue   | 'view'        | 'Unknown method `view` on channel type'
+    }
+
+    @Unroll
+    def 'should return type message' () {
+        expect:
+        LoggerHelper.fmtType(TYPE) == MSG
+
+        where:
+        TYPE             | MSG
+        DataflowQueue    | 'channel type'
+        DataflowVariable | 'channel type'
+        OpCall           | 'operator type'
+        String           | 'String type'
+        new DataflowQueue() | 'channel object'
+        'abc'           | 'String object'
     }
 }

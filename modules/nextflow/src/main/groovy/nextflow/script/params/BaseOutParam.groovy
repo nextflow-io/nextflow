@@ -19,6 +19,8 @@ package nextflow.script.params
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.NF
+import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.ChannelFactory
 import nextflow.script.ProcessConfig
 import nextflow.script.TokenVar
@@ -54,7 +56,9 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
     void lazyInit() {
 
         if( intoObj instanceof TokenVar[] ) {
-            intoObj.each { lazyInitImpl(it) }
+            if(NF.isDsl2())
+                throw new IllegalArgumentException("Not a valid output channel argument: intoObj")
+            for( def it : intoObj ) { lazyInitImpl(it) }
         }
         else if( intoObj != null ) {
             lazyInitImpl(intoObj)
@@ -145,13 +149,21 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
     }
 
     BaseOutParam into( def value ) {
+        if(NF.isDsl2())
+            throw new ScriptRuntimeException("Process clause `into` should not be provided when using DSL 2")
         intoObj = value
         return this
     }
 
     BaseOutParam into( TokenVar... vars ) {
+        if(NF.isDsl2())
+            throw new ScriptRuntimeException("Process clause `into` should not be provided when using DSL 2")
         intoObj = vars
         return this
+    }
+
+    void setInto( Object obj ) {
+        intoObj = obj
     }
 
     @Deprecated

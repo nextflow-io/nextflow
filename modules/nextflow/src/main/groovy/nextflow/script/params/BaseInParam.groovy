@@ -20,8 +20,10 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
+import nextflow.NF
 import nextflow.Nextflow
 import nextflow.exception.ProcessException
+import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.ChannelFactory
 import nextflow.script.ProcessConfig
 import nextflow.script.TokenVar
@@ -166,9 +168,15 @@ abstract class BaseInParam extends BaseParam implements InParam {
     }
 
     BaseInParam from( def obj ) {
+        if(NF.isDsl2())
+            throw new ScriptRuntimeException("Process clause `from` should not be provided when using DSL 2")
+        setFrom(obj)
+        return this
+    }
+
+    void setFrom( obj ) {
         checkFromNotNull(obj)
         fromObject = obj
-        return this
     }
 
     Object getRawChannel() {
