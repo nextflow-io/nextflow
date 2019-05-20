@@ -57,7 +57,6 @@ class WorkflowBindingTest extends Specification {
         def result = binding.invokeMethod('foo', ARGS)
         then:
         1 * binding.getComponent0('foo') >> FOO
-        1 * binding.checkScope0(FOO) >> null
         1 * FOO.invoke_o(ARGS) >> 'Hello'
         result == 'Hello'
 

@@ -10,6 +10,7 @@ import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.NF
 import nextflow.dag.NodeMarker
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
@@ -59,6 +60,11 @@ class OpCall implements Callable {
 
     OpCall setSource(DataflowWriteChannel channel) {
         this.source = channel
+        return this
+    }
+
+    OpCall setArgs(Object[] args) {
+        this.args = args
         return this
     }
 
@@ -271,6 +277,11 @@ class OpCall implements Callable {
     protected void checkDeprecation(Method method) {
         if( method.getAnnotation(Deprecated) ) {
             log.warn "Operator `$methodName` is deprecated -- it will be removed in a future release"
+        }
+        else if( method.getAnnotation(DeprecatedDsl2) && NF.isDsl2() ) {
+            def annot = method.getAnnotation(DeprecatedDsl2)
+            def messg = annot.message() ?: "Operator `$methodName` is deprecated -- it will be removed in a future release".toString()
+            log.warn messg
         }
     }
 

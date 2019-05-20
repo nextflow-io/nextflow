@@ -1,0 +1,44 @@
+set -e
+
+#
+# basic run 
+#
+echo ''
+$NXF_RUN > stdout
+[[ `<stdout grep -c 'Hello world!'` == 1 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > foo'` == 1 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > bar'` == 1 ]] || false
+( cd foo; 
+[[ -s f1.fa ]] || false
+[[ -s f2.fa ]] || false
+[[ -s f3.fa ]] || false
+[[ -s hello.txt ]] || false
+[[ -s sample.zip ]] || false
+[[ -s sample.html ]] || false
+[[ -s '01_A(R1).fastq' ]] || false
+[[ -s '01_A(R2).fastq' ]] || false
+[[ -s 'sample_(1 2).vcf' ]] || false
+[[ -s .alpha/hello.txt ]] || false
+)
+
+#
+# resume 
+# 
+rm -rf foo 
+echo ''
+$NXF_RUN -resume > stdout
+[[ `<stdout grep -c 'Hello world!'` == 1 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Cached process > foo'` == 1 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Cached process > bar'` == 1 ]] || false
+( cd foo; 
+[[ -s f1.fa ]] || false
+[[ -s f2.fa ]] || false
+[[ -s f3.fa ]] || false
+[[ -s hello.txt ]] || false
+[[ -s sample.zip ]] || false
+[[ -s sample.html ]] || false
+[[ -s '01_A(R1).fastq' ]] || false
+[[ -s '01_A(R2).fastq' ]] || false
+[[ -s 'sample_(1 2).vcf' ]] || false
+[[ -s .alpha/hello.txt ]] || false
+)

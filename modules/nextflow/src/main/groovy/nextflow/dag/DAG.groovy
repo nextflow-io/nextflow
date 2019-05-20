@@ -235,9 +235,9 @@ class DAG {
     static private List<ChannelHandler> normalizeOutputs( OutputsList outputs ) {
 
         def result = []
-        outputs.each { OutParam p ->
-            if( p instanceof DefaultOutParam ) return
-            p.outChannels.each {
+        for(OutParam p :outputs) {
+            if( p instanceof DefaultOutParam ) break
+            for(Object it : p.outChannels) {
                 result << new ChannelHandler(channel: it, label: p instanceof SetOutParam ? null : p.name)
             }
         }

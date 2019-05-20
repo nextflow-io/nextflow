@@ -92,7 +92,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     protected process( Map<String,?> args, String name, Closure body ) {
-        throw new DeprecationException("This process invocation syntax is deprecated")
+        throw new DeprecationException("This process invocation syntax is not supported any more")
     }
 
     protected process( String name, Closure body ) {
@@ -109,7 +109,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     protected workflow(TaskBody body) {
         if(!NF.isDsl2())
-            throw new IllegalStateException("Module feature not enabled -- User `nextflow.module = true` to allow the definition of workflow components")
+            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.preview.dsl=2` to allow the definition of workflow components")
 
         if( meta.isModule() ) {
             log.debug "Entry workflow ignored in module script: ${meta.scriptPath?.toUriString()}"
@@ -123,14 +123,14 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     protected workflow(TaskBody body, String name, List<String> declaredInputs) {
         if(!NF.isDsl2())
-            throw new IllegalStateException("Module feature not enabled -- User `nextflow.module = true` to allow the definition of workflow components")
+            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.preview.dsl=2` to allow the definition of workflow components")
 
         meta.addDefinition(new WorkflowDef(this,body,name,declaredInputs))
     }
 
     protected IncludeDef include( IncludeDef include ) {
         if(!NF.isDsl2())
-            throw new IllegalStateException("Module feature not enabled -- User `nextflow.module = true` to import module files")
+            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.preview.dsl=2` to import module files")
 
         include .setSession(session)
 

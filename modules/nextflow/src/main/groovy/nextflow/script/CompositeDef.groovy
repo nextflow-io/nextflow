@@ -55,4 +55,9 @@ class CompositeDef extends ComponentDef implements ChainableDef {
         new ChannelArrayList(ChannelArrayList.spread(result))
     }
 
+    @Override
+    String getSignature() {
+        "expression $name"
+    }
+
 }

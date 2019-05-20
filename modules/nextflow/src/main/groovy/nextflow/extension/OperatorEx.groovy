@@ -1320,39 +1320,39 @@ class OperatorEx {
      * @param source The source channel
      * @param outputs An open array of target channels
      */
-    @Deprecated
+    @DeprecatedDsl2
     void separate( DataflowReadChannel source, final DataflowWriteChannel... outputs ) {
         new SeparateOp(source, outputs as List<DataflowWriteChannel>).apply()
     }
 
-    @Deprecated
+    @DeprecatedDsl2
     void separate(final DataflowReadChannel source, final List<DataflowWriteChannel> outputs) {
         new SeparateOp(source, outputs).apply()
     }
 
-    @Deprecated
+    @DeprecatedDsl2
     void separate(final DataflowReadChannel source, final List<DataflowWriteChannel> outputs, final Closure<List> code) {
         new SeparateOp(source, outputs, code).apply()
     }
 
-    @Deprecated
+    @DeprecatedDsl2
     List<DataflowReadChannel> separate( final DataflowReadChannel source, int n ) {
         def outputs = new SeparateOp(source, n).apply()
         return outputs
     }
 
-    @Deprecated
+    @DeprecatedDsl2
     List<DataflowReadChannel> separate( final DataflowReadChannel source, int n, Closure mapper  ) {
         def outputs = new SeparateOp(source, n, mapper).apply()
         return outputs
     }
 
-    @Deprecated
+    @DeprecatedDsl2
     void into( DataflowReadChannel source, final DataflowWriteChannel... targets ) {
         new IntoOp(source, targets as List<DataflowWriteChannel>).apply()
     }
 
-    @Deprecated
+    @DeprecatedDsl2
     List<DataflowReadChannel> into( final DataflowReadChannel source, int n ) {
         def outputs = new IntoOp(source,n).apply().getOutputs()
         return outputs
@@ -1372,7 +1372,7 @@ class OperatorEx {
      * @param source The source dataflow channel which items are copied into newly created dataflow variables.
      * @param holder A closure that defines one or more variable names into which source items are copied.
      */
-    @Deprecated
+    @DeprecatedDsl2
     void into( DataflowReadChannel source, Closure holder ) {
         def outputs = new IntoOp(source,holder).apply().getOutputs()
         OpCall.current.get().outputs.addAll(outputs)
@@ -1436,6 +1436,7 @@ class OperatorEx {
      * @param source
      * @param closure
      */
+    @DeprecatedDsl2(message='Operator `print` is deprecated -- Use `view` instead')
     void print(final DataflowReadChannel<?> source, Closure closure = null) {
         final print0 = { def obj = closure ? closure.call(it) : it; session.printConsole(obj?.toString(),false) }
         subscribeImpl(source, [onNext: print0])
@@ -1446,6 +1447,7 @@ class OperatorEx {
      * @param source
      * @param closure
      */
+    @DeprecatedDsl2(message='Operator `println` is deprecated -- Use `view` instead')
     void println(final DataflowReadChannel<?> source, Closure closure = null) {
         final print0 = { def obj = closure ? closure.call(it) : it; session.printConsole(obj?.toString(),true) }
         subscribeImpl(source, [onNext: print0])
@@ -1490,7 +1492,7 @@ class OperatorEx {
     }
 
     // NO DAG
-    @Deprecated
+    @DeprecatedDsl2
     DataflowWriteChannel merge(final DataflowReadChannel source, final DataflowReadChannel other, final Closure closure=null) {
         final result = ChannelFactory.createBy(source)
         final inputs = [source, other]
@@ -1502,7 +1504,7 @@ class OperatorEx {
     }
 
     // NO DAG
-    @Deprecated
+    @DeprecatedDsl2
     DataflowWriteChannel merge(final DataflowReadChannel source, final DataflowReadChannel... others) {
         final result = ChannelFactory.createBy(source)
         final List<DataflowReadChannel> inputs = new ArrayList<DataflowReadChannel>(1 + others.size())
@@ -1515,7 +1517,7 @@ class OperatorEx {
     }
 
     // NO DAG
-    @Deprecated
+    @DeprecatedDsl2
     DataflowWriteChannel merge(final DataflowReadChannel source, final List<DataflowReadChannel> others, final Closure closure=null) {
         final result = ChannelFactory.createBy(source)
         final List<DataflowReadChannel> inputs = new ArrayList<DataflowReadChannel>(1 + others.size())

@@ -44,4 +44,8 @@ abstract class ComponentDef implements Cloneable {
         "${this.getClass().getSimpleName()}[$type $name]"
     }
 
+    String getSignature() {
+        "$type `$name`"
+    }
+
 }

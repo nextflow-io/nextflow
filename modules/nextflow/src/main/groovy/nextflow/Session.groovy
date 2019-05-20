@@ -135,12 +135,8 @@ class Session implements ISession {
     String scriptName
 
     /**
-     * The class name used to compile the pipeline script
+     * The main script object
      */
-    String scriptClassName
-
-    Class scriptClass
-
     BaseScript script
 
     /**
