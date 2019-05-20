@@ -29,6 +29,6 @@ final class DefaultOutParam extends StdOutParam {
     DefaultOutParam(ProcessConfig config ) {
         super(config)
         bind('-')
-        into(new DataflowQueue())
+        setInto(new DataflowQueue())
     }
 }

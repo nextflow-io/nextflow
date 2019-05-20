@@ -230,8 +230,6 @@ class ScriptRunner {
     protected void parseScript( ScriptFile scriptFile ) {
         scriptParser = new ScriptParser(session).parse(scriptFile.main)
         session.script = scriptParser.script
-        session.scriptClass = scriptParser.script.getClass()
-        session.scriptClassName = scriptParser.script.getClass().getName()
     }
 
     /**
