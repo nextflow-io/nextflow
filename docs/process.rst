@@ -1479,6 +1479,16 @@ returning an error condition. For example::
 
 The number of times a failing process is re-executed is defined by the `maxRetries`_ and `maxErrors`_ directives.
 
+A more complex example to retry a process five times before ultimately ignoring it would be::
+
+    process retryifFailthenProceed {
+       errorStrategy = { task.exitStatus in [143,137,104,134,139] ? 'retry' : 'finish' }
+       maxRetries = 3
+
+       script:
+       <your command string here>
+    }
+
 .. _process-executor:
 
 executor
