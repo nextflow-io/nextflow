@@ -49,7 +49,7 @@ import org.jsoup.safety.Whitelist
 @CompileStatic
 class Mailer {
 
-    // Adapted from post by Phil Haack and modified to match better
+    // Adapted from post by Phil Hack and modified to match better
     // See https://stackoverflow.com/a/22581832/395921
     private final static String TAG_START = "\\<\\w+((\\s+\\w+(\\s*\\=\\s*(?:\".*?\"|'.*?'|[^'\"\\>\\s]+))?)+\\s*|\\s*)\\>"
 
