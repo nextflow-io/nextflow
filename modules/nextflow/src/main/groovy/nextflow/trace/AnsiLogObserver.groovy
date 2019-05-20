@@ -253,7 +253,7 @@ class AnsiLogObserver implements TraceObserver {
         final delta = endTimestamp-startTimestamp
         if( enableSummary == false )
             return
-        if( enableSummary == null && delta <= WorkflowStats.MIN_SECS*1_000 )
+        if( enableSummary == null && delta <= 60*1_000 )
             return
         
         WorkflowStats stats = session.isSuccess() ? session.getWorkflowStats() : null
