@@ -1,5 +1,33 @@
 NEXTFLOW CHANGE-LOG
 ===================
+19.05.0-edge - 20 May 2019
+- Add Aws Batch maxParallelTransfers config #1107 [26d37556]
+- Add NXF_ANSI_SUMMARY var to disable log summary [d4b9cc44]
+- Add support for AWS user volumes and jobRoleArn [651eeadd]
+- Add Support for LSF per task resource reserve mode #1071
+- Fix Env variable with blanks is not resolved correctly in containers #1146
+- Fix method isDynamic visibility [f241781b]
+- Fix WebLogObserver data leak on completion #1010
+- Fix unit test execution [622d97d4]
+- Fix Quiet cli option is not honoured [e656e4b0]
+- Fix Log messages don't show in the console #1129 [95f4dd7b]
+- Fix nextflow build timestamp json rendering [af6584c9]
+- Fix Launcher should return non-zero exit when fail to setp env #1126
+- Update get started docs [68f53367]
+- Update aws sdk to version 1.11.542
+- Update created label in timestamp [e8945e8b]
+- Update readme IDE version
+- Refactor AWS cli path option [ad9af0dd]
+- Improve Dsl-2 error reporting [4e2621ff]
+- Improve CI tests scripts [febeb530]
+- Improve docs for config profiles [8cf95a5d]
+- Syntax enhancement aka DLS-2 #984 [651af95a]
+- Print summary only the run takes > 3mins [cd459713]
+- Render last tag along with the process name #1144 [8cf8cc44]
+- Sync build scripts [a5689217]
+- Provide scm credentials when fetching information about remote branches #1135 [808847b5]
+- Code cleanup [2322fbcf]
+
 19.04.0-edge - 24 Apr 2019
 - Add Experimental support for gpu resources #997
 - Fix LSF executor should use mem setting in lsf.config #1124
