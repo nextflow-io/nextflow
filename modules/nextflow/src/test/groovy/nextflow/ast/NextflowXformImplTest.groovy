@@ -51,8 +51,11 @@ class NextflowXformImplTest extends Specification {
         // See
         //   DefaultTypeTransformation#compareEqual(Object,Object)
         //   https://stackoverflow.com/questions/28355773/in-groovy-why-does-the-behaviour-of-change-for-interfaces-extending-compar#comment45123447_28387391
-        t != p
-        p != t
+        //
+        // NOTE: Fixed with groovy 2.5.7
+        // see : https://issues.apache.org/jira/browse/GROOVY-7954
+        //t != p
+        //p != t
 
         // AST transformation fix the equality issue
         when:
