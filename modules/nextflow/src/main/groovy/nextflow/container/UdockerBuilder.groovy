@@ -15,7 +15,9 @@
  */
 
 package nextflow.container
-import groovy.transform.CompileStatic
+
+
+import groovy.transform.PackageScope
 /**
  * Wrap a task execution in a Udocker container
  *
@@ -23,7 +25,6 @@ import groovy.transform.CompileStatic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CompileStatic
 class UdockerBuilder extends ContainerBuilder<UdockerBuilder> {
 
     private String temp
@@ -87,7 +88,7 @@ class UdockerBuilder extends ContainerBuilder<UdockerBuilder> {
         // the ID of the container to run
         result << "\$(udocker.py create \"$image\")"
 
-        this.@runCommand = result.toString()
+        this.runCommand = result.toString()
         return this
     }
 
@@ -98,6 +99,10 @@ class UdockerBuilder extends ContainerBuilder<UdockerBuilder> {
         result += "[[ \$? != 0 ]] && echo \"Udocker failed while pulling container \\`$image\\`\" >&2 && exit 1\n"
         result += run
         return result
+    }
+
+    @PackageScope String getRunCommandRaw() {
+        super.getRunCommand()
     }
 
 }
