@@ -63,38 +63,38 @@ class UdockerBuilderTest extends Specification {
         expect:
         new UdockerBuilder('fedora')
                 .build()
-                .@runCommand == 'udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest")'
+                .runCommandRaw == 'udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest")'
 
         new UdockerBuilder('fedora')
                 .addEnv(env)
                 .build()
-                .@runCommand == 'udocker.py run --rm -e "FOO=1" -e "BAR=hello world" -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest")'
+                .runCommandRaw == 'udocker.py run --rm -e "FOO=1" -e "BAR=hello world" -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest")'
 
         new UdockerBuilder('fedora')
                 .setCpus('1,2')
                 .build()
-                .@runCommand == 'udocker.py run --rm --cpuset-cpus=1,2 -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest")'
+                .runCommandRaw == 'udocker.py run --rm --cpuset-cpus=1,2 -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest")'
 
         new UdockerBuilder('fedora')
                 .addMount(db_file)
                 .addEnv(env)
                 .build()
-                .@runCommand == 'udocker.py run --rm -e "FOO=1" -e "BAR=hello world" -v /home/db:/home/db -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest")'
+                .runCommandRaw == 'udocker.py run --rm -e "FOO=1" -e "BAR=hello world" -v /home/db:/home/db -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest")'
 
         new UdockerBuilder('busybox')
                 .params(remove: false)
                 .build()
-                .@runCommand == 'udocker.py run -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "busybox:latest")'
+                .runCommandRaw == 'udocker.py run -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "busybox:latest")'
 
         new UdockerBuilder('busybox')
                 .params(runOptions: '-x --zeta')
                 .build()
-                .@runCommand == 'udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome -x --zeta $(udocker.py create "busybox:latest")'
+                .runCommandRaw == 'udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome -x --zeta $(udocker.py create "busybox:latest")'
 
         new UdockerBuilder('busybox')
                 .params(entry: '/bin/blah')
                 .build()
-                .@runCommand == 'udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "busybox:latest")'
+                .runCommandRaw == 'udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "busybox:latest")'
 
     }
 
