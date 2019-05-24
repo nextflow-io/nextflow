@@ -1479,6 +1479,12 @@ returning an error condition. For example::
 
 The number of times a failing process is re-executed is defined by the `maxRetries`_ and `maxErrors`_ directives.
 
+.. note:: More complex strategies depending on the task exit status
+  or other parametric values can be defined using a dynamic ``errorStrategy``
+  directive. See the `Dynamic directives`_ section for details.
+
+See also: `maxErrors`_, `maxRetries`_ and `Dynamic computing resources`_.
+
 .. _process-executor:
 
 executor
@@ -2220,7 +2226,7 @@ of a process failure and try to re-execute it using a higher limit. For example:
         memory { 2.GB * task.attempt }
         time { 1.hour * task.attempt }
 
-        errorStrategy { task.exitStatus == 140 ? 'retry' : 'terminate' }
+        errorStrategy { task.exitStatus in 137..140 ? 'retry' : 'terminate' }
         maxRetries 3
 
         script:
@@ -2233,7 +2239,24 @@ In the above example the `memory`_ and execution `time`_ limits are defined dyna
 is executed the ``task.attempt`` is set to ``1``, thus it will request a two GB of memory and one hour of maximum execution
 time.
 
-If the task execution fail reporting an exit status equals ``140``, the task is re-submitted (otherwise terminates immediately).
+If the task execution fail reporting an exit status in the range between 137 and 140, the task is re-submitted (otherwise terminates immediately).
 This time the value of ``task.attempt`` is ``2``, thus increasing the amount of the memory to four GB and the time to 2 hours, and so on.
 
 The directive `maxRetries`_ set the maximum number of time the same task can be re-executed.
+
+Dynamic Retry with backoff
+--------------------------
+
+There are cases in which the required execution resources may be temporary unavailable e.g.
+network congestion. In these cases immediately re-executing the task will likely result in
+the identical error. A retry with an exponential backoff delay can better recover these error
+conditions::
+
+    process foo {
+      errorStrategy { sleep(Math.pow(2, task.attempt) * 200); return 'retry' }
+      maxRetries 5
+      script:
+      '''
+      your_command --here
+      '''
+    }
