@@ -43,6 +43,40 @@ class S3Helper {
             unset IFS
         }
         
+        nxf_retry() {
+            local max_attempts=\${ATTEMPTS-4}
+            local timeout=\${TIMEOUT-1}
+            local attempt=0
+            local exitCode=0
+            echo "Downloading" \$2
+
+            while [[ \$attempt < \$max_attempts ]]
+            do
+              if "\$@"
+                then
+                  return 0
+              else
+                exitCode=\$?
+              fi
+              echo \$exitCode
+              if [[ \$exitCode == 0 ]]
+              then
+                echo "Download completed" \$2
+                break
+              fi
+        
+              echo "Failure! Retrying in \$timeout.." 1>&2
+              sleep \$timeout
+              attempt=\$(( attempt + 1 ))
+              timeout=\$(( timeout * 2 * 5 ))
+            done
+        
+            if [[ \$exitCode != 0 ]]
+            then
+              echo "Download failed (\$@)" 1>&2
+            fi
+        }
+        
         nxf_s3_download() {
             local source=\$1
             local target=\$2

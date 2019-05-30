@@ -93,7 +93,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     @Override
     String stageInputFile( Path path, String targetName ) {
         // third param should not be escaped, because it's used in the grep match rule
-        "downloads+=(\"nxf_s3_download s3:/${Escape.path(path)} ${Escape.path(targetName)}\")"
+        "downloads+=(\"nxf_retry nxf_s3_download s3:/${Escape.path(path)} ${Escape.path(targetName)}\")"
     }
 
     /**
