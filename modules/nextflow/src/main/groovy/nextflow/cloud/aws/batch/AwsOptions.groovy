@@ -34,6 +34,10 @@ class AwsOptions {
 
     static final public int MAX_TRANSFER = 16
 
+    static final public int MAX_TRANSFER_ATTEMPTS = 1
+
+    static final public int SLEEP_BETWEEN_ATTEMPTS = 10
+
     String cliPath
 
     String storageClass
@@ -45,6 +49,10 @@ class AwsOptions {
     String region
 
     int maxParallelTransfers = MAX_TRANSFER
+
+    int maxTransferAttempts = MAX_TRANSFER_ATTEMPTS
+
+    int sleepBetweenAttempts = SLEEP_BETWEEN_ATTEMPTS
 
     /**
      * The job role ARN that should be used
@@ -71,6 +79,8 @@ class AwsOptions {
         storageClass = session.config.navigate('aws.client.uploadStorageClass') as String
         storageEncryption = session.config.navigate('aws.client.storageEncryption') as String
         maxParallelTransfers = session.config.navigate('aws.batch.maxParallelTransfers', MAX_TRANSFER) as int
+        maxTransferAttempts = session.config.navigate('aws.batch.maxTransferAttempts', MAX_TRANSFER_ATTEMPTS) as int
+        sleepBetweenAttempts = session.config.navigate('aws.batch.sleepBetweenAttempts', SLEEP_BETWEEN_ATTEMPTS) as int
         region = session.config.navigate('aws.region') as String
         volumes = makeVols(session.config.navigate('aws.batch.volumes'))
         jobRole = session.config.navigate('aws.batch.jobRole')

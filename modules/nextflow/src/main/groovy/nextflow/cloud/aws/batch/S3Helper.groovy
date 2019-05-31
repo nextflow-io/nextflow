@@ -26,6 +26,8 @@ class S3Helper {
         def storage = opts.storageClass ?: 'STANDARD'
         def encryption = opts.storageEncryption ? "--sse $opts.storageEncryption " : ''
         def maxConnect = opts.maxParallelTransfers ?: AwsOptions.MAX_TRANSFER
+        def attempts = opts.maxTransferAttempts ?: AwsOptions.MAX_TRANSFER_ATTEMPTS
+        def sleep = opts.sleepBetweenAttempts ?: AwsOptions.SLEEP_BETWEEN_ATTEMPTS
 
         """
         # aws helper
@@ -43,14 +45,13 @@ class S3Helper {
             unset IFS
         }
         
-        nxf_retry() {
-            local max_attempts=\${ATTEMPTS-4}
-            local timeout=\${TIMEOUT-1}
+        nxf_s3_retry() {
+            local max_attempts=$attempts
+            local timeout=$sleep
             local attempt=0
             local exitCode=0
-            echo "Downloading" \$2
 
-            while [[ \$attempt < \$max_attempts ]]
+            while (( \$attempt < \$max_attempts ))
             do
               if "\$@"
                 then
@@ -58,23 +59,14 @@ class S3Helper {
               else
                 exitCode=\$?
               fi
-              echo \$exitCode
               if [[ \$exitCode == 0 ]]
               then
-                echo "Download completed" \$2
                 break
               fi
-        
-              echo "Failure! Retrying in \$timeout.." 1>&2
               sleep \$timeout
               attempt=\$(( attempt + 1 ))
-              timeout=\$(( timeout * 2 * 5 ))
+              timeout=\$(( timeout * 2 ))
             done
-        
-            if [[ \$exitCode != 0 ]]
-            then
-              echo "Download failed (\$@)" 1>&2
-            fi
         }
         
         nxf_s3_download() {
