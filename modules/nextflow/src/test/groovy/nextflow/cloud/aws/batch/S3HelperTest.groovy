@@ -52,14 +52,13 @@ class S3HelperTest extends Specification {
                         unset IFS
                     }
                     
-                    nxf_retry() {
-                        local max_attempts=\${ATTEMPTS-4}
-                        local timeout=\${TIMEOUT-1}
+                    nxf_s3_retry() {
+                        local max_attempts=1
+                        local timeout=10
                         local attempt=0
                         local exitCode=0
-                        echo "Downloading" \$2
             
-                        while [[ \$attempt < \$max_attempts ]]
+                        while (( \$attempt < \$max_attempts ))
                         do
                           if "\$@"
                             then
@@ -67,23 +66,14 @@ class S3HelperTest extends Specification {
                           else
                             exitCode=\$?
                           fi
-                          echo \$exitCode
                           if [[ \$exitCode == 0 ]]
                           then
-                            echo "Download completed" \$2
                             break
                           fi
-                    
-                          echo "Failure! Retrying in \$timeout.." 1>&2
                           sleep \$timeout
                           attempt=\$(( attempt + 1 ))
-                          timeout=\$(( timeout * 2 * 5 ))
+                          timeout=\$(( timeout * 2 ))
                         done
-                    
-                        if [[ \$exitCode != 0 ]]
-                        then
-                          echo "Download failed (\$@)" 1>&2
-                        fi
                     }
                     
                     nxf_s3_download() {
@@ -157,14 +147,13 @@ class S3HelperTest extends Specification {
                         unset IFS
                     }
                     
-                    nxf_retry() {
-                        local max_attempts=\${ATTEMPTS-4}
-                        local timeout=\${TIMEOUT-1}
+                    nxf_s3_retry() {
+                        local max_attempts=1
+                        local timeout=10
                         local attempt=0
                         local exitCode=0
-                        echo "Downloading" \$2
             
-                        while [[ \$attempt < \$max_attempts ]]
+                        while (( \$attempt < \$max_attempts ))
                         do
                           if "\$@"
                             then
@@ -172,23 +161,14 @@ class S3HelperTest extends Specification {
                           else
                             exitCode=\$?
                           fi
-                          echo \$exitCode
                           if [[ \$exitCode == 0 ]]
                           then
-                            echo "Download completed" \$2
                             break
                           fi
-                    
-                          echo "Failure! Retrying in \$timeout.." 1>&2
                           sleep \$timeout
                           attempt=\$(( attempt + 1 ))
-                          timeout=\$(( timeout * 2 * 5 ))
+                          timeout=\$(( timeout * 2 ))
                         done
-                    
-                        if [[ \$exitCode != 0 ]]
-                        then
-                          echo "Download failed (\$@)" 1>&2
-                        fi
                     }
                     
                     nxf_s3_download() {
