@@ -88,6 +88,11 @@ class K8sDriverLauncher {
     private boolean interactive
 
     /**
+     * Runs in background mode
+     */
+    private boolean background
+
+    /**
      * Workflow script positional parameters
      */
     private List<String> args
@@ -103,6 +108,8 @@ class K8sDriverLauncher {
         this.args = args
         this.pipelineName = name
         this.interactive = name == 'login'
+        if( background && interactive )
+            throw new AbortOperationException("Option -bg conflicts with interactive mode")
         this.config = makeConfig(pipelineName)
         this.k8sConfig = makeK8sConfig(config)
         this.k8sClient = makeK8sClient(k8sConfig)
@@ -110,7 +117,14 @@ class K8sDriverLauncher {
         createK8sConfigMap()
         createK8sLauncherPod()
         waitPodStart()
-        interactive ? launchLogin() : printK8sPodOutput()
+        // login into container session
+        if( interactive )
+            launchLogin()
+        // dump pod output
+        else if( !background )
+            printK8sPodOutput()
+        else
+            log.debug "Nextflow driver launched in background mode -- pod: $runName"
     }
 
     protected void waitPodStart() {
