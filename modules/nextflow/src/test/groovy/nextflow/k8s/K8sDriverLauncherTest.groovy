@@ -166,7 +166,8 @@ class K8sDriverLauncherTest extends Specification {
                                  env:[
                                          [name:'NXF_WORK', value:'/the/work/dir'],
                                          [name:'NXF_ASSETS', value:'/the/project/dir'],
-                                         [name:'NXF_EXECUTOR', value:'k8s']],
+                                         [name:'NXF_EXECUTOR', value:'k8s'],
+                                         [name:'NXF_ANSI_LOG', value: 'false']],
                                  volumeMounts:[
                                          [name:'vol-1', mountPath:'/mnt/path/data'],
                                          [name:'vol-2', mountPath:'/mnt/path/cfg']]]
@@ -214,7 +215,8 @@ class K8sDriverLauncherTest extends Specification {
                                  env:[
                                          [name:'NXF_WORK', value:'/the/work/dir'],
                                          [name:'NXF_ASSETS', value:'/the/project/dir'],
-                                         [name:'NXF_EXECUTOR', value:'k8s']],
+                                         [name:'NXF_EXECUTOR', value:'k8s'],
+                                         [name:'NXF_ANSI_LOG', value: 'false'] ],
                                  volumeMounts:[
                                          [name:'vol-1', mountPath:'/mnt/path/data'],
                                          [name:'vol-2', mountPath:'/mnt/path/cfg']]]
