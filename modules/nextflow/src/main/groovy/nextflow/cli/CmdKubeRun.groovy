@@ -59,12 +59,16 @@ class CmdKubeRun extends CmdRun {
 
     protected boolean background() { launcher.options.background }
 
+    protected hasAnsiLogFlag() { launcher.options.hasAnsiLogFlag() }
+
     @Override
     void run() {
         final scriptArgs = (args?.size()>1 ? args[1..-1] : []) as List<String>
         final pipeline = stdin ? '-' : ( args ? args[0] : null )
         if( !pipeline )
             throw new AbortOperationException("No project name was specified")
+        if( hasAnsiLogFlag() )
+            log.warn "Ansi logging not supported by kuberun command"
         checkRunName()
         new K8sDriverLauncher(cmd: this, runName: runName, podImage: podImage, background: background())
                 .run(pipeline, scriptArgs)

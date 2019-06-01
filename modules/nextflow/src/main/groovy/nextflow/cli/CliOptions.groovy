@@ -109,4 +109,8 @@ class CliOptions {
         return Ansi.isEnabled()
     }
 
+    boolean hasAnsiLogFlag() {
+        ansiLog==true || System.getenv('NXF_ANSI_LOG')=='true'
+    }
+
 }
