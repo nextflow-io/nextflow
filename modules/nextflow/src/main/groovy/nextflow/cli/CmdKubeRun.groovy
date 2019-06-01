@@ -70,8 +70,10 @@ class CmdKubeRun extends CmdRun {
         if( hasAnsiLogFlag() )
             log.warn "Ansi logging not supported by kuberun command"
         checkRunName()
-        new K8sDriverLauncher(cmd: this, runName: runName, podImage: podImage, background: background())
-                .run(pipeline, scriptArgs)
+        final driver = new K8sDriverLauncher(cmd: this, runName: runName, podImage: podImage, background: background())
+        driver.run(pipeline, scriptArgs)
+        final status = driver.shutdown()
+        System.exit(status)
     }
 
 }

@@ -53,18 +53,28 @@ class K8sConfigTest extends Specification {
 
         when:
         cfg = new K8sConfig()
-        then:
+        then: 'it should return true when missing value'
         cfg.getCleanup()
 
         when:
+        cfg = new K8sConfig()
+        then: 'it should return false specified as default'
+        !cfg.getCleanup(false)
+
+        when:
         cfg = new K8sConfig(cleanup:false)
-        then:
+        then: 'it should return false'
         !cfg.getCleanup()
 
         when:
         cfg = new K8sConfig(cleanup:true)
-        then:
+        then: 'it should return true'
         cfg.getCleanup()
+
+        when:
+        cfg = new K8sConfig(cleanup:true)
+        then: 'the default value should be ignored'
+        cfg.getCleanup(false)
     }
 
     def 'should create config with storage claims' () {

@@ -88,8 +88,8 @@ class K8sConfig implements Map<String,Object> {
         new K8sDebug( (Map<String,Object>)get('debug') )
     }
 
-    boolean getCleanup() {
-        target.cleanup == null || target.cleanup as boolean
+    boolean getCleanup(boolean defValue=true) {
+        target.cleanup == null ? defValue : target.cleanup as boolean
     }
 
     String getUserName() {
