@@ -130,12 +130,12 @@ class CmdRun extends CmdBase implements HubOptions {
     boolean stdin
 
     @Parameter(names = ['-ansi'], hidden = true, arity = 0)
-    boolean setAnsi(boolean value) {
+    void setAnsi(boolean value) {
         launcher.options.ansiLog = value
     }
 
     @Parameter(names = ['-ansi-log'], description = 'Enable/disable ANSI console logging', arity = 1)
-    boolean setAnsiLog(boolean value) {
+    void setAnsiLog(boolean value) {
         launcher.options.ansiLog = value
     }
 

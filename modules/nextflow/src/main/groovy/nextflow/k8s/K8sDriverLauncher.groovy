@@ -417,6 +417,7 @@ class K8sDriverLauncher {
             .withEnv( PodEnv.value('NXF_WORK', k8sConfig.getWorkDir()) )
             .withEnv( PodEnv.value('NXF_ASSETS', k8sConfig.getProjectDir()) )
             .withEnv( PodEnv.value('NXF_EXECUTOR', 'k8s'))
+            .withEnv( PodEnv.value('NXF_ANSI_LOG', 'false'))
             .build()
 
         // note: do *not* set the work directory because it may need to be created  by the init script
