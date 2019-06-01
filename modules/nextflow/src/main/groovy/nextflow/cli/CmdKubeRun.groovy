@@ -57,15 +57,17 @@ class CmdKubeRun extends CmdRun {
         runName = runName.replace('_','-')
     }
 
+    protected boolean background() { launcher.options.background }
+
     @Override
     void run() {
         final scriptArgs = (args?.size()>1 ? args[1..-1] : []) as List<String>
         final pipeline = stdin ? '-' : ( args ? args[0] : null )
         if( !pipeline )
             throw new AbortOperationException("No project name was specified")
-
         checkRunName()
-        new K8sDriverLauncher(cmd: this, runName: runName, podImage: podImage).run(pipeline, scriptArgs)
+        new K8sDriverLauncher(cmd: this, runName: runName, podImage: podImage, background: background())
+                .run(pipeline, scriptArgs)
     }
 
 }
