@@ -417,4 +417,72 @@ class K8sDriverLauncherTest extends Specification {
         ])
 
     }
+
+    def 'should return pod exit status' () {
+        given:
+        def POD_NAME = 'pod-x'
+        def client = Mock(K8sClient)
+        def driver = Spy(K8sDriverLauncher)
+        driver.k8sClient = client
+        driver.runName = POD_NAME
+
+        when:
+        def status = driver.waitPodTermination()
+        then:
+        1 * client.podState(POD_NAME) >> [terminated: [exitCode: 99]]
+        then:
+        status == 99
+
+        when:
+        status = driver.waitPodTermination()
+        then:
+        1 * client.podState(POD_NAME) >> [:]
+        then:
+        1 * client.podState(POD_NAME) >> [terminated: [exitCode: 99]]
+        then:
+        status == 99
+
+        when:
+        status = driver.waitPodTermination()
+        then:
+        1 * client.podState(POD_NAME) >> [:]
+        1 * driver.isWaitTimedOut(_) >> true
+        then:
+        status == 127
+    }
+
+
+    def 'should delete configMap' () {
+        given:
+        def POD_NAME = 'pod-x'
+        def config = Mock(K8sConfig)
+        def driver = Spy(K8sDriverLauncher)
+        driver.k8sConfig = config
+        driver.runName = POD_NAME
+
+        when:
+        driver.shutdown()
+        then:
+        1 * driver.waitPodTermination() >> 0
+        then:
+        1 * config.getCleanup(true) >> true
+        1 * driver.deleteConfigMap() >> null
+
+        when:
+        driver.shutdown()
+        then:
+        1 * driver.waitPodTermination() >> 1
+        then:
+        1 * config.getCleanup(false) >> true
+        1 * driver.deleteConfigMap() >> null
+
+        when:
+        driver.shutdown()
+        then:
+        1 * driver.waitPodTermination() >> 1
+        then:
+        1 * config.getCleanup(false) >> false
+        0 * driver.deleteConfigMap() >> null
+
+    }
 }
