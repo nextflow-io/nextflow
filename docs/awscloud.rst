@@ -436,7 +436,7 @@ The pipeline can be launched either in a local computer or a EC2 instance. The l
 running workloads.
 
 Pipeline input data can be stored to be stored either locally or in a `S3 <https://aws.amazon.com/s3/>`_ bucket.
-The pipeline execution must specifies a Google Storage bucket where jobs intermediate results are stored with the
+The pipeline execution must specifies a AWS Storage bucket where jobs intermediate results are stored with the
 ``-bucket-dir`` command line options. For example::
 
   nextflow run my-pipeline -bucket-dir s3://my-bucket/some/path
