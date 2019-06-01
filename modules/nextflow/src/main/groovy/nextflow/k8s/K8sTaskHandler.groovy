@@ -340,7 +340,7 @@ class K8sTaskHandler extends TaskHandler {
         else {
             log.debug "[K8s] Oops.. invalid delete action"
         }
-        }
+    }
 
     protected boolean cleanupDisabled() {
         !k8sConfig.getCleanup()
