@@ -26,6 +26,7 @@ import com.google.api.services.genomics.v2alpha1.model.Operation
 import groovy.json.JsonOutput
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.exception.ProcessSubmitException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
@@ -33,7 +34,6 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.Escape
-
 /**
  * Task handler for Google Pipelines.
  *
@@ -150,7 +150,9 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         // note, according to the semantic of this method
         // the handler status has to be changed to RUNNING either
         // if the operation is still running or it has completed
-        def result = executor.helper.checkOperationStatus(operation)
+        final result = executor.helper.checkOperationStatus(operation)
+        if( !result )
+            return false
         logEvents(result)
 
         if( result!=null ) {
@@ -165,8 +167,12 @@ class GooglePipelinesTaskHandler extends TaskHandler {
     boolean checkIfCompleted() {
         if( !isRunning() )
             return false
-        
-        operation = executor.helper.checkOperationStatus(operation)
+
+        final resultOp = executor.helper.checkOperationStatus(operation)
+        if( !resultOp )
+            return false
+
+        operation = resultOp
         logEvents(operation)
 
         if (operation.getDone()) {
@@ -235,6 +241,8 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         log.trace "[GPAPI] Task created > $task.name - Request: $req"
 
         operation = submitPipeline(req)
+        if( !operation )
+            throw new ProcessSubmitException("Failed to submit task with name: $task.name")
         pipelineId = getPipelineIdFromOp(operation)
         status = TaskStatus.SUBMITTED
 
