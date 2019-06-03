@@ -50,7 +50,6 @@ class S3Helper {
             local timeout=$delayBetweenAttempts
             local attempt=0
             local exitCode=0
-
             while (( \$attempt < \$max_attempts ))
             do
               if "\$@"
@@ -82,6 +81,7 @@ class S3Helper {
         }
      
         nxf_parallel() {
+            IFS=\$'\\n'
             local cmd=("\$@")
             local cpus=\$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
             local max=\$(if (( cpus>$maxConnect )); then echo $maxConnect; else echo \$cpus; fi)
@@ -106,6 +106,7 @@ class S3Helper {
             done
             ((\${#pid[@]}>0)) && wait \${pid[@]}
             )
+            unset IFS
         }
         """.stripIndent()
     }
