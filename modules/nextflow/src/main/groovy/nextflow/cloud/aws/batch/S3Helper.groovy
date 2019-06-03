@@ -27,7 +27,7 @@ class S3Helper {
         def encryption = opts.storageEncryption ? "--sse $opts.storageEncryption " : ''
         def maxConnect = opts.maxParallelTransfers ?: AwsOptions.MAX_TRANSFER
         def attempts = opts.maxTransferAttempts ?: AwsOptions.MAX_TRANSFER_ATTEMPTS
-        def sleep = opts.sleepBetweenAttempts ?: AwsOptions.SLEEP_BETWEEN_ATTEMPTS
+        def delayBetweenAttempts = opts.delayBetweenAttempts ?: AwsOptions.DEFAULT_DELAY_BETWEEN_ATTEMPTS
 
         """
         # aws helper
@@ -47,7 +47,7 @@ class S3Helper {
         
         nxf_s3_retry() {
             local max_attempts=$attempts
-            local timeout=$sleep
+            local timeout=$delayBetweenAttempts
             local attempt=0
             local exitCode=0
 
