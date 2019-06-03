@@ -191,16 +191,33 @@ class GooglePipelinesHelper {
 
     Operation checkOperationStatus(Operation operation) {
         init()
-        genomicsClient.projects().operations().get(operation.getName()).execute()
+        try {
+            genomicsClient.projects().operations().get(operation.getName()).execute()
+        }
+        catch( IOException e ) {
+            log.warn("Invalid server response fetching operation status: $operation", e)
+            return null
+        }
     }
 
     void cancelOperation(Operation operation) {
         init()
-        genomicsClient.projects().operations().cancel(operation.getName(), new CancelOperationRequest()).execute()
+        try {
+            genomicsClient.projects().operations().cancel(operation.getName(), new CancelOperationRequest()).execute()
+        }
+        catch( IOException e ) {
+            log.warn("Invalid server response cancelling operation: $operation", e)
+        }
     }
 
     Operation runPipeline(Pipeline pipeline, Map<String,String> labels = [:]) {
         init()
-        genomicsClient.pipelines().run(new RunPipelineRequest().setPipeline(pipeline).setLabels(labels)).execute()
+        try {
+            genomicsClient.pipelines().run(new RunPipelineRequest().setPipeline(pipeline).setLabels(labels)).execute()
+        }
+        catch( IOException e ) {
+            log.warn("Invalid server response running pipeline: $pipeline", e)
+            return null
+        }
     }
 }
