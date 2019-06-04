@@ -73,6 +73,29 @@ class AwsBatchScriptLauncherTest extends Specification {
                     unset IFS
                 }
                 
+                nxf_s3_retry() {
+                    local max_attempts=1
+                    local timeout=10
+                    local attempt=0
+                    local exitCode=0
+                    while (( \$attempt < \$max_attempts ))
+                    do
+                      if "\$@"
+                        then
+                          return 0
+                      else
+                        exitCode=\$?
+                      fi
+                      if [[ \$exitCode == 0 ]]
+                      then
+                        break
+                      fi
+                      sleep \$timeout
+                      attempt=\$(( attempt + 1 ))
+                      timeout=\$(( timeout * 2 ))
+                    done
+                }
+                
                 nxf_s3_download() {
                     local source=$1
                     local target=$2
@@ -86,6 +109,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                 }
                 
                 nxf_parallel() {
+                    IFS=$'\\n\'
                     local cmd=("$@")
                     local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
                     local max=$(if (( cpus>16 )); then echo 16; else echo $cpus; fi)
@@ -110,6 +134,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                     done
                     ((${#pid[@]}>0)) && wait ${pid[@]}
                     )
+                    unset IFS
                 }
                 
                 '''.stripIndent()
@@ -221,6 +246,29 @@ class AwsBatchScriptLauncherTest extends Specification {
                         unset IFS
                     }
                     
+                    nxf_s3_retry() {
+                        local max_attempts=1
+                        local timeout=10
+                        local attempt=0
+                        local exitCode=0
+                        while (( \$attempt < \$max_attempts ))
+                        do
+                          if "\$@"
+                            then
+                              return 0
+                          else
+                            exitCode=\$?
+                          fi
+                          if [[ \$exitCode == 0 ]]
+                          then
+                            break
+                          fi
+                          sleep \$timeout
+                          attempt=\$(( attempt + 1 ))
+                          timeout=\$(( timeout * 2 ))
+                        done
+                    }
+                    
                     nxf_s3_download() {
                         local source=$1
                         local target=$2
@@ -234,6 +282,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                     }
                     
                     nxf_parallel() {
+                        IFS=$'\\n\'
                         local cmd=("$@")
                         local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
                         local max=$(if (( cpus>16 )); then echo 16; else echo $cpus; fi)
@@ -258,6 +307,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                         done
                         ((${#pid[@]}>0)) && wait ${pid[@]}
                         )
+                        unset IFS
                     }
                     
                     '''.stripIndent()
