@@ -151,7 +151,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         // the handler status has to be changed to RUNNING either
         // if the operation is still running or it has completed
         final result = executor.helper.checkOperationStatus(operation)
-        if( !result )
+        if( result == null )
             return false
         logEvents(result)
 
@@ -241,7 +241,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         log.trace "[GPAPI] Task created > $task.name - Request: $req"
 
         operation = submitPipeline(req)
-        if( !operation )
+        if( operation == null )
             throw new ProcessSubmitException("Failed to submit task with name: $task.name")
         pipelineId = getPipelineIdFromOp(operation)
         status = TaskStatus.SUBMITTED
