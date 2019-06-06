@@ -37,7 +37,7 @@ class AwsOptions {
     static final public int MAX_TRANSFER_ATTEMPTS = 1
 
     static final public int DEFAULT_DELAY_BETWEEN_ATTEMPTS = 10
-
+  
     String cliPath
 
     String storageClass
