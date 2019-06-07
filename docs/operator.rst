@@ -518,7 +518,7 @@ false           No sorting is applied (default).
 true            Order the grouped items by the item natural ordering i.e. numerical for number, lexicographic for string, etc. See http://docs.oracle.com/javase/tutorial/collections/interfaces/order.html
 hash            Order the grouped items by the hash number associated to each entry.
 deep            Similar to the previous, but the hash number is created on actual entries content e.g. when the item is a file the hash is created on the actual file content.
-`custom`        A custom sorting criteria can be specified by using either a :ref:`Closure <script-closure>` or a `Comparator <http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html>`_ object.
+`custom`        A custom sorting criteria used to order the tuples element holding list of values. It can be specified by using either a :ref:`Closure <script-closure>` or a `Comparator <http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html>`_ object.
 =============== ========================
 
 
