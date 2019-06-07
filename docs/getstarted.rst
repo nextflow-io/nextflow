@@ -88,8 +88,6 @@ Execute the script by entering the following command in your terminal::
 It will output something similar to the text shown below::
 
     N E X T F L O W  ~  version 19.04.0
-    Launching `t.nf` [serene_mayer] - revision: aa284738a9
-    [warm up] executor > local
     executor >  local (3)
     [69/c8ea4a] process > splitLetters   [100%] 1 of 1 ✔
     [84/c8b7f1] process > convertToUpper [100%] 2 of 2 ✔
@@ -148,8 +146,6 @@ Then save the file with the same name, and execute it by adding the ``-resume`` 
 It will print output similar to this::
 
     N E X T F L O W  ~  version 19.04.0
-    Launching `t.nf` [fabulous_ptolemy] - revision: 6bb92f2957
-    [warm up] executor > local
     executor >  local (2)
     [69/c8ea4a] process > splitLetters   [100%] 1 of 1, cached: 1 ✔
     [d0/e94f07] process > convertToUpper [100%] 2 of 2 ✔
@@ -182,8 +178,6 @@ The string specified on the command line will override the default value of the 
 will look like this::
 
     N E X T F L O W  ~  version 19.04.0
-    Launching `t.nf` [magical_payne] - revision: 6bb92f2957
-    [warm up] executor > local
     executor >  local (4)
     [8b/16e7d7] process > splitLetters   [100%] 1 of 1 ✔
     [eb/729772] process > convertToUpper [100%] 3 of 3 ✔

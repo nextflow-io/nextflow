@@ -60,7 +60,7 @@ abstract class Executor {
      * Allows to post-initialize the executor
      */
     final void init() {
-        log.info "[warm up] executor > ${getDisplayName()}"
+        log.debug "[warm up] executor > ${getDisplayName()}"
         monitor = createTaskMonitor()
         monitor.start()
         register()
