@@ -22,6 +22,7 @@ import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.util.Duration
 
 /**
  * Helper class wrapping AWS config options required for Batch job executions
@@ -36,7 +37,7 @@ class AwsOptions {
 
     static final public int MAX_TRANSFER_ATTEMPTS = 1
 
-    static final public int DEFAULT_DELAY_BETWEEN_ATTEMPTS = 10
+    static final public Duration DEFAULT_DELAY_BETWEEN_ATTEMPTS = Duration.of('10sec')
   
     String cliPath
 
@@ -52,7 +53,7 @@ class AwsOptions {
 
     int maxTransferAttempts = MAX_TRANSFER_ATTEMPTS
 
-    int delayBetweenAttempts = DEFAULT_DELAY_BETWEEN_ATTEMPTS
+    Duration delayBetweenAttempts = DEFAULT_DELAY_BETWEEN_ATTEMPTS
 
     /**
      * The job role ARN that should be used
@@ -80,7 +81,7 @@ class AwsOptions {
         storageEncryption = session.config.navigate('aws.client.storageEncryption') as String
         maxParallelTransfers = session.config.navigate('aws.batch.maxParallelTransfers', MAX_TRANSFER) as int
         maxTransferAttempts = session.config.navigate('aws.batch.maxTransferAttempts', MAX_TRANSFER_ATTEMPTS) as int
-        delayBetweenAttempts = session.config.navigate('aws.batch.delayBetweenAttempts', DEFAULT_DELAY_BETWEEN_ATTEMPTS) as int
+        delayBetweenAttempts = session.config.navigate('aws.batch.delayBetweenAttempts', DEFAULT_DELAY_BETWEEN_ATTEMPTS) as Duration
         region = session.config.navigate('aws.region') as String
         volumes = makeVols(session.config.navigate('aws.batch.volumes'))
         jobRole = session.config.navigate('aws.batch.jobRole')

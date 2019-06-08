@@ -47,7 +47,7 @@ class S3Helper {
         
         nxf_s3_retry() {
             local max_attempts=$attempts
-            local timeout=$delayBetweenAttempts
+            local timeout=${delayBetweenAttempts.seconds}
             local attempt=0
             local exitCode=0
             while (( \$attempt < \$max_attempts ))

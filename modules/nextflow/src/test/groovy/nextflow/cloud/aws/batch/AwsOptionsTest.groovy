@@ -77,6 +77,8 @@ class AwsOptionsTest extends Specification {
                                     batch:[
                                         cliPath: '/foo/bar/aws',
                                         maxParallelTransfers: 5,
+                                        maxTransferAttempts: 3,
+                                        delayBetweenAttempts: '9 sec',
                                         jobRole: 'aws::foo::bar',
                                         volumes: '/foo,/this:/that'],
                                     client: [
@@ -95,6 +97,8 @@ class AwsOptionsTest extends Specification {
         def opts = new AwsOptions(sess)
         then:
         opts.maxParallelTransfers == 5
+        opts.maxTransferAttempts == 3 
+        opts.delayBetweenAttempts.seconds == 9
         opts.storageClass == 'my-store-class'
         opts.storageEncryption == 'my-ecrypt-class'
         opts.region == 'aws-west-2'
