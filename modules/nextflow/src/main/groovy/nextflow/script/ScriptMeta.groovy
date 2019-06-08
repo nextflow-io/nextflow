@@ -75,6 +75,8 @@ class ScriptMeta {
     /** Whenever it's a module script or the main script */
     private boolean module
 
+    private List<String> processNames = Collections.emptyList()
+
     Path getScriptPath() { scriptPath }
 
     boolean isModule() { module }
@@ -97,6 +99,11 @@ class ScriptMeta {
     @PackageScope
     void setModule(boolean val) {
         this.module = val
+    }
+
+    @PackageScope
+    void setProcessNames(List<String> names) {
+        this.processNames = names
     }
 
     @PackageScope
@@ -156,18 +163,19 @@ class ScriptMeta {
     }
 
     Set<String> getProcessNames() {
-        def result = new HashSet(definitions.size() + imports.size())
-        // local definitions
-        for( def item : definitions.values() ) {
-            if( item instanceof ProcessDef )
-                result.add(item.name)
-        }
-        // processes from imports
-        for( def item: imports.values() ) {
-            if( item instanceof ProcessDef )
-                result.add(item.name)
-        }
-        return result
+        new HashSet<String>(processNames)
+//        def result = new HashSet(definitions.size() + imports.size())
+//        // local definitions
+//        for( def item : definitions.values() ) {
+//            if( item instanceof ProcessDef )
+//                result.add(item.name)
+//        }
+//        // processes from imports
+//        for( def item: imports.values() ) {
+//            if( item instanceof ProcessDef )
+//                result.add(item.name)
+//        }
+//        return result
     }
 
     void addModule(BaseScript script, String name, String alias) {

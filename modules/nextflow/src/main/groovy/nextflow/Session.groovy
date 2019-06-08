@@ -878,8 +878,8 @@ class Session implements ISession {
             else if( key.startsWith('withName:') ) {
                 name = key.substring('withName:'.length())
             }
-            if( name && !isValidProcessName(processNames, name, result) )
-                break
+            if( name )
+                checkValidProcessName(processNames, name, result)
         }
 
         return result
@@ -893,7 +893,7 @@ class Session implements ISession {
      * @param errorMessage A list of strings used to return the error message to the caller
      * @return {@code true} if the name specified belongs to the list of process names or {@code false} otherwise
      */
-    protected boolean isValidProcessName(Collection<String> processNames, String selector, List<String> errorMessage)  {
+    protected boolean checkValidProcessName(Collection<String> processNames, String selector, List<String> errorMessage)  {
         final matches = processNames.any { name -> ProcessConfig.matchesSelector(name, selector) }
         if( matches )
             return true

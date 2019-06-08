@@ -425,7 +425,7 @@ class SessionTest extends Specification {
 
         when:
         def error = []
-        session.isValidProcessName(NAMES, SELECTOR, error)
+        session.checkValidProcessName(NAMES, SELECTOR, error)
         then:
         error[0] == MSG
         
