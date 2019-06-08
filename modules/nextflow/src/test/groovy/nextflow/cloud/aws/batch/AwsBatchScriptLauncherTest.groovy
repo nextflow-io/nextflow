@@ -73,6 +73,29 @@ class AwsBatchScriptLauncherTest extends Specification {
                     unset IFS
                 }
                 
+                nxf_s3_retry() {
+                    local max_attempts=1
+                    local timeout=10
+                    local attempt=0
+                    local exitCode=0
+                    while (( \$attempt < \$max_attempts ))
+                    do
+                      if "\$@"
+                        then
+                          return 0
+                      else
+                        exitCode=\$?
+                      fi
+                      if [[ \$exitCode == 0 ]]
+                      then
+                        break
+                      fi
+                      sleep \$timeout
+                      attempt=\$(( attempt + 1 ))
+                      timeout=\$(( timeout * 2 ))
+                    done
+                }
+                
                 nxf_s3_download() {
                     local source=$1
                     local target=$2
@@ -86,6 +109,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                 }
                 
                 nxf_parallel() {
+                    IFS=$'\\n\'
                     local cmd=("$@")
                     local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
                     local max=$(if (( cpus>16 )); then echo 16; else echo $cpus; fi)
@@ -110,6 +134,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                     done
                     ((${#pid[@]}>0)) && wait ${pid[@]}
                     )
+                    unset IFS
                 }
                 
                 '''.stripIndent()
@@ -221,6 +246,29 @@ class AwsBatchScriptLauncherTest extends Specification {
                         unset IFS
                     }
                     
+                    nxf_s3_retry() {
+                        local max_attempts=1
+                        local timeout=10
+                        local attempt=0
+                        local exitCode=0
+                        while (( \$attempt < \$max_attempts ))
+                        do
+                          if "\$@"
+                            then
+                              return 0
+                          else
+                            exitCode=\$?
+                          fi
+                          if [[ \$exitCode == 0 ]]
+                          then
+                            break
+                          fi
+                          sleep \$timeout
+                          attempt=\$(( attempt + 1 ))
+                          timeout=\$(( timeout * 2 ))
+                        done
+                    }
+                    
                     nxf_s3_download() {
                         local source=$1
                         local target=$2
@@ -234,6 +282,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                     }
                     
                     nxf_parallel() {
+                        IFS=$'\\n\'
                         local cmd=("$@")
                         local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
                         local max=$(if (( cpus>16 )); then echo 16; else echo $cpus; fi)
@@ -258,6 +307,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                         done
                         ((${#pid[@]}>0)) && wait ${pid[@]}
                         )
+                        unset IFS
                     }
                     
                     '''.stripIndent()
@@ -292,6 +342,118 @@ class AwsBatchScriptLauncherTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+    }
+
+    def 'test download retry enabled'() {
+
+        /*
+         * simple bash run
+         */
+        when:
+        def bucket = Paths.get('/bucket/work')
+        def opts = new AwsOptions()
+        opts.maxTransferAttempts = 3
+        opts.delayBetweenAttempts = 9
+
+        def binding = new AwsBatchScriptLauncher([
+                name: 'Hello 1',
+                workDir: bucket,
+                // targetDir: bucket,
+                script: 'echo Hello world!',
+        ] as TaskBean, opts) .makeBinding()
+
+        then:
+
+        binding.stage_inputs == '''\
+                # stage input files
+                downloads=()
+                rm -f .command.sh
+                downloads+=("nxf_s3_retry nxf_s3_download s3://bucket/work/.command.sh .command.sh")
+                nxf_parallel "${downloads[@]}"
+                '''.stripIndent()
+
+        binding.helpers_script == '''
+                    # aws helper
+                    nxf_s3_upload() {
+                        local pattern=$1
+                        local s3path=$2
+                        IFS=$'\\n\'
+                        for name in $(eval "ls -1d $pattern");do
+                          if [[ -d "$name" ]]; then
+                            aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                          else
+                            aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                          fi
+                        done
+                        unset IFS
+                    }
+                    
+                    nxf_s3_retry() {
+                        local max_attempts=3
+                        local timeout=9
+                        local attempt=0
+                        local exitCode=0
+                        while (( \$attempt < \$max_attempts ))
+                        do
+                          if "\$@"
+                            then
+                              return 0
+                          else
+                            exitCode=\$?
+                          fi
+                          if [[ \$exitCode == 0 ]]
+                          then
+                            break
+                          fi
+                          sleep \$timeout
+                          attempt=\$(( attempt + 1 ))
+                          timeout=\$(( timeout * 2 ))
+                        done
+                    }
+                    
+                    nxf_s3_download() {
+                        local source=$1
+                        local target=$2
+                        local file_name=$(basename $1)
+                        local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                        if [[ $is_dir == 1 ]]; then
+                            aws s3 cp --only-show-errors --recursive "$source" "$target"
+                        else 
+                            aws s3 cp --only-show-errors "$source" "$target"
+                        fi
+                    }
+                    
+                    nxf_parallel() {
+                        IFS=$'\\n\'
+                        local cmd=("$@")
+                        local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
+                        local max=$(if (( cpus>16 )); then echo 16; else echo $cpus; fi)
+                        local i=0
+                        local pid=()
+                        (
+                        set +u
+                        while ((i<${#cmd[@]})); do
+                            local copy=()
+                            for x in "${pid[@]}"; do
+                              [[ -e /proc/$x ]] && copy+=($x) 
+                            done
+                            pid=("${copy[@]}")
+                    
+                            if ((${#pid[@]}>=$max)); then 
+                              sleep 1 
+                            else 
+                              eval "${cmd[$i]}" &
+                              pid+=($!)
+                              ((i+=1))
+                            fi 
+                        done
+                        ((${#pid[@]}>0)) && wait ${pid[@]}
+                        )
+                        unset IFS
+                    }
+                    
+                    '''.stripIndent()
+
     }
 
 }
