@@ -99,7 +99,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         given:
         def bean = Mock(TaskBean)
         def opts = Mock(AwsOptions)
-        def copy = Spy(AwsBatchFileCopyStrategy, constructorArgs: [bean, opts])
+        AwsBatchFileCopyStrategy copy = Spy(AwsBatchFileCopyStrategy, constructorArgs: [bean, opts])
 
         when:
         def script = copy.getBeforeStartScript()

@@ -16,7 +16,7 @@
 
 package nextflow.cloud.aws.batch
 
-
+import nextflow.util.Duration
 import spock.lang.Specification
 
 import java.nio.file.Files
@@ -353,7 +353,7 @@ class AwsBatchScriptLauncherTest extends Specification {
         def bucket = Paths.get('/bucket/work')
         def opts = new AwsOptions()
         opts.maxTransferAttempts = 3
-        opts.delayBetweenAttempts = 9
+        opts.delayBetweenAttempts = '9 sec' as Duration
 
         def binding = new AwsBatchScriptLauncher([
                 name: 'Hello 1',
