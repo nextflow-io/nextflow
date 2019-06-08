@@ -16,6 +16,8 @@
 
 package nextflow.ast
 
+import static org.codehaus.groovy.ast.tools.GeneralUtils.*
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.script.BaseScript
@@ -32,6 +34,7 @@ import nextflow.script.TokenVar
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.ConstructorNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.VariableScope
@@ -61,7 +64,6 @@ import org.codehaus.groovy.syntax.SyntaxException
 import org.codehaus.groovy.syntax.Types
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
-import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
 /**
  * Implement some syntax sugars of Nextflow DSL scripting.
  *
@@ -130,6 +132,62 @@ class NextflowDSLImpl implements ASTTransformation {
             super.visitMethod(node)
         }
 
+        /**
+         * Creates a statement that invokes the {@link nextflow.script.ScriptMeta#setProcessNames(java.util.List)} (java.util.List)} method
+         * used to initialize the script with metadata collected during script parsing
+         *
+         * @return The method invocation statement
+         */
+        protected Statement makeSetProcessNamesStm() {
+            final names = new ListExpression()
+            for( String it: processNames ) {
+                names.addExpression(new ConstantExpression(it.toString()))
+            }
+
+            // the method list argument
+            final args = new ArgumentListExpression()
+            args.addExpression(names)
+
+            // some magic code
+            // this generates the invocation of the method:
+            //   nextflow.script.ScriptMeta.get(this).setProcessNames(<list of process names>)
+            final scriptMeta = new PropertyExpression( new PropertyExpression(new VariableExpression('nextflow'),'script'), 'ScriptMeta')
+            final thiz = new ArgumentListExpression(); thiz.addExpression( new VariableExpression('this') )
+            final meta = new MethodCallExpression( scriptMeta, 'get', thiz )
+            final call = new MethodCallExpression( meta, 'setProcessNames', args)
+            final stm = new ExpressionStatement(call)
+            return stm
+        }
+
+        /**
+         * Add to constructor a method call to inject parsed metadata
+         * 
+         * @param node
+         */
+        protected void injectMetadata(ClassNode node) {
+            for( ConstructorNode constructor : node.getDeclaredConstructors() ) {
+                def code = constructor.getCode()
+                if( code instanceof BlockStatement ) {
+                    code.addStatement(makeSetProcessNamesStm())
+                }
+                else if( code instanceof ExpressionStatement ) {
+                    def expr = code
+                    def block = new BlockStatement()
+                    block.addStatement(expr)
+                    block.addStatement(makeSetProcessNamesStm())
+                    constructor.setCode(block)
+                }
+                else
+                    throw new IllegalStateException("Invalid constructor expression: $code")
+            }
+        }
+
+        @Override
+        protected void visitObjectInitializerStatements(ClassNode node) {
+            if( node.getSuperClass().getName() == BaseScript.getName() )
+                injectMetadata(node)
+            super.visitObjectInitializerStatements(node)
+        }
 
         @Override
         void visitMethodCallExpression(MethodCallExpression methodCall) {
