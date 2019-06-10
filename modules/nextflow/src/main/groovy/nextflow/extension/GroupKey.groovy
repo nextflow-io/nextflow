@@ -16,6 +16,10 @@
 
 package nextflow.extension
 
+import com.google.common.hash.Hasher
+import nextflow.util.CacheFunnel
+import nextflow.util.CacheHelper
+import nextflow.util.CacheHelper.HashMode
 import org.codehaus.groovy.runtime.InvokerHelper
 
 /**
@@ -26,7 +30,7 @@ import org.codehaus.groovy.runtime.InvokerHelper
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class GroupKey {
+class GroupKey implements CacheFunnel {
 
     private final Object target
 
@@ -82,5 +86,10 @@ class GroupKey {
     @Override
     String toString() {
         target.toString()
+    }
+
+    @Override
+    Hasher funnel(Hasher hasher, HashMode mode) {
+        return CacheHelper.hasher(hasher, target, mode)
     }
 }
