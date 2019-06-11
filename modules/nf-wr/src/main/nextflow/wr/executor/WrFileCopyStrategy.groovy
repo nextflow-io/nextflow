@@ -37,16 +37,17 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
     private final String outputMountLocation
     static final String inputMountLocation = ".inputs"
     private final String workDirScheme
-
-    private Map<String,String> environment
-
     private final Map<String,Path> inputFiles
+
+    WrFileCopyStrategy() { }
 
     WrFileCopyStrategy(TaskBean task) {
         super(task)
-        this.environment = task.environment
         this.inputFiles = task.inputFiles
-        this.outputMountLocation = ".mnt" + task.workDir.toString()
+        this.outputMountLocation = ".mnt" + task.workDir?.toString()
+        if (this.outputMountLocation.endsWith("/")) {
+            this.outputMountLocation = this.outputMountLocation.substring(0, this.outputMountLocation.length() - 1);
+        }
         this.workDirScheme = getPathScheme(task.workDir)
     }
 
@@ -62,8 +63,7 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String getEnvScript(Map environment, boolean container) {
-        if( container )
-            throw new IllegalArgumentException("Parameter `wrapHandler` not supported by ${this.class.simpleName}")
+        if(container) throw new UnsupportedOperationException()
 
         final result = new StringBuilder()
         final copy = environment ? new HashMap<String,String>(environment) : Collections.<String,String>emptyMap()
@@ -123,13 +123,21 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
                 return "$mountLocation/"
             }
             if (mountLocation == outputMountLocation) {
-                String baseName = Escape.path(path.getFileName())
+                String baseName = path.getFileName()
+                if (baseName.charAt(0) == '/') {
+                    baseName = baseName.substring(1, baseName.length());
+                }
+                baseName = Escape.path(baseName)
                 return "$mountLocation/$baseName"
             }
-            String p = Escape.path(path)
-            return "$mountLocation$p"
+            String p = path
+            if (p.charAt(0) == '/') {
+                p = p.substring(1, p.length());
+            }
+            p = Escape.path(p)
+            return "$mountLocation/$p"
         }
-        return Escape.path(path)
+        return path
     }
 
     /**
