@@ -42,15 +42,15 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
     @Override
     String getContentUrl( String path ) {
-        "${config.endpoint}/api/1.0/repositories/$project/src/${getMainBranch()}/$path"
+        "${config.endpoint}/api/2.0/repositories/$project/src/${getMainBranch()}/$path"
     }
 
     private String getMainBranchUrl() {
-        "${config.endpoint}/api/1.0/repositories/$project/main-branch/"
+        "${config.endpoint}/api/2.0/repositories/$project"
     }
 
     String getMainBranch() {
-        invokeAndParseResponse(getMainBranchUrl()) ?. name
+        invokeAndParseResponse(getMainBranchUrl()) ?. mainbranch ?. name
     }
 
     @Override
@@ -77,8 +77,6 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     byte[] readBytes(String path) {
 
         def url = getContentUrl(path)
-        Map response  = invokeAndParseResponse(url)
-        response.get('data')?.toString()?.getBytes()
-
+        invoke(url)?.getBytes()
     }
 }
