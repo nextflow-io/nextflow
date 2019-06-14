@@ -60,7 +60,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'executor',
             'ext',
             'gpu',
-            'instanceType',
+            'machineType',
             'queue',
             'label',
             'maxErrors',

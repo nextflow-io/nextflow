@@ -34,6 +34,7 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.Escape
+import nextflow.util.MemoryUnit
 /**
  * Task handler for Google Pipelines.
  *
@@ -45,7 +46,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
 
     static private List<String> UNSTAGE_CONTROL_FILES = [TaskRun.CMD_ERRFILE, TaskRun.CMD_OUTFILE, TaskRun.CMD_LOG, TaskRun.CMD_EXIT ]
 
-    static private String DEFAULT_INSTANCE_TYPE = 'n1-standard-1'
+    static private String CUSTOM_INSTANCE_TYPE = 'custom'
 
     GooglePipelinesExecutor executor
     
@@ -59,7 +60,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
 
     private Path errorFile
 
-    private String instanceType
+    private String machineType
 
     private String mountPath
 
@@ -93,12 +94,13 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         //Set the mount path to be the workdir that is parent of the hashed directories.
         this.mountPath = task.workDir.parent.parent.toString()
 
-        //Get the instanceType to use for this task
-        instanceType = executor.getSession().config.navigate("cloud.instanceType") ?: DEFAULT_INSTANCE_TYPE
+        //Get the machineType to use for this task
+        this.machineType = getProcessMachineType()
 
         validateConfiguration()
     }
 
+    
 
     /* ONLY FOR TESTING PURPOSE */
     protected GooglePipelinesTaskHandler() {
@@ -109,9 +111,31 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         if (!task.container) {
             throw new ProcessUnrecoverableException("No container image specified for process $task.name -- Either specify the container to use in the process definition or with 'process.container' value in your config")
         }
-        if (!instanceType) {
-            throw new ProcessUnrecoverableException("No instance type specified for process $task.name -- Please provide a 'cloud.instanceType' definition in your config")
+    }
+
+    //
+    // Use the process cpus and memory directives to create custom GCP instance
+    // If memory not specified, default to 1 GB per cpu.  An absence of the cpus directive defaults to 1 cpu.
+    // If the process machine type is defined as one of the predefined GCP machine types, use that instead of cpus/memory
+    // The deprecated cloud.instanceType will be used if specified
+    String getProcessMachineType() {
+        String machineType = getProcessMachineType(executor.getSession().config.navigate("cloud.instanceType"), task.config.machineType, task.config.cpus, task.config.memory)
+
+        log.trace "[GPAPI] Task: $task.name - Instance Type: $machineType"
+
+	return machineType
+    }
+
+    String getProcessMachineType(String cloudInstanceType, String taskMachineType, int cpus, MemoryUnit memory) {
+
+        String machineType = taskMachineType ?: cloudInstanceType
+
+        if (machineType == null) {
+            long megabytes = memory != null ? memory.mega : cpus*1024
+            machineType = 'custom-' + cpus + '-' + megabytes
         }
+
+        return machineType
     }
 
     protected void logEvents(Operation operation) {
@@ -294,7 +318,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         sharedMount = executor.helper.configureMount(diskName, mountPath)
 
         def req = new GooglePipelinesSubmitRequest()
-        req.instanceType = instanceType
+        req.machineType = machineType
         req.project = pipelineConfiguration.project
         req.zone = pipelineConfiguration.zone
         req.region = pipelineConfiguration.region
