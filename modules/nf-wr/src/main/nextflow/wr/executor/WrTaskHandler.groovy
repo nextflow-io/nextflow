@@ -63,13 +63,13 @@ class WrTaskHandler extends TaskHandler implements BatchHandler<String,Map> {
         this.executor = executor
         this.client = executor.getClient()
 
-        this.logFile = task.workDir.resolve(TaskRun.CMD_LOG)
-        this.scriptFile = task.workDir.resolve(TaskRun.CMD_SCRIPT)
-        this.inputFile =  task.workDir.resolve(TaskRun.CMD_INFILE)
-        this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
-        this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
-        this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
-        this.traceFile = task.workDir.resolve(TaskRun.CMD_TRACE)
+        this.logFile = task.workDir?.resolve(TaskRun.CMD_LOG)
+        this.scriptFile = task.workDir?.resolve(TaskRun.CMD_SCRIPT)
+        this.inputFile =  task.workDir?.resolve(TaskRun.CMD_INFILE)
+        this.outputFile = task.workDir?.resolve(TaskRun.CMD_OUTFILE)
+        this.errorFile = task.workDir?.resolve(TaskRun.CMD_ERRFILE)
+        this.wrapperFile = task.workDir?.resolve(TaskRun.CMD_RUN)
+        this.traceFile = task.workDir?.resolve(TaskRun.CMD_TRACE)
     }
 
     void batch( BatchContext<String,Map> context ) {
