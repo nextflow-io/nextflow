@@ -46,8 +46,6 @@ class GooglePipelinesTaskHandler extends TaskHandler {
 
     static private List<String> UNSTAGE_CONTROL_FILES = [TaskRun.CMD_ERRFILE, TaskRun.CMD_OUTFILE, TaskRun.CMD_LOG, TaskRun.CMD_EXIT ]
 
-    static private String CUSTOM_INSTANCE_TYPE = 'custom'
-
     GooglePipelinesExecutor executor
     
     @PackageScope GooglePipelinesConfiguration pipelineConfiguration
@@ -136,6 +134,31 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         }
 
         return machineType
+    }
+
+    //
+    // If cloud.instancetype is specified as "custom", use a custom instance with the resources specified in the cpus and memory fields for the process
+    // Otherwise, use the instanceType specified in the config file.
+    // If no instanceType specified in config file or in process, use DEFAULT_INSTANCE_TYPE.
+    // If cpus specified without memory, default to 2GB per cpu
+    //
+    String getProcessInstanceType() {
+        String cloudInstanceType = getProcessInstanceType(executor.getSession().config.navigate("cloud.instanceType"), task.config.cpus, task.config.memory)
+
+        log.trace "[GPAPI] Task: $task.name - Instance Type: $cloudInstanceType"
+
+	return cloudInstanceType
+    }
+
+    String getProcessInstanceType(String cloudInstanceType, int cpus, MemoryUnit memory) {
+        if (cloudInstanceType == null) {
+            cloudInstanceType = DEFAULT_INSTANCE_TYPE;
+        } else if (cloudInstanceType.equalsIgnoreCase(CUSTOM_INSTANCE_TYPE)) {
+            long megabytes = memory != null ? memory.mega : cpus*2048
+            cloudInstanceType = 'custom-' + cpus + '-' + megabytes
+        }
+
+        return cloudInstanceType
     }
 
     protected void logEvents(Operation operation) {
