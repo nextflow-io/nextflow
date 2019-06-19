@@ -838,12 +838,12 @@ class Session implements ISession {
     boolean isSuccess() { !aborted && !cancelled }
 
     void processRegister(TaskProcessor process) {
-        log.debug ">>> barrier register (process: ${process.name})"
+        log.trace ">>> barrier register (process: ${process.name})"
         processesBarrier.register(process)
     }
 
     void processDeregister(TaskProcessor process) {
-        log.debug "<<< barrier arrive (process: ${process.name})"
+        log.trace "<<< barrier arrive (process: ${process.name})"
         processesBarrier.arrive(process)
     }
 
