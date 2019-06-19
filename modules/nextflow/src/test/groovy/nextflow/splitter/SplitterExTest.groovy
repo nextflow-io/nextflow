@@ -29,26 +29,6 @@ import test.TestHelper
 class SplitterExTest extends Specification {
 
 
-    def 'should count lines'() {
-
-        given:
-        def file = TestHelper.createInMemTempFile('foo.txt')
-
-        when:
-        file.text = '''
-            line 1
-            line 2
-            line 3
-            line 4
-            line 5
-            '''
-                .stripIndent().strip()
-
-        then:
-        file.countText() == 5
-        file.countText(by:2) == 3
-    }
-
     def 'should count compressed text file' () {
         given:
         def folder = TestHelper.createInMemTempDir()

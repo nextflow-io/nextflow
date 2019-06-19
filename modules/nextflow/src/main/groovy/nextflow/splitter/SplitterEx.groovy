@@ -44,11 +44,6 @@ class SplitterEx {
         new FastqSplitter().options(opts) .target(self) .count()
     }
 
-    static long countText(Path self, Map opts=EMPTY) {
-        log.warn "Method `countText` has been deprecated -- Use `countLines` instead"
-        countLines(self,opts)
-    }
-
     static List splitText(Path self, Map opts=EMPTY) {
         new TextSplitter().options(opts) .target(self) .list()
     }
@@ -64,6 +59,5 @@ class SplitterEx {
     static List splitCsv(Path self, Map opts=EMPTY) {
         new CsvSplitter().options(opts) .target(self) .list()
     }
-
 
 }
