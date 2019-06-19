@@ -269,7 +269,7 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     @Override
     TaskMonitor start() {
-        log.debug ">>> barrier register (monitor: ${this.name})"
+        log.trace ">>> barrier register (monitor: ${this.name})"
         session.barrier.register(this)
 
         this.taskCompleteLock = new ReentrantLock()
@@ -291,7 +291,7 @@ class TaskPollingMonitor implements TaskMonitor {
                 pollLoop()
             }
             finally {
-                log.debug "<<< barrier arrives (monitor: ${this.name})"
+                log.trace "<<< barrier arrives (monitor: ${this.name})"
                 session.barrier.arrive(this)
             }
         }
