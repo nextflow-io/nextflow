@@ -6,8 +6,9 @@ set -e
 $NXF_RUN | tee stdout
 
 [[ `grep INFO .nextflow.log | grep -c 'Submitted process > foo'` == 1 ]] || false
-[[ `grep INFO .nextflow.log | grep -c 'Submitted process > bar (ggal_beta)'` == 1 ]] || false
-[[ `grep INFO .nextflow.log | grep -c 'Submitted process > bar (ggal_test)'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process > bar (gut)'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process > bar (liver)'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process > bar (lung)'` == 1 ]] || false
 cmp stdout .expected || false
 
 
@@ -18,6 +19,7 @@ cmp stdout .expected || false
 $NXF_RUN -resume | tee stdout
 
 [[ `grep INFO .nextflow.log | grep -c 'Cached process > foo'` == 1 ]] || false
-[[ `grep INFO .nextflow.log | grep -c 'Cached process > bar (ggal_beta)'` == 1 ]] || false
-[[ `grep INFO .nextflow.log | grep -c 'Cached process > bar (ggal_test)'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > bar (gut)'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > bar (liver)'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > bar (lung)'` == 1 ]] || false
 cmp stdout .expected || false

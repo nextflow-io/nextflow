@@ -1,10 +1,10 @@
-1	protein_coding	exon	9363	9365	.	+	.	 gene_id "ENSGALG00000011847"; transcript_id "ENSGALT00000019330"; exon_number "1"; gene_name "TTC26"; gene_biotype "protein_coding"; transcript_name "TTC26-201"; exon_id "ENSGALE00000304601";
-1	protein_coding	CDS	9363	9365	.	+	0	 gene_id "ENSGALG00000011847"; transcript_id "ENSGALT00000019330"; exon_number "1"; gene_name "TTC26"; gene_biotype "protein_coding"; transcript_name "TTC26-201"; protein_id "ENSGALP00000019304";
-1	protein_coding	start_codon	9363	9365	.	+	0	 gene_id "ENSGALG00000011847"; transcript_id "ENSGALT00000019330"; exon_number "1"; gene_name "TTC26"; gene_biotype "protein_coding"; transcript_name "TTC26-201";
-1	protein_coding	exon	9492	9629	.	+	.	 gene_id "ENSGALG00000011847"; transcript_id "ENSGALT00000019330"; exon_number "2"; gene_name "TTC26"; gene_biotype "protein_coding"; transcript_name "TTC26-201"; exon_id "ENSGALE00000128217";
-1	protein_coding	CDS	9492	9629	.	+	0	 gene_id "ENSGALG00000011847"; transcript_id "ENSGALT00000019330"; exon_number "2"; gene_name "TTC26"; gene_biotype "protein_coding"; transcript_name "TTC26-201"; protein_id "ENSGALP00000019304";
-1	protein_coding	exon	9807	9899	.	+	.	 gene_id "ENSGALG00000011847"; transcript_id "ENSGALT00000019330"; exon_number "3"; gene_name "TTC26"; gene_biotype "protein_coding"; transcript_name "TTC26-201"; exon_id "ENSGALE00000128207";
-1	protein_coding	CDS	9807	9899	.	+	0	 gene_id "ENSGALG00000011847"; transcript_id "ENSGALT00000019330"; exon_number "3"; gene_name "TTC26"; gene_biotype "protein_coding"; transcript_name "TTC26-201"; protein_id "ENSGALP00000019304";
-1	protein_coding	exon	17513	17627	.	+	.	 gene_id "ENSGALG00000011847"; transcript_id "ENSGALT00000019330"; exon_number "4"; gene_name "TTC26"; gene_biotype "protein_coding"; transcript_name "TTC26-201"; exon_id "ENSGALE00000128214";
-1	protein_coding	CDS	17513	17627	.	+	0	 gene_id "ENSGALG00000011847"; transcript_id "ENSGALT00000019330"; exon_number "4"; gene_name "TTC26"; gene_biotype "protein_coding"; transcript_name "TTC26-201"; protein_id "ENSGALP00000019304";
-1	protein_coding	exon	25466	25515	.	+	.	 gene_id "ENSGALG00000011847"; transcript_id "ENSGALT00000019330"; exon_number "5"; gene_name "TTC26"; gene_biotype "protein_coding"; transcript_name "TTC26-201"; exon_id "ENSGALE00000128206";
+>1 dna:chromosome chromosome:Galgal4:1:48849500:49020500:1
+TGAAGCTTATCGTGTACTCTGTCTTCAGAAGCACAAGGACAATTAACATTCAATAGCAAG
+GTCCTGTATTTATTTGTCTGAATAAATAAATAAGCATAATATATAATAAATAAATACTAT
+TCAGCCTCTCACCAATAACAATAGTACCCACGCACATATTGCATAATTACAAAACATCCT
+GACAGATCTGTGTGGGTGATAGACCAGAAATACCAGCTCAAATTAACTCTACAAAGAACT
+ATATCATGGAACTTAGTGAAAAGTGATTTTTGGTTCCTGATTCTATGGCGCTTTGTTCTG
+ACCTCTGTTTCATTGGATAATAAACAACCAGACTAGATTAAACAGTGTGTATTTGAAACA
+GAAAATCAGTATAGACTTCCTGATTGAAATCTATTCTCAATCTTCTGGAATGCTCAAAGA
+TACTCAGGAATAGAAATTGGAAGAGCAAAAATATCGACAAATTTGTTCCATGAGCTCCCT
+CAACCTTTGTAAGATTACTCTCTGTGCAGTAGTTTTCTAGTCCTTTTTCAGTGGTTGATG
