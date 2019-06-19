@@ -20,8 +20,8 @@
   */
 
 
-s3file = file('s3://cbcrg-eu/ggal/ggal_1_48850000_49020000.bed.gff')
-s3glob = Channel.fromFilePairs('s3://cbcrg-eu/ggal/*_{1,2}.fq')
+s3file = file('s3://cbcrg-eu/nf-test-data/transcriptome.fa')
+s3glob = Channel.fromFilePairs('s3://cbcrg-eu/nf-test-data/*_{1,2}.fq')
 
 process foo {
   echo true
