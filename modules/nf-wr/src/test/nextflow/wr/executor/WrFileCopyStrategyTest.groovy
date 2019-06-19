@@ -49,7 +49,14 @@ class WrFileCopyStrategyTest extends Specification {
         when:
         script = strategy.getEnvScript([ALPHA:'xx', BETA:'yy'], true)
         then:
-        thrown(UnsupportedOperationException)
+        script == '''\
+            nxf_container_env() {
+            cat << EOF
+            export ALPHA=\\"xx\\"
+            export BETA=\\"yy\\"
+            EOF
+            }
+            '''.stripIndent()
     }
 
     def 'should return stage input file script'() {
