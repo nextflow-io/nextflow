@@ -610,7 +610,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.conda_activate == '''\
                 # conda environment
-                source activate /some/conda/env/foo
+                conda activate /some/conda/env/foo
                 '''.stripIndent()
 
     }
