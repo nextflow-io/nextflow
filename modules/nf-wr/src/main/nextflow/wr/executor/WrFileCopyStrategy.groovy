@@ -22,6 +22,7 @@ import java.nio.file.Path
 
 import nextflow.executor.SimpleFileCopyStrategy
 import nextflow.processor.TaskBean
+import nextflow.processor.TaskProcessor
 import nextflow.util.Escape
 
 /**
@@ -63,7 +64,17 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String getEnvScript(Map environment, boolean container) {
-        if(container) throw new UnsupportedOperationException()
+        if(container) {
+            if( !environment )
+                return null
+            final wrapper = new StringBuilder()
+            wrapper << "nxf_container_env() {\n"
+            wrapper << 'cat << EOF\n'
+            wrapper << TaskProcessor.bashEnvironmentScript(environment, true)
+            wrapper << 'EOF\n'
+            wrapper << '}\n'
+            return wrapper.toString()
+        }
 
         final result = new StringBuilder()
         final copy = environment ? new HashMap<String,String>(environment) : Collections.<String,String>emptyMap()
