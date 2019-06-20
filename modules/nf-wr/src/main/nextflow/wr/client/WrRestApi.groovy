@@ -168,7 +168,8 @@ class WrRestApi {
                 limits << sprintf('%s:%d', task.processor.name, task.config.maxForks)
             }
 
-            List<Map> behaviours = [["cleanup":true]]
+            List<Map> behaviours = []
+            behaviours << ["cleanup":true]
 
             // *** what about cloud opts like image and flavor?
             // Turn on docker monitoring if docker container is being used?
