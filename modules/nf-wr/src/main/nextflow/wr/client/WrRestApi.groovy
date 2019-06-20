@@ -168,11 +168,13 @@ class WrRestApi {
                 limits << sprintf('%s:%d', task.processor.name, task.config.maxForks)
             }
 
+            List<Map> behaviours = [["cleanup":true]]
+
             // *** what about cloud opts like image and flavor?
             // Turn on docker monitoring if docker container is being used?
             // Does BashWrapperBuilder handle everything to do with env vars?
 
-            Map args = [cmd: cmd, cwd: cwd, cwd_matters: cwdMatters, rep_grp: grp, req_grp: grp, limit_grps: limits, override: override, retries: 0, cpus: cpus, memory: mem, time: t, disk: d, mounts: m]
+            Map args = [cmd: cmd, cwd: cwd, cwd_matters: cwdMatters, rep_grp: grp, req_grp: grp, limit_grps: limits, override: override, retries: 0, cpus: cpus, memory: mem, time: t, disk: d, mounts: m, on_exit: behaviours]
             // log.debug "[wr] add args: $args"
             jsonArgs << args
         }
