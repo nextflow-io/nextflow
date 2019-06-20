@@ -144,7 +144,7 @@ class GooglePipelinesTaskHandlerTest extends GoogleSpecification {
                 pipelineConfiguration: config,
                 executor: executor,
                 task: task,
-                instanceType: 'n1-1234'
+                machineType: 'n1-1234'
         )
 
         when:
@@ -156,7 +156,7 @@ class GooglePipelinesTaskHandlerTest extends GoogleSpecification {
         config.getRegion() >> ['my-region']
         config.getPreemptible() >> true
         // chek request object
-        req.instanceType == 'n1-1234'
+        req.machineType == 'n1-1234'
         req.project == 'my-project'
         req.zone == ['my-zone']
         req.region == ['my-region']
@@ -197,7 +197,7 @@ class GooglePipelinesTaskHandlerTest extends GoogleSpecification {
         def handler = new GooglePipelinesTaskHandler(
                 pipelineConfiguration: config,
                 executor: executor,
-                instanceType: 'n1-1234',
+                machineType: 'n1-1234',
                 task: task,
                 stagingCommands: ['alpha', 'beta', 'delta'],
                 unstagingCommands: ['foo', 'bar']
