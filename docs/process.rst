@@ -1175,6 +1175,7 @@ The directives are:
 * `executor`_
 * `ext`_
 * `label`_
+* `machineType`_
 * `maxErrors`_
 * `maxForks`_
 * `maxRetries`_
@@ -1555,6 +1556,24 @@ This can be defined in the ``nextflow.config`` file as shown below::
     process.ext.version = '2.5.3'
 
 
+.. _process-machineType:
+
+machineType
+---------
+
+The ``machineType`` can be used to specify a predefined Google Compute Platform `machine type <https://cloud.google.com/compute/docs/machine-types>`_
+when running using the google-pipelines executor.
+This directive is optional and if specified overrides the cpus and memory directives::
+
+    process googlePipelinesPredefinedMachineType {
+      machineType 'n1-highmem-8'
+
+      """
+      <your script here>
+      """
+    }
+    
+See also: `cpus`_ and `memory`_.
 
 .. _process-maxErrors:
 

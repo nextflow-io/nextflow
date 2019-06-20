@@ -125,6 +125,10 @@ class GooglePipelinesTaskHandler extends TaskHandler {
 
     String getProcessMachineType(String cloudInstanceType, String taskMachineType, int cpus, MemoryUnit memory) {
 
+        if (cloudInstanceType != null) {
+            log.warn1("Configuration setting [cloud.instanceType] is deprecated.  Please use either the process cpus/memory directives or process.machineType instead.", firstOnly: true, cacheKey: GooglePipelinesTaskHandler.class)
+        }
+
         String machineType = taskMachineType ?: cloudInstanceType
 
         if (machineType == null) {
