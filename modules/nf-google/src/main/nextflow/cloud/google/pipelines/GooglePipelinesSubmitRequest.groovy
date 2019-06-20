@@ -29,7 +29,7 @@ import groovy.transform.ToString
 @ToString(includeNames = true)
 class GooglePipelinesSubmitRequest {
 
-    String instanceType
+    String machineType
 
     String project
 

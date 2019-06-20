@@ -127,7 +127,7 @@ class GooglePipelinesHelper {
 
     protected Resources createResources(GooglePipelinesSubmitRequest req) {
         configureResources(
-                req.instanceType,
+                req.machineType,
                 req.project,
                 req.zone,
                 req.region,
@@ -162,7 +162,7 @@ class GooglePipelinesHelper {
                 [ActionFlags.ALWAYS_RUN, ActionFlags.IGNORE_EXIT_STATUS])
     }
 
-    Resources configureResources(String instanceType, String projectId, List<String> zone, List<String> region, String diskName, List<String> scopes = null, boolean preEmptible = false) {
+    Resources configureResources(String machineType, String projectId, List<String> zone, List<String> region, String diskName, List<String> scopes = null, boolean preEmptible = false) {
 
         def disk = new Disk()
         disk.setName(diskName)
@@ -172,7 +172,7 @@ class GooglePipelinesHelper {
             serviceAccount.setScopes(scopes)
 
         def vm = new VirtualMachine()
-                .setMachineType(instanceType)
+                .setMachineType(machineType)
                 .setDisks([disk])
                 .setServiceAccount(serviceAccount)
                 .setPreemptible(preEmptible)
