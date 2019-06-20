@@ -74,7 +74,7 @@ Copy the following example into your favourite text editor and save it to a file
     result.println { it.trim() }
 
 
-This script defines two processes. The first splits a string in file chunks containing 6 characters,
+This script defines two processes. The first splits a string into 6-character chunks, writing each one to a file with the prefix ``chunk_``,
 and the second receives these files and transforms their contents to uppercase letters.
 The resulting strings are emitted on the ``result`` channel and the final output is printed by the
 ``subscribe`` operator.
@@ -158,7 +158,7 @@ its results are retrieved from the cache. The second process is executed as expe
 
 
 .. tip:: The pipeline results are cached by default in the directory ``$PWD/work``. Depending on your script, this folder
-  can take of lot of disk space. If your are sure you won't resume your pipeline execution, clean this folder periodically.
+  can take of lot of disk space. If you are sure you won't resume your pipeline execution, clean this folder periodically.
 
 .. _getstart-params:
 
@@ -184,7 +184,3 @@ will look like this::
     m el r
     edno
     uojnoB
-
-
-
-
