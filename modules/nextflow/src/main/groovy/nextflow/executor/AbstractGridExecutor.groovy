@@ -257,7 +257,7 @@ abstract class AbstractGridExecutor extends Executor {
     /**
      * @return The status for all the scheduled and running jobs
      */
-    Map<String,QueueStatus> getQueueStatus(queue) {
+    protected Map<String,QueueStatus> getQueueStatus0(queue) {
 
         List cmd = queueStatusCommand(queue)
         if( !cmd ) return null
@@ -293,7 +293,17 @@ abstract class AbstractGridExecutor extends Executor {
             log.warn "[${name.toUpperCase()}] failed to retrieve queue ${queue?"($queue) ":''}status -- See the log file for details", e
             return null
         }
+    }
 
+    Map<String,QueueStatus> getQueueStatus(queue) {
+        Map<String,QueueStatus> status = Throttle.cache("${name}_${queue}", queueInterval) {
+            final result = getQueueStatus0(queue)
+            log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status >\n" + dumpQueueStatus(result)
+            return result
+        }
+        // track the last status for debugging purpose
+        lastQueueStatus = status
+        return status
     }
 
     @PackageScope
@@ -328,6 +338,22 @@ abstract class AbstractGridExecutor extends Executor {
      */
     protected abstract Map<String,QueueStatus> parseQueueStatus( String text )
 
+    boolean checkStartedStatus(jobId, queueName ) {
+        assert jobId
+
+        // -- fetch the queue status
+        final queue = getQueueStatus(queueName)
+        if( !queue )
+            return false
+
+        if( !queue.containsKey(jobId) )
+            return false
+        if( queue.get(jobId) == QueueStatus.PENDING )
+            return false
+
+        return true
+    }
+
     /**
      * Verify that a job in a 'active' state i.e. RUNNING or HOLD
      *
@@ -339,13 +365,7 @@ abstract class AbstractGridExecutor extends Executor {
         assert jobId
 
         // -- fetch the queue status
-        Map<String,QueueStatus>status = Throttle.cache(queue, queueInterval) {
-            final result = getQueueStatus(queue)
-            log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status >\n" + dumpQueueStatus(result)
-            return result
-        }
-        // track the last status for debugging purpose
-        lastQueueStatus = status
+        final status = getQueueStatus(queue)
 
         if( status == null ) { // no data is returned, so return true
             return true

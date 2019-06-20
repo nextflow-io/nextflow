@@ -305,6 +305,10 @@ class GridTaskHandler extends TaskHandler {
         if( startFile && (attr=FileHelper.readAttributes(startFile)) && attr.lastModifiedTime()?.toMillis() > 0  )
             return true
 
+        // check if the jobId is tracked in the queue status
+        if( executor.checkStartedStatus(jobId, queue) )
+            return true
+
         // to avoid unnecessary pressure on the file system check the existence of
         // the exit file on only on a time-periodic basis
         def now = System.currentTimeMillis()
