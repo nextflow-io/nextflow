@@ -1,5 +1,22 @@
 NEXTFLOW CHANGE-LOG
 ===================
+19.06.0-edge - 21 Jun 2019
+- Fix Nextflow indefinitely waiting for killed jobs #981
+- Fix Suppress Unknown hashing type logging message #1178 [a005b1b0]
+- Fix a typo in AWS docs (#1171)
+- Fix Invalid response cause Google pipelines exec to crash #1163
+- Fix kuberun doesn't delete config maps #1165
+- Fix Disable ansi logging when using kuberun command #1161
+- Fix comparable test with groovy 2.5.8 [3d1c0833]
+- Fix Unexpected config selector warning #1167 [52e70e31]
+- Fix Kuberun should honour `-bg` (background) option #1159 [4b160b7b]
+- Add S3 download retry (#1164)
+- Upgrade BitBucket provider with API 2.0 [feeddcda]
+- Print ansi summary for exec > 60 secs [53c94270]
+- Remove deprecated countText operator #983
+- Demote warmup into to debug level [c7d08337]
+- Demote barrier logging to trace level [5b7234a1]
+
 19.05.0-edge - 20 May 2019
 - Add Aws Batch maxParallelTransfers config #1107 [26d37556]
 - Add NXF_ANSI_SUMMARY var to disable log summary [d4b9cc44]
