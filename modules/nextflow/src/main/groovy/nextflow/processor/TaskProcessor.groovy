@@ -1106,7 +1106,7 @@ class TaskProcessor {
     }
 
     static List tips = [
-            'when you have fixed the problem you can continue the execution appending to the nextflow command line the option `-resume`',
+            'when you have fixed the problem you can continue the execution adding the option `-resume` to the run command line',
             "you can try to figure out what's wrong by changing to the process work dir and showing the script file named `${TaskRun.CMD_SCRIPT}`",
             "view the complete command output by changing to the process work dir and entering the command `cat ${TaskRun.CMD_OUTFILE}`",
             "you can replicate the issue by changing to the process work dir and entering the command `bash ${TaskRun.CMD_RUN}`"
