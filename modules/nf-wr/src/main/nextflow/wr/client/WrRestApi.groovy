@@ -216,8 +216,8 @@ class WrRestApi {
 
         // *** is there a way to avoid needing to get the current state of the
         // job first? Does our caller only call us for running jobs?
-        List jobs = status(id)
-        Map job = jobs[0]
+        List jobObjs = status(id)
+        Map job = jobObjs[0]
         String state
         if (job.State == 'running') {
             state = 'running'
@@ -230,8 +230,12 @@ class WrRestApi {
         def delete = authenticatedConnection("$jobs/$id?state=$state")
         delete.setRequestMethod("DELETE")
         def deleteRC = delete.getResponseCode()
-        if (!deleteRC.equals(200) || !deleteRC.equals(202)) {
-            log.debug("[wr] failed to cancel command held in wr manager")
+        if (deleteRC != 200 && deleteRC != 202) {
+            log.debug("[wr] failed to cancel command held in wr manager (DELETE $jobs/$id?state=$state -> $deleteRC)")
+        } else if (state != 'deletable') {
+            // we just buried it, now delete it
+            sleep(500)
+            cancel(id)
         }
     }
 
