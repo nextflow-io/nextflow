@@ -39,7 +39,8 @@ import nextflow.processor.BatchHandler
 @CompileStatic
 class WrTaskHandler extends TaskHandler implements BatchHandler<String,Map> {
 
-    public static final List<String> COMPLETE_STATUSES = ['complete', 'buried', 'deleted']
+    public static final String BURIED_STATE = 'buried'
+    public static final List<String> COMPLETE_STATUSES = ['complete', BURIED_STATE, 'deleted']
     public static final List<String> STARTED_STATUSES = ['delayed', 'reserved', 'running'] + COMPLETE_STATUSES
 
     final WrExecutor executor
@@ -161,6 +162,14 @@ class WrTaskHandler extends TaskHandler implements BatchHandler<String,Map> {
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
+
+            // remove failed tasks from wr's queue
+            // *** this stops old tasks from building up and preventing reruns,
+            //     but now the user can't easily see the reason for a task's
+            //     failure using `wr status`... could there be a better way?...
+            if (job.State == BURIED_STATE) {
+                kill()
+            }
         }
         return done
     }
