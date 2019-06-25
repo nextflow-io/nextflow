@@ -70,7 +70,7 @@ class ExecutorFactory {
         executorsMap.putAll(BUILT_IN_EXECUTORS)
         // discover non-core executors
         for( Class<Executor> clazz : ServiceDiscover.load(Executor) ) {
-            log.trace "Discovered executor class: ${clazz.name}"
+            log.trace "Discovered executor class: ${clazz.toString()}"
             executorsMap.put(findNameByClass(clazz), clazz)
         }
     }
