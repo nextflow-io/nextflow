@@ -276,7 +276,6 @@ Create a ``nextflow.config`` file in the project root directory. The config must
 
 * Google Pipelines as Nextflow executor i.e. ``process.executor = 'google-pipelines'``.
 * The Docker container images to be used to run pipeline tasks e.g. ``process.container = 'biocontainers/salmon:0.8.2--1'``.
-* The Google Compute Engine machine instance type i.e. ``cloud.instanceType = 'n1-standard-1'``.
 * The Google Cloud `project` to run in e.g. ``google.project = 'rare-lattice-222412'``.
 * The Google Cloud `region` or `zone`. You need to specify either one, **not** both. Multiple regions or zones can be
   specified by separating them with a comma e.g. ``google.zone = 'us-central1-f,us-central-1-b'``.
@@ -304,7 +303,7 @@ machine type with the specified compute resources.  If ``memory`` is not specifi
 
 The process ``machineType`` directive may optionally be used to specify a predifined Google Compute Platform `machine type <https://cloud.google.com/compute/docs/machine-types>`_
 If specified, this value overrides the ``cpus`` and ``memory`` directives.
-If the ``cpus`` and ``memory`` directives are used, the values must comply with the allowed custom machine type `specifications <https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#specifications>`_  Extended memory is not directly supported, however high memory or cpu predefined
+If the ``cpus`` and ``memory`` directives are used, the values must comply with the allowed custom machine type `specifications <https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#specifications>`_ .  Extended memory is not directly supported, however high memory or cpu predefined
 instances may be utilized using the ``machineType`` directive
 
 Examples::
@@ -312,12 +311,20 @@ Examples::
     process custom_instance_using_cpus_and_memory {
         cpus 8
         memory '40 GB'
+
+        """
+        <Your script here>
+        """
     }
 
     process predefined_instance_overrides_cpus_and_memory {
         cpus 8
         memory '40 GB'
         machineType 'n1-highmem-8'
+
+        """
+        <Your script here>
+        """
     }
 
 Pipeline execution
