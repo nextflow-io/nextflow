@@ -218,17 +218,6 @@ class FilePorter {
             }
         }
 
-
-        protected String getStagingMessage(List<Path> filePaths) {
-            def msg = 'Staging foreign file'
-            if (filePaths.size() > 1)
-                msg += 's:\n'
-            else
-                msg += ': '
-            msg += filePaths.collect() { it.toUriString() }.join('\n')
-            return msg
-        }
-
         private String fmtError(Path filePath, Exception e) {
             def message = "Can't stage file ${filePath.toUri().toString()}"
             if( e instanceof NoSuchFileException )
