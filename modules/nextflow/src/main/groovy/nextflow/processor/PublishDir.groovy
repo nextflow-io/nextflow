@@ -24,8 +24,6 @@ import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.util.concurrent.ExecutorService
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
 import groovy.transform.CompileStatic
@@ -38,6 +36,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
+import nextflow.util.BlockingThreadExecutorFactory
 /**
  * Implements the {@code publishDir} directory. It create links or copies the output
  * files of a given task to a user specified directory.
@@ -338,9 +337,10 @@ class PublishDir {
     @Memoized // <-- this guarantees that the same executor is used across different publish dir in the same session
     @CompileStatic
     static synchronized ExecutorService createExecutor(Session session) {
-        final result = new ThreadPoolExecutor(0, Runtime.runtime.availableProcessors(),
-                60L, TimeUnit.SECONDS,
-                new LinkedBlockingQueue<Runnable>());
+        final result = new BlockingThreadExecutorFactory()
+                        .withName('PublishDirExecutor')
+                        .withMaxThreads( Runtime.runtime.availableProcessors()*3 )
+                        .create()
 
         session?.onShutdown {
             result.shutdown()
