@@ -56,7 +56,7 @@ class WrMonitor extends TaskPollingMonitor {
      * <p>
      * Valid parameters are:
      * <li>session: The current {@code Session}
-     * <li>dumpInterval: Determines how often the executor status is written in the application log file
+     * <li>client: An instance of WrRestApi (required)
      *
      * @param params
      */
@@ -120,7 +120,6 @@ class WrMonitor extends TaskPollingMonitor {
      */
     @Override
     protected int submitPendingTasks() {
-
         int count = 0
         def itr = getPendingQueue().iterator()
         List<List> toSubmit = []
