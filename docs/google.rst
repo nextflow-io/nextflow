@@ -308,7 +308,7 @@ instances may be utilized using the ``machineType`` directive
 
 Examples::
 
-    process custom_instance_using_cpus_and_memory {
+    process custom_resources_task {
         cpus 8
         memory '40 GB'
 
@@ -317,15 +317,15 @@ Examples::
         """
     }
 
-    process predefined_instance_overrides_cpus_and_memory {
-        cpus 8
-        memory '40 GB'
+    process predefined_resources_task {
         machineType 'n1-highmem-8'
 
         """
         <Your script here>
         """
     }
+
+.. note:: This feature requires Nextflow 19.07.0 or later.
 
 Pipeline execution
 ------------------

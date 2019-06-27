@@ -1559,19 +1559,22 @@ This can be defined in the ``nextflow.config`` file as shown below::
 .. _process-machineType:
 
 machineType
----------
+-----------
 
 The ``machineType`` can be used to specify a predefined Google Compute Platform `machine type <https://cloud.google.com/compute/docs/machine-types>`_
-when running using the google-pipelines executor.
+when running using the :ref:`Google Pipeline <google-pipelines>` executor.
+
 This directive is optional and if specified overrides the cpus and memory directives::
 
-    process googlePipelinesPredefinedMachineType {
+    process foo {
       machineType 'n1-highmem-8'
 
       """
       <your script here>
       """
     }
+
+.. note:: This feature requires Nextflow 19.07.0 or later.
     
 See also: `cpus`_ and `memory`_.
 
