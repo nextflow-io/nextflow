@@ -38,6 +38,9 @@ import groovy.util.logging.Slf4j
  * Inspired by
  *   http://fahdshariff.blogspot.com/2013/11/throttling-task-submission-with.html
  *   https://www.logicbig.com/tutorials/core-java-tutorial/java-multi-threading/thread-pools.html
+ *
+ * See also
+ *   https://community.oracle.com/docs/DOC-983726
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

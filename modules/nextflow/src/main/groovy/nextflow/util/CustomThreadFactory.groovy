@@ -23,11 +23,14 @@ import groovy.transform.CompileStatic
 
 import java.lang.Thread.UncaughtExceptionHandler
 
+import groovy.util.logging.Slf4j
+
 /**
  * A customised thread factory
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class CustomThreadFactory implements ThreadFactory {
 
@@ -47,7 +50,10 @@ class CustomThreadFactory implements ThreadFactory {
 
 
     Thread newThread(Runnable r) {
-        def thread = new Thread(group, r, "${prefix}-${threadNumber.getAndIncrement()}", 0)
+        final name = "${prefix}-${threadNumber.getAndIncrement()}"
+        log.trace "Creating thread: $name"
+
+        def thread = new Thread(group, r, name, 0)
         if (thread.isDaemon())
             thread.setDaemon(false);
         if (thread.getPriority() != Thread.NORM_PRIORITY)
