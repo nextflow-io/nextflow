@@ -247,7 +247,7 @@ class GooglePipelinesHelperTest extends Specification {
         when:
         def res = helper.createResources(req)
         then:
-        req.instanceType >> 'n1-abc'
+        req.machineType >> 'n1-abc'
         req.project >> 'my-project'
         req.zone >> ['my-zone']
         req.region >> ['my-region']
