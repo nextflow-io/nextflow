@@ -939,6 +939,8 @@ class AssetManager {
         // call submodule init
         init.call()
         // call submodule update
+        if( provider.hasCredentials() )
+            update.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
         def updatedList = update.call()
         log.debug "Update submodules $updatedList"
     }
