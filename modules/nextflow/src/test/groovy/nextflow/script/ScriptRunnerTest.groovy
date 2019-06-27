@@ -63,10 +63,10 @@ class ScriptRunnerTest extends Specification {
     def 'test processor config'() {
 
         /*
-         * test that the *instanceType* attribute is visible in the taskConfig object
+         * test that the *machineType* attribute is visible in the taskConfig object
          */
         when:
-        def runner = new TestScriptRunner( process: [executor:'nope', instanceType:'alpha'] )
+        def runner = new TestScriptRunner( process: [executor:'nope', machineType:'alpha'] )
         def script =
             '''
             process simpleTask  {
@@ -82,34 +82,7 @@ class ScriptRunnerTest extends Specification {
         runner.setScript(script).execute()
         then:
         runner.getScriptObj().getTaskProcessor().name == 'simpleTask'
-        runner.getScriptObj().getTaskProcessor().config.instanceType == 'alpha'
-
-
-        /*
-         * test that the *instanceType* property defined by the task (beta)
-         * override the one define in the main config (alpha)
-         */
-        when:
-        def runner2 = new TestScriptRunner( process: [executor:'nope', instanceType:'alpha'] )
-        def script2 =
-            '''
-            process otherTask  {
-                instanceType 'beta'
-                input:
-                val x from 1
-                output:
-                stdout result
-
-                """echo $x"""
-            }
-
-            '''
-        runner2.setScript(script2).execute()
-
-        then:
-        runner2.getScriptObj().getTaskProcessor().name == 'otherTask'
-        runner2.getScriptObj().getTaskProcessor().config.instanceType == 'beta'
-
+        runner.getScriptObj().getTaskProcessor().config.machineType == 'alpha'
     }
 
 
