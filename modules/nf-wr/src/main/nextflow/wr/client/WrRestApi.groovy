@@ -56,7 +56,7 @@ class WrRestApi {
     static private String token
 
     static private final String rest = "/rest/v1"
-    static private final String jobs = "/jobs/"
+    static private final String jobsEndpoint = "/jobs/"
 
     WrRestApi(String endpoint, String token, String cacertPath) {
         this.endpoint = endpoint
@@ -180,7 +180,7 @@ class WrRestApi {
             jsonArgs << args
         }
 
-        def response = postJson(jobs, jsonArgs)
+        def response = postJson(jobsEndpoint, jsonArgs)
         // log.debug("made a POST request")
         return parseJobsFromJson(response)
     }
@@ -194,7 +194,7 @@ class WrRestApi {
 
         // log.debug "working on ids $ids"
 
-        def get = authenticatedConnection("$jobs/$ids")
+        def get = authenticatedConnection("$jobsEndpoint$ids")
         get.setRequestMethod("GET")
         def getRC = get.getResponseCode()
         // log.debug("made a GET request")
@@ -227,11 +227,11 @@ class WrRestApi {
             state = 'deletable'
         }
 
-        def delete = authenticatedConnection("$jobs/$id?state=$state")
+        def delete = authenticatedConnection("$jobsEndpoint$id?state=$state")
         delete.setRequestMethod("DELETE")
         def deleteRC = delete.getResponseCode()
         if (deleteRC != 200 && deleteRC != 202) {
-            log.debug("[wr] failed to cancel command held in wr manager (DELETE $jobs/$id?state=$state -> $deleteRC)")
+            log.debug("[wr] failed to cancel command held in wr manager (DELETE $jobsEndpoint$id?state=$state -> $deleteRC)")
         } else if (state != 'deletable') {
             // we just buried it, now delete it
             sleep(500)
@@ -239,23 +239,27 @@ class WrRestApi {
         }
     }
 
-    private HttpsURLConnection authenticatedConnection(String leaf) {
-        String url = "$endpoint$rest$leaf"
-        // log.debug("[wr] url: $url")
-        def post = new URL(url).openConnection() as HttpsURLConnection
-        post.setRequestProperty("Content-Type", "application/json")
-        post.setRequestProperty("Authorization", "Bearer $token")
-        return post
+    protected HttpsURLConnection openConnection(String url) {
+        return new URL(url).openConnection() as HttpsURLConnection
     }
 
-    private HttpsURLConnection postConnection(String leaf) {
+    protected HttpsURLConnection authenticatedConnection(String leaf) {
+        String url = "$endpoint$rest$leaf"
+        // log.debug("[wr] url: $url")
+        def con = openConnection(url)
+        con.setRequestProperty("Content-Type", "application/json")
+        con.setRequestProperty("Authorization", "Bearer $token")
+        return con
+    }
+
+    protected HttpsURLConnection postConnection(String leaf) {
         def post = authenticatedConnection(leaf)
         post.setRequestMethod("POST")
         post.setDoOutput(true)
         return post
     }
 
-    private String postJson(String leaf, List<Map> args) {
+    protected String postJson(String leaf, List<Map> args) {
         def json = toJson(args)
         // log.debug("[wr] posting JSON: $json")
 
@@ -270,22 +274,10 @@ class WrRestApi {
         return post.getInputStream().getText()
     }
 
-    private List<Map> parseJobsFromJson(String json) {
+    protected List<Map> parseJobsFromJson(String json) {
         List<Map> jobs = new JsonSlurper().parseText(json) as List<Map>
         // log.debug "got ${jobs.size()} jobs"
         return jobs
-    }
-
-    private String parseIdFromJson(String json) {
-        return extractFirstJob(parseJobsFromJson(json)).Key
-    }
-
-    private Map extractFirstJob(List<Map> jobs) {
-        if (jobs.size() != 1) {
-            log.debug("[wr] expected 1 job, got ${jobs.size()}")
-        }
-        Map job = jobs[0]
-        return job
     }
 
 }
