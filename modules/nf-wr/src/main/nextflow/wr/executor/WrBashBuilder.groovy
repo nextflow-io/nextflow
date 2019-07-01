@@ -17,6 +17,7 @@
 package nextflow.wr.executor
 
 import groovy.transform.CompileStatic
+import java.nio.file.Path
 
 import nextflow.executor.BashWrapperBuilder
 import nextflow.processor.TaskRun
@@ -31,12 +32,12 @@ import nextflow.processor.TaskBean
 @CompileStatic
 class WrBashBuilder extends BashWrapperBuilder {
 
-    WrBashBuilder(TaskRun task) {
-        super(new TaskBean(task), new WrFileCopyStrategy(new TaskBean(task)))
+    WrBashBuilder(TaskRun task, Path remoteBinDir) {
+        super(new TaskBean(task), new WrFileCopyStrategy(new TaskBean(task), remoteBinDir))
     }
 
-    WrBashBuilder(TaskBean bean) {
-        super(bean, new WrFileCopyStrategy(bean))
+    WrBashBuilder(TaskBean bean, Path remoteBinDir) {
+        super(bean, new WrFileCopyStrategy(bean, remoteBinDir))
     }
 
     protected boolean alwaysTryToUnstage() {

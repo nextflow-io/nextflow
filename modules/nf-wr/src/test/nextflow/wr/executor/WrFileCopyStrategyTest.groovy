@@ -70,7 +70,7 @@ class WrFileCopyStrategyTest extends Specification {
 
         when:
         def task = new TaskBean(workDir: Paths.get("/my/work/dir"))
-        def strategy = new WrFileCopyStrategy(task)
+        def strategy = new WrFileCopyStrategy(task, null)
         def script = strategy.getStageInputFilesScript(files)
         def lines = script.readLines()
 
@@ -128,7 +128,7 @@ class WrFileCopyStrategyTest extends Specification {
     def 'should return a valid stage-in command' () {
         given:
         def task = new TaskBean(workDir: Paths.get("/my/work/dir"))
-        def strategy = new WrFileCopyStrategy(task)
+        def strategy = new WrFileCopyStrategy(task, null)
 
         expect:
         strategy.stageInCommand(source, target, mode) == result
@@ -159,7 +159,7 @@ class WrFileCopyStrategyTest extends Specification {
     def 'stage-in command should throw an exception absolute target path' () {
         given:
         def task = Mock(TaskBean)
-        def strategy = new WrFileCopyStrategy(task)
+        def strategy = new WrFileCopyStrategy(task, null)
 
         when:
         strategy.stageInCommand(source, target, mode)
@@ -237,7 +237,7 @@ class WrFileCopyStrategyTest extends Specification {
         def task = new TaskBean(workDir: Paths.get("/my/work/dir"))
 
         when:
-        def strategy = new WrFileCopyStrategy(task)
+        def strategy = new WrFileCopyStrategy(task, null)
         def script = strategy.getStageInputFilesScript(inputs)
         then:
         script == '''
@@ -255,7 +255,7 @@ class WrFileCopyStrategyTest extends Specification {
         def task = new TaskBean( stageInMode: 'copy', workDir: Paths.get("/my/work/dir") )
 
         when:
-        def strategy = new WrFileCopyStrategy(task)
+        def strategy = new WrFileCopyStrategy(task, null)
         def script = strategy.getStageInputFilesScript(inputs)
         then:
         script == '''
@@ -274,7 +274,7 @@ class WrFileCopyStrategyTest extends Specification {
         def task = new TaskBean(workDir: target)
 
         when:
-        def strategy = new WrFileCopyStrategy(task)
+        def strategy = new WrFileCopyStrategy(task, null)
         def script = strategy.getUnstageOutputFilesScript(outputs, target)
         then:
         script == '''
@@ -293,7 +293,7 @@ class WrFileCopyStrategyTest extends Specification {
         def task = new TaskBean(workDir: workDir)
 
         when:
-        def strategy = new WrFileCopyStrategy(task)
+        def strategy = new WrFileCopyStrategy(task, null)
         def script = strategy.getUnstageOutputFilesScript(outputs, storeDir)
         then:
         script == '''
@@ -311,7 +311,7 @@ class WrFileCopyStrategyTest extends Specification {
         def task = new TaskBean(stageOutMode: 'rsync', workDir: target)
 
         when:
-        def strategy = new WrFileCopyStrategy(task)
+        def strategy = new WrFileCopyStrategy(task, null)
         def script = strategy.getUnstageOutputFilesScript(outputs,target)
         then:
         script == '''
@@ -354,7 +354,7 @@ class WrFileCopyStrategyTest extends Specification {
         def task = new TaskBean()
         task.workDir = Paths.get('bucket/work')
         def target = Mock(Path)
-        def strategy = Spy(WrFileCopyStrategy, constructorArgs: [task])
+        def strategy = Spy(WrFileCopyStrategy, constructorArgs: [task, null])
 
         when:
         def script = strategy.getUnstageOutputFilesScript(outputs, target)
@@ -378,7 +378,7 @@ class WrFileCopyStrategyTest extends Specification {
     def 'should return input mount path' () {
         given:
         def task = new TaskBean()
-        def strategy = Spy(WrFileCopyStrategy, constructorArgs: [task])
+        def strategy = Spy(WrFileCopyStrategy, constructorArgs: [task, null])
 
         when:
         def p = strategy.getInputMountPath()
@@ -390,7 +390,7 @@ class WrFileCopyStrategyTest extends Specification {
         given:
         def task = new TaskBean()
         task.workDir = 's3://bucket/work' as Path
-        def strategy = new WrFileCopyStrategy(task)
+        def strategy = new WrFileCopyStrategy(task, null)
 
         when:
         def p = strategy.getOutputMountPath()
@@ -402,7 +402,7 @@ class WrFileCopyStrategyTest extends Specification {
         given:
         def task = new TaskBean()
         task.workDir = 's3://bucket/work' as Path
-        def strategy = new WrFileCopyStrategy(task)
+        def strategy = new WrFileCopyStrategy(task, null)
 
         when:
         def scheme = strategy.getWorkDirScheme()
@@ -414,7 +414,7 @@ class WrFileCopyStrategyTest extends Specification {
         given:
         def task = new TaskBean()
         task.workDir = 's3://bucket/work' as Path
-        def strategy = new WrFileCopyStrategy(task)
+        def strategy = new WrFileCopyStrategy(task, null)
 
         expect:
         strategy.wrWorkPath(source as Path) == result
@@ -430,7 +430,7 @@ class WrFileCopyStrategyTest extends Specification {
         given:
         def task = new TaskBean()
         task.workDir = 's3://bucket/work' as Path
-        def strategy = new WrFileCopyStrategy(task)
+        def strategy = new WrFileCopyStrategy(task, null)
 
         expect:
         strategy.wrInputPath(source as Path) == result
@@ -446,7 +446,7 @@ class WrFileCopyStrategyTest extends Specification {
         given:
         def task = new TaskBean()
         task.workDir = 's3://bucket/work' as Path
-        def strategy = new WrFileCopyStrategy(task)
+        def strategy = new WrFileCopyStrategy(task, null)
 
         when:
         def path = strategy.outputBucket()
@@ -464,7 +464,7 @@ class WrFileCopyStrategyTest extends Specification {
             'c': 'local/sub/a.file' as Path,
             'd': 's3://bucket/inputs/b.file' as Path
         ]
-        def strategy = new WrFileCopyStrategy(task)
+        def strategy = new WrFileCopyStrategy(task, null)
 
         when:
         def paths = strategy.inputBuckets()
@@ -478,7 +478,7 @@ class WrFileCopyStrategyTest extends Specification {
         given:
         def task = new TaskBean()
         task.workDir = 's3://bucket/work' as Path
-        def strategy = new WrFileCopyStrategy(task)
+        def strategy = new WrFileCopyStrategy(task, null)
         def file = 's3://bucket/work/an out.file' as Path
         String mntPath = '.mnt/bucket/work/an\\ out.file'
 
@@ -506,6 +506,61 @@ class WrFileCopyStrategyTest extends Specification {
         cmd = strategy.pipeInputFile(file)
         then:
         cmd == ' < .inputs/bucket/work/an\\ out.file'
+    }
+
+    def 'should return commands for an S3 bin dir' () {
+        given:
+        def task = new TaskBean()
+        task.workDir = 's3://bucket/work' as Path
+        def binDir = 's3://bucket/tmp/bin' as Path
+        def strategy = new WrFileCopyStrategy(task, binDir)
+        def expectedScript = '''\
+            cp -r .mnt/bucket/tmp/bin $PWD/nextflow-bin
+            chmod +x $PWD/nextflow-bin/*
+            export PATH=$PWD/nextflow-bin:$PATH
+            '''.stripIndent()
+
+        when:
+        def script = strategy.getEnvScript([ALPHA:'xx', BETA:'yy', PATH:'/foo'], false)
+        then:
+        script == expectedScript + '''\
+            export ALPHA="xx"
+            export BETA="yy"
+            '''.stripIndent()
+
+        when:
+        script = strategy.getEnvScript(null, false)
+        then:
+        script == expectedScript
+
+        when:
+        script = strategy.getEnvScript([PATH:'/foo'], true)
+        then:
+        script == '''\
+            nxf_container_env() {
+            cat << EOF
+            '''.stripIndent() + expectedScript.replace('$','\\$') + "EOF\n}\n"
+
+        when:
+        script = strategy.getEnvScript(null, true)
+        then:
+        script == '''\
+            nxf_container_env() {
+            cat << EOF
+            '''.stripIndent() + expectedScript.replace('$','\\$') + "EOF\n}\n"
+
+        when:
+        script = strategy.getEnvScript([PATH:'/foo', ALPHA:'xx', BETA:'yy'], true)
+        then:
+        script == '''\
+            nxf_container_env() {
+            cat << EOF
+            '''.stripIndent() + expectedScript.replace('$','\\$') + '''\
+            export ALPHA=\\"xx\\"
+            export BETA=\\"yy\\"
+            EOF
+            }
+            '''.stripIndent()
     }
 
 }

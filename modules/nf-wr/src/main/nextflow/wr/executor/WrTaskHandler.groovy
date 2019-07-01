@@ -194,7 +194,7 @@ class WrTaskHandler extends TaskHandler implements BatchHandler<String,Map> {
 
     List submitArgs() {
         // create task wrapper
-        final bash = new WrBashBuilder(task)
+        final bash = new WrBashBuilder(task, executor.getRemoteBinDir())
         bash.build()
 
         WrFileCopyStrategy copyStrategy = bash.copyStrategy as WrFileCopyStrategy

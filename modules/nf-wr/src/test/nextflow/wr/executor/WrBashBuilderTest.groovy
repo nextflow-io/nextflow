@@ -41,7 +41,7 @@ class WrBashBuilderTest extends Specification {
                 name: 'Hello 1',
                 workDir: folder,
                 script: 'echo Hello world!',
-        ] as TaskBean)
+        ] as TaskBean, null)
         bash.build()
 
         then:
@@ -70,7 +70,7 @@ class WrBashBuilderTest extends Specification {
                 targetDir: folder,
                 script: 'echo Hello world!',
                 outputFiles: ['test.bam','test.bai'],
-        ] as TaskBean)
+        ] as TaskBean, null)
 
         when:
         def binding = bash.makeBinding()
@@ -81,6 +81,29 @@ class WrBashBuilderTest extends Specification {
                   cp -fRL test.bam .mnt/bucket/work/ || true
                   cp -fRL test.bai .mnt/bucket/work/ || true
                   '''.stripIndent().rightTrim()
+    }
+
+    def 'test bash wrapper with bin in S3' () {
+        given:
+        def folder = 's3://bucket/work' as Path
+        def binDir = 's3://bucket/tmp/bin' as Path
+        def bash = new WrBashBuilder([
+                name: 'Hello 3',
+                workDir: folder,
+                targetDir: folder,
+                script: 'echo Hello world!',
+                outputFiles: ['test.bam','test.bai'],
+        ] as TaskBean, binDir)
+
+        when:
+        def binding = bash.makeBinding()
+
+        then:
+        binding.task_env == '''\
+                  cp -r .mnt/bucket/tmp/bin $PWD/nextflow-bin
+                  chmod +x $PWD/nextflow-bin/*
+                  export PATH=$PWD/nextflow-bin:$PATH
+                  '''.stripIndent()
     }
 
     // *** I can't figure out how to get this test to work without it trying to

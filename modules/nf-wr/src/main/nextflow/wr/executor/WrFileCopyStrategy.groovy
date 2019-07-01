@@ -35,21 +35,26 @@ import nextflow.util.Escape
 @CompileStatic
 class WrFileCopyStrategy extends SimpleFileCopyStrategy {
 
-    private final String outputMountLocation
+    static final String baseMountDir = ".mnt"
     static final String inputMountLocation = ".inputs"
+    private final String outputMountLocation
     private final String workDirScheme
     private final Map<String,Path> inputFiles
+    private final Path remoteBinDir
+    private final String binMountLocation
 
     WrFileCopyStrategy() { }
 
-    WrFileCopyStrategy(TaskBean task) {
+    WrFileCopyStrategy(TaskBean task, Path remoteBinDir) {
         super(task)
         this.inputFiles = task.inputFiles
-        this.outputMountLocation = ".mnt" + task.workDir?.toString()
+        this.outputMountLocation = baseMountDir + task.workDir?.toString()
         if (this.outputMountLocation.endsWith("/")) {
             this.outputMountLocation = this.outputMountLocation.substring(0, this.outputMountLocation.length() - 1);
         }
         this.workDirScheme = getPathScheme(task.workDir)
+        this.remoteBinDir = remoteBinDir
+        this.binMountLocation = baseMountDir + remoteBinDir?.toString()
     }
 
     /**
@@ -64,34 +69,33 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String getEnvScript(Map environment, boolean container) {
+        final result = new StringBuilder()
+        final copy = environment ? new HashMap<String,String>(environment) : Collections.<String,String>emptyMap()
+        if( remoteBinDir ) {
+            copy.remove('PATH')
+            result << "cp -r $binMountLocation \$PWD/nextflow-bin\n"
+            result << "chmod +x \$PWD/nextflow-bin/*\n"
+            result << "export PATH=\$PWD/nextflow-bin:\$PATH\n"
+        }
+
         if(container) {
-            if( !environment )
+            if( !environment && !remoteBinDir )
                 return null
             final wrapper = new StringBuilder()
             wrapper << "nxf_container_env() {\n"
             wrapper << 'cat << EOF\n'
-            wrapper << TaskProcessor.bashEnvironmentScript(environment, true)
+            if( remoteBinDir ) {
+                wrapper << result.toString().replace('$','\\$')
+            }
+            if(copy && copy.size() > 0) {
+                wrapper << TaskProcessor.bashEnvironmentScript(copy, true)
+            }
             wrapper << 'EOF\n'
             wrapper << '}\n'
             return wrapper.toString()
         }
 
-        final result = new StringBuilder()
-        final copy = environment ? new HashMap<String,String>(environment) : Collections.<String,String>emptyMap()
-        final path = copy.containsKey('PATH')
-        // remove any external PATH
-        if( path )
-            copy.remove('PATH')
-        // when a remote bin directory is provided manage it properly
-        // *** somehow accept a remoteBinDir opt, and assume it will be mounted
-        // somewhere, and add that relative path to PATH?...
-        // if( opts.remoteBinDir ) {
-        //     result << "${opts.getAwsCli()} s3 cp --recursive --only-show-errors s3:/${opts.remoteBinDir} \$PWD/nextflow-bin\n"
-        //     result << "chmod +x \$PWD/nextflow-bin/*\n"
-        //     result << "export PATH=\$PWD/nextflow-bin:\$PATH\n"
-        // }
-        // finally render the environment
-        final envSnippet = super.getEnvScript(copy,false)
+        final envSnippet = super.getEnvScript(copy, false)
         if( envSnippet )
             result << envSnippet
         return result.toString()
@@ -169,6 +173,14 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
     }
 
     /**
+     * getBinMountPath tells you where you should mount the S3 location
+     * returned by outputBucket().
+    */
+    String getBinMountPath() {
+        return binMountLocation
+    }
+
+    /**
      * inputBuckets returns all the different S3 buckets that would need to be
      * mounted at getInputMountPath() for access to the input files.
     */
@@ -195,6 +207,16 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
             return workDir.toString().substring(1)
         }
         return ""
+    }
+
+    /**
+     * binBucket returns the S3 bucket directory that would need to be
+     * mounted at getBinMountPath() in order to access a user's binaries. They
+     * should be copied out to a local directory and be made executable, and
+     * then added to PATH.
+    */
+    String binBucket() {
+        return remoteBinDir
     }
 
     /**

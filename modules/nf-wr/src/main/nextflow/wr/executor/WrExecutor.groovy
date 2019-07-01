@@ -19,6 +19,9 @@ package nextflow.wr.executor
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import java.nio.file.Paths
+import java.nio.file.Path
+import com.upplication.s3fs.S3Path
+import groovy.transform.PackageScope
 
 import nextflow.wr.client.WrRestApi
 import nextflow.wr.processor.WrMonitor
@@ -29,6 +32,7 @@ import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
 import nextflow.exception.AbortOperationException
 import nextflow.util.ServiceName
+import nextflow.extension.FilesEx
 
 /**
  * Executor that schedules jobs using wr as a backend, avoiding storage of
@@ -48,15 +52,19 @@ class WrExecutor extends Executor {
     static private String managerDir
     static private String deployment
     static private String endpoint
+    private Path remoteBinDir = null
 
     @Override
     void register() {
-        if( session.binDir && !session.binDir.empty() ) {
-            session.abort()
-            throw new AbortOperationException("ERROR: wr executor does not allow the use of custom scripts in the `bin` folder")
-        }
-
         super.register()
+
+        // upload local binaries
+        def disableBinDir = session.getExecConfigProp(name, 'disableRemoteBinDir', false)
+        if (workDir instanceof S3Path && session.binDir && !session.binDir.empty() && !disableBinDir ) {
+            def s3 = getTempDir()
+            log.info "Uploading local `bin` scripts folder to ${s3.toUriString()}/bin"
+            remoteBinDir = FilesEx.copyTo(session.binDir, s3)
+        }
     }
 
     WrRestApi getClient() {
@@ -122,6 +130,11 @@ class WrExecutor extends Executor {
         String path = session.getConfigAttribute('executor.wr.cacertpath', Paths.get(managerDir, "ca.pem"))
         log.debug "[wr] cacertpath=$path"
         return path
+    }
+
+    @PackageScope
+    Path getRemoteBinDir() {
+        remoteBinDir
     }
 
     /**

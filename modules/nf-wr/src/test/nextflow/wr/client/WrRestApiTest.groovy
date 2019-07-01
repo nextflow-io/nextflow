@@ -97,7 +97,7 @@ class WrRestApiTest extends Specification {
         def config1 = new TaskConfig(entries1)
         def task1 = [name: 'Hello 1', processor: processor, config: config1, workDir: workDir1] as TaskRun
         def bean1 = new TaskBean(workDir: workDir1)
-        def strategy1 = new WrFileCopyStrategy(bean1)
+        def strategy1 = new WrFileCopyStrategy(bean1, null)
 
         def workDir2 = 's3://bucket/work' as Path
         Map<String,Object> entries2 = [:]
@@ -109,7 +109,7 @@ class WrRestApiTest extends Specification {
         def config2 = new TaskConfig(entries2)
         def task2 = [name: 'Hello 2', processor: processor, config: config2, workDir: workDir2] as TaskRun
         def bean2 = new TaskBean(workDir: workDir2)
-        def strategy2 = new WrFileCopyStrategy(bean2)
+        def strategy2 = new WrFileCopyStrategy(bean2, null)
 
         def HTTPS_CONN = Mock(HttpsURLConnection)
 

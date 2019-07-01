@@ -136,6 +136,10 @@ class WrRestApi {
             if (write) {
                 m << ["Mount":copyStrategy.getOutputMountPath(),"Targets":[["Path":write,"Write":true]]]
             }
+            def binDir = copyStrategy.binBucket()
+            if (binDir) {
+                m << ["Mount":copyStrategy.getBinMountPath(), "Targets":[["Path":binDir]]]
+            }
 
             Integer cpus = 1
             if ( task.config.cpus && task.config.cpus > 0 ) {
