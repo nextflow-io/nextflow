@@ -498,6 +498,11 @@ class WrFileCopyStrategyTest extends Specification {
         cmd == "cp an\\ out.file $mntPath"
 
         when:
+        cmd = strategy.copyFile(".command.out", file)
+        then:
+        cmd == "[ -s .command.out ] || echo '[empty]' > .command.out\ncp .command.out $mntPath"
+
+        when:
         cmd = strategy.exitFile(file)
         then:
         cmd == "> $mntPath"

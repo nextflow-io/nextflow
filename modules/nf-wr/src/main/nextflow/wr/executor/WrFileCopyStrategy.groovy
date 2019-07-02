@@ -21,6 +21,7 @@ import groovy.util.logging.Slf4j
 import java.nio.file.Path
 
 import nextflow.executor.SimpleFileCopyStrategy
+import nextflow.processor.TaskRun
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.util.Escape
@@ -263,7 +264,14 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String copyFile( String name, Path target ) {
-        "cp ${Escape.path(name)} ${wrWorkPath(target)}"
+        String cmd = ""
+        if (name == TaskRun.CMD_OUTFILE && getPathScheme(target) == 's3') {
+            // wr does not currently create empty files in S3, but this file
+            // must exist, so give it some content
+            cmd = "[ -s $name ] || echo '[empty]' > $name\n"
+        }
+        cmd += "cp ${Escape.path(name)} ${wrWorkPath(target)}"
+        return cmd
     }
 
     /**
