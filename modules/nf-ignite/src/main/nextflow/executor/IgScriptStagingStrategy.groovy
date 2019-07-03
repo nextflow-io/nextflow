@@ -91,17 +91,6 @@ class IgScriptStagingStrategy extends IgFileStagingStrategy implements ScriptFil
     }
 
     /**
-     * Turn off remote file download
-     *
-     * @param inputFiles
-     * @return
-     */
-    @Override
-    Map<String,Path> resolveForeignFiles(Map<String,Path> inputFiles) {
-        return inputFiles
-    }
-
-    /**
      * Turn off file unstage from the wrapper script returning a null string
      *
      * @return A {@code null} string

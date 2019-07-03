@@ -34,7 +34,6 @@ class IgScriptStagingStrategyTest extends Specification {
         strategy.getBeforeStartScript() == null
         strategy.getStageInputFilesScript(['foo.txt': PATH]) == null
         strategy.getUnstageOutputFilesScript(['foo.txt'], PATH) == null
-        strategy.resolveForeignFiles(['foo.txt': PATH]) == ['foo.txt': PATH]
 
         strategy.touchFile(PATH) == delegate.touchFile(PATH)
         strategy.fileStr(PATH) == delegate.fileStr(PATH)

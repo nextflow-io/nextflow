@@ -170,30 +170,6 @@ class BashWrapperBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
-    def 'should resolve foreign files' () {
-
-        given:
-        def INPUTS = [
-                'foo.txt': Paths.get('/some/foo.txt'),
-                'bar.txt': Paths.get('/some/bar.txt'),
-        ]
-
-        def RESOLVED = [
-                'foo.txt': Paths.get('/some/foo.txt'),
-                'BAR.txt': Paths.get('/some/BAR.txt'),
-        ]
-        def bean = Mock(TaskBean)
-        bean.getInputFiles() >> INPUTS
-        def copy = Mock(SimpleFileCopyStrategy)
-        def bash = Spy(BashWrapperBuilder, constructorArgs:[bean, copy])
-
-        when:
-        def files = bash.getResolvedInputs()
-        then:
-        1 * copy.resolveForeignFiles(INPUTS) >> RESOLVED
-        files == RESOLVED
-
-    }
 
     def 'should create module command' () {
         given:
@@ -220,7 +196,7 @@ class BashWrapperBuilderTest extends Specification {
         bash.getStatsEnabled() >> false
         bash.getStageInMode() >> 'symlink'
 
-        bash.getResolvedInputs() >> [:]
+        bash.getInputFiles() >> [:]
         bash.getContainerConfig() >> [engine: 'singularity', envWhitelist: 'FOO,BAR']
         bash.getContainerImage() >> 'foo/bar'
         bash.getContainerMount() >> null
@@ -247,7 +223,7 @@ class BashWrapperBuilderTest extends Specification {
         bash.createContainerBuilder(null)
         then:
         bash.createContainerBuilder0('docker') >> BUILDER
-        bash.getResolvedInputs() >> INPUTS
+        bash.getInputFiles() >> INPUTS
         bash.getStageInMode() >> null
         1 * BUILDER.addMountForInputs(INPUTS) >> null
 

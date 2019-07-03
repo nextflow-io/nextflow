@@ -559,7 +559,7 @@ class K8sTaskHandlerTest extends Specification {
         mounts = handler.getContainerMounts()
         then:
         1 * k8sConfig.getAutoMountHostPaths() >> true
-        1 * wrapper.getResolvedInputs() >> ['foo': Paths.get('/base_path/foo.txt'), 'bar': Paths.get('/base_path/bar.txt')]
+        1 * wrapper.getInputFiles() >> ['foo': Paths.get('/base_path/foo.txt'), 'bar': Paths.get('/base_path/bar.txt')]
         1 * wrapper.getBinDir() >> Paths.get('/user/bin')
         1 * wrapper.getWorkDir() >> Paths.get('/work/dir')
         mounts == ['/base_path', '/user/bin', '/work/dir']

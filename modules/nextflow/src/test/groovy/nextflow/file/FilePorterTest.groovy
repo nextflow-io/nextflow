@@ -16,21 +16,15 @@
 
 package nextflow.file
 
-import spock.lang.Ignore
-import spock.lang.Specification
-
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.concurrent.Callable
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.ProcessStageException
+import spock.lang.Specification
 import test.TestHelper
 /**
  *
@@ -39,37 +33,7 @@ import test.TestHelper
 @Slf4j
 class FilePorterTest extends Specification {
 
-    def 'should get the core threads value' () {
 
-        when:
-        def session = new Session()
-        def porter = new FilePorter(session)
-        then:
-        porter.coreThreads == Runtime.getRuntime().availableProcessors()
-
-        when:
-        session = new Session([filePorter: [coreThreads: 10]])
-        porter = new FilePorter(session)
-        then:
-        porter.coreThreads == 10
-
-    }
-
-    def 'should get the max threads value' () {
-
-        when:
-        def session = new Session()
-        def porter = new FilePorter(session)
-        then:
-        porter.maxThreads == 2 * Runtime.getRuntime().availableProcessors()
-
-        when:
-        session = new Session([filePorter: [maxThreads: 99]])
-        porter = new FilePorter(session)
-        then:
-        porter.maxThreads == 99
-
-    }
 
     def 'should get the max retries value' () {
 
@@ -97,46 +61,47 @@ class FilePorterTest extends Specification {
         def foreign1 = TestHelper.createInMemTempFile('hola.txt', 'hola mundo!')
         def foreign2 = TestHelper.createInMemTempFile('ciao.txt', 'ciao mondo!')
         def local = Paths.get('local.txt')
-        def files = [foo: local, bar: foreign1, baz: foreign2]
 
         when:
         def porter = new FilePorter(session)
-        def result = porter.stageForeignFiles(files, folder)
+        def batch = porter.newBatch(folder)
+        def file0 = batch.addToForeign(local)
+        def file1 = batch.addToForeign(foreign1)
+        def file2 = batch.addToForeign(foreign2)
         then:
-        result.foo ==  Paths.get('local.txt')
+        file0 == local
+        and:
+        file1 != foreign1
+        file1.name == foreign1.name
+        and:
+        file2 != foreign2
+        file2.name == foreign2.name
 
-        result.bar.name == 'hola.txt'
-        result.bar.text == 'hola mundo!'
-        result.bar.fileSystem == FileSystems.default
-
-        result.baz.name == 'ciao.txt'
-        result.baz.text == 'ciao mondo!'
-        result.baz.fileSystem == FileSystems.default
+        when:
+        porter.transfer(batch)
+        then:
+        file1.name == 'hola.txt'
+        file1.text == 'hola mundo!'
+        file1.fileSystem == FileSystems.default
+        and:
+        file2.name == 'ciao.txt'
+        file2.text == 'ciao mondo!'
+        file2.fileSystem == FileSystems.default
 
         cleanup:
         folder?.deleteDir()
     }
 
 
-    static class DummyStage extends FilePorter.FileStageAction {
-        int secs
-        DummyStage(String name, Path file, int secs ) {
-            super(name,file,Paths.get('/work/dir'),0)
-            this.secs = secs
+
+    static class ErrorStage extends FilePorter.FileTransfer {
+
+        ErrorStage(Path path, Path stagePath, int maxRetries) {
+            super(path, stagePath, maxRetries)
         }
 
         @Override
-        FilePorter.NamePathPair call() throws Exception {
-            log.debug "Dummy staging $path"
-            sleep secs
-            return new FilePorter.NamePathPair(name, path.resolve(name))
-        }
-    }
-
-    static class ErrorStage extends FilePorter.FileStageAction {
-
-        @Override
-        FilePorter.NamePathPair call() throws Exception {
+        void run() throws Exception {
             throw new ProcessStageException('Cannot stage gile')
         }
     }
@@ -144,24 +109,23 @@ class FilePorterTest extends Specification {
     def 'should submit actions' () {
 
         given:
+        def foreign1 = TestHelper.createInMemTempFile('hola.txt', 'hola mundo!')
+        def foreign2 = TestHelper.createInMemTempFile('ciao.txt', 'ciao mondo!')
+
         def folder = Files.createTempDirectory('test')
         def session = new Session(workDir: folder)
-        def porter = new FilePorter(session)
+        FilePorter porter = Spy(FilePorter, constructorArgs:[session])
+        def files = [ foreign1, foreign2 ]
 
         when:
-        def actions = [
-                new DummyStage('foo', Paths.get('/data/foo'), 500),
-                new DummyStage('bar', Paths.get('/data/bat'), 3000)
-        ]
-
-        def futures = porter.submitStagingActions(actions)
+        def result = porter.submitStagingActions(files, folder)
         then:
-        futures.size() == 2
-        futures[0].isDone()
-        futures[1].isDone()
+        result.size() == 2
+        result[0].result.done
+        result[1].result.done
 
         when:
-        porter.submitStagingActions([ new ErrorStage() ])
+        porter.submitStagingActions([Paths.get('/missing/file')], folder)
         then:
         thrown(ProcessStageException)
 
@@ -170,35 +134,67 @@ class FilePorterTest extends Specification {
     }
 
 
-    @Ignore
-    def 'should access future' () {
+
+
+    def 'should check batch size and truth' () {
+        given:
+        def STAGE = Files.createTempDirectory('test')
+        def FTP_FILE = 'ftp://host.com/file.txt' as Path
+        def LOC_FILE = '/local/data.txt' as Path
+        def session = Mock(Session)
+        session.config >> [:]
+        def porter = new FilePorter(session)
+
+        when:
+        def batch = porter.newBatch(STAGE)
+        then:
+        !batch
+        batch.size() == 0
+
+        when:
+        batch.addToForeign(LOC_FILE)
+        then:
+        batch.size() == 0
+        !batch
+
+        when:
+        def result = batch.addToForeign(FTP_FILE)
+        then:
+        result.scheme == 'file'
+        batch.size() == 1
+        batch
+
+        cleanup:
+        STAGE?.deleteDir()
+
+    }
+
+    def 'should return stage path' () {
 
         given:
-        def exec = Executors.newFixedThreadPool(2)
+        def STAGE = Files.createTempDirectory('test')
+        def FTP_FILE1 = 'ftp://host.com/file1.txt' as Path
+        def FTP_FILE2 = 'ftp://host.com/file2.txt' as Path
+
         when:
-        def fut = exec.submit( { log.info 'start'; sleep 5000; log.info 'done'; return 'Hello' } as Callable )
-
-        def wait = {
-            while( true ) {
-                try {
-                    def str = fut.get(1, TimeUnit.SECONDS)
-                    log.info "message => $str"
-                    break
-                }
-                catch( TimeoutException e ) {
-                    //
-                    log.info('timeout')
-                }
-            }
-        }
-
-        def t1 = Thread.start(wait)
-        def t2 = Thread.start(wait)
-
-        t1.join()
-        t2.join()
-
+        def stage1 = FilePorter.getCachePathFor(FTP_FILE1, STAGE)
         then:
-        noExceptionThrown()
+        stage1.toString().startsWith( STAGE.toString() )
+
+        when:
+        def stage2 = FilePorter.getCachePathFor(FTP_FILE2, STAGE)
+        then:
+        stage2.toString().startsWith( STAGE.toString() )
+        stage1 != stage2
+
+        when:
+        STAGE.resolve('foo.txt').text = 'ciao' // <-- add a file to alter the content of the dir
+        and:
+        def newStage1 = FilePorter.getCachePathFor(FTP_FILE1, STAGE)
+        then:
+        stage1 == newStage1
+
+        cleanup:
+        STAGE?.deleteDir()
     }
 }

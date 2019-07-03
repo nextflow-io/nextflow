@@ -106,7 +106,7 @@ class K8sTaskHandler extends TaskHandler {
         }
 
         // get input files paths
-        final paths = DockerBuilder.inputFilesToPaths(builder.getResolvedInputs())
+        final paths = DockerBuilder.inputFilesToPaths(builder.getInputFiles())
         final binDir = builder.binDir
         final workDir = builder.workDir
         // add standard paths

@@ -18,22 +18,15 @@ package nextflow.file
 
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
-import java.util.concurrent.Callable
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.ThreadFactory
-import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
-import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.CompileStatic
-import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.transform.ToString
-import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.ProcessStageException
@@ -46,7 +39,7 @@ import nextflow.util.Duration
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@ToString(includeFields = true, includeNames = true, includePackage = false, includes = 'coreThreads,maxThreads,maxRetries,keepAlive,pollTimeout')
+@ToString(includeFields = true, includeNames = true, includePackage = false, includes = 'maxRetries,pollTimeout')
 @CompileStatic
 class FilePorter {
 
@@ -54,25 +47,13 @@ class FilePorter {
 
     static final private int MAX_RETRIES = 3
 
-    static final private int CORE_THREADS = Runtime.runtime.availableProcessors()
-
-    static final private int MAX_THREADS = 2 * CORE_THREADS
-
-    static final private Duration KEEP_ALIVE = Duration.of('60sec')
-
     static final private Duration POLL_TIMEOUT = Duration.of('2sec')
 
-    final Map<FileStageAction,Future<NamePathPair>> stagingFutures = new WeakHashMap<>()
+    final Map<Path,FileTransfer> stagingTransfers = new HashMap<>()
 
-    @Lazy private ExecutorService stagingExecutor = createExecutor()
-
-    private Duration keepAlive
+    @Lazy private ExecutorService threadPool = session.getFileTransferThreadPool()
 
     private Duration pollTimeout
-
-    final int coreThreads
-
-    final int maxThreads
 
     final int maxRetries
 
@@ -80,85 +61,83 @@ class FilePorter {
 
     FilePorter( Session session ) {
         this.session = session
-        keepAlive = session.config.navigate('filePorter.keepAlive') as Duration ?: KEEP_ALIVE
-        pollTimeout = session.config.navigate('filePorter.pollTimeout') as Duration ?: POLL_TIMEOUT
-        coreThreads = session.config.navigate('filePorter.coreThreads') as Integer ?: CORE_THREADS
-        maxThreads = session.config.navigate('filePorter.maxThreads') as Integer ?: MAX_THREADS
         maxRetries = session.config.navigate('filePorter.maxRetries') as Integer ?: MAX_RETRIES
+        pollTimeout = session.config.navigate('filePorter.pollTimeout') as Duration ?: POLL_TIMEOUT
     }
 
-    /**
-     * Given a map of files, copies all the ones stored in a foreign file system
-     * and store them in the current working directory
-     *
-     * @param filesMap A map of files
-     * @return A new files map in which all foreign {@link Path} are replaced with local paths
-     */
-    Map<String,Path> stageForeignFiles(Map<String, Path> filesMap, Path stageDir) {
-        final List<FileStageAction> actions = []
-        final List<Path> paths = []
-        final scheme = stageDir.scheme
+    Batch newBatch(Path stageDir) { new Batch(stageDir) }
 
-        // check for foreign file to copy
-        for( Map.Entry<String,Path> entry : filesMap ) {
-            def name = entry.getKey()
-            def path = entry.getValue()
-            if( path.scheme == scheme )
-                continue
-            // copy the path with a thread pool
-            actions.add( new FileStageAction(name, path, stageDir, maxRetries) )
-            paths.add(path)
+    void transfer(Batch batch) {
+        if( batch.size() ) {
+            log.trace "Stage foreign files: $batch"
+            submitStagingActions(batch.foreignPaths, batch.stageDir)
+            log.trace "Stage foreign files completed: $batch"
         }
-
-        // no foreign file to copy, just return the original map
-        if( !actions )
-            return filesMap
-
-        log.trace "Stage foreign files: $paths"
-        final result = new HashMap(filesMap)
-
-        final futures = submitStagingActions(actions)
-        log.trace "Stage foreign files completed: $paths"
-
-        for( Future<NamePathPair> fut : futures ) {
-            final pair = fut.get()
-            result.put( pair.name, pair.path )
-        }
-        return result
     }
 
-    protected List<Future<NamePathPair>> submitStagingActions(List<FileStageAction> actions) {
+    protected FileTransfer createFileTransfer(Path source, Path stageDir) {
+        final stagePath = getCachePathFor(source,stageDir)
+        return new FileTransfer(source, stagePath, maxRetries)
+    }
 
-        String msg = null
-        final result = new ArrayList<Future<NamePathPair>>(actions.size())
-        for ( def action : actions ) {
+    protected Future submitForExecution(FileTransfer transfer) {
+        threadPool.submit(transfer)
+    }
+
+    protected FileTransfer getOrSubmit(Path source, Path stageDir) {
+        synchronized (stagingTransfers) {
+            FileTransfer transfer = stagingTransfers.get(source)
+            if( transfer == null ) {
+                transfer = createFileTransfer(source, stageDir)
+                transfer.refCount = 1
+                transfer.result = submitForExecution(transfer)
+                stagingTransfers.put(source, transfer)
+            }
+            else
+                transfer.refCount ++
+
+            return transfer
+        }
+    }
+
+    protected void decOrRemove(FileTransfer action) {
+        synchronized (stagingTransfers) {
+            final key = action.source
+            assert stagingTransfers.containsKey(key)
+            if( --action.refCount == 0 ) {
+                stagingTransfers.remove(key)
+            }
+        }
+    }
+
+    protected List<FileTransfer> submitStagingActions(List<Path> paths, Path stageDir) {
+
+        final result = new ArrayList<FileTransfer>(paths.size())
+        for ( def file : paths ) {
             // here's the magic: use a Map to check if a future for the staging action already exist
             // - if exists take it to wait to the submit action termination
             // - otherwise create a new future submitting the action operation
-            final future = stagingFutures.getOrCreate(action) {
-                msg = "Staging foreign file: ${action.path.toUriString()}"
-                return stagingExecutor.submit(action)
-            }
-            result.add(future)
+            result << getOrSubmit(file,stageDir)
         }
 
         // wait for staging actions completion
         // note: make a copy of the list to avoid a ConcurrentModificationException
-        final futures = new ArrayList<Future<NamePathPair>>(result)
+        final futures = new ArrayList<FileTransfer>(result)
         while( futures.size() ) {
             final itr = futures.iterator()
             while( itr.hasNext() ) {
+                final action = itr.next()
                 try {
-                    final fut = itr.next()
-                    fut.get(pollTimeout.millis, TimeUnit.MILLISECONDS)
+                    action.result.get(pollTimeout.millis, TimeUnit.MILLISECONDS)
                     itr.remove()
+                    decOrRemove(action)
                 }
                 catch( TimeoutException e ) {
                     // the timeout event is used to report an info message that
                     // a download is taking place only the very first time
+                    final msg = action.getMessageAndClear()
                     if( msg ) {
                         log.info((String)msg)
-                        msg = null
                     }
                 }
                 catch( ExecutionException e ) {
@@ -170,22 +149,100 @@ class FilePorter {
         return result
     }
 
+    /**
+     * Models a batch (collection) of foreign files that need to be transferred to
+     * the process staging are co-located with the work directory
+     */
+    static class Batch  {
+
+        /**
+         * Holds the list of foreign files to be transferred
+         */
+        private List<Path> foreignPaths = new ArrayList<>()
+
+        /**
+         * The *local* directory where against where files need to be staged.
+         */
+        private Path stageDir
+
+        /**
+         * The stage directory scheme. A file is considered *foreign* when its scheme is different from
+         * the stage directory scheme.
+         */
+        private String stageScheme
+
+        Batch(Path stageDir) {
+            this.stageDir = stageDir
+            this.stageScheme = stageDir.scheme
+        }
+
+        /**
+         * Add the specified path to list of foreign files when
+         * the path scheme is different from the stage directory scheme
+         *
+         * @param path
+         *      The path to include in the foreign files batch
+         * @return
+         *
+         */
+        Path addToForeign(Path path) {
+            if( path.scheme == stageScheme )
+                return path
+
+            // copy the path with a thread pool
+            foreignPaths << path
+            return getCachePathFor(path, stageDir)
+        }
+
+        /**
+         * @return The number of foreign files in the batch
+         */
+        int size() { foreignPaths.size() }
+
+        /**
+         * @return {@code true} when it contains one or more files, {@code false} otherwise
+         */
+        boolean asBoolean() { foreignPaths.size()>0 }
+
+    }
+
+    /**
+     * Model a foreign file transfer
+     */
     @ToString
     @CompileStatic
-    @EqualsAndHashCode
     @PackageScope
-    @TupleConstructor
-    static class FileStageAction implements Callable<NamePathPair> {
+    static class FileTransfer implements Runnable {
 
-        final String name
-        final Path path
-        final Path stageDir
+        /**
+         * The source file (foreign) to be transfer
+         */
+        final Path source
+
+        /**
+         * The target path where the file need to be copied
+         */
+        final Path target
+
+        /**
+         * Max number of retries in case of error
+         */
         final int maxRetries
 
+        volatile int refCount
+        volatile Future result
+        private String message
+
+        FileTransfer(Path foreignPath, Path stagePath, int maxRetries=0) {
+            this.source = foreignPath
+            this.target = stagePath
+            this.maxRetries = maxRetries
+            this.message = "Staging foreign file: ${source.toUriString()}"
+        }
+
         @Override
-        NamePathPair call() throws Exception {
-            final stagedPath = stageForeignFile(path,stageDir)
-            return new NamePathPair(name, stagedPath)
+        void run() throws Exception {
+            stageForeignFile(source, target)
         }
 
         /**
@@ -194,15 +251,12 @@ class FilePorter {
          * @param filePath The {@link Path} of the remote file to copy
          * @return The path of a local copy of the remote file
          */
-        protected Path stageForeignFile(Path filePath, Path stageDir) {
-            // create cache directory
-            final hash = CacheHelper.hasher([filePath, stageDir]).hash().toString()
-            final target = getCacheDir(stageDir, hash).resolve(filePath.getName())
+        protected Path stageForeignFile(Path filePath, Path stagePath) {
 
             int count = 0
             while( true ) {
                 try {
-                    return stageForeignFile0(filePath, target)
+                    return stageForeignFile0(filePath, stagePath)
                 }
                 catch( IOException e ) {
                     if( count++ < maxRetries && !(e instanceof NoSuchFileException )) {
@@ -236,74 +290,30 @@ class FilePorter {
             return FileHelper.copyPath(source, target)
         }
 
-        private Path getCacheDir(Path workDir, String hash) {
-            def bucket = hash.substring(0,2)
-            def result = workDir.resolve( "$bucket/${hash.substring(2)}")
-
-            if( !FilesEx.mkdirs(result) ) {
-                throw new IOException("Unable to create cache directory: $result -- Verify file system access permissions or if a file having the same name exists")
-            }
-            return result.toAbsolutePath()
-        }
-
-    }
-
-
-    @ToString
-    @EqualsAndHashCode
-    @TupleConstructor
-    @PackageScope
-    static class NamePathPair {
-        String name
-        Path path
-
-        String toString() {
-            "name=$name,path=$path"
+        synchronized String getMessageAndClear() {
+            def result = message
+            message = null
+            return result
         }
     }
 
-    private ExecutorService createExecutor() {
-        log.debug "Creating executor service for $this"
 
-        final result = new ThreadPoolExecutor(
-                coreThreads,
-                maxThreads,
-                keepAlive.millis,
-                TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<Runnable>(),
-                new DownloaderThreadFactory() )
-
-        result.allowCoreThreadTimeOut(true);
-
-        // register the shutdown on termination
-        session.onShutdown {
-            result.shutdown()
-            result.awaitTermination(1, TimeUnit.MINUTES)
-        }
-
+    static protected Path getCachePathFor(Path filePath, Path stageDir) {
+        final dirPath = stageDir.toUriString() // <-- use a string to avoid changes in the dir to alter the hashing
+        final hash = CacheHelper.hasher([filePath, dirPath]).hash().toString()
+        final result = getCacheDir0(stageDir, hash).resolve(filePath.getName())
         return result
     }
 
-    /**
-     * Custom thread factory
-     */
-    static private class DownloaderThreadFactory implements ThreadFactory {
-        private final ThreadGroup group;
-        private final AtomicInteger threadNumber = new AtomicInteger(1);
-        private final String namePrefix = "FilePorter-"
+    static private Path getCacheDir0(Path workDir, String hash) {
+        def bucket = hash.substring(0,2)
+        def result = workDir.resolve( "$bucket/${hash.substring(2)}")
 
-        DownloaderThreadFactory() {
-            SecurityManager s = System.getSecurityManager();
-            group = (s != null) ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
+        if( !FilesEx.mkdirs(result) ) {
+            throw new IOException("Unable to create cache directory: $result -- Verify file system access permissions or if a file having the same name exists")
         }
-
-        Thread newThread(Runnable r) {
-            Thread t = new Thread(group, r, namePrefix + threadNumber.getAndIncrement(), 0);
-            if (t.isDaemon())
-                t.setDaemon(false);
-            if (t.getPriority() != Thread.NORM_PRIORITY)
-                t.setPriority(Thread.NORM_PRIORITY);
-            return t;
-        }
+        return result.toAbsolutePath()
     }
+
+
 }

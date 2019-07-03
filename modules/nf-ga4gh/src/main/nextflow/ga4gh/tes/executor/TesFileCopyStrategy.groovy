@@ -43,14 +43,6 @@ class TesFileCopyStrategy implements ScriptFileCopyStrategy {
      * {@inheritDoc}
      */
     @Override
-    Map<String, Path> resolveForeignFiles(Map<String, Path> inputFile) {
-        return inputFile
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     String getStageInputFilesScript(Map<String, Path> inputFiles) {
         return null
     }
