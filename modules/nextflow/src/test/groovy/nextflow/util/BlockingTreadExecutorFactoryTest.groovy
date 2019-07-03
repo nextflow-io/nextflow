@@ -32,7 +32,7 @@ import spock.lang.Specification
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class BlockingTreadExecutorTest extends Specification {
+class BlockingTreadExecutorFactoryTest extends Specification {
 
     def 'should create thread pool with default config' () {
         given:
@@ -45,6 +45,7 @@ class BlockingTreadExecutorTest extends Specification {
         pool.maxThreads == CPUS
         pool.maxQueueSize == CPUS * 3
         pool.keepAlive == Duration.of('60 sec')
+        pool.maxAwait == Duration.of('36 hours')
 
     }
 
@@ -68,7 +69,8 @@ class BlockingTreadExecutorTest extends Specification {
         new Session([threadPool: [foo:[
                 maxThreads: 5,
                 maxQueueSize: 10,
-                keepAlive: '15 sec'
+                keepAlive: '15 sec',
+                maxAwait: '5 min'
         ]]])
         def pool = new BlockingThreadExecutorFactory().withName('foo')
 
@@ -78,6 +80,7 @@ class BlockingTreadExecutorTest extends Specification {
         pool.maxThreads == 5
         pool.maxQueueSize == 10
         pool.keepAlive == Duration.of('15 sec')
+        pool.maxAwait == Duration.of('5 min')
     }
 
     def 'should execute tasks' () {

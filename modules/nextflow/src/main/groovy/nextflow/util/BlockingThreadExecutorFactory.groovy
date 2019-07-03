@@ -44,11 +44,13 @@ class BlockingThreadExecutorFactory {
     private static String DEFAULT_NAME = 'BlockingThreadExecutor'
     private static int DEFAULT_POOL_SIZE = Runtime.runtime.availableProcessors()
     private static Duration DEFAULT_KEEP_ALIVE = Duration.of('60sec')
+    private static Duration DEFAULT_MAX_AWAIT = Duration.of('36 hour')
 
     String name
     Integer maxThreads
     Integer maxQueueSize
     Duration keepAlive
+    Duration maxAwait
 
     static ExecutorService create(String name) {
         new BlockingThreadExecutorFactory().withName(name).create()
@@ -80,6 +82,7 @@ class BlockingThreadExecutorFactory {
             maxQueueSize = session.config.navigate("threadPool.${name}.maxQueueSize") as Integer
             keepAlive = session.config.navigate("threadPool.${name}.keepAlive") as Duration
             maxThreads = session.config.navigate("threadPool.${name}.maxThreads") as Integer
+            maxAwait = session.config.navigate("threadPool.${name}.maxAwait") as Duration
             if( !maxThreads )
                 maxThreads = (session.config.poolSize as Integer ?: 0) *3
         }
@@ -90,6 +93,8 @@ class BlockingThreadExecutorFactory {
             maxQueueSize = maxThreads *3
         if( keepAlive == null )
             keepAlive = DEFAULT_KEEP_ALIVE
+        if( maxAwait == null )
+            maxAwait = DEFAULT_MAX_AWAIT
 
         log.debug "Thread pool name=$name; maxThreads=$maxThreads; maxQueueSize=$maxQueueSize; keepAlive=$keepAlive"
         create0()
