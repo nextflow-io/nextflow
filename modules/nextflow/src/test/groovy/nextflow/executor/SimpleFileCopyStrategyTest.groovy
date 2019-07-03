@@ -16,16 +16,12 @@
 
 package nextflow.executor
 
-import spock.lang.Specification
-import spock.lang.Unroll
-
-import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
-import nextflow.Session
 import nextflow.processor.TaskBean
-import test.TestHelper
+import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -321,30 +317,6 @@ class SimpleFileCopyStrategyTest extends Specification {
 
     }
 
-    def 'should resolve foreign files' () {
-        given:
-        def folder = Files.createTempDirectory('test')
-        def session = new Session(workDir: folder)
-
-        def INPUTS = [
-                'foo.txt': Paths.get('/some/foo.txt'),
-                'bar.txt': Paths.get('/some/bar.txt'),
-                'hello.txt': TestHelper.createInMemTempFile('any.name','Hello world')
-        ]
-        def strategy = new SimpleFileCopyStrategy(workDir: folder.resolve('xx/yy'))
-
-        when:
-        def result = strategy.resolveForeignFiles(INPUTS)
-        then:
-        result.size() == 3
-        result['foo.txt'] == Paths.get('/some/foo.txt')
-        result['bar.txt'] == Paths.get('/some/bar.txt')
-        result['hello.txt'].text == 'Hello world'
-        result['hello.txt'].toString().startsWith(folder.resolve('stage').toString())
-
-        cleanup:
-        folder.deleteDir()
-    }
 
     def 'should return cp script to unstage output files to S3' () {
 

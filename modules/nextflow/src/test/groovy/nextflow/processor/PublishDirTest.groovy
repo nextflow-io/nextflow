@@ -21,11 +21,10 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
-import nextflow.Global
+import nextflow.Session
 import nextflow.file.FileHelper
 import spock.lang.Specification
 import test.TestHelper
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -136,7 +135,7 @@ class PublishDirTest extends Specification {
     def 'should copy output files' () {
 
         given:
-        Global.session = null
+        def session = new Session()
         def folder = Files.createTempDirectory('nxf')
         folder.resolve('work-dir').mkdir()
         folder.resolve('work-dir/file1.txt').text = 'aaa'
@@ -163,8 +162,8 @@ class PublishDirTest extends Specification {
         def publisher = new PublishDir(path: publishDir, mode: 'copy')
         publisher.apply( outputs, task )
 
-        PublishDir.executor.shutdown()
-        PublishDir.executor.awaitTermination(5, TimeUnit.SECONDS)
+        session.fileTransferThreadPool.shutdown()
+        session.fileTransferThreadPool.awaitTermination(5, TimeUnit.SECONDS)
 
         then:
         publishDir.resolve('file1.txt').text == 'aaa'

@@ -20,7 +20,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.container.ContainerBuilder
@@ -140,12 +139,6 @@ class BashWrapperBuilder {
         systemOsName.startsWith('Mac')
     }
 
-    // memoize the result to avoid to multiple time the same input files
-    @Memoized
-    protected Map<String,Path> getResolvedInputs() {
-        copyStrategy.resolveForeignFiles(inputFiles)
-    }
-
     @PackageScope String buildNew0() {
         final template = BashWrapperBuilder.class.getResourceAsStream('command-run.txt')
         try {
@@ -228,7 +221,7 @@ class BashWrapperBuilder {
         /*
          * staging input files when required
          */
-        final stagingScript = copyStrategy.getStageInputFilesScript(resolvedInputs)
+        final stagingScript = copyStrategy.getStageInputFilesScript(inputFiles)
         binding.stage_inputs = stagingScript ? "# stage input files\n${stagingScript}" : null
 
         binding.stdout_file = TaskRun.CMD_OUTFILE
@@ -432,7 +425,7 @@ class BashWrapperBuilder {
          */
         // do not mount inputs when they are copied in the task work dir -- see #1105
         if( stageInMode != 'copy' )
-            builder.addMountForInputs(resolvedInputs)
+            builder.addMountForInputs(inputFiles)
 
         builder.addMount(binDir)
 

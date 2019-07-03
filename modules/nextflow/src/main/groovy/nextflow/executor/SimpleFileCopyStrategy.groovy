@@ -93,14 +93,14 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * @return
      *      A map containing remote file paths resolved as local paths 
      */
-    @Override
-    Map<String,Path> resolveForeignFiles(Map<String,Path> files) {
-        if( !files  )
-            return files
-        if( !porter )
-            porter = ((Session)Global.session).getFilePorter()
-        porter.stageForeignFiles(files, getStagingDir())
-    }
+//    @Override
+//    Map<String,Path> resolveForeignFiles(Map<String,Path> files) {
+//        if( !files  )
+//            return files
+//        if( !porter )
+//            porter = ((Session)Global.session).getFilePorter()
+//        porter.stageForeignFiles(files, getStagingDir())
+//    }
 
     protected Path getStagingDir() {
         final result = workDir.parent?.parent?.resolve('stage')

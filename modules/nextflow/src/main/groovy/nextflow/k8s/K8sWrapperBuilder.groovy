@@ -15,7 +15,7 @@
  */
 
 package nextflow.k8s
-import java.nio.file.Path
+
 
 import groovy.transform.CompileStatic
 import nextflow.executor.BashWrapperBuilder
@@ -41,11 +41,5 @@ class K8sWrapperBuilder extends BashWrapperBuilder {
     boolean fixOwnership() {
         containerConfig.fixOwnership
     }
-
-    @Override
-    Map<String,Path> getResolvedInputs() {
-        super.getResolvedInputs()
-    }
-
 
 }

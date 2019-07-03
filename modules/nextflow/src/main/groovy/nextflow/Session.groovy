@@ -23,6 +23,7 @@ import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 import com.google.common.hash.HashCode
 import com.upplication.s3fs.S3OutputStream
@@ -66,6 +67,7 @@ import nextflow.trace.TraceRecord
 import nextflow.trace.WebLogObserver
 import nextflow.trace.WorkflowStats
 import nextflow.util.Barrier
+import nextflow.util.BlockingThreadExecutorFactory
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
@@ -606,7 +608,7 @@ class Session implements ISession {
     }
 
     protected Map<String,Path> findBinEntries(Path path) {
-        def result = new HashMap<String,Path>()
+        def result = new LinkedHashMap(10)
         path
                 .listFiles { file -> Files.isExecutable(file) }
                 .each { Path file -> result.put(file.name,file)  }
@@ -1220,7 +1222,7 @@ class Session implements ISession {
      * @return The value of tasks to handle in parallel
      */
     @Memoized
-    public int getQueueSize( String execName, int defValue ) {
+    int getQueueSize( String execName, int defValue ) {
         getExecConfigProp(execName, 'queueSize', defValue) as int
     }
 
@@ -1232,7 +1234,7 @@ class Session implements ISession {
      * @return A {@code Duration} object. Default '1 second'
      */
     @Memoized
-    public Duration getPollInterval( String execName, Duration defValue = Duration.of('1sec') ) {
+    Duration getPollInterval( String execName, Duration defValue = Duration.of('1sec') ) {
         getExecConfigProp( execName, 'pollInterval', defValue ) as Duration
     }
 
@@ -1245,7 +1247,7 @@ class Session implements ISession {
      * @return A {@code Duration} object. Default '90 second'
      */
     @Memoized
-    public Duration getExitReadTimeout( String execName, Duration defValue = Duration.of('90sec') ) {
+    Duration getExitReadTimeout( String execName, Duration defValue = Duration.of('90sec') ) {
         getExecConfigProp( execName, 'exitReadTimeout', defValue ) as Duration
     }
 
@@ -1269,7 +1271,7 @@ class Session implements ISession {
      * @return A {@code Duration} object. Default '1 minute'
      */
     @Memoized
-    public Duration getQueueStatInterval( String execName, Duration defValue = Duration.of('1min') ) {
+    Duration getQueueStatInterval( String execName, Duration defValue = Duration.of('1min') ) {
         getExecConfigProp(execName, 'queueStatInterval', defValue) as Duration
     }
 
@@ -1299,4 +1301,19 @@ class Session implements ISession {
         ansiLogObserver ? ansiLogObserver.appendInfo(file.text) : Files.copy(file, System.out)
     }
 
+    @Memoized // <-- this guarantees that the same executor is used across different publish dir in the same session
+    @CompileStatic
+    synchronized ExecutorService getFileTransferThreadPool() {
+        final result = new BlockingThreadExecutorFactory()
+                .withName('FileTransfer')
+                .withMaxThreads( Runtime.runtime.availableProcessors()*3 )
+                .create()
+
+        this.onShutdown {
+            result.shutdown()
+            result.awaitTermination(36, TimeUnit.HOURS)
+        }
+
+        return result
+    }
 }

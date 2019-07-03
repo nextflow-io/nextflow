@@ -15,6 +15,8 @@
  */
 package nextflow.processor
 
+import static nextflow.processor.ErrorStrategy.*
+
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -62,6 +64,7 @@ import nextflow.extension.DataflowHelper
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.file.FilePatternSplitter
+import nextflow.file.FilePorter
 import nextflow.script.BaseScript
 import nextflow.script.params.BasicMode
 import nextflow.script.params.EachInParam
@@ -85,10 +88,6 @@ import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.CollectionHelper
-import static nextflow.processor.ErrorStrategy.FINISH
-import static nextflow.processor.ErrorStrategy.IGNORE
-import static nextflow.processor.ErrorStrategy.RETRY
-import static nextflow.processor.ErrorStrategy.TERMINATE
 /**
  * Implement nextflow process execution logic
  *
@@ -1551,7 +1550,7 @@ class TaskProcessor {
     }
 
 
-    protected List<FileHolder> normalizeInputToFiles( Object obj, int count ) {
+    protected List<FileHolder> normalizeInputToFiles( Object obj, int count, FilePorter.Batch batch ) {
 
         Collection allItems = obj instanceof Collection ? obj : [obj]
         def len = allItems.size()
@@ -1559,7 +1558,16 @@ class TaskProcessor {
         // use a bag so that cache hash key is not affected by file entries order
         def files = new ArrayBag<FileHolder>(len)
         for( def item : allItems ) {
-            files << normalizeInputToFile(item, "input.${++count}")
+
+            if( item instanceof Path ) {
+                def path = batch.addToForeign(item)
+                def holder = new FileHolder(path)
+                files << holder
+            }
+            else {
+                files << normalizeInputToFile(item, "input.${++count}")
+            }
+
         }
 
         return files
@@ -1753,18 +1761,26 @@ class TaskProcessor {
         return count
     }
 
+    protected Path getStageDir() {
+        return executor.getWorkDir().resolve('stage')
+    }
+
+
     final protected void makeTaskContextStage2( TaskRun task, Map secondPass, int count ) {
 
         final ctx = task.context
         final allNames = new HashMap<String,Integer>()
 
+        final FilePorter.Batch batch = session.filePorter.newBatch(getStageDir())
+
         // -- all file parameters are processed in a second pass
         //    so that we can use resolve the variables that eventually are in the file name
-        secondPass.each { FileInParam param, val ->
-
-            def fileParam = param as FileInParam
-            def normalized = normalizeInputToFiles(val,count)
-            def resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
+        for( Map.Entry<FileInParam,?> entry : secondPass.entrySet() ) {
+            final param = entry.getKey()
+            final val = entry.getValue()
+            final fileParam = param as FileInParam
+            final normalized = normalizeInputToFiles(val,count, batch)
+            final resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
             ctx.put( param.name, singleItemOrList(resolved, task.type) )
             count += resolved.size()
             for( FileHolder item : resolved ) {
@@ -1787,6 +1803,9 @@ class TaskProcessor {
             def message = "Process `$name` input file name collision -- There are multiple input files for each of the following file names: ${conflicts.keySet().join(', ')}"
             throw new ProcessUnrecoverableException(message)
         }
+
+        // -- download foreign files
+        session.filePorter.transfer(batch)
     }
 
     final protected void makeTaskContextStage3( TaskRun task, HashCode hash, Path folder ) {

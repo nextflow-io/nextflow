@@ -28,6 +28,7 @@ import nextflow.ISession
 import nextflow.Session
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.executor.Executor
 import nextflow.executor.NopeExecutor
 import nextflow.file.FileHolder
 import nextflow.script.BaseScript
@@ -786,5 +787,16 @@ class TaskProcessorTest extends Specification {
         env == "export FOO=''\nexport BAR=''\n"
 
     }
+
+    def 'should return stage dir' () {
+        given:
+        def WORK_DIR = Paths.get('/the/work/dir')
+        def processor = new TaskProcessor()
+        processor.executor = Mock(Executor) { getWorkDir() >> WORK_DIR }
+
+        expect:
+        processor.getStageDir() == WORK_DIR.resolve('stage')
+    }
+
 
 }
