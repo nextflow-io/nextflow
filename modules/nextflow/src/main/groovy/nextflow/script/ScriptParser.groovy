@@ -58,10 +58,7 @@ class ScriptParser {
 
     ScriptParser(Session session) {
         this.session = session
-    }
-
-    ScriptParser(ClassLoader loader) {
-        this.classLoader = loader
+        this.classLoader = session.getClassLoader()
     }
 
     ScriptParser setSession( Session session ) {
@@ -79,6 +76,10 @@ class ScriptParser {
         this.binding = binding
         return this
     }
+
+    protected ClassLoader getClassLoader() { classLoader }
+
+    protected Session getSession() { session }
 
     ScriptBinding getBinding() { binding }
 
