@@ -134,6 +134,16 @@ class LoggerHelper {
         this.loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory()
     }
 
+    private boolean containsClassName(List<String> debug, List<String> trace, String prefix) {
+        for( String it : debug ) {
+            if( it.startsWith(prefix) ) return true
+        }
+        for( String it : trace ) {
+            if( it.startsWith(prefix) ) return true
+        }
+        return false
+    }
+
     void setup() {
         logFileName = opts.logFile
 
@@ -149,12 +159,16 @@ class LoggerHelper {
         packages[MAIN_PACKAGE] = quiet ? Level.WARN : Level.INFO
 
         // -- add the S3 uploader by default
-        if( !debugConf.contains(S3_UPLOADER_CLASS) && !traceConf.contains(S3_UPLOADER_CLASS) ) {
+        if( !containsClassName(debugConf,traceConf, 'com.upplication.s3fs') ) {
             debugConf << S3_UPLOADER_CLASS
         }
 
-        debugConf.each { packages[it] = Level.DEBUG }
-        traceConf.each { packages[it] = Level.TRACE }
+        for( def it : debugConf ) {
+            packages[it] = Level.DEBUG
+        }
+        for( def it : traceConf ) {
+            packages[it] = Level.TRACE
+        }
 
         // -- the console appender
         this.consoleAppender = createConsoleAppender()
@@ -185,9 +199,13 @@ class LoggerHelper {
         }
 
         // -- debug packages specified by the user
-        debugConf.each { String clazz -> createLogger(clazz, Level.DEBUG) }
+        for( String clazz : debugConf ) {
+            createLogger(clazz, Level.DEBUG)
+        }
         // -- trace packages specified by the user
-        traceConf.each { String clazz -> createLogger(clazz, Level.TRACE) }
+        for( String clazz : traceConf ) {
+            createLogger(clazz, Level.TRACE)
+        }
 
         if(!consoleAppender)
             logger.debug "Console appender: disabled"
