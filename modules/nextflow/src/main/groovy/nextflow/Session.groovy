@@ -16,6 +16,8 @@
 
 package nextflow
 
+import static nextflow.Const.*
+
 import java.lang.reflect.Method
 import java.nio.file.Files
 import java.nio.file.Path
@@ -23,6 +25,7 @@ import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
 import com.google.common.hash.HashCode
@@ -74,7 +77,6 @@ import nextflow.util.HistoryFile
 import nextflow.util.NameGenerator
 import sun.misc.Signal
 import sun.misc.SignalHandler
-import static nextflow.Const.S3_UPLOADER_CLASS
 /**
  * Holds the information on the current execution
  *
@@ -1304,16 +1306,44 @@ class Session implements ISession {
     @Memoized // <-- this guarantees that the same executor is used across different publish dir in the same session
     @CompileStatic
     synchronized ExecutorService getFileTransferThreadPool() {
-        final result = new BlockingThreadExecutorFactory()
+        final factory = new BlockingThreadExecutorFactory()
                 .withName('FileTransfer')
                 .withMaxThreads( Runtime.runtime.availableProcessors()*3 )
-                .create()
+        final pool = factory.create()
 
         this.onShutdown {
-            result.shutdown()
-            result.awaitTermination(36, TimeUnit.HOURS)
+            final max = factory.maxAwait.millis
+            final t0 = System.currentTimeMillis()
+            // start shutdown process
+            pool.shutdown()
+            // wait for ongoing file transfer to complete
+            int count=0
+            while( true ) {
+                final terminated = pool.awaitTermination(5, TimeUnit.SECONDS)
+                if( terminated )
+                    break
+                
+                final delta = System.currentTimeMillis()-t0
+                if( delta > max ) {
+                    log.warn "Exiting before FileTransfer thread pool complete -- Some files maybe lost"
+                    break
+                }
+
+                final p1 = ((ThreadPoolExecutor)pool)
+                final pending = p1.getTaskCount() - p1.getCompletedTaskCount()
+                // log to console every 10 minutes (120 * 5 sec)
+                if( count % 120 == 0 ) {
+                    log.info1 "Waiting files transfer to complete (${pending} files)"
+                }
+                // log to the debug file every minute (12 * 5 sec)
+                else if( count % 12 == 0 ) {
+                    log.debug "Waiting files transfer to complete (${pending} files)"
+                }
+                // increment the count
+                count++
+            }
         }
 
-        return result
+        return pool
     }
 }
