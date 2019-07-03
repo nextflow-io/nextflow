@@ -111,5 +111,18 @@ class ScriptParserTest extends Specification {
         result == 'Script_01af1441'
     }
 
+    def 'should set classpath' () {
+
+        given:
+        def CL = Mock(ClassLoader)
+        def SESS = Mock(Session) { getClassLoader() >> CL }
+
+        when:
+        def parser = new ScriptParser(SESS)
+        then:
+        parser.getSession() == SESS
+        parser.getClassLoader() == CL
+
+    }
 
 }
