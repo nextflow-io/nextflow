@@ -610,24 +610,155 @@ class ConfigBuilderTest extends Specification {
 
         given:
         def env = [:]
-        def config = new ConfigObject()
         def builder = [:] as ConfigBuilder
 
         when:
-        config.trace.enabled = true
+        def config = new ConfigObject()
         builder.configRunOptions(config, env, new CmdRun())
 
         then:
         config.trace instanceof Map
-        config.trace.enabled
+        !config.trace.enabled
         !config.trace.file
 
         when:
+        config = new ConfigObject()
         builder.configRunOptions(config, env, new CmdRun(withTrace: 'some-file'))
         then:
         config.trace instanceof Map
         config.trace.enabled
         config.trace.file == 'some-file'
+
+        when:
+        config = new ConfigObject()
+        config.trace.file = 'foo.txt'
+        builder.configRunOptions(config, env, new CmdRun(withTrace: 'bar.txt'))
+        then: // command line should override the config file
+        config.trace instanceof Map
+        config.trace.enabled
+        config.trace.file == 'bar.txt'
+
+    }
+
+    def 'should set session report options' () {
+
+        given:
+        def env = [:]
+        def builder = [:] as ConfigBuilder
+
+        when:
+        def config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        !config.report
+
+        when:
+        config = new ConfigObject()
+        config.report.file = 'foo.html'
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        config.report instanceof Map
+        !config.report.enabled
+        config.report.file == 'foo.html'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withReport: 'my-report.html'))
+        then:
+        config.report instanceof Map
+        config.report.enabled
+        config.report.file == 'my-report.html'
+
+        when:
+        config = new ConfigObject()
+        config.report.file = 'this-report.html'
+        builder.configRunOptions(config, env, new CmdRun(withReport: 'my-report.html'))
+        then:
+        config.report instanceof Map
+        config.report.enabled
+        config.report.file == 'my-report.html'
+
+    }
+
+
+    def 'should set session dag options' () {
+
+        given:
+        def env = [:]
+        def builder = [:] as ConfigBuilder
+
+        when:
+        def config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        !config.dag
+
+        when:
+        config = new ConfigObject()
+        config.dag.file = 'foo-dag.html'
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        config.dag instanceof Map
+        !config.dag.enabled
+        config.dag.file == 'foo-dag.html'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withDag: 'my-dag.html'))
+        then:
+        config.dag instanceof Map
+        config.dag.enabled
+        config.dag.file == 'my-dag.html'
+
+        when:
+        config = new ConfigObject()
+        config.dag.file = 'this-dag.html'
+        builder.configRunOptions(config, env, new CmdRun(withDag: 'my-dag.html'))
+        then:
+        config.dag instanceof Map
+        config.dag.enabled
+        config.dag.file == 'my-dag.html'
+
+    }
+
+    def 'should set session weblog options' () {
+
+        given:
+        def env = [:]
+        def builder = [:] as ConfigBuilder
+
+        when:
+        def config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        !config.weblog
+
+        when:
+        config = new ConfigObject()
+        config.weblog.url = 'http://bar.com'
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        config.weblog instanceof Map
+        !config.weblog.enabled
+        config.weblog.url == 'http://bar.com'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withWebLog: 'http://foo.com'))
+        then:
+        config.weblog instanceof Map
+        config.weblog.enabled
+        config.weblog.url == 'http://foo.com'
+
+        when:
+        config = new ConfigObject()
+        config.weblog.enabled = true
+        config.weblog.url = 'http://bar.com'
+        builder.configRunOptions(config, env, new CmdRun(withWebLog: 'http://foo.com'))
+        then:
+        config.weblog instanceof Map
+        config.weblog.enabled
+        config.weblog.url == 'http://foo.com'
 
     }
 
@@ -635,24 +766,35 @@ class ConfigBuilderTest extends Specification {
 
         given:
         def env = [:]
-        def config = new ConfigObject()
         def builder = [:] as ConfigBuilder
 
         when:
+        def config = new ConfigObject()
         builder.configRunOptions(config, env, new CmdRun())
         then:
         !config.timeline
 
         when:
-        config.timeline.enabled = true
+        config = new ConfigObject()
+        config.timeline.file = 'my-file.html'
         builder.configRunOptions(config, env, new CmdRun())
+        then:
+        config.timeline instanceof Map
+        !config.timeline.enabled
+        config.timeline.file == 'my-file.html'
 
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withTimeline: 'my-timeline.html'))
         then:
         config.timeline instanceof Map
         config.timeline.enabled
-        !config.timeline.file
+        config.timeline.file == 'my-timeline.html'
 
         when:
+        config = new ConfigObject()
+        config.timeline.enabled = true
+        config.timeline.file = 'this-timeline.html'
         builder.configRunOptions(config, env, new CmdRun(withTimeline: 'my-timeline.html'))
         then:
         config.timeline instanceof Map
@@ -661,15 +803,14 @@ class ConfigBuilderTest extends Specification {
 
     }
 
-
     def 'SHOULD SET `RESUME` OPTION'() {
 
         given:
         def env = [:]
-        def config = new ConfigObject()
         def builder = [:] as ConfigBuilder
 
         when:
+        def config = new ConfigObject()
         builder.configRunOptions(config, env, new CmdRun())
         then:
         !config.isSet('resume')
@@ -688,6 +829,12 @@ class ConfigBuilderTest extends Specification {
         then:
         config.resume == 'xxx-yyy'
 
+        when:
+        config = new ConfigObject()
+        config.resume ='this-that'
+        builder.configRunOptions(config, env, new CmdRun(resume: 'xxx-yyy'))
+        then:
+        config.resume == 'xxx-yyy'
     }
 
     def 'should set `workDir`' () {
