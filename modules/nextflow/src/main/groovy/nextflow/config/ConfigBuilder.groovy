@@ -508,9 +508,7 @@ class ConfigBuilder {
             if( !(config.trace instanceof Map) )
                 config.trace = [:]
             config.trace.enabled = true
-            if( !config.trace.file )
-                config.trace.file = cmdRun.withTrace
-
+            config.trace.file = cmdRun.withTrace
         }
 
         // -- sets report report options
@@ -518,8 +516,7 @@ class ConfigBuilder {
             if( !(config.report instanceof Map) )
                 config.report = [:]
             config.report.enabled = true
-            if( !config.report.file )
-                config.report.file = cmdRun.withReport
+            config.report.file = cmdRun.withReport
         }
 
         // -- sets timeline report options
@@ -527,8 +524,7 @@ class ConfigBuilder {
             if( !(config.timeline instanceof Map) )
                 config.timeline = [:]
             config.timeline.enabled = true
-            if( !config.timeline.file )
-                config.timeline.file = cmdRun.withTimeline
+            config.timeline.file = cmdRun.withTimeline
         }
 
         // -- sets DAG report options
@@ -536,8 +532,7 @@ class ConfigBuilder {
             if( !(config.dag instanceof Map) )
                 config.dag = [:]
             config.dag.enabled = true
-            if( !config.dag.file )
-                config.dag.file = cmdRun.withDag
+            config.dag.file = cmdRun.withDag
         }
 
         if( cmdRun.withNotification ) {
@@ -557,8 +552,7 @@ class ConfigBuilder {
             if( !(config.weblog instanceof Map) )
                 config.weblog = [:]
             config.weblog.enabled = true
-            if ( !config.weblog.url )
-                config.weblog.url = cmdRun.withWebLog
+            config.weblog.url = cmdRun.withWebLog
         }
 
 
