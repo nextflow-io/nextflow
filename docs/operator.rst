@@ -1107,7 +1107,6 @@ The combining operators are:
 * `collectFile`_
 * `combine`_
 * `concat`_
-* `into`_
 * `join`_
 * `merge`_
 * `mix`_
@@ -1115,102 +1114,6 @@ The combining operators are:
 * `spread`_
 * `tap`_
 
-.. _operator-into:
-
-into
--------
-
-The ``into`` operator connects a source channel to two or more target channels in such a way the values emitted by
-the source channel are copied to the target channels. For example::
-
-   Channel
-        .from( 'a', 'b', 'c' )
-        .into{ foo; bar }
-
-    foo.println{ "Foo emit: " + it }
-    bar.println{ "Bar emit: " + it }
-
-::
-
-    Foo emit: a
-    Foo emit: b
-    Foo emit: c
-    Bar emit: a
-    Bar emit: b
-    Bar emit: c
-
-.. note:: Note the use in this example of curly brackets and the ``;`` as channel names separator. This is needed
-  because the actual parameter of ``into`` is a :ref:`closure <script-closure>` which defines the target channels
-  to which the source one is connected.
-
-A second version of the ``into`` operator takes an integer `n` as an argument and returns
-a list of `n` channels, each of which emits a copy of the items that were emitted by the
-source channel. For example::
-
-
-    (foo, bar) = Channel.from( 'a','b','c').into(2)
-    foo.println{ "Foo emit: " + it }
-    bar.println{ "Bar emit: " + it }
-
-
-.. note:: The above example takes advantage of the :ref:`multiple assignment <script-multiple-assignment>` syntax
-  in order to assign two variables at once using the list of channels returned by the ``into`` operator.
-
-See also `tap`_ and `separate`_ operators.
-
-
-tap
-------
-
-The ``tap`` operator combines the functions of `into`_ and `separate`_ operators in such a way that
-it connects two channels, copying the values from the source into the `tapped` channel. At the same
-time it splits the source channel into a newly created channel that is returned by the operator itself.
-
-The ``tap`` can be useful in certain scenarios where you may be required to concatenate multiple operations,
-as in the following example::
-
-
-    log1 = Channel.create().subscribe { println "Log 1: $it" }  
-    log2 = Channel.create().subscribe { println "Log 2: $it" }
-  
-    Channel
-        .from ( 'a', 'b', 'c' ) 
-  	    .tap( log1 ) 
-  	    .map { it * 2 }
-  	    .tap( log2 ) 
-  	    .subscribe { println "Result: $it" }
-
-:: 
-
-    Log 1: a
-    Log 1: b
-    Log 1: c
-
-    Log 2: aa
-    Log 2: bb
-    Log 2: cc
-
-    Result: aa
-    Result: bb
-    Result: cc
-
-The ``tap`` operator also allows the target channel to be specified by using a closure. The advantage of this syntax
-is that you won't need to previously create the target channel, because it is created implicitly by the operator itself.
-
-Using the closure syntax the above example can be rewritten as shown below::
-
-    Channel
-        .from ( 'a', 'b', 'c' )
-  	    .tap { log1 }
-  	    .map { it * 2 }
-  	    .tap { log2 }
-  	    .subscribe { println "Result: $it" }
-
-
-    log1.subscribe { println "Log 1: $it" }
-    log2.subscribe { println "Log 2: $it" }
-
-See also `into`_ and `separate`_ operators.
 
 .. _operator-join:
 
@@ -1657,12 +1560,13 @@ Forking operators
 The forking operators are:
 
 * `choice`_
+* `into`_
 * `separate`_
-* `route`_
+* `tap`_
 
 
 choice
-----------
+------
 
 The ``choice`` operator allows you to forward the items emitted by a source channel to two 
 (or more) output channels, `choosing` one out of them at a time. 
@@ -1684,10 +1588,107 @@ the others into ``queue2``
     queue1.subscribe { println it }
 
 
+.. _operator-into:
+
+into
+----
+
+The ``into`` operator connects a source channel to two or more target channels in such a way the values emitted by
+the source channel are copied to the target channels. For example::
+
+   Channel
+        .from( 'a', 'b', 'c' )
+        .into{ foo; bar }
+
+    foo.println{ "Foo emit: " + it }
+    bar.println{ "Bar emit: " + it }
+
+::
+
+    Foo emit: a
+    Foo emit: b
+    Foo emit: c
+    Bar emit: a
+    Bar emit: b
+    Bar emit: c
+
+.. note:: Note the use in this example of curly brackets and the ``;`` as channel names separator. This is needed
+  because the actual parameter of ``into`` is a :ref:`closure <script-closure>` which defines the target channels
+  to which the source one is connected.
+
+A second version of the ``into`` operator takes an integer `n` as an argument and returns
+a list of `n` channels, each of which emits a copy of the items that were emitted by the
+source channel. For example::
+
+
+    (foo, bar) = Channel.from( 'a','b','c').into(2)
+    foo.println{ "Foo emit: " + it }
+    bar.println{ "Bar emit: " + it }
+
+
+.. note:: The above example takes advantage of the :ref:`multiple assignment <script-multiple-assignment>` syntax
+  in order to assign two variables at once using the list of channels returned by the ``into`` operator.
+
+See also `tap`_ and `separate`_ operators.
+
+
+tap
+---
+
+The ``tap`` operator combines the functions of `into`_ and `separate`_ operators in such a way that
+it connects two channels, copying the values from the source into the `tapped` channel. At the same
+time it splits the source channel into a newly created channel that is returned by the operator itself.
+
+The ``tap`` can be useful in certain scenarios where you may be required to concatenate multiple operations,
+as in the following example::
+
+
+    log1 = Channel.create().subscribe { println "Log 1: $it" }
+    log2 = Channel.create().subscribe { println "Log 2: $it" }
+
+    Channel
+        .from ( 'a', 'b', 'c' )
+  	    .tap( log1 )
+  	    .map { it * 2 }
+  	    .tap( log2 )
+  	    .subscribe { println "Result: $it" }
+
+::
+
+    Log 1: a
+    Log 1: b
+    Log 1: c
+
+    Log 2: aa
+    Log 2: bb
+    Log 2: cc
+
+    Result: aa
+    Result: bb
+    Result: cc
+
+The ``tap`` operator also allows the target channel to be specified by using a closure. The advantage of this syntax
+is that you won't need to previously create the target channel, because it is created implicitly by the operator itself.
+
+Using the closure syntax the above example can be rewritten as shown below::
+
+    Channel
+        .from ( 'a', 'b', 'c' )
+  	    .tap { log1 }
+  	    .map { it * 2 }
+  	    .tap { log2 }
+  	    .subscribe { println "Result: $it" }
+
+
+    log1.subscribe { println "Log 1: $it" }
+    log2.subscribe { println "Log 2: $it" }
+
+See also `into`_ and `separate`_ operators.
+
 .. _operator-separate:
 
 separate
-------------
+--------
 
 The ``separate`` operator lets you copy the items emitted by the source channel into multiple 
 channels, which each of these can receive a `separate` version of the same item. 
@@ -1773,49 +1774,6 @@ The output will look like the following fragment::
 
 
 See also: `into`_, `choice`_ and `map`_ operators.
-
-
-.. _operator-route:
-
-route
------
-
-.. warning:: This operator is deprecated. It will be removed in a future release.
-
-The ``route`` operator allows you to forward the items emitted by the source channel 
-to a channel which is associated with the item's key. 
-
-The channel's keys are specified by using a map parameter as the operator argument, 
-that associates each channel with a key identifier. 
-
-The item's key is defined, by default, as the first entry in an array, a list or map object,
-or the value itself for any other data type.
-
-Optionally, a mapping function can be specified as a parameter in order to provide a custom 
-rule to associate an item with a key, as shown in the example below::
-
-    r1 = Channel.create()
-    r2 = Channel.create()
-    r3 = Channel.create()
-	
-    Channel
-        .from('hello','ciao','hola', 'hi', 'x', 'bonjour')
-        .route ( b: r1, c: r2, h: r3 ) { it[0] }
-
-	r3.subscribe { println it }        
-
-:: 
-
-	hello
-	hola
-	hi
-
-In the above example all the string items starting with the letter ``b`` are copied to the 
-channel ``r1``, the items that begin with ``c`` to the channel ``r2`` and the ones beginning
-with ``h`` are copied to the channel ``r3``. Other items eventually existing are discarded. 
- 
-
-See also: `into`_, `choice`_  and `separate`_ operators.
 
 
 Maths operators
