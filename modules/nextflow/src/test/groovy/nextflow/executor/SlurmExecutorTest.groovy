@@ -130,7 +130,7 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH -o /work/path/.command.log
                 #SBATCH --no-requeue
                 #SBATCH -t 01:00:00
-                #SBATCH --mem 50
+                #SBATCH --mem 50M
                 #SBATCH -a 1
                 '''
                 .stripIndent().leftTrim()
@@ -150,7 +150,7 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH --no-requeue
                 #SBATCH -c 2
                 #SBATCH -t 02:00:00
-                #SBATCH --mem 200
+                #SBATCH --mem 200M
                 #SBATCH -b 2
                 '''
                 .stripIndent().leftTrim()
@@ -170,7 +170,7 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH --no-requeue
                 #SBATCH -c 8
                 #SBATCH -t 51:00:00
-                #SBATCH --mem 3072
+                #SBATCH --mem 3072M
                 #SBATCH -x 3
                 '''
                 .stripIndent().leftTrim()
