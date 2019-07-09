@@ -270,7 +270,17 @@ ext.deployable << project(':nf-google')
 
 protected error(String message) {
     logger.error message
-    throw new StopExecutionException()
+    throw new StopExecutionException(message)
+}
+
+protected checkVersionExits(String version) {
+    if(version.endsWith('-SNAPSHOT'))
+        return
+
+    def cmd = "AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS} AWS_SECRET_ACCESS_KEY=${System.env.NXF_AWS_SECRET} aws s3 ls s3://www2.nextflow.io/releases/v$version/nextflow"
+    def status=['bash','-c', cmd].execute().waitFor()
+    if( status == 0 )
+        error("STOP!! Version $version already deployed!")
 }
 
 protected resolveDeps( String configName, String... x ) {
@@ -422,6 +432,8 @@ task deploy( type: Exec, dependsOn: [clean, compile, pack, deployable.uploadArch
     def files = []
 
     doFirst {
+        checkVersionExits(version)
+        
         def path = new File(releaseDir)
         if( !path.exists() ) error("Releases path does not exists: $path")
         path.eachFile {
