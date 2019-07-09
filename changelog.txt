@@ -1,5 +1,19 @@
 NEXTFLOW CHANGE-LOG
 ===================
+19.07.0-edge - 9 Jul 2019
+- Fix Remote input file download slowdown submission rate #1206 [b710e21e]
+- Fix serial publishDir uploads #856 [14774854]
+- Fix Trace file option is not honoured #1217 
+- Fix Custom lib path is not added to the classpath #1213 
+- Fix Discovery executor tracing error [3e26c146]
+- Add megabyte unit to Slurm memory requirement #1216 [efabdd2f]
+- Add support for GCP dynamic machine type #1198 [5c2c7665]
+- Add setCredentialsProvider for submodules #1205 [e2460414]
+- Improve google pipelines docs [aed407ed]
+- Improve FileTransfer await termination log #1206 [cb968da7]
+- Allow trace logging for com.upplication.s3fs package [d71b94e1]
+- Upgrade s3fs lib to version 1.0.6 #856 
+
 19.06.0-edge - 21 Jun 2019
 - Fix Nextflow indefinitely waiting for killed jobs #981
 - Fix Suppress Unknown hashing type logging message #1178 [a005b1b0]
