@@ -217,9 +217,9 @@ class K8sTaskHandler extends TaskHandler {
 
     protected Map getAnnotations() {
         Map result = [:]
-        def labels = k8sConfig.getAnnotations()
-        if( labels ) {
-            labels.each { k,v -> result.put(k,sanitize0(v)) }
+        def annotations = k8sConfig.getAnnotations()
+        if( annotations ) {
+            annotations.each { k,v -> result.put(k,sanitize0(v)) }
         }
         return result
     }
