@@ -165,6 +165,7 @@ class K8sTaskHandler extends TaskHandler {
             .withNamespace(clientConfig.namespace)
             .withServiceAccount(clientConfig.serviceAccount)
             .withLabels(getLabels(task))
+            .withAnnotations(getAnnotations())
             .withPodOptions(getPodOptions())
 
         // note: task environment is managed by the task bash wrapper
@@ -211,6 +212,15 @@ class K8sTaskHandler extends TaskHandler {
         result.taskName = sanitize0(task.getName())
         result.processName = sanitize0(task.getProcessor().getName())
         result.sessionId = sanitize0("uuid-${executor.getSession().uniqueId}")
+        return result
+    }
+
+    protected Map getAnnotations() {
+        Map result = [:]
+        def labels = k8sConfig.getAnnotations()
+        if( labels ) {
+            labels.each { k,v -> result.put(k,sanitize0(v)) }
+        }
         return result
     }
 

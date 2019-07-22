@@ -361,6 +361,45 @@ class PodOptionsTest extends Specification {
 
     }
 
+    def 'should copy pod annotations' (){
+        given:
+        def data = [
+                [annotation: "ANNOTATION", value: 'VALUE']
+        ]
+
+        when:
+        def opts = new PodOptions() + new PodOptions(data)
+        then:
+        opts.annotations == ["ANNOTATION": "VALUE"]
+
+        when:
+        opts = new PodOptions(data) + new PodOptions()
+        then:
+        opts.annotations == ["ANNOTATION": "VALUE"]
+
+        when:
+        opts = new PodOptions([[annotation:"FOO", value:'one']]) + new PodOptions([[annotation:"BAR", value:'two']])
+        then:
+        opts.annotations == [FOO: 'one', BAR: 'two']
+    }
+
+    def 'should create pod annotations' () {
+
+        given:
+        def options = [
+                [annotation: 'ALPHA', value: 'aaa'],
+                [annotation: 'DELTA', value: 'bbb'],
+                [annotation: 'DELTA', value: 'ddd']
+        ]
+
+        when:
+        def opts = new PodOptions(options)
+        then:
+        opts.annotations.size() == 2
+        opts.annotations == [ALPHA: 'aaa', DELTA: 'ddd']
+
+    }
+
     def 'should create user security context' () {
         when:
         def opts = new PodOptions([ [runAsUser: 1000] ])
