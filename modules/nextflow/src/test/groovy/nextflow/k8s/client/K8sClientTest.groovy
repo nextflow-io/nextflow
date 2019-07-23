@@ -479,14 +479,14 @@ class K8sClientTest extends Specification {
         then:
         1 * client.podStatus(POD_NAME) >> new K8sResponseJson([:])
         e = thrown(K8sResponseException)
-        e.message.startsWith('K8s invalid pod status (missing container status)')
+        e.message.startsWith('K8s undetermined status conditions for pod')
 
         when:
         client.podState(POD_NAME)
         then:
         1 * client.podStatus(POD_NAME) >> new K8sResponseJson([status:[containerStatuses: []]])
         e = thrown(K8sResponseException)
-        e.message.startsWith('K8s invalid pod status (missing container status)')
+        e.message.startsWith('K8s undetermined status conditions for pod')
 
         when:
         client.podState(POD_NAME)
