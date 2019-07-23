@@ -60,7 +60,7 @@ class PodSpecBuilderTest extends Specification {
     }
 
 
-    def 'should set namespace and labels' () {
+    def 'should set namespace, labels and annotations' () {
 
         when:
         def spec = new PodSpecBuilder()
@@ -71,12 +71,26 @@ class PodSpecBuilderTest extends Specification {
                 .withNamespace('xyz')
                 .withLabel('app','myApp')
                 .withLabel('runName','something')
+                .withAnnotation("anno1", "value1")
+                .withAnnotations([anno2: "value2", anno3: "value3"])
                 .build()
 
         then:
         spec ==  [ apiVersion: 'v1',
                    kind: 'Pod',
-                   metadata: [name:'foo', namespace:'xyz', labels:[app: 'myApp', runName: 'something']],
+                   metadata: [
+                           name:'foo',
+                           namespace:'xyz',
+                           labels: [
+                                   app: 'myApp',
+                                   runName: 'something'
+                           ],
+                           annotations: [
+                                   anno1: "value1",
+                                   anno2: "value2",
+                                   anno3: "value3"
+                           ]
+                   ],
                    spec: [
                            restartPolicy:'Never',
                            containers:[
@@ -425,7 +439,7 @@ class PodSpecBuilderTest extends Specification {
 
         given:
         def opts = Mock(PodOptions)
-        def builder = new PodSpecBuilder(podName: 'foo', imageName: 'image', command: ['echo'], labels: [runName: 'crazy_john'])
+        def builder = new PodSpecBuilder(podName: 'foo', imageName: 'image', command: ['echo'], labels: [runName: 'crazy_john'], annotations: [evict: 'false'])
 
         when:
         def spec = builder.withPodOptions(opts).build()
@@ -437,6 +451,7 @@ class PodSpecBuilderTest extends Specification {
         2 * opts.getMountSecrets() >> [ new PodMountSecret('blah', '/etc/secret.txt') ]
         2 * opts.getEnvVars() >> [ PodEnv.value('HELLO','WORLD') ]
         _ * opts.getLabels() >> [ALPHA: 'xxx', GAMMA: 'yyy']
+        _ * opts.getAnnotations() >> [OMEGA:'zzz', SIGMA:'www']
         _ * opts.getSecurityContext() >> new PodSecurityContext(1000)
         _ * opts.getNodeSelector() >> new PodNodeSelector(gpu:true, queue: 'fast')
 
@@ -446,7 +461,9 @@ class PodSpecBuilderTest extends Specification {
                 metadata: [
                         name:'foo',
                         namespace:'default',
-                        labels:[runName:'crazy_john', ALPHA:'xxx', GAMMA:'yyy'] ],
+                        labels:[runName:'crazy_john', ALPHA:'xxx', GAMMA:'yyy'],
+                        annotations: [evict: 'false', OMEGA:'zzz', SIGMA:'www']
+                ],
                 spec: [
                         restartPolicy:'Never',
                         securityContext: [ runAsUser: 1000 ],

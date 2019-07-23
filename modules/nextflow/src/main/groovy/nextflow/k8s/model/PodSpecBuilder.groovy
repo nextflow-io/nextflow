@@ -46,6 +46,8 @@ class PodSpecBuilder {
 
     Map<String,String> labels = [:]
 
+    Map<String,String> annotations = [:]
+
     String namespace
 
     String restart
@@ -153,6 +155,16 @@ class PodSpecBuilder {
         return this
     }
 
+    PodSpecBuilder withAnnotation( String name, String value ) {
+        this.annotations.put(name, value)
+        return this
+    }
+
+    PodSpecBuilder withAnnotations(Map annotations) {
+        this.annotations.putAll(annotations)
+        return this
+    }
+
 
     PodSpecBuilder withEnv( PodEnv var ) {
         envVars.add(var)
@@ -229,6 +241,10 @@ class PodSpecBuilder {
             if( 'runName' in keys ) throw new IllegalArgumentException("Invalid pod label -- `runName` is a reserved label")
             labels.putAll( opts.labels )
         }
+        // - annotations
+        if( opts.annotations ) {
+            annotations.putAll( opts.annotations )
+        }
         // -- security context
         if( opts.securityContext )
             securityContext = opts.securityContext
@@ -301,6 +317,9 @@ class PodSpecBuilder {
         // add labels
         if( labels )
             metadata.labels = labels
+
+        if( annotations)
+            metadata.annotations = annotations
 
         final pod = [
                 apiVersion: 'v1',

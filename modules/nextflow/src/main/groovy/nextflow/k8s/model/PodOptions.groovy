@@ -46,6 +46,8 @@ class PodOptions {
 
     private Map<String,String> labels = [:]
 
+    private Map<String,String> annotations = [:]
+
     private PodNodeSelector nodeSelector
 
     private PodSecurityContext securityContext
@@ -103,6 +105,9 @@ class PodOptions {
         else if( entry.nodeSelector ) {
             this.nodeSelector = new PodNodeSelector(entry.nodeSelector)
         }
+        else if( entry.annotation && entry.value ) {
+            this.annotations.put(entry.annotation as String, entry.value as String)
+        }
         else 
             throw new IllegalArgumentException("Unknown pod options: $entry")
     }
@@ -117,6 +122,8 @@ class PodOptions {
     Collection<PodVolumeClaim> getVolumeClaims() { mountClaims }
 
     Map<String,String> getLabels() { labels }
+
+    Map<String,String> getAnnotations() { annotations }
 
     PodSecurityContext getSecurityContext() { securityContext }
 
@@ -188,6 +195,10 @@ class PodOptions {
         // labels
         result.labels.putAll(labels)
         result.labels.putAll(other.labels)
+
+        // annotations
+        result.annotations.putAll(annotations)
+        result.annotations.putAll(other.annotations)
 
         return result
     }
