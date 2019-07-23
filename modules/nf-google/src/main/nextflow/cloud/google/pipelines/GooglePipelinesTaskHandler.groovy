@@ -64,6 +64,8 @@ class GooglePipelinesTaskHandler extends TaskHandler {
 
     final static String diskName = "nf-pipeline-work"
 
+    private static final int DEFAULT_DISK_SIZE = 500
+
     final static String fileCopyImage = "google/cloud-sdk:alpine"
 
     private Mount sharedMount
@@ -325,6 +327,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         req.zone = pipelineConfiguration.zone
         req.region = pipelineConfiguration.region
         req.diskName = diskName
+        req.diskSizeGb = task.config.disk != null ? task.config.disk.giga : DEFAULT_DISK_SIZE
         req.preemptible = pipelineConfiguration.preemptible
         req.taskName = "nf-$task.hash"
         req.containerImage = task.container
