@@ -262,7 +262,8 @@ class LsfExecutor extends AbstractGridExecutor {
 
     @Override
     void register() {
-        def conf = parseLsfConfig()
+        super.register()
+        final conf = parseLsfConfig()
 
         // lsf mem unit
         // https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsf_unit_for_limits.5.html
