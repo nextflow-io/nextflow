@@ -39,6 +39,8 @@ class GooglePipelinesSubmitRequest {
 
     String diskName
 
+    int diskSizeGb
+
     boolean preemptible
 
     String taskName
