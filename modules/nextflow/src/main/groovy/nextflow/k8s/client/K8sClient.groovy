@@ -259,7 +259,7 @@ class K8sClient {
             return Collections.emptyMap()
         }
 
-        throw new K8sResponseException("K8s Can't determine pod state from status returned by K8s API ", resp)
+        throw new K8sResponseException("K8s undetermined status conditions for pod $podName", resp)
     }
 
     protected void checkInvalidWaitingState( Map waiting, K8sResponseJson resp ) {
