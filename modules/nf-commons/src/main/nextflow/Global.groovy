@@ -101,8 +101,9 @@ class Global {
 
         for( Path it : files ) {
             final conf = new IniFile(it)
-            if( (a=conf.section('default').aws_access_key_id) && (b=conf.section('default').aws_secret_access_key) ) {
-                log.debug "Using AWS credential defined in `default` section in file: ${conf.file}"
+            final profile = env.get('AWS_PROFILE', env.get('AWS_DEFAULT_PROFILE', 'default'))
+            if( (a=conf.section(profile).aws_access_key_id) && (b=conf.section(profile).aws_secret_access_key) ) {
+                log.debug "Using AWS credential defined in `${profile}` section in file: ${conf.file}"
                 return [a,b]
             }
         }
