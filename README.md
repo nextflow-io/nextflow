@@ -104,7 +104,7 @@ Currently the following clusters are supported:
   + [LSF](https://www.nextflow.io/docs/latest/executor.html#lsf)
   + [SLURM](https://www.nextflow.io/docs/latest/executor.html#slurm)
   + [PBS/Torque](https://www.nextflow.io/docs/latest/executor.html#pbs-torque)
-  + [HTCondor (experimental)](https://www.nextflow.io/docs/latest/executor.html#htcondor)
+  + [HTCondor (beta)](https://www.nextflow.io/docs/latest/executor.html#htcondor)
   + [Moab (beta)](https://www.nextflow.io/docs/latest/executor.html#moab)
 
 For example to submit the execution to a SGE cluster create a file named `nextflow.config`, in the directory
