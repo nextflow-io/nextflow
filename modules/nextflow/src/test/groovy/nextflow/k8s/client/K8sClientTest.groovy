@@ -426,6 +426,46 @@ class K8sClientTest extends Specification {
         result == [:]
     }
 
+    def 'should return undetermined status when status conditions are missing' () {
+        given:
+        def JSON = '''
+            {
+                "kind": "Pod",
+                "apiVersion": "v1",
+                "metadata": {
+                    "name": "nf-89b34d7c2d1dc11daad72b1fcf7e0540",
+                    "namespace": "default",
+                    "selfLink": "/api/v1/namespaces/default/pods/nf-89b34d7c2d1dc11daad72b1fcf7e0540/status",
+                    "uid": "02c3a34d-7720-11e9-8e1a-0a8b849038f8",
+                    "resourceVersion": "21753960",
+                    "creationTimestamp": "2019-05-15T14:44:58Z",
+                    "labels": {
+                        "app": "nextflow",
+                        "processName": "split_input_file",
+                        "runName": "hopeful_lalande",
+                        "sessionId": "uuid-6b10c771-1a70-4af0-92be-7c0280e0e17f",
+                        "taskName": "split_input_file_variants.gord_chr11_72000001-78000000",
+                    }
+                },
+                
+                "status": {
+                    "phase": "Pending",
+                    "qosClass": "Guaranteed"
+                }
+            }
+        '''
+
+        def client = Spy(K8sClient)
+        final POD_NAME = 'nf-89b34d7c2d1dc11daad72b1fcf7e0540'
+
+        when:
+        def result = client.podState(POD_NAME)
+        then:
+        1 * client.podStatus(POD_NAME) >> new K8sResponseJson(JSON)
+
+        result == [:]
+    }
+
     def 'should fail to get pod state' () {
 
         given:
@@ -439,14 +479,14 @@ class K8sClientTest extends Specification {
         then:
         1 * client.podStatus(POD_NAME) >> new K8sResponseJson([:])
         e = thrown(K8sResponseException)
-        e.message.startsWith('K8s invalid pod status (missing container status)')
+        e.message.startsWith('K8s undetermined status conditions for pod')
 
         when:
         client.podState(POD_NAME)
         then:
         1 * client.podStatus(POD_NAME) >> new K8sResponseJson([status:[containerStatuses: []]])
         e = thrown(K8sResponseException)
-        e.message.startsWith('K8s invalid pod status (missing container status)')
+        e.message.startsWith('K8s undetermined status conditions for pod')
 
         when:
         client.podState(POD_NAME)

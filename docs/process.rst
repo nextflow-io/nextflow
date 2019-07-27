@@ -1771,6 +1771,7 @@ The ``pod`` directive allows the definition of the following options:
 
 ================================================= =================================================
 ``label: <K>, value: <V>``                        Defines a pod label with key ``K`` and value ``V``.
+``annotation: <K>, value: <V>``                   Defines a pod annotation with key ``K`` and value ``V``.
 ``env: <E>, value: <V>``                          Defines an environment variable with name ``E`` and whose value is given by the ``V`` string.
 ``env: <E>, config: <C/K>``                       Defines an environment variable with name ``E`` and whose value is given by the entry associated to the key with name ``K`` in the `ConfigMap <https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/>`_ with name ``C``.
 ``env: <E>, secret: <S/K>``                       Defines an environment variable with name ``E`` and whose value is given by the entry associated to the key with name ``K`` in the `Secret <https://kubernetes.io/docs/concepts/configuration/secret/>`_ with name ``S``.

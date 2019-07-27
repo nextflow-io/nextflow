@@ -244,20 +244,22 @@ class K8sClient {
             return state
         }
 
-        if( status?.phase == 'Pending' && status.conditions instanceof List ) {
-            final allConditions = status.conditions as List<Map>
-            final cond = allConditions.find { cond -> cond.type == 'PodScheduled' }
-            if( cond.reason == 'Unschedulable' ) {
-                def message = "K8s pod cannot be scheduled"
-                if( cond.message ) message += " -- $cond.message"
-                //def cause = new K8sResponseException(resp)
-                log.warn1(message)
+        if( status?.phase == 'Pending' ){
+            if( status.conditions instanceof List ) {
+                final allConditions = status.conditions as List<Map>
+                final cond = allConditions.find { cond -> cond.type == 'PodScheduled' }
+                if( cond.reason == 'Unschedulable' ) {
+                    def message = "K8s pod cannot be scheduled"
+                    if( cond.message ) message += " -- $cond.message"
+                    //def cause = new K8sResponseException(resp)
+                    log.warn1(message)
+                }
             }
             // undetermined status -- return an empty response
             return Collections.emptyMap()
         }
 
-        throw new K8sResponseException("K8s invalid pod status (missing container status)", resp)
+        throw new K8sResponseException("K8s undetermined status conditions for pod $podName", resp)
     }
 
     protected void checkInvalidWaitingState( Map waiting, K8sResponseJson resp ) {
