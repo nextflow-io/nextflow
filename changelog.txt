@@ -1,5 +1,16 @@
 NEXTFLOW CHANGE-LOG
 ===================
+
+19.07.0 - 27 Jul 2019
+- Add support for K8s annotations #1240 [8eeb7f9f]
+- Add support for Moab resource manager #1224 [3ba51a19]
+- Add Pbs Pro execution documentation [1d39ab31]
+- Add code of conduct document
+- Fix missing LFS executor register invocation #1234 [b1b7ab1]
+- Fix "invalid pod status" when running scrips with the kubernetes executor #1242 [11caac68]
+- Revert Fix Environment activation fails with recent versions of Conda #1195 [98c0d1f8]
+- (includes changes from `19.07.0-edge`, `19.05.0-edge` and `19.05.0-edge`)
+
 19.07.0-edge - 9 Jul 2019
 - Fix Remote input file download slowdown submission rate #1206 [b710e21e]
 - Fix serial publishDir uploads #856 [14774854]
@@ -11,7 +22,7 @@ NEXTFLOW CHANGE-LOG
 - Add setCredentialsProvider for submodules #1205 [e2460414]
 - Improve google pipelines docs [aed407ed]
 - Improve FileTransfer await termination log #1206 [cb968da7]
-- Allow trace logging for com.upplication.s3fs package [d71b94e1]
+- Allow trace logging for `com.upplication.s3fs` package [d71b94e1]
 - Upgrade s3fs lib to version 1.0.6 #856 
 
 19.06.0-edge - 21 Jun 2019
@@ -43,7 +54,7 @@ NEXTFLOW CHANGE-LOG
 - Fix Quiet cli option is not honoured [e656e4b0]
 - Fix Log messages don't show in the console #1129 [95f4dd7b]
 - Fix nextflow build timestamp json rendering [af6584c9]
-- Fix Launcher should return non-zero exit when fail to setp env #1126
+- Fix Launcher should return non-zero exit when fail to step env #1126
 - Update get started docs [68f53367]
 - Update aws sdk to version 1.11.542
 - Update created label in timestamp [e8945e8b]
