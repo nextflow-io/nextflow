@@ -66,6 +66,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [foo: 'bar', hello: 'world']
+        1 * handler.getAnnotations() >> [fooz: 'barz', ciao: 'mondo']
         1 * handler.getContainerMounts() >> []
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
@@ -78,7 +79,9 @@ class K8sTaskHandlerTest extends Specification {
                     metadata: [
                             name:'nf-123',
                             namespace:'default',
-                            labels:[ foo:'bar', hello: 'world'] ],
+                            labels:[ foo:'bar', hello: 'world'],
+                            annotations:[ fooz:'barz', ciao: 'mondo']
+                    ],
                     spec: [
                             restartPolicy:'Never',
                             containers:[
@@ -95,6 +98,7 @@ class K8sTaskHandlerTest extends Specification {
         then:
         1 * handler.getSyntheticPodName(task) >> 'nf-foo'
         1 * handler.getLabels(task) >> [sessionId:'xxx']
+        1 * handler.getAnnotations() >>  [evict: 'false']
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getContainerMounts() >> []
         1 * builder.fixOwnership() >> true
@@ -107,7 +111,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * client.getConfig() >> new ClientConfig()
         result == [ apiVersion: 'v1',
                     kind: 'Pod',
-                    metadata: [name:'nf-foo', namespace:'default', labels: [sessionId: 'xxx']],
+                    metadata: [name:'nf-foo', namespace:'default', labels: [sessionId: 'xxx'], annotations: [evict: 'false']],
                     spec: [
                             restartPolicy:'Never',
                             containers:[
@@ -128,6 +132,7 @@ class K8sTaskHandlerTest extends Specification {
         then:
         1 * handler.getSyntheticPodName(task) >> 'nf-abc'
         1 * handler.getLabels(task) >> [:]
+        1 * handler.getAnnotations() >> [:]
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getContainerMounts() >> []
         1 * task.getContainer() >> 'user/alpine:1.0'
@@ -173,6 +178,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getLabels(task) >> [:]
+        1 * handler.getAnnotations() >> [:]
         1 * handler.getContainerMounts() >> []
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
@@ -218,6 +224,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * client.getConfig() >> new ClientConfig()
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
+        1 * handler.getAnnotations() >> [:]
         1 * handler.getPodOptions() >> podOptions
         1 * handler.getContainerMounts() >> []
         1 * task.getContainer() >> 'debian:latest'
@@ -273,6 +280,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getContainerMounts() >> []
         1 * handler.getLabels(task) >> [:]
+        1 * handler.getAnnotations() >> [:]
         1 * handler.getPodOptions() >> podOptions
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
@@ -309,6 +317,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getContainerMounts() >> ['/tmp', '/data']
         1 * handler.getLabels(task) >> [:]
+        1 * handler.getAnnotations() >> [:]
         1 * handler.getPodOptions() >> new PodOptions()
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
