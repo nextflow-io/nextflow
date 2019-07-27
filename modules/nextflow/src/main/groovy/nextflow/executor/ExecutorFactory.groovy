@@ -57,6 +57,7 @@ class ExecutorFactory {
             'condor': CondorExecutor,
             'k8s': K8sExecutor,
             'nqsii': NqsiiExecutor,
+            'moab': MoabExecutor,
             'awsbatch': AwsBatchExecutor
     ]
 
