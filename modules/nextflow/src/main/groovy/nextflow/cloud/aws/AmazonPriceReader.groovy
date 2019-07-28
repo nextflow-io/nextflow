@@ -182,7 +182,7 @@ class AmazonPriceReader {
 
         int error = 0
         final location = REGIONS[ region ]
-        final map = new HashMap<>()
+        final map = new HashMap<String,CloudInstanceType>()
         // data starts at 7th row
         final reader = cachedUrlBufferedReader(endpoint)
         try {
