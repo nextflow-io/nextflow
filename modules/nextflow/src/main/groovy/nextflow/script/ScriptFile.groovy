@@ -53,6 +53,11 @@ class ScriptFile {
     Path localPath
 
     /**
+     * The name of the project
+     */
+    String projectName 
+
+    /**
      * @return Directory where the main script file is stored
      */
     Path getParent() { main?.parent }

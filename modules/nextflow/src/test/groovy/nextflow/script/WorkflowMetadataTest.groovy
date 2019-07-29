@@ -56,7 +56,7 @@ class WorkflowMetadataTest extends Specification {
         // append fake remote data
         dir.resolve('.git/config') << '''
             [remote "origin"]
-                url = https://github.com/nextflow-io/nextflow.git
+                url = https://github.com/nextflow-io/rnaseq-nf.git
                 fetch = +refs/heads/*:refs/remotes/origin/*
             [branch "master"]
                 remote = origin
@@ -67,7 +67,9 @@ class WorkflowMetadataTest extends Specification {
         /*
          * create ScriptFile object
          */
-        def manager = new AssetManager().setLocalPath(dir.toFile())
+        def manager = new AssetManager()
+                    .setLocalPath(dir.toFile())
+                    .setProject('nextflow-io/rnaseq-nf')
         def script = manager.getScriptFile()
 
         /*
@@ -90,11 +92,12 @@ class WorkflowMetadataTest extends Specification {
         metadata.scriptId == '0e44b16bdeb8ef9f4d8aadcf520e717d'
         metadata.scriptFile == manager.scriptFile.main
         metadata.scriptName == 'main.nf'
-        metadata.repository == 'https://github.com/nextflow-io/nextflow.git'
+        metadata.repository == 'https://github.com/nextflow-io/rnaseq-nf.git'
         metadata.commitId == commit.name()
         metadata.revision == 'master'
         metadata.container == 'busybox/latest'
         metadata.projectDir == dir
+        metadata.projectName == 'nextflow-io/rnaseq-nf'
         metadata.start >= begin
         metadata.start <= new Date()
         metadata.complete == null
