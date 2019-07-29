@@ -803,6 +803,37 @@ class ConfigBuilderTest extends Specification {
 
     }
 
+    def 'should set tower options' () {
+
+        given:
+        def env = [:]
+        def builder = [:] as ConfigBuilder
+
+        when:
+        def config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        !config.tower
+
+        when:
+        config = new ConfigObject()
+        config.tower.endpoint = 'http://foo.com'
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        config.tower instanceof Map
+        !config.tower.enabled
+        config.tower.endpoint == 'http://foo.com'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withTower: 'http://bar.com'))
+        then:
+        config.tower instanceof Map
+        config.tower.enabled
+        config.tower.endpoint == 'http://bar.com'
+
+    }
+
     def 'SHOULD SET `RESUME` OPTION'() {
 
         given:
