@@ -60,14 +60,10 @@ import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.AnsiLogObserver
-import nextflow.trace.GraphObserver
-import nextflow.trace.ReportObserver
 import nextflow.trace.StatsObserver
-import nextflow.trace.TimelineObserver
-import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceObserver
+import nextflow.trace.TraceObserverFactory
 import nextflow.trace.TraceRecord
-import nextflow.trace.WebLogObserver
 import nextflow.trace.WorkflowStats
 import nextflow.util.Barrier
 import nextflow.util.BlockingThreadExecutorFactory
@@ -236,9 +232,7 @@ class Session implements ISession {
 
     boolean ansiLog
 
-    private AnsiLogObserver ansiLogObserver
-
-    AnsiLogObserver getAnsiLogObserver() { ansiLogObserver }
+    AnsiLogObserver ansiLogObserver
 
     FilePorter getFilePorter() { filePorter }
 
@@ -386,105 +380,22 @@ class Session implements ISession {
      */
     @PackageScope
     List<TraceObserver> createObservers() {
+
         def result = new ArrayList(10)
 
-        createStatsObserver(result)     // keep as first, because following may depend on it
-        createTraceFileObserver(result)
-        createReportObserver(result)
-        createTimelineObserver(result)
-        createDagObserver(result)
-        createWebLogObserver(result)
-        createAnsiLogObserver(result)
+        // stats is created as first because others may depend on it
+        final observer = new StatsObserver()
+        this.workflowStats = observer.stats
+        result << observer
+
+        for( TraceObserverFactory f : ServiceLoader.load(TraceObserverFactory) ) {
+            log.debug "Observer factory: ${f.class.simpleName}"
+            result.addAll(f.create(this))
+        }
 
         return result
     }
 
-    protected void createAnsiLogObserver(Collection<TraceObserver> result) {
-        if( ansiLog ) {
-            this.ansiLogObserver = new AnsiLogObserver()
-            result << ansiLogObserver
-        }
-    }
-
-    /**
-     * Create workflow message observer
-     * @param result
-     */
-    protected void createWebLogObserver(Collection<TraceObserver> result) {
-        Boolean isEnabled = config.navigate('weblog.enabled') as Boolean
-        String url = config.navigate('weblog.url') as String
-        if (isEnabled) {
-            if ( !url ) url = WebLogObserver.DEF_URL
-            def observer = new WebLogObserver(url)
-            result << observer
-        }
-    }
-
-    protected void createStatsObserver(Collection<TraceObserver> result) {
-        final observer = new StatsObserver()
-        this.workflowStats = observer.stats
-        result << observer
-    }
-
-
-    /**
-     * Create workflow report file observer
-     */
-    protected void createReportObserver(Collection<TraceObserver> result) {
-        Boolean isEnabled = config.navigate('report.enabled') as Boolean
-        if( isEnabled ) {
-            String fileName = config.navigate('report.file')
-            def maxTasks = config.navigate('report.maxTasks', ReportObserver.DEF_MAX_TASKS) as int
-            if( !fileName ) fileName = ReportObserver.DEF_FILE_NAME
-            def report = (fileName as Path).complete()
-            def observer = new ReportObserver(report)
-            observer.maxTasks = maxTasks
-
-            result << observer
-        }
-    }
-
-    /**
-     * Create timeline report file observer
-     */
-    protected void createTimelineObserver(Collection<TraceObserver> result) {
-        Boolean isEnabled = config.navigate('timeline.enabled') as Boolean
-        if( isEnabled ) {
-            String fileName = config.navigate('timeline.file')
-            if( !fileName ) fileName = TimelineObserver.DEF_FILE_NAME
-            def traceFile = (fileName as Path).complete()
-            def observer = new TimelineObserver(traceFile)
-            result << observer
-        }
-    }
-
-    protected void createDagObserver(Collection<TraceObserver> result) {
-        Boolean isEnabled = config.navigate('dag.enabled') as Boolean
-        if( isEnabled ) {
-            String fileName = config.navigate('dag.file')
-            if( !fileName ) fileName = GraphObserver.DEF_FILE_NAME
-            def traceFile = (fileName as Path).complete()
-            def observer = new GraphObserver(traceFile)
-            result << observer
-        }
-    }
-
-    /*
-     * create the execution trace observer
-     */
-    protected void createTraceFileObserver(Collection<TraceObserver> result) {
-        Boolean isEnabled = config.navigate('trace.enabled') as Boolean
-        if( isEnabled ) {
-            String fileName = config.navigate('trace.file')
-            if( !fileName ) fileName = TraceFileObserver.DEF_FILE_NAME
-            def traceFile = (fileName as Path).complete()
-            def observer = new TraceFileObserver(traceFile)
-            config.navigate('trace.raw') { it -> observer.useRawNumbers(it == true) }
-            config.navigate('trace.sep') { observer.separator = it }
-            config.navigate('trace.fields') { observer.setFieldsAndFormats(it) }
-            result << observer
-        }
-    }
 
     /*
      * intercepts interruption signal i.e. CTRL+C
@@ -610,7 +521,7 @@ class Session implements ISession {
     }
 
     protected Map<String,Path> findBinEntries(Path path) {
-        def result = new LinkedHashMap(10)
+        Map<String,Path> result = new LinkedHashMap(10)
         path
                 .listFiles { file -> Files.isExecutable(file) }
                 .each { Path file -> result.put(file.name,file)  }
