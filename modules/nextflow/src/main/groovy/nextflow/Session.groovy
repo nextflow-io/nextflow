@@ -944,6 +944,18 @@ class Session implements ISession {
         }
     }
 
+    void notifyTaskPending( TaskHandler handler ) {
+        for( int i=0; i<observers.size(); i++ ) {
+            final observer = observers.get(i)
+            try {
+                observer.onProcessPending(handler, handler.getTraceRecord())
+            }
+            catch( Exception e ) {
+                log.debug(e.getMessage(), e)
+            }
+        }
+    }
+
     /**
      * Notifies that a task has been submitted
      */
