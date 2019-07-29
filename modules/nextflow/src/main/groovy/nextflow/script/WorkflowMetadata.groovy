@@ -18,6 +18,7 @@ package nextflow.script
 
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.OffsetDateTime
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -78,13 +79,17 @@ class WorkflowMetadata {
 
     /**
      * Timestamp at workflow execution start
+     *
+     * Use OffDateTime instead of Date -- See https://stackoverflow.com/a/32443004/395921
      */
-    Date start
+    OffsetDateTime start
 
     /**
      * Timestamp at workflow execution complete
+     *
+     * Use OffDateTime instead of Date -- See https://stackoverflow.com/a/32443004/395921
      */
-    Date complete
+    OffsetDateTime complete
 
     /**
      * Time elapsed to complete workflow execution
@@ -217,7 +222,8 @@ class WorkflowMetadata {
         this.commitId = scriptFile?.commitId
         this.revision = scriptFile?.revision
         this.projectDir = scriptFile?.localPath
-        this.start = new Date()
+        this.projectName = scriptFile?.projectName ?: scriptName
+        this.start = OffsetDateTime.now()
         this.container = session.fetchContainers()
         this.commandLine = session.commandLine
         this.nextflow = NextflowMeta.instance
@@ -364,8 +370,8 @@ class WorkflowMetadata {
      */
     @PackageScope
     void invokeOnComplete() {
-        this.complete = new Date()
-        this.duration = Duration.of( complete.time - start.time )
+        this.complete = OffsetDateTime.now()
+        this.duration = Duration.between( start, complete )
         this.success = !(session.aborted || session.cancelled)
 
         setErrorAttributes()
