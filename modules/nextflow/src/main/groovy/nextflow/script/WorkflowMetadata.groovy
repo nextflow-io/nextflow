@@ -122,6 +122,12 @@ class WorkflowMetadata {
     Path projectDir
 
     /**
+     * The name of the project when executed from a github repo or
+     * the script name when executing a script file
+     */
+    String projectName
+
+    /**
      * Directory where workflow execution has been launched
      */
     Path launchDir
