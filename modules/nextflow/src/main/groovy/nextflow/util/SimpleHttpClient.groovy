@@ -18,27 +18,27 @@
 package nextflow.util
 
 import groovy.json.JsonSlurper
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.Const
 
 /**
  * Small and simple http client that sends POST requests
  * to a given URL. Currently used by the MessageObserver class
  * only.
  *
- * @author Sven Fillinger <sven.fillinger@qbic.uni-tuebingen.de>
+ * @author
+ *  Sven Fillinger <sven.fillinger@qbic.uni-tuebingen.de>
+ *  Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class SimpleHttpClient {
 
     /**
      * Default user agent
      */
-    private static String USER_AGENT = "Nextflow weblog"
-
-    /**
-     * Contains the HTTP POST target url
-     */
-    private String url
+    private static String DEF_USER_AGENT = "Nextflow/$Const.APP_VER"
 
     /**
      * Contains the response code of a request
@@ -51,33 +51,33 @@ class SimpleHttpClient {
     private String response
 
     /**
-     * Setter for the target url
-     * @param url
+     * Basic auth token
      */
-    void setUrl(String url) {
-        this.url = url
-    }
+    private String authToken
+
+    /**
+     * Http user agent
+     */
+    private String userAgent = DEF_USER_AGENT
 
     /**
      * Send a json formatted string as HTTP POST request
      * @param json Message content as JSON
      */
-    void sendHttpMessage(String json) throws IllegalStateException, IllegalArgumentException{
+    void sendHttpMessage(String url, String json) throws IllegalStateException, IllegalArgumentException{
 
-        if (!this.url)
+        if (!url)
             throw new IllegalStateException("URL needs to be set!")
 
-        if (!isJson(json)){
-            throw new IllegalArgumentException("Message String needs to be a valid JSON object!")
-        }
-
         // Open a connection to the target url
-        def con = setUpConnection(this.url)
+        def con = getHttpConnection(url)
         // Make header settings
         con.setRequestMethod("POST")
         con.setRequestProperty("Content-Type", "application/json")
-        con.setRequestProperty("User-Agent", USER_AGENT)
-        con.setRequestProperty("Accept-Language", "en-US,en;q=0.5")
+        con.setRequestProperty("User-Agent", userAgent)
+        if( authToken )
+            con.setRequestProperty("Authorization","Basic ${authToken.bytes.encodeBase64()}")
+
         con.setDoOutput(true)
 
         // Send POST request
@@ -87,21 +87,33 @@ class SimpleHttpClient {
         output.close()
 
         // Retrieve response code
-        this.responseCode = con.getResponseCode()
+        try {
+            this.responseCode = con.getResponseCode()
 
-        // Retrieve response message
-        BufferedReader reader = new BufferedReader(new InputStreamReader(con.getInputStream()))
-        String lineContent
-        StringBuffer tmpResponse = new StringBuffer()
+            // Retrieve response message
+            BufferedReader reader = new BufferedReader(new InputStreamReader(con.getInputStream()))
+            String lineContent
+            StringBuffer tmpResponse = new StringBuffer()
 
-        while ((lineContent = reader.readLine()) != null){
-            tmpResponse.append(lineContent)
+            while ((lineContent = reader.readLine()) != null){
+                tmpResponse.append(lineContent)
+            }
+
+            reader.close()
+
+            this.response = tmpResponse.toString()
+        }
+        catch( IOException e ) {
+            // capture error code
+            // https://stackoverflow.com/a/18462721/395921
+            this.responseCode = con.getResponseCode()
+            throw e
         }
 
-        reader.close()
+    }
 
-        this.response = tmpResponse.toString()
-
+    protected HttpURLConnection getHttpConnection(String url) {
+        new URL(url).openConnection() as HttpURLConnection
     }
 
     /**
@@ -117,24 +129,6 @@ class SimpleHttpClient {
             return false
         }
         return true
-    }
-
-    /**
-     * Sets up the header for the request properly and creates
-     * a connection to a target url
-     * @param url The target url
-     * @return A http connection
-     */
-    protected HttpURLConnection setUpConnection(String url){
-        new URL(url).openConnection() as HttpURLConnection
-    }
-
-    /**
-     * Getter for url
-     * @return The current set url
-     */
-    String getUrl(){
-        return this.url
     }
 
     /**
@@ -158,17 +152,21 @@ class SimpleHttpClient {
      * @return The HTTP header user agent
      */
     String getUserAgent(){
-        return this.userAgent
+        return userAgent
     }
 
     /**
      * Setter for the header user agent
      * @param agent A user agent for the HTTP request
      */
-    void setUserAgent(String agent){
-        this.userAgent = agent
+    SimpleHttpClient setUserAgent(String agent){
+        userAgent = agent
+        return this
     }
 
-
+    SimpleHttpClient setAuthToken(String tkn) {
+        authToken = tkn
+        return this
+    }
 
 }

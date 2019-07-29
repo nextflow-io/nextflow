@@ -17,23 +17,13 @@
 
 package nextflow.util
 
+import com.sun.net.httpserver.HttpExchange
+import com.sun.net.httpserver.HttpHandler
+import com.sun.net.httpserver.HttpServer
 import spock.lang.Specification
+import spock.lang.Timeout
 
 class SimpleHttpClientTest extends Specification{
-
-
-    def 'should set a http url successfully' () {
-
-        given:
-        def url = "http://localhost"
-        def httpClient = new SimpleHttpClient()
-        when:
-        httpClient.setUrl(url)
-
-        then:
-        noExceptionThrown()
-        httpClient.getUrl() == url
-    }
 
 
     def 'should raise a ConnectException' () {
@@ -43,8 +33,7 @@ class SimpleHttpClientTest extends Specification{
         def httpClient = new SimpleHttpClient()
 
         when:
-        httpClient.setUrl(url)
-        httpClient.sendHttpMessage('{"test_id": 2}')
+        httpClient.sendHttpMessage(url, '{"test_id": 2}')
 
         then:
         thrown(ConnectException)
@@ -59,8 +48,6 @@ class SimpleHttpClientTest extends Specification{
         def dummyUrl = "http://foo.bar"
         def con = Mock(HttpURLConnection)
         def httpClient = Spy(SimpleHttpClient)
-        httpClient.setUpConnection(dummyUrl) >> con
-        httpClient.setUrl(dummyUrl)
         con.getOutputStream() >> new OutputStream() {
             @Override
             void write(int i) throws IOException { }
@@ -72,41 +59,23 @@ class SimpleHttpClientTest extends Specification{
         con.getResponseCode() >> 404
 
         when:
-        httpClient.sendHttpMessage('{"test_id": 2}')
+        httpClient.sendHttpMessage(dummyUrl, '{"test_id": 2}')
 
         then:
-        noExceptionThrown()
+        1 * httpClient.getHttpConnection(dummyUrl) >> con 
         httpClient.getResponseCode() == 404
 
     }
 
-    def 'should not send message when not a JSON-like string' (){
-
-        given:
-        def dummyUrl = "http://foo.bar"
-        def httpClient0 = Spy(SimpleHttpClient)
-        httpClient0.setUrl(dummyUrl)
-
-        when:
-        httpClient0.sendHttpMessage("Foobar")
-
-        then:
-        thrown(IllegalArgumentException)
-        httpClient0.getResponseCode() == -1
-        1 * httpClient0.isJson("Foobar")
-        0 * httpClient0.setUpConnection(dummyUrl)
-
-    }
 
     def 'raise exception when host not available'() {
 
         given:
         def dummyUrl = "http://foo.bar"
         def httpClient = new SimpleHttpClient()
-        httpClient.setUrl(dummyUrl)
 
         when:
-        httpClient.sendHttpMessage('{"test_id": "2"}')
+        httpClient.sendHttpMessage(dummyUrl, '{"test_id": "2"}')
 
         then:
         thrown(UnknownHostException)
@@ -127,16 +96,68 @@ class SimpleHttpClientTest extends Specification{
     }
 
     def 'check for missing URL'() {
-
         given:
+        def url = ''
         def httpClient = new SimpleHttpClient()
 
         when:
-        httpClient.setUrl("")
-        httpClient.sendHttpMessage()
+        httpClient.sendHttpMessage(url, '{"foo":, "bar"}')
 
         then:
         thrown(IllegalStateException)
     }
+
+    @Timeout(1)
+    def 'should make http request' () {
+
+        given:
+        def PAYLOAD = '{"hello":"world!"}'
+        def RESULT = '{"status":"OK"}'
+        def TOKEN = 'my:secret'
+        def PORT = 9900
+        def ENDPOINT = "http://localhost:$PORT/foo"
+        def AGENT = 'NEXTFLOW/1.0'
+
+        def expectedPayload
+        def expectedContentType
+        def expectedAuthToken
+        def expectedUserAgent
+
+        def server = HttpServer.create(new InetSocketAddress(PORT), 0)
+        server.createContext("/", new HttpHandler() {
+            @Override
+            void handle(HttpExchange exchange) throws IOException {
+                expectedPayload = exchange.requestBody.text
+                expectedContentType = exchange.requestHeaders.get('Content-Type').get(0)
+                expectedAuthToken = exchange.requestHeaders.get('Authorization').get(0)
+                expectedUserAgent = exchange.requestHeaders.get('User-Agent').get(0)
+
+                exchange.sendResponseHeaders(200, RESULT.getBytes().length)
+                OutputStream os = exchange.getResponseBody()
+                os.write(RESULT.getBytes());
+                os.close()
+            }
+        });
+        server.start()
+
+        when:
+        def client = new SimpleHttpClient()
+        client.setAuthToken(TOKEN)
+        client.setUserAgent(AGENT)
+        client.sendHttpMessage( ENDPOINT, PAYLOAD )
+        then:
+        client.responseCode == 200
+        client.response == RESULT
+        and:
+        expectedPayload == PAYLOAD
+        expectedContentType == 'application/json'
+        expectedAuthToken == "Basic ${TOKEN.bytes.encodeBase64()}"
+        expectedUserAgent == AGENT
+
+        cleanup:
+        server?.stop(0)
+
+    }
+
 
 }
