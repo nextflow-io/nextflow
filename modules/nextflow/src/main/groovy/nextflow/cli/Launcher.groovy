@@ -244,6 +244,10 @@ class Launcher {
                 normalized << '-'
             }
 
+            else if( current == '-with-tower' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
+            }
+
             else if( current == '-ansi-log' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << 'true'
             }
