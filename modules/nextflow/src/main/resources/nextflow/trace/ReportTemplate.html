@@ -137,7 +137,7 @@
       <dl>
         <dt>Run times</dt>
         <dd>
-          <span id="workflow_start">${workflow.start}</span> - <span id="workflow_complete">${workflow.complete}</span>
+          <span id="workflow_start">${workflow.start.format('dd-MMM-yyyy HH:mm:ss')}</span> - <span id="workflow_complete">${workflow.complete.format('dd-MMM-yyyy HH:mm:ss')}</span>
           (<span id="completed_fromnow"></span>duration: <strong>${workflow.duration}</strong>)
         </dd>
 

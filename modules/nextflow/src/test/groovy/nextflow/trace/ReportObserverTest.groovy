@@ -15,9 +15,10 @@
  */
 
 package nextflow.trace
+
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.util.concurrent.Executors
+import java.time.OffsetDateTime
 
 import groovy.json.JsonSlurper
 import nextflow.NextflowMeta
@@ -115,6 +116,8 @@ class ReportObserverTest extends Specification {
         given:
         def workDir = TestHelper.createInMemTempDir()
         def workflow = new WorkflowMetadata(
+                start: OffsetDateTime.now(),
+                complete: OffsetDateTime.now(),
                 workDir: workDir,
                 stats: new WorkflowStats(),
                 nextflow: new NextflowMeta('0.27.9', 3232, '2017-12-12')

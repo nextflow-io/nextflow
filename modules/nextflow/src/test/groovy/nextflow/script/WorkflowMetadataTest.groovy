@@ -16,10 +16,9 @@
 
 package nextflow.script
 
-import spock.lang.Specification
-
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.time.OffsetDateTime
 
 import nextflow.Const
 import nextflow.Session
@@ -28,8 +27,8 @@ import nextflow.trace.TraceRecord
 import nextflow.util.Duration
 import nextflow.util.VersionNumber
 import org.eclipse.jgit.api.Git
+import spock.lang.Specification
 import test.TestHelper
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -39,7 +38,7 @@ class WorkflowMetadataTest extends Specification {
     def 'should populate workflow object' () {
 
         given:
-        final begin = new Date()
+        final begin = OffsetDateTime.now()
         def dir = Files.createTempDirectory('test')
         /*
          * create the github repository
@@ -99,7 +98,7 @@ class WorkflowMetadataTest extends Specification {
         metadata.projectDir == dir
         metadata.projectName == 'nextflow-io/rnaseq-nf'
         metadata.start >= begin
-        metadata.start <= new Date()
+        metadata.start <= OffsetDateTime.now()
         metadata.complete == null
         metadata.commandLine == 'nextflow run -this -that'
         metadata.nextflow.version == new VersionNumber(Const.APP_VER)
@@ -120,8 +119,8 @@ class WorkflowMetadataTest extends Specification {
         metadata.invokeOnComplete()
         then:
         metadata.complete > metadata.start
-        metadata.complete <= new Date()
-        metadata.duration == new Duration( metadata.complete.time - metadata.start.time )
+        metadata.complete <= OffsetDateTime.now()
+        metadata.duration == Duration.between(metadata.start, metadata.complete)
         handlerInvoked == metadata.commandLine
 
 
