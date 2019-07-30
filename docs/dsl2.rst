@@ -83,7 +83,7 @@ For example::
           file 'bar.txt'
         script:
           """
-          your_command > bar.txt
+          another_command $x > bar.txt
           """
     }
 
@@ -103,7 +103,7 @@ Processes having matching input-output declaration can be composed so that the o
 of the first process is passed as input to the following process. Take in consideration
 the previous process definition, it's possible to write the following::
 
-    foo(bar())
+    bar(foo())
 
 Process outputs
 ---------------
