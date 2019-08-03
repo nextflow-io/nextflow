@@ -38,7 +38,9 @@ class AwsOptions {
     static final public int MAX_TRANSFER_ATTEMPTS = 1
 
     static final public Duration DEFAULT_DELAY_BETWEEN_ATTEMPTS = Duration.of('10sec')
-  
+
+    static final public String DEFAULT_JOB_NAME_TEMPLATE = '${task.name}'
+
     String cliPath
 
     String storageClass
@@ -59,6 +61,11 @@ class AwsOptions {
      * The job role ARN that should be used
      */
     String jobRole
+
+    /**
+     * The job name template, has access to WorkflowMetadata and TaskRun with "workflow" and "task"
+     */
+    String jobNameTemplate = DEFAULT_JOB_NAME_TEMPLATE
 
     /**
      * Volume mounts
@@ -85,6 +92,7 @@ class AwsOptions {
         region = session.config.navigate('aws.region') as String
         volumes = makeVols(session.config.navigate('aws.batch.volumes'))
         jobRole = session.config.navigate('aws.batch.jobRole')
+        jobNameTemplate = session.config.navigate('aws.batch.jobNameTemplate', DEFAULT_JOB_NAME_TEMPLATE)
     }
 
     protected String getCliPath0(Session session) {

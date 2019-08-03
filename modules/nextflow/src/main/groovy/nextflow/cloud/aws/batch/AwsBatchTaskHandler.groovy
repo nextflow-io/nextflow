@@ -37,6 +37,7 @@ import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.TerminateJobRequest
 import com.amazonaws.services.batch.model.Volume
+import groovy.text.GStringTemplateEngine
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.processor.BatchContext
@@ -46,6 +47,7 @@ import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
 /**
@@ -81,6 +83,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     private Map<String,String> environment
 
+    private WorkflowMetadata workflow
+
     final static private Map<String,String> jobDefinitions = [:]
 
     /**
@@ -97,12 +101,13 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @param task The {@link nextflow.processor.TaskRun} descriptor of the task to run
      * @param executor The {@link AwsBatchExecutor} instance
      */
-    AwsBatchTaskHandler(TaskRun task, AwsBatchExecutor executor) {
+    AwsBatchTaskHandler(TaskRun task, AwsBatchExecutor executor, WorkflowMetadata workflow) {
         super(task)
         this.bean = new TaskBean(task)
         this.executor = executor
         this.client = executor.client
         this.environment = System.getenv()
+        this.workflow = workflow
 
         this.logFile = task.workDir.resolve(TaskRun.CMD_LOG)
         this.scriptFile = task.workDir.resolve(TaskRun.CMD_SCRIPT)
@@ -497,7 +502,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
          * create the request object
          */
         def result = new SubmitJobRequest()
-        result.setJobName(normalizeJobName(task.name))
+        def binding = [task: task, workflow: workflow]
+        def jobName = new GStringTemplateEngine().createTemplate(opts.getJobNameTemplate()).make(binding).toString()
+        result.setJobName(normalizeJobName(jobName))
         result.setJobQueue(getJobQueue(task))
         result.setJobDefinition(getJobDefinition(task))
 

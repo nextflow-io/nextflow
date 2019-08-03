@@ -175,7 +175,7 @@ class AwsBatchExecutor extends Executor {
         assert task
         assert task.workDir
         log.trace "[AWS BATCH] Launching process > ${task.name} -- work folder: ${task.workDirStr}"
-        new AwsBatchTaskHandler(task, this)
+        new AwsBatchTaskHandler(task, this, session.getWorkflowMetadata())
     }
 
     /**
