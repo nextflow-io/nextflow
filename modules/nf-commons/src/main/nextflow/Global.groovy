@@ -75,6 +75,7 @@ class Global {
 
         String a
         String b
+        String c
 
         if( config && config.aws instanceof Map ) {
             a = ((Map)config.aws).accessKey
@@ -101,8 +102,13 @@ class Global {
 
         for( Path it : files ) {
             final conf = new IniFile(it)
-            if( (a=conf.section('default').aws_access_key_id) && (b=conf.section('default').aws_secret_access_key) ) {
-                log.debug "Using AWS credential defined in `default` section in file: ${conf.file}"
+            final profile = env.get('AWS_DEFAULT_PROFILE', 'default')
+            if( (a=conf.section(profile).aws_access_key_id) && (b=conf.section(profile).aws_secret_access_key) && (c=conf.section(profile).aws_session_token) ) {
+                log.debug "Using AWS temporary session credentials defined in `${profile}` section in file: ${conf.file}"
+                return [a,b,c]
+            }
+            if( (a=conf.section(profile).aws_access_key_id) && (b=conf.section(profile).aws_secret_access_key) ) {
+                log.debug "Using AWS credential defined in `${profile}` section in file: ${conf.file}"
                 return [a,b]
             }
         }
