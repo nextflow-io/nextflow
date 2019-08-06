@@ -19,11 +19,9 @@ package nextflow.wr.executor
 import spock.lang.Specification
 import spock.lang.Unroll
 
-import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.Path
 
-import nextflow.Session
 import nextflow.processor.TaskBean
 
 /**
@@ -322,30 +320,12 @@ class WrFileCopyStrategyTest extends Specification {
                 .stripIndent().trim()
     }
 
-    def 'should resolve foreign files' () {
+    def 'should return staging dir' () {
         given:
-        def folder = Files.createTempDirectory('test')
-        def session = new Session(workDir: folder)
+        def strategy = new WrFileCopyStrategy(workDir: Paths.get('/work/foo/bar'))
 
-        def INPUTS = [
-                'foo.txt': Paths.get('/some/foo.txt'),
-                'bar.txt': Paths.get('/some/bar.txt'),
-                //*** don't know how to immport TestHelper
-                // 'hello.txt': TestHelper.createInMemTempFile('any.name','Hello world')
-        ]
-        def strategy = new WrFileCopyStrategy(workDir: folder.resolve('xx/yy'))
-
-        when:
-        def result = strategy.resolveForeignFiles(INPUTS)
-        then:
-        result.size() == 2
-        result['foo.txt'] == Paths.get('/some/foo.txt')
-        result['bar.txt'] == Paths.get('/some/bar.txt')
-        // result['hello.txt'].text == 'Hello world'
-        // result['hello.txt'].toString().startsWith(folder.resolve('stage').toString())
-
-        cleanup:
-        folder.deleteDir()
+        expect:
+        strategy.getStagingDir() == Paths.get('/work/stage')
     }
 
     def 'should return cp script to unstage output files to S3' () {
