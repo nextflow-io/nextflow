@@ -58,7 +58,6 @@ class K8sResponseExceptionTest extends Specification {
         def resp_json = new K8sResponseJson('{"error": "out of cheese error"}')
 
         when:
-
         def resp = new K8sResponseException("Error occurred",resp_json)
 
         then:
