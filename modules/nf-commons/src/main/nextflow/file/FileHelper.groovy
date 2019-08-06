@@ -57,6 +57,8 @@ import nextflow.util.Escape
 @CompileStatic
 class FileHelper {
 
+    static final public Pattern URL_PROTOCOL = ~/^([a-zA-Z][a-zA-Z0-9]*)\:\\/\\/.+/
+
     static final private Path localTempBasePath
 
     static private Random rndGen = new Random()
@@ -975,5 +977,9 @@ class FileHelper {
         return result
     }
 
+    static String getUrlProtocol(String str) {
+        final m = URL_PROTOCOL.matcher(str)
+        return m.matches() ? m.group(1) : null
+    }
 
 }

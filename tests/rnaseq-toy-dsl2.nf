@@ -14,10 +14,10 @@ params.genome = "$baseDir/data/ggal/ggal_1_48850000_49020000.Ggal71.500bpflank.f
  */
 process buildIndex {
     input:
-    file genome
+    path genome
      
     output:
-    file 'genome.index*'
+    path 'genome.index*'
 
     """
     bowtie2-build ${genome} genome.index
@@ -29,9 +29,9 @@ process buildIndex {
  */
 process mapping {     
     input:
-    file genome
-    file index
-    set pair_id, file(reads)
+    path genome
+    path index
+    set pair_id, path(reads)
  
     output:
     set pair_id, "tophat_out/accepted_hits.bam"
@@ -62,12 +62,11 @@ process makeTranscript {
 /*
  * main flow
  */
-genome_file = file(params.genome)
 read_pairs = Channel.fromFilePairs( params.reads, checkIfExists: true )
 
 /*
  * main flow
  */
-buildIndex(genome_file)
-mapping(genome_file, buildIndex.out, read_pairs)
+buildIndex(params.genome)
+mapping(params.genome, buildIndex.out, read_pairs)
 makeTranscript(mapping.out)

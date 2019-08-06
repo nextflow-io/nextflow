@@ -26,6 +26,7 @@ import nextflow.script.TaskBody
 import nextflow.script.TaskClosure
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
+import nextflow.script.TokenPathCall
 import nextflow.script.TokenStdinCall
 import nextflow.script.TokenStdoutCall
 import nextflow.script.TokenValCall
@@ -721,7 +722,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 def nested = methodCall.objectExpression instanceof MethodCallExpression
                 log.trace "convert > input method: $methodName"
 
-                if( methodName in ['val','env','file','each','set','stdin'] ) {
+                if( methodName in ['val','env','file','each','set','stdin','path'] ) {
                     //this methods require a special prefix
                     if( !nested )
                         methodCall.setMethod( new ConstantExpression('_in_' + methodName) )
@@ -737,9 +738,7 @@ class NextflowDSLImpl implements ASTTransformation {
                  *
                  */
                 else if( methodName == 'name' && isWithinMethod(expression, 'file') ) {
-                    withinFileMethod = true
                     varToConst(methodCall.getArguments())
-                    withinFileMethod = false
                 }
 
                 // invoke on the next method call
@@ -778,7 +777,7 @@ class NextflowDSLImpl implements ASTTransformation {
             def nested = methodCall.objectExpression instanceof MethodCallExpression
             log.trace "convert > output method: $methodName"
 
-            if( methodName in ['val','file','set','stdout'] && !nested ) {
+            if( methodName in ['val','file','set','stdout','path'] && !nested ) {
                 // prefix the method name with the string '_out_'
                 methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
                 fixMethodCall(methodCall)
@@ -797,8 +796,6 @@ class NextflowDSLImpl implements ASTTransformation {
 
         private boolean withinSetMethod
 
-        private boolean withinFileMethod
-
         private boolean withinEachMethod
 
         /**
@@ -814,7 +811,6 @@ class NextflowDSLImpl implements ASTTransformation {
             final name = methodCall.methodAsString
 
             withinSetMethod = name == '_in_set' || name == '_out_set'
-            withinFileMethod = name == '_in_file' || name == '_out_file'
             withinEachMethod = name == '_in_each'
 
             try {
@@ -829,7 +825,6 @@ class NextflowDSLImpl implements ASTTransformation {
 
             } finally {
                 withinSetMethod = false
-                withinFileMethod = false
                 withinEachMethod = false
             }
         }
@@ -933,6 +928,10 @@ class NextflowDSLImpl implements ASTTransformation {
                 if( methodCall.methodAsString == 'file' && (withinSetMethod || withinEachMethod) ) {
                     def args = (TupleExpression) varToConst(methodCall.arguments)
                     return newObj( TokenFileCall, args )
+                }
+                else if( methodCall.methodAsString == 'path' && (withinSetMethod || withinEachMethod) ) {
+                    def args = (TupleExpression) varToConst(methodCall.arguments)
+                    return newObj( TokenPathCall, args )
                 }
 
                 /*

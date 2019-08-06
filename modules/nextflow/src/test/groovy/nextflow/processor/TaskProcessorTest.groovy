@@ -31,11 +31,12 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
 import nextflow.executor.NopeExecutor
 import nextflow.file.FileHolder
+import nextflow.file.FilePorter
 import nextflow.script.BaseScript
-import nextflow.script.params.FileOutParam
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptType
 import nextflow.script.TaskBody
+import nextflow.script.params.FileOutParam
 import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
 import spock.lang.Specification
@@ -787,6 +788,44 @@ class TaskProcessorTest extends Specification {
         env == "export FOO=''\nexport BAR=''\n"
 
     }
+
+    def 'should normalise to path' () {
+        given:
+        def proc = new TaskProcessor()
+
+        expect:
+        proc.normalizeToPath('/foo/bar') == '/foo/bar' as Path
+        and:
+        proc.normalizeToPath('file:///foo/bar') == '/foo/bar' as Path
+        and:
+        proc.normalizeToPath(Paths.get('foo.txt')) == Paths.get('foo.txt')
+
+        when:
+        proc.normalizeToPath('abc')
+        then:
+        thrown(ProcessUnrecoverableException)
+
+        when:
+        proc.normalizeToPath(null)
+        then:
+        thrown(ProcessUnrecoverableException)
+    }
+
+    def 'should normalize files' () {
+        given:
+        def proc = new TaskProcessor()
+        def batch = Mock(FilePorter.Batch)
+        def PATH = Paths.get('/some/path')
+
+        when:
+        def result = proc.normalizeInputToFiles(PATH.toString(), 0, true, batch)
+        then:
+        1 * batch.addToForeign(PATH) >> PATH
+        result.size() == 1
+        result[0] == new FileHolder(PATH)
+
+    }
+
 
     def 'should return stage dir' () {
         given:

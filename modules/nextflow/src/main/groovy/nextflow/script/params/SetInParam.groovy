@@ -19,6 +19,7 @@ package nextflow.script.params
 import groovy.transform.InheritConstructors
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
+import nextflow.script.TokenPathCall
 import nextflow.script.TokenStdinCall
 import nextflow.script.TokenValCall
 import nextflow.script.TokenVar
@@ -46,6 +47,13 @@ class SetInParam extends BaseInParam {
 
             else if( item instanceof TokenFileCall )
                 newItem(FileInParam).bind( item.target )
+
+            else if( item instanceof TokenPathCall ) {
+                newItem(FileInParam)
+                        .setPathQualifier(true)
+                        .setOptions(item.opts)
+                        .bind( item.target )
+            }
 
             else if( item instanceof Map )
                 newItem(FileInParam).bind(item)

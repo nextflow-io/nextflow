@@ -4,12 +4,12 @@ nextflow.preview.dsl=2
 process foo {
 
   input:
-  file x
+  path x
 
   output:
-  file x
-  file 'file-\\*.txt'
-  file 'file-?.txt' glob false 
+  path x
+  path 'file-\\*.txt'
+  path 'file-?.txt' glob false
 
   '''
   touch file-\\*.txt

@@ -25,6 +25,8 @@ import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.extension.ChannelFactory
 import nextflow.extension.ToListOp
 import nextflow.script.TokenFileCall
+import nextflow.script.TokenPathCall
+
 /**
  * Represents a process input *iterator* parameter
  *
@@ -41,12 +43,26 @@ class EachInParam extends BaseInParam {
     String getName() { '__$'+this.toString() }
 
     EachInParam bind( def obj ) {
-        def nested = ( obj instanceof TokenFileCall
-                ? new FileInParam(binding, inner, index).bind(obj.target)
-                : new ValueInParam(binding, inner, index).bind(obj) )
+        final nested = createNestedParam(obj)
         nested.owner = this
         this.bindObject = nested.bindObject
         return this
+    }
+
+    protected BaseInParam createNestedParam(obj) {
+        if( obj instanceof TokenFileCall ) {
+            return new FileInParam(binding, inner, index)
+                    .bind(obj.target)
+        }
+        
+        if( obj instanceof TokenPathCall ) {
+            return new FileInParam(binding, inner, index)
+                    .setPathQualifier(true)
+                    .bind(obj.target)
+        }
+
+        return new ValueInParam(binding, inner, index)
+                .bind(obj)
     }
 
     InParam getInner() { inner[0] }

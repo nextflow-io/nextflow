@@ -27,11 +27,15 @@ import nextflow.script.TokenVar
  */
 @Slf4j
 @InheritConstructors
-class FileInParam extends BaseInParam  {
+class FileInParam extends BaseInParam implements PathQualifier {
 
     protected filePattern
 
-    @Override String getTypeName() { 'file' }
+    private boolean pathQualifier
+
+    @Override String getTypeName() { pathQualifier ? 'path' : 'file' }
+
+    @Override String getTypeSimpleName() { getTypeName() + "inparam" }
 
     /**
      * Define the file name
@@ -102,6 +106,20 @@ class FileInParam extends BaseInParam  {
 
         else
             return value
+    }
+
+    @Override
+    FileInParam setPathQualifier(boolean flag) {
+        pathQualifier = flag
+        return this
+    }
+
+    @Override
+    boolean isPathQualifier() { pathQualifier }
+
+    @Override
+    FileInParam setOptions(Map<String,?> opts) {
+        (FileInParam)super.setOptions(opts)
     }
 
 }

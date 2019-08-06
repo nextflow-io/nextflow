@@ -6,7 +6,7 @@ process foo {
   tag "$x"
 
   input:
-  each file(x)
+  each path(x)
 
   """
   grep '>' $x

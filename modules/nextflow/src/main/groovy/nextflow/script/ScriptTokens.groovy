@@ -43,13 +43,31 @@ class TokenVar {
  *
  */
 class TokenFileCall {
+    final target
+    TokenFileCall(target)  { this.target = target }
+}
 
-    final Object target
+/**
+ *  A token used by the DSL to identify a 'path' declaration in a 'set' parameter, for example:
+ *      <pre>
+ *      input:
+ *      set( path('name'), ... )
+ *      </pre>
+ *
+ */
+class TokenPathCall {
+    final target
+    final Map opts
 
-    TokenFileCall( value ) {
-        this.target = value
+    TokenPathCall(target) {
+        this.target = target
+        this.opts = Collections.emptyMap()
     }
 
+    TokenPathCall(Map opts, target) {
+        this.target = target
+        this.opts = opts
+    }
 }
 
 /**
@@ -60,7 +78,7 @@ class TokenFileCall {
  * </pre>
  *
  * @see nextflow.ast.NextflowDSLImpl
- * @see SetInParam#bind(java.lang.Object[])
+ * @see nextflow.script.params.SetInParam#bind(java.lang.Object[])
  */
 class TokenStdinCall { }
 
@@ -72,7 +90,7 @@ class TokenStdinCall { }
  * </pre>
  *
  * @see nextflow.ast.NextflowDSLImpl
- * @see SetOutParam#bind(java.lang.Object[])
+ * @see nextflow.script.params.SetOutParam#bind(java.lang.Object[])
  */
 class TokenStdoutCall { }
 

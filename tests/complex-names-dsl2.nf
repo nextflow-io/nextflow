@@ -5,12 +5,12 @@ process foo {
   publishDir 'foo', mode: 'copy'
   container 'debian:latest'
   output:
-  file '*.fa'
-  file 'hello.txt'
-  file '*.{zip,html}'
-  file '01_A(R{1,2}).fastq'
-  file 'sample_(1 2).vcf'
-  file '.alpha'
+  path '*.fa'
+  path 'hello.txt'
+  path '*.{zip,html}'
+  path '01_A(R{1,2}).fastq'
+  path 'sample_(1 2).vcf'
+  path '.alpha'
 
   script:
   $/
@@ -32,7 +32,7 @@ process bar {
   echo true
   container 'debian:latest'
   input: 
-  file '*'
+  path '*'
 
   script:
   $/

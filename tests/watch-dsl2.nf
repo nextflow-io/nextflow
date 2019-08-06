@@ -7,10 +7,10 @@ params.files = 'examples/data/*.fa'
 
 process align {
   input:
-  file fasta
+  path fasta
 
   output:
-  file aln
+  path aln
 
   """
   t_coffee -in $fasta 1> aln
