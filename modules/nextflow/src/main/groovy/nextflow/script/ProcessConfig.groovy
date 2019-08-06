@@ -455,7 +455,12 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     }
 
     InParam _in_set( Object... obj ) {
-        new SetInParam(this).bind(obj)
+        if( NF.isDsl2() ) log.warn "Input of type `set` is deprecated -- Use `tuple` instead"
+        new TupleInParam(this).bind(obj)
+    }
+
+    InParam _in_tuple( Object... obj ) {
+        new TupleInParam(this).bind(obj)
     }
 
     InParam _in_stdin( obj = null ) {
@@ -500,8 +505,14 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     }
 
     OutParam _out_set( Object... obj ) {
-        new SetOutParam(this) .bind(obj)
+        if( NF.isDsl2() ) log.debug "Output of type `set` is deprecated -- Use `tuple` instead"
+        new TupleOutParam(this) .bind(obj)
     }
+
+    OutParam _out_tuple( Object... obj ) {
+        new TupleOutParam(this) .bind(obj)
+    }
+
 
     OutParam _out_stdout( obj = null ) {
         def result = new StdOutParam(this).bind('-')

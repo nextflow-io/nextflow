@@ -78,7 +78,7 @@ class TokenPathCall {
  * </pre>
  *
  * @see nextflow.ast.NextflowDSLImpl
- * @see nextflow.script.params.SetInParam#bind(java.lang.Object[])
+ * @see nextflow.script.params.TupleInParam#bind(java.lang.Object[])
  */
 class TokenStdinCall { }
 
@@ -90,7 +90,7 @@ class TokenStdinCall { }
  * </pre>
  *
  * @see nextflow.ast.NextflowDSLImpl
- * @see nextflow.script.params.SetOutParam#bind(java.lang.Object[])
+ * @see nextflow.script.params.TupleOutParam#bind(java.lang.Object[])
  */
 class TokenStdoutCall { }
 

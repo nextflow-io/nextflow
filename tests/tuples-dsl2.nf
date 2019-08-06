@@ -5,9 +5,9 @@ nextflow.preview.dsl=2
 process touch {
 
   input:
-    set ( id, fileName )
+    tuple ( id, fileName )
   output:
-    set ( id, 'file*' )
+    tuple ( id, 'file*' )
 
 
   /
@@ -18,10 +18,10 @@ process touch {
 
 process makeFiles {
   input:
-    set( id, 'file_x' ) 
+    tuple( id, 'file_x' ) 
 
   output:
-    set( id, '*') mode flatten
+    tuple( id, '*') mode flatten
 
   /
    cp file_x copy_$id

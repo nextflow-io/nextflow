@@ -31,10 +31,10 @@ process mapping {
     input:
     path genome
     path index
-    set pair_id, path(reads)
+    tuple pair_id, path(reads)
  
     output:
-    set pair_id, "tophat_out/accepted_hits.bam"
+    tuple pair_id, path("tophat_out/accepted_hits.bam")
  
     """
     tophat2 genome.index ${reads}
@@ -49,10 +49,10 @@ process makeTranscript {
     publishDir "results"
     
     input:
-    set pair_id, bam_file
+    tuple pair_id, path(bam_file)
      
     output:
-    set pair_id, 'transcripts.gtf'
+    tuple pair_id, path('transcripts.gtf')
 
     """
     cufflinks ${bam_file}

@@ -25,12 +25,12 @@ import nextflow.script.TokenValCall
 import nextflow.script.TokenVar
 
 /**
- * Models a set of input parameters
+ * Models a tuple of input parameters
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors
-class SetInParam extends BaseInParam {
+class TupleInParam extends BaseInParam {
 
     final List<InParam> inner = []
 
@@ -38,7 +38,7 @@ class SetInParam extends BaseInParam {
 
     String getName() { '__$'+this.toString() }
 
-    SetInParam bind( Object... obj ) {
+    TupleInParam bind(Object... obj ) {
 
         for( def item : obj ) {
 

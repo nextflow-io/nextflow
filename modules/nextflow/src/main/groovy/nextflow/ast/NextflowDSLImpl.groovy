@@ -722,7 +722,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 def nested = methodCall.objectExpression instanceof MethodCallExpression
                 log.trace "convert > input method: $methodName"
 
-                if( methodName in ['val','env','file','each','set','stdin','path'] ) {
+                if( methodName in ['val','env','file','each','set','stdin','path','tuple'] ) {
                     //this methods require a special prefix
                     if( !nested )
                         methodCall.setMethod( new ConstantExpression('_in_' + methodName) )
@@ -777,7 +777,7 @@ class NextflowDSLImpl implements ASTTransformation {
             def nested = methodCall.objectExpression instanceof MethodCallExpression
             log.trace "convert > output method: $methodName"
 
-            if( methodName in ['val','file','set','stdout','path'] && !nested ) {
+            if( methodName in ['val','file','set','stdout','path','tuple'] && !nested ) {
                 // prefix the method name with the string '_out_'
                 methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
                 fixMethodCall(methodCall)
@@ -794,7 +794,7 @@ class NextflowDSLImpl implements ASTTransformation {
 
         }
 
-        private boolean withinSetMethod
+        private boolean withinTupleMethod
 
         private boolean withinEachMethod
 
@@ -810,7 +810,7 @@ class NextflowDSLImpl implements ASTTransformation {
         protected void fixMethodCall( MethodCallExpression methodCall ) {
             final name = methodCall.methodAsString
 
-            withinSetMethod = name == '_in_set' || name == '_out_set'
+            withinTupleMethod = name == '_in_set' || name == '_out_set' || name == '_in_tuple' || name == '_out_tuple'
             withinEachMethod = name == '_in_each'
 
             try {
@@ -824,7 +824,7 @@ class NextflowDSLImpl implements ASTTransformation {
                     varToConst(methodCall.getArguments())
 
             } finally {
-                withinSetMethod = false
+                withinTupleMethod = false
                 withinEachMethod = false
             }
         }
@@ -870,9 +870,9 @@ class NextflowDSLImpl implements ASTTransformation {
             }
             else if( expr instanceof PropertyExpression ) {
                 // transform an output declaration such
-                // output: set val( obj.foo )
+                // output: tuple val( obj.foo )
                 //  to
-                // output: set val({ obj.foo })
+                // output: tuple val({ obj.foo })
                 return wrapPropertyToClosure(expr)
             }
 
@@ -897,19 +897,19 @@ class NextflowDSLImpl implements ASTTransformation {
                 def name = ((VariableExpression) expr).getName()
 
                 /*
-                 * the 'stdin' is used as placeholder for the standard input in the set definition. For example:
+                 * the 'stdin' is used as placeholder for the standard input in the tuple definition. For example:
                  *
                  * input:
-                 *    set( stdin, .. ) from q
+                 *    tuple( stdin, .. ) from q
                  */
-                if( name == 'stdin' && withinSetMethod )
+                if( name == 'stdin' && withinTupleMethod )
                     return newObj( TokenStdinCall )
 
                 /*
                  * input:
-                 *    set( stdout, .. )
+                 *    tuple( stdout, .. )
                  */
-                else if ( name == 'stdout' && withinSetMethod )
+                else if ( name == 'stdout' && withinTupleMethod )
                     return newObj( TokenStdoutCall )
 
                 else
@@ -920,34 +920,34 @@ class NextflowDSLImpl implements ASTTransformation {
                 def methodCall = expr as MethodCallExpression
 
                 /*
-                 * replace 'file' method call in the set definition, for example:
+                 * replace 'file' method call in the tuple definition, for example:
                  *
                  * input:
-                 *   set( file(fasta:'*.fa'), .. ) from q
+                 *   tuple( file(fasta:'*.fa'), .. ) from q
                  */
-                if( methodCall.methodAsString == 'file' && (withinSetMethod || withinEachMethod) ) {
+                if( methodCall.methodAsString == 'file' && (withinTupleMethod || withinEachMethod) ) {
                     def args = (TupleExpression) varToConst(methodCall.arguments)
                     return newObj( TokenFileCall, args )
                 }
-                else if( methodCall.methodAsString == 'path' && (withinSetMethod || withinEachMethod) ) {
+                else if( methodCall.methodAsString == 'path' && (withinTupleMethod || withinEachMethod) ) {
                     def args = (TupleExpression) varToConst(methodCall.arguments)
                     return newObj( TokenPathCall, args )
                 }
 
                 /*
                  * input:
-                 *  set( env(VAR_NAME) ) from q
+                 *  tuple( env(VAR_NAME) ) from q
                  */
-                if( methodCall.methodAsString == 'env' && withinSetMethod ) {
+                if( methodCall.methodAsString == 'env' && withinTupleMethod ) {
                     def args = (TupleExpression) varToStr(methodCall.arguments)
                     return newObj( TokenEnvCall, args )
                 }
 
                 /*
                  * input:
-                 *   set val(x), .. from q
+                 *   tuple val(x), .. from q
                  */
-                if( methodCall.methodAsString == 'val' && withinSetMethod ) {
+                if( methodCall.methodAsString == 'val' && withinTupleMethod ) {
                     def args = (TupleExpression) varToStr(methodCall.arguments)
                     return newObj( TokenValCall, args )
                 }

@@ -78,8 +78,8 @@ import nextflow.script.params.InParam
 import nextflow.script.params.MissingParam
 import nextflow.script.params.OptionalParam
 import nextflow.script.params.OutParam
-import nextflow.script.params.SetInParam
-import nextflow.script.params.SetOutParam
+import nextflow.script.params.TupleInParam
+import nextflow.script.params.TupleOutParam
 import nextflow.script.params.StdInParam
 import nextflow.script.params.StdOutParam
 import nextflow.script.params.ValueInParam
@@ -330,12 +330,12 @@ class TaskProcessor {
             throw new IllegalStateException("Missing task body for process `$name`")
 
         // -- check that input set defines at least two elements
-        def invalidInputSet = config.getInputs().find { it instanceof SetInParam && it.inner.size()<2 }
+        def invalidInputSet = config.getInputs().find { it instanceof TupleInParam && it.inner.size()<2 }
         if( invalidInputSet )
             log.warn "Input `set` must define at least two component -- Check process `$name`"
 
         // -- check that output set defines at least two elements
-        def invalidOutputSet = config.getOutputs().find { it instanceof SetOutParam && it.inner.size()<2 }
+        def invalidOutputSet = config.getOutputs().find { it instanceof TupleOutParam && it.inner.size()<2 }
         if( invalidOutputSet )
             log.warn "Output `set` must define at least two component -- Check process `$name`"
 
@@ -538,8 +538,8 @@ class TaskProcessor {
     }
 
     @Memoized
-    private List<SetInParam> getDeclaredInputSet() {
-        getConfig().getInputs().ofType(SetInParam)
+    private List<TupleInParam> getDeclaredInputSet() {
+        getConfig().getInputs().ofType(TupleInParam)
     }
 
     protected void validateInputSets( List values ) {
@@ -644,7 +644,7 @@ class TaskProcessor {
          * initialize the inputs/outputs for this task instance
          */
         config.getInputs().each { InParam param ->
-            if( param instanceof SetInParam )
+            if( param instanceof TupleInParam )
                 param.inner.each { task.setInput(it)  }
             else if( param instanceof EachInParam )
                 task.setInput(param.inner)
@@ -653,7 +653,7 @@ class TaskProcessor {
         }
 
         config.getOutputs().each { OutParam param ->
-            if( param instanceof SetOutParam ) {
+            if( param instanceof TupleOutParam ) {
                 param.inner.each { task.setOutput(it) }
             }
             else
@@ -1264,7 +1264,7 @@ class TaskProcessor {
                 }
             }
 
-            else if( param.mode == SetOutParam.CombineMode.combine ) {
+            else if( param.mode == TupleOutParam.CombineMode.combine ) {
                 log.trace "Process $name > Combining out param: ${param} = ${list}"
                 final combs = (List<List>)list.combinations()
                 for( def it : combs ) { bindOutParam(param, it) }
@@ -2104,7 +2104,7 @@ class TaskProcessor {
             def chnnl = param?.inChannel
             def isValue = chnnl instanceof DataflowExpression
             def type = last ? '(cntrl)' : (isValue ? '(value)' : '(queue)')
-            def channel = param && !(param instanceof SetInParam) ? param.getName() : '-'
+            def channel = param && !(param instanceof TupleInParam) ? param.getName() : '-'
             def status; if( isValue ) { status = !chnnl.isBound() ? 'OPEN  ' : 'bound ' }
             else status = type == '(queue)' ? (openPorts.get(i) ? 'OPEN  ' : 'closed') : '-     '
             result << "  port $i: $type ${status}; channel: $channel\n"
