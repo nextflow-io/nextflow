@@ -283,8 +283,14 @@ class K8sTaskHandler extends TaskHandler {
     @Override
     boolean checkIfRunning() {
         if( !podName ) throw new IllegalStateException("Missing K8s pod name -- cannot check if running")
-        def state = getState()
-        return state && state.running != null
+        if(isSubmitted()) {
+            def state = getState()
+            if (state && state.running != null) {
+                status = TaskStatus.RUNNING
+                return true
+            }
+        }
+        return false
     }
 
     @Override
