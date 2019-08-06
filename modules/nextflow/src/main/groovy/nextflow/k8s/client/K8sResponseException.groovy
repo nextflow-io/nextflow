@@ -32,6 +32,7 @@ class K8sResponseException extends Exception {
 
     K8sResponseException(K8sResponseJson response) {
         super(msg0(response))
+        this.response = response
     }
 
     K8sResponseException(String message, K8sResponseJson response) {
