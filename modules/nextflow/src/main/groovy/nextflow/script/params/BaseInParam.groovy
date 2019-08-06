@@ -20,6 +20,7 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.NF
 import nextflow.Nextflow
 import nextflow.exception.ProcessException
@@ -80,6 +81,12 @@ abstract class BaseInParam extends BaseParam implements InParam {
 
         if ( value instanceof DataflowReadChannel || value instanceof DataflowBroadcast )  {
             return ChannelFactory.getReadChannel(value)
+        }
+
+        if( NF.isDsl2() ) {
+            final result = new DataflowVariable()
+            result.bind(value)
+            return result
         }
 
         // wrap any collections with a DataflowQueue
