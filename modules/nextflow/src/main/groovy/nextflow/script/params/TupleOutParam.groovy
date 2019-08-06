@@ -29,7 +29,7 @@ import nextflow.script.TokenVar
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors
-class SetOutParam extends BaseOutParam implements OptionalParam {
+class TupleOutParam extends BaseOutParam implements OptionalParam {
 
     enum CombineMode implements OutParam.Mode { combine }
 
@@ -37,7 +37,7 @@ class SetOutParam extends BaseOutParam implements OptionalParam {
 
     String getName() { toString() }
 
-    SetOutParam bind( Object... obj ) {
+    TupleOutParam bind(Object... obj ) {
 
         for( def item : obj ) {
             if( item instanceof TokenVar )
@@ -87,7 +87,7 @@ class SetOutParam extends BaseOutParam implements OptionalParam {
         }
     }
 
-    SetOutParam mode( def value ) {
+    TupleOutParam mode(def value ) {
 
         def str = value instanceof String ? value : ( value instanceof TokenVar ? value.name : null )
         if( str ) {

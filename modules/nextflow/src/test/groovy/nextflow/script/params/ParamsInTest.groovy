@@ -361,11 +361,11 @@ class ParamsInTest extends Specification {
 
             process hola {
               input:
-              set (p) from x
-              set (p, q) from x
-              set (v, 'file_name.fa') from 'str'
-              set (p, 'file_name.txt', '-' ) from { 'ciao' }
-              set (t, [file: 'file.fa'] ) from 0
+              tuple p from x
+              tuple p, q from x
+              tuple v, 'file_name.fa' from 'str'
+              tuple p, 'file_name.txt', '-' from { 'ciao' }
+              tuple t, [file: 'file.fa'] from 0
 
               return ''
             }
@@ -373,11 +373,11 @@ class ParamsInTest extends Specification {
 
         when:
         def process = parseAndReturnProcess(text)
-        SetInParam in1 = process.config.getInputs().get(0)
-        SetInParam in2 = process.config.getInputs().get(1)
-        SetInParam in3 = process.config.getInputs().get(2)
-        SetInParam in4 = process.config.getInputs().get(3)
-        SetInParam in5 = process.config.getInputs().get(4)
+        TupleInParam in1 = process.config.getInputs().get(0)
+        TupleInParam in2 = process.config.getInputs().get(1)
+        TupleInParam in3 = process.config.getInputs().get(2)
+        TupleInParam in4 = process.config.getInputs().get(3)
+        TupleInParam in5 = process.config.getInputs().get(4)
 
         then:
         process.config.getInputs().size() == 5
@@ -450,14 +450,14 @@ class ParamsInTest extends Specification {
 
             process hola {
               input:
-              set( 'name_$x' ) from q
-              set( "${x}_name.${str}" ) from q
+              tuple 'name_$x' from q
+              tuple "${x}_name.${str}" from q
 
-              set( file("hola_${x}") ) from q
-              set( file( handle: "${x}.txt") ) from q
+              tuple file("hola_${x}") from q
+              tuple file( handle: "${x}.txt") from q
 
-              set file( { "${x}_name.txt" } ) from q
-              set file( handle: { "name_${x}.txt" } ) from q
+              tuple file( { "${x}_name.txt" } ) from q
+              tuple file( handle: { "name_${x}.txt" } ) from q
 
               return ''
             }
@@ -465,12 +465,12 @@ class ParamsInTest extends Specification {
 
         when:
         def process = parseAndReturnProcess(text)
-        SetInParam in0 = process.config.getInputs().get(0)
-        SetInParam in1 = process.config.getInputs().get(1)
-        SetInParam in2 = process.config.getInputs().get(2)
-        SetInParam in3 = process.config.getInputs().get(3)
-        SetInParam in4 = process.config.getInputs().get(4)
-        SetInParam in5 = process.config.getInputs().get(5)
+        TupleInParam in0 = process.config.getInputs().get(0)
+        TupleInParam in1 = process.config.getInputs().get(1)
+        TupleInParam in2 = process.config.getInputs().get(2)
+        TupleInParam in3 = process.config.getInputs().get(3)
+        TupleInParam in4 = process.config.getInputs().get(4)
+        TupleInParam in5 = process.config.getInputs().get(5)
         def ctx = [x:'the_file', str: 'fastq']
 
         then:
@@ -505,9 +505,9 @@ class ParamsInTest extends Specification {
         def text = '''
             process hola {
               input:
-              set( val(a), file(x), val(b) ) from 1
-              set( val(p), file('txt'), env('q') ) from 2
-              set( val(v), file(xx:'yy'), stdin, env(W) ) from 3
+              tuple( val(a), file(x), val(b) ) from 1
+              tuple( val(p), file('txt'), env('q') ) from 2
+              tuple( val(v), file(xx:'yy'), stdin, env(W) ) from 3
 
               return ''
             }
@@ -515,14 +515,14 @@ class ParamsInTest extends Specification {
 
         when:
         def process = parseAndReturnProcess(text)
-        SetInParam in0 = process.config.getInputs().get(0)
-        SetInParam in1 = process.config.getInputs().get(1)
-        SetInParam in2 = process.config.getInputs().get(2)
+        TupleInParam in0 = process.config.getInputs().get(0)
+        TupleInParam in1 = process.config.getInputs().get(1)
+        TupleInParam in2 = process.config.getInputs().get(2)
 
         then:
         process.config.getInputs().size() == 3
 
-        in0.name == '__$setinparam<0>'
+        in0.name == '__$tupleinparam<0>'
         in0.inChannel.val == 1
         in0.inner.size() == 3
         in0.inner.get(0) instanceof ValueInParam
@@ -873,8 +873,8 @@ class ParamsInTest extends Specification {
 
             process hola {
               input:
-              set path("hola_${x}") from q
-              set path({ "${x}_name.txt" }) from q
+              tuple path("hola_${x}") from q
+              tuple path({ "${x}_name.txt" }) from q
 
               return ''
             }
@@ -882,8 +882,8 @@ class ParamsInTest extends Specification {
 
         when:
         def process = parseAndReturnProcess(text)
-        SetInParam in1 = process.config.getInputs().get(0)
-        SetInParam in2 = process.config.getInputs().get(1)
+        TupleInParam in1 = process.config.getInputs().get(0)
+        TupleInParam in2 = process.config.getInputs().get(1)
         def ctx = [x:'the_file', str: 'fastq']
 
         then:
@@ -905,9 +905,9 @@ class ParamsInTest extends Specification {
         def text = '''
             process hola {
               input:
-              set( val(a), path(x) ) from 1
-              set( val(p), path('txt') ) from 2
-              set( val(v), path(xx:'yy') ) from 3
+              tuple( val(a), path(x) ) from 1
+              tuple( val(p), path('txt') ) from 2
+              tuple( val(v), path(xx:'yy') ) from 3
 
               return ''
             }
@@ -915,14 +915,14 @@ class ParamsInTest extends Specification {
 
         when:
         def process = parseAndReturnProcess(text)
-        SetInParam in0 = process.config.getInputs().get(0)
-        SetInParam in1 = process.config.getInputs().get(1)
-        SetInParam in2 = process.config.getInputs().get(2)
+        TupleInParam in0 = process.config.getInputs().get(0)
+        TupleInParam in1 = process.config.getInputs().get(1)
+        TupleInParam in2 = process.config.getInputs().get(2)
 
         then:
         process.config.getInputs().size() == 3
 
-        in0.name == '__$setinparam<0>'
+        in0.name == '__$tupleinparam<0>'
         in0.inChannel.val == 1
         in0.inner.size() == 2
         in0.inner.get(0) instanceof ValueInParam
@@ -1014,7 +1014,7 @@ class ParamsInTest extends Specification {
             process hola {
               input:
               val x from ch
-              set x, file(x) from ch
+              tuple x, file(x) from ch
 
               /command/
             }
@@ -1024,7 +1024,7 @@ class ParamsInTest extends Specification {
 
         def process = parseAndReturnProcess(text)
         def in0 = (ValueInParam)process.config.getInputs().get(0)
-        def in1 = (SetInParam)process.config.getInputs().get(1)
+        def in1 = (TupleInParam)process.config.getInputs().get(1)
 
         then:
         !in0.isNestedParam()
