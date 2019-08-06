@@ -121,8 +121,8 @@ class WrRestApiTest extends Specification {
 
         then:
         1 * client.postJson('/jobs/', [
-            [cmd:'exe one', cwd:'/my/work/dir', cwd_matters:true, rep_grp:'[nextflow] myprocess', req_grp:'[nextflow] myprocess', limit_grps:[], override:0, retries:0, rerun:true, cpus:1, memory:'', time:'', disk:0, mounts:[], on_exit:[[cleanup:true]]],
-            [cmd:'exe two', cwd:'/tmp', cwd_matters:false, rep_grp:'[nextflow] myprocess', req_grp:'[nextflow] myprocess', limit_grps:["myprocess:3"], override:2, retries:0, rerun:true, cpus:2, memory:'500M', time:'2h', disk:4, mounts:[[Mount:'.mnt/bucket/work', Targets:[[Path:'bucket/work', Write:true]]]], on_exit:[['cleanup':true]]]
+            [cmd:'exe one', cwd:'/my/work/dir', cwd_matters:true, rep_grp:'[nextflow] myprocess', req_grp:'[nextflow] myprocess', override:0, retries:0, rerun:true, cpus:1, memory:'', time:'', disk:0, mounts:[], on_exit:[[cleanup:true]]],
+            [cmd:'exe two', cwd:'/tmp', cwd_matters:false, rep_grp:'[nextflow] myprocess', req_grp:'[nextflow] myprocess', override:2, retries:0, rerun:true, cpus:2, memory:'500M', time:'2h', disk:4, mounts:[[Mount:'.mnt/bucket/work', Targets:[[Path:'bucket/work', Write:true]]]], on_exit:[['cleanup':true]]]
         ])
         1 * client.openConnection('https://localhost:12345/rest/v1/jobs/') >> HTTPS_CONN
         1 * client.authenticatedConnection('/jobs/')
