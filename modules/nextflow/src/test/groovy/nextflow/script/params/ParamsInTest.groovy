@@ -16,8 +16,7 @@
 
 package nextflow.script.params
 
-import spock.lang.Specification
-import spock.lang.Timeout
+import static test.TestParser.*
 
 import java.nio.file.Paths
 
@@ -25,7 +24,8 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
 import nextflow.processor.TaskProcessor
-import static test.TestParser.parseAndReturnProcess
+import spock.lang.Specification
+import spock.lang.Timeout
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -764,6 +764,273 @@ class ParamsInTest extends Specification {
         in3.inChannel.val == '3'
 
 
+    }
+
+
+    /*
+     * test path qualifier
+     */
+
+    def 'test input paths'() {
+        setup:
+        def FILE = '/data/file.txt'
+        def text = """
+            x = '$FILE'
+
+            process hola {
+              input:
+              path x
+              path f1 from x
+              path f2 name 'abc' from x
+              path f3:'*.fa' from x
+              path 'file.txt' from x
+
+              return ''
+            }
+            """
+
+        when:
+        def process = parseAndReturnProcess(text)
+        FileInParam in1 = process.config.getInputs().get(0)
+        FileInParam in2 = process.config.getInputs().get(1)
+        FileInParam in3 = process.config.getInputs().get(2)
+        FileInParam in4 = process.config.getInputs().get(3)
+        FileInParam in5 = process.config.getInputs().get(4)
+
+        then:
+        process.config.getInputs().size() == 5
+
+        in1.name == 'x'
+        in1.filePattern == '*'
+        in1.inChannel.val == FILE
+        in1.index == 0
+        in1.isPathQualifier()
+
+        in2.name == 'f1'
+        in2.filePattern == '*'
+        in2.inChannel.val == FILE
+        in2.index == 1
+        in2.isPathQualifier()
+
+        in3.name == 'f2'
+        in3.filePattern == 'abc'
+        in3.inChannel.val == FILE
+        in3.index == 2
+        in3.isPathQualifier()
+
+        in4.name == 'f3'
+        in4.filePattern == '*.fa'
+        in4.inChannel.val == FILE
+        in4.index == 3
+        in4.isPathQualifier()
+
+        in5.name == 'file.txt'
+        in5.filePattern == 'file.txt'
+        in5.inChannel.val == FILE
+        in5.index == 4
+        in5.isPathQualifier()
+    }
+
+    def 'test input paths with gstring'() {
+        setup:
+        def ctx = [x: 'main.txt', y: 'hello', z:'the_file_name']
+        def text = '''
+            q = 'file.txt'
+
+            process hola {
+              input:
+              path "$x" from q
+              path "${y}.txt" from "str"
+
+              return ''
+            }
+            '''
+
+        when:
+        def process = parseAndReturnProcess(text)
+        FileInParam in1 = process.config.getInputs().get(0)
+        FileInParam in2 = process.config.getInputs().get(1)
+
+        then:
+        process.config.getInputs().size() == 2
+
+        in1.name == '__$pathinparam<0>'
+        in1.getFilePattern(ctx) == 'main.txt'
+        in1.inChannel.val == 'file.txt'
+        in1.isPathQualifier()
+
+        in2.name == '__$pathinparam<1>'
+        in2.getFilePattern(ctx) == 'hello.txt'
+        in2.inChannel.val == "str"
+        in2.isPathQualifier()
+    }
+
+    def 'test set path with gstring'() {
+
+        setup:
+        def text = '''
+            q = '/the/file/path'
+
+            process hola {
+              input:
+              set path("hola_${x}") from q
+              set path({ "${x}_name.txt" }) from q
+
+              return ''
+            }
+            '''
+
+        when:
+        def process = parseAndReturnProcess(text)
+        SetInParam in1 = process.config.getInputs().get(0)
+        SetInParam in2 = process.config.getInputs().get(1)
+        def ctx = [x:'the_file', str: 'fastq']
+
+        then:
+        in1.inChannel.val == '/the/file/path'
+        in1.inner[0] instanceof FileInParam
+        (in1.inner[0] as FileInParam).getName() == '__$pathinparam<0:0>'
+        (in1.inner[0] as FileInParam).getFilePattern(ctx) == 'hola_the_file'
+        (in1.inner[0] as FileInParam).isPathQualifier()
+
+        in2.inner[0] instanceof FileInParam
+        (in2.inner[0] as FileInParam).name == '__$pathinparam<1:0>'
+        (in2.inner[0] as FileInParam).getFilePattern(ctx) == 'the_file_name.txt'
+        (in2.inner[0] as FileInParam).isPathQualifier()
+
+    }
+
+    def 'test input path with map'() {
+        setup:
+        def text = '''
+            process hola {
+              input:
+              set( val(a), path(x) ) from 1
+              set( val(p), path('txt') ) from 2
+              set( val(v), path(xx:'yy') ) from 3
+
+              return ''
+            }
+            '''
+
+        when:
+        def process = parseAndReturnProcess(text)
+        SetInParam in0 = process.config.getInputs().get(0)
+        SetInParam in1 = process.config.getInputs().get(1)
+        SetInParam in2 = process.config.getInputs().get(2)
+
+        then:
+        process.config.getInputs().size() == 3
+
+        in0.name == '__$setinparam<0>'
+        in0.inChannel.val == 1
+        in0.inner.size() == 2
+        in0.inner.get(0) instanceof ValueInParam
+        in0.inner.get(0).name == 'a'
+        in0.inner.get(0).mapIndex == 0
+        in0.inner.get(1) instanceof FileInParam
+        in0.inner.get(1).name == 'x'
+        in0.inner.get(1).filePattern == '*'
+        in0.inner.get(1).mapIndex == 1
+        in0.inner.get(1).isPathQualifier()
+
+        in1.inner.get(0) instanceof ValueInParam
+        in1.inner.get(0).name == 'p'
+        in1.inner.get(0).mapIndex == 0
+        in1.inner.get(1) instanceof FileInParam
+        in1.inner.get(1).name == 'txt'
+        in1.inner.get(1).filePattern == 'txt'
+        in1.inner.get(1).mapIndex == 1
+        in1.inner.get(1).isPathQualifier()
+
+        in2.inner.get(0) instanceof ValueInParam
+        in2.inner.get(0).name == 'v'
+        in2.inner.get(0).mapIndex == 0
+        in2.inner.get(1) instanceof FileInParam
+        in2.inner.get(1).name == 'xx'
+        in2.inner.get(1).filePattern == 'yy'
+        in2.inner.get(1).mapIndex == 1
+        in2.inner.get(1).isPathQualifier()
+
+    }
+
+
+    def 'test input each path'() {
+
+        setup:
+        def text = '''
+            x = 'aaa'
+            y = [1,2]
+
+            process hola {
+              input:
+              each path(foo) from foo_ch
+              each path('bar') from bar_ch
+
+              return ''
+            }
+            '''
+        when:
+
+        def binding =  [:]
+        binding.foo_ch = 'file-a.txt'
+        binding.bar_ch = 'file-x.fa'
+
+        def process = parseAndReturnProcess(text, binding)
+        def in0 = (EachInParam)process.config.getInputs().get(0)
+        def in1 = (EachInParam)process.config.getInputs().get(1)
+
+        then:
+        process.config.getInputs().size() == 2
+
+        in0.class == EachInParam
+        in0.name == '__$eachinparam<0>'
+        in0.inChannel instanceof DataflowVariable
+        in0.inChannel.val == ['file-a.txt']
+        in0.inner instanceof FileInParam
+        (in0.inner as FileInParam).name == 'foo'
+        (in0.inner as FileInParam).owner == in0
+        (in0.inner as FileInParam).isPathQualifier()
+
+        in1.class == EachInParam
+        in1.name == '__$eachinparam<1>'
+        in1.inChannel instanceof DataflowVariable
+        in1.inChannel.val == ['file-x.fa']
+        in1.inner instanceof FileInParam
+        (in1.inner as FileInParam).name == 'bar'
+        (in1.inner as FileInParam).filePattern == 'bar'
+        (in1.inner as FileInParam).owner == in1
+        (in1.inner as FileInParam).isPathQualifier()
+
+    }
+
+
+    def 'should check is tuple item' () {
+
+        setup:
+        def text = '''
+            ch = 'something'
+            
+            process hola {
+              input:
+              val x from ch
+              set x, file(x) from ch
+
+              /command/
+            }
+            '''
+        when:
+
+
+        def process = parseAndReturnProcess(text)
+        def in0 = (ValueInParam)process.config.getInputs().get(0)
+        def in1 = (SetInParam)process.config.getInputs().get(1)
+
+        then:
+        !in0.isNestedParam()
+        !in1.isNestedParam()
+        (in1.inner[0] as ValueInParam).isNestedParam()
+        (in1.inner[1] as FileInParam).isNestedParam()
     }
 
 }

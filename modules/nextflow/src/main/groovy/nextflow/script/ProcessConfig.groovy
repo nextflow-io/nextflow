@@ -443,6 +443,13 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         new FileInParam(this).bind(obj)
     }
 
+    InParam _in_path( Map opts=null, obj ) {
+        new FileInParam(this)
+                .setPathQualifier(true)
+                .setOptions(opts)
+                .bind(obj)
+    }
+
     InParam _in_each( obj ) {
         new EachInParam(this).bind(obj)
     }
@@ -476,6 +483,20 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
 
         else
             new FileOutParam(this).bind(obj)
+    }
+
+    OutParam _out_path( Map opts=null, Object obj ) {
+        // note: check that is a String type to avoid to force
+        // the evaluation of GString object to a string
+        if( obj instanceof String && obj == '-' ) {
+            new StdOutParam(this).bind(obj)
+        }
+        else {
+            new FileOutParam(this)
+                    .setPathQualifier(true)
+                    .setOptions(opts)
+                    .bind(obj)
+        }
     }
 
     OutParam _out_set( Object... obj ) {

@@ -5,7 +5,7 @@ process blastThemAll {
     echo true
 
     input:
-    file x 
+    path x
 
     """
     echo $x

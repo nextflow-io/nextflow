@@ -16,21 +16,25 @@
 
 package nextflow.script.params
 
-
+import spock.lang.Specification
 /**
- * Implements an optional file output option
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-trait OptionalParam {
+class FileInParamTest extends Specification {
 
-    boolean optional
+    def 'should set path flag' () {
 
-    boolean getOptional() { optional }
+        when:
+        def param = new FileInParam(Mock(Binding), [])
+        then:
+        !param.isPathQualifier()
 
-    def optional( boolean value ) {
-        this.optional = value
-        return this
+        when:
+        param.setPathQualifier(true)
+        then:
+        param.isPathQualifier()
     }
+    
 
 }

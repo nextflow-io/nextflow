@@ -16,21 +16,15 @@
 
 package nextflow.script.params
 
-
 /**
- * Implements an optional file output option
- *
+ * Path qualifier marker interface
+ * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-trait OptionalParam {
+interface PathQualifier {
 
-    boolean optional
+    def setPathQualifier(boolean flag)
 
-    boolean getOptional() { optional }
-
-    def optional( boolean value ) {
-        this.optional = value
-        return this
-    }
+    boolean isPathQualifier()
 
 }

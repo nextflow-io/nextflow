@@ -11,10 +11,10 @@ params.in = "$baseDir/data/sample.fa"
 process ampaTask {
 
     input:
-    file seq
+    path seq
 
     output:
-    file result
+    path 'result'
 
     // The BASH script to be executed - for each - sequence
     """
@@ -24,7 +24,7 @@ process ampaTask {
 }
 
 Channel.fromPath(params.in) |
-            splitFasta |
+            splitFasta(file:true) |
             ampaTask |
             view { it.text }
 

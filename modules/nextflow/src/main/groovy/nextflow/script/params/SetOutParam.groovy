@@ -18,6 +18,7 @@ package nextflow.script.params
 
 import groovy.transform.InheritConstructors
 import nextflow.script.TokenFileCall
+import nextflow.script.TokenPathCall
 import nextflow.script.TokenStdoutCall
 import nextflow.script.TokenValCall
 import nextflow.script.TokenVar
@@ -38,7 +39,7 @@ class SetOutParam extends BaseOutParam implements OptionalParam {
 
     SetOutParam bind( Object... obj ) {
 
-        obj.each { item ->
+        for( def item : obj ) {
             if( item instanceof TokenVar )
                 create(ValueOutParam).bind(item)
 
@@ -55,8 +56,17 @@ class SetOutParam extends BaseOutParam implements OptionalParam {
                 create(FileOutParam).bind(item)
 
             else if( item instanceof TokenFileCall )
-            // note that 'filePattern' can be a string or a GString
+                // note that 'filePattern' can be a string or a GString
                 create(FileOutParam).bind(item.target)
+
+            else if( item instanceof TokenPathCall ) {
+                // note that 'filePattern' can be a string or a GString
+                create(FileOutParam)
+                        .setPathQualifier(true)
+                        .setOptions(item.opts)
+                        .bind(item.target)
+            }
+
 
             else
                 throw new IllegalArgumentException("Invalid `set` output parameter declaration -- item: ${item}")
