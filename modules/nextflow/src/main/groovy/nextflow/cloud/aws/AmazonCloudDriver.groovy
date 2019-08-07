@@ -99,7 +99,7 @@ class AmazonCloudDriver implements CloudDriver {
     /**
      * The AWS session key credentials (optional)
      */
-    private String sessionKey
+    private String sessionToken
 
     /**
      * The AWS region eg. {@code eu-west-1}. If it's not specified the current region is retrieved from
@@ -130,15 +130,15 @@ class AmazonCloudDriver implements CloudDriver {
         if( config.accessKey && config.secretKey ) {
             this.accessKey = config.accessKey
             this.secretKey = config.secretKey
-            if (config.sessionKey){
-                this.sessionKey = config.sessionKey
+            if (config.sessionToken){
+                this.sessionToken = config.sessionToken
             }
         }
         else if( (credentials=Global.getAwsCredentials()) ) {
             this.accessKey = credentials[0]
             this.secretKey = credentials[1]
             if (credentials.size() == 3){
-                this.sessionKey = credentials[2]
+                this.sessionToken = credentials[2]
             }
         }
 
@@ -173,7 +173,7 @@ class AmazonCloudDriver implements CloudDriver {
     /**
      * @return The current set AWS session key
      */
-    protected String getSessionKey() { sessionKey }
+    protected String getsessionToken() { sessionToken }
 
     /**
      * Retrieve the current IAM role eventually define for a EC2 instance.
@@ -240,8 +240,8 @@ class AmazonCloudDriver implements CloudDriver {
         if( ec2Client )
             return ec2Client
 
-        def result = (accessKey && secretKey && sessionKey
-                ? new AmazonEC2Client(new BasicSessionCredentials(accessKey, secretKey, sessionKey))
+        def result = (accessKey && secretKey && sessionToken
+                ? new AmazonEC2Client(new BasicSessionCredentials(accessKey, secretKey, sessionToken))
                 : (accessKey && secretKey 
                     ? new AmazonEC2Client(new BasicAWSCredentials(accessKey, secretKey))
                     : new AmazonEC2Client()))
@@ -261,8 +261,8 @@ class AmazonCloudDriver implements CloudDriver {
      */
     @Memoized
     AWSBatchClient getBatchClient() {
-        def result = (accessKey && secretKey && sessionKey
-                ? new AWSBatchClient(new BasicSessionCredentials(accessKey, secretKey, sessionKey))
+        def result = (accessKey && secretKey && sessionToken
+                ? new AWSBatchClient(new BasicSessionCredentials(accessKey, secretKey, sessionToken))
                 : (accessKey && secretKey 
                     ? new AWSBatchClient(new BasicAWSCredentials(accessKey, secretKey))
                     : new AWSBatchClient()))
@@ -560,8 +560,8 @@ class AmazonCloudDriver implements CloudDriver {
         if( !cfg.instanceRole && accessKey && secretKey ) {
             profile += "export AWS_ACCESS_KEY_ID='$accessKey'\n"
             profile += "export AWS_SECRET_ACCESS_KEY='$secretKey'\n"
-            if (sessionKey){
-                profile += "export AWS_SESSION_TOKEN='$sessionKey'\n"
+            if (sessionToken){
+                profile += "export AWS_SESSION_TOKEN='$sessionToken'\n"
             }
         }
 
