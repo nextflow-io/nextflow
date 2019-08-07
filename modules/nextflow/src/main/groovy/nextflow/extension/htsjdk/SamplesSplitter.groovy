@@ -16,9 +16,24 @@
 
 package nextflow.splitter.extension.htsjdk
 
+import java.nio.charset.Charset
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
+
+import nextflow.splitter.AbstractTextSplitter
+
+import htsjdk.samtools.util.FileExtensions
+import htsjdk.samtools.SamReaderFactory
+import htsjdk.samtools.SAMFileHeader
+import htsjdk.samtools.SAMReadGroupRecord
+import htsjdk.samtools.ValidationStringency
+import htsjdk.variant.vcf.VCFFileReader
+import htsjdk.variant.vcf.VCFHeader
+
+
 /**
  * Split a text file by one or more lines at times
  *
@@ -27,16 +42,63 @@ import groovy.util.logging.Slf4j
 @Slf4j
 @CompileStatic
 @InheritConstructors
-class SampleSplitter extends AbstractTextSplitter {
-
-    private boolean keepHeader
-
-
+class SamplesSplitter extends AbstractTextSplitter {
+   /* wich fields to fetch when using the BAM */
+   private String rgAttributes = SAMReadGroupRecord.READ_GROUP_SAMPLE_TAG
+	
+   @Override
    protected Reader newReader( Path path, Charset charset ) {
-        //def source = newInputStream(path)
-	StringBuilder lines = new StringBuilder();
-	SAMRe        
-
+        final String pathStr = path.toString();
+        StringBuilder lines = new StringBuilder();
+		if( pathStr.endsWith(FileExtensions.SAM) ||
+			pathStr.endsWith(FileExtensions.BAM) ||
+			pathStr.endsWith(FileExtensions.CRAM)
+			)
+			{
+			def attributes = this.rgAttributes.split("[,]");
+			
+			final Set<String> samples = new LinkedHashSet<>();
+			final SAMFileHeader header = SamReaderFactory.
+				makeDefault().
+				validationStringency(ValidationStringency.SILENT).
+				getFileHeader(path);
+			for(final SAMReadGroupRecord rg:header.getReadGroups())
+				{
+				final StringBuilder line = new StringBuilder();
+				boolean found_one = false;
+				
+				for(final String rgAttribute: attributes) {
+					final String sn = rg.getAttribute( rgAttribute );
+					if (sn != null) found_one = true;
+					line.append(sn==null?"":sn).append("\t");
+					}
+				if(!found_one) continue;
+				line.append(pathStr);
+				samples.add(line.toString());
+				}
+			}
+		else  if(pathStr.endsWith(FileExtensions.VCF) ||
+			pathStr.endsWith(FileExtensions.COMPRESSED_VCF) ||
+			pathStr.endsWith(FileExtensions.BCF)
+			)
+			{
+			VCFFileReader vcfFileReader = null;
+			try {
+				vcfFileReader = new VCFFileReader(path, false);
+				final VCFHeader header = vcfFileReader.getFileHeader()
+				for(final String sn: header.getSampleNamesInOrder())
+					{
+					lines.append(sn).append('\t').append(pathStr).append('\n');
+					}
+				}
+			finally {
+				if (vcfFileReader!=null) vcfFileReader.close(); 
+				}
+			}
+		else
+			{
+			throw new IllegalArgumentException("file format is not supported. \"" + path + "\" is not a VCF/BAM/SAM/CRAM file.");
+			}
         new BufferedReader(new StringReader(lines.toString()))
     }
 
@@ -48,9 +110,9 @@ class SampleSplitter extends AbstractTextSplitter {
     }
 
     @Override
-    SamSplitter options(Map opts) {
+    SamplesSplitter options(Map opts) {
         super.options(opts)
-        this.keepHeader = opts.keepHeader == true
+        this.rgAttributes = opts.attribute
         return this
     }
 
@@ -63,28 +125,8 @@ class SampleSplitter extends AbstractTextSplitter {
     @Override
     protected fetchRecord(BufferedReader reader) {
         def line = reader.readLine()
-        if( line != null ) line+='\n'
-        return line
+        if( line == null ) null;
+        return line.split("[\t]");
     }
 
-    protected void parseHeader(Reader reader) {
-        if( !keepHeader )
-            return
-        
-        def line = reader.readLine()
-        if( line==null )
-            return
-
-        def collector = getCollector()
-        if( collector instanceof HeaderCollector ) {
-            collector.setHeader(line+'\n')
-        }
-    }
-
-    @Override
-    protected process( Reader targetObject ) {
-        final reader = wrapReader(targetObject)
-        parseHeader(reader)
-        super.process(reader)
-    }
 }

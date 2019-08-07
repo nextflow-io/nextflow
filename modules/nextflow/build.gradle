@@ -46,5 +46,5 @@ dependencies {
     compile ('org.yaml:snakeyaml:1.18')
     compile ('org.jsoup:jsoup:1.11.2')
     compile 'jline:jline:2.9'
-    compile ('com.github.samtools:htsjdk:jar:2.20.1')
+    compile ('com.github.samtools:htsjdk:2.20.1')
 }
