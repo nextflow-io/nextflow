@@ -311,8 +311,7 @@ class DAG {
 
     @PackageScope
     String getChannelName( ChannelHandler handler ) {
-        def result = handler.label
-        result ?: NF.lookupVariable(handler.channel)
+        NF.lookupVariable(handler.channel) ?: handler.label
     }
 
     void normalize() {
