@@ -1619,4 +1619,26 @@ class OperatorEx {
         countLines(source)
     }
 
+    /**
+     * Implement a `set` operator e.g.
+     * <pre>
+     *     SomeProcess.out | set { channelName }
+     * </pre>
+     *
+     * See also {@link ChannelEx#set(groovyx.gpars.dataflow.DataflowWriteChannel, groovy.lang.Closure)}
+     *
+     * @param source The channel instance to be bound in the context
+     * @param holder A closure defining a variable identifier
+     */
+    void set(DataflowReadChannel source, Closure holder) {
+        final name = CaptureProperties.capture(holder)
+        if( !name )
+            throw new IllegalArgumentException("Missing name to which set the channel variable")
+
+        if( name.size()>1 )
+            throw new IllegalArgumentException("Operation `set` does not allow more than one target name")
+
+        NF.binding.setVariable(name[0], source)
+    }
+
 }
