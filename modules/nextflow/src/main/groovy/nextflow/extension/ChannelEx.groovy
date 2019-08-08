@@ -41,29 +41,6 @@ import org.codehaus.groovy.runtime.InvokerHelper
 @CompileStatic
 class ChannelEx {
 
-    /**
-     * Assign the {@code source} channel to a global variable with the name specified by the closure.
-     * For example:
-     * <pre>
-     *     Channel.from( ... )
-     *            .map { ... }
-     *            .set { newChannelName }
-     * </pre>
-     *
-     * @param DataflowReadChannel
-     * @param holder A closure that must define a single variable expression
-     */
-    static void set(DataflowWriteChannel source, Closure holder) {
-        final name = CaptureProperties.capture(holder)
-        if( !name )
-            throw new IllegalArgumentException("Missing name to which set the channel variable")
-
-        if( name.size()>1 )
-            throw new IllegalArgumentException("Operation `set` does not allow more than one target name")
-
-        NF.binding.setVariable(name[0], source)
-    }
-
     static void set(ChannelArrayList source, Closure holder) {
         final names = CaptureProperties.capture(holder)
         if( names.size() > source.size() )

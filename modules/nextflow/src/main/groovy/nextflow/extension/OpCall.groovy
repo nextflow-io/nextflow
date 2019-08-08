@@ -33,6 +33,7 @@ class OpCall implements Callable {
     private Object[] args
     private Set inputs = new HashSet(5)
     private Set outputs = new HashSet<>(5)
+    boolean ignoreDagNode
 
     static OpCall create(String methodName, Object args) {
         new OpCall(methodName, InvokerHelper.asArray(args))
@@ -115,7 +116,8 @@ class OpCall implements Callable {
     protected Object invoke() {
         final DataflowReadChannel source = read0(source)
         final result = invoke0(source, read1(args))
-        addGraphNode(result)
+        if( !ignoreDagNode )
+            addGraphNode(result)
         return result
     }
 
