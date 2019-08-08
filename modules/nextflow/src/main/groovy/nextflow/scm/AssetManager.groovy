@@ -133,6 +133,10 @@ class AssetManager {
         localPath ? new File(localPath,'.git/config') : null
     }
 
+    @PackageScope AssetManager setProject(String name) {
+        this.project = name
+        return this
+    }
     /**
      * Sets the user credentials on the {@link RepositoryProvider} object
      *
@@ -376,6 +380,7 @@ class AssetManager {
         result.revisionInfo = getCurrentRevisionAndName()
         result.repository = getGitConfigRemoteUrl()
         result.localPath = localPath.toPath()
+        result.projectName = project
 
         return result
     }

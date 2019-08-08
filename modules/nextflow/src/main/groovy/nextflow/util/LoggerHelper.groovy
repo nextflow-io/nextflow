@@ -159,9 +159,10 @@ class LoggerHelper {
         packages[MAIN_PACKAGE] = quiet ? Level.WARN : Level.INFO
 
         // -- add the S3 uploader by default
-        if( !containsClassName(debugConf,traceConf, 'com.upplication.s3fs') ) {
+        if( !containsClassName(debugConf,traceConf, 'com.upplication.s3fs') )
             debugConf << S3_UPLOADER_CLASS
-        }
+        if( !containsClassName(debugConf,traceConf, 'io.seqera') )
+            debugConf << 'io.seqera'
 
         for( def it : debugConf ) {
             packages[it] = Level.DEBUG

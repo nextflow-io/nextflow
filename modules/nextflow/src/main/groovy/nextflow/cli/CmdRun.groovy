@@ -139,6 +139,9 @@ class CmdRun extends CmdBase implements HubOptions {
         launcher.options.ansiLog = value
     }
 
+    @Parameter(names = ['-with-tower'], description = 'Track execution with Seqera Tower service')
+    String withTower
+
     @Parameter(names = ['-with-weblog'], description = 'Send workflow status messages via HTTP to target URL')
     String withWebLog
 

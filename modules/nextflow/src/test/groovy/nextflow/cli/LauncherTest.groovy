@@ -187,6 +187,10 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run', '-', '-a', '-b') == ['run','-stdin', '-a', '-b']
         launcher.normalizeArgs('run') == ['run']
 
+        launcher.normalizeArgs('run','-with-tower') == ['run', '-with-tower', '-']
+        launcher.normalizeArgs('run','-with-tower', '-x') == ['run', '-with-tower', '-', '-x']
+        launcher.normalizeArgs('run','-with-tower', 'foo.com') == ['run', '-with-tower','foo.com']
+
         launcher.normalizeArgs('run','-with-trace') == ['run', '-with-trace','trace.txt']
         launcher.normalizeArgs('run','-with-trace', '-x') == ['run', '-with-trace','trace.txt', '-x']
         launcher.normalizeArgs('run','-with-trace', 'file.x') == ['run', '-with-trace','file.x']
