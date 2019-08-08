@@ -183,8 +183,8 @@ class GceApiHelperTest extends Specification {
 
     def 'should block until a GCE operation returns status "DONE"'() {
         given:
-        Compute.GlobalOperations globalOperations = Mock()
-        Compute compute = Mock(Compute)
+        def globalOperations = Mock(Compute.GlobalOperations)
+        def compute = Mock(Compute)
 
         def runningOp = new Operation().setStatus("RUNNING")
         def doneOp = new Operation().setStatus("DONE")
@@ -195,14 +195,10 @@ class GceApiHelperTest extends Specification {
         GceApiHelper helper = Spy(GceApiHelper,constructorArgs: [testProject,testZone,compute])
 
         when:
-        def ret = helper.blockUntilComplete(runningOp,100,10)
+        def ret = helper.blockUntilComplete(runningOp,1000,10)
         then:
-        (1.._) * globalOperations.get(_,_) >>{
-            computeGlobalOperations
-        }
-        (1.._) * compute.globalOperations() >> {
-            globalOperations
-        }
+        (1.._) * globalOperations.get(_,_) >> computeGlobalOperations
+        (1.._) * compute.globalOperations() >> globalOperations
         !ret
     }
 
