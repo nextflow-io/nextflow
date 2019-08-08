@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.splitter.extension.htsjdk
+package nextflow.splitter
 
 import nextflow.Channel
 import spock.lang.Specification
@@ -24,7 +24,7 @@ import test.TestHelper
  *
  * @author Pierre Lindenbaum PhD Institut du Thorax Nantes France.
  */
-class SamplesSplitter extends Specification {
+class SamplesSplitterTest extends Specification {
 
 
 }

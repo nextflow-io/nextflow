@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.splitter.extension.htsjdk
+package nextflow.splitter
 
 import java.nio.charset.Charset
 import java.nio.file.Path
@@ -22,8 +22,6 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
-
-import nextflow.splitter.AbstractTextSplitter
 
 import htsjdk.samtools.util.FileExtensions
 import htsjdk.samtools.SamReaderFactory
@@ -35,7 +33,7 @@ import htsjdk.variant.vcf.VCFHeader
 
 
 /**
- * Split a text file by one or more lines at times
+ * Extracts Samples from SAM/BAM/CRAM/VCF files
  *
  * @author Pierre Lindenbaum PhD Institut du Thorax Nantes France.
  */
@@ -49,10 +47,9 @@ class SamplesSplitter extends AbstractTextSplitter {
    @Override
    protected Reader newReader( Path path, Charset charset ) {
         final String pathStr = path.toString();
-        StringBuilder lines = new StringBuilder();
+        	List<String> lines = new ArrayList();
 		if( pathStr.endsWith(FileExtensions.SAM) ||
-			pathStr.endsWith(FileExtensions.BAM) ||
-			pathStr.endsWith(FileExtensions.CRAM)
+			pathStr.endsWith(FileExtensions.BAM) 
 			)
 			{
 			def attributes = this.rgAttributes.split("[,]");
@@ -76,6 +73,7 @@ class SamplesSplitter extends AbstractTextSplitter {
 				line.append(pathStr);
 				samples.add(line.toString());
 				}
+			for(final String sampleLine: samples) lines.add(sampleLine);
 			}
 		else  if(pathStr.endsWith(FileExtensions.VCF) ||
 			pathStr.endsWith(FileExtensions.COMPRESSED_VCF) ||
@@ -88,7 +86,7 @@ class SamplesSplitter extends AbstractTextSplitter {
 				final VCFHeader header = vcfFileReader.getFileHeader()
 				for(final String sn: header.getSampleNamesInOrder())
 					{
-					lines.append(sn).append('\t').append(pathStr).append('\n');
+					lines.add(sn + "\t" + pathStr);
 					}
 				}
 			finally {
@@ -99,7 +97,7 @@ class SamplesSplitter extends AbstractTextSplitter {
 			{
 			throw new IllegalArgumentException("file format is not supported. \"" + path + "\" is not a VCF/BAM/SAM/CRAM file.");
 			}
-        new BufferedReader(new StringReader(lines.toString()))
+        new BufferedReader(new StringReader(String.join("\n",lines)))
     }
 
     @Override
@@ -112,7 +110,7 @@ class SamplesSplitter extends AbstractTextSplitter {
     @Override
     SamplesSplitter options(Map opts) {
         super.options(opts)
-        this.rgAttributes = opts.attribute
+        if(opts.attribute) this.rgAttributes = opts.attribute;
         return this
     }
 
@@ -125,8 +123,7 @@ class SamplesSplitter extends AbstractTextSplitter {
     @Override
     protected fetchRecord(BufferedReader reader) {
         def line = reader.readLine()
-        if( line == null ) null;
-        return line.split("[\t]");
+        return line==null? null : line.split("[\t]");
     }
 
 }
