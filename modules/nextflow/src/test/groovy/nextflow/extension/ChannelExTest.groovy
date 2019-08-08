@@ -75,18 +75,4 @@ class ChannelExTest extends Specification {
     }
 
 
-    def 'should assign singleton channel to a new variable' () {
-        given:
-        def session = new Session()
-
-        when:
-        Channel.value('Hello').set { result }
-
-        then:
-        session.binding.result.val == 'Hello'
-        session.binding.result.val == 'Hello'
-        session.binding.result.val == 'Hello'
-
-    }
-
 }

@@ -1639,6 +1639,9 @@ class OperatorEx {
             throw new IllegalArgumentException("Operation `set` does not allow more than one target name")
 
         NF.binding.setVariable(name[0], source)
+        // do not add this nod in the DAG because it's not a real operator
+        // since it's not transforming the channel
+        OpCall.current.get().ignoreDagNode = true
     }
 
 }
