@@ -16,6 +16,8 @@
 
 package nextflow.cloud.google
 
+import java.util.concurrent.TimeoutException
+
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
@@ -172,7 +174,7 @@ class GceApiHelper {
             Thread.sleep(pollingIntervalMs)
             long elapsed = System.currentTimeMillis() - start
             if (elapsed >= timeoutMs) {
-                throw new InterruptedException("Timed out waiting for operation to complete")
+                throw new TimeoutException("Timed out waiting for operation to complete")
             }
             if (opZone != null) {
                 Compute.ZoneOperations.Get get = compute.zoneOperations().get(project, opZone, opId)
