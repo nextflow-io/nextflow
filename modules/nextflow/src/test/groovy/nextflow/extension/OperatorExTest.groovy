@@ -32,7 +32,7 @@ import spock.lang.Timeout
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Timeout(10)
-class OperatorExtTest extends Specification {
+class OperatorExTest extends Specification {
 
     def setupSpec() {
         new Session()
@@ -1384,6 +1384,35 @@ class OperatorExtTest extends Specification {
         result.val == 3
         result.val == Channel.STOP
 
+    }
+
+
+    def 'should assign singleton channel to a new variable' () {
+        given:
+        def session = new Session()
+
+        when:
+        Channel.value('Hello').set { result }
+
+        then:
+        session.binding.result.val == 'Hello'
+        session.binding.result.val == 'Hello'
+        session.binding.result.val == 'Hello'
+
+    }
+
+    def 'should assign queue channel to a new variable' () {
+        given:
+        def session = new Session()
+
+        when:
+        Channel.from(1,2,3).set { result }
+
+        then:
+        session.binding.result.val == 1
+        session.binding.result.val == 2
+        session.binding.result.val == 3
+        session.binding.result.val == Channel.STOP
     }
 
 }
