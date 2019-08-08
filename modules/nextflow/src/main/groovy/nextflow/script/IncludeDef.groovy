@@ -123,7 +123,7 @@ class IncludeDef {
         def module = resolveModulePath(include)
 
         // check if exists a file with `.nf` extension
-        if( !module.name.contains('.') ) {
+        if( !module.name.endsWith('.nf') ) {
             def extendedName = module.resolveSibling( "${module.simpleName}.nf" )
             if( extendedName.exists() )
                 return extendedName
