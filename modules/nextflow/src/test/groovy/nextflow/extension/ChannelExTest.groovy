@@ -1,5 +1,7 @@
 package nextflow.extension
 
+import nextflow.Session
+import nextflow.script.ChannelArrayList
 import spock.lang.Specification
 
 import nextflow.Channel
@@ -35,6 +37,55 @@ class ChannelExTest extends Specification {
         source = Channel.value(1).close()
         then:
         source.val == 1
+
+    }
+
+
+
+    def 'should assign multiple channels in the current binding' () {
+        given:
+        def session = new Session()
+        def ch1 = Channel.value('X')
+        def ch2 = Channel.value('Y')
+        def ch3 = Channel.value('Z')
+        def output = new ChannelArrayList([ch1, ch2, ch3])
+
+        when:
+        output.set { alpha; bravo; delta }
+
+        then:
+        session.binding.alpha.val == 'X'
+        session.binding.bravo.val == 'Y'
+        session.binding.delta.val == 'Z'
+
+        // should throw an exception because
+        // defines more channel variables
+        // then existing ones
+        when:
+        output.set { X; Y; W; Z }
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "Operation `set` expects 4 channels but only 3 are provided"
+
+        when:
+        output.set { ALPHA; ALPHA; BRAVO }
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == 'Duplicate channel definition: ALPHA'
+    }
+
+
+    def 'should assign singleton channel to a new variable' () {
+        given:
+        def session = new Session()
+
+        when:
+        Channel.value('Hello').set { result }
+
+        then:
+        session.binding.result.val == 'Hello'
+        session.binding.result.val == 'Hello'
+        session.binding.result.val == 'Hello'
 
     }
 

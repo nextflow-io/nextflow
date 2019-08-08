@@ -215,4 +215,23 @@ class ScriptPipesTest extends Specification {
 
     }
 
+    def 'should set a channel in the global context' () {
+        given:
+        def SCRIPT =  '''
+        Channel.from(1,2,3) | set { foo } 
+        Channel.value('hola') | set { bar } 
+        '''
+
+        when:
+        def runner = new MockScriptRunner()
+        runner.setScript(SCRIPT).execute()
+
+        then:
+        runner.session.binding.foo.val == 1
+        runner.session.binding.foo.val == 2
+        runner.session.binding.foo.val == 3
+        runner.session.binding.bar.value == 'hola'
+
+    }
+
 }

@@ -16,10 +16,6 @@
 
 package nextflow.extension
 
-import spock.lang.Ignore
-import spock.lang.Specification
-import spock.lang.Timeout
-
 import java.nio.file.Paths
 
 import groovyx.gpars.dataflow.DataflowBroadcast
@@ -28,8 +24,9 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
 import nextflow.Session
-import nextflow.script.ChannelArrayList
-
+import spock.lang.Ignore
+import spock.lang.Specification
+import spock.lang.Timeout
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -1360,54 +1357,6 @@ class OperatorExtTest extends Specification {
 
     }
 
-
-    def 'should assign multiple channels in the current binding' () {
-        given:
-        def session = new Session()
-        def ch1 = Channel.value('X')
-        def ch2 = Channel.value('Y')
-        def ch3 = Channel.value('Z')
-        def output = new ChannelArrayList([ch1, ch2, ch3])
-
-        when:
-        output.set { alpha; bravo; delta }
-        
-        then:
-        session.binding.alpha.val == 'X'
-        session.binding.bravo.val == 'Y'
-        session.binding.delta.val == 'Z'
-
-        // should throw an exception because
-        // defines more channel variables
-        // then existing ones
-        when:
-        output.set { X; Y; W; Z }
-        then:
-        def e = thrown(IllegalArgumentException)
-        e.message == "Operation `set` expects 4 channels but only 3 are provided"
-
-        when:
-        output.set { ALPHA; ALPHA; BRAVO }
-        then:
-        e = thrown(IllegalArgumentException)
-        e.message == 'Duplicate channel definition: ALPHA'
-    }
-
-
-    def 'should assign singleton channel to a new variable' () {
-        given:
-        def session = new Session()
-
-        when:
-        Channel.value('Hello').set { result }
-
-        then:
-        session.binding.result.val == 'Hello'
-        session.binding.result.val == 'Hello'
-        session.binding.result.val == 'Hello'
-
-    }
-
     def 'should always the same value' () {
 
         when:
@@ -1436,6 +1385,5 @@ class OperatorExtTest extends Specification {
         result.val == Channel.STOP
 
     }
-
 
 }
