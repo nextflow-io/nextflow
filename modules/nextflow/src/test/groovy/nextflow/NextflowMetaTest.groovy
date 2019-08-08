@@ -30,7 +30,7 @@ class NextflowMetaTest extends Specification {
         map.version == '10.12.0'
         map.build == 123
         map.preview.dsl == 2
-        dateToString(map.timestamp) == Const.APP_TIMESTAMP_UTC
+        dateToString((Date)map.timestamp) == Const.APP_TIMESTAMP_UTC
 
     }
 }

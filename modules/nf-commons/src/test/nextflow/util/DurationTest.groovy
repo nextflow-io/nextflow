@@ -16,6 +16,8 @@
 
 package nextflow.util
 
+import java.time.Instant
+
 import spock.lang.Specification
 
 /**
@@ -178,6 +180,17 @@ class DurationTest extends Specification {
         expect:
         !new Duration(0)
         new Duration(1)
+    }
+
+
+    def 'should validate duration between' () {
+
+        given:
+        def start = Instant.now()
+        def end = start.plusMillis(1000)
+
+        expect:
+        Duration.between(start, end) == Duration.of('1sec')
     }
 
 

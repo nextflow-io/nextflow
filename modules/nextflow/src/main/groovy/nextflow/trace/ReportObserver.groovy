@@ -15,14 +15,11 @@
  */
 
 package nextflow.trace
+
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.Callable
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Future
 
-import groovy.json.JsonOutput
 import groovy.text.GStringTemplateEngine
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -52,11 +49,6 @@ class ReportObserver implements TraceObserver {
     final private Map<TaskId,TraceRecord> records = new LinkedHashMap<>()
 
     /**
-     * Holds a report summary instance for each process group
-     */
-    final private Map<String,ReportSummary> summaries = new HashMap<>()
-
-    /**
      * Holds workflow session
      */
     private Session session
@@ -73,9 +65,9 @@ class ReportObserver implements TraceObserver {
     private int maxTasks = DEF_MAX_TASKS
 
     /**
-     * Executor service used to compute report summary stats
+     * Compute resources usage stats
      */
-    private ExecutorService executor
+    private ResourcesAggregator aggregator
 
     /**
      * Creates a report observer
@@ -129,7 +121,7 @@ class ReportObserver implements TraceObserver {
     @Override
     void onFlowStart(Session session) {
         this.session = session
-        this.executor = session.getExecService()
+        this.aggregator = new ResourcesAggregator(session)
     }
 
     /**
@@ -228,12 +220,7 @@ class ReportObserver implements TraceObserver {
      * @param record A {@link TraceRecord} object representing a task executed
      */
     protected void aggregate(TraceRecord record) {
-        def process = record.get('process') as String
-        def summary = summaries.get(process)
-        if( !summary ) {
-            summaries.put(process, summary=new ReportSummary())
-        }
-        summary.add(record)
+        aggregator.aggregate(record)
     }
 
     /**
@@ -244,48 +231,9 @@ class ReportObserver implements TraceObserver {
         r.size()<=maxTasks ? renderJsonData(r.values()) : 'null'
     }
 
-    /**
-     * @return The execution summary json
-     */
     protected String renderSummaryJson() {
-        final summary = computeSummary()
-        final result = JsonOutput.toJson(summary)
+        final result = aggregator.renderSummaryJson()
         log.debug "Execution report summary data:\n  ${result}"
-        return result
-    }
-
-    /**
-     * Compute the workflow process summary stats
-     *
-     * @return A {@link Map} holding the summary stats for each process
-     */
-    protected Map computeSummary() {
-
-        // summary stats can be expensive on big workflow
-        // speed-up the computation using a parallel
-        List<Callable<List>> tasks = []
-        summaries.keySet().each  { String process ->
-            final summary = summaries[process]
-            summary.names.each { String series ->
-                // the task execution turn a triple
-                tasks << { return [ process, series, summary.compute(series)] } as Callable<List>
-            }
-        }
-
-        // submit the parallel execution
-        final allResults = executor.invokeAll(tasks)
-
-        // compose the final result
-        def result = new HashMap(summaries.size())
-        allResults.each { Future<List> future ->
-            final triple = future.get()
-            final name = triple[0]      // the process name
-            final series = triple[1]    // the series name eg. `cpu`, `time`, etc
-            final summary = triple[2]   // the computed summary
-            final process = (Map)result.getOrCreate(name, [:])
-            process[series] = summary
-        }
-
         return result
     }
 
@@ -371,6 +319,5 @@ class ReportObserver implements TraceObserver {
         }
         writer.toString();
     }
-
 
 }

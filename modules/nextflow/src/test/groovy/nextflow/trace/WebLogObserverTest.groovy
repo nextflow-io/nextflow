@@ -76,6 +76,7 @@ class WebLogObserverTest extends Specification {
         given:
         def observer = Spy(WebLogObserver)
         def CLIENT = Mock(SimpleHttpClient)
+        observer.endpoint = 'http://foo.com'
         observer.httpClient = CLIENT
         observer.runName = 'foo'
         observer.runId = 'xyz'
@@ -83,12 +84,12 @@ class WebLogObserverTest extends Specification {
         def TRACE = new TraceRecord([hash: '4a4a4a', process: 'bar'])
 
         when:
-        observer.sendHttpMessage('started',  TRACE)
+        observer.sendHttpMessage('started', TRACE)
 
         then:
         1 * observer.logHttpResponse() >> null
-        1 * CLIENT.sendHttpMessage( _ as String ) >> { it ->
-            def message = (Map)new JsonSlurper().parseText((String)it[0])
+        1 * CLIENT.sendHttpMessage( 'http://foo.com', _ as String ) >> { it ->
+            def message = (Map)new JsonSlurper().parseText((String)it[1])
             assert message.runName == 'foo'
             assert message.runId == 'xyz'
             assert message.event == 'started'
