@@ -31,8 +31,9 @@ class ScriptPipesTest extends Specification {
               result = data.toUpperCase()
         } 
 
-        
-        Channel.from('Hello') | map { it.reverse() } | (foo & bar)
+        workflow {
+            Channel.from('Hello') | map { it.reverse() } | (foo & bar)
+        }
         '''
 
         when:
@@ -62,8 +63,9 @@ class ScriptPipesTest extends Specification {
               result = data.toUpperCase()
         } 
 
-        
-        Channel.from('Hola') | foo | map { it.reverse() } | bar
+        workflow {
+            Channel.from('Hola') | foo | map { it.reverse() } | bar
+        }
         '''
 
         when:
@@ -100,7 +102,9 @@ class ScriptPipesTest extends Specification {
         // execute `foo` process and pipe
         // the multiple output channels 
         // to the `bar` process receiving multiple inputs
-        Channel.from('hello') | foo | bar 
+        workflow {
+            Channel.from('hello') | foo | bar 
+        }
         '''
 
         when:
@@ -129,7 +133,9 @@ class ScriptPipesTest extends Specification {
         // execute `foo` process and 
         // pipe the multiple output channels 
         // to the `concat` operator
-        Channel.from('hola') | foo | concat 
+        workflow {
+            Channel.from('hola') | foo | concat 
+        }
         '''
 
         when:
@@ -181,7 +187,9 @@ class ScriptPipesTest extends Specification {
             Z = X.toUpperCase()  
         }
         
-        foo | bar
+        workflow {
+            foo | bar
+        }
         '''
 
         when:
@@ -203,7 +211,9 @@ class ScriptPipesTest extends Specification {
             Z = X*X
         }     
         
-        Channel.from(1,2,3) | square | collect 
+        workflow {
+            Channel.from(1,2,3) | square | collect 
+        }
         '''
 
         when:

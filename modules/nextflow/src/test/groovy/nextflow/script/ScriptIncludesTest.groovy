@@ -512,7 +512,7 @@ class ScriptIncludesTest extends Specification {
             /hello/ 
         }      
         
-        foo()
+        workflow { foo() } 
         '''
 
         SCRIPT.text = """ 
