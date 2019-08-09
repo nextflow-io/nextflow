@@ -41,8 +41,6 @@ import nextflow.Session
 import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.splitter.TextSplitter
-import nextflow.splitter.SamplesSplitter
-import nextflow.splitter.DictionarySplitter
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 import static DataflowHelper.chainImpl
@@ -1595,16 +1593,6 @@ class OperatorEx {
 
     DataflowWriteChannel splitFastq(DataflowReadChannel source, Map opts=null) {
         final result = new SplitOp( source, 'splitFastq', opts ).apply()
-        return result
-    }
-
-    DataflowWriteChannel splitSamples(DataflowReadChannel source, Map opts=null) {
-        final result = new SplitOp( source, 'splitSamples', opts ).apply()
-        return result
-    }
-
-    DataflowWriteChannel splitDictionary(DataflowReadChannel source, Map opts=null) {
-        final result = new SplitOp( source, 'splitDictionary', opts ).apply()
         return result
     }
 
