@@ -48,6 +48,7 @@ class HtsjdkUtils  {
      /* base class working on BAM/VCF/etc.. files */
     private static abstract class AbstractPathClosure
 	{
+	/** returns a List[ Map attributes ,Path original file ] */
 	protected abstract List applyPath(Path p);
 
 	public List apply(obj) {
@@ -104,7 +105,12 @@ class HtsjdkUtils  {
 				getFileHeader(path);
 		for(final SAMReadGroupRecord rg:header.getReadGroups())
 			{
-			rows.add([ rg.getAttributes() , path]);
+			def attributes = new HashMap<>();
+			for(def entry: rg.getAttributes()) {
+				attributes.put(entry.getKey(),entry.getValue());			
+				}
+			attributes.put("ID",rg.getId());
+			rows.add([attributes, path]);
 			}
 		return rows;
 		}
