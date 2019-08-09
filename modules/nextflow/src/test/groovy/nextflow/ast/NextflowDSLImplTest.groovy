@@ -1,7 +1,6 @@
 package nextflow.ast
 
 import nextflow.script.BaseScript
-import nextflow.script.ScriptMeta
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -92,31 +91,6 @@ class NextflowDSLImplTest extends Specification {
         then:
         def err = thrown(MultipleCompilationErrorsException)
         err.message.contains 'Identifier `alpha` is already used by another definition'
-    }
-
-
-    def 'should set process name in the script meta' () {
-        given:
-        def config = new CompilerConfiguration()
-        config.setScriptBaseClass(BaseScript.class.name)
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
-
-        def SCRIPT = '''
-                    
-            process alpha {
-              /hello/
-            }
-        
-            process beta {
-              /world/
-            }
-
-        '''
-
-        when:
-        def script = new GroovyShell(config).parse(SCRIPT)
-        then:
-        ScriptMeta.get(script).processNames == ['alpha','beta'] as Set
     }
 
 

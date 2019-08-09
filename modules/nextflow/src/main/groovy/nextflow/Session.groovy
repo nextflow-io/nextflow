@@ -57,6 +57,7 @@ import nextflow.script.ProcessConfig
 import nextflow.script.ProcessFactory
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptFile
+import nextflow.script.ScriptMeta
 import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.AnsiLogObserver
@@ -71,6 +72,7 @@ import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.NameGenerator
+import nextflow.util.VersionNumber
 import sun.misc.Signal
 import sun.misc.SignalHandler
 /**
@@ -767,6 +769,49 @@ class Session implements ISession {
     ExecutorService getExecService() { execService }
 
     /**
+     * Check preconditions before run the main script
+     */
+    protected void validate() {
+        checkConfig()
+        checkVersion()
+    }
+
+    @PackageScope void checkConfig() {
+        final names = ScriptMeta.current().getProcessNames()
+        validateConfig(names)
+    }
+
+    @PackageScope VersionNumber getCurrentVersion() {
+        new VersionNumber(APP_VER)
+    }
+
+    @PackageScope void checkVersion() {
+        def version = manifest.getNextflowVersion()?.trim()
+        if( !version )
+            return
+
+        // when the version string is prefix with a `!`
+        // an exception is thrown is the version does not match
+        boolean important = false
+        if( version.startsWith('!') ) {
+            important = true
+            version = version.substring(1).trim()
+        }
+
+        if( !getCurrentVersion().matches(version) ) {
+            important ? showVersionError(version) : showVersionWarning(version)
+        }
+    }
+
+    @PackageScope void showVersionError(String ver) {
+        throw new AbortOperationException("Nextflow version $Const.APP_VER does not match workflow required version: $ver")
+    }
+
+    @PackageScope void showVersionWarning(String ver) {
+        log.warn "Nextflow version $Const.APP_VER does not match workflow required version: $ver -- Execution will continue, but things may break!"
+    }
+
+    /**
      * Validate the config file
      *
      * @param processNames The list of process names defined in the pipeline script
@@ -943,6 +988,13 @@ class Session implements ISession {
         }
     }
 
+    void notifyBeforeWorkflowExecution() {
+        validate()
+    }
+
+    void notifyAfterWorkflowExecution() {
+
+    }
 
     /**
      * Notify a task failure

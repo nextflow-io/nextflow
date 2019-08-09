@@ -43,9 +43,9 @@ class ScriptMetaTest extends Specification {
         meta.getComponent('xxx') == null
         meta.getComponent('yyy') == null
 
-//        then:
-//        meta.getProcessNames() as Set == ['proc1','proc2'] as Set
-//
+        then:
+        meta.getProcessNames() as Set == ['proc1','proc2'] as Set
+
     }
 
     def 'should add imports' () {
