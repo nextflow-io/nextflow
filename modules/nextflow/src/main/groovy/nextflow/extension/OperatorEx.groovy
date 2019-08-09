@@ -1000,7 +1000,7 @@ class OperatorEx {
         checkParams('combine', params, [flat:Boolean, by: [List,Integer]])
 
         final op = new CombineOp(left,right)
-        final sources = op.inputs
+        OpCall.current.get().inputs.addAll(op.inputs)
         if( params?.by != null ) op.pivot = params.by
         final target = op.apply()
         return target
