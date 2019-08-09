@@ -31,9 +31,12 @@ process sort {
     """
 }
 
-Channel.fromPath(params.query) |
-        splitFasta( by: params.chunkSize, file:true ) |
-        blast |
-        collect |
-        sort |
-        subscribe { println it }
+
+workflow {
+    Channel.fromPath(params.query) |
+            splitFasta( by: params.chunkSize, file:true ) |
+            blast |
+            collect |
+            sort |
+            subscribe { println it }
+}

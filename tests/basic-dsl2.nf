@@ -40,8 +40,8 @@ process reverse {
     """
 }
 
-Channel.value(params.in) |
-        splitSequences |
-        reverse |
-        subscribe { println it }
+
+workflow {
+    splitSequences(params.in) | reverse | view
+}
 

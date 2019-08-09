@@ -14,4 +14,6 @@ process foo {
 }
 
 
-Channel.fromPath("$baseDir/data/p{1,2,3}.fa") | foo
+workflow {
+    Channel.fromPath("$baseDir/data/p{1,2,3}.fa") | foo
+}

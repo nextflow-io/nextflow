@@ -13,4 +13,6 @@ process sayHello {
 }
 
 
-Channel.from('Bojour', 'Ciao', 'Hello', 'Hola', 'Γεια σου') | sayHello
+workflow {
+    Channel.from('Bojour', 'Ciao', 'Hello', 'Hola', 'Γεια σου') | sayHello
+}

@@ -23,8 +23,10 @@ process ampaTask {
 
 }
 
-Channel.fromPath(params.in) |
+workflow {
+    Channel.fromPath(params.in) |
             splitFasta(file:true) |
             ampaTask |
             view { it.text }
+}
 

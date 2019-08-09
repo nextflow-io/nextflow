@@ -30,7 +30,9 @@ import nextflow.dag.NodeMarker
 import nextflow.exception.ScriptRuntimeException
 import nextflow.script.ChainableDef
 import nextflow.script.ChannelArrayList
+import nextflow.script.ComponentDef
 import nextflow.script.CompositeDef
+import nextflow.script.ExecutionStack
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Implements dataflow channel extension methods
@@ -119,9 +121,9 @@ class ChannelEx {
     static private void checkContext(String method, Object operand) {
         if( !NF.isDsl2() )
             throw new MissingMethodException(method, operand.getClass())
-        //
-        //if( !ExecutionStack.withinWorkflow() )
-        //    throw new IllegalArgumentException("Process invocation are only allowed within a workflow context")
+
+        if( operand instanceof ComponentDef && !ExecutionStack.withinWorkflow() )
+            throw new IllegalArgumentException("Process invocation are only allowed within a workflow context")
     }
 
     /**
@@ -132,7 +134,7 @@ class ChannelEx {
      * @return The channel resulting the pipe operation
      */
     static Object or(DataflowWriteChannel left, ChainableDef right) {
-        checkContext('or', left)
+        checkContext('or', right)
         return right.invoke_o(left)
     }
 
@@ -144,7 +146,7 @@ class ChannelEx {
      * @return The resulting channel object
      */
     static Object or(DataflowWriteChannel left, OpCall right) {
-        checkContext('or', left)
+        checkContext('or', right)
         return right.setSource(left).call()
     }
 
@@ -156,7 +158,7 @@ class ChannelEx {
      * @return The resulting channel object
      */
     static Object or(ChannelArrayList left, ChainableDef right) {
-        checkContext('or', left)
+        checkContext('or', right)
         return right.invoke_o(left)
     }
 
@@ -168,7 +170,7 @@ class ChannelEx {
      * @return The resulting channel object
      */
     static Object or(ChannelArrayList left, OpCall right) {
-        checkContext('or', left)
+        checkContext('or', right)
         if( right.args.size() )
             throw new ScriptRuntimeException("Process multi-output channel cannot be piped with operator ${right.methodName} for which argument is akready provided")
 
@@ -218,11 +220,13 @@ class ChannelEx {
 
     static CompositeDef and(ChainableDef left, ChainableDef right) {
         checkContext('and', left)
+        checkContext('and', right)
         return new CompositeDef().add(left).add(right)
     }
 
     static CompositeDef and(CompositeDef left, ChainableDef right) {
         checkContext('and', left)
+        checkContext('and', right)
         left.add(right)
     }
 

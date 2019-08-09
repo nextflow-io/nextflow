@@ -18,8 +18,11 @@ process foo {
 
 }
 
-Channel.fromPath("$baseDir/data/file\\[a-b\\].txt") | foo
+workflow {
+    Channel.fromPath("$baseDir/data/file\\[a-b\\].txt") | foo
 
-foo.out[0].println { "match: ${it.name}" }
-foo.out[1].println { "match: ${it.name}" }
-foo.out[2].println { "match: ${it.name}" }
+    foo.out[0].println { "match: ${it.name}" }
+    foo.out[1].println { "match: ${it.name}" }
+    foo.out[2].println { "match: ${it.name}" }
+}
+
