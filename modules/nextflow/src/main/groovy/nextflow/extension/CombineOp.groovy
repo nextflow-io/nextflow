@@ -90,7 +90,7 @@ class CombineOp {
 
     private Map handler(int index, DataflowWriteChannel target, AtomicInteger stopCount) {
 
-        def opts = [:]
+        def opts = new LinkedHashMap(2)
         opts.onNext = {
             if( pivot ) {
                 def pair = split(pivot, it)
