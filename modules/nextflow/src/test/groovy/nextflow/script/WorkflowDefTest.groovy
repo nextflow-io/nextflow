@@ -1,20 +1,23 @@
 package nextflow.script
 
-import spock.lang.Specification
-import spock.lang.Timeout
-
+import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.NextflowMeta
+import nextflow.Session
 import nextflow.ast.NextflowDSL
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
+import org.codehaus.groovy.runtime.typehandling.GroovyCastException
+import spock.lang.Specification
+import spock.lang.Timeout
 import test.MockScriptRunner
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @Timeout(5)
 class WorkflowDefTest extends Specification {
 
@@ -23,7 +26,22 @@ class WorkflowDefTest extends Specification {
 
     static abstract class TestScript extends BaseScript {
 
+        private injectSession() {
+            try {
+                def sess = binding.getSession()
+                if( !sess )
+                    return
+                def f = this.class.superclass.superclass.getDeclaredField('session')
+                f.setAccessible(true)
+                f.set(this, sess)
+            }
+            catch (GroovyCastException e) {
+                log.warn "Cant inject session - not a ScriptBinding context object"
+            }
+        }
+
         Object run() {
+            injectSession()
             runScript()
             return this
         }
@@ -92,7 +110,7 @@ class WorkflowDefTest extends Specification {
         '''
 
         when:
-        def binding = new ScriptBinding()
+        def binding = new ScriptBinding().setSession(Mock(Session))
         def script = (TestScript)new GroovyShell(binding, config).parse(SCRIPT).run()
         def meta = ScriptMeta.get(script)
         then:

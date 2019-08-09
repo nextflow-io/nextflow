@@ -16,6 +16,8 @@
 
 package nextflow.script
 
+import static nextflow.util.ConfigHelper.*
+
 import java.nio.file.Path
 
 import groovy.transform.CompileDynamic
@@ -23,14 +25,11 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
-import nextflow.Const
 import nextflow.Session
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.util.HistoryFile
-import nextflow.util.VersionNumber
-import static nextflow.util.ConfigHelper.parseValue
 /**
  * Run a nextflow script file
  *
@@ -126,8 +125,6 @@ class ScriptRunner {
         try {
             // parse the script
             parseScript(scriptFile)
-            // validate the config
-            validate()
             // run the code
             run()
             // await termination
@@ -232,48 +229,6 @@ class ScriptRunner {
         session.script = scriptParser.script
     }
 
-    /**
-     * Check preconditions before run the main script
-     */
-    protected void validate() {
-        checkConfig()
-        checkVersion()
-    }
-
-    @PackageScope void checkConfig() {
-        final names = ScriptMeta.get(scriptParser.script).getProcessNames()
-        session.validateConfig(names)
-    }
-
-    @PackageScope VersionNumber getCurrentVersion() {
-        new VersionNumber(Const.APP_VER)
-    }
-
-    @PackageScope void checkVersion() {
-        def version = session.manifest.getNextflowVersion()?.trim()
-        if( !version )
-            return
-
-        // when the version string is prefix with a `!`
-        // an exception is thrown is the version does not match
-        boolean important = false
-        if( version.startsWith('!') ) {
-            important = true
-            version = version.substring(1).trim()
-        }
-
-        if( !getCurrentVersion().matches(version) ) {
-            important ? showVersionError(version) : showVersionWarning(version)
-        }
-    }
-
-    @PackageScope void showVersionError(String ver) {
-        throw new AbortOperationException("Nextflow version $Const.APP_VER does not match workflow required version: $ver")
-    }
-
-    @PackageScope void showVersionWarning(String ver) {
-        log.warn "Nextflow version $Const.APP_VER does not match workflow required version: $ver -- Execution will continue, but things may break!"
-    }
 
     /**
      * Launch the Nextflow script execution

@@ -139,6 +139,7 @@ class NextflowDSLImpl implements ASTTransformation {
          *
          * @return The method invocation statement
          */
+        @Deprecated
         protected Statement makeSetProcessNamesStm() {
             final names = new ListExpression()
             for( String it: processNames ) {
@@ -165,6 +166,7 @@ class NextflowDSLImpl implements ASTTransformation {
          * 
          * @param node
          */
+        @Deprecated
         protected void injectMetadata(ClassNode node) {
             for( ConstructorNode constructor : node.getDeclaredConstructors() ) {
                 def code = constructor.getCode()
@@ -181,13 +183,6 @@ class NextflowDSLImpl implements ASTTransformation {
                 else
                     throw new IllegalStateException("Invalid constructor expression: $code")
             }
-        }
-
-        @Override
-        protected void visitObjectInitializerStatements(ClassNode node) {
-            if( node.getSuperClass().getName() == BaseScript.getName() )
-                injectMetadata(node)
-            super.visitObjectInitializerStatements(node)
         }
 
         @Override

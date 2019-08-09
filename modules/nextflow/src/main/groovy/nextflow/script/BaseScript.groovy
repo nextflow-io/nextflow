@@ -107,6 +107,12 @@ abstract class BaseScript extends Script implements ExecutionContext {
         }
     }
 
+    /**
+     * Workflow main entry point
+     *
+     * @param body The implementation body of the workflow
+     * @return The result of workflow execution
+     */
     protected workflow(TaskBody body) {
         if(!NF.isDsl2())
             throw new IllegalStateException("Module feature not enabled -- Set `nextflow.preview.dsl=2` to allow the definition of workflow components")
@@ -116,9 +122,13 @@ abstract class BaseScript extends Script implements ExecutionContext {
             return
         }
 
-        def workflow = new WorkflowDef(this, body)
+        // launch the execution
+        final workflow = new WorkflowDef(this, body)
         meta.addDefinition(workflow)
-        return workflow.invoke_a(EMPTY_ARGS)
+        session.notifyBeforeWorkflowExecution()
+        final result = workflow.invoke_a(EMPTY_ARGS)
+        session.notifyAfterWorkflowExecution()
+        return result
     }
 
     protected workflow(TaskBody body, String name, List<String> declaredInputs) {
