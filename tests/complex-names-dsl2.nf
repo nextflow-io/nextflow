@@ -45,4 +45,6 @@ process bar {
  * main flow
  */
 
-foo | mix | collect | bar
+workflow {
+    foo | mix | collect | bar
+}

@@ -21,9 +21,11 @@ process foo {
   """
 }
 
-foo("$baseDir/data/prot.fa")
+workflow {
+    foo("$baseDir/data/prot.fa")
 
-foo.out[0].view { "str: $it" }
-foo.out[1].view { "exp: $it" }
-foo.out[2].view { "x: $it" }
-foo.out[3].view { "y: $it" }
+    foo.out[0].view { "str: $it" }
+    foo.out[1].view { "exp: $it" }
+    foo.out[2].view { "x: $it" }
+    foo.out[3].view { "y: $it" }
+}

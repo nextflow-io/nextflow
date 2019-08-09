@@ -29,9 +29,11 @@ process makeFiles {
   /
 }
 
+workflow {
 
-Channel
-    .from( ['a', 'file1'], ['b','file2'] ) \
-    | touch \
-    | makeFiles \
-    | subscribe { println it }
+    Channel
+        .from( ['a', 'file1'], ['b','file2'] ) \
+        | touch \
+        | makeFiles \
+        | subscribe { println it }
+}

@@ -67,6 +67,8 @@ read_pairs = Channel.fromFilePairs( params.reads, checkIfExists: true )
 /*
  * main flow
  */
-buildIndex(params.genome)
-mapping(params.genome, buildIndex.out, read_pairs)
-makeTranscript(mapping.out)
+workflow {
+    buildIndex(params.genome)
+    mapping(params.genome, buildIndex.out, read_pairs)
+    makeTranscript(mapping.out)
+}

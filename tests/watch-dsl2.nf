@@ -20,11 +20,15 @@ process align {
 /*
  * main flow
  */
- 
-Channel
-    .watchPath(params.files, params.events) \
-    | align \
-    | subscribe {
-          println '------'
-          println it.text
-        }
+
+workflow {
+
+    Channel
+        .watchPath(params.files, params.events) \
+        | align \
+        | subscribe {
+              println '------'
+              println it.text
+            }
+
+}

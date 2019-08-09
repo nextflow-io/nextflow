@@ -14,6 +14,8 @@ process foo {
 }
 
 
-Channel.from(stdin) \
-        | splitFasta( by: params.chunkSize) \
-        | foo
+workflow {
+    Channel.from(stdin) \
+            | splitFasta( by: params.chunkSize) \
+            | foo
+}

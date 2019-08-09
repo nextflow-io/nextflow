@@ -43,8 +43,9 @@ process merge {
  * main flow
  */
 
-algn( ['alpha', 'gamma'], ['one', 'two', 'three'] ) \
-  | groupTuple \
-  | merge
+workflow {
+    algn( ['alpha', 'gamma'], ['one', 'two', 'three'] ) \
+      | groupTuple \
+      | merge
 
-
+}
