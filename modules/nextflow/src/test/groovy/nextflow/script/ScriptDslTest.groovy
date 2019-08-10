@@ -136,4 +136,27 @@ class ScriptDslTest extends Specification {
         err.message.contains('Duplicate entry workflow definition')
     }
 
+    def 'should apply operator to process result' () {
+        given:
+        def SCRIPT = '''
+        process hello {
+          output: val result
+          exec:
+            result = "Hello"
+        }     
+        
+        workflow {
+           hello_out = hello()
+           hello_out.map { it.toUpperCase()  }
+        }
+        '''
+
+        when:
+        def runner = new MockScriptRunner()
+        def result = runner.setScript(SCRIPT).execute()
+
+        then:
+        result.val == 'HELLO'
+    }
+
 }
