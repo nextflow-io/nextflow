@@ -47,3 +47,9 @@ dependencies {
     compile ('org.jsoup:jsoup:1.11.2')
     compile 'jline:jline:2.9'
 }
+
+
+test {
+    minHeapSize = "512m"
+    maxHeapSize = "2048m"
+}
