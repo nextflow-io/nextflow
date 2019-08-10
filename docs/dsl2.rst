@@ -301,7 +301,7 @@ The following methods are not allowed any more when using Nextflow DSL 2:
 * :ref:`channel-bind2`
 * :ref:`operator-close`
 * :ref:`operator-countby`
-* :ref:`operator-route`
+* route
 * :ref:`operator-separate`
 * :ref:`operator-into`
 * :ref:`operator-merge`
