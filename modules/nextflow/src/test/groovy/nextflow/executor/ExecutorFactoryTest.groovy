@@ -26,7 +26,7 @@ import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
 import nextflow.script.ScriptType
-import nextflow.script.TaskBody
+import nextflow.script.BodyDef
 import nextflow.util.ServiceName
 /**
  *
@@ -67,7 +67,7 @@ class ExecutorFactoryTest extends Specification {
         def NAME = "SLURM"
         def config = Mock(ProcessConfig)
         def session = Mock(Session)
-        def script = Mock(TaskBody)
+        def script = Mock(BodyDef)
         script.type >> ScriptType.SCRIPTLET
         def factory = Spy(ExecutorFactory)
         def clazz = SlurmExecutor.class

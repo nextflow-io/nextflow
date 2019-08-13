@@ -25,7 +25,7 @@ import nextflow.cloud.aws.batch.AwsBatchExecutor
 import nextflow.k8s.K8sExecutor
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptType
-import nextflow.script.TaskBody
+import nextflow.script.BodyDef
 import nextflow.util.ServiceDiscover
 import nextflow.util.ServiceName
 /**
@@ -144,7 +144,7 @@ class ExecutorFactory {
         throw new IllegalArgumentException("Specified argument is not a valid executor class: $executor")
     }
 
-    Executor getExecutor(String processName, ProcessConfig processConfig, TaskBody script, Session session ) {
+    Executor getExecutor(String processName, ProcessConfig processConfig, BodyDef script, Session session ) {
         // -- load the executor to be used
         def name = getExecutorName(processConfig,session) ?: DEFAULT_EXECUTOR
         def clazz = getExecutorClass(name)

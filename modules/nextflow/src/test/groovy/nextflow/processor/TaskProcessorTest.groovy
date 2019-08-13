@@ -35,7 +35,7 @@ import nextflow.file.FilePorter
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptType
-import nextflow.script.TaskBody
+import nextflow.script.BodyDef
 import nextflow.script.params.FileOutParam
 import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
@@ -50,7 +50,7 @@ class TaskProcessorTest extends Specification {
     static class DummyProcessor extends TaskProcessor {
 
         DummyProcessor(String name, Session session, BaseScript script, ProcessConfig taskConfig) {
-            super(name, new NopeExecutor(), session, script, taskConfig, new TaskBody({}, '..'))
+            super(name, new NopeExecutor(), session, script, taskConfig, new BodyDef({}, '..'))
         }
 
         @Override protected void createOperator() { }

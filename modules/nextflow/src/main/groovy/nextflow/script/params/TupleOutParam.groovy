@@ -33,9 +33,18 @@ class TupleOutParam extends BaseOutParam implements OptionalParam {
 
     enum CombineMode implements OutParam.Mode { combine }
 
-    final List<BaseOutParam> inner = []
+    protected List<BaseOutParam> inner = new ArrayList<>(10)
 
     String getName() { toString() }
+
+    TupleOutParam clone() {
+        final copy = (TupleOutParam)super.clone()
+        copy.inner = new ArrayList<>(10)
+        for( BaseOutParam p : inner ) {
+            copy.inner.add(p.clone())
+        }
+        return copy
+    }
 
     TupleOutParam bind(Object... obj ) {
 

@@ -22,7 +22,7 @@ import groovy.transform.InheritConstructors
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptBinding
-import nextflow.script.TaskBody
+import nextflow.script.BodyDef
 import nextflow.util.BlankSeparatedList
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -39,7 +39,7 @@ class TaskContextTest extends Specification {
         def taskConfig = new ProcessConfig([:])
         def processor = [:] as TaskProcessor
         processor.metaClass.getTaskConfig = { taskConfig }
-        processor.metaClass.getTaskBody = { new TaskBody(null,'source') }
+        processor.metaClass.getTaskBody = { new BodyDef(null,'source') }
         def str = 'Hola'
         def map = new TaskContext(processor, [:])
         map.alpha = 1

@@ -26,7 +26,8 @@ import nextflow.script.ProcessConfig
  */
 final class DefaultInParam extends ValueInParam {
 
-    @Override String getTypeName() { 'default' }
+    @Override
+    String getTypeName() { 'default' }
 
     DefaultInParam(ProcessConfig config) {
         super(config)

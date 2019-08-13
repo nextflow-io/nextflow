@@ -20,14 +20,12 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
-import groovy.util.logging.Slf4j
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Helper method to handle configuration object
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
 @CompileStatic
 class ConfigHelper {
 

@@ -18,7 +18,6 @@ package nextflow.script
 
 import java.nio.file.Files
 
-import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.NextflowMeta
 import nextflow.exception.DuplicateModuleIncludeException
 import spock.lang.Specification
@@ -100,9 +99,11 @@ class ScriptIncludesTest extends Specification {
               result = data.toUpperCase()
         }   
         
-        workflow alpha(data) {
-            foo(data)
-            bar(foo.output)
+        workflow alpha {
+            get: data
+            main: foo(data)
+                  bar(foo.output)
+            emit: bar.out
         }
         
         '''
@@ -111,7 +112,8 @@ class ScriptIncludesTest extends Specification {
         include "$MODULE" 
    
         workflow {
-            alpha('Hello')
+            main: alpha('Hello')
+            emit: alpha.out 
         }
         """
 
@@ -121,7 +123,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'HELLO MUNDO'
+        result[0].val == 'HELLO MUNDO'
         binding.variables.alpha == null
     }
 
@@ -152,13 +154,16 @@ class ScriptIncludesTest extends Specification {
         SCRIPT.text = """
         include "$MODULE"
 
-        workflow alpha(data) {
-            foo(data)
-            bar(foo.output)
+        workflow alpha {
+            get: data
+            main: foo(data)
+                  bar(foo.output)
+            emit: bar.out      
         }
    
         workflow {
-            alpha('Hello')
+            main: alpha('Hello')
+            emit: alpha.out 
         }
         """
 
@@ -168,7 +173,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'HELLO MUNDO'
+        result[0].val == 'HELLO MUNDO'
         !binding.hasVariable('alpha')
         !binding.hasVariable('foo')
         !binding.hasVariable('bar')
@@ -203,8 +208,9 @@ class ScriptIncludesTest extends Specification {
    
         data = 'Hello'
         workflow {
-            foo(data)
-            bar(foo.output)
+            main: foo(data)
+                  bar(foo.output)
+            emit: bar.out 
         }
         """
 
@@ -213,7 +219,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'HELLO MUNDO'
+        result[0].val == 'HELLO MUNDO'
     }
 
     def 'should gather process outputs' () {
@@ -246,6 +252,7 @@ class ScriptIncludesTest extends Specification {
             data = 'Hello'
             foo(data)
             bar(foo.output)
+            emit: bar.out 
         }
         """
 
@@ -255,7 +262,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'HELLO MUNDO'
+        result[0].val == 'HELLO MUNDO'
         !vars.containsKey('data')
         !vars.containsKey('foo')
         !vars.containsKey('bar')
@@ -281,7 +288,8 @@ class ScriptIncludesTest extends Specification {
         hello_ch = Channel.from('world')
         
         workflow {
-            foo(hello_ch)
+            main: foo(hello_ch)
+            emit: foo.out 
         }
         """
 
@@ -290,8 +298,8 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result instanceof DataflowReadChannel
-        result.val == 'echo Hello world'
+        result instanceof ChannelOut
+        result[0].val == 'echo Hello world'
 
         cleanup:
         folder?.deleteDir()
@@ -319,9 +327,10 @@ class ScriptIncludesTest extends Specification {
         include 'module.nf'
 
         workflow {
-            ch1 = Channel.from('world')
-            ch2 = Channel.value(['x', '/some/file'])
-            foo(ch1, ch2)
+          main: ch1 = Channel.from('world')
+                ch2 = Channel.value(['x', '/some/file'])
+                foo(ch1, ch2)
+          emit: foo.out  
         }
         """
 
@@ -330,8 +339,8 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result instanceof DataflowReadChannel
-        result.val == 'echo sample=world pairId=x reads=/some/file'
+        result instanceof ChannelOut
+        result[0].val == 'echo sample=world pairId=x reads=/some/file'
     }
 
 
@@ -371,15 +380,16 @@ class ScriptIncludesTest extends Specification {
         include 'module.nf'        
 
         workflow {
-            bar( foo('Ciao') )
+            main: bar( foo('Ciao') )
+            emit: bar.out
         }
         """
         def runner = new MockScriptRunner()
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result instanceof DataflowReadChannel
-        result.val == 'echo Ciao world'
+        result instanceof ChannelOut
+        result[0].val == 'echo Ciao world'
 
 
         when:
@@ -387,7 +397,8 @@ class ScriptIncludesTest extends Specification {
         include 'module.nf'        
         
         workflow {
-          (ch0, ch1) = foo('Ciao')
+          main: (ch0, ch1) = foo('Ciao')
+          emit: ch0; ch1
         }
         """
         runner = new MockScriptRunner()
@@ -422,7 +433,8 @@ class ScriptIncludesTest extends Specification {
         include "module.nf" params(foo:'Hello', bar: 'world')
             
         workflow { 
-            foo() 
+            main: foo()
+            emit: foo.out 
         }
         """
 
@@ -431,8 +443,8 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result instanceof DataflowReadChannel
-        result.val == 'echo Hello world'
+        result instanceof ChannelOut
+        result[0].val == 'echo Hello world'
         
     }
 
@@ -489,7 +501,8 @@ class ScriptIncludesTest extends Specification {
         include 'module.nf' params(x: 'Hola mundo')
         
         workflow {
-            return foo()
+            main: foo()
+            emit: foo.out
         }    
         """
 
@@ -498,7 +511,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result.val == 'echo Hola mundo'
+        result[0].val == 'echo Hola mundo'
     }
 
     def 'should not fail when invoking a process in a module' () {
@@ -665,7 +678,8 @@ class ScriptIncludesTest extends Specification {
         workflow {
             foo('Hello')
             bar('World')
-            return [ foo.output, bar.output ]
+            emit: foo.out
+            emit: bar.out
         }
         """
 
@@ -676,5 +690,59 @@ class ScriptIncludesTest extends Specification {
         then:
         result[0].val == 'HELLO'
         result[1].val == 'WORLD'
+    }
+
+
+    def 'should allow multiple use of the same process' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module.nf')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = '''
+            process producer {
+                output: stdout()
+                shell: "echo Hello"
+            }
+            
+            process consumer {
+                input: file "foo"
+                output: stdout()
+                shell:
+                "rev foo"
+            }
+            
+            process another_consumer {
+                input: file "foo"
+                output: stdout()
+                shell: "wc -w foo"
+            }
+            
+            workflow flow1 {
+                producer | consumer | view
+            }
+            
+            workflow flow2 {
+                producer | another_consumer | view
+            }
+            '''.stripIndent()
+
+        SCRIPT.text = """
+            include "$MODULE" 
+  
+            workflow { 
+              flow1()
+              flow2()
+            }
+
+            """
+
+        when:
+        def runner = new MockScriptRunner()
+        def result = runner.setScript(SCRIPT).execute()
+
+        then:
+       true
+
     }
 }

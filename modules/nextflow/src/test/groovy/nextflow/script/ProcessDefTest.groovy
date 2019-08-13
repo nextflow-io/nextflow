@@ -50,10 +50,10 @@ class ProcessDefTest extends Specification {
     def 'should clone a process with a new name - deprecated'() {
 
         given:
-        def proc = new ProcessDef(Mock(BaseScript), 'foo', Mock(ProcessConfig), Mock(TaskBody))
+        def proc = new ProcessDef(Mock(BaseScript), 'foo', Mock(ProcessConfig), Mock(BodyDef))
 
         when:
-        def copy = proc.withName('foo_alias')
+        def copy = proc.cloneWithName('foo_alias')
         then:
         copy.getName() == 'foo_alias'
 
@@ -67,7 +67,7 @@ class ProcessDefTest extends Specification {
         def proc = new ProcessDef(OWNER, BODY, 'foo')
 
         when:
-        def copy = proc.withName('foo_alias')
+        def copy = proc.cloneWithName('foo_alias')
         then:
         copy.getName() == 'foo_alias'
         copy.getOwner() == OWNER

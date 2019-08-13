@@ -45,20 +45,20 @@ class ProcessDef extends BindableDef implements ChainableDef {
 
     private ProcessConfig processConfig
 
-    private TaskBody taskBody
+    private BodyDef taskBody
 
-    private Closure rawBody
+    private Closure<BodyDef> rawBody
 
     private Object output
 
-    ProcessDef(BaseScript owner, Closure body, String name ) {
+    ProcessDef(BaseScript owner, Closure<BodyDef> body, String name ) {
         this.owner = owner
         this.rawBody = body
         this.name = name
     }
 
     @Deprecated
-    ProcessDef(BaseScript owner, String name, ProcessConfig config, TaskBody body) {
+    ProcessDef(BaseScript owner, String name, ProcessConfig config, BodyDef body) {
         this.owner = owner
         this.name = name
         this.taskBody = body
@@ -77,7 +77,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
         final copy = (Closure)rawBody.clone()
         copy.setResolveStrategy(Closure.DELEGATE_FIRST)
         copy.setDelegate(processConfig)
-        taskBody = copy.call() as TaskBody
+        taskBody = copy.call() as BodyDef
         processConfig.throwExceptionOnMissingProperty(false)
         if ( !taskBody )
             throw new ScriptRuntimeException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
@@ -96,7 +96,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
     }
 
     @Override
-    ProcessDef withName(String name) {
+    ProcessDef cloneWithName(String name) {
         def result = clone()
         result.@name = name
         return result
@@ -112,7 +112,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
 
     @Deprecated
     def getOutput() {
-        log.warn "Property output has been deprecated use `${name}.out` instead"
+        log.warn "Property `output` has been deprecated use `${name}.out` instead"
         output
     }
 
@@ -133,7 +133,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
 
     @Override
     Object run(Object[] args) {
-        final params = ChannelArrayList.spread(args)
+        final params = ChannelOut.spread(args)
 
         // sanity check
         if( params.size() != declaredInputs.size() )
@@ -175,9 +175,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
         final result = declaredOutputs.getChannels()
         assert result.size()>0, "Process output should contains at least one channel"
 
-        return output = (result.size()==1
-                ? output=result[0]
-                : new ChannelArrayList(result))
+        return output = new ChannelOut(result)
     }
 
 }

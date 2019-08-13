@@ -38,7 +38,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
     protected intoObj
 
-    private List<DataflowWriteChannel> outChannels = []
+    protected List<DataflowWriteChannel> outChannels = new ArrayList<>(10)
 
     protected OutParam.Mode mode = BasicMode.standard
 
@@ -51,6 +51,12 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
     BaseOutParam( ProcessConfig config ) {
         super(config.getOwnerScript().getBinding(), config.getOutputs())
+    }
+
+    Object clone() {
+        final copy = (BaseOutParam)super.clone()
+        copy.outChannels = new ArrayList<>(10)
+        return copy
     }
 
     void lazyInit() {
@@ -78,6 +84,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
     void lazyInitImpl( def target ) {
         def channel = null
         if( target instanceof TokenVar ) {
+            assert !NF.dsl2
             channel = outputValToChannel(target.name)
         }
         else if( target != null ) {

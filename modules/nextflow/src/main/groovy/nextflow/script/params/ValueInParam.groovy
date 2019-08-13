@@ -26,5 +26,8 @@ import groovy.transform.InheritConstructors
  */
 @InheritConstructors
 class ValueInParam extends BaseInParam {
-    @Override String getTypeName() { 'val' }
+
+    @Override
+    String getTypeName() { 'val' }
+
 }

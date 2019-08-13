@@ -65,6 +65,11 @@ class ExecutionStack {
         throw new IllegalStateException("Not a valid scope object: [${c.getClass().getName()}] $this")
     }
 
+    static WorkflowDef workflow() {
+        final ctx = current()
+        ctx instanceof WorkflowDef ? ctx : null
+    }
+
     static void push(ExecutionContext script) {
         stack.push(script)
     }
