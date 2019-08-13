@@ -29,7 +29,7 @@ import nextflow.NF
 import nextflow.dag.NodeMarker
 import nextflow.exception.ScriptRuntimeException
 import nextflow.script.ChainableDef
-import nextflow.script.ChannelArrayList
+import nextflow.script.ChannelOut
 import nextflow.script.ComponentDef
 import nextflow.script.CompositeDef
 import nextflow.script.ExecutionStack
@@ -43,17 +43,17 @@ import org.codehaus.groovy.runtime.InvokerHelper
 @CompileStatic
 class ChannelEx {
 
-    static void set(ChannelArrayList source, Closure holder) {
-        final names = CaptureProperties.capture(holder)
-        if( names.size() > source.size() )
-            throw new IllegalArgumentException("Operation `set` expects ${names.size()} channels but only ${source.size()} are provided")
-
-        for( int i=0; i<source.size(); i++ ) {
-            final ch = source[i]
-            final nm = names[i]
-            NF.binding.setVariable(nm, ch)
-        }
-    }
+//    static void set(ChannelOut source, Closure holder) {
+//        final names = CaptureProperties.capture(holder)
+//        if( names.size() > source.size() )
+//            throw new IllegalArgumentException("Operation `set` expects ${names.size()} channels but only ${source.size()} are provided")
+//
+//        for( int i=0; i<source.size(); i++ ) {
+//            final ch = source[i]
+//            final nm = names[i]
+//            NF.binding.setVariable(nm, ch)
+//        }
+//    }
 
     static DataflowWriteChannel dump(final DataflowWriteChannel source, Closure closure = null) {
         dump(source, Collections.emptyMap(), closure)
@@ -153,11 +153,11 @@ class ChannelEx {
     /**
      * Implements pipe operation between a multi-channels WITH a process or a sub-workflow
      *
-     * @param left A {@code ChannelArrayList} multi-channel object as left operand
+     * @param left A {@code ChannelOut} multi-channel object as left operand
      * @param right A {@code ChainableDef} object representing a process or sub-workflow call as right operand
      * @return The resulting channel object
      */
-    static Object or(ChannelArrayList left, ChainableDef right) {
+    static Object or(ChannelOut left, ChainableDef right) {
         checkContext('or', right)
         return right.invoke_o(left)
     }
@@ -165,19 +165,13 @@ class ChannelEx {
     /**
      * Implements pipe operation between a multi-channels WITH a operator
      *
-     * @param left A {@code ChannelArrayList} multi-channel object as left operand
+     * @param left A {@code ChannelOut} multi-channel object as left operand
      * @param right A {@code OpCall} object representing a operator call as right operand
      * @return The resulting channel object
      */
-    static Object or(ChannelArrayList left, OpCall right) {
+    static Object or(ChannelOut left, OpCall right) {
         checkContext('or', right)
-        if( right.args.size() )
-            throw new ScriptRuntimeException("Process multi-output channel cannot be piped with operator ${right.methodName} for which argument is akready provided")
-
-        right
-            .setSource(left[0] as DataflowWriteChannel)
-            .setArgs(left[1..-1] as Object[])
-            .call()
+        right.setSource(left).call()
     }
 
     /**
@@ -188,13 +182,14 @@ class ChannelEx {
      * @return The resulting channel object
      */
     static Object or(ChainableDef left, OpCall right) {
+        checkContext('or', left)
         def out = left.invoke_a(InvokerHelper.EMPTY_ARGS)
 
         if( out instanceof DataflowWriteChannel )
             return or((DataflowWriteChannel)out, right)
 
-        if( out instanceof ChannelArrayList )
-            return or((ChannelArrayList)out, right)
+        if( out instanceof ChannelOut )
+            return or((ChannelOut)out, right)
 
         throw new ScriptRuntimeException("Cannot pipe ${fmtType(out)} with ${fmtType(right)}")
     }
@@ -207,13 +202,16 @@ class ChannelEx {
      * @return
      */
     static Object or(ChainableDef left, ChainableDef right) {
+        checkContext('or', left)
+        checkContext('or', right)
+
         def out = left.invoke_a(InvokerHelper.EMPTY_ARGS)
 
         if( out instanceof DataflowWriteChannel )
             return or((DataflowWriteChannel)out, right)
 
-        if( out instanceof ChannelArrayList )
-            return or((ChannelArrayList)out, right)
+        if( out instanceof ChannelOut )
+            return or((ChannelOut)out, right)
 
         throw new ScriptRuntimeException("Cannot pipe ${fmtType(out)} with ${fmtType(right)}")
     }

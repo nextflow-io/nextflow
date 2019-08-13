@@ -12,6 +12,8 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.NF
 import nextflow.dag.NodeMarker
+import nextflow.exception.ScriptRuntimeException
+import nextflow.script.ChannelOut
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Represents an nextflow operation invocation
@@ -47,16 +49,40 @@ class OpCall implements Callable {
         assert owner
         assert method
         this.owner = owner
-        this.source = source
         this.methodName = method
-        this.args = args
+        this.args = ChannelOut.spread(args).toArray()
+        this.setSource(source)
     }
 
     OpCall(String method, Object[] args ) {
         assert method
         this.owner = OperatorEx.instance
         this.methodName = method
-        this.args = args
+        this.args = ChannelOut.spread(args).toArray()
+    }
+
+    OpCall setSource(ChannelOut left) {
+        if( left.size()==1 ) {
+            this.source = left[0] as DataflowWriteChannel
+            return this
+        }
+
+        if( args.size() )
+            throw new ScriptRuntimeException("Multi-channel output cannot be applied to operator ${methodName} for which argument is already provided")
+
+        source = left[0] as DataflowWriteChannel
+        args = left[1..-1] as Object[]
+        return this
+    }
+
+    OpCall setSource( obj ) {
+        if( obj instanceof ChannelOut )
+            return setSource(obj)
+        else if( obj instanceof DataflowWriteChannel)
+            return setSource(obj)
+        else
+            source = obj
+        return this
     }
 
     OpCall setSource(DataflowWriteChannel channel) {
@@ -227,13 +253,6 @@ class OpCall implements Callable {
         return false
     }
 
-    protected void defineArgsAs(List inputs, MetaMethod method) {
-        def types = method.getParameterTypes()
-        for( int i=1; i<types.length; i++ ) {
-            def t = types[i]
-            t.getClass().isAssignableFrom(DataflowReadChannel)
-        }
-    }
 
     protected Object invoke0(DataflowReadChannel channel, Object[] args) {
 

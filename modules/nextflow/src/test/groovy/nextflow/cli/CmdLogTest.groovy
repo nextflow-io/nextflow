@@ -23,7 +23,7 @@ import nextflow.script.ProcessConfig
 import nextflow.processor.TaskContext
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
-import nextflow.script.TaskBody
+import nextflow.script.BodyDef
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
 import nextflow.util.HistoryFile
@@ -55,7 +55,7 @@ class CmdLogTest extends Specification {
 
         // -- the processor mock
         def proc = Mock(TaskProcessor)
-        proc.getTaskBody() >> new TaskBody(null,'source')
+        proc.getTaskBody() >> new BodyDef(null,'source')
         proc.getConfig() >> new ProcessConfig([:])
 
         // -- the task context
@@ -122,7 +122,7 @@ class CmdLogTest extends Specification {
 
         // -- the processor mock
         def proc = Mock(TaskProcessor)
-        proc.getTaskBody() >> new TaskBody(null,'source')
+        proc.getTaskBody() >> new BodyDef(null,'source')
         proc.getConfig() >> new ProcessConfig([:])
 
         // -- the task context

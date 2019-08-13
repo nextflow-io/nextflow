@@ -10,6 +10,7 @@ import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.script.BaseScript
 import nextflow.script.ScriptRunner
 import nextflow.script.ScriptType
 
@@ -24,6 +25,13 @@ class MockScriptRunner extends ScriptRunner {
         setScript(script)
         return this
     }
+
+    MockScriptRunner invoke() {
+        execute()
+        return this
+    }
+
+    BaseScript getScript() { getScriptObj() }
 
 }
 

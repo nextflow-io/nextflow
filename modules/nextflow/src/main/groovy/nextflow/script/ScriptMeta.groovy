@@ -199,7 +199,7 @@ class ScriptMeta {
         }
 
         if( name != component.name ) {
-            imports.put(name, component.withName(name))
+            imports.put(name, component.cloneWithName(name))
         }
         else {
             imports.put(name, component)

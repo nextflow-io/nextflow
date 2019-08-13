@@ -61,7 +61,7 @@ class ProcessFactory {
      * @param taskBody The process task body
      * @return An instance of {@link nextflow.processor.TaskProcessor}
      */
-    protected TaskProcessor newTaskProcessor(String name, Executor executor, ProcessConfig config, TaskBody taskBody ) {
+    protected TaskProcessor newTaskProcessor(String name, Executor executor, ProcessConfig config, BodyDef taskBody ) {
         new TaskProcessor(name, executor, session, owner, config, taskBody)
     }
 
@@ -79,7 +79,7 @@ class ProcessFactory {
      * @return
      *      The {@code Processor} instance
      */
-    TaskProcessor createProcessor( String name, Closure body, Map options = null ) {
+    TaskProcessor createProcessor( String name, Closure<BodyDef> body ) {
         assert body
         assert config.process instanceof Map
 
@@ -103,10 +103,10 @@ class ProcessFactory {
         // Invoke the code block which will return the script closure to the executed.
         // As side effect will set all the property declarations in the 'taskConfig' object.
         processConfig.throwExceptionOnMissingProperty(true)
-        final copy = (Closure)body.clone()
+        final copy = (Closure<BodyDef>)body.clone()
         copy.setResolveStrategy(Closure.DELEGATE_FIRST)
         copy.setDelegate(processConfig)
-        final script = copy.call() as TaskBody
+        final script = copy.call()
         processConfig.throwExceptionOnMissingProperty(false)
         if ( !script )
             throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")

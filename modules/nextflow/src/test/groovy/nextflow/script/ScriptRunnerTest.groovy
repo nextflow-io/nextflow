@@ -23,11 +23,13 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
+import spock.lang.Timeout
 import test.TestParser
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(5)
 class ScriptRunnerTest extends Specification {
 
     def 'test process' () {

@@ -14,38 +14,16 @@
  * limitations under the License.
  */
 
-package nextflow.script
+package nextflow.exception
 
-import groovy.transform.CompileStatic
-import org.codehaus.groovy.runtime.InvokerHelper
+import groovy.transform.InheritConstructors
 
 /**
- * Models an abstract module component i.e. functions, processes
- * or (sub)workflow
- *
+ * Thrown when the same process is invoke more than one
+ * time in the same woekflow scope
+ * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CompileStatic
-abstract class ComponentDef implements Cloneable {
-
-    abstract String getType()
-
-    abstract String getName()
-
-    abstract ComponentDef cloneWithName(String name)
-
-    abstract Object invoke_a(Object[] args)
-
-    Object invoke_o(Object args) {
-        invoke_a(InvokerHelper.asArray(args))
-    }
-
-    String toString() {
-        "${this.getClass().getSimpleName()}[$type $name]"
-    }
-
-    String getSignature() {
-        "$type `$name`"
-    }
-
+@InheritConstructors
+class DuplicateProcessInvocation extends ProcessException {
 }

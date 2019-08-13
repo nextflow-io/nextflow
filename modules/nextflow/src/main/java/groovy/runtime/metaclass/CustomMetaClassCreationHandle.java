@@ -48,7 +48,21 @@ import org.slf4j.LoggerFactory;
  */
 public class CustomMetaClassCreationHandle extends MetaClassRegistry.MetaClassCreationHandle {
 
-    static final Logger log = LoggerFactory.getLogger(CustomMetaClassCreationHandle.class);
+    static final private String CHANNEL_OUT_LIST = "nextflow.script.ChannelOut";
+
+    static final private Logger log = LoggerFactory.getLogger(CustomMetaClassCreationHandle.class);
+
+    static final private Class<?> channelOutHolderClass;
+
+    static {
+        // this class needs to be referenced via reflection otherwise compilation fail
+        // since it requires AST transformation
+        try {
+            channelOutHolderClass = Class.forName(CHANNEL_OUT_LIST);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException("Missing core dependency: " + CHANNEL_OUT_LIST, e) ;
+        }
+    }
 
     protected MetaClass createNormalMetaClass(Class theClass, MetaClassRegistry registry) {
         MetaClass metaClass = super.createNormalMetaClass( theClass, registry );
@@ -65,11 +79,13 @@ public class CustomMetaClassCreationHandle extends MetaClassRegistry.MetaClassCr
         return metaClass;
     }
 
-    protected boolean isExtensionClass(Class theClass ) {
+    protected boolean isExtensionClass(Class theClass) {
         return  File.class == theClass ||
                 Path.class.isAssignableFrom(theClass) ||
                 DataflowBroadcast.class.isAssignableFrom(theClass) ||
-                DataflowReadChannel.class.isAssignableFrom(theClass);
+                DataflowReadChannel.class.isAssignableFrom(theClass) ||
+                channelOutHolderClass.isAssignableFrom(theClass)
+                ;
     }
 
 }

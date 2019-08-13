@@ -26,5 +26,8 @@ import groovy.transform.InheritConstructors
  */
 @InheritConstructors
 class EnvInParam extends BaseInParam {
-    @Override String getTypeName() { 'env' }
+
+    @Override
+    String getTypeName() { 'env' }
+
 }

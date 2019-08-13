@@ -49,7 +49,7 @@ class FunctionDefTest extends Specification {
 
         when:
         def func = new FunctionDef(script, f1)
-        def copy = func.withName('foo_alias')
+        def copy = func.cloneWithName('foo_alias')
         then:
         copy.name == 'foo_alias'
         copy.invoke_o() == "I'm foo"

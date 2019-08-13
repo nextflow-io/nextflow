@@ -25,7 +25,7 @@ import nextflow.processor.TaskProcessor
 import nextflow.script.BaseScript
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptParser
-import nextflow.script.TaskBody
+import nextflow.script.BodyDef
 /**
  * An helper class to parse nextflow script snippets
  *
@@ -75,7 +75,7 @@ class TestParser {
         }
 
         @Override
-        TaskProcessor newTaskProcessor( String name, Executor executor, ProcessConfig config, TaskBody taskBody ) {
+        TaskProcessor newTaskProcessor(String name, Executor executor, ProcessConfig config, BodyDef taskBody ) {
             new MockTaskProcessor(name, executor, session, script, config, taskBody)
         }
 

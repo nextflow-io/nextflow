@@ -38,6 +38,7 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.NF
 import nextflow.Session
+import nextflow.script.ChannelOut
 import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.splitter.TextSplitter
@@ -96,8 +97,8 @@ class OperatorEx {
     }
 
     @CompileStatic
-    boolean isExtension(Object instance, String name) {
-        if( instance instanceof DataflowReadChannel || instance instanceof DataflowBroadcast ) {
+    boolean isExtension(Object obj, String name) {
+        if( obj instanceof DataflowReadChannel || obj instanceof DataflowBroadcast || obj instanceof ChannelOut ) {
             return OPERATOR_NAMES.contains(name)
         }
         return false

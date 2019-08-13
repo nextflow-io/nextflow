@@ -212,12 +212,12 @@ class ScriptRunner {
                 ((List)result).add(read0(item))
             }
         }
-        else if( output instanceof ChannelArrayList ) {
-            def list = []
+        else if( output instanceof ChannelOut ) {
+            def list = new ArrayList(output.size())
             for( int i=0; i<output.size(); i++ ) {
-                list << read0(output[i])
+                list.add(read0(output[i]))
             }
-            result = new ChannelArrayList(list)
+            result = new ChannelOut(list)
         }
         else {
             result = read0(output)

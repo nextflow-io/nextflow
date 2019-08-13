@@ -23,7 +23,7 @@ import groovyx.gpars.dataflow.DataflowReadChannel
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface InParam {
+interface InParam extends Cloneable {
 
     String getName()
 

@@ -32,8 +32,12 @@ class ScriptPipesTest extends Specification {
         } 
 
         workflow {
-            Channel.from('Hello') | map { it.reverse() } | (foo & bar)
+            main: Channel.from('Hello') | map { it.reverse() } | (foo & bar)
+            emit:
+                foo.out
+                bar.out
         }
+        
         '''
 
         when:
@@ -64,7 +68,7 @@ class ScriptPipesTest extends Specification {
         } 
 
         workflow {
-            Channel.from('Hola') | foo | map { it.reverse() } | bar
+            emit: Channel.from('Hola') | foo | map { it.reverse() } | bar
         }
         '''
 
@@ -73,7 +77,7 @@ class ScriptPipesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'DLROW ALOH'
+        result[0].val == 'DLROW ALOH'
     }
 
     def 'should pipe multi-outputs with multi-inputs' () {
@@ -103,7 +107,7 @@ class ScriptPipesTest extends Specification {
         // the multiple output channels 
         // to the `bar` process receiving multiple inputs
         workflow {
-            Channel.from('hello') | foo | bar 
+            emit: Channel.from('hello') | foo | bar 
         }
         '''
 
@@ -112,7 +116,7 @@ class ScriptPipesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'olleh + HELLO'
+        result[0].val == 'olleh + HELLO'
     }
 
     def 'should pipe process with operator' () {
@@ -134,7 +138,7 @@ class ScriptPipesTest extends Specification {
         // pipe the multiple output channels 
         // to the `concat` operator
         workflow {
-            Channel.from('hola') | foo | concat 
+            emit: Channel.from('hola') | foo | concat 
         }
         '''
 
@@ -143,9 +147,9 @@ class ScriptPipesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'aloh'
-        result.val == 'HOLA'
-        result.val == 'hola'
+        result[0].val == 'aloh'
+        result[0].val == 'HOLA'
+        result[0].val == 'hola'
     }
 
 
@@ -159,7 +163,9 @@ class ScriptPipesTest extends Specification {
             X = "hola"
         }     
         
-        foo | map { it.reverse() }
+        workflow {
+            emit: foo | map { it.reverse() }
+        }
         '''
 
         when:
@@ -167,7 +173,7 @@ class ScriptPipesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'aloh'
+        result[0].val == 'aloh'
     }
 
 
@@ -188,7 +194,7 @@ class ScriptPipesTest extends Specification {
         }
         
         workflow {
-            foo | bar
+            emit: foo | bar
         }
         '''
 
@@ -197,7 +203,7 @@ class ScriptPipesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'HOLA'
+        result[0].val == 'HOLA'
     }
 
 
@@ -212,7 +218,7 @@ class ScriptPipesTest extends Specification {
         }     
         
         workflow {
-            Channel.from(1,2,3) | square | collect 
+            emit: Channel.from(1,2,3) | square | collect 
         }
         '''
 
@@ -221,7 +227,7 @@ class ScriptPipesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val.sort() == [1, 4, 9]
+        result[0].val.sort() == [1, 4, 9]
 
     }
 

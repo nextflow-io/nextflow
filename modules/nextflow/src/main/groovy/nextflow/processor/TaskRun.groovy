@@ -34,7 +34,7 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.script.ScriptType
-import nextflow.script.TaskBody
+import nextflow.script.BodyDef
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
@@ -617,9 +617,9 @@ class TaskRun implements Cloneable {
      * 2) extract the process code `source`
      * 3) assign the `script` code to execute
      *
-     * @param body A {@code TaskBody} object instance
+     * @param body A {@code BodyDef} object instance
      */
-    @PackageScope void resolve( TaskBody body ) {
+    @PackageScope void resolve(BodyDef body ) {
 
         // -- initialize the task code to be executed
         this.code = body.closure.clone() as Closure

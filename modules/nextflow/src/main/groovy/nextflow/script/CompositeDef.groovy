@@ -36,7 +36,7 @@ class CompositeDef extends ComponentDef implements ChainableDef {
 
     String getType() { 'composite' }
 
-    CompositeDef withName(String name) {
+    CompositeDef cloneWithName(String name) {
         throw new UnsupportedOperationException()
     }
 
@@ -52,7 +52,7 @@ class CompositeDef extends ComponentDef implements ChainableDef {
         for( def entry : elements )
             result[i++] = entry.invoke_a(args)
 
-        new ChannelArrayList(ChannelArrayList.spread(result))
+        new ChannelOut(ChannelOut.spread(result))
     }
 
     @Override

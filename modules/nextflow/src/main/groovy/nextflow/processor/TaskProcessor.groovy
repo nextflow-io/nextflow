@@ -68,7 +68,7 @@ import nextflow.file.FilePorter
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptType
-import nextflow.script.TaskBody
+import nextflow.script.BodyDef
 import nextflow.script.params.BasicMode
 import nextflow.script.params.EachInParam
 import nextflow.script.params.EnvInParam
@@ -144,7 +144,7 @@ class TaskProcessor {
     /**
      * The piece of code to be execute provided by the user
      */
-    protected TaskBody taskBody
+    protected BodyDef taskBody
 
     /**
      * The corresponding {@code DataflowProcessor} which will receive and
@@ -248,7 +248,7 @@ class TaskProcessor {
      * @param config
      * @param taskBody
      */
-    TaskProcessor( String name, Executor executor, Session session, BaseScript script, ProcessConfig config, TaskBody taskBody ) {
+    TaskProcessor(String name, Executor executor, Session session, BaseScript script, ProcessConfig config, BodyDef taskBody ) {
         assert executor
         assert session
         assert script
@@ -305,7 +305,7 @@ class TaskProcessor {
     /**
      * @return The user provided script block
      */
-    public TaskBody getTaskBody() { taskBody }
+    public BodyDef getTaskBody() { taskBody }
 
     /**
      * Launch the 'script' define by the code closure as a local bash script

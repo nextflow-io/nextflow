@@ -18,24 +18,25 @@ package nextflow.script
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
-import groovyx.gpars.dataflow.DataflowQueue
-import groovyx.gpars.dataflow.DataflowVariable
-import groovyx.gpars.dataflow.DataflowWriteChannel
-import nextflow.Channel
+import groovy.util.logging.Slf4j
+import nextflow.exception.MissingValueException
 import nextflow.extension.ChannelFactory
 /**
  * Models a script workflow component
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext {
 
     private String name
 
-    private TaskBody body
+    private BodyDef body
 
     private List<String> declaredInputs
+
+    private List<String> declaredOutputs
 
     private Set<String> variableNames
 
@@ -44,17 +45,27 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
     // -- following attributes are mutable and instance dependant
     // -- therefore should not be cloned
 
-    private output
+    private ChannelOut output
 
     private WorkflowBinding binding
 
-    WorkflowDef(BaseScript owner, TaskBody body, String name=null, List<String> inputs = Collections.emptyList() ) {
+    WorkflowDef(BaseScript owner, Closure<BodyDef> rawBody, String name=null) {
         this.owner = owner
-        this.body = body
         this.name = name
-        this.declaredInputs = inputs
+        // invoke the body resolving in/out params
+        final copy = (Closure<BodyDef>)rawBody.clone()
+        final resolver = new WorkflowParamsResolver()
+        copy.setResolveStrategy(Closure.DELEGATE_FIRST)
+        copy.setDelegate(resolver)
+        this.body = copy.call()
+        // now it can access the parameters
+        this.declaredInputs = new ArrayList<>(resolver.getGets().keySet())
+        this.declaredOutputs = new ArrayList<>(resolver.getEmits().keySet())
         this.variableNames = getVarNames0()
     }
+
+    /* ONLY FOR TESTING PURPOSE */
+    protected WorkflowDef() {}
 
     WorkflowDef clone() {
         final copy = (WorkflowDef)super.clone()
@@ -62,7 +73,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
         return copy
     }
 
-    WorkflowDef withName(String name) {
+    WorkflowDef cloneWithName(String name) {
         def result = clone()
         result.@name = name
         return result
@@ -74,11 +85,13 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
 
     WorkflowBinding getBinding() { binding }
 
-    Object getOutput() { output }
+    ChannelOut getOut() { output }
 
-    @PackageScope TaskBody getBody() { body }
+    @PackageScope BodyDef getBody() { body }
 
     @PackageScope List<String> getDeclaredInputs() { declaredInputs }
+
+    @PackageScope List<String> getDeclaredOutputs() { declaredOutputs }
 
     @PackageScope String getSource() { body.source }
 
@@ -99,7 +112,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
 
 
     protected void collectInputs(Binding context, Object[] args) {
-        final params = ChannelArrayList.spread(args)
+        final params = ChannelOut.spread(args)
         if( params.size() != declaredInputs.size() )
             throw new IllegalArgumentException("Workflow `$name` declares ${declaredInputs.size()} input channels but ${params.size()} were specified")
 
@@ -110,60 +123,40 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
         }
     }
 
-    protected Object collectOutputs(Object output) {
-        if( output==null )
-            return asChannel(null, true)
+    protected ChannelOut collectOutputs(List<String> emissions) {
+        final channels = new LinkedHashMap<String, ?>(emissions.size())
+        for( String name : emissions ) {
+            if( !binding.hasVariable(name) )
+                throw new MissingValueException("Missing workflow output parameter: $name")
+            final obj = binding.getVariable(name)
 
-        if( output instanceof ChannelArrayList )
-            return output
+            if( ChannelFactory.isChannel(obj) ) {
+                channels.put(name, obj)
+            }
 
-        if( output instanceof DataflowWriteChannel )
-            return output
+            else if( obj instanceof ChannelOut ) {
+                if( obj.size()>1 )
+                    throw new IllegalArgumentException("Cannot emit a multi-channel output: $name")
+                if( obj.size()==0 )
+                    throw new MissingValueException("Cannot emit empty output: $name")
+                channels.put(name, obj.get(0))
+            }
 
-        if( !(output instanceof List) ) {
-            return asChannel(output, true)
-        }
-
-        def result = asChannel(ChannelArrayList.spread(output))
-        if( result.size()==0 )
-            return null
-        if( result.size()==1 )
-            return result[0]
-        return result
-    }
-
-    private List asChannel(List list) {
-        final allScalar = ChannelFactory.allScalar(list)
-        for( int i=0; i<list.size(); i++ ) {
-            def el = list[i]
-            if( !ChannelFactory.isChannel(el) ) {
-                list[i] = asChannel(el, allScalar)
+            else {
+                final value = ChannelFactory.create(true)
+                value.bind(obj)
+                channels.put(name, value)
             }
         }
-        return list
+        return new ChannelOut(channels)
     }
 
-    private DataflowWriteChannel asChannel(Object x, boolean var) {
-        if( var ) {
-            def result = new DataflowVariable()
-            result.bind(x)
-            return result
-        }
 
-        final result = new DataflowQueue()
-        if( x != null ) {
-            result.bind(x)
-            result.bind(Channel.STOP)
-        }
-        return result
-    }
-
-    
     Object run(Object[] args) {
         binding = new WorkflowBinding(owner)
         ExecutionStack.push(this)
         try {
-            run0(args)
+            return run0(args)
         }
         finally {
             ExecutionStack.pop()
@@ -176,9 +169,30 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
         final closure = body.closure
         closure.delegate = binding
         closure.setResolveStrategy(Closure.DELEGATE_FIRST)
-        final result = closure.call()
+        closure.call()
         // collect the workflow outputs
-        output = collectOutputs(result)
+        return output = collectOutputs(declaredOutputs)
     }
 
+}
+
+/**
+ * Hold workflow parameters
+ */
+@CompileStatic
+class WorkflowParamsResolver implements GroovyInterceptable {
+
+    Map<String,Object> gets = new LinkedHashMap<>(10)
+    Map<String,Object> emits = new LinkedHashMap<>(10)
+
+    @Override
+    def invokeMethod(String name, Object args) {
+        if( name.startsWith('_get_') )
+            gets.put(name.substring(5), args)
+        else if( name.startsWith('_emit_') )
+            emits.put(name.substring(6), args)
+        else
+            throw new IllegalArgumentException("Unknown workflow parameter definition: $name")
+
+    }
 }

@@ -31,6 +31,8 @@ class StdInParam extends BaseInParam {
 
     String getName() { '-' }
 
-    @Override String getTypeName() { 'stdin' }
+    @Override
+    String getTypeName() { 'stdin' }
+
 }
 

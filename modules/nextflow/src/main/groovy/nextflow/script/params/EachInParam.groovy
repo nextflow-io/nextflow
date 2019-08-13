@@ -38,9 +38,18 @@ class EachInParam extends BaseInParam {
 
     @Override String getTypeName() { 'each' }
 
-    private List<InParam> inner = []
+    private List<BaseInParam> inner = []
 
     String getName() { '__$'+this.toString() }
+
+    Object clone() {
+        final copy = (EachInParam)super.clone()
+        copy.@inner = new ArrayList<>(inner.size())
+        for( BaseInParam p : inner ) {
+            copy.@inner.add((BaseInParam)p.clone())
+        }
+        return copy
+    }
 
     EachInParam bind( def obj ) {
         final nested = createNestedParam(obj)

@@ -1,18 +1,106 @@
 package nextflow.script
 
-import spock.lang.Specification
 
 import nextflow.NextflowMeta
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
+import spock.lang.Specification
+import spock.lang.Timeout
 import test.MockScriptRunner
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(5)
 class ScriptDslTest extends Specification {
 
     def setupSpec() { NextflowMeta.instance.enableDsl2() }
     def cleanupSpec() { NextflowMeta.instance.disableDsl2() }
+
+    def 'should execute basic workflow' () {
+        given:
+        def SCRIPT = '''
+   
+        workflow {
+            emit: result 
+            main:
+            result = 'Hello world'
+        }
+        '''
+
+        when:
+        def runner = new MockScriptRunner()
+        def result = runner.setScript(SCRIPT).execute()
+
+        then:
+        result[0].val == 'Hello world'
+
+    }
+
+    def 'should execute emit' () {
+        given:
+        def SCRIPT = '''
+   
+        workflow {
+            emit:
+            result = 'Hello world'
+        }
+        '''
+
+        when:
+        def runner = new MockScriptRunner()
+        def result = runner.setScript(SCRIPT).execute()
+
+        then:
+        result[0].val == 'Hello world'
+
+    }
+
+    def 'should emit expression' () {
+        given:
+        def SCRIPT = '''
+         
+        def foo() { 'Hello world' } 
+       
+        workflow {
+            emit:
+            foo().toUpperCase()
+        }
+        '''
+
+        when:
+        def runner = new MockScriptRunner()
+        def result = runner.setScript(SCRIPT).execute()
+
+        then:
+        result[0].val == 'HELLO WORLD'
+
+    }
+
+    def 'should emit process out' () {
+        given:
+        def SCRIPT = '''
+         
+        process foo {
+          output: val x 
+          exec: x = 'Hello'
+        }
+       
+        workflow {
+            main: foo()
+            emit: foo.out
+        }
+        '''
+
+        when:
+        def runner = new MockScriptRunner()
+        def result = runner.setScript(SCRIPT).execute()
+
+        then:
+        result[0].val == 'Hello'
+
+    }
+
+
 
     def 'should define processes and workflow' () {
         given:
@@ -31,13 +119,22 @@ class ScriptDslTest extends Specification {
               result = data.toUpperCase()
         }   
         
-        workflow alpha(data) {
-            foo(data)
-            bar(foo.output)
+        workflow alpha {
+            get: 
+                data
+            
+            main:
+                foo(data)
+                bar(foo.out)
+                
+            emit: 
+                x = bar.out 
+            
         }
    
         workflow {
-           alpha('Hello')
+            main: alpha('Hello') 
+            emit: x = alpha.out 
         }
         '''
 
@@ -46,7 +143,7 @@ class ScriptDslTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'HELLO MUNDO'
+        result[0].val == 'HELLO MUNDO'
     }
 
 
@@ -146,8 +243,8 @@ class ScriptDslTest extends Specification {
         }     
         
         workflow {
-           hello_out = hello()
-           hello_out.map { it.toUpperCase()  }
+           main: hello()
+           emit: hello.out.map { it.toUpperCase()  }
         }
         '''
 
@@ -156,7 +253,7 @@ class ScriptDslTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result.val == 'HELLO'
+        result[0].val == 'HELLO'
     }
 
 }

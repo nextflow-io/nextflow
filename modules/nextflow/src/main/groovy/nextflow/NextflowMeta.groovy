@@ -26,7 +26,7 @@ class NextflowMeta {
             if( num != 2 && num != 1 )
                 throw new IllegalArgumentException("Not a valid DSL version number: $num")
             if( num == 2 )
-                log.warn "DSL 2 IS AN EXPERIMENTAL FEATURE UNDER DEVELOPMENT -- SYNTAX MAY CHANGE IN FUTURE RELEASE"
+                log.warn1 "DSL 2 IS AN EXPERIMENTAL FEATURE UNDER DEVELOPMENT -- SYNTAX MAY CHANGE IN FUTURE RELEASE"
             dsl = num
         }
     }

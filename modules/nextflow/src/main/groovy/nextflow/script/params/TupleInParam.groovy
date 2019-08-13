@@ -32,9 +32,19 @@ import nextflow.script.TokenVar
 @InheritConstructors
 class TupleInParam extends BaseInParam {
 
-    final List<InParam> inner = []
+    protected List<BaseInParam> inner = []
 
     @Override String getTypeName() { 'set' }
+
+    @Override
+    TupleInParam clone() {
+        final copy = (TupleInParam)super.clone()
+        copy.@inner = new ArrayList<>(inner.size())
+        for( BaseInParam p : inner ) {
+            copy.@inner.add((BaseInParam)p.clone())
+        }
+        return copy
+    }
 
     String getName() { '__$'+this.toString() }
 

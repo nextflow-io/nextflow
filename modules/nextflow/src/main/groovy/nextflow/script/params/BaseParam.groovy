@@ -31,7 +31,7 @@ abstract class BaseParam implements Cloneable {
      */
     final protected Binding binding
 
-    final protected List<BaseParam> holder
+    protected List<BaseParam> holder
 
     /**
      * The param declaration index in the input/output block
@@ -70,6 +70,13 @@ abstract class BaseParam implements Cloneable {
 
         // add the the param to the holder list
         holder.add(this)
+    }
+
+    @Override
+    Object clone() {
+        final copy = (BaseParam)super.clone()
+        copy.holder = this.holder!=null ? new ArrayList<BaseParam>(holder) : new ArrayList<BaseParam>()
+        return copy
     }
 
     String toString() {
@@ -133,4 +140,5 @@ abstract class BaseParam implements Cloneable {
     boolean isNestedParam() {
         return mapIndex >= 0
     }
+
 }
