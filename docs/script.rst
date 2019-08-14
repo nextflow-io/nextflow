@@ -795,7 +795,7 @@ The file method ``delete`` deletes the file or directory at the given path, retu
 operation succeeds, and ``false`` otherwise::
 
   myFile = file('some/file.txt')
-  result = myFile.delete
+  result = myFile.delete()
   println result ? "OK" : "Can delete: $myFile"
 
 
