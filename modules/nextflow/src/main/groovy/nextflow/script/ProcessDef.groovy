@@ -112,7 +112,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
 
     @Deprecated
     def getOutput() {
-        log.warn "Property `output` has been deprecated use `${name}.out` instead"
+        log.warn1 "Property `output` has been deprecated use `${name}.out` instead"
         output
     }
 
