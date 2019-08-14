@@ -73,8 +73,6 @@ class Channel  {
      */
     @Deprecated
     static DataflowChannel create() {
-        if( NF.isDsl2() )
-            throw new DeprecationException("Channel `create` method is not supported any more")
         log.warn("The channel `create` method is deprecated -- it will be removed in a future release")
         new DataflowQueue()
     }

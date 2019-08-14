@@ -455,7 +455,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     }
 
     InParam _in_set( Object... obj ) {
-        if( NF.isDsl2() ) log.warn "Input of type `set` is deprecated -- Use `tuple` instead"
+        if( NF.isDsl2() ) log.warn1 "Input of type `set` is deprecated -- Use `tuple` instead"
         new TupleInParam(this).bind(obj)
     }
 

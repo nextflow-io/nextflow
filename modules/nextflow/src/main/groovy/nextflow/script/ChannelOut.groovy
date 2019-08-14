@@ -16,17 +16,33 @@
 
 package nextflow.script
 
-import static nextflow.ast.NextflowDSLImpl.*
-
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import static nextflow.ast.NextflowDSLImpl.OUT_PREFIX
 /**
  * Models the output of a process or a workflow component returning
  * more than one output channels
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class ChannelOut implements List {
+
+    final private static Map<String,Integer> NUMS = new HashMap<>(10)
+
+    static {
+        NUMS['first'] = 0
+        NUMS['second'] = 1
+        NUMS['third'] = 2
+        NUMS['fourth'] = 3
+        NUMS['fifth'] = 4
+        NUMS['sixth'] = 5
+        NUMS['seventh'] = 6
+        NUMS['eighth'] = 7
+        NUMS['ninth'] = 8
+        NUMS['tenth'] = 9
+    }
 
     @Delegate List target
 
@@ -50,31 +66,18 @@ class ChannelOut implements List {
     Set<String> getNames() { channels.keySet().findAll { !it.startsWith(OUT_PREFIX) }  }
 
     def getProperty(String name) {
-        if( channels.containsKey(name) )
+        if( channels.containsKey(name) ) {
             return channels.get(name)
+        }
+        else if(NUMS.containsKey(name)) {
+            // this has been deprecated
+            final i = NUMS[name]
+            log.warn1 "Property `out.${name}` has been deprecated -- Use `out[$i]` instead"
+            return target[i]
+        }
         else
             metaClass.getProperty(this,name)
     }
-
-    def getFirst() { target[0] }
-
-    def getSecond() { target[1] }
-
-    def getThird() { target[2] }
-
-    def getFourth() { target[3] }
-
-    def getFifth() { target[4] }
-
-    def getSixth() { target[5] }
-
-    def getSeventh() { target[6] }
-
-    def getEighth() { target[7] }
-
-    def getNinth() { target[8] }
-
-    def getTenth() { target[9] }
 
     /**
      * Helper method that `spread`
