@@ -199,25 +199,25 @@ class NextflowDSLImpl implements ASTTransformation {
                 final arg = allArgs[0]
                 final newArgs = new ArgumentListExpression()
                 if( arg instanceof ConstantExpression ) {
-                    newArgs.addExpression( newObj(IncludeDef, arg) )
+                    newArgs.addExpression( createX(IncludeDef, arg) )
                 }
                 else if( arg instanceof VariableExpression ) {
                     // the name of the component i.e. process, workflow, etc to import
                     final component = arg.getName()
                     // wrap the name in a `TokenVar` type
-                    final token = newObj(TokenVar, new ConstantExpression(component))
+                    final token = createX(TokenVar, new ConstantExpression(component))
                     // create a new `IncludeDef` object
-                    newArgs.addExpression(newObj(IncludeDef, token))
+                    newArgs.addExpression(createX(IncludeDef, token))
                 }
                 else if( arg instanceof CastExpression && arg.getExpression() instanceof VariableExpression) {
                     def cast = (CastExpression)arg
                     // the name of the component i.e. process, workflow, etc to import
                     final component = (cast.expression as VariableExpression).getName()
                     // wrap the name in a `TokenVar` type
-                    final token = newObj(TokenVar, new ConstantExpression(component))
+                    final token = createX(TokenVar, new ConstantExpression(component))
                     // the alias to give it
                     final alias = constX(cast.type.name)
-                    newArgs.addExpression( newObj(IncludeDef, token, alias) )
+                    newArgs.addExpression( createX(IncludeDef, token, alias) )
                 }
                 else {
                     syntaxError(call, "Not a valid include definition -- it must specify the module path as a string")
@@ -620,10 +620,10 @@ class NextflowDSLImpl implements ASTTransformation {
 
             // the closure expression is wrapped itself into a TaskClosure object
             // in order to capture the closure source other than the closure code
-            def newArgs = []
+            List<Expression> newArgs = []
             newArgs << closure
             newArgs << new ConstantExpression(source.toString())
-            def whenObj = newObj( TaskClosure, newArgs as Object[] )
+            def whenObj = createX( TaskClosure, newArgs )
 
             // creates a method call expression for the method `when`
             def method = new MethodCallExpression(VariableExpression.THIS_EXPRESSION, 'when', whenObj)
@@ -641,7 +641,7 @@ class NextflowDSLImpl implements ASTTransformation {
          */
         private Expression makeScriptWrapper( ClosureExpression closure, CharSequence source, String section, SourceUnit unit ) {
 
-            final newArgs = []
+            final List<Expression> newArgs = []
             newArgs << (closure)
             newArgs << ( new ConstantExpression(source.toString()) )
             newArgs << ( new ConstantExpression(section) )
@@ -651,11 +651,11 @@ class NextflowDSLImpl implements ASTTransformation {
                 def pName = new ConstantExpression(var.name)
                 def pLine = new ConstantExpression(var.lineNum)
                 def pCol = new ConstantExpression(var.colNum)
-                newArgs << newObj( TokenValRef, pName, pLine, pCol )
+                newArgs << createX( TokenValRef, pName, pLine, pCol )
             }
 
             // invokes the BodyDef constructor
-            newObj( BodyDef, newArgs as Object[] )
+            createX( BodyDef, newArgs )
         }
 
         /**
@@ -705,7 +705,7 @@ class NextflowDSLImpl implements ASTTransformation {
                         readSource(closure.getCode(), source, unit)
 
                         // wrap the closure expression by a TaskClosure object invocation
-                        def wrap = newObj( TaskClosure, closure, new ConstantExpression(source.toString()) )
+                        def wrap = createX( TaskClosure, closure, new ConstantExpression(source.toString()) )
                         // replace it with the original closure argument
                         args.expressions.set(0, wrap)
                     }
@@ -820,7 +820,7 @@ class NextflowDSLImpl implements ASTTransformation {
                  *
                  */
                 else if( methodName == 'name' && isWithinMethod(expression, 'file') ) {
-                    varToConst(methodCall.getArguments())
+                    varToConstX(methodCall.getArguments())
                 }
 
                 // invoke on the next method call
@@ -903,7 +903,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 //   output: val({ obj.foo })
                     wrapPropertyToClosure((ArgumentListExpression)methodCall.getArguments())
                 else
-                    varToConst(methodCall.getArguments())
+                    varToConstX(methodCall.getArguments())
 
             } finally {
                 withinTupleMethod = false
@@ -945,10 +945,10 @@ class NextflowDSLImpl implements ASTTransformation {
         }
 
 
-        protected Expression varToStr( Expression expr ) {
+        protected Expression varToStrX( Expression expr ) {
             if( expr instanceof VariableExpression ) {
                 def name = ((VariableExpression) expr).getName()
-                return newObj( TokenVar, new ConstantExpression(name) )
+                return createX( TokenVar, new ConstantExpression(name) )
             }
             else if( expr instanceof PropertyExpression ) {
                 // transform an output declaration such
@@ -962,7 +962,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 def i = 0
                 def list = expr.getExpressions()
                 for( Expression item : list ) {
-                    list[i++] = varToStr(item)
+                    list[i++] = varToStrX(item)
                 }
 
                 return expr
@@ -971,7 +971,7 @@ class NextflowDSLImpl implements ASTTransformation {
             return expr
         }
 
-        protected Expression varToConst( Expression expr ) {
+        protected Expression varToConstX( Expression expr ) {
 
             if( expr instanceof VariableExpression ) {
                 // when it is a variable expression, replace it with a constant representing
@@ -985,17 +985,17 @@ class NextflowDSLImpl implements ASTTransformation {
                  *    tuple( stdin, .. ) from q
                  */
                 if( name == 'stdin' && withinTupleMethod )
-                    return newObj( TokenStdinCall )
+                    return createX( TokenStdinCall )
 
                 /*
                  * input:
                  *    tuple( stdout, .. )
                  */
                 else if ( name == 'stdout' && withinTupleMethod )
-                    return newObj( TokenStdoutCall )
+                    return createX( TokenStdoutCall )
 
                 else
-                    return newObj( TokenVar, new ConstantExpression(name) )
+                    return createX( TokenVar, new ConstantExpression(name) )
             }
 
             if( expr instanceof MethodCallExpression ) {
@@ -1008,12 +1008,12 @@ class NextflowDSLImpl implements ASTTransformation {
                  *   tuple( file(fasta:'*.fa'), .. ) from q
                  */
                 if( methodCall.methodAsString == 'file' && (withinTupleMethod || withinEachMethod) ) {
-                    def args = (TupleExpression) varToConst(methodCall.arguments)
-                    return newObj( TokenFileCall, args )
+                    def args = (TupleExpression) varToConstX(methodCall.arguments)
+                    return createX( TokenFileCall, args )
                 }
                 else if( methodCall.methodAsString == 'path' && (withinTupleMethod || withinEachMethod) ) {
-                    def args = (TupleExpression) varToConst(methodCall.arguments)
-                    return newObj( TokenPathCall, args )
+                    def args = (TupleExpression) varToConstX(methodCall.arguments)
+                    return createX( TokenPathCall, args )
                 }
 
                 /*
@@ -1021,8 +1021,8 @@ class NextflowDSLImpl implements ASTTransformation {
                  *  tuple( env(VAR_NAME) ) from q
                  */
                 if( methodCall.methodAsString == 'env' && withinTupleMethod ) {
-                    def args = (TupleExpression) varToStr(methodCall.arguments)
-                    return newObj( TokenEnvCall, args )
+                    def args = (TupleExpression) varToStrX(methodCall.arguments)
+                    return createX( TokenEnvCall, args )
                 }
 
                 /*
@@ -1030,8 +1030,8 @@ class NextflowDSLImpl implements ASTTransformation {
                  *   tuple val(x), .. from q
                  */
                 if( methodCall.methodAsString == 'val' && withinTupleMethod ) {
-                    def args = (TupleExpression) varToStr(methodCall.arguments)
-                    return newObj( TokenValCall, args )
+                    def args = (TupleExpression) varToStrX(methodCall.arguments)
+                    return createX( TokenValCall, args )
                 }
 
             }
@@ -1041,7 +1041,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 def i = 0
                 def list = expr.getExpressions()
                 for( Expression item : list )  {
-                    list[i++] = varToConst(item)
+                    list[i++] = varToConstX(item)
                 }
                 return expr
             }
@@ -1056,7 +1056,7 @@ class NextflowDSLImpl implements ASTTransformation {
          * @param args The arguments to be passed to the constructor
          * @return The instance for the constructor call
          */
-        protected Expression newObj( Class clazz, TupleExpression args ) {
+        protected Expression createX(Class clazz, TupleExpression args ) {
             def type = new ClassNode(clazz)
             return new ConstructorCallExpression(type,args)
         }
@@ -1069,9 +1069,15 @@ class NextflowDSLImpl implements ASTTransformation {
          * @param args The arguments to be passed to the constructor, they will be wrapped by in a {@code ArgumentListExpression}
          * @return The instance for the constructor call
          */
-        protected Expression newObj( Class clazz, Object... params ) {
+        protected Expression createX(Class clazz, Expression... params ) {
             def type = new ClassNode(clazz)
-            def args = new ArgumentListExpression( params as List<Expression>)
+            def args = new ArgumentListExpression(params as List<Expression>)
+            return new ConstructorCallExpression(type,args)
+        }
+
+        protected Expression createX(Class clazz, List<Expression> params ) {
+            def type = new ClassNode(clazz)
+            def args = new ArgumentListExpression(params as List<Expression>)
             return new ConstructorCallExpression(type,args)
         }
 
