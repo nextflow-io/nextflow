@@ -896,12 +896,13 @@ class NextflowDSLImpl implements ASTTransformation {
             withinEachMethod = name == '_in_each'
 
             try {
-                if( isOutputValWithPropertyExpression(methodCall) )
-                // transform an output value declaration such
-                //   output: val( obj.foo )
-                // to
-                //   output: val({ obj.foo })
+                if( isOutputValWithPropertyExpression(methodCall) ) {
+                    // transform an output value declaration such
+                    //   output: val( obj.foo )
+                    // to
+                    //   output: val({ obj.foo })
                     wrapPropertyToClosure((ArgumentListExpression)methodCall.getArguments())
+                }
                 else
                     varToConstX(methodCall.getArguments())
 
@@ -916,22 +917,20 @@ class NextflowDSLImpl implements ASTTransformation {
                 return false
             if( methodCall.getArguments() instanceof ArgumentListExpression ) {
                 def args = (ArgumentListExpression)methodCall.getArguments()
-                if( args.size() != 1 )
+                if( args.size()==0 || args.size()>2 )
                     return false
 
-                return args.getExpression(0) instanceof PropertyExpression
+                return args.last() instanceof PropertyExpression
             }
 
             return false
         }
 
         protected void wrapPropertyToClosure(ArgumentListExpression expr) {
-            def args = expr as ArgumentListExpression
-            def property = (PropertyExpression) args.getExpression(0)
-
-            def closure = wrapPropertyToClosure(property)
-
-            args.getExpressions().set(0, closure)
+            final args = expr as ArgumentListExpression
+            final property = (PropertyExpression) args.last()
+            final closure = wrapPropertyToClosure(property)
+            args.getExpressions().set(args.size()-1, closure)
         }
 
         protected ClosureExpression wrapPropertyToClosure(PropertyExpression property)  {

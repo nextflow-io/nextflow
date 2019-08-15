@@ -61,6 +61,7 @@ class ParamsOutTest extends Specification {
               val 'str' into y
               val { x } into w
               val "${y}" into z
+              val x.y into p
 
               return ''
             }
@@ -76,12 +77,13 @@ class ParamsOutTest extends Specification {
         def out3 = (ValueOutParam)process.config.getOutputs().get(3)
         def out4 = (ValueOutParam)process.config.getOutputs().get(4)
         def out5 = (ValueOutParam)process.config.getOutputs().get(5)
+        def out6 = (ValueOutParam)process.config.getOutputs().get(6)
 
         // it MUST
         // - create a value out parameter named 'x'
         // - create in the script context (binding) a new variable of type DataflowQueue named 'x'
         then:
-        process.config.getOutputs().size() == 6
+        process.config.getOutputs().size() == 7
 
         out0.name == 'x'
         out0.resolve( [x: 100] ) == 100
@@ -114,6 +116,10 @@ class ParamsOutTest extends Specification {
         out5.outChannel instanceof DataflowQueue
         binding.containsKey('z')
 
+        out6.name == null
+        out6.resolve( [x:[y:'Ciao']] ) == 'Ciao'
+        out6.outChannel instanceof DataflowQueue
+        binding.containsKey('p')
     }
 
     def testIntoMultipleChannels() {
