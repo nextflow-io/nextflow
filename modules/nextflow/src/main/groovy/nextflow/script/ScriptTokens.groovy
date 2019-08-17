@@ -16,6 +16,7 @@
 
 package nextflow.script
 
+import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 import groovy.transform.TupleConstructor
@@ -141,4 +142,23 @@ class TokenValRef {
         this.lineNum = lineNum
         this.colNum = colNum
     }
+}
+
+
+@ToString
+@EqualsAndHashCode
+@TupleConstructor
+@CompileStatic
+class TokenBranchDef {
+    Closure<TokenBranchChoice> closure
+    List<String> branches
+}
+
+@ToString
+@EqualsAndHashCode
+@TupleConstructor
+@CompileStatic
+class TokenBranchChoice {
+    Object value
+    String choice
 }

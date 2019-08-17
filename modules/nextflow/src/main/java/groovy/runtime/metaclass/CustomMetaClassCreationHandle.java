@@ -48,21 +48,8 @@ import org.slf4j.LoggerFactory;
  */
 public class CustomMetaClassCreationHandle extends MetaClassRegistry.MetaClassCreationHandle {
 
-    static final private String CHANNEL_OUT_LIST = "nextflow.script.ChannelOut";
 
     static final private Logger log = LoggerFactory.getLogger(CustomMetaClassCreationHandle.class);
-
-    static final private Class<?> channelOutHolderClass;
-
-    static {
-        // this class needs to be referenced via reflection otherwise compilation fail
-        // since it requires AST transformation
-        try {
-            channelOutHolderClass = Class.forName(CHANNEL_OUT_LIST);
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Missing core dependency: " + CHANNEL_OUT_LIST, e) ;
-        }
-    }
 
     protected MetaClass createNormalMetaClass(Class theClass, MetaClassRegistry registry) {
         MetaClass metaClass = super.createNormalMetaClass( theClass, registry );
@@ -84,7 +71,11 @@ public class CustomMetaClassCreationHandle extends MetaClassRegistry.MetaClassCr
                 Path.class.isAssignableFrom(theClass) ||
                 DataflowBroadcast.class.isAssignableFrom(theClass) ||
                 DataflowReadChannel.class.isAssignableFrom(theClass) ||
-                channelOutHolderClass.isAssignableFrom(theClass)
+                // NOTE: groovy class cannot be referenced explicitly
+                // otherwise it creates a circular dependencies causing
+                // the compile to crash. Also the class name needs to be
+                // resolved statically because this result is cached.
+                "nextflow.script.ChannelOut".equals(theClass.getName())
                 ;
     }
 

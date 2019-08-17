@@ -17,10 +17,10 @@
 package nextflow.splitter
 
 import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.extension.DataflowHelper
 /**
  * Factory class for splitter objects
@@ -82,8 +82,7 @@ class SplitterFactory {
      * @param opt
      * @return
      */
-    @PackageScope
-    static countOverChannel( DataflowReadChannel source, SplitterStrategy splitter, Map opt )  {
+    static DataflowWriteChannel countOverChannel(DataflowReadChannel source, SplitterStrategy splitter, Map opt )  {
 
         // create a new DataflowChannel that will receive the splitter entries
         DataflowVariable result = new DataflowVariable ()

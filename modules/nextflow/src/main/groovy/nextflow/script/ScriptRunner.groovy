@@ -16,20 +16,17 @@
 
 package nextflow.script
 
-import static nextflow.util.ConfigHelper.*
-
 import java.nio.file.Path
 
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowBroadcast
 import nextflow.Session
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.util.HistoryFile
+import static nextflow.util.ConfigHelper.parseValue
 /**
  * Run a nextflow script file
  *
@@ -197,31 +194,8 @@ class ScriptRunner {
         }
     }
 
-
-    private read0( obj ) {
-        if( obj instanceof DataflowBroadcast )
-            return obj.createReadChannel()
-        return obj
-    }
-
-    @CompileDynamic
     def normalizeOutput(output) {
-        if( output instanceof Object[] ) {
-            result = new ArrayList<>(output.size())
-            for( def item : output ) {
-                ((List)result).add(read0(item))
-            }
-        }
-        else if( output instanceof ChannelOut ) {
-            def list = new ArrayList(output.size())
-            for( int i=0; i<output.size(); i++ ) {
-                list.add(read0(output[i]))
-            }
-            result = new ChannelOut(list)
-        }
-        else {
-            result = read0(output)
-        }
+        return output
     }
 
     protected void parseScript( ScriptFile scriptFile ) {
@@ -241,7 +215,7 @@ class ScriptRunner {
         // -- launch the script execution
         scriptParser.runScript()
         // -- normalise output
-        normalizeOutput(scriptParser.getResult())
+        result = normalizeOutput(scriptParser.getResult())
         // -- ignite dataflow network
         session.fireDataflowNetwork()
     }

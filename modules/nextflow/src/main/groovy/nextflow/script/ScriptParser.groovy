@@ -25,6 +25,7 @@ import nextflow.Nextflow
 import nextflow.Session
 import nextflow.ast.NextflowDSL
 import nextflow.ast.NextflowXform
+import nextflow.ast.BranchXform
 import nextflow.file.FileHelper
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -109,6 +110,7 @@ class ScriptParser {
         config.scriptBaseClass = BaseScript.class.name
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(BranchXform))
 
         if( session && session.classesDir )
             config.setTargetDirectory(session.classesDir.toFile())

@@ -1,19 +1,14 @@
 package nextflow.script
 
-import spock.lang.Specification
 
-import nextflow.NextflowMeta
+import test.Dls2Spec
 import test.MockScriptRunner
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ScriptPipesTest extends Specification {
+class ScriptPipesTest extends Dls2Spec {
 
-    def setupSpec() { NextflowMeta.instance.enableDsl2() }
-    def cleanupSpec() { NextflowMeta.instance.disableDsl2() }
-    
     def 'should pipe processes parallel' () {
         given:
         def SCRIPT =  '''
@@ -77,7 +72,7 @@ class ScriptPipesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result[0].val == 'DLROW ALOH'
+        result.val == 'DLROW ALOH'
     }
 
     def 'should pipe multi-outputs with multi-inputs' () {
@@ -116,7 +111,7 @@ class ScriptPipesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result[0].val == 'olleh + HELLO'
+        result.val == 'olleh + HELLO'
     }
 
     def 'should pipe process with operator' () {
@@ -147,9 +142,9 @@ class ScriptPipesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result[0].val == 'aloh'
-        result[0].val == 'HOLA'
-        result[0].val == 'hola'
+        result.val == 'aloh'
+        result.val == 'HOLA'
+        result.val == 'hola'
     }
 
 
@@ -173,7 +168,7 @@ class ScriptPipesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result[0].val == 'aloh'
+        result.val == 'aloh'
     }
 
 
@@ -203,7 +198,7 @@ class ScriptPipesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result[0].val == 'HOLA'
+        result.val == 'HOLA'
     }
 
 
@@ -227,27 +222,43 @@ class ScriptPipesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result[0].val.sort() == [1, 4, 9]
-
+        result.val.sort() == [1, 4, 9]
     }
 
-    def 'should set a channel in the global context' () {
+
+    def 'should pipe branch output to concat operator' () {
         given:
-        def SCRIPT =  '''
-        Channel.from(1,2,3) | set { foo } 
-        Channel.value('hola') | set { bar } 
+        def SCRIPT ='''   
+        Channel.from(10,20,30) | branch { foo: it <=10; bar: true } | concat 
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        runner.setScript(SCRIPT).execute()
-
+        def result = new MockScriptRunner().setScript(SCRIPT).execute()
         then:
-        runner.session.binding.foo.val == 1
-        runner.session.binding.foo.val == 2
-        runner.session.binding.foo.val == 3
-        runner.session.binding.bar.value == 'hola'
-
+        result.val == 10
+        result.val == 20
+        result.val == 30
     }
 
+
+    def 'should pipe branch output to processes' () {
+        given:
+        def SCRIPT ='''                                                              
+        process foo {
+          input: val x 
+          input: val y
+          output: val ret
+          exec: ret=x*2+y
+        }
+
+        workflow {
+           emit: Channel.from(10,20) | branch { foo: it <=10; bar: true } | foo 
+        }
+        '''
+
+        when:
+        def result = new MockScriptRunner().setScript(SCRIPT).execute()
+        then:
+        result.val == 40
+    }
 }

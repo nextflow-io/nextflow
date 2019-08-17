@@ -123,7 +123,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result[0].val == 'HELLO MUNDO'
+        result.val == 'HELLO MUNDO'
         binding.variables.alpha == null
     }
 
@@ -173,7 +173,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result[0].val == 'HELLO MUNDO'
+        result.val == 'HELLO MUNDO'
         !binding.hasVariable('alpha')
         !binding.hasVariable('foo')
         !binding.hasVariable('bar')
@@ -219,7 +219,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result[0].val == 'HELLO MUNDO'
+        result.val == 'HELLO MUNDO'
     }
 
     def 'should gather process outputs' () {
@@ -262,7 +262,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
 
         then:
-        result[0].val == 'HELLO MUNDO'
+        result.val == 'HELLO MUNDO'
         !vars.containsKey('data')
         !vars.containsKey('foo')
         !vars.containsKey('bar')
@@ -298,8 +298,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result instanceof ChannelOut
-        result[0].val == 'echo Hello world'
+        result.val == 'echo Hello world'
 
         cleanup:
         folder?.deleteDir()
@@ -339,8 +338,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result instanceof ChannelOut
-        result[0].val == 'echo sample=world pairId=x reads=/some/file'
+        result.val == 'echo sample=world pairId=x reads=/some/file'
     }
 
 
@@ -388,9 +386,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result instanceof ChannelOut
-        result[0].val == 'echo Ciao world'
-
+        result.val == 'echo Ciao world'
 
         when:
         SCRIPT.text = """ 
@@ -443,8 +439,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result instanceof ChannelOut
-        result[0].val == 'echo Hello world'
+        result.val == 'echo Hello world'
         
     }
 
@@ -511,7 +506,7 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result[0].val == 'echo Hola mundo'
+        result.val == 'echo Hola mundo'
     }
 
     def 'should not fail when invoking a process in a module' () {

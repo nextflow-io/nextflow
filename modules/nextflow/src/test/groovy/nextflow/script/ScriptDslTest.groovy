@@ -1,24 +1,20 @@
 package nextflow.script
 
-
-import nextflow.NextflowMeta
-import org.codehaus.groovy.control.MultipleCompilationErrorsException
-import spock.lang.Specification
 import spock.lang.Timeout
-import test.MockScriptRunner
+
+import org.codehaus.groovy.control.MultipleCompilationErrorsException
+import test.Dls2Spec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Timeout(5)
-class ScriptDslTest extends Specification {
+class ScriptDslTest extends Dls2Spec {
 
-    def setupSpec() { NextflowMeta.instance.enableDsl2() }
-    def cleanupSpec() { NextflowMeta.instance.disableDsl2() }
 
     def 'should execute basic workflow' () {
-        given:
-        def SCRIPT = '''
+        when:
+        def result = dsl_eval '''
    
         workflow {
             emit: result 
@@ -27,18 +23,13 @@ class ScriptDslTest extends Specification {
         }
         '''
 
-        when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
-
         then:
-        result[0].val == 'Hello world'
-
+        result.val == 'Hello world'
     }
 
     def 'should execute emit' () {
-        given:
-        def SCRIPT = '''
+        when:
+        def result = dsl_eval '''
    
         workflow {
             emit:
@@ -46,18 +37,13 @@ class ScriptDslTest extends Specification {
         }
         '''
 
-        when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
-
         then:
-        result[0].val == 'Hello world'
-
+        result.val == 'Hello world'
     }
 
     def 'should emit expression' () {
-        given:
-        def SCRIPT = '''
+        when:
+        def result = dsl_eval '''
          
         def foo() { 'Hello world' } 
        
@@ -67,18 +53,13 @@ class ScriptDslTest extends Specification {
         }
         '''
 
-        when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
-
         then:
-        result[0].val == 'HELLO WORLD'
-
+        result.val == 'HELLO WORLD'
     }
 
     def 'should emit process out' () {
-        given:
-        def SCRIPT = '''
+        when:
+        def result = dsl_eval '''
          
         process foo {
           output: val x 
@@ -91,20 +72,14 @@ class ScriptDslTest extends Specification {
         }
         '''
 
-        when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
-
         then:
-        result[0].val == 'Hello'
-
+        result.val == 'Hello'
     }
 
 
-
     def 'should define processes and workflow' () {
-        given:
-        def SCRIPT = '''
+        when:
+        def result = dsl_eval '''
         process foo {
           input: val data 
           output: val result
@@ -138,23 +113,17 @@ class ScriptDslTest extends Specification {
         }
         '''
 
-        when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
-
         then:
-        result[0].val == 'HELLO MUNDO'
+        result.val == 'HELLO MUNDO'
     }
 
 
-
     def 'should access nextflow enabling property' () {
-        given:
-        def SCRIPT = '''
+        when:
+        def result = dsl_eval '''
         return nextflow.preview.dsl 
         '''
-        when:
-        def result = new MockScriptRunner().setScript(SCRIPT).execute()
+
         then:
         result == 2
     }
@@ -162,15 +131,11 @@ class ScriptDslTest extends Specification {
 
     def 'should not allow function with reserved identifier' () {
 
-        given:
-        def SCRIPT = """ 
+        when:
+        dsl_eval """ 
             def main() { println 'ciao' }
         """
 
-        when:
-        new MockScriptRunner()
-                .setScript(SCRIPT)
-                .execute()
         then:
         def err = thrown(MultipleCompilationErrorsException)
         err.message.contains('Identifier `main` is reserved for internal use')
@@ -178,17 +143,13 @@ class ScriptDslTest extends Specification {
 
     def 'should not allow process with reserved identifier' () {
 
-        given:
-        def SCRIPT = """ 
+        when:
+        dsl_eval """ 
             process main {
               /echo ciao/
             }
         """
 
-        when:
-        new MockScriptRunner()
-                .setScript(SCRIPT)
-                .execute()
         then:
         def err = thrown(MultipleCompilationErrorsException)
         err.message.contains('Identifier `main` is reserved for internal use')
@@ -196,64 +157,77 @@ class ScriptDslTest extends Specification {
 
     def 'should not allow workflow with reserved identifier' () {
 
-        given:
-        def SCRIPT = """ 
+        when:
+        dsl_eval """ 
             workflow main {
               /echo ciao/
             }
         """
-
-        when:
-        new MockScriptRunner()
-                .setScript(SCRIPT)
-                .execute()
         then:
         def err = thrown(MultipleCompilationErrorsException)
         err.message.contains('Identifier `main` is reserved for internal use')
     }
 
     def 'should not allow duplicate workflow keyword' () {
-        given:
-        def SCRIPT = """ 
-            workflow {
-              /echo ciao/
-            }
-            
-            workflow {
-              /echo miao/
-            }
-        """
-
         when:
-        new MockScriptRunner()
-                .setScript(SCRIPT)
-                .execute()
+        dsl_eval(
+                """ 
+                workflow {
+                  /echo ciao/
+                }
+                
+                workflow {
+                  /echo miao/
+                }
+            """
+        )
         then:
         def err = thrown(MultipleCompilationErrorsException)
         err.message.contains('Duplicate entry workflow definition')
     }
 
     def 'should apply operator to process result' () {
-        given:
-        def SCRIPT = '''
-        process hello {
-          output: val result
-          exec:
-            result = "Hello"
-        }     
-        
-        workflow {
-           main: hello()
-           emit: hello.out.map { it.toUpperCase()  }
-        }
-        '''
+        when:
+        def result = dsl_eval(/
+            process hello {
+              output: val result
+              exec:
+                result = "Hello"
+            }     
+            
+            workflow {
+               main: hello()
+               emit: hello.out.map { it.toUpperCase()  }
+            }
+        /)
+        then:
+        result.val == 'HELLO'
+    }
+
+    def 'should branch and view' () {
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = dsl_eval(/
+            Channel
+                .from(1,2,3,40,50)
+                .branch { 
+                    small: it < 10 
+                    large: it > 10  
+                }
+                .set { result }
+                
+             ch1 = result.small.map { it }
+             ch2 = result.large.map { it }  
 
+             [ch1, ch2]
+        /)
         then:
-        result[0].val == 'HELLO'
+        result[0].val == 1
+        result[0].val == 2
+        result[0].val == 3
+        and:
+        result[1].val == 40
+        result[1].val == 50
     }
 
 }

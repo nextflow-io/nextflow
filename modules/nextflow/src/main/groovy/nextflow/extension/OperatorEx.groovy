@@ -39,6 +39,7 @@ import nextflow.Global
 import nextflow.NF
 import nextflow.Session
 import nextflow.script.ChannelOut
+import nextflow.script.TokenBranchDef
 import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.splitter.TextSplitter
@@ -62,7 +63,7 @@ import static nextflow.util.CheckHelper.checkParams
  */
 
 @Slf4j
-class OperatorEx {
+class OperatorEx implements DelegatingPlugin {
 
     static final public OperatorEx instance = new OperatorEx()
 
@@ -70,11 +71,9 @@ class OperatorEx {
 
     final public static Set<String> OPERATOR_NAMES
 
-    final static MetaClass meta = OperatorEx.getMetaClass()
-
     static {
         OPERATOR_NAMES = getDeclaredExtensionMethods0()
-        log.trace "Dataflow extension methods: ${OPERATOR_NAMES.sort().join(',')}"
+        log.debug "Dataflow extension methods: ${OPERATOR_NAMES.sort().join(',')}"
     }
 
     @CompileStatic
@@ -97,7 +96,7 @@ class OperatorEx {
     }
 
     @CompileStatic
-    boolean isExtension(Object obj, String name) {
+    boolean isExtensionMethod(Object obj, String name) {
         if( obj instanceof DataflowReadChannel || obj instanceof DataflowBroadcast || obj instanceof ChannelOut ) {
             return OPERATOR_NAMES.contains(name)
         }
@@ -106,7 +105,7 @@ class OperatorEx {
 
 
     @CompileStatic
-    Object invokeOperator(Object channel, String method, Object[] args) {
+    Object invokeExtensionMethod(Object channel, String method, Object[] args) {
         new OpCall(this,channel,method,args).call()
     }
 
@@ -793,6 +792,7 @@ class OperatorEx {
         return target
     }
 
+
     private static class Aggregate {
 
         def accum
@@ -857,7 +857,7 @@ class OperatorEx {
 
         final target = new DataflowVariable()
         final int len = mapper.getMaximumNumberOfParameters()
-        reduceImpl(source, target, [:]) { map, item ->
+        reduceImpl(source, target, [:]) { Map map, item ->
             def key = len == 2 ? mapper.call(item,index) : mapper.call(item)
             def list = map.get(key)
             list = list ? list << item : [item]
@@ -933,7 +933,6 @@ class OperatorEx {
 
         return target
     }
-
 
     DataflowWriteChannel spread( final DataflowReadChannel source, Object other ) {
 
@@ -1034,11 +1033,11 @@ class OperatorEx {
             def proc = ((DataflowProcessor) getDelegate())
             switch( item ) {
                 case Collection:
-                    item.flatten().each { value -> proc.bindOutput(value) }
+                    ((Collection)item).flatten().each { value -> proc.bindOutput(value) }
                     break
 
                 case (Object[]):
-                    item.flatten().each { value -> proc.bindOutput(value) }
+                    ((Collection)item).flatten().each { value -> proc.bindOutput(value) }
                     break
 
                 case Channel.VOID:
@@ -1455,7 +1454,7 @@ class OperatorEx {
     }
 
 
-    static private final PARAMS_VIEW = [newLine: Boolean]
+    static private final Map PARAMS_VIEW = [newLine: Boolean]
 
     /**
      * Print out the channel content retuning a new channel emitting the identical content as the original one
@@ -1643,6 +1642,19 @@ class OperatorEx {
         // do not add this nod in the DAG because it's not a real operator
         // since it's not transforming the channel
         OpCall.current.get().ignoreDagNode = true
+    }
+
+    /**
+     * Implements `branch` operator
+     *
+     * @param source
+     * @param action
+     * @return
+     */
+    ChannelOut branch(DataflowReadChannel source, Closure<TokenBranchDef> action) {
+        new BranchOp(source, action)
+                .apply()
+                .getOutput()
     }
 
 }
