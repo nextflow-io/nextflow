@@ -1,0 +1,68 @@
+name: Nextflow CI
+# This workflow is triggered on pushes to the repository.
+on: [push]
+
+jobs:
+  build:
+    name: Build Nextflow
+    # This job runs on Linux
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        #java_version: ['8.0.222','10.0.2','11.0.4']
+        java_version: [8, 10, 11]
+
+    steps:
+    - name: Environment
+      run: env | sort 
+
+    - name: Checkout
+      uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+        submodules: true
+
+    - name: Setup Java
+      uses: actions/setup-java@v1
+      with:
+        java-version: '8.0.222' 
+        architecture: x64
+
+    - name: Setup env
+      run: |
+           rm -f $HOME/.gitconfig; 
+           mkdir -p "$HOME/.nextflow";
+           echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
+
+    - name: Compile
+      run: make assemble
+
+    - name: Tests
+      run: make test
+      env:
+        GRADLE_OPTS: '-Dorg.gradle.daemon=false'
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        NXF_BITBUCKET_ACCESS_TOKEN: ${{ secrets.NXF_BITBUCKET_ACCESS_TOKEN }}
+        NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
+        NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
+
+    - name: Integration
+      run: make install && ./integration-tests.sh
+      env:
+        TEST_JDK: ${{ matrix.java_version }}
+        GRADLE_OPTS: '-Dorg.gradle.daemon=false'
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        NXF_BITBUCKET_ACCESS_TOKEN: ${{ secrets.NXF_BITBUCKET_ACCESS_TOKEN }}
+        NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
+        NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
+
+    # - name: Publish 
+    #   if: failure
+    #   run: bash pub-tests.sh github
+    #   env:
+    #     NXF_AWS_ACCESS: ${{ secrets.NXF_AWS_ACCESS }}
+    #     NXF_AWS_SECRET: ${{ secrets.NXF_AWS_SECRET }}
