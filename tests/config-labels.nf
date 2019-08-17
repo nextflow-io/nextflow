@@ -44,7 +44,7 @@ process delta {
 
 process gamma {
     label 'big'
-    memory 4.GB
+    memory 40.MB
     queue 'foo'
 
     /
