@@ -26,6 +26,8 @@ class OpCall implements Callable {
 
     final static private List<String> SPECIAL_NAMES = ["choice","merge","separate"]
 
+    final static private String SET_OP_hack = 'set'
+
     static ThreadLocal<OpCall> current = new ThreadLocal<>()
 
     private OperatorEx owner
@@ -41,8 +43,8 @@ class OpCall implements Callable {
         new OpCall(methodName, InvokerHelper.asArray(args))
     }
 
-    static OpCall create(String method) {
-        new OpCall(method, InvokerHelper.asArray(null))
+    static OpCall create(String methodName) {
+        new OpCall(methodName, InvokerHelper.asArray(null))
     }
 
     OpCall(OperatorEx owner, Object source, String method, Object[] args ) {
@@ -62,6 +64,12 @@ class OpCall implements Callable {
     }
 
     OpCall setSource(ChannelOut left) {
+
+        if( methodName == SET_OP_hack ) {
+            source = left
+            return this
+        }
+
         if( left.size()==1 ) {
             this.source = left[0] as DataflowWriteChannel
             return this
@@ -77,8 +85,6 @@ class OpCall implements Callable {
 
     OpCall setSource( obj ) {
         if( obj instanceof ChannelOut )
-            return setSource(obj)
-        else if( obj instanceof DataflowWriteChannel)
             return setSource(obj)
         else
             source = obj
@@ -140,6 +146,12 @@ class OpCall implements Callable {
 
 
     protected Object invoke() {
+        if( methodName==SET_OP_hack ) {
+            // when this is ugly, the problem is that `set` is not a real operator
+            // but it's exposed as such. let's live whit this for now
+            return invoke1('set', [source, args[0]] as Object[])
+        }
+
         final DataflowReadChannel source = read0(source)
         final result = invoke0(source, read1(args))
         if( !ignoreDagNode )
