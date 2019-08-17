@@ -5,6 +5,7 @@ import spock.lang.Specification
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.exception.ScriptCompilationException
 import test.TestHelper
 /**
  *
@@ -123,6 +124,25 @@ class ScriptParserTest extends Specification {
         parser.getSession() == SESS
         parser.getClassLoader() == CL
 
+    }
+
+    def 'should catch compilation errors' () {
+        given:
+        def session = new Session()
+        def parser = new ScriptParser(session)
+
+        def file = TestHelper.createInMemTempFile('foo.nf')
+        file.text = '''
+        def foo)( { )
+        '''
+
+        when:
+        parser.runScript(file)
+        then:
+        def e = thrown(ScriptCompilationException)
+        e.message.startsWith('Script compilation error')
+        e.message.contains('- cause: unexpected token: foo @ line 2, column 13.')
+        e.message.contains('foo.nf\n')
     }
 
 }

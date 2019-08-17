@@ -51,8 +51,8 @@ class ScriptMeta {
 
     static Map<String,Path> allScriptNames() {
         def result = new HashMap(REGISTRY.size())
-        for( Map.Entry<BaseScript,ScriptMeta> entry : REGISTRY )
-            result.put(entry.key.getClass().getName(), entry.value.scriptPath)
+        for( ScriptMeta entry : REGISTRY.values() )
+            result.put(entry.scriptName, entry.scriptPath)
         return result
     }
 
@@ -76,6 +76,8 @@ class ScriptMeta {
     private boolean module
 
     Path getScriptPath() { scriptPath }
+
+    String getScriptName() { clazz.getName() }
 
     boolean isModule() { module }
 

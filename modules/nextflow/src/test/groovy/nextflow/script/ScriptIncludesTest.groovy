@@ -323,7 +323,7 @@ class ScriptIncludesTest extends Specification {
         '''
 
         SCRIPT.text = """
-        include 'module.nf'
+        include './module.nf'
 
         workflow {
           main: ch1 = Channel.from('world')
@@ -375,7 +375,7 @@ class ScriptIncludesTest extends Specification {
 
         when:
         SCRIPT.text = """  
-        include 'module.nf'        
+        include './module.nf'        
 
         workflow {
             main: bar( foo('Ciao') )
@@ -390,7 +390,7 @@ class ScriptIncludesTest extends Specification {
 
         when:
         SCRIPT.text = """ 
-        include 'module.nf'        
+        include './module.nf'        
         
         workflow {
           main: (ch0, ch1) = foo('Ciao')
@@ -426,7 +426,7 @@ class ScriptIncludesTest extends Specification {
         // inject params in the module
         // and invoke the process 'foo'
         SCRIPT.text = """     
-        include "module.nf" params(foo:'Hello', bar: 'world')
+        include "./module.nf" params(foo:'Hello', bar: 'world')
             
         workflow { 
             main: foo()
@@ -461,7 +461,7 @@ class ScriptIncludesTest extends Specification {
         '''
 
         SCRIPT.text = """  
-        include 'module.nf'
+        include './module.nf'
 
         def str = foo('dlrow')
         return bar('Hello', str)
@@ -493,7 +493,7 @@ class ScriptIncludesTest extends Specification {
         '''
 
         SCRIPT.text = """ 
-        include 'module.nf' params(x: 'Hola mundo')
+        include './module.nf' params(x: 'Hola mundo')
         
         workflow {
             main: foo()
@@ -524,7 +524,7 @@ class ScriptIncludesTest extends Specification {
         '''
 
         SCRIPT.text = """ 
-        include 'module.nf'
+        include './module.nf'
         println 'hello'
         """
 
@@ -549,7 +549,7 @@ class ScriptIncludesTest extends Specification {
         '''
 
         SCRIPT.text = """ 
-        include 'org/bio' 
+        include './org/bio' 
         
         workflow {
             foo()
@@ -577,8 +577,8 @@ class ScriptIncludesTest extends Specification {
         '''
 
         SCRIPT.text = """ 
-        include 'mod1' 
-        include 'mod2' 
+        include './mod1' 
+        include './mod2' 
         println 'x'
         """
 

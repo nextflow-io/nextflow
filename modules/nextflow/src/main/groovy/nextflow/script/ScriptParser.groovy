@@ -23,13 +23,16 @@ import groovy.transform.CompileStatic
 import nextflow.Channel
 import nextflow.Nextflow
 import nextflow.Session
+import nextflow.ast.BranchXform
 import nextflow.ast.NextflowDSL
 import nextflow.ast.NextflowXform
-import nextflow.ast.BranchXform
+import nextflow.exception.ScriptCompilationException
+import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import org.apache.commons.lang.StringUtils
+import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
@@ -152,13 +155,24 @@ class ScriptParser {
     }
 
     ScriptParser parse(String scriptText, GroovyShell interpreter) {
-        final clazzName = computeClassName(scriptText)
-        script = (BaseScript)interpreter.parse(scriptText, clazzName)
-        final meta = ScriptMeta.get(script)
-        meta.setScriptPath(scriptPath)
-        meta.setModule(module)
-        return this
+        final String clazzName = computeClassName(scriptText)
+        try {
+            script = (BaseScript)interpreter.parse(scriptText, clazzName)
+            final meta = ScriptMeta.get(script)
+            meta.setScriptPath(scriptPath)
+            meta.setModule(module)
+            return this
+        }
+        catch (CompilationFailedException e) {
+            String type = module ? "Module" : "Script"
+            String header = "$type compilation error\n- file : ${FilesEx.toUriString(scriptPath)}"
+            String msg = e.message ?: header
+            msg = msg.replaceAll(/startup failed:\n/,'')
+            msg = msg.replaceAll(~/$clazzName(: \d+:\b*)?/, header+'\n- cause:')
+            throw new ScriptCompilationException(msg, e)
+        }
     }
+
 
     ScriptParser parse(String scriptText) {
         def interpreter = getInterpreter()

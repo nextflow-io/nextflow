@@ -16,8 +16,6 @@
 
 package nextflow.cli
 
-import static nextflow.Const.*
-
 import java.lang.reflect.Field
 
 import com.beust.jcommander.DynamicParameter
@@ -32,6 +30,7 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
+import nextflow.exception.ScriptCompilationException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.trace.GraphObserver
 import nextflow.trace.ReportObserver
@@ -39,8 +38,11 @@ import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
 import nextflow.util.Escape
 import nextflow.util.LoggerHelper
-import org.codehaus.groovy.control.CompilationFailedException
 import org.eclipse.jgit.api.errors.GitAPIException
+import static nextflow.Const.APP_BUILDNUM
+import static nextflow.Const.APP_NAME
+import static nextflow.Const.APP_VER
+import static nextflow.Const.SPLASH
 /**
  * Main application entry point. It parses the command line and
  * launch the pipeline execution.
@@ -484,7 +486,7 @@ class Launcher {
             return(1)
         }
 
-        catch( CompilationFailedException e ) {
+        catch( ScriptCompilationException e ) {
             log.error e.message
             return(1)
         }
