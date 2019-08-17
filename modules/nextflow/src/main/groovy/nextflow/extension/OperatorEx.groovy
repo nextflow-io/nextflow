@@ -20,6 +20,7 @@ import java.lang.reflect.Modifier
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
+import groovy.runtime.metaclass.DelegatingPlugin
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -1625,12 +1626,23 @@ class OperatorEx implements DelegatingPlugin {
      *     SomeProcess.out | set { channelName }
      * </pre>
      *
-     * See also {@link ChannelEx#set(groovyx.gpars.dataflow.DataflowWriteChannel, groovy.lang.Closure)}
-     *
      * @param source The channel instance to be bound in the context
      * @param holder A closure defining a variable identifier
      */
+
     void set(DataflowReadChannel source, Closure holder) {
+        set0(source, holder)
+    }
+
+    void set(DataflowBroadcast source, Closure holder) {
+        set0(source, holder)
+    }
+
+    void set(ChannelOut source, Closure holder) {
+        set0(source, holder)
+    }
+
+    private void set0(source, Closure holder) {
         final name = CaptureProperties.capture(holder)
         if( !name )
             throw new IllegalArgumentException("Missing name to which set the channel variable")
