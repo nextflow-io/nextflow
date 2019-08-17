@@ -16,7 +16,9 @@
 
 package nextflow
 
+import groovy.runtime.metaclass.NextflowDelegatingMetaClass
 import nextflow.extension.ChannelFactory
+import nextflow.extension.OperatorEx
 import nextflow.script.ExecutionStack
 import nextflow.script.WorkflowBinding
 
@@ -32,6 +34,7 @@ class NF {
     }
 
     static void init() {
+        NextflowDelegatingMetaClass.plugin = OperatorEx.instance
         ChannelFactory.init()
         WorkflowBinding.init()
     }

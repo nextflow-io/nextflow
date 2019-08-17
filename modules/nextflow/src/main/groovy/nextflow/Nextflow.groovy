@@ -22,13 +22,18 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import groovyx.gpars.dataflow.DataflowQueue
+import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
+import nextflow.ast.BranchXform
+import nextflow.ast.BranchXformImpl
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.StopSplitIterationException
 import nextflow.extension.GroupKey
+import nextflow.extension.OperatorEx
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
 import nextflow.mail.Mailer
+import nextflow.script.TokenBranchDef
 import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.util.ArrayTuple
@@ -407,4 +412,19 @@ class Nextflow {
     static GroupKey groupKey(key, int size) {
         new GroupKey(key,size)
     }
+
+    /**
+     * Marker method to create a closure to be passed to {@link OperatorEx#branch(DataflowReadChannel, groovy.lang.Closure)}
+     * operator.
+     *
+     * Despite apparently is doing nothing, this method is needed as marked to apply the {@link BranchXform} AST
+     * transformation required to interpret the closure content as required for the branch evaluation.
+     *
+     * @see OperatorEx#branch(DataflowReadChannel, Closure)
+     * @see BranchXformImpl
+     *
+     * @param closure
+     * @return
+     */
+    static Closure<TokenBranchDef> branchCriteria(Closure<TokenBranchDef> closure) { closure }
 }

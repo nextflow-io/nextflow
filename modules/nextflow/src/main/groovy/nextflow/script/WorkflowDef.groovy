@@ -19,6 +19,7 @@ package nextflow.script
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.exception.MissingValueException
 import nextflow.extension.ChannelFactory
 /**
@@ -124,14 +125,14 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
     }
 
     protected ChannelOut collectOutputs(List<String> emissions) {
-        final channels = new LinkedHashMap<String, ?>(emissions.size())
+        final channels = new LinkedHashMap<String, DataflowWriteChannel>(emissions.size())
         for( String name : emissions ) {
             if( !binding.hasVariable(name) )
                 throw new MissingValueException("Missing workflow output parameter: $name")
             final obj = binding.getVariable(name)
 
             if( ChannelFactory.isChannel(obj) ) {
-                channels.put(name, obj)
+                channels.put(name, (DataflowWriteChannel)obj)
             }
 
             else if( obj instanceof ChannelOut ) {

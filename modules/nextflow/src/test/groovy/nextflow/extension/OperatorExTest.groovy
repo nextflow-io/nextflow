@@ -49,9 +49,9 @@ class OperatorExTest extends Specification {
         given:
         def ext = new OperatorEx()
         expect:
-        ext.isExtension(new DataflowVariable(), 'map')
-        ext.isExtension(new DataflowVariable(), 'flatMap')
-        !ext.isExtension(new DataflowVariable(), 'foo')
+        ext.isExtensionMethod(new DataflowVariable(), 'map')
+        ext.isExtensionMethod(new DataflowVariable(), 'flatMap')
+        !ext.isExtensionMethod(new DataflowVariable(), 'foo')
     }
 
     def 'should invoke ext method' () {
@@ -60,7 +60,7 @@ class OperatorExTest extends Specification {
         def ch = new DataflowQueue(); ch<<1<<2<<3
 
         when:
-        def result = ext.invokeOperator(ch, 'map', { it -> it * it })
+        def result = ext.invokeExtensionMethod(ch, 'map', { it -> it * it })
         then:
         result instanceof DataflowReadChannel
         result.val == 1

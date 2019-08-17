@@ -20,7 +20,6 @@ import java.io.File;
 import java.nio.file.Path;
 
 import groovy.lang.MetaClass;
-import nextflow.extension.OperatorEx;
 import nextflow.file.FileHelper;
 
 /**
@@ -31,6 +30,8 @@ import nextflow.file.FileHelper;
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 public class NextflowDelegatingMetaClass extends groovy.lang.DelegatingMetaClass {
+
+    static public DelegatingPlugin plugin;
 
     public NextflowDelegatingMetaClass(MetaClass delegate) {
         super(delegate);
@@ -53,8 +54,8 @@ public class NextflowDelegatingMetaClass extends groovy.lang.DelegatingMetaClass
             if( obj instanceof Path )
                 return FileHelper.empty((Path)obj);
         }
-        else if( OperatorEx.instance.isExtension(obj,methodName) ) {
-            return OperatorEx.instance.invokeOperator(obj, methodName, args);
+        else if( plugin!=null && plugin.isExtensionMethod(obj,methodName) ) {
+            return plugin.invokeExtensionMethod(obj, methodName, args);
         }
 
         return delegate.invokeMethod(obj, methodName, args);

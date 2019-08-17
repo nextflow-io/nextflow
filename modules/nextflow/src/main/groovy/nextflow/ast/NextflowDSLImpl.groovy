@@ -16,13 +16,11 @@
 
 package nextflow.ast
 
-import static org.codehaus.groovy.ast.tools.GeneralUtils.*
-
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.script.BaseScript
-import nextflow.script.IncludeDef
 import nextflow.script.BodyDef
+import nextflow.script.IncludeDef
 import nextflow.script.TaskClosure
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
@@ -43,11 +41,8 @@ import org.codehaus.groovy.ast.expr.BinaryExpression
 import org.codehaus.groovy.ast.expr.CastExpression
 import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
-import org.codehaus.groovy.ast.expr.ConstructorCallExpression
-import org.codehaus.groovy.ast.expr.DeclarationExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.GStringExpression
-import org.codehaus.groovy.ast.expr.ListExpression
 import org.codehaus.groovy.ast.expr.MapExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.PropertyExpression
@@ -65,6 +60,16 @@ import org.codehaus.groovy.syntax.Token
 import org.codehaus.groovy.syntax.Types
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
+import static nextflow.ast.ASTHelpers.createX
+import static nextflow.ast.ASTHelpers.isAssignX
+import static nextflow.ast.ASTHelpers.isMethodCallX
+import static nextflow.ast.ASTHelpers.isThisX
+import static nextflow.ast.ASTHelpers.isVariableX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.block
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callThisX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.closureX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
 /**
  * Implement some syntax sugars of Nextflow DSL scripting.
  *
@@ -304,25 +309,6 @@ class NextflowDSLImpl implements ASTTransformation {
             methodCall.setArguments( newArgs )
         }
 
-        protected MethodCallExpression isMethodCallX(Expression expr) {
-            return expr instanceof MethodCallExpression ? expr : null
-        }
-
-        protected VariableExpression isVariableX(Expression expr) {
-            return expr instanceof VariableExpression ? expr : null
-        }
-
-        protected VariableExpression isThisX(Expression expr) {
-            isVariableX(expr)?.name == 'this' ? (VariableExpression)expr : null
-        }
-
-        protected BinaryExpression isBinaryX(Expression expr) {
-            expr instanceof BinaryExpression ? expr : null
-        }
-
-        protected BinaryExpression isAssignX(Expression expr) {
-            isBinaryX(expr)?.operation?.type == Types.ASSIGN ? (BinaryExpression)expr : null
-        }
 
         protected Statement normWorkflowParam(ExpressionStatement stat, String type, Set<String> emitNames, List<Statement> body) {
             MethodCallExpression callx
@@ -434,22 +420,6 @@ class NextflowDSLImpl implements ASTTransformation {
             int line = node.lineNumber
             int coln = node.columnNumber
             unit.addError( new SyntaxException(message,line,coln))
-        }
-
-        protected ListExpression makeArgsList(ArgumentListExpression args) {
-            def result = new ArrayList<Expression>()
-            for( int i=0; i<args.size()-1; i++) {
-                def expr = args.getExpression(i)
-                if( expr instanceof VariableExpression ) {
-                    def varX = expr as VariableExpression
-                    result.add(constX(varX.name))
-                }
-                else {
-                    throw new IllegalArgumentException("Unexpected input expression: $expr")
-                }
-            }
-
-            return new ListExpression(result)
         }
 
         /**
@@ -688,30 +658,6 @@ class NextflowDSLImpl implements ASTTransformation {
                 }
                 buffer.append(line) .append('\n')
             }
-        }
-
-        @Deprecated
-        protected void fixGuards( Statement stm, SourceUnit unit ) {
-
-            if( stm instanceof ExpressionStatement && stm.getExpression() instanceof MethodCallExpression ) {
-
-                def method = stm.getExpression() as MethodCallExpression
-                if( method.arguments instanceof ArgumentListExpression ) {
-                    def args = method.arguments as ArgumentListExpression
-                    if( args.size() == 1 && args.getExpression(0) instanceof ClosureExpression ) {
-                        // read the source code of the closure
-                        def closure = args.getExpression(0) as ClosureExpression
-                        def source = new StringBuilder()
-                        readSource(closure.getCode(), source, unit)
-
-                        // wrap the closure expression by a TaskClosure object invocation
-                        def wrap = createX( TaskClosure, closure, new ConstantExpression(source.toString()) )
-                        // replace it with the original closure argument
-                        args.expressions.set(0, wrap)
-                    }
-                }
-            }
-
         }
 
         protected void fixLazyGString( Statement stm ) {
@@ -1048,37 +994,6 @@ class NextflowDSLImpl implements ASTTransformation {
             return expr
         }
 
-        /**
-         * Creates a new {@code ConstructorCallExpression} for the specified class and arguments
-         *
-         * @param clazz The {@code Class} for which the create a constructor call expression
-         * @param args The arguments to be passed to the constructor
-         * @return The instance for the constructor call
-         */
-        protected Expression createX(Class clazz, TupleExpression args ) {
-            def type = new ClassNode(clazz)
-            return new ConstructorCallExpression(type,args)
-        }
-
-        /**
-         * Creates a new {@code ConstructorCallExpression} for the specified class and arguments
-         * specified using an open array. Te
-         *
-         * @param clazz The {@code Class} for which the create a constructor call expression
-         * @param args The arguments to be passed to the constructor, they will be wrapped by in a {@code ArgumentListExpression}
-         * @return The instance for the constructor call
-         */
-        protected Expression createX(Class clazz, Expression... params ) {
-            def type = new ClassNode(clazz)
-            def args = new ArgumentListExpression(params as List<Expression>)
-            return new ConstructorCallExpression(type,args)
-        }
-
-        protected Expression createX(Class clazz, List<Expression> params ) {
-            def type = new ClassNode(clazz)
-            def args = new ArgumentListExpression(params as List<Expression>)
-            return new ConstructorCallExpression(type,args)
-        }
 
         /**
          * Wrap a generic expression with in a closure expression
@@ -1197,202 +1112,6 @@ class NextflowDSLImpl implements ASTTransformation {
             def visitor = new VariableVisitor(unit)
             visitor.visitClosureExpression(closure)
             return visitor.allVariables
-        }
-
-    }
-
-    /**
-     * Visit a closure and collect all referenced variable names
-     */
-    @CompileStatic
-    static class VariableVisitor extends ClassCodeVisitorSupport {
-
-        final Map<String,TokenValRef> fAllVariables = [:]
-
-        final Set<String> localDef = []
-
-        final SourceUnit sourceUnit
-
-        private boolean declaration
-
-        private int deep
-
-        VariableVisitor( SourceUnit unit ) {
-            this.sourceUnit = unit
-        }
-
-        protected boolean isNormalized(PropertyExpression expr) {
-            if( !(expr.getProperty() instanceof ConstantExpression) )
-                return false
-
-            def target = expr.getObjectExpression()
-            while( target instanceof PropertyExpression) {
-                target = (target as PropertyExpression).getObjectExpression()
-            }
-
-            return target instanceof VariableExpression
-        }
-
-        @Override
-        void visitClosureExpression(ClosureExpression expression) {
-            if( deep++ == 0 )
-                super.visitClosureExpression(expression)
-        }
-
-        @Override
-        void visitDeclarationExpression(DeclarationExpression expr) {
-            declaration = true
-            try {
-                super.visitDeclarationExpression(expr)
-            }
-            finally {
-                declaration = false
-            }
-        }
-
-        @Override
-        void visitPropertyExpression(PropertyExpression expr) {
-
-            if( isNormalized(expr)) {
-                final name = expr.text.replace('?','')
-                final line = expr.lineNumber
-                final coln = expr.columnNumber
-
-                if( !name.startsWith('this.') && !fAllVariables.containsKey(name) ) {
-                    fAllVariables[name] = new TokenValRef(name,line,coln)
-                }
-            }
-            else
-                super.visitPropertyExpression(expr)
-
-        }
-
-        @Override
-        void visitVariableExpression(VariableExpression var) {
-            final name = var.name
-            final line = var.lineNumber
-            final coln = var.columnNumber
-
-            if( name == 'this' )
-                return
-
-            if( declaration ) {
-                if( fAllVariables.containsKey(name) )
-                    sourceUnit.addError( new SyntaxException("Variable `$name` already defined in the process scope", line, coln))
-                else
-                    localDef.add(name)
-            }
-
-            // Note: variable declared in the process scope are not added
-            // to the set of referenced variables. Only global ones are tracked
-            else if( !localDef.contains(name) && !fAllVariables.containsKey(name) ) {
-                fAllVariables[name] = new TokenValRef(name,line,coln)
-            }
-        }
-
-        @Override
-        protected SourceUnit getSourceUnit() {
-            return sourceUnit
-        }
-
-        /**
-         * @return The set of all variables referenced in the script.
-         * NOTE: it includes properties in the form {@code object.propertyName}
-         */
-        Set<TokenValRef> getAllVariables() {
-            new HashSet<TokenValRef>(fAllVariables.values())
-        }
-    }
-
-    /**
-     * Transform any GString to a Lazy GString i.e.
-     *
-     * from
-     *   "${foo} ${bar}"
-     * to
-     *   "${->foo} ${->bar}
-     *
-     */
-    @CompileStatic
-    static class GStringToLazyVisitor extends ClassCodeVisitorSupport {
-
-        final SourceUnit sourceUnit
-
-        private boolean withinClosure
-
-        private List<String> names = []
-
-        GStringToLazyVisitor(SourceUnit unit) {
-            this.sourceUnit = unit
-        }
-
-        @Override
-        void visitClosureExpression(ClosureExpression expression) {
-            withinClosure = true
-            try {
-                super.visitClosureExpression(expression)
-            }
-            finally {
-                withinClosure = false
-            }
-        }
-
-        @Override
-        void visitMethodCallExpression(MethodCallExpression call) {
-            call.getObjectExpression().visit(this)
-            call.getMethod().visit(this)
-            names.push(call.methodAsString)
-            call.getArguments().visit(this)
-            names.pop()
-        }
-
-        @Override
-        void visitGStringExpression(GStringExpression expression) {
-            // channels values are not supposed to be lazy evaluated
-            // therefore stop visiting when reaching `from` keyword
-            if( !withinClosure && names.last()!='from' ) {
-                xformToLazy(expression)
-            }
-        }
-
-        protected void xformToLazy(GStringExpression str) {
-            def values = str.getValues()
-            def normalised = new Expression[values.size()]
-
-            // wrap all non-closure to a ClosureExpression
-            for( int i=0; i<values.size(); i++ ) {
-                final item = values[i]
-                if( item instanceof ClosureExpression  ) {
-                    // when there is already a closure the conversion it is aborted
-                    // because it supposed the gstring is already a lazy-string
-                    return
-                }
-                normalised[i] = wrapWithClosure(item)
-            }
-
-            for( int i=0; i<values.size(); i++ ) {
-                values[i] = normalised[i]
-            }
-        }
-
-        protected ClosureExpression wrapWithClosure( Expression expr ) {
-
-            // create an expression statement for the given `expression`
-            def statement = new ExpressionStatement(expr)
-            // add it to a new block
-            def block = new BlockStatement()
-            block.addStatement(statement)
-            // create a closure over the given block
-            // note: the closure parameter argument must be *null* to force the creation of a closure like {-> something}
-            // otherwise it creates a closure with an implicit parameter that is managed in a different manner by the
-            // GString -- see http://docs.groovy-lang.org/latest/html/documentation/#_special_case_of_interpolating_closure_expressions
-            new ClosureExpression( null, block )
-
-        }
-
-        @Override
-        protected SourceUnit getSourceUnit() {
-            return sourceUnit
         }
 
     }

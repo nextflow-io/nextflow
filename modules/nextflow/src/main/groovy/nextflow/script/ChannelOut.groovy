@@ -18,6 +18,7 @@ package nextflow.script
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import static nextflow.ast.NextflowDSLImpl.OUT_PREFIX
 /**
  * Models the output of a process or a workflow component returning
@@ -27,7 +28,7 @@ import static nextflow.ast.NextflowDSLImpl.OUT_PREFIX
  */
 @Slf4j
 @CompileStatic
-class ChannelOut implements List {
+class ChannelOut implements List<DataflowWriteChannel> {
 
     final private static Map<String,Integer> NUMS = new HashMap<>(10)
 
@@ -44,29 +45,30 @@ class ChannelOut implements List {
         NUMS['tenth'] = 9
     }
 
-    @Delegate List target
+    private @Delegate List<DataflowWriteChannel> target
 
-    private Map<String,Object> channels
+    private Map<String,DataflowWriteChannel> channels
 
     ChannelOut() {
-        this.target = Collections.<Object>unmodifiableList(Collections.<Object>emptyList())
-        this.channels = Collections.emptyMap()
+        this.target = Collections.<DataflowWriteChannel>unmodifiableList(Collections.<DataflowWriteChannel>emptyList())
+        this.channels = Collections.<String,DataflowWriteChannel>emptyMap()
     }
 
-    ChannelOut(List c) {
-        target = Collections.unmodifiableList(c)
-        this.channels = Collections.emptyMap()
+    ChannelOut(List<DataflowWriteChannel> c) {
+        this.target = Collections.<DataflowWriteChannel>unmodifiableList(c)
+        this.channels = Collections.<String,DataflowWriteChannel>emptyMap()
     }
 
-    ChannelOut(LinkedHashMap<String,?> channels) {
-        this.target = Collections.unmodifiableList(new ArrayList(channels.values()))
-        this.channels = new LinkedHashMap(channels)
+    ChannelOut(Map<String,DataflowWriteChannel> channels) {
+        this.target = Collections.unmodifiableList(new ArrayList<DataflowWriteChannel>(channels.values()))
+        this.channels = Collections.unmodifiableMap(new LinkedHashMap<String,DataflowWriteChannel>(channels))
     }
 
     Set<String> getNames() { channels.keySet().findAll { !it.startsWith(OUT_PREFIX) }  }
 
+    @Override
     def getProperty(String name) {
-        if( channels.containsKey(name) ) {
+        if( this.channels.containsKey(name) ) {
             return channels.get(name)
         }
         else if(NUMS.containsKey(name)) {

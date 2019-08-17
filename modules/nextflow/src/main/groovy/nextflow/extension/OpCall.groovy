@@ -180,6 +180,9 @@ class OpCall implements Callable {
         if( declaresReturnType(DataflowWriteChannel, method) ) {
             fetchChannels(value, result)
         }
+        else if( declaresReturnType(ChannelOut, method) ) {
+            fetchChannels(value, result)
+        }
 
         return result
     }
