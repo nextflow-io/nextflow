@@ -20,7 +20,7 @@ import spock.lang.Ignore
 import org.junit.Rule
 
 import nextflow.Channel
-import org.codehaus.groovy.control.MultipleCompilationErrorsException
+import nextflow.exception.ScriptCompilationException
 import test.Dls2Spec
 import test.OutputCapture
 /**
@@ -262,7 +262,7 @@ class BranchOpTest extends Dls2Spec  {
 
     def 'should pass criteria as argument' () {
         when:
-        def result = dsl_eval('''   
+        dsl_eval('''   
             criteria = branchCriteria { 
                 foo: it<5
                 bar: it>=5
@@ -291,7 +291,7 @@ class BranchOpTest extends Dls2Spec  {
                     }
         ''')
         then:
-        def e = thrown(MultipleCompilationErrorsException)
+        def e = thrown(ScriptCompilationException)
         e.message.contains 'Branch evaluation closure should declare at least one parameter or use the implicit `it` parameter'
     }
 
@@ -301,7 +301,7 @@ class BranchOpTest extends Dls2Spec  {
             Channel.empty() .branch { foo: true; foo: true }
         ''')
         then:
-        def e = thrown(MultipleCompilationErrorsException)
+        def e = thrown(ScriptCompilationException)
         e.message.contains 'Branch label already used: foo'
     }
 
@@ -311,7 +311,7 @@ class BranchOpTest extends Dls2Spec  {
             Channel.empty() .branch { foo: if(it) {}; bar: true }
         ''')
         then:
-        def e = thrown(MultipleCompilationErrorsException)
+        def e = thrown(ScriptCompilationException)
         e.message.contains 'Unexpected statement'
     }
 
@@ -321,7 +321,7 @@ class BranchOpTest extends Dls2Spec  {
             Channel.empty() .branch { def x=1 }
         ''')
         then:
-        def e = thrown(MultipleCompilationErrorsException)
+        def e = thrown(ScriptCompilationException)
         e.message.contains 'Branch evaluation closure should contain at least one branch expression'
 
         when:
@@ -329,7 +329,7 @@ class BranchOpTest extends Dls2Spec  {
             Channel.empty() .branch {  }
         ''')
         then:
-        def e2 = thrown(MultipleCompilationErrorsException)
+        def e2 = thrown(ScriptCompilationException)
         e2.message.contains 'Branch evaluation closure should contain at least one branch expression'
     }
 
@@ -340,7 +340,7 @@ class BranchOpTest extends Dls2Spec  {
             Channel.empty() .branch { foo: true; if(x) {}  }
         ''')
         then:
-        def e = thrown(MultipleCompilationErrorsException)
+        def e = thrown(ScriptCompilationException)
         e.message.contains 'Unexpected statement in branch condition'
 
     }

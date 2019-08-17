@@ -16,6 +16,7 @@
 
 package nextflow
 
+import nextflow.exception.ScriptCompilationException
 import static nextflow.Const.*
 
 import java.lang.reflect.Method
@@ -708,7 +709,8 @@ class Session implements ISession {
      */
     void abort(Throwable cause = null) {
         if( aborted ) return
-        log.debug "Session aborted -- Cause: ${cause?.message ?: cause ?: '-'}"
+        if( !(cause instanceof ScriptCompilationException) )
+            log.debug "Session aborted -- Cause: ${cause?.message ?: cause ?: '-'}"
         aborted = true
         error = cause
         try {

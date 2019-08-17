@@ -24,7 +24,7 @@ import groovy.transform.EqualsAndHashCode
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import nextflow.Session
-import nextflow.exception.ProcessException
+import nextflow.exception.IllegalModulePath
 /**
  * Implements a script inclusion
  *
@@ -67,8 +67,7 @@ class IncludeDef {
     }
 
     void load() {
-        if( !path )
-            throw new IllegalArgumentException("Missing module path attribute")
+        checkValidPath(path)
 
         // -- resolve the concrete against the current script
         final moduleFile = realModulePath(path)
@@ -87,22 +86,14 @@ class IncludeDef {
     @PackageScope
     @Memoized
     static BaseScript loadModule0(Path path, Map params, Session session) {
-        try {
-            final binding = new ScriptBinding() .setParams(params)
+        final binding = new ScriptBinding() .setParams(params)
 
-            // the execution of a library file has as side effect the registration of declared processes
-            new ScriptParser(session)
-                    .setModule(true)
-                    .setBinding(binding)
-                    .runScript(path)
-                    .getScript()
-        }
-        catch( ProcessException e ) {
-            throw e
-        }
-        catch( Exception e ) {
-            throw new IllegalArgumentException("Unable to load module file: $path -- cause: ${e.cause?.message ?: e.message}", e)
-        }
+        // the execution of a library file has as side effect the registration of declared processes
+        new ScriptParser(session)
+                .setModule(true)
+                .setBinding(binding)
+                .runScript(path)
+                .getScript()
     }
 
     @PackageScope
@@ -112,7 +103,7 @@ class IncludeDef {
         final result = include as Path
         if( result.isAbsolute() ) {
             if( result.scheme == 'file' ) return result
-            throw new IllegalArgumentException("Cannot resolve module path: ${result.toUriString()}")
+            throw new IllegalModulePath("Cannot resolve module path: ${result.toUriString()}")
         }
 
         return getOwnerPath().resolveSibling(include.toString())
@@ -135,5 +126,20 @@ class IncludeDef {
 
         throw new NoSuchFileException("Can't find a matching module file for include: $include")
     }
+
+    @PackageScope
+    void checkValidPath(path) {
+        if( !path )
+            throw new IllegalModulePath("Missing module path attribute")
+
+        if( path instanceof Path && path.scheme != 'file' )
+            throw new IllegalModulePath("Remote modules are not allowed -- Offending module: ${path.toUriString()}")
+
+        final str = path.toString()
+        if( !str.startsWith('/') && !str.startsWith('./') && !str.startsWith('../') )
+            throw new IllegalModulePath("Module path must start with / or ./ prefix -- Offending module: $str")
+
+    }
+
 
 }

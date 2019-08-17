@@ -2,7 +2,7 @@ package nextflow.script
 
 import spock.lang.Timeout
 
-import org.codehaus.groovy.control.MultipleCompilationErrorsException
+import nextflow.exception.ScriptCompilationException
 import test.Dls2Spec
 /**
  *
@@ -137,7 +137,7 @@ class ScriptDslTest extends Dls2Spec {
         """
 
         then:
-        def err = thrown(MultipleCompilationErrorsException)
+        def err = thrown(ScriptCompilationException)
         err.message.contains('Identifier `main` is reserved for internal use')
     }
 
@@ -151,7 +151,7 @@ class ScriptDslTest extends Dls2Spec {
         """
 
         then:
-        def err = thrown(MultipleCompilationErrorsException)
+        def err = thrown(ScriptCompilationException)
         err.message.contains('Identifier `main` is reserved for internal use')
     }
 
@@ -164,7 +164,7 @@ class ScriptDslTest extends Dls2Spec {
             }
         """
         then:
-        def err = thrown(MultipleCompilationErrorsException)
+        def err = thrown(ScriptCompilationException)
         err.message.contains('Identifier `main` is reserved for internal use')
     }
 
@@ -182,7 +182,7 @@ class ScriptDslTest extends Dls2Spec {
             """
         )
         then:
-        def err = thrown(MultipleCompilationErrorsException)
+        def err = thrown(ScriptCompilationException)
         err.message.contains('Duplicate entry workflow definition')
     }
 
