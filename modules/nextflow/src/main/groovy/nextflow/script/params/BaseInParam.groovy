@@ -25,7 +25,7 @@ import nextflow.NF
 import nextflow.Nextflow
 import nextflow.exception.ProcessException
 import nextflow.exception.ScriptRuntimeException
-import nextflow.extension.ChannelFactory
+import nextflow.extension.CH
 import nextflow.script.ProcessConfig
 import nextflow.script.TokenVar
 
@@ -80,7 +80,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
         }
 
         if ( value instanceof DataflowReadChannel || value instanceof DataflowBroadcast )  {
-            return ChannelFactory.getReadChannel(value)
+            return CH.getReadChannel(value)
         }
 
         if( NF.isDsl2() ) {
@@ -187,9 +187,9 @@ abstract class BaseInParam extends BaseParam implements InParam {
     }
 
     Object getRawChannel() {
-        if( ChannelFactory.isChannel(fromObject) )
+        if( CH.isChannel(fromObject) )
             return fromObject
-        if( ChannelFactory.isChannel(inChannel) )
+        if( CH.isChannel(inChannel) )
             return inChannel
         throw new IllegalStateException("Missing input channel")
     }

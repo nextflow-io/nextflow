@@ -124,10 +124,10 @@ class OpCall implements Callable {
 
     private <T> T read0(source){
         if( source instanceof DataflowBroadcast )
-            return (T)ChannelFactory.getReadChannel(source)
+            return (T)CH.getReadChannel(source)
 
         if( source instanceof DataflowQueue )
-            return (T)ChannelFactory.getReadChannel(source)
+            return (T)CH.getReadChannel(source)
 
         else
             return (T)source

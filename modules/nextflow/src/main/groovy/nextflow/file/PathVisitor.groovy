@@ -30,7 +30,7 @@ import groovy.transform.PackageScope
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
 import nextflow.Session
-import nextflow.extension.ChannelFactory
+import nextflow.extension.CH
 import nextflow.util.CustomThreadFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -62,7 +62,7 @@ class PathVisitor {
             opts = [:]
 
         if( !target )
-            target = ChannelFactory.create()
+            target = CH.create()
 
         if( filePattern instanceof Pattern )
             applyRegexPattern0(filePattern)

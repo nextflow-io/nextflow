@@ -59,7 +59,7 @@ import nextflow.exception.ShowOnlyExceptionMessage
 import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
 import nextflow.executor.StoredTaskHandler
-import nextflow.extension.ChannelFactory
+import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
@@ -2133,7 +2133,7 @@ class TaskProcessor {
             this.stopAfterFirstRun = stop
             this.len = inputs.size()
             this.control = (DataflowQueue)inputs.get(len-1)
-            this.first = inputs.findIndexOf { ChannelFactory.isChannelQueue(it) }
+            this.first = inputs.findIndexOf { CH.isChannelQueue(it) }
         }
 
         @Override

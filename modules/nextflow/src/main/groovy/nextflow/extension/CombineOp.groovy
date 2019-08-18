@@ -149,7 +149,7 @@ class CombineOp {
 
     DataflowWriteChannel apply() {
 
-        target = ChannelFactory.create()
+        target = CH.create()
 
         if( rightChannel ) {
             final stopCount = new AtomicInteger(2)

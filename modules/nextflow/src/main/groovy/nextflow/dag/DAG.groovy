@@ -27,7 +27,7 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.NF
-import nextflow.extension.ChannelFactory
+import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
 import nextflow.processor.TaskProcessor
 import nextflow.script.params.DefaultInParam
@@ -196,7 +196,7 @@ class DAG {
             return true
         if( obj instanceof DataflowBroadcast )
             return true
-        return obj instanceof DataflowQueue && ChannelFactory.isBridge(obj)
+        return obj instanceof DataflowQueue && CH.isBridge(obj)
     }
 
     private void outbound( Vertex vertex, ChannelHandler leaving) {

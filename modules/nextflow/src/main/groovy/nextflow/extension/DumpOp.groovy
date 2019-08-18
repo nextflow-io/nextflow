@@ -56,7 +56,7 @@ class DumpOp {
     }
 
     DumpOp setSource( DataflowWriteChannel source ) {
-        this.source = ChannelFactory.getReadChannel(source)
+        this.source = CH.getReadChannel(source)
         return this
     }
 
@@ -82,7 +82,7 @@ class DumpOp {
             throw new IllegalArgumentException("Illegal dump operator source channel")
         }
 
-        final target = ChannelFactory.createBy(source)
+        final target = CH.createBy(source)
         final events = new HashMap(2)
         events.onNext = {
             def marker = 'DUMP'
@@ -91,7 +91,7 @@ class DumpOp {
             target.bind(it)
         }
 
-        events.onComplete = { ChannelFactory.close0(target) }
+        events.onComplete = { CH.close0(target) }
 
         DataflowHelper.subscribeImpl(source, events)
         return target

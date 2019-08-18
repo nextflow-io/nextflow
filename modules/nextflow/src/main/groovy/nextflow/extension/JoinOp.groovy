@@ -67,7 +67,7 @@ class JoinOp {
     DataflowWriteChannel apply() {
 
         // the resulting channel
-        final result = ChannelFactory.create()
+        final result = CH.create()
         // the following buffer maintains the state of collected items as a map of maps.
         // The first map associates the joining key with the collected values
         // The inner map associates the channel index with the actual values received on that channel

@@ -142,7 +142,7 @@ class OperatorEx implements DelegatingPlugin {
      * @return
      */
     DataflowWriteChannel chain(final DataflowReadChannel<?> source, final Closure closure) {
-        final target = ChannelFactory.createBy(source)
+        final target = CH.createBy(source)
         newOperator(source, target, new ChainWithClosure(closure))
         return target
     }
@@ -155,7 +155,7 @@ class OperatorEx implements DelegatingPlugin {
      * @return
      */
     DataflowWriteChannel chain(final DataflowReadChannel<?> source, final Map<String, Object> params, final Closure closure) {
-        final target = ChannelFactory.createBy(source)
+        final target = CH.createBy(source)
         chainImpl(source, target, params, closure)
         return target;
     }
@@ -183,7 +183,7 @@ class OperatorEx implements DelegatingPlugin {
     DataflowWriteChannel flatMap(final DataflowReadChannel<?> source, final Closure closure=null) {
         assert source != null
 
-        final target = ChannelFactory.create()
+        final target = CH.create()
         final listener = stopErrorListener(source,target)
 
         newOperator(source, target, listener) {  item ->
@@ -299,7 +299,7 @@ class OperatorEx implements DelegatingPlugin {
     DataflowWriteChannel filter(final DataflowReadChannel source, final Object criteria) {
         def discriminator = new BooleanReturningMethodInvoker("isCase");
 
-        def target = ChannelFactory.createBy(source)
+        def target = CH.createBy(source)
         if( source instanceof DataflowExpression ) {
             source.whenBound {
                 def result = it instanceof ControlMessage ? false : discriminator.invoke(criteria, (Object)it)
@@ -317,7 +317,7 @@ class OperatorEx implements DelegatingPlugin {
     }
 
     DataflowWriteChannel filter(DataflowReadChannel source, final Closure<Boolean> closure) {
-        def target = ChannelFactory.createBy(source)
+        def target = CH.createBy(source)
         if( source instanceof DataflowExpression ) {
             source.whenBound {
                 def result = it instanceof ControlMessage ? false : DefaultTypeTransformation.castToBoolean(closure.call(it))
@@ -335,7 +335,7 @@ class OperatorEx implements DelegatingPlugin {
     }
 
     DataflowWriteChannel until(DataflowReadChannel source, final Closure<Boolean> closure) {
-        def target = ChannelFactory.createBy(source)
+        def target = CH.createBy(source)
         newOperator(source, target, {
             final result = DefaultTypeTransformation.castToBoolean(closure.call(it))
             final proc = ((DataflowProcessor) getDelegate())
@@ -377,7 +377,7 @@ class OperatorEx implements DelegatingPlugin {
     DataflowWriteChannel unique(final DataflowReadChannel source, Closure comparator ) {
 
         def history = [:]
-        def target = ChannelFactory.createBy(source)
+        def target = CH.createBy(source)
 
         // when the operator stop clear the history map
         def events = new DataflowEventAdapter() {
@@ -426,7 +426,7 @@ class OperatorEx implements DelegatingPlugin {
     DataflowWriteChannel distinct( final DataflowReadChannel source, Closure comparator ) {
 
         def previous = null
-        final target = ChannelFactory.createBy(source)
+        final target = CH.createBy(source)
         Closure filter = { it ->
 
             def key = comparator.call(it)
@@ -512,7 +512,7 @@ class OperatorEx implements DelegatingPlugin {
             throw new IllegalArgumentException("Operator `take` cannot be applied to a value channel")
 
         def count = 0
-        final target = ChannelFactory.create()
+        final target = CH.create()
 
         if( n==0 ) {
             target.bind(Channel.STOP)
@@ -907,7 +907,7 @@ class OperatorEx implements DelegatingPlugin {
         assert !(source instanceof DataflowExpression)
 
         def allChannels = new ConcurrentHashMap()
-        def target = ChannelFactory.create()
+        def target = CH.create()
 
         subscribeImpl(source,
                 [
@@ -915,7 +915,7 @@ class OperatorEx implements DelegatingPlugin {
                         def key = mapper ? mapper.call(value) : value
                         def channel = allChannels.get(key)
                         if( channel == null ) {
-                            channel = ChannelFactory.create()
+                            channel = CH.create()
                             allChannels[key] = channel
                             // emit the key - channel pair
                             target << [ key, channel ]
@@ -937,7 +937,7 @@ class OperatorEx implements DelegatingPlugin {
 
     DataflowWriteChannel spread( final DataflowReadChannel source, Object other ) {
 
-        final target = ChannelFactory.create()
+        final target = CH.create()
 
         def inputs
         switch(other) {
@@ -1010,7 +1010,7 @@ class OperatorEx implements DelegatingPlugin {
     DataflowWriteChannel flatten( final DataflowReadChannel source )  {
 
         final listeners = []
-        final target = ChannelFactory.create()
+        final target = CH.create()
 
         if( source instanceof DataflowExpression ) {
             listeners << new DataflowEventAdapter() {
@@ -1114,7 +1114,7 @@ class OperatorEx implements DelegatingPlugin {
         }
 
         // the result queue
-        final target = ChannelFactory.create()
+        final target = CH.create()
 
         // the list holding temporary collected elements
         List<List<?>> allBuffers = []
@@ -1174,7 +1174,7 @@ class OperatorEx implements DelegatingPlugin {
     DataflowWriteChannel mix( DataflowReadChannel source, DataflowReadChannel[] others ) {
         assert others.size()>0
 
-        def target = ChannelFactory.create()
+        def target = CH.create()
         def count = new AtomicInteger( others.size()+1 )
         def handlers = [
                 onNext: { target << it },
@@ -1417,7 +1417,7 @@ class OperatorEx implements DelegatingPlugin {
     DataflowWriteChannel ifEmpty( DataflowReadChannel source, value ) {
 
         boolean empty = true
-        final result = ChannelFactory.createBy(source)
+        final result = CH.createBy(source)
         final singleton = result instanceof DataflowExpression
         final next = { result.bind(it); empty=false }
         final complete = {
@@ -1469,7 +1469,7 @@ class OperatorEx implements DelegatingPlugin {
         checkParams('view', opts, PARAMS_VIEW)
         final newLine = opts.newLine != false
 
-        final target = ChannelFactory.createBy(source);
+        final target = CH.createBy(source);
         final apply = new HashMap<String,Closure>(2)
 
         apply.onNext  = {
@@ -1478,7 +1478,7 @@ class OperatorEx implements DelegatingPlugin {
             target.bind(it)
         }
 
-        apply. onComplete = { ChannelFactory.close0(target) }
+        apply. onComplete = { CH.close0(target) }
 
         subscribeImpl(source,apply)
         return target
@@ -1495,7 +1495,7 @@ class OperatorEx implements DelegatingPlugin {
     // NO DAG
     @DeprecatedDsl2
     DataflowWriteChannel merge(final DataflowReadChannel source, final DataflowReadChannel other, final Closure closure=null) {
-        final result = ChannelFactory.createBy(source)
+        final result = CH.createBy(source)
         final inputs = [source, other]
         final action = closure ? new ChainWithClosure<>(closure) : new DefaultMergeClosure(inputs.size())
         final listener = stopErrorListener(source,result)
@@ -1507,7 +1507,7 @@ class OperatorEx implements DelegatingPlugin {
     // NO DAG
     @DeprecatedDsl2
     DataflowWriteChannel merge(final DataflowReadChannel source, final DataflowReadChannel... others) {
-        final result = ChannelFactory.createBy(source)
+        final result = CH.createBy(source)
         final List<DataflowReadChannel> inputs = new ArrayList<DataflowReadChannel>(1 + others.size())
         inputs.add(source)
         inputs.addAll(others)
@@ -1520,7 +1520,7 @@ class OperatorEx implements DelegatingPlugin {
     // NO DAG
     @DeprecatedDsl2
     DataflowWriteChannel merge(final DataflowReadChannel source, final List<DataflowReadChannel> others, final Closure closure=null) {
-        final result = ChannelFactory.createBy(source)
+        final result = CH.createBy(source)
         final List<DataflowReadChannel> inputs = new ArrayList<DataflowReadChannel>(1 + others.size())
         final action = closure ? new ChainWithClosure<>(closure) : new DefaultMergeClosure(1 + others.size())
         inputs.add(source)
@@ -1540,25 +1540,25 @@ class OperatorEx implements DelegatingPlugin {
     }
 
     DataflowWriteChannel toInteger(final DataflowReadChannel source) {
-        final target = ChannelFactory.createBy(source)
+        final target = CH.createBy(source)
         newOperator(source, target, new ChainWithClosure({ it -> it as Integer }))
         return target;
     }
 
     DataflowWriteChannel toLong(final DataflowReadChannel source) {
-        final target = ChannelFactory.createBy(source)
+        final target = CH.createBy(source)
         newOperator(source, target, new ChainWithClosure({ it -> it as Long }))
         return target;
     }
 
     DataflowWriteChannel toFloat(final DataflowReadChannel source) {
-        final target = ChannelFactory.createBy(source)
+        final target = CH.createBy(source)
         newOperator(source, target, new ChainWithClosure({ it -> it as Float }))
         return target;
     }
 
     DataflowWriteChannel toDouble(final DataflowReadChannel source) {
-        final target = ChannelFactory.createBy(source)
+        final target = CH.createBy(source)
         newOperator(source, target, new ChainWithClosure({ it -> it as Double }))
         return target;
     }
