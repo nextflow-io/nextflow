@@ -3,13 +3,13 @@ package nextflow.script
 import spock.lang.Timeout
 
 import nextflow.exception.ScriptCompilationException
-import test.Dls2Spec
+import test.Dsl2Spec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Timeout(5)
-class ScriptDslTest extends Dls2Spec {
+class ScriptDslTest extends Dsl2Spec {
 
 
     def 'should execute basic workflow' () {

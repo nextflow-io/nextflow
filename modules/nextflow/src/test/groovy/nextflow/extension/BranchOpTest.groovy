@@ -21,13 +21,13 @@ import org.junit.Rule
 
 import nextflow.Channel
 import nextflow.exception.ScriptCompilationException
-import test.Dls2Spec
+import test.Dsl2Spec
 import test.OutputCapture
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class BranchOpTest extends Dls2Spec  {
+class BranchOpTest extends Dsl2Spec  {
 
     @Rule
     OutputCapture capture = new OutputCapture()

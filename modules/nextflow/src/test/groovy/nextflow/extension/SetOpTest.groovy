@@ -20,12 +20,12 @@ package nextflow.extension
 import nextflow.Channel
 import nextflow.Session
 import nextflow.script.ChannelOut
-import test.Dls2Spec
+import test.Dsl2Spec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class SetOpTest extends Dls2Spec {
+class SetOpTest extends Dsl2Spec {
 
     def 'should set a channel in the global context' () {
         when:
