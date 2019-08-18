@@ -36,7 +36,7 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.dag.NodeMarker
 import nextflow.datasource.SraExplorer
 import nextflow.exception.AbortOperationException
-import nextflow.extension.ChannelFactory
+import nextflow.extension.CH
 import nextflow.extension.GroupTupleOp
 import nextflow.extension.MapOp
 import nextflow.file.DirWatcher
@@ -102,7 +102,7 @@ class Channel  {
     }
 
     static private DataflowWriteChannel from0( Collection items ) {
-        final result = ChannelFactory.create()
+        final result = CH.create()
         if( NF.isDsl2() ) {
             session.addIgniter { bindValues0(items, result) }
         }
@@ -185,7 +185,7 @@ class Channel  {
     static private DataflowWriteChannel interval0(String duration, Closure closure) {
         def millis = Duration.of(duration).toMillis()
         def timer = new Timer()
-        def result = ChannelFactory.create()
+        def result = CH.create()
         long index = 0
 
         def task = {
@@ -241,7 +241,7 @@ class Channel  {
 
     private static DataflowWriteChannel<Path> fromPath0( Map opts, List allPatterns ) {
 
-        final result = ChannelFactory.create()
+        final result = CH.create()
         if( NF.isDsl2() ) {
             session.addIgniter { pumpFiles0(result, opts, allPatterns) }
         }
@@ -273,7 +273,7 @@ class Channel  {
 
     static private DataflowWriteChannel watchImpl( String syntax, String folder, String pattern, boolean skipHidden, String events, FileSystem fs ) {
         
-        final result = ChannelFactory.create()
+        final result = CH.create()
         final watcher = new DirWatcher(syntax,folder,pattern,skipHidden,events, fs)
                             .setOnComplete { result.bind(STOP) }
          
@@ -452,7 +452,7 @@ class Channel  {
         def size = (options?.size ?: DEF_SIZE)
         def isFlat = options?.flat == true
         def groupOpts = [sort: true, size: size]
-        def groupChannel = isFlat ? new DataflowQueue<>() : ChannelFactory.create()
+        def groupChannel = isFlat ? new DataflowQueue<>() : CH.create()
 
         new GroupTupleOp(groupOpts, mapChannel)
                 .setTarget(groupChannel)

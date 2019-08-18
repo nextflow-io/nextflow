@@ -21,7 +21,7 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.NF
 import nextflow.exception.ScriptRuntimeException
-import nextflow.extension.ChannelFactory
+import nextflow.extension.CH
 import nextflow.script.ProcessConfig
 import nextflow.script.TokenVar
 
@@ -127,7 +127,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
                 }
 
                 // instantiate the new channel
-                channel = ChannelFactory.create( singleton && mode==BasicMode.standard )
+                channel = CH.create( singleton && mode==BasicMode.standard )
 
                 // bind it to the script on-fly
                 if( local != '-' && binding ) {

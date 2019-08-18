@@ -14,13 +14,13 @@ import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import nextflow.Channel
 import nextflow.NF
 /**
- * Helper class to create dataflow objects
+ * Helper class to handle channel internal api ops
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class ChannelFactory {
+class CH {
 
     static private Map<DataflowQueue, DataflowBroadcast> bridges = new HashMap<>(10)
 

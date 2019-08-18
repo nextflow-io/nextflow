@@ -349,7 +349,7 @@ class DataflowHelper {
             }
         }
 
-        chainImpl(channel, ChannelFactory.create(), [listeners: [listener]], {true})
+        chainImpl(channel, CH.create(), [listeners: [listener]], {true})
     }
 
 

@@ -21,7 +21,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.exception.MissingValueException
-import nextflow.extension.ChannelFactory
+import nextflow.extension.CH
 /**
  * Models a script workflow component
  *
@@ -131,7 +131,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
                 throw new MissingValueException("Missing workflow output parameter: $name")
             final obj = binding.getVariable(name)
 
-            if( ChannelFactory.isChannel(obj) ) {
+            if( CH.isChannel(obj) ) {
                 channels.put(name, (DataflowWriteChannel)obj)
             }
 
@@ -144,7 +144,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
             }
 
             else {
-                final value = ChannelFactory.create(true)
+                final value = CH.create(true)
                 value.bind(obj)
                 channels.put(name, value)
             }

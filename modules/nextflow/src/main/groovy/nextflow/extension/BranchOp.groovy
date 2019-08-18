@@ -41,7 +41,7 @@ class BranchOp {
         this.switchDef = action.call()
 
         for( String name : switchDef.branches ) {
-            targets.put( name, ChannelFactory.createBy(source) )
+            targets.put( name, CH.createBy(source) )
         }
 
         this.output = new ChannelOut(targets)

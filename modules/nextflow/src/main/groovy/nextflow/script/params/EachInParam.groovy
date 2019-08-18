@@ -22,7 +22,7 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.expression.DataflowExpression
-import nextflow.extension.ChannelFactory
+import nextflow.extension.CH
 import nextflow.extension.ToListOp
 import nextflow.script.TokenFileCall
 import nextflow.script.TokenPathCall
@@ -88,8 +88,8 @@ class EachInParam extends BaseInParam {
         if( value instanceof DataflowExpression ) {
             result = value
         }
-        else if( ChannelFactory.isChannel(value) ) {
-            def read = ChannelFactory.getReadChannel(value)
+        else if( CH.isChannel(value) ) {
+            def read = CH.getReadChannel(value)
             result = new ToListOp(read).apply()
         }
         else {

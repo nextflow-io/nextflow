@@ -59,7 +59,7 @@ class TapOp {
         assert holder != null
 
         this.source = source
-        this.result = ChannelFactory.createBy(source)
+        this.result = CH.createBy(source)
         this.outputs = [result]
 
         // -- set the target variable in the script binding context
@@ -69,7 +69,7 @@ class TapOp {
 
         final binding = NF.binding
         names.each { item ->
-            def channel = ChannelFactory.createBy(source)
+            def channel = CH.createBy(source)
             if( binding.hasVariable(item) )
                 log.warn "A variable named '${item}' already exists in script global context -- Consider renaming it "
 
@@ -93,7 +93,7 @@ class TapOp {
         }
 
         this.source = source
-        this.result = ChannelFactory.createBy(source)
+        this.result = CH.createBy(source)
         this.outputs = [result, target]
     }
 

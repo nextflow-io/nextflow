@@ -46,7 +46,7 @@ import nextflow.exception.AbortSignalException
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.MissingLibraryException
 import nextflow.executor.ExecutorFactory
-import nextflow.extension.ChannelFactory
+import nextflow.extension.CH
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
 import nextflow.processor.ErrorStrategy
@@ -435,7 +435,7 @@ class Session implements ISession {
             return
 
         // bridge any dataflow queue into a broadcast channel
-        ChannelFactory.broadcast()
+        CH.broadcast()
 
         log.debug "Ignite dataflow network (${igniters.size()})"
         for( def action : igniters ) {

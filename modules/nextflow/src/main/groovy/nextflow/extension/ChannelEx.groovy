@@ -98,7 +98,7 @@ class ChannelEx {
         if( NF.isDsl2() )
             throw new DeprecationException("Channel `close` method is not supported any more")
         log.warn "The `close` operator is deprecated -- it will be removed in a future release"
-        return ChannelFactory.close0(source)
+        return CH.close0(source)
     }
 
     /**

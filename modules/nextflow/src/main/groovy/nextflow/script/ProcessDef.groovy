@@ -21,7 +21,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
-import nextflow.extension.ChannelFactory
+import nextflow.extension.CH
 import nextflow.script.params.BaseInParam
 import nextflow.script.params.BaseOutParam
 import nextflow.script.params.EachInParam
@@ -154,7 +154,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
             final singleton = allScalarValues && !hasEachParams
 
             for(int i=0; i<declaredOutputs.size(); i++ ) {
-                final ch = ChannelFactory.create(singleton)
+                final ch = CH.create(singleton)
                 result[i] = ch 
                 (declaredOutputs[i] as BaseOutParam).setInto(ch)
             }
