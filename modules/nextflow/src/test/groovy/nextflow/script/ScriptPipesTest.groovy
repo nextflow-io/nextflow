@@ -1,13 +1,13 @@
 package nextflow.script
 
 
-import test.Dls2Spec
+import test.Dsl2Spec
 import test.MockScriptRunner
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ScriptPipesTest extends Dls2Spec {
+class ScriptPipesTest extends Dsl2Spec {
 
     def 'should pipe processes parallel' () {
         given:

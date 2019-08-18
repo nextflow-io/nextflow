@@ -24,7 +24,7 @@ import nextflow.NextflowMeta
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class Dls2Spec extends Specification {
+class Dsl2Spec extends Specification {
 
     def setupSpec() { NextflowMeta.instance.enableDsl2() }
     def cleanupSpec() { NextflowMeta.instance.disableDsl2() }
