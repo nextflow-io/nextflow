@@ -15,6 +15,7 @@
  */
 package nextflow.processor
 
+import nextflow.NF
 import static nextflow.processor.ErrorStrategy.*
 
 import java.nio.file.LinkOption
@@ -440,12 +441,13 @@ class TaskProcessor {
             final forwarder = new ForwardClosure(size, iteratorIndexes)
 
             // instantiate the iteration process
+            def DataflowOperator op1
             def stopAfterFirstRun = allScalarValues
             def interceptor = new BaseProcessInterceptor(opInputs, stopAfterFirstRun)
             def params = [inputs: opInputs, outputs: linkingChannels, maxForks: 1, listeners: [interceptor]]
-            session.allOperators << (operator = new DataflowOperator(group, params, forwarder))
+            session.allOperators << (op1 = new DataflowOperator(group, params, forwarder))
             // fix issue #41
-            operator.start()
+            start(op1)
 
             // set as next inputs the result channels of the iteration process
             // adding the 'control' channel removed previously
@@ -484,8 +486,18 @@ class TaskProcessor {
         NodeMarker.addProcessNode(this, config.getInputs(), config.getOutputs())
 
         // fix issue #41
-        operator.start()
+        start(operator)
+    }
 
+    private start(DataflowProcessor op) {
+        if( !NF.dsl2 ) {
+            op.start()
+            return
+        }
+        session.addIgniter {
+            log.debug "Starting process > $name"
+            op.start()
+        }
     }
 
     private AtomicIntegerArray createPortsArray(int size) {
@@ -494,7 +506,6 @@ class TaskProcessor {
             result.set(i, 1)
         return result
     }
-
 
     /**
      * The processor execution body

@@ -30,7 +30,7 @@ import spock.lang.Timeout
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Timeout(30)
+@Timeout(5)
 class ParamsInTest extends Specification {
 
     // ==============================================================

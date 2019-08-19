@@ -12,7 +12,11 @@ import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter
 import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import nextflow.Channel
+import nextflow.Global
 import nextflow.NF
+import nextflow.Session
+import static nextflow.Channel.STOP
+
 /**
  * Helper class to handle channel internal api ops
  *
@@ -21,6 +25,10 @@ import nextflow.NF
 @Slf4j
 @CompileStatic
 class CH {
+
+    static private Session session() {
+        return (Session) Global.session
+    }
 
     static private Map<DataflowQueue, DataflowBroadcast> bridges = new HashMap<>(10)
 
@@ -113,4 +121,44 @@ class CH {
         return true
     }
 
+    static DataflowVariable value() {
+        return new DataflowVariable()
+    }
+
+    static DataflowVariable value(obj) {
+        final result = new DataflowVariable()
+        emit(result, obj)
+        return result
+    }
+
+    static DataflowQueue queue() {
+        new DataflowQueue()
+    }
+
+
+    static DataflowWriteChannel emit(DataflowWriteChannel ch, Object value) {
+        if(NF.isDsl2()) {
+            session().addIgniter { ch.bind(value) }
+        }
+        else {
+            ch.bind(value)
+        }
+        return ch
+    }
+
+    static <T extends DataflowWriteChannel> T emitValues(T ch, Collection items) {
+        if(NF.dsl2) {
+            session().addIgniter {-> for( def it : items ) ch.bind(it) }
+        }
+        else {
+            for( def it : items ) ch.bind(it)
+        }
+        return ch
+    }
+
+    static <T extends DataflowWriteChannel> T emitAndClose(T ch, Collection items) {
+        def values = new ArrayList(items);
+        values.add(STOP)
+        emitValues(ch, values)
+    }
 }

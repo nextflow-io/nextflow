@@ -18,19 +18,34 @@ package test
 
 import spock.lang.Specification
 
-import nextflow.NextflowMeta
+import java.nio.file.Path
 
+import groovy.util.logging.Slf4j
+import nextflow.NextflowMeta
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 class Dsl2Spec extends Specification {
 
     def setupSpec() { NextflowMeta.instance.enableDsl2() }
     def cleanupSpec() { NextflowMeta.instance.disableDsl2() }
 
+    def setup() {
+        log.info "TEST BEGIN > ${specificationContext.currentIteration.name}"
+    }
+
+    def cleanup() {
+        log.info "TEST CLOSE - ${specificationContext.currentIteration.name}"
+    }
+
     def dsl_eval(String str) {
         new MockScriptRunner().setScript(str).execute()
+    }
+
+    def dsl_eval(Path path) {
+        new MockScriptRunner().setScript(path).execute()
     }
 
 }

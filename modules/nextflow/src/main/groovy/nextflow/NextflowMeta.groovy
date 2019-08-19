@@ -20,7 +20,7 @@ class NextflowMeta {
 
     @Slf4j
     static class Preview {
-        float dsl
+        volatile float dsl
 
         void setDsl( float num ) {
             if( num != 2 && num != 1 )
