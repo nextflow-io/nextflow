@@ -74,7 +74,7 @@ class Channel  {
     @Deprecated
     static DataflowChannel create() {
         if( NF.isDsl2() )
-            log.warn("The channel `create` method is deprecated -- it will be removed in a future release")
+            throw new DeprecationException("Channel `create` method is not supported any more")
         return CH.queue()
     }
 
@@ -128,6 +128,8 @@ class Channel  {
      */
     @Deprecated
     static DataflowVariable just( obj = null ) {
+        if( NF.dsl2 )
+            throw new DeprecationException("The operator `just` is not available anymore -- Use `value` instead.")
         log.warn "The operator `just` is deprecated -- Use `value` instead."
         value(obj)
     }
