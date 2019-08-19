@@ -2,6 +2,7 @@ package nextflow.script
 
 import spock.lang.Timeout
 
+import nextflow.Channel
 import nextflow.exception.ScriptCompilationException
 import test.Dsl2Spec
 /**
@@ -228,6 +229,57 @@ class ScriptDslTest extends Dsl2Spec {
         and:
         result[1].val == 40
         result[1].val == 50
+    }
+
+
+    def 'should allow pipe process and operator' () {
+        when:
+        def result = dsl_eval('''
+        process foo {
+          output: val result
+          exec: result = "hello"
+        }     
+ 
+        process bar {
+          output: val result
+          exec: result = "world"
+        } 
+        
+        workflow {
+           emit: (foo & bar) | concat      
+        }
+        ''')
+
+        then:
+        result.val == 'hello'
+        result.val == 'world'
+        result.val == Channel.STOP
+    }
+
+    def 'should allow process and operator composition' () {
+        when:
+        def result = dsl_eval('''
+        process foo {
+          output: val result
+          exec: result = "hello"
+        }     
+ 
+        process bar {
+          output: val result
+          exec: result = "world"
+        } 
+        
+        workflow {
+           main: foo(); bar()
+           emit: foo.out.concat(bar.out)      
+        }
+        ''')
+
+
+        then:
+        result.val == 'hello'
+        result.val == 'world'
+        result.val == Channel.STOP
     }
 
 }

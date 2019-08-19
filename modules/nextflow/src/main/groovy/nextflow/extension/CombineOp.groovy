@@ -25,7 +25,6 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
-import nextflow.Nextflow
 import static nextflow.extension.DataflowHelper.addToList
 import static nextflow.extension.DataflowHelper.split
 /**
@@ -66,7 +65,7 @@ class CombineOp {
 
             case Collection:
             case (Object[]):
-                rightChannel = Nextflow.channel(right as List)
+                rightChannel = CH.emitAndClose(CH.queue(), right as Collection)
                 break
 
             default:

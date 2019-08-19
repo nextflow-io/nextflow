@@ -16,21 +16,18 @@
 
 package nextflow.script
 
+
 import java.nio.file.Files
 
-import nextflow.NextflowMeta
 import nextflow.exception.DuplicateModuleIncludeException
-import spock.lang.Specification
+import test.Dsl2Spec
 import test.MockScriptRunner
 import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ScriptIncludesTest extends Specification {
-
-    def setupSpec() { NextflowMeta.instance.enableDsl2() }
-    def cleanupSpec() { NextflowMeta.instance.disableDsl2() }
+class ScriptIncludesTest extends Dsl2Spec {
 
     def 'should invoke foreign functions' () {
         given:
@@ -343,6 +340,52 @@ class ScriptIncludesTest extends Specification {
 
 
     def 'should compose processes' () {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def MODULE = folder.resolve('module.nf')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = '''
+        process foo {
+          input: 
+            val alpha
+          output: 
+            val delta
+            val gamma
+          script:
+            delta = alpha
+            gamma = 'world'
+            /nope/
+        }
+        
+        process bar {
+           input:
+             val xx
+             val yy 
+           output:
+             stdout()
+           script:
+            /echo $xx $yy/            
+        }
+        '''
+
+        and:
+        SCRIPT.text = """  
+        include './module.nf'        
+
+        workflow {
+            main: bar( foo('Ciao') )
+            emit: bar.out
+        }
+        """
+
+        when:
+        def result = dsl_eval(SCRIPT)
+        then:
+        result.val == 'echo Ciao world'
+    }
+
+    def 'should use multiple assignment' () {
 
         given:
         def folder = TestHelper.createInMemTempDir()
@@ -358,7 +401,7 @@ class ScriptIncludesTest extends Specification {
             val gamma
           script:
             delta = alpha
-            gamma = 'world\'
+            gamma = 'world'
             /nope/
         }
         
@@ -373,22 +416,7 @@ class ScriptIncludesTest extends Specification {
         }
         '''
 
-        when:
-        SCRIPT.text = """  
-        include './module.nf'        
-
-        workflow {
-            main: bar( foo('Ciao') )
-            emit: bar.out
-        }
-        """
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
-        then:
-        noExceptionThrown()
-        result.val == 'echo Ciao world'
-
-        when:
+        and:
         SCRIPT.text = """ 
         include './module.nf'        
         
@@ -397,10 +425,10 @@ class ScriptIncludesTest extends Specification {
           emit: ch0; ch1
         }
         """
-        runner = new MockScriptRunner()
-        result = runner.setScript(SCRIPT).execute()
+        
+        when:
+        def result = dsl_eval(SCRIPT)
         then:
-        noExceptionThrown()
         result[0].val == 'Ciao'
         result[1].val == 'world'
     }
@@ -704,40 +732,41 @@ class ScriptIncludesTest extends Specification {
                 input: file "foo"
                 output: stdout()
                 shell:
-                "rev foo"
+                "cmd consumer 1"
             }
             
             process another_consumer {
                 input: file "foo"
                 output: stdout()
-                shell: "wc -w foo"
+                shell: "cmd consumer 2"
             }
             
             workflow flow1 {
-                producer | consumer | view
+                emit: producer | consumer | map { it.toUpperCase() }
             }
             
             workflow flow2 {
-                producer | another_consumer | view
+                emit: producer | another_consumer | map { it.toUpperCase() }
             }
             '''.stripIndent()
 
-        SCRIPT.text = """
+        when:
+        def result = dsl_eval("""
             include "$MODULE" 
   
             workflow { 
               flow1()
               flow2()
+              emit: 
+              flow1.out
+              flow2.out
             }
 
-            """
-
-        when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+            """)
 
         then:
-       true
+        result[0].val == 'CMD CONSUMER 1'
+        result[1].val == 'CMD CONSUMER 2'
 
     }
 }

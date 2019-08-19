@@ -16,6 +16,7 @@
 
 package nextflow.script
 
+import spock.lang.Timeout
 
 import static test.TestParser.parseAndReturnProcess
 
@@ -24,6 +25,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(5)
 class BodyDefTest extends Specification {
 
     def 'should set script type properly' () {

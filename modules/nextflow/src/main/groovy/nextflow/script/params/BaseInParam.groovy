@@ -20,15 +20,12 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
-import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.NF
-import nextflow.Nextflow
 import nextflow.exception.ProcessException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
 import nextflow.script.ProcessConfig
 import nextflow.script.TokenVar
-
 /**
  * Model a process generic input parameter
  *
@@ -84,24 +81,22 @@ abstract class BaseInParam extends BaseParam implements InParam {
         }
 
         if( NF.isDsl2() ) {
-            final result = new DataflowVariable()
+            final result = CH.value()
             result.bind(value)
             return result
         }
 
         // wrap any collections with a DataflowQueue
         if( value instanceof Collection ) {
-            return Nextflow.channel(value as List)
+            return CH.emitAndClose(CH.queue(), value)
         }
 
         // wrap any array with a DataflowQueue
         if ( value && value.class.isArray() ) {
-            return Nextflow.channel(value as List)
+            return CH.emitAndClose(CH.queue(), value as Collection)
         }
 
-        // wrap a single value with a DataflowVariable
-        return Nextflow.variable(value)
-
+        value!=null ? CH.value(value) : CH.value() 
     }
 
 

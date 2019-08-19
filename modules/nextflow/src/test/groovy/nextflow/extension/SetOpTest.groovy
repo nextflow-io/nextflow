@@ -16,15 +16,14 @@
 
 package nextflow.extension
 
+import spock.lang.Timeout
 
-import nextflow.Channel
-import nextflow.Session
-import nextflow.script.ChannelOut
 import test.Dsl2Spec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(5)
 class SetOpTest extends Dsl2Spec {
 
     def 'should set a channel in the global context' () {
@@ -69,25 +68,28 @@ class SetOpTest extends Dsl2Spec {
 
 
     def 'should assign multiple channels in the current binding' () {
-        given:
-        def session = new Session()
+        when:
+        def result = dsl_eval(/
         def ch1 = Channel.value('X')
         def ch2 = Channel.value('Y')
 
-        when:
-        new ChannelOut([ch1]) .set { foo }
-        def ret = session.binding.foo.map { it.toLowerCase() }
+        new nextflow.script.ChannelOut([ch1]) .set { foo }   
+        return foo
+        /)
         then:
-        ret.val == 'x'
+        result.val == 'X'
 
         when:
-        new ChannelOut([ch1, ch2]) .set { bar }
-        def p = session.binding.bar[0].map { it.toLowerCase() }
-        def q = session.binding.bar[1].map { it.toLowerCase() }
-        then:
-        p.val == 'x'
-        q.val == 'y'
+        result = dsl_eval(/
+        def ch1 = Channel.value('X')
+        def ch2 = Channel.value('Y')
 
+        new nextflow.script.ChannelOut([ch1, ch2]) .set { bar }
+        return bar
+        /)
+        then:
+        result[0].val == 'X'
+        result[1].val == 'Y'
     }
 
 }
