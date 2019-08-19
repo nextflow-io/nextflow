@@ -255,14 +255,16 @@ class BranchXformImpl implements ASTTransformation {
         createVisitor().visitClass((ClassNode)nodes[1])
     }
 
-    protected ClosureExpression isSwitchOpCall(Expression expr) {
+    protected ClosureExpression isBranchOpCall(Expression expr) {
         final m = ASTHelpers.isMethodCallX(expr)
         if( m ) {
             final name = m.methodAsString
             final args = isArgsX(m.arguments)
-            final ClosureExpression clo = args && args.size()>0 ? isClosureX(args.last()) : null
-            return ((name==OPERATOR_NAME && args.size()==1) ||
-                    (name==CRITERIA_NAME && args.size()==1 ) ? clo : null)
+            final ClosureExpression ret = args && args.size()>0 ? isClosureX(args.last()) : null
+            if( name==OPERATOR_NAME && args.size()==1 )
+                return ret
+            if( name==CRITERIA_NAME && args.size()==1 && m.objectExpression.text=='this')
+                return ret
         }
         return null
     }
@@ -279,7 +281,7 @@ class BranchXformImpl implements ASTTransformation {
                 if (expr == null)
                     return null
 
-                final body = isSwitchOpCall(expr)
+                final body = isBranchOpCall(expr)
                 if( body ) {
                     return new Transformer(expr as MethodCallExpression, body).apply()
                 }
