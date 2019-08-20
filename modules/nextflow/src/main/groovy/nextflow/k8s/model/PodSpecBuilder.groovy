@@ -349,11 +349,14 @@ class PodSpecBuilder {
 
         // -- volume claims
         for( PodVolumeClaim entry : volumeClaims ) {
-            final name = nextVolName()
+            //check if we already have a volume for the pvc
+            def volume = volumes.find {it['persistentVolumeClaim']['claimName'] == entry.claimName}
+            final name = volume ? volume['name'] : nextVolName() //use the name of the already defined volume if it exists
             final claim = [name: name, mountPath: entry.mountPath ]
             if( entry.subPath ) claim.subPath = entry.subPath
             mounts << claim
-            volumes << [name: name, persistentVolumeClaim: [claimName: entry.claimName]]
+            if(!volume) //insert a new volume if there wasn't one already defined for the pvc
+                volumes << [name: name, persistentVolumeClaim: [claimName: entry.claimName]]
         }
 
         // -- configMap volumes

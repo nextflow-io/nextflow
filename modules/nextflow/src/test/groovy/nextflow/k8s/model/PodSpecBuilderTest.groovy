@@ -179,6 +179,45 @@ class PodSpecBuilderTest extends Specification {
 
     }
 
+    def 'should only define one volume per persistentVolumeClaim' () {
+
+        when:
+        def spec = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withWorkDir('/path')
+                .withCommand(['echo'])
+                .withVolumeClaim(new PodVolumeClaim('first','/work'))
+                .withVolumeClaim(new PodVolumeClaim('first','/work', '/bar'))
+                .withVolumeClaim(new PodVolumeClaim('second', '/data', '/foo'))
+                .withVolumeClaim(new PodVolumeClaim('second', '/data', '/fooz'))
+                .build()
+        then:
+        spec ==  [ apiVersion: 'v1',
+                   kind: 'Pod',
+                   metadata: [name:'foo', namespace:'default'],
+                   spec: [
+                           restartPolicy:'Never',
+                           containers:[
+                                   [name:'foo',
+                                    image:'busybox',
+                                    command: ['echo'],
+                                    workingDir:'/path',
+                                    volumeMounts:[
+                                            [name:'vol-1', mountPath:'/work'],
+                                            [name:'vol-1', mountPath:'/work', subPath: '/bar'],
+                                            [name:'vol-2', mountPath:'/data', subPath: '/foo'],
+                                            [name:'vol-2', mountPath:'/data', subPath: '/fooz']]]
+                           ],
+                           volumes:[
+                                   [name:'vol-1', persistentVolumeClaim:[claimName:'first']],
+                                   [name:'vol-2', persistentVolumeClaim:[claimName:'second']] ]
+                   ]
+
+        ]
+
+    }
+
     def 'should get config map mounts' () {
 
         when:
