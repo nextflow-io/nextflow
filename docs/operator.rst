@@ -1651,6 +1651,7 @@ To create a branch criteria as variable that can be passed as an argument to mor
     Channel.from(10,20,1).branch(criteria).set { ch2 }
 
 
+ .. _operator-choice:
 
 choice
 ------
