@@ -39,7 +39,9 @@ class ResourcesAggregator {
      * @param record A {@link TraceRecord} object representing a task executed
      */
     void aggregate(TraceRecord record) {
-        def process = record.get('process') as String
+        // aggregate on the process simple name
+        // therefore all nested process are kept together
+        def process = record.getSimpleName()
         def summary = summaries.get(process)
         if( !summary ) {
             summaries.put(process, summary=new ReportSummary())
