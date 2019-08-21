@@ -4,12 +4,12 @@ import nextflow.script.BaseScript
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
-import test.NFSpec
+import test.BaseSpec  
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class NextflowDSLImplTest extends NFSpec {
+class NextflowDSLImplTest extends BaseSpec {
 
     def 'should fetch method names' () {
 

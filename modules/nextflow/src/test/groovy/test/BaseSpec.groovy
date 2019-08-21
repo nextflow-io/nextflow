@@ -26,7 +26,7 @@ import groovy.util.logging.Slf4j
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class NFSpec extends Specification {
+class BaseSpec extends Specification {
 
     def setup() {
         log.info "TEST BEGIN [${specificationContext.currentIteration.name}]"
