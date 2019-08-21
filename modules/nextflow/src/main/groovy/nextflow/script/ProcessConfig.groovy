@@ -142,15 +142,22 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      */
     private outputs = new OutputsList()
 
+    private Map legacySettings
+
     /**
      * Initialize the taskConfig object with the defaults values
      *
      * @param script The owner {@code BaseScript} configuration object
      */
-    ProcessConfig( BaseScript script ) {
+    protected ProcessConfig( BaseScript script ) {
         ownerScript = script
         configProperties = new LinkedHashMap()
         configProperties.putAll( DEFAULT_CONFIG )
+    }
+
+    ProcessConfig( BaseScript script, String name ) {
+        this(script)
+        this.processName = name
     }
 
     /* Only for testing purpose */
@@ -180,6 +187,10 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return this
     }
 
+    ProcessConfig setLegacySettings( Map map ) {
+        this.legacySettings = map
+        return this
+    }
 
     /**
      * Enable special behavior to allow the configuration object
@@ -307,24 +318,20 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      * ```
      *
      * @param configDirectives
-     *      A map object modelling the setting defined defined by the user in the nextflow configuration file     *
+     *      A map object modelling the setting defined defined by the user in the nextflow configuration file
      * @param category
      *      The type of annotation either {@code withLabel:} or {@code withName:}
      * @param processLabel
      *      A specific label representing the object holding the configuration setting to apply
      */
-    @PackageScope
-    void applyConfigForLabel( Map<String,?> configDirectives, String category, String processLabel ) {
+    protected void applyConfigSelector(Map<String,?> configDirectives, String category, String target ) {
         assert category in ['withLabel:','withName:']
-        assert processName != null
-        assert processLabel != null
 
         for( String rule : configDirectives.keySet() ) {
             if( !rule.startsWith(category) )
                 continue
             final isLabel = category=='withLabel:'
             final pattern = rule.substring(category.size()).trim()
-            final target = isLabel ? processLabel : processName
             if( !matchesSelector(target, pattern) )
                 continue
 
@@ -334,7 +341,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
                 applyConfigSettings(settings)
             }
             else if( settings != null ) {
-                throw new ConfigParseException("Unknown config settings for label `$processLabel` -- settings=$settings ")
+                throw new ConfigParseException("Unknown config settings for ${isLabel?"process":'process with name'}: $target  -- settings=$settings ")
             }
         }
     }
@@ -347,13 +354,52 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     }
 
     /**
+     * Apply the process configuration provided in the nextflow configuration file
+     * to the process instance
+     *
+     * @param configProcessScope The process configuration settings specified
+     *      in the configuration file as {@link Map} object
+     * @param simpleName The process name
+     */
+    void applyConfig(Map configProcessScope, String simpleName, String fullyQualifiedName=null) {
+        // -- Apply the directives defined in the config object using the`withLabel:` syntax
+        final processLabels = this.getLabels() ?: ['']
+        for( String lbl : processLabels ) {
+            this.applyConfigSelector(configProcessScope, "withLabel:", lbl)
+        }
+
+        // -- apply setting defined in the config file using the process simple name (ie. w/o execution scope)
+        this.applyConfigSelector(configProcessScope, "withName:", simpleName)
+
+        // -- apply setting defined in the config file using the process qualified name (ie. with the execution scope)
+        if( fullyQualifiedName && fullyQualifiedName!=simpleName ) {
+            this.applyConfigSelector(configProcessScope, "withName:", fullyQualifiedName)
+        }
+
+        // -- Apply process specific setting defined using `process.$name` syntax
+        //    NOTE: this is deprecated and will be removed
+        if( legacySettings ) {
+            this.applyConfigSettings(legacySettings)
+        }
+
+        // -- Apply defaults
+        this.applyConfigDefaults(configProcessScope)
+
+        // -- check for conflicting settings
+        if( this.scratch && this.stageInMode == 'rellink' ) {
+            log.warn("Directives `scratch` and `stageInMode=rellink` conflict each other -- Enforcing default stageInMode for process `$simpleName`")
+            this.remove('stageInMode')
+        }
+    }
+
+
+    /**
      * Apply the settings defined in the configuration file to the actual process configuration object
      *
      * @param settings
      *      A map object modelling the setting defined defined by the user in the nextflow configuration file
      */
-    @PackageScope
-    void applyConfigSettings(Map<String,?> settings) {
+    protected void applyConfigSettings(Map<String,?> settings) {
         if( !settings )
             return
 
@@ -392,8 +438,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      *      the same config setting).
      *
      */
-    @PackageScope
-    void applyConfigDefaults( Map processDefaults ) {
+    protected void applyConfigDefaults( Map processDefaults ) {
         for( String key : processDefaults.keySet() ) {
             if( key == 'params' )
                 continue

@@ -21,12 +21,9 @@ import spock.lang.Unroll
 
 import nextflow.exception.IllegalDirectiveException
 import nextflow.processor.ErrorStrategy
-import nextflow.script.BaseScript
 import nextflow.script.params.FileInParam
-import nextflow.script.ProcessConfig
 import nextflow.script.params.StdInParam
 import nextflow.script.params.StdOutParam
-import nextflow.script.TokenVar
 import nextflow.script.params.ValueInParam
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -380,24 +377,24 @@ class ProcessConfigTest extends Specification {
         ]
 
         when:
-        def process = new ProcessConfig([:]).setProcessName('any')
-        process.applyConfigForLabel(settings, 'withLabel:', 'short')
+        def process = new ProcessConfig([:])
+        process.applyConfigSelector(settings, 'withLabel:', 'short')
         then:
         process.cpus == 1
         process.time == '1h'
         process.size() == 2
 
         when:
-        process = new ProcessConfig([:]).setProcessName('any')
-        process.applyConfigForLabel(settings, 'withLabel:', 'long')
+        process = new ProcessConfig([:])
+        process.applyConfigSelector(settings, 'withLabel:', 'long')
         then:
         process.cpus == 32
         process.queue == 'cn-long'
         process.size() == 2
 
         when:
-        process = new ProcessConfig([:]).setProcessName('any')
-        process.applyConfigForLabel(settings, 'withLabel:', 'foo')
+        process = new ProcessConfig([:])
+        process.applyConfigSelector(settings, 'withLabel:', 'foo')
         then:
         process.cpus == 2
         process.disk == '100GB'
@@ -405,8 +402,8 @@ class ProcessConfigTest extends Specification {
         process.size() == 3
 
         when:
-        process = new ProcessConfig([:]).setProcessName('any')
-        process.applyConfigForLabel(settings, 'withLabel:', 'bar')
+        process = new ProcessConfig([:])
+        process.applyConfigSelector(settings, 'withLabel:', 'bar')
         then:
         process.cpus == 32
         process.disk == '100GB'
@@ -414,8 +411,8 @@ class ProcessConfigTest extends Specification {
         process.size() == 3
 
         when:
-        process = new ProcessConfig([:]).setProcessName('any')
-        process.applyConfigForLabel(settings, 'withLabel:', 'gpu-1')
+        process = new ProcessConfig([:])
+        process.applyConfigSelector(settings, 'withLabel:', 'gpu-1')
         then:
         process.cpus == 4
         process.queue == 'cn-long'
@@ -434,37 +431,37 @@ class ProcessConfigTest extends Specification {
         ]
 
         when:
-        def process = new ProcessConfig([:]).setProcessName('xx')
-        process.applyConfigForLabel(settings, 'withName:', 'any')
+        def process = new ProcessConfig([:])
+        process.applyConfigSelector(settings, 'withName:', 'xx')
         then:
         process.size() == 0
 
         when:
-        process = new ProcessConfig([:]).setProcessName('alpha')
-        process.applyConfigForLabel(settings, 'withName:', 'any')
+        process = new ProcessConfig([:])
+        process.applyConfigSelector(settings, 'withName:', 'alpha')
         then:
         process.cpus == 1
         process.time == '1h'
         process.size() == 2
 
         when:
-        process =  new ProcessConfig([:]).setProcessName('delta')
-        process.applyConfigForLabel(settings, 'withName:', 'any')
+        process =  new ProcessConfig([:])
+        process.applyConfigSelector(settings, 'withName:', 'delta')
         then:
         process.cpus == 2
         process.disk == '100GB'
         process.size() == 2
 
         when:
-        process =  new ProcessConfig([:]).setProcessName('gamma')
-        process.applyConfigForLabel(settings, 'withName:', 'any')
+        process =  new ProcessConfig([:])
+        process.applyConfigSelector(settings, 'withName:', 'gamma')
         then:
         process.disk == '100GB'
         process.size() == 1
 
         when:
-        process = new ProcessConfig([:]).setProcessName('omega_x')
-        process.applyConfigForLabel(settings, 'withName:', 'any')
+        process = new ProcessConfig([:])
+        process.applyConfigSelector(settings, 'withName:', 'omega_x')
         then:
         process.cpus == 4
         process.size() == 1

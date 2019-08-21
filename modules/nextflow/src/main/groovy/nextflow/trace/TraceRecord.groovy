@@ -24,6 +24,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.extension.Bolts
 import nextflow.processor.TaskId
+import nextflow.script.ProcessDef
 import nextflow.util.Duration
 import nextflow.util.KryoHelper
 import nextflow.util.MemoryUnit
@@ -329,6 +330,10 @@ class TraceRecord implements Serializable {
     TaskId getTaskId() { (TaskId)get('task_id') }
 
     String getWorkDir() { get('workdir') }
+
+    String getProcessName() { get('process') }
+
+    String getSimpleName() { ProcessDef.stripScope(processName) }
 
     /**
      * Render the specified list of fields to a single string value

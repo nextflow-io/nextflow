@@ -19,6 +19,7 @@ package nextflow.script
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.DuplicateProcessInvocation
+import static nextflow.Const.SCOPE_SEP
 
 /**
  *  Abstract module component which bind itself in the
@@ -29,8 +30,6 @@ import nextflow.exception.DuplicateProcessInvocation
 @Slf4j
 @CompileStatic
 abstract class BindableDef extends ComponentDef {
-
-    static final public String SCOPE_SEP = ':'
 
     private Set<String> invocations = new HashSet<>()
 

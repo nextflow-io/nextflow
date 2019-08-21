@@ -70,6 +70,9 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.callThisX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.closureX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
+
+import static nextflow.Const.SCOPE_SEP
+
 /**
  * Implement some syntax sugars of Nextflow DSL scripting.
  *
@@ -1041,6 +1044,11 @@ class NextflowDSLImpl implements ASTTransformation {
             }
             if( name in functionNames || name in workflowNames || name in processNames ) {
                 unit.addError( new SyntaxException("Identifier `$name` is already used by another definition", node.lineNumber, node.columnNumber+8) )
+                return true
+            }
+            if( name.contains(SCOPE_SEP) ) {
+                def offset =  8+2+ name.indexOf(SCOPE_SEP)
+                unit.addError( new SyntaxException("Process and workflow names cannot contain colon character", node.lineNumber, node.columnNumber+offset) )
                 return true
             }
             return false

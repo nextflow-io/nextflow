@@ -16,27 +16,25 @@
 
 package test
 
-
-import java.nio.file.Path
+import spock.lang.Specification
 
 import groovy.util.logging.Slf4j
-import nextflow.NextflowMeta
+
 /**
+ * Base specification class - It wraps each test into begin-close "test name" strigs
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class Dsl2Spec extends NFSpec {
+class NFSpec extends Specification {
 
-    def setupSpec() { NextflowMeta.instance.enableDsl2() }
-    def cleanupSpec() { NextflowMeta.instance.disableDsl2() }
-
-    def dsl_eval(String str) {
-        new MockScriptRunner().setScript(str).execute()
+    def setup() {
+        log.info "TEST BEGIN [${specificationContext.currentIteration.name}]"
     }
 
-    def dsl_eval(Path path) {
-        new MockScriptRunner().setScript(path).execute()
+    def cleanup() {
+        log.info "TEST CLOSE [${specificationContext.currentIteration.name}]"
     }
+
 
 }
