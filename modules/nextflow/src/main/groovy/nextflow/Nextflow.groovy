@@ -24,8 +24,8 @@ import java.nio.file.Path
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
-import nextflow.ast.BranchXform
-import nextflow.ast.BranchXformImpl
+import nextflow.ast.OpXform
+import nextflow.ast.OpXformImpl
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.StopSplitIterationException
 import nextflow.extension.CH
@@ -35,6 +35,7 @@ import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
 import nextflow.mail.Mailer
 import nextflow.script.TokenBranchDef
+import nextflow.script.TokenForkDef
 import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.util.ArrayTuple
@@ -413,14 +414,29 @@ class Nextflow {
      * Marker method to create a closure to be passed to {@link OperatorEx#branch(DataflowReadChannel, groovy.lang.Closure)}
      * operator.
      *
-     * Despite apparently is doing nothing, this method is needed as marked to apply the {@link BranchXform} AST
+     * Despite apparently is doing nothing, this method is needed as marker to apply the {@link OpXform} AST
      * transformation required to interpret the closure content as required for the branch evaluation.
      *
      * @see OperatorEx#branch(DataflowReadChannel, Closure)
-     * @see BranchXformImpl
+     * @see OpXformImpl
      *
      * @param closure
      * @return
      */
     static Closure<TokenBranchDef> branchCriteria(Closure<TokenBranchDef> closure) { closure }
+
+    /**
+     * Marker method to create a closure to be passed to {@link OperatorEx#fork(DataflowReadChannel, Closure)}
+     * operator.
+     *
+     * Despite apparently is doing nothing, this method is needed as marker to apply the {@link OpXform} AST
+     * transformation required to interpret the closure content as required for the branch evaluation.
+     *
+     * @see OperatorEx#fork(DataflowReadChannel, Closure)
+     * @see OpXformImpl
+     *
+     * @param closure
+     * @return
+     */
+    static Closure<TokenForkDef> forkCriteria(Closure<TokenBranchDef> closure) { closure }
 }

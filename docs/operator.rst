@@ -1561,6 +1561,7 @@ The forking operators are:
 
 * `branch`_
 * `choice`_
+* `fork`_
 * `into`_
 * `separate`_
 * `tap`_
@@ -1573,7 +1574,7 @@ branch
 .. warning:: This is an experimental operator. Syntax and behavior may change.
   Required version `19.08.0-edge` or later.
 
-The ``choice`` operator allows you to forward the items emitted by a source channel to one
+The ``branch`` operator allows you to forward the items emitted by a source channel to one
 or more output channels, `choosing` one out of them at a time.
 
 The selection criteria is defined by specifying a :ref:`closure <script-closure>` that provides
@@ -1651,6 +1652,7 @@ To create a branch criteria as variable that can be passed as an argument to mor
     Channel.from(10,20,1).branch(criteria).set { ch2 }
 
 
+ .. _operator-choice:
 
 choice
 ------
@@ -1677,6 +1679,73 @@ the others into ``queue2``
     queue1.subscribe { println it }
 
 See also `branch`_ operator.
+
+ .. _operator-fork:
+
+fork
+----
+
+.. warning:: This is an experimental operator. Syntax and behavior may change.
+  Required version `19.08.0-edge` or later.
+
+The ``fork`` operator allows you to forward the items emitted by a source channel to two
+or more output channels assigning each of them a separate value.
+
+The forking criteria is defined by specifying a :ref:`closure <script-closure>` that specify the
+target channels labelled by a unique identifier followed by an expression statement that
+evaluates the value to be assigned to such channel.
+
+For example::
+
+    Channel
+        .from(1,2,3,4)
+        .fork { it ->
+            foo: it + 1
+            bar: it * it
+            }
+        .set { result }
+
+     result.foo.view { "foo $it" }
+     result.far.view { "bar $it" }
+
+It shows::
+
+    foo 2
+    foo 3
+    foo 4
+    bar 1
+    bar 4
+    bar 9
+
+
+.. tip:: The statement expression can be omitted when the value to be emitted is the same as
+  the following one. If you need just need to forward the same value to multiple channel
+  you can use the following the shorthand notation showed below.
+
+::
+
+   Channel
+        .from(1,2,3)
+        .fork { it -> foo: bar: it }
+        .set { result }
+
+As before creates two channels, however both of them receive the same source items.
+
+
+.. warning:: The fork evaluation closure must be specified inline, ie. it *cannot* be assigned to a
+  variable and passed as argument to the operator, how it can be done with other operators.
+
+To create a fork criteria as variable that can be passed as an argument to more than one
+``fork`` operator use the ``forkCriteria`` built-in method as shown below::
+
+    def criteria = forkCriteria {
+                    small: it < 10
+                    large: it > 10
+                    }
+
+    Channel.from(1,2,30).fork(criteria).set { ch1 }
+    Channel.from(10,20,1).fork(criteria).set { ch2 }
+
 
 .. _operator-into:
 
@@ -1780,7 +1849,7 @@ See also `into`_ and `separate`_ operators.
 separate
 --------
 
-.. warning:: The `separate` operator has been deprecated. Use `branch`_ instead.
+.. warning:: The `separate` operator has been deprecated. Use `fork`_ instead.
 
 The ``separate`` operator lets you copy the items emitted by the source channel into multiple 
 channels, which each of these can receive a `separate` version of the same item. 
@@ -1865,7 +1934,7 @@ The output will look like the following fragment::
 
 
 
-See also: `branch`, `into`_, `choice`_ and `map`_ operators.
+See also: `fork`_, `into`_, `choice`_ and `map`_ operators.
 
 
 Maths operators

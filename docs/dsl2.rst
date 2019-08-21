@@ -370,6 +370,7 @@ The following methods are not allowed any more when using Nextflow DSL 2:
 * :ref:`channel-create`
 * :ref:`channel-bind1`
 * :ref:`channel-bind2`
+* :ref:`channel-choice`
 * :ref:`operator-close`
 * :ref:`operator-countby`
 * route
