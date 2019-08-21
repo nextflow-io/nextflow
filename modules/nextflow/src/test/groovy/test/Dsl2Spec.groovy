@@ -26,7 +26,7 @@ import nextflow.NextflowMeta
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class Dsl2Spec extends NFSpec {
+class Dsl2Spec extends BaseSpec {
 
     def setupSpec() { NextflowMeta.instance.enableDsl2() }
     def cleanupSpec() { NextflowMeta.instance.disableDsl2() }
