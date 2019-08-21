@@ -720,7 +720,6 @@ class ScriptIncludesTest extends Dsl2Spec {
         given:
         def folder = Files.createTempDirectory('test')
         def MODULE = folder.resolve('module.nf')
-        def SCRIPT = folder.resolve('main.nf')
 
         MODULE.text = '''
             process producer {

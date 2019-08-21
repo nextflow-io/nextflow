@@ -22,8 +22,8 @@ class ScriptMetaTest extends Specification {
         given:
         def script = new FooScript(new ScriptBinding())
 
-        def proc1 = new ProcessDef(script, 'proc1', Mock(ProcessConfig), Mock(BodyDef))
-        def proc2 = new ProcessDef(script, 'proc2', Mock(ProcessConfig), Mock(BodyDef))
+        def proc1 = new ProcessDef(script, Mock(Closure), 'proc1')
+        def proc2 = new ProcessDef(script, Mock(Closure), 'proc2')
         def func1 = new FunctionDef(name: 'func1')
         def work1 = new WorkflowDef(name:'work1')
 
@@ -60,19 +60,19 @@ class ScriptMetaTest extends Specification {
 
         // defs in the root script
         def func1 = new FunctionDef(name: 'func1')
-        def proc1 = new ProcessDef(script1, 'proc1', Mock(ProcessConfig), Mock(BodyDef))
+        def proc1 = new ProcessDef(script1, Mock(Closure), 'proc1')
         def work1 = new WorkflowDef(name:'work1')
         meta1.addDefinition(proc1, func1, work1)
 
         // defs in the second script imported in the root namespace
         def func2 = new FunctionDef(name: 'func2')
-        def proc2 = new ProcessDef(script2, 'proc2', Mock(ProcessConfig), Mock(BodyDef))
+        def proc2 = new ProcessDef(script2, Mock(Closure), 'proc2')
         def work2 = new WorkflowDef(name:'work2')
         meta2.addDefinition(proc2, func2, work2)
 
         // defs in the third script imported in a separate namespace
         def func3 = new FunctionDef(name: 'func3')
-        def proc3 = new ProcessDef(script2, 'proc3', Mock(ProcessConfig), Mock(BodyDef))
+        def proc3 = new ProcessDef(script2, Mock(Closure), 'proc3')
         def work3 = new WorkflowDef(name:'work3')
         meta3.addDefinition(proc3, func3, work3)
 

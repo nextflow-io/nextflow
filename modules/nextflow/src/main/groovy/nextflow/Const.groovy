@@ -145,4 +145,6 @@ class Const {
 
     static public final String DEFAULT_BRANCH = 'master'
 
+    static public final String SCOPE_SEP = ':'
+
 }
