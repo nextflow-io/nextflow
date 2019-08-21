@@ -24,6 +24,7 @@ import org.codehaus.groovy.ast.expr.BinaryExpression
 import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.ConstructorCallExpression
+import org.codehaus.groovy.ast.expr.DeclarationExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.MapExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
@@ -33,6 +34,7 @@ import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.ExpressionStatement
 import org.codehaus.groovy.ast.stmt.ReturnStatement
 import org.codehaus.groovy.ast.stmt.Statement
+import org.codehaus.groovy.ast.tools.GeneralUtils
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.syntax.SyntaxException
 import org.codehaus.groovy.syntax.Types
@@ -86,6 +88,10 @@ class ASTHelpers {
         return new ConstructorCallExpression(type,args)
     }
 
+    static Expression declX(Expression left, Expression right) {
+        new DeclarationExpression(left, GeneralUtils.ASSIGN, right)
+    }
+
     static MethodCallExpression isMethodCallX(Expression expr) {
         return expr instanceof MethodCallExpression ? expr : null
     }
@@ -137,4 +143,5 @@ class ASTHelpers {
     static ReturnStatement isReturnS(Statement stmt) {
         stmt instanceof ReturnStatement ? stmt : null
     }
+
 }

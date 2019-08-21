@@ -23,7 +23,7 @@ import groovy.transform.CompileStatic
 import nextflow.Channel
 import nextflow.Nextflow
 import nextflow.Session
-import nextflow.ast.BranchXform
+import nextflow.ast.OpXform
 import nextflow.ast.NextflowDSL
 import nextflow.ast.NextflowXform
 import nextflow.exception.ScriptCompilationException
@@ -113,7 +113,7 @@ class ScriptParser {
         config.scriptBaseClass = BaseScript.class.name
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(BranchXform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(OpXform))
 
         if( session && session.classesDir )
             config.setTargetDirectory(session.classesDir.toFile())

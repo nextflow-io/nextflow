@@ -24,9 +24,9 @@ import java.lang.annotation.Target
 import org.codehaus.groovy.transform.GroovyASTTransformationClass
 
 /**
- * Marker interface which to apply AST transformation to {@code process} declaration
+ * Declares Nextflow operators AST xforms
  */
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.METHOD)
-@GroovyASTTransformationClass(classes = [BranchXformImpl])
-@interface BranchXform {}
+@GroovyASTTransformationClass(classes = [OpXformImpl])
+@interface OpXform {}
