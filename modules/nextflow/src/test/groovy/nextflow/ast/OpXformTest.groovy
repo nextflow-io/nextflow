@@ -20,19 +20,21 @@ import spock.lang.Specification
 
 import nextflow.script.TokenBranchDef
 import nextflow.script.TokenBranchChoice
+import nextflow.script.TokenForkDef
 import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class BranchXformTest extends Specification {
+class OpXformTest extends Specification {
 
-    private TokenBranchDef eval(String stmt) {
+    private TokenBranchDef eval_branch(String stmt) {
 
         def config = new CompilerConfiguration()
-        config.addCompilationCustomizers( new ASTTransformationCustomizer(BranchXform))
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(OpXform))
 
         def shell = new GroovyShell(config)
         def result = shell.evaluate("""
@@ -47,9 +49,27 @@ class BranchXformTest extends Specification {
         return (TokenBranchDef)result
     }
 
+    private TokenForkDef eval_fork(String stmt) {
+
+        def config = new CompilerConfiguration()
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(OpXform))
+
+        def shell = new GroovyShell(config)
+        def result = shell.evaluate("""
+        class OpTest {
+            def fork(Closure c) { c.call() }
+        }
+        
+        new OpTest().fork ( $stmt )
+
+        """)
+
+        return (TokenForkDef)result
+    }
+
     def 'should transform basic switch' () {
         when:
-        def result = eval('''{
+        def result = eval_branch('''{
             x: it < 1; return 'hello'
             y: it > 1; return 'world'
         }''')
@@ -70,7 +90,7 @@ class BranchXformTest extends Specification {
 
     def 'should transform switch statement' () {
         when:
-        def result = eval('''
+        def result = eval_branch('''
             {
                 x: it < 1; 'hello'
                 y: it > 1; 'world'
@@ -88,7 +108,7 @@ class BranchXformTest extends Specification {
 
     def 'should return implicit values' () {
         when:
-        def result = eval('''
+        def result = eval_branch('''
             {
                 x: it < 1
                 y: it > 1
@@ -103,9 +123,9 @@ class BranchXformTest extends Specification {
         result.closure(1) == new TokenBranchChoice(1, 'z')
     }
 
-    def 'should returm explicit param' () {
+    def 'should return explicit param' () {
         when:
-        def result = eval('''
+        def result = eval_branch('''
         { p ->
             x: p < 1
             y: p > 1
@@ -123,7 +143,7 @@ class BranchXformTest extends Specification {
 
     def 'should allow arbitrary prolog code' () {
         when:
-        def result = eval('''
+        def result = eval_branch('''
             { p ->
                 def alpha=1
                 def delta=2
@@ -139,4 +159,73 @@ class BranchXformTest extends Specification {
         result.closure.call(0).choice == 'x'
     }
 
+
+    def 'should parse fork block' () {
+        when:
+        def result = eval_fork('''
+            { it -> 
+                foo:
+                it+1
+                
+                bar: 
+                it*it
+            }
+        ''')
+
+        then:
+        result.names == ['foo', 'bar']
+        result.closure.call(1) == [foo:2, bar:1]
+        result.closure.call(2) == [foo:3, bar:4]
+        result.closure.call(3) == [foo:4, bar:9]
+    }
+
+
+    def 'should parse fork multi-block' () {
+        when:
+        def result = eval_fork('''
+            { it -> 
+                alpha:
+                beta:
+                delta:
+                it+1
+                
+                omega:
+                it*2
+            }
+        ''')
+
+        then:
+        result.names == ['alpha', 'beta', 'delta', 'omega']
+        result.closure.call(10) == [alpha:11, beta: 11, delta:11, omega:20]
+    }
+
+
+    def 'should parse fork long ending' () {
+        when:
+        def result = eval_fork('''
+            { it -> 
+                alpha:
+                it+1
+                omega:
+                def x=1
+                def y=2
+                it+x+y
+            }
+        ''')
+
+        then:
+        result.names == ['alpha', 'omega']
+        result.closure.call(10) == [alpha:11, omega:13]
+    }
+
+    def 'should parse empty fork' () {
+        when:
+        eval_fork('''
+            { it -> it+1 }
+        ''')
+
+        then:
+        def e = thrown(MultipleCompilationErrorsException)
+        e.message.contains "The forking criteria should define at least two target channels"
+    }
 }

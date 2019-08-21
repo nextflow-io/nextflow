@@ -162,3 +162,12 @@ class TokenBranchChoice {
     Object value
     String choice
 }
+
+@ToString
+@EqualsAndHashCode
+@TupleConstructor
+@CompileStatic
+class TokenForkDef {
+    Closure<Map> closure
+    List<String> names
+}

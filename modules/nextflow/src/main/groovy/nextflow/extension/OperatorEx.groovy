@@ -41,6 +41,7 @@ import nextflow.NF
 import nextflow.Session
 import nextflow.script.ChannelOut
 import nextflow.script.TokenBranchDef
+import nextflow.script.TokenForkDef
 import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.splitter.TextSplitter
@@ -1665,6 +1666,12 @@ class OperatorEx implements DelegatingPlugin {
      */
     ChannelOut branch(DataflowReadChannel source, Closure<TokenBranchDef> action) {
         new BranchOp(source, action)
+                .apply()
+                .getOutput()
+    }
+
+    ChannelOut fork(DataflowReadChannel source, Closure<TokenForkDef> action) {
+        new ForkOp(source, action)
                 .apply()
                 .getOutput()
     }
