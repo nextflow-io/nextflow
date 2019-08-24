@@ -25,6 +25,7 @@ import com.google.api.services.genomics.v2alpha1.model.Operation
 import nextflow.Session
 import nextflow.cloud.google.GoogleSpecification
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskId
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -139,6 +140,7 @@ class GooglePipelinesTaskHandlerTest extends GoogleSpecification {
         task.getWorkDir() >> workDir
         task.getHash() >> { CacheHelper.hasher('dummy').hash() }
         task.getContainer() >> 'my/image'
+        task.getConfig() >> new TaskConfig(disk: '250 GB')
 
         def handler = new GooglePipelinesTaskHandler(
                 pipelineConfiguration: config,
@@ -161,6 +163,7 @@ class GooglePipelinesTaskHandlerTest extends GoogleSpecification {
         req.zone == ['my-zone']
         req.region == ['my-region']
         req.diskName == GooglePipelinesTaskHandler.diskName
+        req.diskSizeGb == 250
         req.preemptible == true
         req.taskName == "nf-bad893071e9130b866d43a4fcabb95b6"
         req.containerImage == 'my/image'
@@ -193,6 +196,7 @@ class GooglePipelinesTaskHandlerTest extends GoogleSpecification {
         task.getWorkDir() >> workDir
         task.getHash() >> { CacheHelper.hasher('dummy').hash() }
         task.getContainer() >> 'my/image'
+        task.getConfig() >> new TaskConfig()
 
         def handler = new GooglePipelinesTaskHandler(
                 pipelineConfiguration: config,
@@ -213,6 +217,7 @@ class GooglePipelinesTaskHandlerTest extends GoogleSpecification {
         config.getPreemptible() >> true
         // check staging script
         req.stagingScript == 'mkdir -p /work/dir; (alpha; beta; delta) 2>&1 > /work/dir/.command.log'
+        req.diskSizeGb == null 
         // check main script
         req.mainScript == 'cd /work/dir; bash .command.run 2>&1 | tee -a .command.log'
         // check unstaging script

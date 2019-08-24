@@ -300,6 +300,8 @@ Process definition
 ------------------
 Processes can be defined as usual and by default the ``cpus`` and ``memory`` directives are used to instantiate a custom
 machine type with the specified compute resources.  If ``memory`` is not specified, 1GB of memory is allocated per cpu.
+A persistent disk will be created with size corresponding to the ``disk`` directive.  If ``disk`` is not specified, the
+instance default is chosen to ensure reasonable I/O performance.
 
 The process ``machineType`` directive may optionally be used to specify a predifined Google Compute Platform `machine type <https://cloud.google.com/compute/docs/machine-types>`_
 If specified, this value overrides the ``cpus`` and ``memory`` directives.
@@ -311,6 +313,7 @@ Examples::
     process custom_resources_task {
         cpus 8
         memory '40 GB'
+        disk '200 GB'
 
         """
         <Your script here>
@@ -379,7 +382,7 @@ specify the local storage for the jobs computed locally::
 Limitation
 ----------
 
-* Currently it's not possible to specify a disk type and size different from the default ones assigned
+* Currently it's not possible to specify a disk type different from the default one assigned
   by the service depending the chosen instance type.
 
 

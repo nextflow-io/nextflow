@@ -133,8 +133,8 @@ class GooglePipelinesHelperTest extends Specification {
         def helper = new GooglePipelinesHelper()
 
         when:
-        def resources1 = helper.configureResources(type,projectId,zone,null,diskName,scopes,preEmptible)
-        def resources2 = helper.configureResources(type,projectId,null,region,diskName,scopes,preEmptible)
+        def resources1 = helper.configureResources(type,projectId,zone,null,diskName,100, scopes,preEmptible)
+        def resources2 = helper.configureResources(type,projectId,null,region,diskName,200,scopes,preEmptible)
         def resources3 = helper.configureResources(type,projectId,zone,null,diskName)
 
         then:
@@ -144,6 +144,7 @@ class GooglePipelinesHelperTest extends Specification {
             getZones() == zone
             getRegions() == null
             getVirtualMachine().getDisks().get(0).getName() == diskName
+            getVirtualMachine().getDisks().get(0).getSizeGb() == 100
             getVirtualMachine().getServiceAccount().getScopes() == scopes
             getVirtualMachine().getPreemptible() == preEmptible
         }
@@ -154,6 +155,7 @@ class GooglePipelinesHelperTest extends Specification {
             getZones() == null
             getRegions() == region
             getVirtualMachine().getDisks().get(0).getName() == diskName
+            getVirtualMachine().getDisks().get(0).getSizeGb() == 200
             getVirtualMachine().getServiceAccount().getScopes() == scopes
             getVirtualMachine().getPreemptible() == preEmptible
         }
@@ -163,6 +165,7 @@ class GooglePipelinesHelperTest extends Specification {
             getProjectId() == projectId
             getZones() == zone
             getVirtualMachine().getDisks().get(0).getName() == diskName
+            !getVirtualMachine().getDisks().get(0).getSizeGb()
             !getVirtualMachine().getServiceAccount().getScopes()
             !getVirtualMachine().getPreemptible()
         }
@@ -252,6 +255,7 @@ class GooglePipelinesHelperTest extends Specification {
         req.zone >> ['my-zone']
         req.region >> ['my-region']
         req.diskName >> 'my-disk'
+        req.diskSizeGb >> 500
         req.preemptible >> true
 
         1 * helper.configureResources(
@@ -260,6 +264,7 @@ class GooglePipelinesHelperTest extends Specification {
                 ['my-zone'],
                 ['my-region'],
                 'my-disk',
+                500,
                 [GooglePipelinesHelper.SCOPE_CLOUD_PLATFORM],
                 true )
 
@@ -269,6 +274,7 @@ class GooglePipelinesHelperTest extends Specification {
         res.getVirtualMachine().getPreemptible()
         res.getVirtualMachine().getMachineType() == 'n1-abc'
         res.getVirtualMachine().getDisks()[0].getName() == 'my-disk'
+        res.getVirtualMachine().getDisks()[0].getSizeGb() == 500
     }
 
     def 'should create main action' () {
