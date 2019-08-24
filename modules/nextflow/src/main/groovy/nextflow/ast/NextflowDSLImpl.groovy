@@ -43,6 +43,7 @@ import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.GStringExpression
+import org.codehaus.groovy.ast.expr.MapEntryExpression
 import org.codehaus.groovy.ast.expr.MapExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.PropertyExpression
@@ -60,19 +61,20 @@ import org.codehaus.groovy.syntax.Token
 import org.codehaus.groovy.syntax.Types
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
+import static nextflow.Const.SCOPE_SEP
 import static nextflow.ast.ASTHelpers.createX
 import static nextflow.ast.ASTHelpers.isAssignX
+import static nextflow.ast.ASTHelpers.isConstX
+import static nextflow.ast.ASTHelpers.isMapX
 import static nextflow.ast.ASTHelpers.isMethodCallX
 import static nextflow.ast.ASTHelpers.isThisX
+import static nextflow.ast.ASTHelpers.isTupleX
 import static nextflow.ast.ASTHelpers.isVariableX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callThisX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.closureX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
-
-import static nextflow.Const.SCOPE_SEP
-
 /**
  * Implement some syntax sugars of Nextflow DSL scripting.
  *
@@ -795,6 +797,31 @@ class NextflowDSLImpl implements ASTTransformation {
             return method.getMethodAsString() == name
         }
 
+        /**
+         * Transform a map entry `emit: something` into `emit: 'something'
+         * (ie. as a constant) in a map expression passed as argument to
+         * a method call. This allow the syntax
+         *
+         *   output:
+         *   path 'foo', emit: bar
+         *
+         * @param call
+         */
+        protected void fixOutEmitOption(MethodCallExpression call) {
+            List<Expression> args = isTupleX(call.arguments)?.expressions
+            if( !args ) return
+            if( args.size()<2 ) return
+             MapExpression map = isMapX(args[0])
+            if( !map ) return
+            for( int i=0; i<map.mapEntryExpressions.size(); i++ ) {
+                final entry = map.mapEntryExpressions[i]
+                final key = isConstX(entry.keyExpression)
+                final val = isVariableX(entry.valueExpression)
+                if( key?.text == 'emit' && val ) {
+                    map.mapEntryExpressions[i] = new MapEntryExpression(key, constX(val.text))
+                }
+            }
+        }
 
         protected void convertOutputMethod( Expression expression ) {
             log.trace "convert > output expression: $expression"
@@ -812,6 +839,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 // prefix the method name with the string '_out_'
                 methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
                 fixMethodCall(methodCall)
+                fixOutEmitOption(methodCall)
             }
 
             else if( methodName in ['into','mode'] ) {
@@ -996,7 +1024,6 @@ class NextflowDSLImpl implements ASTTransformation {
 
             return expr
         }
-
 
         /**
          * Wrap a generic expression with in a closure expression

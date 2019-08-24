@@ -196,10 +196,8 @@ class ProcessDef extends BindableDef implements ChainableDef {
                 .run()
 
         // the result channels
-        final result = declaredOutputs.getChannels()
-        assert result.size()>0, "Process output should contains at least one channel"
-
-        return output = new ChannelOut(result)
+        assert declaredOutputs.size()>0, "Process output should contains at least one channel"
+        return output = new ChannelOut(declaredOutputs)
     }
 
 }

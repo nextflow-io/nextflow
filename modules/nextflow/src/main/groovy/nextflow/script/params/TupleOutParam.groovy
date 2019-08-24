@@ -78,7 +78,7 @@ class TupleOutParam extends BaseOutParam implements OptionalParam {
 
 
             else
-                throw new IllegalArgumentException("Invalid `set` output parameter declaration -- item: ${item}")
+                throw new IllegalArgumentException("Invalid `tuple` output parameter declaration -- item: ${item}")
         }
 
         return this
