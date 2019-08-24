@@ -525,6 +525,12 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         new ValueOutParam(this).bind(obj)
     }
 
+    OutParam _out_val( Map opts, Object obj ) {
+        new ValueOutParam(this)
+                .setOptions(opts)
+                .bind(obj)
+    }
+
     OutParam _out_file( Object obj ) {
         // note: check that is a String type to avoid to force
         // the evaluation of GString object to a string
@@ -558,6 +564,11 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         new TupleOutParam(this) .bind(obj)
     }
 
+    OutParam _out_tuple( Map opts, Object... obj ) {
+        new TupleOutParam(this)
+                .setOptions(opts)
+                .bind(obj)
+    }
 
     OutParam _out_stdout( obj = null ) {
         def result = new StdOutParam(this).bind('-')

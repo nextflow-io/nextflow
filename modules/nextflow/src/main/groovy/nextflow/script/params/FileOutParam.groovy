@@ -16,7 +16,6 @@
 
 package nextflow.script.params
 
-
 import java.nio.file.Path
 
 import groovy.transform.InheritConstructors
@@ -87,7 +86,6 @@ class FileOutParam extends BaseOutParam implements OutParam, OptionalParam, Path
     private String filePattern
     private boolean pathQualifier
 
-
     /**
      * @return {@code true} when the file name is parametric i.e contains a variable name to be resolved, {@code false} otherwise
      */
@@ -142,6 +140,7 @@ class FileOutParam extends BaseOutParam implements OutParam, OptionalParam, Path
         return this
     }
 
+    @Override
     BaseOutParam bind( obj ) {
 
         if( obj instanceof GString ) {

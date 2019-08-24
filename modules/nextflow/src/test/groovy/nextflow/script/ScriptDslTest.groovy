@@ -5,6 +5,8 @@ import spock.lang.Timeout
 import nextflow.Channel
 import nextflow.exception.ScriptCompilationException
 import test.Dsl2Spec
+import test.MockScriptRunner
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -12,6 +14,33 @@ import test.Dsl2Spec
 @Timeout(5)
 class ScriptDslTest extends Dsl2Spec {
 
+
+    def 'should define a process with output alias' () {
+        given:
+        def SCRIPT = '''
+         
+        process foo {
+          output: val x, emit: 'ch1'
+          output: val y, emit: 'ch2' 
+          exec: x = 'Hello'; y = 'world'
+        }
+       
+        workflow {
+            main: 
+                foo()
+            emit: 
+                foo.out.ch1
+                foo.out.ch2
+        }
+        '''
+
+        when:
+        def runner = new MockScriptRunner()
+        def result = runner.setScript(SCRIPT).execute()
+        then:
+        result[0].val == 'Hello'
+        result[1].val == 'world'
+    }
 
     def 'should execute basic workflow' () {
         when:

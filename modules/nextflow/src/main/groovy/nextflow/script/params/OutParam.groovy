@@ -49,10 +49,12 @@ interface OutParam extends Cloneable {
      */
     DataflowWriteChannel getOutChannel()
 
-    List<DataflowWriteChannel> getOutChannels()
+    @Deprecated List<DataflowWriteChannel> getOutChannels()
 
     short getIndex()
 
-    Mode getMode()
+    @Deprecated Mode getMode()
+
+    String getChannelEmitName()
 
 }
