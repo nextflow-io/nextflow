@@ -19,25 +19,36 @@ package nextflow.script.params
 import groovy.transform.InheritConstructors
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
+import nextflow.script.TokenPathCall
 import nextflow.script.TokenStdinCall
 import nextflow.script.TokenValCall
 import nextflow.script.TokenVar
 
 /**
- * Models a set of input parameters
+ * Models a tuple of input parameters
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors
-class SetInParam extends BaseInParam {
+class TupleInParam extends BaseInParam {
 
-    final List<InParam> inner = []
+    protected List<BaseInParam> inner = []
 
     @Override String getTypeName() { 'set' }
 
+    @Override
+    TupleInParam clone() {
+        final copy = (TupleInParam)super.clone()
+        copy.@inner = new ArrayList<>(inner.size())
+        for( BaseInParam p : inner ) {
+            copy.@inner.add((BaseInParam)p.clone())
+        }
+        return copy
+    }
+
     String getName() { '__$'+this.toString() }
 
-    SetInParam bind( Object... obj ) {
+    TupleInParam bind(Object... obj ) {
 
         for( def item : obj ) {
 
@@ -46,6 +57,13 @@ class SetInParam extends BaseInParam {
 
             else if( item instanceof TokenFileCall )
                 newItem(FileInParam).bind( item.target )
+
+            else if( item instanceof TokenPathCall ) {
+                newItem(FileInParam)
+                        .setPathQualifier(true)
+                        .setOptions(item.opts)
+                        .bind( item.target )
+            }
 
             else if( item instanceof Map )
                 newItem(FileInParam).bind(item)

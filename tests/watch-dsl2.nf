@@ -7,10 +7,10 @@ params.files = 'examples/data/*.fa'
 
 process align {
   input:
-  file fasta
+  path fasta
 
   output:
-  file aln
+  path aln
 
   """
   t_coffee -in $fasta 1> aln
@@ -20,11 +20,15 @@ process align {
 /*
  * main flow
  */
- 
-Channel
-    .watchPath(params.files, params.events) \
-    | align \
-    | subscribe {
-          println '------'
-          println it.text
-        }
+
+workflow {
+
+    Channel
+        .watchPath(params.files, params.events) \
+        | align \
+        | subscribe {
+              println '------'
+              println it.text
+            }
+
+}

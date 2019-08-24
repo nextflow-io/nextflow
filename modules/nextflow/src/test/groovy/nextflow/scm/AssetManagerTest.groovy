@@ -440,7 +440,9 @@ class AssetManagerTest extends Specification {
         dir.resolve('.git/config').text = GIT_CONFIG_TEXT
 
         when:
-        def manager = new AssetManager().setLocalPath(dir.toFile())
+        def manager = new AssetManager()
+                .setLocalPath(dir.toFile())
+                .setProject('nextflow-io/nextflow')
         def script = manager.getScriptFile()
         then:
         script.localPath == dir
@@ -449,6 +451,7 @@ class AssetManagerTest extends Specification {
         script.parent == dir
         script.text == "println 'Hello world'"
         script.repository == 'https://github.com/nextflow-io/nextflow.git'
+        script.projectName == 'nextflow-io/nextflow'
     }
 
     def 'should return project name from git url' () {

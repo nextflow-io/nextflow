@@ -394,6 +394,7 @@ class K8sTaskHandlerTest extends Specification {
         def handler = Spy(K8sTaskHandler)
         handler.client = client
         handler.podName = POD_NAME
+        handler.status = TaskStatus.SUBMITTED
 
         when:
         def result = handler.checkIfRunning()

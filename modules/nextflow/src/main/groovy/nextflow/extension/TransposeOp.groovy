@@ -43,7 +43,7 @@ class TransposeOp {
     TransposeOp(DataflowReadChannel source, Map params=null) {
         CheckHelper.checkParams('transpose', params, TRANSPOSE_PARAMS)
         this.source = source
-        this.target = ChannelFactory.create()
+        this.target = CH.create()
         this.cols = parseByParam(params?.by)
         this.remainder = params?.remainder as Boolean
     }

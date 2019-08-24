@@ -3,7 +3,6 @@ package nextflow.extension
 import spock.lang.Specification
 
 import nextflow.Channel
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -37,5 +36,6 @@ class ChannelExTest extends Specification {
         source.val == 1
 
     }
+
 
 }

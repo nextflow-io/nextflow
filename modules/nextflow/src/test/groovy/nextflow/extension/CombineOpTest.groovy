@@ -24,6 +24,7 @@ import spock.lang.Timeout
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(5)
 class CombineOpTest extends Specification {
 
     def setupSpec() {
@@ -53,7 +54,6 @@ class CombineOpTest extends Specification {
         [1,2]       | ['a','b']         | ['p','q']         | [1,2, 'a','b','p','q']
     }
 
-    @Timeout(1)
     def 'should combine channels' () {
 
         given:
@@ -92,7 +92,6 @@ class CombineOpTest extends Specification {
         true
     }
 
-    @Timeout(1)
     def 'should combine a channel with a list' () {
 
         given:
@@ -115,7 +114,6 @@ class CombineOpTest extends Specification {
         ['b', 4] in all
     }
 
-    @Timeout(1)
     def 'should combine a value with a list' () {
 
         given:
@@ -134,7 +132,6 @@ class CombineOpTest extends Specification {
         ['x', 4] in all
     }
 
-    @Timeout(1)
     def 'should combine two values' () {
 
         given:
@@ -150,7 +147,6 @@ class CombineOpTest extends Specification {
         ['x', 'z'] in all
     }
 
-    @Timeout(1)
     def 'should combine with empty value' () {
         given:
         def left = Channel.value().close()
@@ -162,7 +158,6 @@ class CombineOpTest extends Specification {
         result.val == Channel.STOP
     }
 
-    @Timeout(1)
     def 'should chain combine ops flat default' () {
 
         given:

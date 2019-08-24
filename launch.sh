@@ -18,9 +18,26 @@
 #set -u
 #set -o errexit
 
+function resolve_link() {
+    [[ ! -f $1 ]] && exit 1
+    if command -v realpath &>/dev/null; then
+      realpath "$1"
+    elif command -v readlink &>/dev/null; then
+      local target="$1"
+      cd $(dirname $target); target=$(basename $target)
+      while [ -L "$target" ]; do
+        target="$(readlink "$target")"
+        cd $(dirname $target); target=$(basename $target)
+      done
+      echo "$(cd "$(dirname "$target")"; pwd -P)/$target"
+    else
+      echo_yellow "WARN: Neither \`realpath\` nor \`readlink\` command can be found"
+      exit 1
+    fi
+}
+
 # the application 'base' folder
-bin_dir=`dirname "$0"`
-bin_dir=`cd "$bin_dir"; pwd`
+bin_dir=`dirname $(resolve_link $0)`
 base_dir=$bin_dir
 
 # define the java env

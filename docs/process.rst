@@ -360,7 +360,7 @@ env         Lets you use the received value to set an environment variable named
             as the specified input name.
 file        Lets you handle the received value as a file, staging it properly in the execution context.
 stdin       Lets you forward the received value to the process `stdin` special file.
-set         Lets you handle a group of input values having one of the above qualifiers.
+tuple       Lets you handle a group of input values having one of the above qualifiers.
 each        Lets you execute the process for each entry in the input collection.
 =========== =============
 
@@ -641,15 +641,22 @@ on the value received from the channel. For example::
 Input of type 'set'
 -------------------
 
-The ``set`` qualifier allows you to group multiple parameters in a single parameter definition. It can be useful
+.. warning:: The `set` input type has been deprecated. See `tuple` instead.
+
+
+Input of type 'tuple'
+---------------------
+
+
+The ``tuple`` qualifier allows you to group multiple parameters in a single parameter definition. It can be useful
 when a process receives, in input, tuples of values that need to be handled separately. Each element in the tuple
-is associated to a corresponding element with the ``set`` definition. For example::
+is associated to a corresponding element with the ``tuple`` definition. For example::
 
-     tuple = Channel.from( [1, 'alpha'], [2, 'beta'], [3, 'delta'] )
+     values = Channel.of( [1, 'alpha'], [2, 'beta'], [3, 'delta'] )
 
-     process setExample {
+     process tupleExample {
          input:
-         set val(x), file('latin.txt')  from tuple
+         tuple val(x), file('latin.txt') from values
 
          """
          echo Processing $x
@@ -659,10 +666,10 @@ is associated to a corresponding element with the ``set`` definition. For exampl
      }
 
 
-In the above example the ``set`` parameter is used to define the value ``x`` and the file ``latin.txt``,
+In the above example the ``tuple`` parameter is used to define the value ``x`` and the file ``latin.txt``,
 which will receive a value from the same channel.
 
-In the ``set`` declaration items can be defined by using the following qualifiers: ``val``, ``env``, ``file`` and ``stdin``.
+In the ``tuple`` declaration items can be defined by using the following qualifiers: ``val``, ``env``, ``file`` and ``stdin``.
 
 A shorter notation can be used by applying the following substitution rules:
 
@@ -679,17 +686,16 @@ env(x)          (not supported)
 
 Thus the previous example could be rewritten as follows::
 
-      tuple = Channel.from( [1, 'alpha'], [2, 'beta'], [3, 'delta'] )
+      values = Channel.of( [1, 'alpha'], [2, 'beta'], [3, 'delta'] )
 
-      process setExample {
+      process tupleExample {
           input:
-          set x, 'latin.txt' from tuple
+          tuple x, 'latin.txt' from values
 
           """
           echo Processing $x
           cat - latin.txt > copy
           """
-
       }
 
 File names can be defined in *dynamic* manner as explained in the `Dynamic input file names`_ section.
@@ -849,7 +855,7 @@ Qualifier   Semantic
 val         Sends variable's with the name specified over the output channel.
 file        Sends a file produced by the process with the name specified over the output channel.
 stdout      Sends the executed process `stdout` over the output channel.
-set         Lets to send multiple values over the same output channel.
+tuple       Lets to send multiple values over the same output channel.
 =========== =============
 
 
@@ -1034,7 +1040,7 @@ on the actual value of the ``x`` input.
 
   With Nextflow, in most cases, you don't need to take care of naming output files, because each task is executed 
   in its own unique temporary directory, so files produced by different tasks can never override each other.
-  Also meta-data can be associated with outputs by using the :ref:`set output <process-set>` qualifier, instead of
+  Also meta-data can be associated with outputs by using the :ref:`tuple output <process-tuple>` qualifier, instead of
   including them in the output file name.
 
   To sum up, the use of output files with static names over dynamic ones is preferable whenever possible, 
@@ -1066,25 +1072,34 @@ the channel specified in the output parameter declaration. For example::
 Output 'set' of values
 ----------------------
 
-The ``set`` qualifier allows to send multiple values into a single channel. This feature is useful
+.. warning:: The `set` output type has been deprecated. See `tuple` instead.
+
+
+.. _process-out-tuple:
+
+Output 'tuple' of values
+------------------------
+
+The ``tuple`` qualifier allows to send multiple values into a single channel. This feature is useful
 when you need to `group together` the results of multiple executions of the same process, as shown in the following
 example::
 
-    query = Channel.fromPath '*.fa'
-    species = Channel.from 'human', 'cow', 'horse'
+    query_ch = Channel.fromPath '*.fa'
+    species_ch = Channel.from 'human', 'cow', 'horse'
 
     process blast {
 
     input:
-        val species
-        file query
+      val species from query_ch
+      file query from species_ch
 
     output:
-        set val(species), file('result') into blastOuts
+      tuple val(species), file('result') into blastOuts
 
-
-    "blast -db nr -query $query" > result
-
+    script:
+      """
+      blast -db nr -query $query > result
+      """
     }
 
 
@@ -1092,15 +1107,15 @@ In the above example a `BLAST` task is executed for each pair of ``species`` and
 When the task completes a new tuple containing the value for ``species`` and the file ``result`` is sent to the ``blastOuts`` channel.
 
 
-A `set` declaration can contain any combination of the following qualifiers, previously described: ``val``, ``file`` and ``stdout``.
+A `tuple` declaration can contain any combination of the following qualifiers, previously described: ``val``, ``file`` and ``stdout``.
 
 .. tip:: Variable identifiers are interpreted as `values` while strings literals are interpreted as `files` by default,
-  thus the above output `set` can be rewritten using a short notation as shown below.
+  thus the above output `tuple` can be rewritten using a short notation as shown below.
 
 ::
 
     output:
-        set species, 'result' into blastOuts
+        tuple species, 'result' into blastOuts
 
 
 
@@ -1369,8 +1384,8 @@ You can use it to request non-standard resources or use settings that are specif
 out of the box by Nextflow.
 
 .. note:: This directive is taken in account only when using a grid based executor:
-  :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor` and
-  :ref:`condor-executor` executors.
+  :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor`, :ref:`pbspro-executor`,
+  :ref:`moab-executor` and :ref:`condor-executor` executors.
 
 .. _process-disk:
 
@@ -1506,6 +1521,8 @@ Name                   Executor
 ``lsf``                The process is executed using the `Platform LSF <http://en.wikipedia.org/wiki/Platform_LSF>`_ job scheduler.
 ``slurm``              The process is executed using the SLURM job scheduler.
 ``pbs``                The process is executed using the `PBS/Torque <http://en.wikipedia.org/wiki/Portable_Batch_System>`_ job scheduler.
+``pbspro``             The process is executed using the `PBS Pro <https://www.pbsworks.com/>`_ job scheduler.
+``moab``               The process is executed using the `Moab <http://www.adaptivecomputing.com/moab-hpc-basic-edition/>`_ job scheduler.
 ``condor``             The process is executed using the `HTCondor <https://research.cs.wisc.edu/htcondor/>`_ job scheduler.
 ``nqsii``              The process is executed using the `NQSII <https://www.rz.uni-kiel.de/en/our-portfolio/hiperf/nec-linux-cluster>`_ job scheduler.
 ``ignite``             The process is executed using the `Apache Ignite <https://ignite.apache.org/>`_ cluster.

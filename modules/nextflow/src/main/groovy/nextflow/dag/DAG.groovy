@@ -27,7 +27,7 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.NF
-import nextflow.extension.ChannelFactory
+import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
 import nextflow.processor.TaskProcessor
 import nextflow.script.params.DefaultInParam
@@ -37,8 +37,8 @@ import nextflow.script.params.InParam
 import nextflow.script.params.InputsList
 import nextflow.script.params.OutParam
 import nextflow.script.params.OutputsList
-import nextflow.script.params.SetInParam
-import nextflow.script.params.SetOutParam
+import nextflow.script.params.TupleInParam
+import nextflow.script.params.TupleOutParam
 /**
  * Model a direct acyclic graph of the pipeline execution.
  *
@@ -196,7 +196,7 @@ class DAG {
             return true
         if( obj instanceof DataflowBroadcast )
             return true
-        return obj instanceof DataflowQueue && ChannelFactory.isBridge(obj)
+        return obj instanceof DataflowQueue && CH.isBridge(obj)
     }
 
     private void outbound( Vertex vertex, ChannelHandler leaving) {
@@ -227,7 +227,7 @@ class DAG {
     }
 
     static private String inputName0(InParam param) {
-        if( param instanceof SetInParam ) return null
+        if( param instanceof TupleInParam ) return null
         if( param instanceof EachInParam ) return null
         return param.name
     }
@@ -238,7 +238,7 @@ class DAG {
         for(OutParam p :outputs) {
             if( p instanceof DefaultOutParam ) break
             for(Object it : p.outChannels) {
-                result << new ChannelHandler(channel: it, label: p instanceof SetOutParam ? null : p.name)
+                result << new ChannelHandler(channel: it, label: p instanceof TupleOutParam ? null : p.name)
             }
         }
 
@@ -311,8 +311,7 @@ class DAG {
 
     @PackageScope
     String getChannelName( ChannelHandler handler ) {
-        def result = handler.label
-        result ?: NF.lookupVariable(handler.channel)
+        NF.lookupVariable(handler.channel) ?: handler.label
     }
 
     void normalize() {

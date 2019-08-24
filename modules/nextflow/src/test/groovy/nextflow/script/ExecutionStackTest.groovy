@@ -28,7 +28,6 @@ class ExecutionStackTest extends Specification {
         ExecutionStack.size()==1
         ExecutionStack.current() == s1
         !ExecutionStack.withinWorkflow()
-
         when:
         ExecutionStack.push(s2)
         then:

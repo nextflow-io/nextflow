@@ -9,10 +9,10 @@ DB = file(params.db)
 
 process blast {
     input:
-    file 'seq.fa'
+    path 'seq.fa'
 
     output:
-    file 'out'
+    path 'out'
 
     """
     blastp -db $DB -query seq.fa -outfmt 6 > out
@@ -21,7 +21,7 @@ process blast {
 
 process sort {
     input:
-    file 'hits_*'
+    path 'hits_*'
 
     output:
     stdout()
@@ -31,9 +31,12 @@ process sort {
     """
 }
 
-Channel.fromPath(params.query) |
-        splitFasta( by: params.chunkSize ) |
-        blast |
-        collect |
-        sort |
-        subscribe { println it }
+
+workflow {
+    Channel.fromPath(params.query) |
+            splitFasta( by: params.chunkSize, file:true ) |
+            blast |
+            collect |
+            sort |
+            subscribe { println it }
+}

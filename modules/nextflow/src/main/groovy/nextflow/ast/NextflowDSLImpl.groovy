@@ -16,16 +16,15 @@
 
 package nextflow.ast
 
-import static org.codehaus.groovy.ast.tools.GeneralUtils.*
-
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.script.BaseScript
+import nextflow.script.BodyDef
 import nextflow.script.IncludeDef
-import nextflow.script.TaskBody
 import nextflow.script.TaskClosure
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
+import nextflow.script.TokenPathCall
 import nextflow.script.TokenStdinCall
 import nextflow.script.TokenStdoutCall
 import nextflow.script.TokenValCall
@@ -34,7 +33,6 @@ import nextflow.script.TokenVar
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.ClassNode
-import org.codehaus.groovy.ast.ConstructorNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.VariableScope
@@ -43,11 +41,8 @@ import org.codehaus.groovy.ast.expr.BinaryExpression
 import org.codehaus.groovy.ast.expr.CastExpression
 import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
-import org.codehaus.groovy.ast.expr.ConstructorCallExpression
-import org.codehaus.groovy.ast.expr.DeclarationExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.GStringExpression
-import org.codehaus.groovy.ast.expr.ListExpression
 import org.codehaus.groovy.ast.expr.MapExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.PropertyExpression
@@ -61,9 +56,23 @@ import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.syntax.SyntaxException
+import org.codehaus.groovy.syntax.Token
 import org.codehaus.groovy.syntax.Types
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
+import static nextflow.ast.ASTHelpers.createX
+import static nextflow.ast.ASTHelpers.isAssignX
+import static nextflow.ast.ASTHelpers.isMethodCallX
+import static nextflow.ast.ASTHelpers.isThisX
+import static nextflow.ast.ASTHelpers.isVariableX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.block
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callThisX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.closureX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
+
+import static nextflow.Const.SCOPE_SEP
+
 /**
  * Implement some syntax sugars of Nextflow DSL scripting.
  *
@@ -74,6 +83,8 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
 @CompileStatic
 @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
 class NextflowDSLImpl implements ASTTransformation {
+
+    static public String OUT_PREFIX = '$out'
 
     static private Set<String> RESERVED_NAMES
 
@@ -101,6 +112,13 @@ class NextflowDSLImpl implements ASTTransformation {
 
     @CompileStatic
     static class DslCodeVisitor extends ClassCodeVisitorSupport {
+
+        final static String WORKFLOW_GET = 'get'
+        final static String WORKFLOW_EMIT = 'emit'
+        final static String WORKFLOW_MAIN = 'main'
+        final static String WORKFLOW_PUBLISH = 'publish'
+
+        final static Random RND = new Random()
 
         final private SourceUnit unit
 
@@ -130,63 +148,6 @@ class NextflowDSLImpl implements ASTTransformation {
                     functionNames.add(node.name)
             }
             super.visitMethod(node)
-        }
-
-        /**
-         * Creates a statement that invokes the {@link nextflow.script.ScriptMeta#setProcessNames(java.util.List)} (java.util.List)} method
-         * used to initialize the script with metadata collected during script parsing
-         *
-         * @return The method invocation statement
-         */
-        protected Statement makeSetProcessNamesStm() {
-            final names = new ListExpression()
-            for( String it: processNames ) {
-                names.addExpression(new ConstantExpression(it.toString()))
-            }
-
-            // the method list argument
-            final args = new ArgumentListExpression()
-            args.addExpression(names)
-
-            // some magic code
-            // this generates the invocation of the method:
-            //   nextflow.script.ScriptMeta.get(this).setProcessNames(<list of process names>)
-            final scriptMeta = new PropertyExpression( new PropertyExpression(new VariableExpression('nextflow'),'script'), 'ScriptMeta')
-            final thiz = new ArgumentListExpression(); thiz.addExpression( new VariableExpression('this') )
-            final meta = new MethodCallExpression( scriptMeta, 'get', thiz )
-            final call = new MethodCallExpression( meta, 'setProcessNames', args)
-            final stm = new ExpressionStatement(call)
-            return stm
-        }
-
-        /**
-         * Add to constructor a method call to inject parsed metadata
-         * 
-         * @param node
-         */
-        protected void injectMetadata(ClassNode node) {
-            for( ConstructorNode constructor : node.getDeclaredConstructors() ) {
-                def code = constructor.getCode()
-                if( code instanceof BlockStatement ) {
-                    code.addStatement(makeSetProcessNamesStm())
-                }
-                else if( code instanceof ExpressionStatement ) {
-                    def expr = code
-                    def block = new BlockStatement()
-                    block.addStatement(expr)
-                    block.addStatement(makeSetProcessNamesStm())
-                    constructor.setCode(block)
-                }
-                else
-                    throw new IllegalStateException("Invalid constructor expression: $code")
-            }
-        }
-
-        @Override
-        protected void visitObjectInitializerStatements(ClassNode node) {
-            if( node.getSuperClass().getName() == BaseScript.getName() )
-                injectMetadata(node)
-            super.visitObjectInitializerStatements(node)
         }
 
         @Override
@@ -246,25 +207,25 @@ class NextflowDSLImpl implements ASTTransformation {
                 final arg = allArgs[0]
                 final newArgs = new ArgumentListExpression()
                 if( arg instanceof ConstantExpression ) {
-                    newArgs.addExpression( newObj(IncludeDef, arg) )
+                    newArgs.addExpression( createX(IncludeDef, arg) )
                 }
                 else if( arg instanceof VariableExpression ) {
                     // the name of the component i.e. process, workflow, etc to import
                     final component = arg.getName()
                     // wrap the name in a `TokenVar` type
-                    final token = newObj(TokenVar, new ConstantExpression(component))
+                    final token = createX(TokenVar, new ConstantExpression(component))
                     // create a new `IncludeDef` object
-                    newArgs.addExpression(newObj(IncludeDef, token))
+                    newArgs.addExpression(createX(IncludeDef, token))
                 }
                 else if( arg instanceof CastExpression && arg.getExpression() instanceof VariableExpression) {
                     def cast = (CastExpression)arg
                     // the name of the component i.e. process, workflow, etc to import
                     final component = (cast.expression as VariableExpression).getName()
                     // wrap the name in a `TokenVar` type
-                    final token = newObj(TokenVar, new ConstantExpression(component))
+                    final token = createX(TokenVar, new ConstantExpression(component))
                     // the alias to give it
                     final alias = constX(cast.type.name)
-                    newArgs.addExpression( newObj(IncludeDef, token, alias) )
+                    newArgs.addExpression( createX(IncludeDef, token, alias) )
                 }
                 else {
                     syntaxError(call, "Not a valid include definition -- it must specify the module path as a string")
@@ -280,13 +241,13 @@ class NextflowDSLImpl implements ASTTransformation {
         /*
          * this method transforms the DSL definition
          *
-         *   workflow foo (ch1, ch2) {
+         *   workflow foo {
          *     code
          *   }
          *
          * into a method invocation as
          *
-         *   workflow('foo', ['ch1':ch1, 'ch2':ch2], { -> code })
+         *   workflow('foo', { -> code })
          *
          */
         protected void convertWorkflowDef(MethodCallExpression methodCall, SourceUnit unit) {
@@ -305,7 +266,7 @@ class NextflowDSLImpl implements ASTTransformation {
 
                 def newArgs = new ArgumentListExpression()
                 def body = (ClosureExpression)args[0]
-                newArgs.addExpression( makeWorkflowBodyWrapper(body) )
+                newArgs.addExpression( makeWorkflowDefWrapper(body) )
                 methodCall.setArguments( newArgs )
                 return 
             }
@@ -338,50 +299,130 @@ class NextflowDSLImpl implements ASTTransformation {
             def newArgs = new ArgumentListExpression()
 
             // add the workflow body def
-            if( len == 0 || !(args[len-1] instanceof ClosureExpression)) {
-                syntaxError(methodCall, "Invalid workflow definition -- Missing definition block")
+            if( len != 1 || !(args[0] instanceof ClosureExpression)) {
+                syntaxError(methodCall, "Invalid workflow definition")
                 return
             }
 
-            final body = (ClosureExpression)args[len-1]
-            newArgs.addExpression( makeWorkflowBodyWrapper(body) )
+            final body = (ClosureExpression)args[0]
             newArgs.addExpression( constX(name) )
-            newArgs.addExpression( makeArgsList(args) )
+            newArgs.addExpression( makeWorkflowDefWrapper(body) )
 
             // set the new list as the new arguments
             methodCall.setArguments( newArgs )
         }
 
-        protected Expression makeWorkflowBodyWrapper( ClosureExpression closure ) {
-            // make a copy to clear closure implicit `it` parameter
-            def copy = new ClosureExpression(null, closure.code)
-            def buffer = new StringBuilder()
-            def block = (BlockStatement) closure.code
-            for( Statement stm : block.getStatements() )
-                readSource(stm, buffer, unit)
-            makeScriptWrapper(copy, buffer.toString(), 'workflow', unit)
+
+        protected Statement normWorkflowParam(ExpressionStatement stat, String type, Set<String> emitNames, List<Statement> body) {
+            MethodCallExpression callx
+            VariableExpression varx
+            BinaryExpression binx
+
+            if( (callx=isMethodCallX(stat.expression)) && isThisX(callx.objectExpression) ) {
+                final name = "_${type}_${callx.methodAsString}"
+                return stmt( callThisX(name, callx.arguments) )
+            }
+
+            if( (varx=isVariableX(stat.expression)) ) {
+                final name = "_${type}_${varx.name}"
+                return stmt( callThisX(name) )
+            }
+
+            if( type == WORKFLOW_EMIT ) {
+                if( (binx=isAssignX(stat.expression)) ) {
+                    // keep the statement in body to allow it to be evaluated
+                    body.add(stat)
+                    // and create method call expr to capture the var name in the emission
+                    final left = (VariableExpression)binx.leftExpression
+                    final name = "_${type}_${left.name}"
+                    return stmt( callThisX(name) )
+                }
+
+                // wrap the expression into a assignment expression
+                final name = getRandomName(emitNames)
+                final left = new VariableExpression(name)
+                final right = stat.expression
+                final token = new Token(Types.ASSIGN, '=', -1, -1)
+                final assign = new BinaryExpression(left, token, right)
+                body.add(stmt(assign))
+
+                // the call method statement for the emit declaration
+                return stmt( callThisX("_${type}_${name}") )
+            }
+
+
+            syntaxError(stat, "Workflow malformed parameter definition")
+            return stat
+        }
+
+        protected String getRandomName(Set<String> allNames) {
+            String result
+            while( true ) {
+                result = OUT_PREFIX + RND.nextInt(10000)
+                if( allNames.add(result) )
+                    break
+            }
+            return result
+        }
+
+        protected Expression makeWorkflowDefWrapper( ClosureExpression closure ) {
+
+            final codeBlock = (BlockStatement) closure.code
+            final codeStms = codeBlock.statements
+            final scope = codeBlock.variableScope
+
+            final visited = new HashMap<String,Boolean>(5);
+            final emitNames = new LinkedHashSet<String>(codeStms.size())
+            final wrap = new ArrayList<Statement>(codeStms.size())
+            final body = new ArrayList<Statement>(codeStms.size())
+            final source = new StringBuilder()
+            String context = null
+            String previous = null
+            for( Statement stm : codeStms ) {
+                previous = context
+                context = stm.statementLabel ?: context
+                // check for changing context
+                if( context && context != previous ) {
+                    if( visited[context] && visited[previous] ) {
+                        syntaxError(stm, "Unexpected workflow `${context}` context here")
+                        break
+                    }
+                }
+                visited[context] = true
+
+                switch (context) {
+                    case WORKFLOW_GET:
+                    case WORKFLOW_EMIT:
+                    case WORKFLOW_PUBLISH:
+                        if( !(stm instanceof ExpressionStatement) ) {
+                            syntaxError(stm, "Workflow malformed parameter definition")
+                            break
+                        }
+                        wrap.add(normWorkflowParam(stm as ExpressionStatement, context, emitNames, body))
+                    break
+
+                    case WORKFLOW_MAIN:
+                        body.add(stm)
+                        break
+
+                    default:
+                        body.add(stm)
+                }
+            }
+            // read the closure source
+            readSource(closure, source, unit, true)
+
+            final bodyClosure = closureX(null, block(scope, body))
+            final invokeBody = makeScriptWrapper(bodyClosure, source.toString(), 'workflow', unit)
+            wrap.add( stmt(invokeBody) )
+
+            closureX(null, block(scope, wrap))
         }
 
         protected void syntaxError(ASTNode node, String message) {
             int line = node.lineNumber
             int coln = node.columnNumber
             unit.addError( new SyntaxException(message,line,coln))
-        }
-
-        protected ListExpression makeArgsList(ArgumentListExpression args) {
-            def result = new ArrayList<Expression>()
-            for( int i=0; i<args.size()-1; i++) {
-                def expr = args.getExpression(i)
-                if( expr instanceof VariableExpression ) {
-                    def varX = expr as VariableExpression
-                    result.add(constX(varX.name))
-                }
-                else {
-                    throw new IllegalArgumentException("Unexpected input expression: $expr")
-                }
-            }
-
-            return new ListExpression(result)
         }
 
         /**
@@ -452,7 +493,7 @@ class NextflowDSLImpl implements ASTTransformation {
                             readSource(stm,source,unit)
                             break
 
-                    // capture the statements in a when guard and remove from the current block
+                        // capture the statements in a when guard and remove from the current block
                         case 'when':
                             if( iterator.hasNext() ) {
                                 iterator.remove()
@@ -552,10 +593,10 @@ class NextflowDSLImpl implements ASTTransformation {
 
             // the closure expression is wrapped itself into a TaskClosure object
             // in order to capture the closure source other than the closure code
-            def newArgs = []
+            List<Expression> newArgs = []
             newArgs << closure
             newArgs << new ConstantExpression(source.toString())
-            def whenObj = newObj( TaskClosure, newArgs as Object[] )
+            def whenObj = createX( TaskClosure, newArgs )
 
             // creates a method call expression for the method `when`
             def method = new MethodCallExpression(VariableExpression.THIS_EXPRESSION, 'when', whenObj)
@@ -563,17 +604,17 @@ class NextflowDSLImpl implements ASTTransformation {
 
         }
         /**
-         * Wrap the user provided piece of code, either a script or a closure with a {@code TaskBody} object
+         * Wrap the user provided piece of code, either a script or a closure with a {@code BodyDef} object
          *
          * @param closure
          * @param source
          * @param scriptOrNative
          * @param unit
-         * @return a {@code TaskBody} object
+         * @return a {@code BodyDef} object
          */
         private Expression makeScriptWrapper( ClosureExpression closure, CharSequence source, String section, SourceUnit unit ) {
 
-            final newArgs = []
+            final List<Expression> newArgs = []
             newArgs << (closure)
             newArgs << ( new ConstantExpression(source.toString()) )
             newArgs << ( new ConstantExpression(section) )
@@ -583,52 +624,43 @@ class NextflowDSLImpl implements ASTTransformation {
                 def pName = new ConstantExpression(var.name)
                 def pLine = new ConstantExpression(var.lineNum)
                 def pCol = new ConstantExpression(var.colNum)
-                newArgs << newObj( TokenValRef, pName, pLine, pCol )
+                newArgs << createX( TokenValRef, pName, pLine, pCol )
             }
 
-            // invokes the TaskBody constructor
-            newObj( TaskBody, newArgs as Object[] )
+            // invokes the BodyDef constructor
+            createX( BodyDef, newArgs )
         }
 
         /**
          * Read the user provided script source string
          *
-         * @param statement
+         * @param node
          * @param buffer
          * @param unit
          */
-        private void readSource( Statement statement, StringBuilder buffer, SourceUnit unit ) {
-
-            def line = statement.getLineNumber()
-            def last = statement.getLastLineNumber()
-            for( int i=line; i<=last; i++ ) {
-                buffer.append( unit.source.getLine(i, null) ) .append('\n')
-            }
-
-        }
-
-        @Deprecated
-        protected void fixGuards( Statement stm, SourceUnit unit ) {
-
-            if( stm instanceof ExpressionStatement && stm.getExpression() instanceof MethodCallExpression ) {
-
-                def method = stm.getExpression() as MethodCallExpression
-                if( method.arguments instanceof ArgumentListExpression ) {
-                    def args = method.arguments as ArgumentListExpression
-                    if( args.size() == 1 && args.getExpression(0) instanceof ClosureExpression ) {
-                        // read the source code of the closure
-                        def closure = args.getExpression(0) as ClosureExpression
-                        def source = new StringBuilder()
-                        readSource(closure.getCode(), source, unit)
-
-                        // wrap the closure expression by a TaskClosure object invocation
-                        def wrap = newObj( TaskClosure, closure, new ConstantExpression(source.toString()) )
-                        // replace it with the original closure argument
-                        args.expressions.set(0, wrap)
+        private void readSource( ASTNode node, StringBuilder buffer, SourceUnit unit, stripBrackets=false ) {
+            final colx = node.getColumnNumber()
+            final colz = node.getLastColumnNumber()
+            final first = node.getLineNumber()
+            final last = node.getLastLineNumber()
+            for( int i=first; i<=last; i++ ) {
+                def line = unit.source.getLine(i, null)
+                if( i==last ) {
+                    line = line.substring(0,colz-1)
+                    if( stripBrackets ) {
+                        line = line.replaceFirst(/}.*$/,'')
+                        if( !line.trim() ) continue
                     }
                 }
+                if( i==first ) {
+                    line = line.substring(colx-1)
+                    if( stripBrackets ) {
+                        line = line.replaceFirst(/^.*\{/,'').trim()
+                        if( !line.trim() ) continue
+                    }
+                }
+                buffer.append(line) .append('\n')
             }
-
         }
 
         protected void fixLazyGString( Statement stm ) {
@@ -721,7 +753,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 def nested = methodCall.objectExpression instanceof MethodCallExpression
                 log.trace "convert > input method: $methodName"
 
-                if( methodName in ['val','env','file','each','set','stdin'] ) {
+                if( methodName in ['val','env','file','each','set','stdin','path','tuple'] ) {
                     //this methods require a special prefix
                     if( !nested )
                         methodCall.setMethod( new ConstantExpression('_in_' + methodName) )
@@ -737,9 +769,7 @@ class NextflowDSLImpl implements ASTTransformation {
                  *
                  */
                 else if( methodName == 'name' && isWithinMethod(expression, 'file') ) {
-                    withinFileMethod = true
-                    varToConst(methodCall.getArguments())
-                    withinFileMethod = false
+                    varToConstX(methodCall.getArguments())
                 }
 
                 // invoke on the next method call
@@ -778,7 +808,7 @@ class NextflowDSLImpl implements ASTTransformation {
             def nested = methodCall.objectExpression instanceof MethodCallExpression
             log.trace "convert > output method: $methodName"
 
-            if( methodName in ['val','file','set','stdout'] && !nested ) {
+            if( methodName in ['val','file','set','stdout','path','tuple'] && !nested ) {
                 // prefix the method name with the string '_out_'
                 methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
                 fixMethodCall(methodCall)
@@ -795,9 +825,7 @@ class NextflowDSLImpl implements ASTTransformation {
 
         }
 
-        private boolean withinSetMethod
-
-        private boolean withinFileMethod
+        private boolean withinTupleMethod
 
         private boolean withinEachMethod
 
@@ -813,23 +841,22 @@ class NextflowDSLImpl implements ASTTransformation {
         protected void fixMethodCall( MethodCallExpression methodCall ) {
             final name = methodCall.methodAsString
 
-            withinSetMethod = name == '_in_set' || name == '_out_set'
-            withinFileMethod = name == '_in_file' || name == '_out_file'
+            withinTupleMethod = name == '_in_set' || name == '_out_set' || name == '_in_tuple' || name == '_out_tuple'
             withinEachMethod = name == '_in_each'
 
             try {
-                if( isOutputValWithPropertyExpression(methodCall) )
-                // transform an output value declaration such
-                //   output: val( obj.foo )
-                // to
-                //   output: val({ obj.foo })
+                if( isOutputValWithPropertyExpression(methodCall) ) {
+                    // transform an output value declaration such
+                    //   output: val( obj.foo )
+                    // to
+                    //   output: val({ obj.foo })
                     wrapPropertyToClosure((ArgumentListExpression)methodCall.getArguments())
+                }
                 else
-                    varToConst(methodCall.getArguments())
+                    varToConstX(methodCall.getArguments())
 
             } finally {
-                withinSetMethod = false
-                withinFileMethod = false
+                withinTupleMethod = false
                 withinEachMethod = false
             }
         }
@@ -839,22 +866,20 @@ class NextflowDSLImpl implements ASTTransformation {
                 return false
             if( methodCall.getArguments() instanceof ArgumentListExpression ) {
                 def args = (ArgumentListExpression)methodCall.getArguments()
-                if( args.size() != 1 )
+                if( args.size()==0 || args.size()>2 )
                     return false
 
-                return args.getExpression(0) instanceof PropertyExpression
+                return args.last() instanceof PropertyExpression
             }
 
             return false
         }
 
         protected void wrapPropertyToClosure(ArgumentListExpression expr) {
-            def args = expr as ArgumentListExpression
-            def property = (PropertyExpression) args.getExpression(0)
-
-            def closure = wrapPropertyToClosure(property)
-
-            args.getExpressions().set(0, closure)
+            final args = expr as ArgumentListExpression
+            final property = (PropertyExpression) args.last()
+            final closure = wrapPropertyToClosure(property)
+            args.getExpressions().set(args.size()-1, closure)
         }
 
         protected ClosureExpression wrapPropertyToClosure(PropertyExpression property)  {
@@ -868,16 +893,16 @@ class NextflowDSLImpl implements ASTTransformation {
         }
 
 
-        protected Expression varToStr( Expression expr ) {
+        protected Expression varToStrX( Expression expr ) {
             if( expr instanceof VariableExpression ) {
                 def name = ((VariableExpression) expr).getName()
-                return newObj( TokenVar, new ConstantExpression(name) )
+                return createX( TokenVar, new ConstantExpression(name) )
             }
             else if( expr instanceof PropertyExpression ) {
                 // transform an output declaration such
-                // output: set val( obj.foo )
+                // output: tuple val( obj.foo )
                 //  to
-                // output: set val({ obj.foo })
+                // output: tuple val({ obj.foo })
                 return wrapPropertyToClosure(expr)
             }
 
@@ -885,7 +910,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 def i = 0
                 def list = expr.getExpressions()
                 for( Expression item : list ) {
-                    list[i++] = varToStr(item)
+                    list[i++] = varToStrX(item)
                 }
 
                 return expr
@@ -894,7 +919,7 @@ class NextflowDSLImpl implements ASTTransformation {
             return expr
         }
 
-        protected Expression varToConst( Expression expr ) {
+        protected Expression varToConstX( Expression expr ) {
 
             if( expr instanceof VariableExpression ) {
                 // when it is a variable expression, replace it with a constant representing
@@ -902,55 +927,59 @@ class NextflowDSLImpl implements ASTTransformation {
                 def name = ((VariableExpression) expr).getName()
 
                 /*
-                 * the 'stdin' is used as placeholder for the standard input in the set definition. For example:
+                 * the 'stdin' is used as placeholder for the standard input in the tuple definition. For example:
                  *
                  * input:
-                 *    set( stdin, .. ) from q
+                 *    tuple( stdin, .. ) from q
                  */
-                if( name == 'stdin' && withinSetMethod )
-                    return newObj( TokenStdinCall )
+                if( name == 'stdin' && withinTupleMethod )
+                    return createX( TokenStdinCall )
 
                 /*
                  * input:
-                 *    set( stdout, .. )
+                 *    tuple( stdout, .. )
                  */
-                else if ( name == 'stdout' && withinSetMethod )
-                    return newObj( TokenStdoutCall )
+                else if ( name == 'stdout' && withinTupleMethod )
+                    return createX( TokenStdoutCall )
 
                 else
-                    return newObj( TokenVar, new ConstantExpression(name) )
+                    return createX( TokenVar, new ConstantExpression(name) )
             }
 
             if( expr instanceof MethodCallExpression ) {
                 def methodCall = expr as MethodCallExpression
 
                 /*
-                 * replace 'file' method call in the set definition, for example:
+                 * replace 'file' method call in the tuple definition, for example:
                  *
                  * input:
-                 *   set( file(fasta:'*.fa'), .. ) from q
+                 *   tuple( file(fasta:'*.fa'), .. ) from q
                  */
-                if( methodCall.methodAsString == 'file' && (withinSetMethod || withinEachMethod) ) {
-                    def args = (TupleExpression) varToConst(methodCall.arguments)
-                    return newObj( TokenFileCall, args )
+                if( methodCall.methodAsString == 'file' && (withinTupleMethod || withinEachMethod) ) {
+                    def args = (TupleExpression) varToConstX(methodCall.arguments)
+                    return createX( TokenFileCall, args )
+                }
+                else if( methodCall.methodAsString == 'path' && (withinTupleMethod || withinEachMethod) ) {
+                    def args = (TupleExpression) varToConstX(methodCall.arguments)
+                    return createX( TokenPathCall, args )
                 }
 
                 /*
                  * input:
-                 *  set( env(VAR_NAME) ) from q
+                 *  tuple( env(VAR_NAME) ) from q
                  */
-                if( methodCall.methodAsString == 'env' && withinSetMethod ) {
-                    def args = (TupleExpression) varToStr(methodCall.arguments)
-                    return newObj( TokenEnvCall, args )
+                if( methodCall.methodAsString == 'env' && withinTupleMethod ) {
+                    def args = (TupleExpression) varToStrX(methodCall.arguments)
+                    return createX( TokenEnvCall, args )
                 }
 
                 /*
                  * input:
-                 *   set val(x), .. from q
+                 *   tuple val(x), .. from q
                  */
-                if( methodCall.methodAsString == 'val' && withinSetMethod ) {
-                    def args = (TupleExpression) varToStr(methodCall.arguments)
-                    return newObj( TokenValCall, args )
+                if( methodCall.methodAsString == 'val' && withinTupleMethod ) {
+                    def args = (TupleExpression) varToStrX(methodCall.arguments)
+                    return createX( TokenValCall, args )
                 }
 
             }
@@ -960,7 +989,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 def i = 0
                 def list = expr.getExpressions()
                 for( Expression item : list )  {
-                    list[i++] = varToConst(item)
+                    list[i++] = varToConstX(item)
                 }
                 return expr
             }
@@ -968,31 +997,6 @@ class NextflowDSLImpl implements ASTTransformation {
             return expr
         }
 
-        /**
-         * Creates a new {@code ConstructorCallExpression} for the specified class and arguments
-         *
-         * @param clazz The {@code Class} for which the create a constructor call expression
-         * @param args The arguments to be passed to the constructor
-         * @return The instance for the constructor call
-         */
-        protected Expression newObj( Class clazz, TupleExpression args ) {
-            def type = new ClassNode(clazz)
-            return new ConstructorCallExpression(type,args)
-        }
-
-        /**
-         * Creates a new {@code ConstructorCallExpression} for the specified class and arguments
-         * specified using an open array. Te
-         *
-         * @param clazz The {@code Class} for which the create a constructor call expression
-         * @param args The arguments to be passed to the constructor, they will be wrapped by in a {@code ArgumentListExpression}
-         * @return The instance for the constructor call
-         */
-        protected Expression newObj( Class clazz, Object... params ) {
-            def type = new ClassNode(clazz)
-            def args = new ArgumentListExpression( params as List<Expression>)
-            return new ConstructorCallExpression(type,args)
-        }
 
         /**
          * Wrap a generic expression with in a closure expression
@@ -1016,7 +1020,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 closureExp.variableScope = new VariableScope(block.variableScope)
 
                 // append to the list of statement
-                //def wrap = newObj(TaskBody, closureExp, new ConstantExpression(source.toString()), ConstantExpression.TRUE)
+                //def wrap = newObj(BodyDef, closureExp, new ConstantExpression(source.toString()), ConstantExpression.TRUE)
                 def wrap = makeScriptWrapper(closureExp, source, 'script', unit )
                 block.statements.add( new ExpressionStatement(wrap) )
 
@@ -1040,6 +1044,11 @@ class NextflowDSLImpl implements ASTTransformation {
             }
             if( name in functionNames || name in workflowNames || name in processNames ) {
                 unit.addError( new SyntaxException("Identifier `$name` is already used by another definition", node.lineNumber, node.columnNumber+8) )
+                return true
+            }
+            if( name.contains(SCOPE_SEP) ) {
+                def offset =  8+2+ name.indexOf(SCOPE_SEP)
+                unit.addError( new SyntaxException("Process and workflow names cannot contain colon character", node.lineNumber, node.columnNumber+offset) )
                 return true
             }
             return false
@@ -1111,202 +1120,6 @@ class NextflowDSLImpl implements ASTTransformation {
             def visitor = new VariableVisitor(unit)
             visitor.visitClosureExpression(closure)
             return visitor.allVariables
-        }
-
-    }
-
-    /**
-     * Visit a closure and collect all referenced variable names
-     */
-    @CompileStatic
-    static class VariableVisitor extends ClassCodeVisitorSupport {
-
-        final Map<String,TokenValRef> fAllVariables = [:]
-
-        final Set<String> localDef = []
-
-        final SourceUnit sourceUnit
-
-        private boolean declaration
-
-        private int deep
-
-        VariableVisitor( SourceUnit unit ) {
-            this.sourceUnit = unit
-        }
-
-        protected boolean isNormalized(PropertyExpression expr) {
-            if( !(expr.getProperty() instanceof ConstantExpression) )
-                return false
-
-            def target = expr.getObjectExpression()
-            while( target instanceof PropertyExpression) {
-                target = (target as PropertyExpression).getObjectExpression()
-            }
-
-            return target instanceof VariableExpression
-        }
-
-        @Override
-        void visitClosureExpression(ClosureExpression expression) {
-            if( deep++ == 0 )
-                super.visitClosureExpression(expression)
-        }
-
-        @Override
-        void visitDeclarationExpression(DeclarationExpression expr) {
-            declaration = true
-            try {
-                super.visitDeclarationExpression(expr)
-            }
-            finally {
-                declaration = false
-            }
-        }
-
-        @Override
-        void visitPropertyExpression(PropertyExpression expr) {
-
-            if( isNormalized(expr)) {
-                final name = expr.text.replace('?','')
-                final line = expr.lineNumber
-                final coln = expr.columnNumber
-
-                if( !name.startsWith('this.') && !fAllVariables.containsKey(name) ) {
-                    fAllVariables[name] = new TokenValRef(name,line,coln)
-                }
-            }
-            else
-                super.visitPropertyExpression(expr)
-
-        }
-
-        @Override
-        void visitVariableExpression(VariableExpression var) {
-            final name = var.name
-            final line = var.lineNumber
-            final coln = var.columnNumber
-
-            if( name == 'this' )
-                return
-
-            if( declaration ) {
-                if( fAllVariables.containsKey(name) )
-                    sourceUnit.addError( new SyntaxException("Variable `$name` already defined in the process scope", line, coln))
-                else
-                    localDef.add(name)
-            }
-
-            // Note: variable declared in the process scope are not added
-            // to the set of referenced variables. Only global ones are tracked
-            else if( !localDef.contains(name) && !fAllVariables.containsKey(name) ) {
-                fAllVariables[name] = new TokenValRef(name,line,coln)
-            }
-        }
-
-        @Override
-        protected SourceUnit getSourceUnit() {
-            return sourceUnit
-        }
-
-        /**
-         * @return The set of all variables referenced in the script.
-         * NOTE: it includes properties in the form {@code object.propertyName}
-         */
-        Set<TokenValRef> getAllVariables() {
-            new HashSet<TokenValRef>(fAllVariables.values())
-        }
-    }
-
-    /**
-     * Transform any GString to a Lazy GString i.e.
-     *
-     * from
-     *   "${foo} ${bar}"
-     * to
-     *   "${->foo} ${->bar}
-     *
-     */
-    @CompileStatic
-    static class GStringToLazyVisitor extends ClassCodeVisitorSupport {
-
-        final SourceUnit sourceUnit
-
-        private boolean withinClosure
-
-        private List<String> names = []
-
-        GStringToLazyVisitor(SourceUnit unit) {
-            this.sourceUnit = unit
-        }
-
-        @Override
-        void visitClosureExpression(ClosureExpression expression) {
-            withinClosure = true
-            try {
-                super.visitClosureExpression(expression)
-            }
-            finally {
-                withinClosure = false
-            }
-        }
-
-        @Override
-        void visitMethodCallExpression(MethodCallExpression call) {
-            call.getObjectExpression().visit(this)
-            call.getMethod().visit(this)
-            names.push(call.methodAsString)
-            call.getArguments().visit(this)
-            names.pop()
-        }
-
-        @Override
-        void visitGStringExpression(GStringExpression expression) {
-            // channels values are not supposed to be lazy evaluated
-            // therefore stop visiting when reaching `from` keyword
-            if( !withinClosure && names.last()!='from' ) {
-                xformToLazy(expression)
-            }
-        }
-
-        protected void xformToLazy(GStringExpression str) {
-            def values = str.getValues()
-            def normalised = new Expression[values.size()]
-
-            // wrap all non-closure to a ClosureExpression
-            for( int i=0; i<values.size(); i++ ) {
-                final item = values[i]
-                if( item instanceof ClosureExpression  ) {
-                    // when there is already a closure the conversion it is aborted
-                    // because it supposed the gstring is already a lazy-string
-                    return
-                }
-                normalised[i] = wrapWithClosure(item)
-            }
-
-            for( int i=0; i<values.size(); i++ ) {
-                values[i] = normalised[i]
-            }
-        }
-
-        protected ClosureExpression wrapWithClosure( Expression expr ) {
-
-            // create an expression statement for the given `expression`
-            def statement = new ExpressionStatement(expr)
-            // add it to a new block
-            def block = new BlockStatement()
-            block.addStatement(statement)
-            // create a closure over the given block
-            // note: the closure parameter argument must be *null* to force the creation of a closure like {-> something}
-            // otherwise it creates a closure with an implicit parameter that is managed in a different manner by the
-            // GString -- see http://docs.groovy-lang.org/latest/html/documentation/#_special_case_of_interpolating_closure_expressions
-            new ClosureExpression( null, block )
-
-        }
-
-        @Override
-        protected SourceUnit getSourceUnit() {
-            return sourceUnit
         }
 
     }

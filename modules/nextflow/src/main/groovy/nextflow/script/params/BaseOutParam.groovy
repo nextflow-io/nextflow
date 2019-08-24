@@ -21,7 +21,7 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.NF
 import nextflow.exception.ScriptRuntimeException
-import nextflow.extension.ChannelFactory
+import nextflow.extension.CH
 import nextflow.script.ProcessConfig
 import nextflow.script.TokenVar
 
@@ -38,7 +38,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
     protected intoObj
 
-    private List<DataflowWriteChannel> outChannels = []
+    protected List<DataflowWriteChannel> outChannels = new ArrayList<>(10)
 
     protected OutParam.Mode mode = BasicMode.standard
 
@@ -49,8 +49,14 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
         super(binding,list,ownerIndex)
     }
 
-    BaseOutParam(ProcessConfig config ) {
+    BaseOutParam( ProcessConfig config ) {
         super(config.getOwnerScript().getBinding(), config.getOutputs())
+    }
+
+    Object clone() {
+        final copy = (BaseOutParam)super.clone()
+        copy.outChannels = new ArrayList<>(10)
+        return copy
     }
 
     void lazyInit() {
@@ -78,6 +84,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
     void lazyInitImpl( def target ) {
         def channel = null
         if( target instanceof TokenVar ) {
+            assert !NF.dsl2
             channel = outputValToChannel(target.name)
         }
         else if( target != null ) {
@@ -120,7 +127,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
                 }
 
                 // instantiate the new channel
-                channel = ChannelFactory.create( singleton && mode==BasicMode.standard )
+                channel = CH.create( singleton && mode==BasicMode.standard )
 
                 // bind it to the script on-fly
                 if( local != '-' && binding ) {
@@ -177,7 +184,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
         return outChannels
     }
 
-    def String getName() {
+    String getName() {
 
         if( nameObj != null )
             return nameObj.toString()
@@ -186,7 +193,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
     }
 
 
-    def BaseOutParam mode( def mode ) {
+    BaseOutParam mode( def mode ) {
         this.mode = BasicMode.parseValue(mode)
         return this
     }

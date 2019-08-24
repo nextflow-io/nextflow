@@ -24,7 +24,7 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 
-interface OutParam {
+interface OutParam extends Cloneable {
 
     interface Mode {  }
 

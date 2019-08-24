@@ -15,6 +15,7 @@
  */
 package nextflow.processor
 
+import nextflow.NF
 import static nextflow.processor.ErrorStrategy.*
 
 import java.nio.file.LinkOption
@@ -59,13 +60,16 @@ import nextflow.exception.ShowOnlyExceptionMessage
 import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
 import nextflow.executor.StoredTaskHandler
-import nextflow.extension.ChannelFactory
+import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.file.FilePatternSplitter
 import nextflow.file.FilePorter
 import nextflow.script.BaseScript
+import nextflow.script.ProcessConfig
+import nextflow.script.ScriptType
+import nextflow.script.BodyDef
 import nextflow.script.params.BasicMode
 import nextflow.script.params.EachInParam
 import nextflow.script.params.EnvInParam
@@ -75,13 +79,10 @@ import nextflow.script.params.InParam
 import nextflow.script.params.MissingParam
 import nextflow.script.params.OptionalParam
 import nextflow.script.params.OutParam
-import nextflow.script.ProcessConfig
-import nextflow.script.ScriptType
-import nextflow.script.params.SetInParam
-import nextflow.script.params.SetOutParam
+import nextflow.script.params.TupleInParam
+import nextflow.script.params.TupleOutParam
 import nextflow.script.params.StdInParam
 import nextflow.script.params.StdOutParam
-import nextflow.script.TaskBody
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
 import nextflow.util.ArrayBag
@@ -144,7 +145,7 @@ class TaskProcessor {
     /**
      * The piece of code to be execute provided by the user
      */
-    protected TaskBody taskBody
+    protected BodyDef taskBody
 
     /**
      * The corresponding {@code DataflowProcessor} which will receive and
@@ -248,7 +249,7 @@ class TaskProcessor {
      * @param config
      * @param taskBody
      */
-    TaskProcessor( String name, Executor executor, Session session, BaseScript script, ProcessConfig config, TaskBody taskBody ) {
+    TaskProcessor(String name, Executor executor, Session session, BaseScript script, ProcessConfig config, BodyDef taskBody ) {
         assert executor
         assert session
         assert script
@@ -305,7 +306,7 @@ class TaskProcessor {
     /**
      * @return The user provided script block
      */
-    public TaskBody getTaskBody() { taskBody }
+    public BodyDef getTaskBody() { taskBody }
 
     /**
      * Launch the 'script' define by the code closure as a local bash script
@@ -330,12 +331,12 @@ class TaskProcessor {
             throw new IllegalStateException("Missing task body for process `$name`")
 
         // -- check that input set defines at least two elements
-        def invalidInputSet = config.getInputs().find { it instanceof SetInParam && it.inner.size()<2 }
+        def invalidInputSet = config.getInputs().find { it instanceof TupleInParam && it.inner.size()<2 }
         if( invalidInputSet )
             log.warn "Input `set` must define at least two component -- Check process `$name`"
 
         // -- check that output set defines at least two elements
-        def invalidOutputSet = config.getOutputs().find { it instanceof SetOutParam && it.inner.size()<2 }
+        def invalidOutputSet = config.getOutputs().find { it instanceof TupleOutParam && it.inner.size()<2 }
         if( invalidOutputSet )
             log.warn "Output `set` must define at least two component -- Check process `$name`"
 
@@ -440,12 +441,13 @@ class TaskProcessor {
             final forwarder = new ForwardClosure(size, iteratorIndexes)
 
             // instantiate the iteration process
+            def DataflowOperator op1
             def stopAfterFirstRun = allScalarValues
             def interceptor = new BaseProcessInterceptor(opInputs, stopAfterFirstRun)
             def params = [inputs: opInputs, outputs: linkingChannels, maxForks: 1, listeners: [interceptor]]
-            session.allOperators << (operator = new DataflowOperator(group, params, forwarder))
+            session.allOperators << (op1 = new DataflowOperator(group, params, forwarder))
             // fix issue #41
-            operator.start()
+            start(op1)
 
             // set as next inputs the result channels of the iteration process
             // adding the 'control' channel removed previously
@@ -484,8 +486,18 @@ class TaskProcessor {
         NodeMarker.addProcessNode(this, config.getInputs(), config.getOutputs())
 
         // fix issue #41
-        operator.start()
+        start(operator)
+    }
 
+    private start(DataflowProcessor op) {
+        if( !NF.dsl2 ) {
+            op.start()
+            return
+        }
+        session.addIgniter {
+            log.debug "Starting process > $name"
+            op.start()
+        }
     }
 
     private AtomicIntegerArray createPortsArray(int size) {
@@ -494,7 +506,6 @@ class TaskProcessor {
             result.set(i, 1)
         return result
     }
-
 
     /**
      * The processor execution body
@@ -538,8 +549,8 @@ class TaskProcessor {
     }
 
     @Memoized
-    private List<SetInParam> getDeclaredInputSet() {
-        getConfig().getInputs().ofType(SetInParam)
+    private List<TupleInParam> getDeclaredInputSet() {
+        getConfig().getInputs().ofType(TupleInParam)
     }
 
     protected void validateInputSets( List values ) {
@@ -644,7 +655,7 @@ class TaskProcessor {
          * initialize the inputs/outputs for this task instance
          */
         config.getInputs().each { InParam param ->
-            if( param instanceof SetInParam )
+            if( param instanceof TupleInParam )
                 param.inner.each { task.setInput(it)  }
             else if( param instanceof EachInParam )
                 task.setInput(param.inner)
@@ -653,7 +664,7 @@ class TaskProcessor {
         }
 
         config.getOutputs().each { OutParam param ->
-            if( param instanceof SetOutParam ) {
+            if( param instanceof TupleOutParam ) {
                 param.inner.each { task.setOutput(it) }
             }
             else
@@ -1264,10 +1275,10 @@ class TaskProcessor {
                 }
             }
 
-            else if( param.mode == SetOutParam.CombineMode.combine ) {
+            else if( param.mode == TupleOutParam.CombineMode.combine ) {
                 log.trace "Process $name > Combining out param: ${param} = ${list}"
-                def combs = list.combinations()
-                combs.each { bindOutParam(param, it) }
+                final combs = (List<List>)list.combinations()
+                for( def it : combs ) { bindOutParam(param, it) }
             }
 
             else
@@ -1283,7 +1294,7 @@ class TaskProcessor {
     protected void bindOutParam( OutParam param, List values ) {
         log.trace "<$name> Binding param $param with $values"
         def x = values.size() == 1 ? values[0] : values
-        param.getOutChannels().each { it.bind(x) }
+        for( def it : param.getOutChannels() ) { it.bind(x) }
     }
 
     protected void collectOutputs( TaskRun task ) {
@@ -1549,8 +1560,28 @@ class TaskProcessor {
         return new FileHolder(source, result)
     }
 
+    protected Path normalizeToPath( obj ) {
+        if( obj instanceof Path )
+            return obj
 
-    protected List<FileHolder> normalizeInputToFiles( Object obj, int count, FilePorter.Batch batch ) {
+        if( obj == null )
+            throw new ProcessUnrecoverableException("Path value cannot be null")
+        
+        if( !(obj instanceof CharSequence) )
+            throw new ProcessUnrecoverableException("Not a valid path value type: ${obj.getClass().getName()} ($obj)")
+
+        def str = obj.toString().trim()
+        if( str.contains('\n') )
+            throw new ProcessUnrecoverableException("Path value cannot contain a new-line character: $str")
+        if( str.startsWith('/') )
+            return FileHelper.asPath(str)
+        if( FileHelper.getUrlProtocol(str) )
+            return FileHelper.asPath(str)
+
+        throw new ProcessUnrecoverableException("Not a valid path value: $str")
+    }
+
+    protected List<FileHolder> normalizeInputToFiles( Object obj, int count, boolean coerceToPath, FilePorter.Batch batch ) {
 
         Collection allItems = obj instanceof Collection ? obj : [obj]
         def len = allItems.size()
@@ -1559,15 +1590,15 @@ class TaskProcessor {
         def files = new ArrayBag<FileHolder>(len)
         for( def item : allItems ) {
 
-            if( item instanceof Path ) {
-                def path = batch.addToForeign(item)
-                def holder = new FileHolder(path)
+            if( item instanceof Path || coerceToPath ) {
+                def path = normalizeToPath(item)
+                def target = batch.addToForeign(path)
+                def holder = new FileHolder(target)
                 files << holder
             }
             else {
                 files << normalizeInputToFile(item, "input.${++count}")
             }
-
         }
 
         return files
@@ -1627,7 +1658,7 @@ class TaskProcessor {
 
         if( !name.contains('*') && !name.contains('?') && files.size()>1 ) {
             /*
-             * The name do not contain any wildcards *BUT* when multiple files are provide
+             * When name do not contain any wildcards *BUT* multiple files are provide
              * it is managed like having a 'star' at the end of the file name
              */
             name += '*'
@@ -1779,7 +1810,7 @@ class TaskProcessor {
             final param = entry.getKey()
             final val = entry.getValue()
             final fileParam = param as FileInParam
-            final normalized = normalizeInputToFiles(val,count, batch)
+            final normalized = normalizeInputToFiles(val, count, fileParam.isPathQualifier(), batch)
             final resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
             ctx.put( param.name, singleItemOrList(resolved, task.type) )
             count += resolved.size()
@@ -2084,7 +2115,7 @@ class TaskProcessor {
             def chnnl = param?.inChannel
             def isValue = chnnl instanceof DataflowExpression
             def type = last ? '(cntrl)' : (isValue ? '(value)' : '(queue)')
-            def channel = param && !(param instanceof SetInParam) ? param.getName() : '-'
+            def channel = param && !(param instanceof TupleInParam) ? param.getName() : '-'
             def status; if( isValue ) { status = !chnnl.isBound() ? 'OPEN  ' : 'bound ' }
             else status = type == '(queue)' ? (openPorts.get(i) ? 'OPEN  ' : 'closed') : '-     '
             result << "  port $i: $type ${status}; channel: $channel\n"
@@ -2113,7 +2144,7 @@ class TaskProcessor {
             this.stopAfterFirstRun = stop
             this.len = inputs.size()
             this.control = (DataflowQueue)inputs.get(len-1)
-            this.first = inputs.findIndexOf { ChannelFactory.isChannelQueue(it) }
+            this.first = inputs.findIndexOf { CH.isChannelQueue(it) }
         }
 
         @Override

@@ -22,13 +22,20 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import groovyx.gpars.dataflow.DataflowQueue
+import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
+import nextflow.ast.OpXform
+import nextflow.ast.OpXformImpl
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.StopSplitIterationException
+import nextflow.extension.CH
 import nextflow.extension.GroupKey
+import nextflow.extension.OperatorEx
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
 import nextflow.mail.Mailer
+import nextflow.script.TokenBranchDef
+import nextflow.script.TokenForkDef
 import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.util.ArrayTuple
@@ -55,15 +62,13 @@ class Nextflow {
     /**
      * Create a {@code DataflowVariable} binding it to the specified value
      *
-     * @param value
+     * @param obj
      * @return
      */
-    static <T> DataflowVariable<T> variable( T value = null ) {
-        def result = new DataflowVariable<T>()
-        if( value != null ) {
-            result.bind(value)
-        }
-        result
+    @Deprecated
+    static <T> DataflowVariable<T> variable( T obj = null ) {
+        if( NF.dsl2 ) throw new DeprecationException("Method `variable` is not available any more")
+        obj != null ? CH.value(obj) : CH.value()
     }
 
     /**
@@ -75,17 +80,13 @@ class Nextflow {
      * @param values
      * @return
      */
+    @Deprecated
     static DataflowQueue channel( Collection values = null ) {
-
-        final channel = new DataflowQueue()
-        if ( values != null )  {
-            // bind all the items in the provided collection
-            values.each { channel.bind(it)  }
-            // bind a stop signal to 'terminate' the channel
-            channel << Channel.STOP
-        }
-
-        return channel
+        if( NF.dsl2 ) throw new DeprecationException("Method `channel` is not available any more")
+        def result = CH.queue()
+        if( values != null )
+            CH.emitAndClose(result, values)
+        return result
     }
 
     /**
@@ -97,6 +98,7 @@ class Nextflow {
      * @param item
      * @return
      */
+    @Deprecated
     static DataflowQueue channel( Object... items ) {
         return channel(items as List)
     }
@@ -407,4 +409,34 @@ class Nextflow {
     static GroupKey groupKey(key, int size) {
         new GroupKey(key,size)
     }
+
+    /**
+     * Marker method to create a closure to be passed to {@link OperatorEx#branch(DataflowReadChannel, groovy.lang.Closure)}
+     * operator.
+     *
+     * Despite apparently is doing nothing, this method is needed as marker to apply the {@link OpXform} AST
+     * transformation required to interpret the closure content as required for the branch evaluation.
+     *
+     * @see OperatorEx#branch(DataflowReadChannel, Closure)
+     * @see OpXformImpl
+     *
+     * @param closure
+     * @return
+     */
+    static Closure<TokenBranchDef> branchCriteria(Closure<TokenBranchDef> closure) { closure }
+
+    /**
+     * Marker method to create a closure to be passed to {@link OperatorEx#fork(DataflowReadChannel, Closure)}
+     * operator.
+     *
+     * Despite apparently is doing nothing, this method is needed as marker to apply the {@link OpXform} AST
+     * transformation required to interpret the closure content as required for the branch evaluation.
+     *
+     * @see OperatorEx#fork(DataflowReadChannel, Closure)
+     * @see OpXformImpl
+     *
+     * @param closure
+     * @return
+     */
+    static Closure<TokenForkDef> forkCriteria(Closure<TokenBranchDef> closure) { closure }
 }

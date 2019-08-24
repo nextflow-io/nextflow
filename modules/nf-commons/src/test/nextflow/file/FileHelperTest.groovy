@@ -921,5 +921,17 @@ class FileHelperTest extends Specification {
         '--a  b  c'         | '_a_b_c'
     }
 
+    @Unroll
+    def 'should get url protocol' () {
+        expect:
+        FileHelper.getUrlProtocol(STR)  == EXPECTED
+        where:
+        EXPECTED    | STR
+        'ftp'       | 'ftp://abc.com'
+        's3'        | 's3://bucket/abc'
+        null        | '3s://bucket/abc'
+        null        | 'abc:xyz'
+        null        | '/a/bc/'
+    }
 
 }

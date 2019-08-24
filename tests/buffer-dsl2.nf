@@ -5,7 +5,7 @@ process blastThemAll {
     echo true
 
     input:
-    file x 
+    path x
 
     """
     echo $x
@@ -13,9 +13,11 @@ process blastThemAll {
 }
 
 
-Channel
-    .fromPath("$baseDir/data/p?.fa") |
-    toSortedList |
-    flatten |
-    buffer(size:2, remainder: true) |
-    blastThemAll
+workflow {
+    Channel
+        .fromPath("$baseDir/data/p?.fa") |
+        toSortedList |
+        flatten |
+        buffer(size:2, remainder: true) |
+        blastThemAll
+}

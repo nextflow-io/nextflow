@@ -1389,7 +1389,7 @@ The following parameters can be used with the ``collectFile`` operator:
 =============== ========================
 Name            Description
 =============== ========================
-keepHeader      Prepend the resulting file with the header fetched in the first collected file. The header size (ie. lines) can be specified by using the ``size`` parameter (default: ``false``).
+keepHeader      Prepend the resulting file with the header fetched in the first collected file. The header size (ie. lines) can be specified by using the ``skip`` parameter (default: ``false``), to determine how many lines to remove from all collected files except for the first (where no lines will be removed).
 name            Name of the file where all received values are stored.
 newLine         Appends a ``newline`` character automatically after each entry (default: ``false``).
 seed            A value or a map of values used to initialise the files content.
@@ -1559,14 +1559,105 @@ Forking operators
 
 The forking operators are:
 
+* `branch`_
 * `choice`_
+* `fork`_
 * `into`_
 * `separate`_
 * `tap`_
 
+.. _operator-branch:
+
+branch
+------
+
+.. warning:: This is an experimental operator. Syntax and behavior may change.
+  Required version `19.08.0-edge` or later.
+
+The ``branch`` operator allows you to forward the items emitted by a source channel to one
+or more output channels, `choosing` one out of them at a time.
+
+The selection criteria is defined by specifying a :ref:`closure <script-closure>` that provides
+one or more boolean expression, each of which is identified by a unique label. On the first expression 
+that evaluates to a *true* value, the current item is bound to a named channel as the label identifier.
+For example::
+
+    Channel
+        .from(1,2,3,40,50)
+        .branch {
+            small: it < 10
+            large: it > 10
+        }
+        .set { result }
+
+     result.small.view { "$it is small" }
+     result.large.view { "$it is large" }
+
+It shows::
+
+    1 is small
+    2 is small
+    3 is small
+    40 is large
+    50 is large
+
+.. note:: The above *small* and *large* strings maybe be printed interleaving each other
+  due to the asynchronous execution of the ``view`` operator.
+
+.. tip:: A default fallback condition can be specified using ``true`` as last branch condition. See the example below.
+
+::
+
+    Channel
+        .from(1,2,3,40,50)
+        .branch {
+            small: it < 10
+            large: it < 50
+            other: true
+        }
+
+
+The value returned by each branch condition can be customised by specifying an optional expression statement(s)
+just after the condition expression. For example::
+
+       Channel
+        .from(1,2,3,40,50)
+        .branch {
+            foo: it < 10
+                return it+2
+
+            bar: it < 50
+                return it-2
+
+            other: true
+                return 0
+        }
+
+
+.. tip:: When the ``return`` keyword is omitted the value of the last expression statement is
+  implicitly returned.
+
+.. warning:: The branch evaluation closure must be specified inline, ie. it *cannot* be assigned to a
+  variable and passed as argument to the operator, how it can be done with other operators.
+
+To create a branch criteria as variable that can be passed as an argument to more than one
+``branch`` operator use the ``branchCriteria`` built-in method as shown below::
+
+    def criteria = branchCriteria {
+                    small: it < 10
+                    large: it > 10
+                    }
+
+    Channel.from(1,2,30).branch(criteria).set { ch1 }
+    Channel.from(10,20,1).branch(criteria).set { ch2 }
+
+
+ .. _operator-choice:
 
 choice
 ------
+
+.. warning:: The choice operator has been deprecated. Use `branch`_ instead.
 
 The ``choice`` operator allows you to forward the items emitted by a source channel to two 
 (or more) output channels, `choosing` one out of them at a time. 
@@ -1586,6 +1677,74 @@ the others into ``queue2``
     source.choice( queue1, queue2 ) { a -> a =~ /^Hello.*/ ? 0 : 1 }
 
     queue1.subscribe { println it }
+
+See also `branch`_ operator.
+
+ .. _operator-fork:
+
+fork
+----
+
+.. warning:: This is an experimental operator. Syntax and behavior may change.
+  Required version `19.08.0-edge` or later.
+
+The ``fork`` operator allows you to forward the items emitted by a source channel to two
+or more output channels assigning each of them a separate value.
+
+The forking criteria is defined by specifying a :ref:`closure <script-closure>` that specify the
+target channels labelled by a unique identifier followed by an expression statement that
+evaluates the value to be assigned to such channel.
+
+For example::
+
+    Channel
+        .from(1,2,3,4)
+        .fork { it ->
+            foo: it + 1
+            bar: it * it
+            }
+        .set { result }
+
+     result.foo.view { "foo $it" }
+     result.far.view { "bar $it" }
+
+It shows::
+
+    foo 2
+    foo 3
+    foo 4
+    bar 1
+    bar 4
+    bar 9
+
+
+.. tip:: The statement expression can be omitted when the value to be emitted is the same as
+  the following one. If you need just need to forward the same value to multiple channel
+  you can use the following the shorthand notation showed below.
+
+::
+
+   Channel
+        .from(1,2,3)
+        .fork { it -> foo: bar: it }
+        .set { result }
+
+As before creates two channels, however both of them receive the same source items.
+
+
+.. warning:: The fork evaluation closure must be specified inline, ie. it *cannot* be assigned to a
+  variable and passed as argument to the operator, how it can be done with other operators.
+
+To create a fork criteria as variable that can be passed as an argument to more than one
+``fork`` operator use the ``forkCriteria`` built-in method as shown below::
+
+    def criteria = forkCriteria {
+                    small: it < 10
+                    large: it > 10
+                    }
+
+    Channel.from(1,2,30).fork(criteria).set { ch1 }
+    Channel.from(10,20,1).fork(criteria).set { ch2 }
 
 
 .. _operator-into:
@@ -1690,6 +1849,8 @@ See also `into`_ and `separate`_ operators.
 separate
 --------
 
+.. warning:: The `separate` operator has been deprecated. Use `fork`_ instead.
+
 The ``separate`` operator lets you copy the items emitted by the source channel into multiple 
 channels, which each of these can receive a `separate` version of the same item. 
 
@@ -1773,7 +1934,7 @@ The output will look like the following fragment::
 
 
 
-See also: `into`_, `choice`_ and `map`_ operators.
+See also: `fork`_, `into`_, `choice`_ and `map`_ operators.
 
 
 Maths operators

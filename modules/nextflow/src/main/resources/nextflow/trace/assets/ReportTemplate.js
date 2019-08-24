@@ -38,30 +38,33 @@ $(function() {
   }
 
   // Collect metrics by process
-  for(proc in window.data.summary){
+  for(let i in window.data.summary){
+    let metrics = window.data.summary[i];
+    let proc = metrics.process;
+    
     if(!window.data_byprocess.hasOwnProperty(proc)){
       window.data_byprocess[proc] = {};
     }
-    var metrics = window.data.summary[proc];
-    for (metric in metrics) {
-      if (metrics[metric] != null) {
-        window.data_byprocess[proc][metric] = [];
-        if( metrics[metric].min == metrics[metric].max ) {
+
+    for (let key in metrics) {
+      if (metrics[key] != null) {
+        window.data_byprocess[proc][key] = [];
+        if( metrics[key].min == metrics[key].max ) {
             // min equals max ==> show just a value
-            window.data_byprocess[proc][metric].push(metrics[metric].min);
+            window.data_byprocess[proc][key].push(metrics[key].min);
         }
         else {
             // otherwise show all values
-            window.data_byprocess[proc][metric].push(metrics[metric].min);
-            window.data_byprocess[proc][metric].push(metrics[metric].q1);
-            window.data_byprocess[proc][metric].push(metrics[metric].q1);
-            window.data_byprocess[proc][metric].push(metrics[metric].q2);
-            window.data_byprocess[proc][metric].push(metrics[metric].q3);
-            window.data_byprocess[proc][metric].push(metrics[metric].q3);
-            window.data_byprocess[proc][metric].push(metrics[metric].max);
+            window.data_byprocess[proc][key].push(metrics[key].min);
+            window.data_byprocess[proc][key].push(metrics[key].q1);
+            window.data_byprocess[proc][key].push(metrics[key].q1);
+            window.data_byprocess[proc][key].push(metrics[key].q2);
+            window.data_byprocess[proc][key].push(metrics[key].q3);
+            window.data_byprocess[proc][key].push(metrics[key].q3);
+            window.data_byprocess[proc][key].push(metrics[key].max);
         }
-        if (metric == "time") {
-            window.data_byprocess[proc][metric] = window.data_byprocess[proc][metric].map(function(d,i){
+        if (key == "time") {
+            window.data_byprocess[proc][key] = window.data_byprocess[proc][key].map(function(d,i){
             return moment.duration(d).asMinutes().toFixed(1);
           });
         }

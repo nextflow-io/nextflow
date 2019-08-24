@@ -16,22 +16,23 @@
 
 package nextflow.extension
 
-import static nextflow.util.LoggerHelper.*
-
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.agent.Agent
-import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.NF
 import nextflow.dag.NodeMarker
 import nextflow.exception.ScriptRuntimeException
 import nextflow.script.ChainableDef
-import nextflow.script.ChannelArrayList
+import nextflow.script.ChannelOut
+import nextflow.script.ComponentDef
 import nextflow.script.CompositeDef
+import nextflow.script.ExecutionStack
 import org.codehaus.groovy.runtime.InvokerHelper
+import static nextflow.util.LoggerHelper.fmtType
+
 /**
  * Implements dataflow channel extension methods
  *
@@ -41,40 +42,17 @@ import org.codehaus.groovy.runtime.InvokerHelper
 @CompileStatic
 class ChannelEx {
 
-    /**
-     * Assign the {@code source} channel to a global variable with the name specified by the closure.
-     * For example:
-     * <pre>
-     *     Channel.from( ... )
-     *            .map { ... }
-     *            .set { newChannelName }
-     * </pre>
-     *
-     * @param DataflowReadChannel
-     * @param holder A closure that must define a single variable expression
-     */
-    static void set(DataflowWriteChannel source, Closure holder) {
-        final name = CaptureProperties.capture(holder)
-        if( !name )
-            throw new IllegalArgumentException("Missing name to which set the channel variable")
-
-        if( name.size()>1 )
-            throw new IllegalArgumentException("Operation `set` does not allow more than one target name")
-
-        NF.binding.setVariable(name[0], source)
-    }
-
-    static void set(ChannelArrayList source, Closure holder) {
-        final names = CaptureProperties.capture(holder)
-        if( names.size() > source.size() )
-            throw new IllegalArgumentException("Operation `set` expects ${names.size()} channels but only ${source.size()} are provided")
-
-        for( int i=0; i<source.size(); i++ ) {
-            final ch = source[i]
-            final nm = names[i]
-            NF.binding.setVariable(nm, ch)
-        }
-    }
+//    static void set(ChannelOut source, Closure holder) {
+//        final names = CaptureProperties.capture(holder)
+//        if( names.size() > source.size() )
+//            throw new IllegalArgumentException("Operation `set` expects ${names.size()} channels but only ${source.size()} are provided")
+//
+//        for( int i=0; i<source.size(); i++ ) {
+//            final ch = source[i]
+//            final nm = names[i]
+//            NF.binding.setVariable(nm, ch)
+//        }
+//    }
 
     static DataflowWriteChannel dump(final DataflowWriteChannel source, Closure closure = null) {
         dump(source, Collections.emptyMap(), closure)
@@ -100,11 +78,7 @@ class ChannelEx {
      * @return
      */
     static DataflowWriteChannel channel(Collection values) {
-        final target = new DataflowQueue()
-        final itr = values.iterator()
-        while( itr.hasNext() )
-            target.bind(itr.next())
-        target.bind(Channel.STOP)
+        final target = CH.emitAndClose(CH.queue(), values)
         NodeMarker.addSourceNode('channel',target)
         return target
     }
@@ -118,8 +92,7 @@ class ChannelEx {
     static DataflowWriteChannel close(DataflowWriteChannel source) {
         if( NF.isDsl2() )
             throw new DeprecationException("Channel `close` method is not supported any more")
-        log.warn "The `close` operator is deprecated -- it will be removed in a future release"
-        return ChannelFactory.close0(source)
+        return CH.close0(source)
     }
 
     /**
@@ -142,9 +115,9 @@ class ChannelEx {
     static private void checkContext(String method, Object operand) {
         if( !NF.isDsl2() )
             throw new MissingMethodException(method, operand.getClass())
-        //
-        //if( !ExecutionStack.withinWorkflow() )
-        //    throw new IllegalArgumentException("Process invocation are only allowed within a workflow context")
+
+        if( operand instanceof ComponentDef && !ExecutionStack.withinWorkflow() )
+            throw new IllegalArgumentException("Process invocation are only allowed within a workflow context")
     }
 
     /**
@@ -155,7 +128,7 @@ class ChannelEx {
      * @return The channel resulting the pipe operation
      */
     static Object or(DataflowWriteChannel left, ChainableDef right) {
-        checkContext('or', left)
+        checkContext('or', right)
         return right.invoke_o(left)
     }
 
@@ -167,38 +140,32 @@ class ChannelEx {
      * @return The resulting channel object
      */
     static Object or(DataflowWriteChannel left, OpCall right) {
-        checkContext('or', left)
+        checkContext('or', right)
         return right.setSource(left).call()
     }
 
     /**
      * Implements pipe operation between a multi-channels WITH a process or a sub-workflow
      *
-     * @param left A {@code ChannelArrayList} multi-channel object as left operand
+     * @param left A {@code ChannelOut} multi-channel object as left operand
      * @param right A {@code ChainableDef} object representing a process or sub-workflow call as right operand
      * @return The resulting channel object
      */
-    static Object or(ChannelArrayList left, ChainableDef right) {
-        checkContext('or', left)
+    static Object or(ChannelOut left, ChainableDef right) {
+        checkContext('or', right)
         return right.invoke_o(left)
     }
 
     /**
      * Implements pipe operation between a multi-channels WITH a operator
      *
-     * @param left A {@code ChannelArrayList} multi-channel object as left operand
+     * @param left A {@code ChannelOut} multi-channel object as left operand
      * @param right A {@code OpCall} object representing a operator call as right operand
      * @return The resulting channel object
      */
-    static Object or(ChannelArrayList left, OpCall right) {
-        checkContext('or', left)
-        if( right.args.size() )
-            throw new ScriptRuntimeException("Process multi-output channel cannot be piped with operator ${right.methodName} for which argument is akready provided")
-
-        right
-            .setSource(left[0] as DataflowWriteChannel)
-            .setArgs(left[1..-1] as Object[])
-            .call()
+    static Object or(ChannelOut left, OpCall right) {
+        checkContext('or', right)
+        right.setSource(left).call()
     }
 
     /**
@@ -209,13 +176,14 @@ class ChannelEx {
      * @return The resulting channel object
      */
     static Object or(ChainableDef left, OpCall right) {
+        checkContext('or', left)
         def out = left.invoke_a(InvokerHelper.EMPTY_ARGS)
 
         if( out instanceof DataflowWriteChannel )
             return or((DataflowWriteChannel)out, right)
 
-        if( out instanceof ChannelArrayList )
-            return or((ChannelArrayList)out, right)
+        if( out instanceof ChannelOut )
+            return or((ChannelOut)out, right)
 
         throw new ScriptRuntimeException("Cannot pipe ${fmtType(out)} with ${fmtType(right)}")
     }
@@ -228,24 +196,29 @@ class ChannelEx {
      * @return
      */
     static Object or(ChainableDef left, ChainableDef right) {
+        checkContext('or', left)
+        checkContext('or', right)
+
         def out = left.invoke_a(InvokerHelper.EMPTY_ARGS)
 
         if( out instanceof DataflowWriteChannel )
             return or((DataflowWriteChannel)out, right)
 
-        if( out instanceof ChannelArrayList )
-            return or((ChannelArrayList)out, right)
+        if( out instanceof ChannelOut )
+            return or((ChannelOut)out, right)
 
         throw new ScriptRuntimeException("Cannot pipe ${fmtType(out)} with ${fmtType(right)}")
     }
 
     static CompositeDef and(ChainableDef left, ChainableDef right) {
         checkContext('and', left)
+        checkContext('and', right)
         return new CompositeDef().add(left).add(right)
     }
 
     static CompositeDef and(CompositeDef left, ChainableDef right) {
         checkContext('and', left)
+        checkContext('and', right)
         left.add(right)
     }
 

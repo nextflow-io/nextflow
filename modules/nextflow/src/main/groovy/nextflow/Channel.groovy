@@ -36,7 +36,7 @@ import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.dag.NodeMarker
 import nextflow.datasource.SraExplorer
 import nextflow.exception.AbortOperationException
-import nextflow.extension.ChannelFactory
+import nextflow.extension.CH
 import nextflow.extension.GroupTupleOp
 import nextflow.extension.MapOp
 import nextflow.file.DirWatcher
@@ -75,8 +75,7 @@ class Channel  {
     static DataflowChannel create() {
         if( NF.isDsl2() )
             throw new DeprecationException("Channel `create` method is not supported any more")
-        log.warn("The channel `create` method is deprecated -- it will be removed in a future release")
-        new DataflowQueue()
+        return CH.queue()
     }
 
     /**
@@ -84,9 +83,8 @@ class Channel  {
      *
      * @return The channel instance
      */
-    static DataflowChannel empty() {
-        final result = new DataflowQueue()
-        result.bind(STOP)
+    static DataflowWriteChannel empty() {
+        final result = CH.emit(CH.queue(), STOP)
         NodeMarker.addSourceNode('Channel.empty', result)
         return result
     }
@@ -104,25 +102,10 @@ class Channel  {
     }
 
     static private DataflowWriteChannel from0( Collection items ) {
-        final result = ChannelFactory.create()
-        if( NF.isDsl2() ) {
-            session.addIgniter { bindValues0(items, result) }
-        }
-        else {
-            bindValues0(items, result)
-        }
+        final result = CH.create()
+        if( items != null )
+            CH.emitAndClose(result, items)
         return result
-    }
-
-    static private void bindValues0(Collection values, DataflowWriteChannel result) {
-        if ( values != null )  {
-            // bind all the items in the provided collection
-            for( def item : values ) {
-                result.bind(item)
-            }
-            // bind a stop signal to 'terminate' the result
-            result.bind(Channel.STOP)
-        }
     }
 
     /**
@@ -145,16 +128,14 @@ class Channel  {
      */
     @Deprecated
     static DataflowVariable just( obj = null ) {
+        if( NF.dsl2 )
+            throw new DeprecationException("The operator `just` is not available anymore -- Use `value` instead.")
         log.warn "The operator `just` is deprecated -- Use `value` instead."
-        def result = new DataflowVariable()
-        if( obj != null ) result.bind(obj)
-        return result
+        value(obj)
     }
 
     static DataflowVariable value( obj = null ) {
-        def result = new DataflowVariable()
-        if( obj != null ) result.bind(obj)
-        return result
+        obj != null ? CH.value(obj) : CH.value()
     }
 
     /**
@@ -187,7 +168,7 @@ class Channel  {
     static private DataflowWriteChannel interval0(String duration, Closure closure) {
         def millis = Duration.of(duration).toMillis()
         def timer = new Timer()
-        def result = ChannelFactory.create()
+        def result = CH.create()
         long index = 0
 
         def task = {
@@ -243,7 +224,7 @@ class Channel  {
 
     private static DataflowWriteChannel<Path> fromPath0( Map opts, List allPatterns ) {
 
-        final result = ChannelFactory.create()
+        final result = CH.create()
         if( NF.isDsl2() ) {
             session.addIgniter { pumpFiles0(result, opts, allPatterns) }
         }
@@ -275,7 +256,7 @@ class Channel  {
 
     static private DataflowWriteChannel watchImpl( String syntax, String folder, String pattern, boolean skipHidden, String events, FileSystem fs ) {
         
-        final result = ChannelFactory.create()
+        final result = CH.create()
         final watcher = new DirWatcher(syntax,folder,pattern,skipHidden,events, fs)
                             .setOnComplete { result.bind(STOP) }
          
@@ -454,7 +435,7 @@ class Channel  {
         def size = (options?.size ?: DEF_SIZE)
         def isFlat = options?.flat == true
         def groupOpts = [sort: true, size: size]
-        def groupChannel = isFlat ? new DataflowQueue<>() : ChannelFactory.create()
+        def groupChannel = isFlat ? new DataflowQueue<>() : CH.create()
 
         new GroupTupleOp(groupOpts, mapChannel)
                 .setTarget(groupChannel)

@@ -78,7 +78,7 @@ nxf_main() {
     # beforeScript directive
     echo Before
     # conda environment
-    conda activate /conda/env/path
+    source activate /conda/env/path
     set -u
     [[ $NXF_SCRATCH ]] && echo "nxf-scratch-dir $HOSTNAME:$NXF_SCRATCH" && cd $NXF_SCRATCH
     nxf_stage

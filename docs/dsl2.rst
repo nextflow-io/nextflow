@@ -61,7 +61,8 @@ The new DSL separates the definition of a process by its invocation. The process
 for syntax as described in the :ref:`process documentation <process-page>`. The only difference is that the
 ``from`` and ``into`` channel declaration has to be omitted.
 
-Then processes can be invoked as a function, passing the expected input channels as parameters.
+Then processes can be invoked as a function in the ``workflow`` scope, passing the expected
+input channels as parameters.
 
 For example::
 
@@ -69,7 +70,7 @@ For example::
 
     process foo {
         output:
-          file 'foo.txt'
+          path 'foo.txt'
         script:
           """
           your_command > foo.txt
@@ -78,22 +79,21 @@ For example::
 
      process bar {
         input:
-          file x
+          path x
         output:
           file 'bar.txt'
         script:
           """
-          your_command > bar.txt
+          another_command $x > bar.txt
           """
     }
 
-    data = Channel.fromPath('/some/path/*.txt')
-    foo()
-    bar(data)
+    workflow {
+        data = Channel.fromPath('/some/path/*.txt')
+        foo()
+        bar(data)
+    }
 
-
-Process invocation
-------------------
 
 
 Process composition
@@ -103,59 +103,115 @@ Processes having matching input-output declaration can be composed so that the o
 of the first process is passed as input to the following process. Take in consideration
 the previous process definition, it's possible to write the following::
 
-    foo(bar())
+    bar(foo())
+
 
 Process outputs
 ---------------
 
-A process output can also be accessed using the ``output`` attribute for the respective
+A process output can also be accessed using the ``out`` attribute for the respective
 process object. For example::
 
     foo()
-    bar( foo.output )
-    bar.output.println()
+    bar(foo.out)
+    bar.out.view()
 
 
 When a process defines two or more output channels, each of them can be accessed
-using the array element operator e.g. ``output[0]``, etc or using the ``first``, ``second``, etc
-sub-properties e.g. ``output.first``.
+using the array element operator e.g. ``out[0]``, etc.
 
-.. Workflow
-.. ========
-..
-.. Workflow definition
-.. --------------------
-..
-.. The ``workflow`` keyword allows the definition of sub-workflow components that enclose the
-.. invocation of two or more processes or operators. For example::
-..
-..     workflow my_pipeline {
-..         foo()
-..         bar( foo.output.collect() )
-..     }
-..
-..
-.. Once defined it can be invoked from another (sub) workflow component definition.
-..
-.. Workflow parameters
-.. -------------------
-..
-.. A workflow component can be define one or more parameter in a similar manner as for a function
-.. definition. For example::
-..
-..         workflow my_pipeline( data )  {
-..             foo()
-..             bar( data.mix( foo.output ) )
-..         }
-..
-.. The result channel of the last evaluated process is implicitly returned as the workflow output.
-..
-..
-.. Main workflow
-.. -------------
-..
-.. A workflow definition which does not define any name is assumed to be the main workflow and it's
-.. implicitly executed. Therefore it's the entry point of the workflow application.
+Workflow
+========
+
+Workflow definition
+--------------------
+
+The ``workflow`` keyword allows the definition of sub-workflow components that enclose the
+invocation of one or more processes or operators. For example::
+
+    workflow my_pipeline {
+        foo()
+        bar( foo.out.collect() )
+    }
+
+
+Once defined it can be invoked from another (sub)workflow component definition as any other function
+or process.
+
+Workflow parameters
+---------------------
+
+A workflow component can access any variable and parameter defined in the outer scope::
+
+        params.data = '/some/data/file'
+
+        workflow my_pipeline( data )  {
+            if( params.data )
+                bar(params.data)
+            else
+                bar(foo())
+        }
+
+
+Workflow inputs
+---------------
+
+A workflow component can declare one or more input channels using the ``get`` keyword. For example::
+
+        workflow my_pipeline {
+            get: data
+            main:
+            foo(data)
+            bar(foo.out)
+        }
+
+.. warning:: When the ``get`` is used the beginning of the workflow body needs to be identified with the
+  ``main`` keyword.
+
+Then, the input can be specified a argument on the workflow invocation statement::
+
+    my_pipeline( Channel.from('/some/data') )
+
+.. note:: Workflow inputs are by definition *channel* data structure. If a basic data type is provided
+  instead, ie. number, string, list, etc. it's implicitly converted to a channel value (ie. non-consumable).
+
+
+Workflow outputs
+----------------
+
+A workflow component can declare one or more out channels using the ``emit`` keyword. For example::
+
+        workflow my_pipeline {
+            main:
+              foo(data)
+              bar(foo.out)
+            emit:
+              bar.out
+        }
+
+Then, the result of the ``my_pipeline`` execution can be accessed using the ``out`` property ie.
+``my_pipeline.out``. When is declared more than one output channels, use the array bracket notation
+to access each output component as described for the `process`.
+
+Alternatively, the output channel can be accessed using the identifier name to which it's assigned
+in the ``emit`` declaration::
+
+         workflow my_pipeline {
+            main:
+              foo(data)
+              bar(foo.out)
+            emit:
+              my_data = bar.out
+        }
+
+Then, the result of the above snippet can acessed using the ``my_pipeline.out.my_data``.
+
+
+Implicit workflow
+-----------------
+
+A workflow definition which does not define any name is assumed to be the main workflow and it's
+implicitly executed. Therefore it's the entry point of the workflow application.
 
 Modules
 =======
@@ -178,8 +234,11 @@ For example::
     nextflow.preview.dsl=2
     include 'modules/libx'
 
-    data = Channel.fromPath('/some/data/*.txt')
-    my_pipeline(data)
+    workflow {
+        data = Channel.fromPath('/some/data/*.txt')
+        my_pipeline(data)
+    }
+
 
 Nextflow implicitly looks for the module script ``modules/libx.nf`` resolving the path
 against the main script location.
@@ -194,8 +253,11 @@ inclusion extended syntax as shown below::
     nextflow.preview.dsl=2
     include my_pipeline from 'modules/libx'
 
-    data = Channel.fromPath('/some/data/*.txt')
-    my_pipeline(data)
+    workflow {
+        data = Channel.fromPath('/some/data/*.txt')
+        my_pipeline(data)
+    }
+
 
 The module component can be included using a name alias as shown below::
 
@@ -203,8 +265,10 @@ The module component can be included using a name alias as shown below::
     nextflow.preview.dsl=2
     include my_pipeline as my_tool from 'modules/libx'
 
-    data = Channel.fromPath('/some/data/*.txt')
-    my_tool(data)
+    workflow {
+        data = Channel.fromPath('/some/data/*.txt')
+        my_tool(data)
+    }
 
 Module aliases
 --------------
@@ -218,8 +282,10 @@ in your script using different names. For example::
     include foo from 'modules/my-library'
     include for as bar from 'modules/my-library'
 
-    foo(some_data)
-    bar(other_data)
+    workflow {
+        foo(some_data)
+        bar(other_data)
+    }
 
 
 Module parameters
@@ -264,7 +330,10 @@ Nextflow processes and operators can be composed using the ``|`` *pipe* operator
             result = "$data mundo"
       }
 
-      Channel.from('Hello','world') | foo
+      workflow {
+          Channel.from('Hello','world') | foo
+      }
+
 
 
 The above snippet defines a process named ``foo`` then invoke it passing the content of the
@@ -287,8 +356,10 @@ channel e.g.::
           result = data.toUpperCase()
     }
 
+    workflow {
+      Channel.from('Hello') | map { it.reverse() } | (foo & bar)
+    }
 
-    Channel.from('Hello') | map { it.reverse() } | (foo & bar)
 
 
 Deprecated methods and operators
@@ -299,9 +370,10 @@ The following methods are not allowed any more when using Nextflow DSL 2:
 * :ref:`channel-create`
 * :ref:`channel-bind1`
 * :ref:`channel-bind2`
+* :ref:`channel-choice`
 * :ref:`operator-close`
 * :ref:`operator-countby`
-* :ref:`operator-route`
+* route
 * :ref:`operator-separate`
 * :ref:`operator-into`
 * :ref:`operator-merge`

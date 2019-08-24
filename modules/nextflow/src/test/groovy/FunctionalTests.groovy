@@ -18,6 +18,7 @@
 
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Timeout
 
 import nextflow.config.ConfigParser
 import nextflow.processor.TaskProcessor
@@ -27,6 +28,7 @@ import nextflow.script.TestScriptRunner
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(5)
 class FunctionalTests extends Specification {
 
     @Shared

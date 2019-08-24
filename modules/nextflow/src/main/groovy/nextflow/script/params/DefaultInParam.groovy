@@ -16,9 +16,8 @@
 
 package nextflow.script.params
 
-import groovyx.gpars.dataflow.DataflowQueue
+import nextflow.extension.CH
 import nextflow.script.ProcessConfig
-
 /**
  * Model a process default input parameter
  *
@@ -26,11 +25,17 @@ import nextflow.script.ProcessConfig
  */
 final class DefaultInParam extends ValueInParam {
 
-    @Override String getTypeName() { 'default' }
+    @Override
+    String getTypeName() { 'default' }
 
     DefaultInParam(ProcessConfig config) {
         super(config)
-        final channel = new DataflowQueue(); channel.bind(Boolean.TRUE)
+        // This must be a dataflow queue channel to which
+        // just a value is bound -- No STOP value has to be emitted
+        // because this channel is used to control to process termination
+        // See TaskProcessor.BaseProcessInterceptor#messageArrived
+        final channel = CH.queue()
+        channel.bind(Boolean.TRUE)
         setFrom(channel)
         bind('$')
     }

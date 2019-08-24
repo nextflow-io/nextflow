@@ -91,7 +91,7 @@ class BufferOp {
     }
 
     DataflowWriteChannel apply() {
-        target = ChannelFactory.create()
+        target = CH.create()
 
         if( params?.skip )
             this.skip = params.skip as int

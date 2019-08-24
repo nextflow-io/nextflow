@@ -15,22 +15,21 @@
  */
 
 package nextflow.script
+
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Session
-import nextflow.config.Manifest
-import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-import nextflow.util.VersionNumber
 import spock.lang.Specification
+import spock.lang.Timeout
 import test.TestParser
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(5)
 class ScriptRunnerTest extends Specification {
 
     def 'test process' () {
@@ -610,47 +609,5 @@ class ScriptRunnerTest extends Specification {
 
     }
 
-    def 'should validate version'() {
-
-        given:
-        def session = Mock(Session)
-        def manifest = Mock(Manifest)
-        TestScriptRunner runner = Spy(TestScriptRunner, constructorArgs:[session])
-
-        when:
-        runner.checkVersion()
-        then:
-        session.getManifest() >> manifest
-        1 * runner.getCurrentVersion() >> new VersionNumber('1.1')
-        1 * manifest.getNextflowVersion() >> '>= 1.0'
-        0 * runner.showVersionWarning(_)
-
-        when:
-        runner.checkVersion()
-        then:
-        session.getManifest() >> manifest
-        1 * runner.getCurrentVersion() >> new VersionNumber('1.1')
-        1 * manifest.getNextflowVersion() >> '>= 1.2'
-        1 * runner.showVersionWarning('>= 1.2')
-
-        when:
-        runner.checkVersion()
-        then:
-        session.getManifest() >> manifest
-        1 * runner.getCurrentVersion() >> new VersionNumber('1.1')
-        1 * manifest.getNextflowVersion() >> '! >= 1.2'
-        1 * runner.showVersionError('>= 1.2')   
-        thrown(AbortOperationException)
-
-        when:
-        runner.checkVersion()
-        then:
-        session.getManifest() >> manifest
-        1 * manifest.getNextflowVersion() >> null
-        0 * runner.getCurrentVersion() >> null
-        0 * runner.showVersionWarning(_)
-        0 * runner.showVersionError(_)
-
-    }
 
 }

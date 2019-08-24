@@ -18,10 +18,11 @@ package nextflow.script
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.Const
 import nextflow.Global
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
-import nextflow.extension.ChannelFactory
+import nextflow.extension.CH
 import nextflow.script.params.BaseInParam
 import nextflow.script.params.BaseOutParam
 import nextflow.script.params.EachInParam
@@ -39,37 +40,59 @@ class ProcessDef extends BindableDef implements ChainableDef {
 
     private Session session = Global.session as Session
 
+    /**
+     * The script owning this process
+     */
     private BaseScript owner
 
-    private String name
+    /**
+     * Fully qualified process name ie. it may contain nested workflow execution scopes
+     */
+    private String processName
 
-    private ProcessConfig processConfig
+    /**
+     * Simple process names ie. the name used to declared or import it w/o the execution scope
+     * This name is used to resolve the configuration
+     */
+    private String simpleName
 
-    private TaskBody taskBody
+    /**
+     * The closure holding the process definition body
+     */
+    private Closure<BodyDef> rawBody
 
-    private Closure rawBody
+    /**
+     * The resolved process configuration
+     */
+    private transient ProcessConfig processConfig
 
-    private Object output
+    /**
+     * The actual process implementation
+     */
+    private transient BodyDef taskBody
 
-    ProcessDef(BaseScript owner, Closure body, String name ) {
+    /**
+     * The result of the process execution
+     */
+    private transient ChannelOut output
+
+    ProcessDef(BaseScript owner, Closure<BodyDef> body, String name ) {
         this.owner = owner
         this.rawBody = body
-        this.name = name
+        this.simpleName = name
+        this.processName = name
     }
 
-    @Deprecated
-    ProcessDef(BaseScript owner, String name, ProcessConfig config, TaskBody body) {
-        this.owner = owner
-        this.name = name
-        this.taskBody = body
-        this.processConfig = config
+    static String stripScope(String str) {
+        str.split(Const.SCOPE_SEP).last()
     }
 
-    protected void config() {
-        log.trace "Process config > $name"
-        
+    protected void initialize() {
+        log.trace "Process config > $processName"
+        assert processConfig==null
+
         // the config object
-        processConfig = new ProcessConfig(owner).setProcessName(name)
+        processConfig = new ProcessConfig(owner,processName)
 
         // Invoke the code block which will return the script closure to the executed.
         // As side effect will set all the property declarations in the 'taskConfig' object.
@@ -77,28 +100,28 @@ class ProcessDef extends BindableDef implements ChainableDef {
         final copy = (Closure)rawBody.clone()
         copy.setResolveStrategy(Closure.DELEGATE_FIRST)
         copy.setDelegate(processConfig)
-        taskBody = copy.call() as TaskBody
+        taskBody = copy.call() as BodyDef
         processConfig.throwExceptionOnMissingProperty(false)
         if ( !taskBody )
             throw new ScriptRuntimeException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
 
         // apply config settings to the process
-        ProcessFactory.applyConfig(name, session.config, processConfig)
+        processConfig.applyConfig((Map)session.config.process, simpleName, processName)
     }
 
     @Override
     ProcessDef clone() {
         def result = (ProcessDef)super.clone()
         result.@taskBody = taskBody?.clone()
-        result.@processConfig = processConfig?.clone()
         result.@rawBody = (Closure)rawBody?.clone()
         return result
     }
 
     @Override
-    ProcessDef withName(String name) {
+    ProcessDef cloneWithName(String name) {
         def result = clone()
-        result.@name = name
+        result.@processName = name
+        result.@simpleName = stripScope(name)
         return result
     }
 
@@ -108,23 +131,21 @@ class ProcessDef extends BindableDef implements ChainableDef {
 
     BaseScript getOwner() { owner }
 
-    String getName() { name }
+    String getName() { processName }
+
+    String getSimpleName() { simpleName }
+
+    ProcessConfig getProcessConfig() { processConfig }
 
     @Deprecated
-    def getOutput() {
-        log.warn "Property output has been deprecated use `${name}.out` instead"
-        output
+    ChannelOut getOutput() {
+        log.warn1 "Property `output` has been deprecated use `${name}.out` instead"
+        return output
     }
 
-    def getOut() { output }
+    ChannelOut getOut() { output }
 
     String getType() { 'process' }
-
-    Object invoke_a(Object[] args) {
-        if( processConfig==null )
-            config()
-        super.invoke_a(args)
-    }
 
     private String missMatchErrMessage(String name, int expected, int actual) {
         final ch = expected > 1 ? "channels" : "channel"
@@ -133,11 +154,14 @@ class ProcessDef extends BindableDef implements ChainableDef {
 
     @Override
     Object run(Object[] args) {
-        final params = ChannelArrayList.spread(args)
+        // initialise process config
+        initialize()
 
+        // get params 
+        final params = ChannelOut.spread(args)
         // sanity check
         if( params.size() != declaredInputs.size() )
-            throw new ScriptRuntimeException(missMatchErrMessage(name, declaredInputs.size(), params.size()))
+            throw new ScriptRuntimeException(missMatchErrMessage(processName, declaredInputs.size(), params.size()))
 
         // set input channels
         for( int i=0; i<params.size(); i++ ) {
@@ -154,7 +178,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
             final singleton = allScalarValues && !hasEachParams
 
             for(int i=0; i<declaredOutputs.size(); i++ ) {
-                final ch = ChannelFactory.create(singleton)
+                final ch = CH.create(singleton)
                 result[i] = ch 
                 (declaredOutputs[i] as BaseOutParam).setInto(ch)
             }
@@ -163,21 +187,19 @@ class ProcessDef extends BindableDef implements ChainableDef {
         // create the executor
         final executor = session
                 .executorFactory
-                .getExecutor(name, processConfig, taskBody, session)
+                .getExecutor(processName, processConfig, taskBody, session)
 
         // create processor class
         session
                 .newProcessFactory(owner)
-                .newTaskProcessor(name, executor, processConfig, taskBody)
+                .newTaskProcessor(processName, executor, processConfig, taskBody)
                 .run()
 
         // the result channels
         final result = declaredOutputs.getChannels()
         assert result.size()>0, "Process output should contains at least one channel"
 
-        return output = (result.size()==1
-                ? output=result[0]
-                : new ChannelArrayList(result))
+        return output = new ChannelOut(result)
     }
 
 }

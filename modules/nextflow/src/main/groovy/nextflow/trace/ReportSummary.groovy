@@ -119,7 +119,7 @@ class ReportSummary {
      *      - q3Label: label fot the task reporting the q3 value
      *      - maxLabel: label fot the task reporting the max value
      */
-    Map<String,Double> compute(String name) {
+    Map<String,?> compute(String name) {
         if( !names.contains(name) )
             throw new IllegalArgumentException("Invalid status status field name: $name -- it must be one of the following: ${names.join(',')}")
 
@@ -180,7 +180,7 @@ class ReportSummary {
         }
 
         void add( TraceRecord record ) {
-            final value = metric(record)
+            final Double value = metric(record)
             if( value == null )
                 return
             count++
@@ -213,11 +213,11 @@ class ReportSummary {
          *      - q3Label: label fot the task reporting the q3 value
          *      - maxLabel: label fot the task reporting the max value
          */
-        Map<String,Double> compute() {
+        Map<String,?> compute() {
             if( count==0 )
                 return null
 
-            final result = [:]
+            final result = new LinkedHashMap<String,?>(12)
             final sorted = tasks.sort( false, { TraceRecord record -> metric(record) } )
 
             result.mean = round(total / count as double)

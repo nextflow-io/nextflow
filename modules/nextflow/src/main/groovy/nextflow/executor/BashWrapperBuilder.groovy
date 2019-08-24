@@ -315,7 +315,7 @@ class BashWrapperBuilder {
     }
 
     private String getCondaActivateSnippet() {
-        condaEnv ? "# conda environment\nconda activate ${Escape.path(condaEnv)}\n" : null
+        condaEnv ? "# conda environment\nsource activate ${Escape.path(condaEnv)}\n" : null
     }
 
     protected String getTraceCommand(String interpreter) {

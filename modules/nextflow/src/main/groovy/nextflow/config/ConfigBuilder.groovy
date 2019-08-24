@@ -555,6 +555,13 @@ class ConfigBuilder {
             config.weblog.url = cmdRun.withWebLog
         }
 
+        // -- sets tower options
+        if( cmdRun.withTower ) {
+            if( !(config.tower instanceof Map) )
+                config.tower = [:]
+            config.tower.enabled = true
+            config.tower.endpoint = cmdRun.withTower
+        }
 
         // -- add the command line parameters to the 'taskConfig' object
         if( cmdRun.params || cmdRun.paramsFile )

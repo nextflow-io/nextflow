@@ -83,7 +83,7 @@ class WorkflowBinding extends Binding  {
         if( meta ) {
             final component = getComponent0(name)
             if( component ) {
-                //checkScope0(component)
+                checkScope0(component)
                 return component.invoke_o(args)
             }
 

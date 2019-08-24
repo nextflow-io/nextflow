@@ -11,7 +11,7 @@ build/**
 modules/**/build/
 modules/**/*.iml
 modules/nextflow/work/
-out/**
+**/out/*
 tmp/*
 work/*
 nextflow.eml

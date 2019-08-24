@@ -210,7 +210,7 @@ class GroupTupleOp {
     DataflowWriteChannel apply() {
 
         if( target == null )
-            target = ChannelFactory.create()
+            target = CH.create()
 
         /*
          * apply the logic the the source channel

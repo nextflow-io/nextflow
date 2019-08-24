@@ -101,7 +101,7 @@ class ChoiceOp {
             }
 
             @Override
-            public boolean onException(final DataflowProcessor processor, final Throwable e) {
+            boolean onException(final DataflowProcessor processor, final Throwable e) {
                 log.error("@unknown", e)
                 session.abort(e)
                 return true;

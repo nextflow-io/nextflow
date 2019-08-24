@@ -16,7 +16,6 @@
 
 package nextflow.processor
 
-
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -34,14 +33,14 @@ import nextflow.exception.ProcessTemplateException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
+import nextflow.script.ScriptType
+import nextflow.script.BodyDef
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
 import nextflow.script.params.InParam
 import nextflow.script.params.OutParam
-import nextflow.script.ScriptType
 import nextflow.script.params.StdInParam
-import nextflow.script.TaskBody
 import nextflow.script.params.ValueOutParam
 /**
  * Models a task instance
@@ -419,7 +418,7 @@ class TaskRun implements Cloneable {
     List<String> getOutputFilesNames() {
         def result = []
 
-        getOutputsByType(FileOutParam).keySet().each { FileOutParam param ->
+        for( FileOutParam param : getOutputsByType(FileOutParam).keySet() ) {
             result.addAll( param.getFilePatterns(context, workDir) )
         }
 
@@ -436,7 +435,10 @@ class TaskRun implements Cloneable {
     def <T extends InParam> Map<T,Object> getInputsByType( Class<T>... types ) {
 
         def result = [:]
-        inputs.findAll() { types.contains(it.key.class) }.each { result << it }
+        for( def it : inputs ) {
+            if( types.contains(it.key.class) )
+                result << it
+        }
         return result
     }
 
@@ -448,10 +450,9 @@ class TaskRun implements Cloneable {
      */
     def <T extends OutParam> Map<T,Object> getOutputsByType( Class<T>... types ) {
         def result = [:]
-        outputs.each {
-            if( types.contains(it.key.class) ) {
+        for( def it : outputs ) {
+            if( types.contains(it.key.class) )
                 result << it
-            }
         }
         return result
     }
@@ -616,9 +617,9 @@ class TaskRun implements Cloneable {
      * 2) extract the process code `source`
      * 3) assign the `script` code to execute
      *
-     * @param body A {@code TaskBody} object instance
+     * @param body A {@code BodyDef} object instance
      */
-    @PackageScope void resolve( TaskBody body ) {
+    @PackageScope void resolve(BodyDef body ) {
 
         // -- initialize the task code to be executed
         this.code = body.closure.clone() as Closure

@@ -1,22 +1,86 @@
 package nextflow.script
 
-import spock.lang.Specification
+import spock.lang.Timeout
 
-import nextflow.NextflowMeta
-import org.codehaus.groovy.control.MultipleCompilationErrorsException
-import test.MockScriptRunner
+import nextflow.Channel
+import nextflow.exception.ScriptCompilationException
+import test.Dsl2Spec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ScriptDslTest extends Specification {
+@Timeout(5)
+class ScriptDslTest extends Dsl2Spec {
 
-    def setupSpec() { NextflowMeta.instance.enableDsl2() }
-    def cleanupSpec() { NextflowMeta.instance.disableDsl2() }
+
+    def 'should execute basic workflow' () {
+        when:
+        def result = dsl_eval '''
+   
+        workflow {
+            emit: result 
+            main:
+            result = 'Hello world'
+        }
+        '''
+
+        then:
+        result.val == 'Hello world'
+    }
+
+    def 'should execute emit' () {
+        when:
+        def result = dsl_eval '''
+   
+        workflow {
+            emit:
+            result = 'Hello world'
+        }
+        '''
+
+        then:
+        result.val == 'Hello world'
+    }
+
+    def 'should emit expression' () {
+        when:
+        def result = dsl_eval '''
+         
+        def foo() { 'Hello world' } 
+       
+        workflow {
+            emit:
+            foo().toUpperCase()
+        }
+        '''
+
+        then:
+        result.val == 'HELLO WORLD'
+    }
+
+    def 'should emit process out' () {
+        when:
+        def result = dsl_eval '''
+         
+        process foo {
+          output: val x 
+          exec: x = 'Hello'
+        }
+       
+        workflow {
+            main: foo()
+            emit: foo.out
+        }
+        '''
+
+        then:
+        result.val == 'Hello'
+    }
+
 
     def 'should define processes and workflow' () {
-        given:
-        def SCRIPT = '''
+        when:
+        def result = dsl_eval '''
         process foo {
           input: val data 
           output: val result
@@ -31,33 +95,36 @@ class ScriptDslTest extends Specification {
               result = data.toUpperCase()
         }   
         
-        workflow alpha(data) {
-            foo(data)
-            bar(foo.output)
+        workflow alpha {
+            get: 
+                data
+            
+            main:
+                foo(data)
+                bar(foo.out)
+                
+            emit: 
+                x = bar.out 
+            
         }
    
         workflow {
-           alpha('Hello')
+            main: alpha('Hello') 
+            emit: x = alpha.out 
         }
         '''
-
-        when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
 
         then:
         result.val == 'HELLO MUNDO'
     }
 
 
-
     def 'should access nextflow enabling property' () {
-        given:
-        def SCRIPT = '''
+        when:
+        def result = dsl_eval '''
         return nextflow.preview.dsl 
         '''
-        when:
-        def result = new MockScriptRunner().setScript(SCRIPT).execute()
+
         then:
         result == 2
     }
@@ -65,75 +132,154 @@ class ScriptDslTest extends Specification {
 
     def 'should not allow function with reserved identifier' () {
 
-        given:
-        def SCRIPT = """ 
+        when:
+        dsl_eval """ 
             def main() { println 'ciao' }
         """
 
-        when:
-        new MockScriptRunner()
-                .setScript(SCRIPT)
-                .execute()
         then:
-        def err = thrown(MultipleCompilationErrorsException)
+        def err = thrown(ScriptCompilationException)
         err.message.contains('Identifier `main` is reserved for internal use')
     }
 
     def 'should not allow process with reserved identifier' () {
 
-        given:
-        def SCRIPT = """ 
+        when:
+        dsl_eval """ 
             process main {
               /echo ciao/
             }
         """
 
-        when:
-        new MockScriptRunner()
-                .setScript(SCRIPT)
-                .execute()
         then:
-        def err = thrown(MultipleCompilationErrorsException)
+        def err = thrown(ScriptCompilationException)
         err.message.contains('Identifier `main` is reserved for internal use')
     }
 
     def 'should not allow workflow with reserved identifier' () {
 
-        given:
-        def SCRIPT = """ 
+        when:
+        dsl_eval """ 
             workflow main {
               /echo ciao/
             }
         """
-
-        when:
-        new MockScriptRunner()
-                .setScript(SCRIPT)
-                .execute()
         then:
-        def err = thrown(MultipleCompilationErrorsException)
+        def err = thrown(ScriptCompilationException)
         err.message.contains('Identifier `main` is reserved for internal use')
     }
 
     def 'should not allow duplicate workflow keyword' () {
-        given:
-        def SCRIPT = """ 
-            workflow {
-              /echo ciao/
-            }
+        when:
+        dsl_eval(
+                """ 
+                workflow {
+                  /echo ciao/
+                }
+                
+                workflow {
+                  /echo miao/
+                }
+            """
+        )
+        then:
+        def err = thrown(ScriptCompilationException)
+        err.message.contains('Duplicate entry workflow definition')
+    }
+
+    def 'should apply operator to process result' () {
+        when:
+        def result = dsl_eval(/
+            process hello {
+              output: val result
+              exec:
+                result = "Hello"
+            }     
             
             workflow {
-              /echo miao/
+               main: hello()
+               emit: hello.out.map { it.toUpperCase()  }
             }
-        """
+        /)
+        then:
+        result.val == 'HELLO'
+    }
+
+    def 'should branch and view' () {
 
         when:
-        new MockScriptRunner()
-                .setScript(SCRIPT)
-                .execute()
+        def result = dsl_eval(/
+            Channel
+                .from(1,2,3,40,50)
+                .branch { 
+                    small: it < 10 
+                    large: it > 10  
+                }
+                .set { result }
+                
+             ch1 = result.small.map { it }
+             ch2 = result.large.map { it }  
+
+             [ch1, ch2]
+        /)
         then:
-        def err = thrown(MultipleCompilationErrorsException)
-        err.message.contains('Duplicate entry workflow definition')
+        result[0].val == 1
+        result[0].val == 2
+        result[0].val == 3
+        and:
+        result[1].val == 40
+        result[1].val == 50
+    }
+
+
+    def 'should allow pipe process and operator' () {
+        when:
+        def result = dsl_eval('''
+        process foo {
+          output: val result
+          exec: result = "hello"
+        }     
+ 
+        process bar {
+          output: val result
+          exec: result = "world"
+        } 
+        
+        workflow {
+           emit: (foo & bar) | concat      
+        }
+        ''')
+
+        then:
+        result.val == 'hello'
+        result.val == 'world'
+        result.val == Channel.STOP
+    }
+
+    def 'should allow process and operator composition' () {
+        when:
+        def result = dsl_eval('''
+        process foo {
+          output: val result
+          exec: result = "hello"
+        }     
+ 
+        process bar {
+          output: val result
+          exec: result = "world"
+        } 
+        
+        workflow {
+           main: foo(); bar()
+           emit: foo.out.concat(bar.out)      
+        }
+        ''')
+
+
+        then:
+        result.val == 'hello'
+        result.val == 'world'
+        result.val == Channel.STOP
     }
 
 }

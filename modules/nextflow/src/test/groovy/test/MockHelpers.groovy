@@ -3,6 +3,7 @@ package test
 import java.nio.file.Paths
 
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowBroadcast
 import nextflow.Session
 import nextflow.executor.Executor
 import nextflow.executor.ExecutorFactory
@@ -10,6 +11,8 @@ import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.script.BaseScript
+import nextflow.script.ChannelOut
 import nextflow.script.ScriptRunner
 import nextflow.script.ScriptType
 
@@ -23,6 +26,43 @@ class MockScriptRunner extends ScriptRunner {
         def script = TestHelper.createInMemTempFile('main.nf', str)
         setScript(script)
         return this
+    }
+
+    MockScriptRunner invoke() {
+        execute()
+        return this
+    }
+
+    BaseScript getScript() { getScriptObj() }
+
+    @Override
+    def normalizeOutput(output) {
+        if( output instanceof ChannelOut ) {
+            def list = new ArrayList(output.size())
+            for( int i=0; i<output.size(); i++ ) {
+                list.add(read0(output[i]))
+            }
+            return list.size() == 1 ? list[0] : list
+        }
+
+        if( output instanceof Object[] || output instanceof List) {
+            def result = new ArrayList<>(output.size())
+            for( def item : output ) {
+                ((List)result).add(read0(item))
+            }
+            return result
+        }
+
+        else {
+            return read0(output)
+        }
+    }
+
+
+    private read0( obj ) {
+        if( obj instanceof DataflowBroadcast )
+            return obj.createReadChannel()
+        return obj
     }
 
 }
