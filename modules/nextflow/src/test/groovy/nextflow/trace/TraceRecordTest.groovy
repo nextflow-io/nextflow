@@ -258,7 +258,46 @@ class TraceRecordTest extends Specification {
         json.time == '1h'
         json.memory == '8 GB'
 
+    }
 
+
+    def 'should remove secret key' () {
+        given:
+        def rec = new TraceRecord()
+        expect:
+        rec.secureEnvString('a=b') == 'a=b'
+        and:
+        rec.secureEnvString('aws_key=12345') == 'aws_key=[secure]'
+        rec.secureEnvString('AWS_KEY=12345') == 'AWS_KEY=[secure]'
+
+        rec.secureEnvString('''\
+                foo=hello    
+                aws_key=d7sds89
+                git_token=909s-ds-'''
+                .stripIndent() ) ==
+                '''\
+                foo=hello    
+                aws_key=[secure]
+                git_token=[secure]'''.stripIndent()
+
+    }
+
+    def 'should store safe env' () {
+        given:
+        def rec = new TraceRecord()
+        when:
+        rec.env = 'aws_key=1234'
+        then:
+        rec.store.env == 'aws_key=[secure]'
+    }
+
+    def 'should retrieve safe env' () {
+        given:
+        def rec = new TraceRecord()
+        when:
+        rec.store.env = 'aws_key=1234'
+        then:
+        rec.env == 'aws_key=[secure]'
     }
 
 }
