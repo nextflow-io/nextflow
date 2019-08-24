@@ -16,6 +16,7 @@
 
 package nextflow.processor
 
+
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -33,7 +34,7 @@ import nextflow.script.params.FileOutParam
 import nextflow.script.ScriptBinding
 import nextflow.script.params.StdInParam
 import nextflow.script.params.StdOutParam
-import nextflow.script.TaskBody
+import nextflow.script.BodyDef
 import nextflow.script.TokenVar
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
@@ -429,7 +430,7 @@ class TaskRunTest extends Specification {
          * plain task script
          */
         when:
-        task.resolve(new TaskBody({-> 'Hello'}, 'Hello', 'script'))
+        task.resolve(new BodyDef({-> 'Hello'}, 'Hello', 'script'))
         then:
         task.script == 'Hello'
         task.source == 'Hello'
@@ -439,7 +440,7 @@ class TaskRunTest extends Specification {
          */
         when:
         task.context = new TaskContext(Mock(Script),[x: 'world'],'foo')
-        task.resolve(new TaskBody({-> "Hello ${x}"}, 'Hello ${x}', 'script'))
+        task.resolve(new BodyDef({-> "Hello ${x}"}, 'Hello ${x}', 'script'))
         then:
         task.script == 'Hello world'
         task.source == 'Hello ${x}'
@@ -467,7 +468,7 @@ class TaskRunTest extends Specification {
         when:
         task.context = new TaskContext(script,local,'foo')
         task.config = new TaskConfig().setContext(task.context)
-        task.resolve(new TaskBody({-> '$BASH_VAR !{nxf_var} - !{params.var_no}'}, '<the source script>', 'shell'))  // <-- note: 'shell' type
+        task.resolve(new BodyDef({-> '$BASH_VAR !{nxf_var} - !{params.var_no}'}, '<the source script>', 'shell'))  // <-- note: 'shell' type
         then:
         task.script == '$BASH_VAR YES - NO'
         task.source == '<the source script>'
@@ -479,7 +480,7 @@ class TaskRunTest extends Specification {
         task.context = new TaskContext(Mock(Script),[nxf_var: '>interpolated value<'],'foo')
         task.config = new TaskConfig().setContext(task.context)
         task.config.placeholder = '#' as char
-        task.resolve(new TaskBody({-> '$BASH_VAR #{nxf_var}'}, '$BASH_VAR #{nxf_var}', 'shell'))  // <-- note: 'shell' type
+        task.resolve(new BodyDef({-> '$BASH_VAR #{nxf_var}'}, '$BASH_VAR #{nxf_var}', 'shell'))  // <-- note: 'shell' type
         then:
         task.script == '$BASH_VAR >interpolated value<'
         task.source == '$BASH_VAR #{nxf_var}'
@@ -503,7 +504,7 @@ class TaskRunTest extends Specification {
         task.config = new TaskConfig().setContext(task.context)
 
         when:
-        task.resolve( new TaskBody({-> template(my_file)}, 'template($file)', 'script'))
+        task.resolve( new BodyDef({-> template(my_file)}, 'template($file)', 'script'))
         then:
         task.script == 'echo Ciao mondo'
         task.source == 'echo ${say_hello}'
@@ -528,7 +529,7 @@ class TaskRunTest extends Specification {
         task.config = new TaskConfig().setContext(task.context)
 
         when:
-        task.resolve( new TaskBody({-> template(my_file)}, 'template($file)', 'shell'))
+        task.resolve( new BodyDef({-> template(my_file)}, 'template($file)', 'shell'))
         then:
         task.script == 'echo $HOME ~ Foo bar'
         task.source == 'echo $HOME ~ !{user_name}'
@@ -554,7 +555,7 @@ class TaskRunTest extends Specification {
         task.config.placeholder = '#' as char
 
         when:
-        task.resolve( new TaskBody({-> template(my_file)}, 'template($file)', 'shell'))
+        task.resolve( new BodyDef({-> template(my_file)}, 'template($file)', 'shell'))
         then:
         task.script == 'echo $HOME ~ Foo bar'
         task.source == 'echo $HOME ~ #{user_name}'

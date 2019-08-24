@@ -16,6 +16,10 @@
 
 package nextflow.extension
 
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneId
+
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -51,6 +55,19 @@ class BoltsTest extends Specification {
         'UTC'   | 'dd-MMM-yyyy HH:mm:ss'    | '14-Dec-2017 21:12:27'
         'CST'   | 'dd-MM-yyyy HH:mm'        | '14-12-2017 15:12'
         'CST'   | 'dd-MMM-yyyy HH:mm:ss'    | '14-Dec-2017 15:12:27'
+
+    }
+
+    def 'should format offset datetime' () {
+        given:
+        def now = OffsetDateTime.ofInstant(Instant.ofEpochMilli(1513285947928), ZoneId.of('CET'))
+        expect:
+        now.format(FMT) == EXPECTED
+
+        where:
+        FMT                     | EXPECTED
+        'dd-MM-yyyy HH:mm'      | '14-12-2017 22:12'
+        'dd-MMM-yyyy HH:mm:ss'  | '14-Dec-2017 22:12:27'
 
     }
 

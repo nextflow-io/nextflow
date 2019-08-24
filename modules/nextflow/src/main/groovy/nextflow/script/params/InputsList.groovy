@@ -18,7 +18,7 @@ package nextflow.script.params
 
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
-import nextflow.extension.ChannelFactory
+import nextflow.extension.CH
 
 
 /**
@@ -55,7 +55,7 @@ class InputsList implements List<InParam>, Cloneable {
 
     boolean allScalarInputs() {
         for( InParam param : target ) {
-            if( ChannelFactory.isChannelQueue(param.inChannel) )
+            if( CH.isChannelQueue(param.inChannel) )
                 return false
         }
         return true

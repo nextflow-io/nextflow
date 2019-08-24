@@ -57,7 +57,7 @@ trait CloudDriver {
      * Tag one or more instances with the specified key=value pairs
      *
      * @param instanceIds A list of instance IDs
-     * @param tags A mpa of tags to be associated to the specified instances
+     * @param tags A map of tags to be associated to the specified instances
      */
     abstract void tagInstances( Collection<String> instanceIds, Map<String,String> tags )
 

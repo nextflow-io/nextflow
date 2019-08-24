@@ -16,11 +16,11 @@ compileGroovy {
 dependencies {
     compile(project(':nf-commons'))
     compile(project(':nf-httpfs'))
-    compile "org.codehaus.groovy:groovy:2.5.6"
-    compile "org.codehaus.groovy:groovy-nio:2.5.6"
-    compile "org.codehaus.groovy:groovy-xml:2.5.6"
-    compile "org.codehaus.groovy:groovy-json:2.5.6"
-    compile "org.codehaus.groovy:groovy-templates:2.5.6"
+    compile "org.codehaus.groovy:groovy:2.5.8"
+    compile "org.codehaus.groovy:groovy-nio:2.5.8"
+    compile "org.codehaus.groovy:groovy-xml:2.5.8"
+    compile "org.codehaus.groovy:groovy-json:2.5.8"
+    compile "org.codehaus.groovy:groovy-templates:2.5.8"
     compile "org.slf4j:jcl-over-slf4j:1.7.25"
     compile "org.slf4j:jul-to-slf4j:1.7.25"
     compile "org.slf4j:log4j-over-slf4j:1.7.25"
@@ -46,4 +46,10 @@ dependencies {
     compile ('org.yaml:snakeyaml:1.18')
     compile ('org.jsoup:jsoup:1.11.2')
     compile 'jline:jline:2.9'
+}
+
+
+test {
+    minHeapSize = "512m"
+    maxHeapSize = "2048m"
 }

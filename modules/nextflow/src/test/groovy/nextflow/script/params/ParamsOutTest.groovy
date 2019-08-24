@@ -15,7 +15,8 @@
  */
 
 package nextflow.script.params
-import static test.TestParser.parseAndReturnProcess
+
+import static test.TestParser.*
 
 import java.nio.file.Path
 
@@ -60,6 +61,7 @@ class ParamsOutTest extends Specification {
               val 'str' into y
               val { x } into w
               val "${y}" into z
+              val x.y into p
 
               return ''
             }
@@ -75,12 +77,13 @@ class ParamsOutTest extends Specification {
         def out3 = (ValueOutParam)process.config.getOutputs().get(3)
         def out4 = (ValueOutParam)process.config.getOutputs().get(4)
         def out5 = (ValueOutParam)process.config.getOutputs().get(5)
+        def out6 = (ValueOutParam)process.config.getOutputs().get(6)
 
         // it MUST
         // - create a value out parameter named 'x'
         // - create in the script context (binding) a new variable of type DataflowQueue named 'x'
         then:
-        process.config.getOutputs().size() == 6
+        process.config.getOutputs().size() == 7
 
         out0.name == 'x'
         out0.resolve( [x: 100] ) == 100
@@ -113,6 +116,10 @@ class ParamsOutTest extends Specification {
         out5.outChannel instanceof DataflowQueue
         binding.containsKey('z')
 
+        out6.name == null
+        out6.resolve( [x:[y:'Ciao']] ) == 'Ciao'
+        out6.outChannel instanceof DataflowQueue
+        binding.containsKey('p')
     }
 
     def testIntoMultipleChannels() {
@@ -219,8 +226,8 @@ class ParamsOutTest extends Specification {
               file "${x}_${y}.fa" into channel2
               file "simple.txt" into channel3
               file "${z}.txt:sub/dir/${x}.fa" into channel4
-              set "${z}.txt:${x}.fa" into channel5
-              set file("${z}.txt:${x}.fa") into channel6
+              tuple "${z}.txt:${x}.fa" into channel5
+              tuple file("${z}.txt:${x}.fa") into channel6
 
               return ''
             }
@@ -235,8 +242,8 @@ class ParamsOutTest extends Specification {
         FileOutParam out1 = process.config.getOutputs().get(1)
         FileOutParam out2 = process.config.getOutputs().get(2)
         FileOutParam out3 = process.config.getOutputs().get(3)
-        SetOutParam out4 = process.config.getOutputs().get(4)
-        SetOutParam out5 = process.config.getOutputs().get(5)
+        TupleOutParam out4 = process.config.getOutputs().get(4)
+        TupleOutParam out5 = process.config.getOutputs().get(5)
 
         then:
         process.config.getOutputs().size() == 6
@@ -265,14 +272,14 @@ class ParamsOutTest extends Specification {
         out3.outChannel == binding.channel4
         out3.isDynamic()
 
-        out4.name == 'setoutparam<4>'
+        out4.name == 'tupleoutparam<4>'
         out4.outChannel instanceof DataflowQueue
         out4.outChannel == binding.channel5
         out4.inner[0] instanceof FileOutParam
         (out4.inner[0] as FileOutParam) .getFilePatterns(ctx,null) == ['script_file.txt','hola.fa']
         (out4.inner[0] as FileOutParam) .isDynamic()
 
-        out5.name == 'setoutparam<5>'
+        out5.name == 'tupleoutparam<5>'
         out5.outChannel instanceof DataflowQueue
         out5.outChannel == binding.channel6
         out5.inner[0] instanceof FileOutParam
@@ -289,7 +296,7 @@ class ParamsOutTest extends Specification {
             process hola {
               output:
               file(x) into channel1
-              set file(y) into channel2
+              tuple file(y) into channel2
 
               return ''
             }
@@ -304,7 +311,7 @@ class ParamsOutTest extends Specification {
 
         when:
         FileOutParam out0 = process.config.getOutputs().get(0)
-        SetOutParam out1 = process.config.getOutputs().get(1)
+        TupleOutParam out1 = process.config.getOutputs().get(1)
 
         then:
         out0.getFilePatterns(ctx,null) == ['a.txt', 'b.txt', 'c.txt' ]
@@ -321,7 +328,7 @@ class ParamsOutTest extends Specification {
               output:
               file x
               file "$y" into q
-              set file(z) into p
+              tuple file(z) into p
               file u
               file "$v"
               file 'w'
@@ -336,7 +343,7 @@ class ParamsOutTest extends Specification {
         when:
         FileOutParam out0 = process.config.getOutputs().get(0)
         FileOutParam out1 = process.config.getOutputs().get(1)
-        SetOutParam out2 = process.config.getOutputs().get(2)
+        TupleOutParam out2 = process.config.getOutputs().get(2)
         FileOutParam out3 = process.config.getOutputs().get(3)
         FileOutParam out4 = process.config.getOutputs().get(4)
         FileOutParam out5 = process.config.getOutputs().get(5)
@@ -380,7 +387,7 @@ class ParamsOutTest extends Specification {
               output:
               file { "${x}_name" } into channel1
               file { "${params.fileName}_${y}.fa" } into channel2
-              set file({ "${z}.txt" }) into channel3
+              tuple file({ "${z}.txt" }) into channel3
 
               return ''
             }
@@ -392,7 +399,7 @@ class ParamsOutTest extends Specification {
         when:
         FileOutParam out1 = process.config.getOutputs().get(0)
         FileOutParam out2 = process.config.getOutputs().get(1)
-        SetOutParam out3 = process.config.getOutputs().get(2)
+        TupleOutParam out3 = process.config.getOutputs().get(2)
 
         then:
         out1.name == null
@@ -533,9 +540,9 @@ class ParamsOutTest extends Specification {
         def process = parseAndReturnProcess(text, binding)
 
         when:
-        SetOutParam out1 = process.config.getOutputs().get(0)
-        SetOutParam out2 = process.config.getOutputs().get(1)
-        SetOutParam out3 = process.config.getOutputs().get(2)
+        TupleOutParam out1 = process.config.getOutputs().get(0)
+        TupleOutParam out2 = process.config.getOutputs().get(1)
+        TupleOutParam out3 = process.config.getOutputs().get(2)
 
         then:
         process.config.getOutputs().size() == 3
@@ -572,7 +579,7 @@ class ParamsOutTest extends Specification {
         out3.inner[1] instanceof ValueOutParam
         out3.inner[1].name == 'z'
         out3.inner[1].index == 2
-        out3.mode == SetOutParam.CombineMode.combine
+        out3.mode == TupleOutParam.CombineMode.combine
 
     }
 
@@ -582,9 +589,9 @@ class ParamsOutTest extends Specification {
         def text = '''
             process hola {
               output:
-                set val(x) into p
-                set val(y), stdout, file('*.fa') into q mode flatten
-                set stdout, val(z) into t mode combine
+                tuple val(x) into p
+                tuple val(y), stdout, file('*.fa') into q mode flatten
+                tuple stdout, val(z) into t mode combine
 
               return ''
             }
@@ -594,9 +601,9 @@ class ParamsOutTest extends Specification {
         def process = parseAndReturnProcess(text, binding)
 
         when:
-        SetOutParam out0 = process.config.getOutputs().get(0)
-        SetOutParam out1 = process.config.getOutputs().get(1)
-        SetOutParam out2 = process.config.getOutputs().get(2)
+        TupleOutParam out0 = process.config.getOutputs().get(0)
+        TupleOutParam out1 = process.config.getOutputs().get(1)
+        TupleOutParam out2 = process.config.getOutputs().get(2)
 
         then:
         process.config.getOutputs().size() == 3
@@ -633,7 +640,7 @@ class ParamsOutTest extends Specification {
         out2.inner[1] instanceof ValueOutParam
         out2.inner[1].name == 'z'
         out2.inner[1].index == 2
-        out2.mode == SetOutParam.CombineMode.combine
+        out2.mode == TupleOutParam.CombineMode.combine
 
     }
 
@@ -643,9 +650,9 @@ class ParamsOutTest extends Specification {
         def text = '''
             process hola {
               output:
-                set val(x), val('x') into p
-                set val(1), val('2') into q
-                set val("$foo"), val { bar } into t
+                tuple val(x), val('x') into p
+                tuple val(1), val('2') into q
+                tuple val("$foo"), val { bar } into t
 
               return ''
             }
@@ -655,9 +662,9 @@ class ParamsOutTest extends Specification {
         def process = parseAndReturnProcess(text, binding)
 
         when:
-        SetOutParam out0 = process.config.getOutputs().get(0)
-        SetOutParam out1 = process.config.getOutputs().get(1)
-        SetOutParam out2 = process.config.getOutputs().get(2)
+        TupleOutParam out0 = process.config.getOutputs().get(0)
+        TupleOutParam out1 = process.config.getOutputs().get(1)
+        TupleOutParam out2 = process.config.getOutputs().get(2)
 
         then:
         process.config.getOutputs().size() == 3
@@ -715,7 +722,7 @@ class ParamsOutTest extends Specification {
         def text = '''
             process hola {
               output:
-              set val(X), file('Y')
+              tuple val(X), file('Y')
 
               return ''
             }
@@ -725,7 +732,7 @@ class ParamsOutTest extends Specification {
         def process = parseAndReturnProcess(text, binding)
 
         when:
-        SetOutParam out0 = process.config.getOutputs().get(0)
+        TupleOutParam out0 = process.config.getOutputs().get(0)
 
         then:
         process.config.getOutputs().size() == 1
@@ -790,14 +797,14 @@ class ParamsOutTest extends Specification {
         def v1 = new ValueOutParam(bind,outs)
         def o1 = new StdOutParam(bind,outs)
         def v2 = new ValueOutParam(bind,outs)
-        def s1 = new SetOutParam(bind,outs)
-        def s2 = new SetOutParam(bind,outs)
+        def s1 = new TupleOutParam(bind,outs)
+        def s2 = new TupleOutParam(bind,outs)
 
         then:
         outs.size() == 5
         outs.ofType(StdOutParam) == [o1]
         outs.ofType(ValueOutParam) == [v1,v2]
-        outs.ofType(SetOutParam,StdOutParam) == [o1,s1,s2]
+        outs.ofType(TupleOutParam,StdOutParam) == [o1, s1, s2]
 
     }
 
@@ -805,7 +812,7 @@ class ParamsOutTest extends Specification {
     def testModeParam() {
 
         setup:
-        def p = new SetOutParam(new Binding(), [])
+        def p = new TupleOutParam(new Binding(), [])
         when:
         p.mode(value)
         then:
@@ -813,8 +820,8 @@ class ParamsOutTest extends Specification {
 
         where:
         value                   | expected
-        'combine'               | SetOutParam.CombineMode.combine
-        new TokenVar('combine') | SetOutParam.CombineMode.combine
+        'combine'               | TupleOutParam.CombineMode.combine
+        new TokenVar('combine') | TupleOutParam.CombineMode.combine
         'flatten'               | BasicMode.flatten
         new TokenVar('flatten') | BasicMode.flatten
 
@@ -823,7 +830,7 @@ class ParamsOutTest extends Specification {
     def testWrongMode() {
 
         when:
-        def p = new SetOutParam(new Binding(), [])
+        def p = new TupleOutParam(new Binding(), [])
         p.mode('unknown')
         then:
         thrown(IllegalArgumentException)
@@ -840,7 +847,7 @@ class ParamsOutTest extends Specification {
         new StdOutParam(bind, list).mode == BasicMode.standard
         new ValueOutParam(bind, list).mode == BasicMode.standard
         new FileOutParam(bind, list).mode == BasicMode.standard
-        new SetOutParam(bind, list).mode == BasicMode.standard
+        new TupleOutParam(bind, list).mode == BasicMode.standard
 
     }
 
@@ -895,4 +902,274 @@ class ParamsOutTest extends Specification {
         error.property == 'params'
     }
 
+    /* ------------------------------------------------
+     * test path qualifier
+     * ------------------------------------------------ */
+
+    def 'test output path'() {
+
+        given:
+        def text = '''
+            process foo {
+              output:
+              path x into a
+              path 'hello.*' into b
+              path 'hello.txt' into c
+              
+              return ''
+            }
+            '''
+
+        def binding = [:]
+
+        when:
+        def process = parseAndReturnProcess(text, binding)
+        def out0 = (FileOutParam)process.config.getOutputs().get(0)
+        def out1 = (FileOutParam)process.config.getOutputs().get(1)
+        def out2 = (FileOutParam)process.config.getOutputs().get(2)
+
+        then:
+        process.config.getOutputs().size() == 3
+
+        out0.getName() == 'x'
+        out0.getFilePattern() == null
+        out0.getOutChannels().size()==1
+        out0.getOutChannels().get(0) instanceof DataflowQueue
+        out0.isPathQualifier()
+
+        out1.getName() == null
+        out1.getFilePattern() == 'hello.*'
+        out1.getOutChannels().size()==1
+        out1.getOutChannels().get(0) instanceof DataflowQueue
+        out1.isPathQualifier()
+
+        out2.getName() == null
+        out2.getFilePattern() == 'hello.txt'
+        out2.getOutChannels().size()==1
+        out2.getOutChannels().get(0) instanceof DataflowQueue
+        out2.isPathQualifier()
+        
+    }
+
+
+    def 'test output path with vars'() {
+
+        setup:
+        def text = '''
+
+            process hola {
+              output:
+              path "${x}_name" into channel1
+              path "${x}_${y}.fa" into channel2
+              path "simple.txt" into channel3
+              path "data/sub/dir/file:${x}.fa" into channel4
+
+              return ''
+            }
+            '''
+
+        def binding = [:]
+        def process = parseAndReturnProcess(text, binding)
+        def ctx = [x: 'hola', y:99, z:'script_file']
+
+        when:
+        FileOutParam out0 = process.config.getOutputs().get(0)
+        FileOutParam out1 = process.config.getOutputs().get(1)
+        FileOutParam out2 = process.config.getOutputs().get(2)
+        FileOutParam out3 = process.config.getOutputs().get(3)
+
+        then:
+        process.config.getOutputs().size() == 4
+
+        out0.name == null
+        out0.getFilePatterns(ctx,null) == ['hola_name']
+        out0.outChannel instanceof DataflowQueue
+        out0.outChannel == binding.channel1
+        out0.isDynamic()
+        out0.isPathQualifier()
+
+        out1.name == null
+        out1.getFilePatterns(ctx,null) == ['hola_99.fa']
+        out1.outChannel instanceof DataflowQueue
+        out1.outChannel == binding.channel2
+        out1.isDynamic()
+        out1.isPathQualifier()
+
+        out2.name == null
+        out2.getFilePatterns(ctx,null) == ['simple.txt']
+        out2.outChannel instanceof DataflowQueue
+        out2.outChannel == binding.channel3
+        !out2.isDynamic()
+        out2.isPathQualifier()
+
+        out3.name == null
+        out3.getFilePatterns(ctx,null) == ['data/sub/dir/file:hola.fa']
+        out3.outChannel instanceof DataflowQueue
+        out3.outChannel == binding.channel4
+        out3.isDynamic()
+        out3.isPathQualifier()
+    }
+
+    def 'test output path with set' () {
+
+        given:
+        def text = '''
+
+            process hola {
+              output:
+              tuple path(x) into channel1
+              tuple path(y) into channel1
+              tuple path("sample.fa") into channel2
+              tuple path("data/file:${q}.fa") into channel3
+
+              return ''
+            }
+            '''
+
+        def binding = [:]
+        def process = parseAndReturnProcess(text, binding)
+
+        def list_x = new BlankSeparatedList(['a.txt' as Path, 'b.txt' as Path, 'c.txt' as Path])
+        def list_y = ['one.txt' as Path, 'two.txt' as Path, 'three.txt' as Path]
+        def ctx = [x: list_x, y: list_y, q: 'foo']
+
+        when:
+        TupleOutParam out0 = process.config.getOutputs().get(0)
+        TupleOutParam out1 = process.config.getOutputs().get(1)
+        TupleOutParam out2 = process.config.getOutputs().get(2)
+        TupleOutParam out3 = process.config.getOutputs().get(3)
+
+        then:
+        out0.inner[0] instanceof FileOutParam
+        (out0.inner[0] as FileOutParam).getName() == 'x'
+        (out0.inner[0] as FileOutParam).getFilePatterns(ctx,null) == ['a.txt', 'b.txt', 'c.txt']
+        (out0.inner[0] as FileOutParam).isPathQualifier()
+
+        out1.inner[0] instanceof FileOutParam
+        (out1.inner[0] as FileOutParam).getName() == 'y'
+        (out1.inner[0] as FileOutParam).getFilePatterns(ctx,null) == ['one.txt', 'two.txt', 'three.txt']
+        (out1.inner[0] as FileOutParam).isPathQualifier()
+
+        out2.inner[0] instanceof FileOutParam
+        (out2.inner[0] as FileOutParam).getName() == null
+        (out2.inner[0] as FileOutParam).getFilePatterns(ctx,null) == ['sample.fa']
+        (out2.inner[0] as FileOutParam).isPathQualifier()
+
+        out3.inner[0] instanceof FileOutParam
+        (out3.inner[0] as FileOutParam).getName() == null
+        (out3.inner[0] as FileOutParam).getFilePatterns(ctx,null) == ['data/file:foo.fa']
+        (out3.inner[0] as FileOutParam).isPathQualifier()
+
+    }
+
+    def 'should define output path options' () {
+        given:
+        def text = '''
+
+            process foo {
+              output:
+              path x, 
+                maxDepth:2,
+                hidden: false,
+                followLinks: false,
+                type: 'file',
+                separatorChar: '#',
+                glob: false,
+                optional: false
+                
+              path y, 
+                maxDepth:5,
+                hidden: true,
+                followLinks: true,
+                type: 'dir',
+                separatorChar: ':',
+                glob: true,
+                optional: true
+
+              return ''
+            }
+            '''
+
+        when:
+        def process = parseAndReturnProcess(text, [:])
+        FileOutParam out0 = process.config.getOutputs().get(0)
+        FileOutParam out1 = process.config.getOutputs().get(1)
+
+        then:
+        out0.getMaxDepth() == 2
+        !out0.getHidden()
+        !out0.getFollowLinks()
+        out0.getType()
+        out0.getSeparatorChar() == '#'
+        !out0.getGlob()
+        !out0.getOptional()
+
+        and:
+        out1.getMaxDepth() == 5
+        out1.getHidden()
+        out1.getFollowLinks()
+        out1.getType()
+        out1.getSeparatorChar() == ':'
+        out1.getGlob()
+        out1.getOptional()
+    }
+
+    def 'should set file options' () {
+        given:
+        def text = '''
+            process foo {
+              output:
+              tuple path(x,maxDepth:1,optional:false), path(y,maxDepth:2,optional:true)
+
+              return ''
+            }
+            '''
+
+        when:
+        def process = parseAndReturnProcess(text, [:])
+        TupleOutParam out0 = process.config.getOutputs().get(0)
+        then:
+        out0.inner[0] instanceof FileOutParam
+        and:
+        (out0.inner[0] as FileOutParam).getName() == 'x'
+        (out0.inner[0] as FileOutParam).getMaxDepth() == 1
+        (out0.inner[0] as FileOutParam).getOptional() == false
+        and:
+        (out0.inner[1] as FileOutParam).getName() == 'y'
+        (out0.inner[1] as FileOutParam).getMaxDepth() == 2
+        (out0.inner[1] as FileOutParam).getOptional() == true
+    }
+
+
+    def 'should check is tuple item' () {
+
+        setup:
+        def text = '''
+            
+            process hola {
+              output:
+              val x into ch
+              tuple x, path(x) into ch
+
+              /command/
+            }
+            '''
+        when:
+
+
+        def process = parseAndReturnProcess(text)
+        def out0 = (ValueOutParam)process.config.getOutputs().get(0)
+        def out1 = (TupleOutParam)process.config.getOutputs().get(1)
+
+        then:
+        !out0.isNestedParam()
+        !out1.isNestedParam()
+        (out1.inner[0] as BaseOutParam).isNestedParam()
+        (out1.inner[1] as BaseOutParam).isNestedParam()
+
+        out0.index == 0
+        out1.index == 1
+        (out1.inner[0] as ValueOutParam).index == 1
+        (out1.inner[1] as FileOutParam).index == 1
+    }
 }

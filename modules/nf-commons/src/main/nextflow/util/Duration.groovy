@@ -16,6 +16,7 @@
 
 package nextflow.util
 
+import java.time.temporal.Temporal
 import java.util.concurrent.TimeUnit
 
 import groovy.transform.CompileStatic
@@ -208,6 +209,10 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
             log.debug "Not a valid duration value: $str -- Fallback on default value: $fallback"
             return fallback
         }
+    }
+
+    static Duration between( Temporal start, Temporal end ) {
+        new Duration(java.time.Duration.between(start, end).toMillis())
     }
 
     long toMillis() {

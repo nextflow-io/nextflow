@@ -16,19 +16,21 @@
 
 package nextflow
 
-import spock.lang.Specification
-import spock.lang.Unroll
-
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.attribute.PosixFilePermission
 
+import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
+import nextflow.exception.AbortOperationException
 import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.StatsObserver
 import nextflow.trace.TraceFileObserver
 import nextflow.util.Duration
+import nextflow.util.VersionNumber
+import spock.lang.Specification
+import spock.lang.Unroll
 import test.TestHelper
 /**
  *
@@ -493,4 +495,46 @@ class SessionTest extends Specification {
         session.fetchContainers() == 'ngi/rnaseq:1.2'
     }
 
+
+    def 'should validate version'() {
+
+        given:
+        def manifest = Mock(Manifest)
+        def session = Spy(Session)
+
+        when:
+        session.checkVersion()
+        then:
+        session.getManifest() >> manifest
+        1 * session.getCurrentVersion() >> new VersionNumber('1.1')
+        1 * manifest.getNextflowVersion() >> '>= 1.0'
+        0 * session.showVersionWarning(_)
+
+        when:
+        session.checkVersion()
+        then:
+        session.getManifest() >> manifest
+        1 * session.getCurrentVersion() >> new VersionNumber('1.1')
+        1 * manifest.getNextflowVersion() >> '>= 1.2'
+        1 * session.showVersionWarning('>= 1.2')
+
+        when:
+        session.checkVersion()
+        then:
+        session.getManifest() >> manifest
+        1 * session.getCurrentVersion() >> new VersionNumber('1.1')
+        1 * manifest.getNextflowVersion() >> '! >= 1.2'
+        1 * session.showVersionError('>= 1.2')
+        thrown(AbortOperationException)
+
+        when:
+        session.checkVersion()
+        then:
+        session.getManifest() >> manifest
+        1 * manifest.getNextflowVersion() >> null
+        0 * session.getCurrentVersion() >> null
+        0 * session.showVersionWarning(_)
+        0 * session.showVersionError(_)
+
+    }
 }

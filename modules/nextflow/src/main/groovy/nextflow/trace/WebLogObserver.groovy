@@ -77,13 +77,15 @@ class WebLogObserver implements TraceObserver{
      */
     private JsonGenerator generator
 
+    private String endpoint
+
     /**
      * Constructor that consumes a URL and creates
      * a basic HTTP client.
      * @param url The target address for sending messages to
      */
     WebLogObserver(String url) {
-        this.httpClient.setUrl(checkUrl(url))
+        this.endpoint = checkUrl(url)
         this.webLogAgent = new Agent<>(this)
         this.generator = createJsonGeneratorForPayloads()
     }
@@ -206,7 +208,7 @@ class WebLogObserver implements TraceObserver{
             throw new IllegalArgumentException("Only TraceRecord and Manifest class types are supported: [${payload.getClass().getName()}] $payload")
 
         // The actual HTTP request
-        httpClient.sendHttpMessage(generator.toJson(message))
+        httpClient.sendHttpMessage(endpoint, generator.toJson(message))
         logHttpResponse()
     }
 
@@ -231,11 +233,11 @@ class WebLogObserver implements TraceObserver{
     protected void logHttpResponse(){
         def statusCode = httpClient.getResponseCode()
         if (statusCode >= 200 && statusCode < 300) {
-            log.debug "Successfully send message to ${httpClient.getUrl()} -- received status code ${statusCode}."
+            log.debug "Successfully send message to ${endpoint} -- received status code ${statusCode}."
         } else {
             def msg = """\
                 Unexpected HTTP response.
-                Failed to send message to ${httpClient.getUrl()} -- received 
+                Failed to send message to ${endpoint} -- received 
                 - status code : $statusCode    
                 - response msg: ${httpClient.getResponse()}  
                 """.stripIndent()

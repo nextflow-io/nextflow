@@ -16,22 +16,18 @@
 
 package nextflow.script
 
+
 import java.nio.file.Files
 
-import groovyx.gpars.dataflow.DataflowReadChannel
-import nextflow.NextflowMeta
 import nextflow.exception.DuplicateModuleIncludeException
-import spock.lang.Specification
+import test.Dsl2Spec
 import test.MockScriptRunner
 import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ScriptIncludesTest extends Specification {
-
-    def setupSpec() { NextflowMeta.instance.enableDsl2() }
-    def cleanupSpec() { NextflowMeta.instance.disableDsl2() }
+class ScriptIncludesTest extends Dsl2Spec {
 
     def 'should invoke foreign functions' () {
         given:
@@ -100,9 +96,11 @@ class ScriptIncludesTest extends Specification {
               result = data.toUpperCase()
         }   
         
-        workflow alpha(data) {
-            foo(data)
-            bar(foo.output)
+        workflow alpha {
+            get: data
+            main: foo(data)
+                  bar(foo.output)
+            emit: bar.out
         }
         
         '''
@@ -111,7 +109,8 @@ class ScriptIncludesTest extends Specification {
         include "$MODULE" 
    
         workflow {
-            alpha('Hello')
+            main: alpha('Hello')
+            emit: alpha.out 
         }
         """
 
@@ -152,13 +151,16 @@ class ScriptIncludesTest extends Specification {
         SCRIPT.text = """
         include "$MODULE"
 
-        workflow alpha(data) {
-            foo(data)
-            bar(foo.output)
+        workflow alpha {
+            get: data
+            main: foo(data)
+                  bar(foo.output)
+            emit: bar.out      
         }
    
         workflow {
-            alpha('Hello')
+            main: alpha('Hello')
+            emit: alpha.out 
         }
         """
 
@@ -203,8 +205,9 @@ class ScriptIncludesTest extends Specification {
    
         data = 'Hello'
         workflow {
-            foo(data)
-            bar(foo.output)
+            main: foo(data)
+                  bar(foo.output)
+            emit: bar.out 
         }
         """
 
@@ -246,6 +249,7 @@ class ScriptIncludesTest extends Specification {
             data = 'Hello'
             foo(data)
             bar(foo.output)
+            emit: bar.out 
         }
         """
 
@@ -281,7 +285,8 @@ class ScriptIncludesTest extends Specification {
         hello_ch = Channel.from('world')
         
         workflow {
-            foo(hello_ch)
+            main: foo(hello_ch)
+            emit: foo.out 
         }
         """
 
@@ -290,7 +295,6 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result instanceof DataflowReadChannel
         result.val == 'echo Hello world'
 
         cleanup:
@@ -316,12 +320,13 @@ class ScriptIncludesTest extends Specification {
         '''
 
         SCRIPT.text = """
-        include 'module.nf'
+        include './module.nf'
 
         workflow {
-            ch1 = Channel.from('world')
-            ch2 = Channel.value(['x', '/some/file'])
-            foo(ch1, ch2)
+          main: ch1 = Channel.from('world')
+                ch2 = Channel.value(['x', '/some/file'])
+                foo(ch1, ch2)
+          emit: foo.out  
         }
         """
 
@@ -330,12 +335,57 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result instanceof DataflowReadChannel
         result.val == 'echo sample=world pairId=x reads=/some/file'
     }
 
 
     def 'should compose processes' () {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def MODULE = folder.resolve('module.nf')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = '''
+        process foo {
+          input: 
+            val alpha
+          output: 
+            val delta
+            val gamma
+          script:
+            delta = alpha
+            gamma = 'world'
+            /nope/
+        }
+        
+        process bar {
+           input:
+             val xx
+             val yy 
+           output:
+             stdout()
+           script:
+            /echo $xx $yy/            
+        }
+        '''
+
+        and:
+        SCRIPT.text = """  
+        include './module.nf'        
+
+        workflow {
+            main: bar( foo('Ciao') )
+            emit: bar.out
+        }
+        """
+
+        when:
+        def result = dsl_eval(SCRIPT)
+        then:
+        result.val == 'echo Ciao world'
+    }
+
+    def 'should use multiple assignment' () {
 
         given:
         def folder = TestHelper.createInMemTempDir()
@@ -351,7 +401,7 @@ class ScriptIncludesTest extends Specification {
             val gamma
           script:
             delta = alpha
-            gamma = 'world\'
+            gamma = 'world'
             /nope/
         }
         
@@ -366,34 +416,19 @@ class ScriptIncludesTest extends Specification {
         }
         '''
 
-        when:
-        SCRIPT.text = """  
-        include 'module.nf'        
-
-        workflow {
-            bar( foo('Ciao') )
-        }
-        """
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
-        then:
-        noExceptionThrown()
-        result instanceof DataflowReadChannel
-        result.val == 'echo Ciao world'
-
-
-        when:
+        and:
         SCRIPT.text = """ 
-        include 'module.nf'        
+        include './module.nf'        
         
         workflow {
-          (ch0, ch1) = foo('Ciao')
+          main: (ch0, ch1) = foo('Ciao')
+          emit: ch0; ch1
         }
         """
-        runner = new MockScriptRunner()
-        result = runner.setScript(SCRIPT).execute()
+        
+        when:
+        def result = dsl_eval(SCRIPT)
         then:
-        noExceptionThrown()
         result[0].val == 'Ciao'
         result[1].val == 'world'
     }
@@ -419,10 +454,11 @@ class ScriptIncludesTest extends Specification {
         // inject params in the module
         // and invoke the process 'foo'
         SCRIPT.text = """     
-        include "module.nf" params(foo:'Hello', bar: 'world')
+        include "./module.nf" params(foo:'Hello', bar: 'world')
             
         workflow { 
-            foo() 
+            main: foo()
+            emit: foo.out 
         }
         """
 
@@ -431,7 +467,6 @@ class ScriptIncludesTest extends Specification {
         def result = runner.setScript(SCRIPT).execute()
         then:
         noExceptionThrown()
-        result instanceof DataflowReadChannel
         result.val == 'echo Hello world'
         
     }
@@ -454,7 +489,7 @@ class ScriptIncludesTest extends Specification {
         '''
 
         SCRIPT.text = """  
-        include 'module.nf'
+        include './module.nf'
 
         def str = foo('dlrow')
         return bar('Hello', str)
@@ -486,10 +521,11 @@ class ScriptIncludesTest extends Specification {
         '''
 
         SCRIPT.text = """ 
-        include 'module.nf' params(x: 'Hola mundo')
+        include './module.nf' params(x: 'Hola mundo')
         
         workflow {
-            return foo()
+            main: foo()
+            emit: foo.out
         }    
         """
 
@@ -512,11 +548,11 @@ class ScriptIncludesTest extends Specification {
             /hello/ 
         }      
         
-        foo()
+        workflow { foo() } 
         '''
 
         SCRIPT.text = """ 
-        include 'module.nf'
+        include './module.nf'
         println 'hello'
         """
 
@@ -541,7 +577,7 @@ class ScriptIncludesTest extends Specification {
         '''
 
         SCRIPT.text = """ 
-        include 'org/bio' 
+        include './org/bio' 
         
         workflow {
             foo()
@@ -569,8 +605,8 @@ class ScriptIncludesTest extends Specification {
         '''
 
         SCRIPT.text = """ 
-        include 'mod1' 
-        include 'mod2' 
+        include './mod1' 
+        include './mod2' 
         println 'x'
         """
 
@@ -665,7 +701,8 @@ class ScriptIncludesTest extends Specification {
         workflow {
             foo('Hello')
             bar('World')
-            return [ foo.output, bar.output ]
+            emit: foo.out
+            emit: bar.out
         }
         """
 
@@ -676,5 +713,59 @@ class ScriptIncludesTest extends Specification {
         then:
         result[0].val == 'HELLO'
         result[1].val == 'WORLD'
+    }
+
+
+    def 'should allow multiple use of the same process' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module.nf')
+
+        MODULE.text = '''
+            process producer {
+                output: stdout()
+                shell: "echo Hello"
+            }
+            
+            process consumer {
+                input: file "foo"
+                output: stdout()
+                shell:
+                "cmd consumer 1"
+            }
+            
+            process another_consumer {
+                input: file "foo"
+                output: stdout()
+                shell: "cmd consumer 2"
+            }
+            
+            workflow flow1 {
+                emit: producer | consumer | map { it.toUpperCase() }
+            }
+            
+            workflow flow2 {
+                emit: producer | another_consumer | map { it.toUpperCase() }
+            }
+            '''.stripIndent()
+
+        when:
+        def result = dsl_eval("""
+            include "$MODULE" 
+  
+            workflow { 
+              flow1()
+              flow2()
+              emit: 
+              flow1.out
+              flow2.out
+            }
+
+            """)
+
+        then:
+        result[0].val == 'CMD CONSUMER 1'
+        result[1].val == 'CMD CONSUMER 2'
+
     }
 }

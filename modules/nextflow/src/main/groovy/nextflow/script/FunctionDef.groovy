@@ -58,7 +58,7 @@ class FunctionDef extends ComponentDef {
       return (FunctionDef)super.clone()
     }
 
-    FunctionDef withName(String name) {
+    FunctionDef cloneWithName(String name) {
         def result = clone()
         result.@name = name
         return result

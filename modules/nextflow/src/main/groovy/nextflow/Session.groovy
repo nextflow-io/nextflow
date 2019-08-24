@@ -16,6 +16,7 @@
 
 package nextflow
 
+import nextflow.exception.ScriptCompilationException
 import static nextflow.Const.*
 
 import java.lang.reflect.Method
@@ -45,7 +46,7 @@ import nextflow.exception.AbortSignalException
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.MissingLibraryException
 import nextflow.executor.ExecutorFactory
-import nextflow.extension.ChannelFactory
+import nextflow.extension.CH
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
 import nextflow.processor.ErrorStrategy
@@ -57,17 +58,14 @@ import nextflow.script.ProcessConfig
 import nextflow.script.ProcessFactory
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptFile
+import nextflow.script.ScriptMeta
 import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.AnsiLogObserver
-import nextflow.trace.GraphObserver
-import nextflow.trace.ReportObserver
 import nextflow.trace.StatsObserver
-import nextflow.trace.TimelineObserver
-import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceObserver
+import nextflow.trace.TraceObserverFactory
 import nextflow.trace.TraceRecord
-import nextflow.trace.WebLogObserver
 import nextflow.trace.WorkflowStats
 import nextflow.util.Barrier
 import nextflow.util.BlockingThreadExecutorFactory
@@ -75,6 +73,7 @@ import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.NameGenerator
+import nextflow.util.VersionNumber
 import sun.misc.Signal
 import sun.misc.SignalHandler
 /**
@@ -236,9 +235,7 @@ class Session implements ISession {
 
     boolean ansiLog
 
-    private AnsiLogObserver ansiLogObserver
-
-    AnsiLogObserver getAnsiLogObserver() { ansiLogObserver }
+    AnsiLogObserver ansiLogObserver
 
     FilePorter getFilePorter() { filePorter }
 
@@ -386,105 +383,22 @@ class Session implements ISession {
      */
     @PackageScope
     List<TraceObserver> createObservers() {
+
         def result = new ArrayList(10)
 
-        createStatsObserver(result)     // keep as first, because following may depend on it
-        createTraceFileObserver(result)
-        createReportObserver(result)
-        createTimelineObserver(result)
-        createDagObserver(result)
-        createWebLogObserver(result)
-        createAnsiLogObserver(result)
+        // stats is created as first because others may depend on it
+        final observer = new StatsObserver()
+        this.workflowStats = observer.stats
+        result << observer
+
+        for( TraceObserverFactory f : ServiceLoader.load(TraceObserverFactory) ) {
+            log.debug "Observer factory: ${f.class.simpleName}"
+            result.addAll(f.create(this))
+        }
 
         return result
     }
 
-    protected void createAnsiLogObserver(Collection<TraceObserver> result) {
-        if( ansiLog ) {
-            this.ansiLogObserver = new AnsiLogObserver()
-            result << ansiLogObserver
-        }
-    }
-
-    /**
-     * Create workflow message observer
-     * @param result
-     */
-    protected void createWebLogObserver(Collection<TraceObserver> result) {
-        Boolean isEnabled = config.navigate('weblog.enabled') as Boolean
-        String url = config.navigate('weblog.url') as String
-        if (isEnabled) {
-            if ( !url ) url = WebLogObserver.DEF_URL
-            def observer = new WebLogObserver(url)
-            result << observer
-        }
-    }
-
-    protected void createStatsObserver(Collection<TraceObserver> result) {
-        final observer = new StatsObserver()
-        this.workflowStats = observer.stats
-        result << observer
-    }
-
-
-    /**
-     * Create workflow report file observer
-     */
-    protected void createReportObserver(Collection<TraceObserver> result) {
-        Boolean isEnabled = config.navigate('report.enabled') as Boolean
-        if( isEnabled ) {
-            String fileName = config.navigate('report.file')
-            def maxTasks = config.navigate('report.maxTasks', ReportObserver.DEF_MAX_TASKS) as int
-            if( !fileName ) fileName = ReportObserver.DEF_FILE_NAME
-            def report = (fileName as Path).complete()
-            def observer = new ReportObserver(report)
-            observer.maxTasks = maxTasks
-
-            result << observer
-        }
-    }
-
-    /**
-     * Create timeline report file observer
-     */
-    protected void createTimelineObserver(Collection<TraceObserver> result) {
-        Boolean isEnabled = config.navigate('timeline.enabled') as Boolean
-        if( isEnabled ) {
-            String fileName = config.navigate('timeline.file')
-            if( !fileName ) fileName = TimelineObserver.DEF_FILE_NAME
-            def traceFile = (fileName as Path).complete()
-            def observer = new TimelineObserver(traceFile)
-            result << observer
-        }
-    }
-
-    protected void createDagObserver(Collection<TraceObserver> result) {
-        Boolean isEnabled = config.navigate('dag.enabled') as Boolean
-        if( isEnabled ) {
-            String fileName = config.navigate('dag.file')
-            if( !fileName ) fileName = GraphObserver.DEF_FILE_NAME
-            def traceFile = (fileName as Path).complete()
-            def observer = new GraphObserver(traceFile)
-            result << observer
-        }
-    }
-
-    /*
-     * create the execution trace observer
-     */
-    protected void createTraceFileObserver(Collection<TraceObserver> result) {
-        Boolean isEnabled = config.navigate('trace.enabled') as Boolean
-        if( isEnabled ) {
-            String fileName = config.navigate('trace.file')
-            if( !fileName ) fileName = TraceFileObserver.DEF_FILE_NAME
-            def traceFile = (fileName as Path).complete()
-            def observer = new TraceFileObserver(traceFile)
-            config.navigate('trace.raw') { it -> observer.useRawNumbers(it == true) }
-            config.navigate('trace.sep') { observer.separator = it }
-            config.navigate('trace.fields') { observer.setFieldsAndFormats(it) }
-            result << observer
-        }
-    }
 
     /*
      * intercepts interruption signal i.e. CTRL+C
@@ -521,7 +435,7 @@ class Session implements ISession {
             return
 
         // bridge any dataflow queue into a broadcast channel
-        ChannelFactory.broadcast()
+        CH.broadcast()
 
         log.debug "Ignite dataflow network (${igniters.size()})"
         for( def action : igniters ) {
@@ -610,7 +524,7 @@ class Session implements ISession {
     }
 
     protected Map<String,Path> findBinEntries(Path path) {
-        def result = new LinkedHashMap(10)
+        Map<String,Path> result = new LinkedHashMap(10)
         path
                 .listFiles { file -> Files.isExecutable(file) }
                 .each { Path file -> result.put(file.name,file)  }
@@ -795,7 +709,8 @@ class Session implements ISession {
      */
     void abort(Throwable cause = null) {
         if( aborted ) return
-        log.debug "Session aborted -- Cause: ${cause?.message ?: cause ?: '-'}"
+        if( !(cause instanceof ScriptCompilationException) )
+            log.debug "Session aborted -- Cause: ${cause?.message ?: cause ?: '-'}"
         aborted = true
         error = cause
         try {
@@ -854,6 +769,49 @@ class Session implements ISession {
     DAG getDag() { this.dag }
 
     ExecutorService getExecService() { execService }
+
+    /**
+     * Check preconditions before run the main script
+     */
+    protected void validate() {
+        checkConfig()
+        checkVersion()
+    }
+
+    @PackageScope void checkConfig() {
+        final names = ScriptMeta.current().getProcessNames()
+        validateConfig(names)
+    }
+
+    @PackageScope VersionNumber getCurrentVersion() {
+        new VersionNumber(APP_VER)
+    }
+
+    @PackageScope void checkVersion() {
+        def version = manifest.getNextflowVersion()?.trim()
+        if( !version )
+            return
+
+        // when the version string is prefix with a `!`
+        // an exception is thrown is the version does not match
+        boolean important = false
+        if( version.startsWith('!') ) {
+            important = true
+            version = version.substring(1).trim()
+        }
+
+        if( !getCurrentVersion().matches(version) ) {
+            important ? showVersionError(version) : showVersionWarning(version)
+        }
+    }
+
+    @PackageScope void showVersionError(String ver) {
+        throw new AbortOperationException("Nextflow version $Const.APP_VER does not match workflow required version: $ver")
+    }
+
+    @PackageScope void showVersionWarning(String ver) {
+        log.warn "Nextflow version $Const.APP_VER does not match workflow required version: $ver -- Execution will continue, but things may break!"
+    }
 
     /**
      * Validate the config file
@@ -944,6 +902,18 @@ class Session implements ISession {
         }
     }
 
+    void notifyTaskPending( TaskHandler handler ) {
+        for( int i=0; i<observers.size(); i++ ) {
+            final observer = observers.get(i)
+            try {
+                observer.onProcessPending(handler, handler.getTraceRecord())
+            }
+            catch( Exception e ) {
+                log.debug(e.getMessage(), e)
+            }
+        }
+    }
+
     /**
      * Notifies that a task has been submitted
      */
@@ -1020,6 +990,13 @@ class Session implements ISession {
         }
     }
 
+    void notifyBeforeWorkflowExecution() {
+        validate()
+    }
+
+    void notifyAfterWorkflowExecution() {
+
+    }
 
     /**
      * Notify a task failure

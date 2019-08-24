@@ -91,11 +91,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         binding.setVariable( 'nextflow', NextflowMeta.instance )
     }
 
-    protected process( Map<String,?> args, String name, Closure body ) {
-        throw new DeprecationException("This process invocation syntax is not supported any more")
-    }
-
-    protected process( String name, Closure body ) {
+    protected process( String name, Closure<BodyDef> body ) {
         if( NF.isDsl2() ) {
             def process = new ProcessDef(this,body,name)
             meta.addDefinition(process)
@@ -107,7 +103,13 @@ abstract class BaseScript extends Script implements ExecutionContext {
         }
     }
 
-    protected workflow(TaskBody body) {
+    /**
+     * Workflow main entry point
+     *
+     * @param body The implementation body of the workflow
+     * @return The result of workflow execution
+     */
+    protected workflow(Closure<BodyDef> workflowBody) {
         if(!NF.isDsl2())
             throw new IllegalStateException("Module feature not enabled -- Set `nextflow.preview.dsl=2` to allow the definition of workflow components")
 
@@ -116,16 +118,20 @@ abstract class BaseScript extends Script implements ExecutionContext {
             return
         }
 
-        def workflow = new WorkflowDef(this, body)
+        // launch the execution
+        final workflow = new WorkflowDef(this, workflowBody)
         meta.addDefinition(workflow)
-        return workflow.invoke_a(EMPTY_ARGS)
+        session.notifyBeforeWorkflowExecution()
+        final result = workflow.invoke_a(EMPTY_ARGS)
+        session.notifyAfterWorkflowExecution()
+        return result
     }
 
-    protected workflow(TaskBody body, String name, List<String> declaredInputs) {
+    protected workflow(String name, Closure<BodyDef> workflowDef) {
         if(!NF.isDsl2())
             throw new IllegalStateException("Module feature not enabled -- Set `nextflow.preview.dsl=2` to allow the definition of workflow components")
 
-        meta.addDefinition(new WorkflowDef(this,body,name,declaredInputs))
+        meta.addDefinition(new WorkflowDef(this,workflowDef,name))
     }
 
     protected IncludeDef include( IncludeDef include ) {
@@ -133,7 +139,6 @@ abstract class BaseScript extends Script implements ExecutionContext {
             throw new IllegalStateException("Module feature not enabled -- Set `nextflow.preview.dsl=2` to import module files")
 
         include .setSession(session)
-
     }
 
     @Override

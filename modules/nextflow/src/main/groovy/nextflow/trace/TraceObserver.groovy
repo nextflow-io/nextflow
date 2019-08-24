@@ -49,6 +49,16 @@ trait TraceObserver {
     void onProcessTerminate( TaskProcessor process ){}
 
     /**
+     * This method when a new task is created and submitted in the nextflow
+     * internal queue of pending task to be scheduled to the underlying
+     * execution backend
+     *
+     * @param handler
+     * @param trace
+     */
+    void onProcessPending(TaskHandler handler, TraceRecord trace){}
+
+    /**
      * This method is invoked before a process run is going to be submitted
      *
      * @param handler

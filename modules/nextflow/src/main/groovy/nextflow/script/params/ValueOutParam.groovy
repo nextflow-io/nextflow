@@ -34,7 +34,6 @@ class ValueOutParam extends BaseOutParam {
         return nameObj ? super.getName() : null
     }
 
-
     BaseOutParam bind( def obj ) {
         // the target value object
         target = obj

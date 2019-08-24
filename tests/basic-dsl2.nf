@@ -13,10 +13,10 @@ params.in = "$baseDir/data/sample.fa"
 process splitSequences {
 
     input:
-    file 'input.fa'
+    path 'input.fa'
 
     output:
-    file 'seq_*'
+    path 'seq_*'
 
     """
     awk '/^>/{f="seq_"++d} {print > f}' < input.fa
@@ -30,7 +30,7 @@ process splitSequences {
 process reverse {
 
     input:
-    file x 
+    path x
     
     output:
     stdout()
@@ -40,8 +40,8 @@ process reverse {
     """
 }
 
-Channel.value(file(params.in)) |
-        splitSequences |
-        reverse |
-        subscribe { println it }
+
+workflow {
+    splitSequences(params.in) | reverse | view
+}
 

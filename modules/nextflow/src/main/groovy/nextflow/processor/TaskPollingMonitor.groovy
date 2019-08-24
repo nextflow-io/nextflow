@@ -225,6 +225,7 @@ class TaskPollingMonitor implements TaskMonitor {
         try{
             pendingQueue << handler
             taskAvail.signal()  // signal that a new task is available for execution
+            session.notifyTaskPending(handler)
             log.trace "Scheduled task > $handler"
         }
         finally {

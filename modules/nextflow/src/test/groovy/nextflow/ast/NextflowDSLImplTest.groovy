@@ -1,16 +1,15 @@
 package nextflow.ast
 
 import nextflow.script.BaseScript
-import nextflow.script.ScriptMeta
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
-import spock.lang.Specification
+import test.BaseSpec  
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class NextflowDSLImplTest extends Specification {
+class NextflowDSLImplTest extends BaseSpec {
 
     def 'should fetch method names' () {
 
@@ -94,30 +93,37 @@ class NextflowDSLImplTest extends Specification {
         err.message.contains 'Identifier `alpha` is already used by another definition'
     }
 
+    def 'should throw illegal name exception' () {
 
-    def 'should set process name in the script meta' () {
         given:
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(BaseScript.class.name)
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
+        when:
         def SCRIPT = '''
-                    
-            process alpha {
+            workflow 'foo:bar' {
               /hello/
-            }
-        
-            process beta {
-              /world/
             }
 
         '''
+        new GroovyShell(config).parse(SCRIPT)
+        then:
+        def e = thrown(MultipleCompilationErrorsException)
+        e.message.contains 'Process and workflow names cannot contain colon character'
+
 
         when:
-        def script = new GroovyShell(config).parse(SCRIPT)
-        then:
-        ScriptMeta.get(script).processNames == ['alpha','beta'] as Set
-    }
+        SCRIPT = '''
+            process 'foo:bar' {
+              /hello/
+            }
 
+        '''
+        new GroovyShell(config).parse(SCRIPT)
+        then:
+        e = thrown(MultipleCompilationErrorsException)
+        e.message.contains 'Process and workflow names cannot contain colon character'
+    }
 
 }

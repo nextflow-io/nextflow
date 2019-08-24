@@ -61,7 +61,7 @@ class PhaseOp {
 
     DataflowWriteChannel apply() {
 
-        def result = ChannelFactory.create()
+        def result = CH.create()
         def state = new LinkedHashMap()
 
         final count = 2

@@ -21,7 +21,7 @@ import spock.lang.Requires
 import spock.lang.Specification
 
 @IgnoreIf({System.getenv('NXF_SMOKE')})
-class BitBucketRepositoryProviderTest extends Specification {
+class BitbucketRepositoryProviderTest extends Specification {
 
     @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
     def testBitbucketCloneURL() {

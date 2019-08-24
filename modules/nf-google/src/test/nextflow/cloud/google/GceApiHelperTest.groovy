@@ -15,6 +15,8 @@
  */
 package nextflow.cloud.google
 
+import java.util.concurrent.TimeoutException
+
 import com.google.api.services.compute.Compute
 import com.google.api.services.compute.model.*
 import nextflow.exception.AbortOperationException
@@ -183,8 +185,8 @@ class GceApiHelperTest extends Specification {
 
     def 'should block until a GCE operation returns status "DONE"'() {
         given:
-        Compute.GlobalOperations globalOperations = Mock()
-        Compute compute = Mock(Compute)
+        def globalOperations = Mock(Compute.GlobalOperations)
+        def compute = Mock(Compute)
 
         def runningOp = new Operation().setStatus("RUNNING")
         def doneOp = new Operation().setStatus("DONE")
@@ -195,14 +197,10 @@ class GceApiHelperTest extends Specification {
         GceApiHelper helper = Spy(GceApiHelper,constructorArgs: [testProject,testZone,compute])
 
         when:
-        def ret = helper.blockUntilComplete(runningOp,100,10)
+        def ret = helper.blockUntilComplete(runningOp,1000,10)
         then:
-        (1.._) * globalOperations.get(_,_) >>{
-            computeGlobalOperations
-        }
-        (1.._) * compute.globalOperations() >> {
-            globalOperations
-        }
+        (1.._) * globalOperations.get(_,_) >> computeGlobalOperations
+        (1.._) * compute.globalOperations() >> globalOperations
         !ret
     }
 
@@ -252,7 +250,7 @@ class GceApiHelperTest extends Specification {
         (1.._) * compute.globalOperations() >> {
             globalOperations
         }
-        thrown(InterruptedException)
+        thrown(TimeoutException)
     }
 
     def 'should timeout while waiting too long for multiple operations to complete'() {
@@ -271,13 +269,9 @@ class GceApiHelperTest extends Specification {
         when:
         helper.blockUntilComplete([runningOp,runningOp],100,50)
         then:
-        (1.._) * globalOperations.get(_,_) >>{
-            computeGlobalOperations
-        }
-        (1.._) * compute.globalOperations() >> {
-            globalOperations
-        }
-        thrown(InterruptedException)
+        (1.._) * globalOperations.get(_,_) >> computeGlobalOperations
+        (1.._) * compute.globalOperations() >> globalOperations
+        thrown(TimeoutException)
     }
 
 

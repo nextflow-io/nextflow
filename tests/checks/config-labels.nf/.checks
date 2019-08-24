@@ -1,39 +1,39 @@
 # apply labels for profile `test1`
 $NXF_RUN -c ../../config-labels.config -profile test1 | tee stdout
 
-< stdout grep "alpha memry: 2 GB" || false
+< stdout grep "alpha memry: 20 MB" || false
 < stdout grep "alpha queue: std" || false
 
-< stdout grep "beta memry: 1 GB" || false
+< stdout grep "beta memry: 10 MB" || false
 < stdout grep "beta queue: small" || false
 
-< stdout grep "delta memry: 7 GB" || false
+< stdout grep "delta memry: 70 MB" || false
 < stdout grep "delta queue: big" || false
-< stdout grep "gamma memry: 7 GB" || false
+< stdout grep "gamma memry: 70 MB" || false
 < stdout grep "gamma queue: big" || false
 
 # apply labels for profile `test2`
 $NXF_RUN -c ../../config-labels.config -profile test2 | tee stdout
 
-< stdout grep "beta memry: 1 GB" || false
+< stdout grep "beta memry: 10 MB" || false
 < stdout grep "beta queue: small" || false
 
-< stdout grep "alpha memry: 7 GB" || false
+< stdout grep "alpha memry: 70 MB" || false
 < stdout grep "alpha queue: big" || false
-< stdout grep "delta memry: 7 GB" || false
+< stdout grep "delta memry: 70 MB" || false
 < stdout grep "delta queue: big" || false
-< stdout grep "gamma memry: 7 GB" || false
+< stdout grep "gamma memry: 70 MB" || false
 < stdout grep "gamma queue: big" || false
 
 # apply labels for profile `test3`
 $NXF_RUN -c ../../config-labels.config -profile test3 | tee stdout
 
-< stdout grep "beta memry: 5 GB" || false
+< stdout grep "beta memry: 50 MB" || false
 < stdout grep "beta queue: all" || false
-< stdout grep "alpha memry: 5 GB" || false
+< stdout grep "alpha memry: 50 MB" || false
 < stdout grep "alpha queue: all" || false
-< stdout grep "delta memry: 5 GB" || false
+< stdout grep "delta memry: 50 MB" || false
 < stdout grep "delta queue: all" || false
 
-< stdout grep "gamma memry: 6 GB" || false
+< stdout grep "gamma memry: 60 MB" || false
 < stdout grep "gamma queue: foo" || false

@@ -16,6 +16,7 @@
 
 package nextflow.script
 
+import spock.lang.Timeout
 
 import static test.TestParser.parseAndReturnProcess
 
@@ -24,12 +25,13 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class TaskBodyTest extends Specification {
+@Timeout(5)
+class BodyDefTest extends Specification {
 
     def 'should set script type properly' () {
 
         when:
-        def body = new TaskBody({->'echo foo'}, 'echo foo', section)
+        def body = new BodyDef({->'echo foo'}, 'echo foo', section)
         then:
         body.type == expected
         body.isShell == shell
@@ -45,7 +47,7 @@ class TaskBodyTest extends Specification {
     def 'should thrown illegal argument exception for invalid section' () {
 
         when:
-        new TaskBody({}, 'echo foo', 'bar')
+        new BodyDef({}, 'echo foo', 'bar')
         then:
         thrown(IllegalArgumentException)
 
@@ -53,7 +55,7 @@ class TaskBodyTest extends Specification {
 
     def 'should return empty set'() {
         when:
-        def body = new TaskBody({->'echo foo'}, 'echo foo')
+        def body = new BodyDef({->'echo foo'}, 'echo foo')
         then:
         body.getValNames() == [] as Set
     }

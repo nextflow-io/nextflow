@@ -1,19 +1,14 @@
 package nextflow.script
 
-import spock.lang.Specification
 
-import nextflow.NextflowMeta
+import test.Dsl2Spec
 import test.MockScriptRunner
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ScriptPipesTest extends Specification {
+class ScriptPipesTest extends Dsl2Spec {
 
-    def setupSpec() { NextflowMeta.instance.enableDsl2() }
-    def cleanupSpec() { NextflowMeta.instance.disableDsl2() }
-    
     def 'should pipe processes parallel' () {
         given:
         def SCRIPT =  '''
@@ -31,8 +26,13 @@ class ScriptPipesTest extends Specification {
               result = data.toUpperCase()
         } 
 
+        workflow {
+            main: Channel.from('Hello') | map { it.reverse() } | (foo & bar)
+            emit:
+                foo.out
+                bar.out
+        }
         
-        Channel.from('Hello') | map { it.reverse() } | (foo & bar)
         '''
 
         when:
@@ -62,8 +62,9 @@ class ScriptPipesTest extends Specification {
               result = data.toUpperCase()
         } 
 
-        
-        Channel.from('Hola') | foo | map { it.reverse() } | bar
+        workflow {
+            emit: Channel.from('Hola') | foo | map { it.reverse() } | bar
+        }
         '''
 
         when:
@@ -100,7 +101,9 @@ class ScriptPipesTest extends Specification {
         // execute `foo` process and pipe
         // the multiple output channels 
         // to the `bar` process receiving multiple inputs
-        Channel.from('hello') | foo | bar 
+        workflow {
+            emit: Channel.from('hello') | foo | bar 
+        }
         '''
 
         when:
@@ -129,7 +132,9 @@ class ScriptPipesTest extends Specification {
         // execute `foo` process and 
         // pipe the multiple output channels 
         // to the `concat` operator
-        Channel.from('hola') | foo | concat 
+        workflow {
+            emit: Channel.from('hola') | foo | concat 
+        }
         '''
 
         when:
@@ -153,7 +158,9 @@ class ScriptPipesTest extends Specification {
             X = "hola"
         }     
         
-        foo | map { it.reverse() }
+        workflow {
+            emit: foo | map { it.reverse() }
+        }
         '''
 
         when:
@@ -181,7 +188,9 @@ class ScriptPipesTest extends Specification {
             Z = X.toUpperCase()  
         }
         
-        foo | bar
+        workflow {
+            emit: foo | bar
+        }
         '''
 
         when:
@@ -203,7 +212,9 @@ class ScriptPipesTest extends Specification {
             Z = X*X
         }     
         
-        Channel.from(1,2,3) | square | collect 
+        workflow {
+            emit: Channel.from(1,2,3) | square | collect 
+        }
         '''
 
         when:
@@ -212,7 +223,42 @@ class ScriptPipesTest extends Specification {
 
         then:
         result.val.sort() == [1, 4, 9]
-
     }
 
+
+    def 'should pipe branch output to concat operator' () {
+        given:
+        def SCRIPT ='''   
+        Channel.from(10,20,30) | branch { foo: it <=10; bar: true } | concat 
+        '''
+
+        when:
+        def result = new MockScriptRunner().setScript(SCRIPT).execute()
+        then:
+        result.val == 10
+        result.val == 20
+        result.val == 30
+    }
+
+
+    def 'should pipe branch output to processes' () {
+        given:
+        def SCRIPT ='''                                                              
+        process foo {
+          input: val x 
+          input: val y
+          output: val ret
+          exec: ret=x*2+y
+        }
+
+        workflow {
+           emit: Channel.from(10,20) | branch { foo: it <=10; bar: true } | foo 
+        }
+        '''
+
+        when:
+        def result = new MockScriptRunner().setScript(SCRIPT).execute()
+        then:
+        result.val == 40
+    }
 }

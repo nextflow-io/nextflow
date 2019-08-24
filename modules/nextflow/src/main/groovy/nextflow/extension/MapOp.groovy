@@ -48,7 +48,7 @@ class MapOp {
     DataflowWriteChannel apply() {
 
         if( target == null )
-            target = ChannelFactory.createBy(source)
+            target = CH.createBy(source)
 
         final stopOnFirst = source instanceof DataflowExpression
         DataflowHelper.newOperator(source, target) { it ->

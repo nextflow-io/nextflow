@@ -20,6 +20,8 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.text.DateFormat
 import java.text.SimpleDateFormat
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.locks.Lock
 import java.util.regex.Pattern
 
@@ -81,6 +83,10 @@ class Bolts {
     static String format(Date self, String format=null, String tz=null) {
         TimeZone zone = tz ? TimeZone.getTimeZone(tz) : null
         getLocalDateFormat(format ?: DATETIME_FORMAT, zone).get().format(self)
+    }
+
+    static String format(OffsetDateTime self, String format) {
+        return self.format(DateTimeFormatter.ofPattern(format))
     }
 
     /**

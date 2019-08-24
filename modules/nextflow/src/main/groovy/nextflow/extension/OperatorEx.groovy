@@ -20,6 +20,7 @@ import java.lang.reflect.Modifier
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
+import groovy.runtime.metaclass.DelegatingPlugin
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -38,6 +39,9 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.NF
 import nextflow.Session
+import nextflow.script.ChannelOut
+import nextflow.script.TokenBranchDef
+import nextflow.script.TokenForkDef
 import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.splitter.TextSplitter
@@ -61,7 +65,7 @@ import static nextflow.util.CheckHelper.checkParams
  */
 
 @Slf4j
-class OperatorEx {
+class OperatorEx implements DelegatingPlugin {
 
     static final public OperatorEx instance = new OperatorEx()
 
@@ -69,11 +73,9 @@ class OperatorEx {
 
     final public static Set<String> OPERATOR_NAMES
 
-    final static MetaClass meta = OperatorEx.getMetaClass()
-
     static {
         OPERATOR_NAMES = getDeclaredExtensionMethods0()
-        log.trace "Dataflow extension methods: ${OPERATOR_NAMES.sort().join(',')}"
+        log.debug "Dataflow extension methods: ${OPERATOR_NAMES.sort().join(',')}"
     }
 
     @CompileStatic
@@ -96,8 +98,8 @@ class OperatorEx {
     }
 
     @CompileStatic
-    boolean isExtension(Object instance, String name) {
-        if( instance instanceof DataflowReadChannel || instance instanceof DataflowBroadcast ) {
+    boolean isExtensionMethod(Object obj, String name) {
+        if( obj instanceof DataflowReadChannel || obj instanceof DataflowBroadcast || obj instanceof ChannelOut ) {
             return OPERATOR_NAMES.contains(name)
         }
         return false
@@ -105,7 +107,7 @@ class OperatorEx {
 
 
     @CompileStatic
-    Object invokeOperator(Object channel, String method, Object[] args) {
+    Object invokeExtensionMethod(Object channel, String method, Object[] args) {
         new OpCall(this,channel,method,args).call()
     }
 
@@ -141,7 +143,7 @@ class OperatorEx {
      * @return
      */
     DataflowWriteChannel chain(final DataflowReadChannel<?> source, final Closure closure) {
-        final target = ChannelFactory.createBy(source)
+        final target = CH.createBy(source)
         newOperator(source, target, new ChainWithClosure(closure))
         return target
     }
@@ -154,7 +156,7 @@ class OperatorEx {
      * @return
      */
     DataflowWriteChannel chain(final DataflowReadChannel<?> source, final Map<String, Object> params, final Closure closure) {
-        final target = ChannelFactory.createBy(source)
+        final target = CH.createBy(source)
         chainImpl(source, target, params, closure)
         return target;
     }
@@ -182,7 +184,7 @@ class OperatorEx {
     DataflowWriteChannel flatMap(final DataflowReadChannel<?> source, final Closure closure=null) {
         assert source != null
 
-        final target = ChannelFactory.create()
+        final target = CH.create()
         final listener = stopErrorListener(source,target)
 
         newOperator(source, target, listener) {  item ->
@@ -298,7 +300,7 @@ class OperatorEx {
     DataflowWriteChannel filter(final DataflowReadChannel source, final Object criteria) {
         def discriminator = new BooleanReturningMethodInvoker("isCase");
 
-        def target = ChannelFactory.createBy(source)
+        def target = CH.createBy(source)
         if( source instanceof DataflowExpression ) {
             source.whenBound {
                 def result = it instanceof ControlMessage ? false : discriminator.invoke(criteria, (Object)it)
@@ -316,7 +318,7 @@ class OperatorEx {
     }
 
     DataflowWriteChannel filter(DataflowReadChannel source, final Closure<Boolean> closure) {
-        def target = ChannelFactory.createBy(source)
+        def target = CH.createBy(source)
         if( source instanceof DataflowExpression ) {
             source.whenBound {
                 def result = it instanceof ControlMessage ? false : DefaultTypeTransformation.castToBoolean(closure.call(it))
@@ -334,7 +336,7 @@ class OperatorEx {
     }
 
     DataflowWriteChannel until(DataflowReadChannel source, final Closure<Boolean> closure) {
-        def target = ChannelFactory.createBy(source)
+        def target = CH.createBy(source)
         newOperator(source, target, {
             final result = DefaultTypeTransformation.castToBoolean(closure.call(it))
             final proc = ((DataflowProcessor) getDelegate())
@@ -376,7 +378,7 @@ class OperatorEx {
     DataflowWriteChannel unique(final DataflowReadChannel source, Closure comparator ) {
 
         def history = [:]
-        def target = ChannelFactory.createBy(source)
+        def target = CH.createBy(source)
 
         // when the operator stop clear the history map
         def events = new DataflowEventAdapter() {
@@ -425,7 +427,7 @@ class OperatorEx {
     DataflowWriteChannel distinct( final DataflowReadChannel source, Closure comparator ) {
 
         def previous = null
-        final target = ChannelFactory.createBy(source)
+        final target = CH.createBy(source)
         Closure filter = { it ->
 
             def key = comparator.call(it)
@@ -511,7 +513,7 @@ class OperatorEx {
             throw new IllegalArgumentException("Operator `take` cannot be applied to a value channel")
 
         def count = 0
-        final target = ChannelFactory.create()
+        final target = CH.create()
 
         if( n==0 ) {
             target.bind(Channel.STOP)
@@ -792,6 +794,7 @@ class OperatorEx {
         return target
     }
 
+
     private static class Aggregate {
 
         def accum
@@ -856,7 +859,7 @@ class OperatorEx {
 
         final target = new DataflowVariable()
         final int len = mapper.getMaximumNumberOfParameters()
-        reduceImpl(source, target, [:]) { map, item ->
+        reduceImpl(source, target, [:]) { Map map, item ->
             def key = len == 2 ? mapper.call(item,index) : mapper.call(item)
             def list = map.get(key)
             list = list ? list << item : [item]
@@ -905,7 +908,7 @@ class OperatorEx {
         assert !(source instanceof DataflowExpression)
 
         def allChannels = new ConcurrentHashMap()
-        def target = ChannelFactory.create()
+        def target = CH.create()
 
         subscribeImpl(source,
                 [
@@ -913,7 +916,7 @@ class OperatorEx {
                         def key = mapper ? mapper.call(value) : value
                         def channel = allChannels.get(key)
                         if( channel == null ) {
-                            channel = ChannelFactory.create()
+                            channel = CH.create()
                             allChannels[key] = channel
                             // emit the key - channel pair
                             target << [ key, channel ]
@@ -933,10 +936,9 @@ class OperatorEx {
         return target
     }
 
-
     DataflowWriteChannel spread( final DataflowReadChannel source, Object other ) {
 
-        final target = ChannelFactory.create()
+        final target = CH.create()
 
         def inputs
         switch(other) {
@@ -1000,7 +1002,7 @@ class OperatorEx {
         checkParams('combine', params, [flat:Boolean, by: [List,Integer]])
 
         final op = new CombineOp(left,right)
-        final sources = op.inputs
+        OpCall.current.get().inputs.addAll(op.inputs)
         if( params?.by != null ) op.pivot = params.by
         final target = op.apply()
         return target
@@ -1009,7 +1011,7 @@ class OperatorEx {
     DataflowWriteChannel flatten( final DataflowReadChannel source )  {
 
         final listeners = []
-        final target = ChannelFactory.create()
+        final target = CH.create()
 
         if( source instanceof DataflowExpression ) {
             listeners << new DataflowEventAdapter() {
@@ -1033,11 +1035,11 @@ class OperatorEx {
             def proc = ((DataflowProcessor) getDelegate())
             switch( item ) {
                 case Collection:
-                    item.flatten().each { value -> proc.bindOutput(value) }
+                    ((Collection)item).flatten().each { value -> proc.bindOutput(value) }
                     break
 
                 case (Object[]):
-                    item.flatten().each { value -> proc.bindOutput(value) }
+                    ((Collection)item).flatten().each { value -> proc.bindOutput(value) }
                     break
 
                 case Channel.VOID:
@@ -1113,7 +1115,7 @@ class OperatorEx {
         }
 
         // the result queue
-        final target = ChannelFactory.create()
+        final target = CH.create()
 
         // the list holding temporary collected elements
         List<List<?>> allBuffers = []
@@ -1173,7 +1175,7 @@ class OperatorEx {
     DataflowWriteChannel mix( DataflowReadChannel source, DataflowReadChannel[] others ) {
         assert others.size()>0
 
-        def target = ChannelFactory.create()
+        def target = CH.create()
         def count = new AtomicInteger( others.size()+1 )
         def handlers = [
                 onNext: { target << it },
@@ -1416,7 +1418,7 @@ class OperatorEx {
     DataflowWriteChannel ifEmpty( DataflowReadChannel source, value ) {
 
         boolean empty = true
-        final result = ChannelFactory.createBy(source)
+        final result = CH.createBy(source)
         final singleton = result instanceof DataflowExpression
         final next = { result.bind(it); empty=false }
         final complete = {
@@ -1454,7 +1456,7 @@ class OperatorEx {
     }
 
 
-    static private final PARAMS_VIEW = [newLine: Boolean]
+    static private final Map PARAMS_VIEW = [newLine: Boolean]
 
     /**
      * Print out the channel content retuning a new channel emitting the identical content as the original one
@@ -1468,7 +1470,7 @@ class OperatorEx {
         checkParams('view', opts, PARAMS_VIEW)
         final newLine = opts.newLine != false
 
-        final target = ChannelFactory.createBy(source);
+        final target = CH.createBy(source);
         final apply = new HashMap<String,Closure>(2)
 
         apply.onNext  = {
@@ -1477,7 +1479,7 @@ class OperatorEx {
             target.bind(it)
         }
 
-        apply. onComplete = { ChannelFactory.close0(target) }
+        apply. onComplete = { CH.close0(target) }
 
         subscribeImpl(source,apply)
         return target
@@ -1494,7 +1496,7 @@ class OperatorEx {
     // NO DAG
     @DeprecatedDsl2
     DataflowWriteChannel merge(final DataflowReadChannel source, final DataflowReadChannel other, final Closure closure=null) {
-        final result = ChannelFactory.createBy(source)
+        final result = CH.createBy(source)
         final inputs = [source, other]
         final action = closure ? new ChainWithClosure<>(closure) : new DefaultMergeClosure(inputs.size())
         final listener = stopErrorListener(source,result)
@@ -1506,7 +1508,7 @@ class OperatorEx {
     // NO DAG
     @DeprecatedDsl2
     DataflowWriteChannel merge(final DataflowReadChannel source, final DataflowReadChannel... others) {
-        final result = ChannelFactory.createBy(source)
+        final result = CH.createBy(source)
         final List<DataflowReadChannel> inputs = new ArrayList<DataflowReadChannel>(1 + others.size())
         inputs.add(source)
         inputs.addAll(others)
@@ -1519,7 +1521,7 @@ class OperatorEx {
     // NO DAG
     @DeprecatedDsl2
     DataflowWriteChannel merge(final DataflowReadChannel source, final List<DataflowReadChannel> others, final Closure closure=null) {
-        final result = ChannelFactory.createBy(source)
+        final result = CH.createBy(source)
         final List<DataflowReadChannel> inputs = new ArrayList<DataflowReadChannel>(1 + others.size())
         final action = closure ? new ChainWithClosure<>(closure) : new DefaultMergeClosure(1 + others.size())
         inputs.add(source)
@@ -1539,25 +1541,25 @@ class OperatorEx {
     }
 
     DataflowWriteChannel toInteger(final DataflowReadChannel source) {
-        final target = ChannelFactory.createBy(source)
+        final target = CH.createBy(source)
         newOperator(source, target, new ChainWithClosure({ it -> it as Integer }))
         return target;
     }
 
     DataflowWriteChannel toLong(final DataflowReadChannel source) {
-        final target = ChannelFactory.createBy(source)
+        final target = CH.createBy(source)
         newOperator(source, target, new ChainWithClosure({ it -> it as Long }))
         return target;
     }
 
     DataflowWriteChannel toFloat(final DataflowReadChannel source) {
-        final target = ChannelFactory.createBy(source)
+        final target = CH.createBy(source)
         newOperator(source, target, new ChainWithClosure({ it -> it as Float }))
         return target;
     }
 
     DataflowWriteChannel toDouble(final DataflowReadChannel source) {
-        final target = ChannelFactory.createBy(source)
+        final target = CH.createBy(source)
         newOperator(source, target, new ChainWithClosure({ it -> it as Double }))
         return target;
     }
@@ -1617,6 +1619,61 @@ class OperatorEx {
     @Deprecated
     DataflowWriteChannel countText(DataflowReadChannel source) {
         countLines(source)
+    }
+
+    /**
+     * Implement a `set` operator e.g.
+     * <pre>
+     *     SomeProcess.out | set { channelName }
+     * </pre>
+     *
+     * @param source The channel instance to be bound in the context
+     * @param holder A closure defining a variable identifier
+     */
+
+    void set(DataflowReadChannel source, Closure holder) {
+        set0(source, holder)
+    }
+
+    void set(DataflowBroadcast source, Closure holder) {
+        set0(source, holder)
+    }
+
+    void set(ChannelOut source, Closure holder) {
+        set0(source, holder)
+    }
+
+    private void set0(source, Closure holder) {
+        final name = CaptureProperties.capture(holder)
+        if( !name )
+            throw new IllegalArgumentException("Missing name to which set the channel variable")
+
+        if( name.size()>1 )
+            throw new IllegalArgumentException("Operation `set` does not allow more than one target name")
+
+        NF.binding.setVariable(name[0], source)
+        // do not add this nod in the DAG because it's not a real operator
+        // since it's not transforming the channel
+        OpCall.current.get().ignoreDagNode = true
+    }
+
+    /**
+     * Implements `branch` operator
+     *
+     * @param source
+     * @param action
+     * @return
+     */
+    ChannelOut branch(DataflowReadChannel source, Closure<TokenBranchDef> action) {
+        new BranchOp(source, action)
+                .apply()
+                .getOutput()
+    }
+
+    ChannelOut fork(DataflowReadChannel source, Closure<TokenForkDef> action) {
+        new ForkOp(source, action)
+                .apply()
+                .getOutput()
     }
 
 }

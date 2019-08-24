@@ -53,7 +53,7 @@ class CrossOp {
 
     DataflowWriteChannel apply() {
 
-        final result = ChannelFactory.create()
+        final result = CH.create()
         Map<Object,Map<Integer,List>> state = [:]
 
         final count = 2

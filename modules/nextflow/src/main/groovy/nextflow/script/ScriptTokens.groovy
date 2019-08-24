@@ -16,6 +16,7 @@
 
 package nextflow.script
 
+import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 import groovy.transform.TupleConstructor
@@ -43,13 +44,31 @@ class TokenVar {
  *
  */
 class TokenFileCall {
+    final target
+    TokenFileCall(target)  { this.target = target }
+}
 
-    final Object target
+/**
+ *  A token used by the DSL to identify a 'path' declaration in a 'set' parameter, for example:
+ *      <pre>
+ *      input:
+ *      set( path('name'), ... )
+ *      </pre>
+ *
+ */
+class TokenPathCall {
+    final target
+    final Map opts
 
-    TokenFileCall( value ) {
-        this.target = value
+    TokenPathCall(target) {
+        this.target = target
+        this.opts = Collections.emptyMap()
     }
 
+    TokenPathCall(Map opts, target) {
+        this.target = target
+        this.opts = opts
+    }
 }
 
 /**
@@ -60,7 +79,7 @@ class TokenFileCall {
  * </pre>
  *
  * @see nextflow.ast.NextflowDSLImpl
- * @see SetInParam#bind(java.lang.Object[])
+ * @see nextflow.script.params.TupleInParam#bind(java.lang.Object[])
  */
 class TokenStdinCall { }
 
@@ -72,7 +91,7 @@ class TokenStdinCall { }
  * </pre>
  *
  * @see nextflow.ast.NextflowDSLImpl
- * @see SetOutParam#bind(java.lang.Object[])
+ * @see nextflow.script.params.TupleOutParam#bind(java.lang.Object[])
  */
 class TokenStdoutCall { }
 
@@ -111,108 +130,6 @@ class TokenValCall {
 }
 
 
-
-/**
- * Holds process script meta-data
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
- */
-class TaskBody implements Cloneable {
-
-    /** The actual task code */
-    Closure closure
-
-    /** The task code as source, eventually used to report diagnostic message in case of error */
-    String source
-
-    /** The script type, either a system text script or groovy native code*/
-    ScriptType type
-
-    /** When true the script is interpreted a shell script in which $xxx variable are not interpreted by groovy */
-    boolean isShell
-
-    /**
-     * The set of token variable and properties referenced in the task script
-     */
-    Set<TokenValRef> valRefs
-
-    /**
-     * Hold the use provided task body
-     *
-     * @param closure The task body closure
-     * @param source The task source string
-     * @param section The section in which it has been, declared. One of
-     *      {@code exec}, {@code script} or {@code shell} literals
-     */
-    TaskBody( Closure closure, String source, String section = 'script' ) {
-        this.closure = closure
-        this.source = source
-        this.valRefs = Collections.emptySet()
-        setType(section)
-    }
-
-    TaskBody( Closure closure, String source, String section, TokenValRef... values ) {
-        this(closure, source, section)
-        this.valRefs = values != null ? values as Set : Collections.<TokenValRef>emptySet()
-    }
-
-    TaskBody clone() {
-        def result = (TaskBody) super.clone()
-        result.closure = (Closure) closure.clone()
-        result.valRefs = new HashSet(valRefs)
-        return result
-    }
-    /**
-     * Given a code section literal sets the task body {@link #type} and {@link #isShell} flag
-     *
-     * @param section
-     * @return
-     */
-    protected TaskBody setType( String section )  {
-
-        switch( section ) {
-            case 'exec':
-                type = ScriptType.GROOVY
-                isShell = false
-                break
-
-            case 'script':
-                type = ScriptType.SCRIPTLET
-                isShell = false
-                break
-
-            case 'shell':
-                this.type = ScriptType.SCRIPTLET
-                isShell = true
-                break
-
-            case 'workflow':
-                type = ScriptType.GROOVY
-                isShell = false
-                break
-
-            default:
-                throw new IllegalArgumentException("Not a valid process body definition: $section")
-        }
-
-        return this
-    }
-
-    String toString() {
-        "TaskBody[closure: $closure; types: $type; shell: $isShell; variables: $valRefs; source:\n$source \n]"
-    }
-
-    /**
-     * @return
-     *      The set of variable and properties referenced in the user script.
-     *      NOTE: it includes properties in the form {@code object.propertyName}
-     */
-    Set<String> getValNames() {
-        valRefs *. name
-    }
-}
-
-
 @ToString
 @EqualsAndHashCode
 class TokenValRef {
@@ -225,4 +142,32 @@ class TokenValRef {
         this.lineNum = lineNum
         this.colNum = colNum
     }
+}
+
+
+@ToString
+@EqualsAndHashCode
+@TupleConstructor
+@CompileStatic
+class TokenBranchDef {
+    Closure<TokenBranchChoice> closure
+    List<String> branches
+}
+
+@ToString
+@EqualsAndHashCode
+@TupleConstructor
+@CompileStatic
+class TokenBranchChoice {
+    Object value
+    String choice
+}
+
+@ToString
+@EqualsAndHashCode
+@TupleConstructor
+@CompileStatic
+class TokenForkDef {
+    Closure<Map> closure
+    List<String> names
 }

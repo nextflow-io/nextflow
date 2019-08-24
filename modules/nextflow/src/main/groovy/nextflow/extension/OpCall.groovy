@@ -12,6 +12,8 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.NF
 import nextflow.dag.NodeMarker
+import nextflow.exception.ScriptRuntimeException
+import nextflow.script.ChannelOut
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Represents an nextflow operation invocation
@@ -24,6 +26,8 @@ class OpCall implements Callable {
 
     final static private List<String> SPECIAL_NAMES = ["choice","merge","separate"]
 
+    final static private String SET_OP_hack = 'set'
+
     static ThreadLocal<OpCall> current = new ThreadLocal<>()
 
     private OperatorEx owner
@@ -33,29 +37,58 @@ class OpCall implements Callable {
     private Object[] args
     private Set inputs = new HashSet(5)
     private Set outputs = new HashSet<>(5)
+    boolean ignoreDagNode
 
     static OpCall create(String methodName, Object args) {
         new OpCall(methodName, InvokerHelper.asArray(args))
     }
 
-    static OpCall create(String method) {
-        new OpCall(method, InvokerHelper.asArray(null))
+    static OpCall create(String methodName) {
+        new OpCall(methodName, InvokerHelper.asArray(null))
     }
 
     OpCall(OperatorEx owner, Object source, String method, Object[] args ) {
         assert owner
         assert method
         this.owner = owner
-        this.source = source
         this.methodName = method
-        this.args = args
+        this.args = ChannelOut.spread(args).toArray()
+        this.setSource(source)
     }
 
     OpCall(String method, Object[] args ) {
         assert method
         this.owner = OperatorEx.instance
         this.methodName = method
-        this.args = args
+        this.args = ChannelOut.spread(args).toArray()
+    }
+
+    OpCall setSource(ChannelOut left) {
+
+        if( methodName == SET_OP_hack ) {
+            source = left
+            return this
+        }
+
+        if( left.size()==1 ) {
+            this.source = left[0] as DataflowWriteChannel
+            return this
+        }
+
+        if( args.size() )
+            throw new ScriptRuntimeException("Multi-channel output cannot be applied to operator ${methodName} for which argument is already provided")
+
+        source = left[0] as DataflowWriteChannel
+        args = left[1..-1] as Object[]
+        return this
+    }
+
+    OpCall setSource( obj ) {
+        if( obj instanceof ChannelOut )
+            return setSource(obj)
+        else
+            source = obj
+        return this
     }
 
     OpCall setSource(DataflowWriteChannel channel) {
@@ -91,10 +124,10 @@ class OpCall implements Callable {
 
     private <T> T read0(source){
         if( source instanceof DataflowBroadcast )
-            return (T)ChannelFactory.getReadChannel(source)
+            return (T)CH.getReadChannel(source)
 
         if( source instanceof DataflowQueue )
-            return (T)ChannelFactory.getReadChannel(source)
+            return (T)CH.getReadChannel(source)
 
         else
             return (T)source
@@ -113,9 +146,16 @@ class OpCall implements Callable {
 
 
     protected Object invoke() {
+        if( methodName==SET_OP_hack ) {
+            // when this is ugly, the problem is that `set` is not a real operator
+            // but it's exposed as such. let's live whit this for now
+            return invoke1('set', [source, args[0]] as Object[])
+        }
+
         final DataflowReadChannel source = read0(source)
         final result = invoke0(source, read1(args))
-        addGraphNode(result)
+        if( !ignoreDagNode )
+            addGraphNode(result)
         return result
     }
 
@@ -150,6 +190,9 @@ class OpCall implements Callable {
         }
 
         if( declaresReturnType(DataflowWriteChannel, method) ) {
+            fetchChannels(value, result)
+        }
+        else if( declaresReturnType(ChannelOut, method) ) {
             fetchChannels(value, result)
         }
 
@@ -225,13 +268,6 @@ class OpCall implements Callable {
         return false
     }
 
-    protected void defineArgsAs(List inputs, MetaMethod method) {
-        def types = method.getParameterTypes()
-        for( int i=1; i<types.length; i++ ) {
-            def t = types[i]
-            t.getClass().isAssignableFrom(DataflowReadChannel)
-        }
-    }
 
     protected Object invoke0(DataflowReadChannel channel, Object[] args) {
 

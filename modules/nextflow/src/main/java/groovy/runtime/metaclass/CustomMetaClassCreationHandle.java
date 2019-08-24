@@ -48,7 +48,8 @@ import org.slf4j.LoggerFactory;
  */
 public class CustomMetaClassCreationHandle extends MetaClassRegistry.MetaClassCreationHandle {
 
-    static final Logger log = LoggerFactory.getLogger(CustomMetaClassCreationHandle.class);
+
+    static final private Logger log = LoggerFactory.getLogger(CustomMetaClassCreationHandle.class);
 
     protected MetaClass createNormalMetaClass(Class theClass, MetaClassRegistry registry) {
         MetaClass metaClass = super.createNormalMetaClass( theClass, registry );
@@ -65,11 +66,17 @@ public class CustomMetaClassCreationHandle extends MetaClassRegistry.MetaClassCr
         return metaClass;
     }
 
-    protected boolean isExtensionClass(Class theClass ) {
+    protected boolean isExtensionClass(Class theClass) {
         return  File.class == theClass ||
                 Path.class.isAssignableFrom(theClass) ||
                 DataflowBroadcast.class.isAssignableFrom(theClass) ||
-                DataflowReadChannel.class.isAssignableFrom(theClass);
+                DataflowReadChannel.class.isAssignableFrom(theClass) ||
+                // NOTE: groovy class cannot be referenced explicitly
+                // otherwise it creates a circular dependencies causing
+                // the compile to crash. Also the class name needs to be
+                // resolved statically because this result is cached.
+                "nextflow.script.ChannelOut".equals(theClass.getName())
+                ;
     }
 
 }

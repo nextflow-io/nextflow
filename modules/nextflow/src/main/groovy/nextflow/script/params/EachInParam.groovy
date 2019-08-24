@@ -22,9 +22,11 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.expression.DataflowExpression
-import nextflow.extension.ChannelFactory
+import nextflow.extension.CH
 import nextflow.extension.ToListOp
 import nextflow.script.TokenFileCall
+import nextflow.script.TokenPathCall
+
 /**
  * Represents a process input *iterator* parameter
  *
@@ -36,17 +38,40 @@ class EachInParam extends BaseInParam {
 
     @Override String getTypeName() { 'each' }
 
-    private List<InParam> inner = []
+    private List<BaseInParam> inner = []
 
     String getName() { '__$'+this.toString() }
 
+    Object clone() {
+        final copy = (EachInParam)super.clone()
+        copy.@inner = new ArrayList<>(inner.size())
+        for( BaseInParam p : inner ) {
+            copy.@inner.add((BaseInParam)p.clone())
+        }
+        return copy
+    }
+
     EachInParam bind( def obj ) {
-        def nested = ( obj instanceof TokenFileCall
-                ? new FileInParam(binding, inner, index).bind(obj.target)
-                : new ValueInParam(binding, inner, index).bind(obj) )
+        final nested = createNestedParam(obj)
         nested.owner = this
         this.bindObject = nested.bindObject
         return this
+    }
+
+    protected BaseInParam createNestedParam(obj) {
+        if( obj instanceof TokenFileCall ) {
+            return new FileInParam(binding, inner, index)
+                    .bind(obj.target)
+        }
+        
+        if( obj instanceof TokenPathCall ) {
+            return new FileInParam(binding, inner, index)
+                    .setPathQualifier(true)
+                    .bind(obj.target)
+        }
+
+        return new ValueInParam(binding, inner, index)
+                .bind(obj)
     }
 
     InParam getInner() { inner[0] }
@@ -63,8 +88,8 @@ class EachInParam extends BaseInParam {
         if( value instanceof DataflowExpression ) {
             result = value
         }
-        else if( ChannelFactory.isChannel(value) ) {
-            def read = ChannelFactory.getReadChannel(value)
+        else if( CH.isChannel(value) ) {
+            def read = CH.getReadChannel(value)
             result = new ToListOp(read).apply()
         }
         else {

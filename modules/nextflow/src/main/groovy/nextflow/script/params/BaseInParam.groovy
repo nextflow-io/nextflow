@@ -21,13 +21,11 @@ import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.NF
-import nextflow.Nextflow
 import nextflow.exception.ProcessException
 import nextflow.exception.ScriptRuntimeException
-import nextflow.extension.ChannelFactory
+import nextflow.extension.CH
 import nextflow.script.ProcessConfig
 import nextflow.script.TokenVar
-
 /**
  * Model a process generic input parameter
  *
@@ -79,22 +77,26 @@ abstract class BaseInParam extends BaseParam implements InParam {
         }
 
         if ( value instanceof DataflowReadChannel || value instanceof DataflowBroadcast )  {
-            return ChannelFactory.getReadChannel(value)
+            return CH.getReadChannel(value)
+        }
+
+        if( NF.isDsl2() ) {
+            final result = CH.value()
+            result.bind(value)
+            return result
         }
 
         // wrap any collections with a DataflowQueue
         if( value instanceof Collection ) {
-            return Nextflow.channel(value as List)
+            return CH.emitAndClose(CH.queue(), value)
         }
 
         // wrap any array with a DataflowQueue
         if ( value && value.class.isArray() ) {
-            return Nextflow.channel(value as List)
+            return CH.emitAndClose(CH.queue(), value as Collection)
         }
 
-        // wrap a single value with a DataflowVariable
-        return Nextflow.variable(value)
-
+        value!=null ? CH.value(value) : CH.value() 
     }
 
 
@@ -180,9 +182,9 @@ abstract class BaseInParam extends BaseParam implements InParam {
     }
 
     Object getRawChannel() {
-        if( ChannelFactory.isChannel(fromObject) )
+        if( CH.isChannel(fromObject) )
             return fromObject
-        if( ChannelFactory.isChannel(inChannel) )
+        if( CH.isChannel(inChannel) )
             return inChannel
         throw new IllegalStateException("Missing input channel")
     }

@@ -1,11 +1,11 @@
 process {
     withLabel: /.*/ {
-        memory = 5.GB
+        memory = 50.MB
         queue = 'all'
     }
 
     withName: gamma {
-        memory = 6.GB 
+        memory = 60.MB 
         queue = 'foo'
     }
 }

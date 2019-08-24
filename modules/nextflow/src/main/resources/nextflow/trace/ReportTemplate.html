@@ -137,7 +137,7 @@
       <dl>
         <dt>Run times</dt>
         <dd>
-          <span id="workflow_start">${workflow.start}</span> - <span id="workflow_complete">${workflow.complete}</span>
+          <span id="workflow_start">${workflow.start.format('dd-MMM-yyyy HH:mm:ss')}</span> - <span id="workflow_complete">${workflow.complete.format('dd-MMM-yyyy HH:mm:ss')}</span>
           (<span id="completed_fromnow"></span>duration: <strong>${workflow.duration}</strong>)
         </dd>
 
@@ -302,26 +302,29 @@
         <div id="writeplot"></div>
       </div>
     </div>
+  </div>
 
+  <div class="container">
     <div id="table-container">
-    <h2 id="tasks" style="padding-top: 80px;">Tasks</h2>
-    <p>This table shows information about each task in the workflow. Use the search box on the right
-      to filter rows for specific values. Clicking headers will sort the table by that value and
-      scrolling side to side will reveal more columns.</p>
-    <form class="form-inline" id="nf-form-humanreadable">
-      <label class="mr-sm-2" for="nf-table-humanreadable">Values shown as:</label>
-      <select class="custom-select mb-2 mr-sm-2 mb-sm-0" id="nf-table-humanreadable">
-        <option value="true">Human readable</option>
-        <option value="false">Raw values</option>
-      </select>
-    </form>
-  </div>
-  <div class="container-fluid">
-    <table class="table small table-striped" id="tasks_table"></table>
-  </div>
-  </div>
-  <div id="no-table-container" class="container">
-    (tasks table omitted because the dataset is too big)
+      <h2 id="tasks" style="padding-top: 80px;">Tasks</h2>
+      <p>This table shows information about each task in the workflow. Use the search box on the right
+        to filter rows for specific values. Clicking headers will sort the table by that value and
+        scrolling side to side will reveal more columns.</p>
+      <form class="form-inline" id="nf-form-humanreadable">
+        <label class="mr-sm-2" for="nf-table-humanreadable">Values shown as:</label>
+        <select class="custom-select mb-2 mr-sm-2 mb-sm-0" id="nf-table-humanreadable">
+          <option value="true">Human readable</option>
+          <option value="false">Raw values</option>
+        </select>
+      </form>
+    </div>
+    <div class="container-fluid">
+      <table class="table small table-striped" id="tasks_table"></table>
+    </div>
+
+    <div id="no-table-container">
+      (tasks table omitted because the dataset is too big)
+    </div>
   </div>
 
   <footer>

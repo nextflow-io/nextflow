@@ -24,7 +24,7 @@ package nextflow.script.params
  */
 trait OptionalParam {
 
-    private boolean optional
+    boolean optional
 
     boolean getOptional() { optional }
 
