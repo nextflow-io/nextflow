@@ -27,6 +27,7 @@ import javax.mail.internet.MimeMessage
 import javax.mail.internet.MimeMultipart
 
 import com.amazonaws.auth.BasicAWSCredentials
+import com.amazonaws.auth.BasicSessionCredentials
 import com.amazonaws.regions.Region
 import com.amazonaws.regions.RegionUtils
 import com.amazonaws.services.batch.AWSBatchClient
@@ -96,6 +97,11 @@ class AmazonCloudDriver implements CloudDriver {
     private String secretKey
 
     /**
+     * The AWS session key credentials (optional)
+     */
+    private String sessionToken
+
+    /**
      * The AWS region eg. {@code eu-west-1}. If it's not specified the current region is retrieved from
      * the EC2 instance metadata
      */
@@ -124,10 +130,16 @@ class AmazonCloudDriver implements CloudDriver {
         if( config.accessKey && config.secretKey ) {
             this.accessKey = config.accessKey
             this.secretKey = config.secretKey
+            if (config.sessionToken){
+                this.sessionToken = config.sessionToken
+            }
         }
         else if( (credentials=Global.getAwsCredentials()) ) {
             this.accessKey = credentials[0]
             this.secretKey = credentials[1]
+            if (credentials.size() == 3){
+                this.sessionToken = credentials[2]
+            }
         }
 
         if( !accessKey && !fetchIamRole() )
@@ -157,6 +169,11 @@ class AmazonCloudDriver implements CloudDriver {
      * @return The current set AWS secret key
      */
     protected String getSecretKey() { secretKey }
+
+    /**
+     * @return The current set AWS session key
+     */
+    protected String getsessionToken() { sessionToken }
 
     /**
      * Retrieve the current IAM role eventually define for a EC2 instance.
@@ -223,9 +240,11 @@ class AmazonCloudDriver implements CloudDriver {
         if( ec2Client )
             return ec2Client
 
-        def result = (accessKey && secretKey
-                ? new AmazonEC2Client(new BasicAWSCredentials(accessKey, secretKey))
-                : new AmazonEC2Client())
+        def result = (accessKey && secretKey && sessionToken
+                ? new AmazonEC2Client(new BasicSessionCredentials(accessKey, secretKey, sessionToken))
+                : (accessKey && secretKey 
+                    ? new AmazonEC2Client(new BasicAWSCredentials(accessKey, secretKey))
+                    : new AmazonEC2Client()))
 
         if( region )
             result.setRegion(getRegionObj(region))
@@ -242,9 +261,11 @@ class AmazonCloudDriver implements CloudDriver {
      */
     @Memoized
     AWSBatchClient getBatchClient() {
-        def result = (accessKey && secretKey
-                ? new AWSBatchClient(new BasicAWSCredentials(accessKey, secretKey))
-                : new AWSBatchClient())
+        def result = (accessKey && secretKey && sessionToken
+                ? new AWSBatchClient(new BasicSessionCredentials(accessKey, secretKey, sessionToken))
+                : (accessKey && secretKey 
+                    ? new AWSBatchClient(new BasicAWSCredentials(accessKey, secretKey))
+                    : new AWSBatchClient()))
 
         if( region )
             result.setRegion(getRegionObj(region))
@@ -539,6 +560,9 @@ class AmazonCloudDriver implements CloudDriver {
         if( !cfg.instanceRole && accessKey && secretKey ) {
             profile += "export AWS_ACCESS_KEY_ID='$accessKey'\n"
             profile += "export AWS_SECRET_ACCESS_KEY='$secretKey'\n"
+            if (sessionToken){
+                profile += "export AWS_SESSION_TOKEN='$sessionToken'\n"
+            }
         }
 
         if( region )
