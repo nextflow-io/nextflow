@@ -325,6 +325,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         req.zone = pipelineConfiguration.zone
         req.region = pipelineConfiguration.region
         req.diskName = diskName
+        req.diskSizeGb = task.config.disk?.giga
         req.preemptible = pipelineConfiguration.preemptible
         req.taskName = "nf-$task.hash"
         req.containerImage = task.container
