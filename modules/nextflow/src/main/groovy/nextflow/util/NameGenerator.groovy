@@ -788,8 +788,8 @@ class NameGenerator {
 
     static String next(Collection<String> skip) {
         while( true ) {
-            def result = next()
-            if( !skip.contains(skip) )
+            final result = next()
+            if( !skip.contains(result) )
                 return result
         }
     }
