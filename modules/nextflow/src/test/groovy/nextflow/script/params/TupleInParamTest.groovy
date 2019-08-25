@@ -36,7 +36,8 @@ class TupleInParamTest extends Specification {
               tuple val(p), val(q) from x
               tuple val(v), path('file_name.fa') from 'str'
               tuple val(p), path('file_name.txt'), '-' from { 'ciao' }
-
+              tuple val(p), path(z, stageAs: 'file*')
+              
               /foo/
             }
             '''
@@ -47,17 +48,16 @@ class TupleInParamTest extends Specification {
         TupleInParam in2 = process.config.getInputs().get(1)
         TupleInParam in3 = process.config.getInputs().get(2)
         TupleInParam in4 = process.config.getInputs().get(3)
+        TupleInParam in5 = process.config.getInputs().get(4)
 
         then:
-        process.config.getInputs().size() == 4
-
         in1.inner.size() == 1
         in1.inner.get(0) instanceof ValueInParam
         in1.inner.get(0).index == 0
         in1.inner.get(0).mapIndex == 0
         in1.inner.get(0).name == 'p'
         in1.inChannel.val == 'Hola mundo'
-
+        and:
         in2.inner.size() == 2
         in2.inner.get(0) instanceof ValueInParam
         in2.inner.get(0).name == 'p'
@@ -68,7 +68,7 @@ class TupleInParamTest extends Specification {
         in2.inner.get(1).index == 1
         in2.inner.get(1).mapIndex == 1
         in2.inChannel.val == 'Hola mundo'
-
+        and:
         in3.inner.size() == 2
         in3.inner.get(0) instanceof ValueInParam
         in3.inner.get(0).name == 'v'
@@ -80,7 +80,7 @@ class TupleInParamTest extends Specification {
         in3.inner.get(1).index == 2
         in3.inner.get(1).mapIndex == 1
         in3.inChannel.val == 'str'
-
+        and:
         in4.inner.size() == 3
         in4.inner.get(0) instanceof ValueInParam
         in4.inner.get(0).name == 'p'
@@ -96,6 +96,16 @@ class TupleInParamTest extends Specification {
         in4.inner.get(2).index == 3
         in4.inner.get(2).mapIndex == 2
         in4.inChannel.val == 'ciao'
+        and:
+        in5.inner.size() == 2
+        in5.inner.get(0) instanceof ValueInParam
+        in5.inner.get(0).index == 4
+        in5.inner.get(0).mapIndex == 0
+        in5.inner.get(1) instanceof FileInParam
+        in5.inner.get(1).name == 'z'
+        in5.inner.get(1).filePattern == 'file*'
+        in5.inner.get(1).index == 4
+        in5.inner.get(1).mapIndex == 1
 
     }
 
@@ -144,6 +154,6 @@ class TupleInParamTest extends Specification {
         (in3.inner[0] as FileInParam).name == '__$fileinparam<3:0>'
         (in3.inner[0] as FileInParam).getFilePattern(ctx) == 'the_file_name.txt'
     }
-    
+
 
 }

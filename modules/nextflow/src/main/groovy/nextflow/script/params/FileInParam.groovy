@@ -41,6 +41,9 @@ class FileInParam extends BaseInParam implements PathQualifier {
      * Define the file name
      */
     FileInParam name( obj ) {
+        if(pathQualifier)
+            throw new MissingMethodException("name", this.class, [String] as Object[])
+
         if( obj instanceof String ) {
             filePattern = obj
             return this
@@ -62,8 +65,8 @@ class FileInParam extends BaseInParam implements PathQualifier {
     }
 
     String getName() {
-
         if( bindObject instanceof Map ) {
+            assert !pathQualifier
             def entry = bindObject.entrySet().first()
             return entry?.key
         }
@@ -73,7 +76,14 @@ class FileInParam extends BaseInParam implements PathQualifier {
         }
 
         return super.getName()
+    }
 
+    @Override
+    BaseInParam bind( obj ) {
+        if( pathQualifier && obj instanceof Map )
+            throw new IllegalArgumentException("Input `path` does not allow such argument: ${obj.entrySet().collect{"${it.key}:${it.value}"}.join(',')}")
+        super.bind(obj)
+        return this
     }
 
     String getFilePattern(Map ctx = null) {
@@ -82,6 +92,7 @@ class FileInParam extends BaseInParam implements PathQualifier {
             return resolve(ctx,filePattern)
 
         if( bindObject instanceof Map ) {
+            assert !pathQualifier
             def entry = bindObject.entrySet().first()
             return resolve(ctx, entry?.value)
         }
@@ -120,6 +131,25 @@ class FileInParam extends BaseInParam implements PathQualifier {
     @Override
     FileInParam setOptions(Map<String,?> opts) {
         (FileInParam)super.setOptions(opts)
+    }
+
+    /**
+     * Defines the `stageAs:` option to define the input file stage name pattern
+     *
+     * @param value
+     *      A string representing the target file name or a file name pattern
+     *      ie. containing the star `*` or question mark wildcards
+     * @return
+     *      The param instance itself
+     */
+    FileInParam setStageAs(String value) {
+        this.filePattern = value
+        return this
+    }
+
+    FileInParam setName(String value) {
+        this.filePattern = value
+        return this
     }
 
 }

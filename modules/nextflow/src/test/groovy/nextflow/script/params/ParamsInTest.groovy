@@ -781,9 +781,10 @@ class ParamsInTest extends Specification {
               input:
               path x
               path f1 from x
-              path f2 name 'abc' from x
-              path f3:'*.fa' from x
+              path '*.fa' from x
               path 'file.txt' from x
+              path f2, name: '*.fa'
+              path f3, stageAs: '*.txt' 
 
               return ''
             }
@@ -791,43 +792,47 @@ class ParamsInTest extends Specification {
 
         when:
         def process = parseAndReturnProcess(text)
-        FileInParam in1 = process.config.getInputs().get(0)
-        FileInParam in2 = process.config.getInputs().get(1)
-        FileInParam in3 = process.config.getInputs().get(2)
-        FileInParam in4 = process.config.getInputs().get(3)
-        FileInParam in5 = process.config.getInputs().get(4)
+        FileInParam in0 = process.config.getInputs().get(0)
+        FileInParam in1 = process.config.getInputs().get(1)
+        FileInParam in2 = process.config.getInputs().get(2)
+        FileInParam in3 = process.config.getInputs().get(3)
+        FileInParam in4 = process.config.getInputs().get(4)
+        FileInParam in5 = process.config.getInputs().get(5)
 
         then:
-        process.config.getInputs().size() == 5
 
-        in1.name == 'x'
+        in0.name == 'x'
+        in0.filePattern == '*'
+        in0.inChannel.val == FILE
+        in0.index == 0
+        in0.isPathQualifier()
+
+        in1.name == 'f1'
         in1.filePattern == '*'
         in1.inChannel.val == FILE
-        in1.index == 0
+        in1.index == 1
         in1.isPathQualifier()
 
-        in2.name == 'f1'
-        in2.filePattern == '*'
+        in2.name == '*.fa'
+        in2.filePattern == '*.fa'
         in2.inChannel.val == FILE
-        in2.index == 1
+        in2.index == 2
         in2.isPathQualifier()
 
-        in3.name == 'f2'
-        in3.filePattern == 'abc'
+        in3.name == 'file.txt'
+        in3.filePattern == 'file.txt'
         in3.inChannel.val == FILE
-        in3.index == 2
+        in3.index == 3
         in3.isPathQualifier()
 
-        in4.name == 'f3'
+        in4.name == 'f2'
         in4.filePattern == '*.fa'
-        in4.inChannel.val == FILE
-        in4.index == 3
+        in4.index == 4
         in4.isPathQualifier()
 
-        in5.name == 'file.txt'
-        in5.filePattern == 'file.txt'
-        in5.inChannel.val == FILE
-        in5.index == 4
+        in5.name == 'f3'
+        in5.filePattern == '*.txt'
+        in5.index == 5
         in5.isPathQualifier()
     }
 
@@ -907,7 +912,7 @@ class ParamsInTest extends Specification {
               input:
               tuple( val(a), path(x) ) from 1
               tuple( val(p), path('txt') ) from 2
-              tuple( val(v), path(xx:'yy') ) from 3
+              tuple( val(v), path(xx, stageAs: 'yy') ) from 3
 
               return ''
             }
