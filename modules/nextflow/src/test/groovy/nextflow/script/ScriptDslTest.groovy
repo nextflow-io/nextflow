@@ -311,4 +311,34 @@ class ScriptDslTest extends Dsl2Spec {
         result.val == Channel.STOP
     }
 
+    def 'should run entry flow' () {
+        when:
+        def result = dsl_eval('TEST_FLOW', '''
+        process foo {
+          output: val result
+          exec: result = "hello"
+        }     
+ 
+        process bar {
+          output: val result
+          exec: result = "world"
+        } 
+        
+        workflow {
+           main: foo()
+           emit: foo.out  
+        }
+    
+        workflow TEST_FLOW {
+           main: bar()
+           emit: bar.out  
+        }
+        ''')
+
+
+        then:
+        result.val == 'world'
+        
+    }
+
 }

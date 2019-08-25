@@ -111,7 +111,7 @@ class ScriptRunner {
      * @return The result as returned by the {@code #run} method
      */
 
-    def execute( List<String> args = null ) {
+    def execute( List<String> args = null, String entryName=null ) {
         assert scriptFile
 
         // init session
@@ -121,7 +121,7 @@ class ScriptRunner {
         session.start()
         try {
             // parse the script
-            parseScript(scriptFile)
+            parseScript(scriptFile, entryName)
             // run the code
             run()
             // await termination
@@ -150,7 +150,7 @@ class ScriptRunner {
         assert methodName
         // init session
         session.init(scriptFile, args)
-        parseScript(scriptFile)
+        parseScript(scriptFile, null)
         def values = args ? args.collect { parseValue(it) } : null
 
         def methodsToTest
@@ -198,8 +198,10 @@ class ScriptRunner {
         return output
     }
 
-    protected void parseScript( ScriptFile scriptFile ) {
-        scriptParser = new ScriptParser(session).parse(scriptFile.main)
+    protected void parseScript( ScriptFile scriptFile, String entryName ) {
+        scriptParser = new ScriptParser(session)
+                            .setEntryName(entryName)
+                            .parse(scriptFile.main)
         session.script = scriptParser.script
     }
 

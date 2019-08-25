@@ -53,6 +53,8 @@ class ScriptBinding extends WorkflowBinding {
 
     private Map configEnv = Collections.emptyMap()
 
+    private String entryName
+
     /**
      * Creates a new nextflow script binding object
      *
@@ -99,6 +101,11 @@ class ScriptBinding extends WorkflowBinding {
         return this
     }
 
+    ScriptBinding setEntryName(String entry) {
+        this.entryName = entry
+        return this
+    }
+
     ScriptBinding setModule(boolean value ) {
         module = value
         return this
@@ -116,6 +123,8 @@ class ScriptBinding extends WorkflowBinding {
     boolean getModule() { module }
 
     Path getScriptPath() { scriptPath }
+
+    String getEntryName() { entryName }
 
     @Memoized
     protected Map<String,String> getSysEnv() {

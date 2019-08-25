@@ -85,7 +85,7 @@ class WorkflowDefTest extends Specification {
         '''
 
         when:
-        def script = (TestScript)new GroovyShell(config).parse(SCRIPT).run()
+        def script = (TestScript)new GroovyShell(new ScriptBinding(), config).parse(SCRIPT).run()
         def meta = ScriptMeta.get(script)
         println meta.getWorkflow('bravo') .source.stripIndent()
         then:
