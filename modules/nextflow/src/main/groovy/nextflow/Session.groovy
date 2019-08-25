@@ -1096,7 +1096,7 @@ class Session implements ISession {
     }
 
     @Memoized
-    public getExecConfigProp( String execName, String name, Object defValue, Map env = null  ) {
+    def getExecConfigProp( String execName, String name, Object defValue, Map env = null  ) {
         def result = ConfigHelper.getConfigProperty(config.executor, execName, name )
         if( result != null )
             return result

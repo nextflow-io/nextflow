@@ -78,8 +78,6 @@ class PublishDir {
 
     private FileSystem sourceFileSystem
 
-    private TaskProcessor processor
-
     private Path sourceDir
 
     private String stageInMode
@@ -146,29 +144,11 @@ class PublishDir {
         return result
     }
 
-    /**
-     * Apply the publishing process to the specified {@link TaskRun} instance
-     *
-     * @param task The task whose output need to be published
-     */
     @CompileStatic
-    void apply( List<Path> files, TaskRun task ) {
+    protected void apply0(List<Path> files) {
+        assert path
 
-        if( !files )
-            return
-
-        if( !path )
-            throw new IllegalStateException("Target path for directive publishDir cannot be null")
-
-        if( nullPathWarn )
-            log.warn "Process `$task.processor.name` publishDir path contains a variable with a null value"
-
-        this.processor = task.processor
-        this.sourceDir = task.targetDir
-        this.sourceFileSystem = sourceDir.fileSystem
-        this.stageInMode = task.config.stageInMode
         createPublishDir()
-
         validatePublishMode()
 
         /*
@@ -190,11 +170,42 @@ class PublishDir {
         }
     }
 
+    void apply( List<Path> files, Path sourceDir ) {
+        if( !files )
+            return
+        this.sourceDir = sourceDir
+        this.sourceFileSystem = sourceDir ? sourceDir.fileSystem : null
+        apply0(files)
+    }
+    /**
+     * Apply the publishing process to the specified {@link TaskRun} instance
+     *
+     * @param task The task whose output need to be published
+     */
+    @CompileStatic
+    void apply( List<Path> files, TaskRun task ) {
+
+        if( !files )
+            return
+
+        if( !path )
+            throw new IllegalStateException("Target path for directive publishDir cannot be null")
+
+        if( nullPathWarn )
+            log.warn "Process `$task.processor.name` publishDir path contains a variable with a null value"
+
+        this.sourceDir = task.targetDir
+        this.sourceFileSystem = sourceDir.fileSystem
+        this.stageInMode = task.config.stageInMode
+
+        apply0(files)
+    }
+
 
     @CompileStatic
     protected void apply( Path source, boolean inProcess ) {
 
-        def target = sourceDir.relativize(source)
+        def target = sourceDir ? sourceDir.relativize(source) : source.getFileName()
         if( matcher && !matcher.matches(target) ) {
             // skip not matching file
             return
@@ -319,7 +330,7 @@ class PublishDir {
     @PackageScope
     void validatePublishMode() {
 
-        if( sourceFileSystem != path.fileSystem || path.fileSystem != FileSystems.default ) {
+        if( (sourceFileSystem && sourceFileSystem != path.fileSystem) || path.fileSystem != FileSystems.default ) {
             if( !mode ) {
                 mode = Mode.COPY
             }
