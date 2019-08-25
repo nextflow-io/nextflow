@@ -268,7 +268,7 @@ class NextflowDSLImpl implements ASTTransformation {
 
                 def newArgs = new ArgumentListExpression()
                 def body = (ClosureExpression)args[0]
-                newArgs.addExpression( makeWorkflowDefWrapper(body) )
+                newArgs.addExpression( makeWorkflowDefWrapper(body,true) )
                 methodCall.setArguments( newArgs )
                 return 
             }
@@ -308,17 +308,16 @@ class NextflowDSLImpl implements ASTTransformation {
 
             final body = (ClosureExpression)args[0]
             newArgs.addExpression( constX(name) )
-            newArgs.addExpression( makeWorkflowDefWrapper(body) )
+            newArgs.addExpression( makeWorkflowDefWrapper(body,false) )
 
             // set the new list as the new arguments
             methodCall.setArguments( newArgs )
         }
 
 
-        protected Statement normWorkflowParam(ExpressionStatement stat, String type, Set<String> emitNames, List<Statement> body) {
+        protected Statement normWorkflowParam(ExpressionStatement stat, String type, Set<String> uniqueNames, List<Statement> body) {
             MethodCallExpression callx
             VariableExpression varx
-            BinaryExpression binx
 
             if( (callx=isMethodCallX(stat.expression)) && isThisX(callx.objectExpression) ) {
                 final name = "_${type}_${callx.methodAsString}"
@@ -331,43 +330,74 @@ class NextflowDSLImpl implements ASTTransformation {
             }
 
             if( type == WORKFLOW_EMIT ) {
-                if( (binx=isAssignX(stat.expression)) ) {
-                    // keep the statement in body to allow it to be evaluated
-                    body.add(stat)
-                    // and create method call expr to capture the var name in the emission
-                    final left = (VariableExpression)binx.leftExpression
-                    final name = "_${type}_${left.name}"
-                    return stmt( callThisX(name) )
-                }
-
-                // wrap the expression into a assignment expression
-                final name = getRandomName(emitNames)
-                final left = new VariableExpression(name)
-                final right = stat.expression
-                final token = new Token(Types.ASSIGN, '=', -1, -1)
-                final assign = new BinaryExpression(left, token, right)
-                body.add(stmt(assign))
-
-                // the call method statement for the emit declaration
-                return stmt( callThisX("_${type}_${name}") )
+                return createAssignX(stat, body, type, uniqueNames)
             }
 
+            if( type == WORKFLOW_PUBLISH     ) {
+                return createAssignX(stat, body, type, uniqueNames)
+            }
 
             syntaxError(stat, "Workflow malformed parameter definition")
             return stat
         }
 
-        protected String getRandomName(Set<String> allNames) {
+        protected Statement createAssignX(ExpressionStatement stat, List<Statement> body, String type, Set<String> uniqueNames) {
+            BinaryExpression binx
+            MethodCallExpression callx
+            Expression args=null
+
+            if( (binx=isAssignX(stat.expression)) ) {
+                // keep the statement in body to allow it to be evaluated
+                body.add(stat)
+                // and create method call expr to capture the var name in the emission
+                final left = (VariableExpression)binx.leftExpression
+                final name = "_${type}_${left.name}"
+                return stmt( callThisX(name) )
+            }
+
+            if( (callx=isMethodCallX(stat.expression)) && callx.objectExpression.text!='this' && hasTo(callx)) {
+                // keep the args
+                args = callx.arguments
+                // replace the method call expression with a property
+                stat.expression = new PropertyExpression(callx.objectExpression, callx.method)
+                // then, fallback to default case
+            }
+
+            // wrap the expression into a assignment expression
+            final var = getNextName(uniqueNames)
+            final left = new VariableExpression(var)
+            final right = stat.expression
+            final token = new Token(Types.ASSIGN, '=', -1, -1)
+            final assign = new BinaryExpression(left, token, right)
+            body.add(stmt(assign))
+
+            // the call method statement for the emit declaration
+            final name="_${type}_${var}"
+            callx =  args ? callThisX(name, args) : callThisX(name)
+            return stmt(callx)
+        }
+
+        protected boolean hasTo(MethodCallExpression callX) {
+            def tupleX = isTupleX(callX.arguments)
+            if( !tupleX ) return false
+            if( !tupleX.expressions ) return false
+            def mapX = isMapX(tupleX.expressions[0])
+            if( !mapX ) return false
+            def entry = mapX.getMapEntryExpressions().find { isConstX(it.keyExpression).text=='to' }
+            return entry != null
+        }
+
+        protected String getNextName(Set<String> allNames) {
             String result
             while( true ) {
-                result = OUT_PREFIX + RND.nextInt(10000)
+                result = OUT_PREFIX + allNames.size()
                 if( allNames.add(result) )
                     break
             }
             return result
         }
 
-        protected Expression makeWorkflowDefWrapper( ClosureExpression closure ) {
+        protected Expression makeWorkflowDefWrapper( ClosureExpression closure, boolean anonymous ) {
 
             final codeBlock = (BlockStatement) closure.code
             final codeStms = codeBlock.statements
@@ -393,9 +423,13 @@ class NextflowDSLImpl implements ASTTransformation {
                 visited[context] = true
 
                 switch (context) {
+                    case WORKFLOW_PUBLISH:
+                        if( !anonymous ) {
+                            syntaxError(stm, "Publish declaration is only allowed in main workflow definition")
+                        }
+
                     case WORKFLOW_GET:
                     case WORKFLOW_EMIT:
-                    case WORKFLOW_PUBLISH:
                         if( !(stm instanceof ExpressionStatement) ) {
                             syntaxError(stm, "Workflow malformed parameter definition")
                             break

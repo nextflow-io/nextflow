@@ -1,31 +1,25 @@
 package nextflow.script
 
+import spock.lang.Timeout
+
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
-import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.ast.NextflowDSL
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.runtime.typehandling.GroovyCastException
-import spock.lang.Specification
-import spock.lang.Timeout
+import test.Dsl2Spec
 import test.MockScriptRunner
-
-import static nextflow.ast.NextflowDSLImpl.OUT_PREFIX
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @Timeout(5)
-class WorkflowDefTest extends Specification {
-
-    def setupSpec() { NextflowMeta.instance.enableDsl2() }
-    def cleanupSpec() { NextflowMeta.instance.disableDsl2() }
+class WorkflowDefTest extends Dsl2Spec {
 
     static abstract class TestScript extends BaseScript {
 
@@ -95,7 +89,7 @@ class WorkflowDefTest extends Specification {
         meta.getWorkflow('alpha') .source.stripIndent() == "print 'Hello world'\n"
 
         meta.getWorkflow('bravo') .declaredInputs == ['foo', 'bar']
-        meta.getWorkflow('bravo') .declaredVariables.findAll{!it.startsWith(OUT_PREFIX)} == []
+        meta.getWorkflow('bravo') .declaredVariables == ['$out0']
         meta.getWorkflow('bravo') .source.stripIndent() == '''\
               get: foo
               get: bar
@@ -107,7 +101,7 @@ class WorkflowDefTest extends Specification {
               '''.stripIndent()
 
         meta.getWorkflow('delta') .declaredInputs == ['foo','bar']
-        meta.getWorkflow('delta') .declaredVariables == []
+        meta.getWorkflow('delta') .declaredVariables == [] 
         meta.getWorkflow('delta') .source.stripIndent() == '''\
                 get: foo
                 get: bar
@@ -117,7 +111,7 @@ class WorkflowDefTest extends Specification {
 
         meta.getWorkflow('empty') .source == ''
         meta.getWorkflow('empty') .declaredInputs == []
-        meta.getWorkflow('empty') .declaredVariables.findAll{!it.startsWith(OUT_PREFIX)} == []
+        meta.getWorkflow('empty') .declaredVariables == [] 
     }
 
     def 'should define anonymous workflow' () {
@@ -165,6 +159,58 @@ class WorkflowDefTest extends Specification {
         workflow.declaredInputs == ['foo']
         workflow.declaredOutputs == ['bar', 'baz']
 
+    }
+
+
+    def 'should capture publish defs' () {
+
+        given:
+        def config = new CompilerConfiguration()
+        config.setScriptBaseClass(TestScript.class.name)
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+
+        def SCRIPT = '''
+                    
+            workflow {
+              publish: 
+                foo
+                bar to: 'some/path'
+                baz.out to: 'other/path'
+              main:   
+                x = 1 
+            }
+        '''
+
+        when:
+        def script = (TestScript)new GroovyShell(new ScriptBinding(), config).parse(SCRIPT).run()
+        def meta = ScriptMeta.get(script)
+        then:
+        meta.definitions.size() == 1
+        meta.getWorkflow(null) .declaredInputs == []
+        meta.getWorkflow(null) .declaredVariables == ['baz.out', 'x', '$out0']
+        meta.getWorkflow(null) .getDeclaredPublish() == [foo: [:], bar: [to:'some/path'], '$out0': [to:'other/path']]
+    }
+
+    def 'should not allow publish is sub-workflow' () {
+
+        given:
+        def config = new CompilerConfiguration()
+        config.setScriptBaseClass(TestScript.class.name)
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+
+        def SCRIPT = '''
+                    
+            workflow alpha {
+              publish: foo
+              main:   
+                x = 1 
+            }
+        '''
+
+        when:
+        new GroovyShell(config).parse(SCRIPT)
+        then:
+        thrown(MultipleCompilationErrorsException)
     }
 
     def 'should report malformed workflow block' () {

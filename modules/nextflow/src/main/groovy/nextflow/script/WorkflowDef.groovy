@@ -22,6 +22,8 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.exception.MissingValueException
 import nextflow.extension.CH
+import nextflow.extension.PublishOp
+
 /**
  * Models a script workflow component
  *
@@ -38,6 +40,8 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
     private List<String> declaredInputs
 
     private List<String> declaredOutputs
+
+    private Map<String,Map> declaredPublish
 
     private Set<String> variableNames
 
@@ -62,6 +66,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
         // now it can access the parameters
         this.declaredInputs = new ArrayList<>(resolver.getGets().keySet())
         this.declaredOutputs = new ArrayList<>(resolver.getEmits().keySet())
+        this.declaredPublish = new LinkedHashMap<>(resolver.getPublish())
         this.variableNames = getVarNames0()
     }
 
@@ -93,6 +98,8 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
     @PackageScope List<String> getDeclaredInputs() { declaredInputs }
 
     @PackageScope List<String> getDeclaredOutputs() { declaredOutputs }
+
+    @PackageScope Map<String,Map> getDeclaredPublish() { declaredPublish }
 
     @PackageScope String getSource() { body.source }
 
@@ -152,6 +159,28 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
         return new ChannelOut(channels)
     }
 
+    protected publishOutputs(Map<String,Map> publishDefs, ChannelOut output) {
+        for( Map.Entry<String,Map> pub : publishDefs.entrySet() ) {
+            final name = pub.key
+            final opts = pub.value
+            if( !binding.hasVariable(name) )
+                throw new MissingValueException("Missing workflow publish parameter: $name")
+            final obj = binding.getVariable(name)
+
+            if( CH.isChannel(obj) ) {
+                new PublishOp(CH.getReadChannel(obj), opts).apply()
+            }
+
+            else if( obj instanceof ChannelOut ) {
+                for( DataflowWriteChannel ch : ((ChannelOut)obj) ) {
+                    new PublishOp(CH.getReadChannel(ch), opts).apply()
+                }
+            }
+
+            else throw new IllegalArgumentException("Illegal workflow publish parameter: $name value: $obj")
+        }
+    }
+
 
     Object run(Object[] args) {
         binding = new WorkflowBinding(owner)
@@ -172,7 +201,9 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
         closure.setResolveStrategy(Closure.DELEGATE_FIRST)
         closure.call()
         // collect the workflow outputs
-        return output = collectOutputs(declaredOutputs)
+        output = collectOutputs(declaredOutputs)
+        publishOutputs(declaredPublish, output)
+        return output
     }
 
 }
@@ -183,17 +214,37 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
 @CompileStatic
 class WorkflowParamsResolver implements GroovyInterceptable {
 
+    static final private String GET_PREFIX = '_get_'
+    static final private String EMIT_PREFIX = '_emit_'
+    static final private String PUBLISH_PREFIX = '_publish_'
+
+
     Map<String,Object> gets = new LinkedHashMap<>(10)
     Map<String,Object> emits = new LinkedHashMap<>(10)
+    Map<String,Map> publish = new LinkedHashMap<>(10)
 
     @Override
     def invokeMethod(String name, Object args) {
-        if( name.startsWith('_get_') )
-            gets.put(name.substring(5), args)
-        else if( name.startsWith('_emit_') )
-            emits.put(name.substring(6), args)
+        if( name.startsWith(GET_PREFIX) )
+            gets.put(name.substring(GET_PREFIX.size()), args)
+
+        else if( name.startsWith(EMIT_PREFIX) )
+            emits.put(name.substring(EMIT_PREFIX.size()), args)
+
+        else if( name.startsWith(PUBLISH_PREFIX))
+            publish.put(name.substring(PUBLISH_PREFIX.size()), argsToMap(args))
+
         else
             throw new IllegalArgumentException("Unknown workflow parameter definition: $name")
 
+    }
+
+    private Map argsToMap(Object args) {
+        if( args && args.getClass().isArray() ) {
+            if( ((Object[])args)[0] instanceof Map ) {
+                return (Map)((Object[])args)[0]
+            }
+        }
+        Collections.emptyMap()
     }
 }
