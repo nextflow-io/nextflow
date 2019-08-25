@@ -29,7 +29,7 @@ process merge {
   echo true
 
   input:
-  set barcode, seq_id, path(bam: 'bam?'), path(bai: 'bai?')
+  set barcode, seq_id, path(bam, stageAs:'bam?'), path(bai, stageAs:'bai?')
 
   """
   echo barcode: $barcode
