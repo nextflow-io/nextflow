@@ -198,6 +198,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-offline'], description = 'Do not check for remote project updates')
     boolean offline = System.getenv('NXF_OFFLINE') as boolean
 
+    @Parameter(names=['-entry'], description = 'Entry workflow name to be executed', arity = 1)
+    String entryName
+
     @Override
     String getName() { NAME }
 
@@ -246,7 +249,7 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.verifyAndTrackHistory(launcher.cliString, runName)
 
         // -- run it!
-        runner.execute(scriptArgs)
+        runner.execute(scriptArgs, this.entryName)
     }
 
     protected void checkRunName() {

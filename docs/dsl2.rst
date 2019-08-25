@@ -213,6 +213,9 @@ Implicit workflow
 A workflow definition which does not define any name is assumed to be the main workflow and it's
 implicitly executed. Therefore it's the entry point of the workflow application.
 
+.. tip:: An alternative workflow entry can be specifying using the `-entry` command line option.
+
+
 Modules
 =======
 
