@@ -168,9 +168,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
         // invoke the entry workflow
         session.notifyBeforeWorkflowExecution()
-        final result = entryFlow.invoke_a(EMPTY_ARGS)
+        final ret = entryFlow.invoke_a(EMPTY_ARGS)
         session.notifyAfterWorkflowExecution()
-        return result
+        return ret
     }
 
     Object run() {

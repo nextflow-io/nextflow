@@ -204,7 +204,7 @@ in the ``emit`` declaration::
               my_data = bar.out
         }
 
-Then, the result of the above snippet can acessed using the ``my_pipeline.out.my_data``.
+Then, the result of the above snippet can accessed using the ``my_pipeline.out.my_data``.
 
 
 Implicit workflow
