@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
+import java.io.PrintStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * Implement capsule custom strategy to add maven dependencies as
@@ -26,6 +30,40 @@ import java.util.Map;
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 public class CapsuleLoader extends Capsule {
+
+    private static Pattern IGNORE_REGEX = Pattern.compile("Could not find artifact io.seqera:nf-tower-client.* in central");
+
+    private static Field stderr;
+
+    static {
+        try {
+            stderr = Capsule.class.getDeclaredField("STDERR");
+            stderr.setAccessible(true);
+
+            Field modifiersField = Field.class.getDeclaredField("modifiers");
+            modifiersField.setAccessible(true);
+            modifiersField.setInt(stderr, stderr.getModifiers() & ~Modifier.FINAL);
+
+            stderr.set(null, new FilterPrintStream(System.err));
+        }
+        catch (Exception e) {
+            System.err.println("WARN: Failed to install capsule custom stderr filter -- " + e.getMessage());
+        }
+    }
+
+    static class FilterPrintStream extends PrintStream {
+        FilterPrintStream(PrintStream target) {
+            super(target);
+        }
+
+        @Override
+        public void println(String str) {
+            if( !IGNORE_REGEX.matcher(str).find() ) {
+                super.println(str);
+            }
+        }
+    }
+
 
     /**
      * Constructs a capsule from the given JAR file
