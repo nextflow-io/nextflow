@@ -74,6 +74,7 @@ allprojects {
         mavenCentral()
         maven { url 'https://repo.eclipse.org/content/groups/releases' }
         maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
+        maven { url 'https://s3-eu-west-1.amazonaws.com/maven.seqera.io/releases' }
         maven { url 'https://s3-eu-west-1.amazonaws.com/maven.seqera.io/snapshots' }
     }
 
@@ -161,7 +162,7 @@ dependencies {
     compile project(':nextflow')
     // include Ivy at runtime in order to have Grape @Grab work correctly
     runtime "org.apache.ivy:ivy:2.3.0"
-    runtime "io.seqera:nf-tower-client:0.1.0-SNAPSHOT"
+    runtime "io.seqera:nf-tower-client:0.1.0"
     // library used to compile but not included in the final jar
     compileOnly ('javax.xml.bind:jaxb-api:2.3.0')
     // Capsule manages the fat jar building process
@@ -352,6 +353,9 @@ task packOne(type: Jar) {
     if( version.endsWith('-SNAPSHOT') ) {
         manifest.attributes 'Allow-Snapshots': true
         manifest.attributes 'Repositories': 'local https://oss.sonatype.org/content/repositories/snapshots central https://s3-eu-west-1.amazonaws.com/maven.seqera.io/snapshots'
+    }
+    else {
+        manifest.attributes 'Repositories': 'central https://s3-eu-west-1.amazonaws.com/maven.seqera.io/releases'
     }
 
     /*
