@@ -1,7 +1,7 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
-19.08.0-edge - 26 Aug 2019
+19.08.1-edge - 26 Aug 2019
 - Add Process named output channels #1290 [DSL] [6a756fd2]
 - Add workflow publish directive [DLS2] [287a095e]
 - Add stageAs option to input path [DSL2] [9b5f55f6]
