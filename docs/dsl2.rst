@@ -204,7 +204,7 @@ in the ``emit`` declaration::
               my_data = bar.out
         }
 
-Then, the result of the above snippet can acessed using the ``my_pipeline.out.my_data``.
+Then, the result of the above snippet can accessed using the ``my_pipeline.out.my_data``.
 
 
 Implicit workflow
@@ -212,6 +212,9 @@ Implicit workflow
 
 A workflow definition which does not define any name is assumed to be the main workflow and it's
 implicitly executed. Therefore it's the entry point of the workflow application.
+
+.. tip:: An alternative workflow entry can be specifying using the `-entry` command line option.
+
 
 Modules
 =======

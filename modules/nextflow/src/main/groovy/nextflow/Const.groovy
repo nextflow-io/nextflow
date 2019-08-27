@@ -52,17 +52,17 @@ class Const {
     /**
      * The application version
      */
-    static public final String APP_VER = "19.07.0"
+    static public final String APP_VER = "19.08.1-edge"
 
     /**
      * The app build time as linux/unix timestamp
      */
-    static public final long APP_TIMESTAMP = 1564233620997
+    static public final long APP_TIMESTAMP = 1566845673387
 
     /**
      * The app build number
      */
-    static public final int APP_BUILDNUM = 5105
+    static public final int APP_BUILDNUM = 5131
 
 
     /**
@@ -144,5 +144,7 @@ class Const {
     static public final File DEFAULT_ROOT = System.getenv('NXF_ASSETS') ? new File(System.getenv('NXF_ASSETS')) : Const.APP_HOME_DIR.resolve('assets').toFile()
 
     static public final String DEFAULT_BRANCH = 'master'
+
+    static public final String SCOPE_SEP = ':'
 
 }

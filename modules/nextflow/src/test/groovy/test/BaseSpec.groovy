@@ -14,29 +14,27 @@
  * limitations under the License.
  */
 
-package nextflow.util
+package test
 
 import spock.lang.Specification
+
+import groovy.util.logging.Slf4j
+
 /**
+ * Base specification class - It wraps each test into begin-close "test name" strigs
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class NameGeneratorTest extends Specification {
+@Slf4j
+class BaseSpec extends Specification {
 
-    def 'should return a random name' () {
-        when:
-        def (adj, name)= NameGenerator.next().tokenize('_')
-        then:
-        NameGenerator.ADJECTIVES.contains(adj)
-        NameGenerator.NAMES.contains(name)
-
+    def setup() {
+        log.info "TEST BEGIN [${specificationContext.currentIteration.name}]"
     }
 
-    def 'should not generate a random name except the specified one' () {
-        when:
-        def name = NameGenerator.next('evil_pike')
-        then:
-        name
-        name != 'evil_pike'
+    def cleanup() {
+        log.info "TEST CLOSE [${specificationContext.currentIteration.name}]"
     }
+
+
 }

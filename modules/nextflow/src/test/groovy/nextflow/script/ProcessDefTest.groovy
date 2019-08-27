@@ -2,6 +2,7 @@ package nextflow.script
 
 import spock.lang.Specification
 
+import nextflow.Session
 import nextflow.ast.NextflowDSL
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -47,17 +48,6 @@ class ProcessDefTest extends Specification {
 
     }
 
-    def 'should clone a process with a new name - deprecated'() {
-
-        given:
-        def proc = new ProcessDef(Mock(BaseScript), 'foo', Mock(ProcessConfig), Mock(BodyDef))
-
-        when:
-        def copy = proc.cloneWithName('foo_alias')
-        then:
-        copy.getName() == 'foo_alias'
-
-    }
 
     def 'should clone a process with a new name '() {
 
@@ -70,8 +60,60 @@ class ProcessDefTest extends Specification {
         def copy = proc.cloneWithName('foo_alias')
         then:
         copy.getName() == 'foo_alias'
+        copy.getSimpleName() == 'foo_alias'
         copy.getOwner() == OWNER
         copy.rawBody.class == BODY.class
+        !copy.rawBody.is(BODY)
 
+        when:
+        copy = proc.cloneWithName('flow1:flow2:foo')
+        then:
+        copy.getName() == 'flow1:flow2:foo'
+        copy.getSimpleName() == 'foo'
+        copy.getOwner() == OWNER
+        copy.rawBody.class == BODY.class
+        !copy.rawBody.is(BODY)
+    }
+
+    def 'should apply process config' () {
+        given:
+        def OWNER = Mock(BaseScript)
+        def CONFIG = [
+                process:[
+                        cpus:2, memory: '3GB',
+                        'withName:bar': [cpus:4, memory: '4GB'],
+                        'withName:flow1:flow2:flow3:bar': [memory: '8GB']
+                ]
+        ]
+        def BODY = {->
+            return new BodyDef({->}, 'echo hello')
+        }
+        def proc = new ProcessDef(OWNER, BODY, 'foo')
+        proc.session = Mock(Session) { getConfig() >> CONFIG }
+
+        when:
+        def copy = proc.clone()
+        copy.initialize()
+        then:
+        def cfg1 = copy.processConfig.createTaskConfig()
+        cfg1.getCpus()==2
+        cfg1.getMemory().giga == 3
+
+        when:
+        copy = proc.cloneWithName('flow1:bar')
+        copy.initialize()
+        then:
+        def cfg2 = copy.processConfig.createTaskConfig()
+        cfg2.getCpus()==4
+        cfg2.getMemory().giga == 4
+
+
+        when:
+        copy = proc.cloneWithName('flow1:flow2:flow3:bar')
+        copy.initialize()
+        then:
+        def cfg3 = copy.processConfig.createTaskConfig()
+        cfg3.getCpus()==4           // <-- taken from `withName: foo`
+        cfg3.getMemory().giga == 8  // <-- taken from `withName: 'flow1:flow2:flow3:bar'`
     }
 }

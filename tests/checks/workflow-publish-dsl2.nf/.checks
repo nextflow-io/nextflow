@@ -1,0 +1,15 @@
+
+$NXF_RUN > stdout
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > foo'` == 1 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > bar'` == 1 ]] || false
+[[ -f results/hello.txt ]] || false
+[[ -f results/one.txt ]] || false
+[[ -f results/two.txt ]] || false
+
+rm -rf *
+$NXF_RUN -resume > stdout
+[[ `grep 'INFO' .nextflow.log | grep -c 'Cached process > foo'` == 1 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -c 'Cached process > bar'` == 1 ]] || false
+[[ -f results/hello.txt ]] || false
+[[ -f results/one.txt ]] || false
+[[ -f results/two.txt ]] || false

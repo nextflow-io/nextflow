@@ -33,7 +33,7 @@ dependencies {
     compile("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
     compile('org.iq80.leveldb:leveldb:0.10')
     compile('org.eclipse.jgit:org.eclipse.jgit:5.2.1.201812262042-r')
-    compile('io.nextflow:nxf-s3fs:1.0.6') {
+    compile('io.nextflow:nxf-s3fs:1.0.7') {
         exclude group: 'org.apache.tika', module: 'tika-core'
         exclude group: 'com.amazonaws', module: 'aws-java-sdk-s3'
     }

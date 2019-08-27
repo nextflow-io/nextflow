@@ -28,7 +28,7 @@ mm =
 endif 
 
 compile:
-	./gradlew compile exportClasspath --stacktrace
+	./gradlew compile exportClasspath
 	@echo "DONE `date`"
 
 clean:

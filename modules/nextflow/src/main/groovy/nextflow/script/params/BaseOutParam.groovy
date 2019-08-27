@@ -34,7 +34,7 @@ import nextflow.script.TokenVar
 abstract class BaseOutParam extends BaseParam implements OutParam {
 
     /** The out parameter name */
-    protected nameObj
+    protected String nameObj
 
     protected intoObj
 
@@ -44,6 +44,8 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
     @PackageScope
     boolean singleton
+
+    String channelEmitName
 
     BaseOutParam( Binding binding, List list, short ownerIndex = -1) {
         super(binding,list,ownerIndex)
@@ -62,8 +64,8 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
     void lazyInit() {
 
         if( intoObj instanceof TokenVar[] ) {
-            if(NF.isDsl2())
-                throw new IllegalArgumentException("Not a valid output channel argument: intoObj")
+            if( NF.dsl2 )
+                throw new IllegalArgumentException("Not a valid output channel argument: $intoObj")
             for( def it : intoObj ) { lazyInitImpl(it) }
         }
         else if( intoObj != null ) {
@@ -156,14 +158,14 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
     }
 
     BaseOutParam into( def value ) {
-        if(NF.isDsl2())
+        if( NF.dsl2 )
             throw new ScriptRuntimeException("Process clause `into` should not be provided when using DSL 2")
-        intoObj = value
+        this.intoObj = value
         return this
     }
 
     BaseOutParam into( TokenVar... vars ) {
-        if(NF.isDsl2())
+        if( NF.dsl2 )
             throw new ScriptRuntimeException("Process clause `into` should not be provided when using DSL 2")
         intoObj = vars
         return this
@@ -173,31 +175,43 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
         intoObj = obj
     }
 
-    @Deprecated
     DataflowWriteChannel getOutChannel() {
         init()
         return outChannels ? outChannels.get(0) : null
     }
 
+    @Deprecated
     List<DataflowWriteChannel> getOutChannels() {
         init()
         return outChannels
     }
 
     String getName() {
-
         if( nameObj != null )
             return nameObj.toString()
-
         throw new IllegalStateException("Missing 'name' property in output parameter")
     }
 
 
     BaseOutParam mode( def mode ) {
+        if( NF.isDsl2() )
+            log.warn "Process output `mode` is not supported any more"
         this.mode = BasicMode.parseValue(mode)
         return this
     }
 
     OutParam.Mode getMode() { mode }
 
+    @Override
+    BaseOutParam setOptions(Map<String,?> opts) {
+        super.setOptions(opts)
+        return this
+    }
+
+    BaseOutParam setEmit( value ) {
+        if( isNestedParam() )
+            throw new IllegalArgumentException("Output `emit` option it not allowed in tuple components")
+        this.channelEmitName = value
+        return this
+    }
 }

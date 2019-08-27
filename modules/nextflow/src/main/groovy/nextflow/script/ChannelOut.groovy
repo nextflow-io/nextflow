@@ -19,6 +19,9 @@ package nextflow.script
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.exception.DuplicateChannelNameException
+import nextflow.script.params.OutParam
+import nextflow.script.params.OutputsList
 import static nextflow.ast.NextflowDSLImpl.OUT_PREFIX
 /**
  * Models the output of a process or a workflow component returning
@@ -62,6 +65,21 @@ class ChannelOut implements List<DataflowWriteChannel> {
     ChannelOut(Map<String,DataflowWriteChannel> channels) {
         this.target = Collections.unmodifiableList(new ArrayList<DataflowWriteChannel>(channels.values()))
         this.channels = Collections.unmodifiableMap(new LinkedHashMap<String,DataflowWriteChannel>(channels))
+    }
+
+    ChannelOut(OutputsList outs) {
+        channels = new HashMap<>(outs.size())
+        final onlyWithName = new ArrayList(outs.size())
+        for( OutParam param : outs ) {
+            final ch = param.getOutChannel()
+            final name = param.channelEmitName
+            onlyWithName.add(ch)
+            if(name) {
+                if(channels.containsKey(name)) throw new DuplicateChannelNameException("Output channel name `$name` is used more than one time")
+                channels.put(name, ch)
+            }
+        }
+        target = Collections.unmodifiableList(onlyWithName)
     }
 
     Set<String> getNames() { channels.keySet().findAll { !it.startsWith(OUT_PREFIX) }  }

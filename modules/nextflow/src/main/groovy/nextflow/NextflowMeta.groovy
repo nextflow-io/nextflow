@@ -18,6 +18,8 @@ import static nextflow.extension.Bolts.DATETIME_FORMAT
 @EqualsAndHashCode
 class NextflowMeta {
 
+    private static boolean ignoreWarnDsl2 = System.getenv('NXF_IGNORE_WARN_DSL2')=='true'
+
     @Slf4j
     static class Preview {
         volatile float dsl
@@ -25,7 +27,7 @@ class NextflowMeta {
         void setDsl( float num ) {
             if( num != 2 && num != 1 )
                 throw new IllegalArgumentException("Not a valid DSL version number: $num")
-            if( num == 2 )
+            if( num == 2 && !ignoreWarnDsl2 )
                 log.warn1 "DSL 2 IS AN EXPERIMENTAL FEATURE UNDER DEVELOPMENT -- SYNTAX MAY CHANGE IN FUTURE RELEASE"
             dsl = num
         }

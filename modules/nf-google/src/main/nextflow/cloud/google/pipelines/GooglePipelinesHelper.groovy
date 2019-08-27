@@ -132,6 +132,7 @@ class GooglePipelinesHelper {
                 req.zone,
                 req.region,
                 req.diskName,
+                req.diskSizeGb,
                 [GooglePipelinesHelper.SCOPE_CLOUD_PLATFORM], req.preemptible)
     }
 
@@ -162,10 +163,11 @@ class GooglePipelinesHelper {
                 [ActionFlags.ALWAYS_RUN, ActionFlags.IGNORE_EXIT_STATUS])
     }
 
-    Resources configureResources(String machineType, String projectId, List<String> zone, List<String> region, String diskName, List<String> scopes = null, boolean preEmptible = false) {
+    Resources configureResources(String machineType, String projectId, List<String> zone, List<String> region, String diskName, Integer diskSizeGb=null, List<String> scopes = null, boolean preEmptible = false) {
 
         def disk = new Disk()
         disk.setName(diskName)
+        disk.setSizeGb(diskSizeGb)
 
         def serviceAccount = new ServiceAccount()
         if (scopes)

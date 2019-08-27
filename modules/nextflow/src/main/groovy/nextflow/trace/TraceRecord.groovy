@@ -16,6 +16,7 @@
 
 package nextflow.trace
 import java.nio.file.Path
+import java.util.regex.Pattern
 
 import groovy.json.StringEscapeUtils
 import groovy.transform.CompileStatic
@@ -24,6 +25,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.extension.Bolts
 import nextflow.processor.TaskId
+import nextflow.script.ProcessDef
 import nextflow.util.Duration
 import nextflow.util.KryoHelper
 import nextflow.util.MemoryUnit
@@ -37,8 +39,11 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class TraceRecord implements Serializable {
 
+    // note: ?i stands for ignore case - ?m stands for multiline
+    static public final Pattern SECRET_REGEX = ~/(?im)(^AWS[^=]*|.*TOKEN[^=]*|.*SECRET[^=]*)=(.*)$/
+
     TraceRecord() {
-        this.store = [:]
+        this.store = new LinkedHashMap<>(FIELDS.size())
     }
 
     private TraceRecord(Map store) {
@@ -249,7 +254,15 @@ class TraceRecord implements Serializable {
 
     def get( String name ) {
         assert keySet().contains(name), "Not a valid TraceRecord field: '$name'"
-        store.get(name)
+        if( name == 'env' ) {
+            final ret = store.get(name)
+            return ret ? secureEnvString(ret.toString()) : ret
+        }
+        return store.get(name)
+    }
+
+    protected String secureEnvString( String str ) {
+        str.replaceAll(SECRET_REGEX, '$1=[secure]')
     }
 
     void put( String name, def value ) {
@@ -270,12 +283,16 @@ class TraceRecord implements Serializable {
             store.put('max_rss', value)
         }
 
+        else if( name == 'env' ) {
+            store.put(name, value ? secureEnvString(value.toString()) : value)
+        }
+
         else {
             store.put(name, value)
         }
     }
 
-    def void putAll( Map<String,Object> values ) {
+    void putAll( Map<String,Object> values ) {
         if( !values )
             return
 
@@ -329,6 +346,10 @@ class TraceRecord implements Serializable {
     TaskId getTaskId() { (TaskId)get('task_id') }
 
     String getWorkDir() { get('workdir') }
+
+    String getProcessName() { get('process') }
+
+    String getSimpleName() { ProcessDef.stripScope(processName) }
 
     /**
      * Render the specified list of fields to a single string value

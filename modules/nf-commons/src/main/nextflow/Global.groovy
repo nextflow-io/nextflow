@@ -100,10 +100,19 @@ class Global {
         }
 
         for( Path it : files ) {
+            final DEFAULT_PROFILE = 'default'
             final conf = new IniFile(it)
-            if( (a=conf.section('default').aws_access_key_id) && (b=conf.section('default').aws_secret_access_key) ) {
-                log.debug "Using AWS credential defined in `default` section in file: ${conf.file}"
-                return [a,b]
+            final profile = env ? env.get('AWS_PROFILE', env.get('AWS_DEFAULT_PROFILE', DEFAULT_PROFILE)) : DEFAULT_PROFILE
+            if( (a=conf.section(profile).aws_access_key_id) && (b=conf.section(profile).aws_secret_access_key) ) {
+                final token = conf.section(profile).aws_session_token
+                if( token ) {
+                    log.debug "Using AWS temporary session credentials defined in `$profile` section in file: ${conf.file}"
+                    return [a,b,token]
+                }
+                else {
+                    log.debug "Using AWS credential defined in `$profile` section in file: ${conf.file}"
+                    return [a,b]
+                }
             }
         }
 

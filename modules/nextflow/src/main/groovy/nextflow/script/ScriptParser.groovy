@@ -60,6 +60,8 @@ class ScriptParser {
 
     private CompilerConfiguration config
 
+    private String entryName
+
     ScriptParser(Session session) {
         this.session = session
         this.classLoader = session.getClassLoader()
@@ -77,6 +79,11 @@ class ScriptParser {
 
     ScriptParser setModule(boolean value) {
         this.module = value
+        return this
+    }
+
+    ScriptParser setEntryName(String name) {
+        this.entryName = name
         return this
     }
 
@@ -201,6 +208,7 @@ class ScriptParser {
         binding.setSession(session)
         binding.setModule(module)
         binding.setScriptPath(scriptPath)
+        binding.setEntryName(entryName)
     }
 
     ScriptParser runScript() {

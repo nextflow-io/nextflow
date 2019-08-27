@@ -16,7 +16,6 @@
 
 package nextflow.script
 
-
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
@@ -40,6 +39,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
     private TaskProcessor taskProcessor
 
     private ScriptMeta meta
+
+    private WorkflowDef entryFlow
 
     @Lazy InputStream stdin = { System.in }()
 
@@ -113,25 +114,21 @@ abstract class BaseScript extends Script implements ExecutionContext {
         if(!NF.isDsl2())
             throw new IllegalStateException("Module feature not enabled -- Set `nextflow.preview.dsl=2` to allow the definition of workflow components")
 
-        if( meta.isModule() ) {
-            log.debug "Entry workflow ignored in module script: ${meta.scriptPath?.toUriString()}"
-            return
-        }
-
         // launch the execution
         final workflow = new WorkflowDef(this, workflowBody)
+        if( !binding.entryName )
+            this.entryFlow = workflow
         meta.addDefinition(workflow)
-        session.notifyBeforeWorkflowExecution()
-        final result = workflow.invoke_a(EMPTY_ARGS)
-        session.notifyAfterWorkflowExecution()
-        return result
     }
 
     protected workflow(String name, Closure<BodyDef> workflowDef) {
         if(!NF.isDsl2())
             throw new IllegalStateException("Module feature not enabled -- Set `nextflow.preview.dsl=2` to allow the definition of workflow components")
 
-        meta.addDefinition(new WorkflowDef(this,workflowDef,name))
+        final workflow = new WorkflowDef(this,workflowDef,name)
+        if( binding.entryName==name )
+            this.entryFlow = workflow
+        meta.addDefinition(workflow)
     }
 
     protected IncludeDef include( IncludeDef include ) {
@@ -149,11 +146,38 @@ abstract class BaseScript extends Script implements ExecutionContext {
             super.invokeMethod(name, args)
     }
 
+    private run0() {
+        final result = runScript()
+        if( meta.isModule() ) {
+            return result
+        }
+
+        if( binding.entryName && !entryFlow ) {
+            def msg = "Unknown workflow entry name: ${binding.entryName}"
+            final allNames = meta.getDefinitions().findAll() { it instanceof WorkflowDef }.collect { it.name }
+            final guess = allNames.closest(binding.entryName)
+            if( guess )
+                msg += " -- Did you mean?\n" + guess.collect { "  $it"}.join('\n')
+            throw new IllegalArgumentException(msg)
+        }
+
+        if( !entryFlow ) {
+            log.debug "No entry workflow defined"
+            return result
+        }
+
+        // invoke the entry workflow
+        session.notifyBeforeWorkflowExecution()
+        final ret = entryFlow.invoke_a(EMPTY_ARGS)
+        session.notifyAfterWorkflowExecution()
+        return ret
+    }
+
     Object run() {
         setup()
         ExecutionStack.push(this)
         try {
-            runScript()
+            run0()
         }
         finally {
             ExecutionStack.pop()

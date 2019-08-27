@@ -16,7 +16,6 @@
 
 package test
 
-import spock.lang.Specification
 
 import java.nio.file.Path
 
@@ -27,18 +26,10 @@ import nextflow.NextflowMeta
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class Dsl2Spec extends Specification {
+class Dsl2Spec extends BaseSpec {
 
     def setupSpec() { NextflowMeta.instance.enableDsl2() }
     def cleanupSpec() { NextflowMeta.instance.disableDsl2() }
-
-    def setup() {
-        log.info "TEST BEGIN > ${specificationContext.currentIteration.name}"
-    }
-
-    def cleanup() {
-        log.info "TEST CLOSE - ${specificationContext.currentIteration.name}"
-    }
 
     def dsl_eval(String str) {
         new MockScriptRunner().setScript(str).execute()
@@ -48,4 +39,9 @@ class Dsl2Spec extends Specification {
         new MockScriptRunner().setScript(path).execute()
     }
 
+
+    def dsl_eval(String entry, String str) {
+        new MockScriptRunner()
+                .setScript(str).execute(null, entry)
+    }
 }

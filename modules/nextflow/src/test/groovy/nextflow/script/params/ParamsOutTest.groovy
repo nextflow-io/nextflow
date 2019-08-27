@@ -1010,6 +1010,66 @@ class ParamsOutTest extends Specification {
         out3.isPathQualifier()
     }
 
+    def 'test output path with alias'() {
+
+        setup:
+        def text = '''
+
+            process hola {
+              output:
+              path "${x}_name", emit: aaa
+              path "${x}_${y}.fa", emit: bbb into channel2
+              path "simple.txt", emit: ccc into channel3
+              path "data/sub/dir/file:${x}.fa", emit: ddd into channel4
+
+              return ''
+            }
+            '''
+
+        def binding = [:]
+        def process = parseAndReturnProcess(text, binding)
+        def ctx = [x: 'hola', y:99, z:'script_file']
+
+        when:
+        FileOutParam out0 = process.config.getOutputs().get(0)
+        FileOutParam out1 = process.config.getOutputs().get(1)
+        FileOutParam out2 = process.config.getOutputs().get(2)
+        FileOutParam out3 = process.config.getOutputs().get(3)
+
+        then:
+        process.config.getOutputs().size() == 4
+
+        out0.name == null
+        out0.getFilePatterns(ctx,null) == ['hola_name']
+        out0.isDynamic()
+        out0.isPathQualifier()
+        out0.channelEmitName == 'aaa'
+
+        out1.name == null
+        out1.getFilePatterns(ctx,null) == ['hola_99.fa']
+        out1.outChannel instanceof DataflowQueue
+        out1.outChannel == binding.channel2
+        out1.isDynamic()
+        out1.isPathQualifier()
+        out1.channelEmitName == 'bbb'
+
+        out2.name == null
+        out2.getFilePatterns(ctx,null) == ['simple.txt']
+        out2.outChannel instanceof DataflowQueue
+        out2.outChannel == binding.channel3
+        !out2.isDynamic()
+        out2.isPathQualifier()
+        out2.channelEmitName == 'ccc'
+
+        out3.name == null
+        out3.getFilePatterns(ctx,null) == ['data/sub/dir/file:hola.fa']
+        out3.outChannel instanceof DataflowQueue
+        out3.outChannel == binding.channel4
+        out3.isDynamic()
+        out3.isPathQualifier()
+        out3.channelEmitName == 'ddd'
+    }
+
     def 'test output path with set' () {
 
         given:
@@ -1171,5 +1231,110 @@ class ParamsOutTest extends Specification {
         out1.index == 1
         (out1.inner[0] as ValueOutParam).index == 1
         (out1.inner[1] as FileOutParam).index == 1
+    }
+
+
+    def 'should declare val with alias'() {
+
+        setup:
+        def text = '''
+            process hola {
+              output:
+              val x,     emit: ch0
+              val 10,    emit: ch1
+              val 'str', emit: ch2
+              val "${y}",emit: ch3
+              val x.y,   emit: ch4
+              /return/
+            }
+            '''
+
+        def binding = [:]
+        def process = parseAndReturnProcess(text, binding)
+
+        when:
+        def outs = process.config.getOutputs() as List<ValueOutParam>
+        then:
+        outs[0].name == 'x'
+        outs[0].channelEmitName == 'ch0'
+        outs[0].resolve([x:'foo']) == 'foo'
+        and:
+        outs[1].name == null
+        outs[1].channelEmitName == 'ch1'
+        outs[1].resolve([:]) == 10
+        and:
+        outs[2].name == null
+        outs[2].channelEmitName == 'ch2'
+        outs[2].resolve([:]) == 'str'
+        and:
+        outs[3].name == null
+        outs[3].channelEmitName == 'ch3'
+        outs[3].resolve([y:'blah']) == 'blah'
+        and:
+        outs[4].name == null
+        outs[4].channelEmitName == 'ch4'
+        outs[4].resolve( [x:[y:'Ciao']] ) == 'Ciao'
+    }
+
+    def 'should define with paths' () {
+        setup:
+        def text = '''
+            process hola {
+              output:
+              path x,        emit: ch0
+              path 'file.*', emit: ch1
+              path "${y}",   emit: ch2
+              /return/
+            }
+            '''
+
+        when:
+        def process = parseAndReturnProcess(text)
+        def outs = process.config.getOutputs() as List<FileOutParam>
+        then:
+        outs[0].name == 'x'
+        outs[0].channelEmitName == 'ch0'
+        and:
+        outs[1].getName() == null
+        outs[1].filePattern == 'file.*'
+        outs[1].channelEmitName == 'ch1'
+        and:
+        outs[2].name == null
+        outs[2].filePattern == null
+        outs[2].channelEmitName == 'ch2'
+    }
+
+    def 'should define out tuple with alias'() {
+
+        setup:
+        def text = '''
+            process hola {
+              output:
+                tuple val(x), val(y),   emit: ch1
+                tuple path('foo'),      emit: ch2
+                tuple stdout,           emit: ch3
+
+              /return/
+            }
+            '''
+
+        def binding = [:]
+        def process = parseAndReturnProcess(text, binding)
+
+        when:
+        def outs = process.config.getOutputs() as List<TupleOutParam>
+
+        then:
+        outs[0].name == 'tupleoutparam<0>'
+        outs[0].channelEmitName == 'ch1'
+        outs[0].inner[0].name == 'x'
+        outs[0].inner[1].name == 'y'
+        and:
+        outs[1].name == 'tupleoutparam<1>'
+        outs[1].channelEmitName == 'ch2'
+        and:
+        outs[2].name == 'tupleoutparam<2>'
+        outs[2].channelEmitName == 'ch3'
+
     }
 }
