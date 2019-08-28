@@ -15,9 +15,9 @@
  */
 
 package nextflow.trace
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.Session
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
 /**
@@ -32,11 +32,6 @@ class StatsObserver implements TraceObserver {
     private WorkflowStats stats = new WorkflowStats()
 
     WorkflowStats getStats() { stats }
-
-    @Override
-    void onFlowStart(Session session) {
-
-    }
 
     @Override
     void onFlowComplete() {

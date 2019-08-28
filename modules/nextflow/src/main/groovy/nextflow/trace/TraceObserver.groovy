@@ -31,12 +31,19 @@ trait TraceObserver {
     /**
      * The is method is invoked when the flow is going to start
      */
-    void onFlowStart(Session session){}
+    void onFlowInit(Session session) {}
+
+    @Deprecated void onFlowStart(Session session){}
+
+    /**
+     * The is method is invoked when the flow is going to start
+     */
+    void onFlowBegin() {}
 
     /**
      * This method is invoked when the flow is going to complete
      */
-    void onFlowComplete(){}
+    void onFlowComplete() {}
 
     /*
      * Invoked when the process is created.

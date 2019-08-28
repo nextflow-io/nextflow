@@ -120,7 +120,7 @@ class WebLogObserver implements TraceObserver{
      * @param session The current Nextflow session object
      */
     @Override
-    void onFlowStart(Session session) {
+    void onFlowInit(Session session) {
         this.session = session
         runName = session.getRunName()
         runId = session.getUniqueId()
