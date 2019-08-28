@@ -346,7 +346,7 @@ class TraceRecord implements Serializable {
         }
     }
 
-    TaskId getTaskId() { (TaskId)get('task_id') }
+    TaskId getTaskId() { TaskId.of(get('task_id')) }
 
     String getWorkDir() { get('workdir') }
 

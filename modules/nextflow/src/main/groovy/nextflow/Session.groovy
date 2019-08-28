@@ -90,7 +90,7 @@ class Session implements ISession {
      */
     final Collection<DataflowProcessor> allOperators = new ConcurrentLinkedQueue<>()
 
-    final List<Closure> igniters = new ArrayList<>(10)
+    final List<Closure> igniters = new ArrayList<>(20)
 
     /**
      * Creates process executors
@@ -433,6 +433,8 @@ class Session implements ISession {
     }
 
     void fireDataflowNetwork() {
+        notifyFlowBegin()
+
         if( !NextflowMeta.instance.isDsl2() )
             return
 
@@ -440,7 +442,7 @@ class Session implements ISession {
         CH.broadcast()
 
         log.debug "Ignite dataflow network (${igniters.size()})"
-        for( def action : igniters ) {
+        for( Closure action : igniters ) {
             try {
                 action.call()
             }
@@ -476,8 +478,9 @@ class Session implements ISession {
 
         // create tasks executor
         execService = Executors.newFixedThreadPool(poolSize)
+
         // signal start to trace observers
-        observers.each { trace -> trace.onFlowStart(this) }
+        notifyFlowInit()
 
         return this
     }
@@ -658,16 +661,7 @@ class Session implements ISession {
         }
 
         // -- invoke observers completion handlers
-        def copy = new ArrayList<TraceObserver>(observers)
-        for( TraceObserver observer : copy  ) {
-            try {
-                if( observer )
-                    observer.onFlowComplete()
-            }
-            catch( Exception e ) {
-                log.debug "Failed to invoke observer completion handler: $observer", e
-            }
-        }
+        notifyFlowComplete()
 
         // -- global
         Global.cleanUp()
@@ -998,6 +992,27 @@ class Session implements ISession {
 
     void notifyAfterWorkflowExecution() {
 
+    }
+
+    void notifyFlowBegin() {
+        observers.each { trace -> trace.onFlowBegin() }
+    }
+
+    void notifyFlowInit() {
+        observers.each { trace -> trace.onFlowInit(this); trace.onFlowStart(this) }
+    }
+
+    void notifyFlowComplete() {
+        def copy = new ArrayList<TraceObserver>(observers)
+        for( TraceObserver observer : copy  ) {
+            try {
+                if( observer )
+                    observer.onFlowComplete()
+            }
+            catch( Exception e ) {
+                log.debug "Failed to invoke observer completion handler: $observer", e
+            }
+        }
     }
 
     /**
