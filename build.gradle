@@ -162,7 +162,7 @@ dependencies {
     compile project(':nextflow')
     // include Ivy at runtime in order to have Grape @Grab work correctly
     runtime "org.apache.ivy:ivy:2.3.0"
-    runtime "io.seqera:nf-tower-client:0.1.1"
+    runtime "io.seqera:nf-tower-client:0.2.0-SNAPSHOT"
     // library used to compile but not included in the final jar
     compileOnly ('javax.xml.bind:jaxb-api:2.3.0')
     // Capsule manages the fat jar building process
