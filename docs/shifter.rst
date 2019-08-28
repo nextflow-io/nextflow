@@ -25,6 +25,8 @@ all of the compute nodes and the `shifterimg` command should also be available a
 Image gateway, for more information see the
 `official documentation <https://github.com/NERSC/shifter/tree/master/doc>`__.
 
+.. note:: The engine should work with at least shifter version 18.03.
+
 Images
 ======
 
