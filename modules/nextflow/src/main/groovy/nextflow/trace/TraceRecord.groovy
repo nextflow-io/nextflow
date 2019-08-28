@@ -15,6 +15,7 @@
  */
 
 package nextflow.trace
+
 import java.nio.file.Path
 import java.util.regex.Pattern
 
@@ -29,6 +30,7 @@ import nextflow.script.ProcessDef
 import nextflow.util.Duration
 import nextflow.util.KryoHelper
 import nextflow.util.MemoryUnit
+import static nextflow.util.SecretHelper.secureEnvString 
 /**
   * This object represent holds the information of a single process run,
   * its content is saved to a trace file line
@@ -264,6 +266,7 @@ class TraceRecord implements Serializable {
     protected String secureEnvString( String str ) {
         str.replaceAll(SECRET_REGEX, '$1=[secure]')
     }
+
 
     void put( String name, def value ) {
         if( !keySet().contains(name) ) {

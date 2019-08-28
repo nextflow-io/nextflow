@@ -33,9 +33,11 @@ import nextflow.file.FileHelper
 import nextflow.scm.AssetManager
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
+import nextflow.util.ConfigHelper
 import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
+import nextflow.util.SecretHelper
 import org.yaml.snakeyaml.Yaml
 /**
  * CLI sub-command RUN
@@ -73,7 +75,7 @@ class CmdRun extends CmdBase implements HubOptions {
     String libPath
 
     @Parameter(names=['-cache'], description = 'Enable/disable processes caching', arity = 1)
-    boolean cacheable = true
+    Boolean cacheable
 
     @Parameter(names=['-resume'], description = 'Execute the script using the cached results, useful to continue executions that was stopped by an error')
     String resume
@@ -139,7 +141,7 @@ class CmdRun extends CmdBase implements HubOptions {
         launcher.options.ansiLog = value
     }
 
-    @Parameter(names = ['-with-tower'], description = 'Track execution with Seqera Tower service')
+    @Parameter(names = ['-with-tower'], description = 'Monitor workflow execution with Seqera Tower service')
     String withTower
 
     @Parameter(names = ['-with-weblog'], description = 'Send workflow status messages via HTTP to target URL')
@@ -236,6 +238,7 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.session.profile = profile
         runner.session.commandLine = launcher.cliString
         runner.session.ansiLog = launcher.options.ansiLog
+        runner.session.resolvedConfig = resolveConfig(scriptFile.parent)
 
         if( this.test ) {
             runner.test(this.test, scriptArgs)
@@ -418,5 +421,24 @@ class CmdRun extends CmdBase implements HubOptions {
             throw new AbortOperationException("Cannot parse params file: $file", e)
         }
     }
+
+    protected String resolveConfig(Path baseDir) {
+
+        if( !withTower )
+            return null
+
+        final config = new ConfigBuilder()
+                .setShowClosures(true)
+                .setOptions(launcher.options)
+                .setCmdRun(this)
+                .setBaseDir(baseDir)
+                .buildConfigObject()
+
+        // strip secret
+        SecretHelper.hideSecrets(config)
+
+        ConfigHelper.toCanonicalString(config, false)
+    }
+
 
 }

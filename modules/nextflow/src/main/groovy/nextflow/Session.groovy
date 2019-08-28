@@ -233,6 +233,8 @@ class Session implements ISession {
 
     ScriptBinding.ParamsMap getParams() { binding.getParams() }
 
+    String resolvedConfig
+
     boolean ansiLog
 
     AnsiLogObserver ansiLogObserver
@@ -289,7 +291,7 @@ class Session implements ISession {
         NF.init()
 
         // -- cacheable flag
-        cacheable = config.cacheable
+        cacheable = config.cacheable == null || config.cacheable.toString()=='true'
 
         // -- sets resumeMode and uniqueId
         if( config.resume ) {

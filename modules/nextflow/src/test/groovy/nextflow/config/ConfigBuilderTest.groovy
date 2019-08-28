@@ -908,7 +908,7 @@ class ConfigBuilderTest extends Specification {
         when:
         builder.configRunOptions(config, [:], new CmdRun())
         then:
-        config.libDir == null
+        !config.isSet('libDir')
 
         when:
         builder.configRunOptions(config, [NXF_LIB:'/foo/bar'], new CmdRun())
@@ -931,13 +931,19 @@ class ConfigBuilderTest extends Specification {
         config = new ConfigObject()
         builder.configRunOptions(config, env, new CmdRun())
         then:
-        config.cacheable == true
+        !config.isSet('cacheable')
 
         when:
         config = new ConfigObject()
         builder.configRunOptions(config, env, new CmdRun(cacheable: false))
         then:
         config.cacheable == false
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(cacheable: true))
+        then:
+        config.cacheable == true
     }
 
     def 'should check for a valid profile' () {
