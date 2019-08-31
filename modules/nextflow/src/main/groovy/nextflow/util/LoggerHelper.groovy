@@ -68,6 +68,9 @@ import nextflow.script.WorkflowDef
 import org.apache.commons.lang.exception.ExceptionUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.slf4j.Marker
+import org.slf4j.MarkerFactory
+
 /**
  * Helper class to setup the logging subsystem
  *
@@ -75,6 +78,8 @@ import org.slf4j.LoggerFactory
  */
 @CompileStatic
 class LoggerHelper {
+
+    static public Marker STICKY = MarkerFactory.getMarker('sticky')
 
     static private String STARTUP_ERROR = 'startup failed:\n'
 
@@ -602,6 +607,9 @@ class LoggerHelper {
                 final renderer = session?.ansiLogObserver
                 if( !renderer )
                     System.out.println(message)
+
+                else if( event.marker == STICKY )
+                    renderer.appendSticky(message)
 
                 else if( event.level==Level.ERROR )
                     renderer.appendError(message)

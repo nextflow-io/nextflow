@@ -16,6 +16,8 @@
 
 package nextflow.trace
 
+import static nextflow.util.LoggerHelper.*
+import static org.fusesource.jansi.Ansi.*
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
@@ -27,11 +29,6 @@ import nextflow.processor.TaskProcessor
 import nextflow.util.Duration
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
-import static org.fusesource.jansi.Ansi.Color
-import static org.fusesource.jansi.Ansi.ansi
-
-import static nextflow.util.LoggerHelper.isHashLogPrefix
-
 /**
  * Implements an observer which display workflow
  * execution progress and notifications using
@@ -72,6 +69,8 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     private Session session
+
+    private List<Event> sticky = new ArrayList<>()
 
     private List<Event> errors = new ArrayList<>()
 
@@ -142,6 +141,16 @@ class AnsiLogObserver implements TraceObserver {
         }
     }
 
+    synchronized void appendSticky(String message) {
+        if( !started || !processes )
+            printAnsi(message, Color.RED)
+        else {
+            sticky << new Event(message)
+            dirty = true
+            notify()
+        }
+    }
+
     protected void render0(dummy) {
         while(!stopped) {
             if( dirty ) renderProgress()
@@ -178,6 +187,16 @@ class AnsiLogObserver implements TraceObserver {
 
         for( int i=0; i<BLANKS; i++ )
             term.newline()
+    }
+
+    protected void renderSticky(Ansi term) {
+        for( Event ev : sticky ) {
+            term.fg(Color.GREEN)
+            term.a(Attribute.INTENSITY_BOLD)
+            term.a(ev.message)
+            term.a(Attribute.INTENSITY_BOLD_OFF)
+            term.fg(Color.DEFAULT).newline()
+        }
     }
 
     protected void renderExecutors(Ansi term) {
@@ -232,6 +251,7 @@ class AnsiLogObserver implements TraceObserver {
 
         // -- print processes
         final term = ansi()
+        renderSticky(term)
         renderExecutors(term)
         renderProcesses(term)
         renderMessages(term, infos)
