@@ -158,6 +158,20 @@ class AmazonCloudDriver implements CloudDriver {
      */
     protected String getSecretKey() { secretKey }
 
+    protected boolean inEcs() {
+	def env = System.getenv()
+	return env.containsKey('AWS_CONTAINER_CREDENTIALS_RELATIVE_URI');
+    }
+    protected String getUrlBase() {
+	if( inEcs() ) {
+	    log.info "Running in ECS"
+	    return "http://169.254.170.2"
+	} else {
+	    log.info "Not running in ECS"
+	    return "http://169.254.169.254"
+	}
+    }
+
     /**
      * Retrieve the current IAM role eventually define for a EC2 instance.
      * See http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html#instance-metadata-security-credentials
@@ -168,7 +182,16 @@ class AmazonCloudDriver implements CloudDriver {
      */
     protected String fetchIamRole() {
         try {
-            def role = getUrl('http://169.254.169.254/latest/meta-data/iam/security-credentials/').readLines()
+	    final urlbase = getUrlBase()
+	    def url = ""
+	    
+	    if( inEcs() ) {
+		final env = System.getenv()
+		url = urlbase + env['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI']
+	    }
+	    else
+		url = urlbase + '/latest/meta-data/iam/security-credentials/'
+            def role = getUrl(url).readLines()
             if( role.size() != 1 )
                 throw new IllegalArgumentException("Not a valid EC2 IAM role")
             return role.get(0)
