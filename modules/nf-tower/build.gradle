@@ -1,0 +1,35 @@
+/*
+ * Copyright (c) 2019, Seqera Labs.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+ *
+ * This Source Code Form is "Incompatible With Secondary Licenses", as
+ * defined by the Mozilla Public License, v. 2.0.
+ */
+
+apply plugin: 'groovy'
+
+sourceSets {
+    main.java.srcDirs = []
+    main.groovy.srcDirs = ['src/main']
+    main.resources.srcDirs = ['src/resources']
+    test.groovy.srcDirs = ['src/test']
+    test.java.srcDirs = []
+    test.resources.srcDirs = []
+}
+
+
+dependencies {
+    // Use the latest Groovy version for building this library
+    implementation project(':nextflow')
+
+    // Use the awesome Spock testing and specification framework
+    testImplementation "io.nextflow:nextflow"
+    testImplementation 'io.nextflow:nf-commons'
+    testImplementation ("org.codehaus.groovy:groovy-test:2.5.8") { exclude group: 'org.codehaus.groovy' }
+    testImplementation ("cglib:cglib-nodep:2.2")
+    testImplementation ("org.objenesis:objenesis:2.1")
+    testImplementation ("org.spockframework:spock-core:1.3-groovy-2.5") { exclude group: 'org.codehaus.groovy' }
+}

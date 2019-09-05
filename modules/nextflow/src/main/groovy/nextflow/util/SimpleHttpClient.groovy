@@ -64,7 +64,7 @@ class SimpleHttpClient {
      * Send a json formatted string as HTTP POST request
      * @param json Message content as JSON
      */
-    void sendHttpMessage(String url, String json) throws IllegalStateException, IllegalArgumentException{
+    void sendHttpMessage(String url, String json, String method = 'POST') throws IllegalStateException, IllegalArgumentException{
 
         if (!url)
             throw new IllegalStateException("URL needs to be set!")
@@ -72,7 +72,7 @@ class SimpleHttpClient {
         // Open a connection to the target url
         def con = getHttpConnection(url)
         // Make header settings
-        con.setRequestMethod("POST")
+        con.setRequestMethod(method)
         con.setRequestProperty("Content-Type", "application/json")
         con.setRequestProperty("User-Agent", userAgent)
         if( authToken )
