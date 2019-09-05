@@ -4,9 +4,9 @@
 Shifter Containers
 ******************
 
-`Shifter <https://docs.nersc.gov/programming/shifter/overview/>`__ is yet another container engine alternative to
+`Shifter <https://docs.nersc.gov/programming/shifter/overview/>`__ is container engine alternative to
 `Docker <https://www.docker.com>`__. Shifter works by converting Docker images to a common format that can then be
-distributed and launched on HPC systems. The user interface to shifter enables a user to select an image
+distributed and launched on HPC systems. The user interface to Shifter enables a user to select an image
 from the `dockerhub registry <https://hub.docker.com/>`__ and then submit jobs which run entirely within the container.
 
 Nextflow provides built-in support for Shifter. This allows you to control the execution environment of the processes
@@ -20,12 +20,12 @@ Prerequisites
 =============
 
 You need Shifter and Shifter image gateway installed in your execution environment, i.e: your personal computed or the
-entry node of a distributed cluster. In the case of the distributed cluster case, you should have shifter installed on
-all of the compute nodes and the `shifterimg` command should also be available and shifter properly setup to access the
+entry node of a distributed cluster. In the case of the distributed cluster case, you should have Shifter installed on
+all of the compute nodes and the ``shifterimg`` command should also be available and Shifter properly setup to access the
 Image gateway, for more information see the
 `official documentation <https://github.com/NERSC/shifter/tree/master/doc>`__.
 
-.. note:: The engine should work with at least shifter version 18.03.
+.. note:: This feature requires Shifter version 18.03 (or later) and Nextflow 19.10.0 (or later).
 
 Images
 ======
