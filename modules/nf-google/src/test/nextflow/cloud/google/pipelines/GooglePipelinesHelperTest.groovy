@@ -15,6 +15,7 @@
  */
 package nextflow.cloud.google.pipelines
 
+import nextflow.executor.res.AcceleratorResource
 import spock.lang.Specification
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
@@ -130,12 +131,13 @@ class GooglePipelinesHelperTest extends Specification {
         def diskName = "testDisk"
         def scopes = ["scope1","scope2"]
         def preEmptible = true
+        def acc = new AcceleratorResource(request: 4, type: 'nvidia-tesla-k80')
         def helper = new GooglePipelinesHelper()
 
         when:
-        def resources1 = helper.configureResources(type,projectId,zone,null,diskName,100, scopes,preEmptible)
-        def resources2 = helper.configureResources(type,projectId,null,region,diskName,200,scopes,preEmptible)
-        def resources3 = helper.configureResources(type,projectId,zone,null,diskName)
+        def resources1 = helper.configureResources(type,projectId,zone,null,diskName,100, scopes,preEmptible, null)
+        def resources2 = helper.configureResources(type,projectId,null,region,diskName,200,scopes,preEmptible, null)
+        def resources3 = helper.configureResources(type,projectId,zone,null,diskName, null, null, false, acc)
 
         then:
         with(resources1) {
@@ -147,6 +149,7 @@ class GooglePipelinesHelperTest extends Specification {
             getVirtualMachine().getDisks().get(0).getSizeGb() == 100
             getVirtualMachine().getServiceAccount().getScopes() == scopes
             getVirtualMachine().getPreemptible() == preEmptible
+            !getVirtualMachine().getAccelerators()
         }
 
         with(resources2) {
@@ -158,6 +161,7 @@ class GooglePipelinesHelperTest extends Specification {
             getVirtualMachine().getDisks().get(0).getSizeGb() == 200
             getVirtualMachine().getServiceAccount().getScopes() == scopes
             getVirtualMachine().getPreemptible() == preEmptible
+            !getVirtualMachine().getAccelerators()
         }
 
         with(resources3) {
@@ -168,6 +172,9 @@ class GooglePipelinesHelperTest extends Specification {
             !getVirtualMachine().getDisks().get(0).getSizeGb()
             !getVirtualMachine().getServiceAccount().getScopes()
             !getVirtualMachine().getPreemptible()
+            getVirtualMachine().getAccelerators().size()==1
+            getVirtualMachine().getAccelerators()[0].getCount()==4
+            getVirtualMachine().getAccelerators()[0].getType()=='nvidia-tesla-k80'
         }
     }
 
@@ -266,7 +273,8 @@ class GooglePipelinesHelperTest extends Specification {
                 'my-disk',
                 500,
                 [GooglePipelinesHelper.SCOPE_CLOUD_PLATFORM],
-                true )
+                true,
+                null )
 
         res.getProjectId() == 'my-project'
         res.getZones() ==['my-zone']

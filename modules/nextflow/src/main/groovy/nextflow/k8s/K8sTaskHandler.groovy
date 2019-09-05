@@ -176,13 +176,13 @@ class K8sTaskHandler extends TaskHandler {
         // add computing resources
         final cpus = taskCfg.get('cpus') as Integer
         final mem = taskCfg.getMemory()
-        final gpu = taskCfg.getGpu()
+        final acc = taskCfg.getAccelerator()
         if( cpus )
             builder.withCpus(cpus as int)
         if( mem )
             builder.withMemory(mem)
-        if( gpu )
-            builder.withGpu(gpu)
+        if( acc )
+            builder.withAccelerator(acc)
 
         final List<String> hostMounts = getContainerMounts()
         for( String mount : hostMounts ) {

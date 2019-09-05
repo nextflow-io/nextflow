@@ -555,16 +555,16 @@ class TaskConfigTest extends Specification {
 
         when:
         def process = new ProcessConfig(script)
-        process.gpu 5
-        def res = process.createTaskConfig().getGpu()
+        process.accelerator 5
+        def res = process.createTaskConfig().getAccelerator()
         then:
         res.limit == 5 
         res.request == 5
 
         when:
         process = new ProcessConfig(script)
-        process.gpu 5, limit: 10, type: 'nvidia'
-        res = process.createTaskConfig().getGpu()
+        process.accelerator 5, limit: 10, type: 'nvidia'
+        res = process.createTaskConfig().getAccelerator()
         then:
         res.request == 5
         res.limit == 10

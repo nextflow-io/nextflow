@@ -593,35 +593,35 @@ class ProcessConfigTest extends Specification {
         config.getOutputs().size() == 1
     }
 
-    def 'should apply gpu config' () {
+    def 'should apply accelerator config' () {
 
         given:
         def process = new ProcessConfig(Mock(BaseScript))
 
         when:
-        process.gpu 5
+        process.accelerator 5
         then:
-        process.gpu == [limit: 5]
+        process.accelerator == [limit: 5]
 
         when:
-        process.gpu request: 1, limit: 5, type: 'nvida'
+        process.accelerator request: 1, limit: 5, type: 'nvida'
         then:
-        process.gpu == [request: 1, limit: 5, type: 'nvida']
+        process.accelerator == [request: 1, limit: 5, type: 'nvida']
 
         when:
-        process.gpu 5, type: 'nvida'
+        process.accelerator 5, type: 'nvida'
         then:
-        process.gpu == [limit: 5, type: 'nvida']
+        process.accelerator == [limit: 5, type: 'nvida']
 
         when:
-        process.gpu 1, limit: 5
+        process.accelerator 1, limit: 5
         then:
-        process.gpu == [request: 1, limit:5]
+        process.accelerator == [request: 1, limit:5]
 
         when:
-        process.gpu 5, request: 1
+        process.accelerator 5, request: 1
         then:
-        process.gpu == [request: 1, limit:5]
+        process.accelerator == [request: 1, limit:5]
     }
 
 }

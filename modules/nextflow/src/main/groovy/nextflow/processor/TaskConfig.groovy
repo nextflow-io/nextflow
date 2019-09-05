@@ -25,7 +25,7 @@ import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.exception.FailedGuardException
 import nextflow.executor.BashWrapperBuilder
-import nextflow.executor.res.GpuResource
+import nextflow.executor.res.AcceleratorResource
 import nextflow.k8s.model.PodOptions
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
@@ -347,14 +347,14 @@ class TaskConfig extends LazyMap implements Cloneable {
         new PodOptions((List)get('pod'))
     }
 
-    GpuResource getGpu() {
-        def value = get('gpu')
+    AcceleratorResource getAccelerator() {
+        final value = get('accelerator')
         if( value instanceof Number )
-            return new GpuResource(value)
+            return new AcceleratorResource(value)
         if( value instanceof Map )
-            return new GpuResource(value)
+            return new AcceleratorResource(value)
         if( value != null )
-            throw new IllegalArgumentException("Invalid gpu directive value: $value [${value.getClass().getName()}]")
+            throw new IllegalArgumentException("Invalid `accelerator` directive value: $value [${value.getClass().getName()}]")
         return null
     }
 
