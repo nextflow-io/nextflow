@@ -114,6 +114,29 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     }
 
+
+    def 'should set accelerator' () {
+        given:
+        def task = Mock(TaskRun)
+        task.getName() >> 'batch-task'
+        task.getConfig() >> new TaskConfig(memory: '2GB', cpus: 4, accelerator: 2)
+
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when:
+        def req = handler.newSubmitRequest(task)
+        then:
+        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', region: 'eu-west-1') }
+        1 * handler.getJobQueue(task) >> 'queue1'
+        1 * handler.getJobDefinition(task) >> 'job-def:1'
+
+        def res = req.getContainerOverrides().getResourceRequirements()
+        res.size()==1
+        res[0].getValue() == '2'
+        res[0].getType() == 'GPU'
+    }
+
+
     def 'should create an aws submit request with a timeout'() {
 
         given:

@@ -44,6 +44,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     static final public transient LABEL_REGEXP = ~/[a-zA-Z]([a-zA-Z0-9_]*[a-zA-Z0-9]+)?/
 
     static final public List<String> DIRECTIVES = [
+            'accelerator',
             'afterScript',
             'beforeScript',
             'echo',
@@ -59,7 +60,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'errorStrategy',
             'executor',
             'ext',
-            'gpu',
             'machineType',
             'queue',
             'label',
@@ -784,8 +784,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
 
     }
 
-    ProcessConfig gpu( Map params, value )  {
-        gpuWarn()
+    ProcessConfig accelerator( Map params, value )  {
         if( value instanceof Number ) {
             if( params.limit==null )
                 params.limit=value
@@ -793,23 +792,33 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
                 params.request=value
         }
         else if( value != null )
-            throw new IllegalArgumentException("Not a valid gpu directive value: $value [${value.getClass().getName()}]")
-        gpu(params)
+            throw new IllegalArgumentException("Not a valid `accelerator` directive value: $value [${value.getClass().getName()}]")
+        accelerator(params)
         return this
+    }
+
+    ProcessConfig accelerator( value ) {
+        if( value instanceof Number )
+            configProperties.put('accelerator', [limit: value])
+        else if( value instanceof Map )
+            configProperties.put('accelerator', value)
+        else if( value != null )
+            throw new IllegalArgumentException("Not a valid `accelerator` directive value: $value [${value.getClass().getName()}]")
+        return this
+    }
+
+    ProcessConfig gpu( Map params, value ) {
+        gpuWarn()
+        accelerator(params, value)
     }
 
     ProcessConfig gpu( value ) {
         gpuWarn()
-        if( value instanceof Number )
-            configProperties.put('gpu', [limit: value])
-        else if( value instanceof Map )
-            configProperties.put('gpu', value)
-        else if( value != null )
-            throw new IllegalArgumentException("Not a valid gpu directive value: $value [${value.getClass().getName()}]")
-        return this
+        accelerator(value)
     }
 
-    private void gpuWarn() {
-        log.warn1 "Directive `gpu` is an experimental feature -- it may change in a feature release"
+    protected void gpuWarn() {
+        log.warn1('Directive `gpu` has been deprecated -- Use `accelerator` instead')
     }
+
 }

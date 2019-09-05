@@ -334,6 +334,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
         req.mainScript = mainScript
         req.unstagingScript = unstaging.join("; ").trim()
         req.sharedMount = sharedMount
+        req.accelerator = task.config.getAccelerator()
         return req
     }
 

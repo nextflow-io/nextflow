@@ -22,18 +22,18 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class GpuResourceTest extends Specification {
+class AcceleratorResourceTest extends Specification {
 
     def 'should create a gpu resource' () {
 
         when:
-        def gpu = new GpuResource(VALUE)
+        def acc = new AcceleratorResource(VALUE)
         then:
-        gpu.type == TYPE
-        gpu.request == REQ
-        gpu.limit == LIM
-        gpu.type == TYPE
-        gpu.runtime == RUNTIME
+        acc.type == TYPE
+        acc.request == REQ
+        acc.limit == LIM
+        acc.type == TYPE
+        acc.runtime == RUNTIME
 
         where:
         VALUE                       | REQ   | LIM   | TYPE  | RUNTIME
