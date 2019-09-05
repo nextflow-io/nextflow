@@ -58,7 +58,7 @@ class ShifterBuilderTest extends Specification {
         def cli = new ShifterBuilder('ubuntu:14').build().getRunCommand()
         then:
         cli ==  '''
-                shifter_pull ubuntu:14
+                shifterimg pull ubuntu:14
                 shifter --image ubuntu:14
                 '''
                 .stripIndent().trim()
@@ -67,7 +67,7 @@ class ShifterBuilderTest extends Specification {
         cli = new ShifterBuilder('ubuntu:14').build().getRunCommand('bwa --this --that file.fasta')
         then:
         cli ==  '''
-                shifter_pull ubuntu:14
+                shifterimg pull ubuntu:14
                 shifter --image ubuntu:14 bwa --this --that file.fasta
                 '''
                 .stripIndent().trim()
@@ -76,7 +76,7 @@ class ShifterBuilderTest extends Specification {
         cli = new ShifterBuilder('ubuntu:14').params(entry:'/bin/bash').build().getRunCommand('bwa --this --that file.fasta')
         then:
         cli ==  '''
-                shifter_pull ubuntu:14
+                shifterimg pull ubuntu:14
                 shifter --image ubuntu:14 /bin/bash -c "bwa --this --that file.fasta"
                 '''
                 .stripIndent().trim()

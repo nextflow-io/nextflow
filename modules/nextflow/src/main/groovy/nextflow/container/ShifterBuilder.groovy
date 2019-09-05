@@ -24,29 +24,6 @@ package nextflow.container
  */
 class ShifterBuilder extends ContainerBuilder<ShifterBuilder> {
 
-    static private String SHIFTER_HELPERS = '''
-        function shifter_img() {
-          local cmd=$1
-          local image=$2
-          shifterimg -v $cmd $image |  awk -F: '$0~/"status":/{gsub("[\\", ]","",$2);print $2}\'
-        }
-
-        function shifter_pull() {
-          local image=$1
-          local STATUS=$(shifter_img lookup $image)
-          if [[ $STATUS != READY && $STATUS != '' ]]; then
-            STATUS=$(shifter_img pull $image)
-            while [[ $STATUS != READY && $STATUS != FAILURE && $STATUS != '' ]]; do
-              sleep 5
-              STATUS=$(shifter_img pull $image)
-            done
-          fi
-
-          [[ $STATUS == FAILURE || $STATUS == '' ]] && echo "Shifter failed to pull image \\`$image\\`" >&2  && exit 1
-        }
-        '''.stripIndent()
-
-
     private boolean verbose
 
     ShifterBuilder( String image ) {
@@ -83,14 +60,9 @@ class ShifterBuilder extends ContainerBuilder<ShifterBuilder> {
     }
 
     @Override
-    String getScriptHelpers() {
-        return SHIFTER_HELPERS + '\n'
-    }
-
-    @Override
     String getRunCommand() {
         def run = super.getRunCommand()
-        def result = "shifter_pull $image\n"
+        def result = "shifterimg pull $image\n"
         result += run
         return result
     }
