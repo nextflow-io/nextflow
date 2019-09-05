@@ -100,11 +100,11 @@ class Global {
         }
 
         for( Path it : files ) {
-            final DEFAULT_PROFILE = 'default'
             final conf = new IniFile(it)
-            final profile = env ? env.get('AWS_PROFILE', env.get('AWS_DEFAULT_PROFILE', DEFAULT_PROFILE)) : DEFAULT_PROFILE
-            if( (a=conf.section(profile).aws_access_key_id) && (b=conf.section(profile).aws_secret_access_key) ) {
-                final token = conf.section(profile).aws_session_token
+            final profile = getAwsProfile0(env)
+            final section = conf.section(profile)
+            if( (a=section.aws_access_key_id) && (b=section.aws_secret_access_key) ) {
+                final token = section.aws_session_token
                 if( token ) {
                     log.debug "Using AWS temporary session credentials defined in `$profile` section in file: ${conf.file}"
                     return [a,b,token]
@@ -117,6 +117,17 @@ class Global {
         }
 
         return null
+    }
+
+    static protected String getAwsProfile0(Map env) {
+
+        if( env?.containsKey('AWS_PROFILE'))
+            return env.get('AWS_PROFILE')
+
+        if( env?.containsKey('AWS_DEFAULT_PROFILE'))
+            return env.get('AWS_DEFAULT_PROFILE')
+
+        return 'default'
     }
 
     static List<String> getAwsCredentials(Map env, Map config) {
