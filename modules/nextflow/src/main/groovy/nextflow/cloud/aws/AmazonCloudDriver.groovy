@@ -101,6 +101,11 @@ class AmazonCloudDriver implements CloudDriver {
      */
     private String region
 
+    /** 
+     *  Private copy of system environment (to allow testing) 
+     */
+    private Map env = System.getenv()
+    
     /**
      * Initialise the Amazon cloud driver with default (empty) parameters
      */
@@ -159,7 +164,6 @@ class AmazonCloudDriver implements CloudDriver {
     protected String getSecretKey() { secretKey }
 
     protected boolean inEcs() {
-	def env = System.getenv()
 	return env.containsKey('AWS_CONTAINER_CREDENTIALS_RELATIVE_URI');
     }
     protected String getUrlBase() {
@@ -186,7 +190,6 @@ class AmazonCloudDriver implements CloudDriver {
 	    def url = ""
 	    
 	    if( inEcs() ) {
-		final env = System.getenv()
 		url = urlbase + env['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI']
 	    }
 	    else
