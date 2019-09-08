@@ -198,7 +198,7 @@ class TowerObserverTest extends Specification {
         when:
         observer.sendHttpMessage(URL, req)
         then:
-        1 * client.sendHttpMessage(URL, _) >> null
+        1 * client.sendHttpMessage(URL, _, 'POST') >> null
 
     }
 
