@@ -187,7 +187,7 @@ first
 --------
 
 The ``first`` operator creates a channel that returns the first item emitted by the source channel, or eventually
-the first item that matches an optional condition. The condition can be specified by using a :ref:`regular expression<script-regexp>`,
+the first item that matches an optional condition in a :ref:`value channel <channel-types>`. The condition can be specified by using a :ref:`regular expression<script-regexp>`,
 a Java `class` type or any boolean `predicate`. For example::
 
 
@@ -267,7 +267,7 @@ See also `until`_.
 last
 -------
 
-The ``last`` operator creates a channel that only returns the last item emitted by the source channel. For example::
+The ``last`` operator creates a channel that only returns the last item emitted by the source channel in a :ref:`value channel <channel-types>`. For example::
 
     Channel
         .from( 1,2,3,4,5,6 )
@@ -401,7 +401,7 @@ passed on to the next function call, along with the `i+1 th` item, until all the
 processed.
 
 Finally, the ``reduce`` operator emits the result of the last invocation of your function 
-as the sole output.
+as the sole output in a :ref:`value channel <channel-types>`.
 
 For example::
 
@@ -676,7 +676,7 @@ collect
 -------
 
 The ``collect`` operator collects all the items emitted by a channel to a ``List`` and return
-the resulting object as a sole emission. For example::
+the resulting object as a sole emission in a :ref:`value channel <channel-types>`. For example::
 
     Channel
         .from( 1, 2, 3, 4 )
@@ -1956,8 +1956,8 @@ The maths operators are:
 count
 --------
 
-The ``count`` operator creates a channel that emits a single item: a number that represents the total number of
-items emitted by the source channel. For example:: 
+The ``count`` operator creates a :ref:`value channel <channel-types>` that emits a single item: a number that represents the total number of
+items emitted by the source channel . For example:: 
 
         Channel
             .from(9,1,7,5)
@@ -2029,7 +2029,7 @@ that associates each item with the grouping key. For example::
 min
 ------
 
-The ``min`` operator waits until the source channel completes, and then emits the item that has the lowest value.
+The ``min`` operator waits until the source channel completes, and then emits the item that has the lowest value in a :ref:`value channel <channel-types>`.
 For example::
 
     Channel
@@ -2069,7 +2069,7 @@ taking two parameters that represent two emitted items to be compared. For examp
 max
 ------
 
-The ``max`` operator waits until the source channel completes, and then emits the item that has the greatest value.
+The ``max`` operator waits until the source channel completes, and then emits the item that has the greatest value in a :ref:`value channel <channel-types>`.
 For example::
 
     Channel
@@ -2110,7 +2110,7 @@ taking two parameters that represent two emitted items to be compared. For examp
 sum
 ------
 
-The ``sum`` operator creates a channel that emits the sum of all the items emitted by the channel itself.
+The ``sum`` operator creates a :ref:`value channel <channel-types>` that emits the sum of all the items emitted by the channel itself.
 For example::
 
     Channel
