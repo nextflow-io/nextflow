@@ -94,6 +94,8 @@ class TowerObserver implements TraceObserver {
 
     private volatile String workflowId
 
+    private String watchUrl
+
     private String endpoint
 
     private String urlTraceWorkflow
@@ -209,9 +211,11 @@ class TowerObserver implements TraceObserver {
         if( resp.error )
             throw new AbortOperationException(resp.message)
 
-        this.workflowId = parseFlowStartResponse(resp)
+        final payload = parseFlowStartResponse(resp)
+        this.watchUrl = payload.watchUrl
+        this.workflowId = payload.workflowId
         this.sender = Thread.start('Tower-thread', this.&sendTasks0)
-        final msg = "Monitor the execution with Nextflow Tower using this url ${getHostUrl(endpoint)}/watch/${workflowId}"
+        final msg = "Monitor the execution with Nextflow Tower using this url ${watchUrl}"
         log.info(LoggerHelper.STICKY, msg)
     }
 
@@ -434,10 +438,9 @@ class TowerObserver implements TraceObserver {
         }
     }
 
-    protected parseFlowStartResponse(Response resp) {
+    protected Map parseFlowStartResponse(Response resp) {
         if (resp.code >= 200 && resp.code < 300) {
-            def map = (Map)new JsonSlurper().parseText(resp.message)
-            return map.workflowId
+            return (Map)new JsonSlurper().parseText(resp.message)
         }
 
         def msg = """\
