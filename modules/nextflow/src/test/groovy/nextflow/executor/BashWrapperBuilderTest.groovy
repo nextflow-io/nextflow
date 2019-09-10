@@ -715,9 +715,8 @@ class BashWrapperBuilderTest extends Specification {
                 containerConfig: [enabled: true, engine: 'shifter'] as ContainerConfig ).makeBinding()
 
         then:
-        binding.container_helpers.contains('shifter_pull')
         binding.launch_cmd == '''\
-                shifter_pull docker:ubuntu:latest
+                shifterimg pull docker:ubuntu:latest
                 shifter --image docker:ubuntu:latest /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"
                 '''.stripIndent().rightTrim()
         binding.kill_cmd == null

@@ -33,7 +33,7 @@ import nextflow.trace.TraceRecord
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-public abstract class TaskHandler {
+abstract class TaskHandler {
 
     protected TaskHandler(TaskRun task) {
         this.task = task

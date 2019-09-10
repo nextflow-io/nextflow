@@ -18,7 +18,7 @@ package nextflow.k8s.model
 
 import spock.lang.Specification
 
-import nextflow.executor.res.GpuResource
+import nextflow.executor.res.AcceleratorResource
 
 /**
  *
@@ -116,7 +116,7 @@ class PodSpecBuilderTest extends Specification {
                 .withEnv(PodEnv.value('ALPHA','hello'))
                 .withEnv(PodEnv.value('DELTA', 'world'))
                 .withCpus(8)
-                .withGpu( new GpuResource(request: 5, limit:10, type: 'foo.org') )
+                .withAccelerator( new AcceleratorResource(request: 5, limit:10, type: 'foo.org') )
                 .withMemory('100Gi')
                 .build()
 
@@ -550,31 +550,31 @@ class PodSpecBuilderTest extends Specification {
         def builder = new PodSpecBuilder()
 
         when:
-        def res = builder.addGpuResources(new GpuResource(request:2, limit: 5), null)
+        def res = builder.addAcceleratorResources(new AcceleratorResource(request:2, limit: 5), null)
         then:
         res.requests == ['nvidia.com/gpu': 2]
         res.limits == ['nvidia.com/gpu': 5]
 
         when:
-        res = builder.addGpuResources(new GpuResource(limit: 5, type:'foo'), null)
+        res = builder.addAcceleratorResources(new AcceleratorResource(limit: 5, type:'foo'), null)
         then:
         res.requests == ['foo.com/gpu': 5]
         res.limits == ['foo.com/gpu': 5]
 
         when:
-        res = builder.addGpuResources(new GpuResource(request: 5, type:'foo.org'), null)
+        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, type:'foo.org'), null)
         then:
         res.requests == ['foo.org/gpu': 5]
         res.limits == null
 
         when:
-        res = builder.addGpuResources(new GpuResource(request: 5, type:'foo.org'), [limits: [cpus: 2]])
+        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, type:'foo.org'), [limits: [cpus: 2]])
         then:
         res.requests == ['foo.org/gpu': 5]
         res.limits == [cpus:2]
 
         when:
-        res = builder.addGpuResources(new GpuResource(request: 5, limit: 10, type:'foo.org'), [limits: [cpus: 2]])
+        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, limit: 10, type:'foo.org'), [limits: [cpus: 2]])
         then:
         res.requests == ['foo.org/gpu': 5]
         res.limits == [cpus:2, 'foo.org/gpu': 10]

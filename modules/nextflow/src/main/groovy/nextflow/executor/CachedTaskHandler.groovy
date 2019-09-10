@@ -33,6 +33,9 @@ class CachedTaskHandler extends TaskHandler {
         super(task)
         this.trace = trace
         this.trace.setCached(true)
+        // override task id with the current one
+        // https://github.com/nextflow-io/nextflow/issues/1301
+        this.trace.put('task_id', task.id)
     }
 
     @Override

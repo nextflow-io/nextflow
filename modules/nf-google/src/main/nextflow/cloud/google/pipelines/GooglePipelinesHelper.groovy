@@ -21,6 +21,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.services.genomics.v2alpha1.Genomics
+import com.google.api.services.genomics.v2alpha1.model.Accelerator
 import com.google.api.services.genomics.v2alpha1.model.Action
 import com.google.api.services.genomics.v2alpha1.model.CancelOperationRequest
 import com.google.api.services.genomics.v2alpha1.model.Disk
@@ -33,6 +34,7 @@ import com.google.api.services.genomics.v2alpha1.model.ServiceAccount
 import com.google.api.services.genomics.v2alpha1.model.VirtualMachine
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.executor.res.AcceleratorResource
 
 /**
  * Helper class for Google Pipelines.
@@ -133,7 +135,10 @@ class GooglePipelinesHelper {
                 req.region,
                 req.diskName,
                 req.diskSizeGb,
-                [GooglePipelinesHelper.SCOPE_CLOUD_PLATFORM], req.preemptible)
+                [GooglePipelinesHelper.SCOPE_CLOUD_PLATFORM],
+                req.preemptible,
+                req.accelerator
+        )
     }
 
     protected Action createMainAction(GooglePipelinesSubmitRequest req) {
@@ -163,7 +168,7 @@ class GooglePipelinesHelper {
                 [ActionFlags.ALWAYS_RUN, ActionFlags.IGNORE_EXIT_STATUS])
     }
 
-    Resources configureResources(String machineType, String projectId, List<String> zone, List<String> region, String diskName, Integer diskSizeGb=null, List<String> scopes = null, boolean preEmptible = false) {
+    Resources configureResources(String machineType, String projectId, List<String> zone, List<String> region, String diskName, Integer diskSizeGb, List<String> scopes, boolean preemptible, AcceleratorResource accelerator) {
 
         def disk = new Disk()
         disk.setName(diskName)
@@ -177,8 +182,14 @@ class GooglePipelinesHelper {
                 .setMachineType(machineType)
                 .setDisks([disk])
                 .setServiceAccount(serviceAccount)
-                .setPreemptible(preEmptible)
+                .setPreemptible(preemptible)
 
+        if( accelerator ) {
+            final acc = new Accelerator().setType(accelerator.type).setCount(accelerator.request)
+            final list = new ArrayList(1)
+            list.add(acc)
+            vm.setAccelerators(list)
+        }
 
         new Resources()
                 .setProjectId(projectId)

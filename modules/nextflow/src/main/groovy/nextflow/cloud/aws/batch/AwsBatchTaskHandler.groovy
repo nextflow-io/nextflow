@@ -33,12 +33,14 @@ import com.amazonaws.services.batch.model.JobTimeout
 import com.amazonaws.services.batch.model.KeyValuePair
 import com.amazonaws.services.batch.model.MountPoint
 import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
+import com.amazonaws.services.batch.model.ResourceRequirement
 import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.TerminateJobRequest
 import com.amazonaws.services.batch.model.Volume
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.executor.res.AcceleratorResource
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
 import nextflow.processor.ErrorStrategy
@@ -528,6 +530,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( task.config.getCpus() > 1 )
             container.vcpus = task.config.getCpus()
 
+        if( task.config.getAccelerator() ) {
+            container.setResourceRequirements(createResList(task.config.getAccelerator()))
+        }
+
         // set the environment
         def vars = getEnvironmentVars()
         if( vars )
@@ -535,6 +541,17 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         result.setContainerOverrides(container)
 
+        return result
+    }
+
+    protected List<ResourceRequirement> createResList(AcceleratorResource acc) {
+        final res = new ResourceRequirement()
+        final type = acc.type ?: 'GPU'
+        final count = acc.request?.toString() ?: '1'
+        res.setType(type.toUpperCase())
+        res.setValue(count)
+        final result = new ArrayList(1)
+        result.add(res)
         return result
     }
 

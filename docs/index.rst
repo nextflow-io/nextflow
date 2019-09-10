@@ -25,6 +25,7 @@ Contents:
    google
    conda
    docker
+   shifter
    singularity
    ignite
    kubernetes

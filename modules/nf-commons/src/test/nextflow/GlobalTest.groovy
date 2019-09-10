@@ -40,6 +40,9 @@ class GlobalTest extends Specification {
         Global.getAwsCredentials0(null, [aws:[accessKey: 'b', secretKey: '333']]) == ['b','333']
         Global.getAwsCredentials0(null, [aws:[accessKey: 'b']]) == null
 
+        Global.getAwsCredentials0([AWS_ACCESS_KEY_ID: 'q', AWS_SECRET_ACCESS_KEY: '999'], [aws:[accessKey: 'b', secretKey: '333']]) == ['b','333']
+
+
     }
 
     def testAwsCredentialsWithFile() {
@@ -54,6 +57,33 @@ class GlobalTest extends Specification {
 
         Global.getAwsCredentials0(null, null, [file]) == ['aaa','bbbb']
         Global.getAwsCredentials0([AWS_ACCESS_KEY: 'x', AWS_SECRET_KEY: '222'], null, [file]) == ['x','222']
+
+        cleanup:
+        file?.delete()
+
+    }
+
+    def testAwsCredentialsWithFileAndProfile() {
+
+        given:
+        def file = Files.createTempFile('test','test')
+        file.text = '''
+            [default]
+            aws_access_key_id = aaa
+            aws_secret_access_key = bbbb
+            
+            [foo]
+            aws_access_key_id = xxx
+            aws_secret_access_key = yyy
+
+            [bar]
+            aws_access_key_id = xxx
+            aws_secret_access_key = yyy
+            aws_session_token = zzz
+            '''
+
+        Global.getAwsCredentials0([AWS_PROFILE: 'foo'], null, [file]) == ['xxx','yyy']
+        Global.getAwsCredentials0([AWS_DEFAULT_PROFILE: 'bar'], null, [file]) == ['xxx','yyy','zzz']
 
         cleanup:
         file?.delete()

@@ -1,8 +1,8 @@
 .. _docker-page:
 
-*******************
+******************
 Docker containers
-*******************
+******************
 
 Nextflow integration with `Docker containers <http://www.docker.io>`_ technology allows you to write self-contained
 and truly reproducible computational pipelines.

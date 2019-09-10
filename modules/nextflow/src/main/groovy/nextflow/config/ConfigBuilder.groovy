@@ -445,7 +445,8 @@ class ConfigBuilder {
     void configRunOptions(ConfigObject config, Map env, CmdRun cmdRun) {
 
         // -- set config options
-        config.cacheable = cmdRun.cacheable
+        if( cmdRun.cacheable != null )
+            config.cacheable = cmdRun.cacheable
 
         // -- set the run name
         if( cmdRun.runName )
@@ -465,7 +466,7 @@ class ConfigBuilder {
         if( cmdRun.libPath )
             config.libDir = cmdRun.libPath
 
-        else if ( !config.libDir )
+        else if ( !config.isSet('libDir') && env.get('NXF_LIB') )
             config.libDir = env.get('NXF_LIB')
 
         // -- override 'process' parameters defined on the cmd line

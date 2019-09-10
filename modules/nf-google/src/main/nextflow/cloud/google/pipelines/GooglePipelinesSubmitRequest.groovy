@@ -19,6 +19,7 @@ package nextflow.cloud.google.pipelines
 import com.google.api.services.genomics.v2alpha1.model.Mount
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
+import nextflow.executor.res.AcceleratorResource
 
 /**
  * Models Google pipeline request for a Nextflow task executor
@@ -57,4 +58,5 @@ class GooglePipelinesSubmitRequest {
 
     Mount sharedMount
 
+    AcceleratorResource accelerator
 }

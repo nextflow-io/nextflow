@@ -224,6 +224,18 @@ class SessionTest extends Specification {
 
     }
 
+    def 'test cacheable property' () {
+        when:
+        def session = new Session()
+        then:
+        session.cacheable
+
+        when:
+        session = new Session([cacheable: false])
+        then:
+        !session.cacheable
+    }
+
     def 'test create observers'() {
 
         def session
