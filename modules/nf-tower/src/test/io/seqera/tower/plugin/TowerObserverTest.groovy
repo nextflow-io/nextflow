@@ -43,10 +43,11 @@ class TowerObserverTest extends Specification {
         def tower = new TowerObserver()
 
         when:
-        def resp = new TowerObserver.Response(200, '{"status":"OK", "workflowId":"12345"}')
+        def resp = new TowerObserver.Response(200, '{"status":"OK", "workflowId":"12345", "watchUrl": "http://foo.com/watch/12345"}')
         def result = tower.parseFlowStartResponse(resp)
         then:
-        result == '12345'
+        result.workflowId == '12345'
+        result.watchUrl == 'http://foo.com/watch/12345'
 
         when:
         resp = new TowerObserver.Response(500, '{"status":"OK", "workflowId":"12345"}')
@@ -198,7 +199,7 @@ class TowerObserverTest extends Specification {
         when:
         observer.sendHttpMessage(URL, req)
         then:
-        1 * client.sendHttpMessage(URL, _) >> null
+        1 * client.sendHttpMessage(URL, _, 'POST') >> null
 
     }
 

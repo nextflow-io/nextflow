@@ -15,7 +15,6 @@
  */
 package nextflow.processor
 
-import nextflow.NF
 import static nextflow.processor.ErrorStrategy.*
 
 import java.nio.file.LinkOption
@@ -46,6 +45,7 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import groovyx.gpars.group.PGroup
+import nextflow.NF
 import nextflow.Nextflow
 import nextflow.Session
 import nextflow.cloud.CloudSpotTerminationException
@@ -67,9 +67,9 @@ import nextflow.file.FileHolder
 import nextflow.file.FilePatternSplitter
 import nextflow.file.FilePorter
 import nextflow.script.BaseScript
+import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptType
-import nextflow.script.BodyDef
 import nextflow.script.params.BasicMode
 import nextflow.script.params.EachInParam
 import nextflow.script.params.EnvInParam
@@ -79,16 +79,18 @@ import nextflow.script.params.InParam
 import nextflow.script.params.MissingParam
 import nextflow.script.params.OptionalParam
 import nextflow.script.params.OutParam
-import nextflow.script.params.TupleInParam
-import nextflow.script.params.TupleOutParam
 import nextflow.script.params.StdInParam
 import nextflow.script.params.StdOutParam
+import nextflow.script.params.TupleInParam
+import nextflow.script.params.TupleOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
 import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.CollectionHelper
+import nextflow.util.LockManager
+
 /**
  * Implement nextflow process execution logic
  *
@@ -224,6 +226,9 @@ class TaskProcessor {
     private final int id
 
     private static int processCount
+
+    private static LockManager lockManager = new LockManager();
+
 
     /*
      * Initialise the process ID
@@ -689,7 +694,7 @@ class TaskProcessor {
      *      or {@code true} if the task has been submitted for execution
      *
      */
-
+    @CompileStatic
     final protected boolean checkCachedOrLaunchTask( TaskRun task, HashCode hash, boolean shouldTryCache ) {
 
         int tries = task.failCount +1
@@ -698,9 +703,16 @@ class TaskProcessor {
 
             boolean exists
             final folder = task.getWorkDirFor(hash)
-            exists = folder.exists()
-            if( !exists && !folder.mkdirs() )
-                throw new IOException("Unable to create folder=$folder -- check file system permission")
+            final lock = lockManager.acquire(hash)
+            try {
+                exists = folder.exists()
+                if( !exists && !folder.mkdirs() )
+                    throw new IOException("Unable to create folder=$folder -- check file system permission")
+
+            }
+            finally {
+                lock.release()
+            }
 
             log.trace "[${task.name}] Cacheable folder=$folder -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache"
             def cached = shouldTryCache && exists && checkCachedOutput(task.clone(), folder, hash)

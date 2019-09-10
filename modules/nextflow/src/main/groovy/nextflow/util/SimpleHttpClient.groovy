@@ -81,10 +81,12 @@ class SimpleHttpClient {
         con.setDoOutput(true)
 
         // Send POST request
-        DataOutputStream output = new DataOutputStream(con.getOutputStream())
-        output.writeBytes(json)
-        output.flush()
-        output.close()
+        if( json ) {
+            DataOutputStream output = new DataOutputStream(con.getOutputStream())
+            output.writeBytes(json)
+            output.flush()
+            output.close()
+        }
 
         // Retrieve response code
         try {

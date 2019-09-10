@@ -49,7 +49,7 @@ import nextflow.util.SimpleHttpClient
 @CompileStatic
 class TowerObserver implements TraceObserver {
 
-    static final String DEF_ENDPOINT_URL = 'https://tower.nf/api'
+    static final String DEF_ENDPOINT_URL = 'https://api.tower.nf'
 
     static private final int TASKS_PER_REQUEST = 100
 
@@ -94,13 +94,17 @@ class TowerObserver implements TraceObserver {
 
     private volatile String workflowId
 
+    private String watchUrl
+
     private String endpoint
 
-    private String postFlowUrl
+    private String urlTraceWorkflow
 
-    private String postTaskUrl
+    private String urlTraceTask
 
-    private String postAliveUrl
+    private String urlTraceAlive
+
+    private String urlTraceHello
 
     private ResourcesAggregator aggregator
 
@@ -123,9 +127,10 @@ class TowerObserver implements TraceObserver {
      */
     TowerObserver(String endpoint) {
         this.endpoint = checkUrl(endpoint)
-        this.postTaskUrl = this.endpoint + '/trace/task'
-        this.postFlowUrl = this.endpoint + '/trace/workflow'
-        this.postAliveUrl = this.endpoint + '/trace/alive'
+        this.urlTraceTask = this.endpoint + '/trace/task'
+        this.urlTraceWorkflow = this.endpoint + '/trace/workflow'
+        this.urlTraceAlive = this.endpoint + '/trace/alive'
+        this.urlTraceHello = this.endpoint + '/trace/hello'
     }
 
     /**
@@ -185,6 +190,11 @@ class TowerObserver implements TraceObserver {
         this.runName = session.getRunName()
         this.runId = session.getUniqueId()
         this.httpClient = new SimpleHttpClient().setAuthToken(TOKEN_PREFIX + getAccessToken())
+
+        // send hello to verify auth
+        final resp = sendHttpGet(urlTraceHello)
+        if( resp.error )
+            throw new AbortOperationException(resp.message)
     }
 
     @Override
@@ -197,13 +207,15 @@ class TowerObserver implements TraceObserver {
     @Override
     void onFlowBegin() {
         final req = makeWorkflowReq(session)
-        final resp = sendHttpMessage(postFlowUrl, req)
+        final resp = sendHttpMessage(urlTraceWorkflow, req)
         if( resp.error )
             throw new AbortOperationException(resp.message)
 
-        this.workflowId = parseFlowStartResponse(resp)
+        final payload = parseFlowStartResponse(resp)
+        this.watchUrl = payload.watchUrl
+        this.workflowId = payload.workflowId
         this.sender = Thread.start('Tower-thread', this.&sendTasks0)
-        final msg = "Monitor the execution with Nextflow Tower using this url ${getHostUrl(endpoint)}/watch/${workflowId}"
+        final msg = "Monitor the execution with Nextflow Tower using this url ${watchUrl}"
         log.info(LoggerHelper.STICKY, msg)
     }
 
@@ -227,8 +239,8 @@ class TowerObserver implements TraceObserver {
         // wait the submission of pending events
         sender.join()
         // notify the workflow completion
-        def resp = sendHttpMessage(postFlowUrl, makeWorkflowReq(session))
-        logHttpResponse(postFlowUrl, resp)
+        def resp = sendHttpMessage(urlTraceWorkflow, makeWorkflowReq(session))
+        logHttpResponse(urlTraceWorkflow, resp)
     }
 
     @Override
@@ -299,6 +311,9 @@ class TowerObserver implements TraceObserver {
         events << new ProcessEvent(trace: trace)
     }
 
+    protected Response sendHttpGet(String url) {
+        sendHttpMessage(url, null, 'GET')
+    }
 
     /**
      * Little helper method that sends a HTTP POST message as JSON with
@@ -308,12 +323,13 @@ class TowerObserver implements TraceObserver {
      * 'process_complete', 'error', 'completed'}
      * @param payload An additional object to send. Must be of type TraceRecord or Manifest
      */
-    protected Response sendHttpMessage(String url, Map payload){
+    protected Response sendHttpMessage(String url, Map payload, String method='POST'){
         // The actual HTTP request
-        final json = generator.toJson(payload)
-        log.debug "HTTP url=$url; message:\n${JsonOutput.prettyPrint(json).indent()}\n"
+        final String json = payload != null ? generator.toJson(payload) : null
+        final String debug = json != null ? JsonOutput.prettyPrint(json).indent() : '-'
+        log.debug "HTTP url=$url; payload:\n${debug}\n"
         try {
-            httpClient.sendHttpMessage(url, json)
+            httpClient.sendHttpMessage(url, json, method)
             return new Response(httpClient.responseCode, httpClient.getResponse())
         }
         catch( ConnectException e ) {
@@ -422,10 +438,9 @@ class TowerObserver implements TraceObserver {
         }
     }
 
-    protected parseFlowStartResponse(Response resp) {
+    protected Map parseFlowStartResponse(Response resp) {
         if (resp.code >= 200 && resp.code < 300) {
-            def map = (Map)new JsonSlurper().parseText(resp.message)
-            return map.workflowId
+            return (Map)new JsonSlurper().parseText(resp.message)
         }
 
         def msg = """\
@@ -487,8 +502,8 @@ class TowerObserver implements TraceObserver {
             if( !tasks ) {
                 if( delta > aliveInterval.millis ) {
                     final req = new HashMap(1); req.workflowId = workflowId
-                    final resp = sendHttpMessage(postAliveUrl, req)
-                    logHttpResponse(postAliveUrl, resp)
+                    final resp = sendHttpMessage(urlTraceAlive, req)
+                    logHttpResponse(urlTraceAlive, resp)
                     previous = now
                 }
                 continue
@@ -497,8 +512,8 @@ class TowerObserver implements TraceObserver {
             if( delta > period || tasks.size() >= TASKS_PER_REQUEST || complete ) {
                 // send
                 final req = makeTasksReq(tasks.values())
-                final resp = sendHttpMessage(postTaskUrl, req)
-                logHttpResponse(postTaskUrl, resp)
+                final resp = sendHttpMessage(urlTraceTask, req)
+                logHttpResponse(urlTraceTask, resp)
 
                 // clean up for next iteration
                 previous = now
