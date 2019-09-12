@@ -25,9 +25,18 @@ import nextflow.exception.AbortOperationException
  */
 @Slf4j
 final class BitbucketServerRepositoryProvider extends RepositoryProvider {
+    private String repository
 
+    BitbucketServerRepositoryProvider(String name, ProviderConfig config=null) {
+        def parts = name.split('/') as List<String>
+        if( parts.size()!=2 )
+            throw new AbortOperationException("Not a valid project name: $name")
+
+        def repo = parts[-1]
+        def project = parts[0]
     BitbucketServerRepositoryProvider(String project, ProviderConfig config=null) {
         this.project = project
+        this.repository = repo
         this.config = config ?: new ProviderConfig('bitbucketserver')
     }
 
@@ -37,33 +46,46 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
 
     @Override
     String getEndpointUrl() {
-        "${config.endpoint}/rest/api/1.0/projects/${project}"
+        println("Called BitbucketServerRepositoryProvider::getEndpointUrl: ${config.endpoint}/rest/api/1.0/projects/${project}")
+        return "${config.endpoint}/rest/api/1.0/projects/${project}/repos/${repository}"
     }
 
     @Override
     String getContentUrl( String path ) {
-        "${config.endpoint}/rest/api/1.0/projects/$project/src/${getMainBranch()}/$path"
+        println("Called getContentUrl:")
+        //"${config.endpoint}/rest/api/1.0/projects/$project/src/${getMainBranch()}/$path"
+        println("${config.server}/${project}/${repository}")
+        return  "${config.server}/${project}/${repository}"
     }
 
     private String getMainBranchUrl() {
-        "${config.endpoint}/rest/api/1.0/projects/$project"
+        println("Called getMainBranchUrl:")
+        println("${config.endpoint}/rest/api/1.0/projects/$project/repos/${repository}/branches/default")
+        return  "${config.endpoint}/rest/api/1.0/projects/$project/repos/${repository}/branches/default"
     }
 
     String getMainBranch() {
-        invokeAndParseResponse(getMainBranchUrl()) ?. mainbranch ?. name
+        println("Called getMainBranch:")
+        return invokeAndParseResponse(getMainBranchUrl()) ?. mainbranch ?. name
     }
 
     @Override
     String getCloneUrl() {
+        println("called BitbucketServerRepositoryProvider::getCloneUrl")
         Map response = invokeAndParseResponse( getEndpointUrl() )
+        println("BitbucketServerRepositoryProvider::getCloneUrl::response ${response}")
 
-        if( response?.scm != "git" ){
+        println("BitbucketServerRepositoryProvider::getCloneUrl::response.scm ${response.scm}")
+
+        if( response?.scmId != "git" ){
             throw new AbortOperationException("Bitbucket Server repository at ${getRepositoryUrl()} is not supporting Git")
         }
 
-        def result = response?.links?.clone?.find{ it.name == "https" } as Map
+        def result = response?.links?.clone?.find{ it.name == "http" } as Map
         if( !result )
             throw new IllegalStateException("Missing clone URL for: $project")
+
+        println("BitbucketRepositoryProvider::getCloneUrl::result.href ${result.href}")
 
         return result.href
     }
