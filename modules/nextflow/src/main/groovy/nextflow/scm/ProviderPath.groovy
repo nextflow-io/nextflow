@@ -81,6 +81,7 @@ class ProviderPath implements Path {
     }
 
     String toUriString() {
+        println("called ProviderPath::toUriString")
         provider.getContentUrl(delegate.toString())
     }
 

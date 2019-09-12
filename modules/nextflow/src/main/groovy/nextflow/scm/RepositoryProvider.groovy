@@ -170,7 +170,7 @@ abstract class RepositoryProvider {
     @Memoized
     protected Map invokeAndParseResponse( String request ) {
 
-        def response = invoke(request)
+        String response = invoke(request)
         return new JsonSlurper().parseText(response) as Map
 
     }

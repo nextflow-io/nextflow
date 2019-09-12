@@ -34,7 +34,7 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
 
         def repo = parts[-1]
         def project = parts[0]
-    BitbucketServerRepositoryProvider(String project, ProviderConfig config=null) {
+        println("Split project: ${project}, repo: ${repo}")
         this.project = project
         this.repository = repo
         this.config = config ?: new ProviderConfig('bitbucketserver')
@@ -52,10 +52,9 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
 
     @Override
     String getContentUrl( String path ) {
-        println("Called getContentUrl:")
-        //"${config.endpoint}/rest/api/1.0/projects/$project/src/${getMainBranch()}/$path"
-        println("${config.server}/${project}/${repository}")
-        return  "${config.server}/${project}/${repository}"
+        println("Called getContentUrl: ${config.endpoint}/rest/api/1.0/projects/${project}/repos/${repository}/raw/${path}")
+        // "${config.endpoint}/projects/$project/src/${getMainBranch()}/$path"
+        return  "${config.endpoint}/rest/api/1.0/projects/${project}/repos/${repository}/raw/${path}"    
     }
 
     private String getMainBranchUrl() {
@@ -97,7 +96,7 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
 
     @Override
     byte[] readBytes(String path) {
-
+        println("called BitbucketServerRepositoryProvider::readBytes with path: ${path}")
         def url = getContentUrl(path)
         invoke(url)?.getBytes()
     }
