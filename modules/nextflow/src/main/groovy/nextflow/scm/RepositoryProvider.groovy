@@ -225,6 +225,9 @@ abstract class RepositoryProvider {
             case 'bitbucket':
                 return new BitbucketRepositoryProvider(project, config)
 
+            case 'bitbucketserver':
+                return new BitbucketServerRepositoryProvider(project, config)
+
             case 'gitlab':
                 return new GitlabRepositoryProvider(project, config)
 
