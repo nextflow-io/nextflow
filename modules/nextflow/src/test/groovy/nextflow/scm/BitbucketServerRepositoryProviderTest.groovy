@@ -29,8 +29,8 @@ class BitbucketServerRepositoryProviderTest extends Specification {
         providers {
 
             bbserver {
-                server = 'https://bitbucket.server.com/scm'
-                endpoint = 'https://bitbucket.server.com/'
+                server = 'https://bitbucket.server.com'
+                endpoint = 'https://bitbucket.server.com'
                 platform = 'bitbucketserver'
                 user = 'myname'
                 password = 'mypassword'
