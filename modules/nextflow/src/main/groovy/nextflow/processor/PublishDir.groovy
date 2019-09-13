@@ -74,6 +74,11 @@ class PublishDir {
      */
     Closure saveAs
 
+    /**
+     * Enable disable publish rule
+     */
+    boolean enabled = true
+
     private PathMatcher matcher
 
     private FileSystem sourceFileSystem
@@ -141,6 +146,9 @@ class PublishDir {
         if( params.saveAs )
             result.saveAs = params.saveAs
 
+        if( params.enabled!=null )
+            result.enabled = params.enabled as boolean
+
         return result
     }
 
@@ -204,6 +212,9 @@ class PublishDir {
 
     @CompileStatic
     protected void apply( Path source, boolean inProcess ) {
+
+        if( !enabled )
+            return
 
         def target = sourceDir ? sourceDir.relativize(source) : source.getFileName()
         if( matcher && !matcher.matches(target) ) {
