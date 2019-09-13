@@ -48,7 +48,6 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
 
     @Override
     String getContentUrl( String path ) {
-        // "${config.endpoint}/projects/$project/src/${getMainBranch()}/$path"
         return  "${config.endpoint}/rest/api/1.0/projects/${project}/repos/${repository}/raw/${path}"    
     }
 
