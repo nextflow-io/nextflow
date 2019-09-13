@@ -46,8 +46,6 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     }
 
     private String getMainBranchUrl() {
-        println("Called getMainBranchUrl:")
-        println("${config.endpoint}/api/2.0/repositories/$project")
         "${config.endpoint}/api/2.0/repositories/$project"
     }
 
@@ -58,7 +56,6 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     @Override
     String getCloneUrl() {
         Map response = invokeAndParseResponse( getEndpointUrl() )
-        println("BitbucketRepositoryProvider::getCloneUrl::response ${response}")
 
         if( response?.scm != "git" ){
             throw new AbortOperationException("Bitbucket repository at ${getRepositoryUrl()} is not supporting Git")
@@ -68,7 +65,6 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
         if( !result )
             throw new IllegalStateException("Missing clone URL for: $project")
 
-        println("BitbucketRepositoryProvider::getCloneUrl::result.href ${result.href}")
 
         return result.href
     }

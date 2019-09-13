@@ -357,7 +357,7 @@ class AssetManager {
     }
 
     AssetManager checkValidRemoteRepo() {
-        println("Called AssetManager::checkValidRemoteRepo")
+        
         def scriptName = getMainScriptName()
         provider.validateFor(scriptName)
         return this
@@ -365,8 +365,7 @@ class AssetManager {
 
     @Memoized
     String getGitRepositoryUrl() {
-        println("AssetManager::getGitRepositoryUrl")
-        if( localPath.exists() ) {
+                if( localPath.exists() ) {
             return localPath.toURI().toString()
         }
 
@@ -560,7 +559,6 @@ class AssetManager {
      */
     def download(String revision=null) {
         assert project
-        println("Called AssetManager::download")
         /*
          * if the pipeline already exists locally pull it from the remote repo
          */
@@ -570,15 +568,11 @@ class AssetManager {
             checkValidRemoteRepo()
 
             final cloneURL = getGitRepositoryUrl()
-            // println("AssetManager::download::cloneURL temp ${cloneURL}")
-            // final cloneURL = "https://bitbucket.biscrum.com/scm/ardmirna/scrna-upstream.git"
-            println("AssetManager::download::cloneURL final ${cloneURL}")
             log.debug "Pulling $project -- Using remote clone url: ${cloneURL}"
 
             // clone it
             def clone = Git.cloneRepository()
-            println("AssetManager::download::clone ${clone}")
-            if( provider.hasCredentials() )
+                        if( provider.hasCredentials() )
                 clone.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
 
             if( revision ) {
@@ -648,7 +642,6 @@ class AssetManager {
      * @param revision The revision to be cloned. It can be a branch, tag, or git revision number
      */
     void clone(File directory, String revision = null) {
-        println("Called AssetManager::clone")
         def clone = Git.cloneRepository()
         def uri = getGitRepositoryUrl()
         log.debug "Clone project `$project` -- Using remote URI: ${uri} into: $directory"

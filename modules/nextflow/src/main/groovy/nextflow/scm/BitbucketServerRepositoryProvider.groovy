@@ -34,7 +34,6 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
 
         def repo = parts[-1]
         def project = parts[0]
-        println("Split project: ${project}, repo: ${repo}")
         this.project = project
         this.repository = repo
         this.config = config ?: new ProviderConfig('bitbucketserver')
@@ -46,35 +45,27 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
 
     @Override
     String getEndpointUrl() {
-        println("Called BitbucketServerRepositoryProvider::getEndpointUrl: ${config.endpoint}/rest/api/1.0/projects/${project}")
         return "${config.endpoint}/rest/api/1.0/projects/${project}/repos/${repository}"
     }
 
     @Override
     String getContentUrl( String path ) {
-        println("Called getContentUrl: ${config.endpoint}/rest/api/1.0/projects/${project}/repos/${repository}/raw/${path}")
         // "${config.endpoint}/projects/$project/src/${getMainBranch()}/$path"
         return  "${config.endpoint}/rest/api/1.0/projects/${project}/repos/${repository}/raw/${path}"    
     }
 
     private String getMainBranchUrl() {
-        println("Called getMainBranchUrl:")
-        println("${config.endpoint}/rest/api/1.0/projects/$project/repos/${repository}/branches/default")
         return  "${config.endpoint}/rest/api/1.0/projects/$project/repos/${repository}/branches/default"
     }
 
     String getMainBranch() {
-        println("Called getMainBranch:")
         return invokeAndParseResponse(getMainBranchUrl()) ?. mainbranch ?. name
     }
 
     @Override
     String getCloneUrl() {
-        println("called BitbucketServerRepositoryProvider::getCloneUrl")
         Map response = invokeAndParseResponse( getEndpointUrl() )
-        println("BitbucketServerRepositoryProvider::getCloneUrl::response ${response}")
 
-        println("BitbucketServerRepositoryProvider::getCloneUrl::response.scm ${response.scm}")
 
         if( response?.scmId != "git" ){
             throw new AbortOperationException("Bitbucket Server repository at ${getRepositoryUrl()} is not supporting Git")
@@ -84,7 +75,6 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
         if( !result )
             throw new IllegalStateException("Missing clone URL for: $project")
 
-        println("BitbucketRepositoryProvider::getCloneUrl::result.href ${result.href}")
 
         return result.href
     }
@@ -96,7 +86,6 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
 
     @Override
     byte[] readBytes(String path) {
-        println("called BitbucketServerRepositoryProvider::readBytes with path: ${path}")
         def url = getContentUrl(path)
         invoke(url)?.getBytes()
     }
