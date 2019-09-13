@@ -29,13 +29,11 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
 
     BitbucketServerRepositoryProvider(String name, ProviderConfig config=null) {
         def parts = name.split('/') as List<String>
-        if( parts.size()!=2 )
+        if( parts.size() != 2 )
             throw new AbortOperationException("Not a valid project name: $name")
 
-        def repo = parts[-1]
-        def project = parts[0]
-        this.project = project
-        this.repository = repo
+        this.project = parts[0]
+        this.repository = parts[1]
         this.config = config ?: new ProviderConfig('bitbucketserver')
     }
 
@@ -55,7 +53,7 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
     }
 
     private String getMainBranchUrl() {
-        return  "${config.endpoint}/rest/api/1.0/projects/$project/repos/${repository}/branches/default"
+        return  "${config.endpoint}/rest/api/1.0/projects/${project}/repos/${repository}/branches/default"
     }
 
     String getMainBranch() {
@@ -66,15 +64,13 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
     String getCloneUrl() {
         Map response = invokeAndParseResponse( getEndpointUrl() )
 
-
         if( response?.scmId != "git" ){
             throw new AbortOperationException("Bitbucket Server repository at ${getRepositoryUrl()} is not supporting Git")
         }
 
         def result = response?.links?.clone?.find{ it.name == "http" } as Map
         if( !result )
-            throw new IllegalStateException("Missing clone URL for: $project")
-
+            throw new IllegalStateException("Missing clone URL for: ${project}")
 
         return result.href
     }
