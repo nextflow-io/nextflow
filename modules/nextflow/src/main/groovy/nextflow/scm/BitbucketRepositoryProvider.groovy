@@ -65,7 +65,6 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
         if( !result )
             throw new IllegalStateException("Missing clone URL for: $project")
 
-
         return result.href
     }
 

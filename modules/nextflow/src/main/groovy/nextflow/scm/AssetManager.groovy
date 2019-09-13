@@ -357,7 +357,6 @@ class AssetManager {
     }
 
     AssetManager checkValidRemoteRepo() {
-        
         def scriptName = getMainScriptName()
         provider.validateFor(scriptName)
         return this
@@ -365,11 +364,11 @@ class AssetManager {
 
     @Memoized
     String getGitRepositoryUrl() {
-                if( localPath.exists() ) {
+        if( localPath.exists() ) {
             return localPath.toURI().toString()
         }
 
-        return provider.getCloneUrl()
+        provider.getCloneUrl()
     }
 
     File getLocalPath() { localPath }
@@ -559,6 +558,7 @@ class AssetManager {
      */
     def download(String revision=null) {
         assert project
+
         /*
          * if the pipeline already exists locally pull it from the remote repo
          */
@@ -572,7 +572,7 @@ class AssetManager {
 
             // clone it
             def clone = Git.cloneRepository()
-                        if( provider.hasCredentials() )
+            if( provider.hasCredentials() )
                 clone.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
 
             if( revision ) {
@@ -642,6 +642,7 @@ class AssetManager {
      * @param revision The revision to be cloned. It can be a branch, tag, or git revision number
      */
     void clone(File directory, String revision = null) {
+
         def clone = Git.cloneRepository()
         def uri = getGitRepositoryUrl()
         log.debug "Clone project `$project` -- Using remote URI: ${uri} into: $directory"
