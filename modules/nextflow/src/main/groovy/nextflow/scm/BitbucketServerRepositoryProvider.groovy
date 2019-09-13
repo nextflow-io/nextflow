@@ -91,7 +91,7 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
 
     @Override
     String getRepositoryUrl() {
-        return "${config.server}/$project"
+        return "${config.server}/${project}/${repository}"
     }
 
     @Override
