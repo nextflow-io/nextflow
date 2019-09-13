@@ -255,10 +255,10 @@ class AssetManager {
             }
         }
 
-        if( parts.size() <= 3 ) {
+        if( parts.size() == 2 ) {
             return parts.join('/')
         }
-        else if( parts.size()>3 ) {
+        else if( parts.size()>2 ) {
             throw new AbortOperationException("Not a valid project name: $name")
         }
         else {
