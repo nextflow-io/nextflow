@@ -364,6 +364,7 @@ class AssetManager {
 
     @Memoized
     String getGitRepositoryUrl() {
+
         if( localPath.exists() ) {
             return localPath.toURI().toString()
         }
