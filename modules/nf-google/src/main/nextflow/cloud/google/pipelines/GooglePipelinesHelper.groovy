@@ -219,7 +219,7 @@ class GooglePipelinesHelper {
             genomicsClient.projects().operations().cancel(operation.getName(), new CancelOperationRequest()).execute()
         }
         catch( IOException e ) {
-            log.warn("Invalid server response cancelling operation: $operation", e)
+            log.warn("Invalid server response cancelling operation: $operation | ${e.message}")
         }
     }
 

@@ -228,7 +228,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             exitFile.text as Integer
         }
         catch( Exception e ) {
-            log.debug "[AWS BATCH] Cannot read exitstatus for task: `$task.name`", e
+            log.debug "[AWS BATCH] Cannot read exitstatus for task: `$task.name` | ${e.message}"
             return Integer.MAX_VALUE
         }
     }
