@@ -336,7 +336,7 @@ class K8sTaskHandler extends TaskHandler {
             exitFile.text as Integer
         }
         catch( Exception e ) {
-            log.debug "[K8s] Cannot read exitstatus for task: `$task.name`", e
+            log.debug "[K8s] Cannot read exitstatus for task: `$task.name` | ${e.message}"
             return Integer.MAX_VALUE
         }
     }
