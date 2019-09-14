@@ -20,6 +20,8 @@ Channel types
 
 Nextflow distinguish two different kinds of channels: `queue channels` and `value channels`.
 
+.. _channel-type-queue:
+
 Queue channel
 -------------
 
@@ -37,6 +39,7 @@ In you need to connect a process output channel to more then one process or oper
 :ref:`operator-into` operator to create two (or more) copies of the same channel and use each
 of them to connect a separate process.
 
+.. _channel-type-value:
 
 Value channel
 -------------
