@@ -159,7 +159,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
         return new ChannelOut(channels)
     }
 
-    protected publishOutputs(Map<String,Map> publishDefs, ChannelOut output) {
+    protected publishOutputs(Map<String,Map> publishDefs) {
         for( Map.Entry<String,Map> pub : publishDefs.entrySet() ) {
             final name = pub.key
             final opts = pub.value
@@ -202,7 +202,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
         closure.call()
         // collect the workflow outputs
         output = collectOutputs(declaredOutputs)
-        publishOutputs(declaredPublish, output)
+        publishOutputs(declaredPublish)
         return output
     }
 
@@ -211,6 +211,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
 /**
  * Hold workflow parameters
  */
+@Slf4j
 @CompileStatic
 class WorkflowParamsResolver implements GroovyInterceptable {
 
@@ -232,7 +233,7 @@ class WorkflowParamsResolver implements GroovyInterceptable {
             emits.put(name.substring(EMIT_PREFIX.size()), args)
 
         else if( name.startsWith(PUBLISH_PREFIX))
-            publish.put(name.substring(PUBLISH_PREFIX.size()), argsToMap(args))
+            publish.put(name.substring(PUBLISH_PREFIX.size()), argToPublishOpts(args))
 
         else
             throw new IllegalArgumentException("Unknown workflow parameter definition: $name")
@@ -242,9 +243,19 @@ class WorkflowParamsResolver implements GroovyInterceptable {
     private Map argsToMap(Object args) {
         if( args && args.getClass().isArray() ) {
             if( ((Object[])args)[0] instanceof Map ) {
-                return (Map)((Object[])args)[0]
+                def map = (Map)((Object[])args)[0]
+                return new HashMap(map)
             }
         }
         Collections.emptyMap()
+    }
+
+    private Map argToPublishOpts(Object args) {
+        final opts = argsToMap(args)
+        if( opts.containsKey('saveAs')) {
+            log.warn "Workflow publish does not support `saveAs` option"
+            opts.remove('saveAs')
+        }
+        return opts
     }
 }

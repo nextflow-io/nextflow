@@ -10,6 +10,22 @@ git checkout master
 git merge public/master
 ```
 
+List branch remote
+
+    git branch -vv 
+
+Checkout from a remote branch 
+
+    git co -b <local name> upstream/master
+
+Push to a remote upstream branch
+
+    git push <remote> <local branch>:<remote branch>
+
+eg:
+
+    git push upstream foo:master
+
 Read more [here](https://help.github.com/articles/syncing-a-fork/).
 
 ## Subtree  

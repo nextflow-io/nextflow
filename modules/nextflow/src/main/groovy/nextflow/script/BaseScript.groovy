@@ -16,6 +16,8 @@
 
 package nextflow.script
 
+import java.lang.reflect.InvocationTargetException
+
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
@@ -178,6 +180,10 @@ abstract class BaseScript extends Script implements ExecutionContext {
         ExecutionStack.push(this)
         try {
             run0()
+        }
+        catch(InvocationTargetException e) {
+            // provide the exception cause which is more informative than InvocationTargetException
+            throw(e.cause ?: e)
         }
         finally {
             ExecutionStack.pop()
