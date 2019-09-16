@@ -248,7 +248,7 @@ class GooglePipelinesTaskHandler extends TaskHandler {
             exitFile.text as Integer
         }
         catch (Exception e) {
-            log.debug "[GPAPI] Cannot read exitstatus for task: `$task.name`", e
+            log.debug "[GPAPI] Cannot read exitstatus for task: `$task.name` | ${e.message}"
             null
         }
     }

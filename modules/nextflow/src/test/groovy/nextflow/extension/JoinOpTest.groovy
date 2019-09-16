@@ -17,6 +17,7 @@
 package nextflow.extension
 
 import nextflow.Channel
+import nextflow.Session
 import spock.lang.Specification
 
 /**
@@ -24,6 +25,10 @@ import spock.lang.Specification
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class JoinOpTest extends Specification {
+
+    def setup() {
+        new Session()
+    }
 
     def 'should join entries' () {
         given:
@@ -176,14 +181,13 @@ class JoinOpTest extends Specification {
         when:
         left = Channel.from(['P', 0], ['X', 1], ['Y', 2], ['Z', 3])
         right = Channel.from('X', 'Y', 'Z', 'Q')
-        result = left.join(right, remainder: true)
+        result = left.join(right, remainder: true).toList().val.sort { it -> it[0] }
         then:
-        result.val == ['X', 1]
-        result.val == ['Y', 2]
-        result.val == ['Z', 3]
-        result.val == ['P', 0]
-        result.val == ['Q', null]
-        result.val == Channel.STOP
+        result[2] == ['X', 1]
+        result[3] == ['Y', 2]
+        result[4] == ['Z', 3]
+        result[0] == ['P', 0]
+        result[1] == ['Q', null]
 
     }
 

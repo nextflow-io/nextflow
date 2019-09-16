@@ -128,7 +128,7 @@ class TesTaskHandler extends TaskHandler {
             exitFile.text as Integer
         }
         catch( Exception e ) {
-            log.trace "[TES] Cannot read exitstatus for task: `$task.name`", e
+            log.trace "[TES] Cannot read exitstatus for task: `$task.name` | ${e.message}"
             return Integer.MAX_VALUE
         }
     }
