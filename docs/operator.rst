@@ -1707,7 +1707,7 @@ For example::
         .set { result }
 
      result.foo.view { "foo $it" }
-     result.far.view { "bar $it" }
+     result.bar.view { "bar $it" }
 
 It shows::
 
