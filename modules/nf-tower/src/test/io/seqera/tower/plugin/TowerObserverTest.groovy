@@ -44,14 +44,14 @@ class TowerObserverTest extends Specification {
 
         when:
         def resp = new TowerObserver.Response(200, '{"status":"OK", "workflowId":"12345", "watchUrl": "http://foo.com/watch/12345"}')
-        def result = tower.parseFlowStartResponse(resp)
+        def result = tower.parseTowerResponse(resp)
         then:
         result.workflowId == '12345'
         result.watchUrl == 'http://foo.com/watch/12345'
 
         when:
         resp = new TowerObserver.Response(500, '{"status":"OK", "workflowId":"12345"}')
-        tower.parseFlowStartResponse(resp)
+        tower.parseTowerResponse(resp)
         then:
         thrown(Exception)
     }
@@ -65,6 +65,7 @@ class TowerObserverTest extends Specification {
         def tower = Spy(TowerObserver)
         tower.runName = session.runName
         tower.workflowId = '12ef'
+        tower.terminated = true
 
         when:
         def map = tower.makeWorkflowReq(session)
