@@ -40,6 +40,133 @@ class ChannelTest extends Specification {
         new Session()
     }
 
+    def 'should create a channel of values' () {
+        given:
+        DataflowQueue result
+
+        when:
+        result = Channel.of('a')
+        then:
+        result.val == 'a'
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.of('a','b','c')
+        then:
+        result.val == 'a'
+        result.val == 'b'
+        result.val == 'c'
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.of([1,2,3])
+        then:
+        result.val == [1,2,3]
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.of([1,2], [3,4])
+        then:
+        result.val == [1,2]
+        result.val == [3,4]
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.of([])
+        then:
+        result.val == []
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.of()
+        then:
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.of([1,2,3].toArray())
+        then:
+        result.val == 1
+        result.val == 2
+        result.val == 3
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.of([].toArray())
+        then:
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.of(null)
+        then:
+        result.val == null
+        result.val == Channel.STOP
+        
+
+    }
+
+    def 'should create a channel from a range' () {
+        given:
+        DataflowQueue result
+
+        when:
+        result = Channel.of(1..3)
+        then:
+        result.val == 1
+        result.val == 2
+        result.val == 3
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.of(1..3,'X','Y')
+        then:
+        result.val == 1
+        result.val == 2
+        result.val == 3
+        result.val == 'X'
+        result.val == 'Y'
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.of(1..3,'X'..'Y')
+        then:
+        result.val == 1
+        result.val == 2
+        result.val == 3
+        result.val == 'X'
+        result.val == 'Y'
+        result.val == Channel.STOP
+    }
+
+    def 'should create channel from a list'() {
+        given:
+        given:
+        DataflowQueue result
+
+        when:
+        result = Channel.fromList(['alpha','delta'])
+        then:
+        result.val == 'alpha'
+        result.val == 'delta'
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.fromList([])
+        then:
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.fromList(null)
+        then:
+        result.val == Channel.STOP
+
+        when:
+        result = Channel.fromList([1..3, 'X'..'Y'])
+        then:
+        result.val == 1..3
+        result.val == 'X'..'Y'
+        result.val == Channel.STOP
+    }
+
     def testFrom() {
         given:
         DataflowQueue result
