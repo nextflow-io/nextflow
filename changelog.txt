@@ -1,6 +1,25 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+19.09.0-edge - 16 Sep 2019
+- Add `of` and `fromList` channel factories [cc60b305]
+- Add nf-tower init request [120ed8ba]
+- Add support for accelerator directive #997 [624c8e83]
+- Add support for native shifterimg for shifter engine (#1292) [a106712e]
+- Add nf-tower subproject [285e09ce]
+- Add sticky log marker [f9a3c9da]
+- Add support for config resolution [4754abc6]
+- Add enable option to publishDir [7b9c2d2f]
+- Fix race condition on task workdir creation [5bc323a0]
+- Fix issue when fetching aws profile from env #1248 [ba30b97c]
+- Fix minor issue when reporting invalid entry error msg [814d6728]
+- Fix non determinist test failure [a9289e9e]
+- Throw error cause on InovationTargetException [9e1467d0]
+- Remove verbos logs on readExitFile check [a5a6a1fc]
+- Revert "Patch capsule error message" [ac4ac073]
+- Patch for inconsistent cached task id #1301 [7bfd0008]
+- Improve flow execution events [335b76d1]
+
 19.08.1-edge - 26 Aug 2019
 - Add Process named output channels #1290 [DSL] [6a756fd2]
 - Add workflow publish directive [DLS2] [287a095e]
@@ -16,7 +35,7 @@ NEXTFLOW CHANGE-LOG
 - Add support for tower [1255f702]
 - Add support for timezoned timestamp to metadata [6f4a2e28]
 - Add task pending event [d2d66698]]
-- Add support for path in/out qualfier [DSL2] #1201 [5552b38a]
+- Add support for path in/out qualifier [DSL2] #1201 [5552b38a]
 - Add set chainable operator #1262 [2651a099]
 - Fix name generator uniq check [0bbf7015]
 - Fix execution report nested processes aggregation [e4fad827]
