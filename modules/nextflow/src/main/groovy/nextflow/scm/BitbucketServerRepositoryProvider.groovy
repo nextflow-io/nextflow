@@ -19,9 +19,9 @@ package nextflow.scm
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 /**
- * Implements a repository provider for the BitBucket service
+ * Implements a repository provider for the private hosted BitBucket Server service
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Piotr Faba <piotr.faba@ardigen.com>
  */
 @Slf4j
 final class BitbucketServerRepositoryProvider extends RepositoryProvider {

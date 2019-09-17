@@ -21,7 +21,7 @@ import spock.lang.Specification
 
 /**
  *
- * @author Akira Sekiguchi <pachiras.yokohama@gmail.com>
+ * @author Piotr Faba <piotr.faba@ardigen.com>
  */
 class BitbucketServerRepositoryProviderTest extends Specification {
 
