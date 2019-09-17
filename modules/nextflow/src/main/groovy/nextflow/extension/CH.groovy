@@ -157,7 +157,7 @@ class CH {
     }
 
     static <T extends DataflowWriteChannel> T emitAndClose(T ch, Collection items) {
-        def values = new ArrayList(items);
+        def values = items!=null ? new ArrayList(items) : new ArrayList<>(1)
         values.add(STOP)
         emitValues(ch, values)
     }

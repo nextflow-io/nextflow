@@ -172,6 +172,15 @@ class ScriptMeta {
         return result
     }
 
+    Set<String> getLocalWorkflowNames() {
+        def result = new HashSet(definitions.size())
+        for( def item : definitions.values() ) {
+            if( item instanceof WorkflowDef && item.name )
+                result.add(item.name)
+        }
+        return result
+    }
+
     void addModule(BaseScript script, String name, String alias) {
        addModule(get(script), name, alias)
     }

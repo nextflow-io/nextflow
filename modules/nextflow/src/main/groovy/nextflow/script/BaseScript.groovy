@@ -156,7 +156,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
         if( binding.entryName && !entryFlow ) {
             def msg = "Unknown workflow entry name: ${binding.entryName}"
-            final allNames = meta.getDefinitions().findAll() { it instanceof WorkflowDef }.collect { it.name }
+            final allNames = meta.getLocalWorkflowNames()
             final guess = allNames.closest(binding.entryName)
             if( guess )
                 msg += " -- Did you mean?\n" + guess.collect { "  $it"}.join('\n')
