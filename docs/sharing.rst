@@ -295,6 +295,21 @@ If, for example, the host name of your private GitLab server is ``gitlab.acme.or
 
     }
 
+.. warning:: In case of BitBucket, private servers have different API. ``bitbucketserver`` platform implements this API. To ensure correct interaction, you will need to have in the
+    ``$HOME/.nextflow/scm`` file a configuration like the following::
+
+        providers {
+
+            mybitbucket {
+                server = 'https://bitbucket.server.com'
+                endpoint = 'https://bitbucket.server.com'
+                platform = 'bitbucketserver'
+                user = 'your-user'
+                password = 'your-password or your-token'
+            }
+
+        }
+
 
 Then you will be able to run/pull a project with Nextflow using the following command line::
 
