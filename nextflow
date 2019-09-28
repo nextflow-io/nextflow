@@ -346,8 +346,10 @@ else
       fi
       exit 1
   fi
-  if [[ ! $JAVA_VER =~ ^(1.8|9|10|11) ]]; then
-      echo_yellow "NOTE: Nextflow is not tested with Java $JAVA_VER -- It's recommended the use of version 8 up to 11\n"
+  if [[ ! $JAVA_VER =~ ^(1.8|9|10|11|12) ]]; then
+      echo_yellow "NOTE: Nextflow is not tested with Java $JAVA_VER -- It's recommended the use of version 8 up to 12\n"
+  elif [[ ! $JAVA_VER =~ ^(1.8|9|10|11) && $NXF_MODE == ignite ]]; then
+      echo_yellow "WARN: Apache Ignite executor is not tested with Java $JAVA_VER -- It's recommended the use of version 8 up to 11\n"
   fi
   mkdir -p $(dirname "$JAVA_KEY")
   [[ -f $JAVA_VER ]] && echo $JAVA_VER > "$JAVA_KEY"
@@ -367,7 +369,7 @@ fi
 
 COLUMNS=${COLUMNS:-`tty -s && tput cols 2>/dev/null || true`}
 declare -a JAVA_OPTS=()
-JAVA_OPTS+=(-Dfile.encoding=UTF-8 -noverify -Dcapsule.trampoline -Dcapsule.java.cmd="$JAVA_CMD")
+JAVA_OPTS+=(-Dfile.encoding=UTF-8 -Dcapsule.trampoline -Dcapsule.java.cmd="$JAVA_CMD")
 if [[ $cmd == console ]]; then bg=1;
 else JAVA_OPTS+=(-Djava.awt.headless=true)
 fi
@@ -430,7 +432,7 @@ else
     cli=($("$JAVA_CMD" "${JAVA_OPTS[@]}" -jar "$NXF_BIN"))
     [[ $? -ne 0 ]] && echo_red 'Unable to initialize nextflow environment' && exit 1
 
-    if [[ "$JAVA_VER" =~ ^(9|10|11) ]]; then
+    if [[ "$JAVA_VER" =~ ^(9|10|11|12|13|14) ]]; then
       launcher=("${cli[@]:0:1}")
       launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
