@@ -22,7 +22,6 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import groovy.json.JsonSlurper
 import nextflow.container.ContainerBuilder
 import nextflow.container.DockerBuilder
 import nextflow.container.ShifterBuilder
@@ -316,19 +315,7 @@ class BashWrapperBuilder {
     }
 
     private String getCondaActivateSnippet() {
-        if ( condaEnv ) {
-            // Get path to conda installation using `conda info`
-            def sout = new StringBuilder()
-            Process proc = "conda info --json".execute()
-            proc.waitForProcessOutput(sout, System.err)
-            JsonSlurper jsonSlurper = new JsonSlurper()
-            Map condaInfo = (Map) jsonSlurper.parseText(sout.toString())
-            // Build absolute path to activate script
-            def activateScript = "${condaInfo.conda_prefix}/bin/activate"
-            return "# conda environment\nsource ${Escape.path(activateScript)} ${Escape.path(condaEnv)}\n"
-        } else {
-            return null
-        }
+        condaEnv ? "# conda environment\nsource activate ${Escape.path(condaEnv)}\n" : null
     }
 
     protected String getTraceCommand(String interpreter) {
