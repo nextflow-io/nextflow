@@ -92,7 +92,7 @@ class TowerObserver implements TraceObserver {
 
     private JsonGenerator generator = createJsonGeneratorForPayloads()
 
-    private volatile String workflowId
+    private String workflowId
 
     private String watchUrl
 
@@ -104,7 +104,7 @@ class TowerObserver implements TraceObserver {
 
     private String urlTraceAlive
 
-    private String urlTraceHello
+    private String urlTraceInit
 
     private ResourcesAggregator aggregator
 
@@ -120,6 +120,8 @@ class TowerObserver implements TraceObserver {
 
     private LinkedHashSet<String> processNames = new LinkedHashSet<>(20)
 
+    private boolean terminated
+
     /**
      * Constructor that consumes a URL and creates
      * a basic HTTP client.
@@ -130,7 +132,7 @@ class TowerObserver implements TraceObserver {
         this.urlTraceTask = this.endpoint + '/trace/task'
         this.urlTraceWorkflow = this.endpoint + '/trace/workflow'
         this.urlTraceAlive = this.endpoint + '/trace/alive'
-        this.urlTraceHello = this.endpoint + '/trace/hello'
+        this.urlTraceInit = this.endpoint + '/trace/init'
     }
 
     /**
@@ -192,9 +194,14 @@ class TowerObserver implements TraceObserver {
         this.httpClient = new SimpleHttpClient().setAuthToken(TOKEN_PREFIX + getAccessToken())
 
         // send hello to verify auth
-        final resp = sendHttpGet(urlTraceHello)
+        final msg = [sessionId: session.uniqueId]
+        final resp = sendHttpMessage(urlTraceInit, msg)
         if( resp.error )
             throw new AbortOperationException(resp.message)
+        final ret = parseTowerResponse(resp)
+        this.workflowId = ret.workflowId
+        if( !workflowId )
+            throw new AbortOperationException("Invalid Tower response")
     }
 
     @Override
@@ -211,9 +218,8 @@ class TowerObserver implements TraceObserver {
         if( resp.error )
             throw new AbortOperationException(resp.message)
 
-        final payload = parseFlowStartResponse(resp)
+        final payload = parseTowerResponse(resp)
         this.watchUrl = payload.watchUrl
-        this.workflowId = payload.workflowId
         this.sender = Thread.start('Tower-thread', this.&sendTasks0)
         final msg = "Monitor the execution with Nextflow Tower using this url ${watchUrl}"
         log.info(LoggerHelper.STICKY, msg)
@@ -239,6 +245,7 @@ class TowerObserver implements TraceObserver {
         // wait the submission of pending events
         sender.join()
         // notify the workflow completion
+        terminated = true
         def resp = sendHttpMessage(urlTraceWorkflow, makeWorkflowReq(session))
         logHttpResponse(urlTraceWorkflow, resp)
     }
@@ -349,7 +356,7 @@ class TowerObserver implements TraceObserver {
         def workflow = session.getWorkflowMetadata().toMap()
         workflow.params = session.getParams()
         workflow.id = workflowId
-        if( !workflowId )
+        if( !terminated )
             workflow.remove('stats')
         // render as a string
         workflow.container = mapToString(workflow.container)
@@ -357,8 +364,7 @@ class TowerObserver implements TraceObserver {
 
         def result = new LinkedHashMap(5)
         result.workflow = workflow
-        // the workflowId signal the completion event
-        if( workflowId ) {
+        if( terminated ) {
             result.metrics = getMetricsList()
         }
         else {
@@ -438,7 +444,7 @@ class TowerObserver implements TraceObserver {
         }
     }
 
-    protected Map parseFlowStartResponse(Response resp) {
+    protected Map parseTowerResponse(Response resp) {
         if (resp.code >= 200 && resp.code < 300) {
             return (Map)new JsonSlurper().parseText(resp.message)
         }
