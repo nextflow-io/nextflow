@@ -1,4 +1,4 @@
-
+// Copyright?
 
 package nextflow.executor
 import java.nio.file.Path
@@ -9,10 +9,10 @@ import nextflow.processor.TaskRun
 /**
  * Processor for OAR resource manager (DRAFT)
  *
- * See http://computing.llnl.gov/linux/slurm/
+ * See https://oar.imag.fr/
  *
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Maxime Vallée <maxime.vallee@chu-lyon.fr>
  */
 @Slf4j
 class OarExecutor extends AbstractGridExecutor {
