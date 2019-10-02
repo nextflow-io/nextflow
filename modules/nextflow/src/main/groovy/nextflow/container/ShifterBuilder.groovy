@@ -67,7 +67,7 @@ class ShifterBuilder extends ContainerBuilder<ShifterBuilder> {
         shifterimg lookup ${image}
         while ! shifterimg lookup ${image}; do
             sleep 5
-            STATUS=$(shifterimg -v pull ${image} | awk -F: '$0~/"status":/{gsub("[\", ]","",$2);print $2}')
+            STATUS=$(shifterimg -v pull ${image} | awk -F: '$0~/"status":/{gsub("[\\", ]","",$2);print $2}\')
             [[ $STATUS == "FAILURE" || -z $STATUS ]] && echo "Shifter failed to pull image \'${image}\'" >&2  && exit 1
         done
         '''

@@ -63,7 +63,7 @@ class ShifterBuilderTest extends Specification {
                 while ! shifterimg lookup ubuntu:14; do
                     sleep 5
                     STATUS=$(shifterimg -v pull ubuntu:14| awk -F: '$0~/"status":/{gsub("[\", ]","",$2);print $2}')
-                    [[ $STATUS == "FAILURE" || -z $STATUS ]] && echo "Shifter failed to pull image \'ubuntu:14\'" >&2  && exit 1
+                    [[ $STATUS == "FAILURE" || -z $STATUS ]] && echo "Shifter failed to pull image 'ubuntu:14'" >&2  && exit 1
                 done
                 shifter --image ubuntu:14
                 '''
@@ -78,7 +78,7 @@ class ShifterBuilderTest extends Specification {
                 while ! shifterimg lookup ubuntu:14; do
                     sleep 5
                     STATUS=$(shifterimg -v pull ubuntu:14| awk -F: '$0~/"status":/{gsub("[\", ]","",$2);print $2}')
-                    [[ $STATUS == "FAILURE" || -z $STATUS ]] && echo "Shifter failed to pull image \'ubuntu:14\'" >&2  && exit 1
+                    [[ $STATUS == "FAILURE" || -z $STATUS ]] && echo "Shifter failed to pull image 'ubuntu:14'" >&2  && exit 1
                 done
                 shifter --image ubuntu:14 bwa --this --that file.fasta
                 '''
@@ -93,7 +93,7 @@ class ShifterBuilderTest extends Specification {
                 while ! shifterimg lookup ubuntu:14; do
                     sleep 5
                     STATUS=$(shifterimg -v pull ubuntu:14| awk -F: '$0~/"status":/{gsub("[\", ]","",$2);print $2}')
-                    [[ $STATUS == "FAILURE" || -z $STATUS ]] && echo "Shifter failed to pull image \'ubuntu:14\'" >&2  && exit 1
+                    [[ $STATUS == "FAILURE" || -z $STATUS ]] && echo "Shifter failed to pull image 'ubuntu:14'" >&2  && exit 1
                 done
                 shifter --image ubuntu:14 /bin/bash -c "bwa --this --that file.fasta"
                 '''
