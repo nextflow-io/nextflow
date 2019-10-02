@@ -59,6 +59,12 @@ class ShifterBuilderTest extends Specification {
         then:
         cli ==  '''
                 shifterimg pull ubuntu:14
+                shifterimg lookup ubuntu:14
+                while ! shifterimg lookup ubuntu:14; do
+                    sleep 5
+                    STATUS=$(shifterimg -v pull ubuntu:14| awk -F: '$0~/"status":/{gsub("[\", ]","",$2);print $2}')
+                    [[ $STATUS == "FAILURE" || -z $STATUS ]] && echo "Shifter failed to pull image \'ubuntu:14\'" >&2  && exit 1
+                done
                 shifter --image ubuntu:14
                 '''
                 .stripIndent().trim()
@@ -68,6 +74,12 @@ class ShifterBuilderTest extends Specification {
         then:
         cli ==  '''
                 shifterimg pull ubuntu:14
+                shifterimg lookup ubuntu:14
+                while ! shifterimg lookup ubuntu:14; do
+                    sleep 5
+                    STATUS=$(shifterimg -v pull ubuntu:14| awk -F: '$0~/"status":/{gsub("[\", ]","",$2);print $2}')
+                    [[ $STATUS == "FAILURE" || -z $STATUS ]] && echo "Shifter failed to pull image \'ubuntu:14\'" >&2  && exit 1
+                done
                 shifter --image ubuntu:14 bwa --this --that file.fasta
                 '''
                 .stripIndent().trim()
@@ -77,6 +89,12 @@ class ShifterBuilderTest extends Specification {
         then:
         cli ==  '''
                 shifterimg pull ubuntu:14
+                shifterimg lookup ubuntu:14
+                while ! shifterimg lookup ubuntu:14; do
+                    sleep 5
+                    STATUS=$(shifterimg -v pull ubuntu:14| awk -F: '$0~/"status":/{gsub("[\", ]","",$2);print $2}')
+                    [[ $STATUS == "FAILURE" || -z $STATUS ]] && echo "Shifter failed to pull image \'ubuntu:14\'" >&2  && exit 1
+                done
                 shifter --image ubuntu:14 /bin/bash -c "bwa --this --that file.fasta"
                 '''
                 .stripIndent().trim()

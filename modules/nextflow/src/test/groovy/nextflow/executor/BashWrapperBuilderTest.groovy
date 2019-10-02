@@ -717,6 +717,12 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.launch_cmd == '''\
                 shifterimg pull docker:ubuntu:latest
+                shifterimg lookup docker:ubuntu:latest
+                while ! shifterimg lookup docker:ubuntu:latest; do
+                    sleep 5
+                    STATUS=$(shifterimg -v pull ${image} | awk -F: '$0~/"status":/{gsub("[\", ]","",$2);print $2}')
+                    [[ $STATUS == "FAILURE" || -z $STATUS ]] && echo "Shifter failed to pull image \'docker:ubuntu:latest\'" >&2  && exit 1
+                done
                 shifter --image docker:ubuntu:latest /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"
                 '''.stripIndent().rightTrim()
         binding.kill_cmd == null
