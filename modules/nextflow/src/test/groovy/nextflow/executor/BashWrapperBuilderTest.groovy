@@ -720,7 +720,7 @@ class BashWrapperBuilderTest extends Specification {
                 shifterimg lookup docker:ubuntu:latest
                 while ! shifterimg lookup docker:ubuntu:latest; do
                     sleep 5
-                    STATUS=$(shifterimg -v pull docker:ubuntu:latest | awk -F: '$0~/"status":/{gsub("[\", ]","",$2);print $2}')
+                    STATUS=$(shifterimg -v pull docker:ubuntu:latest | tail -n2 | head -n1 | awk \'{print $6}\')
                     [[ $STATUS == "FAILURE" || -z $STATUS ]] && echo "Shifter failed to pull image \'docker:ubuntu:latest\'" >&2  && exit 1
                 done
                 shifter --image docker:ubuntu:latest /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"
