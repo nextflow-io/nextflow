@@ -31,23 +31,18 @@ class OarExecutor extends AbstractGridExecutor {
         result << '-O' << quote(task.workDir.resolve(TaskRun.CMD_OUTFILE))     
         result << '-E' << quote(task.workDir.resolve(TaskRun.CMD_ERRFILE))     
 
-		// Might be difficult, but all parameters are passed in one argument, like :
-		// 1 core on 2 nodes on the same cluster with 16384 MB of memory and Infiniband 20G + 1 cpu on 2 nodes on the same switch with 8 cores processors for a walltime of 4 hours
-		// oarsub -I -l "{memnode=16384 and ib_rate='20'}/cluster=1/nodes=2/core=1+{cpucore=8}/switch=1/nodes=2/cpu=1,walltime=4:0:0"
-		// Warning
-		// walltime must always be the last argument of -l <...>
+        if( task.config.getMemory() ) {
+            result << "-p" << "\"memnode=${task.config.getMemory().toGiga().toString()}\""
+        }
 
         if( task.config.cpus > 1 ) {
-            result << '-l cpu=' << task.config.cpus.toString() // NOT SURE AT ALL
-        }
-
-        if( task.config.getMemory() ) {
-            result << '-l memnode=' << task.config.getMemory().toMega().toString() // NOT SURE AT ALL
-        }
-
-        if( task.config.time ) {
-            result << '-l walltime=' << task.config.getTime().format('HH:mm:ss') // NOT SURE AT ALL
-        }
+            if( task.config.time ) {
+            	result << "-l" << "/nodes=1/core=${task.config.cpus.toString()},walltime=${task.config.getTime().format('HH:mm:ss')}"
+        	}
+	    else {
+	        result << "-l" << "/nodes=1/core=${task.config.cpus.toString()}"	
+	    }
+	}
 
         // the requested queue name
         if( task.config.queue ) {
