@@ -17,8 +17,6 @@ import nextflow.processor.TaskRun
 @Slf4j
 class OarExecutor extends AbstractGridExecutor {
 
-    static private Pattern SUBMIT_REGEX = ~/OAR_JOB_ID= (\d+)/
-
     /**
      * Gets the directives to submit the specified task to the cluster for execution
      *
@@ -30,10 +28,8 @@ class OarExecutor extends AbstractGridExecutor {
 
         result << '-d' << quote(task.workDir)
         result << '-n' << getJobNameFor(task)
-        // result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))     // -o OUTFILE and no -e option => stdout and stderr merged to stdout/OUTFILE
         result << '-O' << quote(task.workDir.resolve(TaskRun.CMD_OUTFILE))     
         result << '-E' << quote(task.workDir.resolve(TaskRun.CMD_ERRFILE))     
-        result << '--no-requeue' << '' // note: directive need to be returned as pairs
 
 		// Might be difficult, but all parameters are passed in one argument, like :
 		// 1 core on 2 nodes on the same cluster with 16384 MB of memory and Infiniband 20G + 1 cpu on 2 nodes on the same switch with 8 cores processors for a walltime of 4 hours
@@ -83,21 +79,20 @@ class OarExecutor extends AbstractGridExecutor {
     }
 
     /**
-     * Parse the string returned by the {@code sbatch} command and extract the job ID string
+     * Parse the string returned by the {@code oarsub} command and extract the job ID string
      *
      * @param text The string returned when submitting the job
      * @return The actual job ID string
      */
     @Override
     def parseJobId(String text) {
-
-        for( String line : text.readLines() ) {
-            def m = SUBMIT_REGEX.matcher(line)
-            if( m.find() ) {
-                return m.group(1).toString()
+    def pattern = ~ /OAR_JOB_ID=(\d+)/
+    for( String line : text.readLines() ) {
+        def m = pattern.matcher(line)
+        if( m.matches() ) {
+            return m.group(1).toString()
             }
         }
-
         throw new IllegalStateException("Invalid OAR submit response:\n$text\n\n")
     }
 
@@ -106,31 +101,18 @@ class OarExecutor extends AbstractGridExecutor {
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
-        // TO TEST, to have a parsable list of jobs in queue by user, see 'oarstat' page 21 :
-		// http://oar.imag.fr/docs/2.5/OAR-Documentation.pdf
-		// String cmd = 'oarstat -f'
-        // if( queue ) cmd += ' ' + queue
-        // return ['sh','-c', "$cmd | egrep '(Job_Id:|state =)' ".toString()]
-        
-		final result = ['squeue','--noheader','-o','%i %t', '-t', 'all']
-
-        if( queue )
-            result << '-p' << queue.toString()
-
-        final user = System.getProperty('user.name')
-        if( user )
-            result << '-u' << user
-        else
-            log.debug "Cannot retrieve current user"
-
-        return result
+        // To have a parsable list of jobs in queue by user
+		// see page 21 http://oar.imag.fr/docs/2.5/OAR-Documentation.pdf
+		String cmd = 'oarstat -f'
+        if( queue ) cmd += ' ' + queue
+        return ['sh','-c', "$cmd | egrep '(Job_Id:|state =)' ".toString()]
     }
 
     /*
      *  Maps OAR job status to nextflow status
      *  see page 134 http://oar.imag.fr/docs/2.5/OAR-Documentation.pdf
      */
-    static private Map STATUS_MAP = [
+    static private Map DECODE_STATUS = [
             'toLaunch': QueueStatus.RUNNING,			// (the OAR scheduler has attributed some nodes to the job. So it will be launched.)
             'Launching': QueueStatus.RUNNING,			// (OAR has launched the job and will execute the user command on the first node.)
             'Running': QueueStatus.RUNNING,				// (the user command is executing on the first node.)
@@ -144,21 +126,36 @@ class OarExecutor extends AbstractGridExecutor {
             'Terminated': QueueStatus.DONE,				// (the job has terminated normally.)
     ]
 
+    protected QueueStatus decode(String status) {
+        DECODE_STATUS.get(status)
+    }
+
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
-        def result = [:]
+        final JOB_ID = 'Job_Id:'
+        final JOB_STATUS = 'state ='
+        final result = [:]
 
-        text.eachLine { String line ->
-            def cols = line.split(/\s+/)
-            if( cols.size() == 2 ) {
-                result.put( cols[0], STATUS_MAP.get(cols[1]) )
+        String id = null
+        String status = null
+        text.eachLine { line ->
+            if( line.startsWith(JOB_ID) ) {
+                id = fetchValue(JOB_ID, line)
             }
-            else {
-                log.debug "[SLURM] invalid status line: `$line`"
+            else if( id ) {
+                status = fetchValue(JOB_STATUS, line)
             }
+            result.put( id, decode(status) ?: QueueStatus.UNKNOWN )
         }
 
         return result
     }
+
+    static String fetchValue( String prefix, String line ) {
+        final p = line.indexOf(prefix)
+        return p!=-1 ? line.substring(p+prefix.size()).trim() : null
+    }
+
+
 }
