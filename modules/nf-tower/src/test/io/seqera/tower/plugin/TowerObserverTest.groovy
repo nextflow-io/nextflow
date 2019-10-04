@@ -261,4 +261,18 @@ class TowerObserverTest extends Specification {
         tower.mapToString([p:'foo', q:'bar']) == 'p:foo,q:bar'
     }
 
+
+    def 'should load schema col len' () {
+        given:
+        def tower = new TowerObserver()
+
+        when:
+        def schema = tower.loadSchema()
+        then:
+        schema.get('workflow.start')  == null
+        schema.get('workflow.profile') == 50
+        schema.get('workflow.projectDir') == 255
+    }
+
+
 }

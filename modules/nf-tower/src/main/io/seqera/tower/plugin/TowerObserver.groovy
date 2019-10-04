@@ -11,7 +11,7 @@
 
 package io.seqera.tower.plugin
 
-import java.nio.file.Path
+
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -22,12 +22,9 @@ import groovy.json.JsonGenerator
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
-import nextflow.Const
-import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskHandler
@@ -90,7 +87,7 @@ class TowerObserver implements TraceObserver {
      */
     protected SimpleHttpClient httpClient
 
-    private JsonGenerator generator = createJsonGeneratorForPayloads()
+    private JsonGenerator generator
 
     private String workflowId
 
@@ -122,6 +119,8 @@ class TowerObserver implements TraceObserver {
 
     private boolean terminated
 
+    private Map<String,Integer> schema = Collections.emptyMap()
+
     /**
      * Constructor that consumes a URL and creates
      * a basic HTTP client.
@@ -133,13 +132,15 @@ class TowerObserver implements TraceObserver {
         this.urlTraceWorkflow = this.endpoint + '/trace/workflow'
         this.urlTraceAlive = this.endpoint + '/trace/alive'
         this.urlTraceInit = this.endpoint + '/trace/init'
+        this.schema = loadSchema()
+        this.generator = TowerJsonGenerator.create(schema)
     }
 
     /**
      * only for testing purpose -- do not use
      */
     protected TowerObserver() {
-
+        this.generator = TowerJsonGenerator.create(Collections.EMPTY_MAP)
     }
 
     boolean enableMetrics() { true }
@@ -471,17 +472,17 @@ class TowerObserver implements TraceObserver {
         return result
     }
 
-    @PackageScope
-    static JsonGenerator createJsonGeneratorForPayloads() {
-        new JsonGenerator.Options()
-                .addConverter(Path) { Path p, String key -> p.toUriString() }
-                .addConverter(Duration) { Duration d, String key -> d.durationInMillis }
-                .addConverter(NextflowMeta) { NextflowMeta m, String key -> m.toJsonMap() }
-                .addConverter(OffsetDateTime) { it.toString() }
-                .dateFormat(Const.ISO_8601_DATETIME_FORMAT).timezone("UTC")
-                .build()
-    }
 
+    protected Map<String,Integer> loadSchema() {
+        final props = new Properties()
+        props.load(this.getClass().getResourceAsStream('/tower-schema.properties'))
+        final result = new HashMap<String,Integer>(props.size())
+        for( String key : props.keySet() ) {
+            final value = props.getProperty(key)
+            result.put( key, value ? value as Integer : null )
+        }
+        return result
+    }
 
     protected void sendTasks0(dummy) {
         final tasks = new HashMap<TaskId, TraceRecord>(TASKS_PER_REQUEST)

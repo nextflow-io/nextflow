@@ -67,7 +67,7 @@ class Manifest {
         target.mainScript ?: DEFAULT_MAIN_FILE_NAME
     }
 
-    def getGitmodules() {
+    Boolean getGitmodules() {
         target.gitmodules
     }
 
