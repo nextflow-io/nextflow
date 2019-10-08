@@ -29,7 +29,6 @@ import nextflow.util.MemoryUnit
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CompileStatic
 class PodSpecBuilder {
 
     static @PackageScope AtomicInteger VOLUMES = new AtomicInteger()
@@ -350,8 +349,8 @@ class PodSpecBuilder {
         // -- volume claims
         for( PodVolumeClaim entry : volumeClaims ) {
             //check if we already have a volume for the pvc
-            def volume = volumes.find {it['persistentVolumeClaim']['claimName'] == entry.claimName}
-            final name = volume ? volume['name'] : nextVolName() //use the name of the already defined volume if it exists
+            def volume = volumes.find {it.persistentVolumeClaim.claimName == entry.claimName}
+            final name = volume ? volume.name : nextVolName() //use the name of the already defined volume if it exists
             final claim = [name: name, mountPath: entry.mountPath ]
             if( entry.subPath ) claim.subPath = entry.subPath
             mounts << claim
