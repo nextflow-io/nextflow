@@ -29,6 +29,7 @@ import nextflow.util.MemoryUnit
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class PodSpecBuilder {
 
     static @PackageScope AtomicInteger VOLUMES = new AtomicInteger()
@@ -261,6 +262,7 @@ class PodSpecBuilder {
         return result
     }
 
+    @CompileDynamic
     Map build() {
         assert this.podName, 'Missing K8s podName parameter'
         assert this.imageName, 'Missing K8s imageName parameter'
