@@ -715,16 +715,16 @@ class BashWrapperBuilderTest extends Specification {
                 containerConfig: [enabled: true, engine: 'shifter'] as ContainerConfig ).makeBinding()
 
         then:
-        binding.launch_cmd.stripIndent().rightTrim() == '''
-                shifterimg pull docker:ubuntu:latest
-                shifterimg lookup docker:ubuntu:latest
-                while ! shifterimg lookup docker:ubuntu:latest; do
-                    sleep 5
-                    STATUS=$(shifterimg -v pull docker:ubuntu:latest | tail -n2 | head -n1 | awk \'{print $6}\')
-                    [[ $STATUS == "FAILURE" || -z $STATUS ]] && echo "Shifter failed to pull image \'docker:ubuntu:latest\'" >&2  && exit 1
-                done
-                shifter --image docker:ubuntu:latest /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"
-                '''.stripIndent().rightTrim()
+        binding.launch_cmd == '''
+        shifterimg pull docker:ubuntu:latest
+        shifterimg lookup docker:ubuntu:latest
+        while ! shifterimg lookup docker:ubuntu:latest; do
+            sleep 5
+            STATUS=$(shifterimg -v pull docker:ubuntu:latest | tail -n2 | head -n1 | awk \'{print $6}\')
+            [[ $STATUS == "FAILURE" || -z $STATUS ]] && echo "Shifter failed to pull image \'docker:ubuntu:latest\'" >&2  && exit 1
+        done
+        shifter --image docker:ubuntu:latest /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"
+        '''.stripIndent().rightTrim()
         binding.kill_cmd == null
         binding.cleanup_cmd == ""
 
