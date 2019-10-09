@@ -715,7 +715,7 @@ class BashWrapperBuilderTest extends Specification {
                 containerConfig: [enabled: true, engine: 'shifter'] as ContainerConfig ).makeBinding()
 
         then:
-        binding.launch_cmd == '''
+        binding.launch_cmd == '''\
         shifterimg pull docker:ubuntu:latest
         shifterimg lookup docker:ubuntu:latest
         while ! shifterimg lookup docker:ubuntu:latest; do

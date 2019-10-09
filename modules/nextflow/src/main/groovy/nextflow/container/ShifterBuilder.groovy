@@ -62,7 +62,7 @@ class ShifterBuilder extends ContainerBuilder<ShifterBuilder> {
     @Override
     String getRunCommand() {
         def run = super.getRunCommand()
-        def result = """
+        def result = """\
         shifterimg pull $image
         shifterimg lookup $image
         while ! shifterimg lookup $image; do
@@ -70,7 +70,7 @@ class ShifterBuilder extends ContainerBuilder<ShifterBuilder> {
             STATUS=\$(shifterimg -v pull $image | tail -n2 | head -n1 | awk \'{print \$6}\')
             [[ \$STATUS == "FAILURE" || -z \$STATUS ]] && echo "Shifter failed to pull image \'$image\'" >&2  && exit 1
         done
-        """
+        """.stripIndent()
         result += run
         return result
     }
