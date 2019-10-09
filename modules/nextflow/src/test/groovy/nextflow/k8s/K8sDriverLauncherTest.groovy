@@ -169,12 +169,12 @@ class K8sDriverLauncherTest extends Specification {
                                          [name:'NXF_EXECUTOR', value:'k8s'],
                                          [name:'NXF_ANSI_LOG', value: 'false']],
                                  volumeMounts:[
-                                         [name:'vol-1', mountPath:'/mnt/path/data'],
-                                         [name:'vol-2', mountPath:'/mnt/path/cfg']]]
+                                         [name:'vol-pvc-1', mountPath:'/mnt/path/data'],
+                                         [name:'vol-1', mountPath:'/mnt/path/cfg']]]
                                 ],
                         serviceAccountName:'bar',
-                        volumes:[[name:'vol-1', persistentVolumeClaim:[claimName:'pvc-1']],
-                                 [name:'vol-2', configMap:[name:'cfg-2'] ]]
+                        volumes:[[name:'vol-pvc-1', persistentVolumeClaim:[claimName:'pvc-1']],
+                                 [name:'vol-1', configMap:[name:'cfg-2'] ]]
                  ]
         ]
 
@@ -218,12 +218,12 @@ class K8sDriverLauncherTest extends Specification {
                                          [name:'NXF_EXECUTOR', value:'k8s'],
                                          [name:'NXF_ANSI_LOG', value: 'false'] ],
                                  volumeMounts:[
-                                         [name:'vol-1', mountPath:'/mnt/path/data'],
-                                         [name:'vol-2', mountPath:'/mnt/path/cfg']]]
+                                         [name:'vol-pvc-1', mountPath:'/mnt/path/data'],
+                                         [name:'vol-1', mountPath:'/mnt/path/cfg']]]
                         ],
                         serviceAccountName:'bar',
-                        volumes:[[name:'vol-1', persistentVolumeClaim:[claimName:'pvc-1']],
-                                 [name:'vol-2', configMap:[name:'cfg-2'] ]]
+                        volumes:[[name:'vol-pvc-1', persistentVolumeClaim:[claimName:'pvc-1']],
+                                 [name:'vol-1', configMap:[name:'cfg-2'] ]]
                  ]
         ]
 

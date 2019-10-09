@@ -301,12 +301,12 @@ class K8sTaskHandlerTest extends Specification {
                                      command: ['/bin/bash', '-ue', '.command.run'],
                                      workingDir: '/some/work/dir',
                                      volumeMounts: [
-                                             [name:'vol-1', mountPath:'/work'],
-                                             [name:'vol-2', mountPath:'/data']
+                                             [name:'vol-first', mountPath:'/work'],
+                                             [name:'vol-second', mountPath:'/data']
                                      ] ]
                             ],
-                            volumes: [   [name:'vol-1', persistentVolumeClaim:[claimName: 'first']],
-                                         [name:'vol-2', persistentVolumeClaim:[claimName: 'second']] ]
+                            volumes: [   [name:'vol-first', persistentVolumeClaim:[claimName: 'first']],
+                                         [name:'vol-second', persistentVolumeClaim:[claimName: 'second']] ]
                     ]
         ]
 
@@ -337,12 +337,12 @@ class K8sTaskHandlerTest extends Specification {
                                      command: ['/bin/bash', '-ue', '.command.run'],
                                      workingDir: '/some/work/dir',
                                      volumeMounts: [
-                                             [name:'vol-3', mountPath:'/tmp'],
-                                             [name:'vol-4', mountPath: '/data']
+                                             [name:'vol-1', mountPath:'/tmp'],
+                                             [name:'vol-2', mountPath: '/data']
                                      ] ]
                             ],
-                            volumes: [  [name:'vol-3', hostPath:[path:'/tmp']],
-                                        [name:'vol-4', hostPath:[path:'/data']]]
+                            volumes: [  [name:'vol-1', hostPath:[path:'/tmp']],
+                                        [name:'vol-2', hostPath:[path:'/data']]]
                     ]
         ]
 

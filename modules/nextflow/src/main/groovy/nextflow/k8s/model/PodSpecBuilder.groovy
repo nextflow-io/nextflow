@@ -262,7 +262,6 @@ class PodSpecBuilder {
         return result
     }
 
-    @CompileDynamic
     Map build() {
         assert this.podName, 'Missing K8s podName parameter'
         assert this.imageName, 'Missing K8s imageName parameter'
@@ -351,12 +350,11 @@ class PodSpecBuilder {
         // -- volume claims
         for( PodVolumeClaim entry : volumeClaims ) {
             //check if we already have a volume for the pvc
-            def volume = volumes.find {it.persistentVolumeClaim.claimName == entry.claimName}
-            final name = volume ? volume.name : nextVolName() //use the name of the already defined volume if it exists
+            final name = "vol-${entry.claimName}".toString()
             final claim = [name: name, mountPath: entry.mountPath ]
             if( entry.subPath ) claim.subPath = entry.subPath
             mounts << claim
-            if(!volume) //insert a new volume if there wasn't one already defined for the pvc
+            if(!volumes.find({it['name'] == name})) //insert a new volume if there wasn't one already defined for the pvc
                 volumes << [name: name, persistentVolumeClaim: [claimName: entry.claimName]]
         }
 

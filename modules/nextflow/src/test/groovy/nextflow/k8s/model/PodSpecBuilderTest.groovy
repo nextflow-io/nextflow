@@ -167,12 +167,12 @@ class PodSpecBuilderTest extends Specification {
                                     command: ['echo'],
                                     workingDir:'/path',
                                     volumeMounts:[
-                                            [name:'vol-1', mountPath:'/work'],
-                                            [name:'vol-2', mountPath:'/data', subPath: '/foo']] ]
+                                            [name:'vol-first', mountPath:'/work'],
+                                            [name:'vol-second', mountPath:'/data', subPath: '/foo']] ]
                            ],
                            volumes:[
-                                   [name:'vol-1', persistentVolumeClaim:[claimName:'first']],
-                                   [name:'vol-2', persistentVolumeClaim:[claimName:'second']] ]
+                                   [name:'vol-first', persistentVolumeClaim:[claimName:'first']],
+                                   [name:'vol-second', persistentVolumeClaim:[claimName:'second']] ]
                    ]
 
         ]
@@ -204,14 +204,14 @@ class PodSpecBuilderTest extends Specification {
                                     command: ['echo'],
                                     workingDir:'/path',
                                     volumeMounts:[
-                                            [name:'vol-1', mountPath:'/work'],
-                                            [name:'vol-1', mountPath:'/work2', subPath: '/bar'],
-                                            [name:'vol-2', mountPath:'/data', subPath: '/foo'],
-                                            [name:'vol-2', mountPath:'/data2', subPath: '/fooz']]]
+                                            [name:'vol-first', mountPath:'/work'],
+                                            [name:'vol-first', mountPath:'/work2', subPath: '/bar'],
+                                            [name:'vol-second', mountPath:'/data', subPath: '/foo'],
+                                            [name:'vol-second', mountPath:'/data2', subPath: '/fooz']]]
                            ],
                            volumes:[
-                                   [name:'vol-1', persistentVolumeClaim:[claimName:'first']],
-                                   [name:'vol-2', persistentVolumeClaim:[claimName:'second']] ]
+                                   [name:'vol-first', persistentVolumeClaim:[claimName:'first']],
+                                   [name:'vol-second', persistentVolumeClaim:[claimName:'second']] ]
                    ]
 
         ]
@@ -516,16 +516,16 @@ class PodSpecBuilderTest extends Specification {
                                  command:['echo'],
                                  env:[[name:'HELLO', value:'WORLD']],
                                  volumeMounts:[
-                                         [name:'vol-1', mountPath:'/work'],
-                                         [name:'vol-2', mountPath:'/home/user'],
-                                         [name:'vol-3', mountPath:'/etc/secret.txt']
+                                         [name:'vol-pvc1', mountPath:'/work'],
+                                         [name:'vol-1', mountPath:'/home/user'],
+                                         [name:'vol-2', mountPath:'/etc/secret.txt']
                                  ],
                                 ]
                         ],
                         volumes:[
-                                [name:'vol-1', persistentVolumeClaim:[claimName:'pvc1']],
-                                [name:'vol-2', configMap:[name:'data']],
-                                [name:'vol-3', secret:[secretName:'blah']] ]
+                                [name:'vol-pvc1', persistentVolumeClaim:[claimName:'pvc1']],
+                                [name:'vol-1', configMap:[name:'data']],
+                                [name:'vol-2', secret:[secretName:'blah']] ]
                 ]
 
         ]
