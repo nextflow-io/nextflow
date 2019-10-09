@@ -50,8 +50,11 @@ class OarExecutor extends AbstractGridExecutor {
         }
 
         // -- at the end append the command script wrapped file name
+	// Options need to be semicolon ";" separated, if several are needed
         if( task.config.clusterOptions ) {
-            result << task.config.clusterOptions.toString() << ''
+          for (String item : task.config.clusterOptions.toString().tokenize(';')) {
+            result << item << ''
+          }
         }
 
         return result
