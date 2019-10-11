@@ -57,29 +57,47 @@ class ShifterBuilderTest extends Specification {
         when:
         def cli = new ShifterBuilder('ubuntu:14').build().getRunCommand()
         then:
-        cli ==  '''
-                shifterimg pull ubuntu:14
-                shifter --image ubuntu:14
-                '''
-                .stripIndent().trim()
+        cli ==  '''\
+        shifterimg pull ubuntu:14
+        shifterimg lookup ubuntu:14
+        while ! shifterimg lookup ubuntu:14; do
+            sleep 5
+            STATUS=$(shifterimg -v pull ubuntu:14 | tail -n2 | head -n1 | awk '{print $6}')
+            [[ $STATUS == "FAILURE" || -z $STATUS ]] && echo "Shifter failed to pull image 'ubuntu:14'" >&2  && exit 1
+        done
+        shifter --image ubuntu:14
+        '''
+        .stripIndent().trim()
 
         when:
         cli = new ShifterBuilder('ubuntu:14').build().getRunCommand('bwa --this --that file.fasta')
         then:
-        cli ==  '''
-                shifterimg pull ubuntu:14
-                shifter --image ubuntu:14 bwa --this --that file.fasta
-                '''
-                .stripIndent().trim()
+        cli ==  '''\
+        shifterimg pull ubuntu:14
+        shifterimg lookup ubuntu:14
+        while ! shifterimg lookup ubuntu:14; do
+            sleep 5
+            STATUS=$(shifterimg -v pull ubuntu:14 | tail -n2 | head -n1 | awk '{print $6}')
+            [[ $STATUS == "FAILURE" || -z $STATUS ]] && echo "Shifter failed to pull image 'ubuntu:14'" >&2  && exit 1
+        done
+        shifter --image ubuntu:14 bwa --this --that file.fasta
+        '''
+        .stripIndent().trim()
 
         when:
         cli = new ShifterBuilder('ubuntu:14').params(entry:'/bin/bash').build().getRunCommand('bwa --this --that file.fasta')
         then:
-        cli ==  '''
-                shifterimg pull ubuntu:14
-                shifter --image ubuntu:14 /bin/bash -c "bwa --this --that file.fasta"
-                '''
-                .stripIndent().trim()
+        cli ==  '''\
+        shifterimg pull ubuntu:14
+        shifterimg lookup ubuntu:14
+        while ! shifterimg lookup ubuntu:14; do
+            sleep 5
+            STATUS=$(shifterimg -v pull ubuntu:14 | tail -n2 | head -n1 | awk '{print $6}')
+            [[ $STATUS == "FAILURE" || -z $STATUS ]] && echo "Shifter failed to pull image 'ubuntu:14'" >&2  && exit 1
+        done
+        shifter --image ubuntu:14 /bin/bash -c "bwa --this --that file.fasta"
+        '''
+        .stripIndent().trim()
 
     }
 
