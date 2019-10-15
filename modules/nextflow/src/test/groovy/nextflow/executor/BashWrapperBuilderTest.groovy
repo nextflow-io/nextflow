@@ -451,8 +451,8 @@ class BashWrapperBuilderTest extends Specification {
         binding.container_env == /\
                 nxf_container_env() {
                 cat << EOF
-                export FOO=\"aa\"
-                export BAR=\"bb\"
+                export FOO="aa"
+                export BAR="bb"
                 EOF
                 }
                 /.stripIndent()
@@ -761,9 +761,9 @@ class BashWrapperBuilderTest extends Specification {
         binding.container_env ==  '''
                 nxf_container_env() {
                 cat << EOF
-                export FOO=\\"hello\\"
-                export BAR=\\"hello world\\"
-                export PATH=\\"/some/path:\\$PATH\\"
+                export FOO="hello"
+                export BAR="hello world"
+                export PATH="/some/path:\\$PATH"
                 EOF
                 }
                 '''
