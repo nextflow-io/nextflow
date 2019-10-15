@@ -208,7 +208,7 @@ class GooglePipelinesHelper {
             genomicsClient.projects().operations().get(operation.getName()).execute()
         }
         catch( IOException e ) {
-            log.warn("Invalid server response fetching operation status: $operation", e)
+            log.warn("Invalid server response fetching operation status: ${operation.getName()}", e)
             return null
         }
     }
@@ -219,7 +219,7 @@ class GooglePipelinesHelper {
             genomicsClient.projects().operations().cancel(operation.getName(), new CancelOperationRequest()).execute()
         }
         catch( IOException e ) {
-            log.warn("Invalid server response cancelling operation: $operation | ${e.message}")
+            log.debug("Invalid server response cancelling operation: ${operation.getName()} | ${e.message}")
         }
     }
 
