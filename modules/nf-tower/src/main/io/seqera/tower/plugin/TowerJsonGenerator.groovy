@@ -52,6 +52,7 @@ class TowerJsonGenerator extends DefaultJsonGenerator {
         this.scheme = scheme
     }
 
+    @Override
     protected void writeObject(String key, Object object, CharBuf buffer) {
         final pos=stack.size()
         if(key) stack.add(pos, key)
@@ -59,15 +60,17 @@ class TowerJsonGenerator extends DefaultJsonGenerator {
         finally { if(key) stack.remove(pos) }
     }
 
+    @Override
     protected void writeRaw(CharSequence seq, CharBuf buffer) {
         super.writeRaw(safeSequence(seq),buffer)
     }
 
+    @Override
     protected void writeCharSequence(CharSequence seq, CharBuf buffer) {
         super.writeCharSequence(safeSequence(seq), buffer)
     }
 
-    protected CharSequence safeSequence(CharSequence seq) {
+    final protected CharSequence safeSequence(CharSequence seq) {
         final key = stack.join('.')
         final max = scheme.get(key)
         if( seq!=null && max && seq.length()>max ) {
