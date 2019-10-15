@@ -67,7 +67,14 @@ class Manifest {
         target.mainScript ?: DEFAULT_MAIN_FILE_NAME
     }
 
-    Boolean getGitmodules() {
+    /**
+     * Controls whether repository sub-modules should be cloned along with the main one.
+     *
+     * @return
+     *      Either a boolean value, a list object submodule names or a comma separated string
+     *      of sub-module names
+     */
+    def getGitmodules() {
         target.gitmodules
     }
 
