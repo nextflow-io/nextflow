@@ -270,7 +270,7 @@ class TowerObserverTest extends Specification {
         def schema = tower.loadSchema()
         then:
         schema.get('workflow.start')  == null
-        schema.get('workflow.profile') == 50
+        schema.get('workflow.profile') == 100
         schema.get('workflow.projectDir') == 255
     }
 
