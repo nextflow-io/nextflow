@@ -155,10 +155,7 @@ abstract class RepositoryProvider {
                 }
             case 404:
                 log.debug "Response status: $code -- ${connection.getErrorStream()?.text}"
-                String conString = connection.toString()
-                int indexNearUrlStart = conString.indexOf("//") - 10
-                int startIndex = conString.indexOf("http",indexNearUrlStart)
-                throw new AbortOperationException("Uri not found. This uri was attempted for api query: ${conString.substring(startIndex)}")
+                throw new AbortOperationException("API Uri not found. The uri that was used for the query: ${connection.getURL()}")
         }
 
     }
