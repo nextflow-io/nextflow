@@ -82,11 +82,12 @@ class OarExecutor extends AbstractGridExecutor {
      * @param text The string returned when submitting the job
      * @return The actual job ID string
      */
-    @Override
+    static private Pattern SUBMIT_REGEX = ~/OAR_JOB_ID=(\d+)/
+	
+	@Override
     def parseJobId(String text) {
-    def pattern = ~ /OAR_JOB_ID=(\d+)/
     for( String line : text.readLines() ) {
-        def m = pattern.matcher(line)
+        def m = SUBMIT_REGEX.matcher(line)
         if( m.matches() ) {
             return m.group(1).toString()
             }
