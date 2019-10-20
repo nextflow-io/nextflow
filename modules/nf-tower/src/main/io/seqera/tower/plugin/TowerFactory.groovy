@@ -39,9 +39,9 @@ class TowerFactory implements TraceObserverFactory {
             return Collections.emptyList()
 
         if ( !endpoint || endpoint=='-' )
-            endpoint = TowerObserver.DEF_ENDPOINT_URL
+            endpoint = TowerClient.DEF_ENDPOINT_URL
 
-        final tower = new TowerObserver(endpoint)
+        final tower = new TowerClient(endpoint)
         if( aliveInterval )
             tower.aliveInterval = aliveInterval
         if( requestInterval )

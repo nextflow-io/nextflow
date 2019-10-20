@@ -27,14 +27,14 @@ class TowerFactoryTest extends Specification {
         def factory = new TowerFactory()
         
         when:
-        def result = factory.create(session)[0] as TowerObserver
+        def result = factory.create(session)[0] as TowerClient
         then:
         session.getConfig() >> [tower: [enabled: true]]
         then:
-        result.endpoint == TowerObserver.DEF_ENDPOINT_URL
+        result.endpoint == TowerClient.DEF_ENDPOINT_URL
 
         when:
-        result = factory.create(session)[0] as TowerObserver
+        result = factory.create(session)[0] as TowerClient
         then:
         session.getConfig() >> [tower: [enabled: true, endpoint:'http://foo.com/api']]
         then:

@@ -44,7 +44,7 @@ import nextflow.util.SimpleHttpClient
  */
 @Slf4j
 @CompileStatic
-class TowerObserver implements TraceObserver {
+class TowerClient implements TraceObserver {
 
     static final String DEF_ENDPOINT_URL = 'https://api.tower.nf'
 
@@ -132,7 +132,7 @@ class TowerObserver implements TraceObserver {
      * a basic HTTP client.
      * @param endpoint The target address for sending messages to
      */
-    TowerObserver(String endpoint) {
+    TowerClient(String endpoint) {
         this.endpoint = checkUrl(endpoint)
         this.urlTraceTask = this.endpoint + '/trace/task'
         this.urlTraceWorkflow = this.endpoint + '/trace/workflow'
@@ -145,7 +145,7 @@ class TowerObserver implements TraceObserver {
     /**
      * only for testing purpose -- do not use
      */
-    protected TowerObserver() {
+    protected TowerClient() {
         this.generator = TowerJsonGenerator.create(Collections.EMPTY_MAP)
     }
 
