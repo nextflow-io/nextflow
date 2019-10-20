@@ -56,21 +56,37 @@ class TowerJsonGenerator extends DefaultJsonGenerator {
     protected void writeObject(String key, Object object, CharBuf buffer) {
         final pos=stack.size()
         if(key) stack.add(pos, key)
-        try { super.writeObject(key,object,buffer) }
-        finally { if(key) stack.remove(pos) }
+        try {
+            final fqn = stack.join('.')
+            if( fqn == 'workflow.manifest.gitmodules' && object instanceof List ) {
+                writeCharSequence(object.join(','), buffer)
+            }
+            else
+                super.writeObject(key,object,buffer)
+        }
+        finally {
+            if(key) stack.remove(pos)
+        }
     }
 
     @Override
     protected void writeRaw(CharSequence seq, CharBuf buffer) {
-        super.writeRaw(safeSequence(seq),buffer)
+        super.writeRaw(chompString(seq),buffer)
     }
 
     @Override
     protected void writeCharSequence(CharSequence seq, CharBuf buffer) {
-        super.writeCharSequence(safeSequence(seq), buffer)
+        super.writeCharSequence(chompString(seq), buffer)
     }
 
-    final protected CharSequence safeSequence(CharSequence seq) {
+    /**
+     * Make sure the specified argument is not longer than the expected length
+     * defined in the `scheme` object
+     *
+     * @param seq The string object as {@link CharSequence} instance
+     * @return A string object whose length does not exceed the max for the current key entry
+     */
+    final protected CharSequence chompString(CharSequence seq) {
         final key = stack.join('.')
         final max = scheme.get(key)
         if( seq!=null && max && seq.length()>max ) {

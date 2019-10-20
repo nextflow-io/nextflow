@@ -335,7 +335,7 @@ class TowerObserver implements TraceObserver {
         // The actual HTTP request
         final String json = payload != null ? generator.toJson(payload) : null
         final String debug = json != null ? JsonOutput.prettyPrint(json).indent() : '-'
-        log.debug "HTTP url=$url; payload:\n${debug}\n"
+        log.trace "HTTP url=$url; payload:\n${debug}\n"
         try {
             httpClient.sendHttpMessage(url, json, method)
             return new Response(httpClient.responseCode, httpClient.getResponse())
