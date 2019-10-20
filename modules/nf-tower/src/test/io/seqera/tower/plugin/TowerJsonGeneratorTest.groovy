@@ -44,4 +44,26 @@ class TowerJsonGeneratorTest extends Specification {
         then:
         x == '{"bar":{"one":"Hello","two":"Hola mundo"}}'
     }
+
+    def 'should normalise gitmodules attribute' () {
+        given:
+        def scheme = ['workflow.manifest.gitmodules': 10]
+        def gen = new TowerJsonGenerator(new JsonGenerator.Options(), scheme)
+
+        when:
+        def json = gen.toJson( [workflow: [manifest: [gitmodules: ['a','b','c']]]] )
+        then:
+        json == '{"workflow":{"manifest":{"gitmodules":"a,b,c"}}}'
+
+        when:
+        json = gen.toJson( [workflow: [manifest: [gitmodules: 'abc']]] )
+        then:
+        json == '{"workflow":{"manifest":{"gitmodules":"abc"}}}'
+
+        when:
+        json = gen.toJson( [workflow: [manifest: [gitmodules: '123456789012345']]] )
+        then:
+        json == '{"workflow":{"manifest":{"gitmodules":"1234567890"}}}'
+    }
+
 }
