@@ -53,6 +53,7 @@ Read more [here](https://andrey.nering.com.br/2016/git-submodules-vs-subtrees/).
     git stash list
     git stash pop
     git stash pop stash@{1}
+    git showtool stash@{0}
     git stash drop
     git stash drop stash@{1}
     git stash clear
