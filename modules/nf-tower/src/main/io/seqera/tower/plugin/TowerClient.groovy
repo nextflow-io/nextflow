@@ -153,6 +153,8 @@ class TowerClient implements TraceObserver {
 
     String getEndpoint() { endpoint }
 
+    String getWorkflowId() { workflowId }
+
     void setAliveInterval(Duration d) {
         this.aliveInterval = d
     }
@@ -213,14 +215,23 @@ class TowerClient implements TraceObserver {
         this.httpClient = new SimpleHttpClient().setAuthToken(TOKEN_PREFIX + getAccessToken())
 
         // send hello to verify auth
-        final msg = [sessionId: session.uniqueId]
-        final resp = sendHttpMessage(urlTraceInit, msg)
+        final req = makeInitRequest(session)
+        final resp = sendHttpMessage(urlTraceInit, req)
         if( resp.error )
             throw new AbortOperationException(resp.message)
         final ret = parseTowerResponse(resp)
         this.workflowId = ret.workflowId
         if( !workflowId )
             throw new AbortOperationException("Invalid Tower response")
+    }
+
+    protected Map makeInitRequest(Session session) {
+        [
+            sessionId: session.uniqueId.toString(),
+            runName: session.runName,
+            projectName: session.workflowMetadata.projectName,
+            repository: session.workflowMetadata.repository
+        ]
     }
 
     @Override
