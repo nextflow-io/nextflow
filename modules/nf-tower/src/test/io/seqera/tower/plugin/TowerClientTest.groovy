@@ -274,5 +274,55 @@ class TowerClientTest extends Specification {
         schema.get('workflow.projectDir') == 255
     }
 
+    def 'should create init request' () {
+        given:
+        def uuid = UUID.randomUUID()
+        def tower = new TowerClient()
+        def meta = Mock(WorkflowMetadata) {
+            getProjectName() >> 'the-project-name'
+            getRepository() >> 'git://repo.com/foo'
+        }
+        def session = Mock(Session) {
+            getUniqueId() >> uuid
+            getRunName() >> 'foo_bar'
+            getWorkflowMetadata() >> meta
+        }
 
+        when:
+        def req = tower.makeInitRequest(session)
+        then:
+        req.sessionId == uuid.toString()
+        req.runName == 'foo_bar'
+        req.projectName == 'the-project-name'
+        req.repository == 'git://repo.com/foo'
+    }
+
+    def 'should post init request' () {
+        given:
+        def uuid = UUID.randomUUID()
+        def meta = Mock(WorkflowMetadata) {
+            getProjectName() >> 'the-project-name'
+            getRepository() >> 'git://repo.com/foo'
+        }
+        def session = Mock(Session) {
+            getUniqueId() >> uuid
+            getRunName() >> 'foo_bar'
+            getWorkflowMetadata() >> meta
+        }
+
+        TowerClient tower = Spy(TowerClient, constructorArgs: ['https://tower.nf'])
+
+        when:
+        tower.onFlowInit(session)
+        then:
+        1 * tower.getAccessToken() >> 'secret'
+        1 * tower.makeInitRequest(session) >> [runName: 'foo']
+        1 * tower.sendHttpMessage('https://tower.nf/trace/init', [runName: 'foo']) >> new TowerClient.Response(200, '{"workflowId":"xyz123"}')
+        and:
+        tower.runName == 'foo_bar'
+        tower.runId == uuid.toString()
+        and:
+        tower.workflowId == 'xyz123'
+
+    }
 }
