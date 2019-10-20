@@ -121,6 +121,12 @@ class TowerObserver implements TraceObserver {
 
     private Map<String,Integer> schema = Collections.emptyMap()
 
+    private int maxRetries = 5
+
+    private int backOffDelay
+
+    private int backOffBase
+
     /**
      * Constructor that consumes a URL and creates
      * a basic HTTP client.
@@ -151,8 +157,20 @@ class TowerObserver implements TraceObserver {
         this.aliveInterval = d
     }
 
-    void setRequestInterval(Duration d ) {
+    void setRequestInterval(Duration d) {
         this.requestInterval = d
+    }
+
+    void setMaxRetries( int value ) {
+        this.maxRetries = value
+    }
+
+    void setBackOffBase( int value ) {
+        this.backOffBase = value
+    }
+
+    void setBackOffDelay( int value ) {
+        this.backOffDelay = value
     }
 
     /**
@@ -186,7 +204,7 @@ class TowerObserver implements TraceObserver {
      */
     @Override
     void onFlowInit(Session session) {
-        log.debug "Creating Tower observer -- endpoint=$endpoint; requestInterval=$requestInterval; aliveInterval=$aliveInterval"
+        log.debug "Creating Tower observer -- endpoint=$endpoint; requestInterval=$requestInterval; aliveInterval=$aliveInterval; maxRetries=$maxRetries; backOffBase=$backOffBase; backOffDelay=$backOffDelay"
         
         this.session = session
         this.aggregator = new ResourcesAggregator(session)
@@ -207,13 +225,18 @@ class TowerObserver implements TraceObserver {
 
     @Override
     void onProcessCreate(TaskProcessor process){
-        log.debug "Creating process ${process.name}"
+        log.trace "Creating process ${process.name}"
         if( !processNames.add(process.name) )
             throw new IllegalStateException("Process name `${process.name}` already used")
     }
 
     @Override
     void onFlowBegin() {
+        // configure error retry 
+        httpClient.maxRetries = maxRetries
+        httpClient.backOffBase = backOffBase
+        httpClient.backOffDelay = backOffDelay
+
         final req = makeWorkflowReq(session)
         final resp = sendHttpMessage(urlTraceWorkflow, req)
         if( resp.error )

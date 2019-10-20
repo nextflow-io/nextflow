@@ -16,6 +16,7 @@ import nextflow.Session
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
 import nextflow.util.Duration
+import nextflow.util.SimpleHttpClient
 
 /**
  * Create and register the Tower observer instance
@@ -33,6 +34,7 @@ class TowerFactory implements TraceObserverFactory {
         String endpoint = config.navigate('tower.endpoint') as String
         Duration requestInterval = config.navigate('tower.requestInterval') as Duration
         Duration aliveInterval = config.navigate('tower.aliveInterval') as Duration
+
         if( !isEnabled )
             return Collections.emptyList()
 
@@ -44,6 +46,10 @@ class TowerFactory implements TraceObserverFactory {
             tower.aliveInterval = aliveInterval
         if( requestInterval )
             tower.requestInterval = requestInterval
+        // error handling settings
+        tower.maxRetries = config.navigate('tower.maxRetries', 5) as int
+        tower.backOffBase = config.navigate('tower.backOffBase', SimpleHttpClient.DEFAULT_BACK_OFF_BASE) as int
+        tower.backOffDelay = config.navigate('tower.backOffDelay', SimpleHttpClient.DEFAULT_BACK_OFF_DELAY  ) as int
 
         final result = new ArrayList(1)
         result.add(tower)
