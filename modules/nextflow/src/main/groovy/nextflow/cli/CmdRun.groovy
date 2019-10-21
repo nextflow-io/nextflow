@@ -260,8 +260,6 @@ class CmdRun extends CmdBase implements HubOptions {
     protected void checkRunName() {
         if( runName == 'last' )
             throw new AbortOperationException("Not a valid run name: `last`")
-        if( runName && !matchRunName(runName) )
-            throw new AbortOperationException("Not a valid run name: `$runName` -- It must match the pattern $RUN_NAME_PATTERN")
 
         if( !runName ) {
             // -- make sure the generated name does not exist already
