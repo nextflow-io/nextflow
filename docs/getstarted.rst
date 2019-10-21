@@ -50,7 +50,7 @@ Copy the following example into your favourite text editor and save it to a file
     process splitLetters {
 
         output:
-        file 'chunk_*' into letters mode flatten
+        file 'chunk_*' into letters
 
         """
         printf '${params.str}' | split -b 6 - chunk_
@@ -61,7 +61,7 @@ Copy the following example into your favourite text editor and save it to a file
     process convertToUpper {
 
         input:
-        file x from letters
+        file x from letters.collect()
 
         output:
         stdout result
@@ -71,13 +71,13 @@ Copy the following example into your favourite text editor and save it to a file
         """
     }
 
-    result.println { it.trim() }
+    result.view { it.trim() }
 
 
 This script defines two processes. The first splits a string into 6-character chunks, writing each one to a file with the prefix ``chunk_``,
 and the second receives these files and transforms their contents to uppercase letters.
 The resulting strings are emitted on the ``result`` channel and the final output is printed by the
-``subscribe`` operator.
+``view`` operator.
 
 
 

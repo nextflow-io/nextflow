@@ -16,6 +16,8 @@
 
 package nextflow.script
 
+import java.lang.reflect.InvocationTargetException
+
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
@@ -154,7 +156,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
         if( binding.entryName && !entryFlow ) {
             def msg = "Unknown workflow entry name: ${binding.entryName}"
-            final allNames = meta.getDefinitions().findAll() { it instanceof WorkflowDef }.collect { it.name }
+            final allNames = meta.getLocalWorkflowNames()
             final guess = allNames.closest(binding.entryName)
             if( guess )
                 msg += " -- Did you mean?\n" + guess.collect { "  $it"}.join('\n')
@@ -178,6 +180,10 @@ abstract class BaseScript extends Script implements ExecutionContext {
         ExecutionStack.push(this)
         try {
             run0()
+        }
+        catch(InvocationTargetException e) {
+            // provide the exception cause which is more informative than InvocationTargetException
+            throw(e.cause ?: e)
         }
         finally {
             ExecutionStack.pop()

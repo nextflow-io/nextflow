@@ -10,6 +10,22 @@ git checkout master
 git merge public/master
 ```
 
+List branch remote
+
+    git branch -vv 
+
+Checkout from a remote branch 
+
+    git co -b <local name> upstream/master
+
+Push to a remote upstream branch
+
+    git push <remote> <local branch>:<remote branch>
+
+eg:
+
+    git push upstream foo:master
+
 Read more [here](https://help.github.com/articles/syncing-a-fork/).
 
 ## Subtree  
@@ -37,6 +53,7 @@ Read more [here](https://andrey.nering.com.br/2016/git-submodules-vs-subtrees/).
     git stash list
     git stash pop
     git stash pop stash@{1}
+    git showtool stash@{0}
     git stash drop
     git stash drop stash@{1}
     git stash clear

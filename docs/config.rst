@@ -11,7 +11,7 @@ When a pipeline script is launched Nextflow looks for a file named ``nextflow.co
 in the script base directory (if it is not the same as the current directory). Finally it checks for the file
 ``$HOME/.nextflow/config``.
 
-When more than one on the above files exist they are merged, so that the settings in the first override the same ones
+When more than one of the above files exist they are merged, so that the settings in the first override the same ones
 that may appear in the second one, and so on.
 
 The default config file search mechanism can be extended proving an extra configuration file by using the command line

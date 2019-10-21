@@ -11,7 +11,7 @@
 
 package io.seqera.tower.plugin
 
-import java.nio.file.Path
+
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -22,12 +22,9 @@ import groovy.json.JsonGenerator
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
-import nextflow.Const
-import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskHandler
@@ -47,7 +44,7 @@ import nextflow.util.SimpleHttpClient
  */
 @Slf4j
 @CompileStatic
-class TowerObserver implements TraceObserver {
+class TowerClient implements TraceObserver {
 
     static final String DEF_ENDPOINT_URL = 'https://api.tower.nf'
 
@@ -90,9 +87,9 @@ class TowerObserver implements TraceObserver {
      */
     protected SimpleHttpClient httpClient
 
-    private JsonGenerator generator = createJsonGeneratorForPayloads()
+    private JsonGenerator generator
 
-    private volatile String workflowId
+    private String workflowId
 
     private String watchUrl
 
@@ -104,7 +101,7 @@ class TowerObserver implements TraceObserver {
 
     private String urlTraceAlive
 
-    private String urlTraceHello
+    private String urlTraceInit
 
     private ResourcesAggregator aggregator
 
@@ -120,36 +117,62 @@ class TowerObserver implements TraceObserver {
 
     private LinkedHashSet<String> processNames = new LinkedHashSet<>(20)
 
+    private boolean terminated
+
+    private Map<String,Integer> schema = Collections.emptyMap()
+
+    private int maxRetries = 5
+
+    private int backOffDelay
+
+    private int backOffBase
+
     /**
      * Constructor that consumes a URL and creates
      * a basic HTTP client.
      * @param endpoint The target address for sending messages to
      */
-    TowerObserver(String endpoint) {
+    TowerClient(String endpoint) {
         this.endpoint = checkUrl(endpoint)
         this.urlTraceTask = this.endpoint + '/trace/task'
         this.urlTraceWorkflow = this.endpoint + '/trace/workflow'
         this.urlTraceAlive = this.endpoint + '/trace/alive'
-        this.urlTraceHello = this.endpoint + '/trace/hello'
+        this.urlTraceInit = this.endpoint + '/trace/init'
+        this.schema = loadSchema()
+        this.generator = TowerJsonGenerator.create(schema)
     }
 
     /**
      * only for testing purpose -- do not use
      */
-    protected TowerObserver() {
-
+    protected TowerClient() {
+        this.generator = TowerJsonGenerator.create(Collections.EMPTY_MAP)
     }
 
     boolean enableMetrics() { true }
 
     String getEndpoint() { endpoint }
 
+    String getWorkflowId() { workflowId }
+
     void setAliveInterval(Duration d) {
         this.aliveInterval = d
     }
 
-    void setRequestInterval(Duration d ) {
+    void setRequestInterval(Duration d) {
         this.requestInterval = d
+    }
+
+    void setMaxRetries( int value ) {
+        this.maxRetries = value
+    }
+
+    void setBackOffBase( int value ) {
+        this.backOffBase = value
+    }
+
+    void setBackOffDelay( int value ) {
+        this.backOffDelay = value
     }
 
     /**
@@ -183,7 +206,7 @@ class TowerObserver implements TraceObserver {
      */
     @Override
     void onFlowInit(Session session) {
-        log.debug "Creating Tower observer -- endpoint=$endpoint; requestInterval=$requestInterval; aliveInterval=$aliveInterval"
+        log.debug "Creating Tower observer -- endpoint=$endpoint; requestInterval=$requestInterval; aliveInterval=$aliveInterval; maxRetries=$maxRetries; backOffBase=$backOffBase; backOffDelay=$backOffDelay"
         
         this.session = session
         this.aggregator = new ResourcesAggregator(session)
@@ -192,28 +215,46 @@ class TowerObserver implements TraceObserver {
         this.httpClient = new SimpleHttpClient().setAuthToken(TOKEN_PREFIX + getAccessToken())
 
         // send hello to verify auth
-        final resp = sendHttpGet(urlTraceHello)
+        final req = makeInitRequest(session)
+        final resp = sendHttpMessage(urlTraceInit, req)
         if( resp.error )
             throw new AbortOperationException(resp.message)
+        final ret = parseTowerResponse(resp)
+        this.workflowId = ret.workflowId
+        if( !workflowId )
+            throw new AbortOperationException("Invalid Tower response")
+    }
+
+    protected Map makeInitRequest(Session session) {
+        [
+            sessionId: session.uniqueId.toString(),
+            runName: session.runName,
+            projectName: session.workflowMetadata.projectName,
+            repository: session.workflowMetadata.repository
+        ]
     }
 
     @Override
     void onProcessCreate(TaskProcessor process){
-        log.debug "Creating process ${process.name}"
+        log.trace "Creating process ${process.name}"
         if( !processNames.add(process.name) )
             throw new IllegalStateException("Process name `${process.name}` already used")
     }
 
     @Override
     void onFlowBegin() {
+        // configure error retry 
+        httpClient.maxRetries = maxRetries
+        httpClient.backOffBase = backOffBase
+        httpClient.backOffDelay = backOffDelay
+
         final req = makeWorkflowReq(session)
         final resp = sendHttpMessage(urlTraceWorkflow, req)
         if( resp.error )
             throw new AbortOperationException(resp.message)
 
-        final payload = parseFlowStartResponse(resp)
+        final payload = parseTowerResponse(resp)
         this.watchUrl = payload.watchUrl
-        this.workflowId = payload.workflowId
         this.sender = Thread.start('Tower-thread', this.&sendTasks0)
         final msg = "Monitor the execution with Nextflow Tower using this url ${watchUrl}"
         log.info(LoggerHelper.STICKY, msg)
@@ -239,6 +280,7 @@ class TowerObserver implements TraceObserver {
         // wait the submission of pending events
         sender.join()
         // notify the workflow completion
+        terminated = true
         def resp = sendHttpMessage(urlTraceWorkflow, makeWorkflowReq(session))
         logHttpResponse(urlTraceWorkflow, resp)
     }
@@ -327,7 +369,7 @@ class TowerObserver implements TraceObserver {
         // The actual HTTP request
         final String json = payload != null ? generator.toJson(payload) : null
         final String debug = json != null ? JsonOutput.prettyPrint(json).indent() : '-'
-        log.debug "HTTP url=$url; payload:\n${debug}\n"
+        log.trace "HTTP url=$url; payload:\n${debug}\n"
         try {
             httpClient.sendHttpMessage(url, json, method)
             return new Response(httpClient.responseCode, httpClient.getResponse())
@@ -349,7 +391,7 @@ class TowerObserver implements TraceObserver {
         def workflow = session.getWorkflowMetadata().toMap()
         workflow.params = session.getParams()
         workflow.id = workflowId
-        if( !workflowId )
+        if( !terminated )
             workflow.remove('stats')
         // render as a string
         workflow.container = mapToString(workflow.container)
@@ -357,8 +399,7 @@ class TowerObserver implements TraceObserver {
 
         def result = new LinkedHashMap(5)
         result.workflow = workflow
-        // the workflowId signal the completion event
-        if( workflowId ) {
+        if( terminated ) {
             result.metrics = getMetricsList()
         }
         else {
@@ -438,7 +479,7 @@ class TowerObserver implements TraceObserver {
         }
     }
 
-    protected Map parseFlowStartResponse(Response resp) {
+    protected Map parseTowerResponse(Response resp) {
         if (resp.code >= 200 && resp.code < 300) {
             return (Map)new JsonSlurper().parseText(resp.message)
         }
@@ -465,17 +506,17 @@ class TowerObserver implements TraceObserver {
         return result
     }
 
-    @PackageScope
-    static JsonGenerator createJsonGeneratorForPayloads() {
-        new JsonGenerator.Options()
-                .addConverter(Path) { Path p, String key -> p.toUriString() }
-                .addConverter(Duration) { Duration d, String key -> d.durationInMillis }
-                .addConverter(NextflowMeta) { NextflowMeta m, String key -> m.toJsonMap() }
-                .addConverter(OffsetDateTime) { it.toString() }
-                .dateFormat(Const.ISO_8601_DATETIME_FORMAT).timezone("UTC")
-                .build()
-    }
 
+    protected Map<String,Integer> loadSchema() {
+        final props = new Properties()
+        props.load(this.getClass().getResourceAsStream('/tower-schema.properties'))
+        final result = new HashMap<String,Integer>(props.size())
+        for( String key : props.keySet() ) {
+            final value = props.getProperty(key)
+            result.put( key, value ? value as Integer : null )
+        }
+        return result
+    }
 
     protected void sendTasks0(dummy) {
         final tasks = new HashMap<TaskId, TraceRecord>(TASKS_PER_REQUEST)

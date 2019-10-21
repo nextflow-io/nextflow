@@ -42,6 +42,7 @@ class AmazonPriceReader {
     final static private String WAIT_MESSAGE = "Fetching EC2 prices (it can take a few seconds depending your internet connection) .."
 
     final static public String ENDPOINT = 'https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/index.csv'
+    final static public String ENDPOINT_CN = 'https://pricing.amazonaws.com/offers/v1.0/cn/AmazonEC2/current/index.csv'
 
     final static private int CACHE_MAX_DAYS = 7
 
@@ -128,7 +129,7 @@ class AmazonPriceReader {
         }
 
         log.info1 WAIT_MESSAGE
-        final result = parse(ENDPOINT)
+        final result = region.startsWith("cn-") ? parse(ENDPOINT_CN) : parse(ENDPOINT)
         KryoHelper.serialize(result, path)
         return result
     }

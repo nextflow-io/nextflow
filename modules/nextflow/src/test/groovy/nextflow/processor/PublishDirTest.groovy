@@ -57,15 +57,16 @@ class PublishDirTest extends Specification {
         publish.mode == PublishDir.Mode.LINK
         publish.pattern == '*.bam'
         publish.overwrite
+        publish.enabled
 
         when:
-        publish =  PublishDir.create( [path: '/some/data', mode: 'copy'] )
+        publish =  PublishDir.create( [path: '/some/data', mode: 'copy', enabled: false] )
         then:
         publish.path == Paths.get('/some/data')
         publish.mode == PublishDir.Mode.COPY
         publish.pattern == null
         publish.overwrite == null
-
+        !publish.enabled
 
         when:
         publish =  PublishDir.create( [path:'this/folder', overwrite: false, pattern: '*.txt', mode: 'copy'] )
@@ -288,5 +289,31 @@ class PublishDirTest extends Specification {
         pub.checkNull('null')
         pub.checkNull('null-x')
         pub.checkNull(' null')
+    }
+
+    def 'should not apply disable rule' () {
+
+        given:
+        def folder = Files.createTempDirectory('nxf')
+        folder.resolve('work-dir').mkdir()
+        folder.resolve('work-dir/file1.txt').text = 'aaa'
+
+        def workDir = folder.resolve('work-dir')
+        def publishDir = folder.resolve('pub-dir')
+        def task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
+
+        when:
+        def outputs =  [
+                workDir.resolve('file1.txt'),
+        ]
+        def publisher = new PublishDir(path: publishDir, enabled: false)
+        publisher.apply(outputs, task)
+
+        then:
+        !publishDir.resolve('file1.txt').exists()
+
+        cleanup:
+        folder?.deleteDir()
+
     }
 }

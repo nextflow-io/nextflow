@@ -1196,6 +1196,7 @@ An option closure can be provide to customise the items emitted by the resulting
         .merge( evens ) { a, b -> tuple(b*b, a) }
         .println()
 
+.. _operator-mix:
 
 mix
 ------
@@ -1706,7 +1707,7 @@ For example::
         .set { result }
 
      result.foo.view { "foo $it" }
-     result.far.view { "bar $it" }
+     result.bar.view { "bar $it" }
 
 It shows::
 

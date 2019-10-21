@@ -16,6 +16,8 @@
 
 package nextflow
 
+import static nextflow.util.CheckHelper.*
+
 import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.Path
@@ -46,7 +48,6 @@ import nextflow.file.PathVisitor
 import nextflow.util.CheckHelper
 import nextflow.util.Duration
 import org.codehaus.groovy.runtime.NullObject
-import static nextflow.util.CheckHelper.checkParams
 /**
  * Channel factory object
  *
@@ -89,12 +90,40 @@ class Channel  {
         return result
     }
 
+    static DataflowWriteChannel of(Object ... items) {
+        final result = CH.create()
+        final values = new ArrayList()
+        if( items == null ) {
+            values.add(null)
+        }
+        else {
+            for( int i=0; i<items.size(); i++ )
+                addToList0(values, items[i])
+        }
+        values.add(STOP)
+        CH.emitValues(result, values)
+        NodeMarker.addSourceNode('Channel.of', result)
+        return result
+    }
+
+    static private void addToList0(List list, obj) {
+        if( obj instanceof Range ) {
+            for( def x : obj ) {
+                list.add(x)
+            }
+        }
+        else {
+            list.add(obj)
+        }
+    }
+
     /**
      * Creates a channel sending the items in the collection over it
      *
      * @param items
      * @return
      */
+    @Deprecated
     static DataflowWriteChannel from( Collection items ) {
         final result = from0(items)
         NodeMarker.addSourceNode('Channel.from', result)
@@ -108,12 +137,20 @@ class Channel  {
         return result
     }
 
+    static DataflowWriteChannel fromList( Collection items ) {
+        final result = CH.create()
+        CH.emitAndClose(result, items as List)
+        NodeMarker.addSourceNode('Channel.fromList', result)
+        return result
+    }
+    
     /**
      * Creates a channel sending the items in the collection over it
      *
      * @param items
      * @return
      */
+    @Deprecated
     static DataflowWriteChannel from( Object... items ) {
         final result = from0(items as List)
         NodeMarker.addSourceNode('Channel.from', result)

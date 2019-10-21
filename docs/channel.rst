@@ -20,6 +20,8 @@ Channel types
 
 Nextflow distinguish two different kinds of channels: `queue channels` and `value channels`.
 
+.. _channel-type-queue:
+
 Queue channel
 -------------
 
@@ -37,6 +39,7 @@ In you need to connect a process output channel to more then one process or oper
 :ref:`operator-into` operator to create two (or more) copies of the same channel and use each
 of them to connect a separate process.
 
+.. _channel-type-value:
 
 Value channel
 -------------
@@ -98,15 +101,62 @@ The available factory methods are:
 create
 ------
 
+.. warning::
+    This method is deprecated.
+
 Creates a new `channel` by using the ``create`` method, as shown below::
 
     channelObj = Channel.create()
 
 
+.. _channel-of:
+
+of
+--
+
+The ``of`` method allows you to create a channel emitting any sequence of values that are specified as the method argument,
+for example::
+
+    ch = Channel.of( 1, 3, 5, 7 )
+    ch.view { "value: $it" }
+
+The first line in this example creates a variable ``ch`` which holds a channel object. This channel emits the values
+specified as a parameter in the ``of`` method. Thus the second line prints the following::
+
+    value: 1
+    value: 3
+    value: 5
+    value: 7
+
+
+.. tip::
+    Range of values are expanded accordingly.
+
+::
+
+    Channel
+        .of(1..23, 'X', 'Y')
+        .view()
+
+Prints::
+
+    1
+    2
+    3
+    4
+    :
+    23
+    X
+    Y
+
+See also: `fromList`_ factory method.
+
 .. _channel-from:
 
 from
 ----
+
+.. warning:: This method is deprecated. Use `of`_ or `fromList`_ instead.
 
 The ``from`` method allows you to create a channel emitting any sequence of values that are specified as the method argument,
 for example::
@@ -164,6 +214,29 @@ can be specified to bind the channel to a specific value. For example::
 
 The first line in the example creates an 'empty' variable. The second line creates a channel and binds a string to it.
 Finally the last one creates a channel and binds a list object to it that will be emitted as a sole emission.
+
+
+.. _channel-fromlist:
+
+fromList
+--------
+
+The ``fromList`` method allows you to create a channel emitting the values provided as a list of elements,
+for example::
+
+    Channel
+        .fromList( ['a', 'b', 'c', 'd'] )
+        .view { "value: $it" }
+
+Prints::
+
+    a
+    b
+    c
+    d
+
+
+See also: `of`_ factory method.
 
 .. _channel-path:
 

@@ -779,7 +779,7 @@ class TaskProcessorTest extends Specification {
         when:
         env = TaskProcessor.bashEnvironmentScript([PATH: 'foo:$PATH'], true)
         then:
-        env.trim() == 'export PATH=\\"foo:\\$PATH\\"'
+        env.trim() == 'export PATH="foo:\\$PATH"'
         env.charAt(env.size()-1) == '\n' as char
 
         when:

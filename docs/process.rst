@@ -359,6 +359,7 @@ val         Lets you access the received input value by its name in the process 
 env         Lets you use the received value to set an environment variable named
             as the specified input name.
 file        Lets you handle the received value as a file, staging it properly in the execution context.
+path        Lets you handle the received value as a path, staging the file properly in the execution context.
 stdin       Lets you forward the received value to the process `stdin` special file.
 tuple       Lets you handle a group of input values having one of the above qualifiers.
 each        Lets you execute the process for each entry in the input collection.
@@ -579,6 +580,57 @@ with the current execution context.
   own private temporary directory, and input files are automatically staged to this directory by Nextflow. 
   This guarantees that input files with the same name won't overwrite each other.
 
+
+Input of type 'path'
+--------------------
+
+The ``path`` input qualifier was introduced by Nextflow version 19.10.0 and it's a drop-in replacement
+for the ``file`` qualifier, therefore it's backward compatible with the syntax
+and the semantic for the input ``file`` described above.
+
+The important difference between ``file`` and ``path`` qualifier is that the first expects the
+values received as input to be *file* objects. When inputs is a different type, it automatically
+coverts to a string and saves it to a temporary files. This can be useful in some uses cases,
+but it turned out to be tricky in most common cases.
+
+The ``path`` qualifier instead interprets string values as the path location of the input file
+and automatically converts to a file object.
+
+::
+
+    process foo {
+      input:
+        path x from '/some/data/file.txt'
+      """
+        your_command --in $x
+      """
+    }
+
+
+.. note::
+    Provided input value should represent an absolute path location i.e. the string value
+    **must** be prefixed with a `/` character or with a support URI protocol i.e. ``file://``,
+    ``http://``, ``s3://``, etc. and it cannot contain special characters (e.g. ``\n``, etc.).
+
+
+
+The option ``stageAs`` allow you to control how the file should be named in the task work
+directory, providing a specific name or a name pattern as described in the `Multiple input files`_
+section::
+
+
+    process foo {
+      input:
+        path x, stageAs: 'data.txt' from '/some/data/file.txt'
+      """
+        your_command --in data.txt
+      """
+    }
+
+
+.. tip::
+    The ``path`` qualifier should be preferred over ``file`` to handle process input files
+    when using Nextflow 19.10.0 or later.
 
 
 Input of type 'stdin'
@@ -854,6 +906,7 @@ Qualifier   Semantic
 =========== =============
 val         Sends variable's with the name specified over the output channel.
 file        Sends a file produced by the process with the name specified over the output channel.
+path        Sends a file produced by the process with the name specified over the output channel (replaces ``file``).
 stdout      Sends the executed process `stdout` over the output channel.
 tuple       Lets to send multiple values over the same output channel.
 =========== =============
@@ -981,12 +1034,11 @@ Some caveats on glob pattern behavior:
    Instead, use a prefix or a postfix naming notation to restrict the set of matching files to
    only the expected ones e.g. ``file 'prefix_*.sorted.bam'``. 
 
-.. tip::
-    By default all the files matching the specified glob pattern are emitted by the channel as a sole (list) item.
-    It is also possible to emit each file as a sole item by adding the ``mode flatten`` attribute in the output file
-    declaration.
+By default all the files matching the specified glob pattern are emitted by the channel as a sole (list) item.
+It is also possible to emit each file as a sole item by adding the ``mode flatten`` attribute in the output file
+declaration.
 
-By using the `mode` attribute the previous example can be re-written as show below::
+By using the ``mode`` attribute the previous example can be re-written as show below::
 
     process splitLetters {
 
@@ -1001,6 +1053,9 @@ By using the `mode` attribute the previous example can be re-written as show bel
     letters .subscribe { println "File: ${it.name} => ${it.text}" }
 
 
+.. warning::
+    The option ``mode`` is deprecated as of version 19.10.0. Use the operator :ref:`operator-collect`
+    in the downstream process instead.
 
 Read more about glob syntax at the following link `What is a glob?`_
 
@@ -1033,19 +1088,51 @@ For example::
 In the above example, each time the process is executed an alignment file is produced whose name depends
 on the actual value of the ``x`` input.
 
-.. tip:: The management of output files is a very common misunderstanding when using Nextflow. 
+.. tip:: The management of output files is a very common misunderstanding when using Nextflow.
   With other tools, it is generally necessary to organize the outputs files into some kind of directory 
   structure or to guarantee a unique file name scheme, so that result files won't overwrite each other 
   and that they can be referenced univocally by downstream tasks.
 
   With Nextflow, in most cases, you don't need to take care of naming output files, because each task is executed 
   in its own unique temporary directory, so files produced by different tasks can never override each other.
-  Also meta-data can be associated with outputs by using the :ref:`tuple output <process-tuple>` qualifier, instead of
+  Also meta-data can be associated with outputs by using the :ref:`tuple output <process-out-tuple>` qualifier, instead of
   including them in the output file name.
 
   To sum up, the use of output files with static names over dynamic ones is preferable whenever possible, 
   because it will result in a simpler and more portable code.
 
+.. _process-out-path:
+
+Output path
+-----------
+
+The ``path`` output qualifier was introduced by Nextflow version 19.10.0 and it's a drop-in replacement
+for the ``file`` output qualifier, therefore it's backward compatible with the syntax
+and the semantic for the input ``file`` described above.
+
+The main advantage of ``path`` over the ``file`` qualifier is that it allows the specification
+of a number of output to fine-control the output files.
+
+=========== =====================
+Name        Description
+=========== =====================
+glob        When ``true`` the specified name is interpreted as a glob pattern (default: ``true``)
+hidden      When ``true`` hidden files are included in the matching output files (default: ``false``)
+followLinks When ``true`` target files are return in place of any matching symlink (default: ``true``)
+type        Type of paths returned, either ``file``, ``dir`` or ``any`` (default: ``any``, or ``file`` if the specified file name pattern contains a `**` - double star - symbol)
+maxDepth    Maximum number of directory levels to visit (default: `no limit`)
+=========== =====================
+
+
+.. warning::
+    Breaking change: the ``file`` qualifier interprets ``:`` as path separator, therefore ``file 'foo:bar'``
+    captures both files ``foo`` and ``bar``. The ``path`` qualifier interprets it just a plain file name character,
+    and therefore the output definition ``path 'foo:bar'`` captures the output file with name ``foo:bar``.
+
+
+.. tip::
+    The ``path`` qualifier should be preferred over ``file`` to handle process output files
+    when using Nextflow 19.10.0 or later.
 
 .. _process-stdout:
 
@@ -1888,6 +1975,7 @@ saveAs          A closure which, given the name of the file being published, ret
                 a custom strategy.
                 Return the value ``null`` from the closure to *not* publish a file.
                 This is useful when the process has multiple output files, but you want to publish only some of them.
+enabled         Allow to enable or disable the publish rule depending the boolean value specified (default: ``true``).
 =============== =================
 
 Table of publish modes:

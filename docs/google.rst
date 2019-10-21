@@ -303,7 +303,7 @@ machine type with the specified compute resources.  If ``memory`` is not specifi
 A persistent disk will be created with size corresponding to the ``disk`` directive.  If ``disk`` is not specified, the
 instance default is chosen to ensure reasonable I/O performance.
 
-The process ``machineType`` directive may optionally be used to specify a predifined Google Compute Platform `machine type <https://cloud.google.com/compute/docs/machine-types>`_
+The process ``machineType`` directive may optionally be used to specify a predefined Google Compute Platform `machine type <https://cloud.google.com/compute/docs/machine-types>`_
 If specified, this value overrides the ``cpus`` and ``memory`` directives.
 If the ``cpus`` and ``memory`` directives are used, the values must comply with the allowed custom machine type `specifications <https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#specifications>`_ .  Extended memory is not directly supported, however high memory or cpu predefined
 instances may be utilized using the ``machineType`` directive
