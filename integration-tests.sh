@@ -28,6 +28,8 @@ fi
 
 export WITH_DOCKER='-with-docker'
 export NXF_CMD=$PWD/nextflow;
+export CAPSULE_LOG=none
+export TEST_JDK=$X_JDK
 (
  $NXF_CMD info
  cd validation

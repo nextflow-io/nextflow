@@ -35,6 +35,9 @@ import nextflow.Const
 @CompileStatic
 class SimpleHttpClient {
 
+    public static int DEFAULT_BACK_OFF_BASE = 3
+    public static int DEFAULT_BACK_OFF_DELAY = 250
+
     /**
      * Default user agent
      */
@@ -60,6 +63,14 @@ class SimpleHttpClient {
      */
     private String userAgent = DEF_USER_AGENT
 
+    private int errorCount
+
+    private int maxRetries
+
+    private int backOffBase = DEFAULT_BACK_OFF_BASE
+
+    private int backOffDelay = DEFAULT_BACK_OFF_DELAY
+
     /**
      * Send a json formatted string as HTTP POST request
      * @param json Message content as JSON
@@ -69,47 +80,59 @@ class SimpleHttpClient {
         if (!url)
             throw new IllegalStateException("URL needs to be set!")
 
-        // Open a connection to the target url
-        def con = getHttpConnection(url)
-        // Make header settings
-        con.setRequestMethod(method)
-        con.setRequestProperty("Content-Type", "application/json")
-        con.setRequestProperty("User-Agent", userAgent)
-        if( authToken )
-            con.setRequestProperty("Authorization","Basic ${authToken.bytes.encodeBase64()}")
+        // reset the error count 
+        errorCount = 0
 
-        con.setDoOutput(true)
+        while( true ) {
+            // Open a connection to the target url
+            def con = getHttpConnection(url)
+            // Make header settings
+            con.setRequestMethod(method)
+            con.setRequestProperty("Content-Type", "application/json")
+            con.setRequestProperty("User-Agent", userAgent)
+            if( authToken )
+                con.setRequestProperty("Authorization","Basic ${authToken.bytes.encodeBase64()}")
 
-        // Send POST request
-        if( json ) {
-            DataOutputStream output = new DataOutputStream(con.getOutputStream())
-            output.writeBytes(json)
-            output.flush()
-            output.close()
-        }
+            con.setDoOutput(true)
 
-        // Retrieve response code
-        try {
-            this.responseCode = con.getResponseCode()
-
-            // Retrieve response message
-            BufferedReader reader = new BufferedReader(new InputStreamReader(con.getInputStream()))
-            String lineContent
-            StringBuffer tmpResponse = new StringBuffer()
-
-            while ((lineContent = reader.readLine()) != null){
-                tmpResponse.append(lineContent)
+            // Send POST request
+            if( json ) {
+                DataOutputStream output = new DataOutputStream(con.getOutputStream())
+                output.writeBytes(json)
+                output.flush()
+                output.close()
             }
 
-            reader.close()
+            // Retrieve response code
+            try {
+                this.responseCode = con.getResponseCode()
 
-            this.response = tmpResponse.toString()
-        }
-        catch( IOException e ) {
-            // capture error code
-            // https://stackoverflow.com/a/18462721/395921
-            this.responseCode = con.getResponseCode()
-            throw e
+                // Retrieve response message
+                BufferedReader reader = new BufferedReader(new InputStreamReader(con.getInputStream()))
+                String lineContent
+                StringBuffer tmpResponse = new StringBuffer()
+
+                while ((lineContent = reader.readLine()) != null){
+                    tmpResponse.append(lineContent)
+                }
+
+                reader.close()
+
+                this.response = tmpResponse.toString()
+                break
+            }
+            catch( IOException e ) {
+                // capture error code
+                // https://stackoverflow.com/a/18462721/395921
+                this.responseCode = con.getResponseCode()
+                this.errorCount +=1
+                if( responseCode < 500 || this.errorCount > maxRetries )
+                    throw e
+
+                final delay = (Math.pow(backOffBase, errorCount) as long) * backOffDelay
+                log.debug "Got HTTP error=$responseCode waiting for ${delay}ms (errorCount=$errorCount)"
+                Thread.sleep(delay)
+            }
         }
 
     }
@@ -168,6 +191,21 @@ class SimpleHttpClient {
 
     SimpleHttpClient setAuthToken(String tkn) {
         authToken = tkn
+        return this
+    }
+
+    SimpleHttpClient setMaxRetries(int value) {
+        this.maxRetries = value
+        return this
+    }
+
+    SimpleHttpClient setBackOffBase(int value ) {
+        this.backOffBase = value
+        return this
+    }
+
+    SimpleHttpClient setBackOffDelay(int value ) {
+        this.backOffDelay= value
         return this
     }
 

@@ -1761,7 +1761,7 @@ class TaskProcessor {
             }
             else {
                 // escape both wrapping double quotes and the dollar var placeholder
-                script << /export $name=\"${value.replace('$','\\$')}\"/
+                script << /export $name="${value.replace('$','\\$')}"/
             }
         }
         script << ''

@@ -1,0 +1,73 @@
+set -e
+export NXF_ANSI_LOG=false
+
+#
+# create the `hello.sh` executable script
+#
+mkdir -p bin
+echo "echo Hola mundo" > bin/hello.sh
+chmod +x bin/hello.sh
+
+#
+# create the nextflow config file 
+#
+cat << EOF > nextflow.config
+env.FOO = 'HOLA'
+process.container = 'ubuntu:18.04'
+EOF
+
+#
+# create the nextflow script 
+#
+cat << EOF > foo.nf
+process foo {
+  echo true
+  input: 
+  env BAR from Channel.value('Hello World!')
+  '''
+  env | sort 
+  hello.sh
+  '''
+}
+EOF
+
+#
+# not the testing part 
+#
+
+# NF plain run  
+$NXF_CMD run foo.nf | tee stdout
+
+# run tests 
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process'` == 1 ]] || false
+[[ `< stdout grep -c 'FOO=HOLA'` == 1 ]] || false
+[[ `< stdout grep -c 'BAR=Hello World!'` == 1 ]] || false
+[[ `< stdout grep -c 'Hola mundo'` == 1 ]] || false
+
+# NF run with trace
+$NXF_CMD run foo.nf -with-trace | tee stdout
+
+# run tests 
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process'` == 1 ]] || false
+[[ `< stdout grep -c 'FOO=HOLA'` == 1 ]] || false
+[[ `< stdout grep -c 'BAR=Hello World!'` == 1 ]] || false
+[[ `< stdout grep -c 'Hola mundo'` == 1 ]] || false
+
+# NF run with docker
+$NXF_CMD run foo.nf -with-docker | tee stdout
+
+# run tests 
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process'` == 1 ]] || false
+[[ `< stdout grep -c 'FOO=HOLA'` == 1 ]] || false
+[[ `< stdout grep -c 'BAR=Hello World!'` == 1 ]] || false
+[[ `< stdout grep -c 'Hola mundo'` == 1 ]] || false
+
+
+# NF run with docker and trace
+$NXF_CMD run foo.nf -with-trace -with-docker | tee stdout
+
+# run tests 
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process'` == 1 ]] || false
+[[ `< stdout grep -c 'FOO=HOLA'` == 1 ]] || false
+[[ `< stdout grep -c 'BAR=Hello World!'` == 1 ]] || false
+[[ `< stdout grep -c 'Hola mundo'` == 1 ]] || false

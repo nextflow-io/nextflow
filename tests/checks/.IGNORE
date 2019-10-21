@@ -2,3 +2,4 @@
 modules.nf
 rnaseq-toy.nf
 feedback.nf
+stress.nf

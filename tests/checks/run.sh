@@ -80,6 +80,8 @@ function can_run() {
     elif [[ $TRAVIS_PULL_REQUEST != false && `grep -c "$1" .IGNORE-TRAVIS-PR` != 0 ]]; then 
         # https://docs.travis-ci.com/user/pull-requests/#Pull-Requests-and-Security-Restrictions
         echo 'no'    
+    elif [[ -f .IGNORE-JAVA-$TEST_JDK && `grep -c "$1" .IGNORE-JAVA-$TEST_JDK` != 0 ]]; then
+        echo 'no'
     else
         echo 'yes'
     fi
