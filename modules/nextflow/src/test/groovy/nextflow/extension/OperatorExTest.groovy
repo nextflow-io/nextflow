@@ -24,7 +24,6 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
 import nextflow.Session
-import spock.lang.Ignore
 import spock.lang.Specification
 import spock.lang.Timeout
 /**
@@ -501,47 +500,6 @@ class OperatorExTest extends Specification {
         then:
         result.val == [c:['ciao'], b:['bonjour'], h:['hello','hola','hi']]
         result instanceof DataflowVariable
-
-    }
-
-    @Ignore()
-    def testRouteBy() {
-
-        when:
-        def result = Channel.from('hello','ciao','hola', 'hi', 'bonjour').route { it[0] }
-        result.subscribe {
-          def (key, channel) = it
-          channel.subscribe { println "group: $key >> $it" }
-        }
-
-        sleep 1000
-        then:
-        true
-
-    }
-
-    @Ignore
-    def testRouteByMap() {
-
-        setup:
-        def r1 = Channel.create()
-        def r2 = Channel.create()
-        def r3 = Channel.create()
-
-        when:
-        Channel.from('hello','ciao','hola', 'hi', 'x', 'bonjour').route ( b: r1, c: r2, h: r3 ) { it[0] }
-
-        then:
-        r1.val == 'bonjour'
-        r1.val == Channel.STOP
-
-        r2.val == 'ciao'
-        r2.val == Channel.STOP
-
-        r3.val == 'hello'
-        r3.val == 'hola'
-        r3.val == 'hi'
-        r3.val == Channel.STOP
 
     }
 
