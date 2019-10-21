@@ -211,6 +211,30 @@ Create a ``bitbucket`` entry in the `SCM configuration file`_ specifying your us
 
     }
 
+BitBucket Server credentials
+-----------------------------
+
+`BitBucket Server <https://confluence.atlassian.com/bitbucketserver>`_ is a self-hosted Git repository and management
+platform.
+
+.. note::
+    BitBucket Server uses different API from the `BitBucket <https://bitbucket.org/>`_ cloud service. Make sure to
+    use the right configuration whether you are using the cloud service or a self-hosted installation.
+
+To access your local BitBucket Server create an entry in the `SCM configuration file`_ specifying as shown below::
+
+        providers {
+
+            mybitbucket {
+                platform = 'bitbucketserver'
+                server = 'https://your.bitbucket.host.com'
+                endpoint = 'https://your.bitbucket.host.com'
+                user = 'your-user'
+                password = 'your-password or your-token'
+            }
+
+        }
+
 
 GitHub credentials
 ------------------
