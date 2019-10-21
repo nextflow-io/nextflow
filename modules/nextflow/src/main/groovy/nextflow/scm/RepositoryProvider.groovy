@@ -153,9 +153,6 @@ abstract class RepositoryProvider {
                     def message = config.auth ? "Check that the ${name.capitalize()} user name and password provided are correct" : "Provide your ${name.capitalize()} user name and password to access this repository"
                     throw new AbortOperationException("Forbidden -- $message")
                 }
-            case 404:
-                log.debug "Response status: $code -- ${connection.getErrorStream()?.text}"
-                throw new AbortOperationException("API Uri not found. The uri that was used for the query: ${connection.getURL()}")
         }
 
     }
