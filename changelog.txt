@@ -10,15 +10,19 @@ NEXTFLOW CHANGE-LOG
 - Add sticky log marker [f9a3c9da]
 - Add support for config resolution [4754abc6]
 - Add enable option to publishDir [7b9c2d2f]
+- Add BitBucket Server provider [6af6a902] #1297 #1309
+- Add support for AWS temporary security credentials #934
 - Fix race condition on task workdir creation [5bc323a0]
 - Fix issue when fetching aws profile from env #1248 [ba30b97c]
 - Fix minor issue when reporting invalid entry error msg [814d6728]
 - Fix non determinist test failure [a9289e9e]
 - Throw error cause on InovationTargetException [9e1467d0]
 - Remove verbos logs on readExitFile check [a5a6a1fc]
+- Remove route operator #991
 - Revert "Patch capsule error message" [ac4ac073]
 - Patch for inconsistent cached task id #1301 [7bfd0008]
 - Improve flow execution events [335b76d1]
+- Improve resource not found error message [02cf0a55]
 
 19.08.1-edge - 26 Aug 2019
 - Add Process named output channels #1290 [DSL] [6a756fd2]
