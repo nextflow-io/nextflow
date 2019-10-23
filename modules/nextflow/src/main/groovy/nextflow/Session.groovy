@@ -1069,7 +1069,7 @@ class Session implements ISession {
                 def deleted = db.removeTaskEntry(hash)
                 if( deleted ) {
                     // delete folder
-                    FileHelper.asPath(record.workDir).deleteDir()
+                    FileHelper.deletePath(FileHelper.asPath(record.workDir))
                 }
             }
             log.trace "Clean workdir complete"

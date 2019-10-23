@@ -16,8 +16,12 @@
 
 package nextflow.extension
 
+
+import static nextflow.extension.DataflowHelper.*
+import static nextflow.splitter.SplitterFactory.*
+import static nextflow.util.CheckHelper.*
+
 import java.lang.reflect.Modifier
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.runtime.metaclass.DelegatingPlugin
@@ -47,14 +51,6 @@ import nextflow.splitter.FastqSplitter
 import nextflow.splitter.TextSplitter
 import org.codehaus.groovy.runtime.callsite.BooleanReturningMethodInvoker
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
-import static DataflowHelper.chainImpl
-import static DataflowHelper.newOperator
-import static DataflowHelper.reduceImpl
-import static DataflowHelper.subscribeImpl
-import static nextflow.extension.DataflowHelper.createOpParams
-import static nextflow.extension.DataflowHelper.stopErrorListener
-import static nextflow.splitter.SplitterFactory.countOverChannel
-import static nextflow.util.CheckHelper.checkParams
 /**
  * A set of operators inspired to RxJava extending the methods available on DataflowChannel
  * data structure
@@ -870,71 +866,6 @@ class OperatorEx implements DelegatingPlugin {
         return target
     }
 
-
-    /**
-     * Given a an associative array mapping a key with the destination channel, the operator route forwards the items emitted
-     * by the source channel to the target channel matching the key in the routing map
-     *
-     * @param source The source channel emitting the value to route
-     * @param targets The routing map i.e. a {@code Map} associating each key to the target channel
-     * @param mapper A optional mapping function that given an entry return its key
-     */
-    @Deprecated
-    void route( final DataflowReadChannel source, Map<?,DataflowWriteChannel> targets, Closure mapper = DEFAULT_MAPPING_CLOSURE ) {
-
-        DataflowHelper.subscribeImpl(source,
-                [
-                        onNext: { value ->
-                            def key = mapper ? mapper.call(value) : value
-                            def channel = targets.get(key)
-                            // emit the value itself
-                            if( channel ) {
-                                channel << value
-                            }
-
-                        },
-
-                        onComplete: {
-                            targets.values().each { it << Channel.STOP }
-                        }
-
-                ]
-        )
-
-    }
-
-    @Deprecated
-    DataflowWriteChannel route( final DataflowReadChannel source, final Closure mapper = DEFAULT_MAPPING_CLOSURE ) {
-        assert !(source instanceof DataflowExpression)
-
-        def allChannels = new ConcurrentHashMap()
-        def target = CH.create()
-
-        subscribeImpl(source,
-                [
-                    onNext: { value ->
-                        def key = mapper ? mapper.call(value) : value
-                        def channel = allChannels.get(key)
-                        if( channel == null ) {
-                            channel = CH.create()
-                            allChannels[key] = channel
-                            // emit the key - channel pair
-                            target << [ key, channel ]
-                        }
-                        // emit the value itself
-                        channel << value
-                    },
-
-                    onComplete: {
-                        allChannels.values().each { it << Channel.STOP }
-                        target << Channel.STOP
-                    }
-
-                ]
-        )
-
-        return target
-    }
 
     DataflowWriteChannel spread( final DataflowReadChannel source, Object other ) {
 

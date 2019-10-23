@@ -17,6 +17,7 @@
 package nextflow.cli
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.regex.Pattern
 
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.IStringConverter
@@ -49,6 +50,7 @@ import org.yaml.snakeyaml.Yaml
 @Parameters(commandDescription = "Execute a pipeline project")
 class CmdRun extends CmdBase implements HubOptions {
 
+    static final Pattern RUN_NAME_PATTERN = Pattern.compile(/^[a-z](?:[a-z\d]|[-_](?=[a-z\d])){0,39}$/, Pattern.CASE_INSENSITIVE)
 
     static List<String> VALID_PARAMS_FILE = ['json', 'yml', 'yaml']
 
@@ -266,6 +268,10 @@ class CmdRun extends CmdBase implements HubOptions {
 
         else if( HistoryFile.DEFAULT.checkExistsByName(runName) )
             throw new AbortOperationException("Run name `$runName` has been already used -- Specify a different one")
+    }
+
+    static protected boolean matchRunName(String name) {
+        RUN_NAME_PATTERN.matcher(name).matches()
     }
 
     protected ScriptFile getScriptFile(String pipelineName) {

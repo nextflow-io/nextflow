@@ -1,6 +1,21 @@
 NEXTFLOW CHANGE-LOG
 ===================
 
+19.10.0 - 21 Oct 2019
+- Merge Use a delete function that doesn't follow symlinks #1337
+- Merge Allow multiple mounts for the same K8s claim name [1d288a3d] #1284
+- Make Google Pipelines logging less verbose [6edd9954]
+- Merge Shifterimg workaround for ensuring image pulls #1327
+- Merge Add ENDPOINT support for China regions #1323 [636cbfb5]
+- Add limit on max field lengths sent by Tower [4d5cabc2]
+- Add retry ability to Tower client for 500 class errors [c7f70fc5]
+- Add support for Java 12 #1082 [b86b2da0]
+- Add BitBucket Server provider [6af6a902] #1297 #1309
+- Add support for AWS temporary security credentials #934
+- Fix Broken container environment when enabling metrics #1289
+- Improve resource not found error message [02cf0a55]
+- Remove route operator #991
+
 19.09.0-edge - 16 Sep 2019
 - Add `of` and `fromList` channel factories [cc60b305]
 - Add nf-tower init request [120ed8ba]

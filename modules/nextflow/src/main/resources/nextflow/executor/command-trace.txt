@@ -151,6 +151,7 @@ nxf_trace_mac() {
 
 nxf_trace_linux() {
     local pid=$$
+    command -v ps &>/dev/null || { >&2 echo "Command 'ps' required by nextflow to collect task metrics cannot be found"; exit 1; }
     ## see
     ##  https://github.com/Leo-G/DevopsWiki/wiki/How-Linux-CPU-Usage-Time-and-Percentage-is-calculated
     ##  https://stackoverflow.com/questions/27508531/calculate-cpu-per-process/27514562##27514562
@@ -160,8 +161,6 @@ nxf_trace_linux() {
     local cpu_time0=$(2> /dev/null < /proc/$pid/stat awk '{printf "%.0f", ($16+$17)*10 }' || echo -n 'X')
     local io_stat0=($(2> /dev/null < /proc/$pid/io sed 's/^.*:\s*//' | head -n 6 | tr '\n' ' ' || echo -n '0 0 0 0 0 0'))
     local start_millis=$(nxf_date)
-
-    command -v ps &>/dev/null || { >&2 echo "Command 'ps' required by nextflow to collect task metrics cannot be found"; exit 1; }
 
     ## run task script
     {{trace_cmd}} &

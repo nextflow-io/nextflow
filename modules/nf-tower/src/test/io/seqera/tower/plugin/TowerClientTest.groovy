@@ -36,21 +36,21 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class TowerObserverTest extends Specification {
+class TowerClientTest extends Specification {
 
     def 'should parse response' () {
         given:
-        def tower = new TowerObserver()
+        def tower = new TowerClient()
 
         when:
-        def resp = new TowerObserver.Response(200, '{"status":"OK", "workflowId":"12345", "watchUrl": "http://foo.com/watch/12345"}')
+        def resp = new TowerClient.Response(200, '{"status":"OK", "workflowId":"12345", "watchUrl": "http://foo.com/watch/12345"}')
         def result = tower.parseTowerResponse(resp)
         then:
         result.workflowId == '12345'
         result.watchUrl == 'http://foo.com/watch/12345'
 
         when:
-        resp = new TowerObserver.Response(500, '{"status":"OK", "workflowId":"12345"}')
+        resp = new TowerClient.Response(500, '{"status":"OK", "workflowId":"12345"}')
         tower.parseTowerResponse(resp)
         then:
         thrown(Exception)
@@ -62,7 +62,7 @@ class TowerObserverTest extends Specification {
         def params = new ScriptBinding.ParamsMap(x: "hello")
         def meta = Mock(WorkflowMetadata)
 
-        def tower = Spy(TowerObserver)
+        def tower = Spy(TowerClient)
         tower.runName = session.runName
         tower.workflowId = '12ef'
         tower.terminated = true
@@ -86,7 +86,7 @@ class TowerObserverTest extends Specification {
 
     def 'should capitalise underscores' () {
         given:
-        def tower = new TowerObserver()
+        def tower = new TowerClient()
 
         expect:
         tower.underscoreToCamelCase(STR) == EXPECTED
@@ -100,7 +100,7 @@ class TowerObserverTest extends Specification {
 
     def 'should validate URL' () {
         given:
-        def observer = new TowerObserver()
+        def observer = new TowerClient()
 
         expect:
         observer.checkUrl('http://localhost') == 'http://localhost'
@@ -121,7 +121,7 @@ class TowerObserverTest extends Specification {
 
     def 'should get watch url' () {
         given:
-        def observer = new TowerObserver()
+        def observer = new TowerClient()
         expect:
         observer.getHostUrl(STR) == EXPECTED
         where:
@@ -138,7 +138,7 @@ class TowerObserverTest extends Specification {
         def session = Mock(Session)
 
         when:
-        def observer = new TowerObserver(session: session)
+        def observer = new TowerClient(session: session)
         def result = observer.getAccessToken()
         then:
         session.getConfig() >> [tower:[accessToken: 'abc'] ]
@@ -146,7 +146,7 @@ class TowerObserverTest extends Specification {
         result == 'abc'
 
         when:
-        observer = new TowerObserver(session: session, env: ENV)
+        observer = new TowerClient(session: session, env: ENV)
         result = observer.getAccessToken()
         then:
         session.getConfig() >> [:]
@@ -154,7 +154,7 @@ class TowerObserverTest extends Specification {
         result == 'xyz'
 
         when:
-        observer = new TowerObserver(session: session, env:[:])
+        observer = new TowerClient(session: session, env:[:])
         observer.getAccessToken()
         then:
         session.getConfig() >> [:]
@@ -169,7 +169,7 @@ class TowerObserverTest extends Specification {
         def client = Mock(SimpleHttpClient)
         def session = Mock(Session)
         def proc = Mock(TaskProcessor) { getName() >> 'foo'; getProcessEnvironment() >> [:] }
-        def observer = Spy(TowerObserver)
+        def observer = Spy(TowerClient)
         observer.session = session
         observer.httpClient = client
 
@@ -211,7 +211,7 @@ class TowerObserverTest extends Specification {
     def 'should fix field types' () {
 
         expect:
-        TowerObserver.fixTaskField(FIELD,VALUE) == EXPECTED
+        TowerClient.fixTaskField(FIELD,VALUE) == EXPECTED
 
         where:
         FIELD       | VALUE         | EXPECTED
@@ -229,7 +229,7 @@ class TowerObserverTest extends Specification {
         given:
         def dir = Files.createTempDirectory('test')
         def client = Mock(SimpleHttpClient)
-        TowerObserver tower = Spy(TowerObserver, constructorArgs: [ [httpClient: client] ])
+        TowerClient tower = Spy(TowerClient, constructorArgs: [[httpClient: client] ])
 
         def session = Mock(Session)
         session.config >> [:]
@@ -252,7 +252,7 @@ class TowerObserverTest extends Specification {
 
     def 'should convert map' () {
         given:
-        def tower = new TowerObserver()
+        def tower = new TowerClient()
 
         expect:
         tower.mapToString(null)  == null
@@ -261,4 +261,68 @@ class TowerObserverTest extends Specification {
         tower.mapToString([p:'foo', q:'bar']) == 'p:foo,q:bar'
     }
 
+
+    def 'should load schema col len' () {
+        given:
+        def tower = new TowerClient()
+
+        when:
+        def schema = tower.loadSchema()
+        then:
+        schema.get('workflow.start')  == null
+        schema.get('workflow.profile') == 100
+        schema.get('workflow.projectDir') == 255
+    }
+
+    def 'should create init request' () {
+        given:
+        def uuid = UUID.randomUUID()
+        def tower = new TowerClient()
+        def meta = Mock(WorkflowMetadata) {
+            getProjectName() >> 'the-project-name'
+            getRepository() >> 'git://repo.com/foo'
+        }
+        def session = Mock(Session) {
+            getUniqueId() >> uuid
+            getRunName() >> 'foo_bar'
+            getWorkflowMetadata() >> meta
+        }
+
+        when:
+        def req = tower.makeInitRequest(session)
+        then:
+        req.sessionId == uuid.toString()
+        req.runName == 'foo_bar'
+        req.projectName == 'the-project-name'
+        req.repository == 'git://repo.com/foo'
+    }
+
+    def 'should post init request' () {
+        given:
+        def uuid = UUID.randomUUID()
+        def meta = Mock(WorkflowMetadata) {
+            getProjectName() >> 'the-project-name'
+            getRepository() >> 'git://repo.com/foo'
+        }
+        def session = Mock(Session) {
+            getUniqueId() >> uuid
+            getRunName() >> 'foo_bar'
+            getWorkflowMetadata() >> meta
+        }
+
+        TowerClient tower = Spy(TowerClient, constructorArgs: ['https://tower.nf'])
+
+        when:
+        tower.onFlowInit(session)
+        then:
+        1 * tower.getAccessToken() >> 'secret'
+        1 * tower.makeInitRequest(session) >> [runName: 'foo']
+        1 * tower.sendHttpMessage('https://tower.nf/trace/init', [runName: 'foo']) >> new TowerClient.Response(200, '{"workflowId":"xyz123"}')
+        and:
+        tower.runName == 'foo_bar'
+        tower.runId == uuid.toString()
+        and:
+        tower.workflowId == 'xyz123'
+
+    }
 }

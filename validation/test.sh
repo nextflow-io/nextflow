@@ -51,8 +51,9 @@ docker pull cbcrg/ampa-nf
 # RNASEQ-NF
 #
 echo nextflow-io/rnaseq-nf
-$NXF_CMD run nextflow-io/rnaseq-nf -with-docker
-$NXF_CMD run nextflow-io/rnaseq-nf -with-docker -resume
+[[ $TOWER_ACCESS_TOKEN ]] && OPTS='-with-tower' || OPTS=''
+$NXF_CMD run nextflow-io/rnaseq-nf -with-docker $OPTS
+$NXF_CMD run nextflow-io/rnaseq-nf -with-docker $OPTS -resume
 
 #
 # AWS Batch tests

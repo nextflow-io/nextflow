@@ -346,14 +346,23 @@ class PodSpecBuilder {
         // add storage definitions ie. volumes and mounts
         final mounts = []
         final volumes = []
+        final namesMap = [:]
+
+        // creates a volume name for each unique claim name
+        for( String claimName : volumeClaims.collect { it.claimName }.unique() ) {
+            final volName = nextVolName()
+            namesMap[claimName] = volName
+            volumes << [name: volName, persistentVolumeClaim: [claimName: claimName]]
+        }
 
         // -- volume claims
         for( PodVolumeClaim entry : volumeClaims ) {
-            final name = nextVolName()
+            //check if we already have a volume for the pvc
+            final name = namesMap.get(entry.claimName)
             final claim = [name: name, mountPath: entry.mountPath ]
-            if( entry.subPath ) claim.subPath = entry.subPath
+            if( entry.subPath )
+                claim.subPath = entry.subPath
             mounts << claim
-            volumes << [name: name, persistentVolumeClaim: [claimName: entry.claimName]]
         }
 
         // -- configMap volumes
