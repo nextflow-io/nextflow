@@ -60,7 +60,7 @@ class OarExecutorTest extends Specification {
         when:
         def exec = [:] as OarExecutor
         then:
-        exec.getSubmitCommandLine(Mock(TaskRun), Paths.get('/some/path/job.sh')) == ['oarsub', '-S', 'job.sh']
+        exec.getSubmitCommandLine(Mock(TaskRun), Paths.get('/some/path/job.sh')) == ['oarsub', '-S', './job.sh']
     }
 
     def testGetHeaders() {
