@@ -271,17 +271,6 @@ class OarExecutorTest extends Specification {
     }
 
     def testQueueStatusCommand() {
-        when:
-        def usr = System.getProperty('user.name')
-        def exec = [:] as OarExecutor
-        then:
-        usr
-        exec.queueStatusCommand(null) == ['oarstat','-f','-o','%i %t','-t','all','-u', usr]
-        exec.queueStatusCommand('xxx') == ['squeue','--noheader','-o','%i %t','-t','all','-p','xxx','-u', usr]
-
-    }
-
-    def testQueueStatusCommand() {
 
         when:
         def usr = System.getProperty('user.name')
