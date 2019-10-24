@@ -273,12 +273,11 @@ class OarExecutorTest extends Specification {
     def testQueueStatusCommand() {
 
         when:
-        def usr = System.getProperty('user.name')
         def executor = [:] as OarExecutor
 
         then:
-        executor.queueStatusCommand(null) == ['oarstat', '-f']
-        executor.queueStatusCommand('xxx') == ['oarstat','-f','xxx']
+        executor.queueStatusCommand(null) == ['sh','-c', "oarstat -f | egrep '(Job_Id:|state =)' ".toString()]
+        executor.queueStatusCommand('xxx') == ['sh','-c', "oarstat -f xxx | egrep '(Job_Id:|state =)' ".toString()]
 
     }
 
