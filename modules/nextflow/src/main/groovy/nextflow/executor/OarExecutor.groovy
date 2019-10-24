@@ -46,18 +46,31 @@ class OarExecutor extends AbstractGridExecutor {
         result << '-E' << quote(task.workDir.resolve(TaskRun.CMD_ERRFILE))     
 
         if( task.config.getMemory() ) {
-            result << "-p" << "\"memnode=${task.config.getMemory().toGiga().toString()}\""
+            if( task.config.getMemory().toMega() < 1024 ) {
+				result << "-p" << "\"memnode=1\""
+			}
+			else {
+				result << "-p" << "\"memnode=${task.config.getMemory().toGiga().toString()}\""
+			}
         }
 
-        if( task.config.cpus > 1 ) {
+        if( task.config.cpus > 1) {
             if( task.config.time ) {
-            	result << "-l" << "/nodes=1/core=${task.config.cpus.toString()},walltime=${task.config.getTime().format('HH:mm:ss')}"
+				// cpu + time set
+				result << "-l" << "/nodes=1/core=${task.config.cpus.toString()},walltime=${task.config.getTime().format('HH:mm:ss')}"
         	}
-	    else {
-	        result << "-l" << "/nodes=1/core=${task.config.cpus.toString()}"	
+			else {
+				// just cpu set
+				result << "-l" << "/nodes=1/core=${task.config.cpus.toString()}"
+			}
+		}
+		else {
+            if( task.config.time ) {
+				// just time set
+				result << "-l" << "walltime=${task.config.getTime().format('HH:mm:ss')}"
+        	}
 	    }
-	}
-
+		
         // the requested queue name
         if( task.config.queue ) {
             result << '-q' << (task.config.queue.toString())
