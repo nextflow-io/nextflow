@@ -121,7 +121,6 @@ class OarExecutorTest extends Specification {
         task.config.time = '1h'
         task.config.memory = '1023 M'
         task.config.clusterOptions = '-a 1'
-
         then:
         executor.getHeaders(task) == '''
                 #OAR -d /work/path
@@ -129,7 +128,7 @@ class OarExecutorTest extends Specification {
                 #OAR -O /work/path/.command.out
                 #OAR -E /work/path/.command.err
                 #OAR -p "memnode=1"
-				#OAR -l walltime=01:00:00
+                #OAR -l walltime=01:00:00
                 #OAR -a 1
                 '''
                 .stripIndent().leftTrim()
@@ -139,7 +138,6 @@ class OarExecutorTest extends Specification {
         task.config.time = '1h'
         task.config.memory = '2049 M'
         task.config.clusterOptions = '-a 1'
-
         then:
         executor.getHeaders(task) == '''
                 #OAR -d /work/path
@@ -147,7 +145,7 @@ class OarExecutorTest extends Specification {
                 #OAR -O /work/path/.command.out
                 #OAR -E /work/path/.command.err
                 #OAR -p "memnode=2"
-				#OAR -l walltime=01:00:00
+                #OAR -l walltime=01:00:00
                 #OAR -a 1
                 '''
                 .stripIndent().leftTrim()
@@ -158,7 +156,6 @@ class OarExecutorTest extends Specification {
         task.config.time = '2h'
         task.config.memory = '4 G'
         task.config.clusterOptions = '-b 2'
-
         then:
         executor.getHeaders(task) == '''
                 #OAR -d /work/path
@@ -166,7 +163,7 @@ class OarExecutorTest extends Specification {
                 #OAR -O /work/path/.command.out
                 #OAR -E /work/path/.command.err
                 #OAR -p "memnode=4"
-				#OAR -l /nodes=1/core=2,walltime=02:00:00
+                #OAR -l /nodes=1/core=2,walltime=02:00:00
                 #OAR -b 2
                 '''
                 .stripIndent().leftTrim()
@@ -177,7 +174,6 @@ class OarExecutorTest extends Specification {
         task.config.time = '2d 3h'
         task.config.memory = '6 G'
         task.config.clusterOptions = '-x 3'
-
         then:
         executor.getHeaders(task) == '''
                 #OAR -d /work/path
@@ -185,7 +181,7 @@ class OarExecutorTest extends Specification {
                 #OAR -O /work/path/.command.out
                 #OAR -E /work/path/.command.err
                 #OAR -p "memnode=6"
-				#OAR -l /nodes=1/core=8,walltime=51:00:00
+                #OAR -l /nodes=1/core=8,walltime=51:00:00
                 #OAR -x 3
                 '''
                 .stripIndent().leftTrim()
@@ -227,28 +223,28 @@ class OarExecutorTest extends Specification {
         def executor = [:] as OarExecutor
         def text =
                 """
-				Job_Id: 4930950
-					state = toLaunch
-				Job_Id: 4930951
-					state = Launching
-				Job_Id: 4930952
-					state = Running
-				Job_Id: 4930953
-					state = Finishing
-				Job_Id: 4930954
-					state = Waiting
-				Job_Id: 4930955
-					state = toAckReservation
-				Job_Id: 4930956
-					state = Hold
-				Job_Id: 4930957
-					state = Suspended
-				Job_Id: 4930958
-					state = Error
-				Job_Id: 4930959
-					state = toError
-				Job_Id: 4930960
-					state = Terminated
+                Job_Id: 4930950
+                    state = toLaunch
+                Job_Id: 4930951
+                    state = Launching
+                Job_Id: 4930952
+                    state = Running
+                Job_Id: 4930953
+                    state = Finishing
+                Job_Id: 4930954
+                    state = Waiting
+                Job_Id: 4930955
+                    state = toAckReservation
+                Job_Id: 4930956
+                    state = Hold
+                Job_Id: 4930957
+                    state = Suspended
+                Job_Id: 4930958
+                    state = Error
+                Job_Id: 4930959
+                    state = toError
+                Job_Id: 4930960
+                    state = Terminated
                 """.stripIndent().trim()
 
 
@@ -271,10 +267,8 @@ class OarExecutorTest extends Specification {
     }
 
     def testQueueStatusCommand() {
-
         when:
         def executor = [:] as OarExecutor
-
         then:
         executor.queueStatusCommand(null) == ['sh','-c', "oarstat -f | egrep '(Job_Id:|state =)' ".toString()]
         executor.queueStatusCommand('xxx') == ['sh','-c', "oarstat -f xxx | egrep '(Job_Id:|state =)' ".toString()]
