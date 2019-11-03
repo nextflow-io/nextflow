@@ -1127,6 +1127,10 @@ class OperatorEx implements DelegatingPlugin {
     DataflowWriteChannel join( DataflowReadChannel left, right ) {
         if( right==null ) throw new IllegalArgumentException("Operator `join` argument cannot be null")
         if( !(right instanceof DataflowReadChannel) ) throw new IllegalArgumentException("Invalid operator `join` argument [${right.getClass().getName()}] -- it must be a channel type")
+        // due to issue #582 the right channel cannot be provided in the join method signature
+        // therefore the channel need to be added `'manually` to the inputs list
+        // fixes #1346
+        OpCall.current.get().inputs.add(right)
         def target = new JoinOp(left,right) .apply()
         return target
     }
@@ -1134,6 +1138,10 @@ class OperatorEx implements DelegatingPlugin {
     DataflowWriteChannel join( DataflowReadChannel left, Map opts, right ) {
         if( right==null ) throw new IllegalArgumentException("Operator `join` argument cannot be null")
         if( !(right instanceof DataflowReadChannel) ) throw new IllegalArgumentException("Invalid operator `join` argument [${right.getClass().getName()}] -- it must be a channel type")
+        // due to issue #582 the right channel cannot be provided in the join method signature
+        // therefore the channel need to be added `'manually` to the inputs list
+        // fixes #1346
+        OpCall.current.get().inputs.add(right)
         def target = new JoinOp(left,right,opts) .apply()
         return target
     }
