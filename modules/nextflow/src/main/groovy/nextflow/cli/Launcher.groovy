@@ -91,6 +91,7 @@ class Launcher {
                 new CmdClean(),
                 new CmdClone(),
                 new CmdCloud(),
+                new CmdConsole(),
                 new CmdFs(),
                 new CmdHistory(),
                 new CmdInfo(),
