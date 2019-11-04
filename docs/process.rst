@@ -2411,7 +2411,7 @@ the identical error. A retry with an exponential backoff delay can better recove
 conditions::
 
     process foo {
-      errorStrategy { sleep(Math.pow(2, task.attempt) * 200); return 'retry' }
+      errorStrategy { sleep(Math.pow(2, task.attempt) * 200 as long); return 'retry' }
       maxRetries 5
       script:
       '''
