@@ -47,37 +47,37 @@ class OarExecutor extends AbstractGridExecutor {
 
         if( task.config.getMemory() ) {
             if( task.config.getMemory().toMega() < 1024 ) {
-				result << "-p" << "\"memnode=1\""
-			}
-			else {
-				result << "-p" << "\"memnode=${task.config.getMemory().toGiga().toString()}\""
-			}
+                result << "-p" << "\"memnode=1\""
+            }
+            else {
+                result << "-p" << "\"memnode=${task.config.getMemory().toGiga().toString()}\""
+            }
         }
 
         if( task.config.cpus > 1) {
             if( task.config.time ) {
-				// cpu + time set
-				result << "-l" << "/nodes=1/core=${task.config.cpus.toString()},walltime=${task.config.getTime().format('HH:mm:ss')}"
-        	}
-			else {
-				// just cpu set
-				result << "-l" << "/nodes=1/core=${task.config.cpus.toString()}"
-			}
-		}
-		else {
+                // cpu + time set
+                result << "-l" << "/nodes=1/core=${task.config.cpus.toString()},walltime=${task.config.getTime().format('HH:mm:ss')}"
+            }
+            else {
+                // just cpu set
+                result << "-l" << "/nodes=1/core=${task.config.cpus.toString()}"
+            }
+        }
+        else {
             if( task.config.time ) {
-				// just time set
-				result << "-l" << "walltime=${task.config.getTime().format('HH:mm:ss')}"
-        	}
-	    }
-		
+                // just time set
+                result << "-l" << "walltime=${task.config.getTime().format('HH:mm:ss')}"
+            }
+        }
+        
         // the requested queue name
         if( task.config.queue ) {
             result << '-q' << (task.config.queue.toString())
         }
 
         // -- at the end append the command script wrapped file name
-	// Options need to be semicolon ";" separated, if several are needed
+        // Options need to be semicolon ";" separated, if several are needed
         if( task.config.clusterOptions ) {
           for (String item : task.config.clusterOptions.toString().tokenize(';')) {
             result << item << ''
@@ -98,8 +98,8 @@ class OarExecutor extends AbstractGridExecutor {
      */
     @Override
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
-		// Scripts need to be executable
-		scriptFile.setPermissions(7,0,0)
+        // Scripts need to be executable
+        scriptFile.setPermissions(7,0,0)
         return ["oarsub", "-S", "./${scriptFile.getName()}"]
     }
 
@@ -110,8 +110,8 @@ class OarExecutor extends AbstractGridExecutor {
      * @return The actual job ID string
      */
     static private Pattern SUBMIT_REGEX = ~/OAR_JOB_ID=(\d+)/
-	
-	@Override
+    
+    @Override
     def parseJobId(String text) {
     for( String line : text.readLines() ) {
         def m = SUBMIT_REGEX.matcher(line)
@@ -128,8 +128,8 @@ class OarExecutor extends AbstractGridExecutor {
     @Override
     protected List<String> queueStatusCommand(Object queue) {
         // To have a parsable list of jobs in queue by user
-		// see page 21 http://oar.imag.fr/docs/2.5/OAR-Documentation.pdf
-		String cmd = 'oarstat -f'
+        // see page 21 http://oar.imag.fr/docs/2.5/OAR-Documentation.pdf
+        String cmd = 'oarstat -f'
         if( queue ) cmd += ' ' + queue
         return ['sh','-c', "$cmd | egrep '(Job_Id:|state =)' ".toString()]
     }
