@@ -351,3 +351,32 @@ Then you will be able to run your workflow over TES using the usual Nextflow com
 * Automatic deployment of workflow scripts in the `bin` folder is not supported.
 * Process output directories are not supported. For details see `#76 <https://github.com/ga4gh/task-execution-schemas/issues/76>`_.
 * Glob patterns in process output declarations are not supported. For details see `#77 <https://github.com/ga4gh/task-execution-schemas/issues/77>`_.
+
+.. _oar-executor:
+
+OAR
+===
+
+The `OAR` executor allows you to run your pipeline script by using the `OAR <https://oar.imag.fr>`_ resource manager.
+
+Nextflow manages each process as a separate job that is submitted to the cluster by using the ``oarsub`` command.
+
+Being so, the pipeline must be launched from a node where the ``oarsub`` command is available, that is, in a common usage scenario, the cluster `head` node.
+
+To enable the `OAR` executor simply set to ``process.executor`` property to ``oar`` value in the ``nextflow.config`` file.
+
+The amount of resources requested by each job submission is defined by the following process directives:
+
+* :ref:`process-cpus`
+* :ref:`process-queue`
+* :ref:`process-time`
+* :ref:`process-memory`
+* :ref:`process-clusterOptions`
+
+**Known limitation**
+
+* `clusterOptions` should be given, if more than one, semicolon separated. It ensures the `OAR` batch script to be accurately formatted.
+
+```
+clusterOptions = '-t besteffort;--project myproject'
+```
