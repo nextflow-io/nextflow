@@ -133,7 +133,7 @@ that can be used to reference the channel in external scope. For example::
 
     process foo {
       output:
-        path '*.bam' emit: samples_bam
+        path '*.bam', emit: samples_bam
 
       '''
       your_command --here
