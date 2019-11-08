@@ -90,7 +90,7 @@ class TowerJsonGenerator extends DefaultJsonGenerator {
         final key = stack.join('.')
         final max = scheme.get(key)
         if( seq!=null && max && seq.length()>max ) {
-            log.warn "Tower request field `$key` exceeds expected size | offending value: `$seq`, size: ${seq.size()}, max-size: $max"
+            log.warn "Tower request field `$key` exceeds expected size | offending value: `$seq`, size: ${seq.size()} (max: $max)"
             return seq.toString().substring(0,max)
         }
         return seq
