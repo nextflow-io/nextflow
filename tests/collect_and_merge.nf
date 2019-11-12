@@ -38,7 +38,7 @@ process algn {
 
 /*
  * aggregation is made by using a 'reduce' operator
- * followed by 'flatMpa'
+ * followed by 'flatMap'
  */
 
 aggregation = algn_files
