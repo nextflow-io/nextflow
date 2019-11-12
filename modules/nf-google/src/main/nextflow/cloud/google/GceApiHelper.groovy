@@ -26,7 +26,6 @@ import com.google.api.services.compute.Compute
 import com.google.api.services.compute.model.*
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
-import groovyjarjarcommonscli.MissingArgumentException
 import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
@@ -295,7 +294,7 @@ class GceApiHelper {
         String credFileLocation = credentialFileLocation()
 
         if(!credFileLocation)
-            throw new MissingArgumentException("$GAC_ENV is not defined in your environment" )
+            throw new IllegalArgumentException("$GAC_ENV is not defined in your environment" )
 
         Path credFile = FileHelper.asPath(credFileLocation)
         if (credFile && credFile.exists() ) {
