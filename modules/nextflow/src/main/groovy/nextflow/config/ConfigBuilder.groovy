@@ -16,7 +16,7 @@
 
 package nextflow.config
 
-import static nextflow.util.ConfigHelper.parseValue
+import static nextflow.util.ConfigHelper.*
 
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -30,6 +30,11 @@ import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
+import nextflow.trace.GraphObserver
+import nextflow.trace.ReportObserver
+import nextflow.trace.TimelineObserver
+import nextflow.trace.TraceFileObserver
+import nextflow.trace.WebLogObserver
 import nextflow.util.HistoryFile
 /**
  * Builds up the Nextflow configuration object
@@ -509,7 +514,10 @@ class ConfigBuilder {
             if( !(config.trace instanceof Map) )
                 config.trace = [:]
             config.trace.enabled = true
-            config.trace.file = cmdRun.withTrace
+            if( cmdRun.withTrace != '-' )
+                config.trace.file = cmdRun.withTrace
+            else if( !config.trace.file )
+                config.trace.file = TraceFileObserver.DEF_FILE_NAME
         }
 
         // -- sets report report options
@@ -517,7 +525,10 @@ class ConfigBuilder {
             if( !(config.report instanceof Map) )
                 config.report = [:]
             config.report.enabled = true
-            config.report.file = cmdRun.withReport
+            if( cmdRun.withReport != '-' )
+                config.report.file = cmdRun.withReport
+            else if( !config.report.file )
+                config.report.file = ReportObserver.DEF_FILE_NAME
         }
 
         // -- sets timeline report options
@@ -525,7 +536,10 @@ class ConfigBuilder {
             if( !(config.timeline instanceof Map) )
                 config.timeline = [:]
             config.timeline.enabled = true
-            config.timeline.file = cmdRun.withTimeline
+            if( cmdRun.withTimeline != '-' )
+                config.timeline.file = cmdRun.withTimeline
+            else if( !config.timeline.file )
+                config.timeline.file = TimelineObserver.DEF_FILE_NAME
         }
 
         // -- sets DAG report options
@@ -533,7 +547,10 @@ class ConfigBuilder {
             if( !(config.dag instanceof Map) )
                 config.dag = [:]
             config.dag.enabled = true
-            config.dag.file = cmdRun.withDag
+            if( cmdRun.withDag != '-' )
+                config.dag.file = cmdRun.withDag
+            else if( !config.dag.file )
+                config.dag.file = GraphObserver.DEF_FILE_NAME
         }
 
         if( cmdRun.withNotification ) {
@@ -553,7 +570,10 @@ class ConfigBuilder {
             if( !(config.weblog instanceof Map) )
                 config.weblog = [:]
             config.weblog.enabled = true
-            config.weblog.url = cmdRun.withWebLog
+            if( cmdRun.withWebLog != '-' )
+                config.weblog.url = cmdRun.withWebLog
+            else if( !config.weblog.url )
+                config.weblog.url = WebLogObserver.DEF_URL
         }
 
         // -- sets tower options

@@ -16,6 +16,8 @@
 
 package nextflow.cli
 
+import static nextflow.Const.*
+
 import java.lang.reflect.Field
 
 import com.beust.jcommander.DynamicParameter
@@ -32,17 +34,9 @@ import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
 import nextflow.exception.ScriptCompilationException
 import nextflow.exception.ScriptRuntimeException
-import nextflow.trace.GraphObserver
-import nextflow.trace.ReportObserver
-import nextflow.trace.TimelineObserver
-import nextflow.trace.TraceFileObserver
 import nextflow.util.Escape
 import nextflow.util.LoggerHelper
 import org.eclipse.jgit.api.errors.GitAPIException
-import static nextflow.Const.APP_BUILDNUM
-import static nextflow.Const.APP_NAME
-import static nextflow.Const.APP_VER
-import static nextflow.Const.SPLASH
 /**
  * Main application entry point. It parses the command line and
  * launch the pipeline execution.
@@ -220,19 +214,19 @@ class Launcher {
             }
 
             else if( current == '-with-trace' && (i==args.size() || args[i].startsWith('-'))) {
-                normalized << TraceFileObserver.DEF_FILE_NAME
+                normalized << '-'
             }
 
             else if( current == '-with-report' && (i==args.size() || args[i].startsWith('-'))) {
-                normalized << ReportObserver.DEF_FILE_NAME
+                normalized << '-'
             }
 
             else if( current == '-with-timeline' && (i==args.size() || args[i].startsWith('-'))) {
-                normalized << TimelineObserver.DEF_FILE_NAME
+                normalized << '-'
             }
 
             else if( current == '-with-dag' && (i==args.size() || args[i].startsWith('-'))) {
-                normalized << GraphObserver.DEF_FILE_NAME
+                normalized << '-'
             }
 
             else if( current == '-with-docker' && (i==args.size() || args[i].startsWith('-'))) {
