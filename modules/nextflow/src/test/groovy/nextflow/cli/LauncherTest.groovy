@@ -191,20 +191,20 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run','-with-tower', '-x') == ['run', '-with-tower', '-', '-x']
         launcher.normalizeArgs('run','-with-tower', 'foo.com') == ['run', '-with-tower','foo.com']
 
-        launcher.normalizeArgs('run','-with-trace') == ['run', '-with-trace','trace.txt']
-        launcher.normalizeArgs('run','-with-trace', '-x') == ['run', '-with-trace','trace.txt', '-x']
+        launcher.normalizeArgs('run','-with-trace') == ['run', '-with-trace','-']
+        launcher.normalizeArgs('run','-with-trace', '-x') == ['run', '-with-trace','-', '-x']
         launcher.normalizeArgs('run','-with-trace', 'file.x') == ['run', '-with-trace','file.x']
 
-        launcher.normalizeArgs('run','-with-report') == ['run', '-with-report','report.html']
-        launcher.normalizeArgs('run','-with-report', '-x') == ['run', '-with-report','report.html', '-x']
+        launcher.normalizeArgs('run','-with-report') == ['run', '-with-report','-']
+        launcher.normalizeArgs('run','-with-report', '-x') == ['run', '-with-report','-', '-x']
         launcher.normalizeArgs('run','-with-report', 'file.x') == ['run', '-with-report','file.x']
 
-        launcher.normalizeArgs('run','-with-timeline') == ['run', '-with-timeline','timeline.html']
-        launcher.normalizeArgs('run','-with-timeline', '-x') == ['run', '-with-timeline','timeline.html', '-x']
+        launcher.normalizeArgs('run','-with-timeline') == ['run', '-with-timeline','-']
+        launcher.normalizeArgs('run','-with-timeline', '-x') == ['run', '-with-timeline','-', '-x']
         launcher.normalizeArgs('run','-with-timeline', 'file.x') == ['run', '-with-timeline','file.x']
 
-        launcher.normalizeArgs('run','-with-dag') == ['run', '-with-dag','dag.dot']
-        launcher.normalizeArgs('run','-with-dag', '-x') == ['run', '-with-dag','dag.dot', '-x']
+        launcher.normalizeArgs('run','-with-dag') == ['run', '-with-dag','-']
+        launcher.normalizeArgs('run','-with-dag', '-x') == ['run', '-with-dag','-', '-x']
         launcher.normalizeArgs('run','-with-dag', 'file.dot') == ['run', '-with-dag','file.dot']
 
         launcher.normalizeArgs('run','-with-docker') == ['run', '-with-docker','-']

@@ -37,7 +37,7 @@ import org.apache.commons.lang.StringEscapeUtils
 @CompileStatic
 class TimelineObserver implements TraceObserver {
 
-    static final String DEF_FILE_NAME = 'timeline.html'
+    public static final String DEF_FILE_NAME = 'timeline.html'
 
     /**
      * Holds the the start time for tasks started/submitted but not yet completed
