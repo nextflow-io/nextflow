@@ -24,7 +24,6 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.aws.batch.AwsOptions
 import nextflow.cloud.aws.batch.S3Helper
-import nextflow.file.FilePorter
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.util.Escape
@@ -62,8 +61,6 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * Task work directory
      */
     Path workDir
-
-    private FilePorter porter
 
     SimpleFileCopyStrategy() { }
 
