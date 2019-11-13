@@ -61,7 +61,7 @@ Copy the following example into your favourite text editor and save it to a file
     process convertToUpper {
 
         input:
-        file x from letters.collect()
+        file x from letters.flatten()
 
         output:
         stdout result
