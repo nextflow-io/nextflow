@@ -39,7 +39,7 @@ class TaskBeanTest extends Specification {
         session.getBinDir() >> Paths.get('/bin/dir')
 
         def process = Mock(TaskProcessor)
-        process.getConfig() >> ([stageInMode: 'link', stageOutMode: 'rsync'] as ProcessConfig)
+        process.getConfig() >> Mock(ProcessConfig)
         process.getSession() >> session
 
         def config = new TaskConfig()
@@ -48,6 +48,8 @@ class TaskBeanTest extends Specification {
         config.beforeScript = 'before do this'
         config.afterScript = 'after do that'
         config.memory = '1GB'
+        config.stageInMode = 'link'
+        config.stageOutMode = 'rsync'
 
         def task = Mock(TaskRun)
         task.getId() >> '123'
