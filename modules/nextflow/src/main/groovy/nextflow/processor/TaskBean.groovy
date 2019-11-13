@@ -137,8 +137,8 @@ class TaskBean implements Serializable, Cloneable {
         this.outputFiles = task.getOutputFilesNames()
         this.sharedDir = task.getProcessor().getSession().getWorkDir()
         this.binDir = task.getProcessor().getSession().getBinDir()
-        this.stageInMode = task.getProcessor().getConfig().stageInMode
-        this.stageOutMode = task.getProcessor().getConfig().stageOutMode
+        this.stageInMode = task.config.stageInMode
+        this.stageOutMode = task.config.stageOutMode
 
     }
 
