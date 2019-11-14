@@ -1140,15 +1140,16 @@ maxDepth    Maximum number of directory levels to visit (default: `no limit`)
 Output 'stdout' special file
 ----------------------------
 
-The ``stdout`` qualifier allows to `capture` the `stdout` output of the executed process and send it over
+The ``stdout`` qualifier allows you to `capture` the `stdout` output of the executed process and send it over
 the channel specified in the output parameter declaration. For example::
 
     process echoSomething {
         output:
         stdout channel
 
-        "echo Hello world!"
-
+        """
+        echo Hello world!
+        """
     }
 
     channel.subscribe { print "I say..  $it" }
