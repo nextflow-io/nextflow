@@ -869,7 +869,7 @@ class NextflowDSLImpl implements ASTTransformation {
             def nested = methodCall.objectExpression instanceof MethodCallExpression
             log.trace "convert > output method: $methodName"
 
-            if( methodName in ['val','file','set','stdout','path','tuple'] && !nested ) {
+            if( methodName in ['val','env','file','set','stdout','path','tuple'] && !nested ) {
                 // prefix the method name with the string '_out_'
                 methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
                 fixMethodCall(methodCall)

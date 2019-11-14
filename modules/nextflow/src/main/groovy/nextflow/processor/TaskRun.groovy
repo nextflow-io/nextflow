@@ -33,9 +33,10 @@ import nextflow.exception.ProcessTemplateException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
-import nextflow.script.ScriptType
 import nextflow.script.BodyDef
+import nextflow.script.ScriptType
 import nextflow.script.params.EnvInParam
+import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
 import nextflow.script.params.InParam
@@ -516,6 +517,7 @@ class TaskRun implements Cloneable {
     static final public String CMD_START = '.command.begin'
     static final public String CMD_RUN = '.command.run'
     static final public String CMD_TRACE = '.command.trace'
+    static final public String CMD_ENV = '.command.env'
 
 
     String toString( ) {
@@ -544,6 +546,11 @@ class TaskRun implements Cloneable {
             result << str[i]
         }
         return result.toString()
+    }
+
+    List<String> getOutputEnvNames() {
+        final items = getOutputsByType(EnvOutParam)
+        return items ? new ArrayList<String>(items.keySet()*.name) : Collections.<String>emptyList()
     }
 
     @Memoized
