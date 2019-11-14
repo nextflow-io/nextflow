@@ -531,6 +531,17 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
                 .bind(obj)
     }
 
+    OutParam _out_env( Object obj ) {
+        new EnvOutParam(this).bind(obj)
+    }
+
+    OutParam _out_env( Map opts, Object obj ) {
+        new EnvOutParam(this)
+                .setOptions(opts)
+                .bind(obj)
+    }
+
+
     OutParam _out_file( Object obj ) {
         // note: check that is a String type to avoid to force
         // the evaluation of GString object to a string

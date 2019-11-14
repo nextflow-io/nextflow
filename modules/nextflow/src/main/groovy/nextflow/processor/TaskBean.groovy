@@ -67,6 +67,8 @@ class TaskBean implements Serializable, Cloneable {
 
     boolean statsEnabled
 
+    List<String> outputEnvNames
+
     String beforeScript
 
     String afterScript
@@ -131,6 +133,7 @@ class TaskBean implements Serializable, Cloneable {
         this.containerOptions = task.config.containerOptions
 
         // stats
+        this.outputEnvNames = task.getOutputEnvNames()
         this.statsEnabled = task.getProcessor().getSession().statsEnabled
 
         this.inputFiles = task.getInputFilesMap()

@@ -73,6 +73,7 @@ import nextflow.script.ScriptType
 import nextflow.script.params.BasicMode
 import nextflow.script.params.EachInParam
 import nextflow.script.params.EnvInParam
+import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
 import nextflow.script.params.InParam
@@ -1254,6 +1255,7 @@ class TaskProcessor {
                     break
                 }
 
+            case EnvOutParam:
             case ValueOutParam:
                 log.trace "Process $name > collecting out param: ${param} = $value"
                 tuples[param.index].add(value)
@@ -1336,6 +1338,10 @@ class TaskProcessor {
                     collectOutValues(task, (ValueOutParam)param, context)
                     break
 
+                case EnvOutParam:
+                    collectOutEnvParam(task, (EnvOutParam)param, workDir)
+                    break
+
                 default:
                     throw new IllegalArgumentException("Illegal output parameter: ${param.class.simpleName}")
 
@@ -1344,6 +1350,30 @@ class TaskProcessor {
 
         // mark ready for output binding
         task.canBind = true
+    }
+
+    protected void collectOutEnvParam(TaskRun task, EnvOutParam param, Path workDir) {
+
+        // fetch the output value
+        final val = collectOutEnvMap(workDir).get(param.name)
+        if( val == null )
+            throw new MissingValueException("Missing environment variable: $param.name")
+        // set into the output set
+        task.setOutput(param,val)
+        // trace the result
+        log.trace "Collecting param: ${param.name}; value: ${val}"
+
+    }
+
+    @Memoized(maxCacheSize = 10_000)
+    protected Map collectOutEnvMap(Path workDir) {
+        final env = workDir.resolve(TaskRun.CMD_ENV).text
+        final result = new HashMap(50)
+        for(String line : env.readLines() ) {
+            def (k,v) = line.tokenize('=')
+            result.put(k,v)
+        }
+        return result
     }
 
     /**

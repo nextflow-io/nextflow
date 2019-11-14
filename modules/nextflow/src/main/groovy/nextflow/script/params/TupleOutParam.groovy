@@ -17,12 +17,12 @@
 package nextflow.script.params
 
 import groovy.transform.InheritConstructors
+import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
 import nextflow.script.TokenPathCall
 import nextflow.script.TokenStdoutCall
 import nextflow.script.TokenValCall
 import nextflow.script.TokenVar
-
 /**
  * Model a set of process output parameters
  *
@@ -54,6 +54,9 @@ class TupleOutParam extends BaseOutParam implements OptionalParam {
 
             else if( item instanceof TokenValCall )
                 create(ValueOutParam).bind(item.val)
+
+            else if( item instanceof TokenEnvCall )
+                create(EnvOutParam).bind(item.val)
 
             else if( item instanceof GString )
                 create(FileOutParam).bind(item)
