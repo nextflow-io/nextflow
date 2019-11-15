@@ -907,6 +907,7 @@ Qualifier   Semantic
 val         Sends variable's with the name specified over the output channel.
 file        Sends a file produced by the process with the name specified over the output channel.
 path        Sends a file produced by the process with the name specified over the output channel (replaces ``file``).
+env         Sends the variable defined in the process environment with the name specified over the output channel.
 stdout      Sends the executed process `stdout` over the output channel.
 tuple       Lets to send multiple values over the same output channel.
 =========== =============
@@ -1152,6 +1153,25 @@ the channel specified in the output parameter declaration. For example::
 
     channel.subscribe { print "I say..  $it" }
 
+
+.. _process-env:
+
+Output 'env'
+------------
+
+The ``env`` qualifier allows you to capture a variable defined in the process execution environment
+and send it over the channel specified in the output parameter declaration::
+
+    process myTask {
+        output:
+        env FOO into target
+        script:
+        '''
+        FOO=$(ls -la)
+        '''
+    }
+
+    target.view { "directory content: $it" }
 
 
 .. _process-set:

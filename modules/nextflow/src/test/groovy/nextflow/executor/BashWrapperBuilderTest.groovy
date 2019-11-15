@@ -919,4 +919,34 @@ class BashWrapperBuilderTest extends Specification {
             
             '''.stripIndent()
     }
+
+    def 'should get output env capture snippet' () {
+        given:
+        def builder = new BashWrapperBuilder()
+
+        when:
+        def str = builder.getOutputEnvCaptureSnippet(['FOO','BAR'])
+        then:
+        str == '''
+            # capture process environment
+            set +u
+            echo FOO=$FOO > .command.env
+            echo BAR=$BAR >> .command.env
+            '''
+            .stripIndent()
+
+    }
+
+    def 'should validate bash interpreter' () {
+        given:
+        def builder = new BashWrapperBuilder()
+        expect:
+        builder.isBash('/bin/bash')
+        builder.isBash('/usr/bin/bash')
+        builder.isBash('/bin/env bash')
+        builder.isBash('/bin/bash -eu')
+        !builder.isBash('/bin/env perl')
+
+
+    }
 }

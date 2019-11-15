@@ -24,6 +24,7 @@ import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
+import nextflow.trace.WebLogObserver
 import spock.lang.Specification
 /**
  *
@@ -638,6 +639,22 @@ class ConfigBuilderTest extends Specification {
         config.trace.enabled
         config.trace.file == 'bar.txt'
 
+        when:
+        config = new ConfigObject()
+        config.trace.file = 'foo.txt'
+        builder.configRunOptions(config, env, new CmdRun(withTrace: '-'))
+        then: // command line should override the config file
+        config.trace instanceof Map
+        config.trace.enabled
+        config.trace.file == 'foo.txt'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withTrace: '-'))
+        then: // command line should override the config file
+        config.trace instanceof Map
+        config.trace.enabled
+        config.trace.file == 'trace.txt'
     }
 
     def 'should set session report options' () {
@@ -678,6 +695,22 @@ class ConfigBuilderTest extends Specification {
         config.report.enabled
         config.report.file == 'my-report.html'
 
+        when:
+        config = new ConfigObject()
+        config.report.file = 'this-report.html'
+        builder.configRunOptions(config, env, new CmdRun(withReport: '-'))
+        then:
+        config.report instanceof Map
+        config.report.enabled
+        config.report.file == 'this-report.html'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withReport: '-'))
+        then:
+        config.report instanceof Map
+        config.report.enabled
+        config.report.file == 'report.html'
     }
 
 
@@ -719,6 +752,22 @@ class ConfigBuilderTest extends Specification {
         config.dag.enabled
         config.dag.file == 'my-dag.html'
 
+        when:
+        config = new ConfigObject()
+        config.dag.file = 'this-dag.html'
+        builder.configRunOptions(config, env, new CmdRun(withDag: '-'))
+        then:
+        config.dag instanceof Map
+        config.dag.enabled
+        config.dag.file == 'this-dag.html'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withDag: '-'))
+        then:
+        config.dag instanceof Map
+        config.dag.enabled
+        config.dag.file == 'dag.dot'
     }
 
     def 'should set session weblog options' () {
@@ -759,6 +808,25 @@ class ConfigBuilderTest extends Specification {
         config.weblog instanceof Map
         config.weblog.enabled
         config.weblog.url == 'http://foo.com'
+
+        when:
+        config = new ConfigObject()
+        config.weblog.enabled = true
+        config.weblog.url = 'http://bar.com'
+        builder.configRunOptions(config, env, new CmdRun(withWebLog: '-'))
+        then:
+        config.weblog instanceof Map
+        config.weblog.enabled
+        config.weblog.url == 'http://bar.com'
+
+        when:
+        config = new ConfigObject()
+        config.weblog.enabled = true
+        builder.configRunOptions(config, env, new CmdRun(withWebLog: '-'))
+        then:
+        config.weblog instanceof Map
+        config.weblog.enabled
+        config.weblog.url == WebLogObserver.DEF_URL
 
     }
 
@@ -801,6 +869,24 @@ class ConfigBuilderTest extends Specification {
         config.timeline.enabled
         config.timeline.file == 'my-timeline.html'
 
+        when:
+        config = new ConfigObject()
+        config.timeline.enabled = true
+        config.timeline.file = 'my-timeline.html'
+        builder.configRunOptions(config, env, new CmdRun(withTimeline: '-'))
+        then:
+        config.timeline instanceof Map
+        config.timeline.enabled
+        config.timeline.file == 'my-timeline.html'
+
+        when:
+        config = new ConfigObject()
+        config.timeline.enabled = true
+        builder.configRunOptions(config, env, new CmdRun(withTimeline: '-'))
+        then:
+        config.timeline instanceof Map
+        config.timeline.enabled
+        config.timeline.file == 'timeline.html'
     }
 
     def 'should set tower options' () {
