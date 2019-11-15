@@ -250,6 +250,7 @@ if [[ "$dockerize" ]]; then
   NXF_ASSETS=${NXF_ASSETS:-${NXF_HOME:-$HOME/.nextflow}/assets}
   mkdir -p "$NXF_ASSETS"
   exec docker run $detach --rm --net host \
+   -e NXF_ANSI_LOG=false \
    -e USER -e HOME -e NXF_ASSETS=$NXF_ASSETS -e NXF_USRMAP=$(id -u) -e NXF_DOCKER_OPTS='-u $(id -u)' \
    -v /var/run/docker.sock:/var/run/docker.sock \
    -v $HOME:$HOME:ro,Z -v $NXF_ASSETS:$NXF_ASSETS:Z -v $PWD:$PWD:Z -w $PWD $NXF_DOCKER_OPTS \
