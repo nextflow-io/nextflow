@@ -1114,15 +1114,16 @@ and the semantic for the input ``file`` described above.
 The main advantage of ``path`` over the ``file`` qualifier is that it allows the specification
 of a number of output to fine-control the output files.
 
-=========== =====================
-Name        Description
-=========== =====================
-glob        When ``true`` the specified name is interpreted as a glob pattern (default: ``true``)
-hidden      When ``true`` hidden files are included in the matching output files (default: ``false``)
-followLinks When ``true`` target files are return in place of any matching symlink (default: ``true``)
-type        Type of paths returned, either ``file``, ``dir`` or ``any`` (default: ``any``, or ``file`` if the specified file name pattern contains a `**` - double star - symbol)
-maxDepth    Maximum number of directory levels to visit (default: `no limit`)
-=========== =====================
+============== =====================
+Name            Description
+============== =====================
+glob            When ``true`` the specified name is interpreted as a glob pattern (default: ``true``)
+hidden          When ``true`` hidden files are included in the matching output files (default: ``false``)
+followLinks     When ``true`` target files are return in place of any matching symlink (default: ``true``)
+type            Type of paths returned, either ``file``, ``dir`` or ``any`` (default: ``any``, or ``file`` if the specified file name pattern contains a `**` - double star - symbol)
+maxDepth        Maximum number of directory levels to visit (default: `no limit`)
+includeInputs   When ``true`` any input files matching an output file glob pattern are included.
+============== =====================
 
 
 .. warning::
