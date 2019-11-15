@@ -64,7 +64,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
         copy.setDelegate(resolver)
         this.body = copy.call()
         // now it can access the parameters
-        this.declaredInputs = new ArrayList<>(resolver.getGets().keySet())
+        this.declaredInputs = new ArrayList<>(resolver.getTakes().keySet())
         this.declaredOutputs = new ArrayList<>(resolver.getEmits().keySet())
         this.declaredPublish = new LinkedHashMap<>(resolver.getPublish())
         this.variableNames = getVarNames0()
@@ -121,8 +121,10 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
 
     protected void collectInputs(Binding context, Object[] args) {
         final params = ChannelOut.spread(args)
-        if( params.size() != declaredInputs.size() )
-            throw new IllegalArgumentException("Workflow `$name` declares ${declaredInputs.size()} input channels but ${params.size()} were specified")
+        if( params.size() != declaredInputs.size() ) {
+            final prefix = name ? "Workflow `$name`" : "Main workflow"
+            throw new IllegalArgumentException("$prefix declares ${declaredInputs.size()} input channels but ${params.size()} were specified")
+        }
 
         // attach declared inputs with the invocation arguments
         for( int i=0; i< declaredInputs.size(); i++ ) {
@@ -215,19 +217,20 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
 @CompileStatic
 class WorkflowParamsResolver implements GroovyInterceptable {
 
-    static final private String GET_PREFIX = '_get_'
+    @Deprecated static final private String GET_PREFIX = '_get_'
+    static final private String TAKE_PREFIX = '_take_'
     static final private String EMIT_PREFIX = '_emit_'
     static final private String PUBLISH_PREFIX = '_publish_'
 
 
-    Map<String,Object> gets = new LinkedHashMap<>(10)
+    Map<String,Object> takes = new LinkedHashMap<>(10)
     Map<String,Object> emits = new LinkedHashMap<>(10)
     Map<String,Map> publish = new LinkedHashMap<>(10)
 
     @Override
     def invokeMethod(String name, Object args) {
-        if( name.startsWith(GET_PREFIX) )
-            gets.put(name.substring(GET_PREFIX.size()), args)
+        if( name.startsWith(TAKE_PREFIX) )
+            takes.put(name.substring(TAKE_PREFIX.size()), args)
 
         else if( name.startsWith(EMIT_PREFIX) )
             emits.put(name.substring(EMIT_PREFIX.size()), args)
@@ -235,6 +238,11 @@ class WorkflowParamsResolver implements GroovyInterceptable {
         else if( name.startsWith(PUBLISH_PREFIX))
             publish.put(name.substring(PUBLISH_PREFIX.size()), argToPublishOpts(args))
 
+        else if( name.startsWith(GET_PREFIX) ) {
+            log.warn "Workflow `get` is deprecated -- Use `take` instead"
+            takes.put(name.substring(GET_PREFIX.size()), args)
+        }
+            
         else
             throw new IllegalArgumentException("Unknown workflow parameter definition: $name")
 

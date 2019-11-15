@@ -183,16 +183,16 @@ A workflow component can access any variable and parameter defined in the outer 
 Workflow inputs
 ---------------
 
-A workflow component can declare one or more input channels using the ``get`` keyword. For example::
+A workflow component can declare one or more input channels using the ``take`` keyword. For example::
 
         workflow my_pipeline {
-            get: data
+            take: data
             main:
             foo(data)
             bar(foo.out)
         }
 
-.. warning:: When the ``get`` is used the beginning of the workflow body needs to be identified with the
+.. warning:: When the ``take`` is used the beginning of the workflow body needs to be identified with the
   ``main`` keyword.
 
 Then, the input can be specified a argument on the workflow invocation statement::
@@ -282,7 +282,7 @@ as any other process in your application.
 ::
 
     workflow flow1 {
-        get: data
+        take: data
         main:
             foo(data)
             bar(foo.out)
@@ -291,7 +291,7 @@ as any other process in your application.
     }
 
     workflow flow2 {
-        get: data
+        take: data
         main:
             foo(data)
             baz(foo.out)
@@ -300,7 +300,7 @@ as any other process in your application.
     }
 
     workflow {
-        get: data
+        take: data
         main:
           flow1(data)
           flow2(flow1.out)
