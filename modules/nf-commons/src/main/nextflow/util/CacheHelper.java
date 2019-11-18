@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.ProviderMismatchException;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
 import java.util.HashMap;
@@ -215,7 +216,7 @@ public class CacheHelper {
         try {
             attrs = Files.readAttributes(path, BasicFileAttributes.class);
         }
-        catch(IOException e) {
+        catch(IOException | ProviderMismatchException e) {
             log.debug("Unable to get file attributes file: {} -- Cause: {}", FilesEx.toUriString(path), e.toString());
         }
 
