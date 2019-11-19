@@ -216,8 +216,11 @@ public class CacheHelper {
         try {
             attrs = Files.readAttributes(path, BasicFileAttributes.class);
         }
-        catch(IOException | ProviderMismatchException e) {
+        catch(IOException e) {
             log.debug("Unable to get file attributes file: {} -- Cause: {}", FilesEx.toUriString(path), e.toString());
+        }
+        catch(ProviderMismatchException e) {
+            log.warn("File system is unable to get file attributes file: {} -- Cause: {}", FilesEx.toUriString(path), e.toString());
         }
 
         if( mode==HashMode.DEEP && attrs!=null && attrs.isRegularFile() )
