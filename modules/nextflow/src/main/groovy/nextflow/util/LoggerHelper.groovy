@@ -46,7 +46,6 @@ import ch.qos.logback.core.spi.FilterReply
 import ch.qos.logback.core.util.FileSize
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
-import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
@@ -76,7 +75,6 @@ import org.slf4j.MarkerFactory
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
 @CompileStatic
 class LoggerHelper {
 
