@@ -105,6 +105,14 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         super.appendEnv(result)
     }
 
+    protected String prefixEnv(String key) {
+        if( key.startsWith('SINGULARITY_') )
+            return key
+        if( key.startsWith('SINGULARITYENV_') )
+            return key
+        return "SINGULARITYENV_$key"
+    }
+
     @Override
     protected CharSequence makeEnv( env, StringBuilder result = new StringBuilder() ) {
 
@@ -112,7 +120,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
             int index=0
             for( Map.Entry entry : env.entrySet() ) {
                 if( index++ ) result << ' '
-                result << "SINGULARITYENV_${entry.key}=\"${entry.value}\""
+                result << "${prefixEnv(entry.key.toString())}=\"${entry.value}\""
             }
         }
         else if( env instanceof String && env.contains('=') ) {
