@@ -105,20 +105,30 @@ class WorkflowStats {
         tot ? Math.round(failedCount / tot * 10000.0 as float) / 100.0 as float : 0
     }
 
+    protected Duration makeDuration(long value) {
+        try {
+            new Duration(value)
+        }
+        catch( Throwable e ) {
+            log.warn "Oops... not a valid workflow stats duration value=$value", e
+            return new Duration(0)
+        }
+    }
+
     /**
      * @return Overall workflow compute time (CPUs-seconds) for task executed successfully
      */
-    Duration getSucceedDuration() { new Duration(succeedMillis) }
+    Duration getSucceedDuration() { makeDuration(succeedMillis) }
 
     /**
      * @return Overall workflow compute time (CPUs-seconds) for failed tasks
      */
-    Duration getFailedDuration() { new Duration(failedMillis) }
+    Duration getFailedDuration() { makeDuration(failedMillis) }
 
     /**
      * @return Overall workflow compute time (CPUs-seconds) for cached tasks
      */
-    Duration getCachedDuration() { new Duration(cachedMillis) }
+    Duration getCachedDuration() { makeDuration(cachedMillis) }
 
     /**
      * @return Succeed tasks count
