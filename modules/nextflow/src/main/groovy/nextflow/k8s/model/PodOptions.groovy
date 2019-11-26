@@ -44,6 +44,8 @@ class PodOptions {
 
     private Collection<PodVolumeClaim> mountClaims
 
+    private Collection<PodEmptyDir> emptyDirs
+
     private Map<String,String> labels = [:]
 
     private Map<String,String> annotations = [:]
@@ -58,6 +60,7 @@ class PodOptions {
         mountSecrets = new HashSet<>(size)
         mountConfigMaps = new HashSet<>(size)
         mountClaims = new HashSet<>(size)
+        emptyDirs = new HashSet<>(size)
         init(options)
     }
 
@@ -108,6 +111,9 @@ class PodOptions {
         else if( entry.annotation && entry.value ) {
             this.annotations.put(entry.annotation as String, entry.value as String)
         }
+        else if(entry.mountPath && entry.emptyDir) {
+            emptyDirs << new PodEmptyDir(entry)
+        }
         else 
             throw new IllegalArgumentException("Unknown pod options: $entry")
     }
@@ -120,6 +126,8 @@ class PodOptions {
     Collection<PodMountSecret> getMountSecrets() { mountSecrets }
 
     Collection<PodVolumeClaim> getVolumeClaims() { mountClaims }
+
+    Collection<PodEmptyDir> getEmptyDirs() { emptyDirs }
 
     Map<String,String> getLabels() { labels }
 
@@ -170,6 +178,10 @@ class PodOptions {
         // volume claims
         result.volumeClaims.addAll( volumeClaims )
         result.volumeClaims.addAll( other.volumeClaims )
+
+        // empty dirs
+        result.emptyDirs.addAll(emptyDirs)
+        result.emptyDirs.addAll(other.emptyDirs)
 
         // sec context
         if( other.securityContext )

@@ -394,6 +394,51 @@ class PodSpecBuilderTest extends Specification {
 
     }
 
+    def 'should get emptyDir mounts' () {
+
+        when:
+        def spec = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withWorkDir('/path')
+                .withCommand(['echo'])
+                .withEmptyDir(new PodEmptyDir('e1','/diskDirUnlimited', PodEmptyDir.PodEmptyDirType.Disk))
+                .withEmptyDir(new PodEmptyDir('e2','/diskDirlimited', PodEmptyDir.PodEmptyDirType.Disk, "2 GB"))
+                .withEmptyDir(new PodEmptyDir('e3','/memoryDirUnlimited', PodEmptyDir.PodEmptyDirType.Memory))
+                .withEmptyDir(new PodEmptyDir('e4', '/memoryDirlimited', PodEmptyDir.PodEmptyDirType.Memory,'4 GB'))
+                .build()
+
+        then:
+        spec ==  [ apiVersion: 'v1',
+                   kind: 'Pod',
+                   metadata: [name:'foo', namespace:'default'],
+                   spec: [
+                           restartPolicy:'Never',
+                           containers:[
+                                   [name:'foo',
+                                    image:'busybox',
+                                    command: ['echo'],
+                                    workingDir:'/path',
+                                    volumeMounts:[
+                                            [name:'e1', mountPath:'/diskDirUnlimited'],
+                                            [name:'e2', mountPath:'/diskDirlimited'],
+                                            [name:'e3', mountPath:'/memoryDirUnlimited'],
+                                            [name:'e4', mountPath:'/memoryDirlimited']
+                                    ]
+                                   ]
+                           ],
+                           volumes:[
+                                   [name:'e1', emptyDir: [:]],
+                                   [name:'e2', emptyDir: [sizeLimit:'2048Mi']],
+                                   [name:'e3', emptyDir: [medium: 'Memory']],
+                                   [name:'e4', emptyDir: [medium: 'Memory', sizeLimit:'4096Mi']]
+                           ]
+                   ]
+
+        ]
+
+    }
+
 
     def 'should return secret file volume and mounts' () {
 

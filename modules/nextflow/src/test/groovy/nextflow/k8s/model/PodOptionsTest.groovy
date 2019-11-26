@@ -166,6 +166,25 @@ class PodOptionsTest extends Specification {
 
     }
 
+    def 'should create emptyDirs' () {
+        given:
+        def options = [
+                [emptyDir: 'scratch-1', mountPath: '/tmp/e-dir0', type: 'Memory', sizeLimit: '8 GB'],
+                [emptyDir: 'scratch-2', mountPath: '/tmp/e-dir2', type: 'Disk', sizeLimit: '2 GB'],
+                [emptyDir: 'scratch-3', mountPath: '/tmp/e-dir3', type: 'Memory']
+        ]
+
+        when:
+        def emptyDir = new PodOptions(options).getEmptyDirs()
+        then:
+        emptyDir.size() == 3
+        emptyDir == [
+                new PodEmptyDir('scratch-1','/tmp/e-dir0', PodEmptyDir.PodEmptyDirType.Memory, '8 GB'),
+                new PodEmptyDir('scratch-2','/tmp/e-dir2', PodEmptyDir.PodEmptyDirType.Disk  , '2 GB'),
+                new PodEmptyDir('scratch-3','/tmp/e-dir3', PodEmptyDir.PodEmptyDirType.Memory)
+        ] as Set
+
+    }
 
     def 'should not create env' () {
         when:
@@ -197,6 +216,7 @@ class PodOptionsTest extends Specification {
                 [secret: 'secret/key', mountPath: '/etc/secret'],
                 [config: 'data/key', mountPath: '/data/file.txt'],
                 [volumeClaim: 'pvc', mountPath: '/mnt/claim'],
+                [emptyDir: 'scratch-1', mountPath: '/tmp/edir0', type: 'Memory', sizeLimit: '2 GB'],
                 [runAsUser: 500]
         ]
 
@@ -217,11 +237,13 @@ class PodOptionsTest extends Specification {
                 [secret: 'secret/key', mountPath: '/etc/secret'],
                 [config: 'data/key', mountPath: '/data/file.txt'],
                 [volumeClaim: 'pvc', mountPath: '/mnt/claim'],
+                [emptyDir: 'scratch-1', mountPath: '/tmp/edir0', type: 'Memory', sizeLimit: '2 GB'],
 
                 [env: 'DELTA', value: 'LAMBDA'],
                 [secret: 'x', mountPath: '/x'],
                 [config: 'y', mountPath: '/y'],
                 [volumeClaim: 'z', mountPath: '/z'],
+                [emptyDir: 'scratch-2', mountPath: '/tmp/edir1', type: 'Disk'],
                 [securityContext: [runAsUser: 1000, fsGroup: 200, allowPrivilegeEscalation: true]],
 
                 [nodeSelector: 'foo=X, bar=Y']
@@ -281,6 +303,11 @@ class PodOptionsTest extends Specification {
         opts.getVolumeClaims() == [
                 new PodVolumeClaim('pvc','/mnt/claim'),
                 new PodVolumeClaim('z','/z'),
+        ] as Set
+
+        opts.getEmptyDirs() == [
+                new PodEmptyDir('scratch-1', '/tmp/edir0', PodEmptyDir.PodEmptyDirType.Memory, '2 GB'),
+                new PodEmptyDir('scratch-2','/tmp/edir1', PodEmptyDir.PodEmptyDirType.Disk)
         ] as Set
 
         opts.securityContext.toSpec() == [runAsUser: 1000, fsGroup: 200, allowPrivilegeEscalation: true]

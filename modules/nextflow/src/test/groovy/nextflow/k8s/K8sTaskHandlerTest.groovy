@@ -24,6 +24,7 @@ import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.client.K8sResponseJson
+import nextflow.k8s.model.PodEmptyDir
 import nextflow.k8s.model.PodEnv
 import nextflow.k8s.model.PodMountConfig
 import nextflow.k8s.model.PodMountSecret
@@ -273,6 +274,10 @@ class K8sTaskHandlerTest extends Specification {
 
         def podOptions = Mock(PodOptions)
         def CLAIMS = [ new PodVolumeClaim('first','/work'), new PodVolumeClaim('second','/data') ]
+        def EMPTYDIRS = [
+                new PodEmptyDir('scratch-1', '/emptyDirMount', PodEmptyDir.PodEmptyDirType.Memory, "1 GB"),
+                new PodEmptyDir('scratch-2', '/emptyDirMount2', PodEmptyDir.PodEmptyDirType.Disk, "2 GB")
+        ]
 
         when:
         result = handler.newSubmitRequest(task)
@@ -289,6 +294,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         2 * podOptions.getVolumeClaims() >> CLAIMS
+        2 * podOptions.getEmptyDirs() >> EMPTYDIRS
 
         result == [ apiVersion: 'v1',
                     kind: 'Pod',
@@ -302,11 +308,16 @@ class K8sTaskHandlerTest extends Specification {
                                      workingDir: '/some/work/dir',
                                      volumeMounts: [
                                              [name:'vol-1', mountPath:'/work'],
-                                             [name:'vol-2', mountPath:'/data']
+                                             [name:'vol-2', mountPath:'/data'],
+                                             [name:'scratch-1', mountPath:'/emptyDirMount'],
+                                             [name:'scratch-2', mountPath:'/emptyDirMount2']
                                      ] ]
                             ],
                             volumes: [   [name:'vol-1', persistentVolumeClaim:[claimName: 'first']],
-                                         [name:'vol-2', persistentVolumeClaim:[claimName: 'second']] ]
+                                         [name:'vol-2', persistentVolumeClaim:[claimName: 'second']],
+                                         [name:'scratch-1', emptyDir:[medium: 'Memory', sizeLimit: '1024Mi']],
+                                         [name:'scratch-2', emptyDir:[sizeLimit: '2048Mi']]
+                            ]
                     ]
         ]
 

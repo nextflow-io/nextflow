@@ -181,7 +181,7 @@ class K8sConfigTest extends Specification {
         opts.mountSecrets == [] as Set
         opts.mountConfigMaps == [] as Set
         opts.volumeClaims == [] as Set
-
+        opts.emptyDirs == [] as Set
 
         when:
         opts = new K8sConfig(pod: [ [pullPolicy: 'Always'], [env: 'HELLO', value: 'WORLD'] ]).getPodOptions()
