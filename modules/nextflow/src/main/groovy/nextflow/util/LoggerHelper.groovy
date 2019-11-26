@@ -46,6 +46,7 @@ import ch.qos.logback.core.spi.FilterReply
 import ch.qos.logback.core.util.FileSize
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
@@ -70,14 +71,16 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.Marker
 import org.slf4j.MarkerFactory
-
 /**
  * Helper class to setup the logging subsystem
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class LoggerHelper {
+
+    static private Logger log = LoggerFactory.getLogger(LoggerHelper)
 
     static public Marker STICKY = MarkerFactory.getMarker('sticky')
 
@@ -535,7 +538,7 @@ class LoggerHelper {
     }
 
     static @PackageScope List<String> findErrorLine( Throwable e, Map<String, Path> allNames ) {
-        def lines = ExceptionUtils.getStackTrace(e).split('\n')
+        def lines = getErrorLines(e)
         List error = null
         for( String str : lines ) {
             if( (error=getErrorLine(str,allNames))) {
@@ -543,6 +546,16 @@ class LoggerHelper {
             }
         }
         return error
+    }
+
+    static @PackageScope String[] getErrorLines(Throwable e) {
+        try {
+            return ExceptionUtils.getStackTrace(e).split('\n')
+        }
+        catch( Throwable t ) {
+            log.warn "Oops .. something wrong formatting the error stack trace | ${t.message ?: t}", e
+            return Collections.emptyList() as String[]
+        }
     }
 
     static private Pattern ERR_LINE_REGEX = ~/\((Script_[0-9a-f]{8}):(\d*)\)$/
