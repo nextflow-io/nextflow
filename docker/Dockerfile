@@ -5,7 +5,7 @@ MAINTAINER Paolo Di Tommaso <paolo.ditommaso@gmail.com>
 # - bash 
 # - gnu coreutils 
 # - curl 
-RUN apk update && apk add bash && apk add coreutils && apk add curl
+RUN apk update && apk add bash && apk add coreutils && apk add curl && apk add graphviz
 
 # see https://blogs.oracle.com/java-platform-group/java-se-support-for-docker-cpu-and-memory-limits
 ENV NXF_OPTS='-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap' NXF_HOME=/.nextflow
