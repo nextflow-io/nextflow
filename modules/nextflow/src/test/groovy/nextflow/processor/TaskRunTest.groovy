@@ -16,7 +16,7 @@
 
 package nextflow.processor
 
-
+import nextflow.script.params.EnvOutParam
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -683,5 +683,18 @@ class TaskRunTest extends Specification {
 
     }
 
+    def 'should return output env names' () {
+        given:
+        def env1 = new EnvOutParam(new Binding(),[]).bind(new TokenVar('FOO'))
+        def env2 = new EnvOutParam(new Binding(),[]).bind(new TokenVar('BAR'))
+        def task = new TaskRun()
+        task.outputs.put(env1, null)
+        task.outputs.put(env2, null)
+
+        when:
+        def names = task.getOutputEnvNames()
+        then:
+        names == ['FOO','BAR']
+    }
 
 }

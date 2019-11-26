@@ -147,4 +147,36 @@ class TupleOutParamTest extends Specification {
         out2.mode == TupleOutParam.CombineMode.combine
 
     }
+
+    def 'should create tuple of env' () {
+        setup:
+        def text = '''
+            process hola {
+              output:
+                tuple env(FOO), env(BAR) into ch
+              
+              /echo command/ 
+            }
+            '''
+
+        def binding = [:]
+        def process = parseAndReturnProcess(text, binding)
+
+        when:
+        def outs = process.config.getOutputs() as List<TupleOutParam>
+        then:
+        println outs.outChannel
+        outs.size() == 1
+        and:
+        outs[0].outChannel instanceof DataflowQueue
+        outs[0].outChannel == binding.ch
+        and:
+        outs[0].inner.size() ==2
+        and:
+        outs[0].inner[0] instanceof EnvOutParam
+        outs[0].inner[0].getName() == 'FOO'
+        and:
+        outs[0].inner[1] instanceof EnvOutParam
+        outs[0].inner[1].getName() == 'BAR'
+    }
 }

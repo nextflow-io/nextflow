@@ -148,6 +148,21 @@ class BashWrapperBuilder {
             template.close()
         }
     }
+
+    protected String getOutputEnvCaptureSnippet(List<String> names) {
+        def result = new StringBuilder()
+        result.append('\n')
+        result.append('# capture process environment\n')
+        result.append('set +u\n')
+        for( int i=0; i<names.size(); i++) {
+            final key = names[i]
+            result.append "echo $key=\$$key "
+            result.append( i==0 ? '> ' : '>> ' )
+            result.append(TaskRun.CMD_ENV)
+            result.append('\n')
+        }
+        result.toString()
+    }
     
     protected Map<String,String> makeBinding() {
         /*
@@ -178,6 +193,11 @@ class BashWrapperBuilder {
          * fetch the script interpreter i.e. BASH, Perl, Python, etc
          */
         final interpreter = TaskProcessor.fetchInterpreter(script)
+
+        if( outputEnvNames ) {
+            if( !isBash(interpreter) ) throw new IllegalArgumentException("Process output of type env is only allowed with Bash process command -- Current interpreter: $interpreter")
+            script += getOutputEnvCaptureSnippet(outputEnvNames)
+        }
 
         final binding = new HashMap<String,String>(20)
         binding.header_script = headerScript
@@ -237,6 +257,8 @@ class BashWrapperBuilder {
             copyScript += copyFileToWorkDir(TaskRun.CMD_ERRFILE) + ' || true' + ENDL
             if( statsEnabled )
                 copyScript += copyFileToWorkDir(TaskRun.CMD_TRACE) + ' || true' + ENDL
+            if(  outputEnvNames )
+                copyScript += copyFileToWorkDir(TaskRun.CMD_ENV) + ' || true' + ENDL
         }
         binding.unstage_controls = copyScript
 
@@ -255,6 +277,10 @@ class BashWrapperBuilder {
         binding.trace_script = isTraceRequired() ? getTraceScript(binding) : null
         
         return binding
+    }
+
+    protected boolean isBash(String interpreter) {
+        interpreter.tokenize(' /').contains('bash')
     }
 
     protected String getTraceScript(Map binding) {
