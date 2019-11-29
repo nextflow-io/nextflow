@@ -174,12 +174,12 @@ class PublishDir {
          * iterate over the file parameter and publish each single file
          */
         for( Path value : files ) {
-            apply(value, inProcess)
+            apply1(value, inProcess)
         }
     }
 
     void apply( List<Path> files, Path sourceDir ) {
-        if( !files )
+        if( !files || !enabled )
             return
         this.sourceDir = sourceDir
         this.sourceFileSystem = sourceDir ? sourceDir.fileSystem : null
@@ -193,7 +193,7 @@ class PublishDir {
     @CompileStatic
     void apply( List<Path> files, TaskRun task ) {
 
-        if( !files )
+        if( !files || !enabled )
             return
 
         if( !path )
@@ -211,10 +211,7 @@ class PublishDir {
 
 
     @CompileStatic
-    protected void apply( Path source, boolean inProcess ) {
-
-        if( !enabled )
-            return
+    protected void apply1(Path source, boolean inProcess ) {
 
         def target = sourceDir ? sourceDir.relativize(source) : source.getFileName()
         if( matcher && !matcher.matches(target) ) {
