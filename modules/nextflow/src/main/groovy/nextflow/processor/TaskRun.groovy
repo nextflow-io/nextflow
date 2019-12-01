@@ -43,6 +43,9 @@ import nextflow.script.params.InParam
 import nextflow.script.params.OutParam
 import nextflow.script.params.StdInParam
 import nextflow.script.params.ValueOutParam
+import nextflow.util.BlankSeparatedList
+import nextflow.util.Escape
+
 /**
  * Models a task instance
  *
@@ -626,7 +629,7 @@ class TaskRun implements Cloneable {
      *
      * @param body A {@code BodyDef} object instance
      */
-    @PackageScope void resolve(BodyDef body ) {
+    @PackageScope void resolve(BodyDef body) {
 
         // -- initialize the task code to be executed
         this.code = body.closure.clone() as Closure
@@ -651,9 +654,10 @@ class TaskRun implements Cloneable {
             else if( result != null && body.isShell ) {
                 script = renderScript(result)
             }
+            else if( result instanceof GString ) {
+                script = resolveGString(result)
+            }
             else {
-                // note `toString` transform GString to plain string object resolving
-                // interpolated variables
                 script = result.toString()
             }
         }
@@ -664,6 +668,18 @@ class TaskRun implements Cloneable {
             throw new ProcessUnrecoverableException("Process `$name` script contains error(s)", e)
         }
 
+    }
+
+    protected String resolveGString(GString str) {
+        for( int i=0; i<str.getValueCount(); i++ ) {
+            final obj = str.values[i]
+            if( obj instanceof TaskPath )
+                str.values[i] = Escape.path(obj)
+            else if( obj instanceof BlankSeparatedList ) {
+                str.values[i] = obj.toStringEscapePaths()
+            }
+        }
+        str.toString()
     }
 
 
