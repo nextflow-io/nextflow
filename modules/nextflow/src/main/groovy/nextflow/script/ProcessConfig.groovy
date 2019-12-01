@@ -556,7 +556,9 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         // note: check that is a String type to avoid to force
         // the evaluation of GString object to a string
         if( obj instanceof String && obj == '-' ) {
-            new StdOutParam(this).bind(obj)
+            new StdOutParam(this)
+                    .setOptions(opts)
+                    .bind(obj)
         }
         else {
             new FileOutParam(this)
@@ -579,6 +581,12 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         new TupleOutParam(this)
                 .setOptions(opts)
                 .bind(obj)
+    }
+
+    OutParam _out_stdout( Map opts ) {
+        new StdOutParam(this)
+                .setOptions(opts)
+                .bind('-')
     }
 
     OutParam _out_stdout( obj = null ) {

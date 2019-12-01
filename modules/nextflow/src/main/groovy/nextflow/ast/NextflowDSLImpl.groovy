@@ -846,7 +846,7 @@ class NextflowDSLImpl implements ASTTransformation {
         protected void fixOutEmitOption(MethodCallExpression call) {
             List<Expression> args = isTupleX(call.arguments)?.expressions
             if( !args ) return
-            if( args.size()<2 ) return
+            if( args.size()<2 && (args.size()!=1 || call.methodAsString!='_out_stdout')) return
              MapExpression map = isMapX(args[0])
             if( !map ) return
             for( int i=0; i<map.mapEntryExpressions.size(); i++ ) {
