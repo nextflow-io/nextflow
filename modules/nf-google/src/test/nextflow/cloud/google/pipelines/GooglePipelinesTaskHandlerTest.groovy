@@ -15,8 +15,6 @@
  */
 package nextflow.cloud.google.pipelines
 
-import spock.lang.Shared
-
 import java.nio.file.Paths
 
 import com.google.api.services.genomics.v2alpha1.model.Event
@@ -24,12 +22,18 @@ import com.google.api.services.genomics.v2alpha1.model.Metadata
 import com.google.api.services.genomics.v2alpha1.model.Operation
 import nextflow.Session
 import nextflow.cloud.google.GoogleSpecification
+import nextflow.cloud.types.PriceModel
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.executor.Executor
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskId
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.script.BaseScript
+import nextflow.script.ProcessConfig
 import nextflow.util.CacheHelper
+import spock.lang.Shared
 
 class GooglePipelinesTaskHandlerTest extends GoogleSpecification {
 
@@ -352,6 +356,33 @@ class GooglePipelinesTaskHandlerTest extends GoogleSpecification {
         then:
         events == [e2, e3]
 
+    }
+
+    def 'should create trace record'() {
+        given:
+        def exec = Mock(Executor) { getName() >> 'google-pipelines' }
+        def processor = Mock(TaskProcessor)
+        processor.getExecutor() >> exec
+        processor.getName() >> 'foo'
+        processor.getConfig() >> new ProcessConfig(Mock(BaseScript))
+        def task = Mock(TaskRun)
+        task.getProcessor() >> processor
+        task.getConfig() >> Mock(TaskConfig)
+        and:
+        def handler = Spy(GooglePipelinesTaskHandler)
+        handler.task = task
+        handler.pipelineId = 'xyz-123'
+        handler.machineType = 'm1.large'
+        handler.pipelineConfiguration = new GooglePipelinesConfiguration(zone: ['eu-east-1'], preemptible: true)
+
+        when:
+        def record = handler.getTraceRecord()
+        then:
+        record.get('native_id') == 'xyz-123'
+        record.getExecutorName() == 'google-pipelines'
+        record.machineInfo.type == 'm1.large'
+        record.machineInfo.zone == 'eu-east-1'
+        record.machineInfo.priceModel == PriceModel.spot
     }
 
 }
