@@ -775,7 +775,7 @@ class Session implements ISession {
     }
 
     @PackageScope void checkConfig() {
-        final names = ScriptMeta.current().getProcessNames()
+        final names = ScriptMeta.allProcessNames()
         validateConfig(names)
     }
 
