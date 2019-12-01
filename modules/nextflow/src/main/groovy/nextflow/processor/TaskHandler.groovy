@@ -173,6 +173,7 @@ abstract class TaskHandler {
         record.disk = task.config.getDisk()?.toBytes()
         record.time = task.config.getTime()?.toMillis()
         record.env = task.getEnvironmentStr()
+        record.executorName = task.processor.executor.getName()
 
         if( isCompleted() ) {
             record.error_action = task.errorAction?.toString()

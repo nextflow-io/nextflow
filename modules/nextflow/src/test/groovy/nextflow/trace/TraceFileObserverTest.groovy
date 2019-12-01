@@ -18,6 +18,7 @@ package nextflow.trace
 import java.nio.file.Files
 
 import nextflow.Session
+import nextflow.executor.Executor
 import nextflow.executor.NopeTaskHandler
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskId
@@ -99,6 +100,7 @@ class TraceFileObserverTest extends Specification {
         task.processor = Mock(TaskProcessor)
         task.processor.getSession() >> new Session()
         task.processor.getName() >> 'x'
+        task.processor.getExecutor() >> Mock(Executor)
         task.processor.getProcessEnvironment() >> [:]
 
         def handler = new NopeTaskHandler(task)

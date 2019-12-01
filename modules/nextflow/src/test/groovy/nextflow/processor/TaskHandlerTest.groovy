@@ -17,6 +17,7 @@
 package nextflow.processor
 
 import nextflow.Session
+import nextflow.executor.Executor
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
@@ -55,6 +56,7 @@ class TaskHandlerTest extends Specification {
         task.processor = Mock(TaskProcessor)
         task.processor.getSession() >> new Session()
         task.processor.getName() >> 'TheProcessName'
+        task.processor.getExecutor() >> Mock(Executor)
         task.processor.getProcessEnvironment() >> [FOO:'hola', BAR: 'mundo', AWS_SECRET: '12345']
         task.context = new TaskContext(Mock(Script), [:], 'none')
 
