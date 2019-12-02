@@ -223,6 +223,8 @@ class TowerClient implements TraceObserver {
         this.workflowId = ret.workflowId
         if( !workflowId )
             throw new AbortOperationException("Invalid Tower response")
+        if( ret.message )
+            log.warn(ret.message.toString())
     }
 
     protected Map makeInitRequest(Session session) {
