@@ -71,7 +71,7 @@ class OperatorEx implements DelegatingPlugin {
 
     static {
         OPERATOR_NAMES = getDeclaredExtensionMethods0()
-        log.debug "Dataflow extension methods: ${OPERATOR_NAMES.sort().join(',')}"
+        log.trace "Dataflow extension methods: ${OPERATOR_NAMES.sort().join(',')}"
     }
 
     @CompileStatic
