@@ -26,7 +26,7 @@ import test.OutputCapture
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ForkOpTest extends Dsl2Spec {
+class MultiMapOpTest extends Dsl2Spec {
 
     @Rule
     OutputCapture capture = new OutputCapture()
@@ -37,7 +37,7 @@ class ForkOpTest extends Dsl2Spec {
         def result = dsl_eval('''   
             Channel
                 .from(0,1,2)
-                .fork {
+                .multiMap {
                         foo: it+1
                         bar: it*it+2
                         baz: 3
@@ -69,7 +69,7 @@ class ForkOpTest extends Dsl2Spec {
         def result = dsl_eval('''   
             Channel
                 .from(0,1,2)
-                .fork { p ->
+                .multiMap { p ->
                         foo: p+1
                         bar: p*p+2
                         baz: p-1
@@ -98,12 +98,12 @@ class ForkOpTest extends Dsl2Spec {
     def 'should pass criteria as argument' () {
         when:
         dsl_eval('''   
-            criteria = forkCriteria { 
+            criteria = multiMapCriteria { 
                 foo: it
                 bar: it*it
             }
 
-            ch1 = Channel.from(1,2,3).fork(criteria)  
+            ch1 = Channel.from(1,2,3).multiMap(criteria)  
             
             ch1.foo.view { "foo:$it" }
             ch1.bar.view { "bar:$it" }

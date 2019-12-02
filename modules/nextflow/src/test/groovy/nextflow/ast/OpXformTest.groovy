@@ -20,7 +20,7 @@ import spock.lang.Specification
 
 import nextflow.script.TokenBranchDef
 import nextflow.script.TokenBranchChoice
-import nextflow.script.TokenForkDef
+import nextflow.script.TokenMultiMapDef
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -49,7 +49,7 @@ class OpXformTest extends Specification {
         return (TokenBranchDef)result
     }
 
-    private TokenForkDef eval_fork(String stmt) {
+    private TokenMultiMapDef eval_multiMap(String stmt) {
 
         def config = new CompilerConfiguration()
         config.addCompilationCustomizers( new ASTTransformationCustomizer(OpXform))
@@ -57,14 +57,14 @@ class OpXformTest extends Specification {
         def shell = new GroovyShell(config)
         def result = shell.evaluate("""
         class OpTest {
-            def fork(Closure c) { c.call() }
+            def multiMap(Closure c) { c.call() }
         }
         
-        new OpTest().fork ( $stmt )
+        new OpTest().multiMap ( $stmt )
 
         """)
 
-        return (TokenForkDef)result
+        return (TokenMultiMapDef)result
     }
 
     def 'should transform basic switch' () {
@@ -162,7 +162,7 @@ class OpXformTest extends Specification {
 
     def 'should parse fork block' () {
         when:
-        def result = eval_fork('''
+        def result = eval_multiMap('''
             { it -> 
                 foo:
                 it+1
@@ -182,7 +182,7 @@ class OpXformTest extends Specification {
 
     def 'should parse fork multi-block' () {
         when:
-        def result = eval_fork('''
+        def result = eval_multiMap('''
             { it -> 
                 alpha:
                 beta:
@@ -202,7 +202,7 @@ class OpXformTest extends Specification {
 
     def 'should parse fork long ending' () {
         when:
-        def result = eval_fork('''
+        def result = eval_multiMap('''
             { it -> 
                 alpha:
                 it+1
@@ -220,7 +220,7 @@ class OpXformTest extends Specification {
 
     def 'should parse empty fork' () {
         when:
-        eval_fork('''
+        eval_multiMap('''
             { it -> it+1 }
         ''')
 
