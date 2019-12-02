@@ -21,20 +21,21 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.script.ChannelOut
-import nextflow.script.TokenForkDef
+import nextflow.script.TokenMultiMapDef
 /**
+ * Implements multi-map operator
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class ForkOp {
+class MultiMapOp {
 
     private DataflowReadChannel source
-    private TokenForkDef forkDef
+    private TokenMultiMapDef forkDef
     private Map<String, DataflowWriteChannel> targets = new LinkedHashMap<>(10)
     private ChannelOut output
 
-    ForkOp(DataflowReadChannel source, Closure<TokenForkDef> action) {
+    MultiMapOp(DataflowReadChannel source, Closure<TokenMultiMapDef> action) {
         this.source = source
         this.forkDef = action.call()
 
@@ -59,7 +60,7 @@ class ForkOp {
         }
     }
 
-    ForkOp apply() {
+    MultiMapOp apply() {
         def events = new HashMap<String,Closure>(2)
         events.put('onNext', this.&doNext)
         events.put('onComplete', this.&doComplete)

@@ -20,7 +20,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.script.TokenBranchChoice
 import nextflow.script.TokenBranchDef
-import nextflow.script.TokenForkDef
+import nextflow.script.TokenMultiMapDef
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassCodeExpressionTransformer
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport
@@ -75,9 +75,13 @@ class OpXformImpl implements ASTTransformation {
 
     static final public String BRANCH_CRITERIA_FUN = 'branchCriteria'
 
-    static final public String FORK_METHOD_NAME = 'fork'
+    static final public String MULTIMAP_METHOD_NAME = 'multiMap'
 
-    static final public String FORK_CRITERIA_FUN = 'forkCriteria'
+    static final public String MULTIMAP_CRITERIA_FUN = 'multiMapCriteria'
+
+    @Deprecated static final public String FORK_METHOD_NAME = 'fork'
+
+    @Deprecated static final public String FORK_CRITERIA_FUN = 'forkCriteria'
 
     SourceUnit unit
 
@@ -259,7 +263,7 @@ class OpXformImpl implements ASTTransformation {
         }
     }
 
-    class ForkTransformer {
+    class MultiMapTransformer {
         private MethodCallExpression method
         private ClosureExpression body
         private BlockStatement code
@@ -267,7 +271,7 @@ class OpXformImpl implements ASTTransformation {
         private Set<String> vars = new LinkedHashSet<>(10)
         private Set<String> allLabels = new LinkedHashSet<>(10)
 
-        ForkTransformer(MethodCallExpression method, ClosureExpression body) {
+        MultiMapTransformer(MethodCallExpression method, ClosureExpression body) {
             this.method = method
             this.body = body
             this.code = isBlockStmt(body.code)
@@ -317,7 +321,7 @@ class OpXformImpl implements ASTTransformation {
 
             // finally create a new closure with all the implementation code
             final main = closureX(body.parameters, block(scope,impl))
-            final result = createX(TokenForkDef, main, GeneralUtils.list2args(new ArrayList(allLabels)))
+            final result = createX(TokenMultiMapDef, main, GeneralUtils.list2args(new ArrayList(allLabels)))
 
             // create the implementation closure
             final closure = new ClosureExpression(null, block(scope, stmt(result)))
@@ -371,16 +375,25 @@ class OpXformImpl implements ASTTransformation {
         return null
     }
 
-    protected ClosureExpression isForkOpCall(Expression expr) {
+    protected ClosureExpression isMultiMapOpCall(Expression expr) {
         final m = ASTHelpers.isMethodCallX(expr)
         if( m ) {
             final name = m.methodAsString
             final args = isArgsX(m.arguments)
             final ClosureExpression ret = args && args.size()>0 ? isClosureX(args.last()) : null
-            if( name==FORK_METHOD_NAME && args.size()==1 )
+            if( name==MULTIMAP_METHOD_NAME && args.size()==1 )
                 return ret
-            if( name==FORK_CRITERIA_FUN && args.size()==1 && m.objectExpression.text=='this')
+            if( name==MULTIMAP_CRITERIA_FUN && args.size()==1 && m.objectExpression.text=='this')
                 return ret
+            if( name==FORK_METHOD_NAME && args.size()==1 ) {
+                log.debug "Operator `fork` has been renamed to `multiMap`"
+                return ret
+            }
+            if( name==FORK_CRITERIA_FUN && args.size()==1 && m.objectExpression.text=='this') {
+                log.warn "Function `forkCriteria` has been renamed to `multiMapCriteria`"
+                return ret
+            }
+
         }
         return null
     }
@@ -404,8 +417,8 @@ class OpXformImpl implements ASTTransformation {
                 if( (body=isBranchOpCall(expr)) ) {
                     return new BranchTransformer(expr as MethodCallExpression, body).apply()
                 }
-                else if( (body=isForkOpCall(expr)) ) {
-                    return new ForkTransformer(expr as MethodCallExpression, body).apply()
+                else if( (body=isMultiMapOpCall(expr)) ) {
+                    return new MultiMapTransformer(expr as MethodCallExpression, body).apply()
                 }
                 else if( expr instanceof ClosureExpression) {
                     visitClosureExpression(expr)
