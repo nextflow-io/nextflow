@@ -135,7 +135,7 @@ class WrFileCopyStrategy extends SimpleFileCopyStrategy {
     */
     private String wrPath( Path path, String mountLocation ) {
         if( getPathScheme(path) == 's3' ) {
-            if (path == workDir) {
+            if (path.equals(workDir)) {
                 return "$mountLocation/"
             }
             if (mountLocation == outputMountLocation) {
