@@ -50,8 +50,8 @@ class WrFileCopyStrategyTest extends Specification {
         script == '''\
             nxf_container_env() {
             cat << EOF
-            export ALPHA=\\"xx\\"
-            export BETA=\\"yy\\"
+            export ALPHA="xx"
+            export BETA="yy"
             EOF
             }
             '''.stripIndent()
@@ -541,8 +541,8 @@ class WrFileCopyStrategyTest extends Specification {
             nxf_container_env() {
             cat << EOF
             '''.stripIndent() + expectedScript.replace('$','\\$') + '''\
-            export ALPHA=\\"xx\\"
-            export BETA=\\"yy\\"
+            export ALPHA="xx"
+            export BETA="yy"
             EOF
             }
             '''.stripIndent()
