@@ -37,6 +37,7 @@ import groovyx.gpars.dataflow.operator.ControlMessage
 import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.dag.NodeMarker
 import nextflow.datasource.SraExplorer
+import nextflow.database.DBSql
 import nextflow.exception.AbortOperationException
 import nextflow.extension.CH
 import nextflow.extension.GroupTupleOp
@@ -608,4 +609,34 @@ class Channel  {
         fromPath0Future = future.exceptionally(Channel.&handlerException)
     }
 
+    static DataflowWriteChannel fromDBSql(query) {
+        fromDBSql( Collections.emptyMap(), query )
+    }
+
+    static DataflowWriteChannel fromDBSql(Map opts, query) {
+        fromDBSql(opts, query, null)
+    }
+
+    static DataflowWriteChannel fromDBSql(Map opts, query, Closure closure) {
+        //CheckHelper.checkParams('fromSRA', opts, SraExplorer.PARAMS)
+        query = query instanceof GString ? query.toString() : query
+	//place something to avoid SQL injection.
+	
+        def target = new DataflowQueue()
+        def sql = new DBSql(target, opts).setQuery(query)
+        if( NF.isDsl2() ) {
+            session.addIgniter { fromDBSql0(sql, closure) }
+        }
+        else {
+            fromDBSql0(sql, closure)
+        }
+
+        NodeMarker.addSourceNode('Channel.fromDBSql', target)
+        return target
+    }
+
+    static private void fromDBSql0(DBSql sql, Closure closure) {
+        def future = CompletableFuture.runAsync ({ sql.apply(closure==null ? { row -> row } : closure) } as Runnable)
+        fromPath0Future = future.exceptionally(Channel.&handlerException)
+    }
 }
