@@ -20,6 +20,7 @@ class DBSql {
     private columnCount = 0
     private List<String> columns = [] 
     private Closure metaclosure = { meta ->
+	columns = []
 	columnCount = meta.getColumnCount()
         for (int i = 1; i <= columnCount; i++) {
 	    columns << meta.getColumnLabel(i)
