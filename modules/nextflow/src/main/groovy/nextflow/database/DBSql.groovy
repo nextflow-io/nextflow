@@ -17,6 +17,14 @@ class DBSql {
     private Sql connection
     private boolean delayConnection = false
     private query
+    private columnCount = 0
+    private List<String> columns = [] 
+    private Closure metaclosure = { meta ->
+	columnCount = meta.getColumnCount()
+        for (int i = 1; i <= columnCount; i++) {
+	    columns << meta.getColumnLabel(i)
+	}
+    }
 
     protected void init(Map opts) {
         if( opts.dbUrl )
@@ -67,8 +75,12 @@ class DBSql {
     }
 
     protected void query0(Object query, Closure closure) {
-        connection.eachRow(query) { row ->
-            target.bind(closure.call(row))
+        connection.eachRow(query, metaclosure) { row ->
+	    Map<String, Object> lhm = new LinkedHashMap<String, Object>(columnCount, 1);
+	    for (int i = 1; i <= columnCount; i++) {
+		lhm.put(columns.get(i-1), row.getObject(i));
+	    }
+            target.bind(closure.call(lhm))
         }
     }
 }
