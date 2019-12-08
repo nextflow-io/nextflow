@@ -16,6 +16,9 @@
 
 package nextflow.file
 
+import static nextflow.Channel.*
+import static nextflow.file.FileHelper.*
+
 import java.nio.file.FileSystem
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -34,10 +37,6 @@ import nextflow.extension.CH
 import nextflow.util.CustomThreadFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import static nextflow.Channel.STOP
-import static nextflow.file.FileHelper.fileSystemForScheme
-import static nextflow.file.FileHelper.isGlobAllowed
-import static nextflow.file.FileHelper.visitFiles
 /**
  * Implements the logic for {@code Channel.fromPath} and {@code Channel.fromFilePairs}
  * factory methods
@@ -54,8 +53,6 @@ class PathVisitor {
     Map opts
 
     def bindPayload
-
-    boolean forcePattern
 
     DataflowWriteChannel apply(Object filePattern) {
         if( opts == null )
@@ -85,13 +82,29 @@ class PathVisitor {
         pathImpl( 'regex', splitter.parent, splitter.fileName, fs )
     }
 
+    protected void emit0(Path file) {
+        if( bindPayload == null ) {
+            target.bind(file)
+        }
+        else {
+            def pair = new ArrayList<>(2)
+            pair[0] = file
+            pair[1] = bindPayload
+            target.bind(pair)
+        }
+    }
+
+    protected void close0() {
+        if( closeChannelOnComplete )
+            target.bind(STOP)
+    }
 
     private void applyGlobPattern0(Path filePattern) {
 
-        final glob = opts?.containsKey('glob') ? opts.glob as boolean : isGlobAllowed(filePattern)
+        final glob = opts?.containsKey('glob') ? opts.glob as boolean : true
         if( !glob ) {
-            target << FileHelper.checkIfExists(filePattern, opts)
-            if( closeChannelOnComplete ) target << STOP
+            emit0(checkIfExists(filePattern, opts))
+            close0()
             return
         }
 
@@ -99,11 +112,14 @@ class PathVisitor {
         final path = filePattern.toString()
         final splitter = FilePatternSplitter.glob().parse(path)
 
-        if( !splitter.isPattern() && !forcePattern ) {
+        if( !splitter.isPattern()  ) {
             final result = fs.getPath( splitter.strip(path) )
-            target << FileHelper.checkIfExists(result, opts)
-            if( closeChannelOnComplete ) target << STOP
+            emit0(checkIfExists(result, opts))
+            close0()
             return
+        }
+        else if( !isGlobAllowed(filePattern) ) {
+            throw new IllegalArgumentException("Glob pattern not allowed for files with scheme: ${filePattern.scheme}")
         }
 
         final folder = splitter.parent
@@ -142,15 +158,7 @@ class PathVisitor {
         try {
             visitFiles(opts, path, pattern) { Path file ->
                 count++
-                if( bindPayload == null )
-                    target.bind(file)
-
-                else {
-                    def pair = new ArrayList<>(2)
-                    pair[0] = file
-                    pair[1] = bindPayload
-                    target.bind(pair)
-                }
+                emit0(file)
             }
         }
         catch (NoSuchFileException e) {
@@ -159,8 +167,7 @@ class PathVisitor {
         finally {
             if( !count && opts.checkIfExists as boolean )
                 throw new IllegalArgumentException("No files match pattern `$pattern` at path: $folder")
-            if( closeChannelOnComplete )
-                target.bind(STOP)
+            close0()
         }
 
     }
