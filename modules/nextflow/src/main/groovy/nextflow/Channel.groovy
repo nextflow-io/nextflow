@@ -454,11 +454,11 @@ class Channel  {
             pumpFilePairs0(files,fromOpts,allPatterns)
 
         // -- map the files to a tuple like ( ID, filePath )
-        def mapper = { path, int index ->
+        final mapper = { path, int index ->
             def prefix = grouping[index].call(path)
             return [ prefix, path ]
         }
-        def mapChannel = (DataflowReadChannel)new MapOp(files, mapper)
+        final mapChannel = (DataflowReadChannel)new MapOp(files, mapper)
                             .setTarget(new DataflowQueue())
                             .apply()
 
@@ -499,7 +499,7 @@ class Channel  {
     static private void pumpFilePairs0(DataflowWriteChannel files, Map fromOpts, List allPatterns) {
         def future = CompletableFuture.completedFuture(null)
         for( int index=0; index<allPatterns.size(); index++ )  {
-            def factory = new PathVisitor(opts: fromOpts, target: files, forcePattern: true)
+            def factory = new PathVisitor(opts: fromOpts, target: files)
             factory.bindPayload = index
             factory.closeChannelOnComplete = index == allPatterns.size()-1
             future = factory.applyAsync( future, allPatterns.get(index) )
