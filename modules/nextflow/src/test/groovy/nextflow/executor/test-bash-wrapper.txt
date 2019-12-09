@@ -9,7 +9,12 @@ NXF_ENTRY=${1:-nxf_main}
 
 
 nxf_date() {
-    local ts=$(date +%s%3N); [[ $ts == *3N ]] && date +%s000 || echo $ts
+    local ts=$(date +%s%3N);
+    if [[ ${#ts} == 10 ]]; then echo ${ts}000
+    elif [[ $ts == *3N ]]; then echo ${ts/3N/000}
+    elif [[ ${#ts} == 13 ]]; then echo $ts
+    else echo "Unexpected timestamp value: $ts"; exit 1
+    fi
 }
 
 nxf_env() {

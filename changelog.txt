@@ -1,5 +1,36 @@
 NEXTFLOW CHANGE-LOG
 ===================
+19.11.0 - 2 Dec 2019 
+- Increase tasks.module to 255 [7332c606]
+- Fix Allow the output of process env variables #69 [1c1befc7]
+- Fix docs rounding issue #1350 [af824fc7]
+- Fix Join operation incorrectly represented in DAG #1346 [9d83ed51]
+- Fix Tiny typo in docs #1361
+- Fix lost trace/report/timeline file name
+- Fix invalid class exception [4308d6a4]
+- Fix Invalid dynamic resolution of stageIn/OutMode directive #1374
+- Fix No such property stackTraceDepth error #1387 [49450f67] [f5342e71]
+- Fix Singularity env variables are not accessible #1386 [036af4a6]
+- Fix PublishDir should not create dir when disabled  #1381
+- Fix Process hangs for non zero exit status #1344
+- Fix Output stdout does not support emit attribute #1373
+- Fix False positive warning when importing module #1349
+- Fix HTCondor queue status command #1353 [a1addc8f]
+- Fix Escape file names with blanks #1392
+- Fix broken docs tutorial #1366
+- Patch Duration unit cannot be a negative number #1384
+- Handle ProviderMismatchException in CacheHelper (#1382) [cc584368] [3523f174]
+- Introduce workflow take in place of get [DSL2] [e8cbbf08]
+- Disable ansi log when using dockerized run [86bc2ada]
+- Minor logging change [238b0e6c] [f5342e71] [b707882f] [ce97f073]
+- Add multiMap in place of fork operator [afd671c8]
+- Add Show Tower init response message as warning 
+- Add output path includeInputs docs [2ce7e861]
+- Add metrics fields check #1360 [5b7f42e9] [caf9f137]
+- Add console command to cli help #1347
+- Add OAR executor #1343
+- Add graphiviz to Docker image #1370
+- Removed unused property [9c65426a]
 
 19.10.0 - 21 Oct 2019
 - Merge Use a delete function that doesn't follow symlinks #1337

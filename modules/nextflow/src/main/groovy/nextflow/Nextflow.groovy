@@ -35,7 +35,7 @@ import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
 import nextflow.mail.Mailer
 import nextflow.script.TokenBranchDef
-import nextflow.script.TokenForkDef
+import nextflow.script.TokenMultiMapDef
 import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.util.ArrayTuple
@@ -432,11 +432,14 @@ class Nextflow {
      * Despite apparently is doing nothing, this method is needed as marker to apply the {@link OpXform} AST
      * transformation required to interpret the closure content as required for the branch evaluation.
      *
-     * @see OperatorEx#fork(DataflowReadChannel, Closure)
+     * @see OperatorEx#multiMap(groovyx.gpars.dataflow.DataflowReadChannel, groovy.lang.Closure) (DataflowReadChannel, Closure)
      * @see OpXformImpl
      *
      * @param closure
      * @return
      */
-    static Closure<TokenForkDef> forkCriteria(Closure<TokenBranchDef> closure) { closure }
+    static Closure<TokenMultiMapDef> multiMapCriteria(Closure<TokenBranchDef> closure) { closure }
+
+    @Deprecated
+    static Closure<TokenMultiMapDef> forkCriteria(Closure<TokenBranchDef> closure) { closure }
 }

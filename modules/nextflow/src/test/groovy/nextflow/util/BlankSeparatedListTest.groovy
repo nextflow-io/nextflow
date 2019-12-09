@@ -16,6 +16,8 @@
 
 package nextflow.util
 
+import java.nio.file.Paths
+
 import spock.lang.Specification
 
 /**
@@ -23,15 +25,6 @@ import spock.lang.Specification
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class BlankSeparatedListTest extends Specification {
-
-    def 'should return a blank separated list of values'() {
-
-        expect:
-        new BlankSeparatedList('a'..'z').toString() == ('a'..'z').join(' ')
-        "${new BlankSeparatedList('a'..'z')}" == ('a'..'z').join(' ')
-
-    }
-
 
     def 'should access entry with square brackets'() {
 
@@ -85,6 +78,17 @@ class BlankSeparatedListTest extends Specification {
         KryoHelper.deserialize(buffer) == list
         KryoHelper.deserialize(buffer) instanceof BlankSeparatedList
 
+    }
+
+    def 'should escape path names' () {
+        given:
+        def list = new BlankSeparatedList([
+                Paths.get('foo'),
+                Paths.get('bar'),
+                Paths.get('name with blanks') ])
+        
+        expect:
+        list.toStringEscapePaths() == 'foo bar name\\ with\\ blanks'
     }
 
 }

@@ -1562,7 +1562,7 @@ The forking operators are:
 
 * `branch`_
 * `choice`_
-* `fork`_
+* `multiMap`_
 * `into`_
 * `separate`_
 * `tap`_
@@ -1681,18 +1681,18 @@ the others into ``queue2``
 
 See also `branch`_ operator.
 
- .. _operator-fork:
+ .. _operator-multimap:
 
-fork
-----
+multiMap
+--------
 
 .. warning:: This is an experimental operator. Syntax and behavior may change.
-  Required version `19.08.0-edge` or later.
+  Required version `19.11.0-edge` or later.
 
-The ``fork`` operator allows you to forward the items emitted by a source channel to two
-or more output channels assigning each of them a separate value.
+The multiMap operator allows you to forward the items emitted by a source channel to two
+or more output channels mapping each input value as a separate element.
 
-The forking criteria is defined by specifying a :ref:`closure <script-closure>` that specify the
+The mapping criteria is defined by specifying a :ref:`closure <script-closure>` that specify the
 target channels labelled by a unique identifier followed by an expression statement that
 evaluates the value to be assigned to such channel.
 
@@ -1700,7 +1700,7 @@ For example::
 
     Channel
         .from(1,2,3,4)
-        .fork { it ->
+        .multiMap { it ->
             foo: it + 1
             bar: it * it
             }
@@ -1709,7 +1709,7 @@ For example::
      result.foo.view { "foo $it" }
      result.bar.view { "bar $it" }
 
-It shows::
+It prints::
 
     foo 2
     foo 3
@@ -1727,25 +1727,26 @@ It shows::
 
    Channel
         .from(1,2,3)
-        .fork { it -> foo: bar: it }
+        .multiMap { it -> foo: bar: it }
         .set { result }
 
 As before creates two channels, however both of them receive the same source items.
 
 
-.. warning:: The fork evaluation closure must be specified inline, ie. it *cannot* be assigned to a
+.. warning::
+  The multi-map evaluation closure must be specified inline, ie. it *cannot* be assigned to a
   variable and passed as argument to the operator, how it can be done with other operators.
 
-To create a fork criteria as variable that can be passed as an argument to more than one
-``fork`` operator use the ``forkCriteria`` built-in method as shown below::
+To create a multi-map criteria as variable that can be passed as an argument to more than one
+``multiMap`` operator use the ``multiMapCriteria`` built-in method as shown below::
 
-    def criteria = forkCriteria {
-                    small: it < 10
-                    large: it > 10
+    def criteria = multiMapCriteria {
+                      small: it < 10
+                      large: it > 10
                     }
 
-    Channel.from(1,2,30).fork(criteria).set { ch1 }
-    Channel.from(10,20,1).fork(criteria).set { ch2 }
+    Channel.from(1,2,30).multiMap(criteria).set { ch1 }
+    Channel.from(10,20,1).multiMap(criteria).set { ch2 }
 
 
 .. _operator-into:
@@ -1850,7 +1851,7 @@ See also `into`_ and `separate`_ operators.
 separate
 --------
 
-.. warning:: The `separate` operator has been deprecated. Use `fork`_ instead.
+.. warning:: The `separate` operator has been deprecated. Use `multiMap`_ instead.
 
 The ``separate`` operator lets you copy the items emitted by the source channel into multiple 
 channels, which each of these can receive a `separate` version of the same item. 
@@ -1935,7 +1936,7 @@ The output will look like the following fragment::
 
 
 
-See also: `fork`_, `into`_, `choice`_ and `map`_ operators.
+See also: `multiMap`_, `into`_, `choice`_ and `map`_ operators.
 
 
 Maths operators

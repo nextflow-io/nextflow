@@ -60,6 +60,11 @@ Read more [here](https://andrey.nering.com.br/2016/git-submodules-vs-subtrees/).
     git diff stash
     git diff stash@{1} [other]
 
+## Misc 
+
+Find a commit in any branch introducing a change
+
+    git log -S <whatever> --source --all
 
 ## GPG keys 
 

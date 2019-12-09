@@ -141,7 +141,8 @@ nxf_trace_linux() {
     local cpu_time0=$(2> /dev/null < /proc/$pid/stat awk '{printf "%.0f", ($16+$17)*10 }' || echo -n 'X')
     local io_stat0=($(2> /dev/null < /proc/$pid/io sed 's/^.*:\s*//' | head -n 6 | tr '\n' ' ' || echo -n '0 0 0 0 0 0'))
     local start_millis=$(nxf_date)
-
+    trap 'kill $mem_proc' ERR
+    
     /bin/bash -ue {{folder}}/.command.sh &
     local task=$!
 
@@ -190,7 +191,12 @@ nxf_trace() {
 }
 
 nxf_date() {
-    local ts=$(date +%s%3N); [[ $ts == *3N ]] && date +%s000 || echo $ts
+    local ts=$(date +%s%3N);
+    if [[ ${#ts} == 10 ]]; then echo ${ts}000
+    elif [[ $ts == *3N ]]; then echo ${ts/3N/000}
+    elif [[ ${#ts} == 13 ]]; then echo $ts
+    else echo "Unexpected timestamp value: $ts"; exit 1
+    fi
 }
 
 nxf_env() {

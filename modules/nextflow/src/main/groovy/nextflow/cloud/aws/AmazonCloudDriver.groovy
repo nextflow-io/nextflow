@@ -16,6 +16,10 @@
 
 package nextflow.cloud.aws
 
+import com.amazonaws.auth.AWSCredentials
+import com.amazonaws.auth.AWSStaticCredentialsProvider
+import com.amazonaws.services.ecs.AmazonECS
+import com.amazonaws.services.ecs.AmazonECSClientBuilder
 import nextflow.cloud.CloudScripts
 
 import static nextflow.cloud.CloudConst.TAG_CLUSTER_NAME
@@ -272,6 +276,36 @@ class AmazonCloudDriver implements CloudDriver {
 
         return result
     }
+
+    @Memoized
+    AmazonECS getEcsClient() {
+
+        final clientBuilder = AmazonECSClientBuilder .standard()
+        if( region )
+            clientBuilder.withRegion(region)
+
+        final credentials = getCredentialsProvider0()
+        if( credentials )
+            clientBuilder.withCredentials(credentials)
+
+        clientBuilder.build()
+    }
+
+    @CompileDynamic
+    protected AWSCredentials getCredentials0() {
+        if( !accessKey || !secretKey ) {
+            return null
+        }
+
+        return (sessionToken
+                ? new BasicSessionCredentials( accessKey, secretKey, sessionToken)
+                : new BasicAWSCredentials(accessKey,secretKey))
+    }
+
+    protected AWSStaticCredentialsProvider getCredentialsProvider0() {
+        new AWSStaticCredentialsProvider(getCredentials0())
+    }
+
 
     /**
      * Checks if the instance type specified in the configuration provide one or more ephemeral instance storage.

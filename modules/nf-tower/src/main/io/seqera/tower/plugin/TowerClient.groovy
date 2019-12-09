@@ -223,6 +223,8 @@ class TowerClient implements TraceObserver {
         this.workflowId = ret.workflowId
         if( !workflowId )
             throw new AbortOperationException("Invalid Tower response")
+        if( ret.message )
+            log.warn(ret.message.toString())
     }
 
     protected Map makeInitRequest(Session session) {
@@ -432,6 +434,12 @@ class TowerClient implements TraceObserver {
             // put the value
             record.put(name, fixTaskField(name,entry.value))
         }
+
+        // add transient fields
+        record.executor = trace.getExecutorName()
+        record.cloudZone = trace.getMachineInfo()?.zone
+        record.machineType = trace.getMachineInfo()?.type
+        record.priceModel = trace.getMachineInfo()?.priceModel?.toString()
 
         return record
     }

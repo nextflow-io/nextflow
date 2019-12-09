@@ -17,6 +17,7 @@
 package nextflow.processor
 
 import nextflow.script.params.EnvOutParam
+import nextflow.util.BlankSeparatedList
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -445,6 +446,33 @@ class TaskRunTest extends Specification {
         task.script == 'Hello world'
         task.source == 'Hello ${x}'
 
+    }
+
+    def 'should escape file names with blanks' () {
+        given:
+        def task = new TaskRun()
+        task.processor = [:] as TaskProcessor
+        task.processor.grengine = new Grengine()
+        def VARS = [
+                one: new TaskPath(Paths.get('a b.txt')),
+                many: new BlankSeparatedList([Paths.get('a.txt'), Paths.get('b b.txt')])
+        ]
+
+        /*
+         * plain task script
+         */
+        when:
+        task.context = new TaskContext(Mock(Script),VARS,'foo')
+        task.resolve(new BodyDef({-> "cat ${one}\nhead ${many}"}, 'cat ${one}\nhead ${many}', 'script'))
+        then:
+        task.script == '''
+                    cat a\\ b.txt
+                    head a.txt b\\ b.txt
+                    '''.stripIndent().trim()
+        task.source == '''
+                    cat ${one}
+                    head ${many}
+                    '''.stripIndent().trim()
     }
 
     def 'should parse a `shell` script' () {

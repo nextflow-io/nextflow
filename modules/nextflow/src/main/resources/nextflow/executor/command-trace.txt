@@ -105,8 +105,11 @@ nxf_mem_watch() {
         fi
         ## wait for termination message
         read -t $timeout -r DONE || true
-        ## make sure to not enter an infite loop
+        ## make sure to not enter an infinite loop
         [[ $DONE ]] && break
+        ## this likely could be removed since the process is killed
+        ## by the trap on error condition introduced by the patch for #1344
+        ## keeping as extra check to prevent hanging
         if [ ! -e /proc/$pid ]; then
             [ ! $STOP ] && STOP=$(nxf_date)
             [ $(($(nxf_date)-STOP)) -gt 10000 ] && break
@@ -161,7 +164,9 @@ nxf_trace_linux() {
     local cpu_time0=$(2> /dev/null < /proc/$pid/stat awk '{printf "%.0f", ($16+$17)*10 }' || echo -n 'X')
     local io_stat0=($(2> /dev/null < /proc/$pid/io sed 's/^.*:\s*//' | head -n 6 | tr '\n' ' ' || echo -n '0 0 0 0 0 0'))
     local start_millis=$(nxf_date)
-
+    ## capture error and kill mem watcher
+    trap 'kill $mem_proc' ERR
+    
     ## run task script
     {{trace_cmd}} &
     local task=$!
@@ -197,7 +202,7 @@ nxf_trace_linux() {
     echo "read_bytes=${io_stat1[4]}"   >> $trace_file
     echo "write_bytes=${io_stat1[5]}"  >> $trace_file
 
-    ## join mem watcher
+    ## join nxf_mem_watch
     echo 'DONE' >&10
     wait $mem_proc 2>/dev/null || true
     ## Bash prior 4.4 wait on a process substitution returns an error

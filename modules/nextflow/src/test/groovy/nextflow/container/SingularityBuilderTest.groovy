@@ -124,5 +124,6 @@ class SingularityBuilderTest extends Specification {
         builder.makeEnv('X=1').toString() == 'SINGULARITYENV_X=1'
         builder.makeEnv([VAR_X:1, VAR_Y: 2]).toString() == 'SINGULARITYENV_VAR_X="1" SINGULARITYENV_VAR_Y="2"'
         builder.makeEnv('BAR').toString() == '${BAR:+SINGULARITYENV_BAR="$BAR"}'
+        builder.makeEnv([SINGULARITY_BIND: 'foo', SINGULARITYENV_FOO: 'x', BAR: 'y']).toString() == 'SINGULARITY_BIND="foo" SINGULARITYENV_FOO="x" SINGULARITYENV_BAR="y"'
     }
 }

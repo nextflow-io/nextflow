@@ -276,7 +276,7 @@ Create a ``nextflow.config`` file in the project root directory. The config must
 
 * Google Pipelines as Nextflow executor i.e. ``process.executor = 'google-pipelines'``.
 * The Docker container images to be used to run pipeline tasks e.g. ``process.container = 'biocontainers/salmon:0.8.2--1'``.
-* The Google Cloud `project` to run in e.g. ``google.project = 'rare-lattice-222412'``.
+* The Google Cloud `project` ID to run in e.g. ``google.project = 'rare-lattice-222412'``.
 * The Google Cloud `region` or `zone`. You need to specify either one, **not** both. Multiple regions or zones can be
   specified by separating them with a comma e.g. ``google.zone = 'us-central1-f,us-central-1-b'``.
 
@@ -292,6 +292,8 @@ Example::
         zone = 'europe-west1-b'
     }
 
+
+.. warning:: Make sure to specify in the above setting the project ID not the project name.
 
 .. Note:: A container image must be specified to deploy the process execution. You can use a different Docker image for
   each process using one or more :ref:`config-process-selectors`. 

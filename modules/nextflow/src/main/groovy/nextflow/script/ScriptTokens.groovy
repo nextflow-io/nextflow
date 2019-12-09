@@ -167,7 +167,7 @@ class TokenBranchChoice {
 @EqualsAndHashCode
 @TupleConstructor
 @CompileStatic
-class TokenForkDef {
+class TokenMultiMapDef {
     Closure<Map> closure
     List<String> names
 }

@@ -1278,6 +1278,41 @@ class ParamsOutTest extends Specification {
         outs[4].name == null
         outs[4].channelEmitName == 'ch4'
         outs[4].resolve( [x:[y:'Ciao']] ) == 'Ciao'
+
+    }
+
+    def 'should define out with emit' () {
+        setup:
+        def text = '''
+            process hola {
+              output:
+              val x,     emit: ch0
+              env FOO,   emit: ch1
+              path '-',  emit: ch2
+              stdout emit: ch3    
+              /return/
+            }
+            '''
+
+        def binding = [:]
+        def process = parseAndReturnProcess(text, binding)
+
+        when:
+        def outs = process.config.getOutputs() as List<OutParam>
+        then:
+        outs[0].name == 'x'
+        outs[0].channelEmitName == 'ch0'
+        and:
+        outs[1].name == 'FOO'
+        outs[1].channelEmitName == 'ch1'
+        and:
+        outs[2] instanceof StdOutParam  // <-- note: declared as `path`, turned into a `stdout`
+        outs[2].name == '-'
+        outs[2].channelEmitName == 'ch2'
+        and:
+        outs[3] instanceof StdOutParam
+        outs[3].name == '-'
+        outs[3].channelEmitName == 'ch3'
     }
 
     def 'should define with paths' () {
@@ -1316,7 +1351,7 @@ class ParamsOutTest extends Specification {
               output:
                 tuple val(x), val(y),   emit: ch1
                 tuple path('foo'),      emit: ch2
-                tuple stdout,           emit: ch3
+                tuple stdout,env(bar),  emit: ch3
 
               /return/
             }
@@ -1331,14 +1366,21 @@ class ParamsOutTest extends Specification {
         then:
         outs[0].name == 'tupleoutparam<0>'
         outs[0].channelEmitName == 'ch1'
+        outs[0].inner[0] instanceof ValueOutParam
         outs[0].inner[0].name == 'x'
+        outs[0].inner[1] instanceof ValueOutParam
         outs[0].inner[1].name == 'y'
         and:
         outs[1].name == 'tupleoutparam<1>'
         outs[1].channelEmitName == 'ch2'
+        outs[1].inner[0] instanceof FileOutParam
         and:
         outs[2].name == 'tupleoutparam<2>'
         outs[2].channelEmitName == 'ch3'
+        outs[2].inner[0] instanceof StdOutParam
+        outs[2].inner[0].name == '-'
+        outs[2].inner[1] instanceof EnvOutParam
+        outs[2].inner[1].name == 'bar'
 
     }
 }

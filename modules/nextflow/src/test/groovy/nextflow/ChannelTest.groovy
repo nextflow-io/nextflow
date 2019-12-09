@@ -16,10 +16,6 @@
 
 package nextflow
 
-import org.junit.Rule
-import spock.lang.Specification
-import spock.lang.Timeout
-
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -27,6 +23,10 @@ import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
 import groovyx.gpars.dataflow.DataflowQueue
+import nextflow.file.FileHelper
+import org.junit.Rule
+import spock.lang.Specification
+import spock.lang.Timeout
 import test.TemporaryPath
 import test.TestHelper
 /**
@@ -838,6 +838,53 @@ class ChannelTest extends Specification {
         result.val == Channel.STOP
         cleanup:
         folder?.deleteDir()
+    }
+
+    def 'should return single file entries' () {
+        given:
+        def files = [
+                Paths.get('/data/SRR389222_sub1.fastq.gz'),
+                Paths.get('/data/SRR389222_sub2.fastq.gz'),
+                Paths.get('/data/SRR389222_sub3.fastq.gz')
+        ]
+        
+        when:
+        def result = Channel.fromFilePairs(files)
+        then:
+        result.val == ['SRR389222_sub1', [Paths.get('/data/SRR389222_sub1.fastq.gz')]]
+        result.val == ['SRR389222_sub2', [Paths.get('/data/SRR389222_sub2.fastq.gz')]]
+        result.val == ['SRR389222_sub3', [Paths.get('/data/SRR389222_sub3.fastq.gz')]]
+        result.val == Channel.STOP
+    }
+
+    def 'should check file pair exists' () {
+        given:
+        def session = new Session()
+        def file1 = Paths.get('/data/SRR389222_sub1.fastq.gz')
+        def file2 = Paths.get('/data/SRR389222_sub2.fastq.gz')
+
+        when:
+        Channel.fromFilePairs([file1, file2], checkIfExists: true)
+        Channel.fromPath0Future.get()
+        then:
+        session == Global.session
+        session.aborted
+        session.error instanceof NoSuchFileException
+        session.error.message == file1.toString()
+    }
+
+    def 'should return single ftp entries' () {
+        given:
+        def ftp1 = FileHelper.asPath('ftp://foo.com/data/SRR389222_sub1.fastq.gz')
+        def ftp2 = FileHelper.asPath('ftp://foo.com/data/SRR389222_sub2.fastq.gz')
+
+        when:
+        def result = Channel.fromFilePairs([ftp1, ftp2])
+        then:
+        result.val == ['SRR389222_sub1', [ftp1]]
+        result.val == ['SRR389222_sub2', [ftp2]]
+        result.val == Channel.STOP
+
     }
 
 }

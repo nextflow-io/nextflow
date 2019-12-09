@@ -49,6 +49,13 @@ class ScriptMeta {
         REGISTRY.get(script)
     }
 
+    static Set<String> allProcessNames() {
+        def result = new HashSet()
+        for( ScriptMeta entry : REGISTRY.values() )
+            result.addAll( entry.getProcessNames() )
+        return result
+    }
+
     static Map<String,Path> allScriptNames() {
         def result = new HashMap(REGISTRY.size())
         for( ScriptMeta entry : REGISTRY.values() )

@@ -26,6 +26,8 @@ import com.google.api.services.genomics.v2alpha1.model.Operation
 import groovy.json.JsonOutput
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.cloud.types.CloudMachineInfo
+import nextflow.cloud.types.PriceModel
 import nextflow.exception.ProcessSubmitException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.processor.TaskBean
@@ -352,7 +354,15 @@ class GooglePipelinesTaskHandler extends TaskHandler {
     TraceRecord getTraceRecord() {
         def result = super.getTraceRecord()
         result.put('native_id', pipelineId)
+        result.machineInfo = getMachineInfo()
         return result
+    }
+
+    private CloudMachineInfo getMachineInfo() {
+        // TODO the actual zone should be taken from the VM instance
+        final zone = pipelineConfiguration.zone?.get(0)
+        final price = pipelineConfiguration.preemptible ? PriceModel.spot : PriceModel.standard
+        new CloudMachineInfo(machineType, zone, price)
     }
 
     String prettyPrint(Operation op) {

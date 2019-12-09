@@ -115,7 +115,8 @@ class NextflowDSLImpl implements ASTTransformation {
     @CompileStatic
     static class DslCodeVisitor extends ClassCodeVisitorSupport {
 
-        final static String WORKFLOW_GET = 'get'
+        @Deprecated final static String WORKFLOW_GET = 'get'
+        final static String WORKFLOW_TAKE = 'take'
         final static String WORKFLOW_EMIT = 'emit'
         final static String WORKFLOW_MAIN = 'main'
         final static String WORKFLOW_PUBLISH = 'publish'
@@ -333,7 +334,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 return createAssignX(stat, body, type, uniqueNames)
             }
 
-            if( type == WORKFLOW_PUBLISH     ) {
+            if( type == WORKFLOW_PUBLISH ) {
                 return createAssignX(stat, body, type, uniqueNames)
             }
 
@@ -429,6 +430,7 @@ class NextflowDSLImpl implements ASTTransformation {
                         }
 
                     case WORKFLOW_GET:
+                    case WORKFLOW_TAKE:
                     case WORKFLOW_EMIT:
                         if( !(stm instanceof ExpressionStatement) ) {
                             syntaxError(stm, "Workflow malformed parameter definition")
@@ -844,7 +846,7 @@ class NextflowDSLImpl implements ASTTransformation {
         protected void fixOutEmitOption(MethodCallExpression call) {
             List<Expression> args = isTupleX(call.arguments)?.expressions
             if( !args ) return
-            if( args.size()<2 ) return
+            if( args.size()<2 && (args.size()!=1 || call.methodAsString!='_out_stdout')) return
              MapExpression map = isMapX(args[0])
             if( !map ) return
             for( int i=0; i<map.mapEntryExpressions.size(); i++ ) {

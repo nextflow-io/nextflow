@@ -45,7 +45,7 @@ import nextflow.NF
 import nextflow.Session
 import nextflow.script.ChannelOut
 import nextflow.script.TokenBranchDef
-import nextflow.script.TokenForkDef
+import nextflow.script.TokenMultiMapDef
 import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.splitter.TextSplitter
@@ -71,7 +71,7 @@ class OperatorEx implements DelegatingPlugin {
 
     static {
         OPERATOR_NAMES = getDeclaredExtensionMethods0()
-        log.debug "Dataflow extension methods: ${OPERATOR_NAMES.sort().join(',')}"
+        log.trace "Dataflow extension methods: ${OPERATOR_NAMES.sort().join(',')}"
     }
 
     @CompileStatic
@@ -1609,10 +1609,15 @@ class OperatorEx implements DelegatingPlugin {
                 .getOutput()
     }
 
-    ChannelOut fork(DataflowReadChannel source, Closure<TokenForkDef> action) {
-        new ForkOp(source, action)
+    ChannelOut multiMap(DataflowReadChannel source, Closure<TokenMultiMapDef> action) {
+        new MultiMapOp(source, action)
                 .apply()
                 .getOutput()
     }
 
+    @Deprecated
+    ChannelOut fork(DataflowReadChannel source, Closure<TokenMultiMapDef> action) {
+        log.warn "Operator `fork` has been renamed to `multiMap`"
+        multiMap(source, action)
+    }
 }

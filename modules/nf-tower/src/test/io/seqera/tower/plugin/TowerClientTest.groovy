@@ -12,23 +12,19 @@
 package io.seqera.tower.plugin
 
 import java.nio.file.Files
-import java.nio.file.Paths
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
 
 import nextflow.Session
+import nextflow.cloud.types.CloudMachineInfo
+import nextflow.cloud.types.PriceModel
 import nextflow.container.ContainerConfig
 import nextflow.exception.AbortOperationException
-import nextflow.executor.LocalExecutor
-import nextflow.executor.LocalTaskHandler
-import nextflow.processor.TaskConfig
-import nextflow.processor.TaskId
-import nextflow.processor.TaskProcessor
-import nextflow.processor.TaskRun
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
+import nextflow.trace.TraceRecord
 import nextflow.util.SimpleHttpClient
 import org.junit.Ignore
 import spock.lang.Specification
@@ -167,25 +163,23 @@ class TowerClientTest extends Specification {
         given:
         def URL = 'http://foo.com'
         def client = Mock(SimpleHttpClient)
-        def session = Mock(Session)
-        def proc = Mock(TaskProcessor) { getName() >> 'foo'; getProcessEnvironment() >> [:] }
         def observer = Spy(TowerClient)
-        observer.session = session
         observer.httpClient = client
 
-        def now = System.currentTimeMillis()
+        def nowTs = System.currentTimeMillis()
+        def submitTs = nowTs-2000
+        def startTs = nowTs-1000
 
-        def task = new TaskRun(
-                id: TaskId.of(10),
-                workDir: Paths.get('/work/dir'),
-                config: new TaskConfig(),
-                processor: proc
-        )
-        def handler = new LocalTaskHandler(task, Mock(LocalExecutor))
-        handler.submitTimeMillis = now-2000
-        handler.startTimeMillis = now-1000
-        handler.completeTimeMillis = now
-        def trace = handler.getTraceRecord()
+        def trace = new TraceRecord([
+                taskId: 10,
+                process: 'foo',
+                workdir: "/work/dir",
+                cpus: 1,
+                submit: submitTs,
+                start: startTs,
+                complete: nowTs ])
+        trace.executorName= 'batch'
+        trace.machineInfo = new CloudMachineInfo('m4.large', 'eu-west-1b', PriceModel.spot)
 
         when:
         def req = observer.makeTasksReq([trace])
@@ -194,8 +188,12 @@ class TowerClientTest extends Specification {
         req.tasks[0].process == 'foo'
         req.tasks[0].workdir == "/work/dir"
         req.tasks[0].cpus == 1
-        req.tasks[0].submit == OffsetDateTime.ofInstant(Instant.ofEpochMilli(handler.submitTimeMillis), ZoneId.systemDefault())
-        req.tasks[0].start == OffsetDateTime.ofInstant(Instant.ofEpochMilli(handler.startTimeMillis), ZoneId.systemDefault())
+        req.tasks[0].submit == OffsetDateTime.ofInstant(Instant.ofEpochMilli(submitTs), ZoneId.systemDefault())
+        req.tasks[0].start == OffsetDateTime.ofInstant(Instant.ofEpochMilli(startTs), ZoneId.systemDefault())
+        req.tasks[0].executor == 'batch'
+        req.tasks[0].machineType == 'm4.large'
+        req.tasks[0].cloudZone == 'eu-west-1b'
+        req.tasks[0].priceModel == 'spot'
 
         when:
         observer.sendHttpMessage(URL, req)

@@ -24,13 +24,13 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.cloud.types.CloudMachineInfo
 import nextflow.extension.Bolts
 import nextflow.processor.TaskId
 import nextflow.script.ProcessDef
 import nextflow.util.Duration
 import nextflow.util.KryoHelper
 import nextflow.util.MemoryUnit
-import static nextflow.util.SecretHelper.secureEnvString 
 /**
   * This object represent holds the information of a single process run,
   * its content is saved to a trace file line
@@ -48,7 +48,8 @@ class TraceRecord implements Serializable {
         this.store = new LinkedHashMap<>(FIELDS.size())
     }
 
-    private TraceRecord(Map store) {
+    @PackageScope
+    TraceRecord(Map store) {
         this.store = store
     }
 
@@ -113,6 +114,8 @@ class TraceRecord implements Serializable {
     @PackageScope
     static TimeZone TIMEZONE = null
 
+    transient private String executorName
+    transient private CloudMachineInfo machineInfo
 
     /**
      * Convert the given value to a string
@@ -577,6 +580,22 @@ class TraceRecord implements Serializable {
 
     boolean isCached() {
         store.status == 'CACHED'
+    }
+
+    String getExecutorName() {
+        return executorName
+    }
+
+    void setExecutorName(String value ) {
+        this.executorName = value
+    }
+
+    CloudMachineInfo getMachineInfo() {
+        return machineInfo
+    }
+
+    void setMachineInfo(CloudMachineInfo value) {
+        this.machineInfo = value
     }
 
 }

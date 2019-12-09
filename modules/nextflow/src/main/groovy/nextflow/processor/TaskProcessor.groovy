@@ -473,7 +473,7 @@ class TaskProcessor {
             maxForks = config.maxForks
             blocking = true
         }
-        log.debug "Creating operator > $name -- maxForks: $maxForks"
+        log.debug "Creating operator > $name -- maxForks: $maxForks; blocking: $blocking"
 
         /*
          * finally create the operator

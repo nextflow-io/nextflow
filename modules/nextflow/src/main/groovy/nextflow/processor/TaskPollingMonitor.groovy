@@ -419,12 +419,12 @@ class TaskPollingMonitor implements TaskMonitor {
 
             // dump this line every two minutes
             Throttle.after(dumpInterval) {
-                dumpPendingTasks()
+                dumpRunningQueue()
             }
         }
     }
 
-    protected void dumpPendingTasks() {
+    protected void dumpRunningQueue() {
 
         try {
             def pending = runningQueue.size()
@@ -434,7 +434,7 @@ class TaskPollingMonitor implements TaskMonitor {
             }
 
             def msg = []
-            msg << "!! executor $name > tasks to be completed: ${runningQueue.size()} -- pending tasks are shown below"
+            msg << "!! executor $name > tasks to be completed: ${runningQueue.size()} -- submitted tasks are shown below"
             // dump the first 10 tasks
             def i=0; def itr = runningQueue.iterator()
             while( i++<10 && itr.hasNext() )
