@@ -252,6 +252,9 @@ Read :ref:`Cloud configuration<config-cloud>` section to learn more about advanc
 Genomics Pipelines
 ==================
 
+.. warning::
+  The support for Google Pipelines API is deprecated. The `google-lifesciences`_ instead.
+
 `Genomics Pipelines <https://cloud.google.com/genomics/>`_ is a managed computing service that allows the execution of
 containerized workloads in the Google Cloud Platform infrastructure.
 
