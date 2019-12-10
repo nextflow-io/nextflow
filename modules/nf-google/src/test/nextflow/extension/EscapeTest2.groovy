@@ -16,36 +16,31 @@
 
 package nextflow.extension
 
-import spock.lang.Specification
-import spock.lang.Unroll
-
 import java.nio.file.Path
 
-import com.google.cloud.storage.contrib.nio.CloudStoragePath
+import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
+import nextflow.util.Escape
+import spock.lang.Specification
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class FilesExTest2 extends Specification {
+class EscapeTest2 extends Specification {
 
-    @Unroll
-    def 'should return uri string for #PATH' () {
 
-        when:
-        def path = PATH as Path
-        then:
-        path instanceof CloudStoragePath
-        println FilesEx.toUriString(path)
-        FilesEx.toUriString(path) == PATH
+    Path asPath(String bucket, String path) {
+        CloudStorageFileSystem.forBucket(bucket).getPath(path)
+    }
 
+
+    def 'should escape gs path'() {
+        expect:
+        Escape.uriPath(PATH) == EXPECTED
         where:
-        PATH                    | _
-        'gs://foo/bar'          | _
-        'gs://foo'              | _
-        'gs://foo/'             | _
-        'gs://foo/bar/baz'      | _
-        'gs://foo/bar/baz/'     | _
-        'gs://foo/bar - baz/'   | _
+        PATH                                | EXPECTED
+        asPath('foo','/work')   | 'gs://foo/work'
+        asPath('foo','/b a r')  | 'gs://foo/b\\ a\\ r'
+        asPath('f_o o','/bar')  | 'gs://f_o\\ o/bar'
     }
 }

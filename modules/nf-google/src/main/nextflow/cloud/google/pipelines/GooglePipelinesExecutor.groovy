@@ -40,6 +40,7 @@ import nextflow.util.ServiceName
  * @author Ólafur Haukur Flygenring <olafurh@wuxinextcode.com>
  */
 @Slf4j
+@Deprecated
 @CompileStatic
 @ServiceName('google-pipelines')
 @SupportedScriptTypes(ScriptType.SCRIPTLET)
