@@ -418,7 +418,11 @@ containerized workloads in the Google Cloud Platform infrastructure.
 Nextflow provides built-in support for Cloud Life Sciences API which allows the seamless deployment of a Nextflow pipeline
 in the cloud, offloading the process executions through the Google Cloud service.
 
-.. warning:: This API works well for coarse-grained workloads i.e. long running jobs. It's not suggested the use
+.. note::
+  This features requires Nextflow ``19.12.0-edge`` or later.
+
+.. warning::
+  This API works well for coarse-grained workloads i.e. long running jobs. It's not suggested the use
   this feature for pipelines spawning many short lived tasks.
 
 .. _google-lifesciences-config:
@@ -457,6 +461,20 @@ Example::
 
 .. Note:: A container image must be specified to deploy the process execution. You can use a different Docker image for
   each process using one or more :ref:`config-process-selectors`.
+
+The following configuration options are available:
+
+=================================== =================
+Name                                Description
+=================================== =================
+google.project                      The Google Project Id to use for the pipeline execution.
+google.region                       The Google *region* where the computation is executed. Multiple regions can be provided separating them by a comma. Do not specify if a zone is provided.
+google.zone                         The Google *zone* where the computation is executed. Multiple zones can be provided separating them by a comma. Do not specify if a region is provided.
+google.location                     The Google *location* where the job executions are deployed (default: the same as the region or the zone specified).
+google.lifeSciences.bootDiskSize    Set the size of the virtual machine boot disk e.g `50.GB` (default: none).
+google.lifeSciences.preemptible     When ``true`` enables the usage of *preemptible* virtual machines or ``false`` otherwise (default: ``true``)
+=================================== =================
+
 
 Process definition
 ------------------
@@ -548,10 +566,11 @@ Limitation
   by the service depending the chosen instance type.
 
 
+
 Troubleshooting
 ===============
 
-* Make sure to have enabled Compute Engine API, Genomics API and Cloud Storage Service in the
+* Make sure to have enabled Compute Engine API, Life Sciences API and Cloud Storage Service in the
   `APIs & Services Dashboard <https://console.cloud.google.com/apis/dashboard>`_ page.
 
 * Make sure to have enough compute resources to run your pipeline in your project
