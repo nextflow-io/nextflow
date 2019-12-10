@@ -60,3 +60,12 @@ $NXF_CMD run nextflow-io/rnaseq-nf -with-docker $OPTS -resume
 #
 echo aws batch tests
 ./await.sh bash awsbatch.sh
+
+#
+# Google Life Sciences
+#
+if [[ $GOOGLE_SECRET ]]; then
+  ./await.sh bash gls.sh
+else
+  echo "Google Life Science test skipped because GOOGLE_SECRET env var is missing"
+fi

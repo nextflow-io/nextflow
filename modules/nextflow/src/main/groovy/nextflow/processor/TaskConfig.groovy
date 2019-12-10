@@ -358,6 +358,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         return null
     }
 
+    String getMachineType() {
+        return get('machineType')
+    }
+
     /**
      * Get a closure guard condition and evaluate to a boolean result
      *

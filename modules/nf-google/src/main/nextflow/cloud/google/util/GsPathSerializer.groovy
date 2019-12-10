@@ -39,7 +39,7 @@ class GsPathSerializer extends Serializer<CloudStoragePath> implements Serialize
     @Override
     void write(Kryo kryo, Output output, CloudStoragePath target) {
         def path = target.toString()
-        if( !path.startsWith('/') )  // <-- it looks a bug in the google nio library, in some case the path return is not absolute
+        if( !path.startsWith('/') )  // <-- it looks a bug in the google nio library, in some case the path returned is not absolute
             path = '/' + path
         path = target.bucket() + path
         log.trace "Google CloudStoragePath serialisation > path=$path"

@@ -947,6 +947,21 @@ class BashWrapperBuilderTest extends Specification {
         builder.isBash('/bin/bash -eu')
         !builder.isBash('/bin/env perl')
 
+    }
 
+    def 'should get stage and unstage commands' () {
+
+        when:
+        def builder = newBashWrapperBuilder()
+        then:
+        builder.getStageCommand() == 'nxf_stage'
+        builder.getUnstageCommand() == 'nxf_unstage'
+
+        when:
+        def binding = builder.makeBinding()
+        then:
+        binding.stage_cmd == 'nxf_stage'
+        binding.unstage_cmd == 'nxf_unstage'
+        
     }
 }
