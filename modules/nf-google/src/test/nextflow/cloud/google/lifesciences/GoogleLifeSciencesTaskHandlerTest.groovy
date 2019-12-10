@@ -32,6 +32,7 @@ import nextflow.processor.TaskStatus
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
 import nextflow.util.CacheHelper
+import nextflow.util.MemoryUnit
 import spock.lang.Shared
 
 class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
@@ -145,6 +146,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
                     getZones() >> ['my-zone']
                     getRegions() >> ['my-region']
                     getPreemptible() >> true
+                    getBootDiskSize() >> MemoryUnit.of('20 GB')
                 }
             }
         }
@@ -180,6 +182,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         req.sharedMount.getPath() == '/work/dir'
         req.sharedMount.getDisk() == GoogleLifeSciencesTaskHandler.DEFAULT_DISK_NAME
         !req.sharedMount.getReadOnly()
+        req.bootDiskSizeGb == 20
     }
 
    

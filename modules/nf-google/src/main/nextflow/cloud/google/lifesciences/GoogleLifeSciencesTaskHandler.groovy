@@ -295,6 +295,7 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
         req.sharedMount = configureMount(DEFAULT_DISK_NAME, task.workDir.toString())
         req.accelerator = task.config.getAccelerator()
         req.location = executor.config.location
+        req.bootDiskSizeGb = executor.config.bootDiskSize?.toGiga() as Integer
         return req
     }
 
