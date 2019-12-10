@@ -16,6 +16,7 @@
 package nextflow.cloud.google.lifesciences
 
 import nextflow.exception.AbortOperationException
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 
 class GoogleLifeSciencesConfigTest extends Specification {
@@ -66,6 +67,7 @@ class GoogleLifeSciencesConfigTest extends Specification {
         config.location == 'eu-west1'
         config.preemptible
         !config.disableBinDir
+        config.bootDiskSize == null
     }
 
     def 'should config flags' () {
@@ -153,5 +155,13 @@ class GoogleLifeSciencesConfigTest extends Specification {
         and:
         err.message.startsWith('You can\'t specify both \'google.zone\' and \'google.region\' configuration parameters')
     }
+
+    def 'should config boot disk size' () {
+        when:
+        def config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [bootDiskSize: "10 GB"]]])
+        then:
+        config.bootDiskSize == MemoryUnit.of('10 GB')
+    }
+
 
 }

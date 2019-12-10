@@ -39,7 +39,6 @@ import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.executor.res.AcceleratorResource
 /**
  * Helper class for Google Pipelines.
  *
@@ -50,8 +49,8 @@ import nextflow.executor.res.AcceleratorResource
 @CompileStatic
 class GoogleLifeSciencesHelper {
 
-    private static final String SCOPE_CLOUD_PLATFORM = "https://www.googleapis.com/auth/cloud-platform"
-    private static final List<String> ENV_VAR_TO_INCLUDE = ["NXF_DEBUG"]
+    public static final String SCOPE_CLOUD_PLATFORM = "https://www.googleapis.com/auth/cloud-platform"
+    public static final List<String> ENV_VAR_TO_INCLUDE = ["NXF_DEBUG"]
 
     CloudLifeSciences client
     GoogleCredentials credentials
@@ -152,16 +151,33 @@ class GoogleLifeSciencesHelper {
     }
 
     protected Resources createResources(GoogleLifeSciencesSubmitRequest req) {
-        configureResources(
-                req.machineType,
-                req.zone,
-                req.region,
-                req.diskName,
-                req.diskSizeGb,
-                [SCOPE_CLOUD_PLATFORM],
-                req.preemptible,
-                req.accelerator
-        )
+        def disk = new Disk()
+        disk.setName(req.diskName)
+        disk.setSizeGb(req.diskSizeGb)
+
+        def serviceAccount = new ServiceAccount().setScopes( [SCOPE_CLOUD_PLATFORM] )
+
+        def vm = new VirtualMachine()
+                .setMachineType(req.machineType)
+                .setDisks([disk])
+                .setServiceAccount(serviceAccount)
+                .setPreemptible(req.preemptible)
+
+        if( req.bootDiskSizeGb ) {
+            vm.setBootDiskSizeGb(req.bootDiskSizeGb)
+        }
+
+        if( req.accelerator ) {
+            final acc = new Accelerator().setType(req.accelerator.type).setCount(req.accelerator.request)
+            final list = new ArrayList(1)
+            list.add(acc)
+            vm.setAccelerators(list)
+        }
+
+        new Resources()
+                .setZones(req.zone)
+                .setRegions(req.region)
+                .setVirtualMachine(vm)
     }
 
     protected Action createMainAction(GoogleLifeSciencesSubmitRequest req) {
@@ -189,35 +205,6 @@ class GoogleLifeSciencesHelper {
                 [ActionFlags.ALWAYS_RUN, ActionFlags.IGNORE_EXIT_STATUS])
     }
 
-
-    Resources configureResources(String machineType, List<String> zone, List<String> region, String diskName, Integer diskSizeGb, List<String> scopes, boolean preemptible, AcceleratorResource accelerator) {
-
-        def disk = new Disk()
-        disk.setName(diskName)
-        disk.setSizeGb(diskSizeGb)
-
-        def serviceAccount = new ServiceAccount()
-        if (scopes)
-            serviceAccount.setScopes(scopes)
-
-        def vm = new VirtualMachine()
-                .setMachineType(machineType)
-                .setDisks([disk])
-                .setServiceAccount(serviceAccount)
-                .setPreemptible(preemptible)
-
-        if( accelerator ) {
-            final acc = new Accelerator().setType(accelerator.type).setCount(accelerator.request)
-            final list = new ArrayList(1)
-            list.add(acc)
-            vm.setAccelerators(list)
-        }
-
-        new Resources()
-                .setZones(zone)
-                .setRegions(region)
-                .setVirtualMachine(vm)
-    }
 
     Operation checkOperationStatus(Operation operation) {
         try {

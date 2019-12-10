@@ -62,6 +62,8 @@ class GoogleLifeSciencesSubmitRequest implements GoogleLifeSciencesTaskDirWrangl
 
     Path workDir
 
+    Integer bootDiskSizeGb
+
 
     String getStagingScript() {
         String result = "set -x; "

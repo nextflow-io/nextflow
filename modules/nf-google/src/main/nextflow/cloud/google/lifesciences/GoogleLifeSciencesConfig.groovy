@@ -24,6 +24,8 @@ import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.AbortOperationException
+import nextflow.util.MemoryUnit
+
 /**
  * Helper class wrapping configuration required for Google Pipelines.
  *
@@ -41,6 +43,7 @@ class GoogleLifeSciencesConfig {
     Path remoteBinDir
     String location
     boolean disableBinDir
+    MemoryUnit bootDiskSize
 
     @Deprecated
     GoogleLifeSciencesConfig(String project, List<String> zone, List<String> region, Path remoteBinDir = null, boolean preemptible = false) {
@@ -90,9 +93,9 @@ class GoogleLifeSciencesConfig {
         /*
          * upload local binaries
          */
-        boolean disableBinDir = config.navigate('google.lifeSciences.disableRemoteBinDir',false)
-        def preemptible = config.navigate("google.lifeSciences.preemptible", true) as boolean
-
+        final boolean disableBinDir = config.navigate('google.lifeSciences.disableRemoteBinDir',false)
+        final preemptible = config.navigate("google.lifeSciences.preemptible", true) as boolean
+        final bootDiskSize = config.navigate('google.lifeSciences.bootDiskSize') as MemoryUnit
 
         def zones = (config.navigate("google.zone") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
         def regions = (config.navigate("google.region") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
@@ -104,7 +107,8 @@ class GoogleLifeSciencesConfig {
                 zones: zones,
                 location: location,
                 preemptible: preemptible,
-                disableBinDir: disableBinDir )
+                disableBinDir: disableBinDir,
+                bootDiskSize: bootDiskSize )
     }
 
 

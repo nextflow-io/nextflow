@@ -125,21 +125,22 @@ class GoogleLifeSciencesHelperTest extends Specification {
 
     def 'should configure resources correctly'() {
         given:
+        def SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
         def type = "testType"
-        def projectId = "testProject"
         def zone = ["testZone1","testZone2"]
         def region = ["testRegion1","testRegion2"]
         def diskName = "testDisk"
-        def scopes = ["scope1","scope2"]
         def preEmptible = true
         def acc = new AcceleratorResource(request: 4, type: 'nvidia-tesla-k80')
         def helper = new GoogleLifeSciencesHelper()
 
         when:
-        def resources1 = helper.configureResources(type,zone,null,diskName,100, scopes,preEmptible, null)
-        def resources2 = helper.configureResources(type,null,region,diskName,200,scopes,preEmptible, null)
-        def resources3 = helper.configureResources(type,zone,null,diskName, null, null, false, acc)
-
+        def resources1 = helper.createResources(new GoogleLifeSciencesSubmitRequest(
+                machineType:type,
+                zone:zone,
+                diskName: diskName,
+                diskSizeGb: 100,
+                preemptible: true))
         then:
         with(resources1) {
             getVirtualMachine().getMachineType() == type
@@ -147,32 +148,50 @@ class GoogleLifeSciencesHelperTest extends Specification {
             getRegions() == null
             getVirtualMachine().getDisks().get(0).getName() == diskName
             getVirtualMachine().getDisks().get(0).getSizeGb() == 100
-            getVirtualMachine().getServiceAccount().getScopes() == scopes
+            getVirtualMachine().getServiceAccount().getScopes() == SCOPES
             getVirtualMachine().getPreemptible() == preEmptible
             !getVirtualMachine().getAccelerators()
         }
 
+        when:
+        def resources2 = helper.createResources(new GoogleLifeSciencesSubmitRequest(
+                machineType:type,
+                region:region,
+                diskName:diskName,
+                diskSizeGb: 200,
+                preemptible: true))
+        then:
         with(resources2) {
             getVirtualMachine().getMachineType() == type
             getZones() == null
             getRegions() == region
             getVirtualMachine().getDisks().get(0).getName() == diskName
             getVirtualMachine().getDisks().get(0).getSizeGb() == 200
-            getVirtualMachine().getServiceAccount().getScopes() == scopes
+            getVirtualMachine().getServiceAccount().getScopes() == SCOPES
             getVirtualMachine().getPreemptible() == preEmptible
             !getVirtualMachine().getAccelerators()
         }
 
+        when:
+        def resources3 = helper.createResources( new GoogleLifeSciencesSubmitRequest(
+                    machineType:type,
+                    zone:zone,
+                    diskName:diskName,
+                    preemptible: false,
+                    accelerator: acc,
+                    bootDiskSizeGb: 75 ))
+        then:
         with(resources3) {
             getVirtualMachine().getMachineType() == type
             getZones() == zone
             getVirtualMachine().getDisks().get(0).getName() == diskName
+            getVirtualMachine().getServiceAccount().getScopes() == SCOPES
             !getVirtualMachine().getDisks().get(0).getSizeGb()
-            !getVirtualMachine().getServiceAccount().getScopes()
             !getVirtualMachine().getPreemptible()
             getVirtualMachine().getAccelerators().size()==1
             getVirtualMachine().getAccelerators()[0].getCount()==4
             getVirtualMachine().getAccelerators()[0].getType()=='nvidia-tesla-k80'
+            getVirtualMachine().getBootDiskSizeGb() == 75
         }
     }
 
@@ -221,39 +240,6 @@ class GoogleLifeSciencesHelperTest extends Specification {
         1 * mockClient.projects().locations().pipelines().run('projects/PRJ-X/locations/LOC-Y', request).execute() >> new Operation().setName("runOp")
 
         runOp.getName() == "runOp"
-    }
-
-    def 'should create a resource request' () {
-        given:
-        def helper = Spy(GoogleLifeSciencesHelper)
-        def req = Mock(GoogleLifeSciencesSubmitRequest)
-
-        when:
-        def res = helper.createResources(req)
-        then:
-        req.machineType >> 'n1-abc'
-        req.zone >> ['my-zone']
-        req.region >> ['my-region']
-        req.diskName >> 'my-disk'
-        req.diskSizeGb >> 500
-        req.preemptible >> true
-
-        1 * helper.configureResources(
-                'n1-abc',
-                ['my-zone'],
-                ['my-region'],
-                'my-disk',
-                500,
-                [GoogleLifeSciencesHelper.SCOPE_CLOUD_PLATFORM],
-                true,
-                null )
-
-        res.getZones() ==['my-zone']
-        res.getRegions() == ['my-region']
-        res.getVirtualMachine().getPreemptible()
-        res.getVirtualMachine().getMachineType() == 'n1-abc'
-        res.getVirtualMachine().getDisks()[0].getName() == 'my-disk'
-        res.getVirtualMachine().getDisks()[0].getSizeGb() == 500
     }
 
     def 'should create main action' () {
@@ -372,6 +358,7 @@ class GoogleLifeSciencesHelperTest extends Specification {
         1 * helper.createResources(req) >> res
         1 * helper.createPipeline([stage, main, unstage], res) >> pipeline
         1 * helper.runPipeline('PRJ-X','LOC-1', pipeline, [taskName: 'foo']) >> operation
+        and:
         result == operation
     }
 
