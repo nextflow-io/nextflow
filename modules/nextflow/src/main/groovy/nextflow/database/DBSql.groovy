@@ -8,6 +8,7 @@ import nextflow.Channel
 import nextflow.extension.CH
 
 @Slf4j
+@CompileStatic
 class DBSql {
     private DataflowWriteChannel target
     private String dbUrl
