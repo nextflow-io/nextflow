@@ -253,6 +253,10 @@ class FileHelper {
             return Paths.get(str)
         }
 
+        final result = FileSystemPathFactory.parse(str)
+        if( result )
+            return result
+
         asPath(toPathURI(str))
     }
 
