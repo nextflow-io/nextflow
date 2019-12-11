@@ -1686,7 +1686,7 @@ See also `branch`_ operator.
 multiMap
 --------
 
-.. warning:: This is an experimental operator. Syntax and behavior may change.
+.. note:: This is an experimental operator. Syntax and behavior may change.
   Required version `19.11.0-edge` or later.
 
 The multiMap operator allows you to forward the items emitted by a source channel to two
