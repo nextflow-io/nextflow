@@ -1,11 +1,15 @@
 package nextflow.database
 
 import groovy.util.logging.Slf4j
+import groovy.transform.CompileStatic
 import groovy.sql.Sql
+import java.sql.ResultSetMetaData
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.extension.CH
+import nextflow.Global
+import nextflow.Session
 
 @Slf4j
 @CompileStatic
@@ -17,10 +21,10 @@ class DBSql {
     private String dbDriver
     private Sql connection
     private boolean delayConnection = false
-    private query
-    private columnCount = 0
+    private String query
+    private int columnCount = 0
     private List<String> columns = [] 
-    private Closure metaclosure = { meta ->
+    private Closure metaclosure = { ResultSetMetaData meta ->
 	columns = []
 	columnCount = meta.getColumnCount()
         for (int i = 1; i <= columnCount; i++) {
@@ -47,12 +51,28 @@ class DBSql {
 
     DBSql(DataflowWriteChannel target, Map opts) {
         this.target = target
-        init(opts)
+	if (opts.datasource) {
+	    def session = Global.session as Session
+	    def String configPath = "datasources.${opts.datasource}"
+	    //def datasource = session.config.navigate("datasource.${opts.datasource}") //TODO better controls (build specific method
+	    // TODO create a dedicated method to validate configuration
+	    def Map datasource = [dbUrl: session.config.navigate("${configPath}.dbUrl") as String,
+				  dbUser: session.config.navigate("${configPath}.dbUser") as String,
+				  dbPassword: session.config.navigate("${configPath}.dbPassword") as String,
+				  dbDriver: session.config.navigate("${configPath}.dbDriver") as String]
+	    if (datasource){
+		init(datasource)
+	    } else {
+		throw new IllegalArgumentException("Not a valid datasource definition: ${opts.datasource}")
+	    }
+	} else {
+	    throw new IllegalArgumentException("Not enough information to establish a connection to the database")
+	}
         if (!delayConnection)
             connect()
     }
 
-    DBSql setQuery(query) {
+    DBSql setQuery(String query) {
         this.query = query
         return this
     }
@@ -76,7 +96,7 @@ class DBSql {
         return target
     }
 
-    protected void query0(Object query, Closure closure) {
+    protected void query0(String query, Closure closure) {
         connection.eachRow(query, metaclosure) { row ->
 	    Map<String, Object> lhm = new LinkedHashMap<String, Object>(columnCount, 1);
 	    for (int i = 1; i <= columnCount; i++) {
@@ -86,3 +106,4 @@ class DBSql {
         }
     }
 }
+

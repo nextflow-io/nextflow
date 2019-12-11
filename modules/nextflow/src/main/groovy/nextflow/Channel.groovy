@@ -619,11 +619,10 @@ class Channel  {
 
     static DataflowWriteChannel fromSql(Map opts, query, Closure closure) {
         //CheckHelper.checkParams('fromSRA', opts, SraExplorer.PARAMS)
-        query = query instanceof GString ? query.toString() : query
+        def String queryString = query instanceof GString ? query.toString() : query
 	//place something to avoid SQL injection.
-	
         def target = new DataflowQueue()
-        def sql = new DBSql(target, opts).setQuery(query)
+        def DBSql sql = new DBSql(target, opts).setQuery(queryString)
         if( NF.isDsl2() ) {
             session.addIgniter { fromSql0(sql, closure) }
         }
