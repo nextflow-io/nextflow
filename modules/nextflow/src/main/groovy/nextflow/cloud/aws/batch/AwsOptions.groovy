@@ -28,7 +28,7 @@ import nextflow.util.Duration
  * Helper class wrapping AWS config options required for Batch job executions
  */
 @Slf4j
-@ToString
+@ToString(includeNames = true, includePackage = false)
 @EqualsAndHashCode
 @CompileStatic
 class AwsOptions {
@@ -54,6 +54,8 @@ class AwsOptions {
     int maxTransferAttempts = MAX_TRANSFER_ATTEMPTS
 
     Duration delayBetweenAttempts = DEFAULT_DELAY_BETWEEN_ATTEMPTS
+
+    volatile Boolean fetchInstanceType
 
     /**
      * The job role ARN that should be used
@@ -85,6 +87,9 @@ class AwsOptions {
         region = session.config.navigate('aws.region') as String
         volumes = makeVols(session.config.navigate('aws.batch.volumes'))
         jobRole = session.config.navigate('aws.batch.jobRole')
+        fetchInstanceType = session.config.navigate('aws.batch.fetchInstanceType')
+        if( fetchInstanceType==null )
+            fetchInstanceType = session.config.navigate('tower.enabled',false)
     }
 
     protected String getCliPath0(Session session) {
