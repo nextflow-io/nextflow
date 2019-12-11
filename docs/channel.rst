@@ -149,6 +149,9 @@ Prints::
     X
     Y
 
+.. note::
+  This feature requires Nextflow version 19.10.0 of later.
+
 See also: `fromList`_ factory method.
 
 .. _channel-from:
@@ -237,6 +240,9 @@ Prints::
 
 
 See also: `of`_ factory method.
+
+.. note::
+  This feature requires Nextflow version 19.10.0 of later.
 
 .. _channel-path:
 
