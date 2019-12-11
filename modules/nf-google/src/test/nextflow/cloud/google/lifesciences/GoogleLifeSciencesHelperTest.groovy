@@ -397,17 +397,5 @@ class GoogleLifeSciencesHelperTest extends Specification {
                 .getDisableStandardErrorCapture()
     }
 
-    def 'should create gs path' () {
-        expect:
-        gsPath(PATH).toUriString() == PATH
-
-        where:
-        _ | PATH
-        _ | 'gs://foo'
-        _ | 'gs://foo/bar'      
-        _ | 'gs://foo/b a r'
-        _ | 'gs://f o o/bar'
-        _ | 'gs://f_o_o/bar'
-    }
 }
 

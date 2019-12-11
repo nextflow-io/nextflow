@@ -17,7 +17,6 @@
 
 package nextflow.cloud.google.lifesciences
 
-import java.nio.file.Path
 
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.http.HttpRequestInitializer
@@ -36,7 +35,6 @@ import com.google.api.services.lifesciences.v2beta.model.ServiceAccount
 import com.google.api.services.lifesciences.v2beta.model.VirtualMachine
 import com.google.auth.http.HttpCredentialsAdapter
 import com.google.auth.oauth2.GoogleCredentials
-import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 /**
@@ -242,12 +240,4 @@ class GoogleLifeSciencesHelper {
         }
     }
 
-    static Path gsPath(String str) {
-        assert str.startsWith('gs://')
-        str = str.substring(5)
-        int p = str.indexOf('/')
-        return ( p==-1
-                ? CloudStorageFileSystem.forBucket(str).getPath('')
-                : CloudStorageFileSystem.forBucket(str.substring(0,p)).getPath(str.substring(p)) )
-    }
 }
