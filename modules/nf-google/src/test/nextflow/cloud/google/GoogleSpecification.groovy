@@ -16,6 +16,8 @@
 
 package nextflow.cloud.google
 
+import java.nio.file.Paths
+
 import spock.lang.Specification
 
 import java.nio.file.FileSystem
@@ -47,7 +49,7 @@ abstract class GoogleSpecification extends Specification {
 
         def fs = Mock(FileSystem)
         fs.provider() >> provider
-        fs.toString() >> ('gs:/' + bucket)
+        fs.toString() >> ('gs://' + bucket)
         def uri = GroovyMock(URI)
         uri.toString() >> path
 
@@ -62,6 +64,8 @@ abstract class GoogleSpecification extends Specification {
         result.toAbsolutePath() >> result
         result.asBoolean() >> true
         result.getParent() >> { def p=path.lastIndexOf('/'); p!=-1 ? mockGsPath("${path.substring(0,p)}", true) : null }
+        result.getFileName() >> { Paths.get(tokens[-1]) }
+        result.getName() >> tokens[1]
         return result
     }
 

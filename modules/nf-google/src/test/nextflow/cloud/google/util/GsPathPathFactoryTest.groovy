@@ -14,38 +14,29 @@
  * limitations under the License.
  */
 
-package nextflow.extension
+package nextflow.cloud.google.util
+
 
 import spock.lang.Specification
-import spock.lang.Unroll
-
-import java.nio.file.Path
-
-import com.google.cloud.storage.contrib.nio.CloudStoragePath
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class FilesExTest2 extends Specification {
+class GsPathPathFactoryTest extends Specification {
 
-    @Unroll
-    def 'should return uri string for #PATH' () {
+    def 'should create gs path' () {
+        given:
+        def factory = new GsPathFactory()
 
-        when:
-        def path = PATH as Path
-        then:
-        path instanceof CloudStoragePath
-        println FilesEx.toUriString(path)
-        FilesEx.toUriString(path) == PATH
+        expect:
+        factory.parseUri(PATH).toUriString() == PATH
 
         where:
-        PATH                    | _
-        'gs://foo/bar'          | _
-        'gs://foo'              | _
-        'gs://foo/'             | _
-        'gs://foo/bar/baz'      | _
-        'gs://foo/bar/baz/'     | _
-        'gs://foo/bar - baz/'   | _
+        _ | PATH
+        _ | 'gs://foo'
+        _ | 'gs://foo/bar'
+        _ | 'gs://foo/b a r'
+        _ | 'gs://f o o/bar'
+        _ | 'gs://f_o_o/bar'
     }
 }

@@ -15,6 +15,9 @@
  */
 
 package nextflow.file
+
+
+import java.nio.file.FileSystems
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -22,7 +25,6 @@ import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
-
 /**
  * Implements a special {@code Path} used to stage files in the work area
  */
@@ -88,7 +90,11 @@ class FileHolder  {
 
     static private Path real( Path path ) {
         try {
-            return path.toRealPath()
+            // main reason for this is to resolve symlinks to real file location
+            // hence apply only for default file system
+            // note: also for Google Cloud storage path it may convert to relative path
+            // it may return invalid (relative) paths therefore do not apply it
+            return path.getFileSystem() == FileSystems.default ? path.toRealPath() : path
         }
         catch( Exception e ) {
             log.trace "Unable to get real path for: $path"

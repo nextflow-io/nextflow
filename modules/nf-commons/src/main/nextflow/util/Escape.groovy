@@ -19,6 +19,7 @@ package nextflow.util
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import nextflow.extension.FilesEx
 
 /**
  * Escape helper class
@@ -80,4 +81,14 @@ class Escape {
         x == arg ? arg : "'" + arg + "'"
     }
 
+    static String uriPath(Path file) {
+        final scheme = FilesEx.getScheme(file)
+        if( scheme == 'file' )
+            return path(file)
+
+        final uri = FilesEx.toUriString(file)
+        final prefix = "$scheme://"
+        assert uri.startsWith(prefix)
+        return prefix + path(uri.substring(prefix.length()))
+    }
 }

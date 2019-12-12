@@ -20,6 +20,7 @@ import java.nio.file.Path
 
 import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.AWSBatchException
+import com.amazonaws.services.ecs.model.AccessDeniedException
 import com.upplication.s3fs.S3Path
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
@@ -129,6 +130,7 @@ class AwsBatchExecutor extends Executor {
         helper = createHelper(client, driver)
         // create the options object
         awsOptions = new AwsOptions(this)
+        log.debug "[AWS BATCH] Executor options=$awsOptions"
     }
 
     private AwsBatchHelper createHelper(AWSBatch batchClient, AmazonCloudDriver driver) {
@@ -238,8 +240,14 @@ class AwsBatchExecutor extends Executor {
         try {
             return helper?.getCloudInfoByQueueAndTaskArn(queue, taskArn)
         }
+        catch ( AccessDeniedException e ) {
+            log.warn "Unable to retrieve AWS Batch instance type | ${e.message}"
+            // disable it since user has not permission to access this info
+            awsOptions.fetchInstanceType = false
+            return null
+        }
         catch( Exception e ) {
-            log.warn "Unable to retrieve AWS instance type for queue=$queue; task=$taskArn | ${e.message}", e
+            log.warn "Unable to retrieve AWS batch instance type for queue=$queue; task=$taskArn | ${e.message}", e
             return null
         }
     }

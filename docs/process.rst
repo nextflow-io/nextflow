@@ -258,9 +258,6 @@ The template script can contain any piece of code that can be executed by the un
 Shell
 -----
 
-.. warning:: This is an incubating feature. It may change in future Nextflow releases.
-
-
 The ``shell`` block is a string statement that defines the *shell* command executed by the process to carry out its task.
 It is an alternative to the :ref:`process-script` definition with an important difference, it uses
 the exclamation mark ``!`` character as the variable placeholder for Nextflow variables in place of the usual dollar character.
