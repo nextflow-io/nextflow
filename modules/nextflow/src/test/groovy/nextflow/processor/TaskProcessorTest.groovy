@@ -760,6 +760,23 @@ class TaskProcessorTest extends Specification {
         1 * task.getConfig() >> config
         1 * config.getModule() >> ['bar/1.0']
         uuid.toString() == 'f9595fcfaac36a9ffbeddbbdc9d8e72d'
+
+	when:
+	def uuid1 = processor.createTaskHashKey(task)
+	def uuid2 = processor.createTaskHashKey(task)
+	then:
+        2 * session.getUniqueId() >> UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')
+        4 * task.getSource() >> 'hello world'
+        2 * processor.getTaskGlobalVars(task) >>> [
+                [foo:'a', bar:'b'],
+                [bar:'b', foo:'a']
+		]
+        2 * task.isContainerEnabled() >> false
+        0 * task.getContainer()
+        2 * task.getConfig() >> config
+        2 * config.getModule() >> null
+        uuid1 == uuid2
+
     }
 
     def 'should export env vars' () {
