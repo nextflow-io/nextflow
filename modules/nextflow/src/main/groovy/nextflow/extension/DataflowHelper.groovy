@@ -16,6 +16,7 @@
 
 package nextflow.extension
 
+import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.Dataflow
@@ -352,9 +353,9 @@ class DataflowHelper {
         chainImpl(channel, CH.create(), [listeners: [listener]], {true})
     }
 
-
     @PackageScope
-    static KeyPair split(List<Integer> pivot, entry) {
+    @CompileStatic
+    static KeyPair makeKey(List<Integer> pivot, entry) {
         final result = new KeyPair()
 
         if( !(entry instanceof List) ) {
@@ -371,15 +372,16 @@ class DataflowHelper {
 
         for( int i=0; i<list.size(); i++ ) {
             if( i in pivot )
-                result.keys << list[i]
+                result.addKey(list[i])
             else
-                result.values << list[i]
+                result.addValue(list[i])
         }
 
         return result
     }
 
     @PackageScope
+    @CompileStatic
     static void addToList(List result, entry)  {
         if( entry instanceof List ) {
             result.addAll(entry)
@@ -389,6 +391,7 @@ class DataflowHelper {
         }
     }
 
+    @CompileStatic
     static Map<String,Closure> eventsMap(Closure onNext, Closure onComplete) {
         def result = new HashMap<String,Closure>(2)
         result.put('onNext', onNext)
