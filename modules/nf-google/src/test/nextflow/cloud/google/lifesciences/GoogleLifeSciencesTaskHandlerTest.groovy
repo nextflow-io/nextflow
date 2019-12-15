@@ -177,8 +177,6 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         req.containerImage == 'my/image'
         req.fileCopyImage == GoogleLifeSciencesTaskHandler.DEFAULT_COPY_IMAGE
         req.workDir.toUriString() == 'gs://my-bucket/work/dir'
-        req.remoteTaskDir == 'gs://my-bucket/work/dir'
-        req.localTaskDir == '/work/dir'
         req.sharedMount.getPath() == '/work/dir'
         req.sharedMount.getDisk() == GoogleLifeSciencesTaskHandler.DEFAULT_DISK_NAME
         !req.sharedMount.getReadOnly()

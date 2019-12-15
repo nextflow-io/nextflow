@@ -23,8 +23,6 @@ import com.google.api.services.lifesciences.v2beta.model.Mount
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
 import nextflow.executor.res.AcceleratorResource
-import nextflow.processor.TaskRun
-
 /**
  * Models Google pipeline request for a Nextflow task executor
  *
@@ -32,7 +30,7 @@ import nextflow.processor.TaskRun
  */
 @CompileStatic
 @ToString(includeNames = true)
-class GoogleLifeSciencesSubmitRequest implements GoogleLifeSciencesTaskDirWrangler {
+class GoogleLifeSciencesSubmitRequest {
 
     String machineType
 
@@ -64,26 +62,4 @@ class GoogleLifeSciencesSubmitRequest implements GoogleLifeSciencesTaskDirWrangl
 
     Integer bootDiskSizeGb
 
-
-    String getStagingScript() {
-        String result = "set -x; "
-        result += '{ '
-        result += "cd ${localTaskDir}; "
-        result += "gsutil -m -q cp $remoteTaskDir/${TaskRun.CMD_RUN} .; "
-        result += "bash ${TaskRun.CMD_RUN} nxf_stage; "
-        result += "} 2>&1 > $localTaskDir/${TaskRun.CMD_LOG}"
-        return result
-    }
-
-    String getMainScript() {
-        "{ cd $localTaskDir; bash ${TaskRun.CMD_RUN}; } 2>&1 | tee -a $localTaskDir/${TaskRun.CMD_LOG}"
-    }
-
-    String getUnstagingScript() {
-        def result = "set -x; "
-        result += "{ cd $localTaskDir; bash ${TaskRun.CMD_RUN} nxf_unstage; } 2>&1 | tee -a $localTaskDir/${TaskRun.CMD_LOG}; "
-        result += "gsutil -m -q cp -R $localTaskDir/${TaskRun.CMD_LOG} ${remoteTaskDir}/${TaskRun.CMD_LOG} || true; "
-        result += "[[ \$GOOGLE_LAST_EXIT_STATUS -gt 0 || \$NXF_DEBUG -gt 0 ]] && { gsutil -m -q cp -R /google/ ${remoteTaskDir}; } || rm -rf $localTaskDir"
-        return result
-    }
 }

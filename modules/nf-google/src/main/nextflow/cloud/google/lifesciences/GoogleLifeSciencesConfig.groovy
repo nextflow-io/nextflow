@@ -19,6 +19,7 @@ package nextflow.cloud.google.lifesciences
 
 import java.nio.file.Path
 
+import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
@@ -72,8 +73,6 @@ class GoogleLifeSciencesConfig {
 
     protected static GoogleLifeSciencesConfig fromSession0(Map config) {
         def project = config.navigate("google.project") as String
-        if( !project )
-            throw new AbortOperationException("Missing Google project Id -- Please specify `google.project` setting in your Nextflow config file")
 
         //check if we have one of the mutual exclusive zone or region specified
         if(!config.navigate("google.zone") && !config.navigate("google.region")){
@@ -94,7 +93,7 @@ class GoogleLifeSciencesConfig {
          * upload local binaries
          */
         final boolean disableBinDir = config.navigate('google.lifeSciences.disableRemoteBinDir',false)
-        final preemptible = config.navigate("google.lifeSciences.preemptible", true) as boolean
+        final preemptible = config.navigate("google.lifeSciences.preemptible", false) as boolean
         final bootDiskSize = config.navigate('google.lifeSciences.bootDiskSize') as MemoryUnit
 
         def zones = (config.navigate("google.zone") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
@@ -132,4 +131,21 @@ class GoogleLifeSciencesConfig {
         throw new AbortOperationException("Missing Google region or location information")
     }
 
+
+    static String getProjectIdFromCreds(String credsFilePath) {
+        if( !credsFilePath )
+            throw new AbortOperationException('Missing Google credentials -- make sure your environment defines the GOOGLE_APPLICATION_CREDENTIALS environment variable')
+
+        final file = new File(credsFilePath)
+        try {
+            final creds = (Map)new JsonSlurper().parse(file)
+            if( creds.project_id )
+                return creds.project_id
+            else
+                throw new AbortOperationException("Missing `project_id` in Google credentials file: $credsFilePath")
+        }
+        catch(FileNotFoundException e) {
+            throw new AbortOperationException("Missing Google credentials file: $credsFilePath")
+        }
+    }
 }

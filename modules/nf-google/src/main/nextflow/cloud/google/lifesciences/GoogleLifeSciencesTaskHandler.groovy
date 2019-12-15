@@ -191,16 +191,6 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
             task.stdout = outputFile
             task.exitStatus = xs != null ? xs :  operation.getError()?.getCode()
             task.stderr = xs  != null ?  errorFile : operation.getError()?.getMessage()
-
-            /* If we get error 10 or 14 from the pipelines api we'll retry
-             * since it means that the vm instance was probably preemptied.
-             *
-             * This retry method is a bit crude, find a cleaner method if it is available
-             */
-            if(!xs && (task.exitStatus == 10 || task.exitStatus == 14)) {
-                task.config.setProperty("maxRetries",task.failCount+1)
-                task.config.setProperty("errorStrategy","retry")
-            }
             status = TaskStatus.COMPLETED
             return true
         } else

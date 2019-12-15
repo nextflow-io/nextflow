@@ -17,6 +17,7 @@
 
 package nextflow.cloud.google.lifesciences
 
+import java.nio.file.Path
 
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.http.HttpRequestInitializer
@@ -37,6 +38,9 @@ import com.google.auth.http.HttpCredentialsAdapter
 import com.google.auth.oauth2.GoogleCredentials
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskRun
+import nextflow.util.Escape
+
 /**
  * Helper class for Google Pipelines.
  *
@@ -182,7 +186,8 @@ class GoogleLifeSciencesHelper {
         createAction(
                 "$req.taskName-main",
                 req.containerImage,
-                ['bash', '-c', req.mainScript],
+                // flag pipefail is required otherwise the command exit status is not returned
+                ['bash', '-o', 'pipefail', '-c', getMainScript(req.workDir)],
                 [req.sharedMount] )
     }
 
@@ -190,7 +195,7 @@ class GoogleLifeSciencesHelper {
         createAction(
                 "$req.taskName-stage",
                 req.fileCopyImage,
-                ["bash", "-c", req.stagingScript],
+                ["bash", "-c", getStagingScript(req.workDir)],
                 [req.sharedMount] )
     }
 
@@ -198,7 +203,7 @@ class GoogleLifeSciencesHelper {
         createAction(
                 "$req.taskName-unstage",
                 req.fileCopyImage,
-                ["bash", "-c", req.unstagingScript],
+                ["bash", "-c", getUnstagingScript(req.workDir)],
                 [req.sharedMount],
                 [ActionFlags.ALWAYS_RUN, ActionFlags.IGNORE_EXIT_STATUS])
     }
@@ -240,4 +245,34 @@ class GoogleLifeSciencesHelper {
         }
     }
 
+    static String getLocalTaskDir(Path workDir) { Escape.path(workDir) }
+
+    static String getRemoteTaskDir(Path workDir) { Escape.uriPath(workDir) }
+
+    String getStagingScript(Path workDir) {
+        final localTaskDir = getLocalTaskDir(workDir)
+        final remoteTaskDir = getRemoteTaskDir(workDir)
+
+        String result = "[[ \$NXF_DEBUG -gt 0 ]] && set -x; "
+        result += '{ '
+        result += "cd ${localTaskDir}; "
+        result += "gsutil -m -q cp $remoteTaskDir/${TaskRun.CMD_RUN} .; "
+        result += "bash ${TaskRun.CMD_RUN} nxf_stage; "
+        result += "} 2>&1 > $localTaskDir/${TaskRun.CMD_LOG}"
+        return result
+    }
+
+    String getMainScript(Path workDir) {
+        final localTaskDir = getLocalTaskDir(workDir)
+        return "{ cd $localTaskDir; bash ${TaskRun.CMD_RUN}; } 2>&1 | tee -a $localTaskDir/${TaskRun.CMD_LOG}"
+    }
+
+    String getUnstagingScript(Path workDir) {
+        final localTaskDir = getLocalTaskDir(workDir)
+        final remoteTaskDir = getRemoteTaskDir(workDir)
+        def result = "[[ \$NXF_DEBUG -gt 0 ]] && { env; set -x; }; "
+        result += "trap 'err=\$?; gsutil -m -q cp -R $localTaskDir/${TaskRun.CMD_LOG} ${remoteTaskDir}/${TaskRun.CMD_LOG} || true; [[ \$err -gt 0 || \$GOOGLE_LAST_EXIT_STATUS -gt 0 || \$NXF_DEBUG -gt 0 ]] && { gsutil -m -q cp -R /google/ ${remoteTaskDir}; } || rm -rf $localTaskDir; exit \$err' EXIT; "
+        result += "{ cd $localTaskDir; bash ${TaskRun.CMD_RUN} nxf_unstage; } 2>&1 | tee -a $localTaskDir/${TaskRun.CMD_LOG}"
+        return result
+    }
 }

@@ -15,7 +15,7 @@
  */
 package nextflow.cloud.google.lifesciences
 
-import static GoogleLifeSciencesHelper.*
+import static nextflow.cloud.google.lifesciences.GoogleLifeSciencesHelper.*
 
 import com.google.api.services.lifesciences.v2beta.CloudLifeSciences
 import com.google.api.services.lifesciences.v2beta.model.Action
@@ -26,10 +26,12 @@ import com.google.api.services.lifesciences.v2beta.model.Pipeline
 import com.google.api.services.lifesciences.v2beta.model.Resources
 import com.google.api.services.lifesciences.v2beta.model.RunPipelineRequest
 import com.google.auth.oauth2.GoogleCredentials
+import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
+import nextflow.cloud.google.GoogleSpecification
 import nextflow.executor.res.AcceleratorResource
-import spock.lang.Specification
+import spock.lang.Unroll
 
-class GoogleLifeSciencesHelperTest extends Specification {
+class GoogleLifeSciencesHelperTest extends GoogleSpecification {
 
     def mockClient = Mock(CloudLifeSciences) {
         projects() >> Mock(CloudLifeSciences.Projects) {
@@ -244,28 +246,33 @@ class GoogleLifeSciencesHelperTest extends Specification {
 
     def 'should create main action' () {
         given:
+        def workDir = mockGsPath('gs://foo/work')
         def helper = Spy(GoogleLifeSciencesHelper)
-        def req = Mock(GoogleLifeSciencesSubmitRequest)
         def mount = new Mount()
+        and:
+        def req = Mock(GoogleLifeSciencesSubmitRequest) {
+            getTaskName() >> 'foo'
+            getContainerImage() >>'my/image'
+            getSharedMount() >> mount
+            getWorkDir() >> workDir
+        }
 
         when:
         def action = helper.createMainAction(req)
 
         then:
-        req.taskName >> 'foo'
-        req.containerImage >>'my/image'
-        req.mainScript >> 'something.sh'
-        req.sharedMount >> mount
-
+        1 * helper.getMainScript(workDir) >> 'main.sh'
+        and:
         1 * helper.createAction(
                 'foo-main',
                 'my/image',
-                ['bash', '-c', 'something.sh'],
+                ['bash','-o','pipefail','-c', 'main.sh'],
                 [mount] )
 
+        and:
         action.getContainerName() == 'foo-main'
         action.getImageUri() == 'my/image'
-        action.getCommands() == ['bash', '-c', 'something.sh']
+        action.getCommands() == ['bash', '-o', 'pipefail','-c', 'main.sh']
         action.getMounts() == [mount]
         action.getEntrypoint() == null
         action.getEnvironment() == [:]
@@ -273,28 +280,32 @@ class GoogleLifeSciencesHelperTest extends Specification {
 
     def 'should create staging action' () {
         given:
+        def workDir = mockGsPath('gs://foo/work')
+        and:
         def helper = Spy(GoogleLifeSciencesHelper)
-        def req = Mock(GoogleLifeSciencesSubmitRequest)
         def mount = new Mount()
+        and:
+        def req = Mock(GoogleLifeSciencesSubmitRequest) {
+            getTaskName() >> 'bar'
+            getFileCopyImage() >>'alpine'
+            getSharedMount() >> mount
+            getWorkDir() >> workDir
+        }
 
         when:
         def action = helper.createStagingAction(req)
-
         then:
-        req.taskName >> 'bar'
-        req.fileCopyImage >> 'alpine'
-        req.stagingScript >> 'copy this and that'
-        req.sharedMount >> mount
-
+        1 * helper.getStagingScript(workDir) >> 'stage.sh'
+        and:
         1 * helper.createAction(
                 'bar-stage',
                 'alpine',
-                ['bash', '-c', 'copy this and that'],
+                ['bash', '-c', 'stage.sh'],
                 [mount] )
 
         action.getContainerName() == 'bar-stage'
         action.getImageUri() == 'alpine'
-        action.getCommands() == ['bash', '-c', 'copy this and that']
+        action.getCommands() == ['bash', '-c', 'stage.sh']
         action.getMounts() == [mount]
         action.getEntrypoint() == null
         action.getEnvironment() == [:]
@@ -304,30 +315,34 @@ class GoogleLifeSciencesHelperTest extends Specification {
 
     def 'should create unstaging action' () {
         given:
+        def workDir = mockGsPath('gs://foo/work')
+        and:
         def helper = Spy(GoogleLifeSciencesHelper)
-        def req = Mock(GoogleLifeSciencesSubmitRequest)
         def mount = new Mount()
+        def req = Mock(GoogleLifeSciencesSubmitRequest) {
+            getTaskName() >> 'bar'
+            getFileCopyImage() >> 'alpine'
+            getSharedMount() >> mount
+            getWorkDir() >> workDir
+        }
 
         when:
         def action = helper.createUnstagingAction(req)
 
         then:
-        req.taskName >> 'bar'
-        req.fileCopyImage >> 'alpine'
-        req.unstagingScript >> 'upload command here'
-        req.sharedMount >> mount
-
+        1 * helper.getUnstagingScript(workDir) >> 'unstage.sh'
+        and:
         1 * helper.createAction(
                 'bar-unstage',
                 'alpine',
-                ['bash', '-c', 'upload command here'],
+                ['bash', '-c', 'unstage.sh'],
                 [mount],
                 [ActionFlags.ALWAYS_RUN, ActionFlags.IGNORE_EXIT_STATUS]
         )
 
         action.getContainerName() == 'bar-unstage'
         action.getImageUri() == 'alpine'
-        action.getCommands() == ['bash', '-c', 'upload command here']
+        action.getCommands() == ['bash', '-c', 'unstage.sh']
         action.getMounts() == [mount]
         action.getEntrypoint() == null
         action.getEnvironment() == [:]
@@ -395,6 +410,51 @@ class GoogleLifeSciencesHelperTest extends Specification {
         helper
                 .setFlags(new Action(), [ActionFlags.DISABLE_STANDARD_ERROR_CAPTURE])
                 .getDisableStandardErrorCapture()
+    }
+
+    def 'should create wrapper scripts' () {
+        given:
+        def dir = CloudStorageFileSystem.forBucket("my-bucket").getPath('/work/dir')
+        def helper = new GoogleLifeSciencesHelper()
+
+        when:
+        def stage = helper.getStagingScript(dir)
+        then:
+        stage ==
+                '[[ $NXF_DEBUG -gt 0 ]] && set -x; { cd /work/dir; gsutil -m -q cp gs://my-bucket/work/dir/.command.run .; bash .command.run nxf_stage; } 2>&1 > /work/dir/.command.log'
+        when:
+        def main = helper.getMainScript(dir)
+        then:
+        main ==
+                '{ cd /work/dir; bash .command.run; } 2>&1 | tee -a /work/dir/.command.log'
+
+        when:
+        def unstage = helper.getUnstagingScript(dir)
+        then:
+        unstage ==
+                '[[ $NXF_DEBUG -gt 0 ]] && { env; set -x; }; trap \'err=$?; gsutil -m -q cp -R /work/dir/.command.log gs://my-bucket/work/dir/.command.log || true; [[ $err -gt 0 || $GOOGLE_LAST_EXIT_STATUS -gt 0 || $NXF_DEBUG -gt 0 ]] && { gsutil -m -q cp -R /google/ gs://my-bucket/work/dir; } || rm -rf /work/dir; exit $err\' EXIT; { cd /work/dir; bash .command.run nxf_unstage; } 2>&1 | tee -a /work/dir/.command.log'
+    }
+
+    @Unroll
+    def 'should get local dir' () {
+        expect:
+        getLocalTaskDir(mockGsPath(PATH)) == EXPECTED
+        where:
+        PATH                        | EXPECTED
+        'gs://my-bucket/work/dir'   | '/work/dir'
+        'gs://my-bucket/work dir'   | '/work\\ dir'
+
+    }
+
+    @Unroll
+    def 'should get remote dir' () {
+        expect:
+        getRemoteTaskDir(mockGsPath(PATH)) == EXPECTED
+        where:
+        PATH                        | EXPECTED
+        'gs://my-bucket/work/dir'   | 'gs://my-bucket/work/dir'
+        'gs://my-bucket/work dir'   | 'gs://my-bucket/work\\ dir'
+        'gs://my bucket/work/dir'   | 'gs://my\\ bucket/work/dir'
     }
 
 }

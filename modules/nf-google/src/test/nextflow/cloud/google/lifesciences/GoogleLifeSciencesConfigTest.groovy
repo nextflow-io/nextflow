@@ -65,7 +65,7 @@ class GoogleLifeSciencesConfigTest extends Specification {
         config.regions == []
         config.zones == ['us-east4-a','us-east4-b']
         config.location == 'eu-west1'
-        config.preemptible
+        !config.preemptible
         !config.disableBinDir
         config.bootDiskSize == null
     }
@@ -127,15 +127,6 @@ class GoogleLifeSciencesConfigTest extends Specification {
         config.regions == []
         config.zones == ['us-east4-a','us-east4-c']
         config.location == 'us-east4'
-    }
-
-    def 'should report missing project' () {
-        when:
-        GoogleLifeSciencesConfig.fromSession0([:])
-        then:
-        def err =thrown(AbortOperationException)
-        and:
-        err.message.startsWith('Missing Google project Id')
     }
 
     def 'should report missing region' () {
