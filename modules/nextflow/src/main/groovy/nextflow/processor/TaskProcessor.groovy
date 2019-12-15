@@ -1909,7 +1909,7 @@ class TaskProcessor {
         def vars = getTaskGlobalVars(task)
         if( vars ) {
             log.trace "Task: $name > Adding script vars hash code: ${vars}"
-            vars.each { k, v -> keys.add( k ); keys.add( v ) }
+            keys.add(vars.entrySet())
         }
 
         final binEntries = getTaskBinEntries(task.source)
