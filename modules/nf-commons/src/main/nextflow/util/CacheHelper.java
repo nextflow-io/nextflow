@@ -145,10 +145,17 @@ public class CacheHelper {
             return hasher;
         }
 
-        if( value instanceof Map) {
+        if( value instanceof Map ) {
             // note: should map be order invariant as Set ?
             for( Object item : ((Map)value).values() )
                 hasher = CacheHelper.hasher( hasher, item, mode );
+            return hasher;
+        }
+
+        if( value instanceof Map.Entry ) {
+            Map.Entry entry = (Map.Entry)value;
+            hasher = CacheHelper.hasher( hasher, entry.getKey(), mode );
+            hasher = CacheHelper.hasher( hasher, entry.getValue(), mode );
             return hasher;
         }
 
