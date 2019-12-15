@@ -152,6 +152,13 @@ nxf_trace_mac() {
     nxf_write_trace
 }
 
+nxf_fd() {
+    ## Find first avail file descriptor starting from 11
+    local FD=11
+    while [ -e /proc/$$/fd/$FD ]; do FD=$((FD+1)); done
+    echo $FD
+}
+
 nxf_trace_linux() {
     local pid=$$
     command -v ps &>/dev/null || { >&2 echo "Command 'ps' required by nextflow to collect task metrics cannot be found"; exit 1; }
@@ -172,7 +179,8 @@ nxf_trace_linux() {
     local task=$!
 
     ## run mem stat
-    exec 10> >(nxf_mem_watch $task)
+    mem_fd=$(nxf_fd)
+    eval "exec $mem_fd> >(nxf_mem_watch $task)"
     local mem_proc=$!
 
     wait $task
@@ -203,7 +211,7 @@ nxf_trace_linux() {
     echo "write_bytes=${io_stat1[5]}"  >> $trace_file
 
     ## join nxf_mem_watch
-    echo 'DONE' >&10
+    [ -e /proc/$mem_proc ] && eval "echo 'DONE' >&$mem_fd" || true
     wait $mem_proc 2>/dev/null || true
     ## Bash prior 4.4 wait on a process substitution returns an error
     ## fallback on a while loop checking the proc pseudo file system
