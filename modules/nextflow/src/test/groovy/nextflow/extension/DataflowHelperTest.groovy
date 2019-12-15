@@ -57,7 +57,7 @@ class DataflowHelperTest extends Specification {
     @Unroll
     def 'should split entry' () {
         when:
-        def pair = DataflowHelper.split(pivot, entry)
+        def pair = DataflowHelper.makeKey(pivot, entry)
         then:
         pair.keys == keys
         pair.values == values

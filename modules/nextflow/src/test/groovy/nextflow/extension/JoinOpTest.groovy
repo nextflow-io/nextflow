@@ -191,4 +191,18 @@ class JoinOpTest extends Specification {
 
     }
 
+    def 'should match gstrings' () {
+        given:
+        def A = "A"; def B = "B"; def C = "C"
+        def left = Channel.of(['A', 'hola'], ['B', 'hello'], ['C', 'ciao'])
+        def right = Channel.of(["$A", 'mundo'], ["$B", 'world'], ["$C", 'mondo'] )
+        when:
+        def result = left.join(right).toList().val.sort { it[0] }
+        then:
+        result[0] == ['A','hola','mundo']
+        result[1] == ['B','hello','world']
+        result[2] == ['C','ciao','mondo']
+
+    }
+
 }
