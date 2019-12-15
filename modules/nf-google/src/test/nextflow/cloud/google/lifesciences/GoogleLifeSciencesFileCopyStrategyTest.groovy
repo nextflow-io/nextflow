@@ -118,7 +118,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         def result = strategy.getUnstageOutputFilesScript(['foo.txt'], mockGsPath('gs://other/dir'))
         then:
         result == '''\
-                [[ -e foo.txt ]] && gsutil -m -q cp -R foo.txt gs://other/dir
+                IFS=$'\\n'; for name in $(eval "ls -1d foo.txt" 2>/dev/null);do gsutil -m -q cp -R $name gs://other/dir; done; unset IFS
                 '''
                 .stripIndent()
 
@@ -126,7 +126,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         result = strategy.getUnstageOutputFilesScript(['fo o.txt'], mockGsPath('gs://other/dir x'))
         then:
         result == '''\
-                [[ -e fo\\ o.txt ]] && gsutil -m -q cp -R fo\\ o.txt gs://other/dir\\ x
+                IFS=$'\\n'; for name in $(eval "ls -1d fo\\ o.txt" 2>/dev/null);do gsutil -m -q cp -R $name gs://other/dir\\ x; done; unset IFS
                 '''
                 .stripIndent()
 

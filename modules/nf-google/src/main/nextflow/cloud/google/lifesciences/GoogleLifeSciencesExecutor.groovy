@@ -49,7 +49,7 @@ class GoogleLifeSciencesExecutor extends Executor {
 
     private GoogleLifeSciencesHelper helper
 
-    private Map env = new HashMap(System.getenv())
+    private Map<String,String> env = new HashMap(System.getenv())
 
     @Override
     final boolean isContainerNative() {
@@ -70,10 +70,14 @@ class GoogleLifeSciencesExecutor extends Executor {
             throw new AbortOperationException("Executor `google-lifesciences` requires a Google Storage bucket to be specified as a working directory -- Add the option `-w gs://<your-bucket/path>` to your run command line or specify a workDir in your config file")
         }
 
-        if( !env.get('GOOGLE_APPLICATION_CREDENTIALS') )
-            throw new AbortOperationException('Missing Google credentials -- make sure your environment defines the GOOGLE_APPLICATION_CREDENTIALS environment variable')
+        def credsFile = env.get('GOOGLE_APPLICATION_CREDENTIALS')
+        final projectId = GoogleLifeSciencesConfig.getProjectIdFromCreds(credsFile)
 
         config = GoogleLifeSciencesConfig.fromSession(session)
+        if( !config.project )
+            config.project = projectId
+        else if( config.project != projectId )
+            throw new AbortOperationException("Project Id `$config.project` declared in the nextflow config file does not match the one expected by credentials file: $credsFile")
 
         if( session.binDir && !config.disableBinDir ) {
             final cloudPath = getTempDir()

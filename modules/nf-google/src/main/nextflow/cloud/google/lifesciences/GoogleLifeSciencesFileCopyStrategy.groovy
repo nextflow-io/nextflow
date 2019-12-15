@@ -26,6 +26,10 @@ import nextflow.executor.SimpleFileCopyStrategy
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
 import nextflow.util.Escape
+import static nextflow.cloud.google.lifesciences.GoogleLifeSciencesHelper.getLocalTaskDir
+import static nextflow.cloud.google.lifesciences.GoogleLifeSciencesHelper.getRemoteTaskDir
+
+
 /**
  * Defines the file/script copy strategies for Google Pipelines.
  *
@@ -33,7 +37,7 @@ import nextflow.util.Escape
  */
 @Slf4j
 @CompileStatic
-class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy implements GoogleLifeSciencesTaskDirWrangler {
+class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
 
     GoogleLifeSciencesConfig config
     GoogleLifeSciencesTaskHandler handler
@@ -49,6 +53,8 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy implemen
     @Override
     String getStageInputFilesScript(Map<String, Path> inputFiles) {
 
+        final localTaskDir = getLocalTaskDir(workDir)
+        final remoteTaskDir = getRemoteTaskDir(workDir)
         final createDirectories  = []
         final stagingCommands = []
 
@@ -120,7 +126,7 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy implemen
          * cp = copy
          * -R = recursive copy
          */
-        "[[ -e ${Escape.path(local)} ]] && gsutil -m -q cp -R ${Escape.path(local)} ${Escape.uriPath(target)}"
+        "IFS=\$'\\n'; for name in \$(eval \"ls -1d ${Escape.path(local)}\" 2>/dev/null);do gsutil -m -q cp -R \$name ${Escape.uriPath(target)}; done; unset IFS"
     }
 
     /**
@@ -131,6 +137,7 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy implemen
         if( container )
             throw new IllegalArgumentException("Parameter `container` not supported by ${this.class.simpleName}")
 
+        final localTaskDir = getLocalTaskDir(workDir)
         final result = new StringBuilder()
         final copy = environment ? new HashMap<String,String>(environment) : Collections.<String,String>emptyMap()
         // remove any external PATH

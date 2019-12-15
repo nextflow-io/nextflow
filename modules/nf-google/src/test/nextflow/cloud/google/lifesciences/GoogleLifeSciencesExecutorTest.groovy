@@ -15,6 +15,7 @@
  */
 package nextflow.cloud.google.lifesciences
 
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -25,9 +26,26 @@ import spock.lang.Shared
 
 class GoogleLifeSciencesExecutorTest extends GoogleSpecification {
 
+    @Shared Path CREDS_FILE
+    @Shared Path TEMP_DIR
 
-    @Shared
-    Map ENV = [GOOGLE_APPLICATION_CREDENTIALS: '/some/file.json']
+    def setup() {
+        TEMP_DIR = Files.createTempDirectory('test')
+        CREDS_FILE = TEMP_DIR.resolve('google.json')
+        CREDS_FILE.text = '''
+        {
+            "project_id": "my-project-123"
+        }
+        '''
+    }
+
+    def cleanup() {
+        TEMP_DIR?.deleteDir()
+    }
+
+    Map<String,String> ENV() {
+        [GOOGLE_APPLICATION_CREDENTIALS: CREDS_FILE.toString()]
+    }
 
     def 'should config and init executor'() {
         given:
@@ -35,11 +53,11 @@ class GoogleLifeSciencesExecutorTest extends GoogleSpecification {
         def path = mockGsPath('gs://foo/bar')
         session.bucketDir >> path
         session.binDir >> null
-        session.config >> [google: [project: 'foo', region: 'eu-west1', location:'us-central']]
+        session.config >> [google: [project: 'my-project-123', region: 'eu-west1', location:'us-central']]
         and:
         def executor = Spy(GoogleLifeSciencesExecutor)
         executor.session = session
-        executor.env = ENV
+        executor.env = ENV()
 
         when:
         executor.register()
@@ -48,11 +66,53 @@ class GoogleLifeSciencesExecutorTest extends GoogleSpecification {
         and:
         executor.config.location == 'us-central'
         executor.config.regions == ['eu-west1']
-        executor.config.project == 'foo'
-        executor.config.preemptible
+        executor.config.project == 'my-project-123'
         and:
         executor.helper != null
+    }
 
+    def 'should get project from creds file'() {
+        given:
+        def session = Stub(Session)
+        def path = mockGsPath('gs://foo/bar')
+        session.bucketDir >> path
+        session.binDir >> null
+        session.config >> [google: [region: 'eu-west1', location:'us-central']]
+        and:
+        def executor = Spy(GoogleLifeSciencesExecutor)
+        executor.session = session
+        executor.env = ENV()
+
+        when:
+        executor.register()
+        then:
+        1 * executor.initClient() >> Mock(GoogleLifeSciencesHelper)
+        and:
+        executor.config.location == 'us-central'
+        executor.config.regions == ['eu-west1']
+        executor.config.project == 'my-project-123'
+        and:
+        executor.helper != null
+    }
+
+    def 'should fail because project does not match'() {
+        given:
+        def session = Stub(Session)
+        def path = mockGsPath('gs://foo/bar')
+        session.bucketDir >> path
+        session.binDir >> null
+        session.config >> [google: [project: 'another-project', region: 'eu-west1', location:'us-central']]
+        and:
+        def executor = Spy(GoogleLifeSciencesExecutor)
+        executor.session = session
+        executor.env = ENV()
+
+        when:
+        executor.register()
+        then:
+        def err = thrown(AbortOperationException)
+        and:
+        err.message.startsWith('Project Id `another-project` declared in the nextflow config file')
     }
 
     def 'should abort operation when the workdir is not a CloudStoragePath'() {
@@ -60,7 +120,7 @@ class GoogleLifeSciencesExecutorTest extends GoogleSpecification {
         def session = Stub(Session)
         session.workDir = Stub(Path)
         and:
-        def executor = new GoogleLifeSciencesExecutor(env: ENV, session: session)
+        def executor = new GoogleLifeSciencesExecutor(env: ENV(), session: session)
 
         when:
         executor.register()
@@ -94,7 +154,7 @@ class GoogleLifeSciencesExecutorTest extends GoogleSpecification {
         session.bucketDir >> path
         session.binDir >> null
         and:
-        def executor = new GoogleLifeSciencesExecutor(env: ENV, session: session)
+        def executor = new GoogleLifeSciencesExecutor(env: ENV(), session: session)
 
         when:
         executor.register()
