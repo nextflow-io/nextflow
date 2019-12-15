@@ -133,6 +133,12 @@ nxf_trace_mac() {
     nxf_write_trace
 }
 
+nxf_fd() {
+    local FD=11
+    while [ -e /proc/$$/fd/$FD ]; do FD=$((FD+1)); done
+    echo $FD
+}
+
 nxf_trace_linux() {
     local pid=$$
     command -v ps &>/dev/null || { >&2 echo "Command 'ps' required by nextflow to collect task metrics cannot be found"; exit 1; }
@@ -146,7 +152,8 @@ nxf_trace_linux() {
     /bin/bash -ue {{folder}}/.command.sh &
     local task=$!
 
-    exec 10> >(nxf_mem_watch $task)
+    mem_fd=$(nxf_fd)
+    eval "exec $mem_fd> >(nxf_mem_watch $task)"
     local mem_proc=$!
 
     wait $task
@@ -175,7 +182,7 @@ nxf_trace_linux() {
     echo "read_bytes=${io_stat1[4]}"   >> $trace_file
     echo "write_bytes=${io_stat1[5]}"  >> $trace_file
 
-    echo 'DONE' >&10
+    [ -e /proc/$mem_proc ] && eval "echo 'DONE' >&$mem_fd" || true
     wait $mem_proc 2>/dev/null || true
     while [ -e /proc/$mem_proc ]; do nxf_sleep 0.1; done
 }
