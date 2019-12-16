@@ -63,12 +63,27 @@ class TaskTemplateEngine extends TemplateEngine {
 
     private boolean enableShortNotation
 
+    private Set<String> variableNames
+
+    private String result
+
     TaskTemplateEngine() {
         grengine = new Grengine()
     }
 
     TaskTemplateEngine( Grengine engine ) {
         this.grengine = engine
+    }
+
+    String getResult() { result }
+
+    Set<String> getVariableNames() { variableNames }
+
+    TaskTemplateEngine eval(String text, Map binding = null) {
+        def template = createTemplate(text)
+        def result = binding ? template.make(binding) : template.make()
+        this.result = result?.toString()
+        return this
     }
 
     String render( String text, Map binding = null )  {
@@ -80,6 +95,7 @@ class TaskTemplateEngine extends TemplateEngine {
     Template createTemplate(Reader reader) throws CompilationFailedException, IOException {
         ParsableTemplate template = placeholder == DOLLAR ? new SimpleTemplate() : new EscapeTemplate()
         template.create(reader, grengine)
+        variableNames = template.getVariablesNames()
         return template;
     }
 
@@ -99,9 +115,14 @@ class TaskTemplateEngine extends TemplateEngine {
     @Slf4j
     private static abstract class ParsableTemplate implements Template {
 
-        protected Script script;
+        protected Script script
 
         protected Grengine grengine
+
+        Set<String> getVariablesNames() {
+            def result = script.getBinding().getVariables().get('__$$_template_vars') as Set<String>
+            return result
+        }
 
         abstract String parse(Reader reader) throws IOException
 
@@ -168,7 +189,7 @@ class TaskTemplateEngine extends TemplateEngine {
                     writeTo(sw);
                     return sw.toString();
                 }
-            };
+            }
         }
     }
 
@@ -188,7 +209,7 @@ class TaskTemplateEngine extends TemplateEngine {
         }
 
         @Override
-        public Object getVariable(String name) {
+        Object getVariable(String name) {
             if( name == '__$$_out' )
                 return writer
             else
@@ -199,7 +220,7 @@ class TaskTemplateEngine extends TemplateEngine {
             writer.flush()
         }
 
-        public void close() throws IOException {
+        void close() throws IOException {
             writer.close()
         }
 
@@ -295,9 +316,7 @@ class TaskTemplateEngine extends TemplateEngine {
         }
 
         private void processGString(Reader reader, StringWriter sw) throws IOException {
-            int c;
-            def name = new StringBuilder()
-
+            int c
             while ((c = reader.read()) != -1) {
                 if( c != NL && c != CR ) {
                     sw.write(c);
@@ -305,21 +324,18 @@ class TaskTemplateEngine extends TemplateEngine {
                 if(c == CURLY_CLOSE ) {
                     break;
                 }
-                name.append(c)
             }
         }
 
         private void processIdentifier(Reader reader, StringWriter sw) {
-            int c;
-            int pos=0;
-            def name = new StringBuilder()
+            int c
+            int pos=0
 
             while ((c = reader.read()) != -1) {
                 sw.write(c);
 
                 if( (pos==0 && Character.isJavaIdentifierStart(c)) || Character.isJavaIdentifierPart(c) ) {
                     pos++
-                    name.append(c)
                     continue
                 }
 
@@ -329,8 +345,6 @@ class TaskTemplateEngine extends TemplateEngine {
                     if( Character.isJavaIdentifierStart(next)) {
                         pos = 0;
                         sw.write(next)
-                        name.append('.')
-                        name.append(next)
                         continue
                     }
                     else {

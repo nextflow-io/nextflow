@@ -406,29 +406,6 @@ class TaskProcessorTest extends Specification {
     }
 
 
-    def 'should return tasks global variables map'() {
-
-        given:
-        def processor = [:] as TaskProcessor
-        processor.name = 'Hello'
-
-        def binding = new Binding(x:1, y:2, params: [alpha: 'one'], 'workDir': Paths.get('/work/dir'), baseDir: Paths.get('/base/dir'))
-        def vars = ['q', 'x', 'y', 'params.alpha', 'params.beta.delta', 'workDir', 'baseDir'] as Set
-
-        when:
-        def result = processor.getTaskGlobalVars(vars, binding, [:])
-        then:
-        // note: since 'q' is include in the task local scope, is not returned in the var list
-        result == [x:1, y:2, 'params.alpha': 'one', 'params.beta.delta': null , baseDir: '/base/dir', workDir: '/work/dir']
-
-        when:
-        result = processor.getTaskGlobalVars(vars, binding, [x:'foo',y:'bar'])
-        then:
-        result == ['params.alpha': 'one', 'params.beta.delta': null , baseDir: '/base/dir', workDir: '/work/dir']
-
-    }
-
-
     def "should return a file holder" () {
 
         given:

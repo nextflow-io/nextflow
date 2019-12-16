@@ -1,4 +1,3 @@
-#!/usr/bin/env nextflow
 /*
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
@@ -15,15 +14,21 @@
  * limitations under the License.
  */
 
-echo true
-params.data = 'zzz'
+package nextflow.ast
 
-process foo {
-  input:
-    each x from ('alpha','omega')
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
-  shell:
-    '''
-    echo Home: $HOME - Input: !{x} !{params.data}
-    '''
-}
+import org.codehaus.groovy.transform.GroovyASTTransformationClass
+
+/**
+ * Xform used to capture variables names declared in task template
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@Retention(RetentionPolicy.SOURCE)
+@Target(ElementType.METHOD)
+@GroovyASTTransformationClass(classes = [TaskTemplateVarsXformImpl])
+@interface TaskTemplateVarsXform { }

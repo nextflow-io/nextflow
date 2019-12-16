@@ -18,3 +18,20 @@ $NXF_RUN -resume | tee stdout
 < stdout grep "Home: $HOME - Input: omega zzz" || false
 
 
+#
+# run changing params does not hit cache 
+#
+$NXF_RUN -resume --data xxx | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process'` == 2 ]] || false
+< stdout grep "Home: $HOME - Input: alpha xxx" || false
+< stdout grep "Home: $HOME - Input: omega xxx" || false
+
+#
+# now cache is ok
+#
+$NXF_RUN -resume --data xxx | tee stdout
+
+[[ `grep INFO .nextflow.log | grep -c 'Cached process'` == 2 ]] || false
+< stdout grep "Home: $HOME - Input: alpha xxx" || false
+< stdout grep "Home: $HOME - Input: omega xxx" || false
