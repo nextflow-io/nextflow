@@ -20,6 +20,7 @@ package nextflow.script
 import java.nio.file.Files
 
 import nextflow.exception.DuplicateModuleIncludeException
+import spock.lang.Timeout
 import test.Dsl2Spec
 import test.MockScriptRunner
 import test.TestHelper
@@ -27,6 +28,7 @@ import test.TestHelper
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(10)
 class ScriptIncludesTest extends Dsl2Spec {
 
     def 'should invoke foreign functions' () {

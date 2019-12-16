@@ -26,7 +26,6 @@ import org.codehaus.groovy.ast.expr.PropertyExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.syntax.SyntaxException
-
 /**
  * Visit a closure and collect all referenced variable names
  *
@@ -48,6 +47,8 @@ class VariableVisitor extends ClassCodeVisitorSupport {
     VariableVisitor( SourceUnit unit ) {
         this.sourceUnit = unit
     }
+
+    protected boolean scopeEnabled() { true }
 
     protected boolean isNormalized(PropertyExpression expr) {
         if( !(expr.getProperty() instanceof ConstantExpression) )
@@ -86,7 +87,7 @@ class VariableVisitor extends ClassCodeVisitorSupport {
             final line = expr.lineNumber
             final coln = expr.columnNumber
 
-            if( !name.startsWith('this.') && !fAllVariables.containsKey(name) ) {
+            if( !name.startsWith('this.') && !fAllVariables.containsKey(name) && scopeEnabled() ) {
                 fAllVariables[name] = new TokenValRef(name,line,coln)
             }
         }
@@ -113,7 +114,7 @@ class VariableVisitor extends ClassCodeVisitorSupport {
 
         // Note: variable declared in the process scope are not added
         // to the set of referenced variables. Only global ones are tracked
-        else if( !localDef.contains(name) && !fAllVariables.containsKey(name) ) {
+        else if( !localDef.contains(name) && !fAllVariables.containsKey(name) && scopeEnabled() ) {
             fAllVariables[name] = new TokenValRef(name,line,coln)
         }
     }
@@ -129,5 +130,13 @@ class VariableVisitor extends ClassCodeVisitorSupport {
      */
     Set<TokenValRef> getAllVariables() {
         new HashSet<TokenValRef>(fAllVariables.values())
+    }
+
+    Set<String> getAllVariableNames() {
+        def all = getAllVariables()
+        def result = new HashSet(all.size())
+        for( TokenValRef ref : all )
+            result.add(ref.name)
+        return result
     }
 }

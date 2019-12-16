@@ -45,7 +45,6 @@ import nextflow.script.params.StdInParam
 import nextflow.script.params.ValueOutParam
 import nextflow.util.BlankSeparatedList
 import nextflow.util.Escape
-
 /**
  * Models a task instance
  *
@@ -317,6 +316,8 @@ class TaskRun implements Cloneable {
     TaskConfig config
 
     TaskContext context
+
+    Set<String> templateVars
 
     TaskProcessor.RunType runType = TaskProcessor.RunType.SUBMIT
 
@@ -701,7 +702,10 @@ class TaskRun implements Cloneable {
             if( shell ) {
                 engine.setPlaceholder(placeholderChar())
             }
-            return engine.render(source, context)
+            // eval the template string
+            engine.eval(source, context)
+            templateVars = engine.getVariableNames()
+            return engine.result
         }
         catch( NoSuchFileException e ) {
             throw new ProcessTemplateException("Process `${processor.name}` can't find template file: $template")
@@ -717,14 +721,76 @@ class TaskRun implements Cloneable {
 
     final protected String renderScript( script ) {
 
-        new TaskTemplateEngine(processor.grengine)
+        final engine = new TaskTemplateEngine(processor.grengine)
                 .setPlaceholder(placeholderChar())
                 .setEnableShortNotation(false)
-                .render(script.toString(), context)
+                .eval(script.toString(), context)
+        // fetch the template vars
+        templateVars = engine.getVariableNames()
+        // finally return the evaluated string
+        return engine.result
     }
 
     protected placeholderChar() {
         (config.placeholder ?: '!') as char
+    }
+
+    protected Set<String> getVariableNames() {
+        if( templateVars!=null )
+            return templateVars - processor.getDeclaredNames()
+        else
+            return context.getVariableNames()
+    }
+
+    /**
+     * @param variableNames The collection of variables referenced in the task script
+     * @param binding The script global binding
+     * @param context The task variable context
+     * @return The set of task variables accessed in global script context and not declared as input/output
+     */
+    Map<String,Object> getGlobalVars(Binding binding) {
+        final variableNames = getVariableNames()
+        final result = new HashMap(variableNames.size())
+        final processName = name
+
+        def itr = variableNames.iterator()
+        while( itr.hasNext() ) {
+            final varName = itr.next()
+
+            final p = varName.indexOf('.')
+            final baseName = p !=- 1 ? varName.substring(0,p) : varName
+
+            if( context.isLocalVar(baseName) ) {
+                // when the variable belong to the task local context just ignore it,
+                // because it must has been provided as an input parameter
+                continue
+            }
+
+            if( binding.hasVariable(baseName) ) {
+                def value
+                try {
+                    if( p == -1 ) {
+                        value = binding.getVariable(varName)
+                    }
+                    else {
+                        value = processor.grengine.run(varName, binding)
+                    }
+                }
+                catch( MissingPropertyException | NullPointerException e ) {
+                    value = null
+                    log.trace "Process `${processName}` cannot access global variable `$varName` -- Cause: ${e.message}"
+                }
+
+                // value for 'workDir' and 'baseDir' folders are added always as string
+                // in order to avoid to invalid the cache key when resuming the execution
+                if( varName=='workDir' || varName=='baseDir' )
+                    value = value.toString()
+
+                result.put( varName, value )
+            }
+
+        }
+        return result
     }
 
 }
