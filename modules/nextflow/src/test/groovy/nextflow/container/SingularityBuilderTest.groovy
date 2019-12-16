@@ -31,6 +31,7 @@ class SingularityBuilderTest extends Specification {
         given:
         def path1 = Paths.get('/foo/data/file1')
         def path2 = Paths.get('/bar/data/file2')
+        def path3 = Paths.get('/bar/data file')
 
         expect:
         new SingularityBuilder('busybox')
@@ -73,6 +74,13 @@ class SingularityBuilderTest extends Specification {
                 .params(readOnlyInputs: true)
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec -B /foo/data/file1:/foo/data/file1:ro -B "$PWD" ubuntu'
+
+        new SingularityBuilder('ubuntu')
+                .addMount(path3)
+                .params(autoMounts: true)
+                .build()
+                .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec -B /bar/data\\ file -B "$PWD" ubuntu'
+
     }
 
     def 'should return export variables' () {

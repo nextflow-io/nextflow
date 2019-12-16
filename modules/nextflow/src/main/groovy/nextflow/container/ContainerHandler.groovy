@@ -19,6 +19,8 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import groovy.transform.PackageScope
+import nextflow.util.Escape
+
 /**
  * Helper class to normalise a container image name depending
  * the the current select container engine
@@ -57,7 +59,8 @@ class ContainerHandler {
                 return normalizedImageName
             final formats = ['docker', 'docker-daemon', 'shub', 'library']
             final requiresCaching =  formats.any { normalizedImageName.startsWith(it) }
-            return requiresCaching ? createCache(this.config, normalizedImageName) : normalizedImageName
+            final result = requiresCaching ? createCache(this.config, normalizedImageName) : normalizedImageName
+            Escape.path(result)
         }
         else {
             normalizeDockerImageName(imageName)
@@ -66,7 +69,7 @@ class ContainerHandler {
 
     @PackageScope
     String createCache(Map config, String imageName) {
-        new SingularityCache(config) .getCachePathFor(imageName) .toString()
+        new SingularityCache(new ContainerConfig(config)) .getCachePathFor(imageName) .toString()
     }
 
     /**
