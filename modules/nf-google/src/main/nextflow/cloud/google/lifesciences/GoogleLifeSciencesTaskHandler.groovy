@@ -37,7 +37,6 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.MemoryUnit
-
 /**
  * Task handler for Google Pipelines.
  *
@@ -69,6 +68,8 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
     private String pipelineId
 
     private GoogleLifeSciencesHelper helper
+
+    private volatile String assignedZone
 
     GoogleLifeSciencesTaskHandler(TaskRun task, GoogleLifeSciencesExecutor executor) {
         super(task)
@@ -102,9 +103,7 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
     // If the process machineType is defined, use that instead of cpus/memory (must be a predefined GCP machine type)
     protected String getMachineType() {
         String machineType = getMachineType0(task.config.getMachineType(), task.config.getCpus(), task.config.getMemory())
-
         log.trace "[GLS] Task: $task.name - Instance Type: $machineType"
-
         return machineType
     }
 
@@ -127,10 +126,12 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
             return
 
         final warns = new HashSet()
-        for( Event e : events ) {
-            def d = e.getDescription()
+        for( Event ev : events ) {
+            def d = ev.getDescription()
             if( d?.contains('resource_exhausted') )
                 warns << d
+            if( !assignedZone && ev.getWorkerAssigned() )
+                assignedZone = ev.getWorkerAssigned().getZone()
         }
 
         if( warns ) {
@@ -301,10 +302,10 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
     }
 
     private CloudMachineInfo getMachineInfo() {
-        // TODO the actual zone should be taken from the VM instance
-        final zone = executor.config.location
         final price = executor.config.preemptible ? PriceModel.spot : PriceModel.standard
-        new CloudMachineInfo(machineType, zone, price)
+        final result = new CloudMachineInfo(machineType, assignedZone, price)
+        log.trace "[GLS] Task: $task.name > cloud-info=$result"
+        return result
     }
 
     static String prettyPrint(Operation op) {

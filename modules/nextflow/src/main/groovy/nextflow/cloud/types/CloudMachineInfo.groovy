@@ -17,10 +17,12 @@
 package nextflow.cloud.types
 
 import groovy.transform.Canonical
+import groovy.transform.CompileStatic
 /**
  * Model cloud job metadata
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 @Canonical
 class CloudMachineInfo {
     String type
