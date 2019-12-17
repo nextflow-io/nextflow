@@ -16,15 +16,15 @@
 
 package nextflow.cloud.aws
 
-import spock.lang.IgnoreIf
-import spock.lang.Specification
-import spock.lang.Unroll
-
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.attribute.FileTime
 
 import nextflow.util.Duration
+import nextflow.util.MemoryUnit
+import spock.lang.IgnoreIf
+import spock.lang.Specification
+import spock.lang.Unroll
 import test.TestHelper
 /**
  *
@@ -65,7 +65,8 @@ class AmazonPriceReaderTest extends Specification {
         'm4.xlarge' | 4      | '16 GB'  | '0'       | 0
         'm3.xlarge' | 4      | '15 GB'  | '40 GB'   | 2
         'c4.2xlarge'| 8      | '15 GB'  | '0'       | 0
-        'c3.8xlarge'| 32     | '60 GB'  | '320 GB'  | 2
+        'g4dn.2xlarge'| 8    | '32 GB'  | '225 GB'  | 1
+        'm5d.16xlarge'| 64   | '256 GB' | '600 GB'  | 4
 
     }
 
@@ -181,5 +182,12 @@ class AmazonPriceReaderTest extends Specification {
         !parser.existsAndNotExpired(Paths.get('unknown'))
         !path2.exists()
 
+    }
+
+    def 'should test storage conversion' () {
+        given:
+        def parser = new AmazonPriceReader('eu-west-1')
+        expect:
+        parser.parseStorage('225 GB NVMe SSD') == [MemoryUnit.of('225 GB'), 1]
     }
 }

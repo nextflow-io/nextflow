@@ -233,7 +233,7 @@ class AmazonPriceReader {
                     log.debug "map store >> entry=$entry"
                 }
                 catch( Exception e ) {
-                    log.debug "Unexptected AWS price entry -- offending line: $line"
+                    log.debug "Unexptected AWS price entry | $e.message -- offending line: $line"
                     error++
                 }
             }
@@ -321,13 +321,13 @@ class AmazonPriceReader {
         }
     }
 
-    private MemoryUnit parseMem( String str ) {
+    protected MemoryUnit parseMem( String str ) {
         new MemoryUnit(str.replace(',','').replace('i','').toUpperCase())
     }
 
-    private static List EMPTY = [ MemoryUnit.ZERO , 0]
+    protected static List EMPTY = [ MemoryUnit.ZERO , 0]
 
-    private List parseStorage( String str ) {
+    protected List parseStorage( String str ) {
         if( !str ) return EMPTY
 
         def item = str.tokenize(' ')
@@ -336,7 +336,7 @@ class AmazonPriceReader {
                 return [ parseMem(item[2] +' GB'), item[0] as int ]
             }
             else {
-                return [ parseMem(str), 1 ]
+                return [ parseMem(item[0] + item[1]), 1 ]
             }
         }
         else {
