@@ -355,6 +355,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         handler.task = task
         handler.pipelineId = 'xyz-123'
         handler.executor = executor
+        handler.assignedZone = 'eu-east-1'
 
         when:
         def record = handler.getTraceRecord()
