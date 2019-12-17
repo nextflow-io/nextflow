@@ -201,7 +201,7 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
     @PackageScope
     List<Event> getEventsFromOp(Operation operation) {
         final metadata = (Metadata)operation.getMetadata()
-        if( metadata == null )
+        if( !metadata?.getEvents() )
             return Collections.<Event>emptyList()
 
         List<Event> result
