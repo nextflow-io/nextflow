@@ -201,18 +201,21 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
     @PackageScope
     List<Event> getEventsFromOp(Operation operation) {
         final metadata = (Metadata)operation.getMetadata()
+        if( metadata == null )
+            return Collections.<Event>emptyList()
+
         List<Event> result
-        if (!this.metadata) {
+        if ( !this.metadata ) {
             this.metadata = metadata
-            result = metadata != null ? metadata.getEvents() : Collections.<Event>emptyList()
+            result = metadata.getEvents()
         }
         else {
             //Get the new events
             def delta = metadata.getEvents().size() - this.metadata.getEvents().size()
             this.metadata = metadata
-            result = delta > 0 ? metadata.getEvents().take(delta) : Collections.<Event>emptyList()
+            result = delta > 0 ? metadata.getEvents().take(delta) : null
         }
-        return result.reverse()
+        return result != null ? result.reverse() : Collections.<Event>emptyList()
     }
 
     @PackageScope Integer readExitFile() {
