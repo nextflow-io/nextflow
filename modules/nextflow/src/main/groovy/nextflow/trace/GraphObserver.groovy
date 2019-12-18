@@ -59,7 +59,7 @@ class GraphObserver implements TraceObserver {
     }
 
     @Override
-    void onFlowInit(Session session) {
+    void onFlowCreate(Session session) {
         this.dag = session.dag
     }
 

@@ -480,7 +480,7 @@ class Session implements ISession {
         execService = Executors.newFixedThreadPool(poolSize)
 
         // signal start to trace observers
-        notifyFlowInit()
+        notifyFlowCreate()
 
         return this
     }
@@ -998,8 +998,8 @@ class Session implements ISession {
         observers.each { trace -> trace.onFlowBegin() }
     }
 
-    void notifyFlowInit() {
-        observers.each { trace -> trace.onFlowInit(this); trace.onFlowStart(this) }
+    void notifyFlowCreate() {
+        observers.each { trace -> trace.onFlowCreate(this); trace.onFlowStart(this) }
     }
 
     void notifyFlowComplete() {

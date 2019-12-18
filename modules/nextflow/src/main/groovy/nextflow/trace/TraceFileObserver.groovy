@@ -189,7 +189,7 @@ class TraceFileObserver implements TraceObserver {
      * "rolled" to a new file
      */
     @Override
-    void onFlowInit(Session session) {
+    void onFlowCreate(Session session) {
         log.debug "Flow starting -- trace file: $tracePath"
 
         // make sure parent path exists

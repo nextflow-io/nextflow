@@ -367,7 +367,7 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     @Override
-    void onFlowInit(Session session){
+    void onFlowCreate(Session session){
         this.started = true
         this.session = session
         this.startTimestamp = System.currentTimeMillis()
