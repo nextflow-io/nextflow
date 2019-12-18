@@ -58,7 +58,7 @@ class WebLogObserverTest extends Specification {
 
         when:
         def payload = WebLogObserver.createFlowPayloadFromSession(sessionStub)
-        httpPostObserver0.onFlowInit(sessionStub)
+        httpPostObserver0.onFlowCreate(sessionStub)
         httpPostObserver0.onProcessSubmit(handlerStub, traceStub)
         httpPostObserver0.onProcessStart(handlerStub, traceStub)
         httpPostObserver0.onProcessComplete(handlerStub, traceStub)

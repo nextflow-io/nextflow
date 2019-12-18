@@ -110,7 +110,7 @@ class TraceFileObserverTest extends Specification {
         def observer = new TraceFileObserver(file)
 
         when:
-        observer.onFlowInit(null)
+        observer.onFlowCreate(null)
         then:
         observer.current.isEmpty()
 

@@ -31,7 +31,7 @@ trait TraceObserver {
     /**
      * The is method is invoked when the flow is going to start
      */
-    void onFlowInit(Session session) {}
+    void onFlowCreate(Session session) {}
 
     @Deprecated void onFlowStart(Session session){}
 

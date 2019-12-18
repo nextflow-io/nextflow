@@ -205,7 +205,7 @@ class TowerClient implements TraceObserver {
      * @param session The current Nextflow session object
      */
     @Override
-    void onFlowInit(Session session) {
+    void onFlowCreate(Session session) {
         log.debug "Creating Tower observer -- endpoint=$endpoint; requestInterval=$requestInterval; aliveInterval=$aliveInterval; maxRetries=$maxRetries; backOffBase=$backOffBase; backOffDelay=$backOffDelay"
         
         this.session = session

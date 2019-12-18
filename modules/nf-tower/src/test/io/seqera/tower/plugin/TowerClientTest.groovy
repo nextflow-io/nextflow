@@ -311,7 +311,7 @@ class TowerClientTest extends Specification {
         TowerClient tower = Spy(TowerClient, constructorArgs: ['https://tower.nf'])
 
         when:
-        tower.onFlowInit(session)
+        tower.onFlowCreate(session)
         then:
         1 * tower.getAccessToken() >> 'secret'
         1 * tower.makeInitRequest(session) >> [runName: 'foo']
