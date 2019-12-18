@@ -466,6 +466,33 @@ class FileHelperTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'visit files 3' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        folder.resolve('file1.txt').text = 'file 1'
+        folder.resolve('file2.fa').text = 'file 2'
+        folder.resolve('file3.bam').text = 'file 2'
+        Files.createSymbolicLink(
+                folder.resolve('file4.fa'),
+                folder.resolve('file3.bam'))
+
+        when:
+        def result = []
+        FileHelper.visitFiles(folder, '*.fa', relative: true) { result << it.toString() }
+        then:
+        result.sort() == ['file2.fa','file4.fa']
+
+        when:
+        result = []
+        FileHelper.visitFiles(folder, '*.fa', relative: true, followLinks: false) { result << it.toString() }
+        then:
+        result.sort() == ['file2.fa']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'visit files in a base path with glob characters' () {
         given:
         def folder = Files.createTempDirectory('test[a-b]')
