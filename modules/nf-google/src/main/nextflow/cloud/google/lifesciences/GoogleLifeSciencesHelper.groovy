@@ -253,26 +253,27 @@ class GoogleLifeSciencesHelper {
         final localTaskDir = getLocalTaskDir(workDir)
         final remoteTaskDir = getRemoteTaskDir(workDir)
 
-        String result = "[[ \$NXF_DEBUG -gt 0 ]] && set -x; "
+        String result = 'set -x; '
         result += '{ '
         result += "cd ${localTaskDir}; "
         result += "gsutil -m -q cp $remoteTaskDir/${TaskRun.CMD_RUN} .; "
         result += "bash ${TaskRun.CMD_RUN} nxf_stage; "
-        result += "} 2>&1 > $localTaskDir/${TaskRun.CMD_LOG}"
+        result += '[[ $NXF_DEBUG -gt 0 ]] && ls -lah $PWD || true; '
+        result += "} &> $localTaskDir/${TaskRun.CMD_LOG}"
         return result
     }
 
     String getMainScript(Path workDir) {
         final localTaskDir = getLocalTaskDir(workDir)
-        return "{ cd $localTaskDir; bash ${TaskRun.CMD_RUN}; } 2>&1 | tee -a $localTaskDir/${TaskRun.CMD_LOG}"
+        return "{ cd $localTaskDir; bash ${TaskRun.CMD_RUN}; } >> $localTaskDir/${TaskRun.CMD_LOG} 2>&1"
     }
 
     String getUnstagingScript(Path workDir) {
         final localTaskDir = getLocalTaskDir(workDir)
         final remoteTaskDir = getRemoteTaskDir(workDir)
-        def result = "[[ \$NXF_DEBUG -gt 0 ]] && { env; set -x; }; "
-        result += "trap 'err=\$?; gsutil -m -q cp -R $localTaskDir/${TaskRun.CMD_LOG} ${remoteTaskDir}/${TaskRun.CMD_LOG} || true; [[ \$err -gt 0 || \$GOOGLE_LAST_EXIT_STATUS -gt 0 || \$NXF_DEBUG -gt 0 ]] && { gsutil -m -q cp -R /google/ ${remoteTaskDir}; } || rm -rf $localTaskDir; exit \$err' EXIT; "
-        result += "{ cd $localTaskDir; bash ${TaskRun.CMD_RUN} nxf_unstage; } 2>&1 | tee -a $localTaskDir/${TaskRun.CMD_LOG}"
+        def result = 'set -x; '
+        result += "trap 'err=\$?; exec 1>&2; gsutil -m -q cp -R $localTaskDir/${TaskRun.CMD_LOG} ${remoteTaskDir}/${TaskRun.CMD_LOG} || true; [[ \$err -gt 0 || \$GOOGLE_LAST_EXIT_STATUS -gt 0 || \$NXF_DEBUG -gt 0 ]] && { ls -lah $localTaskDir || true; gsutil -m -q cp -R /google/ ${remoteTaskDir}; } || rm -rf $localTaskDir; exit \$err' EXIT; "
+        result += "{ cd $localTaskDir; bash ${TaskRun.CMD_RUN} nxf_unstage; } >> $localTaskDir/${TaskRun.CMD_LOG} 2>&1"
         return result
     }
 }

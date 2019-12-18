@@ -421,18 +421,18 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
         def stage = helper.getStagingScript(dir)
         then:
         stage ==
-                '[[ $NXF_DEBUG -gt 0 ]] && set -x; { cd /work/dir; gsutil -m -q cp gs://my-bucket/work/dir/.command.run .; bash .command.run nxf_stage; } 2>&1 > /work/dir/.command.log'
+                'set -x; { cd /work/dir; gsutil -m -q cp gs://my-bucket/work/dir/.command.run .; bash .command.run nxf_stage; [[ $NXF_DEBUG -gt 0 ]] && ls -lah $PWD || true; } &> /work/dir/.command.log'
         when:
         def main = helper.getMainScript(dir)
         then:
         main ==
-                '{ cd /work/dir; bash .command.run; } 2>&1 | tee -a /work/dir/.command.log'
+                '{ cd /work/dir; bash .command.run; } >> /work/dir/.command.log 2>&1'
 
         when:
         def unstage = helper.getUnstagingScript(dir)
         then:
         unstage ==
-                '[[ $NXF_DEBUG -gt 0 ]] && { env; set -x; }; trap \'err=$?; gsutil -m -q cp -R /work/dir/.command.log gs://my-bucket/work/dir/.command.log || true; [[ $err -gt 0 || $GOOGLE_LAST_EXIT_STATUS -gt 0 || $NXF_DEBUG -gt 0 ]] && { gsutil -m -q cp -R /google/ gs://my-bucket/work/dir; } || rm -rf /work/dir; exit $err\' EXIT; { cd /work/dir; bash .command.run nxf_unstage; } 2>&1 | tee -a /work/dir/.command.log'
+                'set -x; trap \'err=$?; exec 1>&2; gsutil -m -q cp -R /work/dir/.command.log gs://my-bucket/work/dir/.command.log || true; [[ $err -gt 0 || $GOOGLE_LAST_EXIT_STATUS -gt 0 || $NXF_DEBUG -gt 0 ]] && { ls -lah /work/dir || true; gsutil -m -q cp -R /google/ gs://my-bucket/work/dir; } || rm -rf /work/dir; exit $err\' EXIT; { cd /work/dir; bash .command.run nxf_unstage; } >> /work/dir/.command.log 2>&1'
     }
 
     @Unroll
