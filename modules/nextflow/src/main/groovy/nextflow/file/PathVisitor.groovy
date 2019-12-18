@@ -64,8 +64,11 @@ class PathVisitor {
         if( filePattern instanceof Pattern )
             applyRegexPattern0(filePattern)
 
-        else
+        else if( filePattern != null )
             applyGlobPattern0(filePattern as Path)
+
+        else
+            throw new IllegalArgumentException("Missing file pattern argument")
 
         return target
     }
