@@ -1417,7 +1417,7 @@ class TaskProcessor {
         final List<Path> allFiles = []
         // type file parameter can contain a multiple files pattern separating them with a special character
         def entries = param.getFilePatterns(context, task.workDir)
-
+        boolean inputsRemovedFlag = false
         // for each of them collect the produced files
         for( String filePattern : entries ) {
             List<Path> result = null
@@ -1426,9 +1426,10 @@ class TaskProcessor {
             if( splitter?.isPattern() ) {
                 result = fetchResultFiles(param, filePattern, workDir)
                 // filter the inputs
-                if( !param.includeInputs ) {
+                if( result && !param.includeInputs ) {
                     result = filterByRemovingStagedInputs(task, result, workDir)
                     log.trace "Process ${task.name} > after removing staged inputs: ${result}"
+                    inputsRemovedFlag |= (result.size()==0)
                 }
             }
             else {
@@ -1444,8 +1445,12 @@ class TaskProcessor {
             if( result )
                 allFiles.addAll(result)
 
-            else if( !param.optional )
-                throw new MissingFileException("Missing output file(s) `$filePattern` expected by process `${task.name}`")
+            else if( !param.optional ) {
+                def msg = "Missing output file(s) `$filePattern` expected by process `${task.name}`"
+                if( inputsRemovedFlag )
+                    msg += " (note: input files are not included in the default matching set)"
+                throw new MissingFileException(msg)
+            }
         }
 
         task.setOutput( param, allFiles.size()==1 ? allFiles[0] : allFiles )
