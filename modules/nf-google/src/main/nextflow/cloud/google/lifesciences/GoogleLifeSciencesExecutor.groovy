@@ -90,7 +90,7 @@ class GoogleLifeSciencesExecutor extends Executor {
     }
 
     protected GoogleLifeSciencesHelper initClient() {
-        new GoogleLifeSciencesHelper().init()
+        new GoogleLifeSciencesHelper(config).init()
     }
 
     @Override

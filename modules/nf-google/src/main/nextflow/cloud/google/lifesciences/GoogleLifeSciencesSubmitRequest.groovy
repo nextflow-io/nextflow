@@ -50,8 +50,6 @@ class GoogleLifeSciencesSubmitRequest {
 
     String containerImage
 
-    String fileCopyImage
-
     Mount sharedMount
 
     AcceleratorResource accelerator

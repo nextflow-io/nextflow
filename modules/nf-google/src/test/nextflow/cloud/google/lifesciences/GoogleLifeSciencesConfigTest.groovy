@@ -154,5 +154,45 @@ class GoogleLifeSciencesConfigTest extends Specification {
         config.bootDiskSize == MemoryUnit.of('10 GB')
     }
 
+    def 'should config ssh daemon' () {
+        when:
+        def config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [:]]])
+        then:
+        !config.sshDaemon
 
+        when:
+        config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [sshDaemon:true]]])
+        then:
+        config.sshDaemon
+    }
+
+    def 'should config debug mode' () {
+        when:
+        def config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [:]]])
+        then:
+        config.debugMode==null
+
+        when:
+        config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [debug:true]]])
+        then:
+        config.debugMode == 1
+
+        when:
+        config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [debug:2]]])
+        then:
+        config.debugMode == 2
+
+    }
+
+    def 'should config copy image' () {
+        when:
+        def config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [:]]])
+        then:
+        config.copyImage == GoogleLifeSciencesConfig.DEFAULT_COPY_IMAGE
+
+        when:
+        config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [copyImage:'foo']]])
+        then:
+        config.copyImage == 'foo'
+    }
 }

@@ -51,12 +51,15 @@ import nextflow.util.Escape
 @CompileStatic
 class GoogleLifeSciencesHelper {
 
+    public static final String SSH_DAEMON_NAME = 'ssh-daemon'
+    public static final String DEFAULT_APP_NAME = "Nextflow/GLS"
     public static final String SCOPE_CLOUD_PLATFORM = "https://www.googleapis.com/auth/cloud-platform"
     public static final List<String> ENV_VAR_TO_INCLUDE = ["NXF_DEBUG"]
 
     CloudLifeSciences client
     GoogleCredentials credentials
     final String applicationName
+    GoogleLifeSciencesConfig config
 
     /**
      * As defined by Google pipeline API
@@ -73,9 +76,15 @@ class GoogleLifeSciencesHelper {
         DISABLE_STANDARD_ERROR_CAPTURE
     }
 
-    GoogleLifeSciencesHelper(GoogleCredentials credential = null, String name = "Nextflow GoogleLifeScience") {
+    /* only for testing purpose */
+    protected GoogleLifeSciencesHelper(GoogleCredentials credential = null, String name = DEFAULT_APP_NAME) {
         this.credentials = credential
         this.applicationName = name
+    }
+
+    GoogleLifeSciencesHelper(GoogleLifeSciencesConfig config) {
+        this.config = config
+        this.applicationName = DEFAULT_APP_NAME
     }
 
     static String sanitizeName(String name) {
@@ -99,9 +108,10 @@ class GoogleLifeSciencesHelper {
     }
 
     Map<String, String> getEnvironment() {
-        System.getenv().findAll { it ->
-            ENV_VAR_TO_INCLUDE.contains(it.key)
-        }
+        final result = new HashMap(1)
+        if( config.debugMode )
+            result.put('NXF_DEBUG', config.debugMode.toString())
+        return result
     }
 
     Action createAction(String name, String imageUri, List<String> commands, List<Mount> mounts, List<ActionFlags> flags = [], String entrypoint = null) {
@@ -143,6 +153,9 @@ class GoogleLifeSciencesHelper {
     Operation submitPipeline(GoogleLifeSciencesSubmitRequest req) {
 
         final actions = new ArrayList(5)
+        if( config.sshDaemon ) {
+            actions.add(createSshDaemonAction(req))
+        }
         actions.add(createStagingAction(req))
         actions.add(createMainAction(req))
         actions.add(createUnstagingAction(req))
@@ -194,7 +207,7 @@ class GoogleLifeSciencesHelper {
     protected Action createStagingAction(GoogleLifeSciencesSubmitRequest req) {
         createAction(
                 "$req.taskName-stage",
-                req.fileCopyImage,
+                config.copyImage,
                 ["bash", "-c", getStagingScript(req.workDir)],
                 [req.sharedMount] )
     }
@@ -202,12 +215,23 @@ class GoogleLifeSciencesHelper {
     protected Action createUnstagingAction(GoogleLifeSciencesSubmitRequest req) {
         createAction(
                 "$req.taskName-unstage",
-                req.fileCopyImage,
+                config.copyImage,
                 ["bash", "-c", getUnstagingScript(req.workDir)],
                 [req.sharedMount],
                 [ActionFlags.ALWAYS_RUN, ActionFlags.IGNORE_EXIT_STATUS])
     }
 
+    protected Action createSshDaemonAction(GoogleLifeSciencesSubmitRequest req) {
+        new Action()
+            .setContainerName(SSH_DAEMON_NAME)
+            .setImageUri(config.sshImage)
+            .setEntrypoint('ssh-server')
+            .setMounts([req.sharedMount])
+            .setPortMappings(['22':22])
+            .setAlwaysRun(true)
+            .setRunInBackground(true)
+            .setIgnoreExitStatus(true)
+    }
 
     Operation checkOperationStatus(Operation operation) {
         try {

@@ -26,7 +26,6 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.util.MemoryUnit
-
 /**
  * Helper class wrapping configuration required for Google Pipelines.
  *
@@ -37,6 +36,10 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class GoogleLifeSciencesConfig {
 
+    public final static String DEFAULT_COPY_IMAGE = 'google/cloud-sdk:alpine'
+
+    public final static String DEFAULT_SSH_IMAGE = 'gcr.io/cloud-genomics-pipelines/tools'
+
     String project
     List<String> zones
     List<String> regions
@@ -45,6 +48,10 @@ class GoogleLifeSciencesConfig {
     String location
     boolean disableBinDir
     MemoryUnit bootDiskSize
+    boolean sshDaemon
+    String sshImage
+    Integer debugMode
+    String copyImage
 
     @Deprecated
     GoogleLifeSciencesConfig(String project, List<String> zone, List<String> region, Path remoteBinDir = null, boolean preemptible = false) {
@@ -95,6 +102,10 @@ class GoogleLifeSciencesConfig {
         final boolean disableBinDir = config.navigate('google.lifeSciences.disableRemoteBinDir',false)
         final preemptible = config.navigate("google.lifeSciences.preemptible", false) as boolean
         final bootDiskSize = config.navigate('google.lifeSciences.bootDiskSize') as MemoryUnit
+        final sshDaemon = config.navigate('google.lifeSciences.sshDaemon', false) as boolean
+        final sshImage = config.navigate('google.lifeSciences.sshImage', DEFAULT_SSH_IMAGE) as String
+        final copyImage = config.navigate('google.lifeSciences.copyImage', DEFAULT_COPY_IMAGE) as String
+        final debugMode = config.navigate('google.lifeSciences.debug', System.getenv('NXF_DEBUG'))
 
         def zones = (config.navigate("google.zone") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
         def regions = (config.navigate("google.region") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
@@ -107,9 +118,21 @@ class GoogleLifeSciencesConfig {
                 location: location,
                 preemptible: preemptible,
                 disableBinDir: disableBinDir,
-                bootDiskSize: bootDiskSize )
+                bootDiskSize: bootDiskSize,
+                debugMode: debugMode0(debugMode),
+                copyImage: copyImage,
+                sshDaemon: sshDaemon,
+                sshImage: sshImage )
     }
 
+    static private Integer debugMode0(value) {
+        if( value instanceof Boolean )
+            return value ? 1 : 0
+        else if( value ) {
+            return value.toString().toInteger()
+        }
+        return null
+    }
 
     static String fallbackToRegionOrZone(List<String> regions, List<String> zones) {
         if( regions ) {
