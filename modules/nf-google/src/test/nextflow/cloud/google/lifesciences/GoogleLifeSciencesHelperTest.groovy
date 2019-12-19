@@ -85,11 +85,9 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
         def entryPoint = "entryPoint"
         def helper = new GoogleLifeSciencesHelper()
 
-
         when:
+        helper.config = Mock(GoogleLifeSciencesConfig)
         def action1 = helper.createAction(actionName,imageName,commands,mounts,flags,entryPoint)
-        def action2 = helper.createAction(actionName,imageName,commands,mounts)
-
         then:
         with(action1) {
             getContainerName() == actionName
@@ -98,13 +96,20 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
             getMounts() == mounts
             getEntrypoint() == entryPoint
             getAlwaysRun()
+            getEnvironment() == [:]
         }
+
+        when:
+        helper.config = Mock(GoogleLifeSciencesConfig) { getDebugMode() >> 2 }
+        def action2 = helper.createAction(actionName,imageName,commands,mounts)
+        then:
 
         with(action2) {
             getContainerName() == actionName
             getImageUri() == imageName
             getCommands() == commands
             getMounts() == mounts
+            getEnvironment() == [NXF_DEBUG: '2']
             !getEntrypoint()
             !getAlwaysRun()
         }
@@ -246,9 +251,10 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
 
     def 'should create main action' () {
         given:
+        def mount = new Mount()
         def workDir = mockGsPath('gs://foo/work')
         def helper = Spy(GoogleLifeSciencesHelper)
-        def mount = new Mount()
+        helper.config = Mock(GoogleLifeSciencesConfig)
         and:
         def req = Mock(GoogleLifeSciencesSubmitRequest) {
             getTaskName() >> 'foo'
@@ -281,13 +287,13 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
     def 'should create staging action' () {
         given:
         def workDir = mockGsPath('gs://foo/work')
+        def mount = new Mount()
         and:
         def helper = Spy(GoogleLifeSciencesHelper)
-        def mount = new Mount()
+        helper.config = Mock(GoogleLifeSciencesConfig) { getCopyImage() >> 'alpine' }
         and:
         def req = Mock(GoogleLifeSciencesSubmitRequest) {
             getTaskName() >> 'bar'
-            getFileCopyImage() >>'alpine'
             getSharedMount() >> mount
             getWorkDir() >> workDir
         }
@@ -316,12 +322,13 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
     def 'should create unstaging action' () {
         given:
         def workDir = mockGsPath('gs://foo/work')
+        def mount = new Mount()
         and:
         def helper = Spy(GoogleLifeSciencesHelper)
-        def mount = new Mount()
+        helper.config = Mock(GoogleLifeSciencesConfig) { getCopyImage() >> 'alpine' }
+        and:
         def req = Mock(GoogleLifeSciencesSubmitRequest) {
             getTaskName() >> 'bar'
-            getFileCopyImage() >> 'alpine'
             getSharedMount() >> mount
             getWorkDir() >> workDir
         }
@@ -353,12 +360,14 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
     def 'should submit pipeline request' () {
         given:
         def helper = Spy(GoogleLifeSciencesHelper)
+        helper.config = Mock(GoogleLifeSciencesConfig) { getCopyImage() >> 'alpine' }
         def stage = GroovyMock(Action)
         def unstage = GroovyMock(Action)
         def main = GroovyMock(Action)
         def res = GroovyMock(Resources)
         def operation = GroovyMock(Operation)
         and:
+
         def pipeline = new Pipeline()
         def req = new GoogleLifeSciencesSubmitRequest(location: 'LOC-1', project: 'PRJ-X', taskName: 'foo')
 

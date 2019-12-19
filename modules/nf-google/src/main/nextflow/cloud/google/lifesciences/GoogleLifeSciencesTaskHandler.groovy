@@ -17,6 +17,8 @@
 
 package nextflow.cloud.google.lifesciences
 
+import static nextflow.cloud.google.lifesciences.GoogleLifeSciencesHelper.*
+
 import java.nio.file.Path
 
 import com.google.api.services.lifesciences.v2beta.model.Event
@@ -49,8 +51,6 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
 
     public final static String DEFAULT_DISK_NAME = "nf-pipeline-work"
 
-    public final static String DEFAULT_COPY_IMAGE = "google/cloud-sdk:alpine"
-
     GoogleLifeSciencesExecutor executor
 
     private TaskBean taskBean
@@ -70,6 +70,8 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
     private GoogleLifeSciencesHelper helper
 
     private volatile String assignedZone
+
+    private volatile String assignedInstance
 
     GoogleLifeSciencesTaskHandler(TaskRun task, GoogleLifeSciencesExecutor executor) {
         super(task)
@@ -127,11 +129,20 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
 
         final warns = new HashSet()
         for( Event ev : events ) {
-            def d = ev.getDescription()
+            log.trace "[GLS] task $task.name > event=$ev"
+            final d = ev.getDescription()
+            // collect warnings
             if( d?.contains('resource_exhausted') )
                 warns << d
+            // fetch the assigned zone
             if( !assignedZone && ev.getWorkerAssigned() )
                 assignedZone = ev.getWorkerAssigned().getZone()
+            // fetch the assigned instance
+            if( !assignedInstance && ev.getWorkerAssigned() )
+                assignedInstance = ev.getWorkerAssigned().getInstance()
+            // dump SSH daemon info
+            if( ev.getContainerStarted() && d?.contains(SSH_DAEMON_NAME) )
+                log.debug "[GLS] SSH daemon IP ${ev.getContainerStarted().getIpAddress()}; connect command: `gcloud compute --project ${executor.config.project} ssh --zone ${assignedZone} ${assignedInstance}`"
         }
 
         if( warns ) {
@@ -284,7 +295,6 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
         req.preemptible = executor.config.preemptible
         req.taskName = "nf-$task.hash"
         req.containerImage = task.container
-        req.fileCopyImage = DEFAULT_COPY_IMAGE
         req.workDir = task.workDir
         req.sharedMount = configureMount(DEFAULT_DISK_NAME, task.workDir.toString())
         req.accelerator = task.config.getAccelerator()

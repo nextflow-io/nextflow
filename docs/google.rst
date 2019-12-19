@@ -475,7 +475,11 @@ google.region                       The Google *region* where the computation is
 google.zone                         The Google *zone* where the computation is executed. Multiple zones can be provided separating them by a comma. Do not specify if a region is provided.
 google.location                     The Google *location* where the job executions are deployed (default: the same as the region or the zone specified).
 google.lifeSciences.bootDiskSize    Set the size of the virtual machine boot disk e.g `50.GB` (default: none).
+google.lifeSciences.copyImage       The container image run to copy input and output files. It must include the ``gsutil`` tool (default: ``google/cloud-sdk:alpine``).
+google.lifeSciences.debug           When ``true`` copies the `/google` debug directory in that task bucket directory (defualt: ``false``)
 google.lifeSciences.preemptible     When ``true`` enables the usage of *preemptible* virtual machines or ``false`` otherwise (default: ``true``)
+google.lifeSciences.sshDaemon       When ``true`` runs SSH daemon in the VM carrying out the job to which it's possible to connect for debugging purposes (default: ``false``).
+google.lifeSciences.sshImage        The container image used to run the SSH daemon (default: ``gcr.io/cloud-genomics-pipelines/tools``).
 =================================== =================
 
 

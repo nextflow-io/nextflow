@@ -175,7 +175,6 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         req.preemptible
         req.taskName == "nf-bad893071e9130b866d43a4fcabb95b6"
         req.containerImage == 'my/image'
-        req.fileCopyImage == GoogleLifeSciencesTaskHandler.DEFAULT_COPY_IMAGE
         req.workDir.toUriString() == 'gs://my-bucket/work/dir'
         req.sharedMount.getPath() == '/work/dir'
         req.sharedMount.getDisk() == GoogleLifeSciencesTaskHandler.DEFAULT_DISK_NAME
