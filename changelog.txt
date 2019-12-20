@@ -1,6 +1,25 @@
 NEXTFLOW CHANGE-LOG
 ===================
-19.11.0 - 2 Dec 2019 
+19.12.0-edge - 20 Dec 2019 
+- Add GLS assigned zone discovery #1406
+- Add Google Life sciences (GLS) executor improvements #1406 [ead29c11] [8228e9b4]
+- Add GLS bootDiskSize support #1331 [f118798c] [af8fe16d]
+- Add GLS job debugging #1351
+- Fix NPE when file pattern is missing [1cbb6e49]
+- Fix AWS cloud parsing for NVEe storage and tests
+- Fix Disable ansi log on non-tty env #1417
+- Fix Allow Singularity image path with blank #1368
+- Fix Shell template invalid caching #1422
+- Fix Task vars ordering may invalidate cache #1408 
+- Fix Join operator not matching gstrings #1394 
+- Fix sigpipe error caused by runner script #1332 
+- Fix Google Storage bucket with underscore is not recognized #1069 [85cd0cde]
+- Fix fromFilePairs can't take list of paths #1405 [c00f5669]
+- Refactor onFlowInit to onFlowCreate event [c477eeaf]
+- Improve err msg when input files are remove from output [5d5744a8]
+- Upgrade to Gradle 6.0.1 [e0c1a3ac]
+
+19.11.0-edge - 2 Dec 2019 
 - Increase tasks.module to 255 [7332c606]
 - Fix Allow the output of process env variables #69 [1c1befc7]
 - Fix docs rounding issue #1350 [af824fc7]
