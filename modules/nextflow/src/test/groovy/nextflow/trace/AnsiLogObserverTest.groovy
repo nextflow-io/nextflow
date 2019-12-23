@@ -101,4 +101,30 @@ class AnsiLogObserverTest extends Specification {
 
     }
 
+    def 'should count lines' () {
+        given:
+        def ansi = new AnsiLogObserver()
+
+        when:
+        ansi.cols = 80
+        then:
+        ansi.countNewLines('hello') == 0
+        ansi.countNewLines('a\nb\nc') == 2
+        ansi.countNewLines('a\nb\nc\n') == 3
+
+        when:
+        ansi.cols = 5
+        then:
+        ansi.countNewLines('123') == 0
+        ansi.countNewLines('12345') == 0
+        ansi.countNewLines('12345678') == 1
+        ansi.countNewLines('1234567890') == 1
+        ansi.countNewLines('12345678901') == 2
+        and:
+        ansi.countNewLines('123\n') == 1
+        ansi.countNewLines('123\n\n') == 2
+        ansi.countNewLines('123\na\n') == 2
+        ansi.countNewLines('123\n123456\n') == 3
+    }
+
 }

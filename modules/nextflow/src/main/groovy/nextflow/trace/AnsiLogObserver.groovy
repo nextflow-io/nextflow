@@ -263,7 +263,7 @@ class AnsiLogObserver implements TraceObserver {
         final str = term.toString()
         if( str ) {
             printAnsiLines(str)
-            printedLines = str.count(NEWLINE)
+            printedLines = countNewLines(str)
         }
         else
             printedLines = 0
@@ -384,4 +384,21 @@ class AnsiLogObserver implements TraceObserver {
         markModified()
     }
 
+    protected int countNewLines(String str) {
+        int result=0
+        int gap=0
+        while( true ) {
+            int p=str.indexOf(NEWLINE)
+            if( p==-1 ) {
+                result += (str.length()-1).intdiv(cols) +gap
+                break
+            }
+            else {
+                result += (p-1).intdiv(cols) +gap
+                str = str.substring(p+1)
+                if( gap==0 ) gap = 1
+            }
+        }
+        return result
+    }
 }
