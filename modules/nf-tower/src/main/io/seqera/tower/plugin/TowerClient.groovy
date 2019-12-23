@@ -30,6 +30,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
+import nextflow.trace.ProgressRecord
 import nextflow.trace.ResourcesAggregator
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceRecord
@@ -462,11 +463,16 @@ class TowerClient implements TraceObserver {
         final result = new LinkedHashMap(5)
         result.put('tasks', payload)
         result.put('workflowId', workflowId)
+        result.put('progress', getProgressRecords())
         return result
     }
 
     protected List getMetricsList() {
         return aggregator.computeSummaryList()
+    }
+
+    protected List<ProgressRecord> getProgressRecords() {
+        session.getProgressState()?.getProgress() ?: Collections.<ProgressRecord>emptyList()
     }
 
     /**
