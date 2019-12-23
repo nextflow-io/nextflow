@@ -24,6 +24,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
+import nextflow.trace.ProgressRecord
 import nextflow.trace.TraceRecord
 import nextflow.util.SimpleHttpClient
 import org.junit.Ignore
@@ -162,10 +163,12 @@ class TowerClientTest extends Specification {
     def 'should post task records' () {
         given:
         def URL = 'http://foo.com'
+        def PROGRESS = new ProgressRecord(running:1, succeeded: 2, failed: 3)
         def client = Mock(SimpleHttpClient)
         def observer = Spy(TowerClient)
         observer.httpClient = client
-
+        observer.workflowId = 'xyz-123'
+        
         def nowTs = System.currentTimeMillis()
         def submitTs = nowTs-2000
         def startTs = nowTs-1000
@@ -184,6 +187,10 @@ class TowerClientTest extends Specification {
         when:
         def req = observer.makeTasksReq([trace])
         then:
+        observer.getProgressRecords() >> [PROGRESS]
+        and:
+        req.workflowId == 'xyz-123'
+        and:
         req.tasks[0].taskId == 10
         req.tasks[0].process == 'foo'
         req.tasks[0].workdir == "/work/dir"
@@ -194,6 +201,10 @@ class TowerClientTest extends Specification {
         req.tasks[0].machineType == 'm4.large'
         req.tasks[0].cloudZone == 'eu-west-1b'
         req.tasks[0].priceModel == 'spot'
+        and:
+        req.progress[0].running == 1
+        req.progress[0].succeeded == 2
+        req.progress[0].failed == 3 
 
         when:
         observer.sendHttpMessage(URL, req)
