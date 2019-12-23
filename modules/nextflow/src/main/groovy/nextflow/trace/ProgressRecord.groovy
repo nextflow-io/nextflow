@@ -55,6 +55,8 @@ class ProgressRecord implements Cloneable {
     long peakCpus
     long peakMemory
 
+    ProgressRecord() {}
+
     ProgressRecord(int processId, String processName) {
         this.index = processId
         this.name = processName
