@@ -74,8 +74,6 @@ allprojects {
         mavenCentral()
         maven { url 'https://repo.eclipse.org/content/groups/releases' }
         maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
-        maven { url 'https://s3-eu-west-1.amazonaws.com/maven.seqera.io/releases' }
-        maven { url 'https://s3-eu-west-1.amazonaws.com/maven.seqera.io/snapshots' }
     }
 
     configurations {
@@ -353,10 +351,10 @@ task packOne(type: Jar) {
     // enable snapshot dependencies lookup
     if( version.endsWith('-SNAPSHOT') ) {
         manifest.attributes 'Allow-Snapshots': true
-        manifest.attributes 'Repositories': 'local https://oss.sonatype.org/content/repositories/snapshots central https://s3-eu-west-1.amazonaws.com/maven.seqera.io/releases https://s3-eu-west-1.amazonaws.com/maven.seqera.io/snapshots'
+        manifest.attributes 'Repositories': 'local https://oss.sonatype.org/content/repositories/snapshots central seqera'
     }
     else {
-        manifest.attributes 'Repositories': 'central https://s3-eu-west-1.amazonaws.com/maven.seqera.io/releases'
+        manifest.attributes 'Repositories': 'central seqera'
     }
 
     /*
