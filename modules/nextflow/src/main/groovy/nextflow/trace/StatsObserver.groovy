@@ -18,20 +18,31 @@ package nextflow.trace
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.Session
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
 /**
- * Collect workflow execution statistics
+ * Collect workflow execution progress and statistics
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class StatsObserver implements TraceObserver {
+class StatsObserver implements TraceObserver, ProgressState {
 
     private WorkflowStats stats = new WorkflowStats()
 
+    private Session session
+
+    private List<ProgressRecord> records = new ArrayList<>(100)
+
+    private volatile long changeTimestamp
+
     WorkflowStats getStats() { stats }
+
+    StatsObserver(Session session) {
+        this.session = session
+    }
 
     @Override
     void onFlowComplete() {
@@ -39,22 +50,46 @@ class StatsObserver implements TraceObserver {
     }
 
     @Override
-    void onProcessCreate(TaskProcessor process) {
-
+    void onProcessCreate(TaskProcessor process){
+        records[ process.id-1 ] = new ProgressRecord(process.id, process.name)
+        changeTimestamp = System.currentTimeMillis()
     }
 
     @Override
-    void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
-
+    void onProcessTerminate( TaskProcessor processor ) {
+        final state = records[ processor.id-1 ]
+        state?.markTerminated()
+        changeTimestamp = System.currentTimeMillis()
     }
 
     @Override
-    void onProcessStart(TaskHandler handler, TraceRecord trace) {
+    void onProcessPending(TaskHandler handler, TraceRecord trace){
+        final state = records[ handler.getTask().processor.id-1 ]
+        state?.markPending()
+        changeTimestamp = System.currentTimeMillis()
+    }
 
+    @Override
+    void onProcessSubmit(TaskHandler handler, TraceRecord trace){
+        final state = records[ handler.getTask().processor.id-1 ]
+        state?.markSubmitted(handler.getTask())
+        changeTimestamp = System.currentTimeMillis()
+    }
+
+    @Override
+    void onProcessStart(TaskHandler handler, TraceRecord trace){
+        final state = records[ handler.getTask().processor.id-1 ]
+        state?.markRunning(handler.getTask())
+        changeTimestamp = System.currentTimeMillis()
     }
 
     @Override
     void onProcessComplete(TaskHandler handler, TraceRecord trace) {
+        ProgressRecord state = records[ handler.getTask().processor.id-1 ]
+        state?.markComplete(handler.getTask())
+        changeTimestamp = System.currentTimeMillis()
+
+        // update stats
         if( trace ) {
             stats.updateTasksCompleted(trace)
         }
@@ -64,15 +99,33 @@ class StatsObserver implements TraceObserver {
     }
 
     @Override
-    void onProcessCached(TaskHandler handler, TraceRecord trace) {
+    void onProcessCached(TaskHandler handler, TraceRecord trace){
+        final state = records[ handler.getTask().processor.id-1 ]
+        state?.markCached(handler.getTask(), trace)
+        changeTimestamp = System.currentTimeMillis()
+        // update stats
         if( trace ) {
             stats.updateTasksCached(trace)
         }
     }
 
     @Override
-    boolean enableMetrics() {
-        return false
+    List<ProgressRecord> getProgress() {
+        def result = new ArrayList<ProgressRecord>(records.size())
+        for( int i=0; i<records.size(); i++ ) {
+            result.add(i, records.get(i).clone())
+        }
+        return result
+    }
+
+    @Override
+    int getProgressLength() {
+        records.size()
+    }
+
+    @Override
+    long getChangeTimestamp() {
+        changeTimestamp
     }
 
 }

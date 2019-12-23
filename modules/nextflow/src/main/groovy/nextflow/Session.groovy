@@ -62,6 +62,7 @@ import nextflow.script.ScriptMeta
 import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.AnsiLogObserver
+import nextflow.trace.ProgressState
 import nextflow.trace.StatsObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
@@ -239,6 +240,8 @@ class Session implements ISession {
 
     AnsiLogObserver ansiLogObserver
 
+    ProgressState progressState
+
     FilePorter getFilePorter() { filePorter }
 
     /**
@@ -389,7 +392,8 @@ class Session implements ISession {
         def result = new ArrayList(10)
 
         // stats is created as first because others may depend on it
-        final observer = new StatsObserver()
+        final observer = new StatsObserver(this)
+        this.progressState = observer
         this.workflowStats = observer.stats
         result << observer
 
