@@ -315,7 +315,9 @@ class BashWrapperBuilder {
     }
 
     private String getCondaActivateSnippet() {
-        condaEnv ? "# conda environment\nsource activate ${Escape.path(condaEnv)}\n" : null
+        // Extract the "conda_prefix" entry from JSON
+        def condaPrefixSubCmd = 'conda info --json | sed  -n \'s/^.*"conda_prefix":\\s*"\\(.\\+\\)".*$/\\1/p\''
+        condaEnv ? "# conda environment\nsource \$($condaPrefixSubCmd)/bin/activate ${Escape.path(condaEnv)}\n" : null
     }
 
     protected String getTraceCommand(String interpreter) {
