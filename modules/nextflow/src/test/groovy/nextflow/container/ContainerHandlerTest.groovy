@@ -195,6 +195,7 @@ class ContainerHandlerTest extends Specification {
         null                                        | null                                              |           0 | null
         ''                                          | null                                              |           0 | null
         '/abs/path/bar.img'                         | '/abs/path/bar.img'                               |           0 | '/abs/path/bar.img'
+        '/abs/path bar.img'                         | '/abs/path bar.img'                               |           0 | '/abs/path\\ bar.img'
         'file:///abs/path/bar.img'                  | '/abs/path/bar.img'                               |           0 | '/abs/path/bar.img'
         'foo.img'                                   | Paths.get('foo.img').toAbsolutePath().toString() |       0 | Paths.get('foo.img').toAbsolutePath().toString()
         'shub://busybox'                            | 'shub://busybox'                                  |           1 | '/path/to/busybox'

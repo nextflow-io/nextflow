@@ -36,6 +36,7 @@ class FilesExTest2 extends Specification {
         def path = PATH as Path
         then:
         path instanceof CloudStoragePath
+        println FilesEx.toUriString(path)
         FilesEx.toUriString(path) == PATH
 
         where:
@@ -45,5 +46,6 @@ class FilesExTest2 extends Specification {
         'gs://foo/'             | _
         'gs://foo/bar/baz'      | _
         'gs://foo/bar/baz/'     | _
+        'gs://foo/bar - baz/'   | _
     }
 }

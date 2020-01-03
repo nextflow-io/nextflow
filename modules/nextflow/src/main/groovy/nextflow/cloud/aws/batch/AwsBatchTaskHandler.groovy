@@ -601,7 +601,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     protected CloudMachineInfo getMachineInfo() {
         if( machineInfo )
             return machineInfo
-        if( queueName && taskArn ) {
+        if( queueName && taskArn && executor.awsOptions.fetchInstanceType ) {
             machineInfo = executor.getMachineInfoByQueueAndTaskArn(queueName, taskArn)
             log.trace "[AWS BATCH] jobId=$jobId; queue=$queueName; task=$taskArn => machineInfo=$machineInfo"
         }

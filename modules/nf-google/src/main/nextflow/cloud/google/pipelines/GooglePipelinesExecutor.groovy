@@ -40,6 +40,7 @@ import nextflow.util.ServiceName
  * @author Ólafur Haukur Flygenring <olafurh@wuxinextcode.com>
  */
 @Slf4j
+@Deprecated
 @CompileStatic
 @ServiceName('google-pipelines')
 @SupportedScriptTypes(ScriptType.SCRIPTLET)
@@ -115,6 +116,7 @@ class GooglePipelinesExecutor extends Executor {
             log.warn "Environment PATH defined in config file is ignored by Google Pipeline executor"
         }
 
+        log.warn "Executor `$name` is deprecated -- Use `google-lifesciences` instead"
         /*
          * upload local binaries
          */

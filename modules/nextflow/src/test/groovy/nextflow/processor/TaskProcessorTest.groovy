@@ -406,29 +406,6 @@ class TaskProcessorTest extends Specification {
     }
 
 
-    def 'should return tasks global variables map'() {
-
-        given:
-        def processor = [:] as TaskProcessor
-        processor.name = 'Hello'
-
-        def binding = new Binding(x:1, y:2, params: [alpha: 'one'], 'workDir': Paths.get('/work/dir'), baseDir: Paths.get('/base/dir'))
-        def vars = ['q', 'x', 'y', 'params.alpha', 'params.beta.delta', 'workDir', 'baseDir'] as Set
-
-        when:
-        def result = processor.getTaskGlobalVars(vars, binding, [:])
-        then:
-        // note: since 'q' is include in the task local scope, is not returned in the var list
-        result == [x:1, y:2, 'params.alpha': 'one', 'params.beta.delta': null , baseDir: '/base/dir', workDir: '/work/dir']
-
-        when:
-        result = processor.getTaskGlobalVars(vars, binding, [x:'foo',y:'bar'])
-        then:
-        result == ['params.alpha': 'one', 'params.beta.delta': null , baseDir: '/base/dir', workDir: '/work/dir']
-
-    }
-
-
     def "should return a file holder" () {
 
         given:
@@ -729,37 +706,34 @@ class TaskProcessorTest extends Specification {
     def 'should make task unique id' () {
 
         given:
-        def config = Mock(TaskConfig)
-        def task = Mock(TaskRun)
-        def session = Mock(Session)
-        session.getBinEntries() >> ['foo.sh': Paths.get('/some/path/foo.sh'), 'bar.sh': Paths.get('/some/path/bar.sh')]
+        def session = Mock(Session) {
+            getUniqueId() >> UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')
+            getBinEntries() >> ['foo.sh': Paths.get('/some/path/foo.sh'), 'bar.sh': Paths.get('/some/path/bar.sh')]
+        }
+        and:
+        def task = Mock(TaskRun) {
+            getSource() >> 'hello world'
+            isContainerEnabled() >> false
+            getContainer() >> null
+            getConfig() >> Mock(TaskConfig)
+        }
+        and:
         def processor = Spy(TaskProcessor)
         processor.session = session
         processor.config = Mock(ProcessConfig)
 
         when:
-        def uuid = processor.createTaskHashKey(task)
+        def uuid1 = processor.createTaskHashKey(task)
+        def uuid2 = processor.createTaskHashKey(task)
         then:
-        1 * session.getUniqueId() >> UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')
-        2 * task.getSource() >> 'hello world'
-        1 * processor.getTaskGlobalVars(task) >> [:]
-        1 * task.isContainerEnabled() >> false
-        0 * task.getContainer()
-        1 * task.getConfig() >> config
-        1 * config.getModule() >> null
-        uuid.toString() == '14cc05f32bc37f2d1a370871b1f5be4f'
+        // global var should *not* change task hash
+        processor.getTaskGlobalVars(task) >>> [
+                [foo:'a', bar:'b'],
+                [bar:'b', foo:'a']
+        ]
+        and:
+        uuid1 == uuid2
 
-        when:
-        uuid = processor.createTaskHashKey(task)
-        then:
-        1 * session.getUniqueId() >> UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')
-        2 * task.getSource() >> 'hello world'
-        1 * processor.getTaskGlobalVars(task) >> [:]
-        1 * task.isContainerEnabled() >> true
-        1 * task.getContainer() >> 'foo/bar'
-        1 * task.getConfig() >> config
-        1 * config.getModule() >> ['bar/1.0']
-        uuid.toString() == 'f9595fcfaac36a9ffbeddbbdc9d8e72d'
     }
 
     def 'should export env vars' () {

@@ -16,6 +16,7 @@
 
 package nextflow.extension
 
+import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 
@@ -24,9 +25,22 @@ import groovy.transform.ToString
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 @ToString
 @EqualsAndHashCode
 class KeyPair {
     List keys
     List values
+
+    void addKey(el) {
+        keys.add(safeStr(el))
+    }
+
+    void addValue(el) {
+        values.add(el)
+    }
+
+    static private safeStr(key) {
+        key instanceof GString ? key.toString() : key
+    }
 }

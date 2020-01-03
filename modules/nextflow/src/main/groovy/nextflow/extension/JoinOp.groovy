@@ -142,7 +142,7 @@ class JoinOp {
         //  before a match for it is found on another channel)
 
         // get the index key for this object
-        final item0 = DataflowHelper.split(pivot, data)
+        final item0 = DataflowHelper.makeKey(pivot, data)
 
         // given a key we expect to receive on object with the same key on each channel
         def channels = buffer.get(item0.keys)

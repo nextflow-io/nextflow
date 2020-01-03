@@ -16,11 +16,6 @@
 
 package nextflow.processor
 
-import nextflow.script.params.EnvOutParam
-import nextflow.util.BlankSeparatedList
-import spock.lang.Specification
-import spock.lang.Unroll
-
 import java.nio.file.Files
 import java.nio.file.Paths
 
@@ -29,16 +24,20 @@ import nextflow.Session
 import nextflow.container.ContainerConfig
 import nextflow.executor.Executor
 import nextflow.file.FileHolder
+import nextflow.script.BodyDef
+import nextflow.script.ScriptBinding
+import nextflow.script.TokenVar
 import nextflow.script.params.EnvInParam
+import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
-import nextflow.script.ScriptBinding
 import nextflow.script.params.StdInParam
 import nextflow.script.params.StdOutParam
-import nextflow.script.BodyDef
-import nextflow.script.TokenVar
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
+import nextflow.util.BlankSeparatedList
+import spock.lang.Specification
+import spock.lang.Unroll
 import test.TestHelper
 /**
  *
@@ -725,4 +724,109 @@ class TaskRunTest extends Specification {
         names == ['FOO','BAR']
     }
 
+
+    def 'should capture variables' () {
+        given:
+        def processor = new TaskProcessor()
+        and:
+        def ctx = new TaskContext(holder:[params:[foo: 'Hello'], alpha: 1, omega: 2])
+        def task = new TaskRun(processor: processor, context: ctx, config: new TaskConfig())
+
+        when:
+        def result = task.renderScript('echo !{params.foo} !{alpha} !{omega}')
+        then:
+        result == 'echo Hello 1 2'
+
+    }
+
+
+    def 'should return tasks global variables map'() {
+        given:
+        def processor = new TaskProcessor()
+        processor.name = 'Hello'
+        and:
+        def context = Mock(TaskContext)
+        def binding = new Binding(x:1, y:2, params: [alpha: 'one'], 'workDir': Paths.get('/work/dir'), baseDir: Paths.get('/base/dir'))
+        and:
+        def task = Spy(TaskRun)
+        task.context = context
+        task.processor = processor
+        task.getVariableNames() >> ['q', 'x', 'y', 'params.alpha', 'params.beta.delta', 'workDir', 'baseDir']
+
+        when:
+        def result = task.getGlobalVars(binding)
+        then:
+        // note: since 'q' is include in the task local scope, is not returned in the var list
+        result == [x:1, y:2, 'params.alpha': 'one', 'params.beta.delta': null , baseDir: '/base/dir', workDir: '/work/dir']
+
+        when:
+        result = task.getGlobalVars(binding)
+        then:
+        1 * context.isLocalVar('x') >> true
+        1 * context.isLocalVar('y') >> true
+        and:
+        result == ['params.alpha': 'one', 'params.beta.delta': null , baseDir: '/base/dir', workDir: '/work/dir']
+    }
+
+    def 'should fetch script variable names' () {
+        given:
+        def task = new TaskRun()
+        task.processor = new TaskProcessor()
+        task.context = Mock(TaskContext)
+
+        when:
+        task.resolve(new BodyDef({-> "Hello ${x}"}, 'Hello ${x}', 'script'))
+        and:
+        def vars = task.getVariableNames()
+        then:
+        1 * task.context.getVariableNames() >> ['foo']
+        and: 
+        vars == ['foo'] as Set
+    }
+
+    def 'should fetch shell variable names' () {
+        given:
+        def task = new TaskRun()
+        task.processor = Spy(TaskProcessor) {
+            getDeclaredNames() >> ['input_x']
+        }
+        task.context = new TaskContext(holder: [foo:'alpha', bar:'beta', input_x:'delta'])
+        task.config = new TaskConfig()
+
+        when:
+        task.resolve(new BodyDef({-> 'Hello !{foo} !{bar} !{input_x}'}, 'Hello..', 'shell'))
+        and:
+        def vars = task.getVariableNames()
+        then:
+        vars == ['foo','bar'] as Set
+        and:
+        task.script == 'Hello alpha beta delta'
+    }
+
+    def 'should fetch template variable names' () {
+        given:
+        def dir = Files.createTempDirectory('test')
+        def template = dir.resolve('foo.sh')
+        template.text = 'echo ${foo} ${bar} ${input_x}'
+        and:
+
+        def task = new TaskRun()
+        task.processor = Spy(TaskProcessor) {
+            getDeclaredNames() >> ['input_x']
+        }
+        task.context = new TaskContext(holder: [foo:'foo',bar:'bar',input_x:'xxx'])
+        task.config = new TaskConfig()
+
+        when:
+        task.resolve(new BodyDef({-> template }, 'Hello..', 'script'))
+        and:
+        def vars = task.getVariableNames()
+        then:
+        vars == ['foo','bar'] as Set
+        and:
+        task.script == 'echo foo bar xxx'
+
+        cleanup:
+        dir?.deleteDir()
+    }
 }

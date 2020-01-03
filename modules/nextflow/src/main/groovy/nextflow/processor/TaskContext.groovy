@@ -72,16 +72,11 @@ class TaskContext implements Map<String,Object>, Cloneable {
         // to be the ones provided by the *external* script context
         variableNames = processor.getTaskBody().getValNames() ?: []
         if( variableNames ) {
-            Set<String> declaredNames = []
-            declaredNames.addAll( processor.config.getInputs().getNames() )
-            declaredNames.addAll( processor.config.getOutputs().getNames()  )
-            if( declaredNames )
-                variableNames = variableNames - declaredNames
+            variableNames = variableNames - processor.getDeclaredNames()
         }
 
         log.trace "Binding names for '$name' > $variableNames"
     }
-
 
     protected TaskContext(Script script, Map holder, String name) {
         this.script = script
@@ -121,6 +116,8 @@ class TaskContext implements Map<String,Object>, Cloneable {
      *      NOTE: it includes properties in the form {@code object.propertyName}
      */
     Set<String> getVariableNames() { variableNames }
+
+    boolean isLocalVar(String key) { holder.containsKey(key) }
 
     @Override
     String toString() {

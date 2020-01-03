@@ -110,7 +110,7 @@ nxf_main() {
     set -u
     {{task_env}}
     [[ $NXF_SCRATCH ]] && echo "nxf-scratch-dir $HOSTNAME:$NXF_SCRATCH" && cd $NXF_SCRATCH
-    nxf_stage
+    {{stage_cmd}}
 
     set +e
     local ctmp=$(set +u; nxf_mktemp /dev/shm 2>/dev/null || nxf_mktemp $TMPDIR)
@@ -124,7 +124,7 @@ nxf_main() {
     pid=$!
     wait $pid || nxf_main_ret=$?
     wait $tee1 $tee2
-    nxf_unstage
+    {{unstage_cmd}}
     {{after_script}}
 }
 

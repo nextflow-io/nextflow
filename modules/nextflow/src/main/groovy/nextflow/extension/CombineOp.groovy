@@ -26,7 +26,7 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import static nextflow.extension.DataflowHelper.addToList
-import static nextflow.extension.DataflowHelper.split
+import static nextflow.extension.DataflowHelper.makeKey
 /**
  * Implements the {@link OperatorEx#spread(groovyx.gpars.dataflow.DataflowReadChannel, java.lang.Object)} operator
  *
@@ -92,7 +92,7 @@ class CombineOp {
         def opts = new LinkedHashMap(2)
         opts.onNext = {
             if( pivot ) {
-                def pair = split(pivot, it)
+                def pair = makeKey(pivot, it)
                 emit(target, index, pair.keys, pair.values)
             }
             else {

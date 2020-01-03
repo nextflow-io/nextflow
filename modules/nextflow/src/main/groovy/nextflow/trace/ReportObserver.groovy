@@ -119,7 +119,7 @@ class ReportObserver implements TraceObserver {
      * "rolled" to a new file
      */
     @Override
-    void onFlowInit(Session session) {
+    void onFlowCreate(Session session) {
         this.session = session
         this.aggregator = new ResourcesAggregator(session)
     }

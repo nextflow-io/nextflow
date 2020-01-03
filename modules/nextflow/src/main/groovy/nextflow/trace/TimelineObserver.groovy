@@ -66,7 +66,7 @@ class TimelineObserver implements TraceObserver {
      * "rolled" to a new file
      */
     @Override
-    void onFlowInit(Session session) {
+    void onFlowCreate(Session session) {
         beginMillis = startMillis = System.currentTimeMillis()
     }
 

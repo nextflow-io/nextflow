@@ -20,7 +20,7 @@ params.data = 'zzz'
 
 process foo {
   input:
-    each x from 'alpha','omega'
+    each x from ('alpha','omega')
 
   shell:
     '''

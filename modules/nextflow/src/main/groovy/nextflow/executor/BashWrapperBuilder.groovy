@@ -250,17 +250,9 @@ class BashWrapperBuilder {
 
         binding.trace_cmd = getTraceCommand(interpreter)
         binding.launch_cmd = getLaunchCommand(interpreter,env)
-
-        String copyScript = null
-        if( changeDir ) {
-            copyScript = copyFileToWorkDir(TaskRun.CMD_OUTFILE) + ' || true' + ENDL
-            copyScript += copyFileToWorkDir(TaskRun.CMD_ERRFILE) + ' || true' + ENDL
-            if( statsEnabled )
-                copyScript += copyFileToWorkDir(TaskRun.CMD_TRACE) + ' || true' + ENDL
-            if(  outputEnvNames )
-                copyScript += copyFileToWorkDir(TaskRun.CMD_ENV) + ' || true' + ENDL
-        }
-        binding.unstage_controls = copyScript
+        binding.stage_cmd = getStageCommand()
+        binding.unstage_cmd = getUnstageCommand()
+        binding.unstage_controls = changeDir ? getUnstageControls() : null
 
         if( changeDir || workDir != targetDir ) {
             binding.unstage_outputs = copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)
@@ -515,6 +507,20 @@ class BashWrapperBuilder {
     String moduleLoad(String name) {
         int p = name.lastIndexOf('/')
         p != -1 ? "nxf_module_load ${name.substring(0,p)} ${name.substring(p+1)}" : "nxf_module_load ${name}"
+    }
+
+    protected String getStageCommand() { 'nxf_stage' }
+
+    protected String getUnstageCommand() { 'nxf_unstage' }
+
+    protected String getUnstageControls() {
+        def result = copyFileToWorkDir(TaskRun.CMD_OUTFILE) + ' || true' + ENDL
+        result += copyFileToWorkDir(TaskRun.CMD_ERRFILE) + ' || true' + ENDL
+        if( statsEnabled )
+            result += copyFileToWorkDir(TaskRun.CMD_TRACE) + ' || true' + ENDL
+        if(  outputEnvNames )
+            result += copyFileToWorkDir(TaskRun.CMD_ENV) + ' || true' + ENDL
+        return result
     }
 
 }

@@ -48,6 +48,7 @@ import groovyx.gpars.group.PGroup
 import nextflow.NF
 import nextflow.Nextflow
 import nextflow.Session
+import nextflow.ast.TaskTemplateVarsXform
 import nextflow.cloud.CloudSpotTerminationException
 import nextflow.dag.NodeMarker
 import nextflow.exception.FailedGuardException
@@ -91,6 +92,8 @@ import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.CollectionHelper
 import nextflow.util.LockManager
+import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 
 /**
  * Implement nextflow process execution logic
@@ -230,6 +233,11 @@ class TaskProcessor {
 
     private static LockManager lockManager = new LockManager();
 
+    private CompilerConfiguration compilerConfig() {
+        final config = new CompilerConfiguration()
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskTemplateVarsXform) )
+        return config
+    }
 
     /*
      * Initialise the process ID
@@ -239,7 +247,7 @@ class TaskProcessor {
      */
     {
         id = ++processCount
-        grengine = session && session.classLoader ? new Grengine(session.classLoader) : new Grengine()
+        grengine = session && session.classLoader ? new Grengine(session.classLoader, compilerConfig()) : new Grengine(compilerConfig())
     }
 
     /* for testing purpose - do not remove */
@@ -312,7 +320,14 @@ class TaskProcessor {
     /**
      * @return The user provided script block
      */
-    public BodyDef getTaskBody() { taskBody }
+    BodyDef getTaskBody() { taskBody }
+
+    Set<String> getDeclaredNames() {
+        Set<String> result = new HashSet<>(20)
+        result.addAll(config.getInputs().getNames())
+        result.addAll(config.getOutputs().getNames())
+        return result
+    }
 
     /**
      * Launch the 'script' define by the code closure as a local bash script
@@ -1402,7 +1417,7 @@ class TaskProcessor {
         final List<Path> allFiles = []
         // type file parameter can contain a multiple files pattern separating them with a special character
         def entries = param.getFilePatterns(context, task.workDir)
-
+        boolean inputsRemovedFlag = false
         // for each of them collect the produced files
         for( String filePattern : entries ) {
             List<Path> result = null
@@ -1411,9 +1426,10 @@ class TaskProcessor {
             if( splitter?.isPattern() ) {
                 result = fetchResultFiles(param, filePattern, workDir)
                 // filter the inputs
-                if( !param.includeInputs ) {
+                if( result && !param.includeInputs ) {
                     result = filterByRemovingStagedInputs(task, result, workDir)
                     log.trace "Process ${task.name} > after removing staged inputs: ${result}"
+                    inputsRemovedFlag |= (result.size()==0)
                 }
             }
             else {
@@ -1429,8 +1445,12 @@ class TaskProcessor {
             if( result )
                 allFiles.addAll(result)
 
-            else if( !param.optional )
-                throw new MissingFileException("Missing output file(s) `$filePattern` expected by process `${task.name}`")
+            else if( !param.optional ) {
+                def msg = "Missing output file(s) `$filePattern` expected by process `${task.name}`"
+                if( inputsRemovedFlag )
+                    msg += " (note: input files are not included in the default matching set)"
+                throw new MissingFileException(msg)
+            }
         }
 
         task.setOutput( param, allFiles.size()==1 ? allFiles[0] : allFiles )
@@ -1909,7 +1929,7 @@ class TaskProcessor {
         def vars = getTaskGlobalVars(task)
         if( vars ) {
             log.trace "Task: $name > Adding script vars hash code: ${vars}"
-            vars.each { k, v -> keys.add( k ); keys.add( v ) }
+            keys.add(vars.entrySet())
         }
 
         final binEntries = getTaskBinEntries(task.source)
@@ -1968,57 +1988,7 @@ class TaskProcessor {
     }
 
     protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
-        getTaskGlobalVars( task.context.getVariableNames(), ownerScript.binding, task.context.getHolder() )
-    }
-
-    /**
-     * @param variableNames The collection of variables referenced in the task script
-     * @param binding The script global binding
-     * @param context The task variable context
-     * @return The set of task variables accessed in global script context and not declared as input/output
-     */
-    final protected Map<String,Object> getTaskGlobalVars(Set<String> variableNames, Binding binding, Map context) {
-        final result = new HashMap(variableNames.size())
-        final processName = name
-
-        def itr = variableNames.iterator()
-        while( itr.hasNext() ) {
-            final varName = itr.next()
-
-            final p = varName.indexOf('.')
-            final baseName = p !=- 1 ? varName.substring(0,p) : varName
-
-            if( context.containsKey(baseName) ) {
-                // when the variable belong to the task local context just ignore it,
-                // because it must has been provided as an input parameter
-                continue
-            }
-
-            if( binding.hasVariable(baseName) ) {
-                def value
-                try {
-                    if( p == -1 ) {
-                        value = binding.getVariable(varName)
-                    }
-                    else {
-                        value = grengine.run(varName, binding)
-                    }
-                }
-                catch( MissingPropertyException | NullPointerException e ) {
-                    value = null
-                    log.trace "Process `${processName}` cannot access global variable `$varName` -- Cause: ${e.message}"
-                }
-
-                // value for 'workDir' and 'baseDir' folders are added always as string
-                // in order to avoid to invalid the cache key when resuming the execution
-                if( varName=='workDir' || varName=='baseDir' )
-                    value = value.toString()
-
-                result.put( varName, value )
-            }
-
-        }
-        return result
+        task.getGlobalVars(ownerScript.binding)
     }
 
 
