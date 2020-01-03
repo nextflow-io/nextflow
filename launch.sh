@@ -41,9 +41,9 @@ bin_dir=`dirname $(resolve_link $0)`
 base_dir=$bin_dir
 
 # define the java env
-java=java
+JAVA_BIN=java
 if test -n "$JAVA_HOME"; then
-	java="$JAVA_HOME/bin/java"
+	JAVA_BIN="$JAVA_HOME/bin/java"
 fi
 
 #
@@ -58,7 +58,7 @@ declare -a args=()
 DEBUG=''
 COLUMNS=${COLUMNS:-`tput cols 2> /dev/tty`}
 MAIN_CLASS=${MAIN_CLASS:-'nextflow.cli.Launcher'}
-JAVA_VER="$($java -version 2>&1)"
+JAVA_VER="$($JAVA_BIN -version 2>&1)"
 if [ $? -ne 0 ]; then
     echo "${JAVA_VER:-Failed to launch the Java virtual machine}"
     exit 1
@@ -136,4 +136,4 @@ if [ "$DEBUG" != '' ]; then
 fi
 
 # Launch the APP
-exec $java $JVM_ARGS $DEBUG $NXF_OPTS -cp "$CLASSPATH" "$MAIN_CLASS" "${args[@]}"
+exec $JAVA_BIN $JVM_ARGS $DEBUG $NXF_OPTS -cp "$CLASSPATH" "$MAIN_CLASS" "${args[@]}"
