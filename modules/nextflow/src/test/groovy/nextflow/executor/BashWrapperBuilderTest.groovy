@@ -586,7 +586,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.conda_activate == '''\
                 # conda environment
-                source activate /some/conda/env/foo
+                source $(conda info --json | awk '/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }')/bin/activate /some/conda/env/foo
                 '''.stripIndent()
 
     }

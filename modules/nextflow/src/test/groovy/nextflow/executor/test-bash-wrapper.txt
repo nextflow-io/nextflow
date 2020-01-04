@@ -83,7 +83,7 @@ nxf_main() {
     # beforeScript directive
     echo Before
     # conda environment
-    source activate /conda/env/path
+    source $(conda info --json | awk '/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }')/bin/activate /conda/env/path
     set -u
     [[ $NXF_SCRATCH ]] && echo "nxf-scratch-dir $HOSTNAME:$NXF_SCRATCH" && cd $NXF_SCRATCH
     nxf_stage
