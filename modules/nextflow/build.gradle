@@ -31,7 +31,7 @@ dependencies {
     compile "commons-lang:commons-lang:2.6"
     compile "com.beust:jcommander:1.35"
     compile("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
-    compile('org.iq80.leveldb:leveldb:0.10')
+    compile('org.iq80.leveldb:leveldb:0.12')
     compile('org.eclipse.jgit:org.eclipse.jgit:5.2.1.201812262042-r')
     compile('io.nextflow:nxf-s3fs:1.0.7') {
         exclude group: 'org.apache.tika', module: 'tika-core'
