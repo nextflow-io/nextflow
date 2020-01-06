@@ -17,6 +17,7 @@
 package nextflow.dag
 import java.nio.charset.Charset
 import java.nio.file.Path
+import java.nio.file.Files
 import java.text.SimpleDateFormat;
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLEventReader;
@@ -115,7 +116,7 @@ class GexfRenderer implements DagRenderer {
     w.writeStartElement("attvalues");
         w.writeEmptyElement("attvalue");
             w.writeAttribute("for","type");
-            w.writeAttribute("value",vertex.type);
+            w.writeAttribute("value",vertex.type.name());
     w.writeEndElement();//attvalues
 
     w.writeEndElement();//node
