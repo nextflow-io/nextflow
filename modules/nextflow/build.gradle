@@ -51,6 +51,7 @@ dependencies {
 
 
 test {
+    inputs.files fileTree(dir: 'src/test/groovy', includes: ['**/*.txt', '**/*.conf', '**/*.html'])
     minHeapSize = "512m"
     maxHeapSize = "2048m"
 }
