@@ -47,7 +47,7 @@ class GexfRendererTest extends Specification {
 
             dag.normalize()
         when:
-                new GexRenderer('TheGraph').renderDocument(dag, file.toPath())
+                new GexfRenderer('TheGraph').renderDocument(dag, file.toPath())
         then:
                 def graph = new XmlSlurper().parse(file);
                 assert graph.name() == 'gexf'
