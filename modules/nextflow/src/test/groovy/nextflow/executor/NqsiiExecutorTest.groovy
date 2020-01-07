@@ -65,7 +65,7 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -j o
                 #PBS -b 1
                 #PBS -l cpunum_job=1
-                cd /work/dir
+                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -83,7 +83,7 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -q alpha
                 #PBS -l cpunum_job=1
                 #PBS -l elapstim_req=00:01:00
-                cd /work/dir
+                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -103,7 +103,7 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -l cpunum_job=1
                 #PBS -l elapstim_req=00:01:00
                 #PBS -l memsz_job=1mb
-                cd /work/dir
+                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -125,7 +125,7 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -l cpunum_job=2
                 #PBS -l elapstim_req=00:10:00
                 #PBS -l memsz_job=5mb
-                cd /work/dir
+                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -145,7 +145,7 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -l cpunum_job=8
                 #PBS -l elapstim_req=24:00:00
                 #PBS -l memsz_job=1gb
-                cd /work/dir
+                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -164,7 +164,7 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -l cpunum_job=1
                 #PBS -l elapstim_req=54:10:00
                 #PBS -l memsz_job=2gb
-                cd /work/dir
+                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -193,7 +193,7 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -j o
                 #PBS -b 1
                 #PBS -l cpunum_job=1
-                cd "/work/dir\\ 1"
+                NXF_CHDIR=/work/dir\\ 1
                 '''
                 .stripIndent().leftTrim()
 
