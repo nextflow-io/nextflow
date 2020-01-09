@@ -96,7 +96,7 @@ class AnsiLogObserver implements TraceObserver {
 
     private int labelWidth
 
-    private int cols = 80
+    private int cols = 1000
 
     private long startTimestamp
 
