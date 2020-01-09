@@ -80,6 +80,7 @@ nxf_main() {
     trap on_exit EXIT
     trap on_term TERM INT USR1 USR2
 
+    [[ "${NXF_CHDIR:-}" ]] && cd "$NXF_CHDIR"
     NXF_SCRATCH={{folder}}
     [[ $NXF_DEBUG > 0 ]] && nxf_env
     set +u

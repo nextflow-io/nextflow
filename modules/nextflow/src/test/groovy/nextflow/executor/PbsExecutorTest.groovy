@@ -62,7 +62,7 @@ class PbsExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
-                cd /work/dir
+                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -78,7 +78,7 @@ class PbsExecutorTest extends Specification {
                 #PBS -j oe
                 #PBS -q alpha
                 #PBS -l walltime=00:01:00
-                cd /work/dir
+                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -96,7 +96,7 @@ class PbsExecutorTest extends Specification {
                 #PBS -q alpha
                 #PBS -l walltime=00:01:00
                 #PBS -l mem=1mb
-                cd /work/dir
+                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -117,7 +117,7 @@ class PbsExecutorTest extends Specification {
                 #PBS -l nodes=1:ppn=2
                 #PBS -l walltime=00:10:00
                 #PBS -l mem=5mb
-                cd /work/dir
+                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -136,7 +136,7 @@ class PbsExecutorTest extends Specification {
                 #PBS -l nodes=1:ppn=8
                 #PBS -l walltime=24:00:00
                 #PBS -l mem=1gb
-                cd /work/dir
+                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -153,7 +153,7 @@ class PbsExecutorTest extends Specification {
                 #PBS -q delta
                 #PBS -l walltime=54:10:00
                 #PBS -l mem=2gb
-                cd /work/dir
+                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -180,7 +180,7 @@ class PbsExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o "/work/dir\\ 1/.command.log"
                 #PBS -j oe
-                cd "/work/dir\\ 1"
+                NXF_CHDIR=/work/dir\\ 1
                 '''
                 .stripIndent().leftTrim()
 

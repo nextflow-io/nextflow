@@ -99,6 +99,7 @@ nxf_main() {
     trap on_exit EXIT
     trap on_term TERM INT USR1 USR2
 
+    [[ "${NXF_CHDIR:-}" ]] && cd "$NXF_CHDIR"
     {{container_boxid}}
     {{scratch_cmd}}
     [[ $NXF_DEBUG > 0 ]] && nxf_env

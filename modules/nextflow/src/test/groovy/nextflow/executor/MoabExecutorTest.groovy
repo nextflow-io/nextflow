@@ -54,7 +54,7 @@ class MoabExecutorTest extends Specification {
         e.message == 'Missing Moab submit job ID:\n<Data></Data>\n\n'
     }
 
-    def 'should cancel a taks' () {
+    def 'should cancel a task' () {
         given:
         def exec = new MoabExecutor()
         
@@ -126,7 +126,7 @@ class MoabExecutorTest extends Specification {
                 #MSUB -N nf-task_name
                 #MSUB -o /work/dir/.command.log
                 #MSUB -j oe
-                cd /work/dir
+                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -142,7 +142,7 @@ class MoabExecutorTest extends Specification {
                 #MSUB -j oe
                 #MSUB -q alpha
                 #MSUB -l walltime=00:01:00
-                cd /work/dir
+                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -160,7 +160,7 @@ class MoabExecutorTest extends Specification {
                 #MSUB -q alpha
                 #MSUB -l walltime=00:01:00
                 #MSUB -l mem=1mb
-                cd /work/dir
+                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -181,7 +181,7 @@ class MoabExecutorTest extends Specification {
                 #MSUB -l nodes=1:ppn=2
                 #MSUB -l walltime=00:10:00
                 #MSUB -l mem=5mb
-                cd /work/dir
+                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -200,7 +200,7 @@ class MoabExecutorTest extends Specification {
                 #MSUB -l nodes=1:ppn=8
                 #MSUB -l walltime=24:00:00
                 #MSUB -l mem=1gb
-                cd /work/dir
+                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -217,7 +217,34 @@ class MoabExecutorTest extends Specification {
                 #MSUB -q delta
                 #MSUB -l walltime=54:10:00
                 #MSUB -l mem=2gb
-                cd /work/dir
+                NXF_CHDIR=/work/dir
+                '''
+                .stripIndent().leftTrim()
+
+    }
+
+    def WorkDirWithBlanks() {
+
+        setup:
+        def executor = Spy(MoabExecutor)
+
+        // mock process
+        def proc = Mock(TaskProcessor)
+
+        // task object
+        def task = new TaskRun()
+        task.processor = proc
+        task.workDir = Paths.get('/work/dir 1')
+        task.name = 'task name'
+
+        when:
+        task.config = new TaskConfig()
+        then:
+        executor.getHeaders(task) == '''
+                #MSUB -N nf-task_name
+                #MSUB -o "/work/dir\\ 1/.command.log"
+                #MSUB -j oe
+                NXF_CHDIR=/work/dir\\ 1
                 '''
                 .stripIndent().leftTrim()
 
