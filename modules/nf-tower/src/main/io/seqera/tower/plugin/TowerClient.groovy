@@ -471,8 +471,9 @@ class TowerClient implements TraceObserver {
         return aggregator.computeSummaryList()
     }
 
+    @Deprecated
     protected List<ProgressRecord> getProgressRecords() {
-        session.getProgressState()?.getProgress() ?: Collections.<ProgressRecord>emptyList()
+        session.getStatsObserver().getStats().getProcesses()
     }
 
     /**

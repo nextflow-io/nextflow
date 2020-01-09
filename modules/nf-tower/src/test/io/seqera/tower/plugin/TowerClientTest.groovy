@@ -26,6 +26,8 @@ import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.ProgressRecord
 import nextflow.trace.TraceRecord
+import nextflow.trace.WorkflowStats
+import nextflow.trace.WorkflowStatsObserver
 import nextflow.util.SimpleHttpClient
 import org.junit.Ignore
 import spock.lang.Specification
@@ -247,6 +249,8 @@ class TowerClientTest extends Specification {
 
         def meta = new WorkflowMetadata(session, Mock(ScriptFile))
         session.getWorkflowMetadata() >> meta
+        session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
+
         when:
         def req = tower.makeWorkflowReq(session)
         println req.workflow

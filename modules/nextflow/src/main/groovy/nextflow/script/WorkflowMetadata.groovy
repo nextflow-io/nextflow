@@ -235,7 +235,7 @@ class WorkflowMetadata {
         this.runName = session.runName
         this.containerEngine = session.containerConfig.with { isEnabled() ? getEngine() : null }
         this.configFiles = session.configFiles?.collect { it.toAbsolutePath() }
-        this.stats = session.workflowStats
+        this.stats = new WorkflowStats()
         this.userName = System.getProperty('user.name')
         this.homeDir = Paths.get(System.getProperty('user.home'))
         this.manifest = session.getManifest()
@@ -373,6 +373,7 @@ class WorkflowMetadata {
         this.complete = OffsetDateTime.now()
         this.duration = Duration.between( start, complete )
         this.success = !(session.aborted || session.cancelled)
+        this.stats = getWorkflowStats()
 
         setErrorAttributes()
 
@@ -391,6 +392,7 @@ class WorkflowMetadata {
 
     void invokeOnError(trace) {
         this.success = false
+        this.stats = getWorkflowStats()
         setErrorAttributes()
         onErrorActions.each { Closure action ->
             try {
@@ -456,5 +458,8 @@ class WorkflowMetadata {
         }
     }
 
+    protected WorkflowStats getWorkflowStats() {
+        session.statsObserver.getStats()
+    }
 
 }
