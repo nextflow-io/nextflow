@@ -132,31 +132,35 @@ class PodmanBuilderTest extends Specification {
 
         expect:
         new PodmanBuilder('fedora')
+                .params(sudo: true)
                 .setCpus('1,2')
                 .build()
-                .runCommand == 'podman run -i --cpuset-cpus 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'sudo podman run -i --cpuset-cpus 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new PodmanBuilder('fedora')
-                .params(legacy:true)
+                .params(sudo: true, legacy: true)
                 .setCpus('1,2')
                 .build()
-                .runCommand == 'podman run -i --cpuset 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'sudo podman run -i --cpuset 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new PodmanBuilder('fedora')
+                .params(sudo: true)
                 .setMemory('10g')
                 .build()
-                .runCommand == 'podman run -i --memory 10g -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'sudo podman run -i --memory 10g -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new PodmanBuilder('fedora')
+                .params(sudo: true)
                 .setMemory(new MemoryUnit('100M'))
                 .build()
-                .runCommand == 'podman run -i --memory 100m -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'sudo podman run -i --memory 100m -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new PodmanBuilder('fedora')
+                .params(sudo: true)
                 .setCpus('1-3')
                 .setMemory(new MemoryUnit('100M'))
                 .build()
-                .runCommand == 'podman run -i --cpuset-cpus 1-3 --memory 100m -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'sudo podman run -i --cpuset-cpus 1-3 --memory 100m -v "$PWD":"$PWD" -w "$PWD" fedora'
 
     }
 
