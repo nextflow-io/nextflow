@@ -1,0 +1,8 @@
+# TESTS TO BE IGNORED WHEN PODMAN
+# IS NOT AVAILABLE
+ampa.nf
+blast-parallel.nf
+blast.nf
+workdir-with-blank.nf
+stress.nf
+env-container.nf

@@ -233,6 +233,10 @@ class Launcher {
                 normalized << '-'
             }
 
+            else if( current == '-with-podman' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
+            }
+
             else if( current == '-with-singularity' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << '-'
             }

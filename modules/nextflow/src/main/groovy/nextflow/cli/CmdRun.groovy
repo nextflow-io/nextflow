@@ -161,6 +161,12 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names = '-with-singularity', description = 'Enable process execution in a Singularity container')
     def withSingularity
 
+    @Parameter(names = '-with-podman', description = 'Enable process execution in a Podman container')
+    def withPodman
+
+    @Parameter(names = '-without-podman', description = 'Disable process execution in a Podman container')
+    def withoutPodman
+
     @Parameter(names = '-with-docker', description = 'Enable process execution in a Docker container')
     def withDocker
 
@@ -214,6 +220,9 @@ class CmdRun extends CmdBase implements HubOptions {
         final pipeline = stdin ? '-' : ( args ? args[0] : null )
         if( !pipeline )
             throw new AbortOperationException("No project name was specified")
+
+        if( withPodman && withoutPodman )
+            throw new AbortOperationException("Command line options `-with-podman` and `-without-podman` cannot be specified at the same time")
 
         if( withDocker && withoutDocker )
             throw new AbortOperationException("Command line options `-with-docker` and `-without-docker` cannot be specified at the same time")
