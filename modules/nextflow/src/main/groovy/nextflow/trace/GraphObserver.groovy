@@ -24,6 +24,7 @@ import nextflow.dag.CytoscapeHtmlRenderer
 import nextflow.dag.DAG
 import nextflow.dag.DagRenderer
 import nextflow.dag.DotRenderer
+import nextflow.dag.GexfRenderer
 import nextflow.dag.GraphvizRenderer
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
@@ -78,6 +79,9 @@ class GraphObserver implements TraceObserver {
 
         else if( format == 'html' )
             new CytoscapeHtmlRenderer()
+
+        else if( format == 'gexf' )
+            new GexfRenderer(name)
 
         else
             new GraphvizRenderer(name, format)
