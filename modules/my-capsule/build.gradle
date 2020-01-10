@@ -18,7 +18,7 @@ apply plugin: 'java'
 dependencies {
     // Capsule manages the fat jar building process
     compile 'io.nextflow:capsule:1.0.3.1'
-    runtime 'co.paralleluniverse:capsule-maven:1.0.3'
+    runtime 'io.nextflow:capsule-maven:1.0.3.2'
     testCompile "junit:junit-dep:4.10"
     /* testCompile inherited from top gradle build file */
 }
