@@ -41,8 +41,6 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
     private kill = true
 
-    private boolean legacy
-
     private String mountFlags0
 
     PodmanBuilder( String name ) {
@@ -77,9 +75,6 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
         if( params.containsKey('kill') )
             this.kill = params.kill
 
-        if( params.containsKey('legacy') )
-            this.legacy = params.legacy?.toString() == 'true'
-
         if( params.containsKey('readOnlyInputs') )
             this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
 
@@ -111,10 +106,7 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
         // currently development activities are ongoing therefore this is not available if started rootless
         if( cpus && sudo ) {
-            if( legacy )
-                result << "--cpuset ${cpus} "
-            else
-                result << "--cpuset-cpus ${cpus} "
+            result << "--cpuset-cpus ${cpus} "
         }
 
         // currently development activities are ongoing therefore this is not available if started rootless
