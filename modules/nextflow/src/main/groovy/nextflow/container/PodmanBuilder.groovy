@@ -27,9 +27,13 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
     private boolean remove = true
 
+    private boolean userEmulation
+
     private String registry
 
     private String name
+
+    private static final String USER_AND_HOME_EMULATION = '-u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME'
 
     private String removeCommand
 
@@ -55,6 +59,9 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
         if( params.containsKey('runOptions') )
             addRunOptions(params.runOptions.toString())
+
+        if ( params.containsKey('userEmulation') )
+            this.userEmulation = params.userEmulation?.toString() == 'true'
 
         if ( params.containsKey('remove') )
             this.remove = params.remove?.toString() == 'true'
@@ -101,6 +108,9 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
         if( temp )
             result << "-v $temp:/tmp "
+
+        if( userEmulation )
+            result << USER_AND_HOME_EMULATION << ' '
 
         // mount the input folders
         result << makeVolumes(mounts)
