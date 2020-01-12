@@ -78,11 +78,6 @@ class PodmanBuilderTest extends Specification {
                 .runCommand == 'podman run -i -v /hola:/tmp -v "$PWD":"$PWD" -w "$PWD" ubuntu'
 
         new PodmanBuilder('busybox')
-                .params(sudo: true)
-                .build()
-                .runCommand == 'sudo podman run -i -v "$PWD":"$PWD" -w "$PWD" busybox'
-
-        new PodmanBuilder('busybox')
                 .params(entry: '/bin/bash')
                 .build()
                 .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --entrypoint /bin/bash busybox'
@@ -128,40 +123,13 @@ class PodmanBuilderTest extends Specification {
                 .runCommand == 'podman run -i -v /home/db:/home/db:Z -v "$PWD":"$PWD":Z -w "$PWD" fedora'
     }
 
-    def 'test memory and cpuset' () {
+    def 'test cpus' () {
 
         expect:
         new PodmanBuilder('fedora')
-                .params(sudo: true)
                 .setCpus('1,2')
                 .build()
-                .runCommand == 'sudo podman run -i --cpuset-cpus 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'
-
-        new PodmanBuilder('fedora')
-                .params(sudo: true, legacy: true)
-                .setCpus('1,2')
-                .build()
-                .runCommand == 'sudo podman run -i --cpuset 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'
-
-        new PodmanBuilder('fedora')
-                .params(sudo: true)
-                .setMemory('10g')
-                .build()
-                .runCommand == 'sudo podman run -i --memory 10g -v "$PWD":"$PWD" -w "$PWD" fedora'
-
-        new PodmanBuilder('fedora')
-                .params(sudo: true)
-                .setMemory(new MemoryUnit('100M'))
-                .build()
-                .runCommand == 'sudo podman run -i --memory 100m -v "$PWD":"$PWD" -w "$PWD" fedora'
-
-        new PodmanBuilder('fedora')
-                .params(sudo: true)
-                .setCpus('1-3')
-                .setMemory(new MemoryUnit('100M'))
-                .build()
-                .runCommand == 'sudo podman run -i --cpuset-cpus 1-3 --memory 100m -v "$PWD":"$PWD" -w "$PWD" fedora'
-
+                .runCommand == 'podman run -i --cpus 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'
     }
 
     def 'test add mount'() {
@@ -188,14 +156,6 @@ class PodmanBuilderTest extends Specification {
         podman.runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --name c1 busybox'
         podman.removeCommand == 'podman rm c1'
         podman.killCommand == 'podman kill c1'
-
-        when:
-        podman =  new PodmanBuilder('busybox').setName('c2').params(sudo: true, remove: true).build()
-        then:
-        podman.runCommand == 'sudo podman run -i -v "$PWD":"$PWD" -w "$PWD" --name c2 busybox'
-        podman.removeCommand == 'sudo podman rm c2'
-        podman.killCommand == 'sudo podman kill c2'
-
 
         when:
         podman = new PodmanBuilder('busybox').setName('c3').params(remove: true).build()
