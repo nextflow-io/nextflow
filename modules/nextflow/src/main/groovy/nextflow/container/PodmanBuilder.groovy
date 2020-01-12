@@ -98,11 +98,6 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
         result << 'run -i '
 
-        // currently libpod development activities are ongoing therefore cpuset-cpus and memory are not available in rootless mode
-        if( cpus ) {
-            result << "--cpus ${cpus} "
-        }
-
         // add the environment
         appendEnv(result)
 
