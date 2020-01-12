@@ -88,11 +88,6 @@ class PodmanBuilderTest extends Specification {
                 .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" -x --zeta busybox'
 
         new PodmanBuilder('busybox')
-                .params(userEmulation:true)
-                .build()
-                .runCommand == 'podman run -i -u $(id -u) -e "HOME=${HOME}" -v /etc/passwd:/etc/passwd:ro -v /etc/shadow:/etc/shadow:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME -v "$PWD":"$PWD" -w "$PWD" busybox'
-
-        new PodmanBuilder('busybox')
                 .setName('hola')
                 .build()
                 .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --name hola busybox'
