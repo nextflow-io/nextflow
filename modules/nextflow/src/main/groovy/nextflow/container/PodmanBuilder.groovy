@@ -25,8 +25,6 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
-    private boolean sudo
-
     private boolean remove = true
 
     private String registry
@@ -61,9 +59,6 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
         if ( params.containsKey('remove') )
             this.remove = params.remove?.toString() == 'true'
 
-        if( params.containsKey('sudo') )
-            this.sudo = params.sudo?.toString() == 'true'
-
         if( params.containsKey('entry') )
             this.entryPoint = params.entry
 
@@ -89,9 +84,6 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
     PodmanBuilder build(StringBuilder result) {
         assert image
 
-        if( sudo )
-            result << 'sudo '
-
         result << 'podman '
 
         if( engineOptions )
@@ -99,14 +91,10 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
         result << 'run -i '
 
-        // currently development activities are ongoing therefore this is not available if started rootless
-        if( cpus && sudo ) {
-            result << "--cpuset-cpus ${cpus} "
+        // currently libpod development activities are ongoing therefore cpuset-cpus and memory are not available in rootless mode
+        if( cpus ) {
+            result << "--cpus ${cpus} "
         }
-
-        // currently development activities are ongoing therefore this is not available if started rootless
-        if( memory && sudo )
-            result << "--memory ${memory} "
 
         // add the environment
         appendEnv(result)
@@ -140,7 +128,6 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
         // use an explicit 'podman rm' command as --rm does not remove images in all cases.
         if( remove && name ) {
             removeCommand = 'podman rm ' + name
-            if( sudo ) removeCommand = 'sudo ' + removeCommand
         }
 
         if( kill )  {
@@ -148,8 +135,6 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
             // if `kill` is a string it is interpreted as a the kill signal
             if( kill instanceof String ) killCommand += "-s $kill "
             killCommand += name
-            // prefix with sudo if required
-            if( sudo ) killCommand = 'sudo ' + killCommand
         }
 
         return this
