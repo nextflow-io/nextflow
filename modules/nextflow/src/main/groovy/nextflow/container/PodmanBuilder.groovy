@@ -33,8 +33,6 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
     private String name
 
-    private boolean tty
-
     private String removeCommand
 
     private String killCommand
@@ -65,9 +63,6 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
         if( params.containsKey('sudo') )
             this.sudo = params.sudo?.toString() == 'true'
-
-        if( params.containsKey('tty') )
-            this.tty = params.tty?.toString() == 'true'
 
         if( params.containsKey('entry') )
             this.entryPoint = params.entry
@@ -112,9 +107,6 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
         // currently development activities are ongoing therefore this is not available if started rootless
         if( memory && sudo )
             result << "--memory ${memory} "
-
-        if( tty )
-            result << '-t '
 
         // add the environment
         appendEnv(result)
