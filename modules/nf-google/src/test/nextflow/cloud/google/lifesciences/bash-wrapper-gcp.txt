@@ -70,9 +70,9 @@ nxf_stage() {
 
 nxf_unstage() {
     true
-    IFS=$'\n'; for name in $(eval "ls -1d .command.out" 2>/dev/null);do gsutil -m -q cp -R $name gs://bucket/work/dir/.command.out; done; unset IFS || true
-    IFS=$'\n'; for name in $(eval "ls -1d .command.err" 2>/dev/null);do gsutil -m -q cp -R $name gs://bucket/work/dir/.command.err; done; unset IFS || true
-    IFS=$'\n'; for name in $(eval "ls -1d .exitcode" 2>/dev/null);do gsutil -m -q cp -R $name gs://bucket/work/dir/.exitcode; done; unset IFS || true
+    gsutil -m -q cp -R $name gs://bucket/work/dir/.command.out || true
+    gsutil -m -q cp -R $name gs://bucket/work/dir/.command.err || true
+    gsutil -m -q cp -R $name gs://bucket/work/dir/.exitcode || true
     [[ ${nxf_main_ret:=0} != 0 ]] && return
 }
 
