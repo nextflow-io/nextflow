@@ -111,7 +111,7 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
 
         for( String it : outputFiles ) {
             result
-                    .append(copyFile(it, targetDir))
+                    .append(copyMany(it, targetDir))
                     .append('\n')
         }
 
@@ -126,7 +126,11 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
          * cp = copy
          * -R = recursive copy
          */
-        "IFS=\$'\\n'; for name in \$(eval \"ls -1d ${Escape.path(local)}\" 2>/dev/null);do gsutil -m -q cp -R \$name ${Escape.uriPath(target)}; done; unset IFS"
+        "gsutil -m -q cp -R \$name ${Escape.uriPath(target)}"
+    }
+
+    String copyMany(String local, Path target) {
+        "IFS=\$'\\n'; for name in \$(eval \"ls -1d ${Escape.path(local)}\" 2>/dev/null);do gsutil -m -q cp -R \$name ${Escape.uriPath(target)}/\$name; done; unset IFS"
     }
 
     /**
