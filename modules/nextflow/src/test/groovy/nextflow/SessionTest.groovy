@@ -364,6 +364,8 @@ class SessionTest extends Specification {
         engine      | config
         'docker'    | [enabled: true, x:'alpha', y: 'beta']
         'docker'    | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
+        'podman'    | [enabled: true, x:'alpha', y: 'beta']
+        'podman'    | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
         'udocker'   | [enabled: true, x:'alpha', y: 'beta']
         'shifter'   | [enabled: true, x:'delta', y: 'gamma']
     }
