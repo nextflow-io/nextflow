@@ -209,6 +209,7 @@ html          HTML file
 pdf           PDF file (*)
 png           PNG file (*)
 svg           SVG file (*)
+gexf          Graph Exchange XML file (Gephi)
 ============ ====================
 
 .. warning:: The file formats marked with a `*` require the `Graphviz <http://www.graphviz.org>`_ tool installed
