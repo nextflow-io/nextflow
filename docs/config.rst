@@ -302,7 +302,7 @@ The above configuration example can be rewritten using the dot notation as shown
 Scope `docker`
 --------------
 
-The ``docker`` configuration scope controls how `Docker <http://www.docker.io>`_ containers are executed by Nextflow.
+The ``docker`` configuration scope controls how `Docker <https://www.docker.com>`_ containers are executed by Nextflow.
 
 The following settings are available:
 
@@ -343,7 +343,7 @@ Read :ref:`docker-page` page to lean more how use Docker containers with Nextflo
 Scope `singularity`
 -------------------
 
-The ``singularity`` configuration scope controls how `Singularity <http://singularity.lbl.gov>`_ containers are executed
+The ``singularity`` configuration scope controls how `Singularity <https://sylabs.io/singularity/>`_ containers are executed
 by Nextflow.
 
 The following settings are available:
