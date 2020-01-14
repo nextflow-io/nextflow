@@ -24,6 +24,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.container.ContainerBuilder
 import nextflow.container.DockerBuilder
+import nextflow.container.PodmanBuilder
 import nextflow.container.ShifterBuilder
 import nextflow.container.SingularityBuilder
 import nextflow.container.UdockerBuilder
@@ -421,6 +422,8 @@ class BashWrapperBuilder {
          */
         if( engine == 'docker' )
             return new DockerBuilder(containerImage)
+        if( engine == 'podman' )
+            return new PodmanBuilder(containerImage)
         if( engine == 'singularity' )
             return new SingularityBuilder(containerImage)
         if( engine == 'udocker' )

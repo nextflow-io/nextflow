@@ -598,6 +598,10 @@ class ConfigBuilder {
             configContainer(config, 'docker', cmdRun.withDocker)
         }
 
+        if( cmdRun.withPodman ) {
+            configContainer(config, 'podman', cmdRun.withPodman)
+        }
+
         if( cmdRun.withSingularity ) {
             configContainer(config, 'singularity', cmdRun.withSingularity)
         }

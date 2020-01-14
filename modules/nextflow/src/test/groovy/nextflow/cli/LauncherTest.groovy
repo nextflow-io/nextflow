@@ -211,6 +211,10 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run','-with-docker', '-x') == ['run', '-with-docker','-', '-x']
         launcher.normalizeArgs('run','-with-docker', 'busybox') == ['run', '-with-docker','busybox']
 
+        launcher.normalizeArgs('run','-with-podman') == ['run', '-with-podman','-']
+        launcher.normalizeArgs('run','-with-podman', '-x') == ['run', '-with-podman','-', '-x']
+        launcher.normalizeArgs('run','-with-podman', 'busybox') == ['run', '-with-podman','busybox']
+
         launcher.normalizeArgs('run','-with-singularity') == ['run', '-with-singularity','-']
         launcher.normalizeArgs('run','-with-singularity', '-x') == ['run', '-with-singularity','-', '-x']
         launcher.normalizeArgs('run','-with-singularity', 'busybox') == ['run', '-with-singularity','busybox']

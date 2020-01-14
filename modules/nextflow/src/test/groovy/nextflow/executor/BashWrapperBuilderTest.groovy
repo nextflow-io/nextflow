@@ -27,6 +27,7 @@ import nextflow.Session
 import nextflow.cloud.aws.batch.AwsOptions
 import nextflow.container.ContainerConfig
 import nextflow.container.DockerBuilder
+import nextflow.container.PodmanBuilder
 import nextflow.container.SingularityBuilder
 import nextflow.processor.TaskBean
 import nextflow.util.MustacheTemplateEngine
