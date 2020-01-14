@@ -27,6 +27,7 @@ Contents:
    docker
    shifter
    singularity
+   podman
    ignite
    kubernetes
    tracing
