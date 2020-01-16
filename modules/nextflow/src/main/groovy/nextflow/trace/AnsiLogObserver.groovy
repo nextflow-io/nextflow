@@ -77,6 +77,8 @@ class AnsiLogObserver implements TraceObserver {
 
     private int printedLines
 
+    private int gapLines
+
     private int labelWidth
 
     private int cols = 80
@@ -249,7 +251,7 @@ class AnsiLogObserver implements TraceObserver {
 
     synchronized protected void renderProgress(WorkflowStats stats) {
         if( printedLines )
-            AnsiConsole.out.println ansi().cursorUp(printedLines+1)
+            AnsiConsole.out.println ansi().cursorUp(printedLines+gapLines+1)
 
         // -- print processes
         final term = ansi()
@@ -261,14 +263,26 @@ class AnsiLogObserver implements TraceObserver {
         renderErrors(term)
 
         final str = term.toString()
-        if( str ) {
-            printAnsiLines(str)
-            printedLines = countNewLines(str)
-        }
-        else
-            printedLines = 0
+        final count = printAndCountLines(str)
+        // usually the gap should be negative because `count` should be greater or equal
+        // than the previous `printedLines` value (the output should become longer)
+        // otherwise cleanup the remaining lines
+        gapLines = printedLines > count ? printedLines-count : 0
+        if( gapLines>0 ) for(int i=0; i<gapLines; i++ )
+            AnsiConsole.out.print(NEWLINE)
+        // finally update the value of printed lines
+        printedLines = count
 
         AnsiConsole.out.flush()
+    }
+
+    protected int printAndCountLines(String str) {
+        if( str ) {
+            printAnsiLines(str)
+            return countNewLines(str)
+        }
+        else
+            return 0
     }
 
     protected void renderSummary(WorkflowStats stats) {
