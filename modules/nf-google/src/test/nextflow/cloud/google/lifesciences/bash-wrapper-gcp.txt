@@ -70,9 +70,9 @@ nxf_stage() {
 
 nxf_unstage() {
     true
-    gsutil -m -q cp -R $name gs://bucket/work/dir/.command.out || true
-    gsutil -m -q cp -R $name gs://bucket/work/dir/.command.err || true
-    gsutil -m -q cp -R $name gs://bucket/work/dir/.exitcode || true
+    gsutil -m -q cp -R .command.out gs://bucket/work/dir/.command.out || true
+    gsutil -m -q cp -R .command.err gs://bucket/work/dir/.command.err || true
+    gsutil -m -q cp -R .exitcode gs://bucket/work/dir/.exitcode || true
     [[ ${nxf_main_ret:=0} != 0 ]] && return
 }
 

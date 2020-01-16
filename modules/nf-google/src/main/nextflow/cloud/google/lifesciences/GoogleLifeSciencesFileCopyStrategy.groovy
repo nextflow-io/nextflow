@@ -126,7 +126,7 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
          * cp = copy
          * -R = recursive copy
          */
-        "gsutil -m -q cp -R \$name ${Escape.uriPath(target)}"
+        "gsutil -m -q cp -R ${Escape.path(local)} ${Escape.uriPath(target)}"
     }
 
     String copyMany(String local, Path target) {
