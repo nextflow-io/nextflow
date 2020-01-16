@@ -16,13 +16,9 @@
 
 package nextflow.trace
 
-
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
-import nextflow.processor.ErrorStrategy
-import nextflow.processor.TaskRun
-
 /**
  * Holds process execution progress stats
  *
@@ -32,6 +28,7 @@ import nextflow.processor.TaskRun
 @ToString(includePackage = false, includeNames = true)
 @EqualsAndHashCode
 class ProgressRecord implements Cloneable {
+
     final int index
     final String name     // process name
     String hash     // process hash
@@ -48,11 +45,11 @@ class ProgressRecord implements Cloneable {
     boolean terminated
     boolean errored
 
-    long loadCpus
+    int loadCpus
     long loadMemory
 
     int peakRunning
-    long peakCpus
+    int peakCpus
     long peakMemory
 
     ProgressRecord() {}
@@ -71,75 +68,9 @@ class ProgressRecord implements Cloneable {
         succeeded+ failed+ cached+ stored
     }
 
-
     @Override
     synchronized ProgressRecord clone() {
         return (ProgressRecord)super.clone()
     }
 
-    synchronized void markPending() {
-        pending ++
-    }
-
-    synchronized void markSubmitted(TaskRun task) {
-        hash = task.hashLog
-        pending --
-        submitted ++
-    }
-
-    synchronized void markRunning(TaskRun task) {
-        submitted --
-        running ++
-        // update current load
-        loadCpus += task.getConfig().getCpus()
-        loadMemory += (task.getConfig().getMemory()?.toBytes() ?: 0)
-        // update peaks
-        if( peakRunning < running )
-            peakRunning = running
-        if( peakCpus < loadCpus )
-            peakCpus = loadCpus
-        if( peakMemory < loadMemory )
-            peakMemory = loadMemory
-    }
-
-    synchronized void markComplete(TaskRun task) {
-        hash = task.hashLog
-        running --
-        loadCpus -= task.getConfig().getCpus()
-        loadMemory -= (task.getConfig().getMemory()?.toBytes() ?: 0)
-
-        if( task.failed ) {
-            failed ++
-            if( task.errorAction == ErrorStrategy.RETRY )
-                retries ++
-
-            else if( task.errorAction == ErrorStrategy.IGNORE )
-                ignored ++
-
-            else if( !task.errorAction?.soft )
-                errored |= true
-        }
-        else if( task.aborted ) {
-            aborted ++
-        }
-        else {
-            succeeded ++
-        }
-    }
-
-    synchronized void markCached(TaskRun task, TraceRecord trace)
-    {
-        if( trace ) {
-            cached++
-            hash = task.hashLog
-        }
-        else {
-            stored++
-            hash = 'skipped'
-        }
-    }
-
-    synchronized void markTerminated() {
-        terminated = true
-    }
 }

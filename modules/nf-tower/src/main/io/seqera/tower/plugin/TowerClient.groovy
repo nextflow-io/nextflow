@@ -11,7 +11,6 @@
 
 package io.seqera.tower.plugin
 
-
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -30,7 +29,6 @@ import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
-import nextflow.trace.ProgressRecord
 import nextflow.trace.ResourcesAggregator
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceRecord
@@ -96,13 +94,15 @@ class TowerClient implements TraceObserver {
 
     private String endpoint
 
-    private String urlTraceWorkflow
+    private String urlTraceBegin
 
-    private String urlTraceTask
+    private String urlTraceComplete
 
-    private String urlTraceAlive
+    private String urlTraceRecord
 
-    private String urlTraceInit
+    private String urlTraceHeartbeat
+
+    private String urlTraceCreate
 
     private ResourcesAggregator aggregator
 
@@ -135,10 +135,11 @@ class TowerClient implements TraceObserver {
      */
     TowerClient(String endpoint) {
         this.endpoint = checkUrl(endpoint)
-        this.urlTraceTask = this.endpoint + '/trace/task'
-        this.urlTraceWorkflow = this.endpoint + '/trace/workflow'
-        this.urlTraceAlive = this.endpoint + '/trace/alive'
-        this.urlTraceInit = this.endpoint + '/trace/init'
+        this.urlTraceRecord = this.endpoint + '/trace/record'
+        this.urlTraceBegin= this.endpoint + '/trace/begin'
+        this.urlTraceComplete = this.endpoint + '/trace/complete'
+        this.urlTraceHeartbeat = this.endpoint + '/trace/heartbeat'
+        this.urlTraceCreate = this.endpoint + '/trace/create'
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
     }
@@ -216,8 +217,8 @@ class TowerClient implements TraceObserver {
         this.httpClient = new SimpleHttpClient().setAuthToken(TOKEN_PREFIX + getAccessToken())
 
         // send hello to verify auth
-        final req = makeInitRequest(session)
-        final resp = sendHttpMessage(urlTraceInit, req)
+        final req = makeCreateRequest(session)
+        final resp = sendHttpMessage(urlTraceCreate, req)
         if( resp.error )
             throw new AbortOperationException(resp.message)
         final ret = parseTowerResponse(resp)
@@ -228,7 +229,7 @@ class TowerClient implements TraceObserver {
             log.warn(ret.message.toString())
     }
 
-    protected Map makeInitRequest(Session session) {
+    protected Map makeCreateRequest(Session session) {
         [
             sessionId: session.uniqueId.toString(),
             runName: session.runName,
@@ -251,8 +252,8 @@ class TowerClient implements TraceObserver {
         httpClient.backOffBase = backOffBase
         httpClient.backOffDelay = backOffDelay
 
-        final req = makeWorkflowReq(session)
-        final resp = sendHttpMessage(urlTraceWorkflow, req)
+        final req = makeBeginReq(session)
+        final resp = sendHttpMessage(urlTraceBegin, req)
         if( resp.error )
             throw new AbortOperationException(resp.message)
 
@@ -284,8 +285,9 @@ class TowerClient implements TraceObserver {
         sender.join()
         // notify the workflow completion
         terminated = true
-        def resp = sendHttpMessage(urlTraceWorkflow, makeWorkflowReq(session))
-        logHttpResponse(urlTraceWorkflow, resp)
+        final req = makeCompleteReq(session)
+        final resp = sendHttpMessage(urlTraceComplete, req)
+        logHttpResponse(urlTraceComplete, resp)
     }
 
     @Override
@@ -390,24 +392,40 @@ class TowerClient implements TraceObserver {
         }
     }
 
-    protected Map makeWorkflowReq(Session session) {
+    protected Map makeBeginReq(Session session) {
         def workflow = session.getWorkflowMetadata().toMap()
         workflow.params = session.getParams()
         workflow.id = workflowId
-        if( !terminated )
-            workflow.remove('stats')
+        workflow.remove('stats')
+
         // render as a string
         workflow.container = mapToString(workflow.container)
         workflow.configText = session.resolvedConfig
 
         def result = new LinkedHashMap(5)
         result.workflow = workflow
-        if( terminated ) {
-            result.metrics = getMetricsList()
-        }
-        else {
-            result.processNames = new ArrayList(processNames)
-        }
+        result.processNames = new ArrayList(processNames)
+        return result
+    }
+
+    protected Map makeCompleteReq(Session session) {
+        def workflow = session.getWorkflowMetadata().toMap()
+        workflow.params = session.getParams()
+        workflow.id = workflowId
+        // render as a string
+        workflow.container = mapToString(workflow.container)
+        workflow.configText = session.resolvedConfig
+
+        def result = new LinkedHashMap(5)
+        result.workflow = workflow
+        result.metrics = getMetricsList()
+        return result
+    }
+
+    protected Map makeHeartbeatReq() {
+        def result = new HashMap(1)
+        result.workflowId = workflowId
+        result.progress = getWorkflowProgress(true)
         return result
     }
 
@@ -463,7 +481,7 @@ class TowerClient implements TraceObserver {
         final result = new LinkedHashMap(5)
         result.put('tasks', payload)
         result.put('workflowId', workflowId)
-        result.put('progress', getProgressRecords())
+        result.put('progress', getWorkflowProgress(true))
         return result
     }
 
@@ -471,8 +489,9 @@ class TowerClient implements TraceObserver {
         return aggregator.computeSummaryList()
     }
 
-    protected List<ProgressRecord> getProgressRecords() {
-        session.getProgressState()?.getProgress() ?: Collections.<ProgressRecord>emptyList()
+    protected WorkflowProgress getWorkflowProgress(boolean quick) {
+        def stats = quick ? session.getStatsObserver().getQuickStats() : session.getStatsObserver().getStats()
+        new WorkflowProgress(stats)
     }
 
     /**
@@ -556,9 +575,9 @@ class TowerClient implements TraceObserver {
 
             if( !tasks ) {
                 if( delta > aliveInterval.millis ) {
-                    final req = new HashMap(1); req.workflowId = workflowId
-                    final resp = sendHttpMessage(urlTraceAlive, req)
-                    logHttpResponse(urlTraceAlive, resp)
+                    final req = makeHeartbeatReq()
+                    final resp = sendHttpMessage(urlTraceHeartbeat, req)
+                    logHttpResponse(urlTraceHeartbeat, resp)
                     previous = now
                 }
                 continue
@@ -567,8 +586,8 @@ class TowerClient implements TraceObserver {
             if( delta > period || tasks.size() >= TASKS_PER_REQUEST || complete ) {
                 // send
                 final req = makeTasksReq(tasks.values())
-                final resp = sendHttpMessage(urlTraceTask, req)
-                logHttpResponse(urlTraceTask, resp)
+                final resp = sendHttpMessage(urlTraceRecord, req)
+                logHttpResponse(urlTraceRecord, resp)
 
                 // clean up for next iteration
                 previous = now

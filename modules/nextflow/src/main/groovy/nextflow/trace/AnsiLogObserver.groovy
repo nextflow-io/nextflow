@@ -87,16 +87,14 @@ class AnsiLogObserver implements TraceObserver {
 
     private Boolean enableSummary = System.getenv('NXF_ANSI_SUMMARY') as Boolean
 
+    private WorkflowStatsObserver statsObserver
+
     private void markModified() {
         changeTimestamp = System.currentTimeMillis()
     }
 
-    private boolean hasProgressRecords() {
-        session.progressState?.getProgressLength()
-    }
-
     private boolean hasProgressChanges() {
-        final long progress = session.progressState?.changeTimestamp ?: 0
+        final long progress = statsObserver.changeTimestamp ?: 0
         final last = progress ? Math.max(progress,changeTimestamp) : changeTimestamp
         if( last != lastRendered ) {
             lastRendered = last
@@ -110,7 +108,7 @@ class AnsiLogObserver implements TraceObserver {
         if( isHashLogPrefix(message) && !(warn=message.indexOf('NOTE:')>0) )
             return
         
-        if( !started || !hasProgressRecords() ) {
+        if( !started || !statsObserver.hasProgressRecords() ) {
             println message
         }
         else if( warn ) {
@@ -124,7 +122,7 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     synchronized void appendWarning(String message) {
-        if( !started || !hasProgressRecords() )
+        if( !started || !statsObserver.hasProgressRecords() )
             printAnsi(message, Color.YELLOW)
         else {
             warnings << new Event(message)
@@ -133,7 +131,7 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     synchronized void appendError(String message) {
-        if( !started || !hasProgressRecords() )
+        if( !started || !statsObserver.hasProgressRecords() )
             printAnsi(message, Color.RED)
         else {
             errors << new Event(message)
@@ -143,7 +141,7 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     synchronized void appendSticky(String message) {
-        if( !started || !hasProgressRecords() )
+        if( !started || !statsObserver.hasProgressRecords() )
             printAnsi(message, Color.GREEN)
         else {
             sticky << new Event(message)
@@ -155,13 +153,15 @@ class AnsiLogObserver implements TraceObserver {
     protected void render0(dummy) {
         while(!stopped) {
             if( hasProgressChanges() )
-                renderProgress()
+                renderProgress(statsObserver.quickStats)
             synchronized (this) {
                 wait(200)
             }
         }
-        renderProgress()
-        renderSummary()
+        // 
+        final stats = statsObserver.getStats()
+        renderProgress(stats)
+        renderSummary(stats)
     }
 
     protected void renderMessages( Ansi term, List<Event> allMessages, Color color=null )  {
@@ -215,8 +215,8 @@ class AnsiLogObserver implements TraceObserver {
         }
     }
 
-    protected void renderProcesses(Ansi term) {
-        def processes = session.progressState?.getProgress()
+    protected void renderProcesses(Ansi term, WorkflowStats stats) {
+        def processes = stats.getProcesses()
         if( !processes || (!session.isSuccess() && errors && !rendered) ) {
             // prevent to show a useless process progress if there's an error
             // on startup and the execution is terminated
@@ -247,7 +247,7 @@ class AnsiLogObserver implements TraceObserver {
         }
     }
 
-    synchronized protected void renderProgress() {
+    synchronized protected void renderProgress(WorkflowStats stats) {
         if( printedLines )
             AnsiConsole.out.println ansi().cursorUp(printedLines+1)
 
@@ -255,7 +255,7 @@ class AnsiLogObserver implements TraceObserver {
         final term = ansi()
         renderSticky(term)
         renderExecutors(term)
-        renderProcesses(term)
+        renderProcesses(term, stats)
         renderMessages(term, infos)
         renderMessages(term, warnings, Color.YELLOW)
         renderErrors(term)
@@ -271,15 +271,14 @@ class AnsiLogObserver implements TraceObserver {
         AnsiConsole.out.flush()
     }
 
-    protected void renderSummary() {
+    protected void renderSummary(WorkflowStats stats) {
         final delta = endTimestamp-startTimestamp
         if( enableSummary == false )
             return
         if( enableSummary == null && delta <= 60*1_000 )
             return
         
-        WorkflowStats stats = session.isSuccess() ? session.getWorkflowStats() : null
-        if( stats && hasProgressRecords()) {
+        if( session.isSuccess() && stats.progressLength>0 ) {
             def report = ""
             report += "Completed at: ${new Date(endTimestamp).format('dd-MMM-yyyy HH:mm:ss')}\n"
             report += "Duration    : ${new Duration(delta)}\n"
@@ -359,6 +358,7 @@ class AnsiLogObserver implements TraceObserver {
     void onFlowCreate(Session session){
         this.started = true
         this.session = session
+        this.statsObserver = session.statsObserver
         this.startTimestamp = System.currentTimeMillis()
         AnsiConsole.systemInstall()
         this.renderer = Thread.start('AnsiLogObserver', this.&render0)

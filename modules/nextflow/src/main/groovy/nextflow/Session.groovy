@@ -16,7 +16,6 @@
 
 package nextflow
 
-import nextflow.exception.ScriptCompilationException
 import static nextflow.Const.*
 
 import java.lang.reflect.Method
@@ -45,6 +44,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortSignalException
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.MissingLibraryException
+import nextflow.exception.ScriptCompilationException
 import nextflow.executor.ExecutorFactory
 import nextflow.extension.CH
 import nextflow.file.FileHelper
@@ -62,12 +62,10 @@ import nextflow.script.ScriptMeta
 import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.AnsiLogObserver
-import nextflow.trace.ProgressState
-import nextflow.trace.StatsObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
 import nextflow.trace.TraceRecord
-import nextflow.trace.WorkflowStats
+import nextflow.trace.WorkflowStatsObserver
 import nextflow.util.Barrier
 import nextflow.util.BlockingThreadExecutorFactory
 import nextflow.util.ConfigHelper
@@ -208,7 +206,7 @@ class Session implements ISession {
 
     private WorkflowMetadata workflowMetadata
 
-    private WorkflowStats workflowStats
+    private WorkflowStatsObserver statsObserver
 
     private FilePorter filePorter
 
@@ -226,7 +224,7 @@ class Session implements ISession {
 
     Throwable getError() { error }
 
-    WorkflowStats getWorkflowStats() { workflowStats }
+    WorkflowStatsObserver getStatsObserver() { statsObserver }
 
     WorkflowMetadata getWorkflowMetadata() { workflowMetadata }
 
@@ -239,8 +237,6 @@ class Session implements ISession {
     boolean ansiLog
 
     AnsiLogObserver ansiLogObserver
-
-    ProgressState progressState
 
     FilePorter getFilePorter() { filePorter }
 
@@ -389,13 +385,11 @@ class Session implements ISession {
     @PackageScope
     List<TraceObserver> createObservers() {
 
-        def result = new ArrayList(10)
+        final result = new ArrayList(10)
 
         // stats is created as first because others may depend on it
-        final observer = new StatsObserver(this)
-        this.progressState = observer
-        this.workflowStats = observer.stats
-        result << observer
+        statsObserver = new WorkflowStatsObserver(this)
+        result.add(statsObserver)
 
         for( TraceObserverFactory f : ServiceLoader.load(TraceObserverFactory) ) {
             log.debug "Observer factory: ${f.class.simpleName}"
