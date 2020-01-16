@@ -40,6 +40,8 @@ class GoogleLifeSciencesConfig {
 
     public final static String DEFAULT_SSH_IMAGE = 'gcr.io/cloud-genomics-pipelines/tools'
 
+    public final static String DEFAULT_ENTRY_POINT = '/bin/bash'
+
     String project
     List<String> zones
     List<String> regions

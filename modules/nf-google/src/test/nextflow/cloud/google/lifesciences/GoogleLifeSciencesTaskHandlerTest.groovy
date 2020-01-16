@@ -156,7 +156,6 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         task.getWorkDir() >> workDir
         task.getHash() >> { CacheHelper.hasher('dummy').hash() }
         task.getContainer() >> 'my/image'
-        task.getConfig() >> new TaskConfig(disk: '250 GB', machineType: 'n1-1234')
 
         def handler = new GoogleLifeSciencesTaskHandler(
                 executor: executor,
@@ -164,8 +163,9 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
 
         when:
         def req = handler.createPipelineRequest()
-
         then:
+        task.getConfig() >> new TaskConfig(disk: '250 GB', machineType: 'n1-1234')
+        and:
         req.machineType == 'n1-1234'
         req.project == 'my-project'
         req.zone == ['my-zone']
@@ -180,9 +180,24 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         req.sharedMount.getDisk() == GoogleLifeSciencesTaskHandler.DEFAULT_DISK_NAME
         !req.sharedMount.getReadOnly()
         req.bootDiskSizeGb == 20
+        req.entryPoint == GoogleLifeSciencesConfig.DEFAULT_ENTRY_POINT
+
+        when:
+        req = handler.createPipelineRequest()
+        then:
+        task.getConfig() >> new TaskConfig(containerOptions: [entrypoint:'/bin/foo'])
+        and:
+        req.entryPoint == '/bin/foo'
+
+        when:
+        req = handler.createPipelineRequest()
+        then:
+        task.getConfig() >> new TaskConfig(containerOptions: [entrypoint:null])
+        and:
+        req.entryPoint == null
+
     }
 
-   
     
     def 'should check if it is running'(){
         given:

@@ -362,6 +362,16 @@ class TaskConfig extends LazyMap implements Cloneable {
         return get('machineType')
     }
 
+    String getContainerOptions() {
+        def opts = get('containerOptions')
+        return opts instanceof CharSequence ? opts.toString() : null
+    }
+
+    Map getContainerOptionsMap() {
+        def opts = get('containerOptions')
+        return opts instanceof Map ? opts : Collections.emptyMap()
+    }
+
     /**
      * Get a closure guard condition and evaluate to a boolean result
      *

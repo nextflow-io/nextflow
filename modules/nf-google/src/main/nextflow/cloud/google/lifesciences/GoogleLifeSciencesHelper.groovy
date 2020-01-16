@@ -196,12 +196,18 @@ class GoogleLifeSciencesHelper {
     }
 
     protected Action createMainAction(GoogleLifeSciencesSubmitRequest req) {
+        // flag pipefail is required otherwise the command exit status is not returned
+        List<String> cmd = ['-o', 'pipefail', '-c', getMainScript(req.workDir)]
+        if( !req.entryPoint )
+            cmd.add(0, 'bash')
+
         createAction(
                 "$req.taskName-main",
                 req.containerImage,
-                // flag pipefail is required otherwise the command exit status is not returned
-                ['bash', '-o', 'pipefail', '-c', getMainScript(req.workDir)],
-                [req.sharedMount] )
+                cmd,
+                [req.sharedMount],
+                Collections.<ActionFlags>emptyList(),
+                req.entryPoint)
     }
 
     protected Action createStagingAction(GoogleLifeSciencesSubmitRequest req) {
