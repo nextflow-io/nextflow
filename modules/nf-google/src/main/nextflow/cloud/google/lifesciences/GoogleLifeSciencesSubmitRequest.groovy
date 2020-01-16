@@ -60,4 +60,5 @@ class GoogleLifeSciencesSubmitRequest {
 
     Integer bootDiskSizeGb
 
+    String entryPoint
 }
