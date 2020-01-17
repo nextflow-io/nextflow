@@ -15,7 +15,9 @@
  */
 
 package nextflow.trace
-import nextflow.processor.TaskHandler
+
+import nextflow.Session
+import nextflow.processor.TaskProcessor
 import spock.lang.Specification
 /**
  *
@@ -23,26 +25,47 @@ import spock.lang.Specification
  */
 class StatsObserverTest extends Specification {
 
-    def 'should update tasks completed' () {
+    def 'should create process' () {
         given:
-        def stats = Mock(WorkflowStats)
-        def observer = new StatsObserver(stats: stats)
-
-        def RECORD1 = Mock(TraceRecord)
-        def RECORD2 = Mock(TraceRecord)
-
-        def HANDLER1 = Mock(TaskHandler)
-        def HANDLER2 = Mock(TaskHandler)
+        def observer = new WorkflowStatsObserver(Mock(Session))
+        and:
+        def process = Mock(TaskProcessor) { getId() >> 1; getName() >> 'foo' }
 
         when:
-        observer.onProcessComplete(HANDLER1, RECORD1)
+        observer.onProcessCreate(process)
         then:
-        1 * stats.updateTasksCompleted(RECORD1) >> null
+        observer.stats.processes.size() == 1
+        and:
+        with(observer.stats.processes[0]) {
+            name == 'foo'
+            pending == 0
+            running == 0
+            submitted == 0
+            failed == 0
+            !terminated
+        }
+
+    }
+
+    def 'should terminate process' () {
+        given:
+        def observer = new WorkflowStatsObserver(Mock(Session))
+        def ts = System.currentTimeMillis()
+        and:
+        def process = Mock(TaskProcessor) { getId() >> 1; getName() >> 'foo' }
+        and:
+        observer.onProcessCreate(process)
 
         when:
-        observer.onProcessCached(HANDLER2, RECORD2)
+        observer.onProcessTerminate(process)
         then:
-        1 * stats.updateTasksCached(RECORD2) >> null
+        with(observer.stats.processes[0]) {
+            name == 'foo'
+            terminated
+        }
+        and:
+        observer.getChangeTimestamp() >= ts
+        observer.getChangeTimestamp() <= System.currentTimeMillis()
     }
 
 

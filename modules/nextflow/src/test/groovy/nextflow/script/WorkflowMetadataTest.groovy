@@ -24,6 +24,8 @@ import nextflow.Const
 import nextflow.Session
 import nextflow.scm.AssetManager
 import nextflow.trace.TraceRecord
+import nextflow.trace.WorkflowStats
+import nextflow.trace.WorkflowStatsObserver
 import nextflow.util.Duration
 import nextflow.util.VersionNumber
 import org.eclipse.jgit.api.Git
@@ -80,7 +82,7 @@ class WorkflowMetadataTest extends Specification {
                     manifest: [version: '1.0.0', nextflowVersion: '>=0.31.1']]
         Session session = Spy(Session, constructorArgs: [config])
         session.configFiles >> [Paths.get('foo'), Paths.get('bar')]
-
+        session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
         session.fetchContainers() >> 'busybox/latest'
         session.commandLine >> 'nextflow run -this -that'
 
@@ -145,6 +147,8 @@ class WorkflowMetadataTest extends Specification {
         def script = new ScriptFile(file)
 
         def session = Spy(Session)
+        session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
+        
         def metadata = new WorkflowMetadata(session, script)
 
         session.binding.setVariable('value_a', 1)
@@ -199,6 +203,8 @@ class WorkflowMetadataTest extends Specification {
         session.binding.setVariable('value_b', 2)
         session.binding.setVariable('workflow', metadata)
         session.binding.setParams(foo: 'Hello', bar: 'world')
+        
+        session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
 
         def result1
         def result2
@@ -245,6 +251,8 @@ class WorkflowMetadataTest extends Specification {
         
         def session = Spy(Session)
         def metadata = new WorkflowMetadata(session, script)
+        and:
+        session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
 
         when:
         def result = metadata.toMap()

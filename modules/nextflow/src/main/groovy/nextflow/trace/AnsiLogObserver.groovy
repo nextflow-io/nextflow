@@ -20,12 +20,9 @@ import static nextflow.util.LoggerHelper.*
 import static org.fusesource.jansi.Ansi.*
 
 import groovy.transform.CompileStatic
-import groovy.transform.EqualsAndHashCode
-import groovy.util.logging.Slf4j
 import jline.TerminalFactory
 import nextflow.Session
 import nextflow.processor.TaskHandler
-import nextflow.processor.TaskProcessor
 import nextflow.util.Duration
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
@@ -36,24 +33,10 @@ import org.fusesource.jansi.AnsiConsole
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
 @CompileStatic
 class AnsiLogObserver implements TraceObserver {
 
     static final private String NEWLINE = System.getProperty("line.separator")
-
-    @EqualsAndHashCode
-    static class ProcessStats {
-        int submitted
-        int cached
-        int stored
-        int failed
-        int completed
-        boolean terminated
-        String hash
-        boolean error
-        String name
-    }
 
     static class Event {
         String message
@@ -80,19 +63,21 @@ class AnsiLogObserver implements TraceObserver {
 
     private Thread renderer
 
-    private Map<String,ProcessStats> processes = new LinkedHashMap()
-
     private Map<String,Integer> executors = new LinkedHashMap<>()
 
     private volatile boolean stopped
 
     private volatile boolean started
 
-    private volatile boolean dirty
+    private volatile long changeTimestamp
+
+    private volatile long lastRendered
 
     private volatile boolean rendered
 
     private int printedLines
+
+    private int gapLines
 
     private int labelWidth
 
@@ -104,62 +89,81 @@ class AnsiLogObserver implements TraceObserver {
 
     private Boolean enableSummary = System.getenv('NXF_ANSI_SUMMARY') as Boolean
 
+    private WorkflowStatsObserver statsObserver
+
+    private void markModified() {
+        changeTimestamp = System.currentTimeMillis()
+    }
+
+    private boolean hasProgressChanges() {
+        final long progress = statsObserver.changeTimestamp ?: 0
+        final last = progress ? Math.max(progress,changeTimestamp) : changeTimestamp
+        if( last != lastRendered ) {
+            lastRendered = last
+            return true
+        }
+        return false
+    }
+
     synchronized void appendInfo(String message) {
         boolean warn
         if( isHashLogPrefix(message) && !(warn=message.indexOf('NOTE:')>0) )
             return
         
-        if( !started || !processes ) {
+        if( !started || !statsObserver.hasProgressRecords() ) {
             println message
         }
         else if( warn ) {
             warnings << new Event(message)
-            dirty = true
+            markModified()
         }
         else {
             infos << new Event(message)
-            dirty = true
+            markModified()
         }
     }
 
     synchronized void appendWarning(String message) {
-        if( !started || !processes )
+        if( !started || !statsObserver.hasProgressRecords() )
             printAnsi(message, Color.YELLOW)
         else {
             warnings << new Event(message)
-            dirty = true
+            markModified()
         }
     }
 
     synchronized void appendError(String message) {
-        if( !started || !processes )
+        if( !started || !statsObserver.hasProgressRecords() )
             printAnsi(message, Color.RED)
         else {
             errors << new Event(message)
-            dirty = true
+            markModified()
             notify()
         }
     }
 
     synchronized void appendSticky(String message) {
-        if( !started || !processes )
-            printAnsi(message, Color.RED)
+        if( !started || !statsObserver.hasProgressRecords() )
+            printAnsi(message, Color.GREEN)
         else {
             sticky << new Event(message)
-            dirty = true
+            markModified()
             notify()
         }
     }
 
     protected void render0(dummy) {
         while(!stopped) {
-            if( dirty ) renderProgress()
+            if( hasProgressChanges() )
+                renderProgress(statsObserver.quickStats)
             synchronized (this) {
                 wait(200)
             }
         }
-        renderProgress()
-        renderSummary()
+        // 
+        final stats = statsObserver.getStats()
+        renderProgress(stats)
+        renderSummary(stats)
     }
 
     protected void renderMessages( Ansi term, List<Event> allMessages, Color color=null )  {
@@ -213,7 +217,8 @@ class AnsiLogObserver implements TraceObserver {
         }
     }
 
-    protected void renderProcesses(Ansi term) {
+    protected void renderProcesses(Ansi term, WorkflowStats stats) {
+        def processes = stats.getProcesses()
         if( !processes || (!session.isSuccess() && errors && !rendered) ) {
             // prevent to show a useless process progress if there's an error
             // on startup and the execution is terminated
@@ -224,13 +229,13 @@ class AnsiLogObserver implements TraceObserver {
 
         // calc max width
         labelWidth = 0
-        for( Map.Entry<String,ProcessStats> entry : processes ) {
-            labelWidth = Math.max(labelWidth, entry.value.name.size())
+        for( ProgressRecord entry : processes ) {
+            labelWidth = Math.max(labelWidth, entry.name.size())
         }
 
         // render line
-        for( Map.Entry<String,ProcessStats> entry : processes ) {
-            term.a(line(entry.value))
+        for( ProgressRecord entry : processes ) {
+            term.a(line(entry))
             term.newline()
         }
         rendered = true
@@ -244,40 +249,50 @@ class AnsiLogObserver implements TraceObserver {
         }
     }
 
-    synchronized protected void renderProgress() {
-        dirty = false
+    synchronized protected void renderProgress(WorkflowStats stats) {
         if( printedLines )
-            AnsiConsole.out.println ansi().cursorUp(printedLines+1)
+            AnsiConsole.out.println ansi().cursorUp(printedLines+gapLines+1)
 
         // -- print processes
         final term = ansi()
         renderSticky(term)
         renderExecutors(term)
-        renderProcesses(term)
+        renderProcesses(term, stats)
         renderMessages(term, infos)
         renderMessages(term, warnings, Color.YELLOW)
         renderErrors(term)
 
         final str = term.toString()
-        if( str ) {
-            printAnsiLines(str)
-            printedLines = countNewLines(str)
-        }
-        else
-            printedLines = 0
+        final count = printAndCountLines(str)
+        // usually the gap should be negative because `count` should be greater or equal
+        // than the previous `printedLines` value (the output should become longer)
+        // otherwise cleanup the remaining lines
+        gapLines = printedLines > count ? printedLines-count : 0
+        if( gapLines>0 ) for(int i=0; i<gapLines; i++ )
+            AnsiConsole.out.print(NEWLINE)
+        // finally update the value of printed lines
+        printedLines = count
 
         AnsiConsole.out.flush()
     }
 
-    protected void renderSummary() {
+    protected int printAndCountLines(String str) {
+        if( str ) {
+            printAnsiLines(str)
+            return countNewLines(str)
+        }
+        else
+            return 0
+    }
+
+    protected void renderSummary(WorkflowStats stats) {
         final delta = endTimestamp-startTimestamp
         if( enableSummary == false )
             return
         if( enableSummary == null && delta <= 60*1_000 )
             return
         
-        WorkflowStats stats = session.isSuccess() ? session.getWorkflowStats() : null
-        if( stats && processes.size() ) {
+        if( session.isSuccess() && stats.progressLength>0 ) {
             def report = ""
             report += "Completed at: ${new Date(endTimestamp).format('dd-MMM-yyyy HH:mm:ss')}\n"
             report += "Duration    : ${new Duration(delta)}\n"
@@ -295,7 +310,7 @@ class AnsiLogObserver implements TraceObserver {
         }
     }
 
-    protected void printAnsi(String message, Ansi.Color color=null, boolean bold=false) {
+    protected void printAnsi(String message, Color color=null, boolean bold=false) {
         def fmt = ansi()
         if( color ) fmt = fmt.fg(color)
         if( bold ) fmt = fmt.bold()
@@ -326,9 +341,9 @@ class AnsiLogObserver implements TraceObserver {
         return cols>3 ? str[0..(cols-3-1)] + '...' : str[0..cols-1]
     }
 
-    protected String line(ProcessStats stats) {
-        final float tot = stats.submitted +stats.cached +stats.stored
-        final float com = stats.completed +stats.cached +stats.stored
+    protected String line(ProgressRecord stats) {
+        final float tot = stats.getTotalCount()
+        final float com = stats.getCompletedCount()
         final label = fmtWidth(stats.name, labelWidth, Math.max(cols-50, 5))
         final hh = (stats.hash && tot>0 ? stats.hash : '-').padRight(9)
 
@@ -346,30 +361,18 @@ class AnsiLogObserver implements TraceObserver {
             result += ", stored: $stats.stored"
         if( stats.failed )
             result += ", failed: $stats.failed"
+        if( stats.retries )
+            result += ", retries: $stats.retries"
         if( stats.terminated && tot )
-            result += stats.error ? ' \u2718' : ' \u2714'
+            result += stats.errored ? ' \u2718' : ' \u2714'
         return fmtChop(result, cols)
-    }
-
-
-    private ProcessStats proc0(String name) {
-        def result = processes.get(name)
-        if( !result ) {
-            result = new ProcessStats()
-            result.name = name
-            processes.put(name, result)
-        }
-        return result
-    }
-
-    private ProcessStats proc0(TaskHandler handler) {
-        proc0(handler.task.processor.name)
     }
 
     @Override
     void onFlowCreate(Session session){
         this.started = true
         this.session = session
+        this.statsObserver = session.statsObserver
         this.startTimestamp = System.currentTimeMillis()
         AnsiConsole.systemInstall()
         this.renderer = Thread.start('AnsiLogObserver', this.&render0)
@@ -382,64 +385,17 @@ class AnsiLogObserver implements TraceObserver {
         renderer.join()
     }
 
-    @Override
-    synchronized void onProcessCreate(TaskProcessor processor) {
-        proc0(processor.name)
-        dirty = true
-    }
-
     /**
      * This method is invoked before a process run is going to be submitted
      * @param handler
      */
     @Override
     synchronized void onProcessSubmit(TaskHandler handler, TraceRecord trace){
-        final process = proc0(handler)
-        process.submitted++
-        process.hash = handler.task.hashLog
-        process.name = handler.task.name
         // executor counter
         final exec = handler.task.processor.executor.name
         Integer count = executors[exec] ?: 0
         executors[exec] = count+1
-        dirty = true
-    }
-
-    @Override
-    synchronized void onProcessComplete(TaskHandler handler, TraceRecord trace){
-        final process = proc0(handler)
-        process.completed++
-        process.hash = handler.task.hashLog
-        process.name = handler.task.name
-        if( handler.task.aborted || handler.task.failed ) {
-            process.failed++
-            process.error |= !handler.task.errorAction?.soft
-        }
-        dirty = true
-    }
-
-    @Override
-    synchronized void onProcessTerminate(TaskProcessor processor) {
-        final process = processes.get(processor.name)
-        if( process ) {
-            process.terminated = true
-            dirty = true
-        }
-    }
-
-    @Override
-    synchronized void onProcessCached(TaskHandler handler, TraceRecord trace){
-        final process = proc0(handler)
-        process.name = handler.task.name
-        if( trace ) {
-            process.cached++
-            process.hash = handler.task.hashLog
-        }
-        else {
-            process.stored++
-            process.hash = 'skipped'
-        }
-        dirty = true
+        markModified()
     }
 
     protected int countNewLines(String str) {
