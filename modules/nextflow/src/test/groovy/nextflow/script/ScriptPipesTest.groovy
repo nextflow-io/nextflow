@@ -1,12 +1,13 @@
 package nextflow.script
 
-
+import spock.lang.Timeout
 import test.Dsl2Spec
 import test.MockScriptRunner
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(5)
 class ScriptPipesTest extends Dsl2Spec {
 
     def 'should pipe processes parallel' () {
