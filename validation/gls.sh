@@ -24,3 +24,8 @@ $NXF_CMD -C ./gls.config \
     run nextflow-io/rnaseq-nf \
     -with-report \
     -with-trace $OPTS
+
+$NXF_CMD -C ./gls.config \
+    run ./readspair.nf \
+    -with-report \
+    -with-trace $OPTS
