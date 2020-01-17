@@ -16,6 +16,7 @@
 
 package nextflow.file
 
+import java.nio.file.Path
 import java.nio.file.Paths
 
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
@@ -51,5 +52,23 @@ class FileHelperGsTest extends Specification {
         and:
         FileHelper.asPath('gs://f_o_o/bar.txt') ==
                 CloudStorageFileSystem.forBucket('f_o_o').getPath('/bar.txt')
+    }
+
+
+    def 'should strip ending slash' () {
+        given:
+        def nxFolder = Paths.get('/my-bucket/foo')
+        def nxNested = Paths.get('/my-bucket/foo/bar/')
+        and:
+        def gsFolder = 'gs://my-bucket/foo' as Path
+        def gsNested = 'gs://my-bucket/foo/bar/' as Path
+
+        expect:
+        nxFolder.relativize(nxNested).toString() == 'bar'
+        gsFolder.relativize(gsNested).toString() == 'bar/'      // <-- gs adds a slash that mess-up things
+        and:
+        FileHelper.relativize0(nxFolder,nxNested).toString() == 'bar'
+        FileHelper.relativize0(gsFolder,gsNested).toString() == 'bar'
+
     }
 }

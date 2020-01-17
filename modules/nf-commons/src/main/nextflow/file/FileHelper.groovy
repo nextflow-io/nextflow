@@ -744,7 +744,7 @@ class FileHelper {
             @Override
             FileVisitResult preVisitDirectory(Path fullPath, BasicFileAttributes attrs) throws IOException {
                 final int depth = fullPath.nameCount - folder.nameCount
-                final path = folder.relativize(fullPath)
+                final path = relativize0(folder, fullPath)
                 log.trace "visitFiles > dir=$path; depth=$depth; includeDir=$includeDir; matches=${matcher.matches(path)}; isDir=${attrs.isDirectory()}"
 
                 if (depth>0 && includeDir && matcher.matches(path) && attrs.isDirectory() && (includeHidden || !isHidden(fullPath))) {
@@ -786,6 +786,16 @@ class FileHelper {
             }
       })
 
+    }
+
+    static protected Path relativize0(Path folder, Path fullPath) {
+        def result = folder.relativize(fullPath)
+        String str
+        if( folder.is(FileSystems.default) || !(str=result.toString()).endsWith('/') )
+            return result
+        // strip the ending slash
+        def len = str.length()
+        len>0 ? Paths.get(str.substring(0,str.length()-1)) : Paths.get('')
     }
 
     private static boolean isHidden(Path path) {
