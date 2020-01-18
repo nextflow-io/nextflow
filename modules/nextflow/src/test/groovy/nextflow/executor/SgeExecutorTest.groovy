@@ -302,17 +302,19 @@ class SgeExecutorTest extends Specification {
               1258 0.17254 mouse.4689 epalumbo     r     08/29/2014 11:13:55 long@node-hp0515.linux.crg.es                                    16
               1261 0.17254 run_mappin epalumbo     qw    08/29/2014 11:28:11 short@node-ib0208bi.linux.crg.                                    4
               1262 0.17254 run_mappin epalumbo     Eqw   08/29/2014 11:28:31 short@node-ib0209bi.linux.crg.                                    4
+              1263 0.17254 run_mappin epalumbo     Tr    08/29/2014 11:28:31 short@node-ib0209bi.linux.crg.                                    4
         """.stripIndent().trim()
 
 
         when:
         def result = executor.parseQueueStatus(text)
         then:
-        result.size() == 4
+        result.size() == 5
         result['1220'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['1258'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['1261'] == AbstractGridExecutor.QueueStatus.PENDING
         result['1262'] == AbstractGridExecutor.QueueStatus.ERROR
+        result['1263'] == AbstractGridExecutor.QueueStatus.HOLD
     }
 
     def testParseQueueDump() {
