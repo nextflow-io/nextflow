@@ -147,7 +147,7 @@ class OpCall implements Callable {
 
     protected Object invoke() {
         if( methodName==SET_OP_hack ) {
-            // when this is ugly, the problem is that `set` is not a real operator
+            // well this is ugly, the problem is that `set` is not a real operator
             // but it's exposed as such. let's live whit this for now
             return invoke1('set', [source, args[0]] as Object[])
         }

@@ -19,6 +19,7 @@ package nextflow.extension
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
@@ -49,7 +50,7 @@ class SplitOp {
     @PackageScope Map params
 
     /**
-     * Whenever the splitter is applied to a paired-end read files (only valid for {@code splitFastaq} operator.
+     * Whenever the splitter is applied to a paired-end read files (only valid for {@code splitFastq} operator.
      */
     @PackageScope boolean pairedEnd
 
