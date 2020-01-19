@@ -190,8 +190,6 @@ class TowerClientTest extends Specification {
         then:
         observer.getWorkflowProgress(true) >> PROGRESS
         and:
-        req.workflowId == 'xyz-123'
-        and:
         req.tasks[0].taskId == 10
         req.tasks[0].process == 'foo'
         req.tasks[0].workdir == "/work/dir"
@@ -240,7 +238,7 @@ class TowerClientTest extends Specification {
         def dir = Files.createTempDirectory('test')
         def client = Mock(SimpleHttpClient)
         TowerClient tower = Spy(TowerClient, constructorArgs: [[httpClient: client] ])
-
+        and:
         def session = Mock(Session)
         session.config >> [:]
         session.containerConfig >> new ContainerConfig()
@@ -253,6 +251,9 @@ class TowerClientTest extends Specification {
         when:
         def req = tower.makeBeginReq(session)
         then:
+        tower.getWorkflowId() >> '12345'
+        and:
+        req.workflow.id == '12345'
         req.workflow.params == [foo:'Hello', bar:'World']
 
         cleanup:
@@ -299,7 +300,7 @@ class TowerClientTest extends Specification {
         }
 
         when:
-        def req = tower.makeCreateRequest(session)
+        def req = tower.makeCreateReq(session)
         then:
         req.sessionId == uuid.toString()
         req.runName == 'foo_bar'
@@ -326,13 +327,26 @@ class TowerClientTest extends Specification {
         tower.onFlowCreate(session)
         then:
         1 * tower.getAccessToken() >> 'secret'
-        1 * tower.makeCreateRequest(session) >> [runName: 'foo']
-        1 * tower.sendHttpMessage('https://tower.nf/trace/create', [runName: 'foo']) >> new TowerClient.Response(200, '{"workflowId":"xyz123"}')
+        1 * tower.makeCreateReq(session) >> [runName: 'foo']
+        1 * tower.sendHttpMessage('https://tower.nf/trace/create', [runName: 'foo'], 'POST') >> new TowerClient.Response(200, '{"workflowId":"xyz123"}')
         and:
         tower.runName == 'foo_bar'
         tower.runId == uuid.toString()
         and:
         tower.workflowId == 'xyz123'
 
+    }
+
+    def 'should get trace endpoint' () {
+        given:
+        def tower = new TowerClient('https://tower.nf')
+        tower.workflowId = '12345'
+
+        expect:
+        tower.getUrlTraceCreate() == 'https://tower.nf/trace/create'
+        tower.getUrlTraceBegin() == 'https://tower.nf/trace/12345/begin'
+        tower.getUrlTraceProgress() == 'https://tower.nf/trace/12345/progress'
+        tower.getUrlTraceHeartbeat() == 'https://tower.nf/trace/12345/heartbeat'
+        tower.getUrlTraceComplete() == 'https://tower.nf/trace/12345/complete'
     }
 }
