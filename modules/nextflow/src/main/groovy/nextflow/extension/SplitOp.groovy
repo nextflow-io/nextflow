@@ -136,6 +136,7 @@ class SplitOp {
             def opts = new HashMap(params)
             opts.remove('pe')
             opts.elem = indexes.get(i)
+            opts.into = createInto0()
             def result = splitSingleEntry(channel as DataflowReadChannel, opts)
             splitted.add( result )
         }
@@ -144,6 +145,10 @@ class SplitOp {
         def output = CH.create()
         applyMergingOperator(splitted, output, indexes)
         return output
+    }
+
+    protected DataflowWriteChannel createInto0() {
+        return new DataflowQueue()
     }
 
     /**
