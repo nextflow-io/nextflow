@@ -4,7 +4,7 @@ get_abs_filename() {
 
 export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
 
-$NXF_CMD run awsbatch.nf -c awsbatch.config
+$NXF_CMD run test-complexpaths.nf -c awsbatch.config
 [[ -d foo ]] || false
 [[ -e 'foo/.alpha' ]] || false
 [[ -e 'foo/01_A(R1).fastq' ]] || false
@@ -18,7 +18,7 @@ $NXF_CMD run awsbatch.nf -c awsbatch.config
 [[ -e 'foo/sample_(1 2).vcf' ]] || false
 
 rm -rf foo
-$NXF_CMD run awsbatch.nf -resume -c awsbatch.config
+$NXF_CMD run test-complexpaths.nf -resume -c awsbatch.config
 [[ -d foo ]] || false
 [[ -e 'foo/.alpha' ]] || false
 [[ -e 'foo/01_A(R1).fastq' ]] || false
