@@ -1,5 +1,32 @@
 NEXTFLOW CHANGE-LOG
 ===================
+20.01.0-edge - 20 Jan 2020 
+- Add Prevent negative progress stats [87cdddc6]
+- Add More cloud tests [7a5dd828]
+- Add support for UGE throttled jobs (Tr) #1461 [20408e4b]
+- Add progress stats to tower client [781116a4] [138cf0b0]
+- Add experimental Podman containers support (#1451) 026866cd
+- Add support for Gexf format for DAG rendering [28bfe0ee]
+- Improve ansi logging for multilines output [1ce978c3] [004e23eb]
+- Improve progress stats and ansi log [0212ba16]
+- Improve api to enable wr executor #1148 [21088ad3]
+- Update tower trace client requests [138cf0b0]
+- Enhance progress execution stats & tracking [a30e2b9a]
+- Unexpected output when using Google Storage as work dir #1452
+- Fix typos and minor changes [fb2f954f]
+- Fix Operator splitFastq fails with PE option and DSL2 enabled #1390
+- Fix Container entrypoint when using GLS executor #1291
+- Fix GLS file unstaging #1406 [e67ef3be]
+- Fix GLS unstage for file patterns #1406 
+- Fix Scratch directive does not work #1280 [644e9ac7] [6c7291fa]
+- Fix Resume fails due to LevelDB exception #1358 [28fa3a6c]
+- Fix Conda env activation #1195 [e3919275]
+- Fix java command in launch script #1436 [f28b015f]
+- Rename variable java to JAVA_BIN [086377d8]
+- Removed unused compile deps [686bcd98]
+- Bump capsule-maven 1.0.3.2 and fix broken env [004684e3]
+- Bump capsule-maven 1.0.3.1 and seqera repo [62964eed]
+
 19.12.0-edge - 20 Dec 2019 
 - Add GLS assigned zone discovery #1406
 - Add Google Life sciences (GLS) executor improvements #1406 [ead29c11] [8228e9b4]
