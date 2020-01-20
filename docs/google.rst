@@ -392,7 +392,7 @@ Limitation
 
 
 Troubleshooting
-===============
+---------------
 
 * Make sure to have enabled Compute Engine API, Genomics API and Cloud Storage Service in the
   `APIs & Services Dashboard <https://console.cloud.google.com/apis/dashboard>`_ page.
@@ -422,7 +422,7 @@ Nextflow provides built-in support for Cloud Life Sciences API which allows the 
 in the cloud, offloading the process executions through the Google Cloud service.
 
 .. note::
-  This features requires Nextflow ``19.12.0-edge`` or later.
+  This features requires Nextflow ``20.01.0-edge`` or later.
 
 .. warning::
   This API works well for coarse-grained workloads i.e. long running jobs. It's not suggested the use
@@ -532,6 +532,25 @@ the ``-work-dir`` command line options. For example::
 .. tip:: Any input data **not** stored in a Google Storage bucket will automatically be transferred to the
   pipeline work bucket. Use this feature with caution being careful to avoid unnecessary data transfers.
 
+Preemptible instances
+---------------------
+
+Preemptible instances are supported adding the following setting in the Nextflow config file::
+
+    google {
+        lifeSciences.preemptible = true
+    }
+
+Since this type of virtual machines can be retired by the provider before the job completion, it is advisable
+to add the following retry strategy to your config file to instruct Nextflow to automatically re-execute a job
+if the virtual machine was terminated preemptively::
+
+    process {
+      errorStrategy = { task.exitStatus==14 ? 'retry' : 'terminate' }
+      maxRetries = 5
+    }
+
+
 Hybrid execution
 ----------------
 
@@ -575,7 +594,7 @@ Limitation
 
 
 Troubleshooting
-===============
+---------------
 
 * Make sure to have enabled Compute Engine API, Life Sciences API and Cloud Storage Service in the
   `APIs & Services Dashboard <https://console.cloud.google.com/apis/dashboard>`_ page.
@@ -587,8 +606,10 @@ Troubleshooting
 * Make sure your security credentials allows you to access any Google Storage bucket
   where input data and temporary files are stored.
 
-Google Pipelines debugging information can be enabled using the ``-trace`` command line option
-as shown below::
+* Check the directory ``google/`` created in the task work directory (in the bucket storage) created
+  when on job failure and containing useful information of the job execution. The creation
+  can be enabled as default setting the option ``google.lifeSciences.debug = true`` in the
+  Nextflow config file
 
-    nextflow -trace nextflow.cloud.google.pipelines run <your_project_or_script_name>
+* Enable the optional SSH daemon in the job VM using the option ``google.lifeSciences.sshDaemon = true``
 
