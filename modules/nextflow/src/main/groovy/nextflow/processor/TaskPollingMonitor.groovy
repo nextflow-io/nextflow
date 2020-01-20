@@ -654,5 +654,13 @@ class TaskPollingMonitor implements TaskMonitor {
             log.debug "Failed to kill pending tasks ${batch} -- cause: ${e.message}"
         }
     }
+
+    /**
+     * The queue of tasks pending for submission to the underlying execution system
+     */
+    protected Queue<TaskHandler> getPendingQueue() {
+        return pendingQueue
+    }
+
 }
 

@@ -133,6 +133,10 @@ class BashWrapperBuilder {
         return "NXF_SCRATCH=\"\$(set +u; nxf_mktemp $scratchStr)\""
     }
 
+    protected boolean shouldUnstageOutputs() {
+        return workDir != targetDir
+    }
+
     protected boolean fixOwnership() {
         systemOsName == 'Linux' && containerConfig?.fixOwnership && runWithContainer && containerConfig.engine == 'docker' // <-- note: only for docker (shifter is not affected)
     }
@@ -256,7 +260,7 @@ class BashWrapperBuilder {
         binding.unstage_cmd = getUnstageCommand()
         binding.unstage_controls = changeDir ? getUnstageControls() : null
 
-        if( changeDir || workDir != targetDir ) {
+        if( changeDir || shouldUnstageOutputs() ) {
             binding.unstage_outputs = copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)
         }
         else {
