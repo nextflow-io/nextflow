@@ -148,7 +148,14 @@ abstract class BaseScript extends Script implements ExecutionContext {
             super.invokeMethod(name, args)
     }
 
-    private run0() {
+    private runDsl1() {
+        session.notifyBeforeWorkflowExecution()
+        final ret = runScript()
+        session.notifyAfterWorkflowExecution()
+        return ret
+    }
+
+    private runDsl2() {
         final result = runScript()
         if( meta.isModule() ) {
             return result
@@ -179,7 +186,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         setup()
         ExecutionStack.push(this)
         try {
-            run0()
+            NF.dsl2 ? runDsl2() : runDsl1()
         }
         catch(InvocationTargetException e) {
             // provide the exception cause which is more informative than InvocationTargetException
