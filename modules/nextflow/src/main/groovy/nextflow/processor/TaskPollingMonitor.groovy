@@ -604,6 +604,9 @@ class TaskPollingMonitor implements TaskMonitor {
         if( handler.checkIfRunning() ) {
             log.trace "Task started > $handler"
             session.notifyTaskStart(handler)
+            // output streams are bound as soon as the task starts
+            // to trigger the executions of the downstream tasks consuming them
+            handler.task.processor.bindOutStreams(handler.task)
         }
 
         // check if it is terminated

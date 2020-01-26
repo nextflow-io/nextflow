@@ -75,6 +75,8 @@ import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.file.FilePatternSplitter
 import nextflow.file.FilePorter
+import nextflow.processor.streams.StreamHandle
+import nextflow.processor.streams.StreamRef
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
@@ -93,6 +95,8 @@ import nextflow.script.params.OptionalParam
 import nextflow.script.params.OutParam
 import nextflow.script.params.StdInParam
 import nextflow.script.params.StdOutParam
+import nextflow.script.params.StreamInParam
+import nextflow.script.params.StreamOutParam
 import nextflow.script.params.TupleInParam
 import nextflow.script.params.TupleOutParam
 import nextflow.script.params.ValueInParam
@@ -1356,6 +1360,11 @@ class TaskProcessor {
                 tuples[param.index].add(value)
                 break
 
+            case StreamOutParam:
+                log.trace "Process $name > collecting out param: ${param}"
+                // ignore streams
+                break
+
             default:
                 throw new IllegalArgumentException("Illegal output parameter type: $param")
             }
@@ -1400,6 +1409,8 @@ class TaskProcessor {
     protected void bindOutputs0(Map<Short,List> tuples) {
         // -- bind out the collected values
         for( OutParam param : config.getOutputs() ) {
+            if( param instanceof StreamOutParam )
+                continue
             final outValue = tuples[param.index]
             if( outValue == null )
                 throw new IllegalStateException()
@@ -1427,6 +1438,14 @@ class TaskProcessor {
         collectOutputs( task, task.getTargetDir(), task.@stdout, task.context )
     }
 
+    protected void bindOutStreams(TaskRun task) {
+        for( OutParam param : task.outputs.keySet() ) {
+            if( param instanceof StreamOutParam ) {
+                param.getOutChannel().bind( task.outputs.get(param) )
+            }
+        }
+    }
+
     /**
      * Once the task has completed this method is invoked to collected all the task results
      *
@@ -1452,6 +1471,10 @@ class TaskProcessor {
 
                 case EnvOutParam:
                     collectOutEnvParam(task, (EnvOutParam)param, workDir)
+                    break
+
+                case StreamOutParam:
+                    // just ignore, since streams are emitted ahead
                     break
 
                 default:
@@ -1961,6 +1984,10 @@ class TaskProcessor {
                     contextMap.put( param.name, val )
                     break
 
+                case StreamInParam:
+                    contextMap.put( param.name, StreamHandle.input(val) )
+                    break
+
                 case FileInParam:
                     secondPass[param] = val
                     return // <-- leave it, because we do not want to add this 'val' at this stage
@@ -1978,6 +2005,14 @@ class TaskProcessor {
             task.setInput(param, val)
         }
 
+        // add also output stream
+        for( OutParam param : task.outputs.keySet() ) {
+            if( param instanceof StreamOutParam ) {
+                final stream = StreamRef.create()
+                task.setOutput(param,stream)
+                contextMap.put( param.name, StreamHandle.output(stream) )
+            }
+        }
         return count
     }
 

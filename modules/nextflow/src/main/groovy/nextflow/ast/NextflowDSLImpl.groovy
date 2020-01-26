@@ -938,7 +938,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 def nested = methodCall.objectExpression instanceof MethodCallExpression
                 log.trace "convert > input method: $methodName"
 
-                if( methodName in ['val','env','file','each','set','stdin','path','tuple'] ) {
+                if( methodName in ['val','env','file','each','set','stdin','path','tuple','stream'] ) {
                     //this methods require a special prefix
                     if( !nested )
                         methodCall.setMethod( new ConstantExpression('_in_' + methodName) )
@@ -1018,7 +1018,7 @@ class NextflowDSLImpl implements ASTTransformation {
             def nested = methodCall.objectExpression instanceof MethodCallExpression
             log.trace "convert > output method: $methodName"
 
-            if( methodName in ['val','env','file','set','stdout','path','tuple'] && !nested ) {
+            if( methodName in ['val','env','file','set','stdout','path','tuple','stream'] && !nested ) {
                 // prefix the method name with the string '_out_'
                 methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
                 fixMethodCall(methodCall)
