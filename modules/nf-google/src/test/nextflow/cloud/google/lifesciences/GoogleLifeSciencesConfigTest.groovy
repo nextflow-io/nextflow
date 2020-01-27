@@ -15,6 +15,8 @@
  */
 package nextflow.cloud.google.lifesciences
 
+import spock.lang.Unroll
+
 import nextflow.exception.AbortOperationException
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
@@ -75,13 +77,13 @@ class GoogleLifeSciencesConfigTest extends Specification {
         def map = [google:
                            [
                                    project: 'bar',
-                                   zone: 'eu-west1-a',
+                                   zone: 'europe-west1-a',
                                    lifeSciences: [preemptible: false, disableRemoteBinDir: false]
                            ]]
         def config = GoogleLifeSciencesConfig.fromSession0(map)
         then:
         config.project == 'bar'
-        config.location == 'eu-west1'
+        config.location == 'europe-west2'
         !config.preemptible
         !config.disableBinDir
 
@@ -90,13 +92,13 @@ class GoogleLifeSciencesConfigTest extends Specification {
         map = [google:
                            [
                                    project: 'bar',
-                                   zone: 'eu-west1-a',
+                                   zone: 'europe-west1-a',
                                    lifeSciences: [preemptible: true, disableRemoteBinDir: true]
                            ]]
         config = GoogleLifeSciencesConfig.fromSession0(map)
         then:
         config.project == 'bar'
-        config.location == 'eu-west1'
+        config.location == 'europe-west2'
         config.preemptible
         config.disableBinDir
     }
@@ -112,7 +114,7 @@ class GoogleLifeSciencesConfigTest extends Specification {
         config.project == 'foo'
         config.regions == ['us-central']
         config.zones == []
-        config.location == 'us-central'
+        config.location == 'us-central1'
     }
 
     def 'should config location from zone' () {
@@ -126,7 +128,7 @@ class GoogleLifeSciencesConfigTest extends Specification {
         config.project == 'foo'
         config.regions == []
         config.zones == ['us-east4-a','us-east4-c']
-        config.location == 'us-east4'
+        config.location == 'us-central1'
     }
 
     def 'should report missing region' () {
@@ -195,4 +197,23 @@ class GoogleLifeSciencesConfigTest extends Specification {
         then:
         config.copyImage == 'foo'
     }
+
+    @Unroll
+    def 'should return location from region'( ){
+        given:
+        def config = new GoogleLifeSciencesConfig()
+
+        expect:
+        config.bestLocationForRegion(REGION) == LOCATION
+
+        where:
+        REGION          | LOCATION
+        'europe-west1'  | 'europe-west2'
+        'europe-west2'  | 'europe-west2'
+        'europe-any'    | 'europe-west2'
+        'us-central1'   | 'us-central1'
+        'us-any'        | 'us-central1'
+        'foo'           | 'us-central1'
+    }
+
 }

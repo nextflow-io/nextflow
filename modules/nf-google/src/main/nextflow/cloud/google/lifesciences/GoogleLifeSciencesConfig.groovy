@@ -138,24 +138,20 @@ class GoogleLifeSciencesConfig {
 
     static String fallbackToRegionOrZone(List<String> regions, List<String> zones) {
         if( regions ) {
-            if( regions.size()>1 ) {
-                log.warn "Google LifeSciences location is missing -- Defaulting to region: ${regions[0]}"
-            }
-            return regions[0]
+            return bestLocationForRegion(regions[0])
         }
         if( zones ) {
             def norm = zones
                     .collect { int p = zones[0].lastIndexOf('-'); p!=-1 ? it.substring(0,p) : it }
                     .unique()
-            if( norm.size()>1 ) {
-                log.warn "Google LifeSciences location is missing -- Defaulting to zone: ${norm[0]}"
-            }
-
-            return norm[0]
+            return bestLocationForRegion(norm[0])
         }
-        throw new AbortOperationException("Missing Google region or location information")
+        throw new AbortOperationException("Missing Google region or zone information")
     }
 
+    static String bestLocationForRegion(String region) {
+        region.startsWith('europe-') ? 'europe-west2' : 'us-central1'
+    }
 
     static String getProjectIdFromCreds(String credsFilePath) {
         if( !credsFilePath )
