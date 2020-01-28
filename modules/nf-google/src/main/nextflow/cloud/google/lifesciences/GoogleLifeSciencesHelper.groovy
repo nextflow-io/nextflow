@@ -51,10 +51,14 @@ import nextflow.util.Escape
 @CompileStatic
 class GoogleLifeSciencesHelper {
 
+    /*
+     * Avail location see https://cloud.google.com/life-sciences/docs/concepts/locations
+     */
+    public static final List<String> DEFAULT_LOCATIONS  = ['us-central1','europe-west2']
+
     public static final String SSH_DAEMON_NAME = 'ssh-daemon'
     public static final String DEFAULT_APP_NAME = "Nextflow/GLS"
     public static final String SCOPE_CLOUD_PLATFORM = "https://www.googleapis.com/auth/cloud-platform"
-    public static final List<String> ENV_VAR_TO_INCLUDE = ["NXF_DEBUG"]
 
     CloudLifeSciences client
     GoogleCredentials credentials
@@ -305,5 +309,25 @@ class GoogleLifeSciencesHelper {
         result += "trap 'err=\$?; exec 1>&2; gsutil -m -q cp -R $localTaskDir/${TaskRun.CMD_LOG} ${remoteTaskDir}/${TaskRun.CMD_LOG} || true; [[ \$err -gt 0 || \$GOOGLE_LAST_EXIT_STATUS -gt 0 || \$NXF_DEBUG -gt 0 ]] && { ls -lah $localTaskDir || true; gsutil -m -q cp -R /google/ ${remoteTaskDir}; } || rm -rf $localTaskDir; exit \$err' EXIT; "
         result += "{ cd $localTaskDir; bash ${TaskRun.CMD_RUN} nxf_unstage; } >> $localTaskDir/${TaskRun.CMD_LOG} 2>&1"
         return result
+    }
+
+    void checkValidLocation() {
+        if( config.location in DEFAULT_LOCATIONS ) {
+            // that's fine, just return
+            return
+        }
+        // check the current list of location to make sure the specified one really exists
+        final availLocations = client
+                .projects()
+                .locations()
+                .list("projects/$config.project")
+                .execute()
+                .getLocations()
+                *.getLocationId()
+        if( config.location in availLocations ) {
+            return
+        }
+        // show a warning message
+        log.warn "The specified Google Life Sciences location is not available: \"$config.location\" -- Please choose open of the following ${availLocations.join(',')}"
     }
 }
