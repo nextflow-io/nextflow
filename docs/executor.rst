@@ -223,6 +223,11 @@ Nextflow manages each process as a separate job that is submitted to the cluster
 Being so, the pipeline must be launched from a node where the ``condor_submit`` command is available, that is, in a
 common usage scenario, the cluster `head` node.
 
+.. note::
+  The HTCondor executor for Nextflow does not support at this time the HTCondor ability to transfer input/output data to
+  the corresponding job computing node. Therefore the data needs to be made accessible to the computing nodes using
+  a shared file system directory from where the Nextflow workflow has to be executed (or specified via the ``-w`` option).
+
 To enable the HTCondor executor simply set to ``process.executor`` property to ``condor`` value in the ``nextflow.config`` file.
 
 The amount of resources requested by each job submission is defined by the following process directives:
