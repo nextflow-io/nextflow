@@ -444,8 +444,9 @@ Create a ``nextflow.config`` file in the project root directory. The config must
 * Google Life Sciences as Nextflow executor i.e. ``process.executor = 'google-lifesciences'``.
 * The Docker container images to be used to run pipeline tasks e.g. ``process.container = 'biocontainers/salmon:0.8.2--1'``.
 * The Google Cloud `project` ID to run in e.g. ``google.project = 'rare-lattice-222412'``.
-* The Google Cloud `region` or `zone`. You need to specify either one, **not** both. Multiple regions or zones can be
-  specified by separating them with a comma e.g. ``google.zone = 'us-central1-f,us-central-1-b'``.
+* The Google Cloud `region` or `zone`. This is where the Compute Engine VMs will be started.
+  You need to specify either one, **not** both. Multiple regions or zones can be specified by
+  separating them with a comma e.g. ``google.zone = 'us-central1-f,us-central-1-b'``.
 
 Example::
 
@@ -471,9 +472,9 @@ The following configuration options are available:
 Name                                Description
 =================================== =================
 google.project                      The Google Project Id to use for the pipeline execution.
-google.region                       The Google *region* where the computation is executed. Multiple regions can be provided separating them by a comma. Do not specify if a zone is provided.
-google.zone                         The Google *zone* where the computation is executed. Multiple zones can be provided separating them by a comma. Do not specify if a region is provided.
-google.location                     The Google *location* where the job executions are deployed (default: the same as the region or the zone specified).
+google.region                       The Google *region* where the computation is executed in Compute Engine VMs. Multiple regions can be provided separating them by a comma. Do not specify if a zone is provided. See  `available Compute Engine regions and zones <https://cloud.google.com/compute/docs/regions-zones/>`_ 
+google.zone                         The Google *zone* where the computation is executed in Compute Engine VMs. Multiple zones can be provided separating them by a comma. Do not specify if a region is provided. See  `available Compute Engine regions and zones <https://cloud.google.com/compute/docs/regions-zones/>`_ 
+google.location                     The Google *location* where the job executions are deployed to Cloud Life Sciences API. See  `available Cloud Life Sciences API locations <https://cloud.google.com/life-sciences/docs/concepts/locations>`_ (default: the same as the region or the zone specified).
 google.lifeSciences.bootDiskSize    Set the size of the virtual machine boot disk e.g `50.GB` (default: none).
 google.lifeSciences.copyImage       The container image run to copy input and output files. It must include the ``gsutil`` tool (default: ``google/cloud-sdk:alpine``).
 google.lifeSciences.debug           When ``true`` copies the `/google` debug directory in that task bucket directory (defualt: ``false``)
@@ -613,3 +614,6 @@ Troubleshooting
 
 * Enable the optional SSH daemon in the job VM using the option ``google.lifeSciences.sshDaemon = true``
 
+* Make sure you are choosing a `location` where  `Cloud Life Sciences API is available <https://cloud.google.com/life-sciences/docs/concepts/locations>`_, 
+  and a `region` or `zone` where `Compute Engine is available <https://cloud.google.com/compute/docs/regions-zones/>`_.
+  
