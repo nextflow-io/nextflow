@@ -33,9 +33,9 @@ import nextflow.executor.NopeExecutor
 import nextflow.file.FileHolder
 import nextflow.file.FilePorter
 import nextflow.script.BaseScript
+import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptType
-import nextflow.script.BodyDef
 import nextflow.script.params.FileOutParam
 import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
@@ -787,29 +787,19 @@ class TaskProcessorTest extends Specification {
 
     def 'should normalize files' () {
         given:
-        def proc = new TaskProcessor()
         def batch = Mock(FilePorter.Batch)
+        def executor = Mock(Executor)
         def PATH = Paths.get('/some/path')
+        def proc = new TaskProcessor(); proc.executor = executor
 
         when:
         def result = proc.normalizeInputToFiles(PATH.toString(), 0, true, batch)
         then:
-        1 * batch.addToForeign(PATH) >> PATH
+        1 * executor.isForeignFile(PATH) >> false
+        0 * batch.addToForeign(PATH) >> null
         result.size() == 1
         result[0] == new FileHolder(PATH)
 
     }
-
-
-    def 'should return stage dir' () {
-        given:
-        def WORK_DIR = Paths.get('/the/work/dir')
-        def processor = new TaskProcessor()
-        processor.executor = Mock(Executor) { getWorkDir() >> WORK_DIR }
-
-        expect:
-        processor.getStageDir() == WORK_DIR.resolve('stage')
-    }
-
 
 }

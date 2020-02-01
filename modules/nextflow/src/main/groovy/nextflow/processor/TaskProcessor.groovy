@@ -1654,7 +1654,7 @@ class TaskProcessor {
 
             if( item instanceof Path || coerceToPath ) {
                 def path = normalizeToPath(item)
-                def target = batch.addToForeign(path)
+                def target = executor.isForeignFile(path) ? batch.addToForeign(path) : path
                 def holder = new FileHolder(target)
                 files << holder
             }
@@ -1854,17 +1854,12 @@ class TaskProcessor {
         return count
     }
 
-    protected Path getStageDir() {
-        return executor.getWorkDir().resolve('stage')
-    }
-
-
     final protected void makeTaskContextStage2( TaskRun task, Map secondPass, int count ) {
 
         final ctx = task.context
         final allNames = new HashMap<String,Integer>()
 
-        final FilePorter.Batch batch = session.filePorter.newBatch(getStageDir())
+        final FilePorter.Batch batch = session.filePorter.newBatch(executor.getStageDir())
 
         // -- all file parameters are processed in a second pass
         //    so that we can use resolve the variables that eventually are in the file name
