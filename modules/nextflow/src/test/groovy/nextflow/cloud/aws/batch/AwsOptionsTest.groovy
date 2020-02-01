@@ -125,7 +125,9 @@ class AwsOptionsTest extends Specification {
         null            | []
         'foo'           | ['foo']
         'foo, bar'      | ['foo','bar']
+        '/foo/,/bar///' | ['/foo','/bar']
         ['/this','/that'] | ['/this','/that']
+        ['/foo/bar/']   | ['/foo/bar']
 
     }
 

@@ -19,6 +19,7 @@ package nextflow.executor
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
 
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -111,6 +112,15 @@ abstract class Executor {
      */
     Path getWorkDir() {
        session.getWorkDir()
+    }
+
+    @Memoized
+    Path getStageDir() {
+        return getWorkDir().resolve('stage')
+    }
+
+    boolean isForeignFile(Path path) {
+        path.scheme != getStageDir().scheme
     }
 
     /**

@@ -186,9 +186,6 @@ class FilePorter {
          *
          */
         Path addToForeign(Path path) {
-            if( path.scheme == stageScheme )
-                return path
-
             // copy the path with a thread pool
             foreignPaths << path
             return getCachePathFor(path, stageDir)
