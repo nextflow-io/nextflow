@@ -91,7 +91,6 @@ allprojects {
         testCompile ("org.objenesis:objenesis:2.1")
         testCompile ("org.spockframework:spock-core:1.3-groovy-2.5") { exclude group: 'org.codehaus.groovy' }
         testCompile 'com.google.jimfs:jimfs:1.1'
-        testCompile 'org.subethamail:subethasmtp:3.1.7'
         // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sec:module_replacement
         modules {
             module("commons-logging:commons-logging") { replacedBy("org.slf4j:jcl-over-slf4j") }
@@ -177,9 +176,9 @@ jar.enabled = false
  */
 task buildInfo { doLast {
 
-    def file = new File('./modules/nextflow/src/main/groovy/nextflow/Const.groovy')
+    def file0 = file('./modules/nextflow/src/main/groovy/nextflow/Const.groovy')
     def buildNum = 0
-    def src = file.text
+    def src = file0.text
     src.find(/APP_BUILDNUM *= *([0-9]*)/) { buildNum = it[1]?.toInteger()+1 }
     src = src.replaceAll('APP_VER *= *"[0-9a-zA-Z_\\-\\.]+"', "APP_VER = \"${version}\"" as String)
     src = src.replaceAll('APP_TIMESTAMP *= *[0-9]*', "APP_TIMESTAMP = ${System.currentTimeMillis()}" as String)
@@ -189,27 +188,27 @@ task buildInfo { doLast {
     else {
         println "WARN: Unable to find current build number"
     }
-    file.text = src
+    file0.text = src
 
     // -- update 'nextflow' wrapper
-    file = new File('nextflow')
-    src = file.text
+    file0 = file('nextflow')
+    src = file0.text
     src = src.replaceAll(/NXF_VER\=\$\{NXF_VER:-'.*'\}/, 'NXF_VER=\\${NXF_VER:-\'' + version + '\'}')
-    file.text = src
+    file0.text = src
 
     // -- update sphynx
     def major = version.split(/\./)[0..1].join('.')
-    file = new File('docs/conf.py')
-    src = file.text
+    file0 = file('docs/conf.py')
+    src = file0.text
     src = src.replaceAll(/version *= *'[0-9a-zA-Z_\-\.]+'/, "version = '$major'" as String)
     src = src.replaceAll(/release *= *'[0-9a-zA-Z_\-\.]+'/, "release = '$version'" as String)
-    file.text = src
+    file0.text = src
 
     // -- update dockerfile
-    file = new File('docker/Dockerfile')
-    src = file.text
+    file0 = file('docker/Dockerfile')
+    src = file0.text
     src = src.replaceAll(/releases\/v[0-9a-zA-Z_\-\.]+\//, "releases/v$version/" as String)
-    file.text = src
+    file0.text = src
 }}
 
 String bytesToHex(byte[] bytes) {
@@ -592,7 +591,7 @@ task exportClasspath {
     def home = System.getProperty('user.home')
     def all = configurations.ignite + configurations.console + configurations.ga4gh + configurations.google
     def libs = all.collect { File file -> /* println file.canonicalPath.replace(home, '$HOME'); */ file.canonicalPath;  }
-    new File('.launch.classpath').text = libs.join(':')
+    file('.launch.classpath').text = libs.join(':')
 }
 
 /*
