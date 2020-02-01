@@ -618,7 +618,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         handler.submit()
         then:
-        1 * handler.createTaskWrapper() >> null
+        1 * handler.buildTaskWrapper() >> null
         1 * handler.newSubmitRequest(task) >> req
         1 * handler.bypassProxy(proxy) >> client
         1 * client.submitJob(req) >> resp
