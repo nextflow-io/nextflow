@@ -84,17 +84,11 @@ class AwsBatchExecutor extends Executor {
     }
 
     @Override
-    final Path getWorkDir() {
+    Path getWorkDir() {
         session.bucketDir ?: session.workDir
     }
 
-    /**
-     * Initialise the AWS batch executor.
-     */
-    @Override
-    protected void register() {
-        super.register()
-
+    protected void validateWorkDir() {
         /*
          * make sure the work dir is a S3 bucket
          */
@@ -102,12 +96,16 @@ class AwsBatchExecutor extends Executor {
             session.abort()
             throw new AbortOperationException("When using `$name` executor a S3 bucket must be provided as working directory either using -bucket-dir or -work-dir command line option")
         }
+    }
 
+    protected void validatePathDir() {
         def path = session.config.navigate('env.PATH')
         if( path ) {
             log.warn "Environment PATH defined in config file is ignored by AWS Batch executor"
         }
+    }
 
+    protected void uploadBinDir() {
         /*
          * upload local binaries
          */
@@ -117,20 +115,34 @@ class AwsBatchExecutor extends Executor {
             log.info "Uploading local `bin` scripts folder to ${s3.toUriString()}/bin"
             remoteBinDir = FilesEx.copyTo(session.binDir, s3)
         }
+    }
 
+    protected void createAwsClient() {
         /*
          * retrieve config and credentials and create AWS client
          */
         final driver = new AmazonCloudDriver(session.config)
 
         /*
-         * create a proxy for the aws batch client that manages the request throttling 
+         * create a proxy for the aws batch client that manages the request throttling
          */
         client = new AwsBatchProxy(driver.getBatchClient(), submitter)
         helper = createHelper(client, driver)
         // create the options object
         awsOptions = new AwsOptions(this)
         log.debug "[AWS BATCH] Executor options=$awsOptions"
+    }
+
+    /**
+     * Initialise the AWS batch executor.
+     */
+    @Override
+    protected void register() {
+        super.register()
+        validateWorkDir()
+        validatePathDir()
+        uploadBinDir()
+        createAwsClient()
     }
 
     private AwsBatchHelper createHelper(AWSBatch batchClient, AmazonCloudDriver driver) {

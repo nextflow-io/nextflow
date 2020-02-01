@@ -194,4 +194,20 @@ class AwsOptionsTest extends Specification {
         thrown(ProcessUnrecoverableException)
     }
 
+    def 'should add a volume' () {
+        given:
+        def opts = new AwsOptions()
+
+        when:
+        opts.addVolume(Paths.get('/some/dir'))
+        then:
+        opts.volumes == ['/some/dir']
+
+        when:
+        opts.addVolume(Paths.get('/other/dir'))
+        opts.addVolume(Paths.get('/other/dir'))
+        then:
+        opts.volumes == ['/some/dir', '/other/dir']
+    }
+
 }

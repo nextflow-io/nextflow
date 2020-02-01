@@ -41,6 +41,7 @@ import com.amazonaws.services.batch.model.Volume
 import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
@@ -271,7 +272,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         /*
          * create task wrapper
          */
-        createTaskWrapper()
+        buildTaskWrapper()
 
         /*
          * create submit request
@@ -291,9 +292,12 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         log.debug "[AWS BATCH] submitted > job=$jobId; work-dir=${task.getWorkDirStr()}"
     }
 
-    protected createTaskWrapper() {
-        final launcher = new AwsBatchScriptLauncher(bean,getAwsOptions())
-        launcher.build()
+    protected BashWrapperBuilder createTaskWrapper() {
+        new AwsBatchScriptLauncher(bean,getAwsOptions())
+    }
+
+    protected void buildTaskWrapper() {
+        createTaskWrapper().build()
     }
 
     protected AWSBatch bypassProxy(AWSBatch batch) {
@@ -491,6 +495,15 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return "nf-" + result
     }
 
+    protected List<String> getSubmitCommand() {
+        // the cmd list to launch it
+        def opts = getAwsOptions()
+        def aws = opts.getAwsCli()
+        def cmd = "trap \"{ ret=\$?; $aws s3 cp --only-show-errors ${TaskRun.CMD_LOG} s3:/${getLogFile()}||true; exit \$ret; }\" EXIT; $aws s3 cp --only-show-errors s3:/${getWrapperFile()} - | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
+        // final launcher command
+        return ['bash','-o','pipefail','-c', cmd.toString() ]
+    }
+
     /**
      * Create a new Batch job request for the given NF {@link TaskRun}
      *
@@ -498,13 +511,6 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @return A {@link com.amazonaws.services.batch.model.SubmitJobRequest} instance representing the Batch job to submit
      */
     protected SubmitJobRequest newSubmitRequest(TaskRun task) {
-
-        // the cmd list to launch it
-        def opts = getAwsOptions()
-        def aws = opts.getAwsCli()
-        def cmd = "trap \"{ ret=\$?; $aws s3 cp --only-show-errors ${TaskRun.CMD_LOG} s3:/${getLogFile()}||true; exit \$ret; }\" EXIT; $aws s3 cp --only-show-errors s3:/${getWrapperFile()} - | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
-        // final launcher command
-        def cli = ['bash','-o','pipefail','-c', cmd.toString() ] as List<String>
 
         /*
          * create the request object
@@ -533,7 +539,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         // set the actual command
         def container = new ContainerOverrides()
-        container.command = cli
+        container.command = getSubmitCommand()
         // set the task memory
         if( task.config.getMemory() )
             container.memory = (int)task.config.getMemory().toMega()
