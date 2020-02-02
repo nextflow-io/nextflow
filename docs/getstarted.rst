@@ -12,9 +12,10 @@ Requirements
 `Nextflow` can be used on any POSIX compatible system (Linux, OS X, etc).
 It requires Bash 3.2 (or later) and `Java 8 (or later, up to 11) <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_ to be installed.
 
-Windows systems may be supported using a POSIX compatibility layer like `Cygwin <http://www.cygwin.com>`_ (unverified) or,
-alternatively, installing it into a Linux VM using virtualization software like `VirtualBox <http://www.virtualbox.org>`_
-or `VMware <http://www.vmware.com/>`_.
+For the execution in a cluster of computers the use a shared file system is required to allow
+the sharing of tasks input/output files.
+
+Windows system is supported through `WSL <https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux>`_.
 
 .. _getstart-install:
 
