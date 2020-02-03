@@ -361,20 +361,23 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      *      in the configuration file as {@link Map} object
      * @param simpleName The process name
      */
-    void applyConfig(Map configProcessScope, String simpleName, String fullyQualifiedName=null) {
+    void applyConfig(Map configProcessScope, String baseName, String simpleName, String fullyQualifiedName) {
         // -- Apply the directives defined in the config object using the`withLabel:` syntax
         final processLabels = this.getLabels() ?: ['']
         for( String lbl : processLabels ) {
             this.applyConfigSelector(configProcessScope, "withLabel:", lbl)
         }
 
-        // -- apply setting defined in the config file using the process simple name (ie. w/o execution scope)
-        this.applyConfigSelector(configProcessScope, "withName:", simpleName)
+        // -- apply setting defined in the config file using the process base name
+        this.applyConfigSelector(configProcessScope, "withName:", baseName)
+
+        // -- apply setting defined in the config file using the process simple name
+        if( simpleName && simpleName!=baseName )
+            this.applyConfigSelector(configProcessScope, "withName:", simpleName)
 
         // -- apply setting defined in the config file using the process qualified name (ie. with the execution scope)
-        if( fullyQualifiedName && fullyQualifiedName!=simpleName ) {
+        if( fullyQualifiedName && (fullyQualifiedName!=simpleName || fullyQualifiedName!=baseName) )
             this.applyConfigSelector(configProcessScope, "withName:", fullyQualifiedName)
-        }
 
         // -- Apply process specific setting defined using `process.$name` syntax
         //    NOTE: this is deprecated and will be removed
@@ -390,6 +393,10 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             log.warn("Directives `scratch` and `stageInMode=rellink` conflict each other -- Enforcing default stageInMode for process `$simpleName`")
             this.remove('stageInMode')
         }
+    }
+
+    void applyConfigLegacy(Map configProcessScope, String processName) {
+        applyConfig(configProcessScope, processName, null, null)
     }
 
 

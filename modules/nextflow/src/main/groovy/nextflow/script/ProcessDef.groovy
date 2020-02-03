@@ -57,6 +57,12 @@ class ProcessDef extends BindableDef implements ChainableDef {
     private String simpleName
 
     /**
+     * Process source name how it was given in the original model ie. this name
+     * name is stable and cannot be changed/aliased while the process is included.
+     */
+    private String baseName
+
+    /**
      * The closure holding the process definition body
      */
     private Closure<BodyDef> rawBody
@@ -81,6 +87,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
         this.rawBody = body
         this.simpleName = name
         this.processName = name
+        this.baseName = name
     }
 
     static String stripScope(String str) {
@@ -106,7 +113,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
             throw new ScriptRuntimeException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
 
         // apply config settings to the process
-        processConfig.applyConfig((Map)session.config.process, simpleName, processName)
+        processConfig.applyConfig((Map)session.config.process, baseName, simpleName, processName)
     }
 
     @Override
@@ -134,6 +141,8 @@ class ProcessDef extends BindableDef implements ChainableDef {
     String getName() { processName }
 
     String getSimpleName() { simpleName }
+
+    String getBaseName() { baseName }
 
     ProcessConfig getProcessConfig() { processConfig }
 

@@ -85,7 +85,7 @@ class IncludeDef {
 
     /*
      * Note: this method invocation is injected during the Nextflow AST manipulation.
-     * Do not use explicitly
+     * Do not use it explicitly.
      *
      * @param ownerParams The params in the owner context
      */

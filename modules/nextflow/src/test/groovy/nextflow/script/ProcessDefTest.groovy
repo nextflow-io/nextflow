@@ -61,6 +61,7 @@ class ProcessDefTest extends Specification {
         then:
         copy.getName() == 'foo_alias'
         copy.getSimpleName() == 'foo_alias'
+        copy.getBaseName() == 'foo'
         copy.getOwner() == OWNER
         copy.rawBody.class == BODY.class
         !copy.rawBody.is(BODY)
@@ -70,6 +71,7 @@ class ProcessDefTest extends Specification {
         then:
         copy.getName() == 'flow1:flow2:foo'
         copy.getSimpleName() == 'foo'
+        copy.getBaseName() == 'foo'
         copy.getOwner() == OWNER
         copy.rawBody.class == BODY.class
         !copy.rawBody.is(BODY)
@@ -80,7 +82,8 @@ class ProcessDefTest extends Specification {
         def OWNER = Mock(BaseScript)
         def CONFIG = [
                 process:[
-                        cpus:2, memory: '3GB',
+                        cpus:2, memory: '1GB',
+                        'withName:foo': [memory: '3GB'],
                         'withName:bar': [cpus:4, memory: '4GB'],
                         'withName:flow1:flow2:flow3:bar': [memory: '8GB']
                 ]
@@ -96,16 +99,16 @@ class ProcessDefTest extends Specification {
         copy.initialize()
         then:
         def cfg1 = copy.processConfig.createTaskConfig()
-        cfg1.getCpus()==2
-        cfg1.getMemory().giga == 3
+        cfg1.getCpus()==2           // taken from the generic config
+        cfg1.getMemory().giga == 3  // taken from the `foo` config
 
         when:
         copy = proc.cloneWithName('flow1:bar')
         copy.initialize()
         then:
         def cfg2 = copy.processConfig.createTaskConfig()
-        cfg2.getCpus()==4
-        cfg2.getMemory().giga == 4
+        cfg2.getCpus()==4           // taken from the `bar` config
+        cfg2.getMemory().giga == 4  // taken from the `bar` config
 
 
         when:
