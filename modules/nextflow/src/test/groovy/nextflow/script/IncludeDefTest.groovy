@@ -108,8 +108,7 @@ class IncludeDefTest extends Specification {
 
         TestInclude(IncludeDef include) {
             this.path = include.path
-            this.name = include.name
-            this.alias = include.alias
+            this.modules = include.modules
         }
 
         @Override
@@ -146,8 +145,7 @@ class IncludeDefTest extends Specification {
         script.run()
         then:
         script.includes[0].path == PATH
-        script.includes[0].name == NAME
-        script.includes[0].alias == ALIAS
+        script.includes[0].modules == [ new IncludeDef.Module(NAME, ALIAS) ]
         script.includes[0].params == PARAMS
         script.includes[0].loadInvoked
 
