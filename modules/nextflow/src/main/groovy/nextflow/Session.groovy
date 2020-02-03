@@ -774,6 +774,8 @@ class Session implements ISession {
 
     @PackageScope void checkConfig() {
         final names = ScriptMeta.allProcessNames()
+        final ver = "dsl${NF.dsl1 ?'1' :'2'}"
+        log.debug "Workflow process names [$ver]: ${names.join(', ')}"
         validateConfig(names)
     }
 
