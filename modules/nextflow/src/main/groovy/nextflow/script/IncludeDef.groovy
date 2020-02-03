@@ -45,7 +45,7 @@ class IncludeDef {
 
     @PackageScope path
     @PackageScope List<Module> modules
-    @PackageScope Map params = new LinkedHashMap(10)
+    @PackageScope Map params
     private Session session
 
     @Deprecated
@@ -74,7 +74,7 @@ class IncludeDef {
     }
 
     IncludeDef params(Map args) {
-        this.params.putAll(args)
+        this.params = args != null ? new HashMap(args) : null
         return this
     }
 
@@ -83,13 +83,21 @@ class IncludeDef {
         return this
     }
 
-    void load() {
+    /*
+     * Note: this method invocation is injected during the Nextflow AST manipulation.
+     * Do not use explicitly
+     *
+     * @param ownerParams The params in the owner context
+     */
+    void load0(Map ownerParams) {
         checkValidPath(path)
 
         // -- resolve the concrete against the current script
         final moduleFile = realModulePath(path)
+        // -- use the module specific params or default to the owner one if not provided
+        final p = params != null ? params : ownerParams
         // -- load the module
-        def moduleScript = loadModule0(moduleFile, params, session)
+        final moduleScript = loadModule0(moduleFile, p, session)
         // -- add it to the inclusions
         for( Module module : modules ) {
             meta.addModule(moduleScript, module.name, module.alias)

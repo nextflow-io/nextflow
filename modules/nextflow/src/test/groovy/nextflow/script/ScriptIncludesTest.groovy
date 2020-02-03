@@ -807,4 +807,74 @@ class ScriptIncludesTest extends Dsl2Spec {
         result[0].val == 'HELLO'
         result[1].val == 'WORLD'
     }
+
+    def 'should inherit module params' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module.nf')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = '''
+        params.alpha = 'first'
+        params.omega = 'last'
+        
+        process foo {
+          output: val result
+          exec:
+            result = "$params.alpha $params.omega".toUpperCase()
+        }     
+        '''
+
+        SCRIPT.text = """
+        params.alpha = 'owner'
+        include { foo } from "$MODULE" 
+
+        workflow {
+            foo()
+            emit: foo.out
+        }
+        """
+
+        when:
+        def runner = new MockScriptRunner()
+        def result = runner.setScript(SCRIPT).execute()
+
+        then:
+        result.val == 'OWNER LAST'
+    }
+
+    def 'should override module params' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module.nf')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = '''
+        params.alpha = 'first'
+        params.omega = 'last'
+        
+        process foo {
+          output: val result
+          exec:
+            result = "$params.alpha $params.omega".toUpperCase()
+        }     
+        '''
+
+        SCRIPT.text = """
+        params.alpha = 'owner'
+        include { foo } from "$MODULE" params(alpha:'aaa', omega:'zzz')
+
+        workflow {
+            foo()
+            emit: foo.out
+        }
+        """
+
+        when:
+        def runner = new MockScriptRunner()
+        def result = runner.setScript(SCRIPT).execute()
+
+        then:
+        result.val == 'AAA ZZZ'
+    }
 }

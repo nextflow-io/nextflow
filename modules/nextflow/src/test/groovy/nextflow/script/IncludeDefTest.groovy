@@ -112,7 +112,7 @@ class IncludeDefTest extends Specification {
         }
 
         @Override
-        void load() {
+        void load0(Map p) {
             loadInvoked = true
         }
     }
@@ -136,12 +136,13 @@ class IncludeDefTest extends Specification {
 
     def 'should add includes' () {
         given:
+        def binding = new Binding([params: [foo:1, bar:2]])
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(TestScript.class.name)
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
 
         when:
-        def script = (TestScript)new GroovyShell(config).parse(INCLUDE)
+        def script = (TestScript)new GroovyShell(binding, config).parse(INCLUDE)
         script.run()
         then:
         script.includes[0].path == PATH
@@ -152,12 +153,13 @@ class IncludeDefTest extends Specification {
 
         where:
         INCLUDE                                         | PATH          | NAME      | ALIAS     | PARAMS
-        "include 'some/path'"                           | 'some/path'   | null      | null      | [:]
-        "include ALPHA from 'modules/path'"             | 'modules/path'| 'ALPHA'   | null      | [:]
-        "include ALPHA as BRAVO from 'modules/x'"       | 'modules/x'   | 'ALPHA'   | 'BRAVO'   | [:]
+        "include 'some/path'"                           | 'some/path'   | null      | null      | null
+        "include ALPHA from 'modules/path'"             | 'modules/path'| 'ALPHA'   | null      | null
+        "include ALPHA as BRAVO from 'modules/x'"       | 'modules/x'   | 'ALPHA'   | 'BRAVO'   | null
         "include 'modules/1' params(a:1, b:2)"          | 'modules/1'   | null      | null      | [a:1, b:2]
         "include DELTA from 'abc' params(x:1)"          | 'abc'         | 'DELTA'   | null      | [x:1]
         "include GAMMA as FOO from 'm1' params(p:2)"    | 'm1'          | 'GAMMA'   | 'FOO'     | [p:2]
+        "include GAMMA as FOO from 'm1' params([:])"    | 'm1'          | 'GAMMA'   | 'FOO'     | [:]
 
     }
 

@@ -242,7 +242,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 final methodCall = (MethodCallExpression)stm.getExpression()
                 convertIncludeDef(methodCall)
                 // this is necessary to invoke the `load` method on the include definition
-                final loadCall = new MethodCallExpression(methodCall, 'load', new ArgumentListExpression())
+                final loadCall = new MethodCallExpression(methodCall, 'load0', new ArgumentListExpression(new VariableExpression('params')))
                 stm.setExpression(loadCall)
             }
             super.visitExpressionStatement(stm)
