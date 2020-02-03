@@ -113,7 +113,7 @@ class ProcessFactory {
             throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
 
         // -- apply settings from config file to process config
-        processConfig.applyConfig((Map)config.process, name)
+        processConfig.applyConfigLegacy((Map)config.process, name)
 
         // -- get the executor for the given process config
         final execObj = executorFactory.getExecutor(name, processConfig, script, session)
