@@ -1,15 +1,13 @@
 package nextflow.script
 
-import spock.lang.Specification
-
 import groovy.transform.InheritConstructors
 import nextflow.exception.DuplicateModuleIncludeException
-
+import test.Dsl2Spec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ScriptMetaTest extends Specification {
+class ScriptMetaTest extends Dsl2Spec {
 
     @InheritConstructors
     static class FooScript extends BaseScript {

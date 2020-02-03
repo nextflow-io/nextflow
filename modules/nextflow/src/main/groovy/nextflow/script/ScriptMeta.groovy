@@ -23,6 +23,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.exception.DuplicateModuleIncludeException
 import nextflow.exception.MissingModuleComponentException
 import nextflow.extension.OperatorEx
@@ -79,6 +80,8 @@ class ScriptMeta {
     /** The module components included in the script */
     private Map<String,ComponentDef> imports = new HashMap<>(10)
 
+    private List<String> dsl1ProcessNames
+
     /** Whenever it's a module script or the main script */
     private boolean module
 
@@ -106,6 +109,25 @@ class ScriptMeta {
     @PackageScope
     void setModule(boolean val) {
         this.module = val
+    }
+
+    /*
+     * This method invocation is inject by the NF AST transformer to pass
+     * the process names declared in the workflow script. This is only required
+     * for DSL1 script.
+     *
+     * When using DSL2 process names can be discovered during
+     * the script execution since, the process declaration is de-coupled by the
+     * process invocations.
+     */
+    @PackageScope
+    void setDsl1ProcessNames(List<String> names) {
+        this.dsl1ProcessNames = names
+    }
+
+    @PackageScope
+    List<String> getDsl1ProcessNames() {
+        dsl1ProcessNames ?: Collections.<String>emptyList()
     }
 
     @PackageScope
@@ -165,6 +187,9 @@ class ScriptMeta {
     }
 
     Set<String> getProcessNames() {
+        if( NF.dsl1 )
+            return new HashSet<String>(getDsl1ProcessNames())
+
         def result = new HashSet(definitions.size() + imports.size())
         // local definitions
         for( def item : definitions.values() ) {

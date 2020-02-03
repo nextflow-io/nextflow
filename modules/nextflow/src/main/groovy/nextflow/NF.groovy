@@ -39,6 +39,10 @@ class NF {
         WorkflowBinding.init()
     }
 
+    static boolean isDsl1() {
+        !NextflowMeta.instance.isDsl2()
+    }
+
     static boolean isDsl2() {
         NextflowMeta.instance.isDsl2()
     }
