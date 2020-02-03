@@ -16,6 +16,10 @@
 
 package nextflow.ast
 
+import static nextflow.Const.*
+import static nextflow.ast.ASTHelpers.*
+import static org.codehaus.groovy.ast.tools.GeneralUtils.*
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.script.BaseScript
@@ -44,6 +48,7 @@ import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.GStringExpression
+import org.codehaus.groovy.ast.expr.ListExpression
 import org.codehaus.groovy.ast.expr.MapEntryExpression
 import org.codehaus.groovy.ast.expr.MapExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
@@ -62,20 +67,6 @@ import org.codehaus.groovy.syntax.Token
 import org.codehaus.groovy.syntax.Types
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
-import static nextflow.Const.SCOPE_SEP
-import static nextflow.ast.ASTHelpers.createX
-import static nextflow.ast.ASTHelpers.isAssignX
-import static nextflow.ast.ASTHelpers.isConstX
-import static nextflow.ast.ASTHelpers.isMapX
-import static nextflow.ast.ASTHelpers.isMethodCallX
-import static nextflow.ast.ASTHelpers.isThisX
-import static nextflow.ast.ASTHelpers.isTupleX
-import static nextflow.ast.ASTHelpers.isVariableX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.block
-import static org.codehaus.groovy.ast.tools.GeneralUtils.callThisX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.closureX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
 /**
  * Implement some syntax sugars of Nextflow DSL scripting.
  *
@@ -287,6 +278,38 @@ class NextflowDSLImpl implements ASTTransformation {
                     // the alias to give it
                     final alias = constX(cast.type.name)
                     newArgs.addExpression( createX(IncludeDef, token, alias) )
+                }
+                else if( arg instanceof ClosureExpression ) {
+                    // multiple modules inclusion 
+                    final block = (BlockStatement)arg.getCode()
+                    final modulesList = new ListExpression()
+                    for( Statement stm : block.statements ) {
+                        if( stm instanceof ExpressionStatement ) {
+                            CastExpression castX
+                            VariableExpression varX
+                            Expression moduleX
+                            if( (varX=isVariableX(stm.expression)) ) {
+                                def name = constX(varX.name)
+                                moduleX = createX(IncludeDef.Module, name)
+                            }
+                            else if( (castX=isCastX(stm.expression)) && (varX=isVariableX(castX.expression)) ) {
+                                def name = constX(varX.name)
+                                final alias = constX(castX.type.name)
+                                moduleX = createX(IncludeDef.Module, name, alias)
+                            }
+                            else {
+                                syntaxError(call, "Not a valid include module name")
+                                return
+                            }
+                            modulesList.addExpression(moduleX)
+                        }
+                        else {
+                            syntaxError(call, "Not a valid include module name")
+                            return
+                        }
+
+                    }
+                    newArgs.addExpression( createX(IncludeDef, modulesList) )
                 }
                 else {
                     syntaxError(call, "Not a valid include definition -- it must specify the module path as a string")

@@ -770,4 +770,41 @@ class ScriptIncludesTest extends Dsl2Spec {
         result[1].val == 'CMD CONSUMER 2'
 
     }
+
+
+
+    def 'should include many processes' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module.nf')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = '''
+        process foo {
+          input: val data 
+          output: val result
+          exec:
+            result = data.toUpperCase()
+        }     
+        '''
+
+        SCRIPT.text = """
+        include { foo; foo as bar } from "$MODULE" 
+
+        workflow {
+            foo('Hello')
+            bar('World')
+            emit: foo.out
+            emit: bar.out
+        }
+        """
+
+        when:
+        def runner = new MockScriptRunner()
+        def result = runner.setScript(SCRIPT).execute()
+
+        then:
+        result[0].val == 'HELLO'
+        result[1].val == 'WORLD'
+    }
 }
