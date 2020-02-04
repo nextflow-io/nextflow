@@ -86,8 +86,8 @@ class GStringToLazyVisitor extends ClassCodeVisitorSupport {
         for( int i=0; i<values.size(); i++ ) {
             final item = values[i]
             if( item instanceof ClosureExpression  ) {
-                // when there is already a closure the conversion it is aborted
-                // because it supposed the gstring is already a lazy-string
+                // when there is already a closure the conversion it is skipped
+                // because it's supposed the gstring is already a lazy-string
                 return
             }
             normalised[i] = wrapWithClosure(item)

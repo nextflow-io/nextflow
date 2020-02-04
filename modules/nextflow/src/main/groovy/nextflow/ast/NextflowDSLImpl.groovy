@@ -928,7 +928,7 @@ class NextflowDSLImpl implements ASTTransformation {
             List<Expression> args = isTupleX(call.arguments)?.expressions
             if( !args ) return
             if( args.size()<2 && (args.size()!=1 || call.methodAsString!='_out_stdout')) return
-             MapExpression map = isMapX(args[0])
+            MapExpression map = isMapX(args[0])
             if( !map ) return
             for( int i=0; i<map.mapEntryExpressions.size(); i++ ) {
                 final entry = map.mapEntryExpressions[i]
