@@ -701,7 +701,7 @@ class Bolts {
      * @param binding A {@link Map} object that is set as delegate object in the cloned closure.
      * @return The cloned {@link GString} instance
      */
-    static GString cloneAsLazy(GString self, binding ) {
+    static GString cloneAsLazy(GString self, binding) {
 
         def values = new Object[ self.valueCount ]
 
