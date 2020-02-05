@@ -17,7 +17,7 @@ class ProcessDefTest extends Specification {
 
         given:
         def session = new MockSession()
-        def binding = new ScriptBinding(session).setModule(true)
+        def binding = new ScriptBinding(session)
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(BaseScript.class.name)
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
