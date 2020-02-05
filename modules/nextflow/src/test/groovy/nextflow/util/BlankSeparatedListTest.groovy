@@ -88,7 +88,7 @@ class BlankSeparatedListTest extends Specification {
                 Paths.get('name with blanks') ])
         
         expect:
-        list.toStringEscapePaths() == 'foo bar name\\ with\\ blanks'
+        list.toStringEscape() == 'foo bar name\\ with\\ blanks'
     }
 
 }

@@ -48,6 +48,7 @@ import groovyx.gpars.group.PGroup
 import nextflow.NF
 import nextflow.Nextflow
 import nextflow.Session
+import nextflow.ast.TaskCmdXform
 import nextflow.ast.TaskTemplateVarsXform
 import nextflow.cloud.CloudSpotTerminationException
 import nextflow.dag.NodeMarker
@@ -236,6 +237,7 @@ class TaskProcessor {
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
         config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskTemplateVarsXform) )
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskCmdXform) )
         return config
     }
 

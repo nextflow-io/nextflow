@@ -43,8 +43,6 @@ import nextflow.script.params.InParam
 import nextflow.script.params.OutParam
 import nextflow.script.params.StdInParam
 import nextflow.script.params.ValueOutParam
-import nextflow.util.BlankSeparatedList
-import nextflow.util.Escape
 /**
  * Models a task instance
  *
@@ -655,9 +653,6 @@ class TaskRun implements Cloneable {
             else if( result != null && body.isShell ) {
                 script = renderScript(result)
             }
-            else if( result instanceof GString ) {
-                script = resolveGString(result)
-            }
             else {
                 script = result.toString()
             }
@@ -668,21 +663,7 @@ class TaskRun implements Cloneable {
         catch( Throwable e ) {
             throw new ProcessUnrecoverableException("Process `$name` script contains error(s)", e)
         }
-
     }
-
-    protected String resolveGString(GString str) {
-        for( int i=0; i<str.getValueCount(); i++ ) {
-            final obj = str.values[i]
-            if( obj instanceof TaskPath )
-                str.values[i] = Escape.path(obj)
-            else if( obj instanceof BlankSeparatedList ) {
-                str.values[i] = obj.toStringEscapePaths()
-            }
-        }
-        str.toString()
-    }
-
 
     /**
      * Given a template script file and a binding, returns the rendered script content
