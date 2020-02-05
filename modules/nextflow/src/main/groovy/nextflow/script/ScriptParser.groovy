@@ -215,7 +215,6 @@ class ScriptParser {
     private void setupContext() {
         assert session
         binding.setSession(session)
-        binding.setModule(module)
         binding.setScriptPath(scriptPath)
         binding.setEntryName(entryName)
     }
