@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic;
 import groovy.transform.PackageScope;
 import nextflow.processor.TaskPath;
 import nextflow.util.Duration;
+import nextflow.util.PathEscapeAware;
 import nextflow.util.MemoryUnit;
 import org.codehaus.groovy.runtime.ScriptBytecodeAdapter;
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation;
@@ -262,4 +263,21 @@ class LangHelpers {
         return ScriptBytecodeAdapter.compareTo(left, right) >= 0;
     }
 
+    /**
+     * Invokes escapes on objects implementing {@link PathEscapeAware}
+     * interface
+     *
+     * {@link TaskCmdXform}, {@link TaskCmdXformVisitor}
+     *
+     * @param value The value to be rendered
+     * @return
+     *      A string with path escaped or the original value
+     *      if the argument is not implementing the {@link PathEscapeAware} interface
+     */
+    static Object applyPathEscapeAware(Object value) {
+        if( value instanceof PathEscapeAware)
+            return ((PathEscapeAware) value).toStringEscape();
+        else
+            return value;
+    }
 }

@@ -665,7 +665,9 @@ class NextflowDSLImpl implements ASTTransformation {
                     // append the new block to the
                     // set the 'script' flag parameter
                     def wrap = makeScriptWrapper(execClosure, source, currentLabel, unit)
-                    block.addStatement( new ExpressionStatement(wrap)  )
+                    block.addStatement( new ExpressionStatement(wrap) )
+                    if( currentLabel == 'script' )
+                        block.visit(new TaskCmdXformVisitor(unit))
                     done = true
 
                 }
@@ -685,6 +687,8 @@ class NextflowDSLImpl implements ASTTransformation {
                         done = wrapExpressionWithClosure(block, stm.getExpression(), len, source, unit)
                     }
 
+                    // apply command variables escape
+                    stm.visit(new TaskCmdXformVisitor(unit))
                     // set the 'script' flag
                     currentLabel = 'script'
                 }

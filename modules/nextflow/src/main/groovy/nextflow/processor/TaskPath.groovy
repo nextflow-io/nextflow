@@ -31,6 +31,9 @@ import java.nio.file.attribute.FileAttribute
 import groovy.transform.CompileStatic
 import nextflow.extension.FilesEx
 import nextflow.file.FileHolder
+import nextflow.util.Escape
+import nextflow.util.PathEscapeAware
+
 /**
  * This class model a input file path injected in a process
  * script resolution context and represent the *relative* input file
@@ -42,7 +45,7 @@ import nextflow.file.FileHolder
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-final class TaskPath implements Path {
+final class TaskPath implements Path, PathEscapeAware {
 
     /**
      * The real path where the file is stored
@@ -448,4 +451,8 @@ final class TaskPath implements Path {
         throw new UnsupportedOperationException()
     }
 
+    @Override
+    String toStringEscape() {
+        return Escape.path(this)
+    }
 }
