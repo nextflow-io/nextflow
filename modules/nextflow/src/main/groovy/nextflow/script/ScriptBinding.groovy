@@ -43,8 +43,6 @@ class ScriptBinding extends WorkflowBinding {
 
     private Session session
 
-    private boolean module
-
     private Path scriptPath
 
     private List<String> args
@@ -119,8 +117,6 @@ class ScriptBinding extends WorkflowBinding {
     ParamsMap getParams() { params }
 
     Session getSession() { session }
-
-    boolean getModule() { module }
 
     Path getScriptPath() { scriptPath }
 

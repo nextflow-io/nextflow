@@ -37,10 +37,8 @@ class ScriptBindingTest extends Specification {
         def binding = new ScriptBinding()
                 .setSession(session)
                 .setScriptPath(path)
-                .setModule(true)
 
         then:
-        binding.module == true
         binding.scriptPath == path
         binding.session == session
     }
