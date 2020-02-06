@@ -28,6 +28,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import nextflow.Const
+import nextflow.NextflowMeta
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
@@ -211,6 +212,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-entry'], description = 'Entry workflow name to be executed', arity = 1)
     String entryName
 
+    @Parameter(names=['-dsl2'], hidden = true)
+    boolean dsl2
+
     @Override
     String getName() { NAME }
 
@@ -230,6 +234,9 @@ class CmdRun extends CmdBase implements HubOptions {
         if( offline && latest )
             throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
 
+        if( dsl2 )
+            NextflowMeta.instance.enableDsl2()
+        
         checkRunName()
 
         log.info "N E X T F L O W  ~  version ${Const.APP_VER}"
