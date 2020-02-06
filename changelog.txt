@@ -1,5 +1,25 @@
 NEXTFLOW CHANGE-LOG
 ===================
+20.01.0-rc1 - 6 Feb 2020
+- Add ability to extend module params #1484 [17c6acca]
+- Add dsl2 command line opt [1cf544d5]
+- Add GLS executor docs [574f2098] [7ce2597a]
+- Add HTCondor detail on data sharing #1473 [f0af66de]
+- Allow aliased process to inherit config settings [DSL2] [1c447e85]
+- Allow module inclusion to inherit context params #1484 
+- Allow multiple inclusion from the same module [DSL2] [a9ae36f9]
+- Fix Script template fails to render list of files #1478 [2e97bbbc]
+- Fix process name validation when using legacy script [1543365c]
+- Fix Early detection Dsl2 declaration #1468 [93a642aa]
+- Fix Missing script validation checks #1468 [5d0cf145]
+- Revert "Disable ansi log on non-tty env #1417" [98e6758b]
+- Minor changes gradle build [619385f1]
+- Minor AWS Batch api refactor [c20abc11]
+- Improve foreign file detection [50508684]
+- Improve GLS location validation [5b89ab50]
+- Removed unused module flag [cf19cc9c]
+- Update dsl2 docs [5c57c3a8]
+
 20.01.0-edge - 20 Jan 2020 
 - Add Prevent negative progress stats [87cdddc6]
 - Add More cloud tests [7a5dd828]
