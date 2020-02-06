@@ -331,39 +331,38 @@ as described in the above sections.
 Modules include
 ---------------
 
-A module script can be included from another Nextflow script using the ``include`` keyword.
-Then it's possible to reference the components (eg. functions, processes and workflow ) defined in the module
-from the including script.
+A component defined in a module script can be imported into another Nextflow script using the ``include`` keyword.
 
 For example::
 
-    nextflow.preview.dsl=2
-    include './modules/my-module'
+    include foo from './some/module'
 
     workflow {
         data = Channel.fromPath('/some/data/*.txt')
-        my_pipeline(data)
+        foo(data)
     }
 
+The above snippets includes a process with name ``foo`` defined in the module script in the main
+execution context, as such it can be invoked in the ``workflow`` scope.
 
-Nextflow implicitly looks for the script file ``modules/my-module.nf`` resolving the path
+Nextflow implicitly looks for the script file ``./some/module.nf`` resolving the path
 against the *including* script location.
 
 .. note:: Relative paths must begin with the ``./`` prefix.
 
-Selective inclusion
+Multiple inclusions
 -------------------
 
-The module inclusion implicitly imports all the components defined in the module script.
-It's possible to selective include only a specific component by its name using the
-inclusion extended syntax as shown below::
+A Nextflow script allows the inclusion of any number of modules. When multiple
+components need to be included from the some module script the component names can be
+specified in the same inclusion using the curly brackets notation as shown below::
 
-    nextflow.preview.dsl=2
-    include my_pipeline from './modules/my-module'
+    include { foo; bar } from './some/module'
 
     workflow {
         data = Channel.fromPath('/some/data/*.txt')
-        my_pipeline(data)
+        foo(data)
+        bar(data)
     }
 
 
@@ -374,45 +373,71 @@ When including a module component it's possible to specify a name *alias*.
 This allows the inclusion and the invocation of the same component multiple times
 in your script using different names. For example::
 
-    nextflow.preview.dsl=2
-
-    include foo from './modules/my-module'
-    include foo as bar from './modules/my-module'
+    include foo from './some/module'
+    include foo as bar from './other/module'
 
     workflow {
         foo(some_data)
         bar(other_data)
     }
 
-.. warning:: The process configuration defined in the ``nextflow.config`` file will
-  be resolved against the alias name. Following the above example the process ``bar``
-  ignores any process specific settings eventually defined for the process with name ``foo``.
+The same is possible when using the curly delimited  inclusion as shown below::
+
+    include { foo; foo as bar } from './some/module'
+
+    workflow {
+        foo(some_data)
+        bar(other_data)
+    }
 
 
 Module parameters
 -----------------
 
-A module script can define one or more parameters as any other Nextflow script::
+A module script can define one or more parameters using the same syntax of a Nextflow workflow script::
 
-    params.foo = 'hello'
-    params.bar = 'world'
+    params.foo = 'Hello'
+    params.bar = 'world!'
 
     def sayHello() {
-        "$params.foo $params.bar"
+        println "$params.foo $params.bar"
     }
 
 
-Then, parameters can be specified when the module is imported with the ``include`` statement::
+Then, parameters are inherited from the including context. For example::
+
+    params.foo = 'Hola'
+    params.bar = 'Mundo'
+
+    include {sayHello} from './some/module'
+
+    workflow {
+        sayHello()
+    }
+
+The above snippet prints::
+
+    Hola mundo
 
 
-    nextflow.preview.dsl=2
+The option ``addParams`` can be used to extend the module parameters without affecting the external
+scope. For example::
 
-    include './modules/my-module' params(foo: 'Hola', bar: 'mundo')
+
+    include {sayHello} from './some/module' addParams(foo: 'Ciao')
+
+    workflow {
+        sayHello()
+    }
 
 
-.. tip::
-    All parameters in the current context can be passed to a module using the ``params(params)`` idiom.
+The above snippet prints::
 
+    Ciao world!
+
+
+Finally the include option ``params`` allows the specification of one or more parameters without
+inheriting any value from the external environment. 
 
 Channel forking
 ===============
