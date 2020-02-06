@@ -261,6 +261,10 @@ class Launcher {
                 normalized << 'true'
             }
 
+            else if( (current == '-dsl2') && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << 'true'
+            }
+
             else if( current == '-syslog' && (i==args.size() || args[i].startsWith('-') || allCommands.find { it.name == args[i] } )) {
                 normalized << 'localhost'
             }
