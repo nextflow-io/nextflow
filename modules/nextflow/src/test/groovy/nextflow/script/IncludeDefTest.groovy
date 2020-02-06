@@ -112,7 +112,7 @@ class IncludeDefTest extends Specification {
         }
 
         @Override
-        void load0(Map p) {
+        void load0(ScriptBinding.ParamsMap p) {
             loadInvoked = true
         }
     }
@@ -136,7 +136,7 @@ class IncludeDefTest extends Specification {
 
     def 'should add includes' () {
         given:
-        def binding = new Binding([params: [foo:1, bar:2]])
+        def binding = new ScriptBinding([params: [foo:1, bar:2]])
         def config = new CompilerConfiguration()
         config.setScriptBaseClass(TestScript.class.name)
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))

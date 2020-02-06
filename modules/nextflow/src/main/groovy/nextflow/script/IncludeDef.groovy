@@ -46,6 +46,7 @@ class IncludeDef {
     @PackageScope path
     @PackageScope List<Module> modules
     @PackageScope Map params
+    @PackageScope Map addedParams
     private Session session
 
     @Deprecated
@@ -78,6 +79,11 @@ class IncludeDef {
         return this
     }
 
+    IncludeDef addParams(Map args) {
+        this.addedParams = args
+        return this
+    }
+
     IncludeDef setSession(Session session) {
         this.session = session
         return this
@@ -89,19 +95,25 @@ class IncludeDef {
      *
      * @param ownerParams The params in the owner context
      */
-    void load0(Map ownerParams) {
+    void load0(ScriptBinding.ParamsMap ownerParams) {
         checkValidPath(path)
-
         // -- resolve the concrete against the current script
         final moduleFile = realModulePath(path)
-        // -- use the module specific params or default to the owner one if not provided
-        final p = params != null ? params : ownerParams
         // -- load the module
-        final moduleScript = loadModule0(moduleFile, p, session)
+        final moduleScript = loadModule0(moduleFile, resolveParams(ownerParams), session)
         // -- add it to the inclusions
         for( Module module : modules ) {
             meta.addModule(moduleScript, module.name, module.alias)
         }
+    }
+
+    private Map resolveParams(ScriptBinding.ParamsMap ownerParams) {
+        if( params!=null && addedParams!=null )
+            throw new IllegalArgumentException("Include 'params' and 'addParams' option conflict -- check module: $path")
+        if( params!=null )
+            return params
+
+        addedParams ? ownerParams.copyWith(addedParams) : ownerParams
     }
 
     @PackageScope
