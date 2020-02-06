@@ -95,6 +95,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     protected process( String name, Closure<BodyDef> body ) {
+        if( meta.isLibrary() )
+            throw new IllegalStateException("Process definition not allowed in library file")
         if( NF.isDsl2() ) {
             def process = new ProcessDef(this,body,name)
             meta.addDefinition(process)
@@ -115,7 +117,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
     protected workflow(Closure<BodyDef> workflowBody) {
         if(!NF.isDsl2())
             throw new IllegalStateException("Module feature not enabled -- Set `nextflow.preview.dsl=2` to allow the definition of workflow components")
-
+        if( meta.isLibrary() )
+            throw new IllegalStateException("Workflow definition not allowed in library file")
         // launch the execution
         final workflow = new WorkflowDef(this, workflowBody)
         if( !binding.entryName )
@@ -126,6 +129,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
     protected workflow(String name, Closure<BodyDef> workflowDef) {
         if(!NF.isDsl2())
             throw new IllegalStateException("Module feature not enabled -- Set `nextflow.preview.dsl=2` to allow the definition of workflow components")
+        if( meta.isLibrary() )
+            throw new IllegalStateException("Workflow definition not allowed in library file")
 
         final workflow = new WorkflowDef(this,workflowDef,name)
         if( binding.entryName==name )
@@ -136,13 +141,15 @@ abstract class BaseScript extends Script implements ExecutionContext {
     protected IncludeDef include( IncludeDef include ) {
         if(!NF.isDsl2())
             throw new IllegalStateException("Module feature not enabled -- Set `nextflow.preview.dsl=2` to import module files")
+        if( meta.isLibrary() )
+            throw new IllegalStateException("Module include not allowed in library file")
 
         include .setSession(session)
     }
 
     @Override
     Object invokeMethod(String name, Object args) {
-        if(NF.isDsl2())
+        if(NF.isDsl2() && !meta.isLibrary())
             binding.invokeMethod(name, args)
         else
             super.invokeMethod(name, args)
@@ -174,6 +181,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
             log.debug "No entry workflow defined"
             return result
         }
+
+        meta.loadModules(binding.params)
 
         // invoke the entry workflow
         session.notifyBeforeWorkflowExecution()

@@ -137,7 +137,7 @@ class ScriptParserTest extends Specification {
         parser.runScript(file)
         then:
         def e = thrown(ScriptCompilationException)
-        e.message.startsWith('Script compilation error')
+        e.message.startsWith('Workflow script compilation error')
         e.message.contains('- cause: unexpected token: foo @ line 2, column 13.')
         e.message.contains('foo.nf\n')
     }

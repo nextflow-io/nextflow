@@ -80,16 +80,20 @@ class ScriptMeta {
     /** The module components included in the script */
     private Map<String,ComponentDef> imports = new HashMap<>(10)
 
+    private List<IncludeDef> includes = new ArrayList<>(10)
+
     private List<String> dsl1ProcessNames
 
     /** Whenever it's a module script or the main script */
-    private boolean module
+    private SourceType sourceType
 
     Path getScriptPath() { scriptPath }
 
     String getScriptName() { clazz.getName() }
 
-    boolean isModule() { module }
+    boolean isModule() { sourceType==SourceType.MODULE }
+
+    boolean isLibrary() { sourceType==SourceType.LIBRARY }
 
     ScriptMeta(BaseScript script) {
         this.clazz = script.class
@@ -107,8 +111,8 @@ class ScriptMeta {
     }
 
     @PackageScope
-    void setModule(boolean val) {
-        this.module = val
+    void setSourceType(SourceType type) {
+        this.sourceType = type
     }
 
     /*
@@ -249,4 +253,12 @@ class ScriptMeta {
         }
     }
 
+    void defineModule(IncludeDef inc) {
+        includes.add(inc)
+    }
+
+    void loadModules(Map ownerParams) {
+        for( IncludeDef inc : includes )
+            inc.loadModule(ownerParams)
+    }
 }

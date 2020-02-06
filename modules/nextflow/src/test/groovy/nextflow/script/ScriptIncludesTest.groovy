@@ -77,6 +77,52 @@ class ScriptIncludesTest extends Dsl2Spec {
         binding.ret4 == result
     }
 
+    def 'should invoke library functions' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module.groovy')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = '''
+        def alpha() {
+          return 'this is alpha result'
+        }   
+        
+        def bravo(x) { 
+          return x.reverse()
+        }
+        
+        def gamma(x,y) {
+          return "$x and $y"
+        }
+        '''
+
+        SCRIPT.text = """  
+        include {alpha; bravo; gamma} from "$MODULE"
+   
+        def local_func() {
+          return "I'm local"
+        }
+   
+        ret1 = alpha()
+        ret2 = bravo('Hello')
+        ret3 = gamma('Hola', 'mundo')
+        ret4 = local_func()
+        """
+
+        when:
+        def runner = new MockScriptRunner()
+        def binding = runner.session.binding
+        def result = runner.setScript(SCRIPT).execute()
+
+        then:
+        binding.ret1 == 'this is alpha result'
+        binding.ret2 == 'olleH'
+        binding.ret3 == 'Hola and mundo'
+        binding.ret4 == "I'm local"
+        binding.ret4 == result
+    }
+
     def 'should invoke a workflow from include' () {
         given:
         def folder = Files.createTempDirectory('test')
@@ -623,7 +669,7 @@ class ScriptIncludesTest extends Dsl2Spec {
     def 'should include only named component' () {
         given:
         def folder = Files.createTempDirectory('test')
-        def MODULE = folder.resolve('module.nf')
+        def MODULE = folder.resolve('module.groovy')
 
         MODULE.text = '''
         def alpha() {
@@ -659,7 +705,7 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         when:
         SCRIPT = """
-        include alpha as FOO from "$MODULE"
+        include alpha as FOO from "$MODULE" library true
         alpha()
         """
         runner = new MockScriptRunner()
@@ -670,7 +716,7 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         when:
         SCRIPT = """
-        include alpha from "$MODULE"
+        include alpha from "$MODULE" library true
         bravo()
         """
         runner = new MockScriptRunner()
@@ -826,8 +872,11 @@ class ScriptIncludesTest extends Dsl2Spec {
         '''
 
         SCRIPT.text = """
-        params.alpha = 'owner'
         include { foo } from "$MODULE" 
+        
+        // define context params 
+        // note: even after the inclusion still overrides is propagated into the module
+        params.alpha = 'owner'
 
         workflow {
             foo()

@@ -52,7 +52,7 @@ class ScriptParser {
 
     private Session session
 
-    private boolean module
+    private SourceType sourceType = SourceType.WORKFLOW
 
     private Path scriptPath
 
@@ -82,7 +82,12 @@ class ScriptParser {
     }
 
     ScriptParser setModule(boolean value) {
-        this.module = value
+        this.sourceType = value ? SourceType.MODULE : SourceType.WORKFLOW
+        return this
+    }
+
+    ScriptParser setLibrary(boolean value) {
+        this.sourceType = value ? SourceType.LIBRARY : SourceType.WORKFLOW
         return this
     }
 
@@ -174,14 +179,14 @@ class ScriptParser {
             script = (BaseScript)interpreter.parse(scriptText, clazzName)
             final meta = ScriptMeta.get(script)
             meta.setScriptPath(scriptPath)
-            meta.setModule(module)
+            meta.setSourceType(sourceType)
             if( isDsl2(scriptText) )
                 NextflowMeta.instance.enableDsl2()
             return this
         }
         catch (CompilationFailedException e) {
-            String type = module ? "Module" : "Script"
-            String header = "$type compilation error\n- file : ${FilesEx.toUriString(scriptPath)}"
+            String typeStr = sourceType.toString().toLowerCase().capitalize()
+            String header = "$typeStr script compilation error\n- file : ${FilesEx.toUriString(scriptPath)}"
             String msg = e.message ?: header
             msg = msg.replaceAll(/startup failed:\n/,'')
             msg = msg.replaceAll(~/$clazzName(: \d+:\b*)?/, header+'\n- cause:')

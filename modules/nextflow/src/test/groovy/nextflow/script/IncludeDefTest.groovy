@@ -112,8 +112,9 @@ class IncludeDefTest extends Specification {
         }
 
         @Override
-        void load0(Map p) {
+        void define0(Map p) {
             loadInvoked = true
+            checkValidPath(path)
         }
     }
 
@@ -149,17 +150,19 @@ class IncludeDefTest extends Specification {
         script.includes[0].modules == [ new IncludeDef.Module(NAME, ALIAS) ]
         script.includes[0].params == PARAMS
         script.includes[0].loadInvoked
+        script.includes[0].isLibrary() == LIB
 
 
         where:
-        INCLUDE                                         | PATH          | NAME      | ALIAS     | PARAMS
-        "include 'some/path'"                           | 'some/path'   | null      | null      | null
-        "include ALPHA from 'modules/path'"             | 'modules/path'| 'ALPHA'   | null      | null
-        "include ALPHA as BRAVO from 'modules/x'"       | 'modules/x'   | 'ALPHA'   | 'BRAVO'   | null
-        "include 'modules/1' params(a:1, b:2)"          | 'modules/1'   | null      | null      | [a:1, b:2]
-        "include DELTA from 'abc' params(x:1)"          | 'abc'         | 'DELTA'   | null      | [x:1]
-        "include GAMMA as FOO from 'm1' params(p:2)"    | 'm1'          | 'GAMMA'   | 'FOO'     | [p:2]
-        "include GAMMA as FOO from 'm1' params([:])"    | 'm1'          | 'GAMMA'   | 'FOO'     | [:]
+        INCLUDE                                             | PATH              | NAME      | ALIAS     | PARAMS        | LIB
+        "include './some/path'"                             | './some/path'     | null      | null      | null          | false
+        "include ALPHA from './modules/path'"               | './modules/path'  | 'ALPHA'   | null      | null          | false
+        "include ALPHA as BRAVO from './modules/x'"         | './modules/x'     | 'ALPHA'   | 'BRAVO'   | null          | false
+        "include './modules/1' params(a:1, b:2)"            | './modules/1'     | null      | null      | [a:1, b:2]    | false
+        "include DELTA from './abc' params(x:1)"            | './abc'           | 'DELTA'   | null      | [x:1]         | false
+        "include GAMMA as FOO from './m1' params(p:2)"      | './m1'            | 'GAMMA'   | 'FOO'     | [p:2]         | false
+        "include GAMMA as FOO from './m1' params([:])"      | './m1'            | 'GAMMA'   | 'FOO'     | [:]           | false
+        "include ALPHA from './l.groovy'"                   | './l.groovy'      | 'ALPHA'   | null      | null          | true
 
     }
 

@@ -47,13 +47,15 @@ class IncludeDef {
     @PackageScope List<Module> modules
     @PackageScope Map params
     private Session session
+    private boolean isLibrary
+    private boolean anonymous
 
     @Deprecated
     IncludeDef( String module ) {
-        log.warn "Anonymous module inclusion is deprecated -- Replace `include '${module}'` with `include { MODULE_NAME } from '${module}'`"
-        this.path = module
         this.modules = new ArrayList<>(1)
-        this.modules << new Module(null,null)
+        this.modules << new Module(null, null)
+        this.path = module
+        this.anonymous = true
     }
 
     IncludeDef(TokenVar name, String alias=null) {
@@ -83,15 +85,39 @@ class IncludeDef {
         return this
     }
 
+    void define0(Map ownerParams) {
+        checkValidPath(path)
+        if( anonymous ) {
+            // deprecated -- fallback on load
+            log.warn "Anonymous module inclusion is deprecated -- Replace `include '${path}'` with `include { COMPONENT_NAME } from '${path}'`"
+            loadModule(ownerParams)
+        }
+        else if( isLibrary ) {
+            loadLibrary()
+        }
+        else {
+            meta.defineModule(this)
+        }
+    }
+
+    void loadLibrary() {
+        // -- resolve the concrete against the current script
+        final libraryFile = realModulePath(path)
+        // -- load the library
+        final libraryScript = loadLibrary0(libraryFile, session)
+        // -- add it to the inclusions
+        for( Module module : modules ) {
+            meta.addModule(libraryScript, module.name, module.alias)
+        }
+    }
+
     /*
      * Note: this method invocation is injected during the Nextflow AST manipulation.
      * Do not use it explicitly.
      *
      * @param ownerParams The params in the owner context
      */
-    void load0(Map ownerParams) {
-        checkValidPath(path)
-
+    void loadModule(Map ownerParams) {
         // -- resolve the concrete against the current script
         final moduleFile = realModulePath(path)
         // -- use the module specific params or default to the owner one if not provided
@@ -111,6 +137,9 @@ class IncludeDef {
     Path getOwnerPath() { getMeta().getScriptPath() }
 
     @PackageScope
+    boolean isLibrary() { isLibrary }
+
+    @PackageScope
     @Memoized
     static BaseScript loadModule0(Path path, Map params, Session session) {
         final binding = new ScriptBinding() .setParams(params)
@@ -119,6 +148,17 @@ class IncludeDef {
         new ScriptParser(session)
                 .setModule(true)
                 .setBinding(binding)
+                .runScript(path)
+                .getScript()
+    }
+
+    @PackageScope
+    @Memoized
+    static BaseScript loadLibrary0(Path path, Session session) {
+        // the execution of a library file has as side effect the registration of declared processes
+        new ScriptParser(session)
+                .setModule(true)
+                .setBinding(new ScriptBinding())
                 .runScript(path)
                 .getScript()
     }
@@ -157,7 +197,7 @@ class IncludeDef {
     @PackageScope
     void checkValidPath(path) {
         if( !path )
-            throw new IllegalModulePath("Missing module path attribute")
+            throw new IllegalModulePath("Missing include 'from' attribute")
 
         if( path instanceof Path && path.scheme != 'file' )
             throw new IllegalModulePath("Remote modules are not allowed -- Offending module: ${path.toUriString()}")
@@ -166,6 +206,7 @@ class IncludeDef {
         if( !str.startsWith('/') && !str.startsWith('./') && !str.startsWith('../') )
             throw new IllegalModulePath("Module path must start with / or ./ prefix -- Offending module: $str")
 
+        isLibrary = str.endsWith('.groovy') || str.endsWith('.nfl')
     }
 
 
