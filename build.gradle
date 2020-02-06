@@ -14,17 +14,11 @@
  * limitations under the License.
  */
 
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:0.20.0"
-    }
+plugins {
+    id "io.codearte.nexus-staging" version "0.21.2"
 }
 
 apply plugin: 'idea'
-apply plugin: 'io.codearte.nexus-staging'   // See https://github.com/Codearte/gradle-nexus-staging-plugin/
 
 // Add ability to test with upcoming versions of Groovy
 def groovyVer = System.getenv('CI_GROOVY_VERSION')
