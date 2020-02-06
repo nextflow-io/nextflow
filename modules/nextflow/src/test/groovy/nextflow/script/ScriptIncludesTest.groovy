@@ -877,4 +877,41 @@ class ScriptIncludesTest extends Dsl2Spec {
         then:
         result.val == 'AAA ZZZ'
     }
+
+    def 'should extends module params' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module.nf')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = '''
+        params.alpha = 'first'
+        params.omega = 'last'
+        
+        process foo {
+          output: val result
+          exec:
+            result = "$params.alpha $params.omega".toUpperCase()
+        }     
+        '''
+
+        SCRIPT.text = """
+        params.alpha = 'one' 
+        params.omega = 'two'
+
+        include { foo } from "$MODULE" addParams(omega:'zzz')
+
+        workflow {
+            foo()
+            emit: foo.out
+        }
+        """
+
+        when:
+        def runner = new MockScriptRunner()
+        def result = runner.setScript(SCRIPT).execute()
+
+        then:
+        result.val == 'ONE ZZZ'
+    }
 }

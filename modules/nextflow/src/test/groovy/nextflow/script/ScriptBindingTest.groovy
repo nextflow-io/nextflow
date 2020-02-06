@@ -170,6 +170,34 @@ class ScriptBindingTest extends Specification {
 
     }
 
+    def 'should copy with overriding values' () {
+        when:
+        def map = new ScriptBinding.ParamsMap()
+        map['alpha'] = 0
+        map['alpha'] = 1
+        map['delta'] = 2
+        map['gamma'] = 3
+        then:
+        map.alpha == 0
+        map.delta == 2
+        map.gamma == 3
+
+        when:
+        def copy = map.copyWith(foo:1, omega: 9)
+        then:
+        copy.foo == 1
+        copy.delta == 2
+        copy.gamma == 3
+        copy.omega == 9
+        and:
+        // source does not change
+        map.alpha == 0
+        map.delta == 2
+        map.gamma == 3
+        !map.containsKey('omega')
+
+    }
+
     def 'should wrap a string value with quote character' () {
 
         expect:

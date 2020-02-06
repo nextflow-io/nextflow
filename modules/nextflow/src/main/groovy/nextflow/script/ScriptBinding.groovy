@@ -204,19 +204,39 @@ class ScriptBinding extends WorkflowBinding {
     @CompileStatic
     static class ParamsMap implements Map<String,Object> {
 
-        private Set<String> readOnlyNames = []
+        private Set<String> readOnlyNames
 
-        private List<String> realNames = []
+        private List<String> realNames
 
         private List<String> scriptAssignment = []
 
         @Delegate
-        private Map<String,Object> target = new LinkedHashMap<>()
+        private Map<String,Object> target
 
-        ParamsMap() {}
+        ParamsMap() {
+            readOnlyNames = []
+            realNames = []
+            target = new LinkedHashMap<>()
+        }
 
-        ParamsMap(Map<String,Object> copy) {
-            putAll(copy)
+        ParamsMap(Map<String,Object> values) {
+            this()
+            putAll(values)
+        }
+
+        private ParamsMap(ParamsMap template, Map overrides) {
+            this(template)
+            allowNames(overrides.keySet())
+            putAll(overrides)
+        }
+
+        ParamsMap copyWith(Map overrides) {
+            return new ParamsMap(this, overrides)
+        }
+
+        private ParamsMap allowNames(Set names) {
+            readOnlyNames.removeAll(names)
+            return this
         }
 
         @Override
