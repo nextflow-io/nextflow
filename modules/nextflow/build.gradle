@@ -46,7 +46,7 @@ dependencies {
     compile ('javax.mail:mail:1.4.7')
     compile ('org.yaml:snakeyaml:1.18')
     compile ('org.jsoup:jsoup:1.11.2')
-    compile 'jline:jline:2.9'
+    compile 'jline:jline:2.14.6'
 
     testCompile 'org.subethamail:subethasmtp:3.1.7'
 }
