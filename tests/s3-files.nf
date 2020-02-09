@@ -20,8 +20,8 @@
   */
 
 
-s3file = file('s3://cbcrg-eu/nf-test-data/transcriptome.fa')
-s3glob = Channel.fromFilePairs('s3://cbcrg-eu/nf-test-data/*_{1,2}.fq')
+s3file = file('s3://nextflow-ci/nf-test-data/transcriptome.fa')
+s3glob = Channel.fromFilePairs('s3://nextflow-ci/nf-test-data/*_{1,2}.fq')
 
 process foo {
   echo true
