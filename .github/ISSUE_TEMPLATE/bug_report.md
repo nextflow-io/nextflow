@@ -25,6 +25,7 @@ and actual behavior)
 * Nextflow version: [?] 
 * Java version: [?]
 * Operating system: [macOS, Linux, etc]
+* Bash version: (use the command `$SHELL --version`)
 
 ### Additional context
 
