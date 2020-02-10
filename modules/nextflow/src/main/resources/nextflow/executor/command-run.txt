@@ -27,9 +27,11 @@ NXF_ENTRY=${1:-nxf_main}
 nxf_date() {
     ## should return the current timestamp in milliseconds
     ## note1: some linux silently ignores the `%3N` option and returns the ts in seconds (len==10)
-    ## note2: on mac the `%3N` is ignored and the string `3N` is returned instead
+    ## note2: old date tool ignores the `%3N` option and append that string to the timestamp in seconds
+    ## note3: mac date tools ignores the `%3N` option and the string `3N` is appended to the timestamp in seconds
     local ts=$(date +%s%3N);
     if [[ ${#ts} == 10 ]]; then echo ${ts}000
+    elif [[ $ts == *%3N ]]; then echo ${ts/\%3N/000}
     elif [[ $ts == *3N ]]; then echo ${ts/3N/000}
     elif [[ ${#ts} == 13 ]]; then echo $ts
     else echo "Unexpected timestamp value: $ts"; exit 1
