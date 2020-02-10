@@ -102,7 +102,7 @@ class CmdRunTest extends Specification {
         true        | 'f-a-b'
         true        | 'f-0-1'
         true        | 'foo-bar'
-        true        | 'a' * 40 
+        true        | 'a' * 80
         and:
         true        | 'f_00'
         true        | 'f_a_b'
@@ -114,7 +114,7 @@ class CmdRunTest extends Specification {
         false       | 'foo--bar'
         false       | 'foo__bar'
         false       | 'foo_-bar'
-        false       | 'a' * 41
+        false       | 'a' * 81
 
     }
 }
