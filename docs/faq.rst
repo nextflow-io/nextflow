@@ -259,7 +259,7 @@ This is also useful if all the items of a channel are required to be in the work
         // Concatenate Bootstrap Trees
         script:
         """
-        for every treeFile in ${bootstrapTreeList}
+        for treeFile in ${bootstrapTreeList}
         do
             cat \$treeFile >> concatenatedBootstrapTrees.nwk
         done
