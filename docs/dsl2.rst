@@ -252,6 +252,8 @@ implicitly executed. Therefore it's the entry point of the workflow application.
 Workflow publish
 ----------------
 
+.. attention:: This features has been retired and it will not be included in the final DSL2 release.
+
 The ``publish`` clause in the workflow declaration allow the definition of one or more output channels
 whose content needs to be copied to a storage location of your choice. For example::
 
