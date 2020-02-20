@@ -848,7 +848,7 @@ text entries. For example::
 The above example shows hows CSV text is parsed and is split into single rows. Values can be accessed
 by its column index in the row object.
 
-When the CVS begins with a header line defining the columns names, you can specify the parameter ``header: true`` which
+When the CSV begins with a header line defining the columns names, you can specify the parameter ``header: true`` which
 allows you to reference each value by its name, as shown in the following example::
 
     Channel
