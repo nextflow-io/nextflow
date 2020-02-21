@@ -1120,7 +1120,7 @@ The combining operators are:
 join
 -----
 
-The ``join`` operator creates a channel that joins together the items emitted by two channels for which exits
+The ``join`` operator creates a channel that joins together the items emitted by two channels for which exists
 a matching key. The key is defined, by default, as the first element in each item emitted.
 
 For example::
