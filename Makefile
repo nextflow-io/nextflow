@@ -64,7 +64,7 @@ else
 endif
 
 smoke:
-	NXF_SMOKE=1 ./gradlew :nextflow:test
+	NXF_SMOKE=1 ./gradlew test
 
 pack:
 	./gradlew packAll
