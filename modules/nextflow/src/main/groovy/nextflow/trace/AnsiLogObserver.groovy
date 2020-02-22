@@ -232,7 +232,7 @@ class AnsiLogObserver implements TraceObserver {
         // calc max width
         labelWidth = 0
         for( ProgressRecord entry : processes ) {
-            labelWidth = Math.max(labelWidth, entry.name.size())
+            labelWidth = Math.max(labelWidth, entry.taskName.size())
         }
 
         // render line
@@ -346,7 +346,7 @@ class AnsiLogObserver implements TraceObserver {
     protected String line(ProgressRecord stats) {
         final float tot = stats.getTotalCount()
         final float com = stats.getCompletedCount()
-        final label = fmtWidth(stats.name, labelWidth, Math.max(cols-50, 5))
+        final label = fmtWidth(stats.taskName, labelWidth, Math.max(cols-50, 5))
         final hh = (stats.hash && tot>0 ? stats.hash : '-').padRight(9)
 
         if( tot == 0  )
