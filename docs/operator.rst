@@ -1390,14 +1390,14 @@ The following parameters can be used with the ``collectFile`` operator:
 =============== ========================
 Name            Description
 =============== ========================
-keepHeader      Prepend the resulting file with the header fetched in the first collected file. The header size (ie. lines) can be specified by using the ``skip`` parameter (default: ``false``), to determine how many lines to remove from all collected files except for the first (where no lines will be removed).
-name            Name of the file where all received values are stored.
-newLine         Appends a ``newline`` character automatically after each entry (default: ``false``).
-seed            A value or a map of values used to initialise the files content.
-skip            Skip the first `n` lines eg. ``skip: 1``.
-sort            Defines sorting criteria of content in resulting file(s). See below for sorting options.
-storeDir        Folder where the resulting file(s) are be stored.
-tempDir         Folder where temporary files, used by the collecting process, are stored.
+``keepHeader``  Prepend the resulting file with the header fetched in the first collected file. The header size (ie. lines) can be specified by using the ``skip`` parameter (default: ``false``), to determine how many lines to remove from all collected files except for the first (where no lines will be removed).
+``name``        Name of the file where all received values are stored.
+``newLine``     Appends a ``newline`` character automatically after each entry (default: ``false``).
+``seed``        A value or a map of values used to initialise the files content.
+``skip``        Skip the first `n` lines eg. ``skip: 1``.
+``sort``        Defines sorting criteria of content in resulting file(s). See below for sorting options.
+``storeDir``    Folder where the resulting file(s) are be stored.
+``tempDir``     Folder where temporary files, used by the collecting process, are stored.
 =============== ========================
 
 .. note:: The file content is sorted in such a way that it does not depend on the order on which
@@ -1410,11 +1410,11 @@ can be specified:
 =============== ========================
 Sort            Description
 =============== ========================
-false           Disable content sorting. Entries are appended as they are produced.
-true            Order the content by the entries natural ordering i.e. numerical for number, lexicographic for string, etc. See http://docs.oracle.com/javase/tutorial/collections/interfaces/order.html
-index           Order the content by the incremental index number assigned to each entry while they are collected.
-hash            Order the content by the hash number associated to each entry (default)
-deep            Similar to the previous, but the hash number is created on actual entries content e.g. when the entry is a file the hash is created on the actual file content.
+``false``       Disable content sorting. Entries are appended as they are produced.
+``true``        Order the content by the entries natural ordering i.e. numerical for number, lexicographic for string, etc. See http://docs.oracle.com/javase/tutorial/collections/interfaces/order.html
+``'index'``     Order the content by the incremental index number assigned to each entry while they are collected.
+``'hash'``      Order the content by the hash number associated to each entry (default)
+``'deep'``      Similar to the previous, but the hash number is created on actual entries content e.g. when the entry is a file the hash is created on the actual file content.
 `custom`        A custom sorting criteria can be specified by using either a :ref:`Closure <script-closure>` or a `Comparator <http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html>`_ object.
 =============== ========================
 
