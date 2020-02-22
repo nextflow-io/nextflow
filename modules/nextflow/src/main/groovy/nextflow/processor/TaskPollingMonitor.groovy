@@ -181,7 +181,7 @@ class TaskPollingMonitor implements TaskMonitor {
      *      by the polling monitor
      */
     protected boolean canSubmit(TaskHandler handler) {
-        capacity>0 ? runningQueue.size() < capacity : true
+        (capacity>0 ? runningQueue.size() < capacity : true) && handler.canForkProcess()
     }
 
     /**
@@ -367,7 +367,7 @@ class TaskPollingMonitor implements TaskMonitor {
     private void awaitSlots() {
         pendingLock.lock()
         try {
-            slotAvail.await()
+            slotAvail.await(1, TimeUnit.SECONDS)
         }
         finally {
             pendingLock.unlock()
@@ -555,6 +555,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
                 if( session.isSuccess() ) {
                     itr.remove(); count++   // <-- remove the task in all cases
+                    handler.incProcessForks()
                     submit(handler)
                 }
                 else
@@ -601,14 +602,14 @@ class TaskPollingMonitor implements TaskMonitor {
         // check if it is terminated
         if( handler.checkIfCompleted() ) {
             log.debug "Task completed > $handler"
+            // decrement forks count
+            handler.decProcessForks()
 
             // since completed *remove* the task from the processing queue
             evict(handler)
 
             // finalize the tasks execution
             final fault = handler.task.processor.finalizeTask(handler.task)
-            // trigger the count down latch when it is a blocking task
-            handler.latch?.countDown()
 
             // notify task completion
             session.notifyTaskComplete(handler)

@@ -16,11 +16,14 @@
 
 package nextflow.processor
 
+import java.util.concurrent.atomic.LongAdder
+
 import nextflow.Session
 import nextflow.executor.Executor
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
+import spock.lang.Unroll
 import test.TestHelper
 /**
  *
@@ -132,5 +135,76 @@ class TaskHandlerTest extends Specification {
 
     }
 
+    LongAdder _adder(Integer x) {
+        if( x != null ) {
+            def adder = new LongAdder()
+            adder.add(x)
+            return adder
+        }
+        else
+            return null
+    }
+
+    @Unroll
+    def 'should validate has forks' () {
+        given:
+        def handler = Spy(TaskHandler)
+        handler.task = Mock(TaskRun) {
+            getProcessor() >> Mock(TaskProcessor) {
+                getMaxForks() >> MAX
+                getForksCount() >> { COUNT ? _adder(COUNT) : null }
+            }
+        }
+
+        expect:
+        handler.canForkProcess() == EXPECT
+
+        where:
+        COUNT   | MAX   | EXPECT
+        null    | null  | true      // when max is null or 0 result is `true by default
+        0       | 0     | true
+        1       | 0     | true
+        and:
+        1       | 10    | true
+        9       | 10    | true
+        10      | 10    | false
+        90      | 10    | false
+        1       | 1     | false
+
+    }
+
+    def 'should increment forked count' () {
+        given:
+        def COUNTER = 10
+        def adder = new LongAdder(); adder.add(COUNTER)
+        def handler = Spy(TaskHandler)
+        handler.task = Mock(TaskRun) {
+            getProcessor() >> Mock(TaskProcessor) {
+                getForksCount() >> { adder }
+            }
+        }
+
+        when:
+        handler.incProcessForks()
+        then:
+        handler.task.processor.getForksCount().intValue() == COUNTER +1
+    }
+
+    def 'should decrement forked count' () {
+        given:
+        def COUNTER = 10
+        def adder = new LongAdder(); adder.add(COUNTER)
+        def handler = Spy(TaskHandler)
+        handler.task = Mock(TaskRun) {
+            getProcessor() >> Mock(TaskProcessor) {
+                getForksCount() >> { adder }
+            }
+        }
+
+        when:
+        handler.decProcessForks()
+        then:
+        handler.task.processor.getForksCount().intValue() == COUNTER -1
+    }
 
 }
