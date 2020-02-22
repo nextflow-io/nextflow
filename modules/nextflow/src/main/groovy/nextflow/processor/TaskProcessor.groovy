@@ -24,6 +24,7 @@ import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicIntegerArray
+import java.util.concurrent.atomic.LongAdder
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
@@ -199,12 +200,6 @@ class TaskProcessor {
     protected boolean hasEachParams
 
     /**
-     * Whenever the process execution is required to be blocking in order to handle
-     * shared object in a thread safe manner
-     */
-    protected boolean blocking
-
-    /**
      * The state is maintained by using an agent
      */
     protected Agent<StateObj> state
@@ -230,9 +225,13 @@ class TaskProcessor {
      */
     private final int id
 
+    private LongAdder forksCount
+
+    private int maxForks
+
     private static int processCount
 
-    private static LockManager lockManager = new LockManager();
+    private static LockManager lockManager = new LockManager()
 
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
@@ -277,6 +276,8 @@ class TaskProcessor {
         this.config = config
         this.taskBody = taskBody
         this.name = name
+        this.maxForks = config.maxForks as Integer ?: 0
+        this.forksCount = maxForks ? new LongAdder() : null
     }
 
     /**
@@ -330,6 +331,10 @@ class TaskProcessor {
         result.addAll(config.getOutputs().getNames())
         return result
     }
+
+    LongAdder getForksCount() { forksCount }
+
+    int getMaxForks() { maxForks }
 
     /**
      * Launch the 'script' define by the code closure as a local bash script
@@ -485,12 +490,8 @@ class TaskProcessor {
          * - by default the process execution is parallel using the poolSize value
          * - otherwise use the value defined by the user via 'taskConfig'
          */
-        def maxForks = session.poolSize
-        if( config.maxForks ) {
-            maxForks = config.maxForks
-            blocking = true
-        }
-        log.debug "Creating operator > $name -- maxForks: $maxForks; blocking: $blocking"
+        final maxForks = maxForks ?: session.poolSize
+        log.trace "Creating operator > $name -- maxForks: $maxForks"
 
         /*
          * finally create the operator
@@ -2001,7 +2002,7 @@ class TaskProcessor {
         makeTaskContextStage3(task, hash, folder)
 
         // add the task to the collection of running tasks
-        executor.submit(task, blocking)
+        executor.submit(task)
 
     }
 

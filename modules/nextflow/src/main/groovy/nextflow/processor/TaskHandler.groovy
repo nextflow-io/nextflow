@@ -19,7 +19,6 @@ package nextflow.processor
 import static nextflow.processor.TaskStatus.*
 
 import java.nio.file.NoSuchFileException
-import java.util.concurrent.CountDownLatch
 
 import groovy.util.logging.Slf4j
 import nextflow.trace.TraceRecord
@@ -39,7 +38,6 @@ abstract class TaskHandler {
         this.task = task
     }
 
-
     /** Only for testing purpose */
     protected TaskHandler() { }
 
@@ -57,8 +55,6 @@ abstract class TaskHandler {
      * Task current status
      */
     volatile TaskStatus status = NEW
-
-    CountDownLatch latch
 
     long submitTimeMillis
 
@@ -205,6 +201,35 @@ abstract class TaskHandler {
         }
 
         return record
+    }
+
+    /**
+     * Determine if a process can be forked i.e. can launch
+     * a parallel task execution. This is only enforced when
+     * when the `process.maxForks` directive is greater than zero.
+     *
+     * @return
+     *      {@code true} if the number of forked process is less
+     *      then of {@code process.maxForks} or {@code process.maxForks} is zero.
+     *      {@code false} otherwise
+     */
+    boolean canForkProcess() {
+        final max = task.processor.maxForks
+        return !max ? true : task.processor.forksCount < max
+    }
+
+    /**
+     * Increment the number of current forked processes
+     */
+    final void incProcessForks() {
+        task.processor.forksCount?.increment()
+    }
+
+    /**
+     * Decrement the number of current forked processes
+     */
+    final void decProcessForks() {
+        task.processor.forksCount?.decrement()
     }
 
 
