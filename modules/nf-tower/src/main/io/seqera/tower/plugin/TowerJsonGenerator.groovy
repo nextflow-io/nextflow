@@ -60,6 +60,7 @@ class TowerJsonGenerator extends DefaultJsonGenerator {
             result.remove('errored')
             result.remove('completedCount')
             result.remove('totalCount')
+            result.remove('taskName')
         }
         return result
     }
