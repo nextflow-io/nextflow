@@ -87,6 +87,8 @@ class AnsiLogObserver implements TraceObserver {
 
     private long endTimestamp
 
+    private long lastWidthReset
+
     private Boolean enableSummary = System.getenv('NXF_ANSI_SUMMARY') as Boolean
 
     private final int WARN_MESSAGE_TIMEOUT = 35_000
@@ -230,10 +232,16 @@ class AnsiLogObserver implements TraceObserver {
         cols = TerminalFactory.get().getWidth()
 
         // calc max width
-        labelWidth = 0
+        final now = System.currentTimeMillis()
+        if( now-lastWidthReset>20_000 )
+            labelWidth = 0
+
+        final lastWidth = labelWidth
         for( ProgressRecord entry : processes ) {
             labelWidth = Math.max(labelWidth, entry.taskName.size())
         }
+        if( lastWidth != labelWidth )
+            lastWidthReset = now
 
         // render line
         for( ProgressRecord entry : processes ) {
