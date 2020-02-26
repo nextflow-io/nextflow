@@ -107,11 +107,11 @@ nxf_main() {
     [[ $NXF_DEBUG > 0 ]] && nxf_env
     {{touch_file}}
     set +u
-    {{before_script}}
     {{module_load}}
     {{conda_activate}}
     set -u
     {{task_env}}
+    {{before_script}}
     [[ $NXF_SCRATCH ]] && echo "nxf-scratch-dir $HOSTNAME:$NXF_SCRATCH" && cd $NXF_SCRATCH
     {{stage_cmd}}
 
