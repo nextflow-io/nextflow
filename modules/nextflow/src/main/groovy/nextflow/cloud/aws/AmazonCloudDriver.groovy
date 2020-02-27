@@ -303,7 +303,9 @@ class AmazonCloudDriver implements CloudDriver {
     }
 
     protected AWSStaticCredentialsProvider getCredentialsProvider0() {
-        new AWSStaticCredentialsProvider(getCredentials0())
+        final creds = getCredentials0()
+        if( !creds ) return null
+        return new AWSStaticCredentialsProvider(creds)
     }
 
 
