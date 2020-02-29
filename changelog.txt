@@ -1,5 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
+20.02.0-edge - 29 Feb 2020
+- Fix Unable to create AWS helper class warn #1504
+- Fix Ansi log flickers when variable-length tags are used #1288
+- Fix Directive maxForks may cause execution to hang #1432
+- Fix Missing tag in ansi log #1503
+- Fix PBSPRO res req should always include cpus #1510 
+- Deprecate workflow publish 7f315a63
+
 20.01.0 - 12 Feb 2020
 - Fix ansi logging and line count [4f5c7187]
 - Fix Division by 0 in launcher script with Biocontainers #1488
