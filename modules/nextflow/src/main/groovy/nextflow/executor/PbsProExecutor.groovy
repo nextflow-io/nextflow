@@ -54,8 +54,8 @@ class PbsProExecutor extends PbsExecutor {
         }
 
         def res = []
-        if( task.config.cpus > 1 ) {
-            res << "ncpus=${task.config.cpus}".toString()
+        if( task.config.hasCpus() || task.config.memory ) {
+            res << "ncpus=${task.config.getCpus()}".toString()
         }
         if( task.config.memory ) {
             // https://www.osc.edu/documentation/knowledge_base/out_of_memory_oom_or_excessive_memory_usage

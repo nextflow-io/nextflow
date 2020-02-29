@@ -236,6 +236,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         }
     }
 
+    boolean hasCpus() {
+        get('cpus') != null
+    }
+
     int getCpus() {
         final value = get('cpus')
         value ? value as int : 1  // note: always return at least 1 cpus

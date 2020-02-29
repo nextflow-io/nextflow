@@ -118,7 +118,7 @@ class PbsProExecutorTest extends Specification {
                 '-o', '/foo/bar/.command.log',
                 '-j', 'oe',
                 '-q', 'my-queue',
-                '-l', 'select=1:mem=2048mb'
+                '-l', 'select=1:ncpus=1:mem=2048mb'
         ]
     }
 
