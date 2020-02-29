@@ -220,7 +220,7 @@ class WorkflowParamsResolver implements GroovyInterceptable {
     @Deprecated static final private String GET_PREFIX = '_get_'
     static final private String TAKE_PREFIX = '_take_'
     static final private String EMIT_PREFIX = '_emit_'
-    static final private String PUBLISH_PREFIX = '_publish_'
+    @Deprecated static final private String PUBLISH_PREFIX = '_publish_'
 
 
     Map<String,Object> takes = new LinkedHashMap<>(10)
@@ -235,11 +235,13 @@ class WorkflowParamsResolver implements GroovyInterceptable {
         else if( name.startsWith(EMIT_PREFIX) )
             emits.put(name.substring(EMIT_PREFIX.size()), args)
 
-        else if( name.startsWith(PUBLISH_PREFIX))
+        else if( name.startsWith(PUBLISH_PREFIX)) {
+            log.warn1 "Workflow `publish` is deprecated -- Use process directive `publishDir` instead"
             publish.put(name.substring(PUBLISH_PREFIX.size()), argToPublishOpts(args))
+        }
 
         else if( name.startsWith(GET_PREFIX) ) {
-            log.warn "Workflow `get` is deprecated -- Use `take` instead"
+            log.warn1 "Workflow `get` is deprecated -- Use `take` instead"
             takes.put(name.substring(GET_PREFIX.size()), args)
         }
             
