@@ -398,7 +398,7 @@ class CmdRun extends CmdBase implements HubOptions {
         return result
     }
 
-    static private parseParam( String str ) {
+    static protected parseParam( String str ) {
 
         if ( str == null ) return null
 
