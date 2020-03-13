@@ -14,7 +14,7 @@ Nextflow can execute any piece of Groovy code or use any library for the JVM pla
 For a detailed description of the Groovy programming language, reference these links:
 
 * `Groovy User Guide <http://groovy-lang.org/documentation.html>`_
-* `Groovy Cheat sheet <http://refcardz.dzone.com/refcardz/groovy>`_
+* `Groovy Cheat sheet <http://www.cheat-sheets.org/saved-copy/rc015-groovy_online.pdf>`_
 * `Groovy in Action <http://www.manning.com/koenig2/>`_
 
 
