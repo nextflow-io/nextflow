@@ -999,7 +999,7 @@ class Session implements ISession {
     }
 
     void notifyFlowCreate() {
-        observers.each { trace -> trace.onFlowCreate(this); trace.onFlowStart(this) }
+        observers.each { trace -> trace.onFlowCreate(this) }
     }
 
     void notifyFlowComplete() {
