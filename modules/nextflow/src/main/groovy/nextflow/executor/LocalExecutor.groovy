@@ -16,6 +16,7 @@
 
 package nextflow.executor
 
+import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.util.concurrent.Callable
 import java.util.concurrent.Future
@@ -61,6 +62,13 @@ class LocalExecutor extends Executor {
 
     }
 
+    @Override
+    protected void register() {
+        super.register()
+        if( workDir.fileSystem != FileSystems.default ) {
+            log.warn "Local executor only supports default file system -- Check work directory: ${getWorkDir().toUriString()}"
+        }
+    }
 }
 
 
