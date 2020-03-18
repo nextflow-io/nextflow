@@ -298,11 +298,16 @@ class SgeExecutorTest extends Specification {
         """
         job-ID     prior   name       user         state submit/start at     queue                          jclass                         slots ja-task-ID
         ------------------------------------------------------------------------------------------------------------------------------------------------
+              1219 1.00000 oliver-tes abria        t     08/29/2014 10:17:21 long@node-hp0115.linux.crg.es                                     4
               1220 1.00000 oliver-tes abria        r     08/29/2014 10:17:21 long@node-hp0115.linux.crg.es                                     8
               1258 0.17254 mouse.4689 epalumbo     r     08/29/2014 11:13:55 long@node-hp0515.linux.crg.es                                    16
               1261 0.17254 run_mappin epalumbo     qw    08/29/2014 11:28:11 short@node-ib0208bi.linux.crg.                                    4
               1262 0.17254 run_mappin epalumbo     Eqw   08/29/2014 11:28:31 short@node-ib0209bi.linux.crg.                                    4
               1263 0.17254 run_mappin epalumbo     Tr    08/29/2014 11:28:31 short@node-ib0209bi.linux.crg.                                    4
+              24261953 0.00005 nf-collect benjamin     T     03/18/2020 11:13:25 short.qc@compc038.hpc.in.bmrc.                                    1 
+              1265 0.17254 run_mappin epalumbo     S     08/29/2014 11:28:31 short@node-ib0209bi.linux.crg.                                    4
+              1266 0.17254 run_mappin epalumbo     N     08/29/2014 11:28:31 short@node-ib0209bi.linux.crg.                                    4
+              1267 0.17254 run_mappin epalumbo     h     08/29/2014 11:28:11 short@node-ib0208bi.linux.crg.                                    4
         """.stripIndent().trim()
 
 
@@ -310,11 +315,16 @@ class SgeExecutorTest extends Specification {
         def result = executor.parseQueueStatus(text)
         then:
         result.size() == 5
+        result['1219'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['1220'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['1258'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['1261'] == AbstractGridExecutor.QueueStatus.PENDING
         result['1262'] == AbstractGridExecutor.QueueStatus.ERROR
         result['1263'] == AbstractGridExecutor.QueueStatus.HOLD
+        result['24261953'] == AbstractGridExecutor.QueueStatus.HOLD
+        result['1265'] == AbstractGridExecutor.QueueStatus.HOLD
+        result['1266'] == AbstractGridExecutor.QueueStatus.HOLD
+        result['1267'] == AbstractGridExecutor.QueueStatus.PENDING
     }
 
     def testParseQueueDump() {

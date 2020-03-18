@@ -132,13 +132,14 @@ class SgeExecutor extends AbstractGridExecutor {
     }
 
     static protected Map DECODE_STATUS = [
+        't': QueueStatus.RUNNING,
         'r': QueueStatus.RUNNING,
         'R': QueueStatus.RUNNING,
         'qw': QueueStatus.PENDING,
         'h': QueueStatus.PENDING,
-        'P': QueueStatus.PENDING,
         'w': QueueStatus.PENDING,
-        'N': QueueStatus.PENDING,
+        'P': QueueStatus.HOLD,
+        'N': QueueStatus.HOLD,
         'S': QueueStatus.HOLD,
         's': QueueStatus.HOLD,
         'T': QueueStatus.HOLD,
