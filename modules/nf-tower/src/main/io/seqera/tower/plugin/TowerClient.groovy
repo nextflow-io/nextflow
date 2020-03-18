@@ -420,6 +420,7 @@ class TowerClient implements TraceObserver {
         def result = new LinkedHashMap(5)
         result.workflow = workflow
         result.metrics = getMetricsList()
+        result.progress = getWorkflowProgress(false)
         return result
     }
 
