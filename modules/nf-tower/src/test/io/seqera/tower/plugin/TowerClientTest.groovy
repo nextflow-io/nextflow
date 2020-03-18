@@ -162,6 +162,14 @@ class TowerClientTest extends Specification {
 
     }
 
+    def 'should get launchId from env' () {
+        when:
+        def observer = new TowerClient(env:[TOWER_LAUNCH_ID:'foo-123'])
+
+        then:
+        observer.launchId == 'foo-123'
+    }
+
     def 'should post task records' () {
         given:
         def URL = 'http://foo.com'
@@ -238,7 +246,7 @@ class TowerClientTest extends Specification {
         given:
         def dir = Files.createTempDirectory('test')
         def client = Mock(SimpleHttpClient)
-        TowerClient tower = Spy(TowerClient, constructorArgs: [[httpClient: client] ])
+        TowerClient tower = Spy(TowerClient, constructorArgs: [ [httpClient: client] ])
         and:
         def session = Mock(Session)
         session.config >> [:]
@@ -253,10 +261,11 @@ class TowerClientTest extends Specification {
         def req = tower.makeBeginReq(session)
         then:
         tower.getWorkflowId() >> '12345'
+        tower.getLaunchId() >> 'x123'
         and:
         req.workflow.id == '12345'
         req.workflow.params == [foo:'Hello', bar:'World']
-
+        req.launchId == 'x123'
         cleanup:
         dir?.deleteDir()
 
@@ -289,7 +298,7 @@ class TowerClientTest extends Specification {
     def 'should create init request' () {
         given:
         def uuid = UUID.randomUUID()
-        def tower = new TowerClient()
+        def tower = new TowerClient(env: [TOWER_LAUNCH_ID: 'x123'])
         def meta = Mock(WorkflowMetadata) {
             getProjectName() >> 'the-project-name'
             getRepository() >> 'git://repo.com/foo'
@@ -307,6 +316,7 @@ class TowerClientTest extends Specification {
         req.runName == 'foo_bar'
         req.projectName == 'the-project-name'
         req.repository == 'git://repo.com/foo'
+        req.launchId == 'x123'
     }
 
     def 'should post create request' () {
