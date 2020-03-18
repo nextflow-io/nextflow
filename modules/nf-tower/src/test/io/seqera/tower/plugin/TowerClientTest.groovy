@@ -72,6 +72,7 @@ class TowerClientTest extends Specification {
         1 * session.getParams() >> params
         1 * meta.toMap() >> [foo:1, bar:2, container: [p1: 'c1', p2: 'c2']]
         1 * tower.getMetricsList() >> [[process:'foo', cpu: [min: 1, max:5], time: [min: 6, max: 9]]]
+        1 * tower.getWorkflowProgress(false) >> new WorkflowProgress()
         then:
         map.workflow.foo == 1
         map.workflow.bar == 2
@@ -79,7 +80,7 @@ class TowerClientTest extends Specification {
         map.workflow.params == [x: 'hello']
         map.workflow.container == 'p1:c1,p2:c2'
         map.metrics == [[process:'foo', cpu: [min: 1, max:5], time: [min: 6, max: 9]]]
-
+        map.progress == new WorkflowProgress()
     }
 
     def 'should capitalise underscores' () {

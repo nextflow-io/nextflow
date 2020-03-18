@@ -17,6 +17,7 @@
 package io.seqera.tower.plugin
 
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
 import nextflow.trace.ProgressRecord
 import nextflow.trace.WorkflowStats
 /**
@@ -24,6 +25,7 @@ import nextflow.trace.WorkflowStats
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@EqualsAndHashCode
 @CompileStatic
 class WorkflowProgress {
     private WorkflowStats stats
