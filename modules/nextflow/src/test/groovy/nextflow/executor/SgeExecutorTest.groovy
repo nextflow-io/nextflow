@@ -314,7 +314,7 @@ class SgeExecutorTest extends Specification {
         when:
         def result = executor.parseQueueStatus(text)
         then:
-        result.size() == 5
+        result.size() == 10
         result['1219'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['1220'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['1258'] == AbstractGridExecutor.QueueStatus.RUNNING
