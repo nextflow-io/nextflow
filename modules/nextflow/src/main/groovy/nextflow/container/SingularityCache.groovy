@@ -195,7 +195,7 @@ class SingularityCache {
         log.trace "Singularity pulling remote image `$imageUrl`"
 
         if( missingCacheDir )
-            log.warn1 "Singularity cache directory has not been defined -- Remote image will be stored in the path: $localPath.parent"
+            log.warn1 "Singularity cache directory has not been defined in variable NXF_SINGULARITY_CACHEDIR -- Remote image will be stored in the path: $localPath.parent"
 
         log.info "Pulling Singularity image $imageUrl [cache $localPath]"
 
