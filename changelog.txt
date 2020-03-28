@@ -1,5 +1,18 @@
 NEXTFLOW CHANGE-LOG
 ===================
+20.03.0-edge - 28 Mar 2020
+- Add support for GLS private addr #1545 [a481b42b]
+- Add AWS batch job def normalise function [79239f05]
+- Fix Escape Singularity env variables #1535 [b651a371]
+- Add Local executor file system check [ffc92926]
+- Add Launch Id to Tower client [d768d2d1]
+- Add workflow progress on completion [aea41f37]
+- Remove deprecated onFlowStart method [14f12b5f]
+- Minor method visibility change [43bc9697]
+- Minor log change [130a963b]
+- Fix docs broken link [0a1ec9a9]
+- Fix typo CVS -> CSV #1500 [d89281c3]
+
 20.02.0-edge - 29 Feb 2020
 - Fix Unable to create AWS helper class warn #1504
 - Fix Ansi log flickers when variable-length tags are used #1288
