@@ -300,6 +300,11 @@ class AwsBatchTaskHandlerTest extends Specification {
         handler.normalizeJobDefinitionName(null) == null
         handler.normalizeJobDefinitionName('foo') == 'nf-foo'
         handler.normalizeJobDefinitionName('foo:1') == 'nf-foo-1'
+
+        when:
+        handler.normalizeJobDefinitionName('/some/file.img')
+        then:
+        thrown(IllegalArgumentException)
     }
 
 
