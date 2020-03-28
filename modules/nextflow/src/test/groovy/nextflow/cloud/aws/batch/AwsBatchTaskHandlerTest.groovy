@@ -678,18 +678,4 @@ class AwsBatchTaskHandlerTest extends Specification {
         trace.machineInfo.priceModel == PriceModel.spot
     }
 
-    def 'should normalise jobdef name'() {
-        given:
-        def handler = Spy(AwsBatchTaskHandler)
-
-        expect:
-        handler.normalizeJobDefinitionName(IMAGE) == JOB_DEF
-
-        where:
-        IMAGE                                       | JOB_DEF
-        'foo/bar'                                   | 'nf-foo-bar'
-        'quay.io/h3abionet_org/py3plink'            | 'nf-quay-io-h3abionet_org-py3plink'
-        'docker://quay.io/h3abionet_org/py3plink'   | 'nf-docker-quay-io-h3abionet_org-py3plink'
-    }
-
 }
