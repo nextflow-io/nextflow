@@ -301,6 +301,7 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
         req.location = executor.config.location
         req.bootDiskSizeGb = executor.config.bootDiskSize?.toGiga() as Integer
         req.entryPoint = task.config.getContainerOptionsMap().getOrDefault('entrypoint', GoogleLifeSciencesConfig.DEFAULT_ENTRY_POINT)
+        req.usePrivateAddress = executor.config.usePrivateAddress
         return req
     }
 

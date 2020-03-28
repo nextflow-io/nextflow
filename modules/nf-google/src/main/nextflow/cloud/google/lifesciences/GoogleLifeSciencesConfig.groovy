@@ -54,6 +54,7 @@ class GoogleLifeSciencesConfig {
     String sshImage
     Integer debugMode
     String copyImage
+    boolean usePrivateAddress
 
     @Deprecated
     GoogleLifeSciencesConfig(String project, List<String> zone, List<String> region, Path remoteBinDir = null, boolean preemptible = false) {
@@ -108,6 +109,7 @@ class GoogleLifeSciencesConfig {
         final sshImage = config.navigate('google.lifeSciences.sshImage', DEFAULT_SSH_IMAGE) as String
         final copyImage = config.navigate('google.lifeSciences.copyImage', DEFAULT_COPY_IMAGE) as String
         final debugMode = config.navigate('google.lifeSciences.debug', System.getenv('NXF_DEBUG'))
+        final privateAddr  = config.navigate('google.lifeSciences.usePrivateAddress') as boolean
 
         def zones = (config.navigate("google.zone") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
         def regions = (config.navigate("google.region") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
@@ -124,7 +126,8 @@ class GoogleLifeSciencesConfig {
                 debugMode: debugMode0(debugMode),
                 copyImage: copyImage,
                 sshDaemon: sshDaemon,
-                sshImage: sshImage )
+                sshImage: sshImage,
+                usePrivateAddress: privateAddr )
     }
 
     static private Integer debugMode0(value) {

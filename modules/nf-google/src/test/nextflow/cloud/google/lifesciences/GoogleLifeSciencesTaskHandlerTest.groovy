@@ -145,8 +145,72 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
                     getProject() >> 'my-project'
                     getZones() >> ['my-zone']
                     getRegions() >> ['my-region']
+                }
+            }
+        }
+        and:
+        def task = Mock(TaskRun)
+        task.getName() >> 'foo'
+        task.getWorkDir() >> workDir
+        task.getHash() >> { CacheHelper.hasher('dummy').hash() }
+        task.getContainer() >> 'my/image'
+
+        def handler = new GoogleLifeSciencesTaskHandler(
+                executor: executor,
+                task: task )
+
+        when:
+        def req = handler.createPipelineRequest()
+        then:
+        task.getConfig() >> new TaskConfig(machineType: 'n1-1234')
+        and:
+        req.machineType == 'n1-1234'
+        req.project == 'my-project'
+        req.zone == ['my-zone']
+        req.region == ['my-region']
+        req.diskName == GoogleLifeSciencesTaskHandler.DEFAULT_DISK_NAME
+        req.diskSizeGb == null
+        !req.preemptible
+        req.taskName == "nf-bad893071e9130b866d43a4fcabb95b6"
+        req.containerImage == 'my/image'
+        req.workDir.toUriString() == 'gs://my-bucket/work/dir'
+        req.sharedMount.getPath() == '/work/dir'
+        req.sharedMount.getDisk() == GoogleLifeSciencesTaskHandler.DEFAULT_DISK_NAME
+        !req.sharedMount.getReadOnly()
+        req.bootDiskSizeGb == null
+        req.entryPoint == GoogleLifeSciencesConfig.DEFAULT_ENTRY_POINT
+        !req.usePrivateAddress
+
+        when:
+        req = handler.createPipelineRequest()
+        then:
+        task.getConfig() >> new TaskConfig(containerOptions: [entrypoint:'/bin/foo'])
+        and:
+        req.entryPoint == '/bin/foo'
+
+        when:
+        req = handler.createPipelineRequest()
+        then:
+        task.getConfig() >> new TaskConfig(containerOptions: [entrypoint:null])
+        and:
+        req.entryPoint == null
+
+    }
+
+    def 'should create pipeline request/2' () {
+        given:
+        def workDir = mockGsPath('gs://my-bucket/work/dir')
+        and:
+        def executor = Mock(GoogleLifeSciencesExecutor) {
+            getHelper() >> Mock(GoogleLifeSciencesHelper)
+            getConfig() >> {
+                Mock(GoogleLifeSciencesConfig) {
+                    getProject() >> 'my-project'
+                    getZones() >> ['my-zone']
+                    getRegions() >> ['my-region']
                     getPreemptible() >> true
                     getBootDiskSize() >> MemoryUnit.of('20 GB')
+                    getUsePrivateAddress() >> true
                 }
             }
         }
@@ -181,6 +245,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         !req.sharedMount.getReadOnly()
         req.bootDiskSizeGb == 20
         req.entryPoint == GoogleLifeSciencesConfig.DEFAULT_ENTRY_POINT
+        req.usePrivateAddress
 
         when:
         req = handler.createPipelineRequest()

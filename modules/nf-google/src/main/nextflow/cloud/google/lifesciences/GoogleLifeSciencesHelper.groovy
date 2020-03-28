@@ -28,6 +28,7 @@ import com.google.api.services.lifesciences.v2beta.model.Action
 import com.google.api.services.lifesciences.v2beta.model.CancelOperationRequest
 import com.google.api.services.lifesciences.v2beta.model.Disk
 import com.google.api.services.lifesciences.v2beta.model.Mount
+import com.google.api.services.lifesciences.v2beta.model.Network
 import com.google.api.services.lifesciences.v2beta.model.Operation
 import com.google.api.services.lifesciences.v2beta.model.Pipeline
 import com.google.api.services.lifesciences.v2beta.model.Resources
@@ -182,6 +183,10 @@ class GoogleLifeSciencesHelper {
                 .setServiceAccount(serviceAccount)
                 .setPreemptible(req.preemptible)
 
+        if( req.usePrivateAddress ) {
+            vm.setNetwork( new Network().setUsePrivateAddress(true) )
+        }
+
         if( req.bootDiskSizeGb ) {
             vm.setBootDiskSizeGb(req.bootDiskSizeGb)
         }
@@ -193,10 +198,13 @@ class GoogleLifeSciencesHelper {
             vm.setAccelerators(list)
         }
 
-        new Resources()
+        final result = new Resources()
                 .setZones(req.zone)
                 .setRegions(req.region)
                 .setVirtualMachine(vm)
+
+        log.trace "[GLS] task=$req.taskName; VM resources=$result"
+        return result
     }
 
     protected Action createMainAction(GoogleLifeSciencesSubmitRequest req) {
