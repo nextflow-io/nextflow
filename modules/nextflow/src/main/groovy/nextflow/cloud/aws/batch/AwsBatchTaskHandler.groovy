@@ -40,6 +40,7 @@ import com.amazonaws.services.batch.model.TerminateJobRequest
 import com.amazonaws.services.batch.model.Volume
 import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
+import nextflow.container.ContainerNameValidator
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
@@ -491,6 +492,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      */
     protected String normalizeJobDefinitionName(String name) {
         if( !name ) return null
+        if( !ContainerNameValidator.isValidImageName(name) ) throw new IllegalArgumentException("Invalid container image name: $name")
+
         def result = name.replaceAll(/[^a-zA-Z0-9\-_]+/,'-')
         return "nf-" + result
     }
