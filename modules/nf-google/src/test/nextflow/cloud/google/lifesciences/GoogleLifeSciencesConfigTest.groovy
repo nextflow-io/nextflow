@@ -168,6 +168,18 @@ class GoogleLifeSciencesConfigTest extends Specification {
         config.sshDaemon
     }
 
+    def 'should config usePrivateAddress' () {
+        when:
+        def config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [:]]])
+        then:
+        !config.usePrivateAddress
+
+        when:
+        config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [usePrivateAddress:true]]])
+        then:
+        config.usePrivateAddress
+    }
+
     def 'should config debug mode' () {
         when:
         def config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [:]]])
