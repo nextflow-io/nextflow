@@ -300,7 +300,7 @@ class SgeExecutorTest extends Specification {
         ------------------------------------------------------------------------------------------------------------------------------------------------
               1219 1.00000 oliver-tes abria        t     08/29/2014 10:17:21 long@node-hp0115.linux.crg.es                                     4
               1220 1.00000 oliver-tes abria        r     08/29/2014 10:17:21 long@node-hp0115.linux.crg.es                                     8
-              1258 0.17254 mouse.4689 epalumbo     r     08/29/2014 11:13:55 long@node-hp0515.linux.crg.es                                    16
+              1258 0.17254 mouse.4689 epalumbo     R     08/29/2014 11:13:55 long@node-hp0515.linux.crg.es                                    16
               1261 0.17254 run_mappin epalumbo     qw    08/29/2014 11:28:11 short@node-ib0208bi.linux.crg.                                    4
               1262 0.17254 run_mappin epalumbo     Eqw   08/29/2014 11:28:31 short@node-ib0209bi.linux.crg.                                    4
               1263 0.17254 run_mappin epalumbo     Tr    08/29/2014 11:28:31 short@node-ib0209bi.linux.crg.                                    4
@@ -308,6 +308,11 @@ class SgeExecutorTest extends Specification {
               1265 0.17254 run_mappin epalumbo     S     08/29/2014 11:28:31 short@node-ib0209bi.linux.crg.                                    4
               1266 0.17254 run_mappin epalumbo     N     08/29/2014 11:28:31 short@node-ib0209bi.linux.crg.                                    4
               1267 0.17254 run_mappin epalumbo     h     08/29/2014 11:28:11 short@node-ib0208bi.linux.crg.                                    4
+              1268 0.15000 run_testin bschuster    P     08/29/2018 12:15:00 short@node-ib0208bi.linux.crg.                                    1
+              1269 0.15000 run_testin bschuster    s     08/29/2018 12:15:00 short@node-ib0208bi.linux.crg.                                    1
+              1270 0.15000 run_testin bschuster    hqw   08/29/2018 12:15:01 short@node-ib0208bi.linux.crg.                                    1
+              1271 0.15000 run_testin bschuster    E     08/29/2018 12:15:02 short@node-ib0208bi.linux.crg.                                    1
+              1272 0.15000 run_testin bschuster    w     08/29/2018 12:15:02 short@node-ib0208bi.linux.crg.                                    1
         """.stripIndent().trim()
 
 
@@ -325,6 +330,11 @@ class SgeExecutorTest extends Specification {
         result['1265'] == AbstractGridExecutor.QueueStatus.HOLD
         result['1266'] == AbstractGridExecutor.QueueStatus.HOLD
         result['1267'] == AbstractGridExecutor.QueueStatus.PENDING
+        result['1268'] == AbstractGridExecutor.QueueStatus.PENDING
+        result['1269'] == AbstractGridExecutor.QueueStatus.HOLD
+        result['1270'] == AbstractGridExecutor.QueueStatus.HOLD
+        result['1271'] == AbstractGridExecutor.QueueStatus.ERROR
+        result['1272'] == AbstractGridExecutor.QueueStatus.PENDING
     }
 
     def testParseQueueDump() {
