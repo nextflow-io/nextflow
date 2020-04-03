@@ -61,4 +61,6 @@ class GoogleLifeSciencesSubmitRequest {
     Integer bootDiskSizeGb
 
     String entryPoint
+
+    boolean usePrivateAddress
 }

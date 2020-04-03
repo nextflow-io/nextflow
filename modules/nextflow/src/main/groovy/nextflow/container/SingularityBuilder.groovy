@@ -124,10 +124,10 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
             }
         }
         else if( env instanceof String && env.contains('=') ) {
-            result << 'SINGULARITYENV_' << env
+            result << prefixEnv(env)
         }
         else if( env instanceof String ) {
-            result << "\${$env:+SINGULARITYENV_$env=\"\$$env\"}"
+            result << "\${$env:+${prefixEnv(env)}=\"\$$env\"}"
         }
         else if( env ) {
             throw new IllegalArgumentException("Not a valid environment value: $env [${env.getClass().name}]")

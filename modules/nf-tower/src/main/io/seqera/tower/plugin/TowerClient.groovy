@@ -136,6 +136,10 @@ class TowerClient implements TraceObserver {
         this.generator = TowerJsonGenerator.create(Collections.EMPTY_MAP)
     }
 
+    protected String getLaunchId() {
+        env.get('TOWER_LAUNCH_ID')
+    }
+
     boolean enableMetrics() { true }
 
     String getEndpoint() { endpoint }
@@ -240,6 +244,7 @@ class TowerClient implements TraceObserver {
         result.runName = session.runName
         result.projectName = session.workflowMetadata.projectName
         result.repository = session.workflowMetadata.repository
+        result.launchId = launchId
         return result
     }
 
@@ -406,6 +411,7 @@ class TowerClient implements TraceObserver {
         def result = new LinkedHashMap(5)
         result.workflow = workflow
         result.processNames = new ArrayList(processNames)
+        result.launchId = launchId
         return result
     }
 
@@ -420,6 +426,7 @@ class TowerClient implements TraceObserver {
         def result = new LinkedHashMap(5)
         result.workflow = workflow
         result.metrics = getMetricsList()
+        result.progress = getWorkflowProgress(false)
         return result
     }
 
