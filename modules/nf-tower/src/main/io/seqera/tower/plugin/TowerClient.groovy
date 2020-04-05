@@ -59,6 +59,7 @@ class TowerClient implements TraceObserver {
     static class Response {
         final int code
         final String message
+        final String cause
         boolean isError() { code < 200 || code >= 300 }
     }
 
@@ -394,7 +395,7 @@ class TowerClient implements TraceObserver {
             String msg = ( code == 401
                             ? 'Unauthorized Tower access -- Make sure you have specified the correct access token'
                             : "Unexpected response code $code for request $url"  )
-            return new Response(code, msg)
+            return new Response(code, msg, httpClient.response)
         }
     }
 
@@ -508,12 +509,15 @@ class TowerClient implements TraceObserver {
             log.trace "Successfully send message to ${url} -- received status code ${resp.code}"
         }
         else {
+            def cause = parseCause(resp.cause)
             def msg = """\
                 Unexpected HTTP response.
                 Failed to send message to ${endpoint} -- received 
                 - status code : $resp.code    
-                - response msg: $resp.message   
+                - response msg: $resp.message
                 """.stripIndent()
+            // append separately otherwise formatting get broken
+            msg += "- error cause : ${cause ?: '-'}"
             log.warn(msg)
         }
     }
@@ -523,14 +527,30 @@ class TowerClient implements TraceObserver {
             return (Map)new JsonSlurper().parseText(resp.message)
         }
 
+        def cause = parseCause(resp.cause)
+
         def msg = """\
                 Unexpected Tower response
                 - endpoint url: $endpoint
                 - status code : $resp.code    
-                - response msg: ${resp.message}  
+                - response msg: ${resp.message} 
                 """.stripIndent()
-
+        // append separately otherwise formatting get broken
+        msg += "- error cause : ${cause ?: '-'}"
         throw new Exception(msg)
+    }
+
+    protected String parseCause(String cause) {
+        if( !cause )
+            return null
+        try {
+            def map = (Map)new JsonSlurper().parseText(cause)
+            return map.message
+        }
+        catch ( Exception ) {
+            log.debug "Unable to parse error cause as JSON object: $cause"
+            return cause
+        }
     }
 
     protected String underscoreToCamelCase(String str) {
