@@ -462,6 +462,13 @@ class TowerClient implements TraceObserver {
             record.put(name, fixTaskField(name,entry.value))
         }
 
+        // prevent invalid tag data
+        if( record.tag!=null && !(record.tag instanceof CharSequence)) {
+            final msg = "Invalid tag value for process: ${record.process} -- A string is expected instead of type: ${record.tag.getClass().getName()}; offending value=${record.tag}"
+            log.warn1(msg, cacheKey: record.process)
+            record.tag = null
+        }
+
         // add transient fields
         record.executor = trace.getExecutorName()
         record.cloudZone = trace.getMachineInfo()?.zone
