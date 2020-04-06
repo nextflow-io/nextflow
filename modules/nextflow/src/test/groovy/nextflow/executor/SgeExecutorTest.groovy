@@ -328,7 +328,7 @@ class SgeExecutorTest extends Specification {
         result['1263'] == AbstractGridExecutor.QueueStatus.HOLD
         result['24261953'] == AbstractGridExecutor.QueueStatus.HOLD
         result['1265'] == AbstractGridExecutor.QueueStatus.HOLD
-        result['1266'] == AbstractGridExecutor.QueueStatus.HOLD
+        result['1266'] == AbstractGridExecutor.QueueStatus.PENDING
         result['1267'] == AbstractGridExecutor.QueueStatus.PENDING
         result['1268'] == AbstractGridExecutor.QueueStatus.PENDING
         result['1269'] == AbstractGridExecutor.QueueStatus.HOLD
