@@ -479,7 +479,7 @@ google.lifeSciences.bootDiskSize        Set the size of the virtual machine boot
 google.lifeSciences.copyImage           The container image run to copy input and output files. It must include the ``gsutil`` tool (default: ``google/cloud-sdk:alpine``).
 google.lifeSciences.debug               When ``true`` copies the `/google` debug directory in that task bucket directory (defualt: ``false``)
 google.lifeSciences.preemptible         When ``true`` enables the usage of *preemptible* virtual machines or ``false`` otherwise (default: ``true``)
-google.lifeSciences.usePrivateAddress   When ``true`` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: ``false``).
+google.lifeSciences.usePrivateAddress   When ``true`` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: ``false``). Requires version `20.03.0-edge` or later.
 google.lifeSciences.sshDaemon           When ``true`` runs SSH daemon in the VM carrying out the job to which it's possible to connect for debugging purposes (default: ``false``).
 google.lifeSciences.sshImage            The container image used to run the SSH daemon (default: ``gcr.io/cloud-genomics-pipelines/tools``).
 ======================================= =================

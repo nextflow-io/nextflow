@@ -300,6 +300,11 @@ class AwsBatchTaskHandlerTest extends Specification {
         handler.normalizeJobDefinitionName(null) == null
         handler.normalizeJobDefinitionName('foo') == 'nf-foo'
         handler.normalizeJobDefinitionName('foo:1') == 'nf-foo-1'
+
+        when:
+        handler.normalizeJobDefinitionName('/some/file.img')
+        then:
+        thrown(IllegalArgumentException)
     }
 
 
@@ -676,20 +681,6 @@ class AwsBatchTaskHandlerTest extends Specification {
         trace.machineInfo.type == 'x1.large'
         trace.machineInfo.zone == 'us-east-1b'
         trace.machineInfo.priceModel == PriceModel.spot
-    }
-
-    def 'should normalise jobdef name'() {
-        given:
-        def handler = Spy(AwsBatchTaskHandler)
-
-        expect:
-        handler.normalizeJobDefinitionName(IMAGE) == JOB_DEF
-
-        where:
-        IMAGE                                       | JOB_DEF
-        'foo/bar'                                   | 'nf-foo-bar'
-        'quay.io/h3abionet_org/py3plink'            | 'nf-quay-io-h3abionet_org-py3plink'
-        'docker://quay.io/h3abionet_org/py3plink'   | 'nf-docker-quay-io-h3abionet_org-py3plink'
     }
 
 }
