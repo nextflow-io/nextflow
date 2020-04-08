@@ -276,18 +276,20 @@ class SgeExecutorTest extends Specification {
         7548349 0.00050 nf-exonera pditommaso   hqw   02/10/2014 12:32:56 long@node-hp0303.linux.crg.es      1
         7548904 0.00050 nf-exonera pditommaso   qw    02/10/2014 13:07:09                                    1
         7548960 0.00050 nf-exonera pditommaso   Eqw   02/10/2014 13:08:11                                    1
+        47261  11.00790 nf-alignRe bschuster    hr    04/07/2020 23:27:15 byslot.q@node06.pri.cortex2.al     4  
         """.stripIndent().trim()
 
 
         when:
         def result = executor.parseQueueStatus(text)
         then:
-        result.size() == 5
+        result.size() == 6
         result['7548318'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['7548348'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['7548349'] == AbstractGridExecutor.QueueStatus.HOLD
         result['7548904'] == AbstractGridExecutor.QueueStatus.PENDING
         result['7548960'] == AbstractGridExecutor.QueueStatus.ERROR
+        result['47261'] == AbstractGridExecutor.QueueStatus.RUNNING
 
     }
 
