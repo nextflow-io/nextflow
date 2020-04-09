@@ -135,6 +135,7 @@ class SgeExecutor extends AbstractGridExecutor {
         't': QueueStatus.RUNNING,
         'r': QueueStatus.RUNNING,
         'R': QueueStatus.RUNNING,
+        'hr': QueueStatus.RUNNING,
         'qw': QueueStatus.PENDING,
         'h': QueueStatus.PENDING,
         'w': QueueStatus.PENDING,
