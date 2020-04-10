@@ -73,7 +73,10 @@ class ExecutorFactory {
         // discover non-core executors
         for( Class<Executor> clazz : ServiceDiscover.load(Executor) ) {
             log.trace "Discovered executor class: ${clazz.toString()}"
-            executorsMap.put(findNameByClass(clazz), clazz)
+            final name = findNameByClass(clazz)
+            if( executorsMap.containsKey(name) )
+                log.debug "Replacing executor ${executorsMap[name]} by ${clazz}"
+            executorsMap.put(name, clazz)
         }
     }
 
