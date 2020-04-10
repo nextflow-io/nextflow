@@ -33,21 +33,6 @@ import static nextflow.ast.NextflowDSLImpl.OUT_PREFIX
 @CompileStatic
 class ChannelOut implements List<DataflowWriteChannel> {
 
-    final private static Map<String,Integer> NUMS = new HashMap<>(10)
-
-    static {
-        NUMS['first'] = 0
-        NUMS['second'] = 1
-        NUMS['third'] = 2
-        NUMS['fourth'] = 3
-        NUMS['fifth'] = 4
-        NUMS['sixth'] = 5
-        NUMS['seventh'] = 6
-        NUMS['eighth'] = 7
-        NUMS['ninth'] = 8
-        NUMS['tenth'] = 9
-    }
-
     private @Delegate List<DataflowWriteChannel> target
 
     private Map<String,DataflowWriteChannel> channels
@@ -88,12 +73,6 @@ class ChannelOut implements List<DataflowWriteChannel> {
     def getProperty(String name) {
         if( this.channels.containsKey(name) ) {
             return channels.get(name)
-        }
-        else if(NUMS.containsKey(name)) {
-            // this has been deprecated
-            final i = NUMS[name]
-            log.warn1 "Property `out.${name}` has been deprecated -- Use `out[$i]` instead"
-            return target[i]
         }
         else
             metaClass.getProperty(this,name)
