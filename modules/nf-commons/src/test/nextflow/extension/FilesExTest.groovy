@@ -831,18 +831,17 @@ class FilesExTest extends Specification {
     }
 
     def testCheckFolder() {
-
         when:
         def folder1 = Paths.get('some/path')
-        folder1.createDirIfNotExists()
+        def result1 = folder1.createDirIfNotExists()
         then:
-        folder1.exists()
+        result1.exists()
 
         when:
         def folder2 = Files.createTempDirectory('some-temp-dir')
-        folder2.createDirIfNotExists( )
+        def result2 = folder2.createDirIfNotExists( )
         then:
-        folder2.exists()
+        result2.exists()
 
         when:
         def file3 = Files.createTempFile('some-file',null)

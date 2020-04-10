@@ -1244,7 +1244,7 @@ class FilesEx {
      * Create a folder if not already exists
      * @param target The folder to be created
      */
-    static void createDirIfNotExists( Path target ) {
+    static Path createDirIfNotExists( Path target ) {
         assert target
 
         try {
@@ -1256,6 +1256,8 @@ class FilesEx {
                 throw new IOException("Cannot create folder: $target -- Check file systeme access permission")
 
         }
+
+        return target
     }
 
     static void createDirIfNotExists( File target ) {
