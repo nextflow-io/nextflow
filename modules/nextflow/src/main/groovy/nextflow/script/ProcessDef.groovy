@@ -146,12 +146,6 @@ class ProcessDef extends BindableDef implements ChainableDef {
 
     ProcessConfig getProcessConfig() { processConfig }
 
-    @Deprecated
-    ChannelOut getOutput() {
-        log.warn1 "Property `output` has been deprecated use `${name}.out` instead"
-        return output
-    }
-
     ChannelOut getOut() { output }
 
     String getType() { 'process' }
