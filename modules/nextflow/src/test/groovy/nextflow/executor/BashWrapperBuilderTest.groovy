@@ -724,7 +724,7 @@ class BashWrapperBuilderTest extends Specification {
         shifter --image docker:ubuntu:latest /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"
         '''.stripIndent().rightTrim()
         binding.cleanup_cmd == ""
-        binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
+        binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
 
     }
 
@@ -739,7 +739,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.launch_cmd == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec docker:ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == ""
-        binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
+        binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
 
     }
 
