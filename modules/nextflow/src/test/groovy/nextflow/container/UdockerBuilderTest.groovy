@@ -114,7 +114,7 @@ class UdockerBuilderTest extends Specification {
             .stripIndent().trim()
 
         builder.getRemoveCommand() == null
-        builder.getKillCommand() == null
+        builder.getKillCommand() == '[[ "$pid" ]] && nxf_kill $pid'
     }
 
     def 'should append the run command line with launcher' () {
@@ -131,7 +131,7 @@ class UdockerBuilderTest extends Specification {
                 .stripIndent().trim()
 
         builder.getRemoveCommand() == null
-        builder.getKillCommand() == null
+        builder.getKillCommand() == '[[ "$pid" ]] && nxf_kill $pid'
 
 
         when:
@@ -146,7 +146,7 @@ class UdockerBuilderTest extends Specification {
                 .stripIndent().trim()
 
         builder.getRemoveCommand() == null
-        builder.getKillCommand() == null
+        builder.getKillCommand() == '[[ "$pid" ]] && nxf_kill $pid'
     }
 
 }

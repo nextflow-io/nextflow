@@ -43,6 +43,8 @@ import nextflow.util.Escape
 @CompileStatic
 class BashWrapperBuilder {
 
+    static final public KILL_CMD = '[[ "$pid" ]] && nxf_kill $pid'
+
     static final private ENDL = '\n'
 
     static final public List<String> BASH
@@ -218,7 +220,7 @@ class BashWrapperBuilder {
         else {
             binding.container_boxid = null
             binding.container_helpers = null
-            binding.kill_cmd = '[[ "$pid" ]] && nxf_kill $pid'
+            binding.kill_cmd = KILL_CMD
         }
 
         binding.cleanup_cmd = getCleanupCmd(changeDir)

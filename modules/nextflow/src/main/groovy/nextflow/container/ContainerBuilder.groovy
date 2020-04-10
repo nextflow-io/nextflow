@@ -18,6 +18,7 @@ package nextflow.container
 
 import java.nio.file.Path
 
+import nextflow.executor.BashWrapperBuilder
 import nextflow.util.Escape
 import nextflow.util.MemoryUnit
 import nextflow.util.PathTrie
@@ -119,7 +120,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
         return run + ' ' + launcher
     }
 
-    String getKillCommand() { return null }
+    String getKillCommand() { return BashWrapperBuilder.KILL_CMD }
 
     String getRemoveCommand() { return null }
 
