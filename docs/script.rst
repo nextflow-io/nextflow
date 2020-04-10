@@ -212,6 +212,42 @@ a `new line` character from separating that line from the one that follows::
 In the preceding example, ``blastp`` and its ``-in``, ``-out``, ``-db`` and ``-html`` switches and
 their arguments are effectively a single line.
 
+.. _implicit-variables:
+
+Implicit variables
+==================
+
+The following variables are implicitly defined in the script global execution scope:
+
+=============== ========================
+Name            Description
+=============== ========================
+``baseDir``     The directory where the main workflow script is located (deprecated in favour of ``projectDir`` since ``20.04.0``).
+``launchDir``   The directory where the workflow is run (requires version ``20.04.0`` or later).
+``moduleDir``   The directory where a module script is located for DSL2 modules or the same as ``projectDir`` for a non-module script (requires version ``20.04.0`` or later).
+``nextflow``    Variable representing nextflow runtime information (see :ref:`metadata-nextflow`).
+``projectDir``  The directory where the main script is located (requires version ``20.04.0`` or later).
+``workDir``     The directory where tasks temporary files are created.
+``workflow``    Variable representing workflow runtime information (see :ref:`metadata-workflow`).
+=============== ========================
+
+
+Configuration file implicit variables
+-------------------------------------
+
+The following variables are implicitly defined in the Nextflow configuration file:
+
+=============== ========================
+Name            Description
+=============== ========================
+``baseDir``     The directory where the main workflow script is located (deprecated in favour of ``projectDir`` since ``20.04.0``).
+``launchDir``   The directory where the workflow is run (requires version ``20.04.0`` or later).
+``projectDir``  The directory where the main script is located (requires version ``20.04.0`` or later).
+=============== ========================
+
+
+
+
 
 .. _script-closure:
 

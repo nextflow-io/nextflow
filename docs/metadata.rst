@@ -4,6 +4,7 @@
 Workflow introspection
 ***********************
 
+.. _metadata-workflow:
 
 Runtime metadata
 ----------------
@@ -60,6 +61,8 @@ manifest                    Entries of the workflow manifest.
 | Properties marked with a `✝` are accessible only in the workflow completion handler.
 | Properties marked with a `*` are accessible only in the workflow completion and error handlers. See the `Completion handler`_ section for details.
 |
+
+.. _metadata-nextflow:
 
 Nextflow metadata
 -----------------

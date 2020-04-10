@@ -311,6 +311,8 @@ class ConfigBuilder {
             final binding = new HashMap(System.getenv())
             binding.putAll(env)
             binding.put('baseDir', baseDir)
+            binding.put('projectDir', baseDir)
+            binding.put('launchDir', Paths.get('.').toRealPath())
 
             slurper.setBinding(binding)
 

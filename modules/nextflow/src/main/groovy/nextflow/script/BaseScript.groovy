@@ -17,6 +17,7 @@
 package nextflow.script
 
 import java.lang.reflect.InvocationTargetException
+import java.nio.file.Paths
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -89,9 +90,12 @@ abstract class BaseScript extends Script implements ExecutionContext {
         processFactory = session.newProcessFactory(this)
 
         binding.setVariable( 'baseDir', session.baseDir )
+        binding.setVariable( 'projectDir', session.baseDir )
         binding.setVariable( 'workDir', session.workDir )
         binding.setVariable( 'workflow', session.workflowMetadata )
         binding.setVariable( 'nextflow', NextflowMeta.instance )
+        binding.setVariable('launchDir', Paths.get('./').toRealPath())
+        binding.setVariable('moduleDir', meta.scriptPath?.parent )
     }
 
     protected process( String name, Closure<BodyDef> body ) {

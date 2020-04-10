@@ -914,4 +914,35 @@ class ScriptIncludesTest extends Dsl2Spec {
         then:
         result.val == 'ONE ZZZ'
     }
+
+    def 'should declare moduleDir path' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module/dir').createDirIfNotExists().resolve('module.nf')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = """
+        def foo () { return true }
+        assert moduleDir == file("$folder/module/dir")
+        assert projectDir == file("$folder")
+        assert launchDir == file('.')
+        """
+
+        SCRIPT.text = """
+        include foo from "$MODULE" 
+
+        assert moduleDir == file("$folder")
+        assert projectDir == file("$folder")
+        assert launchDir == file('.')
+        
+        workflow { true }
+        """
+
+        when:
+        new MockScriptRunner()
+                .setScript(SCRIPT)
+                .execute()
+        then:
+        true
+    }
 }
