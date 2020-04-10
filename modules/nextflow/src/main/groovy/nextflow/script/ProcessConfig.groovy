@@ -292,7 +292,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             return result
         }
         else {
-            if( name == 'gpu' ) gpuWarn()
             return configProperties.put(name,value)
         }
     }
@@ -831,20 +830,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         else if( value != null )
             throw new IllegalArgumentException("Not a valid `accelerator` directive value: $value [${value.getClass().getName()}]")
         return this
-    }
-
-    ProcessConfig gpu( Map params, value ) {
-        gpuWarn()
-        accelerator(params, value)
-    }
-
-    ProcessConfig gpu( value ) {
-        gpuWarn()
-        accelerator(value)
-    }
-
-    protected void gpuWarn() {
-        log.warn1('Directive `gpu` has been deprecated -- Use `accelerator` instead')
     }
 
 }
