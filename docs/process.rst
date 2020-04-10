@@ -606,8 +606,8 @@ and automatically converts to a file object.
 
 .. note::
     Provided input value should represent an absolute path location i.e. the string value
-    **must** be prefixed with a `/` character or with a support URI protocol i.e. ``file://``,
-    ``http://``, ``s3://``, etc. and it cannot contain special characters (e.g. ``\n``, etc.).
+    **must** be prefixed with a `/` character or with a supported URI protocol i.e. ``file://``,
+    ``http://``, ``s3://``, etc. and it cannot contains special characters (e.g. ``\n``, etc.).
 
 
 

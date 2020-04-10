@@ -79,7 +79,7 @@ input channels as parameters as it if were a custom function. For example::
         input:
           path x
         output:
-          file 'bar.txt'
+          path 'bar.txt'
         script:
           """
           another_command $x > bar.txt
