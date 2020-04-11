@@ -217,7 +217,6 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
 @CompileStatic
 class WorkflowParamsResolver implements GroovyInterceptable {
 
-    @Deprecated static final private String GET_PREFIX = '_get_'
     static final private String TAKE_PREFIX = '_take_'
     static final private String EMIT_PREFIX = '_emit_'
     @Deprecated static final private String PUBLISH_PREFIX = '_publish_'
@@ -240,11 +239,6 @@ class WorkflowParamsResolver implements GroovyInterceptable {
             publish.put(name.substring(PUBLISH_PREFIX.size()), argToPublishOpts(args))
         }
 
-        else if( name.startsWith(GET_PREFIX) ) {
-            log.warn1 "Workflow `get` is deprecated -- Use `take` instead"
-            takes.put(name.substring(GET_PREFIX.size()), args)
-        }
-            
         else
             throw new IllegalArgumentException("Unknown workflow parameter definition: $name")
 

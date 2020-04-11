@@ -125,7 +125,7 @@ class ScriptDslTest extends Dsl2Spec {
         }   
         
         workflow alpha {
-            get: 
+            take: 
                 data
             
             main:
@@ -339,6 +339,26 @@ class ScriptDslTest extends Dsl2Spec {
         then:
         result.val == 'world'
         
+    }
+
+    def 'should report unsupported error' () {
+        when:
+        dsl_eval('''
+        process foo {
+          /echo foo/
+        }
+        
+        workflow {
+          get: 
+            x
+          main: 
+          flow()
+        }
+        ''')
+
+        then:
+        def err = thrown(ScriptCompilationException)
+        err.message.contains "Workflow 'get' is not supported anymore use 'take' instead"
     }
 
 }

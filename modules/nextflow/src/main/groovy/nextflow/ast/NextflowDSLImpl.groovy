@@ -111,7 +111,7 @@ class NextflowDSLImpl implements ASTTransformation {
         final static String WORKFLOW_TAKE = 'take'
         final static String WORKFLOW_EMIT = 'emit'
         final static String WORKFLOW_MAIN = 'main'
-        final static String WORKFLOW_PUBLISH = 'publish'
+        @Deprecated final static String WORKFLOW_PUBLISH = 'publish'
 
         final static Random RND = new Random()
 
@@ -505,12 +505,14 @@ class NextflowDSLImpl implements ASTTransformation {
                 visited[context] = true
 
                 switch (context) {
+                    case WORKFLOW_GET:
+                        syntaxError(stm, "Workflow 'get' is not supported anymore use 'take' instead")
+
                     case WORKFLOW_PUBLISH:
                         if( !anonymous ) {
                             syntaxError(stm, "Publish declaration is only allowed in main workflow definition")
                         }
 
-                    case WORKFLOW_GET:
                     case WORKFLOW_TAKE:
                     case WORKFLOW_EMIT:
                         if( !(stm instanceof ExpressionStatement) ) {
