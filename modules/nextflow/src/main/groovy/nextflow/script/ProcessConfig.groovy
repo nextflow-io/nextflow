@@ -299,7 +299,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     @PackageScope
     BaseScript getOwnerScript() { ownerScript }
 
-    @PackageScope
     TaskConfig createTaskConfig() {
         if(configProperties.validExitStatus != DEFAULT_CONFIG.validExitStatus)
             log.warn1 "Directive 'validExitStatus' has been deprecated -- Check process '$processName'"
