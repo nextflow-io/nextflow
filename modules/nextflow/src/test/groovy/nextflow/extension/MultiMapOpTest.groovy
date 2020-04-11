@@ -16,6 +16,7 @@
 
 package nextflow.extension
 
+import groovyx.gpars.dataflow.DataflowVariable
 import org.junit.Rule
 
 import nextflow.Channel
@@ -119,4 +120,27 @@ class MultiMapOpTest extends Dsl2Spec {
         stdout.contains('bar:4')
         stdout.contains('bar:9')
     }
+
+    def 'should fork channel value ch' () {
+
+        when:
+        def result = dsl_eval('''   
+            Channel
+                .value('hello')
+                .multiMap { p ->
+                        foo: p.toUpperCase()
+                        bar: p.reverse()
+                    }
+        ''')
+        then:
+        result.size() == 2
+        and:
+        result[0] instanceof DataflowVariable
+        result[0].val == 'HELLO'
+        and:
+        result[1] instanceof DataflowVariable
+        result[1].val == 'olleh'
+
+    }
+
 }
