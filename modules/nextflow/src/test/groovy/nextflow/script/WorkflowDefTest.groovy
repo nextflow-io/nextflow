@@ -59,8 +59,8 @@ class WorkflowDefTest extends Dsl2Spec {
             }
         
             workflow bravo() {
-              get: foo
-              get: bar
+              take: foo
+              take: bar
               main:
                 print foo
                 print bar
@@ -69,8 +69,8 @@ class WorkflowDefTest extends Dsl2Spec {
             }
             
             workflow delta() {
-                get: foo
-                get: bar
+                take: foo
+                take: bar
                 main:
                 println foo+bar
             }
@@ -91,8 +91,8 @@ class WorkflowDefTest extends Dsl2Spec {
         meta.getWorkflow('bravo') .declaredInputs == ['foo', 'bar']
         meta.getWorkflow('bravo') .declaredVariables == ['$out0']
         meta.getWorkflow('bravo') .source.stripIndent() == '''\
-              get: foo
-              get: bar
+              take: foo
+              take: bar
               main:
                 print foo
                 print bar
@@ -103,8 +103,8 @@ class WorkflowDefTest extends Dsl2Spec {
         meta.getWorkflow('delta') .declaredInputs == ['foo','bar']
         meta.getWorkflow('delta') .declaredVariables == [] 
         meta.getWorkflow('delta') .source.stripIndent() == '''\
-                get: foo
-                get: bar
+                take: foo
+                take: bar
                 main:
                 println foo+bar
                 '''.stripIndent()
@@ -142,7 +142,7 @@ class WorkflowDefTest extends Dsl2Spec {
         def SCRIPT = '''
                     
             workflow alpha {
-              get: foo
+              take: foo
               emit: bar
               emit: baz  
               
@@ -223,9 +223,9 @@ class WorkflowDefTest extends Dsl2Spec {
         def SCRIPT = '''
                     
             workflow alpha {
-              get: foo
+              take: foo
               main: println foo
-              get: bar
+              take: bar
             }
        
         '''
@@ -236,7 +236,7 @@ class WorkflowDefTest extends Dsl2Spec {
         def workflow = ScriptMeta.get(script).getWorkflow('alpha')
         then:
         def e = thrown(MultipleCompilationErrorsException)
-        e.message.contains('Unexpected workflow `get` context here')
+        e.message.contains('Unexpected workflow `take` context here')
 
     }
 
@@ -327,7 +327,7 @@ class WorkflowDefTest extends Dsl2Spec {
         def SCRIPT = '''
                     
             workflow alpha {
-              get:
+              take:
                 foo
               main:
                 print x 
@@ -342,7 +342,7 @@ class WorkflowDefTest extends Dsl2Spec {
         def workflow = ScriptMeta.get(script).getWorkflow('alpha')
         then:
         workflow.getSource().stripIndent() == '''\
-                            get:
+                            take:
                               foo
                             main:
                               print x 

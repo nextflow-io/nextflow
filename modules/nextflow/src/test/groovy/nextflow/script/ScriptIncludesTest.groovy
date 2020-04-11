@@ -99,7 +99,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         }   
         
         workflow alpha {
-            get: data
+            take: data
             main: foo(data)
                   bar(foo.output)
             emit: bar.out
@@ -154,7 +154,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         include "$MODULE"
 
         workflow alpha {
-            get: data
+            take: data
             main: foo(data)
                   bar(foo.output)
             emit: bar.out      
