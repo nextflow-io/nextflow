@@ -16,6 +16,7 @@
 
 package nextflow.extension
 
+import groovyx.gpars.dataflow.DataflowVariable
 import spock.lang.Ignore
 import org.junit.Rule
 
@@ -342,6 +343,29 @@ class BranchOpTest extends Dsl2Spec  {
         then:
         def e = thrown(ScriptCompilationException)
         e.message.contains 'Unexpected statement in branch condition'
+
+    }
+
+
+    def 'should branch value ch' () {
+
+        when:
+        def result = dsl_eval('''   
+            Channel
+                .value(10)
+                .branch {
+                        foo: it <5
+                        otherwise: it
+                    }
+        ''')
+        then:
+        result.size() == 2
+        and:
+        result[0] instanceof DataflowVariable
+        result[0].val == Channel.STOP
+        and:
+        result[1] instanceof DataflowVariable
+        result[1].val == 10
 
     }
 }
