@@ -70,6 +70,9 @@ class OpCall implements Callable {
             return this
         }
 
+        if( left.size()== 0 ) {
+            throw new ScriptRuntimeException("Operator '${methodName}' cannot be applied to an undefined output")
+        }
         if( left.size()==1 ) {
             this.source = left[0] as DataflowWriteChannel
             return this

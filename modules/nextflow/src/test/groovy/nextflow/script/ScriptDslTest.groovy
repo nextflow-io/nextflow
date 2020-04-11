@@ -1,5 +1,6 @@
 package nextflow.script
 
+import nextflow.exception.ScriptRuntimeException
 import spock.lang.Timeout
 
 import nextflow.Channel
@@ -340,6 +341,122 @@ class ScriptDslTest extends Dsl2Spec {
         result.val == 'world'
         
     }
+
+    def 'should not allow composition' () {
+        when:
+        dsl_eval('''
+        process foo {
+          /echo foo/
+        }
+        
+        process bar {
+          input: val x 
+          /echo bar $x/
+        }
+        
+        workflow {
+          bar(foo())
+        }
+        ''')
+
+
+        then:
+        def err = thrown(ScriptRuntimeException)
+        err.message == 'Process `bar` declares 1 input channel but 0 were specified'
+    }
+
+    def 'should report error accessing undefined out/a' () {
+        when:
+        dsl_eval('''
+        process foo {
+          /echo foo/
+        }
+        
+        process bar {
+          input: val x 
+          /echo bar $x/
+        }
+        
+        workflow {
+          bar(foo.out)
+        }
+        ''')
+
+        then:
+        def err = thrown(ScriptRuntimeException)
+        err.message == "Access to 'foo.out' is undefined since process doesn't declare any output"
+    }
+
+    def 'should report error accessing undefined out/b' () {
+        when:
+        dsl_eval('''
+        process foo {
+          /echo foo/
+        }
+        
+        process bar {
+          input: val x 
+          /echo bar $x/
+        }
+        
+        workflow {
+          bar(foo.out)
+        }
+        ''')
+
+        then:
+        def err = thrown(ScriptRuntimeException)
+        err.message == "Access to 'foo.out' is undefined since process doesn't declare any output"
+    }
+
+    def 'should report error accessing undefined out/c' () {
+        when:
+        dsl_eval('''
+        process foo {
+          /echo foo/
+        }
+        
+        workflow flow1 {
+            foo()
+        }
+        
+        workflow {
+          flow1()
+          flow1.out.view()
+        }
+        ''')
+
+        then:
+        def err = thrown(ScriptRuntimeException)
+        err.message == "Access to 'flow1.out' is undefined since workflow doesn't declare any output"
+    }
+
+    def 'should report error accessing undefined out/d' () {
+        when:
+        dsl_eval('''
+        process foo {
+          /echo foo/
+        }
+        
+        process bar {
+          input: val x 
+          /echo bar $x/
+        }
+        
+        workflow flow1 {
+            foo()
+        }
+        
+        workflow {
+          flow1 | bar
+        }
+        ''')
+
+        then:
+        def err = thrown(ScriptRuntimeException)
+        err.message == "Process `bar` declares 1 input channel but 0 were specified"
+    }
+
 
     def 'should report unsupported error' () {
         when:
