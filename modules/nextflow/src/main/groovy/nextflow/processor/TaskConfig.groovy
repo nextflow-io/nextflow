@@ -39,7 +39,9 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class TaskConfig extends LazyMap implements Cloneable {
 
-    private transient Map cache = [:]
+    static private final List<Integer> EXIT_ZERO = [0]
+
+    private transient Map cache = new LinkedHashMap(20)
 
     TaskConfig() {  }
 
@@ -164,7 +166,7 @@ class TaskConfig extends LazyMap implements Cloneable {
         if( result != null )
             return [result as Integer]
 
-        return [0]
+        return EXIT_ZERO
     }
 
     ErrorStrategy getErrorStrategy() {
