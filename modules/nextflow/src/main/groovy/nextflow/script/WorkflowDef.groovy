@@ -21,6 +21,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.exception.MissingValueException
+import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
 import nextflow.extension.PublishOp
 
@@ -91,7 +92,10 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
 
     WorkflowBinding getBinding() { binding }
 
-    ChannelOut getOut() { output }
+    ChannelOut getOut() {
+        if(!output) throw new ScriptRuntimeException("Access to '${name}.out' is undefined since workflow doesn't declare any output")
+        return output
+    }
 
     @PackageScope BodyDef getBody() { body }
 
