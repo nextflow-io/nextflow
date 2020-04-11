@@ -301,7 +301,9 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
 
     @PackageScope
     TaskConfig createTaskConfig() {
-        new TaskConfig(configProperties)
+        if(configProperties.validExitStatus != DEFAULT_CONFIG.validExitStatus)
+            log.warn1 "Directive 'validExitStatus' has been deprecated -- Check process '$processName'"
+        return new TaskConfig(configProperties)
     }
 
     /**

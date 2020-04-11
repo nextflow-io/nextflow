@@ -2311,6 +2311,9 @@ See also: `cpus`_, `memory`_, `queue`_ and `Dynamic computing resources`_.
 validExitStatus
 ---------------
 
+.. warning::
+    This feature has been deprecated and will be removed in a future release.
+
 A process is terminated when the executed command returns an error exit status. By default any error status
 other than ``0`` is interpreted as an error condition.
 
@@ -2332,7 +2335,6 @@ You can specify a single value or multiple values as shown in the following exam
 In the above example, although the command script ends with a ``1`` exit status, the process
 will not return an error condition because the value ``1`` is declared as a `valid` status in
 the ``validExitStatus`` directive.
-
 
 
 Dynamic directives
