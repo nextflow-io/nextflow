@@ -866,7 +866,7 @@ class OperatorEx implements DelegatingPlugin {
         return target
     }
 
-
+    @Deprecated
     DataflowWriteChannel spread( final DataflowReadChannel source, Object other ) {
 
         final target = CH.create()

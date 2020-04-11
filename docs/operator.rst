@@ -433,6 +433,9 @@ as shown below::
 groupBy
 ----------
 
+.. warning::
+    This operator is deprecated. Use the `groupTuple`_ operator instead.
+
 The ``groupBy`` operator collects the values emitted by the source channel grouping them together using a `mapping`
 function that associates each item with a key. When finished, it emits an associative
 array that maps each key to the set of items identified by that key.  
@@ -1169,6 +1172,9 @@ remainder       When ``false`` incomplete tuples (i.e. with less than `size` gro
 merge
 --------
 
+.. warning::
+    This operator is deprecated and it will be removed in upcoming release.
+
 The ``merge`` operator lets you join items emitted by two (or more) channels into a new channel.
 
 For example the following code merges two channels together, one which emits a series of odd integers
@@ -1572,8 +1578,7 @@ The forking operators are:
 branch
 ------
 
-.. warning:: This is an experimental operator. Syntax and behavior may change.
-  Required version `19.08.0-edge` or later.
+.. note:: Requires Nextflow version ``19.08.0-edge`` or later.
 
 The ``branch`` operator allows you to forward the items emitted by a source channel to one
 or more output channels, `choosing` one out of them at a time.
@@ -1686,8 +1691,7 @@ See also `branch`_ operator.
 multiMap
 --------
 
-.. note:: This is an experimental operator. Syntax and behavior may change.
-  Required version `19.11.0-edge` or later.
+.. note:: Requires Nextflow version ``19.11.0-edge`` or later.
 
 The multiMap operator allows you to forward the items emitted by a source channel to two
 or more output channels mapping each input value as a separate element.
