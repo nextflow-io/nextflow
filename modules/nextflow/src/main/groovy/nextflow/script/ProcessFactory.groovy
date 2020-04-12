@@ -83,24 +83,8 @@ class ProcessFactory {
         assert body
         assert config.process instanceof Map
 
-        /*
-         * check if exists 'attributes' defined in the 'process' scope for this process, e.g.
-         *
-         * process.$name.attribute1 = xxx
-         * process.$name.attribute2 = yyy
-         *
-         * NOTE: THIS HAS BEEN DEPRECATED AND WILL BE REMOVED
-         */
-        Map legacySettings = null
-        if( config.process['$'+name] instanceof Map ) {
-            legacySettings = (Map)config.process['$'+name]
-            log.warn "Process configuration syntax \$processName has been deprecated -- Replace `process.\$$name = <value>` with a process selector"
-        }
-
         // -- the config object
         final processConfig = new ProcessConfig(owner, name)
-                                .setLegacySettings(legacySettings)
-
         // Invoke the code block which will return the script closure to the executed.
         // As side effect will set all the property declarations in the 'taskConfig' object.
         processConfig.throwExceptionOnMissingProperty(true)

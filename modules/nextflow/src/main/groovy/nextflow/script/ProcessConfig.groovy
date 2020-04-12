@@ -142,8 +142,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      */
     private outputs = new OutputsList()
 
-    private Map legacySettings
-
     /**
      * Initialize the taskConfig object with the defaults values
      *
@@ -184,11 +182,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     @PackageScope
     ProcessConfig setProcessName( String name ) {
         this.processName = name
-        return this
-    }
-
-    ProcessConfig setLegacySettings( Map map ) {
-        this.legacySettings = map
         return this
     }
 
@@ -379,12 +372,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         if( fullyQualifiedName && (fullyQualifiedName!=simpleName || fullyQualifiedName!=baseName) )
             this.applyConfigSelector(configProcessScope, "withName:", fullyQualifiedName)
 
-        // -- Apply process specific setting defined using `process.$name` syntax
-        //    NOTE: this is deprecated and will be removed
-        if( legacySettings ) {
-            this.applyConfigSettings(legacySettings)
-        }
-
         // -- Apply defaults
         this.applyConfigDefaults(configProcessScope)
 
@@ -411,9 +398,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             return
 
         for( Entry<String,?> entry: settings ) {
-            if( entry.key.startsWith('$'))
-                continue
-
             if( entry.key.startsWith("withLabel:") || entry.key.startsWith("withName:"))
                 continue
 
