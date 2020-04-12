@@ -15,6 +15,7 @@
  */
 
 package nextflow.cli
+
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -76,7 +77,7 @@ class CmdConfig extends CmdBase {
         if( printProperties && printFlatten )
             throw new AbortOperationException("Option `-flat` and `-properties` conflicts")
 
-        def config = new ConfigBuilder()
+        final config = new ConfigBuilder()
                 .setShowClosures(true)
                 .setOptions(launcher.options)
                 .setBaseDir(base)
@@ -148,8 +149,8 @@ class CmdConfig extends CmdBase {
             return file.parent ?: Paths.get('/')
         }
 
-        def manager = new AssetManager(path)
-        manager.isLocal() ? manager.localPath.toPath() : null
+        final manager = new AssetManager(path)
+        manager.isLocal() ? manager.localPath.toPath() : manager.configFile?.parent
 
     }
 

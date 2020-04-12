@@ -80,7 +80,7 @@ abstract class CascadingConfig<K,V> {
 
     protected Map<String,Object> copyPublicAttributes() {
         def skip = privateFields()
-        def copy = [:]
+        def copy = new LinkedHashMap()
         this.config.each { k,v -> if(!skip.contains(k)) copy[k]=v }
         return copy
     }
