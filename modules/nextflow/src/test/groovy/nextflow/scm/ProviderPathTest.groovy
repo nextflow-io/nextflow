@@ -70,4 +70,30 @@ class ProviderPathTest extends Specification {
         str == URI
     }
 
+
+    def 'should return parent' () {
+        given:
+        def provider = Mock(RepositoryProvider) {
+            getRepositoryUrl() >> 'https://github.com/nf-core/sarek'
+        }
+        def path = new ProviderPath(provider, 'some/dir/nextflow.config')
+
+        expect:
+        path.parent.equals( new ProviderPath(provider, 'some/dir') )
+        path.parent.parent.equals( new ProviderPath(provider, 'some') )
+        path.parent.parent.parent.equals( new ProviderPath(provider, '') )
+    }
+
+    def 'should check helper methods' () {
+        given:
+        def provider = Mock(RepositoryProvider) {
+            getRepositoryUrl() >> 'https://github.com/nf-core/sarek'
+        }
+        def path = new ProviderPath(provider, 'some/dir/nextflow.config')
+
+        expect:
+        path.isAbsolute() 
+        path.toAbsolutePath().equals(path)
+        path.normalize().equals(path)
+    }
 }
