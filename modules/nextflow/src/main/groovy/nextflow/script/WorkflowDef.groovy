@@ -244,7 +244,7 @@ class WorkflowParamsResolver implements GroovyInterceptable {
         }
 
         else
-            throw new IllegalArgumentException("Unknown workflow parameter definition: $name")
+            throw new MissingMethodException(name, WorkflowDef, args)
 
     }
 
