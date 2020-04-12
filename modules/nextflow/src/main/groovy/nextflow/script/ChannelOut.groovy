@@ -103,4 +103,16 @@ class ChannelOut implements List<DataflowWriteChannel> {
     static List spread(List args) {
         spread(args as Object[])
     }
+
+    static Object[] spreadToArray(Object[] args) {
+        if(!args)
+            return args
+        // check if needed
+        boolean found=false
+        for( short i=0; i<args.length && !found; i++)
+            found = args[i] instanceof ChannelOut
+        if(!found)
+            return args
+        spread(args).toArray()
+    }
 }

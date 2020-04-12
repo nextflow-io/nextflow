@@ -47,6 +47,24 @@ class ChannelOutTest extends Specification {
             == ['a', 'b', 'p', 'q', 'x', 'y', 'z']
     }
 
+    def 'should check spread as array' () {
+        given:
+        def out1 = new ChannelOut( ['a', 'b'] )
+        def out2 = new ChannelOut( ['x', 'y', 'z'])
+        and:
+        def ARGS1 = [1, 2, 3] as Object[]
+        def ARGS2 = [out1] as Object[]
+        def ARGS3 = [out1, 'p', 'q', out2] as Object[]
+
+        expect:
+        ChannelOut.spreadToArray(ARGS1) == ARGS1
+        ChannelOut.spreadToArray(ARGS1).is(ARGS1)
+        and:
+        ChannelOut.spreadToArray(ARGS2) == ['a', 'b'] as Object[]
+        and:
+        ChannelOut.spreadToArray(ARGS3) == ['a', 'b', 'p', 'q', 'x', 'y', 'z'] as Object[]
+    }
+
     def 'should create with outputs list' () {
         given:
         def ch1 = Mock(DataflowWriteChannel)
