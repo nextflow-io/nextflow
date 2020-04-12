@@ -521,11 +521,11 @@ class LoggerHelper {
         def hasLeftTarget = !WorkflowBinding.isAssignableFrom(type) && !BaseScript.isAssignableFrom(type)
         def found = type.getMethods().find { it.name == name }
         if( found ) {
-            msg = "Invalid method `$name` invocation with arguments: $right"
+            msg = "Invalid method invocation `$name` with arguments: $right"
             if( hasLeftTarget ) msg += " on $left"
         }
         else {
-            msg = "Unknown method `$name`"
+            msg = "Unknown method invocation `$name`"
             if( hasLeftTarget ) msg += " on $left"
             def tips = type.getMethods().collect { it.name }.closest(name)
             if( tips )
