@@ -108,10 +108,10 @@ class NextflowDSLImpl implements ASTTransformation {
     static class DslCodeVisitor extends ClassCodeVisitorSupport {
 
         @Deprecated final static String WORKFLOW_GET = 'get'
+        @Deprecated final static String WORKFLOW_PUBLISH = 'publish'
         final static String WORKFLOW_TAKE = 'take'
         final static String WORKFLOW_EMIT = 'emit'
         final static String WORKFLOW_MAIN = 'main'
-        @Deprecated final static String WORKFLOW_PUBLISH = 'publish'
 
         final static Random RND = new Random()
 
@@ -415,10 +415,6 @@ class NextflowDSLImpl implements ASTTransformation {
                 return createAssignX(stat, body, type, uniqueNames)
             }
 
-            if( type == WORKFLOW_PUBLISH ) {
-                return createAssignX(stat, body, type, uniqueNames)
-            }
-
             syntaxError(stat, "Workflow malformed parameter definition")
             return stat
         }
@@ -509,9 +505,7 @@ class NextflowDSLImpl implements ASTTransformation {
                         syntaxError(stm, "Workflow 'get' is not supported anymore use 'take' instead")
 
                     case WORKFLOW_PUBLISH:
-                        if( !anonymous ) {
-                            syntaxError(stm, "Publish declaration is only allowed in main workflow definition")
-                        }
+                        syntaxError(stm, "Workflow 'publish' is not supported anymore use process 'publishDir' instead")
 
                     case WORKFLOW_TAKE:
                     case WORKFLOW_EMIT:

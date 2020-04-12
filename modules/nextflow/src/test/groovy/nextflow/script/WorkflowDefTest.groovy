@@ -183,12 +183,8 @@ class WorkflowDefTest extends Dsl2Spec {
 
         when:
         def script = (TestScript)new GroovyShell(new ScriptBinding(), config).parse(SCRIPT).run()
-        def meta = ScriptMeta.get(script)
         then:
-        meta.definitions.size() == 1
-        meta.getWorkflow(null) .declaredInputs == []
-        meta.getWorkflow(null) .declaredVariables == ['baz.out', 'x', '$out0']
-        meta.getWorkflow(null) .getDeclaredPublish() == [foo: [:], bar: [to:'some/path'], '$out0': [to:'other/path']]
+        thrown(MultipleCompilationErrorsException)
     }
 
     def 'should not allow publish is sub-workflow' () {

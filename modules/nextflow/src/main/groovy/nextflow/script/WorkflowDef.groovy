@@ -23,8 +23,6 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.exception.MissingValueException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
-import nextflow.extension.PublishOp
-
 /**
  * Models a script workflow component
  *
@@ -41,8 +39,6 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
     private List<String> declaredInputs
 
     private List<String> declaredOutputs
-
-    private Map<String,Map> declaredPublish
 
     private Set<String> variableNames
 
@@ -67,7 +63,6 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
         // now it can access the parameters
         this.declaredInputs = new ArrayList<>(resolver.getTakes().keySet())
         this.declaredOutputs = new ArrayList<>(resolver.getEmits().keySet())
-        this.declaredPublish = new LinkedHashMap<>(resolver.getPublish())
         this.variableNames = getVarNames0()
     }
 
@@ -164,29 +159,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
         }
         return new ChannelOut(channels)
     }
-
-    protected publishOutputs(Map<String,Map> publishDefs) {
-        for( Map.Entry<String,Map> pub : publishDefs.entrySet() ) {
-            final name = pub.key
-            final opts = pub.value
-            if( !binding.hasVariable(name) )
-                throw new MissingValueException("Missing workflow publish parameter: $name")
-            final obj = binding.getVariable(name)
-
-            if( CH.isChannel(obj) ) {
-                new PublishOp(CH.getReadChannel(obj), opts).apply()
-            }
-
-            else if( obj instanceof ChannelOut ) {
-                for( DataflowWriteChannel ch : ((ChannelOut)obj) ) {
-                    new PublishOp(CH.getReadChannel(ch), opts).apply()
-                }
-            }
-
-            else throw new IllegalArgumentException("Illegal workflow publish parameter: $name value: $obj")
-        }
-    }
-
+    
 
     Object run(Object[] args) {
         binding = new WorkflowBinding(owner)
@@ -208,7 +181,6 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
         closure.call()
         // collect the workflow outputs
         output = collectOutputs(declaredOutputs)
-        publishOutputs(declaredPublish)
         return output
     }
 
@@ -223,12 +195,10 @@ class WorkflowParamsResolver implements GroovyInterceptable {
 
     static final private String TAKE_PREFIX = '_take_'
     static final private String EMIT_PREFIX = '_emit_'
-    @Deprecated static final private String PUBLISH_PREFIX = '_publish_'
 
 
     Map<String,Object> takes = new LinkedHashMap<>(10)
     Map<String,Object> emits = new LinkedHashMap<>(10)
-    Map<String,Map> publish = new LinkedHashMap<>(10)
 
     @Override
     def invokeMethod(String name, Object args) {
@@ -238,14 +208,8 @@ class WorkflowParamsResolver implements GroovyInterceptable {
         else if( name.startsWith(EMIT_PREFIX) )
             emits.put(name.substring(EMIT_PREFIX.size()), args)
 
-        else if( name.startsWith(PUBLISH_PREFIX)) {
-            log.warn1 "Workflow `publish` is deprecated -- Use process directive `publishDir` instead"
-            publish.put(name.substring(PUBLISH_PREFIX.size()), argToPublishOpts(args))
-        }
-
         else
             throw new MissingMethodException(name, WorkflowDef, args)
-
     }
 
     private Map argsToMap(Object args) {
