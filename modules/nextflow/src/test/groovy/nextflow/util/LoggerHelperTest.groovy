@@ -142,9 +142,9 @@ class LoggerHelperTest extends Specification {
 
         where:
         CLAZZ           | METHOD        | MSG
-        ScriptBinding   | 'printx'      | 'Unknown method `printx`'
-        BaseScript      | 'printq'      | 'Unknown method `printq` -- Did you mean?\n  print\n  printf'
-        DataflowQueue   | 'view'        | 'Unknown method `view` on channel type'
+        ScriptBinding   | 'printx'      | 'Unknown method invocation `printx`'
+        BaseScript      | 'printq'      | 'Unknown method invocation `printq` -- Did you mean?\n  print\n  printf'
+        DataflowQueue   | 'view'        | 'Unknown method invocation `view` on channel type'
     }
 
     @Unroll
