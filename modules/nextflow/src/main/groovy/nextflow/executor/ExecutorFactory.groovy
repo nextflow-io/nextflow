@@ -80,6 +80,14 @@ class ExecutorFactory {
         }
     }
 
+    String getDisplayName(String key) {
+        final clazz = executorsMap.get(key)
+        if( !clazz ) return key
+        final exec = this.executors.get(clazz)
+        if( !exec ) return key
+        exec.getDisplayName() ?: key
+    }
+
     /**
      * Extract the executor name by using the annotation {@code ServiceName} or fallback to simple classname
      * if the annotation is not provided
