@@ -1,5 +1,34 @@
 NEXTFLOW CHANGE-LOG
 ===================
+20.04.0-edge - 13 Mar 2020
+- Add SGE hr status handling (#1558) [f4db0049]
+- Add moduleDir, projectDir and launchDir vars [7832a697] [576a5694]
+- Add executor display name rendering [74c90ca9]
+- Add ability to pipe custom fun [DSL2] [80bb6485]
+- Add Aws Batch container image validation [e73951fa]
+- Recognizes more UGE states (#1536) [4dacebbf]
+- Prevent invalid process tag values [f2da1357]
+- Report Tower backend error cause on failure [da8ac8f5]
+- Fix Config cmd should resolve remote projects #889 [c2e0ac0b]
+- Fix issue applying branch/multiMap to value channel [e69f39fa]
+- Fix Kill signal is not propagated for Singularity container #1561
+- Fix docs typos [d7261d2e]
+- Fix Minor docs update #1545 
+- Revert "Bump jline 2.14.9" [ef7040cb]
+- Deprecate validExitStatus directive #1564
+- Improve error message [DSL2] [f8a0ee1c]
+- Add sluper parse method for Path [a54fd03d]
+- Report error message when accessing invalid out #1553 [83bd009c]
+- Remove deprecated $ config syntax [0a31f9df]
+- Remove deprecated workflow publish [DSL2] [1bd7b4a4]
+- Remove support for workflow 'get' [d9b91149]
+- Remove deprecated process output getter [013a323b]
+- Remove deprecated out cardinal getters [414fae94]
+- Remove deprecated gpu directive [f48b2c24]
+- Minor executor logging [7f94299b]
+- Minor improvement createDirIfNotExists API [34211675]
+- Bump groovy 2.5.11 
+
 20.03.0-edge - 28 Mar 2020
 - Add support for GLS private addr #1545 [a481b42b]
 - Add AWS batch job def normalise function [79239f05]
