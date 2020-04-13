@@ -16,9 +16,6 @@
 
 package nextflow.trace
 
-import static nextflow.util.LoggerHelper.*
-import static org.fusesource.jansi.Ansi.*
-
 import groovy.transform.CompileStatic
 import jline.TerminalFactory
 import nextflow.Session
@@ -26,6 +23,10 @@ import nextflow.processor.TaskHandler
 import nextflow.util.Duration
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
+import static nextflow.util.LoggerHelper.isHashLogPrefix
+import static org.fusesource.jansi.Ansi.Attribute
+import static org.fusesource.jansi.Ansi.Color
+import static org.fusesource.jansi.Ansi.ansi
 /**
  * Implements an observer which display workflow
  * execution progress and notifications using
@@ -207,12 +208,16 @@ class AnsiLogObserver implements TraceObserver {
         }
     }
 
+    protected String getExecutorName(String key) {
+        session.getExecutorFactory().getDisplayName(key)
+    }
+    
     protected void renderExecutors(Ansi term) {
         int count=0
         def line = ''
         for( Map.Entry<String,Integer> entry : executors ) {
             if( count++ ) line += ","
-            line += " $entry.key ($entry.value)"
+            line += " ${getExecutorName(entry.key)} ($entry.value)"
         }
 
         if( count ) {
