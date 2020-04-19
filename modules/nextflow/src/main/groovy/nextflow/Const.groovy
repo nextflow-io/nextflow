@@ -52,17 +52,17 @@ class Const {
     /**
      * The application version
      */
-    static public final String APP_VER = "20.04.0-edge"
+    static public final String APP_VER = "20.04.1-edge"
 
     /**
      * The app build time as linux/unix timestamp
      */
-    static public final long APP_TIMESTAMP = 1586809116833
+    static public final long APP_TIMESTAMP = 1587316425933
 
     /**
      * The app build number
      */
-    static public final int APP_BUILDNUM = 5330
+    static public final int APP_BUILDNUM = 5333
 
 
     /**
