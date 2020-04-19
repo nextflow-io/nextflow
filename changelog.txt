@@ -1,6 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
-20.04.0-edge - 13 Mar 2020
+20.04.1-edge - 19 Apr 2020
+- Fix AWS auth with temporary security token [6a7b11b8]
+
+20.04.0-edge - 13 Apr 2020
 - Add SGE hr status handling (#1558) [f4db0049]
 - Add moduleDir, projectDir and launchDir vars [7832a697] [576a5694]
 - Add executor display name rendering [74c90ca9]
