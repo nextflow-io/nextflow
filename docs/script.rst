@@ -450,7 +450,7 @@ checkIfExists   When ``true`` throws an exception of the specified path do not e
 
 
 .. tip:: If you are a Java geek you will be interested to know that the ``file`` method returns a
-  `Path <http://docs.oracle.com/javase/7/docs/api/java/nio/file/Path.html>`_ object, which allows
+  `Path <http://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html>`_ object, which allows
   you to use the usual methods you would in a Java program.
 
 See also: :ref:`Channel.fromPath <channel-path>`.
@@ -831,6 +831,11 @@ For example, the following line prints a file name and size::
 
   println "File ${myFile.getName() size: ${myFile.size()}"
 
+
+.. tip:: The invocation of any method name starting with the ``get`` prefix can be shortcut
+    omitting the `get` prefix and ending ``()`` parentheses. Therefore writing ``myFile.getName()``
+    is exactly the same of ``myFile.name`` and ``myFile.getBaseName()`` is the same of ``myFile.baseName``
+    and so on.
 
 
 Get and modify file permissions
