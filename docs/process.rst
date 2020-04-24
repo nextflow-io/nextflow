@@ -1336,12 +1336,12 @@ e.g. *GPU* processor. For example::
 The above examples will request 4 GPUs of type `nvidia-tesla-k80`.
 
 
-.. note:: This directive is only supported by :ref:`awsbatch-executor`, :ref:`google-pipelines-executor` and :ref:`k8s-executor` executors.
+.. note:: This directive is only supported by :ref:`awsbatch-executor`, :ref:`google-lifesciences-executor` and :ref:`k8s-executor` executors.
 
-.. tip:: The accelerator ``type`` option value depends by the target execution platform. Refers to the target
-  platform documentation for details on the `available <https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_>`_
-  `accelerator <https://cloud.google.com/compute/docs/gpus/>`_
-  `types <https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/#clusters-containing-different-types-of-gpus>`_.
+.. tip:: The accelerator ``type`` option value depends by the target execution platform. Refer to the target
+  platform documentation for details on the available accelerators. `AWS <https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_>`_
+  `Google <https://cloud.google.com/compute/docs/gpus/>`_
+  `Kubernetes <https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/#clusters-containing-different-types-of-gpus>`_.
 
 
 afterScript
