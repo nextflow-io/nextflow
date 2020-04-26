@@ -42,6 +42,8 @@ dependencies {
     compile ('com.amazonaws:aws-java-sdk-batch:1.11.542')
     compile ('com.amazonaws:aws-java-sdk-iam:1.11.542')
     compile ('com.amazonaws:aws-java-sdk-ecs:1.11.542')
+    implementation platform('software.amazon.awssdk:bom:2.13.3')
+    implementation 'software.amazon.awssdk:codecommit'
     compile ('javax.activation:activation:1.1.1')
     compile ('javax.mail:mail:1.4.7')
     compile ('org.yaml:snakeyaml:1.18')
