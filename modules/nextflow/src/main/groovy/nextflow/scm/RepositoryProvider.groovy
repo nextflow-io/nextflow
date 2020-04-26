@@ -21,6 +21,9 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
+
+import org.eclipse.jgit.transport.CredentialsProvider
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 /**
  *
  * Base class for a generic source repository provider
@@ -86,6 +89,14 @@ abstract class RepositoryProvider {
      * @return The project home page e.g. https://github.com/nextflow-io/hello
      */
     abstract String getRepositoryUrl()
+
+    /**
+     * @return a org.eclipse.jgit.transport.CredentialsProvider object for authenticating git operations
+     * like clone, fetch, pull, and update
+     **/
+    protected CredentialsProvider getGitCredentials() {
+        return new UsernamePasswordCredentialsProvider(getUser(), getPassword())
+    }
 
     /**
      * Invoke the API request specified

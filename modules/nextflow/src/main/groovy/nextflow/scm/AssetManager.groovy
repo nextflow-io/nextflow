@@ -41,7 +41,6 @@ import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.lib.Repository
-import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 import static nextflow.Const.DEFAULT_HUB
 import static nextflow.Const.DEFAULT_MAIN_FILE_NAME
 import static nextflow.Const.DEFAULT_ORGANIZATION
@@ -54,6 +53,7 @@ import static nextflow.Const.MANIFEST_FILE_NAME
  */
 
 @Slf4j
+@CompileStatic
 class AssetManager {
 
     /**
@@ -581,11 +581,8 @@ class AssetManager {
 
             // clone it
             def clone = Git.cloneRepository()
-            if( provider.name == "CodeCommit" ) 
-                clone.setCredentialsProvider( provider.getAwsCodeCommitCredentialProvider() )
-
             if( provider.hasCredentials() )
-                clone.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
+                clone.setCredentialsProvider( provider.getGitCredentials() )
 
             if( revision ) {
                 clone.setBranch(revision)
@@ -636,11 +633,8 @@ class AssetManager {
             pull.setRemoteBranchName( "refs/tags/" + revInfo.name )
         }
 
-        if( provider.name == "CodeCommit" ) 
-            pull.setCredentialsProvider( provider.getAwsCodeCommitCredentialProvider() )
-
         if( provider.hasCredentials() )
-            pull.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password))
+            pull.setCredentialsProvider( provider.getGitCredentials())
 
         def result = pull.call()
         if(!result.isSuccessful())
@@ -668,11 +662,8 @@ class AssetManager {
         clone.setURI(uri)
         clone.setDirectory(directory)
         
-        if( provider.name == "CodeCommit" )
-            clone.setCredentialsProvider( provider.getAwsCodeCommitCredentialProvider() )
-
         if( provider.hasCredentials() )
-            clone.setCredentialsProvider(new UsernamePasswordCredentialsProvider(provider.user, provider.password))
+            clone.setCredentialsProvider(provider.getGitCredentials())
 
         if( revision )
             clone.setBranch(revision)
@@ -917,11 +908,8 @@ class AssetManager {
 
         try {
             def fetch = git.fetch()
-            if( provider.name == "CodeCommit" ) 
-                fetch.setCredentialsProvider( provider.getAwsCodeCommitCredentialProvider() )
-
             if(provider.hasCredentials()) {
-                fetch.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
+                fetch.setCredentialsProvider( provider.getGitCredentials() )
             }
             fetch.call()
             git.checkout()
@@ -965,11 +953,8 @@ class AssetManager {
         // call submodule init
         init.call()
         // call submodule update
-        if( provider.name == "CodeCommit" ) 
-            update.setCredentialsProvider( provider.getAwsCodeCommitCredentialProvider() )
-
         if( provider.hasCredentials() )
-            update.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
+            update.setCredentialsProvider( provider.getGitCredentials() )
         def updatedList = update.call()
         log.debug "Update submodules $updatedList"
     }

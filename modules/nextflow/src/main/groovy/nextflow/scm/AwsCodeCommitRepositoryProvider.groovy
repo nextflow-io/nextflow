@@ -15,6 +15,8 @@ import software.amazon.awssdk.services.codecommit.model.RepositoryMetadata
 
 import org.springframework.cloud.config.server.support.AwsCodeCommitCredentialProvider
 
+import org.eclipse.jgit.transport.CredentialsProvider
+
 /**
  * Implements a repository provider for AWS CodeCommit
  *
@@ -41,7 +43,9 @@ final class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     private String repositoryName
     private RepositoryMetadata repositoryMetadata
 
-    AwsCodeCommitCredentialProvider getAwsCodeCommitCredentialProvider() {
+    /** {@inheritDoc} **/
+    @Override
+    protected CredentialsProvider getGitCredentials() {
         def provider = new AwsCodeCommitCredentialProvider()
         provider.setAwsCredentialProvider( driver.getCredentialsProvider0() )
         return provider
@@ -94,10 +98,10 @@ final class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     // used to set credentials for a clone, pull, fetch, operation
     @Override
     boolean hasCredentials() {
-        // set to false
-        // use AWS Credentials instead of username : password
-        // see getAwsCodeCommitCredentialProvider()
-        return false
+        // set to true
+        // uses AWS Credentials instead of username : password
+        // see getGitCredentials()
+        return true
     }
 
     /** {@inheritDoc} **/
