@@ -128,7 +128,7 @@ class PodSpecBuilderTest extends Specification {
                            namespace:'xyz',
                            labels: [
                                    app: 'myApp',
-                                   runName: 'something'
+                                   runName: 'something',
                                    tag: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggend'
                            ],
                            annotations: [
