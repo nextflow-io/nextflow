@@ -24,12 +24,15 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.executor.res.AcceleratorResource
 import nextflow.util.MemoryUnit
+import groovy.util.logging.Slf4j
+
 /**
  * Object build for a K8s pod specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
+@Slf4j
 class PodSpecBuilder {
 
     static @PackageScope AtomicInteger VOLUMES = new AtomicInteger()
@@ -236,10 +239,24 @@ class PodSpecBuilder {
             volumeClaims.addAll( opts.getVolumeClaims() )
         // -- labels
         if( opts.labels ) {
-            def keys = opts.labels.keySet()
-            if( 'app' in keys ) throw new IllegalArgumentException("Invalid pod label -- `app` is a reserved label")
-            if( 'runName' in keys ) throw new IllegalArgumentException("Invalid pod label -- `runName` is a reserved label")
-            labels.putAll( opts.labels )
+            for( Map.Entry<String,String> entry : opts.labels ) {
+                if( !entry.key || !entry.value ) {
+                    log.debug "K8s invalid label entry=$entry"  
+                }
+                else if( entry.key == 'app' ){
+                     throw new IllegalArgumentException("Invalid pod label -- `app` is a reserved label")
+                }
+                else if( entry.key == 'runName' ){
+                     throw new IllegalArgumentException("Invalid pod label -- `runName` is a reserved label")
+                }
+                else if( entry.value.size() > 63 ) {
+                    log.debug "K8s label exceeds allowed size: 63 -- offending entry=$entry"  
+                    labels.put(entry.key, entry.value.substring(0,63))   
+                }
+                else {
+                    labels.put(entry.key, entry.value)    
+                }
+            } 
         }
         // - annotations
         if( opts.annotations ) {
