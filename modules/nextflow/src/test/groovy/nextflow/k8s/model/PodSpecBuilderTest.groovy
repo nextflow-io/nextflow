@@ -116,6 +116,7 @@ class PodSpecBuilderTest extends Specification {
                 .withLabel('app','myApp')
                 .withLabel('runName','something')
                 .withLabel('tag','somethingreallylonggggggggggggggggggggggggggggggggggggggggggendEXTRABIT')
+                .withLabels([tag2: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggendEXTRABIT', tag3: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggendEXTRABIT'])
                 .withAnnotation("anno1", "value1")
                 .withAnnotations([anno2: "value2", anno3: "value3"])
                 .build()
@@ -129,7 +130,9 @@ class PodSpecBuilderTest extends Specification {
                            labels: [
                                    app: 'myApp',
                                    runName: 'something',
-                                   tag: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggend'
+                                   tag: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggend',
+                                   tag2: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggend',
+                                   tag3: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggend'
                            ],
                            annotations: [
                                    anno1: "value1",
