@@ -149,12 +149,12 @@ class PodSpecBuilder {
     }
 
     PodSpecBuilder withLabel( String name, String value ) {
-        this.labels.put(name, value)
+        this.labels.put(name, normalizeLabel(name, value))
         return this
     }
 
     PodSpecBuilder withLabels(Map labels) {
-        this.labels.putAll(labels)
+        this.labels.putAll(normalizeLabels(labels)) 
         return this
     }
 
@@ -219,6 +219,24 @@ class PodSpecBuilder {
         return this
     }
 
+    String normalizeLabel( String name, String value ) {
+        if( !name || !value ) {
+            log.debug "K8s invalid label name=$name value=$value"  
+        }
+        else if( value.size() > 63 ) {
+            log.debug "K8s label exceeds allowed size: 63 -- offending name=$name value=$value"  
+            value=value.substring(0,63)   
+        }
+        return value
+    }
+    
+    Map<String, String> normalizeLabels(Map<String, String> labels) {
+        for( Map.Entry<String,String> entry : labels ) {
+            labels.put(entry.key, normalizeLabel(entry.key, entry.value))
+        }
+        return labels
+    }
+
     PodSpecBuilder withPodOptions(PodOptions opts) {
         // -- pull policy
         if( opts.imagePullPolicy )
@@ -239,24 +257,10 @@ class PodSpecBuilder {
             volumeClaims.addAll( opts.getVolumeClaims() )
         // -- labels
         if( opts.labels ) {
-            for( Map.Entry<String,String> entry : opts.labels ) {
-                if( !entry.key || !entry.value ) {
-                    log.debug "K8s invalid label entry=$entry"  
-                }
-                else if( entry.key == 'app' ){
-                     throw new IllegalArgumentException("Invalid pod label -- `app` is a reserved label")
-                }
-                else if( entry.key == 'runName' ){
-                     throw new IllegalArgumentException("Invalid pod label -- `runName` is a reserved label")
-                }
-                else if( entry.value.size() > 63 ) {
-                    log.debug "K8s label exceeds allowed size: 63 -- offending entry=$entry"  
-                    labels.put(entry.key, entry.value.substring(0,63))   
-                }
-                else {
-                    labels.put(entry.key, entry.value)    
-                }
-            } 
+            def keys = opts.labels.keySet()
+            if( 'app' in keys ) throw new IllegalArgumentException("Invalid pod label -- `app` is a reserved label")
+            if( 'runName' in keys ) throw new IllegalArgumentException("Invalid pod label -- `runName` is a reserved label")
+            labels.putAll(normalizeLabels(opts.labels)) 
         }
         // - annotations
         if( opts.annotations ) {
