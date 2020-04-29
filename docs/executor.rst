@@ -334,9 +334,9 @@ To use this feature define the following variables in the workflow launching env
     export NXF_EXECUTOR_TES_ENDPOINT='http://back.end.com'
     
 
-Then you will be able to run your workflow over TES using the usual Nextflow command line, i.e.::
+Then you will be able to run your workflow over TES using the usual Nextflow command line. Be sure to specify the Docker image to use, i.e.::
 
-    nextflow run rnaseq-nf
+    nextflow run rnaseq-nf -with-docker alpine
 
 .. note:: If the variable ``NXF_EXECUTOR_TES_ENDPOINT`` is omitted the default endpoint is ``http://localhost:8000``.
 
