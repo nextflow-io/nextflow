@@ -21,11 +21,13 @@ import java.nio.file.Path
 
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.util.MemoryUnit
+
 /**
  * Helper class wrapping configuration required for Google Pipelines.
  *
@@ -55,6 +57,7 @@ class GoogleLifeSciencesConfig {
     Integer debugMode
     String copyImage
     boolean usePrivateAddress
+    boolean enableRequesterPaysBuckets
 
     @Deprecated
     GoogleLifeSciencesConfig(String project, List<String> zone, List<String> region, Path remoteBinDir = null, boolean preemptible = false) {
@@ -71,6 +74,7 @@ class GoogleLifeSciencesConfig {
 
     GoogleLifeSciencesConfig() {}
 
+    @Memoized
     static GoogleLifeSciencesConfig fromSession(Session session) {
         try {
             fromSession0(session.config)
@@ -110,6 +114,7 @@ class GoogleLifeSciencesConfig {
         final copyImage = config.navigate('google.lifeSciences.copyImage', DEFAULT_COPY_IMAGE) as String
         final debugMode = config.navigate('google.lifeSciences.debug', System.getenv('NXF_DEBUG'))
         final privateAddr  = config.navigate('google.lifeSciences.usePrivateAddress') as boolean
+        final requesterPays = config.navigate('google.enableRequesterPaysBuckets') as boolean
 
         def zones = (config.navigate("google.zone") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
         def regions = (config.navigate("google.region") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
@@ -127,7 +132,8 @@ class GoogleLifeSciencesConfig {
                 copyImage: copyImage,
                 sshDaemon: sshDaemon,
                 sshImage: sshImage,
-                usePrivateAddress: privateAddr )
+                usePrivateAddress: privateAddr,
+                enableRequesterPaysBuckets: requesterPays)
     }
 
     static private Integer debugMode0(value) {

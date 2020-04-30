@@ -228,4 +228,17 @@ class GoogleLifeSciencesConfigTest extends Specification {
         'foo'           | 'us-central1'
     }
 
+    def 'should set requester pays' () {
+        when:
+        def config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [:]]])
+        then:
+        config.enableRequesterPaysBuckets == false
+
+        when:
+        config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', enableRequesterPaysBuckets:true]])
+        then:
+        config.enableRequesterPaysBuckets == true
+
+    }
+
 }
