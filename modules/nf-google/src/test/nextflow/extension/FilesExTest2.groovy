@@ -22,6 +22,8 @@ import spock.lang.Unroll
 import java.nio.file.Path
 
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
+import nextflow.Global
+import nextflow.Session
 
 /**
  *
@@ -33,6 +35,9 @@ class FilesExTest2 extends Specification {
     def 'should return uri string for #PATH' () {
 
         when:
+        def sess = new Session()
+        sess.config = [google:[project:'foo', region:'x']]
+        Global.session = sess
         def path = PATH as Path
         then:
         path instanceof CloudStoragePath
