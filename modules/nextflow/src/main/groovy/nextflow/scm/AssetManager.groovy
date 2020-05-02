@@ -309,6 +309,15 @@ class AssetManager {
             }
         }
 
+        if ( repository.startsWith('codecommit:') ) {
+            // use git-remote-codecommit style project names for code commit
+            // codecommit:[region]://<repository-name>[/script.nf]
+            this.hub = 'codecommit'
+            log.debug "Repository URL: $repository; Project: $repository; Hub provder: $hub"
+
+            return repository
+        }
+
         return null
     }
 

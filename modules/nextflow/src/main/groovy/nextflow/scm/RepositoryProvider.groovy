@@ -236,6 +236,9 @@ abstract class RepositoryProvider {
 
             case 'gitea':
                 return new GiteaRepositoryProvider(project, config)
+            
+            case 'codecommit':
+                return new AwsCodeCommitRepositoryProvider(project, config)
 
             case 'file':
                 // remove the 'local' prefix for the file provider

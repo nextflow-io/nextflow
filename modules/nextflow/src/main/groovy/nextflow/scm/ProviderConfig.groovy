@@ -62,6 +62,11 @@ class ProviderConfig {
             case 'bitbucket':
                 attr.platform = name
                 if( !attr.server ) attr.server = 'https://bitbucket.org'
+                break
+            
+            case 'codecommit':
+                attr.platform = name
+                break
         }
 
         if( attr.path )
@@ -264,6 +269,9 @@ class ProviderConfig {
 
         if( !result.find{ it.name == 'bitbucket' })
             result << new ProviderConfig('bitbucket')
+        
+        if( !result.find{ it.name == 'codecommit' })
+            result << new ProviderConfig('codecommit')
     }
 
 }
