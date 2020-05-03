@@ -7,6 +7,8 @@ Amazon Cloud
 Nextflow provides out of the box support for the Amazon AWS cloud allowing you to setup a computing cluster,
 deploy it and run your pipeline in the AWS infrastructure in a few commands.
 
+.. warning::
+    This feature is deprecated in favour of the :ref:`awscloud-batch` executor.
 
 Configuration
 =============
@@ -268,7 +270,8 @@ Read :ref:`Cloud configuration<config-cloud>` section to learn more about advanc
 AWS Batch
 =========
 
-.. warning:: Requires Nextflow version `0.26.0` or later.
+.. note::
+    Requires Nextflow version `0.26.0` or later.
 
 `AWS Batch <https://aws.amazon.com/batch/>`_ is a managed computing service that allows the execution of containerised
 workloads in the Amazon cloud infrastructure.
