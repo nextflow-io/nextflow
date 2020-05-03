@@ -16,6 +16,8 @@
 
 package nextflow.ga4gh.tes.executor
 
+import nextflow.ga4gh.tes.client.model.TesFileType
+
 import static nextflow.processor.TaskStatus.COMPLETED
 import static nextflow.processor.TaskStatus.RUNNING
 
@@ -214,6 +216,7 @@ class TesTaskHandler extends TaskHandler {
         def result = new TesInput()
         result.url = realPath.toUriString()
         result.path = fileName ? "$WORK_DIR/$fileName" : "$WORK_DIR/${realPath.getName()}"
+        result.type = TesFileType.FILE
         log.trace "[TES] Adding INPUT file: $result"
         return result
     }
@@ -222,6 +225,7 @@ class TesTaskHandler extends TaskHandler {
         def result = new TesOutput()
         result.path = "$WORK_DIR/$fileName"
         result.url = task.workDir.resolve(fileName).toUriString()
+        result.type = TesFileType.FILE
         log.trace "[TES] Adding OUTPUT file: $result"
         return result
     }
