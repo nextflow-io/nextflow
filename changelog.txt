@@ -1,5 +1,23 @@
 NEXTFLOW CHANGE-LOG
 ===================
+20.04.1 - 3 May 2020 
+- Add executor display name rendering [41e12a86]
+- Add Aws Batch container image validation[e73951fa]
+- Add SGE hr status handling (#1558) [f4db0049]
+- Add Recognition for more UGE states (#1536) [4dacebbf]
+- Fix Prevent invalid process tag values [f2da1357]
+- Fix issue applying branch/multiMap to value channel [691963db]
+- Fix AWS auth with temporary security token [e445b5eb]
+- Fix Report Tower backend error cause on failure [da8ac8f5]
+- Fix Config cmd should resolve remote projects #889 [62d54ac6]
+- Fix for accelerator docs (#1578) e13f632d
+- Update cloud docs [509d9966]
+- Revert "Bump jline 2.14.9" [4078b860]
+- Add docs tip [a215947d]
+- Plus changes from 20.03.0-edge and 20.02.0-edge
+
+20.04.0 - 3 May 2020 (broken) 
+
 20.03.0-edge - 28 Mar 2020
 - Add support for GLS private addr #1545 [a481b42b]
 - Add AWS batch job def normalise function [79239f05]
