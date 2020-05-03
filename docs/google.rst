@@ -10,9 +10,11 @@ enabling the seamless deployment and execution of Nextflow pipelines over Google
 The execution can be done either deploying a Nextflow managed cluster using `Google Compute Engine <https://cloud.google.com/compute/>`_
 instances or via the `Genomics Pipelines <https://cloud.google.com/genomics/>`_ managed service.
 
-.. warning:: This is an experimental feature and it may change in a future release. It requires Nextflow
-  version ``19.01.0`` or later.
+.. note::
+    This feature requires Nextflow version 19.01.0 or later.
 
+.. warning::
+    This feature is deprecated in favour of :ref:`google-lifesciences` executor.
 
 Requirements
 ============
