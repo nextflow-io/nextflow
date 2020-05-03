@@ -1,5 +1,6 @@
 package nextflow.scm
 
+import nextflow.Global
 import nextflow.cloud.aws.AmazonCloudDriver
 import nextflow.exception.AbortOperationException
 
@@ -24,50 +25,60 @@ import software.amazon.awssdk.services.codecommit.model.RepositoryMetadata
 final class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
 
     AwsCodeCommitRepositoryProvider(String project, ProviderConfig config=null) {
+        this.driver = new AmazonCloudDriver()
+
         this.project = project  // expect: "codecommit:[region]://<repository>"
-        this.region = getRepositoryRegion()
         this.config = config ?: new ProviderConfig('codecommit')
-        this.driver = new AmazonCloudDriver(session.config)
+        this.region = getRepositoryRegion()
+        
         this.client = getClient()
+        this.repositoryName = getRepositoryName()
         this.repositoryMetadata = getRepositoryMetadata()
     }
 
-    final AmazonCloudDriver driver
+    private AmazonCloudDriver driver
     private Region region
     private CodeCommitClient client
+    private String repositoryName
     private RepositoryMetadata repositoryMetadata
 
     private String getRepositoryName() {
-        return project.replaceAll("codecommit:.*?//", "")
+        def name = project.replaceAll("codecommit:.*?//", "")
+        log.debug "project name: $name"
+        return name
     }
 
     private Region getRepositoryRegion() {
-        def region = null
-        def projectRegion = project.replaceAll("codecommit:[:]*", "").replaceAll("[:]*//.*", "")
+        def _region = driver.region
 
+        // use the repository region if specified
+        def projectRegion = project.replaceAll("codecommit:[:]*", "").replaceAll("[:]*//.*", "")
         if ( projectRegion != "" ) {
-            return Region.of(projectRegion)
+            _region = projectRegion
         }
+
+        log.debug "project region: $_region"
+        return Region.of( _region )
     }
 
     private CodeCommitClient getClient() {
 
         // aws codecommit repositories can be from different regions
 
-        builder = CodeCommitClient.builder()
+        def builder = CodeCommitClient.builder()
 
         if ( region ) {
             builder.region(region)
         }
 
-        if ( driver.getAccessKeyId() && driver.getSecretAccessKey() ) {
+        if ( driver.getAccessKey() && driver.getSecretKey() ) {
             // use use aws config scope for credentials
             if ( driver.getSessionToken() ) {
                 client = builder
                     .credentialsProvider(StaticCredentialsProvider.create(
                         AwsSessionCredentials.create(
-                            driver.getAccessKeyId(),
-                            driver.getSecretAccessKey(),
+                            driver.getAccessKey(),
+                            driver.getSecretKey(),
                             driver.getSessionToken()
                         )
                     ))
@@ -76,8 +87,8 @@ final class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
                 client = builder
                     .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create(
-                            driver.getAccessKeyId(),
-                            driver.getSecretAccessKey()
+                            driver.getAccessKey(),
+                            driver.getSecretKey()
                         )
                     ))
                     .build()
@@ -93,7 +104,11 @@ final class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     }
 
     private RepositoryMetadata getRepositoryMetadata() {
-        def response = client.getRepository(GetRepositoryRequest.builder().repositoryName(project).build())
+        def response = client.getRepository(
+            GetRepositoryRequest.builder()
+                .repositoryName( repositoryName )
+                .build()
+        )
         return response.repositoryMetadata()
     }
 
@@ -142,14 +157,13 @@ final class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     protected byte[] readBytes( String path ) {
         def response = client.getFile(
             GetFileRequest.builder()
-                .repositoryName(project)
+                .repositoryName( repositoryName )
                 .filePath(path)
                 .build()
         )
-        return response.fileContent()  // base-64 encoded
-            .toString()
-            .decodeBase64()
 
+        def contents = response.fileContent().asUtf8String()
+        return contents.bytes
     }
 
     /** {@inheritDoc} **/
