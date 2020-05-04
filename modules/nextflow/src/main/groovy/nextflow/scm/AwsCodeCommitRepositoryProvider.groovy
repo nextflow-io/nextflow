@@ -8,13 +8,12 @@ import groovy.util.logging.Slf4j
 import groovy.transform.CompileStatic
 
 import software.amazon.awssdk.regions.Region
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
-import software.amazon.awssdk.auth.credentials.AwsSessionCredentials
 import software.amazon.awssdk.services.codecommit.CodeCommitClient
 import software.amazon.awssdk.services.codecommit.model.GetRepositoryRequest
 import software.amazon.awssdk.services.codecommit.model.GetFileRequest
 import software.amazon.awssdk.services.codecommit.model.RepositoryMetadata
+
+import org.springframework.cloud.config.server.support.AwsCodeCommitCredentialProvider
 
 /**
  * Implements a repository provider for AWS CodeCommit
@@ -42,6 +41,12 @@ final class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     private String repositoryName
     private RepositoryMetadata repositoryMetadata
 
+    AwsCodeCommitCredentialProvider getAwsCodeCommitCredentialProvider() {
+        def provider = new AwsCodeCommitCredentialProvider()
+        provider.setAwsCredentialProvider( driver.getCredentialsProvider0() )
+        return provider
+    }
+
     private String getRepositoryName() {
         def name = project.replaceAll("codecommit:.*?//", "")
         log.debug "project name: $name"
@@ -63,44 +68,16 @@ final class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
 
     private CodeCommitClient getClient() {
 
-        // aws codecommit repositories can be from different regions
-
         def builder = CodeCommitClient.builder()
 
+        // aws codecommit repositories can be from different regions
         if ( region ) {
             builder.region(region)
         }
 
-        if ( driver.getAccessKey() && driver.getSecretKey() ) {
-            // use use aws config scope for credentials
-            if ( driver.getSessionToken() ) {
-                client = builder
-                    .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsSessionCredentials.create(
-                            driver.getAccessKey(),
-                            driver.getSecretKey(),
-                            driver.getSessionToken()
-                        )
-                    ))
-                    .build()
-            } else {
-                client = builder
-                    .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(
-                            driver.getAccessKey(),
-                            driver.getSecretKey()
-                        )
-                    ))
-                    .build()
-            }
-
-        } else {
-            // otherwise use the default credentials chain
-            // this is the recommended way to provide AWS credentials
-            client = builder.build()
-        }
-
-        return client
+        return builder
+            .credentialsProvider( driver.getCredentialsProvider0() )
+            .build()
     }
 
     private RepositoryMetadata getRepositoryMetadata() {
@@ -119,11 +96,9 @@ final class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     boolean hasCredentials() {
         // set to false
         // use AWS Credentials instead of username : password
+        // see getAwsCodeCommitCredentialProvider()
         return false
     }
-
-    // called by AssetManager
-    // RepositoryProvider setCredentials(String userName, String password)
 
     /** {@inheritDoc} **/
     @Override

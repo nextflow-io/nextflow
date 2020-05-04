@@ -54,7 +54,6 @@ import static nextflow.Const.MANIFEST_FILE_NAME
  */
 
 @Slf4j
-@CompileStatic
 class AssetManager {
 
     /**
@@ -582,6 +581,9 @@ class AssetManager {
 
             // clone it
             def clone = Git.cloneRepository()
+            if( provider.name == "CodeCommit" ) 
+                clone.setCredentialsProvider( provider.getAwsCodeCommitCredentialProvider() )
+
             if( provider.hasCredentials() )
                 clone.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
 
@@ -634,6 +636,9 @@ class AssetManager {
             pull.setRemoteBranchName( "refs/tags/" + revInfo.name )
         }
 
+        if( provider.name == "CodeCommit" ) 
+            pull.setCredentialsProvider( provider.getAwsCodeCommitCredentialProvider() )
+
         if( provider.hasCredentials() )
             pull.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password))
 
@@ -662,6 +667,10 @@ class AssetManager {
 
         clone.setURI(uri)
         clone.setDirectory(directory)
+        
+        if( provider.name == "CodeCommit" )
+            clone.setCredentialsProvider( provider.getAwsCodeCommitCredentialProvider() )
+
         if( provider.hasCredentials() )
             clone.setCredentialsProvider(new UsernamePasswordCredentialsProvider(provider.user, provider.password))
 
@@ -908,6 +917,9 @@ class AssetManager {
 
         try {
             def fetch = git.fetch()
+            if( provider.name == "CodeCommit" ) 
+                fetch.setCredentialsProvider( provider.getAwsCodeCommitCredentialProvider() )
+
             if(provider.hasCredentials()) {
                 fetch.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
             }
@@ -953,6 +965,9 @@ class AssetManager {
         // call submodule init
         init.call()
         // call submodule update
+        if( provider.name == "CodeCommit" ) 
+            update.setCredentialsProvider( provider.getAwsCodeCommitCredentialProvider() )
+
         if( provider.hasCredentials() )
             update.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
         def updatedList = update.call()
@@ -1046,6 +1061,10 @@ class AssetManager {
                             ? "Can't find git repository remote host -- Check config file at path: $localGitConfig"
                             : "Can't find git repository config file -- Repository may be corrupted: $localPath" )
             throw new AbortOperationException(message)
+        }
+
+        if ( domain.matches("git-codecommit\\..*?\\.amazonaws\\.com") ) {
+            return "codecommit"
         }
 
         final result = providerConfigs.find { it -> it.domain == domain }

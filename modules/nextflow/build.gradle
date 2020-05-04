@@ -43,7 +43,8 @@ dependencies {
     compile ('com.amazonaws:aws-java-sdk-iam:1.11.542')
     compile ('com.amazonaws:aws-java-sdk-ecs:1.11.542')
     compile platform('software.amazon.awssdk:bom:2.13.3')
-    compile 'software.amazon.awssdk:codecommit'
+    compile ('software.amazon.awssdk:codecommit')
+    compile ('org.springframework.cloud:spring-cloud-config-server:2.2.2.RELEASE')
     compile ('javax.activation:activation:1.1.1')
     compile ('javax.mail:mail:1.4.7')
     compile ('org.yaml:snakeyaml:1.18')
