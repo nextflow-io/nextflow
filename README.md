@@ -16,7 +16,7 @@ Quick overview
 ==============
 Nextflow is a bioinformatics workflow manager that enables the development of portable and reproducible workflows.
 It supports deploying workflows on a variety of execution platforms including local, HPC schedulers, AWS Batch,
-Google Genomics Pipelines, and Kubernetes. Additionally, it provides support for manage your workflow dependencies
+Google Cloud Life Sciences, and Kubernetes. Additionally, it provides support for manage your workflow dependencies
 through built-in support for Conda, Docker, Singularity, and Modules.
 
 ## Contents
