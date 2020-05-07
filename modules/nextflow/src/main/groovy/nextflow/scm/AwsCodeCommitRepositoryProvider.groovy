@@ -45,7 +45,7 @@ final class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
 
     /** {@inheritDoc} **/
     @Override
-    protected CredentialsProvider getGitCredentials() {
+    CredentialsProvider getGitCredentials() {
         def provider = new AwsCodeCommitCredentialProvider()
         provider.setAwsCredentialProvider( driver.getCredentialsProvider0() )
         return provider
@@ -111,7 +111,7 @@ final class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} **/
     @Override
     String getEndpointUrl() {
-        //"${config.endpoint}/v1/repos/${project}"
+        "https://git-codecommit.${region.id()}.amazonaws.com/v1/repos/${getRepositoryName()}"
     }
 
     /** {@inheritDoc} **/

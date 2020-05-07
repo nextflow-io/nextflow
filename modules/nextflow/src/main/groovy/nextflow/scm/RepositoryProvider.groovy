@@ -94,7 +94,7 @@ abstract class RepositoryProvider {
      * @return a org.eclipse.jgit.transport.CredentialsProvider object for authenticating git operations
      * like clone, fetch, pull, and update
      **/
-    protected CredentialsProvider getGitCredentials() {
+    CredentialsProvider getGitCredentials() {
         return new UsernamePasswordCredentialsProvider(getUser(), getPassword())
     }
 
