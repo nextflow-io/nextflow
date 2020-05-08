@@ -176,7 +176,7 @@ class ProviderConfigTest extends Specification {
         when:
         def result = ProviderConfig.createFromText(CONFIG)
         then:
-        result.size() == 6
+        result.size() == 7
 
         result.find { it.name == 'github' }.server == 'https://github.com'
         result.find { it.name == 'github' }.auth == '12732:35454'
@@ -184,6 +184,8 @@ class ProviderConfigTest extends Specification {
         result.find { it.name == 'gitlab' }.server == 'https://gitlab.com'
 
         result.find { it.name == 'bitbucket' }.server == 'https://bitbucket.org'
+
+        result.find { it.name == 'codecommit' }.platform == 'codecommit'
 
         result.find { it.name == 'custom' }.server == 'http://local.host'
         result.find { it.name == 'custom' }.platform == 'gitlab'

@@ -25,16 +25,16 @@ import org.eclipse.jgit.transport.CredentialsProvider
 @Slf4j
 final class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
 
-    AwsCodeCommitRepositoryProvider(String project, ProviderConfig config=null) {
+    AwsCodeCommitRepositoryProvider(String project, ProviderConfig config=null, CodeCommitClient client=null) {
         this.driver = new AmazonCloudDriver()
 
         this.project = project  // expect: "codecommit:[region]://<repository>"
         this.config = config ?: new ProviderConfig('codecommit')
         this.region = getRepositoryRegion()
         
-        this.client = getClient()
+        this.client = client ?: getClient()
+
         this.repositoryName = getRepositoryName()
-        this.repositoryMetadata = getRepositoryMetadata()
     }
 
     private AmazonCloudDriver driver
@@ -122,12 +122,12 @@ final class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} **/
     // called by AssetManager
     @Override
-    String getCloneUrl() { repositoryMetadata.cloneUrlHttp() }
+    String getCloneUrl() { getEndpointUrl() }
 
     /** {@inheritDoc} **/
     // called by AssetManager
     @Override
-    String getRepositoryUrl() { repositoryMetadata.cloneUrlHttp() }
+    String getRepositoryUrl() { getEndpointUrl() }
     
     /** {@inheritDoc} **/
     // called by AssetManager
