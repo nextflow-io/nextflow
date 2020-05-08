@@ -5,8 +5,8 @@ Pipeline sharing
 ****************
 
 Nextflow seamlessly integrates with `BitBucket <http://bitbucket.org/>`_ [#]_, `GitHub <http://github.com>`_,
-and `GitLab <http://gitlab.com>`_ hosted code repositories and sharing platforms. This feature allows you to manage your
-project code in a more consistent manner or use other people's Nextflow pipelines, published through BitBucket/GitHub/GitLab,
+`GitLab <http://gitlab.com>`_, and `AWS CodeCommit <https://aws.amazon.com/codecommit/>`_ hosted code repositories and sharing platforms. This feature allows you to manage your
+project code in a more consistent manner or use other people's Nextflow pipelines, published through BitBucket/GitHub/GitLab/CodeCommit,
 in a quick and transparent way.
 
 How it works
@@ -55,6 +55,10 @@ it using the `organisation` name defined by the environment variable ``NXF_ORG``
     line option, then the program will ask you to enter the password interactively.
     Private repositories access credentials can also be defined in the `SCM configuration file`_.
 
+
+.. note:: To access AWS CodeCommit repositories, you use `git-remote-codecommit <https://docs.aws.amazon.com/codecommit/latest/userguide/setting-up-git-remote-codecommit.html>`_ formatted 
+    project names. For example: `codecommit://MyDemoRepo` for a repository in your current (default) AWS Region or `codecommit::us-west-2://MyDemoRepo` for
+    repository in a specific region. Using named profiles is currently not supported.
 
 Handling revisions
 ==================
@@ -294,6 +298,16 @@ have to provide all the credential information below::
 
 See `Gitea documentation <https://docs.gitea.io/en-us/api-usage/>`_ about how to enable API access on your 
 server and how to issue a token. 
+
+
+AWS CodeCommit credentials
+--------------------------
+
+AWS CodeCommit is a version control service hosted by Amazon Web Services that you can use to privately store and manage
+assets (such as documents, source code, and binary files) in the cloud.  To access AWS CodeCommit repositories, you must
+have an AWS Account and configured IAM User or Role based credentials which you can configure in your environment with
+the AWS CLI using `aws configure`, via an attached instance role on an EC2 Instance, or provided explicitly in the `aws`
+configuration scope. Note, the SCM config is not used by AWS CodeCommit for credentials.
 
 
 Private server configuration
