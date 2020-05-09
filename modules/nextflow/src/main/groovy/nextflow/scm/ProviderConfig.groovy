@@ -111,7 +111,7 @@ class ProviderConfig {
      *      Remote server name e.g. {@code github.com}
      */
     String getDomain() {
-        def result = (String)attr.server ?: path
+        def result = server ?: path
         def p = result.indexOf('://')
         if( p != -1 )
             result = result.substring(p+3)
