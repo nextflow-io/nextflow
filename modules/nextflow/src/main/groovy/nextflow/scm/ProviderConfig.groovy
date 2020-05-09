@@ -66,6 +66,10 @@ class ProviderConfig {
             
             case 'codecommit':
                 attr.platform = name
+                // this config is ignored when accessing repositories - the actual server/domain is
+                // determined by the configured or specified AWS region.
+                // it is required here for compatibility for provider server/domain processing
+                attr.server = "https://git-codecommit.us-west-2.amazonaws.com"
                 break
         }
 
