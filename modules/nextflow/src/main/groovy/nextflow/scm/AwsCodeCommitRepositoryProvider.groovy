@@ -7,11 +7,14 @@ import nextflow.exception.AbortOperationException
 import groovy.util.logging.Slf4j
 import groovy.transform.CompileStatic
 
-import software.amazon.awssdk.regions.Region
-import software.amazon.awssdk.services.codecommit.CodeCommitClient
-import software.amazon.awssdk.services.codecommit.model.GetRepositoryRequest
-import software.amazon.awssdk.services.codecommit.model.GetFileRequest
-import software.amazon.awssdk.services.codecommit.model.RepositoryMetadata
+import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.profile.ProfileCredentialsProvider
+import com.amazonaws.services.codecommit.AWSCodeCommitClient
+import com.amazonaws.services.codecommit.AWSCodeCommitClientBuilder
+import com.amazonaws.services.codecommit.model.GetRepositoryRequest
+import com.amazonaws.services.codecommit.model.GetRepositoryResult
+import com.amazonaws.services.codecommit.model.RepositoryMetadata
+import com.amazonaws.services.codecommit.model.GetFileRequest
 
 import org.springframework.cloud.config.server.support.AwsCodeCommitCredentialProvider
 
@@ -25,72 +28,99 @@ import org.eclipse.jgit.transport.CredentialsProvider
 @Slf4j
 final class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
 
-    AwsCodeCommitRepositoryProvider(String project, ProviderConfig config=null, CodeCommitClient client=null) {
+    AwsCodeCommitRepositoryProvider(String project, ProviderConfig config=null, AWSCodeCommitClient client=null) {
         this.driver = new AmazonCloudDriver()
 
         this.project = project  // expect: "codecommit:[region]://<repository>"
         this.config = config ?: new ProviderConfig('codecommit')
         this.region = getRepositoryRegion()
+        this.repositoryName = getRepositoryName()
+        this.profile = getRepositoryProfile()
         
         this.client = client ?: getClient()
 
-        this.repositoryName = getRepositoryName()
     }
 
     private AmazonCloudDriver driver
-    private Region region
-    private CodeCommitClient client
+    private String region
+    private AWSCodeCommitClient client
     private String repositoryName
+    private String profile
     private RepositoryMetadata repositoryMetadata
 
     /** {@inheritDoc} **/
     @Override
     CredentialsProvider getGitCredentials() {
         def provider = new AwsCodeCommitCredentialProvider()
-        provider.setAwsCredentialProvider( driver.getCredentialsProvider0() )
+        provider.setAwsCredentialProvider( getAwsCredentialsProvider() )
         return provider
     }
 
     private String getRepositoryName() {
-        def name = project.replaceAll("codecommit:.*?//", "")
-        log.debug "project name: $name"
-        return name
+        def result = project
+            .replaceAll("codecommit:.*?//", "")
+            .replaceAll(".*?@", "")
+        log.debug "project name: $result"
+        return result
     }
 
-    private Region getRepositoryRegion() {
+    private String getRepositoryProfile() {
+
+        def result = null
+
+        if ( project.indexOf('@') != -1 ) {
+            result = project
+                .replaceAll("codecommit:.*?//", "")
+                .replaceAll("@.*", "")
+            
+            log.debug "project profile: $result"
+
+        }
+        
+        return result
+    }
+
+    private String getRepositoryRegion() {
         def _region = driver.region
 
         // use the repository region if specified
-        def projectRegion = project.replaceAll("codecommit:[:]*", "").replaceAll("[:]*//.*", "")
-        if ( projectRegion != "" ) {
-            _region = projectRegion
+        def result = project
+            .replaceAll("codecommit:[:]*", "")
+            .replaceAll("[:]*//.*", "")
+        if ( result != "" ) {
+            _region = result
         }
 
         log.debug "project region: $_region"
-        return Region.of( _region )
+        return _region
     }
 
-    private CodeCommitClient getClient() {
-
-        def builder = CodeCommitClient.builder()
-
-        // aws codecommit repositories can be from different regions
-        if ( region ) {
-            builder.region(region)
+    private AWSCredentialsProvider getAwsCredentialsProvider() {
+        if ( profile ) {
+            // use locally configured profile
+            return new ProfileCredentialsProvider( profile )
         }
 
-        return builder
-            .credentialsProvider( driver.getCredentialsProvider0() )
-            .build()
+        return driver.getCredentialsProvider0()
+    }
+
+    private AWSCodeCommitClient getClient() {
+
+        def builder = AWSCodeCommitClientBuilder.standard()
+        builder.setCredentials( getAwsCredentialsProvider() )
+        if ( region ) {
+            builder.setRegion(region)
+        }
+
+        return builder.build()
     }
 
     private RepositoryMetadata getRepositoryMetadata() {
-        def response = client.getRepository(
-            GetRepositoryRequest.builder()
-                .repositoryName( repositoryName )
-                .build()
-        )
-        return response.repositoryMetadata()
+        def request = new GetRepositoryRequest()
+        request.setRepositoryName( repositoryName)
+
+        def response = client.getRepository( request )
+        return response.getRepositoryMetadata()
     }
 
     /** {@inheritDoc} **/
@@ -111,7 +141,7 @@ final class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} **/
     @Override
     String getEndpointUrl() {
-        "https://git-codecommit.${region.id()}.amazonaws.com/v1/repos/${getRepositoryName()}"
+        "https://git-codecommit.${region}.amazonaws.com/v1/repos/${getRepositoryName()}"
     }
 
     /** {@inheritDoc} **/
@@ -134,15 +164,15 @@ final class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     // called by RepositoryProvider.readText()
     @Override
     protected byte[] readBytes( String path ) {
-        def response = client.getFile(
-            GetFileRequest.builder()
-                .repositoryName( repositoryName )
-                .filePath(path)
-                .build()
-        )
+        
+        def request = new GetFileRequest()
+        request.setRepositoryName( repositoryName )
+        request.setFilePath( path )
 
-        def contents = response.fileContent().asUtf8String()
-        return contents.bytes
+        def response = client.getFile( request )
+
+        def contents = response.getFileContent().array()
+        return contents
     }
 
     /** {@inheritDoc} **/

@@ -58,7 +58,8 @@ it using the `organisation` name defined by the environment variable ``NXF_ORG``
 
 .. note:: To access AWS CodeCommit repositories, you use `git-remote-codecommit <https://docs.aws.amazon.com/codecommit/latest/userguide/setting-up-git-remote-codecommit.html>`_ formatted 
     project names. For example: `codecommit://MyDemoRepo` for a repository in your current (default) AWS Region or `codecommit::us-west-2://MyDemoRepo` for
-    repository in a specific region. Using named profiles is currently not supported.
+    repository in a specific region. If you are running `nextflow` locally, and you have locally configured AWS profiles (e.g. `aws configure --profile profile-name`) you can
+    access repositories with specific profiles using `codecommit://<profile-name>@<repo-name>` or `codecommit::<region>://<profile-name>@<repo-name>`.
 
 Handling revisions
 ==================
