@@ -15,6 +15,8 @@
  */
 
 package nextflow.scm
+
+
 import groovy.util.logging.Slf4j
 /**
  * Implements a repository provider for GitHub service
@@ -59,6 +61,20 @@ class GitlabRepositoryProvider extends RepositoryProvider {
             return 'master'
         }
         return result
+    }
+
+    @Override
+    List<BranchInfo> getBranches() {
+        // https://docs.gitlab.com/ee/api/branches.html
+        final url = "${config.endpoint}/api/v4/projects/${getProjectName()}/repository/branches"
+        this.<BranchInfo>invokeAndResponseWithPaging(url, { Map branch -> new BranchInfo(branch.name as String, branch.commit?.id as String) })
+    }
+
+    @Override
+    List<TagInfo> getTags() {
+        // https://docs.gitlab.com/ee/api/tags.html
+        final url = "${config.endpoint}/api/v4/projects/${getProjectName()}/repository/tags"
+        this.<TagInfo>invokeAndResponseWithPaging(url, { Map tag -> new TagInfo(tag.name as String, tag.commit?.id as String) })
     }
 
     /** {@inheritDoc} */
