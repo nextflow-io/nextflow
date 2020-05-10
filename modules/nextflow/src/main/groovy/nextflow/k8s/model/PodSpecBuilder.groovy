@@ -24,12 +24,15 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.executor.res.AcceleratorResource
 import nextflow.util.MemoryUnit
+import groovy.util.logging.Slf4j
+
 /**
  * Object build for a K8s pod specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
+@Slf4j
 class PodSpecBuilder {
 
     static @PackageScope AtomicInteger VOLUMES = new AtomicInteger()
@@ -316,10 +319,10 @@ class PodSpecBuilder {
 
         // add labels
         if( labels )
-            metadata.labels = labels
+            metadata.labels = sanitize0(labels, 'label')
 
         if( annotations)
-            metadata.annotations = annotations
+            metadata.annotations = sanitize0(annotations, 'annotation')
 
         final pod = [
                 apiVersion: 'v1',
@@ -447,5 +450,30 @@ class PodSpecBuilder {
         volumes << [name: volName, configMap: config ]
     }
 
+    protected Map sanitize0(Map map, String kind) {
+        final result = new HashMap(map.size())
+        for( Map.Entry entry : map )
+            result.put(entry.key, sanitize0(entry.key, entry.value, kind))
+        return result
+    }
+
+    /**
+     * Valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.',
+     * and must start and end with an alphanumeric character.
+     *
+     * @param value
+     * @return
+     */
+    protected String sanitize0( key, value, String kind ) {
+        def str = String.valueOf(value)
+        if( str.length() > 63 ) {
+            log.debug "K8s $kind exceeds allowed size: 63 -- offending name=$key value=$str"
+            str = str.substring(0,63)
+        }
+        str = str.replaceAll(/[^a-zA-Z0-9\.\_\-]+/, '_')
+        str = str.replaceAll(/^[^a-zA-Z]+/, '')
+        str = str.replaceAll(/[^a-zA-Z0-9]+$/, '')
+        return str
+    }
 
 }

@@ -201,44 +201,24 @@ class K8sTaskHandler extends TaskHandler {
     }
 
 
-    protected Map getLabels(TaskRun task) {
-        Map result = [:]
+    protected Map<String,String> getLabels(TaskRun task) {
+        def result = new LinkedHashMap<String,String>(10)
         def labels = k8sConfig.getLabels()
         if( labels ) {
-            labels.each { k,v -> result.put(k,sanitize0(v)) }
+            result.putAll(labels)
         }
         result.app = 'nextflow'
-        result.runName = sanitize0(getRunName())
-        result.taskName = sanitize0(task.getName())
-        result.processName = sanitize0(task.getProcessor().getName())
-        result.sessionId = sanitize0("uuid-${executor.getSession().uniqueId}")
+        result.runName = getRunName()
+        result.taskName = task.getName()
+        result.processName = task.getProcessor().getName()
+        result.sessionId = "uuid-${executor.getSession().uniqueId}"
         return result
     }
 
     protected Map getAnnotations() {
-        Map result = [:]
-        def annotations = k8sConfig.getAnnotations()
-        if( annotations ) {
-            annotations.each { k,v -> result.put(k,sanitize0(v)) }
-        }
-        return result
+        k8sConfig.getAnnotations()
     }
 
-    /**
-     * Valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.',
-     * and must start and end with an alphanumeric character.
-     *
-     * @param value
-     * @return
-     */
-
-    protected String sanitize0( value ) {
-        def str = String.valueOf(value)
-        str = str.replaceAll(/[^a-zA-Z0-9\.\_\-]+/, '_')
-        str = str.replaceAll(/^[^a-zA-Z]+/, '')
-        str = str.replaceAll(/[^a-zA-Z0-9]+$/, '')
-        return str
-    }
 
     /**
      * Creates a new K8s pod executing the associated task

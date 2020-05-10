@@ -610,31 +610,6 @@ class K8sTaskHandlerTest extends Specification {
         labels.sessionId == "uuid-${uuid.toString()}".toString()
     }
 
-    @Unroll
-    def 'should sanitize k8s label: #label' () {
-
-        given:
-        def handler = new K8sTaskHandler()
-
-        expect:
-        handler.sanitize0(label) == str
-
-        where:
-        label           | str
-        null            | 'null'
-        'hello'         | 'hello'
-        'hello world'   | 'hello_world'
-        'hello  world'  | 'hello_world'
-        'hello.world'   | 'hello.world'
-        'hello-world'   | 'hello-world'
-        'hello_world'   | 'hello_world'
-        'hello_world-'  | 'hello_world'
-        'hello_world_'  | 'hello_world'
-        'hello_world.'  | 'hello_world'
-        'hello_123'     | 'hello_123'
-        'HELLO 123'     | 'HELLO_123'
-        '123hello'      | 'hello'
-    }
 
     def 'should delete pod if complete' () {
 
