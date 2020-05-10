@@ -104,7 +104,9 @@ class ProviderPath implements Path {
     }
 
     String toString() {
-        "${provider.getRepositoryUrl()}/${delegate.toString()}"
+        final base = provider.getRepositoryUrl()
+        final file = delegate.toString()
+        return file ? "$base/$file" : base
     }
 
     /**
