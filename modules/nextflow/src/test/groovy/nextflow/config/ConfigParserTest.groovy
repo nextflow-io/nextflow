@@ -386,6 +386,40 @@ class ConfigParserTest extends Specification {
         slurper.getConditionalBlockNames() == [] as Set
     }
 
+    def 'should return the profile names' () {
+        given:
+        def text = '''
+        profiles {
+            alpha {
+                a = 1
+            }
+            beta {
+                b = 2
+            }
+        }
+
+        servers {
+            local {
+                x = 1
+            }
+            test {
+                y = 2
+            }
+            prod {
+                z = 3
+            }
+        }
+        '''
+
+        when:
+        def slurper = new ConfigParser()
+        slurper.parse(text)
+        then:
+        slurper.getProfileNames() == ['alpha','beta'] as Set
+        slurper.getConditionalBlockNames() == [] as Set
+
+    }
+
     def 'should disable includeConfig parsing' () {
         given:
         def text = '''
