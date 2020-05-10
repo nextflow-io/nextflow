@@ -149,12 +149,12 @@ class PodSpecBuilder {
     }
 
     PodSpecBuilder withLabel( String name, String value ) {
-        this.labels.put(name, normalizeLabel(name, value))
+        this.labels.put(name, value)
         return this
     }
 
     PodSpecBuilder withLabels(Map labels) {
-        this.labels.putAll(normalizeLabels(labels)) 
+        this.labels.putAll(labels)
         return this
     }
 
@@ -219,24 +219,6 @@ class PodSpecBuilder {
         return this
     }
 
-    String normalizeLabel( String name, String value ) {
-        if( !name || !value ) {
-            log.debug "K8s invalid label name=$name value=$value"  
-        }
-        else if( value.size() > 63 ) {
-            log.debug "K8s label exceeds allowed size: 63 -- offending name=$name value=$value"  
-            value=value.substring(0,63)   
-        }
-        return value
-    }
-    
-    Map<String, String> normalizeLabels(Map<String, String> labels) {
-        for( Map.Entry<String,String> entry : labels ) {
-            labels.put(entry.key, normalizeLabel(entry.key, entry.value))
-        }
-        return labels
-    }
-
     PodSpecBuilder withPodOptions(PodOptions opts) {
         // -- pull policy
         if( opts.imagePullPolicy )
@@ -260,7 +242,7 @@ class PodSpecBuilder {
             def keys = opts.labels.keySet()
             if( 'app' in keys ) throw new IllegalArgumentException("Invalid pod label -- `app` is a reserved label")
             if( 'runName' in keys ) throw new IllegalArgumentException("Invalid pod label -- `runName` is a reserved label")
-            labels.putAll(normalizeLabels(opts.labels)) 
+            labels.putAll( opts.labels )
         }
         // - annotations
         if( opts.annotations ) {
@@ -337,10 +319,10 @@ class PodSpecBuilder {
 
         // add labels
         if( labels )
-            metadata.labels = labels
+            metadata.labels = sanitize0(labels, 'label')
 
         if( annotations)
-            metadata.annotations = annotations
+            metadata.annotations = sanitize0(annotations, 'annotation')
 
         final pod = [
                 apiVersion: 'v1',
@@ -468,5 +450,30 @@ class PodSpecBuilder {
         volumes << [name: volName, configMap: config ]
     }
 
+    protected Map sanitize0(Map map, String kind) {
+        final result = new HashMap(map.size())
+        for( Map.Entry entry : map )
+            result.put(entry.key, sanitize0(entry.key, entry.value, kind))
+        return result
+    }
+
+    /**
+     * Valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.',
+     * and must start and end with an alphanumeric character.
+     *
+     * @param value
+     * @return
+     */
+    protected String sanitize0( key, value, String kind ) {
+        def str = String.valueOf(value)
+        if( str.length() > 63 ) {
+            log.debug "K8s $kind exceeds allowed size: 63 -- offending name=$key value=$str"
+            str = str.substring(0,63)
+        }
+        str = str.replaceAll(/[^a-zA-Z0-9\.\_\-]+/, '_')
+        str = str.replaceAll(/^[^a-zA-Z]+/, '')
+        str = str.replaceAll(/[^a-zA-Z0-9]+$/, '')
+        return str
+    }
 
 }
