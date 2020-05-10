@@ -105,6 +105,12 @@ class AssetManager {
         build(pipelineName, config, cliOpts)
     }
 
+    AssetManager( String pipelineName, Map config ) {
+        assert pipelineName
+        // build the object
+        build(pipelineName, config)
+    }
+
     /**
      * Build the asset manager internal data structure
      *
