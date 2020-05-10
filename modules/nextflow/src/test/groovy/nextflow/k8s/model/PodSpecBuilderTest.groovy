@@ -103,6 +103,55 @@ class PodSpecBuilderTest extends Specification {
                    ]
         ]
     }
+    
+    def 'should truncate labels longer than 63 chars' () {
+
+        when:
+        def spec = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withWorkDir('/some/work/dir')
+                .withCommand(['sh', '-c', 'echo hello'])
+                .withNamespace('xyz')
+                .withLabel('app','myApp')
+                .withLabel('runName','something')
+                .withLabel('tag','somethingreallylonggggggggggggggggggggggggggggggggggggggggggendEXTRABIT')
+                .withLabels([tag2: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggendEXTRABIT', tag3: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggendEXTRABIT'])
+                .withAnnotation("anno1", "value1")
+                .withAnnotations([anno2: "value2", anno3: "value3"])
+                .build()
+
+        then:
+        spec ==  [ apiVersion: 'v1',
+                   kind: 'Pod',
+                   metadata: [
+                           name:'foo',
+                           namespace:'xyz',
+                           labels: [
+                                   app: 'myApp',
+                                   runName: 'something',
+                                   tag: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggend',
+                                   tag2: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggend',
+                                   tag3: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggend'
+                           ],
+                           annotations: [
+                                   anno1: "value1",
+                                   anno2: "value2",
+                                   anno3: "value3"
+                           ]
+                   ],
+                   spec: [
+                           restartPolicy:'Never',
+                           containers:[
+                                   [name:'foo',
+                                    image:'busybox',
+                                    command: ['sh', '-c', 'echo hello'],
+                                    workingDir:'/some/work/dir'
+                                   ]
+                           ]
+                   ]
+        ]
+    }
 
 
     def 'should set resources and env' () {
