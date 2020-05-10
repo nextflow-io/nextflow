@@ -68,6 +68,8 @@ class ConfigBuilder {
 
     List<Path> parsedConfigFiles = []
 
+    List<String> parsedProfileNames
+
     boolean showClosures
 
     {
@@ -120,6 +122,11 @@ class ConfigBuilder {
     ConfigBuilder setProfile( String value ) {
         profile = value ?: DEFAULT_PROFILE
         validateProfile = value as boolean
+        return this
+    }
+
+    ConfigBuilder setShowAllProfiles(boolean value) {
+        this.showAllProfiles = value
         return this
     }
 
@@ -332,6 +339,7 @@ class ConfigBuilder {
             }
 
             log.trace "Resolved config object:\n${result.prettyPrint().indent('  ')}"
+            this.parsedProfileNames = new ArrayList<>(slurper.getProfileNames())
             if( validateProfile ) {
                 checkValidProfile(slurper.getConditionalBlockNames())
             }
