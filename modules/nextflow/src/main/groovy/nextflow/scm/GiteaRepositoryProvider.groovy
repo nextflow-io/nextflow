@@ -16,6 +16,7 @@
 
 package nextflow.scm
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
 /**
@@ -39,6 +40,22 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
     @Override
     String getEndpointUrl() {
         "${config.endpoint}/repos/${project}"
+    }
+
+    @Override
+    @CompileDynamic
+    List<BranchInfo> getBranches() {
+        // https://try.gitea.io/api/swagger#/repository/repoListBranches
+        final url = "${config.endpoint}/repos/${project}/branches"
+        this.<BranchInfo>invokeAndResponseWithPaging(url, { Map branch -> new BranchInfo(branch.name as String, branch.commit?.id as String) })
+    }
+
+    @Override
+    @CompileDynamic
+    List<TagInfo> getTags() {
+        // https://try.gitea.io/api/swagger#/repository/repoListTags
+        final url = "${config.endpoint}/repos/${project}/tags"
+        this.<TagInfo>invokeAndResponseWithPaging(url, { Map tag -> new TagInfo(tag.name as String, tag.commit?.sha as String) })
     }
 
     /** {@inheritDoc} */

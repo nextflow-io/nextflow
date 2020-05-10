@@ -739,6 +739,17 @@ class AssetManager {
         return result
     }
 
+    List<RevisionInfo> getRemoteRevisions() {
+        final result = new ArrayList(50)
+        for( def branch : provider.getBranches() ) {
+            result.add(new RevisionInfo(branch.commitId, branch.name, RevisionInfo.Type.BRANCH))
+        }
+        for( def tag : provider.getTags() ) {
+            result.add(new RevisionInfo(tag.commitId, tag.name, RevisionInfo.Type.TAG))
+        }
+        return result
+    }
+
     Map getBranchesAndTags(boolean checkForUpdates) {
         final result = [:]
         final current = getCurrentRevision()
