@@ -16,10 +16,9 @@
 
 package nextflow.k8s.model
 
-import spock.lang.Specification
-
 import nextflow.executor.res.AcceleratorResource
-
+import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -628,5 +627,32 @@ class PodSpecBuilderTest extends Specification {
         res.requests == ['foo.org/gpu': 5]
         res.limits == [cpus:2, 'foo.org/gpu': 10]
 
+    }
+
+
+    @Unroll
+    def 'should sanitize k8s label: #label' () {
+        given:
+        def builder = new PodSpecBuilder()
+
+        expect:
+        builder.sanitize0('foo',label, 'label') == str
+
+        where:
+        label           | str
+        null            | 'null'
+        'hello'         | 'hello'
+        'hello world'   | 'hello_world'
+        'hello  world'  | 'hello_world'
+        'hello.world'   | 'hello.world'
+        'hello-world'   | 'hello-world'
+        'hello_world'   | 'hello_world'
+        'hello_world-'  | 'hello_world'
+        'hello_world_'  | 'hello_world'
+        'hello_world.'  | 'hello_world'
+        'hello_123'     | 'hello_123'
+        'HELLO 123'     | 'HELLO_123'
+        '123hello'      | 'hello'
+        'x2345678901234567890123456789012345678901234567890123456789012345' | 'x23456789012345678901234567890123456789012345678901234567890123'
     }
 }
