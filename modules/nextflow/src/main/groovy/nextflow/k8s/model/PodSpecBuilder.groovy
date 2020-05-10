@@ -24,12 +24,15 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.executor.res.AcceleratorResource
 import nextflow.util.MemoryUnit
+import groovy.util.logging.Slf4j
+
 /**
  * Object build for a K8s pod specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
+@Slf4j
 class PodSpecBuilder {
 
     static @PackageScope AtomicInteger VOLUMES = new AtomicInteger()
@@ -146,12 +149,12 @@ class PodSpecBuilder {
     }
 
     PodSpecBuilder withLabel( String name, String value ) {
-        this.labels.put(name, value)
+        this.labels.put(name, normalizeLabel(name, value))
         return this
     }
 
     PodSpecBuilder withLabels(Map labels) {
-        this.labels.putAll(labels)
+        this.labels.putAll(normalizeLabels(labels)) 
         return this
     }
 
@@ -216,6 +219,24 @@ class PodSpecBuilder {
         return this
     }
 
+    String normalizeLabel( String name, String value ) {
+        if( !name || !value ) {
+            log.debug "K8s invalid label name=$name value=$value"  
+        }
+        else if( value.size() > 63 ) {
+            log.debug "K8s label exceeds allowed size: 63 -- offending name=$name value=$value"  
+            value=value.substring(0,63)   
+        }
+        return value
+    }
+    
+    Map<String, String> normalizeLabels(Map<String, String> labels) {
+        for( Map.Entry<String,String> entry : labels ) {
+            labels.put(entry.key, normalizeLabel(entry.key, entry.value))
+        }
+        return labels
+    }
+
     PodSpecBuilder withPodOptions(PodOptions opts) {
         // -- pull policy
         if( opts.imagePullPolicy )
@@ -239,7 +260,7 @@ class PodSpecBuilder {
             def keys = opts.labels.keySet()
             if( 'app' in keys ) throw new IllegalArgumentException("Invalid pod label -- `app` is a reserved label")
             if( 'runName' in keys ) throw new IllegalArgumentException("Invalid pod label -- `runName` is a reserved label")
-            labels.putAll( opts.labels )
+            labels.putAll(normalizeLabels(opts.labels)) 
         }
         // - annotations
         if( opts.annotations ) {
