@@ -72,6 +72,12 @@ class ConfigBuilder {
 
     boolean showClosures
 
+    boolean showMissingVariables
+
+    Map<ConfigObject, String> emptyVariables = new LinkedHashMap<>(10)
+
+    List<String> warnings = new ArrayList<>(10);
+
     {
         setHomeDir(Const.APP_HOME_DIR)
         setCurrentDir(Paths.get('.'))
@@ -79,6 +85,11 @@ class ConfigBuilder {
 
     ConfigBuilder setShowClosures(boolean value) {
         this.showClosures = value
+        return this
+    }
+
+    ConfigBuilder showMissingVariables(boolean value) {
+        this.showMissingVariables = value
         return this
     }
 
@@ -405,16 +416,46 @@ class ConfigBuilder {
      * @param file The source config file/snippet
      * @return
      */
-    protected validate(ConfigObject config, file, String parent=null) {
-        for( String key : config.keySet() ) {
+    protected validate(ConfigObject config, file, String parent=null, List stack = new ArrayList()) {
+        for( String key : new ArrayList<>(config.keySet()) ) {
             final value = config.get(key)
             if( value instanceof ConfigObject ) {
                 final fqKey = parent ? "${parent}.${key}": key as String
                 if( value.isEmpty() ) {
-                    log.debug "In the following config object the attribute `$fqKey` is empty:\n${config.prettyPrint().indent('  ')}"
-                    throw new ConfigParseException("Unknown config attribute `$fqKey` -- check config file: $file")
+                    final msg = "Unknown config attribute `$fqKey` -- check config file: $file"
+                    if( showMissingVariables ) {
+                        emptyVariables.put(value, key)
+                        warnings.add(msg)
+                    }
+                    else {
+                        log.debug("In the following config snippet the attribute `$fqKey` is empty:\n${->config.prettyPrint().indent('  ')}")
+                        throw new ConfigParseException(msg)
+                    }
                 }
-                validate(value, file, fqKey)
+                else {
+                    stack.push(config)
+                    try {
+                        if( !stack.contains(value)) {
+                            validate(value, file, fqKey, stack)
+                        }
+                        else {
+                            warnings.add("Found a recursive config property: `$fqKey`")
+                        }
+                    }
+                    finally {
+                        stack.pop()
+                    }
+                }
+            }
+            else if( value instanceof GString && showMissingVariables ) {
+                final str = (GString) value
+                for( int i=0; i<str.values.length; i++ ) {
+                    // try replace empty interpolated strings with variable handle
+                    final arg = str.values[i]
+                    final name = emptyVariables.get(arg)
+                    if( name )
+                        str.values[i] = '$' + name
+                }
             }
         }
     }
