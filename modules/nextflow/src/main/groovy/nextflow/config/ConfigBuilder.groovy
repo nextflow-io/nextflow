@@ -349,7 +349,6 @@ class ConfigBuilder {
                 }
             }
 
-            log.trace "Resolved config object:\n${result.prettyPrint().indent('  ')}"
             this.parsedProfileNames = new ArrayList<>(slurper.getProfileNames())
             if( validateProfile ) {
                 checkValidProfile(slurper.getConditionalBlockNames())
@@ -422,7 +421,7 @@ class ConfigBuilder {
             if( value instanceof ConfigObject ) {
                 final fqKey = parent ? "${parent}.${key}": key as String
                 if( value.isEmpty() ) {
-                    final msg = "Unknown config attribute `$fqKey` -- check config file: $file"
+                    final msg = "Unknown config attribute `$fqKey` -- check config file: $file".toString()
                     if( showMissingVariables ) {
                         emptyVariables.put(value, key)
                         warnings.add(msg)
@@ -439,7 +438,7 @@ class ConfigBuilder {
                             validate(value, file, fqKey, stack)
                         }
                         else {
-                            warnings.add("Found a recursive config property: `$fqKey`")
+                            log.debug("Found a recursive config property: `$fqKey`")
                         }
                     }
                     finally {
