@@ -16,27 +16,21 @@
 
 package nextflow.cloud.google.util
 
-
-import spock.lang.Specification
-
-import com.google.cloud.storage.contrib.nio.CloudStorageConfiguration
-import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.Global
 import nextflow.Session
-import nextflow.cloud.google.lifesciences.GoogleLifeSciencesConfig
-import nextflow.config.ConfigBuilder
-
+import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class GsPathPathFactoryTest extends Specification {
+class GsPathFactoryTest extends Specification {
 
     def 'should create gs path' () {
         given:
-        def sess = new Session()
-        sess.config = [google:[project:'foo', region:'x']]
-        Global.session = sess
+        Global.session = Mock(Session) {
+            getConfig() >> [google:[project:'foo', region:'x']]
+        }
+        and:
         def factory = new GsPathFactory()
 
         expect:
@@ -53,9 +47,9 @@ class GsPathPathFactoryTest extends Specification {
 
     def 'should use requester pays' () {
         given:
-        def sess = new Session()
-        sess.config = [google:[project:'foo', region:'x', enableRequesterPaysBuckets:true]]
-        Global.session = sess
+        Global.session = Mock(Session) {
+            getConfig() >> [google:[project:'foo', region:'x', enableRequesterPaysBuckets:true]]
+        }
 
         when:
         def storageConfig = GsPathFactory.getCloudStorageConfig()

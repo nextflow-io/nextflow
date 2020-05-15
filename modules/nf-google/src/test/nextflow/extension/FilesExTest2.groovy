@@ -33,11 +33,12 @@ class FilesExTest2 extends Specification {
 
     @Unroll
     def 'should return uri string for #PATH' () {
+        given:
+        Global.session = Mock(Session) {
+            getConfig() >> [google:[project:'foo', region:'x']]
+        }
 
         when:
-        def sess = new Session()
-        sess.config = [google:[project:'foo', region:'x']]
-        Global.session = sess
         def path = PATH as Path
         then:
         path instanceof CloudStoragePath
