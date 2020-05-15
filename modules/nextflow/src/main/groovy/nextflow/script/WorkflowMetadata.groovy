@@ -202,7 +202,7 @@ class WorkflowMetadata {
      */
     Manifest manifest
 
-    final private Session session
+    private Session session
 
     final private List<Closure> onCompleteActions = []
 
