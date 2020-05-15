@@ -298,7 +298,7 @@ class Session implements ISession {
             uniqueId = UUID.fromString(config.resume as String)
         }
         else {
-           uniqueId = UUID.randomUUID()
+           uniqueId = systemEnv.get('NXF_UUID') ? UUID.fromString(systemEnv.get('NXF_UUID')) : UUID.randomUUID()
         }
         log.debug "Session uuid: $uniqueId"
 

@@ -97,7 +97,7 @@ class TowerClient implements TraceObserver {
 
     private ResourcesAggregator aggregator
 
-    private Map<String,String> env = System.getenv()
+    protected Map<String,String> env = System.getenv()
 
     private LinkedBlockingQueue<ProcessEvent> events = new LinkedBlockingQueue()
 
@@ -119,6 +119,8 @@ class TowerClient implements TraceObserver {
 
     private int backOffBase
 
+    private boolean towerLaunch
+
     /**
      * Constructor that consumes a URL and creates
      * a basic HTTP client.
@@ -137,15 +139,13 @@ class TowerClient implements TraceObserver {
         this.generator = TowerJsonGenerator.create(Collections.EMPTY_MAP)
     }
 
-    protected String getLaunchId() {
-        env.get('TOWER_LAUNCH_ID')
-    }
-
     boolean enableMetrics() { true }
 
     String getEndpoint() { endpoint }
 
     String getWorkflowId() { workflowId }
+
+    boolean getTowerLaunch() { towerLaunch }
 
     void setAliveInterval(Duration d) {
         this.aliveInterval = d
@@ -245,7 +245,8 @@ class TowerClient implements TraceObserver {
         result.runName = session.runName
         result.projectName = session.workflowMetadata.projectName
         result.repository = session.workflowMetadata.repository
-        result.launchId = launchId
+        result.workflowId = env.get('TOWER_WORKFLOW_ID')
+        this.towerLaunch = result.workflowId != null
         return result
     }
 
@@ -412,7 +413,7 @@ class TowerClient implements TraceObserver {
         def result = new LinkedHashMap(5)
         result.workflow = workflow
         result.processNames = new ArrayList(processNames)
-        result.launchId = launchId
+        result.towerLaunch = towerLaunch
         return result
     }
 
