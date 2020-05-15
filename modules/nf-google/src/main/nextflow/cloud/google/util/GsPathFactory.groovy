@@ -22,6 +22,7 @@ import com.google.cloud.storage.contrib.nio.CloudStorageConfiguration
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import groovy.transform.CompileStatic
 import nextflow.Global
+import nextflow.Session
 import nextflow.cloud.google.lifesciences.GoogleLifeSciencesConfig
 import nextflow.file.FileSystemPathFactory
 
@@ -39,7 +40,7 @@ class GsPathFactory extends FileSystemPathFactory {
     } ()
 
     static private CloudStorageConfiguration getCloudStorageConfig() {
-        def session = Global.getSession() as nextflow.Session
+        final session = (Session) Global.getSession()
         if (!session)
             new IllegalStateException("Cannot initialize GsPathFactory: missing session")
 

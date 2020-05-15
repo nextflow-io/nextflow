@@ -34,9 +34,9 @@ class FileHelperGsTest extends Specification {
     def 'should parse google storage path' () {
 
         given:
-        def sess = new Session()
-        sess.config = [google:[project:'foo', region:'x']]
-        Global.session = sess
+        Global.session = Mock(Session) {
+            getConfig() >> [google:[project:'foo', region:'x']]
+        }
 
         expect:
         FileHelper.asPath('file.txt') ==
@@ -65,9 +65,7 @@ class FileHelperGsTest extends Specification {
 
     def 'should strip ending slash' () {
         given:
-        def sess = new Session()
-        sess.config = [google:[project:'foo', region:'x']]
-        Global.session = sess
+        Global.session = Mock(Session) { getConfig() >> [google:[project:'foo', region:'x']] }
         def nxFolder = Paths.get('/my-bucket/foo')
         def nxNested = Paths.get('/my-bucket/foo/bar/')
         and:
