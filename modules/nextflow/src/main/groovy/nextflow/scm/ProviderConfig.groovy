@@ -69,7 +69,7 @@ class ProviderConfig {
                 // this config is ignored when accessing repositories - the actual server/domain is
                 // determined by the configured or specified AWS region.
                 // it is required here for compatibility for provider server/domain processing
-                attr.server = "https://git-codecommit.us-west-2.amazonaws.com"
+                attr.server = "https://git-codecommit.[a-z1-9-]+.amazonaws.com/v1/repos"
                 break
         }
 

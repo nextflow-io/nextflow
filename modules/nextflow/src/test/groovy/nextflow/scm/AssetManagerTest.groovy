@@ -475,6 +475,13 @@ class AssetManagerTest extends Specification {
 
         when:
         manager = new AssetManager()
+        result = manager.resolveNameFromGitUrl('https://git-codecommit.us-west-2.amazonaws.com/v1/repos/project')
+        then:
+        result == 'codecommit::us-west-2://project'
+        manager.hub == 'codecommit'
+
+        when:
+        manager = new AssetManager()
         result = manager.resolveNameFromGitUrl('https://gitlab.com/pditommaso/hello.git')
         then:
         result == 'pditommaso/hello'

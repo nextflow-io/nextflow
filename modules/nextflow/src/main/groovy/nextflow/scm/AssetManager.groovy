@@ -295,9 +295,17 @@ class AssetManager {
                 }
                 else {
                     // find the provider config for this server
-                    def config = providerConfigs.find { it.domain == url.domain }
+                    def config = providerConfigs.find { it.domain == url.domain || url.domain.matches(it.domain) }
                     this.hub = config?.name
-                    result = resolveProjectName0(url.path, config?.server)
+
+                    if ( hub == 'codecommit') {
+                        def project = resolveProjectName0(url.path, config?.server)
+                        def region = url.domain.split("\\.")[1]
+                        result = "codecommit::$region://$project"
+                    } else {
+                        result = resolveProjectName0(url.path, config?.server)
+                    }
+                    
                 }
                 log.debug "Repository URL: $repository; Project: $result; Hub provider: $hub"
 
