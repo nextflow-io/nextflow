@@ -16,8 +16,6 @@ import com.amazonaws.services.codecommit.model.GetRepositoryResult
 import com.amazonaws.services.codecommit.model.RepositoryMetadata
 import com.amazonaws.services.codecommit.model.GetFileRequest
 
-import org.springframework.cloud.config.server.support.AwsCodeCommitCredentialProvider
-
 import org.eclipse.jgit.transport.CredentialsProvider
 
 /**
@@ -52,7 +50,7 @@ final class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     @Override
     CredentialsProvider getGitCredentials() {
         def provider = new AwsCodeCommitCredentialProvider()
-        provider.setAwsCredentialProvider( getAwsCredentialsProvider() )
+        provider.setAwsCredentialsProvider( getAwsCredentialsProvider() )
         return provider
     }
 
