@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2019 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.scm
 
 import nextflow.Global
@@ -43,7 +59,9 @@ import org.eclipse.jgit.transport.URIish
  * calculating this signature is documented very well at
  * https://docs.aws.amazon.com/general/latest/gr/signature-version-4.html.
  *
- * This is mostly a direct port of the AwsCodeCommitCredentialProvider class provided by the
+ * @author Don Laidlaw
+ * 
+ * This class mostly a direct port of the AwsCodeCommitCredentialProvider class provided by the
  * spring framework in org.springframwork.cloud.config.server.support with some minor 
  * modifications and simplifications that leverage the Groovy language.
  * 
