@@ -16,10 +16,9 @@
 
 package nextflow.k8s.model
 
-import spock.lang.Specification
-
 import nextflow.executor.res.AcceleratorResource
-
+import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -84,6 +83,55 @@ class PodSpecBuilderTest extends Specification {
                            labels: [
                                    app: 'myApp',
                                    runName: 'something'
+                           ],
+                           annotations: [
+                                   anno1: "value1",
+                                   anno2: "value2",
+                                   anno3: "value3"
+                           ]
+                   ],
+                   spec: [
+                           restartPolicy:'Never',
+                           containers:[
+                                   [name:'foo',
+                                    image:'busybox',
+                                    command: ['sh', '-c', 'echo hello'],
+                                    workingDir:'/some/work/dir'
+                                   ]
+                           ]
+                   ]
+        ]
+    }
+    
+    def 'should truncate labels longer than 63 chars' () {
+
+        when:
+        def spec = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withWorkDir('/some/work/dir')
+                .withCommand(['sh', '-c', 'echo hello'])
+                .withNamespace('xyz')
+                .withLabel('app','myApp')
+                .withLabel('runName','something')
+                .withLabel('tag','somethingreallylonggggggggggggggggggggggggggggggggggggggggggendEXTRABIT')
+                .withLabels([tag2: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggendEXTRABIT', tag3: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggendEXTRABIT'])
+                .withAnnotation("anno1", "value1")
+                .withAnnotations([anno2: "value2", anno3: "value3"])
+                .build()
+
+        then:
+        spec ==  [ apiVersion: 'v1',
+                   kind: 'Pod',
+                   metadata: [
+                           name:'foo',
+                           namespace:'xyz',
+                           labels: [
+                                   app: 'myApp',
+                                   runName: 'something',
+                                   tag: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggend',
+                                   tag2: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggend',
+                                   tag3: 'somethingreallylonggggggggggggggggggggggggggggggggggggggggggend'
                            ],
                            annotations: [
                                    anno1: "value1",
@@ -579,5 +627,32 @@ class PodSpecBuilderTest extends Specification {
         res.requests == ['foo.org/gpu': 5]
         res.limits == [cpus:2, 'foo.org/gpu': 10]
 
+    }
+
+
+    @Unroll
+    def 'should sanitize k8s label: #label' () {
+        given:
+        def builder = new PodSpecBuilder()
+
+        expect:
+        builder.sanitize0('foo',label, 'label') == str
+
+        where:
+        label           | str
+        null            | 'null'
+        'hello'         | 'hello'
+        'hello world'   | 'hello_world'
+        'hello  world'  | 'hello_world'
+        'hello.world'   | 'hello.world'
+        'hello-world'   | 'hello-world'
+        'hello_world'   | 'hello_world'
+        'hello_world-'  | 'hello_world'
+        'hello_world_'  | 'hello_world'
+        'hello_world.'  | 'hello_world'
+        'hello_123'     | 'hello_123'
+        'HELLO 123'     | 'HELLO_123'
+        '123hello'      | 'hello'
+        'x2345678901234567890123456789012345678901234567890123456789012345' | 'x23456789012345678901234567890123456789012345678901234567890123'
     }
 }

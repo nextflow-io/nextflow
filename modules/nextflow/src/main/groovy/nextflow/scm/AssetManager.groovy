@@ -104,6 +104,12 @@ class AssetManager {
         build(pipelineName, config, cliOpts)
     }
 
+    AssetManager( String pipelineName, Map config ) {
+        assert pipelineName
+        // build the object
+        build(pipelineName, config)
+    }
+
     /**
      * Build the asset manager internal data structure
      *
@@ -753,6 +759,17 @@ class AssetManager {
         def result = new ArrayList<String>(branches.size() + tags.size())
         result.addAll(branches)
         result.addAll(tags)
+        return result
+    }
+
+    List<RevisionInfo> getRemoteRevisions() {
+        final result = new ArrayList(50)
+        for( def branch : provider.getBranches() ) {
+            result.add(new RevisionInfo(branch.commitId, branch.name, RevisionInfo.Type.BRANCH))
+        }
+        for( def tag : provider.getTags() ) {
+            result.add(new RevisionInfo(tag.commitId, tag.name, RevisionInfo.Type.TAG))
+        }
         return result
     }
 

@@ -15,7 +15,10 @@
  */
 
 package nextflow.scm
+
+
 import groovy.json.JsonSlurper
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
@@ -33,6 +36,18 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 @Slf4j
 @CompileStatic
 abstract class RepositoryProvider {
+
+    @Canonical
+    static class TagInfo {
+        String name
+        String commitId
+    }
+
+    @Canonical
+    static class BranchInfo {
+        String name
+        String commitId
+    }
 
     /**
      * The pipeline qualified name following the syntax {@code owner/repository}
@@ -89,6 +104,10 @@ abstract class RepositoryProvider {
      * @return The project home page e.g. https://github.com/nextflow-io/hello
      */
     abstract String getRepositoryUrl()
+
+    List<BranchInfo> getBranches() { throw new UnsupportedOperationException("Get branches operation not support by ${this.getClass().getSimpleName()} provider") }
+
+    List<TagInfo> getTags() { throw new UnsupportedOperationException("Get tags operation not support by ${this.getClass().getSimpleName()} provider") }
 
     /**
      * @return a org.eclipse.jgit.transport.CredentialsProvider object for authenticating git operations
@@ -168,9 +187,25 @@ abstract class RepositoryProvider {
                 log.debug "Response status: $code -- ${connection.getErrorStream()?.text}"
                 throw new AbortOperationException("Remote resource not found: ${connection.getURL()}")
         }
-
     }
 
+    @Memoized
+    protected <T> List<T> invokeAndResponseWithPaging(String request, Closure<T> parse) {
+        int page = 0
+        final result = new ArrayList()
+        while( true ) {
+            final url = request + (request.contains('?') ? "&page=${++page}": "?page=${++page}")
+            final response = invoke(url)
+            final list = (List) new JsonSlurper().parseText(response)
+            if( !list )
+                break
+
+            for( def item : list ) {
+                result.add( parse(item) )
+            }
+        }
+        return result
+    }
 
     /**
      * Invoke the API request specified and parse the JSON response

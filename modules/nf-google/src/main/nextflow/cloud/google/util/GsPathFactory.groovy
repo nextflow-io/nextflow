@@ -18,8 +18,12 @@ package nextflow.cloud.google.util
 
 import java.nio.file.Path
 
+import com.google.cloud.storage.contrib.nio.CloudStorageConfiguration
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import groovy.transform.CompileStatic
+import nextflow.Global
+import nextflow.Session
+import nextflow.cloud.google.lifesciences.GoogleLifeSciencesConfig
 import nextflow.file.FileSystemPathFactory
 
 /**
@@ -30,6 +34,24 @@ import nextflow.file.FileSystemPathFactory
 @CompileStatic
 class GsPathFactory extends FileSystemPathFactory {
 
+    @Lazy
+    static private final CloudStorageConfiguration storageConfig = {
+        return getCloudStorageConfig()
+    } ()
+
+    static private CloudStorageConfiguration getCloudStorageConfig() {
+        final session = (Session) Global.getSession()
+        if (!session)
+            new IllegalStateException("Cannot initialize GsPathFactory: missing session")
+
+        final config = GoogleLifeSciencesConfig.fromSession(session)
+        final builder = CloudStorageConfiguration.builder()
+        if (config.enableRequesterPaysBuckets) {
+            builder.userProject(config.project)
+        }
+        return builder.build()
+    }
+
     @Override
     protected Path parseUri(String uri) {
         if( !uri.startsWith('gs://') )
@@ -37,7 +59,7 @@ class GsPathFactory extends FileSystemPathFactory {
         final str = uri.substring(5)
         final p = str.indexOf('/')
         return ( p==-1
-                ? CloudStorageFileSystem.forBucket(str).getPath('')
-                : CloudStorageFileSystem.forBucket(str.substring(0,p)).getPath(str.substring(p)) )
+                ? CloudStorageFileSystem.forBucket(str, storageConfig).getPath('')
+                : CloudStorageFileSystem.forBucket(str.substring(0,p), storageConfig).getPath(str.substring(p)) )
     }
 }

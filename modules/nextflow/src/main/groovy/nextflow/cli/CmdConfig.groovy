@@ -77,12 +77,14 @@ class CmdConfig extends CmdBase {
         if( printProperties && printFlatten )
             throw new AbortOperationException("Option `-flat` and `-properties` conflicts")
 
-        final config = new ConfigBuilder()
+        final builder = new ConfigBuilder()
                 .setShowClosures(true)
+                .showMissingVariables(true)
                 .setOptions(launcher.options)
                 .setBaseDir(base)
                 .setCmdConfig(this)
-                .buildConfigObject()
+
+        final config = builder.buildConfigObject()
 
         if( printProperties ) {
             printProperties0(config, stdout)
@@ -93,6 +95,9 @@ class CmdConfig extends CmdBase {
         else {
             printCanonical0(config, stdout)
         }
+
+        for( String msg : builder.warnings )
+            log.warn(msg)
     }
 
     /**

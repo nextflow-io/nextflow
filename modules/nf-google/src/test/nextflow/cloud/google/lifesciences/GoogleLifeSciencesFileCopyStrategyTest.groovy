@@ -101,6 +101,41 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
                 '''.stripIndent()
     }
 
+    def 'create stage files using Requester Pays' () {
+        given:
+        def bean = Mock(TaskBean) {
+            getWorkDir() >> mockGsPath('gs://my-bucket/work/xx/yy')
+        }
+        def handler = Mock(GoogleLifeSciencesTaskHandler) {
+            getExecutor() >> Mock(GoogleLifeSciencesExecutor) {
+                getConfig() >> GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', enableRequesterPaysBuckets:true]])
+            }
+        }
+        and:
+        def strategy = new GoogleLifeSciencesFileCopyStrategy(bean, handler)
+
+        // file with the same name
+        when:
+        def inputs = ['foo.txt': mockGsPath('gs://my-bucket/bar/foo.txt')]
+        def result = strategy.getStageInputFilesScript(inputs)
+        then:
+        result == '''\
+                echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
+                gsutil -m -q -u foo cp gs://my-bucket/bar/foo.txt /work/xx/yy/foo.txt
+                '''.stripIndent()
+
+        // file a directory name
+        when:
+        inputs = ['dir1': mockGsPath('gs://my-bucket/foo/dir1', true)]
+        result = strategy.getStageInputFilesScript(inputs)
+        then:
+        result == '''\
+                echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
+                gsutil -m -q -u foo cp -R gs://my-bucket/foo/dir1/ /work/xx/yy
+                '''.stripIndent()
+
+    }
+
     def 'should unstage files' () {
         given:
         def bean = Mock(TaskBean) {

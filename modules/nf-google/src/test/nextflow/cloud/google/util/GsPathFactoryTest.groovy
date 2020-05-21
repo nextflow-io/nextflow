@@ -16,16 +16,21 @@
 
 package nextflow.cloud.google.util
 
-
+import nextflow.Global
+import nextflow.Session
 import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class GsPathPathFactoryTest extends Specification {
+class GsPathFactoryTest extends Specification {
 
     def 'should create gs path' () {
         given:
+        Global.session = Mock(Session) {
+            getConfig() >> [google:[project:'foo', region:'x']]
+        }
+        and:
         def factory = new GsPathFactory()
 
         expect:
@@ -38,5 +43,31 @@ class GsPathPathFactoryTest extends Specification {
         _ | 'gs://foo/b a r'
         _ | 'gs://f o o/bar'
         _ | 'gs://f_o_o/bar'
+    }
+
+    def 'should use requester pays' () {
+        given:
+        Global.session = Mock(Session) {
+            getConfig() >> [google:[project:'foo', region:'x', enableRequesterPaysBuckets:true]]
+        }
+
+        when:
+        def storageConfig = GsPathFactory.getCloudStorageConfig()
+
+        then:
+        storageConfig.userProject() == 'foo'
+    }
+
+    def 'should not use requester pays' () {
+        given:
+        def sess = new Session()
+        sess.config = [google:[project:'foo', region:'x', lifeSciences: [:]]]
+        Global.session = sess
+
+        when:
+        def storageConfig = GsPathFactory.getCloudStorageConfig()
+
+        then:
+        storageConfig.userProject() == null
     }
 }
