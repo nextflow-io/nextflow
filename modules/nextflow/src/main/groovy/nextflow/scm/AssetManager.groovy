@@ -29,6 +29,7 @@ import nextflow.cli.HubOptions
 import nextflow.config.ConfigParser
 import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
+import nextflow.exception.AmbiguousPipelineNameException
 import nextflow.script.ScriptFile
 import nextflow.util.IniFile
 import org.eclipse.jgit.api.CreateBranchCommand
@@ -277,7 +278,8 @@ class AssetManager {
         }
 
         if( qualifiedName instanceof List ) {
-            throw new AbortOperationException("Which one do you mean?\n${qualifiedName.join('\n')}")
+            final msg = "Which one do you mean?\n${qualifiedName.join('\n')}"
+            throw new AmbiguousPipelineNameException(msg, qualifiedName)
         }
 
         return qualifiedName
