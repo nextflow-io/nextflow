@@ -151,7 +151,7 @@ class LoggerHelper {
     }
 
     void setup() {
-        logFileName = opts.logFile
+        logFileName = opts.logFile ?: System.getenv('NXF_LOG_FILE')
 
         final boolean quiet = opts.quiet
         final List<String> debugConf = opts.debug ?: new ArrayList<String>()
