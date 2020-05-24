@@ -154,9 +154,9 @@ class Launcher {
     private void checkLogFileName() {
         if( !options.logFile ) {
             if( isDaemon() )
-                options.logFile = '.node-nextflow.log'
+                options.logFile = System.getenv('NXF_LOG_FILE') ?: '.node-nextflow.log'
             else if( command instanceof CmdRun || options.debug || options.trace )
-                options.logFile = ".nextflow.log"
+                options.logFile = System.getenv('NXF_LOG_FILE') ?: ".nextflow.log"
         }
     }
 
