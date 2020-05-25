@@ -42,7 +42,7 @@ import nextflow.util.Duration
 @Slf4j
 class SraExplorer {
 
-    static public Map PARAMS = [apiKey:String, cache: Boolean, max: Integer]
+    static public Map PARAMS = [apiKey:String, cache: Boolean, max: Integer, fields: [String, List]]
 
     @ToString
     static class SearchRecord {
@@ -68,6 +68,7 @@ class SraExplorer {
 
     String apiKey
     boolean useCache = true
+    def fieldsSRA
 
     SraExplorer() {
 
@@ -90,6 +91,9 @@ class SraExplorer {
             useCache = opts.cache as boolean
         if( opts.max )
             maxResults = opts.max as int
+        if( opts.fields )
+            fieldsSRA = opts.fields
+            log.warn1("Modified url for fields=$fieldsSRA")
     }
 
     DataflowWriteChannel apply() {
@@ -99,7 +103,7 @@ class SraExplorer {
         if( !apiKey )
             apiKey = getConfigApiKey()
 
-        query0(query)
+        query0(query, fieldsSRA)
 
         if( missing )
             log.warn "Failed to retrieve fastq download URL for accessions: ${missing.join(',')}"
@@ -128,7 +132,7 @@ class SraExplorer {
         return result
     }
 
-    protected void query0( query ) {
+    protected void query0( query, fieldsSRA ) {
         if( query instanceof List ) {
             for( def item in query ) {
                 query0(item)
@@ -137,14 +141,14 @@ class SraExplorer {
         }
 
         if( query instanceof String || query instanceof GString ) {
-            query1(query.toString())
+            query1(query.toString(), fieldsSRA)
             return
         }
 
         throw new IllegalArgumentException("Not a valid query argument: $query [${query?.getClass()?.getName()}]")
     }
 
-    protected void query1(String query) {
+    protected void query1(String query, fieldsSRA) {
 
         def url = getSearchUrl(query)
         def result = makeSearch(url)
@@ -153,7 +157,7 @@ class SraExplorer {
         while( index < result.count && emitCount<maxResults ) {
             url = getFetchUrl(result.querykey, result.webenv, index, entriesPerChunk)
             def data = makeDataRequest(url)
-            parseDataResponse(data)
+            parseDataResponse(data, fieldsSRA)
             index += entriesPerChunk
         }
 
@@ -189,17 +193,24 @@ class SraExplorer {
         }
     }
 
-    protected void parseDataResponse( Map response ) {
+    protected void parseDataResponse( Map response, fieldsSRA ) {
         def ids = response.result.uids
 
         for( def key : ids ) {
             def runs = parseXml(response.result[key]?.runs)
             for( def run : runs ) {
                 final acc = run['@acc']?.toString()
-                final files = getFastqUrl(acc)
+                final files = getFastqUrl(acc, fieldsSRA) //TODO if fieldsSRA present add them to the result
                 if( acc && files ) {
-                    target.bind( [acc, files] )
+                    def result = new ArrayList(files.size() + 1)
+                    result.add(acc)
+                    for (def it : files) {
+                        result.add(it)
+                    }
+                    //target.bind( [acc, files]
+                    target.bind(result)
                 }
+
                 if( ++emitCount>= maxResults )
                     return
             }
@@ -233,7 +244,7 @@ class SraExplorer {
         getCacheFolder().resolve("$bucket/${acc}.fastq_ftp.cache")
     }
 
-    protected String readRunFastqs(String acc) {
+    protected String readRunFastqs(String acc, fieldsSRA) {
         final Path cache = cachePath(acc)
         if( useCache ) try {
             def delta = System.currentTimeMillis() - FilesEx.lastModified(cache)
@@ -244,7 +255,7 @@ class SraExplorer {
             // ok ignore it and download it from EBI
         }
 
-        final result = readRunUrl(acc)
+        final result = readRunUrl(acc, fieldsSRA)
         if( useCache && result ) {
             // store in the cache
             cache.parent.createDirIfNotExists()
@@ -253,9 +264,17 @@ class SraExplorer {
         return result
     }
 
-    protected String readRunUrl(String acc) {
-        final url = "https://www.ebi.ac.uk/ena/data/warehouse/filereport?result=read_run&fields=fastq_ftp&accession=$acc"
-        log.debug "SRA fetch ftp fastq url=$url"
+    protected String readRunUrl(String acc, fields) {
+        //final url = "https://www.ebi.ac.uk/ena/data/warehouse/filereport?result=read_run&fields=fastq_ftp&accession=$acc"
+        def url = "https://www.ebi.ac.uk/ena/data/warehouse/filereport?result=read_run&fields=fastq_ftp"
+
+        for( def field in fields.split(',') ) {
+            url += ",$field"
+        }
+
+        url += "&accession=$acc"
+
+        // Here is where the file is read #modify
         String result = new URL(url).text.trim()
         log.trace "SRA fetch ftp fastq url result:\n${result?.indent()}"
 
@@ -264,23 +283,39 @@ class SraExplorer {
             missing << acc
             return null
         }
+        // modify this does not work //To do catch 500 http error
+        /*else if (result ==~  "A column id supplied is not valid")
+            log.debug "Not a valid SRA field =$fields"
+            missing << acc
+            return null*/
 
         return result
     }
-
-    protected getFastqUrl(String acc) {
-        def text = readRunFastqs(acc)
+    // to do here I dont need fieldssRA
+    protected getFastqUrl(String acc, fieldsSRA) {
+        def text = readRunFastqs(acc, fieldsSRA)
         if( !text )
             return
-
+        // modify
         def lines = text.trim().readLines()
-        def files = lines[1].split(';')
-        def result = new ArrayList(files.size())
+        def files = lines[1].split('\t')[0].split(';')
+        def fields =  lines[1].split('\t').drop(1)// TODO check whether fields exists
+        def result_files = new ArrayList(files.size())
         for( def str : files ) {
-            result.add( FileHelper.asPath("ftp://$str") )
+            result_files.add( FileHelper.asPath("ftp://$str") )
+        }
+        def result_f = result_files.size()==1 ? result_files[0] : result_files
+        if (fields == null) {
+            return result_f
         }
 
-        return result.size()==1 ? result[0] : result
+        def result = new ArrayList(fields.size() + 1)
+
+        result.add (result_f)
+        for( def it : fields ) {
+            result.add( it )
+        }
+        return result
     }
 
 
