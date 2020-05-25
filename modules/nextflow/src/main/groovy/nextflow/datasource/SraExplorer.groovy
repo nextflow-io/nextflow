@@ -268,8 +268,10 @@ class SraExplorer {
         //final url = "https://www.ebi.ac.uk/ena/data/warehouse/filereport?result=read_run&fields=fastq_ftp&accession=$acc"
         def url = "https://www.ebi.ac.uk/ena/data/warehouse/filereport?result=read_run&fields=fastq_ftp"
 
-        for( def field in fields.split(',') ) {
-            url += ",$field"
+        if( fields != null ) {
+            for (def field in fields.split(',')) {//ERROR HERE
+                url += ",$field"
+            }
         }
 
         url += "&accession=$acc"
