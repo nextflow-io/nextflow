@@ -127,41 +127,43 @@ class SraExplorerTest extends Specification {
 
 
         def slurper = Spy(SraExplorer)
+        def SRAfields = ""
         def f0 = 'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR144/004/SRR1448774/SRR1448774.fastq.gz' as Path
         def f1 = "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908503/ERR908503_1.fastq.gz" as Path
         def f2= "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908503/ERR908503_2.fastq.gz" as Path
 
         when:
-        def result = slurper.getFastqUrl('SRR1448774')
+        def result = slurper.getFastqUrl('SRR1448774', SRAfields)
         then:
-        1 * slurper.readRunFastqs('SRR1448774') >> RESP1
+        1 * slurper.readRunFastqs('SRR1448774', SRAfields) >> RESP1
         result == f0
 
         when:
-        result = slurper.getFastqUrl('ERR908503')
+        result = slurper.getFastqUrl('ERR908503', SRAfields)
         then:
-        1 * slurper.readRunFastqs('ERR908503') >> RESP2
+        1 * slurper.readRunFastqs('ERR908503', SRAfields) >> RESP2
         result == [f1, f2]
     }
 
     def 'should cache fastq_ftp' () {
         given:
         def CACHE_CONTENT = 'Hello'
+        def SRAfields = ""
         def folder = Files.createTempDirectory('test')
         def cache = folder.resolve('dir1/cache.txt')
         def slurper = Spy(SraExplorer)
 
         when:
-        def result = slurper.readRunFastqs('ERR908503')
+        def result = slurper.readRunFastqs('ERR908503', SRAfields)
         then:
         1 * slurper.cachePath("ERR908503") >> cache
-        1 * slurper.readRunUrl("ERR908503") >> CACHE_CONTENT
+        1 * slurper.readRunUrl("ERR908503", SRAfields) >> CACHE_CONTENT
         result == CACHE_CONTENT
         cache.text == CACHE_CONTENT
 
         // should HIT the cache
         when:
-        result = slurper.readRunFastqs('ERR908503')
+        result = slurper.readRunFastqs('ERR908503', SRAfields)
         then:
         1 * slurper.cachePath("ERR908503") >> cache
         0 * slurper.readRunUrl(_) >> null
