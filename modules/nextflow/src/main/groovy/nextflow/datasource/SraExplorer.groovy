@@ -93,7 +93,6 @@ class SraExplorer {
             maxResults = opts.max as int
         if( opts.fields )
             fieldsSRA = opts.fields
-            log.warn1("Modified url for fields=$fieldsSRA")
     }
 
     DataflowWriteChannel apply() {
@@ -200,11 +199,11 @@ class SraExplorer {
             def runs = parseXml(response.result[key]?.runs)
             for( def run : runs ) {
                 final acc = run['@acc']?.toString()
-                final files = getFastqUrl(acc, fieldsSRA) //TODO if fieldsSRA present add them to the result
-                if( acc && files ) {
-                    def result = new ArrayList(files.size() + 1)
+                final filesPlusFields = getFastqUrl(acc, fieldsSRA)
+                if( acc && filesPlusFields ) {
+                    def result = new ArrayList(filesPlusFields.size() + 1)
                     result.add(acc)
-                    for (def it : files) {
+                    for (def it : filesPlusFields) {
                         result.add(it)
                     }
                     //target.bind( [acc, files]
@@ -269,7 +268,7 @@ class SraExplorer {
         def url = "https://www.ebi.ac.uk/ena/data/warehouse/filereport?result=read_run&fields=fastq_ftp"
 
         if( fields != null ) {
-            for (def field in fields.split(',')) {//ERROR HERE
+            for (def field in fields.split(',')) {
                 url += ",$field"
             }
         }
@@ -307,10 +306,6 @@ class SraExplorer {
             result_files.add( FileHelper.asPath("ftp://$str") )
         }
         def result_f = result_files.size()==1 ? result_files[0] : result_files
-        if (fields == null) {
-            return result_f
-        }
-
         def result = new ArrayList(fields.size() + 1)
 
         result.add (result_f)
