@@ -42,7 +42,7 @@ import nextflow.util.Duration
 @Slf4j
 class SraExplorer {
 
-    static public Map PARAMS = [apiKey:String, cache: Boolean, max: Integer, fields: [String, List], queryFields: [String, List]]
+    static public Map PARAMS = [apiKey:String, cache: Boolean, max: Integer, queryFields: [String, List]]
 
     @ToString
     static class SearchRecord {
@@ -68,7 +68,6 @@ class SraExplorer {
 
     String apiKey
     boolean useCache = true
-    def fieldsSRA
     List<String> queryFields
 
     SraExplorer() {
@@ -92,8 +91,6 @@ class SraExplorer {
             useCache = opts.cache as boolean
         if( opts.max )
             maxResults = opts.max as int
-        /*if( opts.fields )
-            fieldsSRA = opts.fields*/
         if( opts.queryFields )
             queryFields = getFields(opts.queryFields)
     }
@@ -278,7 +275,6 @@ class SraExplorer {
     }
 
     protected String readRunUrl(String acc, List<String> queryFields) {
-        //final url = "https://www.ebi.ac.uk/ena/data/warehouse/filereport?result=read_run&fields=fastq_ftp&accession=$acc"
         def url = "https://www.ebi.ac.uk/ena/data/warehouse/filereport?result=read_run&fields=fastq_ftp"
 
         if( queryFields != null ) {
@@ -288,8 +284,6 @@ class SraExplorer {
         }
 
         url += "&accession=$acc"
-
-        // Here is where the file is read #modify
         String result = new URL(url).text.trim()
         log.trace "SRA fetch ftp fastq url result:\n${result?.indent()}"
 
@@ -298,15 +292,10 @@ class SraExplorer {
             missing << acc
             return null
         }
-        // modify this does not work //To do catch 500 http error
-        /*else if (result ==~  "A column id supplied is not valid")
-            log.debug "Not a valid SRA field =$fields"
-            missing << acc
-            return null*/
 
         return result
     }
-    // to do here I dont need fieldssRA //#del
+
     protected getFastqUrl(String acc, List<String> queryFields) {
         def text = readRunFastqs(acc, queryFields)
         if( !text )
@@ -339,7 +328,6 @@ class SraExplorer {
 
         }
 
-        log.warn1("$result_fields   -----------------------------------------------------")
         return result_fields
 
 
