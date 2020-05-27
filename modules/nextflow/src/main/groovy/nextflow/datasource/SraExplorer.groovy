@@ -42,7 +42,7 @@ import nextflow.util.Duration
 @Slf4j
 class SraExplorer {
 
-    static public Map PARAMS = [apiKey:String, cache: Boolean, max: Integer, fields: [String, List]]
+    static public Map PARAMS = [apiKey:String, cache: Boolean, max: Integer, fields: [String, List], queryFields: [String, List]]
 
     @ToString
     static class SearchRecord {
@@ -69,6 +69,7 @@ class SraExplorer {
     String apiKey
     boolean useCache = true
     def fieldsSRA
+    List<String> queryFields
 
     SraExplorer() {
 
@@ -91,8 +92,10 @@ class SraExplorer {
             useCache = opts.cache as boolean
         if( opts.max )
             maxResults = opts.max as int
-        if( opts.fields )
-            fieldsSRA = opts.fields
+        /*if( opts.fields )
+            fieldsSRA = opts.fields*/
+        if( opts.queryFields )
+            queryFields = getFields(opts.queryFields)
     }
 
     DataflowWriteChannel apply() {
@@ -102,7 +105,7 @@ class SraExplorer {
         if( !apiKey )
             apiKey = getConfigApiKey()
 
-        query0(query, fieldsSRA)
+        query0(query, queryFields)
 
         if( missing )
             log.warn "Failed to retrieve fastq download URL for accessions: ${missing.join(',')}"
@@ -131,7 +134,7 @@ class SraExplorer {
         return result
     }
 
-    protected void query0( query, fieldsSRA ) {
+    protected void query0( query, List<String> queryFields ) {
         if( query instanceof List ) {
             for( def item in query ) {
                 query0(item)
@@ -140,14 +143,14 @@ class SraExplorer {
         }
 
         if( query instanceof String || query instanceof GString ) {
-            query1(query.toString(), fieldsSRA)
+            query1(query.toString(), queryFields)
             return
         }
 
         throw new IllegalArgumentException("Not a valid query argument: $query [${query?.getClass()?.getName()}]")
     }
 
-    protected void query1(String query, fieldsSRA) {
+    protected void query1(String query, List<String> queryFields) {
 
         def url = getSearchUrl(query)
         def result = makeSearch(url)
@@ -156,7 +159,7 @@ class SraExplorer {
         while( index < result.count && emitCount<maxResults ) {
             url = getFetchUrl(result.querykey, result.webenv, index, entriesPerChunk)
             def data = makeDataRequest(url)
-            parseDataResponse(data, fieldsSRA)
+            parseDataResponse(data, queryFields)
             index += entriesPerChunk
         }
 
@@ -192,27 +195,38 @@ class SraExplorer {
         }
     }
 
-    protected void parseDataResponse( Map response, fieldsSRA ) {
+    protected void parseDataResponse( Map response,  List<String> queryFields ) {
         def ids = response.result.uids
 
         for( def key : ids ) {
             def runs = parseXml(response.result[key]?.runs)
+
             for( def run : runs ) {
                 final acc = run['@acc']?.toString()
-                final filesPlusFields = getFastqUrl(acc, fieldsSRA)
-                if( acc && filesPlusFields ) {
-                    def result = new ArrayList(filesPlusFields.size() + 1)
-                    result.add(acc)
-                    for (def it : filesPlusFields) {
-                        result.add(it)
+                if( !queryFields ) {
+                    final files = getFastqUrl(acc, queryFields)
+                    if (acc && files) {
+                        target.bind([acc, files])
                     }
-                    //target.bind( [acc, files]
-                    target.bind(result)
+                    if (++emitCount >= maxResults)
+                        return
                 }
-
-                if( ++emitCount>= maxResults )
-                    return
+                else {
+                    final filesFields = getFastqUrl(acc, queryFields)
+                    if (acc && filesFields) {
+                        def result = new ArrayList(filesFields.size()+2)
+                        result.add(acc)
+                        result.add(filesFields['fastq_ftp'])
+                        for(def field : queryFields) {
+                            result.add(filesFields[field])
+                        }
+                        target.bind(result)
+                    }
+                    if (++emitCount >= maxResults)
+                        return
+                }
             }
+
         }
     }
 
@@ -243,7 +257,7 @@ class SraExplorer {
         getCacheFolder().resolve("$bucket/${acc}.fastq_ftp.cache")
     }
 
-    protected String readRunFastqs(String acc, fieldsSRA) {
+    protected String readRunFastqs(String acc, List<String> queryFields) {
         final Path cache = cachePath(acc)
         if( useCache ) try {
             def delta = System.currentTimeMillis() - FilesEx.lastModified(cache)
@@ -254,7 +268,7 @@ class SraExplorer {
             // ok ignore it and download it from EBI
         }
 
-        final result = readRunUrl(acc, fieldsSRA)
+        final result = readRunUrl(acc, queryFields)
         if( useCache && result ) {
             // store in the cache
             cache.parent.createDirIfNotExists()
@@ -263,12 +277,12 @@ class SraExplorer {
         return result
     }
 
-    protected String readRunUrl(String acc, fields) {
+    protected String readRunUrl(String acc, List<String> queryFields) {
         //final url = "https://www.ebi.ac.uk/ena/data/warehouse/filereport?result=read_run&fields=fastq_ftp&accession=$acc"
         def url = "https://www.ebi.ac.uk/ena/data/warehouse/filereport?result=read_run&fields=fastq_ftp"
 
-        if( fields != null ) {
-            for (def field in fields.split(',')) {
+        if( queryFields != null ) {
+            for (def field in queryFields) {
                 url += ",$field"
             }
         }
@@ -292,29 +306,44 @@ class SraExplorer {
 
         return result
     }
-    // to do here I dont need fieldssRA
-    protected getFastqUrl(String acc, fieldsSRA) {
-        def text = readRunFastqs(acc, fieldsSRA)
+    // to do here I dont need fieldssRA //#del
+    protected getFastqUrl(String acc, List<String> queryFields) {
+        def text = readRunFastqs(acc, queryFields)
         if( !text )
             return
-        // modify
+
+        if (!queryFields) {
+            def lines = text.trim().readLines()
+            def files = lines[1].split(';')
+            def result = new ArrayList(files.size())
+            for( def str : files ) {
+                result.add( FileHelper.asPath("ftp://$str") )
+            }
+
+            return result.size()==1 ? result[0] : result
+        }
+
         def lines = text.trim().readLines()
-        def files = lines[1].split('\t')[0].split(';')
-        def fields =  lines[1].split('\t').drop(1)// TODO check whether fields exists
-        def result_files = new ArrayList(files.size())
-        for( def str : files ) {
-            result_files.add( FileHelper.asPath("ftp://$str") )
-        }
-        def result_f = result_files.size()==1 ? result_files[0] : result_files
-        def result = new ArrayList(fields.size() + 1)
+        def header = lines[0].tokenize('\t')
+        def content =  lines[1].tokenize('\t')
 
-        result.add (result_f)
-        for( def it : fields ) {
-            result.add( it )
+        def result_fields = [:]
+
+        header.eachWithIndex { key, index ->
+            def values = content[index].tokenize(';')
+            if ( key == 'fastq_ftp') {
+                values = values.each { str -> FileHelper.asPath("ftp://$str") }
+            }
+
+            result_fields[key] =  values.size()==1 ? values[0] : values
+
         }
-        return result
+
+        log.warn1("$result_fields   -----------------------------------------------------")
+        return result_fields
+
+
     }
-
 
     protected parseXml(String str) {
         if( !str )
@@ -337,6 +366,12 @@ class SraExplorer {
             url += "&api_key=$apiKey"
 
         return url
+    }
+
+    protected List<String> getFields( value ) {
+        if( !value ) return Collections.emptyList()
+        return value instanceof List ? value : value.toString().tokenize(',')
+
     }
 
 }
