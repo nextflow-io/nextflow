@@ -17,12 +17,9 @@
 package nextflow.extension
 
 import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.concurrent.TimeoutException
 
 import groovyx.gpars.dataflow.DataflowQueue
-import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
@@ -33,34 +30,6 @@ import test.BaseSpec
  */
 class PublishOpTest extends BaseSpec {
 
-    def 'should infer task dir' () {
-        given:
-        def BASE = '/some/work/dir' as Path
-        def BUCKET = 's3:/other/bucket/dir' as Path
-        def sess = Mock(Session) {
-            getWorkDir() >> BASE
-            getBucketDir() >> BUCKET
-        }
-        Global.session = sess
-
-        def op = new PublishOp(Mock(DataflowReadChannel), [to:'/target'])
-
-        when:
-        def result = op.getTaskDir( BASE.resolve('xx/yyyy/this/and/that.txt') )
-        then:
-        result == Paths.get('/some/work/dir/xx/yyyy')
-
-        when:
-        result = op.getTaskDir( BUCKET.resolve('pp/qqqq/other/file.fasta') )
-        then:
-        result == 's3:/other/bucket/dir/pp/qqqq' as Path
-
-
-        when:
-        result = op.getTaskDir( BASE.resolve('xx/foo.txt') )
-        then:
-        result == null
-    }
 
     def 'should publish files' () {
         given:

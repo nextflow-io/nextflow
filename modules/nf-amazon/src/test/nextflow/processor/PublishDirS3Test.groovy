@@ -14,23 +14,34 @@
  * limitations under the License.
  */
 
-package nextflow.util
-import java.lang.annotation.ElementType
-import java.lang.annotation.Retention
-import java.lang.annotation.RetentionPolicy
-import java.lang.annotation.Target
+package nextflow.processor
+
+import spock.lang.Specification
+
+import java.nio.file.FileSystems
+
+import nextflow.file.FileHelper
+
 /**
- * Assign a name to a runtime loaded service object
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+class PublishDirS3Test extends Specification {
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-@interface ServiceName {
+    def 'should change mode to `copy`' () {
 
-    String value()
+        given:
+        def processor = [:] as TaskProcessor
+        processor.name = 'foo'
 
-    boolean important() default Boolean.FALSE
+        def targetDir = FileHelper.asPath( 's3://bucket/work' )
+        def publisher = new PublishDir(mode:'symlink', path: targetDir, sourceFileSystem: FileSystems.default)
+
+        when:
+        publisher.validatePublishMode()
+        then:
+        publisher.mode == PublishDir.Mode.COPY
+    }
+
 
 }
