@@ -16,6 +16,7 @@
 
 package nextflow.cli
 
+import nextflow.util.SpuriousDeps
 import static nextflow.Const.*
 
 import java.lang.reflect.Field
@@ -84,7 +85,6 @@ class Launcher {
         allCommands = (List<CmdBase>)[
                 new CmdClean(),
                 new CmdClone(),
-                new CmdCloud(),
                 new CmdConsole(),
                 new CmdFs(),
                 new CmdHistory(),
@@ -102,6 +102,11 @@ class Launcher {
                 new CmdHelp(),
                 new CmdSelfUpdate()
         ]
+
+        // legacy command
+        final cmdCloud = SpuriousDeps.cmdCloud()
+        if( cmdCloud )
+            allCommands.add(cmdCloud)
 
         options = new CliOptions()
         jcommander = new JCommander(options)

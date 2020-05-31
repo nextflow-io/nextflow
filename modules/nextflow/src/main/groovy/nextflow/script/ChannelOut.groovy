@@ -54,7 +54,7 @@ class ChannelOut implements List<DataflowWriteChannel> {
 
     ChannelOut(OutputsList outs) {
         channels = new HashMap<>(outs.size())
-        final onlyWithName = new ArrayList(outs.size())
+        final onlyWithName = new ArrayList<DataflowWriteChannel>(outs.size())
         for( OutParam param : outs ) {
             final ch = param.getOutChannel()
             final name = param.channelEmitName

@@ -230,11 +230,11 @@ while [[ $# != 0 ]]; do
       ;;
     -process.executor|-executor.name)
       if [[ $2 && $2 == 'ignite' ]]; then
-      NXF_MODE='ignite'; shift;
+      [ ! $NXF_MODE ] && NXF_MODE='ignite'; shift;
       fi
       ;;
     -with-mpi)
-      NXF_MODE='ignite'
+      [ ! $NXF_MODE ] && NXF_MODE='ignite'
       NXF_MPIRUN='true'
       ;;
     *)

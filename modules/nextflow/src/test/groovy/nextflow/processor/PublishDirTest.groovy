@@ -16,14 +16,14 @@
 
 package nextflow.processor
 
+import spock.lang.Specification
+
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
 import nextflow.Session
-import nextflow.file.FileHelper
-import spock.lang.Specification
 import test.TestHelper
 /**
  *
@@ -248,21 +248,6 @@ class PublishDirTest extends Specification {
         publisher.mode == PublishDir.Mode.SYMLINK
     }
 
-
-    def 'should change mode to `copy`' () {
-
-        given:
-        def processor = [:] as TaskProcessor
-        processor.name = 'foo'
-
-        def targetDir = FileHelper.asPath( 's3://bucket/work' )
-        def publisher = new PublishDir(mode:'symlink', path: targetDir, sourceFileSystem: FileSystems.default)
-
-        when:
-        publisher.validatePublishMode()
-        then:
-        publisher.mode == PublishDir.Mode.COPY
-    }
 
     def 'should change mode to `copy` when the target is a foreign file system' () {
 

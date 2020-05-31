@@ -26,9 +26,6 @@ sourceSets {
 
 dependencies {
     compile project(':nextflow')
-    compile project(':nf-ignite')
-    compile 'com.google.apis:google-api-services-compute:v1-rev20190905-1.30.3'
-    compile 'com.google.apis:google-api-services-genomics:v2alpha1-rev20191112-1.30.3'
     compile 'com.google.apis:google-api-services-lifesciences:v2beta-rev20191030-1.30.3'
     compile 'com.google.cloud:google-cloud-nio:0.120.0-alpha'
     compile 'com.google.auth:google-auth-library-oauth2-http:0.18.0'

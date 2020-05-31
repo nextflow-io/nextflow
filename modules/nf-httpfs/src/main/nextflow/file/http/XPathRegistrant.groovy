@@ -14,23 +14,20 @@
  * limitations under the License.
  */
 
-package nextflow.util
-import java.lang.annotation.ElementType
-import java.lang.annotation.Retention
-import java.lang.annotation.RetentionPolicy
-import java.lang.annotation.Target
+package nextflow.file.http
+
+import groovy.transform.CompileStatic
+import nextflow.util.SerializerRegistrant
+
 /**
- * Assign a name to a runtime loaded service object
- *
+ * Register the {@link XPathSerializer} as Kryo serializer
+ * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-@interface ServiceName {
-
-    String value()
-
-    boolean important() default Boolean.FALSE
-
+@CompileStatic
+class XPathRegistrant implements SerializerRegistrant {
+    @Override
+    void register(Map<Class, Object> serializers) {
+        serializers.put(XPath, XPathSerializer)
+    }
 }
