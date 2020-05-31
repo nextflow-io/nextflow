@@ -70,9 +70,10 @@ class PublishOp {
     protected void publish0(entry) {
         log.debug "Publish operator got: $entry"
         sourceDir = null
-        final list = new ArrayList(10)
-        collectFiles(entry, list)
-        publisher.apply(list, sourceDir)
+        // use an set to avoid duplicates
+        final result = new HashSet(10)
+        collectFiles(entry, result)
+        publisher.apply(result, sourceDir)
     }
 
     protected void done0(nope) {
@@ -80,15 +81,15 @@ class PublishOp {
         this.complete = true
     }
 
-    protected void collectFiles(entry, List<Path> list) {
+    protected void collectFiles(entry, Collection<Path> result) {
         if( entry instanceof Path ) {
-            list.add(entry)
+            result.add(entry)
             if( sourceDir == null )
                 sourceDir = getTaskDir(entry)
         }
         else if( entry instanceof List ) {
             for( def x : entry ) {
-                collectFiles(x, list)
+                collectFiles(x, result)
             }
         }
     }
