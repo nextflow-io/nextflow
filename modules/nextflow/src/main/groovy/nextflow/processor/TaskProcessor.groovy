@@ -1227,7 +1227,7 @@ class TaskProcessor {
             publish.overwrite = !task.cached
         }
 
-        List<Path> files = []
+        HashSet<Path> files = []
         def outputs = task.getOutputsByType(FileOutParam)
         for( Map.Entry entry : outputs ) {
             final value = entry.value
