@@ -1,6 +1,6 @@
 NEXTFLOW CHANGE-LOG
 ===================
-20.05.0-edge - 30 May 2020
+20.05.0-edge - 31 May 2020
 - Add support for NXF_LOG_NAME env var [cf496615]
 - Add exception specialiation for ambiguous repo [a34b1d2a]
 - Add support for tower_workflow_id env var [53188126]
