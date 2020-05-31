@@ -19,7 +19,6 @@ package nextflow.executor
 import spock.lang.Specification
 
 import nextflow.Session
-import nextflow.cloud.aws.batch.AwsBatchExecutor
 import nextflow.k8s.K8sExecutor
 import nextflow.script.ProcessConfig
 import nextflow.processor.TaskHandler
@@ -51,8 +50,6 @@ class ExecutorFactoryTest extends Specification {
         factory.getExecutorClass('slurm') == SlurmExecutor
         factory.getExecutorClass('condor') == CondorExecutor
         factory.getExecutorClass('k8s') == K8sExecutor
-        factory.getExecutorClass('awsbatch') == AwsBatchExecutor
-        factory.getExecutorClass('AwsBatch') == AwsBatchExecutor
         factory.getExecutorClass('x') == XExecutor  // <-- this is loaded by the name
 
         when:

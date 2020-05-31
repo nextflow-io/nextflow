@@ -16,9 +16,6 @@
 
 package nextflow
 
-import static nextflow.Const.*
-
-import java.lang.reflect.Method
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -29,7 +26,6 @@ import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
 import com.google.common.hash.HashCode
-import com.upplication.s3fs.S3OutputStream
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -75,6 +71,8 @@ import nextflow.util.NameGenerator
 import nextflow.util.VersionNumber
 import sun.misc.Signal
 import sun.misc.SignalHandler
+import static nextflow.Const.APP_VER
+import static nextflow.util.SpuriousDeps.shutdownS3Uploader
 /**
  * Holds the information on the current execution
  *
@@ -1270,19 +1268,6 @@ class Session implements ISession {
     @Memoized
     Duration getQueueStatInterval( String execName, Duration defValue = Duration.of('1min') ) {
         getExecConfigProp(execName, 'queueStatInterval', defValue) as Duration
-    }
-
-    static private void shutdownS3Uploader() {
-        if( classWasLoaded(S3_UPLOADER_CLASS) ) {
-            log.debug "AWS S3 uploader shutdown"
-            S3OutputStream.shutdownExecutor()
-        }
-    }
-
-    static private boolean classWasLoaded(String className) {
-        Method find = ClassLoader.class.getDeclaredMethod("findLoadedClass", [String.class] as Class[] );
-        find.setAccessible(true)
-        return find.invoke(ClassLoader.getSystemClassLoader(), className)
     }
 
     void printConsole(String str, boolean newLine=false) {

@@ -15,22 +15,27 @@
  */
 
 package nextflow.util
-import java.lang.annotation.ElementType
-import java.lang.annotation.Retention
-import java.lang.annotation.RetentionPolicy
-import java.lang.annotation.Target
+
+import groovy.transform.CompileStatic
+
 /**
- * Assign a name to a runtime loaded service object
+ * Register a serializer class in the Kryo serializers list
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
+interface SerializerRegistrant {
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-@interface ServiceName {
-
-    String value()
-
-    boolean important() default Boolean.FALSE
+    /**
+     * Serializer should implement this method adding the
+     * serialized class and the serializer class to the
+     * map passed as argument
+     *
+     * @param
+     *      serializers The serializer map, where the key element
+     *      represent the class to be serialized and the value
+     *      the serialization object
+     */
+    void register(Map<Class,Object> serializers)
 
 }

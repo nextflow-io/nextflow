@@ -14,23 +14,22 @@
  * limitations under the License.
  */
 
-package nextflow.util
-import java.lang.annotation.ElementType
-import java.lang.annotation.Retention
-import java.lang.annotation.RetentionPolicy
-import java.lang.annotation.Target
+package nextflow.cloud.aws.util
+
+import com.upplication.s3fs.S3Path
+import groovy.transform.CompileStatic
+import nextflow.util.PathSerializer
+import nextflow.util.SerializerRegistrant
+
 /**
- * Assign a name to a runtime loaded service object
+ * Register the S3Path serializer
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-@interface ServiceName {
-
-    String value()
-
-    boolean important() default Boolean.FALSE
-
+@CompileStatic
+class S3PathSerializer implements SerializerRegistrant  {
+    @Override
+    void register(Map<Class, Object> serializers) {
+        serializers.put(S3Path, PathSerializer)
+    }
 }
