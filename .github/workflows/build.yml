@@ -1,6 +1,11 @@
 name: Nextflow CI
 # This workflow is triggered on pushes to the repository.
-on: [push]
+on:
+  push:
+    branches:
+      - '*'
+    tags-ignore:
+      - '*'  
 
 jobs:
   build:
