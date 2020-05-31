@@ -97,7 +97,7 @@ class PublishDirTest extends Specification {
                 workDir.resolve('file1.txt'),
                 workDir.resolve('file2.bam'),
                 workDir.resolve('file3.fastq')
-        ]
+        ] as Set
         def publisher = new PublishDir(path: publishDir)
         publisher.apply(outputs, task)
 
@@ -117,7 +117,7 @@ class PublishDirTest extends Specification {
                 workDir.resolve('file1.txt'),
                 workDir.resolve('file2.bam'),
                 workDir.resolve('file3.fastq')
-        ]
+        ] as Set
         publishDir.deleteDir()
         publisher = new PublishDir(path: publishDir, pattern: '*.bam')
         publisher.apply( outputs, task )
@@ -159,7 +159,7 @@ class PublishDirTest extends Specification {
                 workDir.resolve('file2.bam'),
                 workDir.resolve('dir-x'),
                 workDir.resolve('dir-y/file.3')
-        ]
+        ] as Set
         def publisher = new PublishDir(path: publishDir, mode: 'copy')
         publisher.apply( outputs, task )
 
@@ -211,7 +211,7 @@ class PublishDirTest extends Specification {
                 workDir.resolve('file2.bam'),
                 workDir.resolve('file3.fastq'),
                 workDir.resolve('file4.temp')
-        ]
+        ] as Set
         def rule = { String it ->
             if( it == 'file1.txt' ) return 'file_one.txt'
             if( it !='file4.temp' ) return target2.resolve(it)
@@ -290,7 +290,7 @@ class PublishDirTest extends Specification {
         when:
         def outputs =  [
                 workDir.resolve('file1.txt'),
-        ]
+        ] as Set
         def publisher = new PublishDir(path: publishDir, enabled: false)
         publisher.apply(outputs, task)
 

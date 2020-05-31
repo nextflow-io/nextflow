@@ -153,7 +153,7 @@ class PublishDir {
     }
 
     @CompileStatic
-    protected void apply0(List<Path> files) {
+    protected void apply0(Set<Path> files) {
         assert path
 
         createPublishDir()
@@ -178,7 +178,7 @@ class PublishDir {
         }
     }
 
-    void apply( List<Path> files, Path sourceDir ) {
+    void apply( Set<Path> files, Path sourceDir ) {
         if( !files || !enabled )
             return
         this.sourceDir = sourceDir
@@ -191,7 +191,7 @@ class PublishDir {
      * @param task The task whose output need to be published
      */
     @CompileStatic
-    void apply( List<Path> files, TaskRun task ) {
+    void apply( Set<Path> files, TaskRun task ) {
 
         if( !files || !enabled )
             return
