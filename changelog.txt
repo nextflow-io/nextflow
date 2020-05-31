@@ -1,5 +1,19 @@
 NEXTFLOW CHANGE-LOG
 ===================
+20.05.0-edge - 30 May 2020
+- Add support for NXF_LOG_NAME env var [cf496615]
+- Add exception specialiation for ambiguous repo [a34b1d2a]
+- Add support for tower_workflow_id env var [53188126]
+- Add config profile names accessor [2784cdb8]
+- Add support for Google Cloud buckets with Requester Pays set #1466 [bc9db8d8]
+- Add Git tag and branch retrieval [7c97f23f]
+- Fix PublishDir error caused by duplicates output files [5f3b69c1]
+- Fix weird issue on config resolution [0d0fef4b]
+- Fix resolution of malformed configs [fe213e41]
+- Fix K8s labels and annotation normalization [6434b9d] #1577 #1584 
+- Fix minor git path provider ending slash [9888be29]
+- Fix bugs in GA4GH TES support (#1589) [26708335]
+
 20.04.1-edge - 19 Apr 2020
 - Fix AWS auth with temporary security token [6a7b11b8]
 
