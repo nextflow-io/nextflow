@@ -194,7 +194,6 @@ class SraExplorer {
 
     protected void parseDataResponse( Map response,  List<String> queryFields ) {
         def ids = response.result.uids
-
         for( def key : ids ) {
             def runs = parseXml(response.result[key]?.runs)
 
@@ -258,8 +257,12 @@ class SraExplorer {
         final Path cache = cachePath(acc)
         if( useCache ) try {
             def delta = System.currentTimeMillis() - FilesEx.lastModified(cache)
-            if( delta < CACHE_MAX_TIME.millis )
-                return cache.getText()
+            if( delta < CACHE_MAX_TIME.millis ) {
+                def text = cache.getText()
+                def cached = matchCache(text, queryFields)
+                if (cached)
+                    return text
+            }
         }
         catch( NoSuchFileException e ) {
             // ok ignore it and download it from EBI
@@ -274,6 +277,22 @@ class SraExplorer {
         return result
     }
 
+    protected boolean matchCache (String text,  List<String> queryFields) {
+        def cached_fields = text.trim().readLines()[0].tokenize('\t')
+
+        if (cached_fields.size() == 1)
+            if (!queryFields)
+                return true
+            return false
+
+        // Order matters, could be further develop to check for the fields and return its value
+        // another option will be to directly keep the csv file returned by the url
+        if (cached_fields[1..-1] == queryFields)
+            return true
+
+        return false
+    }
+
     protected String readRunUrl(String acc, List<String> queryFields) {
         def url = "https://www.ebi.ac.uk/ena/data/warehouse/filereport?result=read_run&fields=fastq_ftp"
 
@@ -284,7 +303,11 @@ class SraExplorer {
         }
 
         url += "&accession=$acc"
-        String result = new URL(url).text.trim()
+
+        String text = new URL(url).text
+        String result = text.replaceAll("\t\n","\tempty").replaceAll("\t\t","\tempty\t").trim()
+
+        // String result = new URL(url).text.trim()
         log.trace "SRA fetch ftp fastq url result:\n${result?.indent()}"
 
         if( result.indexOf('\n')==-1 ) {
@@ -312,25 +335,7 @@ class SraExplorer {
             return result.size()==1 ? result[0] : result
         }
 
-        def lines = text.trim().readLines()
-        def header = lines[0].tokenize('\t')
-        def content =  lines[1].tokenize('\t')
-
-        def result_fields = [:]
-
-        header.eachWithIndex { key, index ->
-            def values = content[index].tokenize(';')
-            if ( key == 'fastq_ftp') {
-                values = values.each { str -> FileHelper.asPath("ftp://$str") }
-            }
-
-            result_fields[key] =  values.size()==1 ? values[0] : values
-
-        }
-
-        return result_fields
-
-
+        return parseCsv(text)
     }
 
     protected parseXml(String str) {
@@ -339,6 +344,27 @@ class SraExplorer {
 
         def xml = str.trim().replaceAll('&lt;','<').replaceAll('&gt;','>')
         xmlParser.parseText("<document>$xml</document>")
+    }
+
+    protected parseCsv (String text) {
+        if (!text)
+            return null
+
+        def parsedCsv = [:]
+        def lines = text.trim().readLines()
+        def header = lines[0].tokenize('\t')
+        // def content =  lines[1].tokenize('\t')
+        String[] content = lines[1].split(/\t/)
+
+        header.eachWithIndex { key, index ->
+            def values = content[index].tokenize(';')
+            if ( key == 'fastq_ftp') {
+                values = values.each { str -> FileHelper.asPath("ftp://$str") }
+            }
+            parsedCsv[key] =  values.size()==1 ? values[0] == "empty"  ? null : values[0]: values
+        }
+
+        return parsedCsv
     }
 
     /**
