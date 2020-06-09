@@ -102,7 +102,25 @@ class ProviderConfigTest extends Specification {
     def 'should return provider attributes' () {
 
         when:
-        def config = new ProviderConfig('custom',[platform: 'github', server:'http://local.host'])
+        def config = new ProviderConfig('local',[platform: 'file', path:'/local/repo'])
+        then:
+        config.name == 'local'
+        config.platform == 'file'
+        config.domain == '/local/repo'
+        config.server == null
+        config.endpoint == null
+
+        when:
+        config = new ProviderConfig('local',[platform: 'file', path:'file:///local/repo'])
+        then:
+        config.name == 'local'
+        config.platform == 'file'
+        config.domain == '/local/repo'
+        config.server == null
+        config.endpoint == null
+
+        when:
+        config = new ProviderConfig('custom',[platform: 'github', server:'http://local.host'])
         then:
         config.name == 'custom'
         config.platform == 'github'
