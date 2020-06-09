@@ -565,7 +565,7 @@ class AssetManager {
      * @param revision The revision to download
      * @result A message representing the operation result
      */
-    def download(String revision=null) {
+    def download(boolean recurse_submodules = false, String revision=null) {
         assert project
 
         /*
@@ -591,7 +591,7 @@ class AssetManager {
             clone
                 .setURI(cloneURL)
                 .setDirectory(localPath)
-                .setCloneSubmodules(true)
+                .setCloneSubmodules(recurse_submodules)
                 .call()
 
             // return status message
@@ -652,7 +652,7 @@ class AssetManager {
      * @param directory The folder when the pipeline will be cloned
      * @param revision The revision to be cloned. It can be a branch, tag, or git revision number
      */
-    void clone(File directory, String revision = null) {
+    void clone(File directory, String revision = null, boolean recurse_submodules) {
 
         def clone = Git.cloneRepository()
         def uri = getGitRepositoryUrl()
@@ -663,7 +663,7 @@ class AssetManager {
 
         clone.setURI(uri)
         clone.setDirectory(directory)
-        clone.setCloneSubmodules(true)
+        clone.setCloneSubmodules(recurse_submodules)
         if( provider.hasCredentials() )
             clone.setCredentialsProvider(new UsernamePasswordCredentialsProvider(provider.user, provider.password))
 
@@ -939,7 +939,7 @@ class AssetManager {
 
     }
 
-    void updateModules() {
+    void updateModules(boolean recurse_submodules ) {
 
         if( !localPath )
             return // nothing to do
@@ -963,7 +963,11 @@ class AssetManager {
 
         final init = git.submoduleInit()
         final update = git.submoduleUpdate()
-        update.setStrategy(MergeStrategy.RECURSIVE)
+
+        if (recurse_submodules) {
+            update.setStrategy(MergeStrategy.RECURSIVE)
+        }
+
         filter.each { String m -> init.addPath(m); update.addPath(m) }
         // call submodule init
         init.call()

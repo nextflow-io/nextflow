@@ -42,6 +42,8 @@ class CmdPull extends CmdBase implements HubOptions {
     @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
     String revision
 
+    @Parameter(names='-recursive', description = 'control recursive fetching of submodules', arity = 0)
+    boolean recurse_submodules
 
 
     @Override
@@ -71,8 +73,8 @@ class CmdPull extends CmdBase implements HubOptions {
             log.info "Checking $it ..."
             def manager = new AssetManager(it, this)
 
-            def result = manager.download(revision)
-            manager.updateModules()
+            def result = manager.download(recurse_submodules, revision)
+            manager.updateModules(recurse_submodules)
 
             def scriptFile = manager.getScriptFile()
             String message = !result ? " done" : " $result"
