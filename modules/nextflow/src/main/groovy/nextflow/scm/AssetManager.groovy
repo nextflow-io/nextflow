@@ -939,7 +939,7 @@ class AssetManager {
 
     }
 
-    void updateModules(boolean recurse_submodules ) {
+    void updateModules(boolean recurse_submodules = false) {
 
         if( !localPath )
             return // nothing to do
