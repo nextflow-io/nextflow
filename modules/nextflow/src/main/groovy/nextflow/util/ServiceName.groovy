@@ -31,4 +31,6 @@ import java.lang.annotation.Target
 
     String value()
 
+    boolean important() default Boolean.FALSE
+
 }

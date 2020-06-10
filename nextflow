@@ -15,7 +15,7 @@
 #  limitations under the License.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'20.05.0-SNAPSHOT'}
+NXF_VER=${NXF_VER:-'20.05.0-edge'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -230,11 +230,11 @@ while [[ $# != 0 ]]; do
       ;;
     -process.executor|-executor.name)
       if [[ $2 && $2 == 'ignite' ]]; then
-      NXF_MODE='ignite'; shift;
+      [ ! $NXF_MODE ] && NXF_MODE='ignite'; shift;
       fi
       ;;
     -with-mpi)
-      NXF_MODE='ignite'
+      [ ! $NXF_MODE ] && NXF_MODE='ignite'
       NXF_MPIRUN='true'
       ;;
     *)

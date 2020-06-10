@@ -21,11 +21,10 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.cloud.aws.batch.AwsBatchExecutor
 import nextflow.k8s.K8sExecutor
+import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptType
-import nextflow.script.BodyDef
 import nextflow.util.ServiceDiscover
 import nextflow.util.ServiceName
 /**
@@ -58,7 +57,6 @@ class ExecutorFactory {
             'k8s': K8sExecutor,
             'nqsii': NqsiiExecutor,
             'moab': MoabExecutor,
-            'awsbatch': AwsBatchExecutor,
             'oar': OarExecutor
     ]
 
@@ -74,8 +72,13 @@ class ExecutorFactory {
         for( Class<Executor> clazz : ServiceDiscover.load(Executor) ) {
             log.trace "Discovered executor class: ${clazz.toString()}"
             final name = findNameByClass(clazz)
-            if( executorsMap.containsKey(name) )
-                log.debug "Replacing executor ${executorsMap[name]} by ${clazz}"
+            final current = executorsMap.get(name)
+            if( current ) {
+                if( current.getAnnotation(ServiceName)?.important() )
+                    log.debug "Executor ${current.getClass().getSimpleName()} has priority over ${clazz}"
+                else
+                    log.debug "Replacing executor ${executorsMap[name]} by ${clazz}"
+            }
             executorsMap.put(name, clazz)
         }
     }

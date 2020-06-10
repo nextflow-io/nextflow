@@ -16,6 +16,7 @@
 
 package nextflow.cli
 
+import nextflow.util.SpuriousDeps
 import static nextflow.Const.*
 
 import java.lang.reflect.Field
@@ -84,7 +85,6 @@ class Launcher {
         allCommands = (List<CmdBase>)[
                 new CmdClean(),
                 new CmdClone(),
-                new CmdCloud(),
                 new CmdConsole(),
                 new CmdFs(),
                 new CmdHistory(),
@@ -102,6 +102,11 @@ class Launcher {
                 new CmdHelp(),
                 new CmdSelfUpdate()
         ]
+
+        // legacy command
+        final cmdCloud = SpuriousDeps.cmdCloud()
+        if( cmdCloud )
+            allCommands.add(cmdCloud)
 
         options = new CliOptions()
         jcommander = new JCommander(options)
@@ -154,9 +159,9 @@ class Launcher {
     private void checkLogFileName() {
         if( !options.logFile ) {
             if( isDaemon() )
-                options.logFile = '.node-nextflow.log'
+                options.logFile = System.getenv('NXF_LOG_FILE') ?: '.node-nextflow.log'
             else if( command instanceof CmdRun || options.debug || options.trace )
-                options.logFile = ".nextflow.log"
+                options.logFile = System.getenv('NXF_LOG_FILE') ?: ".nextflow.log"
         }
     }
 

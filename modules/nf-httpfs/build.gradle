@@ -26,10 +26,13 @@ sourceSets {
     test.resources.srcDirs = []
 }
 
+
 dependencies {
+    compile project(':nf-commons')
     compile "ch.qos.logback:logback-classic:1.1.11"
     compile "org.codehaus.groovy:groovy:2.5.11"
     compile "org.codehaus.groovy:groovy-nio:2.5.11"
+    compile("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
 
     /* testCompile inherited from top gradle build file */
     testCompile "org.codehaus.groovy:groovy-json:2.5.11" // needed by wiremock
