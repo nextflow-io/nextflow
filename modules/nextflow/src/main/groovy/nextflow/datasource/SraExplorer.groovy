@@ -208,7 +208,7 @@ class SraExplorer {
                         return
                 }
                 else {
-                    final filesFields = getFastqUrl(acc, queryFields)
+                    final filesFields = getFastqUrlFields(acc, queryFields)
                     if (acc && filesFields) {
                         def result = new ArrayList(filesFields.size()+2)
                         result.add(acc)
@@ -324,16 +324,20 @@ class SraExplorer {
         if( !text )
             return
 
-        if (!queryFields) {
-            def lines = text.trim().readLines()
-            def files = lines[1].split(';')
-            def result = new ArrayList(files.size())
-            for( def str : files ) {
-                result.add( FileHelper.asPath("ftp://$str") )
-            }
-
-            return result.size()==1 ? result[0] : result
+        def lines = text.trim().readLines()
+        def files = lines[1].split(';')
+        def result = new ArrayList(files.size())
+        for( def str : files ) {
+            result.add( FileHelper.asPath("ftp://$str") )
         }
+
+        return result.size()==1 ? result[0] : result
+    }
+
+    protected getFastqUrlFields(String acc, List<String> queryFields) {
+        def text = readRunFastqs(acc, queryFields)
+        if( !text )
+            return
 
         return parseCsv(text)
     }

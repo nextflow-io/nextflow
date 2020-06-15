@@ -170,8 +170,7 @@ class SraExplorerTest extends Specification {
         def id = 'SRR1448774'
 
         expect:
-        // slurper.getFastqUrl(id,[FIELD])[FIELD] == EXPECTED
-        slurper.getFastqUrl(id,[FIELD]) == EXPECTED
+        slurper.getFastqUrlFields(id,[FIELD]) == EXPECTED
 
         where:
         FIELD                                           | EXPECTED
