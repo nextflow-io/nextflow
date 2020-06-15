@@ -26,7 +26,7 @@ sourceSets {
 
 dependencies {
     compile project(':nextflow')
-    compile('io.nextflow:nxf-s3fs:1.0.7') {
+    compile('io.nextflow:nxf-s3fs:1.0.8') {
         exclude group: 'org.apache.tika', module: 'tika-core'
         exclude group: 'com.amazonaws', module: 'aws-java-sdk-s3'
     }
