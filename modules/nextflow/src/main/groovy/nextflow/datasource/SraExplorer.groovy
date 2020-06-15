@@ -42,7 +42,7 @@ import nextflow.util.Duration
 @Slf4j
 class SraExplorer {
 
-    static public Map PARAMS = [apiKey:String, cache: Boolean, max: Integer, queryFields: [String, List]]
+    static public Map PARAMS = [apiKey:String, cache: Boolean, max: Integer, fields: [String, List]]
 
     @ToString
     static class SearchRecord {
@@ -91,8 +91,8 @@ class SraExplorer {
             useCache = opts.cache as boolean
         if( opts.max )
             maxResults = opts.max as int
-        if( opts.queryFields )
-            queryFields = getFields(opts.queryFields)
+        if( opts.fields )
+            queryFields = getFields(opts.fields)
     }
 
     DataflowWriteChannel apply() {
