@@ -167,20 +167,19 @@ class SraExplorerTest extends Specification {
     def 'should return ftp files for accession id plus queried fields' () {
         given:
         def slurper = new SraExplorer()
-        def id = 'SRR1448774'
+        def id = 'ERR908503'
 
         expect:
         slurper.getFastqUrlFields(id,[FIELD]) == EXPECTED
 
         where:
-        FIELD                                           | EXPECTED
-        'study_accession'                               | [fastq_ftp:'ftp.sra.ebi.ac.uk/vol1/fastq/SRR144/004/SRR1448774/SRR1448774.fastq.gz', study_accession:'PRJNA253315']
-        'secondary_study_accession'                     | [fastq_ftp:'ftp.sra.ebi.ac.uk/vol1/fastq/SRR144/004/SRR1448774/SRR1448774.fastq.gz', secondary_study_accession:'SRP043510']
-        'first_created'                                 | [fastq_ftp:'ftp.sra.ebi.ac.uk/vol1/fastq/SRR144/004/SRR1448774/SRR1448774.fastq.gz', first_created:'2015-06-05']
-        'instrument_platform'                           | [fastq_ftp:'ftp.sra.ebi.ac.uk/vol1/fastq/SRR144/004/SRR1448774/SRR1448774.fastq.gz', instrument_platform:'ILLUMINA']
-        'instrument_model'                              | [fastq_ftp:'ftp.sra.ebi.ac.uk/vol1/fastq/SRR144/004/SRR1448774/SRR1448774.fastq.gz', instrument_model:'Illumina HiSeq 2000']
-        'submitted_md5'                                 | [fastq_ftp:'ftp.sra.ebi.ac.uk/vol1/fastq/SRR144/004/SRR1448774/SRR1448774.fastq.gz', submitted_md5:null]
-        'study_accession,submitted_md5,first_created'   | [fastq_ftp:'ftp.sra.ebi.ac.uk/vol1/fastq/SRR144/004/SRR1448774/SRR1448774.fastq.gz', study_accession:'PRJNA253315', submitted_md5:null, first_created:'2015-06-05']
+        FIELD                         | EXPECTED
+        'study_accession'             | [fastq_ftp:['ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908503/ERR908503_1.fastq.gz', 'ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908503/ERR908503_2.fastq.gz'], study_accession:'PRJEB8073']
+        'submitted_md5'               | [fastq_ftp:['ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908503/ERR908503_1.fastq.gz', 'ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908503/ERR908503_2.fastq.gz'], submitted_md5:['fcba9a06c3dd459bdd61d0c2f61fa39f', 'a5ac089eb6d5181254315ac1d9534d69']]
+        'fastq_aspera'                | [fastq_ftp:['ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908503/ERR908503_1.fastq.gz', 'ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908503/ERR908503_2.fastq.gz'], fastq_aspera:['fasp.sra.ebi.ac.uk:/vol1/fastq/ERR908/ERR908503/ERR908503_1.fastq.gz', 'fasp.sra.ebi.ac.uk:/vol1/fastq/ERR908/ERR908503/ERR908503_2.fastq.gz']]
+        'submitted_format'            | [fastq_ftp:['ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908503/ERR908503_1.fastq.gz', 'ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908503/ERR908503_2.fastq.gz'], submitted_format:['FASTQ', 'FASTQ']]
+        'first_created'               | [fastq_ftp:['ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908503/ERR908503_1.fastq.gz', 'ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908503/ERR908503_2.fastq.gz'], first_created:'2015-06-08']
+        'submitted_md5,first_created' | [fastq_ftp:['ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908503/ERR908503_1.fastq.gz', 'ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908503/ERR908503_2.fastq.gz'], submitted_md5:['fcba9a06c3dd459bdd61d0c2f61fa39f', 'a5ac089eb6d5181254315ac1d9534d69'], first_created:'2015-06-08']
     }
 
     def 'should cache fastq_ftp' () {
