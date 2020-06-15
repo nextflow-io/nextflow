@@ -384,7 +384,7 @@ class SraExplorer {
 
     protected List<String> getFields( value ) {
         if( !value ) return Collections.emptyList()
-        return value instanceof List ? value : value.toString().tokenize(',')
+        return value instanceof List ? value : value.toString().replaceAll("\\s", "").tokenize(',')
 
     }
 

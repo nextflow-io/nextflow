@@ -241,4 +241,22 @@ class SraExplorerTest extends Specification {
         then:
         result == '1bc'
     }
+
+    def 'should return SRA fields from a string' () {
+        given:
+        def slurper = new SraExplorer()
+
+        expect:
+        slurper.getFields(FIELDS) == EXPECTED
+
+        where:
+        FIELDS    | EXPECTED
+        'a'       | ['a']
+        'a,b'     | ['a','b']
+        'a, b'    | ['a','b']
+        ['a']     | ['a']
+        ['a','b'] | ['a','b']
+
+
+    }
 }
