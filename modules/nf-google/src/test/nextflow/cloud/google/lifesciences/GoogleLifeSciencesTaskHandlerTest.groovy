@@ -178,6 +178,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         req.sharedMount.getDisk() == GoogleLifeSciencesTaskHandler.DEFAULT_DISK_NAME
         !req.sharedMount.getReadOnly()
         req.bootDiskSizeGb == null
+        req.cpuPlatform == null
         req.entryPoint == GoogleLifeSciencesConfig.DEFAULT_ENTRY_POINT
         !req.usePrivateAddress
 
