@@ -190,6 +190,10 @@ class GoogleLifeSciencesHelper {
         if( req.bootDiskSizeGb ) {
             vm.setBootDiskSizeGb(req.bootDiskSizeGb)
         }
+        
+        if( req.cpuPlatform ) {
+            vm.cpuPlatform(req.cpuPlatform)
+        }
 
         if( req.accelerator ) {
             final acc = new Accelerator().setType(req.accelerator.type).setCount(req.accelerator.request)
