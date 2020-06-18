@@ -52,6 +52,7 @@ class GoogleLifeSciencesConfig {
     String location
     boolean disableBinDir
     MemoryUnit bootDiskSize
+    String cpuPlatform
     boolean sshDaemon
     String sshImage
     Integer debugMode
@@ -109,6 +110,7 @@ class GoogleLifeSciencesConfig {
         final boolean disableBinDir = config.navigate('google.lifeSciences.disableRemoteBinDir',false)
         final preemptible = config.navigate("google.lifeSciences.preemptible", false) as boolean
         final bootDiskSize = config.navigate('google.lifeSciences.bootDiskSize') as MemoryUnit
+        final cpuPlatform = config.navigate('google.lifeSciences.cpuPlatform') as String
         final sshDaemon = config.navigate('google.lifeSciences.sshDaemon', false) as boolean
         final sshImage = config.navigate('google.lifeSciences.sshImage', DEFAULT_SSH_IMAGE) as String
         final copyImage = config.navigate('google.lifeSciences.copyImage', DEFAULT_COPY_IMAGE) as String
@@ -128,6 +130,7 @@ class GoogleLifeSciencesConfig {
                 preemptible: preemptible,
                 disableBinDir: disableBinDir,
                 bootDiskSize: bootDiskSize,
+                cpuPlatform: cpuPlatform,
                 debugMode: debugMode0(debugMode),
                 copyImage: copyImage,
                 sshDaemon: sshDaemon,
