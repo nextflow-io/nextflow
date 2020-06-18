@@ -192,7 +192,7 @@ class GoogleLifeSciencesHelper {
         }
         
         if( req.cpuPlatform ) {
-            vm.cpuPlatform(req.cpuPlatform)
+            vm.setCpuPlatform(req.cpuPlatform)
         }
 
         if( req.accelerator ) {
