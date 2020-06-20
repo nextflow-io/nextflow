@@ -212,7 +212,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
                     getPreemptible() >> true
                     getBootDiskSize() >> MemoryUnit.of('20 GB')
                     getUsePrivateAddress() >> true
-                    getcpuPlatform() >> 'Intel Skylake'
+                    getCpuPlatform() >> 'Intel Skylake'
                 }
             }
         }

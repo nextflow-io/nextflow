@@ -203,7 +203,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
             getVirtualMachine().getAccelerators()[0].getCount()==4
             getVirtualMachine().getAccelerators()[0].getType()=='nvidia-tesla-k80'
             getVirtualMachine().getBootDiskSizeGb() == 75
-            getVirtualMachine().getcpuPlatform() == 'Intel Skylake'
+            getVirtualMachine().getCpuPlatform() == 'Intel Skylake'
             getVirtualMachine().getNetwork().getUsePrivateAddress()
         }
     }
