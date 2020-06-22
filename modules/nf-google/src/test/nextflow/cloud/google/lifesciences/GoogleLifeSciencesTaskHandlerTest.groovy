@@ -170,6 +170,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         req.region == ['my-region']
         req.diskName == GoogleLifeSciencesTaskHandler.DEFAULT_DISK_NAME
         req.diskSizeGb == null
+        req.diskType == null
         !req.preemptible
         req.taskName == "nf-bad893071e9130b866d43a4fcabb95b6"
         req.containerImage == 'my/image'
@@ -230,7 +231,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         when:
         def req = handler.createPipelineRequest()
         then:
-        task.getConfig() >> new TaskConfig(disk: '250 GB', machineType: 'n1-1234')
+        task.getConfig() >> new TaskConfig(disk: '250 GB', diskType: 'pd-ssd', machineType: 'n1-1234')
         and:
         req.machineType == 'n1-1234'
         req.project == 'my-project'
@@ -238,6 +239,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         req.region == ['my-region']
         req.diskName == GoogleLifeSciencesTaskHandler.DEFAULT_DISK_NAME
         req.diskSizeGb == 250
+        req.diskType == 'pd-ssd'
         req.preemptible
         req.taskName == "nf-bad893071e9130b866d43a4fcabb95b6"
         req.containerImage == 'my/image'
@@ -266,7 +268,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
 
     }
 
-    
+
     def 'should check if it is running'(){
         given:
         // -- task

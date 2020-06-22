@@ -44,6 +44,8 @@ class GoogleLifeSciencesSubmitRequest {
 
     Integer diskSizeGb
 
+    String diskType
+
     boolean preemptible
 
     String taskName

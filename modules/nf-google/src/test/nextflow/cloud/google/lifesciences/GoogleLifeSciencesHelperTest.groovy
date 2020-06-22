@@ -147,6 +147,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
                 zone:zone,
                 diskName: diskName,
                 diskSizeGb: 100,
+                diskType: 'pd-ssd',
                 preemptible: true))
         then:
         with(resources1) {
@@ -155,6 +156,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
             getRegions() == null
             getVirtualMachine().getDisks().get(0).getName() == diskName
             getVirtualMachine().getDisks().get(0).getSizeGb() == 100
+            getVirtualMachine().getDisks().get(0).getType() == 'pd-ssd'
             getVirtualMachine().getServiceAccount().getScopes() == SCOPES
             getVirtualMachine().getPreemptible() == preEmptible
             !getVirtualMachine().getAccelerators()
@@ -167,6 +169,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
                 region:region,
                 diskName:diskName,
                 diskSizeGb: 200,
+                diskType: 'pd-ssd',
                 preemptible: true))
         then:
         with(resources2) {
@@ -175,6 +178,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
             getRegions() == region
             getVirtualMachine().getDisks().get(0).getName() == diskName
             getVirtualMachine().getDisks().get(0).getSizeGb() == 200
+            getVirtualMachine().getDisks().get(0).getType() == 'pd-ssd'
             getVirtualMachine().getServiceAccount().getScopes() == SCOPES
             getVirtualMachine().getPreemptible() == preEmptible
             !getVirtualMachine().getAccelerators()
@@ -515,4 +519,3 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
     }
 
 }
-

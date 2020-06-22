@@ -151,6 +151,21 @@ Examples::
 
 .. note:: This feature requires Nextflow 19.07.0 or later.
 
+The process ``diskType`` directive may also optionally be used to specify a predefined Google Compute Platform `disk type <https://cloud.google.com/compute/docs/disks>`_
+when running using the :ref:`Google Pipeline <google-pipelines>` executor.
+
+This directive is optional and if not specified standard-pd will be used as default::
+
+    process foo {
+      diskType 'pd-ssd'
+
+      """
+      <your script here>
+      """
+    }
+
+.. note:: This feature requires Nextflow 20.05.0 or later.
+
 Pipeline execution
 ------------------
 
@@ -249,4 +264,3 @@ Troubleshooting
 
 * Make sure you are choosing a `location` where  `Cloud Life Sciences API is available <https://cloud.google.com/life-sciences/docs/concepts/locations>`_,
   and a `region` or `zone` where `Compute Engine is available <https://cloud.google.com/compute/docs/regions-zones/>`_.
-

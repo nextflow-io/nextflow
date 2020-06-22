@@ -56,6 +56,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'cleanup',
             'clusterOptions',
             'disk',
+            'diskType',
             'echo',
             'errorStrategy',
             'executor',
