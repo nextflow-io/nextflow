@@ -627,6 +627,17 @@ class PodSpecBuilderTest extends Specification {
         res.requests == ['foo.org/gpu': 5]
         res.limits == [cpus:2, 'foo.org/gpu': 10]
 
+        when:
+        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, type:'example.com/fpga'), null)
+        then:
+        res.requests == ['example.com/fpga': 5]
+        res.limits == null
+
+        when:
+        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, limit: 10, type:'example.com/fpga'), [limits: [cpus: 2]])
+        then:
+        res.requests == ['example.com/fpga': 5]
+        res.limits == [cpus:2, 'example.com/fpga': 10]
     }
 
 
