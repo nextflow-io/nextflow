@@ -403,11 +403,13 @@ class PodSpecBuilder {
 
         def type = accelerator.type ?: 'nvidia.com'
 
-        // If '/' is missing then assume we're using GPU and update as necessary.
-        if ( !type.contains('/') ) {
-            if( !type.contains('.') ) type += '.com'
-            type += '/gpu'
-        }
+        if ( type.contains('/') )
+            // Assume the user has fully specified the resource type.
+            return type
+
+        // Assume we're using GPU and update as necessary.
+        if( !type.contains('.') ) type += '.com'
+        type += '/gpu'
 
         return type
     }
