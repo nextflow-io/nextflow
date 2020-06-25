@@ -99,7 +99,7 @@ It will output something similar to the text shown below::
 You can see that the first process is executed once, and the second twice. Finally the result string is printed.
 
 It's worth noting that the process ``convertToUpper`` is executed in parallel, so there's no guarantee that the instance
-processing the first split (the chunk `Hello`) will be executed before before the one processing the second split (the chunk `world!`).
+processing the first split (the chunk `Hello`) will be executed before the one processing the second split (the chunk `world!`).
 
 Thus, it is perfectly possible that you will get the final result printed out in a different order::
 
