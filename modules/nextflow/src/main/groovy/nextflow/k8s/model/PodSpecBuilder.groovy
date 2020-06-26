@@ -396,6 +396,25 @@ class PodSpecBuilder {
         return pod
     }
 
+
+    @PackageScope
+    @CompileDynamic
+    String getAcceleratorType(AcceleratorResource accelerator) {
+
+        def type = accelerator.type ?: 'nvidia.com'
+
+        if ( type.contains('/') )
+            // Assume the user has fully specified the resource type.
+            return type
+
+        // Assume we're using GPU and update as necessary.
+        if( !type.contains('.') ) type += '.com'
+        type += '/gpu'
+
+        return type
+    }
+
+
     @PackageScope
     @CompileDynamic
     Map addAcceleratorResources(AcceleratorResource accelerator, Map res) {
@@ -403,10 +422,7 @@ class PodSpecBuilder {
         if( res == null )
             res = new LinkedHashMap(2)
 
-        // tpu gou custom resource type
-        def type = accelerator.type ?: 'nvidia.com'
-        if( !type.contains('.') ) type += '.com'
-        type += '/gpu'
+        def type = getAcceleratorType(accelerator)
 
         if( accelerator.request ) {
             final req = res.requests ?: new LinkedHashMap<>(2)
