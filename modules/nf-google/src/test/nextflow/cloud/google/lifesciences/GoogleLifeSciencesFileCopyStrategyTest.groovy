@@ -96,7 +96,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         then:
         result == '''\
                 echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
-                gsutil -m -q cp -R gs://my-bucket/foo/dir1/ /work/xx/yy
+                gsutil -m -q cp -R gs://my-bucket/foo/dir1 /work/xx/yy
                 mv /work/xx/yy/dir1 /work/xx/yy/dir2
                 '''.stripIndent()
     }
