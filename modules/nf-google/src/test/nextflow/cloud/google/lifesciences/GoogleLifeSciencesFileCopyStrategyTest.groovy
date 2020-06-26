@@ -86,7 +86,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         then:
         result == '''\
                 echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
-                gsutil -m -q cp -R gs://my-bucket/foo/dir1/ /work/xx/yy
+                gsutil -m -q cp -R gs://my-bucket/foo/dir1 /work/xx/yy
                 '''.stripIndent()
 
         // stage file is a directory with a different name
@@ -131,7 +131,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         then:
         result == '''\
                 echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
-                gsutil -m -q -u foo cp -R gs://my-bucket/foo/dir1/ /work/xx/yy
+                gsutil -m -q -u foo cp -R gs://my-bucket/foo/dir1 /work/xx/yy
                 '''.stripIndent()
 
     }
