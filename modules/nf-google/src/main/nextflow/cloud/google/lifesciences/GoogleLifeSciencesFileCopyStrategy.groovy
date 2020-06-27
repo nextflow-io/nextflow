@@ -80,10 +80,6 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
 
             if(storePathIsDir) {
                 stagingCommands << "$gsutilPrefix cp -R $escapedStoreUri $localTaskDir".toString()
-                //check if we need to move the directory (gsutil doesn't support renaming directories on copy)
-                //if(parent || !storePath.toString().endsWith(stageName)) {
-                //    stagingCommands << "mv $localTaskDir/${Escape.path(storePath.name)} $localTaskDir/$escapedStageName".toString()
-                //}
             } else {
                 stagingCommands << "$gsutilPrefix cp $escapedStoreUri $localTaskDir/$escapedStageName".toString()
             }
