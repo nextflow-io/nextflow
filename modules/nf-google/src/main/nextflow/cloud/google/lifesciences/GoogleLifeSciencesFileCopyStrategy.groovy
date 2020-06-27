@@ -81,9 +81,9 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
             if(storePathIsDir) {
                 stagingCommands << "$gsutilPrefix cp -R $escapedStoreUri $localTaskDir".toString()
                 //check if we need to move the directory (gsutil doesn't support renaming directories on copy)
-                if(parent || !storePath.toString().endsWith(stageName)) {
-                    stagingCommands << "mv $localTaskDir/${Escape.path(storePath.name)} $localTaskDir/$escapedStageName".toString()
-                }
+                //if(parent || !storePath.toString().endsWith(stageName)) {
+                //    stagingCommands << "mv $localTaskDir/${Escape.path(storePath.name)} $localTaskDir/$escapedStageName".toString()
+                //}
             } else {
                 stagingCommands << "$gsutilPrefix cp $escapedStoreUri $localTaskDir/$escapedStageName".toString()
             }
@@ -137,7 +137,7 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
     }
 
     String copyMany(String local, Path target) {
-        "IFS=\$'\\n'; for name in \$(eval \"ls -1d ${Escape.path(local)}\" 2>/dev/null);do gsutil -m -q cp -R \$name ${Escape.uriPath(target)}/\$name; done; unset IFS"
+        "IFS=\$'\\n'; for name in \$(eval \"ls -1d ${Escape.path(local)}\" 2>/dev/null);do gsutil -m -q cp -R \$name ${Escape.uriPath(target)}/; done; unset IFS"
     }
 
     /**
