@@ -1164,6 +1164,8 @@ by              The index (zero based) of the element to be used as grouping key
                 A key composed by multiple elements can be defined specifying a list of indices e.g. ``by: [0,2]``
 remainder       When ``false`` incomplete tuples (i.e. with less than `size` grouped items)
                 are discarded (default). When ``true`` incomplete tuples are emitted as the ending emission.
+failOnDuplicate An error is reported when the same key is found more than once.
+failOnMismatch  An error is reported when a channel emits a value for which there isn't a corresponding element in the joining channel. This option cannot be used with ``remainder``.
 =============== ========================
 
 
