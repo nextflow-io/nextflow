@@ -56,4 +56,8 @@ class NF {
             return WorkflowBinding.lookup(value)
         return session().getBinding().getVariableName(value)
     }
+
+    static boolean isStrictMode() {
+        NextflowMeta.instance.isStrictModeEnabled()
+    }
 }
