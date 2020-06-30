@@ -97,6 +97,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         result == '''\
                 echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
                 gsutil -m -q cp -R gs://my-bucket/foo/dir1 /work/xx/yy
+                mv /work/xx/yy/dir1 /work/xx/yy/dir2
                 '''.stripIndent()
     }
 
@@ -152,7 +153,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         def result = strategy.getUnstageOutputFilesScript(['foo.txt'], mockGsPath('gs://other/dir'))
         then:
         result == '''\
-                IFS=$'\\n'; for name in $(eval "ls -1d foo.txt" 2>/dev/null);do gsutil -m -q cp -R $name gs://other/dir/; done; unset IFS
+                IFS=$'\\n'; for name in $(eval "ls -1d foo.txt" 2>/dev/null);do gsutil -m -q cp -R $name gs://other/dir/\$name; done; unset IFS
                 '''
                 .stripIndent()
 
@@ -160,7 +161,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         result = strategy.getUnstageOutputFilesScript(['fo o.txt'], mockGsPath('gs://other/dir x/'))
         then:
         result == '''\
-                IFS=$'\\n'; for name in $(eval "ls -1d fo\\ o.txt" 2>/dev/null);do gsutil -m -q cp -R $name gs://other/dir\\ x/; done; unset IFS
+                IFS=$'\\n'; for name in $(eval "ls -1d fo\\ o.txt" 2>/dev/null);do gsutil -m -q cp -R $name gs://other/dir\\ x/\$name; done; unset IFS
                 '''
                 .stripIndent()
 
