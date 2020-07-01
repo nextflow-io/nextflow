@@ -368,6 +368,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         return get('machineType')
     }
 
+    String getDiskType() {
+        return get('diskType')
+    }
+
     String getContainerOptions() {
         def opts = get('containerOptions')
         return opts instanceof CharSequence ? opts.toString() : null

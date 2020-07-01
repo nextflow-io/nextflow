@@ -292,6 +292,7 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
         req.region = executor.config.regions
         req.diskName = DEFAULT_DISK_NAME
         req.diskSizeGb = task.config.getDisk()?.getGiga() as Integer
+        req.diskType = task.config.getDiskType()
         req.preemptible = executor.config.preemptible
         req.taskName = "nf-$task.hash"
         req.containerImage = task.container

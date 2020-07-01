@@ -174,6 +174,9 @@ class GoogleLifeSciencesHelper {
         def disk = new Disk()
         disk.setName(req.diskName)
         disk.setSizeGb(req.diskSizeGb)
+        if( req.diskType ) {
+            disk.setType(req.diskType)
+        }
 
         def serviceAccount = new ServiceAccount().setScopes( [SCOPE_CLOUD_PLATFORM] )
 
