@@ -59,3 +59,5 @@ $NXF_CMD -C ./gls.config run ./test-complexpaths.nf -resume
 [[ -e 'foo/sample.zip' ]] || false
 [[ -e 'foo/sample_(1 2).vcf' ]] || false
 
+## run test-subdirs inputs/outputs
+$NXF_CMD -C ./gls.config run ./test-subdirs.nf
