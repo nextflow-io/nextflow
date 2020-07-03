@@ -292,7 +292,7 @@ class DAG {
 
     @PackageScope
     void resolveEdgeNames() {
-        for( Edge edge : edges ) {
+        for( Edge edge : new ArrayList<>(edges) ) {
             final name = lookupVariable(edge.channel)
             if( name )
                 edge.label = name

@@ -24,6 +24,8 @@ class NextflowMeta {
     static class Preview {
         volatile float dsl
 
+        boolean strict
+
         void setDsl( float num ) {
             if( num != 2 && num != 1 )
                 throw new IllegalArgumentException("Not a valid DSL version number: $num")
@@ -31,6 +33,7 @@ class NextflowMeta {
                 log.warn1 "DSL 2 IS AN EXPERIMENTAL FEATURE UNDER DEVELOPMENT -- SYNTAX MAY CHANGE IN FUTURE RELEASE"
             dsl = num
         }
+
     }
 
     final VersionNumber version
@@ -80,5 +83,9 @@ class NextflowMeta {
 
     void disableDsl2() {
         preview.dsl = 1
+    }
+
+    boolean isStrictModeEnabled() {
+        preview.strict
     }
 }

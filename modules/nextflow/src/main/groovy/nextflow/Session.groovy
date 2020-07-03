@@ -597,7 +597,7 @@ class Session implements ISession {
         try {
             log.trace "Session > destroying"
             if( !aborted ) {
-                allOperatorsJoin()
+                joinAllOperators()
                 log.trace "Session > after processors join"
             }
 
@@ -626,7 +626,7 @@ class Session implements ISession {
         }
     }
 
-    final private allOperatorsJoin() {
+    final protected void joinAllOperators() {
         int attempts=0
 
         while( allOperators.size() ) {
@@ -712,7 +712,7 @@ class Session implements ISession {
                 log.debug(status)
             // force termination
             notifyError(null)
-            executorFactory.signalExecutors()
+            executorFactory?.signalExecutors()
             processesBarrier.forceTermination()
             monitorsBarrier.forceTermination()
             operatorsForceTermination()
