@@ -25,6 +25,7 @@ import nextflow.NF
 import nextflow.exception.ConfigParseException
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.IllegalDirectiveException
+import nextflow.exception.AbortOperationException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.processor.ConfigList
@@ -32,6 +33,8 @@ import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskConfig
 import static nextflow.util.CacheHelper.HashMode
 import nextflow.script.params.*
+import nextflow.util.MemoryUnit
+
 
 /**
  * Holds the process configuration properties
@@ -818,4 +821,37 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return this
     }
 
+    /**
+     * Allow user to specify diskType 
+     *
+     * @param entry
+     *      A map object representing diskType options
+     * @return
+     *      The {@link ProcessConfig} instance itself
+     */
+    ProcessConfig disk( Map params, value ) {
+        if( value instanceof MemoryUnit )
+            if( params.diskSize==null )
+                params.diskSize=value
+        else if(value != null) {
+            try {
+                new MemoryUnit(value.toString().trim())
+            }
+            catch( Exception e ) {
+                throw new AbortOperationException("Not a valid 'disk' value in process definition: $value")
+            }
+        }
+        disk(params)
+        return this
+    }
+
+    ProcessConfig disk( value ) {
+        if( value instanceof MemoryUnit )
+            configProperties.put('disk', [diskSize: value])
+        else if( value instanceof Map )
+            configProperties.put('disk', value)
+        else if( value != null )
+            throw new IllegalArgumentException("Not a valid `disk` directive value: $value [${value.getClass().getName()}]")
+        return this
+    }
 }

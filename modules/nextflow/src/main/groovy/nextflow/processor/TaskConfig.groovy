@@ -209,13 +209,21 @@ class TaskConfig extends LazyMap implements Cloneable {
 
         if( value instanceof MemoryUnit )
             return (MemoryUnit)value
+	if( value instanceof Map )
+            return (MemoryUnit)value.get("diskSize")
+        if( value != null ) 
+            throw new IllegalArgumentException("Invalid `disk` directive value: $value") 
+        
+    }
 
-        try {
-            new MemoryUnit(value.toString().trim())
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Not a valid 'disk' value in process definition: $value")
-        }
+    String getDiskType() {
+	def value = get('disk')
+        if( !value )
+            return null
+        if(value instanceof Map)
+            return value.get("diskType")
+        else
+            return null
     }
 
     Duration getTime() {
@@ -366,10 +374,6 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     String getMachineType() {
         return get('machineType')
-    }
-
-    String getDiskType() {
-        return get('diskType')
     }
 
     String getContainerOptions() {
