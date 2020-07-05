@@ -27,6 +27,7 @@ import com.amazonaws.services.ecs.model.DescribeContainerInstancesRequest
 import com.amazonaws.services.ecs.model.DescribeTasksRequest
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 /**
@@ -34,6 +35,7 @@ import nextflow.cloud.types.PriceModel
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class AwsBatchHelper {
 
@@ -70,7 +72,7 @@ class AwsBatchHelper {
     private CloudMachineInfo getInfoByClusterAndTaskArn(String clusterArn, String taskArn) {
         final containerId = getContainerIdByClusterAndTaskArn(clusterArn, taskArn)
         final instanceId = getInstanceIdByClusterAndContainerId(clusterArn, containerId)
-        instanceId ? getInfoByInstanceId(instanceId) : null
+        return instanceId ? getInfoByInstanceId(instanceId) : null
     }
 
     private String getContainerIdByClusterAndTaskArn(String clusterArn, String taskArn) {
@@ -81,10 +83,13 @@ class AwsBatchHelper {
                 .describeTasks(describeTaskReq)
                 .getTasks()
                 *.getContainerInstanceArn()
-        if( containers.size()==1 )
+        if( containers.size()==1 ) {
             return containers.get(0)
-        if( containers.size()==0 )
+        }
+        if( containers.size()==0 ) {
+            log.debug "Unable to find container id for clusterArn=$clusterArn and taskArn=$taskArn"
             return null
+        }
         else
             throw new IllegalStateException("Found more than one container for taskArn=$taskArn")
     }
@@ -97,8 +102,10 @@ class AwsBatchHelper {
                 .describeContainerInstances(describeContainerReq)
                 .getContainerInstances()
                 *.getEc2InstanceId()
-        if( !instanceIds )
+        if( !instanceIds ) {
+            log.debug "Unable to find EC2 instance id for clusterArn=$clusterArn and containerId=$containerId"
             return null
+        }
         if( instanceIds.size()==1 )
             return instanceIds.get(0)
         else
@@ -111,15 +118,18 @@ class AwsBatchHelper {
         final req = new DescribeInstancesRequest() .withInstanceIds(instanceId)
         final res = ec2Client .describeInstances(req) .getReservations() [0]
         final Instance instance = res ? res.getInstances() [0] : null
-        return (instance
-                ? new CloudMachineInfo(
-                    instance.getInstanceType(),
-                    instance.getPlacement().getAvailabilityZone(),
-                    getPrice(instance) )
-                : null)
+        if( !instance ) {
+            log.debug "Unable to find cloud machine info for instanceId=$instanceId"
+            return null
+        }
+
+        new CloudMachineInfo(
+                instance.getInstanceType(),
+                instance.getPlacement().getAvailabilityZone(),
+                getPrice(instance))
     }
 
-        private PriceModel getPrice(Instance instance) {
+    private PriceModel getPrice(Instance instance) {
         instance.getInstanceLifecycle()=='spot' ? PriceModel.spot : PriceModel.standard
     }
 
@@ -130,6 +140,8 @@ class AwsBatchHelper {
             if( result )
                 return result
         }
+
+        log.debug "Unable to find cloud info for queue=$queue and taskArn=$taskArn"
         return null
     }
 
