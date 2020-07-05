@@ -23,7 +23,7 @@ if [ ${X_JDK} -gt 8 ]; then
   # sed -i 's@https://download.java.net/java@https://download.oracle.com/java@g' install-jdk.sh
   export JAVA_HOME=$HOME/jdk-$TEST_JDK
   chmod +x install-jdk.sh
-  source ./install-jdk.sh -f $TEST_JDK -c --target $JAVA_HOME || ( echo Failed to configure Java $TEST_JDK && exit 1 )
+  source ./install-jdk.sh -f $TEST_JDK --target $JAVA_HOME || ( echo Failed to configure Java $TEST_JDK && exit 1 )
 fi
 
 export WITH_DOCKER='-with-docker'
