@@ -107,13 +107,12 @@ class NextflowDSLImpl implements ASTTransformation {
     @CompileStatic
     static class DslCodeVisitor extends ClassCodeVisitorSupport {
 
-        @Deprecated final static String WORKFLOW_GET = 'get'
-        @Deprecated final static String WORKFLOW_PUBLISH = 'publish'
-        final static String WORKFLOW_TAKE = 'take'
-        final static String WORKFLOW_EMIT = 'emit'
-        final static String WORKFLOW_MAIN = 'main'
-
-        final static Random RND = new Random()
+        @Deprecated final static private String WORKFLOW_GET = 'get'
+        @Deprecated final static private String WORKFLOW_PUBLISH = 'publish'
+        final static private String WORKFLOW_TAKE = 'take'
+        final static private String WORKFLOW_EMIT = 'emit'
+        final static private String WORKFLOW_MAIN = 'main'
+        final static private List<String> SCOPES = [WORKFLOW_TAKE, WORKFLOW_EMIT, WORKFLOW_MAIN]
 
         final private SourceUnit unit
 
@@ -521,6 +520,14 @@ class NextflowDSLImpl implements ASTTransformation {
                         break
 
                     default:
+                        if( context ) {
+                            def opts = SCOPES.closest(context)
+                            def msg = "Unknown execution scope '$context:'"
+                            if( opts ) msg += " -- Did you mean ${opts.collect{"'$it'"}.join(', ')}"
+                            syntaxError(stm, msg)
+                        }
+
+                        log.info "context=$context"
                         body.add(stm)
                 }
             }
