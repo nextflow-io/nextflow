@@ -478,4 +478,24 @@ class ScriptDslTest extends Dsl2Spec {
         err.message.contains "Workflow 'get' is not supported anymore use 'take' instead"
     }
 
+    def 'should fail with wrong scope'() {
+        when:
+        dsl_eval('''\
+        process foo {
+          /echo foo/
+        }
+        
+        workflow {
+          main: 
+          flow()
+          emmit:
+          flow.out
+        }
+        ''')
+
+        then:
+        def err = thrown(ScriptCompilationException)
+        err.message.contains "Unknown execution scope 'emmit:' -- Did you mean 'emit'"
+    }
+
 }

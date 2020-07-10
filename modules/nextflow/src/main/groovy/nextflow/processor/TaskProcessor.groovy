@@ -96,7 +96,6 @@ import nextflow.util.CollectionHelper
 import nextflow.util.LockManager
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
-
 /**
  * Implement nextflow process execution logic
  *
@@ -336,6 +335,15 @@ class TaskProcessor {
 
     int getMaxForks() { maxForks }
 
+    protected void checkWarn(String msg, Map opts) {
+        if( NF.isStrictMode() )
+            throw new ProcessUnrecoverableException(msg)
+        if( opts )
+            log.warn1(opts, msg)
+        else
+            log.warn(msg)
+    }
+
     /**
      * Launch the 'script' define by the code closure as a local bash script
      *
@@ -361,12 +369,12 @@ class TaskProcessor {
         // -- check that input set defines at least two elements
         def invalidInputSet = config.getInputs().find { it instanceof TupleInParam && it.inner.size()<2 }
         if( invalidInputSet )
-            log.warn "Input `set` must define at least two component -- Check process `$name`"
+            checkWarn "Input `set` must define at least two component -- Check process `$name`"
 
         // -- check that output set defines at least two elements
         def invalidOutputSet = config.getOutputs().find { it instanceof TupleOutParam && it.inner.size()<2 }
         if( invalidOutputSet )
-            log.warn "Output `set` must define at least two component -- Check process `$name`"
+            checkWarn "Output `set` must define at least two component -- Check process `$name`"
 
         /**
          * Verify if this process run only one time
@@ -587,7 +595,8 @@ class TaskProcessor {
             final actual = entry instanceof Collection ? entry.size() : (entry instanceof Map ? entry.size() : 1)
 
             if( actual != expected ) {
-                log.warn1("Input tuple does not match input set cardinality declared by process `$name` -- offending value: $entry", firstOnly: true, cacheKey: this)
+                final msg = "Input tuple does not match input set cardinality declared by process `$name` -- offending value: $entry"
+                checkWarn(msg, [firstOnly: true, cacheKey: this])
             }
         }
     }
@@ -776,7 +785,7 @@ class TaskProcessor {
             return true
         }
         if( invalid ) {
-            log.warn "[$task.name] StoreDir can only be used when using 'file' outputs"
+            checkWarn "[$task.name] StoreDir can only be used when using 'file' outputs"
             return false
         }
 
@@ -858,7 +867,7 @@ class TaskProcessor {
 
         }
         catch( Throwable e ) {
-            log.warn1("[$task.name] Unable to resume cached task -- See log file for details", causedBy: e)
+            log.warn1("[$task.name] Unable to resume cached task -- See log file for details", )
             return false
         }
 

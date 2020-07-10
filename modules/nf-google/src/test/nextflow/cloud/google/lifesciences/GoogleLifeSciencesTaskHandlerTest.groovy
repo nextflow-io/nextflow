@@ -178,6 +178,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         req.sharedMount.getDisk() == GoogleLifeSciencesTaskHandler.DEFAULT_DISK_NAME
         !req.sharedMount.getReadOnly()
         req.bootDiskSizeGb == null
+        req.cpuPlatform == null
         req.entryPoint == GoogleLifeSciencesConfig.DEFAULT_ENTRY_POINT
         !req.usePrivateAddress
 
@@ -211,6 +212,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
                     getPreemptible() >> true
                     getBootDiskSize() >> MemoryUnit.of('20 GB')
                     getUsePrivateAddress() >> true
+                    getCpuPlatform() >> 'Intel Skylake'
                 }
             }
         }
@@ -244,6 +246,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         req.sharedMount.getDisk() == GoogleLifeSciencesTaskHandler.DEFAULT_DISK_NAME
         !req.sharedMount.getReadOnly()
         req.bootDiskSizeGb == 20
+        req.cpuPlatform =='Intel Skylake'
         req.entryPoint == GoogleLifeSciencesConfig.DEFAULT_ENTRY_POINT
         req.usePrivateAddress
 
