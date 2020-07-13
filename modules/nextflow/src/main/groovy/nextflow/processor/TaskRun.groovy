@@ -213,7 +213,7 @@ class TaskRun implements Cloneable {
         }
         catch( Exception e ) {
             log.debug "Unable to dump output of process '$name' -- Cause: ${e}"
-            return []
+            return Collections.<String>emptyList()
         }
     }
 
@@ -224,17 +224,19 @@ class TaskRun implements Cloneable {
         }
         catch( Exception e ) {
             log.debug "Unable to dump error of process '$name' -- Cause: ${e}"
-            return []
+            return Collections.<String>emptyList()
         }
     }
 
     List<String> dumpLogFile(int n = 50) {
+        if( !workDir )
+            return Collections.<String>emptyList()
         try {
             return dumpObject(workDir.resolve(CMD_LOG),n)
         }
         catch( Exception e ) {
             log.debug "Unable to dump error of process '$name' -- Cause: ${e}"
-            return []
+            return Collections.<String>emptyList()
         }
     }
 
@@ -253,7 +255,7 @@ class TaskRun implements Cloneable {
             }
         }
 
-        return result ?: []
+        return result ?: Collections.<String>emptyList()
     }
 
     /**
