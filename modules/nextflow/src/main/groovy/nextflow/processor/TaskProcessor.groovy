@@ -60,6 +60,7 @@ import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.ShowOnlyExceptionMessage
+import nextflow.exception.UnexpectedException
 import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
 import nextflow.executor.StoredTaskHandler
@@ -1956,12 +1957,23 @@ class TaskProcessor {
         }
 
         final mode = config.getHashMode()
-        final hash = CacheHelper.hasher(keys, mode).hash()
+        final hash = computeHash(keys, mode)
         if( session.dumpHashes ) {
             traceInputsHashes(task, keys, mode, hash)
         }
         return hash
     }
+
+    HashCode computeHash(List keys, CacheHelper.HashMode mode) {
+        try {
+            return CacheHelper.hasher(keys, mode).hash()
+        }
+        catch (Throwable e) {
+            final msg = "Oops.. something wrong happened while creating task '$name' unique id -- Offending keys: ${ keys.collect {"\n - type=${it.getClass().getName()} value=$it"} }"
+            throw new UnexpectedException(msg,e)
+        }
+    }
+
 
     /**
      * This method scans the task command string looking for invocations of scripts
