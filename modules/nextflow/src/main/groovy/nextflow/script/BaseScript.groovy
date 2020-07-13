@@ -118,7 +118,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
      */
     protected workflow(Closure<BodyDef> workflowBody) {
         if(!NF.isDsl2())
-            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.preview.dsl=2` to allow the definition of workflow components")
+            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.enable.dsl=2` to allow the definition of workflow components")
 
         // launch the execution
         final workflow = new WorkflowDef(this, workflowBody)
@@ -129,7 +129,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     protected workflow(String name, Closure<BodyDef> workflowDef) {
         if(!NF.isDsl2())
-            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.preview.dsl=2` to allow the definition of workflow components")
+            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.enable.dsl=2` to allow the definition of workflow components")
 
         final workflow = new WorkflowDef(this,workflowDef,name)
         if( binding.entryName==name )
@@ -139,7 +139,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     protected IncludeDef include( IncludeDef include ) {
         if(!NF.isDsl2())
-            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.preview.dsl=2` to import module files")
+            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.enable.dsl=2` to import module files")
 
         include .setSession(session)
     }

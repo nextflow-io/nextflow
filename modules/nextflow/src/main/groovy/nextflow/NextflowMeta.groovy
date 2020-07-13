@@ -10,7 +10,7 @@ import static nextflow.extension.Bolts.DATETIME_FORMAT
 
 /**
  * Models nextflow script properties and metadata
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Singleton(strict = false)
@@ -20,10 +20,15 @@ class NextflowMeta {
 
     private static boolean ignoreWarnDsl2 = System.getenv('NXF_IGNORE_WARN_DSL2')=='true'
 
-    @Slf4j
-    static class Preview {
-        volatile float dsl
+    static trait Flags {
+        abstract float dsl
+        abstract boolean strict
+    }
 
+
+    @Slf4j
+    static class Preview implements Flags {
+        volatile float dsl
         boolean strict
 
         void setDsl( float num ) {
@@ -33,8 +38,13 @@ class NextflowMeta {
                 log.warn1 "DSL 2 IS AN EXPERIMENTAL FEATURE UNDER DEVELOPMENT -- SYNTAX MAY CHANGE IN FUTURE RELEASE"
             dsl = num
         }
-
     }
+
+    static class Features implements Flags {
+        volatile float dsl
+        boolean strict
+    }
+
 
     final VersionNumber version
     final int build
@@ -45,6 +55,8 @@ class NextflowMeta {
     final String timestamp
 
     final Preview preview = new Preview()
+
+    final Features enable = new Features()
 
     private NextflowMeta() {
         version = new VersionNumber(Const.APP_VER)
@@ -74,18 +86,23 @@ class NextflowMeta {
     }
 
     boolean isDsl2() {
-        preview.dsl == 2
+        preview.dsl == 2 || enable.dsl == 2
+    }
+
+    boolean isDsl2Final() {
+        enable.dsl == 2
     }
 
     void enableDsl2() {
-        preview.dsl = 2
+        enable.dsl = 2
     }
 
     void disableDsl2() {
-        preview.dsl = 1
+        enable.dsl = 1
     }
 
     boolean isStrictModeEnabled() {
-        preview.strict
+        preview.strict || enable.strict
     }
+
 }

@@ -155,7 +155,23 @@ class ScriptParserTest extends Specification {
         parser.isDsl2('nextflow.preview.dsl = 2')
         parser.isDsl2('nextflow.preview.dsl =  2;')
         parser.isDsl2('#!/bin/env nextflow\nnextflow.preview.dsl=2\nprintln foo')
+
+    }
+
+
+    def 'should find final dsl2 declaration' () {
+        given:
+        def parser = new ScriptParser(Mock(Session))
+
+        expect:
+        !parser.isDsl2('hello')
+        and:
+        !parser.isDsl2('nextflow.enable.dsl=1')
+        and:
         parser.isDsl2('nextflow.enable.dsl=2')
+        parser.isDsl2('nextflow.enable.dsl = 2')
+        parser.isDsl2('nextflow.enable.dsl =  2;')
+        parser.isDsl2('#!/bin/env nextflow\nnextflow.enable.dsl=2\nprintln foo')
 
     }
 }
