@@ -34,4 +34,4 @@ process foo {
     '''
 }
 
-result.println { it.name }
+result.view { it.name }

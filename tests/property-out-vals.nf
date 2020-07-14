@@ -28,5 +28,5 @@ process foo {
   """
 }
 
-ch1.println { "exit_status=$it" }
-ch2.println { "record=${it[0]}_${it[1]}" }
+ch1.view { "exit_status=$it" }
+ch2.view { "record=${it[0]}_${it[1]}" }

@@ -34,6 +34,6 @@ process foo {
 
 }
 
-_out1.println { "match: ${it.name}" }
-_out2.println { "match: ${it.name}" }
-_out3.println { "match: ${it.name}" }
+_out1.view { "match: ${it.name}" }
+_out2.view { "match: ${it.name}" }
+_out3.view { "match: ${it.name}" }
