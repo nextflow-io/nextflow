@@ -90,6 +90,10 @@ class Manifest {
         target.name
     }
 
+    String getDoi() {
+        target.doi
+    }
+
     Map toMap() {
         final result = new HashMap(10)
         result.author = getAuthor()
@@ -100,6 +104,7 @@ class Manifest {
         result.mainScript = getMainScript()
         result.version = getVersion()
         result.nextflowVersion = getNextflowVersion()
+        result.doi = getDoi()
         return result
     }
 }
