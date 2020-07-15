@@ -35,7 +35,7 @@ process foo {
   """
 }
 
-x_channel.println { "x: $it" }
-y_channel.println { "y: $it" }
-str_channel.println { "str: $it" }
-exp_channel.println { "exp: $it" }
+x_channel.view { "x: $it" }
+y_channel.view { "y: $it" }
+str_channel.view { "str: $it" }
+exp_channel.view { "exp: $it" }

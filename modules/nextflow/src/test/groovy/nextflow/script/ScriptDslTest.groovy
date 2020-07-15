@@ -152,7 +152,7 @@ class ScriptDslTest extends Dsl2Spec {
     def 'should access nextflow enabling property' () {
         when:
         def result = dsl_eval '''
-        return nextflow.preview.dsl 
+        return nextflow.enable.dsl 
         '''
 
         then:

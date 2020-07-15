@@ -25,4 +25,4 @@ process foo {
   template 'bash-script.txt'
 }
 
-results.print { it.text }
+results.view { it.text }
