@@ -415,6 +415,7 @@ Name                Description
 author              Project author name (use a comma to separate multiple names).
 defaultBranch       Git repository default branch (default: ``master``).
 description         Free text describing the workflow project.
+doi                 Project related publication DOI identifier.
 homePage            Project home page URL.
 mainScript          Project main script (default: ``main.nf``).
 name                Project short name.
