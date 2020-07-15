@@ -70,13 +70,26 @@ class NextflowMeta {
         this.timestamp = timestamp
     }
 
+    Map featuresMap() {
+        final result = new LinkedHashMap()
+        if( isDsl2() )
+            result.dsl = 2i
+        if( isStrictModeEnabled() )
+            result.strict = true
+        return result
+    }
+
     Map toJsonMap() {
         final result = new LinkedHashMap<>(5)
         result.version = version.toString()
         result.build = build
         result.timestamp = parseDateStr(timestamp)
-        if( isDsl2() )
-            result.preview = [dsl:2i]
+        if( isDsl2Final() ) {
+            result.enable = featuresMap()
+        }
+        else if( isDsl2() ) {
+            result.preview = featuresMap()
+        }
         return result
     }
 
@@ -97,8 +110,20 @@ class NextflowMeta {
         enable.dsl = 2
     }
 
+    void enableDsl2(String mode) {
+        if( !mode )
+            return
+        if( mode=='final' )
+            enable.dsl = 2
+        else if( mode=='preview' )
+            preview.dsl = 2
+        else
+            throw new IllegalArgumentException("Invalid DSL2 mode=$mode")
+    }
+
     void disableDsl2() {
         enable.dsl = 1
+        preview.dsl = 1
     }
 
     boolean isStrictModeEnabled() {

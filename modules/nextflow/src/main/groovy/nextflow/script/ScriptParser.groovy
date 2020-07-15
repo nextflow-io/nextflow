@@ -25,9 +25,9 @@ import nextflow.Channel
 import nextflow.Nextflow
 import nextflow.NextflowMeta
 import nextflow.Session
-import nextflow.ast.OpXform
 import nextflow.ast.NextflowDSL
 import nextflow.ast.NextflowXform
+import nextflow.ast.OpXform
 import nextflow.exception.ScriptCompilationException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
@@ -46,7 +46,7 @@ import org.codehaus.groovy.control.customizers.ImportCustomizer
 @CompileStatic
 class ScriptParser {
 
-    private static final Pattern DSL2_DECLARATION = ~/(?m)^\s*(nextflow\.(?:preview|enable)\.dsl\s*=\s*2)\s*;?\s*$/
+    private static final Pattern DSL2_DECLARATION = ~/(?m)^\s*(nextflow\.(preview|enable)\.dsl\s*=\s*2)\s*;?\s*$/
 
     private ClassLoader classLoader
 
@@ -132,8 +132,9 @@ class ScriptParser {
         return config
     }
 
-    protected boolean isDsl2(String script) {
-        script.find(DSL2_DECLARATION) != null
+    protected String checkDsl2Mode(String script) {
+        final matcher = DSL2_DECLARATION.matcher(script)
+        return matcher.find() ? matcher.group(2) : null
     }
 
     /**
@@ -175,8 +176,8 @@ class ScriptParser {
             final meta = ScriptMeta.get(script)
             meta.setScriptPath(scriptPath)
             meta.setModule(module)
-            if( isDsl2(scriptText) )
-                NextflowMeta.instance.enableDsl2()
+            // enable dsl2 when required
+            NextflowMeta.instance.enableDsl2(checkDsl2Mode(scriptText) )
             return this
         }
         catch (CompilationFailedException e) {
