@@ -41,4 +41,4 @@ process printHello {
 
 }
 
-results.println { "Square: $it" }
+results.view { "Square: $it" }

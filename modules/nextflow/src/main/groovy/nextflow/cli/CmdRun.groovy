@@ -212,7 +212,7 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-entry'], description = 'Entry workflow name to be executed', arity = 1)
     String entryName
 
-    @Parameter(names=['-dsl2'], hidden = true)
+    @Parameter(names=['-dsl2'], description = 'Execute the workflow using DSL2 syntax')
     boolean dsl2
 
     @Override

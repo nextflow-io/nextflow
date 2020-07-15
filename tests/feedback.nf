@@ -43,4 +43,4 @@ process baz {
   """
 }
 
-result.last().println { it.text }
+result.last().view { it.text }

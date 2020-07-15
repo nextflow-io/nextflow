@@ -25,7 +25,7 @@ process foo {
   """
 }
 
-baz.println { "Hello $it" }
+baz.view { "Hello $it" }
 
 process bar1 {
   echo true

@@ -25,4 +25,4 @@
    'echo foo'
  }
 
- result.println { it.text }
+ result.view { it.text }

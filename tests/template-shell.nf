@@ -27,4 +27,4 @@ process foo {
   template 'shell-script.txt'
 }
 
-results.print { it.text }
+results.view { it.text }
