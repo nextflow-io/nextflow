@@ -18,6 +18,8 @@ package nextflow.k8s
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Instant
+import java.time.format.DateTimeFormatter
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
@@ -273,11 +275,30 @@ class K8sTaskHandler extends TaskHandler {
         return false
     }
 
+    /**
+     * It's possible for a task to run so quickly (<1 second) that it skips
+     * right over the RUNNING status. If this happens, the startTimeMillis
+     * never gets set and remains equal to 0. In the case that startTimeMillis
+     * is equal to 0, update it with the start time based on "startedAt"
+     * from the terminated state.
+     */
+    void updateStartTime(Map terminated) {
+        try {
+            if ( !startTimeMillis ) {
+                final time = DateTimeFormatter.ISO_INSTANT.parse(terminated.startedAt as String)
+                startTimeMillis = Instant.from(time).toEpochMilli()
+            }
+        } catch( Exception e ) {
+            log.debug "Failed attempted update of startTimeMillis: ${startTimeMillis} from startedAt in: '${terminated.toString()}'", e
+        }
+    }
+
     @Override
     boolean checkIfCompleted() {
         if( !podName ) throw new IllegalStateException("Missing K8s pod name - cannot check if complete")
         def state = getState()
         if( state && state.terminated ) {
+            updateStartTime(state.terminated as Map)
             // finalize the task
             task.exitStatus = readExitFile()
             task.stdout = outputFile
