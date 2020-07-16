@@ -109,9 +109,9 @@ class MemoryUnit implements Comparable<MemoryUnit>, Serializable, Cloneable {
 
     long getMega() { size >> 20 }
 
-    long toGiga() { size / 1073741824 } //Bytes to GiB
+    double toGiga() { size / 1073741824 } //Bytes to GiB
 
-    long getGiga() { size / 1073741824 } //Bytes to GiB
+    double getGiga() { size / 1073741824 } //Bytes to GiB
 
     MemoryUnit plus( MemoryUnit value )  {
         return value != null ? new MemoryUnit( size + value.size ) : this
