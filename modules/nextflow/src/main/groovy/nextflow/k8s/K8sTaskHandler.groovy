@@ -282,7 +282,7 @@ class K8sTaskHandler extends TaskHandler {
      * is equal to 0, update it with the start time based on "startedAt"
      * from the terminated state.
      */
-    private void updateStartTime(Map terminated) {
+    void updateStartTime(Map terminated) {
         try {
             if ( startTimeMillis == 0 ) {
                 DateTimeFormatter f = DateTimeFormatter.ISO_INSTANT
