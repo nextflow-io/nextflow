@@ -616,7 +616,7 @@ class LoggerHelper {
             try {
                 final message = fmtEvent(event, session).trim()
                 final renderer = session?.ansiLogObserver
-                if( !renderer )
+                if( !renderer || !renderer.started || renderer.stopped )
                     System.out.println(message)
 
                 else if( event.marker == STICKY )

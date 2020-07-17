@@ -100,6 +100,10 @@ class AnsiLogObserver implements TraceObserver {
         changeTimestamp = System.currentTimeMillis()
     }
 
+    boolean getStarted() { started }
+
+    boolean  getStopped() { stopped }
+
     private boolean hasProgressChanges() {
         final long progress = statsObserver.changeTimestamp ?: 0
         final last = progress ? Math.max(progress,changeTimestamp) : changeTimestamp
@@ -138,8 +142,9 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     synchronized void appendError(String message) {
-        if( !started || !statsObserver.hasProgressRecords() )
+        if( !started || !statsObserver.hasProgressRecords() ) {
             printAnsi(message, Color.RED)
+        }
         else {
             errors << new Event(message)
             markModified()
@@ -413,4 +418,8 @@ class AnsiLogObserver implements TraceObserver {
         markModified()
     }
 
+    void forceTermination() {
+        stopped = true
+        endTimestamp = System.currentTimeMillis()
+    }
 }
