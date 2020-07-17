@@ -1104,7 +1104,8 @@ class OperatorEx implements DelegatingPlugin {
      * @return
      */
     DataflowWriteChannel mix( DataflowReadChannel source, DataflowReadChannel[] others ) {
-        assert others.size()>0
+        if( others.size()==0 )
+            throw new IllegalArgumentException("Operator 'mix' should have at least one right operand")
 
         def target = CH.create()
         def count = new AtomicInteger( others.size()+1 )
