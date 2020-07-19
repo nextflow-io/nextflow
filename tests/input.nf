@@ -26,13 +26,9 @@ process foo {
     val y
 
     output:
-    val y into channel
+    val y into result
 
     "echo $x - $y"
-
 }
 
-
-channel.subscribe {
-    println "foo out: $it"
-}
+result.view { "foo out: $it" }
