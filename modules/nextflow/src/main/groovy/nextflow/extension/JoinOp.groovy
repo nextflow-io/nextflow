@@ -129,8 +129,8 @@ class JoinOp {
         result.onComplete = {
             if( stopCount.decrementAndGet()==0 && !failed ) {
                 try {
-                    if( remainder )
-                        remainder0(buffer,size,target)
+                    if( remainder || failOnDuplicate )
+                        checkRemainder(buffer,size,target)
                     if( failOnMismatch )
                         checkForMismatch(buffer)
                 }
@@ -173,6 +173,9 @@ class JoinOp {
         // get the index key for this object
         final item0 = DataflowHelper.makeKey(pivot, data)
 
+        // check for unique keys
+        checkForDuplicate(item0.keys, item0.values, index, false)
+
         // given a key we expect to receive on object with the same key on each channel
         Map<Integer,List> channels = buffer.get(item0.keys)
         if( channels==null ) {
@@ -213,11 +216,12 @@ class JoinOp {
             }
         }
 
-        checkForDuplicate(item0.keys, result)
+        // track unique keys
+        checkForDuplicate(item0.keys, item0.values, index, true)
         return result
     }
 
-    private final void remainder0( Map<Object,Map<Integer,List>> buffers, int count, DataflowWriteChannel target ) {
+    private final void checkRemainder(Map<Object,Map<Integer,List>> buffers, int count, DataflowWriteChannel target ) {
        log.trace "Operator `join` remainder buffer: ${-> buffers}"
 
         for( Object key : buffers.keySet() ) {
@@ -232,6 +236,9 @@ class JoinOp {
                 for( int i=0; i<count; i++ ) {
                     List values = entry[i]
                     if( values ) {
+                        // track unique keys
+                        checkForDuplicate(key, values[0], i,false)
+
                         addToList(result, values[0])
                         fill |= true
                         values.remove(0)
@@ -243,8 +250,8 @@ class JoinOp {
 
                 if( fill ) {
                     final value = singleton() ? result[0] : result
-                    checkForDuplicate(key,value)
-                    target.bind(value)
+                    // bind value to target channel
+                    if( remainder ) target.bind(value)
                 }
                 else
                     break
@@ -253,21 +260,23 @@ class JoinOp {
         }
     }
 
-    protected void checkForDuplicate( key, value ) {
-        if( failOnDuplicate && !uniqueKeys.add(key) )
-            throw new AbortOperationException("Detected join operation duplicate element -- offending key=${csv0(key,',')}; value=${csv0(value,',')}")
+    protected void checkForDuplicate( key, value, int dir, boolean add ) {
+        if( failOnDuplicate && ( (add && !uniqueKeys.add(key)) || (!add && uniqueKeys.contains(key)) ) ) {
+            final msg = "Detected join operation duplicate emission on ${dir==0 ? 'left' : 'right'} channel -- offending element: key=${csv0(key,',')}; value=${csv0(value,',')}"
+            throw new AbortOperationException(msg)
+        }
     }
 
     protected void checkForMismatch( Map<Object,Map<Integer,List>> buffers ) {
         final result = new HashMap<Object,List>()
         for( Object key : buffers.keySet() ) {
             Map<Integer,List> el = buffers.get(key)
-            final reminder = el.entrySet()
-            if( !reminder )
+            final remainder0 = el.entrySet()
+            if( !remainder0 )
                 continue
 
             result[key] = []
-            for( Map.Entry entry : reminder ) {
+            for( Map.Entry entry : remainder0 ) {
                 result[key].add(csv0(entry.value,','))
             }
         }
