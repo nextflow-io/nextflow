@@ -313,7 +313,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         process foo {
           input: 
             val sample
-            set pairId, reads
+            tuple val(pairId), val(reads)
           output: 
             stdout() 
           script:

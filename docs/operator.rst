@@ -26,8 +26,6 @@ Operators can be separated in to seven groups:
         .println { it }
         .filter( ~/^a.*/ )
 
-  ::
-
 
 Filtering operators
 ===================
@@ -460,6 +458,9 @@ following these rules:
 * Any value of type ``Collection`` or ``Array`` is associated with its first entry.
 * For any other value, the value itself is used as a key.
 
+
+.. _operator-grouptuple:
+
 groupTuple
 ----------
 
@@ -710,6 +711,8 @@ For example::
 .. =========== ============================
 
 See also: `toList`_ and `toSortedList`_ operator.
+
+.. _operator-flatten:
 
 flatten
 ----------

@@ -21,6 +21,7 @@ import java.nio.file.Path
 import groovy.transform.InheritConstructors
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.exception.IllegalFileException
 import nextflow.file.FilePatternSplitter
 import nextflow.script.TokenVar
@@ -93,30 +94,35 @@ class FileOutParam extends BaseOutParam implements OutParam, OptionalParam, Path
 
     @Deprecated
     FileOutParam separatorChar( String value ) {
+        if( NF.dsl2Final ) throw new DeprecationException("Option `separatorChar is not supported any more")
         this.separatorChar = value
         return this
     }
 
     @Deprecated
     FileOutParam includeInputs( boolean flag ) {
+        if( NF.dsl2Final ) throw new DeprecationException("Deprecated syntax error - replace `includeInputs $flag` with `, includeInputs: $flag` ")
         this.includeInputs = flag
         return this
     }
 
     @Deprecated
     FileOutParam includeHidden( boolean flag ) {
+        if( NF.dsl2Final ) throw new DeprecationException("Deprecated syntax error - replace `includeHidden $flag` with `, includeHidden: $flag`")
         this.hidden = flag
         return this
     }
 
     @Deprecated
     FileOutParam hidden( boolean flag ) {
+        if( NF.dsl2Final ) throw new DeprecationException("Deprecated syntax error - replace `hidden $flag` with use `, hidden: $flag`")
         this.hidden = flag
         return this
     }
 
     @Deprecated
     FileOutParam type( String value ) {
+        if( NF.dsl2Final ) throw new DeprecationException("Deprecated syntax error - replace `type $value` with `, type: $value`")
         assert value in ['file','dir','any']
         type = value
         return this
@@ -124,18 +130,21 @@ class FileOutParam extends BaseOutParam implements OutParam, OptionalParam, Path
 
     @Deprecated
     FileOutParam maxDepth( int value ) {
+        if( NF.dsl2Final ) throw new DeprecationException("Deprecated syntax error - replace `maxDepth $value` with `, maxDepth: $value`")
         maxDepth = value
         return this
     }
 
     @Deprecated
     FileOutParam followLinks( boolean value ) {
+        if( NF.dsl2Final ) throw new DeprecationException("Deprecated syntax error - replace `followLinks $value` with `, followLinks: $value`")
         followLinks = value
         return this
     }
 
     @Deprecated
     FileOutParam glob( boolean value ) {
+        if( NF.dsl2Final ) throw new DeprecationException("Deprecated syntax error - replace `glob $value` with `, glob: $value` ")
         glob = value
         return this
     }

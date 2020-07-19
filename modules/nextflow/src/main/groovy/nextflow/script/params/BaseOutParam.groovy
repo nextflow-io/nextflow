@@ -194,8 +194,11 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
 
     BaseOutParam mode( def mode ) {
-        if( NF.isDsl2() )
-            log.warn "Process output `mode` is not supported any more"
+        final msg = "Process output `mode` is not supported any more"
+        if( NF.isDsl2Final() )
+            throw new DeprecationException(msg)
+        else if( NF.isDsl2() )
+            log.warn(msg)
         this.mode = BasicMode.parseValue(mode)
         return this
     }

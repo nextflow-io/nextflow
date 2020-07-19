@@ -35,7 +35,3 @@ Contents:
    metadata
    mail
    example
-   faq
-
-
-
