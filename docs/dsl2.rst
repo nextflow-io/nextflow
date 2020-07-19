@@ -4,16 +4,13 @@
 DSL 2
 ******
 
-Nextflow implements an experimental syntax that implements new features and enhancements that
-simplifies the implementation of data analysis applications.
+Nextflow provides a syntax extension that implements that allow the definition of module libraries and
+simplifies the writing of complex data analysis pipelines.
 
 To enable this feature you need to defined the following directive at the beginning of
 your workflow script::
 
-    nextflow.preview.dsl=2
-
-
-.. warning:: THIS IS AN EXPERIMENT FEATURE UNDER DEVELOPMENT. SYNTAX MAY CHANGE IN FUTURE RELEASE.
+    nextflow.enable.dsl=2
 
 
 Function
@@ -553,3 +550,94 @@ The following methods are not allowed any more when using Nextflow DSL 2:
 * :ref:`operator-separate`
 * :ref:`operator-into`
 * :ref:`operator-merge`
+
+
+DSL2 migration notes
+=====================
+
+* DSL2 final version is activated using the declaration ``nextflow.enable.dsl=2`` in place of ``nextflow.preview.dsl=2``.
+* Process inputs of type ``set`` have to be replaced with :ref:`tuple <process-input-tuple>`.
+* Process outputs of type ``set`` have to be replaced with :ref:`tuple <process-out-tuple>`.
+* Process output option ``mode flatten`` is not available any more. Replace it using the :ref:`operator-flatten` to the
+  corresponding output channel.
+* Anonymous and unwrapped includes are not supported any more. Replace it with a explicit module inclusion. For example::
+
+        include './some/library'
+        include bar from './other/library'
+
+        workflow {
+          foo()
+          bar()
+        }
+
+  Should be replaced with::
+
+        include { foo } from './some/library'
+        include { bar } from './other/library'
+
+        workflow {
+          foo()
+          bar()
+        }
+        
+* The use of unqualified value and file element into input tuples is not allowed anymore. Replace them with a corresponding
+  ``val`` or ``path`` qualifier::
+
+        process foo {
+        input:
+          tuple X, 'some-file.bam'
+         script:
+           '''
+           your_command
+           '''
+        }
+
+  Use::
+
+        process foo {
+        input:
+          tuple val(X), path('some-file.bam')
+         script:
+           '''
+           your_command --in $X some-file.bam
+           '''
+        }
+
+
+* The use of unqualified value and file element into output tuples is not allowed anymore. Replace them with a corresponding
+  ``val`` or ``path`` qualifier::
+
+
+        process foo {
+        output:
+          tuple X, 'some-file.bam'
+
+        script:
+           X = 'some value'
+           '''
+           your_command > some-file.bam
+           '''
+        }
+
+  Use::
+
+        process foo {
+        output:
+          tuple val(X), path('some-file.bam')
+
+        script:
+           X = 'some value'
+           '''
+           your_command > some-file.bam
+           '''
+        }
+
+
+* Operator ``print`` and ``println`` have been deprecated by DLS2 syntax. Use :ref:`operator-view` instead.
+* Operator ``into`` has been deprecated by DLS2 syntax since it .
+* Operator ``separate`` has been deprecated by DLS2 syntax.
+* Operator ``merge`` has been deprecated by DLS2 syntax. Use :ref:`operator-join` instead.
+* Operator ``countBy`` has been deprecated by DLS2 syntax.
+* Operator ``groupBy`` has been deprecated by DLS2 syntax. Replace it with :ref:`operator-grouptuple`
+* Operator ``spread`` has been deprecated with DLS2 syntax. Replace it with :ref:`operator-combine`.
+* Opeartor ``fork`` has been renamed to :ref:`operator-multimap`.
