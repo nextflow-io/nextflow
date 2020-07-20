@@ -54,8 +54,8 @@ Process
 Process definition
 ------------------
 
-The new DSL separates the definition of a process by its invocation. The process definition follows the usual
-for syntax as described in the :ref:`process documentation <process-page>`. The only difference is that the
+The new DSL separates the definition of a process from its invocation. The process definition follows the usual 
+syntax as described in the :ref:`process documentation <process-page>`. The only difference is that the
 ``from`` and ``into`` channel declaration has to be omitted.
 
 Then a process can be invoked as a function in the ``workflow`` scope, passing the expected
@@ -125,8 +125,8 @@ using the array element operator e.g. ``out[0]``, ``out[1]``, etc. or using
 Process named output
 --------------------
 
-The process output definition allow the use of the ``emit`` option to define a name identifier
-that can be used to reference the channel in external scope. For example::
+The process output definition allows the use of the ``emit`` option to define a name identifier
+that can be used to reference the channel in the external scope. For example::
 
     process foo {
       output:
@@ -189,16 +189,16 @@ A workflow component can declare one or more input channels using the ``take`` k
             bar(foo.out)
         }
 
-.. warning:: When the ``take`` is used the beginning of the workflow body needs to be identified with the
+.. warning:: When the ``take`` keyword is used, the beginning of the workflow body needs to be identified with the
   ``main`` keyword.
 
-Then, the input can be specified a argument on the workflow invocation statement::
+Then, the input can be specified as an argument in the workflow invocation statement::
 
     workflow {
         my_pipeline( Channel.from('/some/data') )
     }
 
-.. note:: Workflow inputs are by definition *channel* data structure. If a basic data type is provided
+.. note:: Workflow inputs are by definition *channel* data structures. If a basic data type is provided
   instead, ie. number, string, list, etc. it's implicitly converted to a :ref:`channel value <channel-type-value>` (ie. non-consumable).
 
 
@@ -216,10 +216,10 @@ A workflow component can declare one or more out channels using the ``emit`` key
         }
 
 Then, the result of the ``my_pipeline`` execution can be accessed using the ``out`` property ie.
-``my_pipeline.out``. When is declared more than one output channels, use the array bracket notation
+``my_pipeline.out``. When there are multiple output channels declared, use the array bracket notation
 to access each output component as described for the `Process outputs`_ definition.
 
-Alternatively, the output channel can be accessed using the identifier name to which it's assigned
+Alternatively, the output channel can be accessed using the identifier name which it's assigned to
 in the ``emit`` declaration::
 
          workflow my_pipeline {
@@ -230,7 +230,7 @@ in the ``emit`` declaration::
               my_data = bar.out
         }
 
-Then, the result of the above snippet can accessed using the ``my_pipeline.out.my_data``.
+Then, the result of the above snippet can accessed using ``my_pipeline.out.my_data``.
 
 
 Implicit workflow
@@ -240,18 +240,18 @@ A workflow definition which does not declare any name is assumed to be the main 
 implicitly executed. Therefore it's the entry point of the workflow application.
 
 .. note:: Implicit workflow definition is ignored when a script is included as module. This
-  allow the writing a workflow script that can be used either as a library module and as
+  allows the writing a workflow script that can be used either as a library module and as
   application script. 
 
-.. tip:: An alternative workflow entry can be specifying using the ``-entry`` command line option.
+.. tip:: An alternative workflow entry can be specified using the ``-entry`` command line option.
 
 
 Workflow publish
 ----------------
 
-.. attention:: This features has been retired and it will not be included in the final DSL2 release.
+.. attention:: This feature has been retired and it will not be included in the final DSL2 release.
 
-The ``publish`` clause in the workflow declaration allow the definition of one or more output channels
+The ``publish`` clause in the workflow declaration allows the definition of one or more output channels
 whose content needs to be copied to a storage location of your choice. For example::
 
     workflow {
@@ -266,16 +266,16 @@ whose content needs to be copied to a storage location of your choice. For examp
 .. note:: The ``publish`` clause is only allowed in a *implicit workflow* definition.
 
 The ``publish`` clause works in similar manner to the process :ref:`process-publishDir` directive,
-however the former allow you to specify a different target directory for each published channel.
+however the former allows you to specify a different target directory for each published channel.
 
-.. tip:: In the ``publish`` clause can be specified the same options as for the :ref:`process-publishDir`
-  directive i.e. ``mode``, ``overwrite``, ``enabled``, etc.
+.. tip:: In the ``publish`` clause, the same options as for the :ref:`process-publishDir`
+  directive can be specified i.e. ``mode``, ``overwrite``, ``enabled``, etc.
 
 
 Workflow composition
 --------------------
 
-Workflow defined in your script or import by a module inclusion can be invoked and composed
+Workflows defined in your script or imported by a module inclusion can be invoked and composed
 as any other process in your application.
 
 ::
@@ -311,7 +311,7 @@ as any other process in your application.
     invoked in two different workflow scopes, like for example ``foo`` in the above snippet that
     is used either in ``flow1`` and ``flow2``. The workflow execution path along with the
     process names defines the process *fully qualified name* that is used to distinguish the
-    two different process invocation i.e. ``flow1:foo`` and ``flow2:foo`` in the above example.
+    two different process invocations i.e. ``flow1:foo`` and ``flow2:foo`` in the above example.
 
 .. tip::
     The process fully qualified name can be used as a valid :ref:`process selector <config-process-selectors>` in the
@@ -324,7 +324,7 @@ Modules
 The new DSL allows the definition module scripts that
 can be included and shared across workflow applications.
 
-A module can contain the definition of function, process and workflow definitions
+A module can contain the definition of a function, process and workflow definitions
 as described in the above sections.
 
 Modules include
@@ -334,7 +334,7 @@ A component defined in a module script can be imported into another Nextflow scr
 
 For example::
 
-    include foo from './some/module'
+    include { foo } from './some/module'
 
     workflow {
         data = Channel.fromPath('/some/data/*.txt')
@@ -353,7 +353,7 @@ Multiple inclusions
 -------------------
 
 A Nextflow script allows the inclusion of any number of modules. When multiple
-components need to be included from the some module script the component names can be
+components need to be included from the some module script, the component names can be
 specified in the same inclusion using the curly brackets notation as shown below::
 
     include { foo; bar } from './some/module'
@@ -372,7 +372,7 @@ When including a module component it's possible to specify a name *alias*.
 This allows the inclusion and the invocation of the same component multiple times
 in your script using different names. For example::
 
-    include foo from './some/module'
+    include { foo } from './some/module'
     include foo as bar from './other/module'
 
     workflow {
@@ -380,7 +380,7 @@ in your script using different names. For example::
         bar(other_data)
     }
 
-The same is possible when using the curly delimited  inclusion as shown below::
+The same is possible when using the curly delimited inclusion as shown below::
 
     include { foo; foo as bar } from './some/module'
 
@@ -441,7 +441,7 @@ inheriting any value from the external environment.
 Channel forking
 ===============
 
-Using the new DSL Nextflow channels are automatically forked when connecting two or more consumers.
+Using the new DSL, Nextflow channels are automatically forked when connecting two or more consumers.
 
 For example::
 
@@ -460,7 +460,7 @@ For example::
 
 The same is valid for the result (channel) of a process execution. Therefore a process output can be used by
 two or more processes without the need to fork them using the :ref:`operator-into` operator, making the
-writing of workflow script much fluent and readable.
+writing of workflow scripts very fluent and readable.
 
 
 Pipes
@@ -486,13 +486,13 @@ Nextflow processes and operators can be composed using the ``|`` *pipe* operator
 
 The above snippet defines a process named ``foo`` then invoke it passing the content of the
 ``data`` channel. The result is piped to the :ref:`operator-map` operator which converts each string
-to uppercase and finally, the last :ref:`operator-view` prints it.
+to uppercase and finally, the last :ref:`operator-view` operator prints it.
 
 
 The *and* operator
 ------------------
 
-The ``&`` *and* operator allow the feed of two or more processes with the content of the same
+The ``&`` *and* operator allows to feed two or more processes with the content of the same
 channel(s) e.g.::
 
     process foo {
@@ -515,12 +515,12 @@ channel(s) e.g.::
 
 
 In the above snippet the channel emitting the ``Hello`` is piped with the :ref:`operator-map`
-which reverse the string value. Then, the result is passed to either ``foo`` and ``bar``
-processes which are executed in parallel. The result is pair of channels which content
-is merged into a single channel using the :ref:`operator-mix`. Finally the result is printed
-using the :ref:`operator-view`.
+which reverses the string value. Then, the result is passed to either ``foo`` and ``bar``
+processes which are executed in parallel. The result is pair of channels whose content
+is merged into a single channel using the :ref:`operator-mix` operator. Finally the result is printed
+using the :ref:`operator-view` operator.
 
-.. tip:: The break-line operator ``\`` can be use to split long pipes concatenation
+.. tip:: The break-line operator ``\`` can be used to split long pipe concatenations
   over multiple lines.
 
 
@@ -580,7 +580,7 @@ DSL2 migration notes
           bar()
         }
         
-* The use of unqualified value and file element into input tuples is not allowed anymore. Replace them with a corresponding
+* The use of unqualified value and file elements into input tuples is not allowed anymore. Replace them with a corresponding
   ``val`` or ``path`` qualifier::
 
         process foo {
@@ -604,7 +604,7 @@ DSL2 migration notes
         }
 
 
-* The use of unqualified value and file element into output tuples is not allowed anymore. Replace them with a corresponding
+* The use of unqualified value and file elements into output tuples is not allowed anymore. Replace them with a corresponding
   ``val`` or ``path`` qualifier::
 
 
@@ -634,7 +634,7 @@ DSL2 migration notes
 
 
 * Operator ``print`` and ``println`` have been deprecated by DLS2 syntax. Use :ref:`operator-view` instead.
-* Operator ``into`` has been deprecated by DLS2 syntax since it .
+* Operator ``into`` has been deprecated by DLS2 syntax.
 * Operator ``separate`` has been deprecated by DLS2 syntax.
 * Operator ``merge`` has been deprecated by DLS2 syntax. Use :ref:`operator-join` instead.
 * Operator ``countBy`` has been deprecated by DLS2 syntax.
