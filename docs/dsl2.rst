@@ -633,11 +633,11 @@ DSL2 migration notes
         }
 
 
-* Operator ``print`` and ``println`` have been deprecated by DLS2 syntax. Use :ref:`operator-view` instead.
-* Operator ``into`` has been deprecated by DLS2 syntax.
-* Operator ``separate`` has been deprecated by DLS2 syntax.
-* Operator ``merge`` has been deprecated by DLS2 syntax. Use :ref:`operator-join` instead.
-* Operator ``countBy`` has been deprecated by DLS2 syntax.
-* Operator ``groupBy`` has been deprecated by DLS2 syntax. Replace it with :ref:`operator-grouptuple`
-* Operator ``spread`` has been deprecated with DLS2 syntax. Replace it with :ref:`operator-combine`.
+* Operator ``print`` and ``println`` have been deprecated by DSL2 syntax. Use :ref:`operator-view` instead.
+* Operator ``into`` has been deprecated by DSL2 syntax.
+* Operator ``separate`` has been deprecated by DSL2 syntax.
+* Operator ``merge`` has been deprecated by DSL2 syntax. Use :ref:`operator-join` instead.
+* Operator ``countBy`` has been deprecated by DSL2 syntax.
+* Operator ``groupBy`` has been deprecated by DSL2 syntax. Replace it with :ref:`operator-grouptuple`
+* Operator ``spread`` has been deprecated with DSL2 syntax. Replace it with :ref:`operator-combine`.
 * Opeartor ``fork`` has been renamed to :ref:`operator-multimap`.
