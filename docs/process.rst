@@ -686,12 +686,15 @@ on the value received from the channel. For example::
     hola world!
 
 
+.. _process-input-set:
 
 Input of type 'set'
 -------------------
 
 .. warning:: The `set` input type has been deprecated. See `tuple` instead.
 
+
+.. _process-input-tuple:
 
 Input of type 'tuple'
 ---------------------

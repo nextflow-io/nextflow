@@ -712,6 +712,7 @@ class Session implements ISession {
                 log.debug(status)
             // force termination
             notifyError(null)
+            ansiLogObserver?.forceTermination()
             executorFactory?.signalExecutors()
             processesBarrier.forceTermination()
             monitorsBarrier.forceTermination()

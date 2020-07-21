@@ -1,6 +1,7 @@
 package nextflow
 
 import java.text.SimpleDateFormat
+import java.util.regex.Pattern
 
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
@@ -18,13 +19,14 @@ import static nextflow.extension.Bolts.DATETIME_FORMAT
 @EqualsAndHashCode
 class NextflowMeta {
 
+    private static final Pattern DSL2_DECLARATION = ~/(?m)^\s*(nextflow\.(preview|enable)\.dsl\s*=\s*2)\s*;?\s*$/
+
     private static boolean ignoreWarnDsl2 = System.getenv('NXF_IGNORE_WARN_DSL2')=='true'
 
     static trait Flags {
         abstract float dsl
         abstract boolean strict
     }
-
 
     @Slf4j
     static class Preview implements Flags {
@@ -70,13 +72,26 @@ class NextflowMeta {
         this.timestamp = timestamp
     }
 
+    Map featuresMap() {
+        final result = new LinkedHashMap()
+        if( isDsl2() )
+            result.dsl = 2i
+        if( isStrictModeEnabled() )
+            result.strict = true
+        return result
+    }
+
     Map toJsonMap() {
         final result = new LinkedHashMap<>(5)
         result.version = version.toString()
         result.build = build
         result.timestamp = parseDateStr(timestamp)
-        if( isDsl2() )
-            result.preview = [dsl:2i]
+        if( isDsl2Final() ) {
+            result.enable = featuresMap()
+        }
+        else if( isDsl2() ) {
+            result.preview = featuresMap()
+        }
         return result
     }
 
@@ -93,16 +108,33 @@ class NextflowMeta {
         enable.dsl == 2
     }
 
-    void enableDsl2() {
-        enable.dsl = 2
+    void enableDsl2(boolean preview=false) {
+        if( preview )
+            this.preview.dsl = 2
+        else
+            this.enable.dsl = 2
     }
 
     void disableDsl2() {
         enable.dsl = 1
+        preview.dsl = 1
     }
 
     boolean isStrictModeEnabled() {
         preview.strict || enable.strict
+    }
+
+    void checkDsl2Mode(String script) {
+        final matcher = DSL2_DECLARATION.matcher(script)
+        final mode = matcher.find() ? matcher.group(2) : null
+        if( !mode )
+            return
+        if( mode == 'enable' )
+            enableDsl2()
+        else if( mode == 'preview' )
+            enableDsl2(true)
+        else
+            throw new IllegalArgumentException("Unknown nextflow mode=${matcher.group(1)}")
     }
 
 }

@@ -313,7 +313,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         process foo {
           input: 
             val sample
-            set pairId, reads
+            tuple val(pairId), val(reads)
           output: 
             stdout() 
           script:
@@ -944,5 +944,43 @@ class ScriptIncludesTest extends Dsl2Spec {
                 .execute()
         then:
         true
+    }
+
+
+    def 'should not allow unwrapped include' () {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def MODULE = folder.resolve('module.nf')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = '''
+        params.foo = 'x' 
+        params.bar = 'y'
+        
+        process foo {
+          output: stdout() 
+          script:
+          /echo $params.foo $params.bar/
+        }
+        '''
+
+        // inject params in the module
+        // and invoke the process 'foo'
+        SCRIPT.text = """
+        include foo from "./module.nf" params(foo:'Hello', bar: 'world')
+            
+        workflow { 
+            main: foo()
+            emit: foo.out 
+        }
+        """
+
+        when:
+        def runner = new MockScriptRunner()
+        def result = runner.setScript(SCRIPT).execute()
+        then:
+        def e = thrown(DeprecationException)
+        e.message == "Unwrapped module inclusion is deprecated -- Replace `include foo from './MODULE/PATH'` with `include { foo } from './MODULE/PATH'`"
+
     }
 }

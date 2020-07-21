@@ -96,13 +96,17 @@ The available factory methods are:
 * `value`_
 * `watchPath`_
 
+.. tip::
+  As for version 20.07.0 the prefix ``channel.`` has been introduced as an alias of ``Channel.``, therefore factory
+  methods can be used either with the syntaxes ``channel.from()`` and ``Channel.from()``, and so on.
+
 .. _channel-create:
 
 create
 ------
 
 .. warning::
-    This method is deprecated.
+    This method is deprecated and won't be available in DSL2 syntax.
 
 Creates a new `channel` by using the ``create`` method, as shown below::
 
@@ -159,7 +163,9 @@ See also: `fromList`_ factory method.
 from
 ----
 
-.. warning:: This method is deprecated. Use `of`_ or `fromList`_ instead.
+.. warning::
+  This method is deprecated and should only be used for backward compatibility in legacy code.
+  Use `of`_ or `fromList`_ instead.
 
 The ``from`` method allows you to create a channel emitting any sequence of values that are specified as the method argument,
 for example::

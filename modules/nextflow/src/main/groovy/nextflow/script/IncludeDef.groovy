@@ -61,10 +61,9 @@ class IncludeDef {
         this.modules << new Module(null,null)
     }
 
-    @Deprecated
     IncludeDef(TokenVar token, String alias=null) {
         def component = token.name; if(alias) component += " as $alias"
-        def msg = "Unwrapped module inclusion is deprecated -- Replace `include $component from './MODULE/PATH`' with `include { $component } from './MODULE/PATH'`"
+        def msg = "Unwrapped module inclusion is deprecated -- Replace `include $component from './MODULE/PATH'` with `include { $component } from './MODULE/PATH'`"
         if( NF.isDsl2Final() )
             throw new DeprecationException(msg)
         log.warn msg

@@ -526,8 +526,6 @@ class NextflowDSLImpl implements ASTTransformation {
                             if( opts ) msg += " -- Did you mean ${opts.collect{"'$it'"}.join(', ')}"
                             syntaxError(stm, msg)
                         }
-
-                        log.info "context=$context"
                         body.add(stm)
                 }
             }

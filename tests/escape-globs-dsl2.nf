@@ -9,7 +9,7 @@ process foo {
   output:
   path x
   path 'file-\\*.txt'
-  path 'file-?.txt' glob false
+  path 'file-?.txt', glob: false
 
   '''
   touch file-\\*.txt

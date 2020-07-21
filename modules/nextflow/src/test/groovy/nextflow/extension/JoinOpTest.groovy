@@ -168,7 +168,7 @@ class JoinOpTest extends Specification {
     }
 
 
-    def 'should join pair with singleton and reminder' () {
+    def 'should join pair with singleton and remainder' () {
 
         when:
         def left = Channel.from(['P', 0], ['X', 1], ['Y', 2], ['Z', 3])
@@ -296,10 +296,11 @@ class JoinOpTest extends Specification {
         await(sess)
         then:
         sess.isAborted()
-        sess.getError().message.startsWith('Detected join operation duplicate element -- offending key=X')
+        and:
+        sess.error.message ==~ /Detected join operation duplicate emission on (left|right) channel -- offending element: key=X; value=(3|4|5|6)/
     }
 
-    def 'should fail on duplicate with reminder' () {
+    def 'should fail on duplicate with remainder' () {
         given:
         def ch1 = (DataflowReadChannel) Channel.of(['X', 1], ['X', 3])
         def ch2 = (DataflowReadChannel) Channel.of(['X', 2])
@@ -313,21 +314,26 @@ class JoinOpTest extends Specification {
         await(sess)
         then:
         sess.isAborted()
-        sess.getError().message.startsWith('Detected join operation duplicate element -- offending key=X')
+        sess.getError().message == 'Detected join operation duplicate emission on left channel -- offending element: key=X; value=3'
     }
 
-    def 'should not fail on duplicate without reminder' () {
+    def 'should fail on duplicate without remainder' () {
         given:
         def ch1 = (DataflowReadChannel) Channel.of(['X', 1], ['X', 3])
         def ch2 = (DataflowReadChannel) Channel.of(['X', 2])
         and:
+        def sess = Global.session as Session
 
         when:
         def op = new JoinOp(ch1, ch2, [failOnDuplicate:true])
         def result = op.apply().toList().getVal()
         then:
-        result == [ ['X',1,2] ]
+        await(sess)
+        then:
+        sess.isAborted()
+        sess.getError().message == 'Detected join operation duplicate emission on left channel -- offending element: key=X; value=3'
     }
+
 
     protected void await(Session session) {
         def begin = System.currentTimeMillis()

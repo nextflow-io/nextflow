@@ -18,6 +18,7 @@ package nextflow.script.params
 
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.script.TokenVar
 
 /**
@@ -41,7 +42,7 @@ class FileInParam extends BaseInParam implements PathQualifier {
      * Define the file name
      */
     FileInParam name( obj ) {
-        if(pathQualifier)
+        if( pathQualifier )
             throw new MissingMethodException("name", this.class, [String] as Object[])
 
         if( obj instanceof String ) {
@@ -56,7 +57,7 @@ class FileInParam extends BaseInParam implements PathQualifier {
 
         // the ability to pass a closure as file name has been replaced by
         // lazy gstring -- this should be deprecated
-        if( obj instanceof Closure ) {
+        if( obj instanceof Closure && !NF.dsl2Final ) {
             filePattern = obj
             return this
         }
