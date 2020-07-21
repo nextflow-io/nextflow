@@ -11,7 +11,7 @@ import static nextflow.extension.Bolts.DATETIME_FORMAT
 
 /**
  * Models nextflow script properties and metadata
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Singleton(strict = false)
@@ -46,6 +46,7 @@ class NextflowMeta {
         volatile float dsl
         boolean strict
     }
+
 
     final VersionNumber version
     final int build
@@ -135,4 +136,5 @@ class NextflowMeta {
         else
             throw new IllegalArgumentException("Unknown nextflow mode=${matcher.group(1)}")
     }
+
 }

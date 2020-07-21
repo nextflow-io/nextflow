@@ -141,5 +141,4 @@ class ScriptParserTest extends Specification {
         e.message.contains('- cause: unexpected token: foo @ line 2, column 13.')
         e.message.contains('foo.nf\n')
     }
-    
 }
