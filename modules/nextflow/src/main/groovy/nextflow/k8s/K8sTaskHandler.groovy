@@ -284,10 +284,9 @@ class K8sTaskHandler extends TaskHandler {
      */
     void updateStartTime(Map terminated) {
         try {
-            if ( startTimeMillis == 0 ) {
-                DateTimeFormatter f = DateTimeFormatter.ISO_INSTANT
-                Instant i = Instant.from(f.parse(terminated.startedAt as String))
-                startTimeMillis = i.toEpochMilli()
+            if ( !startTimeMillis ) {
+                final time = DateTimeFormatter.ISO_INSTANT.parse(terminated.startedAt as String)
+                startTimeMillis = Instant.from(time).toEpochMilli()
             }
         } catch( Exception e ) {
             log.debug "Failed attempted update of startTimeMillis: ${startTimeMillis} from startedAt in: '${terminated.toString()}'", e
