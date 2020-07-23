@@ -424,6 +424,11 @@ class K8sTaskHandlerTest extends Specification {
         def task = new TaskRun()
         def client = Mock(K8sClient)
         def handler = Spy(K8sTaskHandler)
+        def termState = [ reason: "Completed",
+                          startedAt: "2018-01-13T10:09:36Z",
+                          finishedAt: "2018-01-13T10:19:36Z",
+                          exitCode: 0 ]
+        def fullState = [terminated: termState]
         handler.task = task
         handler.client = client
         handler.podName = POD_NAME
@@ -447,7 +452,8 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.checkIfCompleted()
         then:
-        1 * handler.getState() >> [terminated: ["reason": "Completed", "finishedAt": "2018-01-13T10:19:36Z", exitCode: 0]]
+        1 * handler.getState() >> fullState
+        1 * handler.updateStartTime(termState)
         1 * handler.readExitFile() >> EXIT_STATUS
         1 * handler.deletePodIfSuccessful(task) >> null
         1 * handler.savePodLogOnError(task) >> null
@@ -455,6 +461,7 @@ class K8sTaskHandlerTest extends Specification {
         handler.task.@stdout == OUT_FILE
         handler.task.@stderr == ERR_FILE
         handler.status == TaskStatus.COMPLETED
+        handler.startTimeMillis == 1515838176000
         result == true
 
     }
@@ -720,5 +727,48 @@ class K8sTaskHandlerTest extends Specification {
         1 * taskConfig.getPodOptions() >> new PodOptions([[env:'HELLO', value:'WORLD']])
         1 * k8sConfig.getPodOptions() >> new PodOptions([ [env:'BRAVO', value:'HOTEL'] ])
         opts == new PodOptions([[env:'HELLO', value:'WORLD'], [env:'BRAVO', value:'HOTEL']])
+    }
+
+    def 'should update startTimeMillis when zero' () {
+
+        given:
+        def handler = Spy(K8sTaskHandler)
+        def termState = [ startedAt: "2018-01-13T10:09:36Z" ]
+
+        when:
+        handler.updateStartTime(termState)
+        then:
+        handler.startTimeMillis == 1515838176000
+    }
+
+    def 'should not update startTimeMillis when non-zero' () {
+
+        given:
+        def handler = Spy(K8sTaskHandler)
+        handler.startTimeMillis = 10
+        def termState = [ startedAt: "2018-01-13T10:09:36Z" ]
+
+        when:
+        handler.updateStartTime(termState)
+        then:
+        handler.startTimeMillis == 10
+    }
+
+    def 'should not update startTimeMillis with missing or malformed time' () {
+
+        given:
+        def handler = Spy(K8sTaskHandler)
+        def malformedTime = [ startedAt: "2018-01-13 10:09:36" ]
+        def garbage = [ what: "nope" ]
+
+        when:
+        handler.updateStartTime(malformedTime)
+        then:
+        handler.startTimeMillis == 0
+
+        when:
+        handler.updateStartTime(garbage)
+        then:
+        handler.startTimeMillis == 0
     }
 }
