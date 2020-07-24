@@ -22,6 +22,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.*
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.IncludeDef
@@ -821,6 +822,7 @@ class NextflowDSLImpl implements ASTTransformation {
             // transform the following syntax:
             //      `stdin from x`  --> stdin() from (x)
             //      `stdout into x` --> `stdout() into (x)`
+            VariableExpression varX
             if( stm.expression instanceof PropertyExpression ) {
                 def expr = (PropertyExpression)stm.expression
                 def obj = expr.objectExpression
@@ -861,6 +863,12 @@ class NextflowDSLImpl implements ASTTransformation {
                         }
                     }
                 }
+            }
+            else if( (varX=isVariableX(stm.expression)) && (varX.name=='stdin' || varX.name=='stdout') && NF.isDsl2Final() ) {
+                final name = varX.name=='stdin' ? '_in_stdin' : '_out_stdout'
+                final call = new MethodCallExpression( new VariableExpression('this'), name, new ArgumentListExpression()  )
+                // remove replace the old one with the new one
+                stm.setExpression(call)
             }
         }
 
