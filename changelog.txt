@@ -1,6 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
-20.07.0 - 24 Jul 2020
+20.07.1 - 24 Jul 2020
+- see 20.07.0 and 20.07.0-RC1
+
+20.07.0 - (skipped)
 - Allow unqualified stdin/stdout defintions with DLS2 [bcdcaab6] 
 
 20.07.0-RC1 - 21 Jul 2020 

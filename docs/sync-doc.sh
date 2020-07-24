@@ -11,4 +11,4 @@ mkdir -p $TLATEST
 
 rsync -r _build/html/* $LATEST
 
-( cd ../../nextflow-website; jbake)
+( cd ../../nextflow-website; ./jbake)
