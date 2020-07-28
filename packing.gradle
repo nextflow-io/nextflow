@@ -194,7 +194,7 @@ task packAll(type: Jar) {
     archiveName = "nextflow-${version}-all.jar"
 
     from jar // embed our application jar
-    from (configurations.ignite + configurations.amazon + configurations.google + configurations.ga4gh)
+    from (configurations.ignite + configurations.amazon + configurations.google)
     from (configurations.capsule.collect { zipTree(it) })
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     
@@ -208,7 +208,12 @@ task packAll(type: Jar) {
     manifest.attributes('Main-Class': 'CapsuleLoader', 'amazon')
     manifest.attributes('Main-Class': 'CapsuleLoader', 'google')
     manifest.attributes('Main-Class': 'CapsuleLoader', 'ignite')
-    manifest.attributes('Main-Class': 'CapsuleLoader', 'ga4gh')
+
+    if( project.hasProperty('GA4GH') ) {
+        println "The build will include GA4GH dependencies."
+        from(configurations.ga4gh)
+        manifest.attributes('Main-Class': 'CapsuleLoader', 'ga4gh')
+    }
 
     doLast {
         file(releaseDir).mkdir()
