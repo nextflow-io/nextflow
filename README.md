@@ -214,6 +214,8 @@ The self-contained runnable Nextflow packages can be created by using the follow
 make pack
 ```
 
+To include support of GA4GH and its dependencies in the binary, use `make packGA4GH` instead.
+
 In order to install the compiled packages use the following command:
 
 ```bash
