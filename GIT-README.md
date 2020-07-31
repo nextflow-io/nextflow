@@ -41,7 +41,7 @@ To pull changes from the [tests repo](https://github.com/nextflow-io/tests) use 
 
     git subtree pull --squash --prefix=tests/ tests integration
 
-To push changes to to [tests repo](https://github.com/nextflow-io/tests) use this command: 
+To push changes to the [tests repo](https://github.com/nextflow-io/tests) use this command: 
 
     git subtree push --prefix=tests/ tests integration
 
