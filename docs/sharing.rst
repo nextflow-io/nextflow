@@ -200,7 +200,7 @@ The attributes marked with a * are only required when defining the configuration
 BitBucket credentials
 ---------------------
 
-Create a ``bitbucket`` entry in the `SCM configuration file`_ specifying your user name and password, as shown below::
+Create a ``bitbucket`` entry in the `SCM configuration file`_ specifying your user name and app password, as shown below::
 
     providers {
 
@@ -210,6 +210,12 @@ Create a ``bitbucket`` entry in the `SCM configuration file`_ specifying your us
         }
 
     }
+
+
+.. note::
+   App passwords are substitute passwords for a user account which you can use for scripts and integrating
+   tools to avoid putting your real password into configuration files.
+   Learn more at `this link <https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/>`_.
 
 BitBucket Server credentials
 -----------------------------
