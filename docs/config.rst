@@ -414,6 +414,7 @@ Name                Description
 ================== ================
 author              Project author name (use a comma to separate multiple names).
 defaultBranch       Git repository default branch (default: ``master``).
+recurseSubmodules   Turn this flag to ``true`` to pull submodules recursively from the Git repository
 description         Free text describing the workflow project.
 homePage            Project home page URL.
 mainScript          Project main script (default: ``main.nf``).

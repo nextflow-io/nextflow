@@ -101,9 +101,6 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-bucket-dir'], description = 'Remote bucket where intermediate result files are stored')
     String bucketDir
 
-    @Parameter(names=['-recursive','-recurse-submodules'], description = 'Try to download submodules recursively if those do not exist', arity = 0)
-    boolean recurse_submodules
-
     /**
      * Defines the parameters to be passed to the pipeline script
      */
@@ -339,7 +336,7 @@ class CmdRun extends CmdBase implements HubOptions {
             if( offline )
                 throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
             log.info "Pulling $repo ..."
-            def result = manager.download(recurse_submodules)
+            def result = manager.download()
             if( result )
                 log.info " $result"
             checkForUpdate = false
@@ -347,7 +344,7 @@ class CmdRun extends CmdBase implements HubOptions {
         // checkout requested revision
         try {
             manager.checkout(revision)
-            manager.updateModules(recurse_submodules)
+            manager.updateModules()
             def scriptFile = manager.getScriptFile()
             log.info "Launching `$repo` [$runName] - revision: ${scriptFile.revisionInfo}"
             if( checkForUpdate && !offline )

@@ -567,7 +567,7 @@ class AssetManager {
      * @param revision The revision to download
      * @result A message representing the operation result
      */
-    def download(boolean recurse_submodules = false, String revision=null) {
+    def download(String revision=null) {
         assert project
 
         /*
@@ -593,7 +593,7 @@ class AssetManager {
             clone
                 .setURI(cloneURL)
                 .setDirectory(localPath)
-                .setCloneSubmodules(recurse_submodules)
+                .setCloneSubmodules(manifest.recurseSubmodules)
                 .call()
 
             // return status message
@@ -639,7 +639,9 @@ class AssetManager {
         if( provider.hasCredentials() )
             pull.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password))
 
-        pull.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
+        if( manifest.recurseSubmodules ) {
+            pull.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
+        }
         def result = pull.call()
         if(!result.isSuccessful())
             throw new AbortOperationException("Cannot pull project `$project` -- ${result.toString()}")
@@ -654,7 +656,7 @@ class AssetManager {
      * @param directory The folder when the pipeline will be cloned
      * @param revision The revision to be cloned. It can be a branch, tag, or git revision number
      */
-    void clone(File directory, String revision = null, boolean recurse_submodules) {
+    void clone(File directory, String revision = null) {
 
         def clone = Git.cloneRepository()
         def uri = getGitRepositoryUrl()
@@ -665,7 +667,7 @@ class AssetManager {
 
         clone.setURI(uri)
         clone.setDirectory(directory)
-        clone.setCloneSubmodules(recurse_submodules)
+        clone.setCloneSubmodules(manifest.recurseSubmodules)
         if( provider.hasCredentials() )
             clone.setCredentialsProvider(new UsernamePasswordCredentialsProvider(provider.user, provider.password))
 
@@ -926,7 +928,9 @@ class AssetManager {
             if(provider.hasCredentials()) {
                 fetch.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
             }
-            fetch.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
+            if( manifest.recurseSubmodules ) {
+                fetch.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
+            }
             fetch.call()
             git.checkout()
                     .setCreateBranch(true)
@@ -941,7 +945,7 @@ class AssetManager {
 
     }
 
-    void updateModules(boolean recurse_submodules = false) {
+    void updateModules() {
 
         if( !localPath )
             return // nothing to do
@@ -966,7 +970,7 @@ class AssetManager {
         final init = git.submoduleInit()
         final update = git.submoduleUpdate()
 
-        if (recurse_submodules) {
+        if( manifest.recurseSubmodules ) {
             update.setStrategy(MergeStrategy.RECURSIVE)
         }
 

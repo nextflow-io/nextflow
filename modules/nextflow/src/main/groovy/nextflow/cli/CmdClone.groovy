@@ -39,9 +39,6 @@ class CmdClone extends CmdBase implements HubOptions {
     @Parameter(names='-r', description = 'Revision to clone - It can be a git branch, tag or revision number')
     String revision
 
-    @Parameter(names=['-recursive','-recurse-submodules'], description = 'initialize submodules in the clone', arity = 0)
-    boolean recurse_submodules
-
     @Override
     final String getName() { NAME }
 
@@ -66,7 +63,7 @@ class CmdClone extends CmdBase implements HubOptions {
 
         manager.checkValidRemoteRepo()
         print "Cloning ${manager.project}${revision ? ':'+revision:''} ..."
-        manager.clone(target, revision, recurse_submodules)
+        manager.clone(target, revision)
         print "\r"
         println "${manager.project} cloned to: $target"
     }
