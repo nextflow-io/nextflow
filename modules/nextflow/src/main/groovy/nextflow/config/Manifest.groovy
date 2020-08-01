@@ -79,6 +79,10 @@ class Manifest {
         target.gitmodules
     }
 
+    boolean getRecurseSubmodules() {
+        target.recurseSubmodules
+    }
+
     String getNextflowVersion() {
         target.nextflowVersion
     }
