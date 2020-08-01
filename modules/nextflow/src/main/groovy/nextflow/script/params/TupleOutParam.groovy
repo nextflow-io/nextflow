@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +18,7 @@
 package nextflow.script.params
 
 import groovy.transform.InheritConstructors
+import nextflow.NF
 import nextflow.script.TokenEnvCall
 import nextflow.script.TokenFileCall
 import nextflow.script.TokenPathCall
@@ -49,28 +51,34 @@ class TupleOutParam extends BaseOutParam implements OptionalParam {
     TupleOutParam bind(Object... obj ) {
 
         for( def item : obj ) {
-            if( item instanceof TokenVar )
+            if( item instanceof TokenVar ) {
+                if( NF.dsl2Final )
+                    throw new DeprecationException("Unqualified output value declaration has been deprecated - replace `tuple ${item.name},..` with `tuple val(${item.name}),..`")
                 create(ValueOutParam).bind(item)
-
-            else if( item instanceof TokenValCall )
+            }
+            else if( item instanceof TokenValCall ) {
                 create(ValueOutParam).bind(item.val)
-
-            else if( item instanceof TokenEnvCall )
+            }
+            else if( item instanceof TokenEnvCall ) {
                 create(EnvOutParam).bind(item.val)
-
-            else if( item instanceof GString )
+            }
+            else if( item instanceof GString ) {
+                if( NF.dsl2Final )
+                    throw new DeprecationException("Unqualified output path declaration has been deprecated - replace `tuple \"$item\",..` with `tuple path(\"$item\"),..`")
                 create(FileOutParam).bind(item)
-
-            else if( item instanceof TokenStdoutCall || item == '-'  )
+            }
+            else if( item instanceof TokenStdoutCall || item == '-'  ) {
                 create(StdOutParam).bind('-')
-
-            else if( item instanceof String )
+            }
+            else if( item instanceof String ) {
+                if( NF.dsl2Final )
+                    throw new DeprecationException("Unqualified output path declaration has been deprecated - replace `tuple '$item',..` with `tuple path('$item'),..`")
                 create(FileOutParam).bind(item)
-
-            else if( item instanceof TokenFileCall )
+            }
+            else if( item instanceof TokenFileCall ) {
                 // note that 'filePattern' can be a string or a GString
                 create(FileOutParam).bind(item.target)
-
+            }
             else if( item instanceof TokenPathCall ) {
                 // note that 'filePattern' can be a string or a GString
                 create(FileOutParam)
@@ -78,8 +86,6 @@ class TupleOutParam extends BaseOutParam implements OptionalParam {
                         .setOptions(item.opts)
                         .bind(item.target)
             }
-
-
             else
                 throw new IllegalArgumentException("Invalid `tuple` output parameter declaration -- item: ${item}")
         }

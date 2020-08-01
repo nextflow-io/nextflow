@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -86,7 +87,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         then:
         result == '''\
                 echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
-                gsutil -m -q cp -R gs://my-bucket/foo/dir1/ /work/xx/yy
+                gsutil -m -q cp -R gs://my-bucket/foo/dir1 /work/xx/yy
                 '''.stripIndent()
 
         // stage file is a directory with a different name
@@ -96,7 +97,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         then:
         result == '''\
                 echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
-                gsutil -m -q cp -R gs://my-bucket/foo/dir1/ /work/xx/yy
+                gsutil -m -q cp -R gs://my-bucket/foo/dir1 /work/xx/yy
                 mv /work/xx/yy/dir1 /work/xx/yy/dir2
                 '''.stripIndent()
     }
@@ -131,7 +132,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         then:
         result == '''\
                 echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
-                gsutil -m -q -u foo cp -R gs://my-bucket/foo/dir1/ /work/xx/yy
+                gsutil -m -q -u foo cp -R gs://my-bucket/foo/dir1 /work/xx/yy
                 '''.stripIndent()
 
     }
@@ -225,5 +226,31 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
             mkdir -p /work/xx/yy/nextflow-bin
             gsutil -m -q cp -P -r gs://my-bucket/bin/d\\ i\\ r/* /work/xx/yy/nextflow-bin
             '''.stripIndent()
+    }
+
+
+    def 'should validate copy many' () {
+        given:
+        def handler = Mock(GoogleLifeSciencesTaskHandler) {
+            getExecutor() >> Mock(GoogleLifeSciencesExecutor) { getConfig() >> Mock(GoogleLifeSciencesConfig) }
+        }
+        def strategy = new GoogleLifeSciencesFileCopyStrategy(Mock(TaskBean), handler)
+
+        when:
+        def ret1 = strategy.copyMany('file.txt', mockGsPath('gs://foo/bar'))
+        then:
+        ret1 == 'IFS=$\'\\n\'; for name in $(eval "ls -1d file.txt" 2>/dev/null);do gsutil -m -q cp -R $name gs://foo/bar/$name; done; unset IFS'
+
+        when:
+        def ret2 = strategy.copyMany('file name', mockGsPath('gs://foo/bar'))
+        then:
+        ret2 == 'IFS=$\'\\n\'; for name in $(eval "ls -1d file\\ name" 2>/dev/null);do gsutil -m -q cp -R $name gs://foo/bar/$name; done; unset IFS'
+
+        when:
+        def ret3 = strategy.copyMany('dir-name/', mockGsPath('gs://foo/bar'))
+        then:
+        ret3 == 'IFS=$\'\\n\'; for name in $(eval "ls -1d dir-name" 2>/dev/null);do gsutil -m -q cp -R $name gs://foo/bar/$name; done; unset IFS'
+
+
     }
 }

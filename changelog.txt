@@ -1,5 +1,36 @@
 NEXTFLOW CHANGE-LOG
 ===================
+20.07.1 - 24 Jul 2020
+- see 20.07.0 and 20.07.0-RC1
+
+20.07.0 - (skipped)
+- Allow unqualified stdin/stdout defintions with DLS2 [bcdcaab6] 
+
+20.07.0-RC1 - 21 Jul 2020 
+- Add Dsl2 enable flag [08238109]
+- Add check on invalid scope syntax definition [23c92021]
+- Add channel as alias for Channel [05c358c9]
+- Add DSL2 deprecation + clean up syntax [1b4b1307]
+- Add DOI field to NF manifest #1676 [ec6ee223]
+- Improve join duplicate detection [33eb9ef5]
+- Improve mix operator error message [8074d714]
+- Remove invalid log message [48b1b9f1]
+- Fix hidden error message on fail fast run [3b4b377c]
+- Disallow upwrapped includes + hard deprecation [19130f87]
+- Suppress trap for SIGUSR1 signal #1656 [ca5bcf46]
+- Improve error reporting on invalid task id [3921de1a]
+
+20.06.0-edge - 5 Jul 2020 
+- Add more debug logging for AWS helper [2a62fdf7]
+- Add join options failOnDuplicate and failOnMismatch [387366aa]
+- Add strict mode flag [4ba5ac18]
+- Add support for selecting minimum CPU platform on GCP (#1633) [afc4375d]
+- Add missing trace fields to docs [bf2e1637]
+- Fix Invalid GLS path composition in staging directories #1654 [e33fff98]
+- Fix for feature 1647 that allows non gpu k8s accelerator resources. (#1649) [c1efa29d]
+- Fix Issue accessing S3 bucket #1596 [ffc6f843]
+- Fix Update getDomain method in ProviderConfig to support local repositories - #1492 (#1624) [651501ac]
+
 20.05.0-edge - 31 May 2020
 - Add support for NXF_LOG_NAME env var [cf496615]
 - Add exception specialiation for ambiguous repo [a34b1d2a]

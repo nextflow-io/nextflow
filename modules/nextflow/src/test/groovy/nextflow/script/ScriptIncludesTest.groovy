@@ -52,7 +52,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         '''
 
         SCRIPT.text = """  
-        include "$MODULE" 
+        include { alpha; bravo; gamma } from "$MODULE" 
    
         def local_func() {
           return "I'm local"
@@ -108,7 +108,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         '''
 
         SCRIPT.text = """
-        include "$MODULE" 
+        include { alpha } from "$MODULE" 
    
         workflow {
             main: alpha('Hello')
@@ -151,7 +151,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         '''
 
         SCRIPT.text = """
-        include "$MODULE"
+        include { foo; bar } from "$MODULE"
 
         workflow alpha {
             take: data
@@ -203,7 +203,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         '''
 
         SCRIPT.text = """
-        include "$MODULE"
+        include { foo; bar } from "$MODULE"
    
         data = 'Hello'
         workflow {
@@ -245,7 +245,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         '''
 
         SCRIPT.text = """
-        include "$MODULE" 
+        include { foo; bar } from "$MODULE" 
    
         workflow {
             data = 'Hello'
@@ -283,7 +283,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         '''
 
         SCRIPT.text = """
-        include "$MODULE" 
+        include { foo } from "$MODULE" 
         hello_ch = Channel.from('world')
         
         workflow {
@@ -313,7 +313,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         process foo {
           input: 
             val sample
-            set pairId, reads
+            tuple val(pairId), val(reads)
           output: 
             stdout() 
           script:
@@ -322,7 +322,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         '''
 
         SCRIPT.text = """
-        include './module.nf'
+        include { foo } from './module.nf'
 
         workflow {
           main: ch1 = Channel.from('world')
@@ -373,7 +373,7 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         and:
         SCRIPT.text = """  
-        include './module.nf'        
+        include { foo; bar } from './module.nf'        
 
         workflow {
             main: bar( foo('Ciao') )
@@ -420,7 +420,7 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         and:
         SCRIPT.text = """ 
-        include './module.nf'        
+        include { foo } from './module.nf'        
         
         workflow {
           main: (ch0, ch1) = foo('Ciao')
@@ -456,7 +456,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         // inject params in the module
         // and invoke the process 'foo'
         SCRIPT.text = """     
-        include "./module.nf" params(foo:'Hello', bar: 'world')
+        include { foo } from "./module.nf" params(foo:'Hello', bar: 'world')
             
         workflow { 
             main: foo()
@@ -491,7 +491,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         '''
 
         SCRIPT.text = """  
-        include './module.nf'
+        include { foo; bar } from './module.nf'
 
         def str = foo('dlrow')
         return bar('Hello', str)
@@ -523,7 +523,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         '''
 
         SCRIPT.text = """ 
-        include './module.nf' params(x: 'Hola mundo')
+        include { foo } from './module.nf' params(x: 'Hola mundo')
         
         workflow {
             main: foo()
@@ -554,7 +554,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         '''
 
         SCRIPT.text = """ 
-        include './module.nf'
+        include { foo } from './module.nf'
         println 'hello'
         """
 
@@ -579,7 +579,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         '''
 
         SCRIPT.text = """ 
-        include './org/bio' 
+        include { foo } from './org/bio' 
         
         workflow {
             foo()
@@ -607,8 +607,8 @@ class ScriptIncludesTest extends Dsl2Spec {
         '''
 
         SCRIPT.text = """ 
-        include './mod1' 
-        include './mod2' 
+        include { foo } from './mod1' 
+        include { foo } from './mod2' 
         println 'x'
         """
 
@@ -638,7 +638,7 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         when:
         def SCRIPT = """
-        include alpha from "$MODULE"
+        include { alpha } from "$MODULE"
         alpha()
         """
         def runner = new MockScriptRunner()
@@ -648,7 +648,7 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         when:
         SCRIPT = """
-        include alpha as FOO from "$MODULE"
+        include { alpha as FOO } from "$MODULE"
         FOO()
         """
         runner = new MockScriptRunner()
@@ -659,7 +659,7 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         when:
         SCRIPT = """
-        include alpha as FOO from "$MODULE"
+        include { alpha as FOO } from "$MODULE"
         alpha()
         """
         runner = new MockScriptRunner()
@@ -670,7 +670,7 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         when:
         SCRIPT = """
-        include alpha from "$MODULE"
+        include { alpha } from "$MODULE"
         bravo()
         """
         runner = new MockScriptRunner()
@@ -697,8 +697,8 @@ class ScriptIncludesTest extends Dsl2Spec {
         '''
 
         SCRIPT.text = """
-        include foo from "$MODULE" 
-        include foo as bar from "$MODULE"  
+        include { foo } from "$MODULE" 
+        include { foo as bar } from "$MODULE"  
 
         workflow {
             foo('Hello')
@@ -753,7 +753,7 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         when:
         def result = dsl_eval("""
-            include "$MODULE" 
+            include { flow1; flow2 } from "$MODULE" 
   
             workflow { 
               flow1()
@@ -929,7 +929,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         """
 
         SCRIPT.text = """
-        include foo from "$MODULE" 
+        include { foo } from "$MODULE" 
 
         assert moduleDir == file("$folder")
         assert projectDir == file("$folder")
@@ -944,5 +944,43 @@ class ScriptIncludesTest extends Dsl2Spec {
                 .execute()
         then:
         true
+    }
+
+
+    def 'should not allow unwrapped include' () {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def MODULE = folder.resolve('module.nf')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = '''
+        params.foo = 'x' 
+        params.bar = 'y'
+        
+        process foo {
+          output: stdout() 
+          script:
+          /echo $params.foo $params.bar/
+        }
+        '''
+
+        // inject params in the module
+        // and invoke the process 'foo'
+        SCRIPT.text = """
+        include foo from "./module.nf" params(foo:'Hello', bar: 'world')
+            
+        workflow { 
+            main: foo()
+            emit: foo.out 
+        }
+        """
+
+        when:
+        def runner = new MockScriptRunner()
+        def result = runner.setScript(SCRIPT).execute()
+        then:
+        def e = thrown(DeprecationException)
+        e.message == "Unwrapped module inclusion is deprecated -- Replace `include foo from './MODULE/PATH'` with `include { foo } from './MODULE/PATH'`"
+
     }
 }

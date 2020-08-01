@@ -1,5 +1,5 @@
 #!/usr/bin/env nextflow
-nextflow.preview.dsl=2
+nextflow.enable.dsl=2
 
 /*
  * fake alignment step producing a BAM and BAI files
@@ -12,7 +12,7 @@ process algn {
   each seq_id
 
   output:
-  set barcode, seq_id, path('bam'), path('bai')
+  tuple val(barcode), val(seq_id), path('bam'), path('bai')
 
   """
   echo BAM $seq_id - $barcode > bam
@@ -29,7 +29,7 @@ process merge {
   echo true
 
   input:
-  set barcode, seq_id, path(bam, stageAs:'bam?'), path(bai, stageAs:'bai?')
+  tuple val(barcode), val(seq_id), path(bam, stageAs:'bam?'), path(bai, stageAs:'bai?')
 
   """
   echo barcode: $barcode
@@ -47,5 +47,4 @@ workflow {
     algn( ['alpha', 'gamma'], ['one', 'two', 'three'] ) \
       | groupTuple \
       | merge
-
 }

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -597,7 +598,7 @@ class Session implements ISession {
         try {
             log.trace "Session > destroying"
             if( !aborted ) {
-                allOperatorsJoin()
+                joinAllOperators()
                 log.trace "Session > after processors join"
             }
 
@@ -626,7 +627,7 @@ class Session implements ISession {
         }
     }
 
-    final private allOperatorsJoin() {
+    final protected void joinAllOperators() {
         int attempts=0
 
         while( allOperators.size() ) {
@@ -712,7 +713,8 @@ class Session implements ISession {
                 log.debug(status)
             // force termination
             notifyError(null)
-            executorFactory.signalExecutors()
+            ansiLogObserver?.forceTermination()
+            executorFactory?.signalExecutors()
             processesBarrier.forceTermination()
             monitorsBarrier.forceTermination()
             operatorsForceTermination()

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,6 +61,7 @@ import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.ShowOnlyExceptionMessage
+import nextflow.exception.UnexpectedException
 import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
 import nextflow.executor.StoredTaskHandler
@@ -96,7 +98,6 @@ import nextflow.util.CollectionHelper
 import nextflow.util.LockManager
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
-
 /**
  * Implement nextflow process execution logic
  *
@@ -336,6 +337,15 @@ class TaskProcessor {
 
     int getMaxForks() { maxForks }
 
+    protected void checkWarn(String msg, Map opts) {
+        if( NF.isStrictMode() )
+            throw new ProcessUnrecoverableException(msg)
+        if( opts )
+            log.warn1(opts, msg)
+        else
+            log.warn(msg)
+    }
+
     /**
      * Launch the 'script' define by the code closure as a local bash script
      *
@@ -361,12 +371,12 @@ class TaskProcessor {
         // -- check that input set defines at least two elements
         def invalidInputSet = config.getInputs().find { it instanceof TupleInParam && it.inner.size()<2 }
         if( invalidInputSet )
-            log.warn "Input `set` must define at least two component -- Check process `$name`"
+            checkWarn "Input `set` must define at least two component -- Check process `$name`"
 
         // -- check that output set defines at least two elements
         def invalidOutputSet = config.getOutputs().find { it instanceof TupleOutParam && it.inner.size()<2 }
         if( invalidOutputSet )
-            log.warn "Output `set` must define at least two component -- Check process `$name`"
+            checkWarn "Output `set` must define at least two component -- Check process `$name`"
 
         /**
          * Verify if this process run only one time
@@ -587,7 +597,8 @@ class TaskProcessor {
             final actual = entry instanceof Collection ? entry.size() : (entry instanceof Map ? entry.size() : 1)
 
             if( actual != expected ) {
-                log.warn1("Input tuple does not match input set cardinality declared by process `$name` -- offending value: $entry", firstOnly: true, cacheKey: this)
+                final msg = "Input tuple does not match input set cardinality declared by process `$name` -- offending value: $entry"
+                checkWarn(msg, [firstOnly: true, cacheKey: this])
             }
         }
     }
@@ -776,7 +787,7 @@ class TaskProcessor {
             return true
         }
         if( invalid ) {
-            log.warn "[$task.name] StoreDir can only be used when using 'file' outputs"
+            checkWarn "[$task.name] StoreDir can only be used when using 'file' outputs"
             return false
         }
 
@@ -858,7 +869,7 @@ class TaskProcessor {
 
         }
         catch( Throwable e ) {
-            log.warn1("[$task.name] Unable to resume cached task -- See log file for details", causedBy: e)
+            log.warn1("[$task.name] Unable to resume cached task -- See log file for details", )
             return false
         }
 
@@ -1947,12 +1958,23 @@ class TaskProcessor {
         }
 
         final mode = config.getHashMode()
-        final hash = CacheHelper.hasher(keys, mode).hash()
+        final hash = computeHash(keys, mode)
         if( session.dumpHashes ) {
             traceInputsHashes(task, keys, mode, hash)
         }
         return hash
     }
+
+    HashCode computeHash(List keys, CacheHelper.HashMode mode) {
+        try {
+            return CacheHelper.hasher(keys, mode).hash()
+        }
+        catch (Throwable e) {
+            final msg = "Oops.. something wrong happened while creating task '$name' unique id -- Offending keys: ${ keys.collect {"\n - type=${it.getClass().getName()} value=$it"} }"
+            throw new UnexpectedException(msg,e)
+        }
+    }
+
 
     /**
      * This method scans the task command string looking for invocations of scripts

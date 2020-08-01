@@ -143,6 +143,11 @@ read_bytes              Number of bytes the process directly read from disk. Thi
 write_bytes             Number of bytes the process originally dirtied in the page-cache (assuming they will go to disk later). This data is read from file ``/proc/$pid/io``.
 vol_ctxt                Number of voluntary context switches.
 inv_ctxt                Number of involuntary context switches.
+env                     The variables defined in task execution environment.
+workdir                 The directory path where the task was executed.
+script                  The task command script.
+scratch                 The value of the process ``scratch`` directive.
+error_action            The action applied on errof task failure.
 ======================= ===============
 
 .. note:: These numbers provide an estimation of the resources used by running tasks. They should not be intended as an alternative

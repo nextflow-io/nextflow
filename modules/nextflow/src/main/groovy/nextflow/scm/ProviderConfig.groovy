@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -110,9 +111,14 @@ class ProviderConfig {
         def p = result.indexOf('://')
         if( p != -1 )
             result = result.substring(p+3)
+        // a local file url (e.g. file:///path/to/repo or /path/to/repo)
+        // so we need to return the full path as the domain
+        if ( result.startsWith('/') )
+            return result
+        // a server url so we look for the domain without subdirectories
         p = result.indexOf('/')
         if( p != -1 )
-            result = result.substring(0,p)
+            result = result.substring(0, p)
         return result
     }
 

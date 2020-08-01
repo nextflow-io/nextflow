@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +27,7 @@ sourceSets {
 
 dependencies {
     compile project(':nextflow')
-    compile('io.nextflow:nxf-s3fs:1.0.7') {
+    compile('io.nextflow:nxf-s3fs:1.0.8') {
         exclude group: 'org.apache.tika', module: 'tika-core'
         exclude group: 'com.amazonaws', module: 'aws-java-sdk-s3'
     }

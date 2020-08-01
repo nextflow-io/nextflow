@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -94,6 +95,10 @@ class Manifest {
         target.name
     }
 
+    String getDoi() {
+        target.doi
+    }
+
     Map toMap() {
         final result = new HashMap(10)
         result.author = getAuthor()
@@ -104,6 +109,7 @@ class Manifest {
         result.mainScript = getMainScript()
         result.version = getVersion()
         result.nextflowVersion = getNextflowVersion()
+        result.doi = getDoi()
         return result
     }
 }

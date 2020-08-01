@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -212,7 +213,7 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-entry'], description = 'Entry workflow name to be executed', arity = 1)
     String entryName
 
-    @Parameter(names=['-dsl2'], hidden = true)
+    @Parameter(names=['-dsl2'], description = 'Execute the workflow using DSL2 syntax')
     boolean dsl2
 
     @Override

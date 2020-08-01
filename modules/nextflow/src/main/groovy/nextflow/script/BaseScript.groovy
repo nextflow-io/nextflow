@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -65,7 +66,10 @@ abstract class BaseScript extends Script implements ExecutionContext {
      * Holds the configuration object which will used to execution the user tasks
      */
     protected Map getConfig() {
-        log.warn "The access of `config` object is deprecated"
+        final msg = "The access of `config` object is deprecated"
+        if( NF.dsl2Final )
+            throw new DeprecationException(msg)
+        log.warn(msg)
         session.getConfig()
     }
 
@@ -80,7 +84,10 @@ abstract class BaseScript extends Script implements ExecutionContext {
      * @param value
      */
     protected void echo(boolean value = true) {
-        log.warn "The use of `echo` method is deprecated"
+        final msg = "The use of `echo` method has been deprecated"
+        if( NF.dsl2Final )
+            throw new DeprecationException(msg)
+        log.warn(msg)
         session.getConfig().process.echo = value
     }
 
@@ -118,7 +125,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
      */
     protected workflow(Closure<BodyDef> workflowBody) {
         if(!NF.isDsl2())
-            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.preview.dsl=2` to allow the definition of workflow components")
+            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.enable.dsl=2` to allow the definition of workflow components")
 
         // launch the execution
         final workflow = new WorkflowDef(this, workflowBody)
@@ -129,7 +136,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     protected workflow(String name, Closure<BodyDef> workflowDef) {
         if(!NF.isDsl2())
-            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.preview.dsl=2` to allow the definition of workflow components")
+            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.enable.dsl=2` to allow the definition of workflow components")
 
         final workflow = new WorkflowDef(this,workflowDef,name)
         if( binding.entryName==name )
@@ -139,7 +146,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     protected IncludeDef include( IncludeDef include ) {
         if(!NF.isDsl2())
-            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.preview.dsl=2` to import module files")
+            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.enable.dsl=2` to import module files")
 
         include .setSession(session)
     }

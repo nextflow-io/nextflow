@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -189,6 +190,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
                     preemptible: false,
                     accelerator: acc,
                     bootDiskSizeGb: 75,
+                    cpuPlatform: 'Intel Skylake',
                     usePrivateAddress: true ))
         then:
         with(resources3) {
@@ -202,6 +204,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
             getVirtualMachine().getAccelerators()[0].getCount()==4
             getVirtualMachine().getAccelerators()[0].getType()=='nvidia-tesla-k80'
             getVirtualMachine().getBootDiskSizeGb() == 75
+            getVirtualMachine().getCpuPlatform() == 'Intel Skylake'
             getVirtualMachine().getNetwork().getUsePrivateAddress()
         }
     }

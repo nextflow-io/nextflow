@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -1104,7 +1105,8 @@ class OperatorEx implements DelegatingPlugin {
      * @return
      */
     DataflowWriteChannel mix( DataflowReadChannel source, DataflowReadChannel[] others ) {
-        assert others.size()>0
+        if( others.size()==0 )
+            throw new IllegalArgumentException("Operator 'mix' should have at least one right operand")
 
         def target = CH.create()
         def count = new AtomicInteger( others.size()+1 )

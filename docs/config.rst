@@ -356,7 +356,7 @@ engineOptions       This attribute can be used to provide any option supported b
 envWhitelist        Comma separated list of environment variable names to be included in the container environment.
 runOptions          This attribute can be used to provide any extra command line options supported by the ``singularity exec``.
 noHttps             Turn this flag to ``true`` to pull the Singularity image with http protocol (default: ``false``).
-autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed contained. It requires the `user bind control` feature enabled in your Singularity installation (default: ``false``).
+autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Singularity installation (default: ``false``).
 cacheDir            The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
 pullTimeout         The amount of time the Singularity pull can last, exceeding which the process is terminated (default: ``20 min``).
 ================== ================
@@ -416,6 +416,7 @@ author              Project author name (use a comma to separate multiple names)
 defaultBranch       Git repository default branch (default: ``master``).
 recurseSubmodules   Turn this flag to ``true`` to pull submodules recursively from the Git repository
 description         Free text describing the workflow project.
+doi                 Project related publication DOI identifier.
 homePage            Project home page URL.
 mainScript          Project main script (default: ``main.nf``).
 name                Project short name.

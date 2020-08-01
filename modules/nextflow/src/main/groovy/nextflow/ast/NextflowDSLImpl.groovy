@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +23,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.*
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.IncludeDef
@@ -107,13 +109,12 @@ class NextflowDSLImpl implements ASTTransformation {
     @CompileStatic
     static class DslCodeVisitor extends ClassCodeVisitorSupport {
 
-        @Deprecated final static String WORKFLOW_GET = 'get'
-        @Deprecated final static String WORKFLOW_PUBLISH = 'publish'
-        final static String WORKFLOW_TAKE = 'take'
-        final static String WORKFLOW_EMIT = 'emit'
-        final static String WORKFLOW_MAIN = 'main'
-
-        final static Random RND = new Random()
+        @Deprecated final static private String WORKFLOW_GET = 'get'
+        @Deprecated final static private String WORKFLOW_PUBLISH = 'publish'
+        final static private String WORKFLOW_TAKE = 'take'
+        final static private String WORKFLOW_EMIT = 'emit'
+        final static private String WORKFLOW_MAIN = 'main'
+        final static private List<String> SCOPES = [WORKFLOW_TAKE, WORKFLOW_EMIT, WORKFLOW_MAIN]
 
         final private SourceUnit unit
 
@@ -521,6 +522,12 @@ class NextflowDSLImpl implements ASTTransformation {
                         break
 
                     default:
+                        if( context ) {
+                            def opts = SCOPES.closest(context)
+                            def msg = "Unknown execution scope '$context:'"
+                            if( opts ) msg += " -- Did you mean ${opts.collect{"'$it'"}.join(', ')}"
+                            syntaxError(stm, msg)
+                        }
                         body.add(stm)
                 }
             }
@@ -816,6 +823,7 @@ class NextflowDSLImpl implements ASTTransformation {
             // transform the following syntax:
             //      `stdin from x`  --> stdin() from (x)
             //      `stdout into x` --> `stdout() into (x)`
+            VariableExpression varX
             if( stm.expression instanceof PropertyExpression ) {
                 def expr = (PropertyExpression)stm.expression
                 def obj = expr.objectExpression
@@ -856,6 +864,12 @@ class NextflowDSLImpl implements ASTTransformation {
                         }
                     }
                 }
+            }
+            else if( (varX=isVariableX(stm.expression)) && (varX.name=='stdin' || varX.name=='stdout') && NF.isDsl2Final() ) {
+                final name = varX.name=='stdin' ? '_in_stdin' : '_out_stdout'
+                final call = new MethodCallExpression( new VariableExpression('this'), name, new ArgumentListExpression()  )
+                // remove replace the old one with the new one
+                stm.setExpression(call)
             }
         }
 
