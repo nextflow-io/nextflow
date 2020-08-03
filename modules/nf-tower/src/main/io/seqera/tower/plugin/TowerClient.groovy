@@ -59,6 +59,7 @@ class TowerClient implements TraceObserver {
     static class Response {
         final int code
         final String message
+        final String cause
         boolean isError() { code < 200 || code >= 300 }
     }
 
@@ -96,7 +97,7 @@ class TowerClient implements TraceObserver {
 
     private ResourcesAggregator aggregator
 
-    private Map<String,String> env = System.getenv()
+    protected Map<String,String> env = System.getenv()
 
     private LinkedBlockingQueue<ProcessEvent> events = new LinkedBlockingQueue()
 
@@ -117,6 +118,8 @@ class TowerClient implements TraceObserver {
     private int backOffDelay
 
     private int backOffBase
+
+    private boolean towerLaunch
 
     /**
      * Constructor that consumes a URL and creates
@@ -141,6 +144,8 @@ class TowerClient implements TraceObserver {
     String getEndpoint() { endpoint }
 
     String getWorkflowId() { workflowId }
+
+    boolean getTowerLaunch() { towerLaunch }
 
     void setAliveInterval(Duration d) {
         this.aliveInterval = d
@@ -240,6 +245,8 @@ class TowerClient implements TraceObserver {
         result.runName = session.runName
         result.projectName = session.workflowMetadata.projectName
         result.repository = session.workflowMetadata.repository
+        result.workflowId = env.get('TOWER_WORKFLOW_ID')
+        this.towerLaunch = result.workflowId != null
         return result
     }
 
@@ -389,7 +396,7 @@ class TowerClient implements TraceObserver {
             String msg = ( code == 401
                             ? 'Unauthorized Tower access -- Make sure you have specified the correct access token'
                             : "Unexpected response code $code for request $url"  )
-            return new Response(code, msg)
+            return new Response(code, msg, httpClient.response)
         }
     }
 
@@ -406,6 +413,7 @@ class TowerClient implements TraceObserver {
         def result = new LinkedHashMap(5)
         result.workflow = workflow
         result.processNames = new ArrayList(processNames)
+        result.towerLaunch = towerLaunch
         return result
     }
 
@@ -420,6 +428,7 @@ class TowerClient implements TraceObserver {
         def result = new LinkedHashMap(5)
         result.workflow = workflow
         result.metrics = getMetricsList()
+        result.progress = getWorkflowProgress(false)
         return result
     }
 
@@ -452,6 +461,13 @@ class TowerClient implements TraceObserver {
             name = underscoreToCamelCase(name)
             // put the value
             record.put(name, fixTaskField(name,entry.value))
+        }
+
+        // prevent invalid tag data
+        if( record.tag!=null && !(record.tag instanceof CharSequence)) {
+            final msg = "Invalid tag value for process: ${record.process} -- A string is expected instead of type: ${record.tag.getClass().getName()}; offending value=${record.tag}"
+            log.warn1(msg, cacheKey: record.process)
+            record.tag = null
         }
 
         // add transient fields
@@ -501,12 +517,15 @@ class TowerClient implements TraceObserver {
             log.trace "Successfully send message to ${url} -- received status code ${resp.code}"
         }
         else {
+            def cause = parseCause(resp.cause)
             def msg = """\
                 Unexpected HTTP response.
                 Failed to send message to ${endpoint} -- received 
                 - status code : $resp.code    
-                - response msg: $resp.message   
+                - response msg: $resp.message
                 """.stripIndent()
+            // append separately otherwise formatting get broken
+            msg += "- error cause : ${cause ?: '-'}"
             log.warn(msg)
         }
     }
@@ -516,14 +535,30 @@ class TowerClient implements TraceObserver {
             return (Map)new JsonSlurper().parseText(resp.message)
         }
 
+        def cause = parseCause(resp.cause)
+
         def msg = """\
                 Unexpected Tower response
                 - endpoint url: $endpoint
                 - status code : $resp.code    
-                - response msg: ${resp.message}  
+                - response msg: ${resp.message} 
                 """.stripIndent()
-
+        // append separately otherwise formatting get broken
+        msg += "- error cause : ${cause ?: '-'}"
         throw new Exception(msg)
+    }
+
+    protected String parseCause(String cause) {
+        if( !cause )
+            return null
+        try {
+            def map = (Map)new JsonSlurper().parseText(cause)
+            return map.message
+        }
+        catch ( Exception ) {
+            log.debug "Unable to parse error cause as JSON object: $cause"
+            return cause
+        }
     }
 
     protected String underscoreToCamelCase(String str) {

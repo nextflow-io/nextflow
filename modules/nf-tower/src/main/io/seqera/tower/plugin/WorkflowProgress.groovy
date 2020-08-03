@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +18,7 @@
 package io.seqera.tower.plugin
 
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
 import nextflow.trace.ProgressRecord
 import nextflow.trace.WorkflowStats
 /**
@@ -24,6 +26,7 @@ import nextflow.trace.WorkflowStats
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@EqualsAndHashCode
 @CompileStatic
 class WorkflowProgress {
     private WorkflowStats stats
