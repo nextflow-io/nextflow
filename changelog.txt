@@ -1,5 +1,8 @@
 NEXTFLOW CHANGE-LOG
 ===================
+20.01.1 - 3 Aug 2020 
+- Update Tower client 
+
 20.01.0 - 12 Feb 2020
 - Fix ansi logging and line count [4f5c7187]
 - Fix Division by 0 in launcher script with Biocontainers #1488
