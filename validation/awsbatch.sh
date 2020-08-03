@@ -36,6 +36,7 @@ $NXF_CMD run test-complexpaths.nf -resume -c awsbatch.config
 
 
 $NXF_CMD run nextflow-io/rnaseq-nf \
+    -revision 770a37f \
     -profile batch \
     -with-report \
     -with-trace

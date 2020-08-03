@@ -22,6 +22,7 @@ export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
 set -x
 $NXF_CMD -C ./gls.config \
     run nextflow-io/rnaseq-nf \
+    -revision 770a37f  \
     -with-report \
     -with-trace $OPTS
 
