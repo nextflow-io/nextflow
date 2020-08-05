@@ -224,7 +224,7 @@ from the channel to which is applied. For example::
   Channel
         .from( 1..100 )
         .randomSample( 10 )
-        .println()
+        .view()
 
 The above snippet will print 10 numbers in the range from 1 to 100.
 
@@ -234,7 +234,7 @@ By setting it, the ``randomSample`` operator will always return the same pseudo-
   Channel
         .from( 1..100 )
         .randomSample( 10, 234 )
-        .println()
+        .view()
 
 The above example will print 10 random numbers in the range between 1 and 100. At each run of the script, the same 
 sequence will be returned.
@@ -286,7 +286,7 @@ the condition specified is verified. For example::
   Channel
       .from( 3,2,1,5,1,5 )
       .until{ it==5 }
-      .println()
+      .view()
 
 ::
 
@@ -685,7 +685,7 @@ the resulting object as a sole emission. For example::
     Channel
         .from( 1, 2, 3, 4 )
         .collect()
-        .println()
+        .view()
 
     # outputs
     [1,2,3,4]
@@ -696,7 +696,7 @@ For example::
     Channel
         .from( 'hello', 'ciao', 'bonjour' )
         .collect { it.length() }
-        .println()
+        .view()
 
     # outputs
     [5,4,7]
@@ -798,7 +798,7 @@ of all tuple elements in each item. For example::
        ['b', ['s', 't'], ['x','y'] ]
        ])
        .transpose()
-       .println()
+       .view()
 
 The above snippet prints::
 
@@ -978,7 +978,7 @@ sequences each::
    Channel
         .fromPath('misc/sample.fastq')
         .splitFastq( by: 10 )
-        .println()
+        .view()
 
 
 .. warning:: By default chunks are kept in memory. When splitting big files specify the parameter ``file: true`` to save the
@@ -995,7 +995,7 @@ the required fields, or just specify ``record: true`` as in the example shown be
    Channel
         .fromPath('misc/sample.fastq')
         .splitFastq( record: true )
-        .println { record -> record.readHeader }
+        .view { record -> record.readHeader }
 
 
 Finally the ``splitFastq`` operator is able to split paired-end read pair FASTQ files. It must be applied to a channel
@@ -1004,7 +1004,7 @@ which emits tuples containing at least two elements that are the files to be spl
     Channel
         .fromFilePairs('/my/data/SRR*_{1,2}.fastq', flat:true)
         .splitFastq(by: 100_000, pe:true, file:true)
-        .println()
+        .view()
 
 
 .. note:: The ``fromFilePairs`` requires the ``flat:true`` option to have the file pairs as separate elements
@@ -1127,7 +1127,7 @@ For example::
 
   left = Channel.from(['X', 1], ['Y', 2], ['Z', 3], ['P', 7])
   right= Channel.from(['Z', 6], ['Y', 5], ['X', 4])
-  left.join(right).println()
+  left.join(right).view()
 
 The resulting channel emits::
 
@@ -1142,7 +1142,7 @@ is missing, by specifying the optional parameter ``remainder`` as shown below::
 
     left = Channel.from(['X', 1], ['Y', 2], ['Z', 3], ['P', 7])
     right= Channel.from(['Z', 6], ['Y', 5], ['X', 4])
-    left.join(right, remainder: true).println()
+    left.join(right, remainder: true).view()
 
 The above example prints::
 
@@ -1184,7 +1184,7 @@ and the other which emits a series of even integers::
 
     odds
         .merge( evens )
-        .println()
+        .view()
 
 ::
 
@@ -1199,7 +1199,7 @@ An option closure can be provide to customise the items emitted by the resulting
 
     odds
         .merge( evens ) { a, b -> tuple(b*b, a) }
-        .println()
+        .view()
 
 .. _operator-mix:
 
@@ -1467,7 +1467,7 @@ object (as right operand). For example::
     words = Channel.from('hello', 'ciao')
     numbers
         .combine(words)
-        .println()
+        .view()
 
     # outputs
     [1, hello]
@@ -1487,7 +1487,7 @@ For example::
 
     left
         .combine(right, by: 0)
-        .println()
+        .view()
 
     # outputs
     [A, 1, z]
@@ -1762,8 +1762,8 @@ the source channel are copied to the target channels. For example::
         .from( 'a', 'b', 'c' )
         .into{ foo; bar }
 
-    foo.println{ "Foo emit: " + it }
-    bar.println{ "Bar emit: " + it }
+    foo.view{ "Foo emit: " + it }
+    bar.view{ "Bar emit: " + it }
 
 ::
 
@@ -1784,8 +1784,8 @@ source channel. For example::
 
 
     (foo, bar) = Channel.from( 'a','b','c').into(2)
-    foo.println{ "Foo emit: " + it }
-    bar.println{ "Bar emit: " + it }
+    foo.view{ "Foo emit: " + it }
+    bar.view{ "Bar emit: " + it }
 
 
 .. note:: The above example takes advantage of the :ref:`multiple assignment <script-multiple-assignment>` syntax
@@ -2150,7 +2150,7 @@ example::
         .from( '1', '7', '12' )
         .toInteger()
         .sum()
-        .println()
+        .view()
 
 
 
@@ -2221,7 +2221,7 @@ is applied is *empty* i.e. doesn't emit any value. Otherwise it will emit the sa
 
 Thus, the following example prints::
 
-    Channel .from(1,2,3) .ifEmpty('Hello') .println()
+    Channel .from(1,2,3) .ifEmpty('Hello') .view()
 
     1
     2
@@ -2233,7 +2233,7 @@ Thus, the following example prints::
 
 Instead, this one prints::
 
-    Channel.empty().ifEmpty('Hello') .println()
+    Channel.empty().ifEmpty('Hello') .view()
 
     Hello
 
@@ -2246,6 +2246,10 @@ See also: :ref:`channel-empty` method.
 
 print
 ------
+
+.. warning::
+  The ``print`` operator is deprecated and not supported any more when using DLS2 syntax. Use
+  `view`_ instead.
 
 The ``print`` operator prints the items emitted by a channel to the standard output.
 An optional :ref:`closure <script-closure>` parameter can be specified to customise how items are printed.
@@ -2266,6 +2270,10 @@ See also: `println`_ and `view`_.
 println
 --------
 
+.. warning::
+  The ``println`` operator is deprecated and not supported any more when using DLS2 syntax. Use
+  `view`_ instead.
+
 The ``println`` operator prints the items emitted by a channel to the console standard output appending
 a *new line* character to each of them. For example::
 
@@ -2285,7 +2293,7 @@ An optional closure parameter can be specified to customise how items are printe
 
   Channel
         .from('foo', 'bar', 'baz', 'qux')
-        .println { "~ $it" }
+        .view { "~ $it" }
 
 
 It prints::
