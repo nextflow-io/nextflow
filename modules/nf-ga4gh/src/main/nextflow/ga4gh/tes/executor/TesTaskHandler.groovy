@@ -214,13 +214,8 @@ class TesTaskHandler extends TaskHandler {
     }
 
     private Double toGiga(MemoryUnit size) {
-        try {
-            // 1073741824 = 1GB
-            return ((double)size.getBytes())/1073741824
-        } catch (NullPointerException npe) {
-            // If no size is provided, return null, so no memory is sent
-            return null
-        }
+        // 1073741824 = 1GB
+        return size != null ? ((double)size.bytes)/1073741824 : null
     }
 
     private TesInput inItem( Path realPath, String fileName = null) {
