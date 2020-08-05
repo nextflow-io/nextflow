@@ -4,6 +4,87 @@
 Tracing & visualisation
 ***********************
 
+
+.. _execution-log:
+
+Execution log
+=============
+
+The ``nextflow log`` command shows information about executed pipelines in the current folder::
+
+  nextflow log <run name> [options]
+
+.. note:: Both the :ref:`execution report <execution-report>` and the :ref:`trace report <trace-report>` must be specified when the pipeline is first called. By contrast, the ``log`` option is useful after a pipeline has already run and is available for every executed pipeline.
+
+By default, ``log`` prints the list of executed pipelines::
+
+  $ nextflow log
+  TIMESTAMP            RUN NAME         SESSION ID                            COMMAND
+  2016-08-01 11:44:51  grave_poincare   18cbe2d3-d1b7-4030-8df4-ae6c42abaa9c  nextflow run hello
+  2016-08-01 11:44:55  small_goldstine  18cbe2d3-d1b7-4030-8df4-ae6c42abaa9c  nextflow run hello -resume
+  2016-08-01 11:45:09  goofy_kilby      0a1f1589-bd0e-4cfc-b688-34a03810735e  nextflow run rnatoy -with-docker
+
+Specifying a run name or session id prints tasks executed by that pipeline run::
+
+  $ nextflow log goofy_kilby
+  /Users/../work/0b/be0d1c4b6fd6c778d509caa3565b64
+  /Users/../work/ec/3100e79e21c28a12ec2204304c1081
+  /Users/../work/7d/eb4d4471d04cec3c69523aab599fd4
+  /Users/../work/8f/d5a26b17b40374d37338ccfe967a30
+  /Users/../work/94/dfdfb63d5816c9c65889ae34511b32
+
+
+Customizing fields
+------------------
+
+By default, only the task execution paths are printed. A custom list of fields to print can be provided via the ``-f`` (``-fields``) option. For example::
+
+  $ nextflow log goofy_kilby -f hash,name,exit,status
+  0b/be0d1c  buildIndex (ggal_1_48850000_49020000.Ggal71.500bpflank)  0  COMPLETED
+  ec/3100e7  mapping (ggal_gut)                                       0  COMPLETED
+  7d/eb4d44  mapping (ggal_liver)                                     0  COMPLETED
+  8f/d5a26b  makeTranscript (ggal_liver)                              0  COMPLETED
+  94/dfdfb6  makeTranscript (ggal_gut)                                0  COMPLETED
+
+The fields accepted by the ``-f`` options are the ones in the :ref:`trace report<trace-fields>`, as well as: script, stdout, stderr, env. List available fields using the ``-l`` (``-list-fields``) option.
+
+The ``script`` field is useful for examining script commands run in each task::
+
+  $ nextflow log goofy_kilby -f name,status,script
+  align_genome      COMPLETED
+     bowtie --index /data/genome input.fastq > output
+  ...
+
+Templates
+---------
+
+The ``-t`` option allows a template (string or file) to be specified. This makes it possible to create complex custom report in any text based format.  For example you could save this markdown snippet to a file::
+
+  ## $name
+
+  script:
+
+      $script
+
+  exist status: $exit
+  task status: $status
+  task folder: $folder
+
+Then, the following command will output a markdown file containing the script, exit status and folder of all executed tasks::
+
+  nextflow log goofy_kilby -t my-template.md > execution-report.md
+
+
+Filtering
+---------
+
+The ``filter`` option makes it possible to select which entries to include in the log report. Any valid groovy boolean expression on the log fields can be used to define the filter condition. For example::
+
+  nextflow log goofy_kilby -filter 'name =~ /foo.*/ && status == "FAILED"'
+
+.. warning:: The ``log`` command replaces the deprecated ``history`` command.
+
+
 .. _execution-report:
 
 Execution report
