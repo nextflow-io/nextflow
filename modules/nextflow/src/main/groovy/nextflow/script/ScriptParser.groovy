@@ -66,7 +66,7 @@ class ScriptParser {
 
     ScriptParser(Session session) {
         this.session = session
-        this.classLoader = session.getClassLoader()
+        this.classLoader = session.classLoader
     }
 
     ScriptParser(ClassLoader loader) {
