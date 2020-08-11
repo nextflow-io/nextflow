@@ -7,8 +7,8 @@ MODE=latest
 fi
 LATEST=$TARGET/docs/$MODE/
 
-mkdir -p $TLATEST
+mkdir -p $LATEST
 
-rsync -r _build/html/* $LATEST
+rsync -r _build/html/ $LATEST
 
 ( cd ../../nextflow-website; ./jbake)
