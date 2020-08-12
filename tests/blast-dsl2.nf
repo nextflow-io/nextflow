@@ -24,7 +24,7 @@ process sort {
     path 'hits_*'
 
     output:
-    stdout()
+    stdout
 
     """
     sort hits_*
