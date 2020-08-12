@@ -33,7 +33,7 @@ process reverse {
     path x
     
     output:
-    stdout()
+    stdout
 
     """
     cat $x | rev
