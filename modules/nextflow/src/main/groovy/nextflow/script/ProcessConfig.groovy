@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,7 +26,6 @@ import nextflow.NF
 import nextflow.exception.ConfigParseException
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.IllegalDirectiveException
-import nextflow.exception.ScriptRuntimeException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.processor.ConfigList
 import nextflow.processor.ErrorStrategy
@@ -587,7 +587,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     OutParam _out_stdout( obj = null ) {
         def result = new StdOutParam(this).bind('-')
         if( obj ) {
-            if(NF.isDsl2()) throw new ScriptRuntimeException("Process `stdout` output channel should not be specified when using DSL 2 -- Use `stdout()` instead")
             result.into(obj)
         }
         result

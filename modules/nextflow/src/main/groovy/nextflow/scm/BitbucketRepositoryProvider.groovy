@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +21,13 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 /**
  * Implements a repository provider for the BitBucket service
+ *
+ * Nextflow uses Basic authentication for API access. It requires
+ * the use of App password in place of the user password.
+ *
+ * See more:
+ *   https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/
+ *   https://bitbucket.org/account/settings/app-passwords/
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

@@ -1,5 +1,25 @@
 NEXTFLOW CHANGE-LOG
 ===================
+20.07.1 - 24 Jul 2020
+- see 20.07.0 and 20.07.0-RC1
+
+20.07.0 - (skipped)
+- Allow unqualified stdin/stdout defintions with DLS2 [bcdcaab6] 
+
+20.07.0-RC1 - 21 Jul 2020 
+- Add Dsl2 enable flag [08238109]
+- Add check on invalid scope syntax definition [23c92021]
+- Add channel as alias for Channel [05c358c9]
+- Add DSL2 deprecation + clean up syntax [1b4b1307]
+- Add DOI field to NF manifest #1676 [ec6ee223]
+- Improve join duplicate detection [33eb9ef5]
+- Improve mix operator error message [8074d714]
+- Remove invalid log message [48b1b9f1]
+- Fix hidden error message on fail fast run [3b4b377c]
+- Disallow upwrapped includes + hard deprecation [19130f87]
+- Suppress trap for SIGUSR1 signal #1656 [ca5bcf46]
+- Improve error reporting on invalid task id [3921de1a]
+
 20.06.0-edge - 5 Jul 2020 
 - Add more debug logging for AWS helper [2a62fdf7]
 - Add join options failOnDuplicate and failOnMismatch [387366aa]

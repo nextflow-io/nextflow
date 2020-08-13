@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,6 +44,8 @@ import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+import org.eclipse.jgit.merge.MergeStrategy
+import org.eclipse.jgit.lib.SubmoduleConfig.FetchRecurseSubmodulesMode
 import static nextflow.Const.DEFAULT_HUB
 import static nextflow.Const.DEFAULT_MAIN_FILE_NAME
 import static nextflow.Const.DEFAULT_ORGANIZATION
@@ -591,6 +594,7 @@ class AssetManager {
             clone
                 .setURI(cloneURL)
                 .setDirectory(localPath)
+                .setCloneSubmodules(manifest.recurseSubmodules)
                 .call()
 
             // return status message
@@ -636,6 +640,9 @@ class AssetManager {
         if( provider.hasCredentials() )
             pull.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password))
 
+        if( manifest.recurseSubmodules ) {
+            pull.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
+        }
         def result = pull.call()
         if(!result.isSuccessful())
             throw new AbortOperationException("Cannot pull project `$project` -- ${result.toString()}")
@@ -661,6 +668,7 @@ class AssetManager {
 
         clone.setURI(uri)
         clone.setDirectory(directory)
+        clone.setCloneSubmodules(manifest.recurseSubmodules)
         if( provider.hasCredentials() )
             clone.setCredentialsProvider(new UsernamePasswordCredentialsProvider(provider.user, provider.password))
 
@@ -921,6 +929,9 @@ class AssetManager {
             if(provider.hasCredentials()) {
                 fetch.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
             }
+            if( manifest.recurseSubmodules ) {
+                fetch.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
+            }
             fetch.call()
             git.checkout()
                     .setCreateBranch(true)
@@ -959,6 +970,11 @@ class AssetManager {
 
         final init = git.submoduleInit()
         final update = git.submoduleUpdate()
+
+        if( manifest.recurseSubmodules ) {
+            update.setStrategy(MergeStrategy.RECURSIVE)
+        }
+
         filter.each { String m -> init.addPath(m); update.addPath(m) }
         // call submodule init
         init.call()

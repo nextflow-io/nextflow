@@ -276,7 +276,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         MODULE.text = '''
         process foo {
           input: val sample
-          output: stdout() 
+          output: stdout 
           script:
           /echo Hello $sample/
         }        
@@ -315,7 +315,7 @@ class ScriptIncludesTest extends Dsl2Spec {
             val sample
             tuple val(pairId), val(reads)
           output: 
-            stdout() 
+            stdout 
           script:
             /echo sample=$sample pairId=$pairId reads=$reads/
         }
@@ -365,7 +365,7 @@ class ScriptIncludesTest extends Dsl2Spec {
              val xx
              val yy 
            output:
-             stdout()
+             stdout
            script:
             /echo $xx $yy/            
         }
@@ -412,7 +412,7 @@ class ScriptIncludesTest extends Dsl2Spec {
              val xx
              val yy 
            output:
-             stdout()
+             stdout
            script:
             /echo $xx $yy/            
         }
@@ -447,7 +447,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         params.bar = 'y'
         
         process foo {
-          output: stdout() 
+          output: stdout 
           script:
           /echo $params.foo $params.bar/
         }
@@ -516,7 +516,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         FOO = params.x   
         
         process foo {
-          output: stdout() 
+          output: stdout 
           script:
           "echo $FOO"
         }
@@ -725,20 +725,20 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         MODULE.text = '''
             process producer {
-                output: stdout()
+                output: stdout
                 shell: "echo Hello"
             }
             
             process consumer {
                 input: file "foo"
-                output: stdout()
+                output: stdout
                 shell:
                 "cmd consumer 1"
             }
             
             process another_consumer {
                 input: file "foo"
-                output: stdout()
+                output: stdout
                 shell: "cmd consumer 2"
             }
             
@@ -958,7 +958,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         params.bar = 'y'
         
         process foo {
-          output: stdout() 
+          output: stdout 
           script:
           /echo $params.foo $params.bar/
         }

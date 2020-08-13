@@ -2,20 +2,20 @@
 nextflow.enable.dsl=2
 
 process foo {
-    output: stdout()
+    output: stdout
     shell: "echo Hello"
 }
 
 process bar {
     input: file "foo"
-    output: stdout()
+    output: stdout
     shell:
     "rev foo"
 }
 
 process baz {
     input: file "foo"
-    output: stdout()
+    output: stdout
     shell: "tr '[:lower:]' '[:upper:]' < foo"
 }
 

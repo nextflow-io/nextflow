@@ -34,6 +34,13 @@ or
 conda install sphinx
 ```
 
+### Theme 
+
+Docs uses the [sphinx_rtd_theme](https://github.com/readthedocs/sphinx_rtd_theme) theme. 
+
+To update it, clone the bove repo, then copy `sphinx_rtd_theme/sphinx_rtd_theme` directory 
+into `docs/_themes`.  
+
 ### License
 
 Nextflow documentation is distributed under 

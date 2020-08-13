@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,6 +38,7 @@ import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.util.MemoryUnit
 /**
  * Handle execution phases for a task executed by a TES executor
  *
@@ -203,7 +205,7 @@ class TesTaskHandler extends TaskHandler {
     private TesResources getResources(TaskConfig cfg) {
         def res = new TesResources()
         res.cpuCores(cfg.getCpus())
-            .ramGb(cfg.getMemory()?.toGiga()) // @TODO only works for >= 1.GB
+            .ramGb(toGiga(cfg.getMemory()))
             .diskGb(cfg.getDisk()?.toGiga())
         log.trace("[TES] Adding resource request: $res")
         // @TODO preemptible
@@ -211,6 +213,10 @@ class TesTaskHandler extends TaskHandler {
         return res
     }
 
+    private Double toGiga(MemoryUnit size) {
+        // 1073741824 = 1GB
+        return size != null ? ((double)size.bytes)/1073741824 : null
+    }
 
     private TesInput inItem( Path realPath, String fileName = null) {
         def result = new TesInput()
