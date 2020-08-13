@@ -765,4 +765,20 @@ class K8sTaskHandlerTest extends Specification {
         handler.startTimeMillis > 0
         handler.startTimeMillis <= handler.completeTimeMillis
     }
+
+    def 'should not update timestamps with malformed time and when startTimeMillis already set' () {
+
+        given:
+        def handler = Spy(K8sTaskHandler)
+        handler.startTimeMillis = 10
+        handler.completeTimeMillis = 20
+        def malformedTime = [ startedAt: "2018-01-13 10:09:36",
+                              finishedAt: "2018-01-13T10:19:36Z" ]
+
+        when:
+        handler.updateTimestamps(malformedTime)
+        then:
+        handler.startTimeMillis == 10
+        handler.completeTimeMillis == 20
+    }
 }

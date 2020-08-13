@@ -294,8 +294,14 @@ class K8sTaskHandler extends TaskHandler {
             completeTimeMillis = getEpochMilli(terminated.finishedAt as String)
         } catch( Exception e ) {
             log.debug "Failed updating timestamps '${terminated.toString()}'", e
-            startTimeMillis = System.currentTimeMillis()
-            completeTimeMillis = System.currentTimeMillis()
+            // Only update if startTimeMillis hasn't already been set.
+            // If startTimeMillis _has_ been set, then both startTimeMillis
+            // and completeTimeMillis will have been set with the normal
+            // TaskHandler mechanism, so there's no need to reset them here.
+            if (!startTimeMillis) {
+                startTimeMillis = System.currentTimeMillis()
+                completeTimeMillis = System.currentTimeMillis()
+            }
         }
     }
 
