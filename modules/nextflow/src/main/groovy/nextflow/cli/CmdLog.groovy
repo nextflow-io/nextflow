@@ -299,7 +299,7 @@ class CmdLog extends CmdBase implements CacheBase {
                 path.withReader { reader ->
                     String line
                     while( (line=reader.readLine()) && c++<MAX_LINES ) {
-                        result << line
+                        result << line << '\n'
                     }
                 }
 
