@@ -66,6 +66,12 @@ Find a commit in any branch introducing a change
 
     git log -S <whatever> --source --all
 
+Reset last merge pushed 
+
+    git reset --hard HEAD@{1}
+
+    Read more https://stackoverflow.com/a/11722640/395921
+    
 ## GPG keys 
 
 To sign Git commits with a GPG key on Mac use [GPG Suite](https://gpgtools.org/), import your key, then: 
