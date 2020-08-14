@@ -19,6 +19,8 @@ package nextflow.k8s
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Instant
+import java.time.format.DateTimeFormatter
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
@@ -274,6 +276,36 @@ class K8sTaskHandler extends TaskHandler {
         return false
     }
 
+    long getEpochMilli(String timeString) {
+        final time = DateTimeFormatter.ISO_INSTANT.parse(timeString)
+        return Instant.from(time).toEpochMilli()
+    }
+
+    /**
+     * Update task start and end times based on pod timestamps.
+     * We update timestamps because it's possible for a task to run  so quickly
+     * (less than 1 second) that it skips right over the RUNNING status.
+     * If this happens, the startTimeMillis never gets set and remains equal to 0.
+     * To make sure startTimeMillis is non-zero we update it with the pod start time.
+     * We update completTimeMillis from the same pod info to be consistent.
+     */
+    void updateTimestamps(Map terminated) {
+        try {
+            startTimeMillis = getEpochMilli(terminated.startedAt as String)
+            completeTimeMillis = getEpochMilli(terminated.finishedAt as String)
+        } catch( Exception e ) {
+            log.debug "Failed updating timestamps '${terminated.toString()}'", e
+            // Only update if startTimeMillis hasn't already been set.
+            // If startTimeMillis _has_ been set, then both startTimeMillis
+            // and completeTimeMillis will have been set with the normal
+            // TaskHandler mechanism, so there's no need to reset them here.
+            if (!startTimeMillis) {
+                startTimeMillis = System.currentTimeMillis()
+                completeTimeMillis = System.currentTimeMillis()
+            }
+        }
+    }
+
     @Override
     boolean checkIfCompleted() {
         if( !podName ) throw new IllegalStateException("Missing K8s pod name - cannot check if complete")
@@ -286,6 +318,7 @@ class K8sTaskHandler extends TaskHandler {
             status = TaskStatus.COMPLETED
             savePodLogOnError(task)
             deletePodIfSuccessful(task)
+            updateTimestamps(state.terminated as Map)
             return true
         }
 
