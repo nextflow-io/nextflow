@@ -41,7 +41,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Nextflow'
-copyright = u'2013-2019, Centre for Genomic Regulation (CRG)'
+copyright = u'2013-2019, Centre for Genomic Regulation (CRG). 2020, Seqera Labs.'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
