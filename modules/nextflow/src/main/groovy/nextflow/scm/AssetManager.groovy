@@ -119,7 +119,7 @@ class AssetManager {
      * Build the asset manager internal data structure
      *
      * @param pipelineName A project name or a project repository Git URL
-     * @param config A {@link Map} holding the configuration properties defined in the {@link ProviderConfig#SCM_FILE} file
+     * @param config A {@link Map} holding the configuration properties defined in the {@link ProviderConfig#DEFAULT_SCM_FILE} file
      * @param cliOpts User credentials provided on the command line. See {@link HubOptions} trait
      * @return The {@link AssetManager} object itself
      */

@@ -160,6 +160,9 @@ Downloaded pipelines can be deleted by using the ``drop`` command, as shown belo
 
     nextflow drop nextflow-io/hello
 
+
+.. _sharing-scm-file:
+
 SCM configuration file
 =======================
 
@@ -196,6 +199,9 @@ token               Private API access token (used only when the specified platf
 
 The attributes marked with a * are only required when defining the configuration of a private SCM server.
 
+.. tip::
+  A custom location for the SCM file can be specified using the ``NXF_SCM_FILE`` environment variable (requires
+ version ``20.10.0`` or later).
 
 BitBucket credentials
 ---------------------
