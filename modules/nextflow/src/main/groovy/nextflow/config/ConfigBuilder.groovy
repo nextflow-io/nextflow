@@ -664,6 +664,10 @@ class ConfigBuilder {
         if( cmdRun.withSingularity ) {
             configContainer(config, 'singularity', cmdRun.withSingularity)
         }
+
+        if( cmdRun.withCharliecloud ) {
+            configContainer(config, 'charliecloud', cmdRun.withChareliecloud)
+        }
     }
 
     private void configContainer(ConfigObject config, String engine, def cli) {
