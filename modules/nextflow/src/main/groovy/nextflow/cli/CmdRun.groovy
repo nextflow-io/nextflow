@@ -160,6 +160,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names = ['-with-timeline'], description = 'Create processes execution timeline file')
     String withTimeline
 
+    @Parameter(names = '-with-charliecloud', description = 'Enable process execution in a Charliecloud container runtime')
+    def withCharliecloud
+
     @Parameter(names = '-with-singularity', description = 'Enable process execution in a Singularity container')
     def withSingularity
 
