@@ -37,7 +37,7 @@ import nextflow.util.Duration
 /**
  * Query NCBI SRA database and returns the retrieved FASTQs to the specified
  * target channel. Inspired to SRA-Explorer by Phil Ewels -- https://ewels.github.io/sra-explorer/
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -217,7 +217,7 @@ class SraExplorer {
         if( response instanceof Map && response.esearchresult instanceof Map ) {
             def search = (Map)response.esearchresult
             def result = new SearchRecord()
-            result.count = search.count as Integer 
+            result.count = search.count as Integer
             result.retmax = search.retmax as Integer
             result.retstart = search.retstart as Integer
             result.querykey = search.querykey
@@ -275,7 +275,14 @@ class SraExplorer {
             return
 
         def lines = text.trim().readLines()
-        def files = lines[1].split(';')
+        def rows = lines.collect { it.tokenize('\t') }
+        def rowsMapped = rows[1..<rows.size].collect { row ->
+            row.withIndex().collectEntries { value, index ->
+                [rows[0][index], value]
+            }
+        }
+
+        def files = rowsMapped[0]["fastq_ftp"].split(';')
         def result = new ArrayList(files.size())
         for( def str : files ) {
             result.add( FileHelper.asPath("ftp://$str") )
@@ -295,7 +302,7 @@ class SraExplorer {
 
     /**
      * NCBI search https://www.ncbi.nlm.nih.gov/books/NBK25499/#chapter4.ESummary
-     * 
+     *
      * @param result
      * @return
      */
