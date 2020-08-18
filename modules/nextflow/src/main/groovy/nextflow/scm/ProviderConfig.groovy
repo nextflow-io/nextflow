@@ -16,12 +16,17 @@
  */
 
 package nextflow.scm
+
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.Const
 import nextflow.config.ConfigParser
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
+import nextflow.file.FileHelper
+
 /**
  * Models a repository provider configuration attributes
  *
@@ -31,7 +36,21 @@ import nextflow.exception.ConfigParseException
 class ProviderConfig {
 
     @PackageScope
-    static public File SCM_FILE = Const.APP_HOME_DIR.resolve('scm').toFile()
+    static Path DEFAULT_SCM_FILE = Const.APP_HOME_DIR.resolve('scm')
+
+    @PackageScope
+    static Map<String,String> env = new HashMap<>(System.getenv())
+
+    static Path getScmConfigPath() {
+        def cfg = env.get('NXF_SCM_FILE')
+        if( !cfg )
+            return DEFAULT_SCM_FILE
+        // check and return it if valid
+        final path = FileHelper.asPath(cfg)
+        if( !path.exists() )
+            throw new AbortOperationException("Missing SCM config file: $cfg - Check the env variable NXF_SCM_FILE")
+        return path
+    }
 
     private String name
 
@@ -69,7 +88,7 @@ class ProviderConfig {
             attr.platform = 'file'
 
         if( !attr.platform ) {
-            throw new AbortOperationException("Missing `platform` attribute for `$name` scm provider configuration -- Check file: ${SCM_FILE}")
+            throw new AbortOperationException("Missing `platform` attribute for `$name` scm provider configuration -- Check file: ${getScmConfigPath().toUriString()}")
         }
 
         if( attr.auth ) {
@@ -209,7 +228,6 @@ class ProviderConfig {
     @PackageScope
     static Map parse(String text) {
         def slurper = new ConfigParser()
-        def env = new HashMap( System.getenv() )
         slurper.setBinding(env)
         return slurper.parse(text)
     }
@@ -243,7 +261,7 @@ class ProviderConfig {
     }
 
     @PackageScope
-    static Map getFromFile(File file) {
+    static Map getFromFile(Path file) {
         try {
             parse(file.text)
         }
@@ -254,7 +272,7 @@ class ProviderConfig {
     }
 
     static Map getDefault() {
-        def file = SCM_FILE
+        final file = getScmConfigPath()
         return file.exists() ? getFromFile(file) : [:]
     }
 

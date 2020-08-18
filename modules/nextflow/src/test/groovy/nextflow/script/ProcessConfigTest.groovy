@@ -17,6 +17,9 @@
 
 package nextflow.script
 
+import java.nio.file.Files
+
+import nextflow.scm.ProviderConfig
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -625,4 +628,29 @@ class ProcessConfigTest extends Specification {
         process.accelerator == [request: 1, limit:5]
     }
 
+    def 'should get default config path' () {
+        given:
+        ProviderConfig.env.remove('NXF_SCM_FILE')
+
+        when:
+        def path = ProviderConfig.getScmConfigPath()
+        then:
+        path.toString() == "${System.getProperty('user.home')}/.nextflow/scm"
+
+    }
+
+    def 'should get custom config path' () {
+        given:
+        def cfg = Files.createTempFile('test','config')
+        ProviderConfig.env.NXF_SCM_FILE = cfg.toString()
+
+        when:
+        def path = ProviderConfig.getScmConfigPath()
+        then:
+        path.toString() == cfg.toString()
+
+        cleanup:
+        ProviderConfig.env.remove('NXF_SCM_FILE')
+        cfg.delete()
+    }
 }

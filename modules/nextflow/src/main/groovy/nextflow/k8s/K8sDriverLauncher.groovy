@@ -497,7 +497,7 @@ class K8sDriverLauncher {
     }
 
     protected Path getScmFile() {
-        ProviderConfig.SCM_FILE.toPath()
+        ProviderConfig.getScmConfigPath()
     }
 
     /**
