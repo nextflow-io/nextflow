@@ -117,13 +117,13 @@ class SraExplorerTest extends Specification {
     def 'should return ftp files for accession id' () {
         given:
         def RESP1 = '''
-                fastq_ftp
-                ftp.sra.ebi.ac.uk/vol1/fastq/SRR144/004/SRR1448774/SRR1448774.fastq.gz
+                run_accession\tfastq_ftp
+                SRR1448774\tftp.sra.ebi.ac.uk/vol1/fastq/SRR144/004/SRR1448774/SRR1448774.fastq.gz
                 '''.stripIndent()
 
         def RESP2 = '''
-                fastq_ftp
-                ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908503/ERR908503_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908503/ERR908503_2.fastq.gz
+                run_accession\tfastq_ftp
+                ERR908503\tftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908503/ERR908503_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908503/ERR908503_2.fastq.gz
                 '''.stripIndent()
 
 
