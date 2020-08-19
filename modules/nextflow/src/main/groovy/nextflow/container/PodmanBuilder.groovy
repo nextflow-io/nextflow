@@ -100,7 +100,7 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
         // mount the input folders
         result << makeVolumes(mounts)
-        result << ' -w "$PWD" '
+        result << '-w "$PWD" '
 
         if( entryPoint )
             result << '--entrypoint ' << entryPoint << ' '
