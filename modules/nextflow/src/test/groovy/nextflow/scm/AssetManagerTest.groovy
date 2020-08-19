@@ -441,9 +441,12 @@ class AssetManagerTest extends Specification {
         dir.resolve('.git/config').text = GIT_CONFIG_TEXT
 
         when:
-        def manager = new AssetManager()
+        def p = Mock(RepositoryProvider) { getRepositoryUrl() >> 'https://github.com/nextflow-io/nextflow' }
+        and:
+        def manager = new AssetManager(provider: p)
                 .setLocalPath(dir.toFile())
                 .setProject('nextflow-io/nextflow')
+        and:
         def script = manager.getScriptFile()
         then:
         script.localPath == dir
@@ -451,7 +454,7 @@ class AssetManagerTest extends Specification {
         script.revision == 'master'
         script.parent == dir
         script.text == "println 'Hello world'"
-        script.repository == 'https://github.com/nextflow-io/nextflow.git'
+        script.repository == 'https://github.com/nextflow-io/nextflow'
         script.projectName == 'nextflow-io/nextflow'
     }
 
