@@ -94,7 +94,7 @@ class SingularityCacheTest extends Specification {
         cache.downloadSingularityImage(IMAGE)
         then:
         1 * cache.localImagePath(IMAGE) >> dir.resolve(LOCAL)
-        1 * cache.runCommand("singularity pull --nohttps --name $LOCAL $IMAGE > /dev/null", dir) >> 0
+        1 * cache.runCommand(s =~ ~"singularity pull --nohttps -F --name [^ ]*$LOCAL[^ ]* $IMAGE > /dev/null/", dir) >> 0
 
     }
 

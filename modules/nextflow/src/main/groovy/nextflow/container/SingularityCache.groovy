@@ -19,7 +19,9 @@ package nextflow.container
 
 import java.nio.file.FileSystems
 import java.nio.file.Path
+import java.nio.file.Files
 import java.nio.file.Paths
+import java.nio.file.attribute.FileAttribute
 import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
@@ -171,12 +173,23 @@ class SingularityCache {
     Path downloadSingularityImage(String imageUrl) {
         final localPath = localImagePath(imageUrl)
         final file = new File("${localPath.parent}/.${localPath.name}.lock")
+
         final wait = "Another Nextflow instance is pulling the Singularity image $imageUrl -- please wait the download completes"
         final err =  "Unable to acquire exclusive lock after $pullTimeout on file: $file"
 
+        if( localPath.exists() ) {
+            log.debug "Singularity found local store for image=$imageUrl; path=$localPath"
+            return localPath
+        }
+
+        final pullFile = Files.createTempFile(localPath.parent,
+                                              ".${localPath.name}".toString(),
+                                              ".pulling",
+                                              new FileAttribute<?>[0])
+
         final mutex = new FileMutex(target: file, timeout: pullTimeout, waitMessage: wait, errorMessage: err)
         try {
-            mutex .lock { downloadSingularityImage0(imageUrl, localPath) }
+            mutex .lock { downloadSingularityImage0(imageUrl, localPath, pullFile) }
         }
         finally {
             file.delete()
@@ -187,12 +200,19 @@ class SingularityCache {
 
 
     @PackageScope
-    Path downloadSingularityImage0(String imageUrl, Path localPath) {
+    Path downloadSingularityImage0(String imageUrl, Path localPath, Path pullFile) {
 
         if( localPath.exists() ) {
+            // If we're here we're an additional process that has waited for the pulling
+            // before we got the mutex to advance here. We need to clean up the pullFile
+            // as we won't use it.
+            
+            pullFile.delete()
+
             log.debug "Singularity found local store for image=$imageUrl; path=$localPath"
             return localPath
         }
+
         log.trace "Singularity pulling remote image `$imageUrl`"
 
         if( missingCacheDir )
@@ -202,14 +222,15 @@ class SingularityCache {
 
         final noHttpsOption = (config.noHttps)? '--nohttps' : ''
 
-        String cmd = "singularity pull ${noHttpsOption} --name ${Escape.path(localPath.getFileName())} $imageUrl > /dev/null"
+        String cmd = "singularity pull ${noHttpsOption} -F --name ${Escape.path(pullFile.getFileName())} $imageUrl > /dev/null"
         try {
             runCommand( cmd, localPath.parent )
+            Files.move( pullFile, localPath )
             log.debug "Singularity pull complete image=$imageUrl path=$localPath"
         }
         catch( Exception e ){
             // clean-up to avoid to keep eventually corrupted image file
-            localPath.delete()
+            pullFile.delete()
             throw e
         }
         return localPath
