@@ -48,10 +48,10 @@ class UdockerBuilderTest extends Specification {
         def quotes =  [ Paths.get('/folder with blanks/A'), Paths.get('/folder with blanks/B') ]
 
         expect:
-        builder.makeVolumes([]).toString() == '-v "$PWD":"$PWD"'
-        builder.makeVolumes(files).toString() == '-v /folder:/folder -v "$PWD":"$PWD"'
-        builder.makeVolumes(real).toString()  == '-v /user/yo/nextflow:/user/yo/nextflow -v /db/pdb/local/data:/db/pdb/local/data -v "$PWD":"$PWD"'
-        builder.makeVolumes(quotes).toString() == '-v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v "$PWD":"$PWD"'
+        builder.makeVolumes([]).toString() == '-v "$PWD":"$PWD" '
+        builder.makeVolumes(files).toString() == '-v /folder:/folder -v "$PWD":"$PWD" '
+        builder.makeVolumes(real).toString()  == '-v /user/yo/nextflow:/user/yo/nextflow -v /db/pdb/local/data:/db/pdb/local/data -v "$PWD":"$PWD" '
+        builder.makeVolumes(quotes).toString() == '-v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v "$PWD":"$PWD" '
 
     }
 
