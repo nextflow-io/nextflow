@@ -28,6 +28,13 @@ eg:
 
 Read more [here](https://help.github.com/articles/syncing-a-fork/).
 
+## Pull options
+
+  git config pull.rebase false  # merge (the default strategy)
+  git config pull.rebase true   # rebase
+  git config pull.ff only       # fast-forward only
+
+
 ## Subtree  
 
 The `tests` directory is a Git subtree created with the 
