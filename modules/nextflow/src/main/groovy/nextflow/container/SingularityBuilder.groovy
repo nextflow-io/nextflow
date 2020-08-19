@@ -80,7 +80,6 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
         if( autoMounts ) {
             makeVolumes(mounts, result)
-            result << ' '
         }
 
         if( runOptions )
