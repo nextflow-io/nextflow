@@ -389,7 +389,7 @@ class AssetManager {
 
         def result = new ScriptFile(getMainScriptFile())
         result.revisionInfo = getCurrentRevisionAndName()
-        result.repository = getGitConfigRemoteUrl()
+        result.repository = getRepositoryUrl()
         result.localPath = localPath.toPath()
         result.projectName = project
 
