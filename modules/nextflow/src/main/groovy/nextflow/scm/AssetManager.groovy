@@ -469,7 +469,7 @@ class AssetManager {
                 // no error => exist, return a path for it
                 return new ProviderPath(provider, MANIFEST_FILE_NAME)
             }
-            catch (IOException e) {
+            catch (Exception e) {
                 provider.validateRepo()
                 log.debug "Cannot retried remote config file -- likely does not exist"
                 return null
