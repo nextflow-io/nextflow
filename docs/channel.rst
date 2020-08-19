@@ -340,7 +340,7 @@ pair and the second element is the list of files (sorted in lexicographical orde
 
     Channel
         .fromFilePairs('/my/data/SRR*_{1,2}.fastq')
-        .println()
+        .view()
 
 It will produce an output similar to the following::
 
@@ -361,7 +361,7 @@ For example::
 
     Channel
         .fromFilePairs('/some/data/*', size: -1) { file -> file.extension }
-        .println { ext, files -> "Files with the extension $ext are $files" }
+        .view { ext, files -> "Files with the extension $ext are $files" }
 
 
 Table of optional parameters available:
@@ -395,7 +395,7 @@ the FASTQ files matching the specified criteria i.e project or accession number(
 
     Channel
         .fromSRA('SRP043510')
-        .println()
+        .view()
 
 
 It returns::
@@ -413,7 +413,7 @@ Multiple accession IDs can be specified using a list object::
     ids = ['ERR908507', 'ERR908506', 'ERR908505']
     Channel
         .fromSRA(ids)
-        .println()
+        .view()
 
 ::
 
