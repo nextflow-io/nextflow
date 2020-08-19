@@ -934,7 +934,7 @@ this is a value which has been defined in the `input` declaration block, as show
 
    }
 
-   receiver.println { "Received: $it" }
+   receiver.view { "Received: $it" }
 
 
 Valid output values are value literals, input values identifiers, variables accessible in the process scope and
