@@ -17,9 +17,6 @@
 
 package nextflow.file
 
-import static java.nio.file.StandardCopyOption.ATOMIC_MOVE
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING
-
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -291,15 +288,13 @@ class FilePorter {
 
             log.debug "Copying foreign file ${source.toUriString()} to work dir: ${target.toUriString()}"
 
-            // copy to a temp file first and move atomically to ensure that a partial copy doesn't get cached 
-            // as completed.
-            // use the target parent dir as the temp dir because atomic moves between partitions are not supported,
-            // and /tmp is usually a different partition.
-            Path tmpFile = Files.createTempFile(target.getParent(), target.getFileName().toString(), null)
-            log.debug "Using temp file ${tmpFile.toUriString()}"
+            // copy to a temp file first and move to ensure that a partial copy doesn't get cached as completed.
+            // use the target parent dir as the temp dir because it'lll have the same permissions.
+            def tmpFile = target.getParent().resolve( "temp-${UUID.randomUUID()}" )
+            log.debug "Using temp file ${tmpFile.toUriString()} for ${target.toUriString()}"
 
-            Path copiedTmpPath = FileHelper.copyPath(source, tmpFile, REPLACE_EXISTING);
-            return FileHelper.movePath(copiedTmpPath, target, ATOMIC_MOVE)
+            FileHelper.copyPath(source, tmpFile)
+            return FileHelper.movePath(tmpFile, target)
         }
 
         synchronized String getMessageAndClear() {
