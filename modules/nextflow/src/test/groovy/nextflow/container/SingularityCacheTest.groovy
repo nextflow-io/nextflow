@@ -84,8 +84,8 @@ class SingularityCacheTest extends Specification {
 
         given:
         def dir = Files.createTempDirectory('test')
-        def IMAGE = 'docker://pditommaso/foo:latest'
-        def LOCAL = 'foo-latest.img'
+        def IMAGE = 'docker://pditommaso/test:latest'
+        def LOCAL = 'test-latest.img'
         ContainerConfig config = [noHttps: true] 
         and:
         def cache = Spy(SingularityCache, constructorArgs: [ config ])
@@ -94,7 +94,7 @@ class SingularityCacheTest extends Specification {
         cache.downloadSingularityImage(IMAGE)
         then:
         1 * cache.localImagePath(IMAGE) >> dir.resolve(LOCAL)
-        1 * cache.runCommand(s =~ ~"singularity pull --nohttps -F --name [^ ]*$LOCAL[^ ]* $IMAGE > /dev/null/", dir) >> 0
+        1 * cache.runCommand({(it =~ ~"singularity pull --nohttps -F --name \\.\\S*$LOCAL\\S+ $IMAGE > /dev/null")}, dir) >> 0
 
     }
 
@@ -125,8 +125,8 @@ class SingularityCacheTest extends Specification {
     def 'should pull a singularity image' () {
 
         given:
-        def IMAGE = 'docker://pditommaso/foo:latest'
-        def LOCAL = 'foo-latest.img'
+        def IMAGE = 'docker://pditommaso/test:latest'
+        def LOCAL = 'test-latest.img'
         def dir = Paths.get('/test/path')
         def container = dir.resolve(LOCAL)
         and:
