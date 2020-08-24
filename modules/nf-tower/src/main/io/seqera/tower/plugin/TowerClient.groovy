@@ -147,6 +147,10 @@ class TowerClient implements TraceObserver {
 
     boolean getTowerLaunch() { towerLaunch }
 
+    String getRunName() { runName }
+
+    String getRunId() { runId }
+    
     void setAliveInterval(Duration d) {
         this.aliveInterval = d
     }

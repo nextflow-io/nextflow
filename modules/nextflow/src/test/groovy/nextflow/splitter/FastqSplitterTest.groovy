@@ -371,7 +371,7 @@ class FastqSplitterTest extends Specification {
                     AAGGTCTTCAAGCGTGCCAAGAAGAATAGTAATAAG
                     +V00-HWI-EAS132_5_30HYMAAXX:4:1:746:1938
                     ]]]]]]]][]]][]X[[L]X]]][TX[]]HZCXXZV
-                   '''
+                    '''
             .stripIndent().trim()
 
 

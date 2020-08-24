@@ -432,7 +432,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         and:
         def task = Mock(TaskRun)
         task.getProcessor() >> processor
-        task.getConfig() >> Mock(TaskConfig) { getMachineType() >> 'm1.large' }
+        task.getConfig() >> GroovyMock(TaskConfig) { getMachineType() >> 'm1.large' }
         and:
         def handler = Spy(GoogleLifeSciencesTaskHandler)
         handler.task = task

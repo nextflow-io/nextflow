@@ -663,7 +663,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         processor.getConfig() >> new ProcessConfig(Mock(BaseScript))
         def task = Mock(TaskRun)
         task.getProcessor() >> processor
-        task.getConfig() >> Mock(TaskConfig)
+        task.getConfig() >> GroovyMock(TaskConfig)
         def proxy = Mock(AwsBatchProxy)
         def handler = Spy(AwsBatchTaskHandler)
         handler.@client = proxy

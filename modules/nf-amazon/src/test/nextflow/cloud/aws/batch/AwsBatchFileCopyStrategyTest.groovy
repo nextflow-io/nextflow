@@ -188,7 +188,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                         )
                         unset IFS
                     }
-                    '''.stripIndent()
+                    '''.stripIndent(true)
 
         when:
         script = copy.getBeforeStartScript()
@@ -276,7 +276,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                     )
                     unset IFS
                 }
-            '''.stripIndent()
+            '''.stripIndent(true)
     }
 
     def 'should return env variables' () {

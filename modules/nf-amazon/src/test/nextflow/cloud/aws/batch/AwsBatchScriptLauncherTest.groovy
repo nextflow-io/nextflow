@@ -139,7 +139,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                     unset IFS
                 }
                 
-                '''.stripIndent()
+                '''.stripIndent(true)
     }
 
     def 'should create task environment' () {
@@ -312,7 +312,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                         unset IFS
                     }
                     
-                    '''.stripIndent()
+                    '''.stripIndent(true)
 
     }
 
@@ -454,7 +454,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                         unset IFS
                     }
                     
-                    '''.stripIndent()
+                    '''.stripIndent(true)
 
     }
 

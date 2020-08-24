@@ -100,6 +100,10 @@ class K8sTaskHandler extends TaskHandler {
         executor.session.runName
     }
 
+    protected String getPodName() {
+        return podName
+    }
+
     protected K8sConfig getK8sConfig() { executor.getK8sConfig() }
 
     protected List<String> getContainerMounts() {
@@ -214,7 +218,7 @@ class K8sTaskHandler extends TaskHandler {
         result.runName = getRunName()
         result.taskName = task.getName()
         result.processName = task.getProcessor().getName()
-        result.sessionId = "uuid-${executor.getSession().uniqueId}"
+        result.sessionId = "uuid-${executor.getSession().uniqueId}" as String
         return result
     }
 

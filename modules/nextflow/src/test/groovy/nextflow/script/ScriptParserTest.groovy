@@ -138,7 +138,7 @@ class ScriptParserTest extends Specification {
         then:
         def e = thrown(ScriptCompilationException)
         e.message.startsWith('Script compilation error')
-        e.message.contains('- cause: unexpected token: foo @ line 2, column 13.')
+        e.message.contains("- cause: Unexpected input: ')'")
         e.message.contains('foo.nf\n')
     }
     

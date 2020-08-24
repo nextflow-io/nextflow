@@ -84,7 +84,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
         this.holder = holder
         this.name = name
         def names = script.getBinding()?.getVariables()?.keySet()
-        this.variableNames = names ? new HashSet<>(names) : new HashSet<>()
+        this.variableNames = names ? new HashSet<String>(names) : new HashSet<String>()
         log.trace "Binding names for '$name' > $variableNames"
     }
 

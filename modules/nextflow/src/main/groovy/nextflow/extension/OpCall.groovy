@@ -303,7 +303,7 @@ class OpCall implements Callable {
     protected Method getMethod0(String methodName, Object[] args) {
         def meta = owner.metaClass.getMetaMethod(methodName, args)
         if( meta == null )
-            throw new MissingMethodException(methodName, owner.getClass())
+            throw new MissingMethodException(methodName, owner.getClass(), args)
         method = owner.getClass().getMethod(methodName, meta.getNativeParameterTypes())
     }
 
