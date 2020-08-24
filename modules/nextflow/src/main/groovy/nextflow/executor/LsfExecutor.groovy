@@ -21,7 +21,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.regex.Pattern
 
-import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 /**
@@ -41,18 +40,23 @@ class LsfExecutor extends AbstractGridExecutor {
 
     static private Pattern QUOTED_STRING_REGEX = ~/"((?:[^"\\]|\\.)*)"(\s*#.*)?/
 
-    @PackageScope boolean perJobMemLimit
+    private boolean perJobMemLimit
 
-    @PackageScope boolean perTaskReserve
+    private boolean perTaskReserve
 
     /*
      * If LSF_UNIT_FOR_LIMITS is not defined in lsf.conf, then the default setting is in KB, and for RUSAGE it is MB
      * see https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsf_unit_for_limits.5.html
      */
-    @PackageScope String memUnit = 'KB'
+    private String memUnit = 'KB'
 
-    @PackageScope String usageUnit = 'MB'
+    private String usageUnit = 'MB'
 
+    protected boolean getPerJobMemLimit() { perJobMemLimit }
+    protected boolean getPerTaskReserve() { perTaskReserve }
+    protected String getMemUnit() { memUnit }
+    protected String getUsageUnit() { usageUnit }
+    
     /**
      * Gets the directives to submit the specified task to the cluster for execution
      *

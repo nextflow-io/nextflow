@@ -184,7 +184,7 @@ Build from source
 Required dependencies
 ---------------------
 
-* Compiler Java 8
+* Compiler Java 8 or later
 * Runtime Java 8 or later
 
 Build from source
@@ -212,22 +212,22 @@ The self-contained runnable Nextflow packages can be created by using the follow
 
 ```bash
 make pack
-```
+```            
 
-To include support of GA4GH and its dependencies in the binary, use `make packGA4GH` instead.
+Once compiled use the script `./launch.sh` as a replacement for the usual `nextflow` command.
 
-In order to install the compiled packages use the following command:
+The compiled packages can be locally installed using the following command:
 
 ```bash
 make install
 ```
 
-Then you will be able to run nextflow using the `nextflow` launcher script in the project root folder.
+A self-contained distribution can be created with the command: `make pack`.  To include support of GA4GH and its dependencies in the binary, use `make packGA4GH` instead.
 
 Known compilation problems
 ---------------------------
 
-Nextflow required JDK 8 to be compiled. The Java compiler used by the build process can be choose by setting the
+Nextflow requires JDK 8 or later to be compiled. The Java compiler used by the build process can be chosen by setting the
 `JAVA_HOME` environment variable accordingly.
 
 
@@ -279,7 +279,7 @@ Build servers
 =============
 
   * [Travis-CI](https://travis-ci.org/nextflow-io/nextflow)
-  * [Groovy Joint build](http://ci.groovy-lang.org/project.html?projectId=JointBuilds_Nextflow&guest=1)
+  * [GitHub Actions](https://github.com/nextflow-io/nextflow/actions)
 
 License
 =======

@@ -190,7 +190,7 @@ class XPathTest extends Specification {
         'http://nextflow.io/abc/'    | 'http://x.com/z.txt'  | 'http://x.com/z.txt'
     }
 
-    def 'should normalise a path: #base' () {
+    def 'should normalise a path: #path' () {
         expect:
         XPath.get(path).normalize() == XPath.get(expected)
 

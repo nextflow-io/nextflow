@@ -142,7 +142,7 @@ class BashWrapperBuilderS3Test extends Specification {
                 unset IFS
             }
             
-            '''.stripIndent()
+            '''.stripIndent(true)
     }
 
 

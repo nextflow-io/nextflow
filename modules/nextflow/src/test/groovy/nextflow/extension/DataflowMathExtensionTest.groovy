@@ -31,6 +31,8 @@ class DataflowMathExtensionTest extends Specification {
         new Session()
     }
 
+    Comparator makeComparator(Closure c) { c as Comparator }
+
     def 'should return the min value'() {
 
         expect:
@@ -38,7 +40,7 @@ class DataflowMathExtensionTest extends Specification {
         Channel.from("hello","hi","hey").min { it.size() } .val == "hi"
         Channel.from("hello","hi","hey").min { a,b -> a.size()<=>b.size() } .val == "hi"
         Channel.from("hello","hi","hey").min { a,b -> a.size()<=>b.size() } .val == "hi"
-        Channel.from("hello","hi","hey").min ({ a,b -> a.size()<=>b.size() } as Comparator) .val == "hi"
+        Channel.from("hello","hi","hey").min ( makeComparator({ a,b -> a.size()<=>b.size() }) ) .val == "hi"
 
     }
 
@@ -48,7 +50,7 @@ class DataflowMathExtensionTest extends Specification {
         Channel.from("hello","hi","hey").max { it.size() } .val == "hello"
         Channel.from("hello","hi","hey").max { a,b -> a.size()<=>b.size() } .val == "hello"
         Channel.from("hello","hi","hey").max { a,b -> a.size()<=>b.size() } .val == "hello"
-        Channel.from("hello","hi","hey").max ({ a,b -> a.size()<=>b.size() } as Comparator) .val == "hello"
+        Channel.from("hello","hi","hey").max (makeComparator {{ a,b -> a.size()<=>b.size() }}) .val == "hello"
 
     }
 

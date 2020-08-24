@@ -186,7 +186,7 @@ class ConfigHelperTest extends Specification {
                        x = 'hello'
                        y = 'world'
                     }
-                   '''
+                    '''
                     .stripIndent().leftTrim()
     }
 

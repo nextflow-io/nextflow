@@ -158,7 +158,7 @@ class CondorExecutor extends AbstractGridExecutor {
             // give execute permission to wrapper file
             wrapper.setExecutable(true)
             // save the condor manifest
-            workDir.resolve(CMD_CONDOR).text = manifest
+            this.workDir.resolve(CMD_CONDOR).text = manifest
             return wrapper
         }
 

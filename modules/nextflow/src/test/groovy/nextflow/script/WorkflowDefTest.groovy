@@ -81,16 +81,16 @@ class WorkflowDefTest extends Dsl2Spec {
         when:
         def script = (TestScript)new GroovyShell(new ScriptBinding(), config).parse(SCRIPT).run()
         def meta = ScriptMeta.get(script)
-        println meta.getWorkflow('bravo') .source.stripIndent()
+
         then:
         meta.definitions.size() == 4
         meta.getWorkflow('alpha') .declaredInputs == []
         meta.getWorkflow('alpha') .declaredVariables == []
-        meta.getWorkflow('alpha') .source.stripIndent() == "print 'Hello world'\n"
+        meta.getWorkflow('alpha') .source.stripIndent(true) == "print 'Hello world'\n"
 
         meta.getWorkflow('bravo') .declaredInputs == ['foo', 'bar']
         meta.getWorkflow('bravo') .declaredVariables == ['$out0']
-        meta.getWorkflow('bravo') .source.stripIndent() == '''\
+        meta.getWorkflow('bravo') .source.stripIndent(true) == '''\
               take: foo
               take: bar
               main:
@@ -98,16 +98,16 @@ class WorkflowDefTest extends Dsl2Spec {
                 print bar
               emit: 
                 foo+bar
-              '''.stripIndent()
+              '''.stripIndent(true)
 
         meta.getWorkflow('delta') .declaredInputs == ['foo','bar']
         meta.getWorkflow('delta') .declaredVariables == [] 
-        meta.getWorkflow('delta') .source.stripIndent() == '''\
+        meta.getWorkflow('delta') .source.stripIndent(true) == '''\
                 take: foo
                 take: bar
                 main:
                 println foo+bar
-                '''.stripIndent()
+                '''.stripIndent(true)
 
         meta.getWorkflow('empty') .source == ''
         meta.getWorkflow('empty') .declaredInputs == []
@@ -128,7 +128,7 @@ class WorkflowDefTest extends Dsl2Spec {
         def runner = new MockScriptRunner().setScript(SCRIPT).invoke()
         def meta = ScriptMeta.get(runner.getScript())
         then:
-        meta.getWorkflow(null).getSource().stripIndent() == 'print 1\nprint 2\n'
+        meta.getWorkflow(null).getSource().stripIndent(true) == 'print 1\nprint 2\n'
 
     }
 
@@ -337,14 +337,14 @@ class WorkflowDefTest extends Dsl2Spec {
         def script = (TestScript)new GroovyShell(binding,config).parse(SCRIPT).run()
         def workflow = ScriptMeta.get(script).getWorkflow('alpha')
         then:
-        workflow.getSource().stripIndent() == '''\
+        workflow.getSource().stripIndent(true) == '''\
                             take:
                               foo
                             main:
                               print x 
                             emit: 
                               foo  
-                            '''.stripIndent()
+                            '''.stripIndent(true)
     }
 
     def 'should capture empty workflow code'  () {

@@ -500,6 +500,26 @@ class K8sDriverLauncher {
         ProviderConfig.getScmConfigPath()
     }
 
+    protected String getPipelineName() {
+        return pipelineName
+    }
+
+    protected boolean getInteractive() {
+        return interactive
+    }
+
+    protected Map getConfig() {
+        return config
+    }
+
+    protected K8sConfig getK8sConfig() {
+        return k8sConfig
+    }
+
+    protected K8sClient getK8sClient() {
+        return k8sClient
+    }
+
     /**
      * Creates a K8s ConfigMap to share the nextflow configuration in the K8s cluster
      */

@@ -566,8 +566,9 @@ class LazyMap implements Map<String,Object> {
 
     @Override
     String toString() {
-        def result = []
-        keySet().each { key -> result << "$key: ${getProperty(key)}" }
+        final allKeys = keySet()
+        final result = new ArrayList<String>(allKeys.size())
+        for( String key : allKeys ) { result << "$key: ${getProperty(key)}".toString() }
         result.join('; ')
     }
 }

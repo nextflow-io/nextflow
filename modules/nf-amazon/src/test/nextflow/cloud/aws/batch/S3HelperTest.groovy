@@ -117,7 +117,7 @@ class S3HelperTest extends Specification {
                         unset IFS
                     }
                     '''
-                    .stripIndent()
+                    .stripIndent(true)
     }
 
     def 'should set storage class and encryption' () {
@@ -213,7 +213,7 @@ class S3HelperTest extends Specification {
                         unset IFS
                     }
                     '''
-                .stripIndent()
+                .stripIndent(true)
 
     }
 }

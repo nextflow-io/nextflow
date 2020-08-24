@@ -27,7 +27,7 @@ import spock.lang.Unroll
 class SkipLinesInputStreamTest extends Specification {
 
     @Unroll
-    def 'should skip first line: #skip' () {
+    def 'should skip first line: #SKIP' () {
 
         given:
         def TEXT = 'HEADER\nA\rB\r\nC\n'

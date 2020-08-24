@@ -235,7 +235,7 @@ class CondorExecutorTest extends Specification {
         def folder = Files.createTempDirectory('test')
         def executor = [:] as CondorExecutor
         def task = new TaskRun(name: 'Hello', workDir: folder, script: 'echo Hello world!')
-        task.config = Mock(TaskConfig)
+        task.config = GroovyMock(TaskConfig)
         task.processor = Mock(TaskProcessor)
         task.processor.getProcessEnvironment() >> [:]
         task.processor.getConfig() >> Mock(ProcessConfig)

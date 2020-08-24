@@ -380,7 +380,7 @@ class LauncherTest extends Specification {
                   list   List all downloaded projects
                   run    Execute a pipeline project
 
-               '''
+                '''
                 .stripIndent()
     }
 

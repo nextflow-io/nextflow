@@ -94,7 +94,7 @@ class CacheDB implements Closeable {
         // open a LevelDB instance
         final file=dataDir.resolve('db').toFile()
         try {
-            db = Iq80DBFactory.factory.open(file, new Options().createIfMissing(true))
+            db = Iq80DBFactory.@factory.open(file, new Options().createIfMissing(true))
         }
         catch( Exception e ) {
             String msg

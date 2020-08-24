@@ -84,7 +84,7 @@ class CondaCacheTest extends Specification {
               - star=2.5.4a
               - bwa=0.7.15        
             '''
-            .stripIndent()
+            .stripIndent(true)  // https://issues.apache.org/jira/browse/GROOVY-9423
 
         when:
         def prefix = cache.condaPrefixPath(ENV.toString())
@@ -114,7 +114,7 @@ class CondaCacheTest extends Specification {
               - star=2.5.4a
               - bwa=0.7.15        
             '''
-                .stripIndent()
+                .stripIndent(true)
 
         when:
         def prefix = cache.condaPrefixPath(ENV.toString())
@@ -137,7 +137,7 @@ class CondaCacheTest extends Specification {
                 bwa=0.7.15   
                 multiqc=1.2.3
                 '''
-                .stripIndent()
+                .stripIndent(true)  // https://issues.apache.org/jira/browse/GROOVY-9423
 
         when:
         def prefix = cache.condaPrefixPath(ENV.toString())

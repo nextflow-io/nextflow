@@ -91,7 +91,7 @@ class PublishDirTest extends Specification {
 
         def workDir = folder.resolve('work-dir')
         def publishDir = folder.resolve('pub-dir')
-        def task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
+        def task = new TaskRun(workDir: workDir, config: new TaskConfig())
 
         when:
         def outputs =  [
@@ -152,7 +152,7 @@ class PublishDirTest extends Specification {
 
         def workDir = folder.resolve('work-dir')
         def publishDir = folder.resolve('pub-dir')
-        def task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
+        def task = new TaskRun(workDir: workDir, config: new TaskConfig())
 
         when:
         def outputs = [
@@ -204,7 +204,7 @@ class PublishDirTest extends Specification {
         def workDir = folder.resolve('work-dir')
         def target1 = folder.resolve('pub-dir1')
         def target2 = folder.resolve('pub-dir2')
-        def task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
+        def task = new TaskRun(workDir: workDir, config: new TaskConfig())
 
         when:
         def outputs = [

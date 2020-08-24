@@ -22,6 +22,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingDeque
 import java.util.concurrent.TimeUnit
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.SimpleType
@@ -120,6 +121,7 @@ class SimpleAgent<T> {
         }
 
         @Override
+        @CompileDynamic
         Object call(final Object... arguments) {
             result = s0 instanceof Cloneable ? s0.clone() : s0
             sync.countDown()

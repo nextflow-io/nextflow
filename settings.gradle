@@ -17,7 +17,6 @@
 
 rootProject.name = 'nextflow-prj'
 
-include 'my-capsule'
 include 'nextflow'
 include 'nf-commons'
 include 'nf-console'

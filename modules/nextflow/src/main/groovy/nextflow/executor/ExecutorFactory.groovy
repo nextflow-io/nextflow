@@ -64,6 +64,8 @@ class ExecutorFactory {
 
     private Map<Class<? extends Executor>,? extends Executor> executors = new HashMap<>()
 
+    @PackageScope Map<Class<? extends Executor>,? extends Executor> getExecutors() { executors }
+
     ExecutorFactory() {
         executorsMap = new HashMap(20)
         // add built-in executors

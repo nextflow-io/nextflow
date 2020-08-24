@@ -154,7 +154,7 @@ class TableBuilderTest extends Specification {
          bb 22 \n\
           9 333
         """
-                .stripIndent().trim()
+                .stripIndent(true).trim()
 
     }
 
