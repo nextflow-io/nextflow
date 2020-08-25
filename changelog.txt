@@ -1,5 +1,25 @@
 NEXTFLOW CHANGE-LOG
 ===================
+20.08.0-edge - 24 Aug 2020
+- Merge Groovy3 runtime and support for Java 12/13/14
+- Use repository URL instead of Git clone URL [102f8b01]
+- Fix Invalid exception capture for missing config [8c7accca]
+- Fix podman issue on duplicate mounts #1710 [d0cc38de]
+- Fix FromSra illegal character error #1700 [a45decfb]
+- Fix Allow custom SCM file location #1657 [7c27f895]
+- Fix dynamic executors loading [7b9ce82f]
+- Fix missing newline on cmd log stdout/err #1705 [1416a388]
+- Fix k8s timeline start #1687 [24dff871]
+- Remove unneeded parentheses from stdout declaration [dc029c04]
+- Merge execution logs command docs [577ec744]
+- Passing exact memory to TES executor in GiB #1696 [c8a15545]
+- Improve docs replacing suscribe{println it} with view() [f84ccb6f] [cb2d607d]
+- Use current environment Bash #1598 #1614 [e70ef87a]
+- Include GA4GH support into the standalone binary (make pack) #1666 [e2175d45]
+- Update Bitbucket docs [b9b57f83]
+- Clone/Pull submodules recursively #1615 [5f20ab6a]
+- Bump nf-ignite to version 1.1.0
+
 20.07.1 - 24 Jul 2020
 - see 20.07.0 and 20.07.0-RC1
 
