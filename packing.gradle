@@ -26,7 +26,7 @@ dependencies {
     google  project(':nf-google')
     amazon  project(':nf-amazon')
     // ignite module
-    ignite 'io.nextflow:nf-ignite:1.1.0-SNAPSHOT'
+    ignite 'io.nextflow:nf-ignite:1.1.0'
     // legacy cloud support
     legacy 'io.nextflow:nf-legacy-cloud:1.0.1'
 }
