@@ -43,7 +43,7 @@ import nextflow.util.Duration
 @Slf4j
 class SraExplorer {
 
-    static public Map PARAMS = [apiKey:String, cache: Boolean, max: Integer]
+    static public Map PARAMS = [apiKey:[String,GString], cache: Boolean, max: Integer]
 
     @ToString
     static class SearchRecord {
