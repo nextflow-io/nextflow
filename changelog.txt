@@ -1,5 +1,178 @@
 NEXTFLOW CHANGE-LOG
 ===================
+20.08.0-edge - 24 Aug 2020
+- Merge Groovy3 runtime and support for Java 12/13/14
+- Use repository URL instead of Git clone URL [102f8b01]
+- Fix Invalid exception capture for missing config [8c7accca]
+- Fix podman issue on duplicate mounts #1710 [d0cc38de]
+- Fix FromSra illegal character error #1700 [a45decfb]
+- Fix Allow custom SCM file location #1657 [7c27f895]
+- Fix dynamic executors loading [7b9ce82f]
+- Fix missing newline on cmd log stdout/err #1705 [1416a388]
+- Fix k8s timeline start #1687 [24dff871]
+- Remove unneeded parentheses from stdout declaration [dc029c04]
+- Merge execution logs command docs [577ec744]
+- Passing exact memory to TES executor in GiB #1696 [c8a15545]
+- Improve docs replacing suscribe{println it} with view() [f84ccb6f] [cb2d607d]
+- Use current environment Bash #1598 #1614 [e70ef87a]
+- Include GA4GH support into the standalone binary (make pack) #1666 [e2175d45]
+- Update Bitbucket docs [b9b57f83]
+- Clone/Pull submodules recursively #1615 [5f20ab6a]
+- Bump nf-ignite to version 1.1.0
+
+20.07.1 - 24 Jul 2020
+- see 20.07.0 and 20.07.0-RC1
+
+20.07.0 - (skipped)
+- Allow unqualified stdin/stdout defintions with DLS2 [bcdcaab6] 
+
+20.07.0-RC1 - 21 Jul 2020 
+- Add Dsl2 enable flag [08238109]
+- Add check on invalid scope syntax definition [23c92021]
+- Add channel as alias for Channel [05c358c9]
+- Add DSL2 deprecation + clean up syntax [1b4b1307]
+- Add DOI field to NF manifest #1676 [ec6ee223]
+- Improve join duplicate detection [33eb9ef5]
+- Improve mix operator error message [8074d714]
+- Remove invalid log message [48b1b9f1]
+- Fix hidden error message on fail fast run [3b4b377c]
+- Disallow upwrapped includes + hard deprecation [19130f87]
+- Suppress trap for SIGUSR1 signal #1656 [ca5bcf46]
+- Improve error reporting on invalid task id [3921de1a]
+
+20.06.0-edge - 5 Jul 2020 
+- Add more debug logging for AWS helper [2a62fdf7]
+- Add join options failOnDuplicate and failOnMismatch [387366aa]
+- Add strict mode flag [4ba5ac18]
+- Add support for selecting minimum CPU platform on GCP (#1633) [afc4375d]
+- Add missing trace fields to docs [bf2e1637]
+- Fix Invalid GLS path composition in staging directories #1654 [e33fff98]
+- Fix for feature 1647 that allows non gpu k8s accelerator resources. (#1649) [c1efa29d]
+- Fix Issue accessing S3 bucket #1596 [ffc6f843]
+- Fix Update getDomain method in ProviderConfig to support local repositories - #1492 (#1624) [651501ac]
+
+20.05.0-edge - 31 May 2020
+- Add support for NXF_LOG_NAME env var [cf496615]
+- Add exception specialiation for ambiguous repo [a34b1d2a]
+- Add support for tower_workflow_id env var [53188126]
+- Add config profile names accessor [2784cdb8]
+- Add support for Google Cloud buckets with Requester Pays set #1466 [bc9db8d8]
+- Add Git tag and branch retrieval [7c97f23f]
+- Fix PublishDir error caused by duplicates output files [5f3b69c1]
+- Fix weird issue on config resolution [0d0fef4b]
+- Fix resolution of malformed configs [fe213e41]
+- Fix K8s labels and annotation normalization [6434b9d] #1577 #1584 
+- Fix minor git path provider ending slash [9888be29]
+- Fix bugs in GA4GH TES support (#1589) [26708335]
+
+20.04.1-edge - 19 Apr 2020
+- Fix AWS auth with temporary security token [6a7b11b8]
+
+20.04.0-edge - 13 Apr 2020
+- Add SGE hr status handling (#1558) [f4db0049]
+- Add moduleDir, projectDir and launchDir vars [7832a697] [576a5694]
+- Add executor display name rendering [74c90ca9]
+- Add ability to pipe custom fun [DSL2] [80bb6485]
+- Add Aws Batch container image validation [e73951fa]
+- Recognizes more UGE states (#1536) [4dacebbf]
+- Prevent invalid process tag values [f2da1357]
+- Report Tower backend error cause on failure [da8ac8f5]
+- Fix Config cmd should resolve remote projects #889 [c2e0ac0b]
+- Fix issue applying branch/multiMap to value channel [e69f39fa]
+- Fix Kill signal is not propagated for Singularity container #1561
+- Fix docs typos [d7261d2e]
+- Fix Minor docs update #1545 
+- Revert "Bump jline 2.14.9" [ef7040cb]
+- Deprecate validExitStatus directive #1564
+- Improve error message [DSL2] [f8a0ee1c]
+- Add sluper parse method for Path [a54fd03d]
+- Report error message when accessing invalid out #1553 [83bd009c]
+- Remove deprecated $ config syntax [0a31f9df]
+- Remove deprecated workflow publish [DSL2] [1bd7b4a4]
+- Remove support for workflow 'get' [d9b91149]
+- Remove deprecated process output getter [013a323b]
+- Remove deprecated out cardinal getters [414fae94]
+- Remove deprecated gpu directive [f48b2c24]
+- Minor executor logging [7f94299b]
+- Minor improvement createDirIfNotExists API [34211675]
+- Bump groovy 2.5.11 
+
+20.03.0-edge - 28 Mar 2020
+- Add support for GLS private addr #1545 [a481b42b]
+- Add AWS batch job def normalise function [79239f05]
+- Fix Escape Singularity env variables #1535 [b651a371]
+- Add Local executor file system check [ffc92926]
+- Add Launch Id to Tower client [d768d2d1]
+- Add workflow progress on completion [aea41f37]
+- Remove deprecated onFlowStart method [14f12b5f]
+- Minor method visibility change [43bc9697]
+- Minor log change [130a963b]
+- Fix docs broken link [0a1ec9a9]
+- Fix typo CVS -> CSV #1500 [d89281c3]
+
+20.02.0-edge - 29 Feb 2020
+- Fix Unable to create AWS helper class warn #1504
+- Fix Ansi log flickers when variable-length tags are used #1288
+- Fix Directive maxForks may cause execution to hang #1432
+- Fix Missing tag in ansi log #1503
+- Fix PBSPRO res req should always include cpus #1510 
+- Deprecate workflow publish 7f315a63
+
+20.01.0 - 12 Feb 2020
+- Fix ansi logging and line count [4f5c7187]
+- Fix Division by 0 in launcher script with Biocontainers #1488
+- Fix Run name validation to 80 chars max #1491
+- Add GitHub badge to README
+- Add Bash version to issue template [78928546]
+- Bump jline 2.14.9 [5df2b27e]
+
+20.01.0-rc1 - 6 Feb 2020
+- Add ability to extend module params #1484 [17c6acca]
+- Add dsl2 command line opt [1cf544d5]
+- Add GLS executor docs [574f2098] [7ce2597a]
+- Add HTCondor detail on data sharing #1473 [f0af66de]
+- Allow aliased process to inherit config settings [DSL2] [1c447e85]
+- Allow module inclusion to inherit context params #1484 
+- Allow multiple inclusion from the same module [DSL2] [a9ae36f9]
+- Fix Script template fails to render list of files #1478 [2e97bbbc]
+- Fix process name validation when using legacy script [1543365c]
+- Fix Early detection Dsl2 declaration #1468 [93a642aa]
+- Fix Missing script validation checks #1468 [5d0cf145]
+- Revert "Disable ansi log on non-tty env #1417" [98e6758b]
+- Minor changes gradle build [619385f1]
+- Minor AWS Batch api refactor [c20abc11]
+- Improve foreign file detection [50508684]
+- Improve GLS location validation [5b89ab50]
+- Removed unused module flag [cf19cc9c]
+- Update dsl2 docs [5c57c3a8]
+
+20.01.0-edge - 20 Jan 2020 
+- Add Prevent negative progress stats [87cdddc6]
+- Add More cloud tests [7a5dd828]
+- Add support for UGE throttled jobs (Tr) #1461 [20408e4b]
+- Add progress stats to tower client [781116a4] [138cf0b0]
+- Add experimental Podman containers support (#1451) 026866cd
+- Add support for Gexf format for DAG rendering [28bfe0ee]
+- Improve ansi logging for multilines output [1ce978c3] [004e23eb]
+- Improve progress stats and ansi log [0212ba16]
+- Improve api to enable wr executor #1148 [21088ad3]
+- Update tower trace client requests [138cf0b0]
+- Enhance progress execution stats & tracking [a30e2b9a]
+- Unexpected output when using Google Storage as work dir #1452
+- Fix typos and minor changes [fb2f954f]
+- Fix Operator splitFastq fails with PE option and DSL2 enabled #1390
+- Fix Container entrypoint when using GLS executor #1291
+- Fix GLS file unstaging #1406 [e67ef3be]
+- Fix GLS unstage for file patterns #1406 
+- Fix Scratch directive does not work #1280 [644e9ac7] [6c7291fa]
+- Fix Resume fails due to LevelDB exception #1358 [28fa3a6c]
+- Fix Conda env activation #1195 [e3919275]
+- Fix java command in launch script #1436 [f28b015f]
+- Rename variable java to JAVA_BIN [086377d8]
+- Removed unused compile deps [686bcd98]
+- Bump capsule-maven 1.0.3.2 and fix broken env [004684e3]
+- Bump capsule-maven 1.0.3.1 and seqera repo [62964eed]
+
 19.12.0-edge - 20 Dec 2019 
 - Add GLS assigned zone discovery #1406
 - Add Google Life sciences (GLS) executor improvements #1406 [ead29c11] [8228e9b4]

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -151,7 +152,7 @@ class LoggerHelper {
     }
 
     void setup() {
-        logFileName = opts.logFile
+        logFileName = opts.logFile ?: System.getenv('NXF_LOG_FILE')
 
         final boolean quiet = opts.quiet
         final List<String> debugConf = opts.debug ?: new ArrayList<String>()
@@ -521,11 +522,11 @@ class LoggerHelper {
         def hasLeftTarget = !WorkflowBinding.isAssignableFrom(type) && !BaseScript.isAssignableFrom(type)
         def found = type.getMethods().find { it.name == name }
         if( found ) {
-            msg = "Invalid method `$name` invocation with arguments: $right"
+            msg = "Invalid method invocation `$name` with arguments: $right"
             if( hasLeftTarget ) msg += " on $left"
         }
         else {
-            msg = "Unknown method `$name`"
+            msg = "Unknown method invocation `$name`"
             if( hasLeftTarget ) msg += " on $left"
             def tips = type.getMethods().collect { it.name }.closest(name)
             if( tips )
@@ -616,7 +617,7 @@ class LoggerHelper {
             try {
                 final message = fmtEvent(event, session).trim()
                 final renderer = session?.ansiLogObserver
-                if( !renderer )
+                if( !renderer || !renderer.started || renderer.stopped )
                     System.out.println(message)
 
                 else if( event.marker == STICKY )

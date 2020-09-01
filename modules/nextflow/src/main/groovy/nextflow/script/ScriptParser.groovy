@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,10 +23,11 @@ import com.google.common.hash.Hashing
 import groovy.transform.CompileStatic
 import nextflow.Channel
 import nextflow.Nextflow
+import nextflow.NextflowMeta
 import nextflow.Session
-import nextflow.ast.OpXform
 import nextflow.ast.NextflowDSL
 import nextflow.ast.NextflowXform
+import nextflow.ast.OpXform
 import nextflow.exception.ScriptCompilationException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
@@ -64,7 +66,7 @@ class ScriptParser {
 
     ScriptParser(Session session) {
         this.session = session
-        this.classLoader = session.getClassLoader()
+        this.classLoader = session.classLoader
     }
 
     ScriptParser(ClassLoader loader) {
@@ -113,6 +115,7 @@ class ScriptParser {
         importCustomizer.addImports( Channel.name )
         importCustomizer.addImports( Duration.name )
         importCustomizer.addImports( MemoryUnit.name )
+        importCustomizer.addImport( 'channel', Channel.name )
         importCustomizer.addStaticStars( Nextflow.name )
 
         config = new CompilerConfiguration()
@@ -127,7 +130,6 @@ class ScriptParser {
 
         return config
     }
-
 
     /**
      * Creates a unique name for the main script class in order to avoid collision
@@ -164,6 +166,7 @@ class ScriptParser {
     ScriptParser parse(String scriptText, GroovyShell interpreter) {
         final String clazzName = computeClassName(scriptText)
         try {
+            NextflowMeta.instance.checkDsl2Mode(scriptText)
             script = (BaseScript)interpreter.parse(scriptText, clazzName)
             final meta = ScriptMeta.get(script)
             meta.setScriptPath(scriptPath)
@@ -206,7 +209,6 @@ class ScriptParser {
     private void setupContext() {
         assert session
         binding.setSession(session)
-        binding.setModule(module)
         binding.setScriptPath(scriptPath)
         binding.setEntryName(entryName)
     }

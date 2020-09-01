@@ -16,4 +16,4 @@
 
 moduleName=nextflow
 moduleVersion=1.0
-extensionClasses=nextflow.extension.ChannelEx,nextflow.splitter.SplitterEx
+extensionClasses=nextflow.extension.ChannelEx,nextflow.splitter.SplitterEx,nextflow.file.SlurperEx

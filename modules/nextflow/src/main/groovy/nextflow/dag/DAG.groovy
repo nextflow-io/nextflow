@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -292,7 +293,7 @@ class DAG {
 
     @PackageScope
     void resolveEdgeNames() {
-        for( Edge edge : edges ) {
+        for( Edge edge : new ArrayList<>(edges) ) {
             final name = lookupVariable(edge.channel)
             if( name )
                 edge.label = name

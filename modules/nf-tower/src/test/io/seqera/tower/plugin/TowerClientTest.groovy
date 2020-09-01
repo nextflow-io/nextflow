@@ -11,6 +11,8 @@
 
 package io.seqera.tower.plugin
 
+import spock.lang.Specification
+
 import java.nio.file.Files
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -22,12 +24,11 @@ import nextflow.cloud.types.PriceModel
 import nextflow.container.ContainerConfig
 import nextflow.exception.AbortOperationException
 import nextflow.script.ScriptBinding
-import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceRecord
+import nextflow.trace.WorkflowStats
+import nextflow.trace.WorkflowStatsObserver
 import nextflow.util.SimpleHttpClient
-import org.junit.Ignore
-import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -64,12 +65,13 @@ class TowerClientTest extends Specification {
         tower.terminated = true
 
         when:
-        def map = tower.makeWorkflowReq(session)
+        def map = tower.makeCompleteReq(session)
         then:
         1 * session.getWorkflowMetadata() >> meta
         1 * session.getParams() >> params
         1 * meta.toMap() >> [foo:1, bar:2, container: [p1: 'c1', p2: 'c2']]
         1 * tower.getMetricsList() >> [[process:'foo', cpu: [min: 1, max:5], time: [min: 6, max: 9]]]
+        1 * tower.getWorkflowProgress(false) >> new WorkflowProgress()
         then:
         map.workflow.foo == 1
         map.workflow.bar == 2
@@ -77,7 +79,7 @@ class TowerClientTest extends Specification {
         map.workflow.params == [x: 'hello']
         map.workflow.container == 'p1:c1,p2:c2'
         map.metrics == [[process:'foo', cpu: [min: 1, max:5], time: [min: 6, max: 9]]]
-
+        map.progress == new WorkflowProgress()
     }
 
     def 'should capitalise underscores' () {
@@ -162,10 +164,12 @@ class TowerClientTest extends Specification {
     def 'should post task records' () {
         given:
         def URL = 'http://foo.com'
+        def PROGRESS = Mock(WorkflowProgress) { getRunning()>>1; getSucceeded()>>2; getFailed()>>3 }
         def client = Mock(SimpleHttpClient)
         def observer = Spy(TowerClient)
         observer.httpClient = client
-
+        observer.workflowId = 'xyz-123'
+        
         def nowTs = System.currentTimeMillis()
         def submitTs = nowTs-2000
         def startTs = nowTs-1000
@@ -184,6 +188,8 @@ class TowerClientTest extends Specification {
         when:
         def req = observer.makeTasksReq([trace])
         then:
+        observer.getWorkflowProgress(true) >> PROGRESS
+        and:
         req.tasks[0].taskId == 10
         req.tasks[0].process == 'foo'
         req.tasks[0].workdir == "/work/dir"
@@ -194,6 +200,10 @@ class TowerClientTest extends Specification {
         req.tasks[0].machineType == 'm4.large'
         req.tasks[0].cloudZone == 'eu-west-1b'
         req.tasks[0].priceModel == 'spot'
+        and:
+        req.progress.running == 1
+        req.progress.succeeded == 2
+        req.progress.failed == 3
 
         when:
         observer.sendHttpMessage(URL, req)
@@ -221,30 +231,55 @@ class TowerClientTest extends Specification {
     }
 
 
-    @Ignore
     def 'should create workflow json' () {
 
         given:
+        def sessionId = UUID.randomUUID()
         def dir = Files.createTempDirectory('test')
-        def client = Mock(SimpleHttpClient)
-        TowerClient tower = Spy(TowerClient, constructorArgs: [[httpClient: client] ])
-
+        def http = Mock(SimpleHttpClient)
+        Map args = [httpClient: http, env: ENV]
+        TowerClient client = Spy(TowerClient, constructorArgs: [ args ])
+        and:
         def session = Mock(Session)
+        session.getUniqueId() >> sessionId
+        session.getRunName() >> 'foo'
         session.config >> [:]
         session.containerConfig >> new ContainerConfig()
         session.getParams() >> new ScriptBinding.ParamsMap([foo:'Hello', bar:'World'])
 
-        def meta = new WorkflowMetadata(session, Mock(ScriptFile))
+        def meta = new WorkflowMetadata(
+                session: session,
+                projectName: 'the-project-name',
+                repository: 'git://repo.com/foo' )
         session.getWorkflowMetadata() >> meta
-        when:
-        def req = tower.makeWorkflowReq(session)
-        println req.workflow
-        then:
-        req.workflow.params == [foo:'Hello', bar:'World']
+        session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
 
+        when:
+        def req1 = client.makeCreateReq(session)
+        then:
+        req1.sessionId == sessionId.toString()
+        req1.runName == 'foo'
+        req1.projectName == 'the-project-name'
+        req1.repository == 'git://repo.com/foo'
+        req1.workflowId == WORKFLOW_ID
+
+        when:
+        def req = client.makeBeginReq(session)
+        then:
+        client.getWorkflowId() >> '12345'
+        and:
+        req.workflow.id == '12345'
+        req.workflow.params == [foo:'Hello', bar:'World']
+        and:
+        req.towerLaunch == TOWER_LAUNCH
 
         cleanup:
         dir?.deleteDir()
+
+        where:
+        ENV                         | WORKFLOW_ID   | TOWER_LAUNCH
+        [:]                         | null          | false
+        [TOWER_WORKFLOW_ID: '1234'] | '1234'        | true
 
     }
 
@@ -275,7 +310,7 @@ class TowerClientTest extends Specification {
     def 'should create init request' () {
         given:
         def uuid = UUID.randomUUID()
-        def tower = new TowerClient()
+        def client = new TowerClient(env: [TOWER_WORKFLOW_ID: 'x123'])
         def meta = Mock(WorkflowMetadata) {
             getProjectName() >> 'the-project-name'
             getRepository() >> 'git://repo.com/foo'
@@ -287,15 +322,18 @@ class TowerClientTest extends Specification {
         }
 
         when:
-        def req = tower.makeInitRequest(session)
+        def req = client.makeCreateReq(session)
         then:
         req.sessionId == uuid.toString()
         req.runName == 'foo_bar'
         req.projectName == 'the-project-name'
         req.repository == 'git://repo.com/foo'
+        req.workflowId == 'x123'
+        and:
+        client.towerLaunch
     }
 
-    def 'should post init request' () {
+    def 'should post create request' () {
         given:
         def uuid = UUID.randomUUID()
         def meta = Mock(WorkflowMetadata) {
@@ -308,19 +346,33 @@ class TowerClientTest extends Specification {
             getWorkflowMetadata() >> meta
         }
 
-        TowerClient tower = Spy(TowerClient, constructorArgs: ['https://tower.nf'])
+        TowerClient client = Spy(TowerClient, constructorArgs: ['https://tower.nf'])
 
         when:
-        tower.onFlowCreate(session)
+        client.onFlowCreate(session)
         then:
-        1 * tower.getAccessToken() >> 'secret'
-        1 * tower.makeInitRequest(session) >> [runName: 'foo']
-        1 * tower.sendHttpMessage('https://tower.nf/trace/init', [runName: 'foo']) >> new TowerClient.Response(200, '{"workflowId":"xyz123"}')
+        1 * client.getAccessToken() >> 'secret'
+        1 * client.makeCreateReq(session) >> [runName: 'foo']
+        1 * client.sendHttpMessage('https://tower.nf/trace/create', [runName: 'foo'], 'POST') >> new TowerClient.Response(200, '{"workflowId":"xyz123"}')
         and:
-        tower.runName == 'foo_bar'
-        tower.runId == uuid.toString()
+        client.runName == 'foo_bar'
+        client.runId == uuid.toString()
         and:
-        tower.workflowId == 'xyz123'
+        client.workflowId == 'xyz123'
+        !client.towerLaunch
 
+    }
+
+    def 'should get trace endpoint' () {
+        given:
+        def tower = new TowerClient('https://tower.nf')
+        tower.workflowId = '12345'
+
+        expect:
+        tower.getUrlTraceCreate() == 'https://tower.nf/trace/create'
+        tower.getUrlTraceBegin() == 'https://tower.nf/trace/12345/begin'
+        tower.getUrlTraceProgress() == 'https://tower.nf/trace/12345/progress'
+        tower.getUrlTraceHeartbeat() == 'https://tower.nf/trace/12345/heartbeat'
+        tower.getUrlTraceComplete() == 'https://tower.nf/trace/12345/complete'
     }
 }

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -157,7 +158,7 @@ class CondorExecutor extends AbstractGridExecutor {
             // give execute permission to wrapper file
             wrapper.setExecutable(true)
             // save the condor manifest
-            workDir.resolve(CMD_CONDOR).text = manifest
+            this.workDir.resolve(CMD_CONDOR).text = manifest
             return wrapper
         }
 

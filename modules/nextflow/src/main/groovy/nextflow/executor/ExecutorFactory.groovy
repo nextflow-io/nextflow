@@ -21,11 +21,10 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.cloud.aws.batch.AwsBatchExecutor
 import nextflow.k8s.K8sExecutor
+import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptType
-import nextflow.script.BodyDef
 import nextflow.util.ServiceDiscover
 import nextflow.util.ServiceName
 /**
@@ -58,13 +57,14 @@ class ExecutorFactory {
             'k8s': K8sExecutor,
             'nqsii': NqsiiExecutor,
             'moab': MoabExecutor,
-            'awsbatch': AwsBatchExecutor,
             'oar': OarExecutor
     ]
 
     @PackageScope Map<String, Class<? extends Executor>> executorsMap
 
     private Map<Class<? extends Executor>,? extends Executor> executors = new HashMap<>()
+
+    @PackageScope Map<Class<? extends Executor>,? extends Executor> getExecutors() { executors }
 
     ExecutorFactory() {
         executorsMap = new HashMap(20)
@@ -73,8 +73,25 @@ class ExecutorFactory {
         // discover non-core executors
         for( Class<Executor> clazz : ServiceDiscover.load(Executor) ) {
             log.trace "Discovered executor class: ${clazz.toString()}"
-            executorsMap.put(findNameByClass(clazz), clazz)
+            final name = findNameByClass(clazz)
+            final current = executorsMap.get(name)
+            if( current ) {
+                if( current.getAnnotation(ServiceName)?.important() ) {
+                    log.debug "Executor ${current.getSimpleName()} has priority - skipping ${clazz}"
+                    continue
+                }
+                log.debug "Replacing executor ${current.getSimpleName()} with ${clazz}"
+            }
+            executorsMap.put(name, clazz)
         }
+    }
+
+    String getDisplayName(String key) {
+        final clazz = executorsMap.get(key)
+        if( !clazz ) return key
+        final exec = this.executors.get(clazz)
+        if( !exec ) return key
+        exec.getDisplayName() ?: key
     }
 
     /**

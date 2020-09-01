@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,10 +17,14 @@
 
 package nextflow.file
 
+import java.nio.file.Path
 import java.nio.file.Paths
 
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import spock.lang.Specification
+
+import nextflow.Global
+import nextflow.Session
 
 /**
  *
@@ -28,6 +33,11 @@ import spock.lang.Specification
 class FileHelperGsTest extends Specification {
 
     def 'should parse google storage path' () {
+
+        given:
+        Global.session = Mock(Session) {
+            getConfig() >> [google:[project:'foo', region:'x']]
+        }
 
         expect:
         FileHelper.asPath('file.txt') ==
@@ -43,7 +53,7 @@ class FileHelperGsTest extends Specification {
         and:
         FileHelper.asPath('gs://foo/b a r.txt') ==
                 CloudStorageFileSystem.forBucket('foo').getPath('/b a r.txt')
-        
+
         and:
         FileHelper.asPath('gs://f o o/bar.txt') ==
                 CloudStorageFileSystem.forBucket('f o o').getPath('/bar.txt')
@@ -51,5 +61,24 @@ class FileHelperGsTest extends Specification {
         and:
         FileHelper.asPath('gs://f_o_o/bar.txt') ==
                 CloudStorageFileSystem.forBucket('f_o_o').getPath('/bar.txt')
+    }
+
+
+    def 'should strip ending slash' () {
+        given:
+        Global.session = Mock(Session) { getConfig() >> [google:[project:'foo', region:'x']] }
+        def nxFolder = Paths.get('/my-bucket/foo')
+        def nxNested = Paths.get('/my-bucket/foo/bar/')
+        and:
+        def gsFolder = 'gs://my-bucket/foo' as Path
+        def gsNested = 'gs://my-bucket/foo/bar/' as Path
+
+        expect:
+        nxFolder.relativize(nxNested).toString() == 'bar'
+        gsFolder.relativize(gsNested).toString() == 'bar/'      // <-- gs adds a slash that mess-up things
+        and:
+        FileHelper.relativize0(nxFolder,nxNested).toString() == 'bar'
+        FileHelper.relativize0(gsFolder,gsNested).toString() == 'bar'
+
     }
 }

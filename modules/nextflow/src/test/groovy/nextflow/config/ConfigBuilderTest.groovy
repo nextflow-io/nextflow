@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +16,7 @@
  */
 
 package nextflow.config
+
 import java.nio.file.Files
 import java.nio.file.Paths
 
@@ -25,6 +27,7 @@ import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.trace.WebLogObserver
+import nextflow.util.ConfigHelper
 import spock.lang.Specification
 /**
  *
@@ -135,6 +138,8 @@ class ConfigBuilderTest extends Specification {
         params.p = "$baseDir/1"
         params {
             q = "$baseDir/2"
+            x = "$projectDir/3"
+            y = "$launchDir/4"
         }
         '''
 
@@ -143,6 +148,8 @@ class ConfigBuilderTest extends Specification {
         then:
         cfg.params.p == '/base/path/1'
         cfg.params.q == '/base/path/2'
+        cfg.params.x == '/base/path/3'
+        cfg.params.y == "${Paths.get('.').toRealPath()}/4"
 
     }
 
@@ -1251,6 +1258,35 @@ class ConfigBuilderTest extends Specification {
         def e = thrown(ConfigParseException)
         e.message == "Unknown config attribute `bar` -- check config file: ${file.toRealPath()}".toString()
 
+    }
+
+    def 'should render missing variables' () {
+        given:
+        def file = Files.createTempFile('test',null)
+
+        file.text =
+                '''
+                foo = 'xyz'
+                bar = "$SCRATCH/singularity_images_nextflow"
+                '''
+
+        when:
+        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
+        def builder = new ConfigBuilder()
+                .setOptions(opt)
+                .showMissingVariables(true)
+        def cfg = builder.buildConfigObject()
+        def str = ConfigHelper.toCanonicalString(cfg)
+        then:
+        str == '''\
+            foo = 'xyz'
+            bar = '$SCRATCH/singularity_images_nextflow'
+            '''.stripIndent()
+
+        and:
+        builder.warnings[0].startsWith('Unknown config attribute `SCRATCH`')
+        cleanup:
+        file?.delete()
     }
 
     def 'should report fully qualified missing attribute'  () {

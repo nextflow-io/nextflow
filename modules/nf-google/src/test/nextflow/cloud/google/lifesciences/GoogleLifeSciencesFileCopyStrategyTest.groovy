@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -86,7 +87,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         then:
         result == '''\
                 echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
-                gsutil -m -q cp -R gs://my-bucket/foo/dir1/ /work/xx/yy
+                gsutil -m -q cp -R gs://my-bucket/foo/dir1 /work/xx/yy
                 '''.stripIndent()
 
         // stage file is a directory with a different name
@@ -96,9 +97,44 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         then:
         result == '''\
                 echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
-                gsutil -m -q cp -R gs://my-bucket/foo/dir1/ /work/xx/yy
+                gsutil -m -q cp -R gs://my-bucket/foo/dir1 /work/xx/yy
                 mv /work/xx/yy/dir1 /work/xx/yy/dir2
                 '''.stripIndent()
+    }
+
+    def 'create stage files using Requester Pays' () {
+        given:
+        def bean = Mock(TaskBean) {
+            getWorkDir() >> mockGsPath('gs://my-bucket/work/xx/yy')
+        }
+        def handler = Mock(GoogleLifeSciencesTaskHandler) {
+            getExecutor() >> Mock(GoogleLifeSciencesExecutor) {
+                getConfig() >> GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', enableRequesterPaysBuckets:true]])
+            }
+        }
+        and:
+        def strategy = new GoogleLifeSciencesFileCopyStrategy(bean, handler)
+
+        // file with the same name
+        when:
+        def inputs = ['foo.txt': mockGsPath('gs://my-bucket/bar/foo.txt')]
+        def result = strategy.getStageInputFilesScript(inputs)
+        then:
+        result == '''\
+                echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
+                gsutil -m -q -u foo cp gs://my-bucket/bar/foo.txt /work/xx/yy/foo.txt
+                '''.stripIndent()
+
+        // file a directory name
+        when:
+        inputs = ['dir1': mockGsPath('gs://my-bucket/foo/dir1', true)]
+        result = strategy.getStageInputFilesScript(inputs)
+        then:
+        result == '''\
+                echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
+                gsutil -m -q -u foo cp -R gs://my-bucket/foo/dir1 /work/xx/yy
+                '''.stripIndent()
+
     }
 
     def 'should unstage files' () {
@@ -118,15 +154,15 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         def result = strategy.getUnstageOutputFilesScript(['foo.txt'], mockGsPath('gs://other/dir'))
         then:
         result == '''\
-                IFS=$'\\n'; for name in $(eval "ls -1d foo.txt" 2>/dev/null);do gsutil -m -q cp -R $name gs://other/dir; done; unset IFS
+                IFS=$'\\n'; for name in $(eval "ls -1d foo.txt" 2>/dev/null);do gsutil -m -q cp -R $name gs://other/dir/\$name; done; unset IFS
                 '''
                 .stripIndent()
 
         when:
-        result = strategy.getUnstageOutputFilesScript(['fo o.txt'], mockGsPath('gs://other/dir x'))
+        result = strategy.getUnstageOutputFilesScript(['fo o.txt'], mockGsPath('gs://other/dir x/'))
         then:
         result == '''\
-                IFS=$'\\n'; for name in $(eval "ls -1d fo\\ o.txt" 2>/dev/null);do gsutil -m -q cp -R $name gs://other/dir\\ x; done; unset IFS
+                IFS=$'\\n'; for name in $(eval "ls -1d fo\\ o.txt" 2>/dev/null);do gsutil -m -q cp -R $name gs://other/dir\\ x/\$name; done; unset IFS
                 '''
                 .stripIndent()
 
@@ -190,5 +226,31 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
             mkdir -p /work/xx/yy/nextflow-bin
             gsutil -m -q cp -P -r gs://my-bucket/bin/d\\ i\\ r/* /work/xx/yy/nextflow-bin
             '''.stripIndent()
+    }
+
+
+    def 'should validate copy many' () {
+        given:
+        def handler = Mock(GoogleLifeSciencesTaskHandler) {
+            getExecutor() >> Mock(GoogleLifeSciencesExecutor) { getConfig() >> Mock(GoogleLifeSciencesConfig) }
+        }
+        def strategy = new GoogleLifeSciencesFileCopyStrategy(Mock(TaskBean), handler)
+
+        when:
+        def ret1 = strategy.copyMany('file.txt', mockGsPath('gs://foo/bar'))
+        then:
+        ret1 == 'IFS=$\'\\n\'; for name in $(eval "ls -1d file.txt" 2>/dev/null);do gsutil -m -q cp -R $name gs://foo/bar/$name; done; unset IFS'
+
+        when:
+        def ret2 = strategy.copyMany('file name', mockGsPath('gs://foo/bar'))
+        then:
+        ret2 == 'IFS=$\'\\n\'; for name in $(eval "ls -1d file\\ name" 2>/dev/null);do gsutil -m -q cp -R $name gs://foo/bar/$name; done; unset IFS'
+
+        when:
+        def ret3 = strategy.copyMany('dir-name/', mockGsPath('gs://foo/bar'))
+        then:
+        ret3 == 'IFS=$\'\\n\'; for name in $(eval "ls -1d dir-name" 2>/dev/null);do gsutil -m -q cp -R $name gs://foo/bar/$name; done; unset IFS'
+
+
     }
 }

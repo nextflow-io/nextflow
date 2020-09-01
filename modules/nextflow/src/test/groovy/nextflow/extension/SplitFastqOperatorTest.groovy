@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +21,7 @@ import static test.TestHelper.gunzip
 import java.nio.file.Files
 
 import nextflow.Channel
+import nextflow.Session
 import spock.lang.Specification
 import spock.lang.Timeout
 import test.TestHelper
@@ -29,6 +31,10 @@ import test.TestHelper
  */
 @Timeout(10)
 class SplitFastqOperatorTest extends Specification {
+
+    def setupSpec() {
+        new Session()
+    }
 
     String READS = '''
         @SRR636272.19519409/1
@@ -167,7 +173,7 @@ class SplitFastqOperatorTest extends Specification {
                         GCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAGATCGGAAGAGCACACGTCTGAACTCC
                         +
                         BBCFDFDEFFHHFIJIHGHGHGIIFIJJJJIGGBFHHIEGBEFEFFCDDDD:@@<BB8BBDDDDDDBBB?AA?CDABDD5?CDDDBB<A<>ACBB8ACDCD@CD>
-                       '''.stripIndent().leftTrim()
+                        '''.stripIndent().leftTrim()
         result[1][2] == '''
                         @SRR636272.13995011/2
                         GCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAGATCGGAAGAGCACACGTCTGAACTCC
@@ -238,7 +244,7 @@ class SplitFastqOperatorTest extends Specification {
                         GCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAGATCGGAAGAGCACACGTCTGAACTCC
                         +
                         BBCFDFDEFFHHFIJIHGHGHGIIFIJJJJIGGBFHHIEGBEFEFFCDDDD:@@<BB8BBDDDDDDBBB?AA?CDABDD5?CDDDBB<A<>ACBB8ACDCD@CD>
-                       '''.stripIndent().leftTrim()
+                        '''.stripIndent().leftTrim()
         result[2] == '''
                         @SRR636272.13995011/2
                         GCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAGATCGGAAGAGCACACGTCTGAACTCC
@@ -331,7 +337,7 @@ class SplitFastqOperatorTest extends Specification {
                         GCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAGATCGGAAGAGCACACGTCTGAACTCC
                         +
                         BBCFDFDEFFHHFIJIHGHGHGIIFIJJJJIGGBFHHIEGBEFEFFCDDDD:@@<BB8BBDDDDDDBBB?AA?CDABDD5?CDDDBB<A<>ACBB8ACDCD@CD>
-                       '''.stripIndent().leftTrim()
+                        '''.stripIndent().leftTrim()
         result[2].text == '''
                         @SRR636272.13995011/2
                         GCAGGATGATGCTCTCCCGGGCCAAGCCGGCTGTGGGGAGCACCCCGCCGCAGGGGGACAGGCGGAGGAAGAAAGGGAGATCGGAAGAGCACACGTCTGAACTCC
@@ -429,4 +435,5 @@ class SplitFastqOperatorTest extends Specification {
         folder.list().find { it.startsWith('.chunks.bbb_1.fq') }
         folder.list().find { it.startsWith('.chunks.bbb_2.fq') }
     }
+
 }

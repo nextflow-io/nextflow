@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +20,8 @@ package nextflow.script
 import java.lang.reflect.Method
 
 import groovy.transform.CompileStatic
+import static ChannelOut.spreadToArray
+
 /**
  * Models a function component that can be included from a module script
  *
@@ -26,7 +29,7 @@ import groovy.transform.CompileStatic
  */
 
 @CompileStatic
-class FunctionDef extends ComponentDef {
+class FunctionDef extends ComponentDef implements ChainableDef {
 
     private BaseScript owner
 
@@ -51,7 +54,7 @@ class FunctionDef extends ComponentDef {
     BaseScript getOwner() { owner }
 
     Object invoke_a(Object[] args) {
-        method.invoke(owner, args)
+        method.invoke(owner, spreadToArray(args))
     }
 
     FunctionDef clone() {

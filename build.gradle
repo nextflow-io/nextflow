@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,17 +15,11 @@
  * limitations under the License.
  */
 
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath "io.codearte.gradle.nexus:gradle-nexus-staging-plugin:0.20.0"
-    }
+plugins {
+    id "io.codearte.nexus-staging" version "0.21.2"
+    id 'java'
+    id 'idea'
 }
-
-apply plugin: 'idea'
-apply plugin: 'io.codearte.nexus-staging'   // See https://github.com/Codearte/gradle-nexus-staging-plugin/
 
 // Add ability to test with upcoming versions of Groovy
 def groovyVer = System.getenv('CI_GROOVY_VERSION')
@@ -50,16 +45,13 @@ if (groovyVer) {
     }
 }
 
-
-ext {
-    mainClassName = 'nextflow.cli.Launcher'
-}
-
 allprojects {
     apply plugin: 'java'
+    apply plugin: 'java-test-fixtures'
     apply plugin: 'idea'
+    apply plugin: 'groovy'
 
-    version = /20.01.0-SNAPSHOT/
+    version = new File('VERSION').text.trim()
     group = 'io.nextflow'
 
     sourceCompatibility = 1.8
@@ -74,8 +66,6 @@ allprojects {
         mavenCentral()
         maven { url 'https://repo.eclipse.org/content/groups/releases' }
         maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
-        maven { url 'https://s3-eu-west-1.amazonaws.com/maven.seqera.io/releases' }
-        maven { url 'https://s3-eu-west-1.amazonaws.com/maven.seqera.io/snapshots' }
     }
 
     configurations {
@@ -88,12 +78,12 @@ allprojects {
 
     dependencies {
         // test configuration
-        testCompile ("org.codehaus.groovy:groovy-test:2.5.8") { exclude group: 'org.codehaus.groovy' }
-        testCompile ("cglib:cglib-nodep:2.2")
-        testCompile ("org.objenesis:objenesis:2.1")
-        testCompile ("org.spockframework:spock-core:1.3-groovy-2.5") { exclude group: 'org.codehaus.groovy' }
-        testCompile 'com.google.jimfs:jimfs:1.1'
-        testCompile 'org.subethamail:subethasmtp:3.1.7'
+        testFixturesCompile ("org.codehaus.groovy:groovy-test:3.0.5") { exclude group: 'org.codehaus.groovy' }
+        testFixturesRuntime ("cglib:cglib-nodep:3.3.0")
+        testFixturesRuntime ("org.objenesis:objenesis:3.1")
+        testFixturesCompile ("org.spockframework:spock-core:2.0-M3-groovy-3.0") { exclude group: 'org.codehaus.groovy'; exclude group: 'net.bytebuddy' }
+        testFixturesCompile ('org.spockframework:spock-junit4:2.0-M3-groovy-3.0') { exclude group: 'org.codehaus.groovy'; exclude group: 'net.bytebuddy' }
+        testFixturesCompile 'com.google.jimfs:jimfs:1.1'
         // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sec:module_replacement
         modules {
             module("commons-logging:commons-logging") { replacedBy("org.slf4j:jcl-over-slf4j") }
@@ -101,10 +91,14 @@ allprojects {
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:1.11'
-        groovyDoc "org.codehaus.groovy:groovy-groovydoc:2.5.8"
-        groovyDoc "org.codehaus.groovy:groovy-ant:2.5.8"
+        groovyDoc "org.codehaus.groovy:groovy-groovydoc:3.0.5"
+        groovyDoc "org.codehaus.groovy:groovy-ant:3.0.5"
     }
 
+    test {
+        useJUnitPlatform()
+    }
+    
     // this is required due to this IDEA bug
     // https://youtrack.jetbrains.com/issue/IDEA-129282
     sourceSets {
@@ -142,35 +136,9 @@ allprojects {
                     '--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED',
                     '--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED',
                     '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED',
-                    '--add-modules=java.xml.bind,java.activation',
             ])
         }
     }
-}
-
-configurations {
-    capsule
-    //provided
-    ignite.extendsFrom runtime
-    console.extendsFrom runtime
-    ga4gh.extendsFrom runtime
-    google.extendsFrom runtime
-}
-
-
-dependencies {
-    compile project(':nextflow')
-    // include Ivy at runtime in order to have Grape @Grab work correctly
-    runtime "org.apache.ivy:ivy:2.3.0"
-    runtime project(':nf-tower')
-    // library used to compile but not included in the final jar
-    compileOnly ('javax.xml.bind:jaxb-api:2.3.0')
-    // Capsule manages the fat jar building process
-    capsule project(':my-capsule')
-    ignite  project(':nf-ignite')
-    console project(':nf-console')
-    ga4gh   project(':nf-ga4gh')
-    google  project(':nf-google')
 }
 
 // disable jar for root project
@@ -181,9 +149,9 @@ jar.enabled = false
  */
 task buildInfo { doLast {
 
-    def file = new File('./modules/nextflow/src/main/groovy/nextflow/Const.groovy')
+    def file0 = file('./modules/nextflow/src/main/groovy/nextflow/Const.groovy')
     def buildNum = 0
-    def src = file.text
+    def src = file0.text
     src.find(/APP_BUILDNUM *= *([0-9]*)/) { buildNum = it[1]?.toInteger()+1 }
     src = src.replaceAll('APP_VER *= *"[0-9a-zA-Z_\\-\\.]+"', "APP_VER = \"${version}\"" as String)
     src = src.replaceAll('APP_TIMESTAMP *= *[0-9]*', "APP_TIMESTAMP = ${System.currentTimeMillis()}" as String)
@@ -193,48 +161,29 @@ task buildInfo { doLast {
     else {
         println "WARN: Unable to find current build number"
     }
-    file.text = src
+    file0.text = src
 
     // -- update 'nextflow' wrapper
-    file = new File('nextflow')
-    src = file.text
+    file0 = file('nextflow')
+    src = file0.text
     src = src.replaceAll(/NXF_VER\=\$\{NXF_VER:-'.*'\}/, 'NXF_VER=\\${NXF_VER:-\'' + version + '\'}')
-    file.text = src
+    file0.text = src
 
     // -- update sphynx
     def major = version.split(/\./)[0..1].join('.')
-    file = new File('docs/conf.py')
-    src = file.text
+    file0 = file('docs/conf.py')
+    src = file0.text
     src = src.replaceAll(/version *= *'[0-9a-zA-Z_\-\.]+'/, "version = '$major'" as String)
     src = src.replaceAll(/release *= *'[0-9a-zA-Z_\-\.]+'/, "release = '$version'" as String)
-    file.text = src
+    file0.text = src
 
     // -- update dockerfile
-    file = new File('docker/Dockerfile')
-    src = file.text
+    file0 = file('docker/Dockerfile')
+    src = file0.text
     src = src.replaceAll(/releases\/v[0-9a-zA-Z_\-\.]+\//, "releases/v$version/" as String)
-    file.text = src
+    file0.text = src
 }}
 
-String bytesToHex(byte[] bytes) {
-    StringBuffer result = new StringBuffer();
-    for (byte byt : bytes) result.append(Integer.toString((byt & 0xff) + 0x100, 16).substring(1));
-    return result.toString();
-}
-
-task makeDigest { doLast {
-    byte[] digest
-    String  str = file('nextflow').text
-    // create sha1
-    digest = java.security.MessageDigest.getInstance("SHA1").digest(str.getBytes())
-    file('nextflow.sha1').text = new BigInteger(1, digest).toString(16) + '\n'
-    // create sha-256
-    digest = java.security.MessageDigest.getInstance("SHA-256").digest(str.getBytes())
-    file('nextflow.sha256').text = bytesToHex(digest) + '\n'
-    // create md5
-    digest = java.security.MessageDigest.getInstance("MD5").digest(str.getBytes())
-    file('nextflow.md5').text = bytesToHex(digest) + '\n'
-}}
 
 /*
  * Compile sources and copies all libs to target directory
@@ -244,373 +193,55 @@ task compile {
     dependsOn allprojects.jar
 }
 
+def getRuntimeConfigs() {
+    def names = subprojects
+            .findAll { prj -> prj.name!='capsule-loader' }
+            .collect { it.name }
+
+    FileCollection result = null
+    for( def it : names ) {
+        def cfg = project(it).configurations.getByName('runtime')
+        if( result==null )
+            result = cfg
+        else
+            result += cfg
+        // this include the module actual jar file
+        result = result + cfg.getOutgoing().getArtifacts().getFiles()
+    }
+    return result
+}
+
 /*
- * Creates a self-contained *fat* jar shipping all required dependencies
- *
- * @link https://github.com/puniverse/capsule
+ * Save the runtime classpath
  */
+task exportClasspath {
+    dependsOn allprojects.jar
+    doLast {
+        def home = System.getProperty('user.home')
+        def all = getRuntimeConfigs()
+        def libs = all.collect { File file ->  /*println file.canonicalPath.replace(home, '$HOME');*/ file.canonicalPath;  }
+        file('.launch.classpath').text = libs.join(':')
+    }
+}
+
 
 ext.nexusUsername = project.findProperty('nexusUsername')
 ext.nexusPassword = project.findProperty('nexusPassword')
 ext.nexusFullName = project.findProperty('nexusFullName')
 ext.nexusEmail = project.findProperty('nexusEmail')
 
-ext.homeDir = System.properties['user.home']
-ext.nextflowDir = "$homeDir/.nextflow/framework/$version"
-ext.releaseDir = "$buildDir/releases"
-ext.s3CmdOpts="--acl public-read --storage-class STANDARD --region eu-west-1"
 // `signing.keyId` property needs to be defined in the `gradle.properties` file
 ext.enableSignArchives = project.findProperty('signing.keyId')
 
 ext.deployable = []
 ext.deployable << project(':nextflow')
 ext.deployable << project(':nf-commons')
-ext.deployable << project(':nf-ignite')
 ext.deployable << project(':nf-console')
 ext.deployable << project(':nf-httpfs')
 ext.deployable << project(':nf-ga4gh')
 ext.deployable << project(':nf-google')
+ext.deployable << project(':nf-amazon')
 ext.deployable << project(':nf-tower')
-
-protected error(String message) {
-    logger.error message
-    throw new StopExecutionException(message)
-}
-
-protected checkVersionExits(String version) {
-    if(version.endsWith('-SNAPSHOT'))
-        return
-
-    def cmd = "AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS} AWS_SECRET_ACCESS_KEY=${System.env.NXF_AWS_SECRET} aws s3 ls s3://www2.nextflow.io/releases/v$version/nextflow"
-    def status=['bash','-c', cmd].execute().waitFor()
-    if( status == 0 )
-        error("STOP!! Version $version already deployed!")
-}
-
-protected resolveDeps( String configName, String... x ) {
-
-    final deps = [] as Set
-    final config = configurations.getByName(configName)
-    //final root = config.getIncoming().getResolutionResult().root.moduleVersion.toString()
-    config.getResolvedConfiguration().getResolvedArtifacts().each{ deps << coordinates(it) }
-
-    if( x )
-        deps.addAll(x as List)
-
-    logger.info ">> Dependencies for configuration: $configName"
-    deps.sort().each { logger.info " - $it" }
-
-    // make sure there aren't any version conflict
-    def conflicts = deps.countBy {  it.tokenize(":")[0..1].join(':') }.findAll { k,v -> v>1 }
-    if( conflicts ) {
-        def err = "There are multiple versions for the following lib(s):"
-        conflicts.each { name, count -> err += "\n- $name: " + deps.findAll{ it.startsWith(name) }.collect{ it.tokenize(':')[2] } }
-        throw new IllegalStateException(err)
-    }
-    
-    //println "** $configName\n${deps.sort().collect{"- $it"}.join('\n')}\n"
-
-    //println ">> Config: $configName \n${deps.sort().join('\n')}\n\n"
-
-    return deps.collect{ "$it(*:*)" }.join(' ')
-}
-
-protected coordinates( it ) {
-    if( it instanceof Dependency )
-        return "${it.group}:${it.name}:${it.version}".toString()
-
-    if( it instanceof ResolvedArtifact ) {
-        def result = it.moduleVersion.id.toString()
-        if( it.classifier ) result += ":${it.classifier}"
-        return result
-    }
-
-    throw new IllegalArgumentException("Not a valid dependency object [${it?.class?.name}]: $it")
-}
-
-/*
- * Default nextflow package. It contains the capsule loader
- */
-task packOne(type: Jar) {
-    dependsOn ':my-capsule:jar', configurations.runtime
-    archiveName = "nextflow-${version}-one.jar"
-
-    from (configurations.capsule.collect { zipTree(it) })
-
-    // main manifest attributes
-    def deps = resolveDeps('runtime')
-
-    manifest.attributes(
-                'Main-Class'        : 'CapsuleLoader',
-                'Application-Name'  : 'nextflow',
-                'Application-Class' : mainClassName,
-                'Application-Version': version,
-                'Min-Java-Version'  : '1.8.0',
-                'Caplets'           : 'MavenCapsule',
-                'Dependencies'      : deps
-    )
-
-    // enable snapshot dependencies lookup
-    if( version.endsWith('-SNAPSHOT') ) {
-        manifest.attributes 'Allow-Snapshots': true
-        manifest.attributes 'Repositories': 'local https://oss.sonatype.org/content/repositories/snapshots central https://s3-eu-west-1.amazonaws.com/maven.seqera.io/releases https://s3-eu-west-1.amazonaws.com/maven.seqera.io/snapshots'
-    }
-    else {
-        manifest.attributes 'Repositories': 'central https://s3-eu-west-1.amazonaws.com/maven.seqera.io/releases'
-    }
-
-    /*
-     * `console` dependencies
-     */
-    deps = resolveDeps('console')
-    manifest.attributes('Application-Class' : 'nextflow.ui.console.Nextflow', 'console' )
-    manifest.attributes('Dependencies': deps, 'console')
-
-    /*
-     * `ignite` dependencies
-     */
-    deps = resolveDeps('ignite')
-    manifest.attributes('Dependencies': deps, 'ignite')
-
-    /*
-     * `ga4gh` dependencies
-     */
-    deps = resolveDeps('ga4gh')
-    manifest.attributes('Dependencies': deps, 'ga4gh')
-
-    /*
-     * `google` dependencies
-     */
-    deps = resolveDeps('google')
-    manifest.attributes('Dependencies': deps, 'google')
-
-    doLast {
-        ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: releaseDir, overwrite: true)
-        ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: nextflowDir, overwrite: true)
-        println "\n+ Nextflow package `ONE` copied to: $releaseDir"
-    }
-}
-
-task packAll(type: Jar) {
-    dependsOn ':my-capsule:jar', configurations.runtime
-    archiveName = "nextflow-${version}-all.jar"
-
-    from jar // embed our application jar
-    from (configurations.ignite)
-    from (configurations.capsule.collect { zipTree(it) })
-
-    manifest.attributes( 'Main-Class'        : 'CapsuleLoader',
-                          'Application-Name'  : 'nextflow-all',
-                          'Application-Class' : mainClassName,
-                          'Application-Version': version,
-                          'Min-Java-Version'  : '1.8.0'
-                          )
-
-    manifest.attributes('Main-Class': 'CapsuleLoader', 'ignite')
-
-    doLast {
-        file(releaseDir).mkdir()
-        // cleanup
-        def source = file("$buildDir/libs/nextflow-${version}-all.jar")
-        def target = file("$releaseDir/nextflow-${version}-all"); target.delete()
-        // append the big jar
-        target.withOutputStream {
-            it << file('nextflow').text.replaceAll(/NXF_PACK\=.*/, 'NXF_PACK=all')
-            it << new FileInputStream(source)
-        }
-        // done
-        println "+ Nextflow package `ALL` copied to: $releaseDir\n"
-    }
-}
-
-
-/*
- * Compile and pack all packages
- */
-task pack( dependsOn: [packOne, packAll]) {
-
-}
-
-
-task deploy( type: Exec, dependsOn: [clean, compile, pack, deployable.uploadArchives, makeDigest]) {
-
-    def temp = File.createTempFile('upload',null)
-    temp.deleteOnExit()
-    def files = []
-
-    doFirst {
-        checkVersionExits(version)
-        
-        def path = new File(releaseDir)
-        if( !path.exists() ) error("Releases path does not exists: $path")
-        path.eachFile {
-            if( it.name.startsWith("nextflow-$version"))
-                files << it
-        }
-
-        if( !files ) error("Can't find any file to upload -- Check path: $path")
-        files << file('nextflow').absoluteFile
-        files << file('nextflow.sha1').absoluteFile
-        files << file('nextflow.sha256').absoluteFile
-        files << file('nextflow.md5').absoluteFile
-
-        println "Uploading artifacts: "
-        files.each { println "- $it"}
-
-        def script = []
-        script << "export AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS}"
-        script << "export AWS_SECRET_ACCESS_KEY=${System.env.NXF_AWS_SECRET}"
-        script.addAll( files.collect { "aws s3 cp ${it} s3://www2.nextflow.io/releases/v${version}/${it.name} ${s3CmdOpts}"})
-
-        temp.text = script.join('\n')
-    }
-
-    commandLine 'bash', '-e', temp.absolutePath
-}
-
-task installLauncher(type: Copy, dependsOn: ['pack']) {
-    from "$releaseDir/nextflow-$version-one.jar"
-    into "$homeDir/.nextflow/framework/$version/"
-}
-
-/*
- * build, tag and publish a and new docker packaged nextflow release
- */
-task dockerImage(type: Exec) {
-
-    def temp = File.createTempFile('upload',null)
-    temp.deleteOnExit()
-    temp.text =  """\
-    cd docker
-    make release version=$version
-    """.stripIndent()
-
-    commandLine 'bash', '-e', temp.absolutePath
-}
-
-/*
- * Build a docker container image with the current snapshot
- * DO NOT CALL IT DIRECTLY! Use the `make dockerPack` command instead
- */
-task dockerPack(type: Exec, dependsOn: ['pack']) {
-
-    def source = new File("$releaseDir/nextflow-$version-one.jar")
-    def target = new File("$buildDir/docker/.nextflow/framework/$version/")
-    def dockerBase = new File("$buildDir/docker")
-    if( dockerBase.exists() ) dockerBase.deleteDir()
-    dockerBase.mkdirs()
-    def dockerFile = new File("$buildDir/docker/Dockerfile")
-    dockerFile.text = """
-    FROM openjdk:8-jre-alpine
-    RUN apk update && apk add bash && apk add coreutils && apk add curl
-    COPY .nextflow /.nextflow
-    COPY nextflow /usr/local/bin/nextflow
-    COPY entry.sh /usr/local/bin/entry.sh
-    COPY dist/docker /usr/local/bin/docker
-    ENV NXF_HOME=/.nextflow
-    ENV NXF_OPTS='-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap'
-    RUN touch /.nextflow/dockerized && rm -rf /.nextflow/launch-classpath
-    RUN chmod +x /usr/local/bin/nextflow /usr/local/bin/entry.sh
-    RUN nextflow info
-    ENTRYPOINT ["/usr/local/bin/entry.sh"]
-    """
-
-    def temp = File.createTempFile('upload',null)
-    temp.deleteOnExit()
-    temp.text =  """\
-    mkdir -p $target
-    cp $source $target
-    cp nextflow $buildDir/docker
-    cp docker/entry.sh $buildDir/docker
-    cd $buildDir/docker  
-    mkdir -p dist
-    curl -fsSLO https://get.docker.com/builds/Linux/x86_64/docker-17.03.1-ce.tgz && tar --strip-components=1 -xvzf docker-17.03.1-ce.tgz -C dist
-    NXF_HOME=\$PWD/.nextflow nextflow info
-    docker build -t nextflow/nextflow:$version .
-    """.stripIndent()
-
-    commandLine 'bash', '-e', temp.absolutePath
-}
-
-/*
- * Tag and upload the release
- * 
- * https://github.com/aktau/github-release/
- */
-task release(type: Exec, dependsOn: [pack, dockerImage]) {
-
-    def launcherFile = file('nextflow').absoluteFile
-    def launcherSha1 = file('nextflow.sha1').absoluteFile
-    def launcherSha256 = file('nextflow.sha256').absoluteFile
-    def nextflowAllFile = file("$releaseDir/nextflow-${version}-all")
-
-    def snapshot = version ==~ /^.+(-RC\d+|-SNAPSHOT)$/
-    def edge = version ==~ /^.+(-edge|-EDGE)$/
-    def isLatest = !snapshot && !edge
-    def cmd =  """\
-    # tag the release
-    git push || exit \$?
-    (git tag -a v$version -m 'Tagging version $version [release]' -f && git push origin v$version -f) || exit \$?
-    sleep 1
-    github-release release -u nextflow-io -r nextflow -t v$version --pre-release
-    github-release upload -u nextflow-io -r nextflow -t v$version --file ${launcherFile} --name ${launcherFile.name}
-    sleep 5
-    github-release upload -u nextflow-io -r nextflow -t v$version --file ${nextflowAllFile} --name ${nextflowAllFile.name}
-    """.stripIndent()
-
-    if( edge )
-        cmd += """
-        # publish the script as the latest
-        export AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS}
-        export AWS_SECRET_ACCESS_KEY=${System.env.NXF_AWS_SECRET}
-        aws s3 cp $launcherFile s3://www2.nextflow.io/releases/edge/nextflow $s3CmdOpts
-        aws s3 cp $launcherSha1 s3://www2.nextflow.io/releases/edge/nextflow.sha1 $s3CmdOpts
-        aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/edge/nextflow.sha256 $s3CmdOpts
-        aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/edge/nextflow.md5 $s3CmdOpts
-        """.stripIndent()
-        
-    else if( isLatest )
-        cmd += """
-        # publish the script as the latest
-        export AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS}
-        export AWS_SECRET_ACCESS_KEY=${System.env.NXF_AWS_SECRET}
-        aws s3 cp $launcherFile s3://www2.nextflow.io/releases/latest/nextflow $s3CmdOpts
-        aws s3 cp $launcherSha1 s3://www2.nextflow.io/releases/latest/nextflow.sha1 $s3CmdOpts
-        aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/latest/nextflow.sha256 $s3CmdOpts
-        aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/latest/nextflow.md5 $s3CmdOpts
-        """.stripIndent()
-
-    def temp = File.createTempFile('upload',null)
-    temp.deleteOnExit()
-    temp.text = cmd
-    commandLine 'bash', '-e', temp.absolutePath
-}
-
-
-/*
- * Save the runtime classpath
- */
-task exportClasspath {
-    dependsOn configurations.ignite, configurations.console, configurations.ga4gh, configurations.google
-
-    def home = System.getProperty('user.home')
-    def all = configurations.ignite + configurations.console + configurations.ga4gh + configurations.google
-    def libs = all.collect { File file -> /* println file.canonicalPath.replace(home, '$HOME'); */ file.canonicalPath;  }
-    new File('.launch.classpath').text = libs.join(':')
-}
-
-/*
- * Configure Nextflow staging plugin -- https://github.com/Codearte/gradle-nexus-staging-plugin
- * It adds the tasks
- * - closeRepository
- * - releaseRepository
- * - closeAndReleaseRepository
- */
-nexusStaging {
-    packageGroup = 'io.nextflow'
-    delayBetweenRetriesInMillis = 10_000
-}
-
 
 /*
  * Maven central deployment
@@ -622,7 +253,7 @@ configure(deployable) {
 
     task javadocJar(type: Jar) {
         classifier = 'javadoc'
-        from groovydoc
+        from configurations.groovyDoc
     }
 
     task sourcesJar(type: Jar) {
@@ -687,3 +318,23 @@ configure(deployable) {
     signArchives.onlyIf { enableSignArchives }
 }
 
+task upload {
+    dependsOn compile
+    dependsOn deployable.uploadArchives
+}
+
+
+/*
+ * Configure Nextflow staging plugin -- https://github.com/Codearte/gradle-nexus-staging-plugin
+ * It adds the tasks
+ * - closeRepository
+ * - releaseRepository
+ * - closeAndReleaseRepository
+ */
+nexusStaging {
+    packageGroup = 'io.nextflow'
+    delayBetweenRetriesInMillis = 10_000
+}
+
+if( System.env.BUILD_PACK )
+    apply from: 'packing.gradle'

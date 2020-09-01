@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,10 +38,8 @@ class ScriptBindingTest extends Specification {
         def binding = new ScriptBinding()
                 .setSession(session)
                 .setScriptPath(path)
-                .setModule(true)
 
         then:
-        binding.module == true
         binding.scriptPath == path
         binding.session == session
     }
@@ -169,6 +168,34 @@ class ScriptBindingTest extends Specification {
         map['field-1'] == null
         map['field2']  == 2
         map['Field2']  == 3
+
+    }
+
+    def 'should copy with overriding values' () {
+        when:
+        def map = new ScriptBinding.ParamsMap()
+        map['alpha'] = 0
+        map['alpha'] = 1
+        map['delta'] = 2
+        map['gamma'] = 3
+        then:
+        map.alpha == 0
+        map.delta == 2
+        map.gamma == 3
+
+        when:
+        def copy = map.copyWith(foo:1, omega: 9)
+        then:
+        copy.foo == 1
+        copy.delta == 2
+        copy.gamma == 3
+        copy.omega == 9
+        and:
+        // source does not change
+        map.alpha == 0
+        map.delta == 2
+        map.gamma == 3
+        !map.containsKey('omega')
 
     }
 

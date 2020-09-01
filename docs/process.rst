@@ -606,8 +606,8 @@ and automatically converts to a file object.
 
 .. note::
     Provided input value should represent an absolute path location i.e. the string value
-    **must** be prefixed with a `/` character or with a support URI protocol i.e. ``file://``,
-    ``http://``, ``s3://``, etc. and it cannot contain special characters (e.g. ``\n``, etc.).
+    **must** be prefixed with a `/` character or with a supported URI protocol i.e. ``file://``,
+    ``http://``, ``s3://``, etc. and it cannot contains special characters (e.g. ``\n``, etc.).
 
 
 
@@ -686,12 +686,15 @@ on the value received from the channel. For example::
     hola world!
 
 
+.. _process-input-set:
 
 Input of type 'set'
 -------------------
 
 .. warning:: The `set` input type has been deprecated. See `tuple` instead.
 
+
+.. _process-input-tuple:
 
 Input of type 'tuple'
 ---------------------
@@ -931,7 +934,7 @@ this is a value which has been defined in the `input` declaration block, as show
 
    }
 
-   receiver.println { "Received: $it" }
+   receiver.view { "Received: $it" }
 
 
 Valid output values are value literals, input values identifiers, variables accessible in the process scope and
@@ -1336,12 +1339,12 @@ e.g. *GPU* processor. For example::
 The above examples will request 4 GPUs of type `nvidia-tesla-k80`.
 
 
-.. note:: This directive is only supported by :ref:`awsbatch-executor`, :ref:`google-pipelines-executor` and :ref:`k8s-executor` executors.
+.. note:: This directive is only supported by :ref:`awsbatch-executor`, :ref:`google-lifesciences-executor` and :ref:`k8s-executor` executors.
 
-.. tip:: The accelerator ``type`` option value depends by the target execution platform. Refers to the target
-  platform documentation for details on the `available <https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_>`_
-  `accelerator <https://cloud.google.com/compute/docs/gpus/>`_
-  `types <https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/#clusters-containing-different-types-of-gpus>`_.
+.. tip:: The accelerator ``type`` option value depends by the target execution platform. Refer to the target
+  platform documentation for details on the available accelerators. `AWS <https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_>`_
+  `Google <https://cloud.google.com/compute/docs/gpus/>`_
+  `Kubernetes <https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/#clusters-containing-different-types-of-gpus>`_.
 
 
 afterScript
@@ -2311,6 +2314,9 @@ See also: `cpus`_, `memory`_, `queue`_ and `Dynamic computing resources`_.
 validExitStatus
 ---------------
 
+.. warning::
+    This feature has been deprecated and will be removed in a future release.
+
 A process is terminated when the executed command returns an error exit status. By default any error status
 other than ``0`` is interpreted as an error condition.
 
@@ -2332,7 +2338,6 @@ You can specify a single value or multiple values as shown in the following exam
 In the above example, although the command script ends with a ``1`` exit status, the process
 will not return an error condition because the value ``1`` is declared as a `valid` status in
 the ``validExitStatus`` directive.
-
 
 
 Dynamic directives

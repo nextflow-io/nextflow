@@ -1,4 +1,5 @@
 #
+#  Copyright 2020, Seqera Labs
 #  Copyright 2013-2019, Centre for Genomic Regulation (CRG)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +20,7 @@
 # make deps config=runtime
 # 
 
-config ?= compile
+config ?= default
 
 ifdef module 
 mm = :${module}:
@@ -44,18 +45,30 @@ assemble:
 check:
 	./gradlew check
 
+#
+# install compiled artifacts in Mavel local dir 
+# 
 install:
-	./gradlew installLauncher install -Dmaven.repo.local=${HOME}/.nextflow/capsule/deps/ -x signArchives
+	BUILD_PACK=1 ./gradlew installLauncher install -Dmaven.repo.local=${HOME}/.nextflow/capsule/deps/ -x signArchives
 
+#
+# Show dependencies try `make deps config=runtime`, `make deps config=google`
+#
 deps:
-	./gradlew -q ${mm}dependencies --configuration ${config}
+	BUILD_PACK=1 ./gradlew -q ${mm}dependencies --configuration ${config}
 
 deps-all:
 	./gradlew -q dependencyInsight --configuration ${config} --dependency ${module}
 
+#
+# Refresh SNAPSHOTs dependencies
+#
 refresh:
 	./gradlew --refresh-dependencies 
 
+#
+# Run all tests or selected ones
+#
 test:
 ifndef class
 	./gradlew ${mm}test
@@ -63,20 +76,56 @@ else
 	./gradlew ${mm}test --tests ${class}
 endif
 
+#
+# Run smoke tests
+#
 smoke:
-	NXF_SMOKE=1 ./gradlew :nextflow:test
+	NXF_SMOKE=1 ./gradlew test
 
+#
+# Upload JAR artifacts to Maven Central
+#
+upload:
+	./gradlew upload
+
+#
+# Create self-contained distribution package
+#
 pack:
-	./gradlew packAll
+	BUILD_PACK=1 ./gradlew packAll
 
+#
+# Create self-contained distribution package, including GA4GH support and associated dependencies
+#
+packGA4GH:
+	BUILD_PACK=1 ./gradlew -PGA4GH packAll
+
+#
+# Upload NF launcher to nextflow.io web site
+#
 deploy:
-	./gradlew deploy
+	BUILD_PACK=1 ./gradlew deploy
 
+#
+# Close artifacts uploaded to Maven central
+#
 close:
 	./gradlew closeAndReleaseRepository
-	
+
+#
+# Upload final package to GitHub
+#
 release:
-	./gradlew release	
-	
+	BUILD_PACK=1 ./gradlew release
+
+#
+# Create and upload docker image distribution
+#
+dockerImage:
+	BUILD_PACK=1 ./gradlew dockerImage
+
+#
+# Create local docker image
+#
 dockerPack:
-	./gradlew install dockerPack -Dmaven.repo.local=${PWD}/build/docker/.nextflow/capsule/deps/ -x signArchives
+	BUILD_PACK=1 ./gradlew install dockerPack -Dmaven.repo.local=${PWD}/build/docker/.nextflow/capsule/deps/ -x signArchives

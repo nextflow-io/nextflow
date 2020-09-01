@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -158,6 +159,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
             getVirtualMachine().getServiceAccount().getScopes() == SCOPES
             getVirtualMachine().getPreemptible() == preEmptible
             !getVirtualMachine().getAccelerators()
+            !getVirtualMachine().getNetwork()?.getUsePrivateAddress()
         }
 
         when:
@@ -177,6 +179,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
             getVirtualMachine().getServiceAccount().getScopes() == SCOPES
             getVirtualMachine().getPreemptible() == preEmptible
             !getVirtualMachine().getAccelerators()
+            !getVirtualMachine().getNetwork()?.getUsePrivateAddress()
         }
 
         when:
@@ -186,7 +189,9 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
                     diskName:diskName,
                     preemptible: false,
                     accelerator: acc,
-                    bootDiskSizeGb: 75 ))
+                    bootDiskSizeGb: 75,
+                    cpuPlatform: 'Intel Skylake',
+                    usePrivateAddress: true ))
         then:
         with(resources3) {
             getVirtualMachine().getMachineType() == type
@@ -199,6 +204,8 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
             getVirtualMachine().getAccelerators()[0].getCount()==4
             getVirtualMachine().getAccelerators()[0].getType()=='nvidia-tesla-k80'
             getVirtualMachine().getBootDiskSizeGb() == 75
+            getVirtualMachine().getCpuPlatform() == 'Intel Skylake'
+            getVirtualMachine().getNetwork().getUsePrivateAddress()
         }
     }
 
@@ -249,7 +256,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
         runOp.getName() == "runOp"
     }
 
-    def 'should create main action' () {
+    def 'should create main action with entry' () {
         given:
         def mount = new Mount()
         def workDir = mockGsPath('gs://foo/work')
@@ -261,6 +268,45 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
             getContainerImage() >>'my/image'
             getSharedMount() >> mount
             getWorkDir() >> workDir
+            getEntryPoint() >> '/bin/sh'
+        }
+
+        when:
+        def action = helper.createMainAction(req)
+
+        then:
+        1 * helper.getMainScript(workDir) >> 'main.sh'
+        and:
+        1 * helper.createAction(
+                'foo-main',
+                'my/image',
+                ['-o','pipefail','-c', 'main.sh'],
+                [mount],
+                [],
+                '/bin/sh' )
+
+        and:
+        action.getContainerName() == 'foo-main'
+        action.getImageUri() == 'my/image'
+        action.getCommands() == ['-o', 'pipefail','-c', 'main.sh']
+        action.getMounts() == [mount]
+        action.getEntrypoint() == '/bin/sh'
+        action.getEnvironment() == [:]
+    }
+
+    def 'should create action with no entry' () {
+        given:
+        def mount = new Mount()
+        def workDir = mockGsPath('gs://foo/work')
+        def helper = Spy(GoogleLifeSciencesHelper)
+        helper.config = Mock(GoogleLifeSciencesConfig)
+        and:
+        def req = Mock(GoogleLifeSciencesSubmitRequest) {
+            getTaskName() >> 'foo'
+            getContainerImage() >>'my/image'
+            getSharedMount() >> mount
+            getWorkDir() >> workDir
+            getEntryPoint() >> null
         }
 
         when:
@@ -273,16 +319,19 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
                 'foo-main',
                 'my/image',
                 ['bash','-o','pipefail','-c', 'main.sh'],
-                [mount] )
+                [mount],
+                [],
+                null )
 
         and:
         action.getContainerName() == 'foo-main'
         action.getImageUri() == 'my/image'
         action.getCommands() == ['bash', '-o', 'pipefail','-c', 'main.sh']
         action.getMounts() == [mount]
-        action.getEntrypoint() == null
         action.getEnvironment() == [:]
+        action.getEntrypoint() == null
     }
+
 
     def 'should create staging action' () {
         given:

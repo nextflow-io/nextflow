@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +22,7 @@ import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.BinaryExpression
+import org.codehaus.groovy.ast.expr.CastExpression
 import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.ConstructorCallExpression
@@ -98,6 +100,10 @@ class ASTHelpers {
 
     static VariableExpression isVariableX(Expression expr) {
         return expr instanceof VariableExpression ? expr : null
+    }
+
+    static CastExpression isCastX(Expression expr) {
+        return expr instanceof CastExpression ? expr : null
     }
 
     static VariableExpression isThisX(Expression expr) {

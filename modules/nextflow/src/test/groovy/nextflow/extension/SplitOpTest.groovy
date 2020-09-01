@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -119,6 +120,8 @@ class SplitOpTest extends Specification {
         def params = [pe:true]
         SplitOp op = Spy(SplitOp, constructorArgs:[SOURCE, METHOD, params])
 
+        def target1 = Mock(FakeDataflowQueue)
+        def target2 = Mock(FakeDataflowQueue)
         def copy1 = Mock(FakeDataflowQueue)
         def copy2 = Mock(FakeDataflowQueue)
         def out1 = Mock(DataflowWriteChannel)
@@ -131,9 +134,11 @@ class SplitOpTest extends Specification {
         then:
         1 * op.splitMultiEntries()
         1 * op.createSourceCopies(SOURCE,2) >> [copy1, copy2]
+        1 * op.createInto0() >> target1
+        1 * op.createInto0() >> target2
 
-        1 * op.splitSingleEntry(copy1, [elem:-1, autoClose: false])
-        1 * op.splitSingleEntry(copy2, [elem:-2, autoClose: false])
+        1 * op.splitSingleEntry(copy1, [elem:-1, autoClose: false, into:target1])
+        1 * op.splitSingleEntry(copy2, [elem:-2, autoClose: false, into:target2])
 
         1 * op.getOrCreateWriteChannel( _ as Map ) >> out1
         1 * op.getOrCreateWriteChannel( _ as Map ) >> out2

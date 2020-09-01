@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -64,7 +65,7 @@ class WorkflowNotifierTest extends Specification {
                 container: 'image/foo:tag',
                 containerEngine: 'docker',
                 nextflow: new NextflowMeta('0.27.0', 333, '2017-12-12'),
-                stats: new WorkflowStats(succeedMillis: 4_000_000, succeedCount: 10, failedCount: 20, cachedCount: 30, ignoredCount: 0)
+                stats: new WorkflowStats(succeedMillis: 4_000_000, succeededCount: 10, failedCount: 20, cachedCount: 30, ignoredCount: 0)
         )
 
         def notifier = new WorkflowNotifier(variables: [workflow:meta], config: [:])

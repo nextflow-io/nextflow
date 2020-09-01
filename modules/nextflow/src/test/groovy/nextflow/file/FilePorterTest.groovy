@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,7 +35,6 @@ import test.TestHelper
 class FilePorterTest extends Specification {
 
 
-
     def 'should get the max retries value' () {
 
         when:
@@ -60,17 +60,13 @@ class FilePorterTest extends Specification {
 
         def foreign1 = TestHelper.createInMemTempFile('hola.txt', 'hola mundo!')
         def foreign2 = TestHelper.createInMemTempFile('ciao.txt', 'ciao mondo!')
-        def local = Paths.get('local.txt')
 
         when:
         def porter = new FilePorter(session)
         def batch = porter.newBatch(folder)
-        def file0 = batch.addToForeign(local)
         def file1 = batch.addToForeign(foreign1)
         def file2 = batch.addToForeign(foreign2)
         then:
-        file0 == local
-        and:
         file1 != foreign1
         file1.name == foreign1.name
         and:
@@ -140,7 +136,7 @@ class FilePorterTest extends Specification {
         given:
         def STAGE = Files.createTempDirectory('test')
         def FTP_FILE = 'ftp://host.com/file.txt' as Path
-        def LOC_FILE = '/local/data.txt' as Path
+        def MEM_FILE = TestHelper.createInMemTempFile('bar.txt')
         def session = Mock(Session)
         session.config >> [:]
         def porter = new FilePorter(session)
@@ -152,16 +148,17 @@ class FilePorterTest extends Specification {
         batch.size() == 0
 
         when:
-        batch.addToForeign(LOC_FILE)
+        def result1 = batch.addToForeign(MEM_FILE)
         then:
-        batch.size() == 0
-        !batch
+        result1.scheme == 'file'
+        batch.size() == 1
+        batch
 
         when:
-        def result = batch.addToForeign(FTP_FILE)
+        def result2 = batch.addToForeign(FTP_FILE)
         then:
-        result.scheme == 'file'
-        batch.size() == 1
+        result2.scheme == 'file'
+        batch.size() == 2
         batch
 
         cleanup:

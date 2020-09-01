@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -281,13 +282,14 @@ class TaskConfigTest extends Specification {
         then:
         config.cpus == expected
         config.getCpus() == expected
+        config.hasCpus() == defined
 
         where:
-        expected                || value
-        1                       || null
-        1                       || 1
-        8                       || 8
-        10                      || { ten ?: 0  }
+        expected     | defined  | value
+        1            | false    | null
+        1            | true     | 1
+        8            | true     | 8
+        10           | true     | { ten ?: 0  }
 
     }
 

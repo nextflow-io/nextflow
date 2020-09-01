@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,17 +53,17 @@ class Const {
     /**
      * The application version
      */
-    static public final String APP_VER = "19.12.0-edge"
+    static public final String APP_VER = "20.08.0-edge"
 
     /**
      * The app build time as linux/unix timestamp
      */
-    static public final long APP_TIMESTAMP = 1576839997768
+    static public final long APP_TIMESTAMP = 1598299591571
 
     /**
      * The app build number
      */
-    static public final int APP_BUILDNUM = 5244
+    static public final int APP_BUILDNUM = 5414
 
 
     /**

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,10 +17,6 @@
 
 package nextflow
 
-import nextflow.exception.ScriptCompilationException
-import static nextflow.Const.*
-
-import java.lang.reflect.Method
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -30,7 +27,6 @@ import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
 import com.google.common.hash.HashCode
-import com.upplication.s3fs.S3OutputStream
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -45,6 +41,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortSignalException
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.MissingLibraryException
+import nextflow.exception.ScriptCompilationException
 import nextflow.executor.ExecutorFactory
 import nextflow.extension.CH
 import nextflow.file.FileHelper
@@ -62,11 +59,10 @@ import nextflow.script.ScriptMeta
 import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.AnsiLogObserver
-import nextflow.trace.StatsObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
 import nextflow.trace.TraceRecord
-import nextflow.trace.WorkflowStats
+import nextflow.trace.WorkflowStatsObserver
 import nextflow.util.Barrier
 import nextflow.util.BlockingThreadExecutorFactory
 import nextflow.util.ConfigHelper
@@ -76,6 +72,8 @@ import nextflow.util.NameGenerator
 import nextflow.util.VersionNumber
 import sun.misc.Signal
 import sun.misc.SignalHandler
+import static nextflow.Const.APP_VER
+import static nextflow.util.SpuriousDeps.shutdownS3Uploader
 /**
  * Holds the information on the current execution
  *
@@ -207,7 +205,7 @@ class Session implements ISession {
 
     private WorkflowMetadata workflowMetadata
 
-    private WorkflowStats workflowStats
+    private WorkflowStatsObserver statsObserver
 
     private FilePorter filePorter
 
@@ -225,7 +223,7 @@ class Session implements ISession {
 
     Throwable getError() { error }
 
-    WorkflowStats getWorkflowStats() { workflowStats }
+    WorkflowStatsObserver getStatsObserver() { statsObserver }
 
     WorkflowMetadata getWorkflowMetadata() { workflowMetadata }
 
@@ -299,7 +297,7 @@ class Session implements ISession {
             uniqueId = UUID.fromString(config.resume as String)
         }
         else {
-           uniqueId = UUID.randomUUID()
+           uniqueId = systemEnv.get('NXF_UUID') ? UUID.fromString(systemEnv.get('NXF_UUID')) : UUID.randomUUID()
         }
         log.debug "Session uuid: $uniqueId"
 
@@ -386,12 +384,11 @@ class Session implements ISession {
     @PackageScope
     List<TraceObserver> createObservers() {
 
-        def result = new ArrayList(10)
+        final result = new ArrayList(10)
 
         // stats is created as first because others may depend on it
-        final observer = new StatsObserver()
-        this.workflowStats = observer.stats
-        result << observer
+        statsObserver = new WorkflowStatsObserver(this)
+        result.add(statsObserver)
 
         for( TraceObserverFactory f : ServiceLoader.load(TraceObserverFactory) ) {
             log.debug "Observer factory: ${f.class.simpleName}"
@@ -601,7 +598,7 @@ class Session implements ISession {
         try {
             log.trace "Session > destroying"
             if( !aborted ) {
-                allOperatorsJoin()
+                joinAllOperators()
                 log.trace "Session > after processors join"
             }
 
@@ -630,7 +627,7 @@ class Session implements ISession {
         }
     }
 
-    final private allOperatorsJoin() {
+    final protected void joinAllOperators() {
         int attempts=0
 
         while( allOperators.size() ) {
@@ -716,7 +713,8 @@ class Session implements ISession {
                 log.debug(status)
             // force termination
             notifyError(null)
-            executorFactory.signalExecutors()
+            ansiLogObserver?.forceTermination()
+            executorFactory?.signalExecutors()
             processesBarrier.forceTermination()
             monitorsBarrier.forceTermination()
             operatorsForceTermination()
@@ -776,6 +774,8 @@ class Session implements ISession {
 
     @PackageScope void checkConfig() {
         final names = ScriptMeta.allProcessNames()
+        final ver = "dsl${NF.dsl1 ?'1' :'2'}"
+        log.debug "Workflow process names [$ver]: ${names.join(', ')}"
         validateConfig(names)
     }
 
@@ -999,7 +999,7 @@ class Session implements ISession {
     }
 
     void notifyFlowCreate() {
-        observers.each { trace -> trace.onFlowCreate(this); trace.onFlowStart(this) }
+        observers.each { trace -> trace.onFlowCreate(this) }
     }
 
     void notifyFlowComplete() {
@@ -1090,6 +1090,7 @@ class Session implements ISession {
 
         def engines = new LinkedList<Map>()
         getContainerConfig0('docker', engines)
+        getContainerConfig0('podman', engines)
         getContainerConfig0('shifter', engines)
         getContainerConfig0('udocker', engines)
         getContainerConfig0('singularity', engines)
@@ -1269,19 +1270,6 @@ class Session implements ISession {
     @Memoized
     Duration getQueueStatInterval( String execName, Duration defValue = Duration.of('1min') ) {
         getExecConfigProp(execName, 'queueStatInterval', defValue) as Duration
-    }
-
-    static private void shutdownS3Uploader() {
-        if( classWasLoaded(S3_UPLOADER_CLASS) ) {
-            log.debug "AWS S3 uploader shutdown"
-            S3OutputStream.shutdownExecutor()
-        }
-    }
-
-    static private boolean classWasLoaded(String className) {
-        Method find = ClassLoader.class.getDeclaredMethod("findLoadedClass", [String.class] as Class[] );
-        find.setAccessible(true)
-        return find.invoke(ClassLoader.getSystemClassLoader(), className)
     }
 
     void printConsole(String str, boolean newLine=false) {

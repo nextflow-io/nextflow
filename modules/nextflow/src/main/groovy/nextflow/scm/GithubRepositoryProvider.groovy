@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +17,9 @@
 
 package nextflow.scm
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 
 /**
  * Implements a repository provider for GitHub service
@@ -57,6 +60,24 @@ final class GithubRepositoryProvider extends RepositoryProvider {
             throw new IllegalStateException("Missing clone URL for: $project")
 
         return result
+    }
+
+    @Override
+    @CompileDynamic
+    @Memoized
+    List<BranchInfo> getBranches() {
+        // https://developer.github.com/v3/repos/branches/#list-branches
+        final url = "${config.endpoint}/repos/$project/branches"
+        this.<BranchInfo>invokeAndResponseWithPaging(url, { Map branch -> new BranchInfo(branch.name as String, branch.commit?.sha as String) })
+    }
+
+    @Override
+    @CompileDynamic
+    @Memoized
+    List<TagInfo> getTags() {
+        // https://developer.github.com/v3/repos/#list-tags
+        final url = "${config.endpoint}/repos/$project/tags"
+        this.<TagInfo>invokeAndResponseWithPaging(url, { Map tag -> new TagInfo(tag.name as String, tag.commit?.sha as String)})
     }
 
     /** {@inheritDoc} */

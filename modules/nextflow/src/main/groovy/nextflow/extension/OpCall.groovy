@@ -70,6 +70,9 @@ class OpCall implements Callable {
             return this
         }
 
+        if( left.size()== 0 ) {
+            throw new ScriptRuntimeException("Operator '${methodName}' cannot be applied to an undefined output")
+        }
         if( left.size()==1 ) {
             this.source = left[0] as DataflowWriteChannel
             return this
@@ -147,7 +150,7 @@ class OpCall implements Callable {
 
     protected Object invoke() {
         if( methodName==SET_OP_hack ) {
-            // when this is ugly, the problem is that `set` is not a real operator
+            // well this is ugly, the problem is that `set` is not a real operator
             // but it's exposed as such. let's live whit this for now
             return invoke1('set', [source, args[0]] as Object[])
         }
@@ -300,7 +303,7 @@ class OpCall implements Callable {
     protected Method getMethod0(String methodName, Object[] args) {
         def meta = owner.metaClass.getMetaMethod(methodName, args)
         if( meta == null )
-            throw new MissingMethodException(methodName, owner.getClass())
+            throw new MissingMethodException(methodName, owner.getClass(), args)
         method = owner.getClass().getMethod(methodName, meta.getNativeParameterTypes())
     }
 
@@ -312,11 +315,16 @@ class OpCall implements Callable {
 
     protected void checkDeprecation(Method method) {
         if( method.getAnnotation(Deprecated) ) {
-            log.warn "Operator `$methodName` is deprecated -- it will be removed in a future release"
+            def messg = "Operator `$methodName` is deprecated -- it will be removed in a future release"
+            if( NF.dsl2Final )
+                throw new DeprecationException(messg)
+            log.warn messg
         }
         else if( method.getAnnotation(DeprecatedDsl2) && NF.isDsl2() ) {
             def annot = method.getAnnotation(DeprecatedDsl2)
             def messg = annot.message() ?: "Operator `$methodName` is deprecated -- it will be removed in a future release".toString()
+            if( NF.dsl2Final )
+                throw new DeprecationException(messg)
             log.warn messg
         }
     }

@@ -4,8 +4,9 @@
 <br>[Henri E. Bal , Jennifer G. Steiner , Andrew S. Tanenbaum](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.145.7873)
 
 
-[![Chat on Gitter](https://img.shields.io/gitter/room/nextflow-io/nextflow.svg?colorB=26af64&style=popout)](https://gitter.im/nextflow-io/nextflow)
+![Nextflow CI](https://github.com/nextflow-io/nextflow/workflows/Nextflow%20CI/badge.svg)
 [![Nextflow version](https://img.shields.io/github/release/nextflow-io/nextflow.svg?colorB=26af64&style=popout)](https://github.com/nextflow-io/nextflow/releases/latest)
+[![Chat on Gitter](https://img.shields.io/gitter/room/nextflow-io/nextflow.svg?colorB=26af64&style=popout)](https://gitter.im/nextflow-io/nextflow)
 [![Nextflow Twitter](https://img.shields.io/twitter/url/https/nextflowio.svg?colorB=26af64&&label=%40nextflow&style=popout)](https://twitter.com/nextflowio)
 [![Nextflow Publication](https://img.shields.io/badge/Published-Nature%20Biotechnology-26af64.svg?colorB=26af64&style=popout)](https://www.nature.com/articles/nbt.3820)
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?colorB=26af64&style=popout)](http://bioconda.github.io/recipes/nextflow/README.html)
@@ -15,7 +16,7 @@ Quick overview
 ==============
 Nextflow is a bioinformatics workflow manager that enables the development of portable and reproducible workflows.
 It supports deploying workflows on a variety of execution platforms including local, HPC schedulers, AWS Batch,
-Google Genomics Pipelines, and Kubernetes. Additionally, it provides support for manage your workflow dependencies
+Google Cloud Life Sciences, and Kubernetes. Additionally, it provides support for manage your workflow dependencies
 through built-in support for Conda, Docker, Singularity, and Modules.
 
 ## Contents
@@ -183,7 +184,7 @@ Build from source
 Required dependencies
 ---------------------
 
-* Compiler Java 8
+* Compiler Java 8 or later
 * Runtime Java 8 or later
 
 Build from source
@@ -211,20 +212,22 @@ The self-contained runnable Nextflow packages can be created by using the follow
 
 ```bash
 make pack
-```
+```            
 
-In order to install the compiled packages use the following command:
+Once compiled use the script `./launch.sh` as a replacement for the usual `nextflow` command.
+
+The compiled packages can be locally installed using the following command:
 
 ```bash
 make install
 ```
 
-Then you will be able to run nextflow using the `nextflow` launcher script in the project root folder.
+A self-contained distribution can be created with the command: `make pack`.  To include support of GA4GH and its dependencies in the binary, use `make packGA4GH` instead.
 
 Known compilation problems
 ---------------------------
 
-Nextflow required JDK 8 to be compiled. The Java compiler used by the build process can be choose by setting the
+Nextflow requires JDK 8 or later to be compiled. The Java compiler used by the build process can be chosen by setting the
 `JAVA_HOME` environment variable accordingly.
 
 
@@ -276,7 +279,7 @@ Build servers
 =============
 
   * [Travis-CI](https://travis-ci.org/nextflow-io/nextflow)
-  * [Groovy Joint build](http://ci.groovy-lang.org/project.html?projectId=JointBuilds_Nextflow&guest=1)
+  * [GitHub Actions](https://github.com/nextflow-io/nextflow/actions)
 
 License
 =======

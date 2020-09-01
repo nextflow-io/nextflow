@@ -21,11 +21,13 @@ import java.nio.file.Path
 
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.util.MemoryUnit
+
 /**
  * Helper class wrapping configuration required for Google Pipelines.
  *
@@ -40,6 +42,8 @@ class GoogleLifeSciencesConfig {
 
     public final static String DEFAULT_SSH_IMAGE = 'gcr.io/cloud-genomics-pipelines/tools'
 
+    public final static String DEFAULT_ENTRY_POINT = '/bin/bash'
+
     String project
     List<String> zones
     List<String> regions
@@ -48,10 +52,13 @@ class GoogleLifeSciencesConfig {
     String location
     boolean disableBinDir
     MemoryUnit bootDiskSize
+    String cpuPlatform
     boolean sshDaemon
     String sshImage
     Integer debugMode
     String copyImage
+    boolean usePrivateAddress
+    boolean enableRequesterPaysBuckets
 
     @Deprecated
     GoogleLifeSciencesConfig(String project, List<String> zone, List<String> region, Path remoteBinDir = null, boolean preemptible = false) {
@@ -68,6 +75,7 @@ class GoogleLifeSciencesConfig {
 
     GoogleLifeSciencesConfig() {}
 
+    @Memoized
     static GoogleLifeSciencesConfig fromSession(Session session) {
         try {
             fromSession0(session.config)
@@ -102,10 +110,13 @@ class GoogleLifeSciencesConfig {
         final boolean disableBinDir = config.navigate('google.lifeSciences.disableRemoteBinDir',false)
         final preemptible = config.navigate("google.lifeSciences.preemptible", false) as boolean
         final bootDiskSize = config.navigate('google.lifeSciences.bootDiskSize') as MemoryUnit
+        final cpuPlatform = config.navigate('google.lifeSciences.cpuPlatform') as String
         final sshDaemon = config.navigate('google.lifeSciences.sshDaemon', false) as boolean
         final sshImage = config.navigate('google.lifeSciences.sshImage', DEFAULT_SSH_IMAGE) as String
         final copyImage = config.navigate('google.lifeSciences.copyImage', DEFAULT_COPY_IMAGE) as String
         final debugMode = config.navigate('google.lifeSciences.debug', System.getenv('NXF_DEBUG'))
+        final privateAddr  = config.navigate('google.lifeSciences.usePrivateAddress') as boolean
+        final requesterPays = config.navigate('google.enableRequesterPaysBuckets') as boolean
 
         def zones = (config.navigate("google.zone") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
         def regions = (config.navigate("google.region") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
@@ -119,10 +130,13 @@ class GoogleLifeSciencesConfig {
                 preemptible: preemptible,
                 disableBinDir: disableBinDir,
                 bootDiskSize: bootDiskSize,
+                cpuPlatform: cpuPlatform,
                 debugMode: debugMode0(debugMode),
                 copyImage: copyImage,
                 sshDaemon: sshDaemon,
-                sshImage: sshImage )
+                sshImage: sshImage,
+                usePrivateAddress: privateAddr,
+                enableRequesterPaysBuckets: requesterPays)
     }
 
     static private Integer debugMode0(value) {
@@ -136,24 +150,20 @@ class GoogleLifeSciencesConfig {
 
     static String fallbackToRegionOrZone(List<String> regions, List<String> zones) {
         if( regions ) {
-            if( regions.size()>1 ) {
-                log.warn "Google LifeSciences location is missing -- Defaulting to region: ${regions[0]}"
-            }
-            return regions[0]
+            return bestLocationForRegion(regions[0])
         }
         if( zones ) {
             def norm = zones
                     .collect { int p = zones[0].lastIndexOf('-'); p!=-1 ? it.substring(0,p) : it }
                     .unique()
-            if( norm.size()>1 ) {
-                log.warn "Google LifeSciences location is missing -- Defaulting to zone: ${norm[0]}"
-            }
-
-            return norm[0]
+            return bestLocationForRegion(norm[0])
         }
-        throw new AbortOperationException("Missing Google region or location information")
+        throw new AbortOperationException("Missing Google region or zone information")
     }
 
+    static String bestLocationForRegion(String region) {
+        region.startsWith('europe-') ? 'europe-west2' : 'us-central1'
+    }
 
     static String getProjectIdFromCreds(String credsFilePath) {
         if( !credsFilePath )

@@ -200,6 +200,7 @@ nxf_trace() {
 nxf_date() {
     local ts=$(date +%s%3N);
     if [[ ${#ts} == 10 ]]; then echo ${ts}000
+    elif [[ $ts == *%3N ]]; then echo ${ts/\%3N/000}
     elif [[ $ts == *3N ]]; then echo ${ts/3N/000}
     elif [[ ${#ts} == 13 ]]; then echo $ts
     else echo "Unexpected timestamp value: $ts"; exit 1
@@ -263,8 +264,9 @@ nxf_unstage() {
 
 nxf_main() {
     trap on_exit EXIT
-    trap on_term TERM INT USR1 USR2
+    trap on_term TERM INT USR2
 
+    [[ "${NXF_CHDIR:-}" ]] && cd "$NXF_CHDIR"
     NXF_SCRATCH=''
     [[ $NXF_DEBUG > 0 ]] && nxf_env
     touch {{folder}}/.command.begin

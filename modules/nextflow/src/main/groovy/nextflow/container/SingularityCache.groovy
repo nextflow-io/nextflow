@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -195,7 +196,7 @@ class SingularityCache {
         log.trace "Singularity pulling remote image `$imageUrl`"
 
         if( missingCacheDir )
-            log.warn1 "Singularity cache directory has not been defined -- Remote image will be stored in the path: $localPath.parent"
+            log.warn1 "Singularity cache directory has not been defined -- Remote image will be stored in the path: $localPath.parent -- Use env variable NXF_SINGULARITY_CACHEDIR to specify a different location"
 
         log.info "Pulling Singularity image $imageUrl [cache $localPath]"
 

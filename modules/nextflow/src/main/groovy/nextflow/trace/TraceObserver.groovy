@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,8 +33,6 @@ trait TraceObserver {
      * The is method is invoked when the flow is going to start
      */
     void onFlowCreate(Session session) {}
-
-    @Deprecated void onFlowStart(Session session){}
 
     /**
      * The is method is invoked when the flow is going to start

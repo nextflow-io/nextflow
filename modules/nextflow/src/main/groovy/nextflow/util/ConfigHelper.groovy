@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,12 +21,14 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Helper method to handle configuration object
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class ConfigHelper {
 
@@ -108,48 +111,56 @@ class ConfigHelper {
 
     static private final String TAB = '   '
 
-    static private void canonicalFormat(StringBuilder writer, ConfigObject object, int level, boolean sort) {
+    static private void canonicalFormat(StringBuilder writer, ConfigObject object, int level, boolean sort, List stack) {
+        if( stack.contains(object) )
+            return
+        stack.push(object)
 
-        final keys = sort ? object.keySet().sort() : new ArrayList<>(object.keySet())
+        try {
+            final keys = sort ? object.keySet().sort() : new ArrayList<>(object.keySet())
 
-        // remove all empty config objects
-        final itr = keys.iterator()
-        while( itr.hasNext() ) {
-            final key = itr.next()
-            final value = object.get(key)
-            if( value instanceof ConfigObject && value.size()==0 ) {
-                itr.remove()
+            // remove all empty config objects
+            final itr = keys.iterator()
+            while( itr.hasNext() ) {
+                final key = itr.next()
+                final value = object.get(key)
+                if( value instanceof ConfigObject && value.size()==0 ) {
+                    itr.remove()
+                }
+            }
+
+            for( int i=0; i<keys.size(); i++) {
+                final key = keys[i]
+                final value = object.get(key)
+                if( value instanceof ConfigObject ) {
+                    // add an extra new-line to separate simple values from a config object
+                    if( level==0 && i>0 ) {
+                        writer.append('\n')
+                    }
+
+                    writer.append(TAB*level)
+                    writer.append(wrap1(key))
+                    writer.append(' {\n')
+                    canonicalFormat(writer, value, level+1,sort,stack)
+                    writer.append(TAB*level)
+                    writer.append('}\n')
+                }
+                else {
+                    // add a new-line to separate simple values from a previous config object
+                    if( level==0 && i>0 && object.get(keys[i-1]) instanceof ConfigObject) {
+                        writer.append('\n')
+                    }
+
+                    writer.append(TAB*level)
+                    writer.append(wrap1(key))
+                    writer.append(' = ')
+                    writer.append( render0(value) )
+                    writer.append('\n')
+                }
             }
         }
-
-        for( int i=0; i<keys.size(); i++) {
-            final key = keys[i]
-            final value = object.get(key)
-            if( value instanceof ConfigObject ) {
-                // add an extra new-line to separate simple values from a config object
-                if( level==0 && i>0 ) {
-                    writer.append('\n')
-                }
-
-                writer.append(TAB*level)
-                writer.append(wrap1(key))
-                writer.append(' {\n')
-                canonicalFormat(writer, value, level+1,sort)
-                writer.append(TAB*level)
-                writer.append('}\n')
-            }
-            else {
-                // add a new-line to separate simple values from a previous config object
-                if( level==0 && i>0 && object.get(keys[i-1]) instanceof ConfigObject) {
-                    writer.append('\n')
-                }
-
-                writer.append(TAB*level)
-                writer.append(wrap1(key))
-                writer.append(' = ')
-                writer.append( render0(value) )
-                writer.append('\n')
-            }
+        finally {
+            stack.pop()
         }
     }
 
@@ -186,27 +197,34 @@ class ConfigHelper {
 
     static private String flattenFormat(ConfigObject config,boolean sort) {
         def result = new StringBuilder()
-        flattenFormat(config, [], result, sort)
+        flattenFormat(config, [], result, sort, [])
         result.toString()
     }
 
-    static private void flattenFormat(ConfigObject config, List<String> stack, StringBuilder result, boolean sort) {
-        final keys = sort ? config.keySet().sort() : new ArrayList<>(config.keySet())
+    static private void flattenFormat(ConfigObject config, List<String> path, StringBuilder result, boolean sort, List stack) {
+        if( stack.contains(config) )
+            return
+        stack.push(config)
+        try {
+            final keys = sort ? config.keySet().sort() : new ArrayList<>(config.keySet())
 
-        for( int i=0; i<keys.size(); i++) {
-            final key = keys.get(i)
-            final val = config.get(key)
-            stack.add(wrap0(key))
-            if( val instanceof ConfigObject ) {
-                flattenFormat(val, stack, result, sort)
+            for( int i=0; i<keys.size(); i++) {
+                final key = keys.get(i)
+                final val = config.get(key)
+                path.add(wrap0(key))
+                if( val instanceof ConfigObject ) {
+                    flattenFormat(val, path, result, sort, stack)
+                }
+                else {
+                    final name = path.join('.')
+                    result << name << ' = ' << render0(val) << '\n'
+                }
+                path.removeLast()
             }
-            else {
-                final name = stack.join('.')
-                result << name << ' = ' << render0(val) << '\n'
-            }
-            stack.removeLast()
         }
-
+        finally {
+            stack.pop()
+        }
     }
 
     private static String render0( Object val ) {
@@ -252,7 +270,7 @@ class ConfigHelper {
 
     static String toCanonicalString(ConfigObject object, boolean sort=false) {
         def result = new StringBuilder()
-        canonicalFormat(result,object,0,sort)
+        canonicalFormat(result,object,0,sort,[])
         result.toString()
     }
 

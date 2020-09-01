@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +21,8 @@ import java.nio.file.Path
 
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
+import nextflow.util.Escape
+
 /**
  * Implements a executor for Moab batch scheduler cluster
  *
@@ -78,7 +81,7 @@ class MoabExecutor extends AbstractGridExecutor {
     @Override
     String getHeaders( TaskRun task ) {
         String result = super.getHeaders(task)
-        result += "cd ${quote(task.workDir)}\n"
+        result += "NXF_CHDIR=${Escape.path(task.workDir)}\n"
         return result
     }
 

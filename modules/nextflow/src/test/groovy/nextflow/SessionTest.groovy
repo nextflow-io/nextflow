@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,7 +26,7 @@ import nextflow.container.ContainerConfig
 import nextflow.exception.AbortOperationException
 import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
-import nextflow.trace.StatsObserver
+import nextflow.trace.WorkflowStatsObserver
 import nextflow.trace.TraceFileObserver
 import nextflow.util.Duration
 import nextflow.util.VersionNumber
@@ -247,7 +248,7 @@ class SessionTest extends Specification {
         result = session.createObservers()
         then:
         result.size()==1
-        result.any { it instanceof StatsObserver }
+        result.any { it instanceof WorkflowStatsObserver }
 
         when:
         session = [:] as Session
@@ -364,6 +365,8 @@ class SessionTest extends Specification {
         engine      | config
         'docker'    | [enabled: true, x:'alpha', y: 'beta']
         'docker'    | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
+        'podman'    | [enabled: true, x:'alpha', y: 'beta']
+        'podman'    | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
         'udocker'   | [enabled: true, x:'alpha', y: 'beta']
         'shifter'   | [enabled: true, x:'delta', y: 'gamma']
     }

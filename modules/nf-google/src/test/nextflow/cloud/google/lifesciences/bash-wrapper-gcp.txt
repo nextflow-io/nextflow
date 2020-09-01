@@ -9,6 +9,7 @@ NXF_ENTRY=${1:-nxf_main}
 nxf_date() {
     local ts=$(date +%s%3N);
     if [[ ${#ts} == 10 ]]; then echo ${ts}000
+    elif [[ $ts == *%3N ]]; then echo ${ts/\%3N/000}
     elif [[ $ts == *3N ]]; then echo ${ts/3N/000}
     elif [[ ${#ts} == 13 ]]; then echo $ts
     else echo "Unexpected timestamp value: $ts"; exit 1
@@ -70,16 +71,17 @@ nxf_stage() {
 
 nxf_unstage() {
     true
-    IFS=$'\n'; for name in $(eval "ls -1d .command.out" 2>/dev/null);do gsutil -m -q cp -R $name gs://bucket/work/dir/.command.out; done; unset IFS || true
-    IFS=$'\n'; for name in $(eval "ls -1d .command.err" 2>/dev/null);do gsutil -m -q cp -R $name gs://bucket/work/dir/.command.err; done; unset IFS || true
-    IFS=$'\n'; for name in $(eval "ls -1d .exitcode" 2>/dev/null);do gsutil -m -q cp -R $name gs://bucket/work/dir/.exitcode; done; unset IFS || true
+    gsutil -m -q cp -R .command.out gs://bucket/work/dir/.command.out || true
+    gsutil -m -q cp -R .command.err gs://bucket/work/dir/.command.err || true
+    gsutil -m -q cp -R .exitcode gs://bucket/work/dir/.exitcode || true
     [[ ${nxf_main_ret:=0} != 0 ]] && return
 }
 
 nxf_main() {
     trap on_exit EXIT
-    trap on_term TERM INT USR1 USR2
+    trap on_term TERM INT USR2
 
+    [[ "${NXF_CHDIR:-}" ]] && cd "$NXF_CHDIR"
     NXF_SCRATCH={{folder}}
     [[ $NXF_DEBUG > 0 ]] && nxf_env
     set +u

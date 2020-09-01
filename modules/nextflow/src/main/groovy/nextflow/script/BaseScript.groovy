@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +18,7 @@
 package nextflow.script
 
 import java.lang.reflect.InvocationTargetException
+import java.nio.file.Paths
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -64,7 +66,10 @@ abstract class BaseScript extends Script implements ExecutionContext {
      * Holds the configuration object which will used to execution the user tasks
      */
     protected Map getConfig() {
-        log.warn "The access of `config` object is deprecated"
+        final msg = "The access of `config` object is deprecated"
+        if( NF.dsl2Final )
+            throw new DeprecationException(msg)
+        log.warn(msg)
         session.getConfig()
     }
 
@@ -79,7 +84,10 @@ abstract class BaseScript extends Script implements ExecutionContext {
      * @param value
      */
     protected void echo(boolean value = true) {
-        log.warn "The use of `echo` method is deprecated"
+        final msg = "The use of `echo` method has been deprecated"
+        if( NF.dsl2Final )
+            throw new DeprecationException(msg)
+        log.warn(msg)
         session.getConfig().process.echo = value
     }
 
@@ -89,9 +97,12 @@ abstract class BaseScript extends Script implements ExecutionContext {
         processFactory = session.newProcessFactory(this)
 
         binding.setVariable( 'baseDir', session.baseDir )
+        binding.setVariable( 'projectDir', session.baseDir )
         binding.setVariable( 'workDir', session.workDir )
         binding.setVariable( 'workflow', session.workflowMetadata )
         binding.setVariable( 'nextflow', NextflowMeta.instance )
+        binding.setVariable('launchDir', Paths.get('./').toRealPath())
+        binding.setVariable('moduleDir', meta.scriptPath?.parent )
     }
 
     protected process( String name, Closure<BodyDef> body ) {
@@ -114,7 +125,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
      */
     protected workflow(Closure<BodyDef> workflowBody) {
         if(!NF.isDsl2())
-            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.preview.dsl=2` to allow the definition of workflow components")
+            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.enable.dsl=2` to allow the definition of workflow components")
 
         // launch the execution
         final workflow = new WorkflowDef(this, workflowBody)
@@ -125,7 +136,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     protected workflow(String name, Closure<BodyDef> workflowDef) {
         if(!NF.isDsl2())
-            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.preview.dsl=2` to allow the definition of workflow components")
+            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.enable.dsl=2` to allow the definition of workflow components")
 
         final workflow = new WorkflowDef(this,workflowDef,name)
         if( binding.entryName==name )
@@ -135,7 +146,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     protected IncludeDef include( IncludeDef include ) {
         if(!NF.isDsl2())
-            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.preview.dsl=2` to import module files")
+            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.enable.dsl=2` to import module files")
 
         include .setSession(session)
     }
@@ -148,7 +159,14 @@ abstract class BaseScript extends Script implements ExecutionContext {
             super.invokeMethod(name, args)
     }
 
-    private run0() {
+    private runDsl1() {
+        session.notifyBeforeWorkflowExecution()
+        final ret = runScript()
+        session.notifyAfterWorkflowExecution()
+        return ret
+    }
+
+    private runDsl2() {
         final result = runScript()
         if( meta.isModule() ) {
             return result
@@ -179,7 +197,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         setup()
         ExecutionStack.push(this)
         try {
-            run0()
+            NF.dsl2 ? runDsl2() : runDsl1()
         }
         catch(InvocationTargetException e) {
             // provide the exception cause which is more informative than InvocationTargetException

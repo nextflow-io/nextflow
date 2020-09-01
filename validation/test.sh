@@ -1,6 +1,5 @@
 #!/bin/bash 
 set -e 
-trap "exit" INT
 
 get_abs_filename() {
   echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
@@ -59,13 +58,13 @@ $NXF_CMD run nextflow-io/rnaseq-nf -with-docker $OPTS -resume
 # AWS Batch tests
 #
 echo aws batch tests
-./await.sh bash awsbatch.sh
+bash awsbatch.sh
 
 #
 # Google Life Sciences
 #
 if [[ $GOOGLE_SECRET ]]; then
-  ./await.sh bash gls.sh
+  bash gls.sh
 else
   echo "Google Life Science test skipped because GOOGLE_SECRET env var is missing"
 fi

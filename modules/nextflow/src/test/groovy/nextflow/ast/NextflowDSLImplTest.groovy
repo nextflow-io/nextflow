@@ -1,10 +1,12 @@
 package nextflow.ast
 
+
 import nextflow.script.BaseScript
+import nextflow.script.ScriptMeta
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
-import test.BaseSpec  
+import test.BaseSpec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -125,5 +127,32 @@ class NextflowDSLImplTest extends BaseSpec {
         e = thrown(MultipleCompilationErrorsException)
         e.message.contains 'Process and workflow names cannot contain colon character'
     }
+
+    def 'should set process name in the script meta' () {
+        given:
+        def config = new CompilerConfiguration()
+        config.setScriptBaseClass(BaseScript.class.name)
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+
+        def SCRIPT = '''
+                    
+            process alpha {
+              /hello/
+            }
+        
+            process beta {
+              /world/
+            }
+
+        '''
+
+        when:
+        def script = new GroovyShell(config).parse(SCRIPT)
+        then:
+        ScriptMeta.get(script).getDsl1ProcessNames() == ['alpha', 'beta']
+        ScriptMeta.get(script).getProcessNames() == ['alpha', 'beta'] as Set
+    }
+
+
 
 }

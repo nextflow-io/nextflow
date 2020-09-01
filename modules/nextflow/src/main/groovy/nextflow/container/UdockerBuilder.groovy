@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -79,7 +80,7 @@ class UdockerBuilder extends ContainerBuilder<UdockerBuilder> {
 
         // mount the input folders
         result << makeVolumes(mounts)
-        result << ' -w "$PWD" --bindhome '
+        result << '-w "$PWD" --bindhome '
 
 
         if( runOptions )

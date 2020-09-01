@@ -67,15 +67,6 @@ Provide a list of pre-configured IP addresses on the daemon launch command line,
 
     nextflow node -cluster.join ip:10.0.2.1,10.0.2.2,10.0.2.4
 
-AWS S3 bucket
-=============
-
-Creates an Amazon AWS S3 bucket that will hold the cluster member's IP addresses. For example::
-
-   nextflow node -cluster.join s3:cluster_bucket
-
-
-
 
 Advanced options
 =====================

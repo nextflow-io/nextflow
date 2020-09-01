@@ -1,5 +1,6 @@
 #!/usr/bin/env nextflow
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,6 +35,6 @@ process foo {
 
 }
 
-_out1.println { "match: ${it.name}" }
-_out2.println { "match: ${it.name}" }
-_out3.println { "match: ${it.name}" }
+_out1.view { "match: ${it.name}" }
+_out2.view { "match: ${it.name}" }
+_out3.view { "match: ${it.name}" }

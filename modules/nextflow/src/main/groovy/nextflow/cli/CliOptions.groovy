@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,12 +17,12 @@
 
 package nextflow.cli
 
-import static org.fusesource.jansi.internal.CLibrary.*
-
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
+import org.fusesource.jansi.Ansi
+
 /**
  * Main application command line options
  *
@@ -106,7 +107,7 @@ class CliOptions {
         catch (Exception e) {
             log.warn "Invalid boolean value for variable NXF_ANSI_LOG: $env -- it must be 'true' or 'false'"
         }
-        return isatty(STDIN_FILENO)>0
+        return Ansi.isEnabled()
     }
 
     boolean hasAnsiLogFlag() {

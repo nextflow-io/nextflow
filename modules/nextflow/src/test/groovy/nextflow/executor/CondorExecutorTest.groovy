@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -234,7 +235,7 @@ class CondorExecutorTest extends Specification {
         def folder = Files.createTempDirectory('test')
         def executor = [:] as CondorExecutor
         def task = new TaskRun(name: 'Hello', workDir: folder, script: 'echo Hello world!')
-        task.config = Mock(TaskConfig)
+        task.config = GroovyMock(TaskConfig)
         task.processor = Mock(TaskProcessor)
         task.processor.getProcessEnvironment() >> [:]
         task.processor.getConfig() >> Mock(ProcessConfig)

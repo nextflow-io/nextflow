@@ -20,9 +20,9 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.NextflowMeta
+import nextflow.trace.ProgressRecord
 import nextflow.util.Duration
 import org.apache.groovy.json.internal.CharBuf
-
 /**
  * Customized json generator that chomp string values
  * longer than expected size
@@ -50,6 +50,19 @@ class TowerJsonGenerator extends DefaultJsonGenerator {
     protected TowerJsonGenerator(Options options, Map<String,Integer> scheme) {
         super(options)
         this.scheme = scheme
+    }
+
+    @Override
+    protected Map<?, ?> getObjectProperties(Object object) {
+        final result = super.getObjectProperties(object)
+        if( object instanceof ProgressRecord ) {
+            result.remove('hash')
+            result.remove('errored')
+            result.remove('completedCount')
+            result.remove('totalCount')
+            result.remove('taskName')
+        }
+        return result
     }
 
     @Override

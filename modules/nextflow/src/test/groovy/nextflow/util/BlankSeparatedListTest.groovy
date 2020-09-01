@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -88,7 +89,7 @@ class BlankSeparatedListTest extends Specification {
                 Paths.get('name with blanks') ])
         
         expect:
-        list.toStringEscapePaths() == 'foo bar name\\ with\\ blanks'
+        list.toStringEscape() == 'foo bar name\\ with\\ blanks'
     }
 
 }

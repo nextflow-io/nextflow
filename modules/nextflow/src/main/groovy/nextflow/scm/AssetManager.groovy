@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,6 +30,7 @@ import nextflow.cli.HubOptions
 import nextflow.config.ConfigParser
 import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
+import nextflow.exception.AmbiguousPipelineNameException
 import nextflow.script.ScriptFile
 import nextflow.util.IniFile
 import org.eclipse.jgit.api.CreateBranchCommand
@@ -42,6 +44,8 @@ import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+import org.eclipse.jgit.merge.MergeStrategy
+import org.eclipse.jgit.lib.SubmoduleConfig.FetchRecurseSubmodulesMode
 import static nextflow.Const.DEFAULT_HUB
 import static nextflow.Const.DEFAULT_MAIN_FILE_NAME
 import static nextflow.Const.DEFAULT_ORGANIZATION
@@ -105,11 +109,17 @@ class AssetManager {
         build(pipelineName, config, cliOpts)
     }
 
+    AssetManager( String pipelineName, Map config ) {
+        assert pipelineName
+        // build the object
+        build(pipelineName, config)
+    }
+
     /**
      * Build the asset manager internal data structure
      *
      * @param pipelineName A project name or a project repository Git URL
-     * @param config A {@link Map} holding the configuration properties defined in the {@link ProviderConfig#SCM_FILE} file
+     * @param config A {@link Map} holding the configuration properties defined in the {@link ProviderConfig#DEFAULT_SCM_FILE} file
      * @param cliOpts User credentials provided on the command line. See {@link HubOptions} trait
      * @return The {@link AssetManager} object itself
      */
@@ -271,7 +281,8 @@ class AssetManager {
         }
 
         if( qualifiedName instanceof List ) {
-            throw new AbortOperationException("Which one do you mean?\n${qualifiedName.join('\n')}")
+            final msg = "Which one do you mean?\n${qualifiedName.join('\n')}"
+            throw new AmbiguousPipelineNameException(msg, qualifiedName)
         }
 
         return qualifiedName
@@ -378,7 +389,7 @@ class AssetManager {
 
         def result = new ScriptFile(getMainScriptFile())
         result.revisionInfo = getCurrentRevisionAndName()
-        result.repository = getGitConfigRemoteUrl()
+        result.repository = getRepositoryUrl()
         result.localPath = localPath.toPath()
         result.projectName = project
 
@@ -458,7 +469,7 @@ class AssetManager {
                 // no error => exist, return a path for it
                 return new ProviderPath(provider, MANIFEST_FILE_NAME)
             }
-            catch (IOException e) {
+            catch (Exception e) {
                 provider.validateRepo()
                 log.debug "Cannot retried remote config file -- likely does not exist"
                 return null
@@ -469,7 +480,7 @@ class AssetManager {
 
     String getBaseName() {
         def result = project.tokenize('/')
-        if( result.size() > 2 ) throw new IllegalArgumentException("Not a valid projct name: $project")
+        if( result.size() > 2 ) throw new IllegalArgumentException("Not a valid project name: $project")
         return result.size()==1 ? result[0] : result[1]
     }
 
@@ -583,6 +594,7 @@ class AssetManager {
             clone
                 .setURI(cloneURL)
                 .setDirectory(localPath)
+                .setCloneSubmodules(manifest.recurseSubmodules)
                 .call()
 
             // return status message
@@ -628,6 +640,9 @@ class AssetManager {
         if( provider.hasCredentials() )
             pull.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password))
 
+        if( manifest.recurseSubmodules ) {
+            pull.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
+        }
         def result = pull.call()
         if(!result.isSuccessful())
             throw new AbortOperationException("Cannot pull project `$project` -- ${result.toString()}")
@@ -653,6 +668,7 @@ class AssetManager {
 
         clone.setURI(uri)
         clone.setDirectory(directory)
+        clone.setCloneSubmodules(manifest.recurseSubmodules)
         if( provider.hasCredentials() )
             clone.setCredentialsProvider(new UsernamePasswordCredentialsProvider(provider.user, provider.password))
 
@@ -736,6 +752,17 @@ class AssetManager {
         def result = new ArrayList<String>(branches.size() + tags.size())
         result.addAll(branches)
         result.addAll(tags)
+        return result
+    }
+
+    List<RevisionInfo> getRemoteRevisions() {
+        final result = new ArrayList(50)
+        for( def branch : provider.getBranches() ) {
+            result.add(new RevisionInfo(branch.commitId, branch.name, RevisionInfo.Type.BRANCH))
+        }
+        for( def tag : provider.getTags() ) {
+            result.add(new RevisionInfo(tag.commitId, tag.name, RevisionInfo.Type.TAG))
+        }
         return result
     }
 
@@ -902,6 +929,9 @@ class AssetManager {
             if(provider.hasCredentials()) {
                 fetch.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
             }
+            if( manifest.recurseSubmodules ) {
+                fetch.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
+            }
             fetch.call()
             git.checkout()
                     .setCreateBranch(true)
@@ -940,6 +970,11 @@ class AssetManager {
 
         final init = git.submoduleInit()
         final update = git.submoduleUpdate()
+
+        if( manifest.recurseSubmodules ) {
+            update.setStrategy(MergeStrategy.RECURSIVE)
+        }
+
         filter.each { String m -> init.addPath(m); update.addPath(m) }
         // call submodule init
         init.call()

@@ -28,6 +28,7 @@ import com.google.api.services.lifesciences.v2beta.model.Action
 import com.google.api.services.lifesciences.v2beta.model.CancelOperationRequest
 import com.google.api.services.lifesciences.v2beta.model.Disk
 import com.google.api.services.lifesciences.v2beta.model.Mount
+import com.google.api.services.lifesciences.v2beta.model.Network
 import com.google.api.services.lifesciences.v2beta.model.Operation
 import com.google.api.services.lifesciences.v2beta.model.Pipeline
 import com.google.api.services.lifesciences.v2beta.model.Resources
@@ -51,10 +52,14 @@ import nextflow.util.Escape
 @CompileStatic
 class GoogleLifeSciencesHelper {
 
+    /*
+     * Avail location see https://cloud.google.com/life-sciences/docs/concepts/locations
+     */
+    public static final List<String> DEFAULT_LOCATIONS  = ['us-central1','europe-west2']
+
     public static final String SSH_DAEMON_NAME = 'ssh-daemon'
     public static final String DEFAULT_APP_NAME = "Nextflow/GLS"
     public static final String SCOPE_CLOUD_PLATFORM = "https://www.googleapis.com/auth/cloud-platform"
-    public static final List<String> ENV_VAR_TO_INCLUDE = ["NXF_DEBUG"]
 
     CloudLifeSciences client
     GoogleCredentials credentials
@@ -178,8 +183,16 @@ class GoogleLifeSciencesHelper {
                 .setServiceAccount(serviceAccount)
                 .setPreemptible(req.preemptible)
 
+        if( req.usePrivateAddress ) {
+            vm.setNetwork( new Network().setUsePrivateAddress(true) )
+        }
+
         if( req.bootDiskSizeGb ) {
             vm.setBootDiskSizeGb(req.bootDiskSizeGb)
+        }
+        
+        if( req.cpuPlatform ) {
+            vm.setCpuPlatform(req.cpuPlatform)
         }
 
         if( req.accelerator ) {
@@ -189,19 +202,28 @@ class GoogleLifeSciencesHelper {
             vm.setAccelerators(list)
         }
 
-        new Resources()
+        final result = new Resources()
                 .setZones(req.zone)
                 .setRegions(req.region)
                 .setVirtualMachine(vm)
+
+        log.trace "[GLS] task=$req.taskName; VM resources=$result"
+        return result
     }
 
     protected Action createMainAction(GoogleLifeSciencesSubmitRequest req) {
+        // flag pipefail is required otherwise the command exit status is not returned
+        List<String> cmd = ['-o', 'pipefail', '-c', getMainScript(req.workDir)]
+        if( !req.entryPoint )
+            cmd.add(0, 'bash')
+
         createAction(
                 "$req.taskName-main",
                 req.containerImage,
-                // flag pipefail is required otherwise the command exit status is not returned
-                ['bash', '-o', 'pipefail', '-c', getMainScript(req.workDir)],
-                [req.sharedMount] )
+                cmd,
+                [req.sharedMount],
+                Collections.<ActionFlags>emptyList(),
+                req.entryPoint)
     }
 
     protected Action createStagingAction(GoogleLifeSciencesSubmitRequest req) {
@@ -299,5 +321,25 @@ class GoogleLifeSciencesHelper {
         result += "trap 'err=\$?; exec 1>&2; gsutil -m -q cp -R $localTaskDir/${TaskRun.CMD_LOG} ${remoteTaskDir}/${TaskRun.CMD_LOG} || true; [[ \$err -gt 0 || \$GOOGLE_LAST_EXIT_STATUS -gt 0 || \$NXF_DEBUG -gt 0 ]] && { ls -lah $localTaskDir || true; gsutil -m -q cp -R /google/ ${remoteTaskDir}; } || rm -rf $localTaskDir; exit \$err' EXIT; "
         result += "{ cd $localTaskDir; bash ${TaskRun.CMD_RUN} nxf_unstage; } >> $localTaskDir/${TaskRun.CMD_LOG} 2>&1"
         return result
+    }
+
+    void checkValidLocation() {
+        if( config.location in DEFAULT_LOCATIONS ) {
+            // that's fine, just return
+            return
+        }
+        // check the current list of location to make sure the specified one really exists
+        final availLocations = client
+                .projects()
+                .locations()
+                .list("projects/$config.project")
+                .execute()
+                .getLocations()
+                *.getLocationId()
+        if( config.location in availLocations ) {
+            return
+        }
+        // show a warning message
+        log.warn "The specified Google Life Sciences location is not available: \"$config.location\" -- Please choose open of the following ${availLocations.join(',')}"
     }
 }

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,6 +58,12 @@ class ProcessDef extends BindableDef implements ChainableDef {
     private String simpleName
 
     /**
+     * Process source name how it was given in the original model ie. this name
+     * name is stable and cannot be changed/aliased while the process is included.
+     */
+    private String baseName
+
+    /**
      * The closure holding the process definition body
      */
     private Closure<BodyDef> rawBody
@@ -81,6 +88,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
         this.rawBody = body
         this.simpleName = name
         this.processName = name
+        this.baseName = name
     }
 
     static String stripScope(String str) {
@@ -106,7 +114,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
             throw new ScriptRuntimeException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
 
         // apply config settings to the process
-        processConfig.applyConfig((Map)session.config.process, simpleName, processName)
+        processConfig.applyConfig((Map)session.config.process, baseName, simpleName, processName)
     }
 
     @Override
@@ -135,15 +143,14 @@ class ProcessDef extends BindableDef implements ChainableDef {
 
     String getSimpleName() { simpleName }
 
+    String getBaseName() { baseName }
+
     ProcessConfig getProcessConfig() { processConfig }
 
-    @Deprecated
-    ChannelOut getOutput() {
-        log.warn1 "Property `output` has been deprecated use `${name}.out` instead"
+    ChannelOut getOut() {
+        if(!output) throw new ScriptRuntimeException("Access to '${processName}.out' is undefined since process doesn't declare any output")
         return output
     }
-
-    ChannelOut getOut() { output }
 
     String getType() { 'process' }
 
@@ -184,6 +191,9 @@ class ProcessDef extends BindableDef implements ChainableDef {
             }
         }
 
+        // make a copy of the output list because execution can change it
+        final copyOuts = declaredOutputs.clone()
+
         // create the executor
         final executor = session
                 .executorFactory
@@ -197,7 +207,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
 
         // the result channels
         assert declaredOutputs.size()>0, "Process output should contains at least one channel"
-        return output = new ChannelOut(declaredOutputs)
+        return output = new ChannelOut(copyOuts)
     }
 
 }

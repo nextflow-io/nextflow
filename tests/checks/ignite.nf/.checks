@@ -17,7 +17,7 @@ $NXF_RUN -process.executor ignite | tee stdout
 #
 # Run Ignite using S3 as working directory 
 #
-$NXF_RUN -process.executor ignite -w s3://nxf-s3fs-tests/work | tee stdout
+$NXF_RUN -process.executor ignite -w s3://nextflow-ci/work | tee stdout
 
 [[ `< .nextflow.log grep -c 'executor > ignite'` == 1 ]] || false
 [[ `< .nextflow.log grep -c 'Submitted process'` == 8 ]] || false

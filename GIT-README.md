@@ -28,6 +28,13 @@ eg:
 
 Read more [here](https://help.github.com/articles/syncing-a-fork/).
 
+## Pull options
+
+  git config pull.rebase false  # merge (the default strategy)
+  git config pull.rebase true   # rebase
+  git config pull.ff only       # fast-forward only
+
+
 ## Subtree  
 
 The `tests` directory is a Git subtree created with the 
@@ -41,7 +48,7 @@ To pull changes from the [tests repo](https://github.com/nextflow-io/tests) use 
 
     git subtree pull --squash --prefix=tests/ tests integration
 
-To push changes to to [tests repo](https://github.com/nextflow-io/tests) use this command: 
+To push changes to the [tests repo](https://github.com/nextflow-io/tests) use this command: 
 
     git subtree push --prefix=tests/ tests integration
 
@@ -66,6 +73,12 @@ Find a commit in any branch introducing a change
 
     git log -S <whatever> --source --all
 
+Reset last merge pushed 
+
+    git reset --hard HEAD@{1}
+
+    Read more https://stackoverflow.com/a/11722640/395921
+    
 ## GPG keys 
 
 To sign Git commits with a GPG key on Mac use [GPG Suite](https://gpgtools.org/), import your key, then: 

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,7 +30,7 @@ import groovy.transform.EqualsAndHashCode
 
 @CompileStatic
 @EqualsAndHashCode
-class BlankSeparatedList implements KryoSerializable {
+class BlankSeparatedList implements KryoSerializable, PathEscapeAware {
 
     @Delegate
     List target
@@ -50,7 +51,7 @@ class BlankSeparatedList implements KryoSerializable {
         target.join(' ')
     }
 
-    String toStringEscapePaths() {
+    String toStringEscape() {
         def result = new StringBuilder()
         for( int i=0; i<target.size(); i++ ) {
             if( i ) result.append(' ')

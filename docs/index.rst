@@ -27,6 +27,7 @@ Contents:
    docker
    shifter
    singularity
+   podman
    ignite
    kubernetes
    tracing
@@ -34,7 +35,3 @@ Contents:
    metadata
    mail
    example
-   faq
-
-
-

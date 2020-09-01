@@ -87,6 +87,8 @@ class GoogleLifeSciencesExecutor extends Executor {
 
         log.debug "Google Life Science config=$config"
         helper = initClient()
+        // validate specified location
+        helper.checkValidLocation()
     }
 
     protected GoogleLifeSciencesHelper initClient() {

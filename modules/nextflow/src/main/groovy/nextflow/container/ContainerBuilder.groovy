@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,6 +52,8 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
     protected String entryPoint
 
     protected String runCommand
+
+    protected boolean mountWorkDir = true
 
     V addRunOptions(String str) {
         runOptions.add(str)
@@ -119,7 +122,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
         return run + ' ' + launcher
     }
 
-    String getKillCommand() { return null }
+    String getKillCommand() { return '[[ "$pid" ]] && kill $pid 2>/dev/null' }
 
     String getRemoveCommand() { return null }
 
@@ -151,6 +154,11 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
     V addMountForInputs( Map<String,Path> inputFiles ) {
         mounts.addAll( inputFilesToPaths(inputFiles) )
+        return (V)this
+    }
+
+    V addMountWorkDir(boolean flag) {
+        this.mountWorkDir = flag
         return (V)this
     }
 
@@ -222,18 +230,17 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
         // find the longest commons paths and mount only them
         final trie = new PathTrie()
-        allMounts.each { trie.add(it) }
+        for( String it : allMounts ) { trie.add(it) }
 
         // when mounts are read-only make sure to remove the work-dir path
         final paths = trie.longest()
         if( readOnlyInputs && workDirStr && paths.contains(workDirStr) )
             paths.remove(workDirStr)
 
-        paths.each {
-            if(it) {
-                result << composeVolumePath(it,readOnlyInputs)
-                result << ' '
-            }
+        for( String it : paths ) {
+            if(!it) continue
+            result << composeVolumePath(it,readOnlyInputs)
+            result << ' '
         }
 
         // when mounts are read-only, make sure to include the work-dir as writable
@@ -243,7 +250,10 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
         }
 
         // -- append by default the current path -- this is needed when `scratch` is set to true
-        result << composeVolumePath('$PWD')
+        if( mountWorkDir ) {
+            result << composeVolumePath('$PWD')
+            result << ' '
+        }
 
         return result
     }

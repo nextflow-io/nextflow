@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -211,6 +212,10 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run','-with-docker', '-x') == ['run', '-with-docker','-', '-x']
         launcher.normalizeArgs('run','-with-docker', 'busybox') == ['run', '-with-docker','busybox']
 
+        launcher.normalizeArgs('run','-with-podman') == ['run', '-with-podman','-']
+        launcher.normalizeArgs('run','-with-podman', '-x') == ['run', '-with-podman','-', '-x']
+        launcher.normalizeArgs('run','-with-podman', 'busybox') == ['run', '-with-podman','busybox']
+
         launcher.normalizeArgs('run','-with-singularity') == ['run', '-with-singularity','-']
         launcher.normalizeArgs('run','-with-singularity', '-x') == ['run', '-with-singularity','-', '-x']
         launcher.normalizeArgs('run','-with-singularity', 'busybox') == ['run', '-with-singularity','busybox']
@@ -242,6 +247,8 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run','-ansi-log', '-x') == ['run', '-ansi-log','true', '-x']
         launcher.normalizeArgs('run','-ansi-log', 'true', '-x') == ['run', '-ansi-log','true', '-x']
         launcher.normalizeArgs('run','-ansi-log', 'false', '-x') == ['run', '-ansi-log','false', '-x']
+
+        launcher.normalizeArgs('run','-dsl2', '-x') == ['run', '-dsl2','true', '-x']
 
         launcher.normalizeArgs( script.toAbsolutePath().toString(), '--x=1' ) == ['run', script.toAbsolutePath().toString(), '--x=1']
 
@@ -373,7 +380,7 @@ class LauncherTest extends Specification {
                   list   List all downloaded projects
                   run    Execute a pipeline project
 
-               '''
+                '''
                 .stripIndent()
     }
 

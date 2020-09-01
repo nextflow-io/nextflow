@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,8 +21,10 @@ import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.Paths
 
+import groovy.transform.EqualsAndHashCode
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
 
 /**
  * Implements a {@link Path} interface for the a given
@@ -37,6 +40,8 @@ import groovy.transform.PackageScope
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@EqualsAndHashCode
+@Slf4j
 class ProviderPath implements Path {
 
     @PackageScope
@@ -73,7 +78,22 @@ class ProviderPath implements Path {
         new ProviderPath(provider, delegate.resolve(other))
     }
 
-    boolean exists(LinkOption... options) { true }
+    @Override
+    Path getParent() {
+        def parent = delegate.parent ?: Paths.get('')
+        new ProviderPath(provider, parent)
+    }
+
+    boolean exists(LinkOption... options) {
+        try {
+            getText()
+            return true
+        }
+        catch (Exception e) {
+            log.trace "Failed to check existance -- cause [${e.class.name}] ${e.message}"
+            return false
+        }
+    }
 
     @Memoized
     String getText() {
@@ -84,4 +104,30 @@ class ProviderPath implements Path {
         provider.getContentUrl(delegate.toString())
     }
 
+    String toString() {
+        final base = provider.getRepositoryUrl()
+        final file = delegate.toString()
+        return file ? "$base/$file" : base
+    }
+
+    /**
+     * @return the path itself because it's absolute by definition being a remote file
+     */
+    Path toAbsolutePath() {
+        return this
+    }
+
+    /**
+     * @return {@code true} because it's absolute by definition being a remote file
+     */
+    boolean isAbsolute() {
+        return true
+    }
+
+    /**
+     * @return the path itself because it's absolute by definition being a remote file
+     */
+    Path normalize() {
+        return this
+    }
 }

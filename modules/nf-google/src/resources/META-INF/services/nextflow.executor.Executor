@@ -14,5 +14,4 @@
 # limitations under the License.
 #
 
-nextflow.cloud.google.pipelines.GooglePipelinesExecutor
 nextflow.cloud.google.lifesciences.GoogleLifeSciencesExecutor

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,12 +25,15 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.executor.res.AcceleratorResource
 import nextflow.util.MemoryUnit
+import groovy.util.logging.Slf4j
+
 /**
  * Object build for a K8s pod specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
+@Slf4j
 class PodSpecBuilder {
 
     static @PackageScope AtomicInteger VOLUMES = new AtomicInteger()
@@ -333,10 +337,10 @@ class PodSpecBuilder {
 
         // add labels
         if( labels )
-            metadata.labels = labels
+            metadata.labels = sanitize0(labels, 'label')
 
         if( annotations)
-            metadata.annotations = annotations
+            metadata.annotations = sanitize0(annotations, 'annotation')
 
         final pod = [
                 apiVersion: 'v1',
@@ -424,6 +428,25 @@ class PodSpecBuilder {
         return pod
     }
 
+
+    @PackageScope
+    @CompileDynamic
+    String getAcceleratorType(AcceleratorResource accelerator) {
+
+        def type = accelerator.type ?: 'nvidia.com'
+
+        if ( type.contains('/') )
+            // Assume the user has fully specified the resource type.
+            return type
+
+        // Assume we're using GPU and update as necessary.
+        if( !type.contains('.') ) type += '.com'
+        type += '/gpu'
+
+        return type
+    }
+
+
     @PackageScope
     @CompileDynamic
     Map addAcceleratorResources(AcceleratorResource accelerator, Map res) {
@@ -431,10 +454,7 @@ class PodSpecBuilder {
         if( res == null )
             res = new LinkedHashMap(2)
 
-        // tpu gou custom resource type
-        def type = accelerator.type ?: 'nvidia.com'
-        if( !type.contains('.') ) type += '.com'
-        type += '/gpu'
+        def type = getAcceleratorType(accelerator)
 
         if( accelerator.request ) {
             final req = res.requests ?: new LinkedHashMap<>(2)
@@ -478,5 +498,30 @@ class PodSpecBuilder {
         volumes << [name: volName, configMap: config ]
     }
 
+    protected Map sanitize0(Map map, String kind) {
+        final result = new HashMap(map.size())
+        for( Map.Entry entry : map )
+            result.put(entry.key, sanitize0(entry.key, entry.value, kind))
+        return result
+    }
+
+    /**
+     * Valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.',
+     * and must start and end with an alphanumeric character.
+     *
+     * @param value
+     * @return
+     */
+    protected String sanitize0( key, value, String kind ) {
+        def str = String.valueOf(value)
+        if( str.length() > 63 ) {
+            log.debug "K8s $kind exceeds allowed size: 63 -- offending name=$key value=$str"
+            str = str.substring(0,63)
+        }
+        str = str.replaceAll(/[^a-zA-Z0-9\.\_\-]+/, '_')
+        str = str.replaceAll(/^[^a-zA-Z]+/, '')
+        str = str.replaceAll(/[^a-zA-Z0-9]+$/, '')
+        return str
+    }
 
 }

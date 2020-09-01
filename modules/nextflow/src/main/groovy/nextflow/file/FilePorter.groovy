@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -186,9 +187,6 @@ class FilePorter {
          *
          */
         Path addToForeign(Path path) {
-            if( path.scheme == stageScheme )
-                return path
-
             // copy the path with a thread pool
             foreignPaths << path
             return getCachePathFor(path, stageDir)

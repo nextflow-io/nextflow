@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +25,7 @@ import nextflow.dag.CytoscapeHtmlRenderer
 import nextflow.dag.DAG
 import nextflow.dag.DagRenderer
 import nextflow.dag.DotRenderer
+import nextflow.dag.GexfRenderer
 import nextflow.dag.GraphvizRenderer
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
@@ -78,6 +80,9 @@ class GraphObserver implements TraceObserver {
 
         else if( format == 'html' )
             new CytoscapeHtmlRenderer()
+
+        else if( format == 'gexf' )
+            new GexfRenderer(name)
 
         else
             new GraphvizRenderer(name, format)

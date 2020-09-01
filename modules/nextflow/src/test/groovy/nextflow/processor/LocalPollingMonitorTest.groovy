@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -95,6 +96,7 @@ class LocalPollingMonitorTest extends Specification {
         task.config = new TaskConfig(cpus: 4, memory: MemoryUnit.of('8GB'))
         def handler = Mock(TaskHandler)
         handler.getTask() >> { task }
+        handler.canForkProcess() >> true
 
         expect:
         monitor.canSubmit(handler) == true
@@ -139,7 +141,8 @@ class LocalPollingMonitorTest extends Specification {
         task.config = new TaskConfig(cpus: 1, memory: MemoryUnit.of('8GB'))
         def handler = Mock(TaskHandler)
         handler.getTask() >> { task }
-
+        handler.canForkProcess() >> true
+        
         expect:
         monitor.canSubmit(handler) == true
         monitor.availCpus == 1

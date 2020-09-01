@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,8 +44,6 @@ import nextflow.script.params.InParam
 import nextflow.script.params.OutParam
 import nextflow.script.params.StdInParam
 import nextflow.script.params.ValueOutParam
-import nextflow.util.BlankSeparatedList
-import nextflow.util.Escape
 /**
  * Models a task instance
  *
@@ -215,7 +214,7 @@ class TaskRun implements Cloneable {
         }
         catch( Exception e ) {
             log.debug "Unable to dump output of process '$name' -- Cause: ${e}"
-            return []
+            return Collections.<String>emptyList()
         }
     }
 
@@ -226,17 +225,19 @@ class TaskRun implements Cloneable {
         }
         catch( Exception e ) {
             log.debug "Unable to dump error of process '$name' -- Cause: ${e}"
-            return []
+            return Collections.<String>emptyList()
         }
     }
 
     List<String> dumpLogFile(int n = 50) {
+        if( !workDir )
+            return Collections.<String>emptyList()
         try {
             return dumpObject(workDir.resolve(CMD_LOG),n)
         }
         catch( Exception e ) {
             log.debug "Unable to dump error of process '$name' -- Cause: ${e}"
-            return []
+            return Collections.<String>emptyList()
         }
     }
 
@@ -255,7 +256,7 @@ class TaskRun implements Cloneable {
             }
         }
 
-        return result ?: []
+        return result ?: Collections.<String>emptyList()
     }
 
     /**
@@ -655,9 +656,6 @@ class TaskRun implements Cloneable {
             else if( result != null && body.isShell ) {
                 script = renderScript(result)
             }
-            else if( result instanceof GString ) {
-                script = resolveGString(result)
-            }
             else {
                 script = result.toString()
             }
@@ -668,21 +666,7 @@ class TaskRun implements Cloneable {
         catch( Throwable e ) {
             throw new ProcessUnrecoverableException("Process `$name` script contains error(s)", e)
         }
-
     }
-
-    protected String resolveGString(GString str) {
-        for( int i=0; i<str.getValueCount(); i++ ) {
-            final obj = str.values[i]
-            if( obj instanceof TaskPath )
-                str.values[i] = Escape.path(obj)
-            else if( obj instanceof BlankSeparatedList ) {
-                str.values[i] = obj.toStringEscapePaths()
-            }
-        }
-        str.toString()
-    }
-
 
     /**
      * Given a template script file and a binding, returns the rendered script content

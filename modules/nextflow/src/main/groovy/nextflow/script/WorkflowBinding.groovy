@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -69,6 +70,8 @@ class WorkflowBinding extends Binding  {
     }
 
     @PackageScope void checkScope0(ComponentDef component) {
+        if( component instanceof FunctionDef )
+            return // OK
         if( component instanceof ChainableDef && !ExecutionStack.withinWorkflow() ) {
             throw new IllegalInvocationException(component)
         }

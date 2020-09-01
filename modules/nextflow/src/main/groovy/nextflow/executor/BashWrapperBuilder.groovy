@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +25,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.container.ContainerBuilder
 import nextflow.container.DockerBuilder
+import nextflow.container.PodmanBuilder
 import nextflow.container.ShifterBuilder
 import nextflow.container.SingularityBuilder
 import nextflow.container.UdockerBuilder
@@ -31,6 +33,7 @@ import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Escape
+
 /**
  * Builder to create the BASH script which is used to
  * wrap and launch the user task
@@ -40,6 +43,8 @@ import nextflow.util.Escape
 @Slf4j
 @CompileStatic
 class BashWrapperBuilder {
+
+    static final public KILL_CMD = '[[ "$pid" ]] && nxf_kill $pid'
 
     static final private ENDL = '\n'
 
@@ -131,6 +136,10 @@ class BashWrapperBuilder {
         return "NXF_SCRATCH=\"\$(set +u; nxf_mktemp $scratchStr)\""
     }
 
+    protected boolean shouldUnstageOutputs() {
+        return workDir != targetDir
+    }
+
     protected boolean fixOwnership() {
         systemOsName == 'Linux' && containerConfig?.fixOwnership && runWithContainer && containerConfig.engine == 'docker' // <-- note: only for docker (shifter is not affected)
     }
@@ -212,7 +221,7 @@ class BashWrapperBuilder {
         else {
             binding.container_boxid = null
             binding.container_helpers = null
-            binding.kill_cmd = '[[ "$pid" ]] && nxf_kill $pid'
+            binding.kill_cmd = KILL_CMD
         }
 
         binding.cleanup_cmd = getCleanupCmd(changeDir)
@@ -254,7 +263,7 @@ class BashWrapperBuilder {
         binding.unstage_cmd = getUnstageCommand()
         binding.unstage_controls = changeDir ? getUnstageControls() : null
 
-        if( changeDir || workDir != targetDir ) {
+        if( changeDir || shouldUnstageOutputs() ) {
             binding.unstage_outputs = copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)
         }
         else {
@@ -333,7 +342,12 @@ class BashWrapperBuilder {
     }
 
     private String getCondaActivateSnippet() {
-        condaEnv ? "# conda environment\nsource activate ${Escape.path(condaEnv)}\n" : null
+        if( !condaEnv )
+            return null
+        def result = "# conda environment\n"
+        result += 'source $(conda info --json | awk \'/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }\')'
+        result += "/bin/activate ${Escape.path(condaEnv)}\n"
+        return result
     }
 
     protected String getTraceCommand(String interpreter) {
@@ -415,6 +429,8 @@ class BashWrapperBuilder {
          */
         if( engine == 'docker' )
             return new DockerBuilder(containerImage)
+        if( engine == 'podman' )
+            return new PodmanBuilder(containerImage)
         if( engine == 'singularity' )
             return new SingularityBuilder(containerImage)
         if( engine == 'udocker' )
@@ -499,6 +515,11 @@ class BashWrapperBuilder {
         if( containerOptions ) {
             builder.addRunOptions(containerOptions)
         }
+
+        // The current work directory should be mounted only when
+        // the task is executed in a temporary scratch directory (ie changeDir != null)
+        // Applying this strategy only to podman for now. See https://github.com/nextflow-io/nextflow/issues/1710
+        builder.addMountWorkDir( engine!='podman' || changeDir )
 
         builder.build()
         return builder

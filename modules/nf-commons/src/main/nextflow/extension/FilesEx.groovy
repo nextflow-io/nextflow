@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -1244,7 +1245,7 @@ class FilesEx {
      * Create a folder if not already exists
      * @param target The folder to be created
      */
-    static void createDirIfNotExists( Path target ) {
+    static Path createDirIfNotExists( Path target ) {
         assert target
 
         try {
@@ -1256,6 +1257,8 @@ class FilesEx {
                 throw new IOException("Cannot create folder: $target -- Check file systeme access permission")
 
         }
+
+        return target
     }
 
     static void createDirIfNotExists( File target ) {

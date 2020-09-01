@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2018, University of Tübingen, Quantitative Biology Center (QBiC)
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
@@ -125,6 +126,7 @@ class SimpleHttpClient {
                 // capture error code
                 // https://stackoverflow.com/a/18462721/395921
                 this.responseCode = con.getResponseCode()
+                this.response = (con.getErrorStream() ?: con.getInputStream())?.text
                 this.errorCount +=1
                 if( responseCode < 500 || this.errorCount > maxRetries )
                     throw e

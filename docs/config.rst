@@ -302,7 +302,7 @@ The above configuration example can be rewritten using the dot notation as shown
 Scope `docker`
 --------------
 
-The ``docker`` configuration scope controls how `Docker <http://www.docker.io>`_ containers are executed by Nextflow.
+The ``docker`` configuration scope controls how `Docker <https://www.docker.com>`_ containers are executed by Nextflow.
 
 The following settings are available:
 
@@ -343,7 +343,7 @@ Read :ref:`docker-page` page to lean more how use Docker containers with Nextflo
 Scope `singularity`
 -------------------
 
-The ``singularity`` configuration scope controls how `Singularity <http://singularity.lbl.gov>`_ containers are executed
+The ``singularity`` configuration scope controls how `Singularity <https://sylabs.io/singularity/>`_ containers are executed
 by Nextflow.
 
 The following settings are available:
@@ -356,13 +356,49 @@ engineOptions       This attribute can be used to provide any option supported b
 envWhitelist        Comma separated list of environment variable names to be included in the container environment.
 runOptions          This attribute can be used to provide any extra command line options supported by the ``singularity exec``.
 noHttps             Turn this flag to ``true`` to pull the Singularity image with http protocol (default: ``false``).
-autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed contained. It requires the `user bind control` feature enabled in your Singularity installation (default: ``false``).
+autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Singularity installation (default: ``false``).
 cacheDir            The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
 pullTimeout         The amount of time the Singularity pull can last, exceeding which the process is terminated (default: ``20 min``).
 ================== ================
 
 
 Read :ref:`singularity-page` page to lean more how use Singularity containers with Nextflow.
+
+.. _config-podman:
+
+Scope `podman`
+--------------
+
+The ``podman`` configuration scope controls how `Podman <https://podman.io/>`_ containers are executed by Nextflow.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+enabled             Turn this flag to ``true`` to enable Podman execution (default: ``false``).
+envWhitelist        Comma separated list of environment variable names to be included in the container environment.
+temp                Mounts a path of your choice as the ``/tmp`` directory in the container. Use the special value ``auto`` to create a temporary directory each time a container is created.
+remove              Clean-up the container after the execution (default: ``true``).
+runOptions          This attribute can be used to provide any extra command line options supported by the ``podman run`` command.
+registry            The registry from where container images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. ``http://``.
+engineOptions       This attribute can be used to provide any option supported by the Docker engine i.e. ``podman [OPTIONS]``.
+mountFlags          Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`
+================== ================
+
+The above options can be used by prefixing them with the ``podman`` scope or surrounding them by curly
+brackets, as shown below::
+
+    process.container = 'nextflow/examples'
+
+    podman {
+        enabled = true
+        temp = 'auto'
+    }
+
+
+
+Read :ref:`podman-page` page to lean more how use Podman containers with Nextflow.
 
 .. _config-manifest:
 
@@ -378,7 +414,9 @@ Name                Description
 ================== ================
 author              Project author name (use a comma to separate multiple names).
 defaultBranch       Git repository default branch (default: ``master``).
+recurseSubmodules   Turn this flag to ``true`` to pull submodules recursively from the Git repository
 description         Free text describing the workflow project.
+doi                 Project related publication DOI identifier.
 homePage            Project home page URL.
 mainScript          Project main script (default: ``main.nf``).
 name                Project short name.
@@ -520,48 +558,9 @@ maxTransferAttempts         Max number of downloads attempts from S3 (default: `
 Scope `cloud`
 -------------
 
-The ``cloud`` scope allows you to define the settings of the computing cluster that can be deployed in the cloud
-by Nextflow.
+.. note::
+    The ``cloud`` configuration scope has been retired.
 
-The following settings are available:
-
-=========================== ================
-Name                        Description
-=========================== ================
-bootStorageSize             Boot storage volume size e.g. ``10 GB``.
-imageId                     Identifier of the virtual machine(s) to launch e.g. ``ami-43f49030``.
-instanceRole                IAM role granting required permissions and authorizations in the launched instances.
-                            When specifying an IAM role no access/security keys are installed in the cluster deployed in the cloud.
-instanceType                Type of the virtual machine(s) to launch e.g. ``m4.xlarge``.
-instanceStorageMount        Ephemeral instance storage mount path e.g. ``/mnt/scratch``.
-instanceStorageDevice       Ephemeral instance storage device name e.g. ``/dev/xvdc`` (optional).
-keyName                     SSH access key name given by the cloud provider.
-keyHash                     SSH access public key hash string.
-keyFile                     SSH access public key file path.
-securityGroup               Identifier of the security group to be applied e.g. ``sg-df72b9ba``.
-sharedStorageId             Identifier of the shared file system instance e.g. ``fs-1803efd1``.
-sharedStorageMount          Mount path of the shared file system e.g. ``/mnt/efs``.
-subnetId                    Identifier of the VPC subnet to be applied e.g. ``subnet-05222a43``.
-spotPrice                   Price bid for spot/preemptive instances.
-userName                    SSH access user name (don't specify it to use the image default user name).
-autoscale                   See below.
-=========================== ================
-
-The autoscale configuration group provides the following settings:
-
-=========================== ================
-Name                        Description
-=========================== ================
-enabled                     Enable cluster auto-scaling.
-terminateWhenIdle           Enable cluster automatic scale-down i.e. instance terminations when idle (default: ``false``).
-idleTimeout                 Amount of time in idle state after which an instance is candidate to be terminated (default: ``5 min``).
-starvingTimeout             Amount of time after which one ore more tasks pending for execution trigger an auto-scale request (default: ``5 min``).
-minInstances                Minimum number of instances in the cluster.
-maxInstances                Maximum number of instances in the cluster.
-imageId                     Identifier of the virtual machine(s) to launch when new instances are added to the cluster.
-instanceType                Type of the virtual machine(s) to launch when new instances are added to the cluster.
-spotPrice                   Price bid for spot/preemptive instances launched while auto-scaling the cluster.
-=========================== ================
 
 .. _config-conda:
 
@@ -811,6 +810,7 @@ NXF_OFFLINE                 When ``true`` disables the project automatic downloa
 NXF_CLOUD_DRIVER            Defines the default cloud driver to be used if not specified in the config file or as command line option, either ``aws`` or ``google``.
 NXF_ANSI_LOG                Enables/disables ANSI console output (default ``true`` when ANSI terminal is detected).
 NXF_ANSI_SUMMARY            Enables/disables ANSI completion summary: `true|false` (default: print summary if execution last more than 1 minute).
+NXF_SCM_FILE                Defines the path location of the SCM config file (requires version ``20.10.0`` or later).
 JAVA_HOME                   Defines the path location of the Java VM installation used to run Nextflow.
 JAVA_CMD                    Defines the path location of the Java binary command used to launch Nextflow.
 HTTP_PROXY                  Defines the HTTP proxy server

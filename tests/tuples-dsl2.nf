@@ -1,13 +1,13 @@
 #!/usr/bin/env nextflow
-nextflow.preview.dsl=2
+nextflow.enable.dsl=2
 
 
 process touch {
 
   input:
-    tuple ( id, fileName )
+    tuple val(id), val(fileName)
   output:
-    tuple ( id, 'file*' )
+    tuple val(id), path('file*')
 
 
   /
@@ -18,10 +18,10 @@ process touch {
 
 process makeFiles {
   input:
-    tuple( id, 'file_x' ) 
+    tuple val(id), path('file_x')
 
   output:
-    tuple( id, '*') mode flatten
+    tuple val(id), path('*')
 
   /
    cp file_x copy_$id
@@ -35,5 +35,6 @@ workflow {
         .from( ['a', 'file1'], ['b','file2'] ) \
         | touch \
         | makeFiles \
+        | flatten \
         | subscribe { println it }
 }

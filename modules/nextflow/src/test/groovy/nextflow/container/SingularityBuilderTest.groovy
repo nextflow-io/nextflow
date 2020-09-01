@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -129,9 +130,16 @@ class SingularityBuilderTest extends Specification {
         def builder = [:] as SingularityBuilder
 
         expect:
-        builder.makeEnv('X=1').toString() == 'SINGULARITYENV_X=1'
-        builder.makeEnv([VAR_X:1, VAR_Y: 2]).toString() == 'SINGULARITYENV_VAR_X="1" SINGULARITYENV_VAR_Y="2"'
-        builder.makeEnv('BAR').toString() == '${BAR:+SINGULARITYENV_BAR="$BAR"}'
-        builder.makeEnv([SINGULARITY_BIND: 'foo', SINGULARITYENV_FOO: 'x', BAR: 'y']).toString() == 'SINGULARITY_BIND="foo" SINGULARITYENV_FOO="x" SINGULARITYENV_BAR="y"'
+        builder.makeEnv(ENV).toString() == RESULT
+
+        where:
+        ENV                         | RESULT
+        'X=1'                       | 'SINGULARITYENV_X=1'
+        'BAR'                       | '${BAR:+SINGULARITYENV_BAR="$BAR"}'
+        [VAR_X:1, VAR_Y: 2]         | 'SINGULARITYENV_VAR_X="1" SINGULARITYENV_VAR_Y="2"'
+        [SINGULARITY_BIND: 'foo', SINGULARITYENV_FOO: 'x', BAR: 'y'] | 'SINGULARITY_BIND="foo" SINGULARITYENV_FOO="x" SINGULARITYENV_BAR="y"'
+        'SINGULARITY_FOO'          | '${SINGULARITY_FOO:+SINGULARITY_FOO="$SINGULARITY_FOO"}'
+        'SINGULARITYENV_FOO'       | '${SINGULARITYENV_FOO:+SINGULARITYENV_FOO="$SINGULARITYENV_FOO"}'
+        'SINGULARITYENV_X=1'       | 'SINGULARITYENV_X=1'
     }
 }

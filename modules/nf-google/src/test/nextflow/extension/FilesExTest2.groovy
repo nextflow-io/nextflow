@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +23,8 @@ import spock.lang.Unroll
 import java.nio.file.Path
 
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
+import nextflow.Global
+import nextflow.Session
 
 /**
  *
@@ -31,6 +34,10 @@ class FilesExTest2 extends Specification {
 
     @Unroll
     def 'should return uri string for #PATH' () {
+        given:
+        Global.session = Mock(Session) {
+            getConfig() >> [google:[project:'foo', region:'x']]
+        }
 
         when:
         def path = PATH as Path

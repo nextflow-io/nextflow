@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -701,7 +702,7 @@ class Bolts {
      * @param binding A {@link Map} object that is set as delegate object in the cloned closure.
      * @return The cloned {@link GString} instance
      */
-    static GString cloneAsLazy(GString self, binding ) {
+    static GString cloneAsLazy(GString self, binding) {
 
         def values = new Object[ self.valueCount ]
 

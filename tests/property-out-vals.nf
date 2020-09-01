@@ -1,5 +1,6 @@
 #!/usr/bin/env nextflow
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,5 +29,5 @@ process foo {
   """
 }
 
-ch1.println { "exit_status=$it" }
-ch2.println { "record=${it[0]}_${it[1]}" }
+ch1.view { "exit_status=$it" }
+ch2.view { "record=${it[0]}_${it[1]}" }

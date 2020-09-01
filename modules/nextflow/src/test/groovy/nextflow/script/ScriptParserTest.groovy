@@ -33,7 +33,6 @@ class ScriptParserTest extends Specification {
         parser.result == 'Hello world!'
         parser.result == binding.getVariable('bar')
         parser.binding.scriptPath == file
-        parser.binding.module == false
         parser.binding.session == session
         !session.binding.hasVariable('bar')
     }
@@ -57,7 +56,6 @@ class ScriptParserTest extends Specification {
         parser.result == 'Hello world!'
         parser.result == binding.getVariable('bar')
         parser.binding.scriptPath == null
-        parser.binding.module == false
         parser.binding.session == session
         !session.binding.hasVariable('bar')
     }
@@ -79,7 +77,6 @@ class ScriptParserTest extends Specification {
         parser.script instanceof BaseScript
         parser.result == 'Hello world!'
         parser.binding.scriptPath == null
-        parser.binding.module == false
         parser.binding.session == session
         session.binding.getVariable('foo') == 'Hello'
         session.binding.getVariable('bar') == 'Hello world!'
@@ -141,8 +138,8 @@ class ScriptParserTest extends Specification {
         then:
         def e = thrown(ScriptCompilationException)
         e.message.startsWith('Script compilation error')
-        e.message.contains('- cause: unexpected token: foo @ line 2, column 13.')
+        e.message.contains("- cause: Unexpected input: ')'")
         e.message.contains('foo.nf\n')
     }
-
+    
 }

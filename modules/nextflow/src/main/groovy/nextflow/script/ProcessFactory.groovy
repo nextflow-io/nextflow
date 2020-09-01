@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -83,24 +84,8 @@ class ProcessFactory {
         assert body
         assert config.process instanceof Map
 
-        /*
-         * check if exists 'attributes' defined in the 'process' scope for this process, e.g.
-         *
-         * process.$name.attribute1 = xxx
-         * process.$name.attribute2 = yyy
-         *
-         * NOTE: THIS HAS BEEN DEPRECATED AND WILL BE REMOVED
-         */
-        Map legacySettings = null
-        if( config.process['$'+name] instanceof Map ) {
-            legacySettings = (Map)config.process['$'+name]
-            log.warn "Process configuration syntax \$processName has been deprecated -- Replace `process.\$$name = <value>` with a process selector"
-        }
-
         // -- the config object
         final processConfig = new ProcessConfig(owner, name)
-                                .setLegacySettings(legacySettings)
-
         // Invoke the code block which will return the script closure to the executed.
         // As side effect will set all the property declarations in the 'taskConfig' object.
         processConfig.throwExceptionOnMissingProperty(true)
@@ -113,7 +98,7 @@ class ProcessFactory {
             throw new IllegalArgumentException("Missing script in the specified process block -- make sure it terminates with the script string to be executed")
 
         // -- apply settings from config file to process config
-        processConfig.applyConfig((Map)config.process, name)
+        processConfig.applyConfigLegacy((Map)config.process, name)
 
         // -- get the executor for the given process config
         final execObj = executorFactory.getExecutor(name, processConfig, script, session)

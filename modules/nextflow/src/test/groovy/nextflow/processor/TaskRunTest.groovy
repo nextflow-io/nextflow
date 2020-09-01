@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +22,7 @@ import java.nio.file.Paths
 
 import ch.grengine.Grengine
 import nextflow.Session
+import nextflow.ast.TaskCmdXform
 import nextflow.container.ContainerConfig
 import nextflow.executor.Executor
 import nextflow.file.FileHolder
@@ -36,6 +38,8 @@ import nextflow.script.params.StdOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
 import nextflow.util.BlankSeparatedList
+import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import spock.lang.Specification
 import spock.lang.Unroll
 import test.TestHelper
@@ -449,9 +453,13 @@ class TaskRunTest extends Specification {
 
     def 'should escape file names with blanks' () {
         given:
+        def compilerConfig = new CompilerConfiguration()
+        compilerConfig.addCompilationCustomizers(new ASTTransformationCustomizer(TaskCmdXform))
+        def shell = new GroovyShell(compilerConfig)
+        def body = (Closure)shell.evaluate('{-> "cat ${one}\\nhead ${many}"}')
+        and:
         def task = new TaskRun()
         task.processor = [:] as TaskProcessor
-        task.processor.grengine = new Grengine()
         def VARS = [
                 one: new TaskPath(Paths.get('a b.txt')),
                 many: new BlankSeparatedList([Paths.get('a.txt'), Paths.get('b b.txt')])
@@ -462,7 +470,7 @@ class TaskRunTest extends Specification {
          */
         when:
         task.context = new TaskContext(Mock(Script),VARS,'foo')
-        task.resolve(new BodyDef({-> "cat ${one}\nhead ${many}"}, 'cat ${one}\nhead ${many}', 'script'))
+        task.resolve(new BodyDef(body, 'cat ${one}\nhead ${many}', 'script'))
         then:
         task.script == '''
                     cat a\\ b.txt
@@ -772,7 +780,7 @@ class TaskRunTest extends Specification {
         given:
         def task = new TaskRun()
         task.processor = new TaskProcessor()
-        task.context = Mock(TaskContext)
+        task.context = GroovyMock(TaskContext)
 
         when:
         task.resolve(new BodyDef({-> "Hello ${x}"}, 'Hello ${x}', 'script'))
