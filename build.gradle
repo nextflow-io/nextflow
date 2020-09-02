@@ -316,11 +316,33 @@ configure(deployable) {
     signArchives.onlyIf { enableSignArchives }
 }
 
-task upload {
-    dependsOn compile
-    dependsOn deployable.uploadArchives
+
+String bytesToHex(byte[] bytes) {
+    StringBuffer result = new StringBuffer();
+    for (byte byt : bytes) result.append(Integer.toString((byt & 0xff) + 0x100, 16).substring(1));
+    return result.toString();
 }
 
+task makeDigest { doLast {
+    byte[] digest
+    String  str = file('nextflow').text
+    // create sha1
+    digest = java.security.MessageDigest.getInstance("SHA1").digest(str.getBytes())
+    file('nextflow.sha1').text = new BigInteger(1, digest).toString(16) + '\n'
+    // create sha-256
+    digest = java.security.MessageDigest.getInstance("SHA-256").digest(str.getBytes())
+    file('nextflow.sha256').text = bytesToHex(digest) + '\n'
+    // create md5
+    digest = java.security.MessageDigest.getInstance("MD5").digest(str.getBytes())
+    file('nextflow.md5').text = bytesToHex(digest) + '\n'
+}}
+
+
+task upload {
+    dependsOn compile
+    dependsOn makeDigest
+    dependsOn deployable.uploadArchives
+}
 
 /*
  * Configure Nextflow staging plugin -- https://github.com/Codearte/gradle-nexus-staging-plugin
