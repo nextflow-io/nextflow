@@ -1,5 +1,8 @@
 NEXTFLOW CHANGE-LOG
 ===================
+20.08.1-edge - 2 Sep 2020 
+- Add variable NXF_CONFIG_FILE [d15edcb8]
+
 20.08.0-edge - 24 Aug 2020
 - Merge Groovy3 runtime and support for Java 12/13/14
 - Use repository URL instead of Git clone URL [102f8b01]
