@@ -32,27 +32,6 @@ dependencies {
 }
 
 
-String bytesToHex(byte[] bytes) {
-    StringBuffer result = new StringBuffer();
-    for (byte byt : bytes) result.append(Integer.toString((byt & 0xff) + 0x100, 16).substring(1));
-    return result.toString();
-}
-
-task makeDigest { doLast {
-    byte[] digest
-    String  str = file('nextflow').text
-    // create sha1
-    digest = java.security.MessageDigest.getInstance("SHA1").digest(str.getBytes())
-    file('nextflow.sha1').text = new BigInteger(1, digest).toString(16) + '\n'
-    // create sha-256
-    digest = java.security.MessageDigest.getInstance("SHA-256").digest(str.getBytes())
-    file('nextflow.sha256').text = bytesToHex(digest) + '\n'
-    // create md5
-    digest = java.security.MessageDigest.getInstance("MD5").digest(str.getBytes())
-    file('nextflow.md5').text = bytesToHex(digest) + '\n'
-}}
-
-
 ext.mainClassName = 'nextflow.cli.Launcher'
 ext.homeDir = System.properties['user.home']
 ext.nextflowDir = "$homeDir/.nextflow/framework/$version"
@@ -242,7 +221,7 @@ task pack( dependsOn: [packOne, packAll]) {
 }
 
 
-task deploy( type: Exec, dependsOn: [clean, compile, pack, makeDigest]) {
+task deploy( type: Exec, dependsOn: [clean, compile, pack]) {
 
     def temp = File.createTempFile('upload',null)
     temp.deleteOnExit()
