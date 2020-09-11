@@ -110,22 +110,8 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         1 * opts.getStorageEncryption() >> null
 
         script ==   '''
-                    # aws helper
-                    nxf_s3_upload() {
-                        local pattern=$1
-                        local s3path=$2
-                        IFS=$'\\n'
-                        for name in $(eval "ls -1d $pattern");do
-                          if [[ -d "$name" ]]; then
-                            aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
-                          else
-                            aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
-                          fi
-                        done
-                        unset IFS
-                    }
-                    
-                    nxf_s3_retry() {
+                    # bash helper functions
+                    nxf_cp_retry() {
                         local max_attempts=1
                         local timeout=10
                         local attempt=0
@@ -146,18 +132,6 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                           attempt=\$(( attempt + 1 ))
                           timeout=\$(( timeout * 2 ))
                         done
-                    }
-
-                    nxf_s3_download() {
-                        local source=$1
-                        local target=$2
-                        local file_name=$(basename $1)
-                        local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
-                        if [[ $is_dir == 1 ]]; then
-                            aws s3 cp --only-show-errors --recursive "$source" "$target"
-                        else 
-                            aws s3 cp --only-show-errors "$source" "$target"
-                        fi
                     }
                     
                     nxf_parallel() {
@@ -188,6 +162,33 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                         )
                         unset IFS
                     }
+                    
+                    # aws helper
+                    nxf_s3_upload() {
+                        local pattern=$1
+                        local s3path=$2
+                        IFS=$'\\n'
+                        for name in $(eval "ls -1d $pattern");do
+                          if [[ -d "$name" ]]; then
+                            aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                          else
+                            aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                          fi
+                        done
+                        unset IFS
+                    }
+
+                    nxf_s3_download() {
+                        local source=$1
+                        local target=$2
+                        local file_name=$(basename $1)
+                        local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                        if [[ $is_dir == 1 ]]; then
+                            aws s3 cp --only-show-errors --recursive "$source" "$target"
+                        else 
+                            aws s3 cp --only-show-errors "$source" "$target"
+                        fi
+                    }
                     '''.stripIndent()
 
         when:
@@ -198,22 +199,8 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         2 * opts.getStorageEncryption() >> 'AES256'
 
         script == '''
-                # aws helper
-                nxf_s3_upload() {
-                    local pattern=$1
-                    local s3path=$2
-                    IFS=$'\\n'
-                    for name in $(eval "ls -1d $pattern");do
-                      if [[ -d "$name" ]]; then
-                        /foo/aws s3 cp --only-show-errors --recursive --sse AES256 --storage-class STANDARD_IA "$name" "$s3path/$name"
-                      else
-                        /foo/aws s3 cp --only-show-errors --sse AES256 --storage-class STANDARD_IA "$name" "$s3path/$name"
-                      fi
-                    done
-                    unset IFS
-                }
-                
-                nxf_s3_retry() {
+                # bash helper functions
+                nxf_cp_retry() {
                     local max_attempts=1
                     local timeout=10
                     local attempt=0
@@ -234,18 +221,6 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                       attempt=\$(( attempt + 1 ))
                       timeout=\$(( timeout * 2 ))
                     done
-                }
- 
-                nxf_s3_download() {
-                    local source=$1
-                    local target=$2
-                    local file_name=$(basename $1)
-                    local is_dir=$(/foo/aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
-                    if [[ $is_dir == 1 ]]; then
-                        /foo/aws s3 cp --only-show-errors --recursive "$source" "$target"
-                    else 
-                        /foo/aws s3 cp --only-show-errors "$source" "$target"
-                    fi
                 }
                 
                 nxf_parallel() {
@@ -275,6 +250,33 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                     ((${#pid[@]}>0)) && wait ${pid[@]}
                     )
                     unset IFS
+                }
+                
+                # aws helper
+                nxf_s3_upload() {
+                    local pattern=$1
+                    local s3path=$2
+                    IFS=$'\\n'
+                    for name in $(eval "ls -1d $pattern");do
+                      if [[ -d "$name" ]]; then
+                        /foo/aws s3 cp --only-show-errors --recursive --sse AES256 --storage-class STANDARD_IA "$name" "$s3path/$name"
+                      else
+                        /foo/aws s3 cp --only-show-errors --sse AES256 --storage-class STANDARD_IA "$name" "$s3path/$name"
+                      fi
+                    done
+                    unset IFS
+                }
+ 
+                nxf_s3_download() {
+                    local source=$1
+                    local target=$2
+                    local file_name=$(basename $1)
+                    local is_dir=$(/foo/aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                    if [[ $is_dir == 1 ]]; then
+                        /foo/aws s3 cp --only-show-errors --recursive "$source" "$target"
+                    else 
+                        /foo/aws s3 cp --only-show-errors "$source" "$target"
+                    fi
                 }
             '''.stripIndent()
     }
