@@ -441,6 +441,10 @@ class BashWrapperBuilder {
         throw new IllegalArgumentException("Unknown container engine: $engine")
     }
 
+    protected boolean getAllowContainerMounts() {
+        return true
+    }
+
     /**
      * Build a {@link DockerBuilder} object to handle Docker commands
      *
@@ -458,16 +462,18 @@ class BashWrapperBuilder {
          * initialise the builder
          */
         // do not mount inputs when they are copied in the task work dir -- see #1105
-        if( stageInMode != 'copy' )
+        if( stageInMode != 'copy' && allowContainerMounts )
             builder.addMountForInputs(inputFiles)
 
-        builder.addMount(binDir)
+        if( allowContainerMounts )
+            builder.addMount(binDir)
 
         if(this.containerMount)
             builder.addMount(containerMount)
 
         // task work dir
-        builder.setWorkDir(workDir)
+        if( allowContainerMounts )
+            builder.setWorkDir(workDir)
 
         // set the name
         builder.setName('$NXF_BOXID')
