@@ -25,7 +25,9 @@ import groovy.transform.Memoized
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.cloud.CloudTransferOptions
 import nextflow.exception.AbortOperationException
+import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 
 /**
@@ -36,7 +38,7 @@ import nextflow.util.MemoryUnit
 @Slf4j
 @ToString(includePackage = false, includeNames = true)
 @CompileStatic
-class GoogleLifeSciencesConfig {
+class GoogleLifeSciencesConfig implements CloudTransferOptions {
 
     public final static String DEFAULT_COPY_IMAGE = 'google/cloud-sdk:alpine'
 
@@ -59,6 +61,10 @@ class GoogleLifeSciencesConfig {
     String copyImage
     boolean usePrivateAddress
     boolean enableRequesterPaysBuckets
+
+    int maxParallelTransfers = MAX_TRANSFER
+    int maxTransferAttempts = MAX_TRANSFER_ATTEMPTS
+    Duration delayBetweenAttempts = DEFAULT_DELAY_BETWEEN_ATTEMPTS
 
     @Deprecated
     GoogleLifeSciencesConfig(String project, List<String> zone, List<String> region, Path remoteBinDir = null, boolean preemptible = false) {
@@ -117,6 +123,10 @@ class GoogleLifeSciencesConfig {
         final debugMode = config.navigate('google.lifeSciences.debug', System.getenv('NXF_DEBUG'))
         final privateAddr  = config.navigate('google.lifeSciences.usePrivateAddress') as boolean
         final requesterPays = config.navigate('google.enableRequesterPaysBuckets') as boolean
+        //
+        final maxParallelTransfers = config.navigate('aws.batch.maxParallelTransfers', MAX_TRANSFER) as int
+        final maxTransferAttempts = config.navigate('aws.batch.maxTransferAttempts', MAX_TRANSFER_ATTEMPTS) as int
+        final delayBetweenAttempts = config.navigate('aws.batch.delayBetweenAttempts', DEFAULT_DELAY_BETWEEN_ATTEMPTS) as Duration
 
         def zones = (config.navigate("google.zone") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
         def regions = (config.navigate("google.region") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
@@ -136,7 +146,11 @@ class GoogleLifeSciencesConfig {
                 sshDaemon: sshDaemon,
                 sshImage: sshImage,
                 usePrivateAddress: privateAddr,
-                enableRequesterPaysBuckets: requesterPays)
+                enableRequesterPaysBuckets: requesterPays,
+                maxParallelTransfers: maxParallelTransfers,
+                maxTransferAttempts: maxTransferAttempts,
+                delayBetweenAttempts: delayBetweenAttempts
+            )
     }
 
     static private Integer debugMode0(value) {

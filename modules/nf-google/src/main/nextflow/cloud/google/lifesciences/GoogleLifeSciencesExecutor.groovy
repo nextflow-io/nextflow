@@ -109,6 +109,4 @@ class GoogleLifeSciencesExecutor extends Executor {
 
     protected GoogleLifeSciencesConfig getConfig() { return config }
 
-
-
 }
