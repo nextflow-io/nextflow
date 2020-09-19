@@ -17,6 +17,7 @@
 
 package nextflow.cloud.google.lifesciences
 
+
 import nextflow.cloud.google.GoogleSpecification
 import nextflow.processor.TaskBean
 /**
@@ -139,8 +140,9 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
 
     def 'should unstage files' () {
         given:
+        def WORK = gsPath('gs://my-bucket/work/xx/yy')
         def bean = Mock(TaskBean) {
-            getWorkDir() >> mockGsPath('gs://my-bucket/work/xx/yy')
+            getWorkDir() >> WORK
         }
         def handler = Mock(GoogleLifeSciencesTaskHandler) {
             getExecutor() >> Mock(GoogleLifeSciencesExecutor) {
@@ -151,7 +153,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         def strategy = new GoogleLifeSciencesFileCopyStrategy(bean, handler)
 
         when:
-        def result = strategy.getUnstageOutputFilesScript(['foo.txt'], mockGsPath('gs://other/dir'))
+        def result = strategy.getUnstageOutputFilesScript(['foo.txt'], gsPath('gs://other/dir'))
         then:
         result == '''\
                 IFS=$'\\n'; for name in $(eval "ls -1d foo.txt" 2>/dev/null);do gsutil -m -q cp -R $name gs://other/dir/\$name; done; unset IFS
@@ -159,7 +161,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
                 .stripIndent()
 
         when:
-        result = strategy.getUnstageOutputFilesScript(['fo o.txt'], mockGsPath('gs://other/dir x/'))
+        result = strategy.getUnstageOutputFilesScript(['fo o.txt'], gsPath('gs://other/dir x/'))
         then:
         result == '''\
                 IFS=$'\\n'; for name in $(eval "ls -1d fo\\ o.txt" 2>/dev/null);do gsutil -m -q cp -R $name gs://other/dir\\ x/\$name; done; unset IFS
