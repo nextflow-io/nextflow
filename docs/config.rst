@@ -811,6 +811,7 @@ NXF_CLOUD_DRIVER            Defines the default cloud driver to be used if not s
 NXF_ANSI_LOG                Enables/disables ANSI console output (default ``true`` when ANSI terminal is detected).
 NXF_ANSI_SUMMARY            Enables/disables ANSI completion summary: `true|false` (default: print summary if execution last more than 1 minute).
 NXF_SCM_FILE                Defines the path location of the SCM config file (requires version ``20.10.0`` or later).
+NXF_PARAMS_FILE             Defines the path location of the pipeline parameters file (requires version ``20.10.0`` or later).
 JAVA_HOME                   Defines the path location of the Java VM installation used to run Nextflow.
 JAVA_CMD                    Defines the path location of the Java binary command used to launch Nextflow.
 HTTP_PROXY                  Defines the HTTP proxy server

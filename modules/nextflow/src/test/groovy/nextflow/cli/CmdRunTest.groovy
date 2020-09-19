@@ -17,6 +17,7 @@
 
 package nextflow.cli
 
+import nextflow.exception.AbortOperationException
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -117,5 +118,56 @@ class CmdRunTest extends Specification {
         false       | 'foo_-bar'
         false       | 'a' * 81
 
+    }
+
+
+    def 'should parse params file' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def JSON = '{"abc": 1, "xyz": 2}'
+        def YAML = '''
+                    ---
+                    foo: 1
+                    bar: 2
+                    '''.stripIndent()
+
+        when:
+        def file = folder.resolve('params.json')
+        file.text = JSON
+        and:
+        def cmd = new CmdRun(paramsFile: file.toString())
+        def params = cmd.getParsedParams()
+        then:
+        params.abc == 1
+        params.xyz == 2
+        
+        when:
+        file = folder.resolve('params.yaml')
+        file.text = YAML
+        and:
+        cmd = new CmdRun(paramsFile: file.toString())
+        params = cmd.getParsedParams()
+        then:
+        params.foo == 1
+        params.bar == 2
+
+        when:
+        cmd = new CmdRun(env: [NXF_PARAMS_FILE: file.toString()])
+        params = cmd.getParsedParams()
+        then:
+        params.foo == 1
+        params.bar == 2
+
+
+        when:
+        cmd = new CmdRun(env: [NXF_PARAMS_FILE: '/missing/path'])
+        cmd.getParsedParams()
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == 'Specified params file does not exists: /missing/path'
+
+
+        cleanup:
+        folder?.delete()
     }
 }
