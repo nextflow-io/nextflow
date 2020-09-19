@@ -10,7 +10,7 @@ import nextflow.util.Duration
 class BashFunLib {
 
     static String body(int maxConnect, int maxAttempts, Duration delayBetweenAttempts) {
-        """
+        """\
         # bash helper functions
         nxf_cp_retry() {
             local max_attempts=$maxAttempts
@@ -47,17 +47,17 @@ class BashFunLib {
             while ((i<\${#cmd[@]})); do
                 local copy=()
                 for x in "\${pid[@]}"; do
-                  [[ -e /proc/\$x ]] && copy+=(\$x) 
+                  [[ -e /proc/\$x ]] && copy+=(\$x)
                 done
                 pid=("\${copy[@]}")
                 
-                if ((\${#pid[@]}>=\$max)); then 
-                  sleep 1 
-                else 
+                if ((\${#pid[@]}>=\$max)); then
+                  sleep 1
+                else
                   eval "\${cmd[\$i]}" &
                   pid+=(\$!)
                   ((i+=1))
-                fi 
+                fi
             done
             ((\${#pid[@]}>0)) && wait \${pid[@]}
             )

@@ -106,21 +106,26 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     @Override
     String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
 
-        // collect all the expected names (pattern) for files to be un-staged
-        def result = []
-        def normalized = normalizeGlobStarPaths(outputFiles)
-
+        final patterns = normalizeGlobStarPaths(outputFiles)
         // create a bash script that will copy the out file to the working directory
-        log.trace "[AWS BATCH] Unstaging file path: $normalized"
-        if( normalized ) {
-            result << 'uploads=()'
-            normalized.each {
-                result << "uploads+=(\"nxf_s3_upload '${Escape.path(it)}' s3:/${Escape.path(targetDir)}\")" // <-- add true to avoid it stops on errors
-            }
-            result << 'nxf_parallel "${uploads[@]}"'
-        }
+        log.trace "[AWS BATCH] Unstaging file path: $patterns"
 
-        return result.join(separatorChar)
+        if( !patterns )
+            return null
+
+        final escape = new ArrayList(outputFiles.size())
+        for( String it : patterns )
+            escape.add( Escape.path(it) )
+
+        return """\
+            uploads=()
+            IFS=\$'\\n'
+            for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
+                uploads+=("nxf_s3_upload '\$name' s3:/${Escape.path(targetDir)}")
+            done
+            unset IFS
+            nxf_parallel "\${uploads[@]}"
+            """.stripIndent(true)
     }
 
     /**
