@@ -37,7 +37,7 @@ class S3HelperTest extends Specification {
         1 * opts.getStorageClass() >> null
         1 * opts.getStorageEncryption() >> null
         
-        script == '''
+        script == '''\
                     # bash helper functions
                     nxf_cp_retry() {
                         local max_attempts=1
@@ -74,17 +74,17 @@ class S3HelperTest extends Specification {
                         while ((i<${#cmd[@]})); do
                             local copy=()
                             for x in "${pid[@]}"; do
-                              [[ -e /proc/$x ]] && copy+=($x) 
+                              [[ -e /proc/$x ]] && copy+=($x)
                             done
                             pid=("${copy[@]}")
                     
-                            if ((${#pid[@]}>=$max)); then 
-                              sleep 1 
-                            else 
+                            if ((${#pid[@]}>=$max)); then
+                              sleep 1
+                            else
                               eval "${cmd[$i]}" &
                               pid+=($!)
                               ((i+=1))
-                            fi 
+                            fi
                         done
                         ((${#pid[@]}>0)) && wait ${pid[@]}
                         )
@@ -93,17 +93,13 @@ class S3HelperTest extends Specification {
                     
                     # aws helper
                     nxf_s3_upload() {
-                        local pattern=$1
+                        local name=$1
                         local s3path=$2
-                        IFS=$'\\n\'
-                        for name in $(eval "ls -1d $pattern");do
-                          if [[ -d "$name" ]]; then
-                            aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
-                          else
-                            aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
-                          fi
-                        done
-                        unset IFS
+                        if [[ -d "$name" ]]; then
+                          aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                        else
+                          aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                        fi
                     }
                     
                     nxf_s3_download() {
@@ -134,7 +130,7 @@ class S3HelperTest extends Specification {
         opts.getAwsCli() >> '/foo/bin/aws'
         opts.getMaxParallelTransfers() >> 33
 
-        script == '''
+        script == '''\
                     # bash helper functions
                     nxf_cp_retry() {
                         local max_attempts=1
@@ -171,17 +167,17 @@ class S3HelperTest extends Specification {
                         while ((i<${#cmd[@]})); do
                             local copy=()
                             for x in "${pid[@]}"; do
-                              [[ -e /proc/$x ]] && copy+=($x) 
+                              [[ -e /proc/$x ]] && copy+=($x)
                             done
                             pid=("${copy[@]}")
                     
-                            if ((${#pid[@]}>=$max)); then 
-                              sleep 1 
-                            else 
+                            if ((${#pid[@]}>=$max)); then
+                              sleep 1
+                            else
                               eval "${cmd[$i]}" &
                               pid+=($!)
                               ((i+=1))
-                            fi 
+                            fi
                         done
                         ((${#pid[@]}>0)) && wait ${pid[@]}
                         )
@@ -190,17 +186,13 @@ class S3HelperTest extends Specification {
                     
                     # aws helper
                     nxf_s3_upload() {
-                        local pattern=$1
+                        local name=$1
                         local s3path=$2
-                        IFS=$'\\n\'
-                        for name in $(eval "ls -1d $pattern");do
-                          if [[ -d "$name" ]]; then
-                            /foo/bin/aws s3 cp --only-show-errors --recursive --sse S-ENCRYPT --storage-class S-CLAZZ "$name" "$s3path/$name"
-                          else
-                            /foo/bin/aws s3 cp --only-show-errors --sse S-ENCRYPT --storage-class S-CLAZZ "$name" "$s3path/$name"
-                          fi
-                        done
-                        unset IFS
+                        if [[ -d "$name" ]]; then
+                          /foo/bin/aws s3 cp --only-show-errors --recursive --sse S-ENCRYPT --storage-class S-CLAZZ "$name" "$s3path/$name"
+                        else
+                          /foo/bin/aws s3 cp --only-show-errors --sse S-ENCRYPT --storage-class S-CLAZZ "$name" "$s3path/$name"
+                        fi
                     }
                     
                     nxf_s3_download() {

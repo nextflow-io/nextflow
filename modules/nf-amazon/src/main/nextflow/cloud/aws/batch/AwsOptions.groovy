@@ -24,6 +24,7 @@ import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.cloud.CloudTransferOptions
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.Duration
 
@@ -34,14 +35,8 @@ import nextflow.util.Duration
 @ToString(includeNames = true, includePackage = false)
 @EqualsAndHashCode
 @CompileStatic
-class AwsOptions {
+class AwsOptions implements CloudTransferOptions {
 
-    static final public int MAX_TRANSFER = 16
-
-    static final public int MAX_TRANSFER_ATTEMPTS = 1
-
-    static final public Duration DEFAULT_DELAY_BETWEEN_ATTEMPTS = Duration.of('10sec')
-  
     String cliPath
 
     String storageClass

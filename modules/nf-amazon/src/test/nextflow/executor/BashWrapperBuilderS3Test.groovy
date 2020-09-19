@@ -99,17 +99,17 @@ class BashWrapperBuilderS3Test extends Specification {
                 while ((i<${#cmd[@]})); do
                     local copy=()
                     for x in "${pid[@]}"; do
-                      [[ -e /proc/$x ]] && copy+=($x) 
+                      [[ -e /proc/$x ]] && copy+=($x)
                     done
                     pid=("${copy[@]}")
             
-                    if ((${#pid[@]}>=$max)); then 
-                      sleep 1 
-                    else 
+                    if ((${#pid[@]}>=$max)); then
+                      sleep 1
+                    else
                       eval "${cmd[$i]}" &
                       pid+=($!)
                       ((i+=1))
-                    fi 
+                    fi
                 done
                 ((${#pid[@]}>0)) && wait ${pid[@]}
                 )
@@ -118,17 +118,13 @@ class BashWrapperBuilderS3Test extends Specification {
             
             # aws helper
             nxf_s3_upload() {
-                local pattern=$1
+                local name=$1
                 local s3path=$2
-                IFS=$'\\n\'
-                for name in $(eval "ls -1d $pattern");do
-                  if [[ -d "$name" ]]; then
-                    aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
-                  else
-                    aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
-                  fi
-                done
-                unset IFS
+                if [[ -d "$name" ]]; then
+                  aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                else
+                  aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                fi
             }
             
             nxf_s3_download() {

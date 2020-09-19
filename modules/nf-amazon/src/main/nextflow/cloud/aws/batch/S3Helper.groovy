@@ -39,17 +39,13 @@ class S3Helper {
         """
         # aws helper
         nxf_s3_upload() {
-            local pattern=\$1
+            local name=\$1
             local s3path=\$2
-            IFS=\$'\\n'
-            for name in \$(eval "ls -1d \$pattern");do
-              if [[ -d "\$name" ]]; then
-                $cli s3 cp --only-show-errors --recursive $encryption--storage-class $storage "\$name" "\$s3path/\$name"
-              else
-                $cli s3 cp --only-show-errors $encryption--storage-class $storage "\$name" "\$s3path/\$name"
-              fi
-            done
-            unset IFS
+            if [[ -d "\$name" ]]; then
+              $cli s3 cp --only-show-errors --recursive $encryption--storage-class $storage "\$name" "\$s3path/\$name"
+            else
+              $cli s3 cp --only-show-errors $encryption--storage-class $storage "\$name" "\$s3path/\$name"
+            fi
         }
         
         nxf_s3_download() {
