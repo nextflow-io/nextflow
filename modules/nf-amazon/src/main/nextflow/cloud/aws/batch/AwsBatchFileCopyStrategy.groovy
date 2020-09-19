@@ -59,7 +59,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     @Override
     String getEnvScript(Map environment, boolean container) {
         if( container )
-            throw new IllegalArgumentException("Parameter `wrapHandler` not supported by ${this.class.simpleName}")
+            throw new IllegalArgumentException("Parameter `container` not supported by ${this.class.simpleName}")
 
         final result = new StringBuilder()
         final copy = environment ? new HashMap<String,String>(environment) : Collections.<String,String>emptyMap()
