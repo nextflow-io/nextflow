@@ -187,6 +187,21 @@ class ScriptMeta {
         (FunctionDef)getComponent(name)
     }
 
+    Set<String> getAllNames() {
+        final result = new HashSet(definitions.size() + imports.size())
+        // local definitions
+        for( def item : definitions.values() ) {
+            if( item.name )
+                result.add(item.name)
+        }
+        // processes from imports
+        for( def item: imports.values() ) {
+            if( item.name )
+                result.add(item.name)
+        }
+        return result
+    }
+
     Set<String> getProcessNames() {
         if( NF.dsl1 )
             return new HashSet<String>(getDsl1ProcessNames())
