@@ -1,5 +1,24 @@
 NEXTFLOW CHANGE-LOG
 ===================
+20.09.0-edge - 23 Sep 2020 
+- Fix invalid error message on missing process #1719 [fc607f11]
+- Deduplicate GS file + parallel up/downloads [29d37083]
+- Deduplicate S3 file uploads [0b65d61f]
+- Fix issue on GS path composition [276f0ed3]
+- Add NXF_PARAMS_FILE env var [2e3c9232]
+- Allow configurable container mounts [8dc0adf4]
+- Refactor common Bash helper functions [22a0ff34] [502309b7]
+- Fix race condition creating FTP file system #1725 
+- Fix invalid checkWarn method invocation [ba052a02]
+- Move makeDigest into build.gradle file [a2b5de8f]
+- Add variable NXF_CONFIG_FILE [83365aa3]
+- Patch use of GString for fromSra apiKey option [a8b81ada]
+- Use repository URL instead of Git clone URL [75a04d90]
+- Fix Invalid exception capture for missing config [ce427924]
+- Fix podman issue on duplicate mounts [661a40e9]
+- Fix FromSra illegal character error [5a86d180]
+- Fix Allow custom SCM file location #1657 [a90e66e3]
+
 20.08.1-edge - 2 Sep 2020 
 - Add variable NXF_CONFIG_FILE [d15edcb8]
 
