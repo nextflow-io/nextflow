@@ -142,7 +142,28 @@ that can be used to reference the channel in the external scope. For example::
         foo()
         foo.out.samples_bam.view()
     }
+    
+Process named stdout
+--------------------
 
+The process can name stdout using the ``emit`` option:
+
+    process sayHello {
+        input:
+            val cheers
+        output:
+            stdout emit: verbiage
+        script:
+        """
+        echo -n $cheers
+        """
+    }
+
+    workflow {
+        things = channel.of('Hello world!', 'Yo, dude!', 'Duck!')
+        greetings = sayHello(things)
+        greetings.verbiage.subscribe {println "$it" }
+    }
 
 Workflow
 ========
