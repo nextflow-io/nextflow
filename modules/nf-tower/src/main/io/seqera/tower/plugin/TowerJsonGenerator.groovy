@@ -69,16 +69,29 @@ class TowerJsonGenerator extends DefaultJsonGenerator {
     protected void writeObject(String key, Object object, CharBuf buffer) {
         final pos=stack.size()
         if(key) stack.add(pos, key)
+        final fqn = stack.join('.')
         try {
-            final fqn = stack.join('.')
             if( fqn == 'workflow.manifest.gitmodules' && object instanceof List ) {
                 writeCharSequence(object.join(','), buffer)
             }
             else
                 super.writeObject(key,object,buffer)
         }
+        catch( Exception e ) {
+            log.warn1 ("Unable to serialize key=$fqn; value=${safeString0(object)}; type=${object?.getClass()?.getName()} -- Cause: ${e.message ?: e}", causedBy: e)
+        }
         finally {
             if(key) stack.remove(pos)
+        }
+    }
+
+    private String safeString0(Object obj) {
+        try {
+            return obj !=null ? obj.toString() : null
+        }
+        catch( Throwable e ) {
+            log.debug "SafeString error=${e.message ?: e}"
+            return null
         }
     }
 
