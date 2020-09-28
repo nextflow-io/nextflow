@@ -20,7 +20,7 @@
 # make deps config=runtime
 # 
 
-config ?= default
+config ?= compileClasspath
 
 ifdef module 
 mm = :${module}:
