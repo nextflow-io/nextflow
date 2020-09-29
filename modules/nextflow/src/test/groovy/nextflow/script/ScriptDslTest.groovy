@@ -1,18 +1,15 @@
 package nextflow.script
 
-import nextflow.exception.ScriptRuntimeException
-import spock.lang.Timeout
-
 import nextflow.Channel
+import nextflow.exception.MissingProcessException
 import nextflow.exception.ScriptCompilationException
+import nextflow.exception.ScriptRuntimeException
 import test.Dsl2Spec
 import test.MockScriptRunner
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Timeout(5)
 class ScriptDslTest extends Dsl2Spec {
 
 
@@ -498,4 +495,89 @@ class ScriptDslTest extends Dsl2Spec {
         err.message.contains "Unknown execution scope 'emmit:' -- Did you mean 'emit'"
     }
 
+
+    def 'should fail because process is not defined'() {
+        when:
+        dsl_eval(
+        '''
+        process sleeper {
+            exec:
+            """
+            sleep 5
+            """
+        }
+        
+        workflow {
+            main:
+                sleeper()
+                hello()      
+        }
+        
+        ''')
+
+        then:
+        def err = thrown(MissingProcessException)
+        err.message == "Missing process or function with name 'hello'"
+    }
+
+
+    def 'should fail because is not defined /2' () {
+        when:
+        dsl_eval('''
+        process sleeper {
+            exec:
+            """
+            sleep 5
+            """
+        }
+        
+        workflow nested {
+            main:
+                sleeper()
+                sleeper_2()      
+        }
+        
+        workflow{
+            nested()
+        }
+        ''')
+
+        then:
+        def err = thrown(MissingProcessException)
+        err.message == "Missing process or function with name 'sleeper_2' -- Did you mean 'sleeper' instead?"
+    }
+
+    def 'should fail because is not defined /3' () {
+        when:
+        dsl_eval('''
+        process sleeper1 {
+            /echo 1/
+        }
+        
+        process sleeper2 {
+            /echo 3/
+        }
+
+        
+        workflow nested {
+            main:
+                sleeper1()
+                sleeper3()      
+        }
+        
+        workflow{
+            nested()
+        }
+        ''')
+
+        then:
+        def err = thrown(MissingProcessException)
+        err.message ==  '''\
+                        Missing process or function with name 'sleeper3'
+                        
+                        Did you mean any of these instead?
+                          sleeper1
+                          sleeper2
+                        '''.stripIndent()
+    }
 }

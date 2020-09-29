@@ -57,25 +57,11 @@ class AwsBatchScriptLauncherTest extends Specification {
                 '''.stripIndent()
 
         binding.launch_cmd == '/bin/bash -ue .command.sh < .command.in'
-        binding.unstage_outputs == ''
+        binding.unstage_outputs == null
 
-        binding.helpers_script == '''
-                # aws helper
-                nxf_s3_upload() {
-                    local pattern=$1
-                    local s3path=$2
-                    IFS=$'\\n\'
-                    for name in $(eval "ls -1d $pattern");do
-                      if [[ -d "$name" ]]; then
-                        /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
-                      else
-                        /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
-                      fi
-                    done
-                    unset IFS
-                }
-                
-                nxf_s3_retry() {
+        binding.helpers_script == '''\
+                # bash helper functions
+                nxf_cp_retry() {
                     local max_attempts=1
                     local timeout=10
                     local attempt=0
@@ -98,18 +84,6 @@ class AwsBatchScriptLauncherTest extends Specification {
                     done
                 }
                 
-                nxf_s3_download() {
-                    local source=$1
-                    local target=$2
-                    local file_name=$(basename $1)
-                    local is_dir=$(/conda/bin/aws --region eu-west-1 s3 ls $source | grep -F "PRE ${file_name}/" -c)
-                    if [[ $is_dir == 1 ]]; then
-                        /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --recursive "$source" "$target"
-                    else 
-                        /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors "$source" "$target"
-                    fi
-                }
-                
                 nxf_parallel() {
                     IFS=$'\\n\'
                     local cmd=("$@")
@@ -122,21 +96,44 @@ class AwsBatchScriptLauncherTest extends Specification {
                     while ((i<${#cmd[@]})); do
                         local copy=()
                         for x in "${pid[@]}"; do
-                          [[ -e /proc/$x ]] && copy+=($x) 
+                          [[ -e /proc/$x ]] && copy+=($x)
                         done
                         pid=("${copy[@]}")
                 
-                        if ((${#pid[@]}>=$max)); then 
-                          sleep 1 
-                        else 
+                        if ((${#pid[@]}>=$max)); then
+                          sleep 1
+                        else
                           eval "${cmd[$i]}" &
                           pid+=($!)
                           ((i+=1))
-                        fi 
+                        fi
                     done
                     ((${#pid[@]}>0)) && wait ${pid[@]}
                     )
                     unset IFS
+                }
+                
+                # aws helper
+                nxf_s3_upload() {
+                    local name=$1
+                    local s3path=$2
+                    if [[ -d "$name" ]]; then
+                      /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                    else
+                      /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                    fi
+                }
+                
+                nxf_s3_download() {
+                    local source=$1
+                    local target=$2
+                    local file_name=$(basename $1)
+                    local is_dir=$(/conda/bin/aws --region eu-west-1 s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                    if [[ $is_dir == 1 ]]; then
+                        /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --recursive "$source" "$target"
+                    else 
+                        /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors "$source" "$target"
+                    fi
                 }
                 
                 '''.stripIndent(true)
@@ -221,34 +218,23 @@ class AwsBatchScriptLauncherTest extends Specification {
                 nxf_parallel "${downloads[@]}"
                 '''.stripIndent()
 
-        binding.unstage_outputs == '''\
-                  uploads=()
-                  uploads+=("nxf_s3_upload 'foo.txt' s3://bucket/work")
-                  uploads+=("nxf_s3_upload 'bar.fastq' s3://bucket/work")
-                  nxf_parallel "${uploads[@]}"
-                  '''.stripIndent().rightTrim()
+        binding.unstage_outputs == '''
+                    uploads=()
+                    IFS=$'\\n'
+                    for name in $(eval "ls -1d foo.txt bar.fastq" | sort | uniq); do
+                        uploads+=("nxf_s3_upload '$name' s3://bucket/work")
+                    done
+                    unset IFS
+                    nxf_parallel "${uploads[@]}"
+                    '''.stripIndent().leftTrim()
 
         binding.launch_cmd == '/bin/bash .command.run nxf_trace'
         
         binding.task_env == ''
 
-        binding.helpers_script == '''
-                    # aws helper
-                    nxf_s3_upload() {
-                        local pattern=$1
-                        local s3path=$2
-                        IFS=$'\\n\'
-                        for name in $(eval "ls -1d $pattern");do
-                          if [[ -d "$name" ]]; then
-                            aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
-                          else
-                            aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
-                          fi
-                        done
-                        unset IFS
-                    }
-                    
-                    nxf_s3_retry() {
+        binding.helpers_script == '''\
+                    # bash helper functions
+                    nxf_cp_retry() {
                         local max_attempts=1
                         local timeout=10
                         local attempt=0
@@ -271,18 +257,6 @@ class AwsBatchScriptLauncherTest extends Specification {
                         done
                     }
                     
-                    nxf_s3_download() {
-                        local source=$1
-                        local target=$2
-                        local file_name=$(basename $1)
-                        local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
-                        if [[ $is_dir == 1 ]]; then
-                            aws s3 cp --only-show-errors --recursive "$source" "$target"
-                        else 
-                            aws s3 cp --only-show-errors "$source" "$target"
-                        fi
-                    }
-                    
                     nxf_parallel() {
                         IFS=$'\\n\'
                         local cmd=("$@")
@@ -295,21 +269,44 @@ class AwsBatchScriptLauncherTest extends Specification {
                         while ((i<${#cmd[@]})); do
                             local copy=()
                             for x in "${pid[@]}"; do
-                              [[ -e /proc/$x ]] && copy+=($x) 
+                              [[ -e /proc/$x ]] && copy+=($x)
                             done
                             pid=("${copy[@]}")
                     
-                            if ((${#pid[@]}>=$max)); then 
-                              sleep 1 
-                            else 
+                            if ((${#pid[@]}>=$max)); then
+                              sleep 1
+                            else
                               eval "${cmd[$i]}" &
                               pid+=($!)
                               ((i+=1))
-                            fi 
+                            fi
                         done
                         ((${#pid[@]}>0)) && wait ${pid[@]}
                         )
                         unset IFS
+                    }
+                    
+                    # aws helper
+                    nxf_s3_upload() {
+                        local name=$1
+                        local s3path=$2
+                        if [[ -d "$name" ]]; then
+                          aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                        else
+                          aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                        fi
+                    }
+                    
+                    nxf_s3_download() {
+                        local source=$1
+                        local target=$2
+                        local file_name=$(basename $1)
+                        local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                        if [[ $is_dir == 1 ]]; then
+                            aws s3 cp --only-show-errors --recursive "$source" "$target"
+                        else 
+                            aws s3 cp --only-show-errors "$source" "$target"
+                        fi
                     }
                     
                     '''.stripIndent(true)
@@ -370,27 +367,13 @@ class AwsBatchScriptLauncherTest extends Specification {
                 # stage input files
                 downloads=()
                 rm -f .command.sh
-                downloads+=("nxf_s3_retry nxf_s3_download s3://bucket/work/.command.sh .command.sh")
+                downloads+=("nxf_cp_retry nxf_s3_download s3://bucket/work/.command.sh .command.sh")
                 nxf_parallel "${downloads[@]}"
                 '''.stripIndent()
 
-        binding.helpers_script == '''
-                    # aws helper
-                    nxf_s3_upload() {
-                        local pattern=$1
-                        local s3path=$2
-                        IFS=$'\\n\'
-                        for name in $(eval "ls -1d $pattern");do
-                          if [[ -d "$name" ]]; then
-                            aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
-                          else
-                            aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
-                          fi
-                        done
-                        unset IFS
-                    }
-                    
-                    nxf_s3_retry() {
+        binding.helpers_script == '''\
+                    # bash helper functions
+                    nxf_cp_retry() {
                         local max_attempts=3
                         local timeout=9
                         local attempt=0
@@ -413,18 +396,6 @@ class AwsBatchScriptLauncherTest extends Specification {
                         done
                     }
                     
-                    nxf_s3_download() {
-                        local source=$1
-                        local target=$2
-                        local file_name=$(basename $1)
-                        local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
-                        if [[ $is_dir == 1 ]]; then
-                            aws s3 cp --only-show-errors --recursive "$source" "$target"
-                        else 
-                            aws s3 cp --only-show-errors "$source" "$target"
-                        fi
-                    }
-                    
                     nxf_parallel() {
                         IFS=$'\\n\'
                         local cmd=("$@")
@@ -437,21 +408,44 @@ class AwsBatchScriptLauncherTest extends Specification {
                         while ((i<${#cmd[@]})); do
                             local copy=()
                             for x in "${pid[@]}"; do
-                              [[ -e /proc/$x ]] && copy+=($x) 
+                              [[ -e /proc/$x ]] && copy+=($x)
                             done
                             pid=("${copy[@]}")
                     
-                            if ((${#pid[@]}>=$max)); then 
-                              sleep 1 
-                            else 
+                            if ((${#pid[@]}>=$max)); then
+                              sleep 1
+                            else
                               eval "${cmd[$i]}" &
                               pid+=($!)
                               ((i+=1))
-                            fi 
+                            fi
                         done
                         ((${#pid[@]}>0)) && wait ${pid[@]}
                         )
                         unset IFS
+                    }
+                    
+                    # aws helper
+                    nxf_s3_upload() {
+                        local name=$1
+                        local s3path=$2
+                        if [[ -d "$name" ]]; then
+                          aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                        else
+                          aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                        fi
+                    }
+                    
+                    nxf_s3_download() {
+                        local source=$1
+                        local target=$2
+                        local file_name=$(basename $1)
+                        local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                        if [[ $is_dir == 1 ]]; then
+                            aws s3 cp --only-show-errors --recursive "$source" "$target"
+                        else 
+                            aws s3 cp --only-show-errors "$source" "$target"
+                        fi
                     }
                     
                     '''.stripIndent(true)

@@ -39,9 +39,11 @@ class EscapeTest2 extends Specification {
         expect:
         Escape.uriPath(PATH) == EXPECTED
         where:
-        PATH                                | EXPECTED
+        PATH                    | EXPECTED
         asPath('foo','/work')   | 'gs://foo/work'
+        asPath('foo','/work/')  | 'gs://foo/work'
         asPath('foo','/b a r')  | 'gs://foo/b\\ a\\ r'
         asPath('f_o o','/bar')  | 'gs://f_o\\ o/bar'
+        asPath('f_o o','/bar/') | 'gs://f_o\\ o/bar'
     }
 }

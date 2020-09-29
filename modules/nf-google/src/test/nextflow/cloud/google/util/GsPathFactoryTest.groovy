@@ -20,13 +20,16 @@ package nextflow.cloud.google.util
 import nextflow.Global
 import nextflow.Session
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class GsPathFactoryTest extends Specification {
 
-    def 'should create gs path' () {
+    @Unroll
+    def 'should create gs path #PATH' () {
         given:
         Global.session = Mock(Session) {
             getConfig() >> [google:[project:'foo', region:'x']]
@@ -36,14 +39,16 @@ class GsPathFactoryTest extends Specification {
 
         expect:
         factory.parseUri(PATH).toUriString() == PATH
+        factory.parseUri(PATH).toString() == STR
 
         where:
-        _ | PATH
-        _ | 'gs://foo'
-        _ | 'gs://foo/bar'
-        _ | 'gs://foo/b a r'
-        _ | 'gs://f o o/bar'
-        _ | 'gs://f_o_o/bar'
+        _ | PATH                | STR
+        _ | 'gs://foo'          | ''
+        _ | 'gs://foo/bar'      | '/bar'
+        _ | 'gs://foo/bar/'     | '/bar/'   // <-- bug or feature ?
+        _ | 'gs://foo/b a r'    | '/b a r'
+        _ | 'gs://f o o/bar'    | '/bar'
+        _ | 'gs://f_o_o/bar'    | '/bar'
     }
 
     def 'should use requester pays' () {

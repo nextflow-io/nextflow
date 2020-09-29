@@ -40,13 +40,16 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                                     downloads+=("nxf_s3_download s3://some/data/nobel_prize_results.gz foo.txt")
                                     """
                                     .stripIndent().trim()
-        copy.getUnstageOutputFilesScript(OUTPUTS,TARGET) == """
+        copy.getUnstageOutputFilesScript(OUTPUTS,TARGET) == '''
                                         uploads=()
-                                        uploads+=("nxf_s3_upload 'outputs_*' s3://data/results")
-                                        uploads+=("nxf_s3_upload 'final_folder' s3://data/results")
-                                        nxf_parallel "\${uploads[@]}"
-                                        """
-                                        .stripIndent().trim()
+                                        IFS=$'\\n'
+                                        for name in $(eval "ls -1d outputs_* final_folder" | sort | uniq); do
+                                            uploads+=("nxf_s3_upload '$name' s3://data/results")
+                                        done
+                                        unset IFS
+                                        nxf_parallel "${uploads[@]}"
+                                        '''
+                                        .stripIndent().leftTrim()
     }
 
     def 'should return unstage script' () {
@@ -57,41 +60,57 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         when:
         def script = copy.getUnstageOutputFilesScript(['file.txt'],target)
         then:
-        script.trim() == """
+        script.trim() == '''
                     uploads=()
-                    uploads+=("nxf_s3_upload 'file.txt' s3://foo/bar")
-                    nxf_parallel "\${uploads[@]}"
-                    """
+                    IFS=$'\\n'
+                    for name in $(eval "ls -1d file.txt" | sort | uniq); do
+                        uploads+=("nxf_s3_upload '$name' s3://foo/bar")
+                    done
+                    unset IFS
+                    nxf_parallel "${uploads[@]}"
+                    '''
                     .stripIndent().trim()
 
         when:
         script = copy.getUnstageOutputFilesScript(['file-*.txt'],target)
         then:
-        script.trim() == """
+        script.trim() == '''
                         uploads=()
-                        uploads+=("nxf_s3_upload 'file-*.txt' s3://foo/bar")
-                        nxf_parallel "\${uploads[@]}"
-                        """
+                        IFS=$'\\n'
+                        for name in $(eval "ls -1d file-*.txt" | sort | uniq); do
+                            uploads+=("nxf_s3_upload '$name' s3://foo/bar")
+                        done
+                        unset IFS
+                        nxf_parallel "${uploads[@]}"
+                        '''
                         .stripIndent().trim()
 
         when:
         script = copy.getUnstageOutputFilesScript(['file-[a,b].txt'],target)
         then:
-        script.trim() == """
+        script.trim() == '''
                     uploads=()
-                    uploads+=("nxf_s3_upload 'file-[a,b].txt' s3://foo/bar")
-                    nxf_parallel "\${uploads[@]}"
-                    """
+                    IFS=$'\\n'
+                    for name in $(eval "ls -1d file-[a,b].txt" | sort | uniq); do
+                        uploads+=("nxf_s3_upload '$name' s3://foo/bar")
+                    done
+                    unset IFS
+                    nxf_parallel "${uploads[@]}"
+                    '''
                     .stripIndent().trim()
 
         when:
-        script = copy.getUnstageOutputFilesScript(['file-01(A).txt'],target)
+        script = copy.getUnstageOutputFilesScript(['file-01(A).txt', 'f o o.txt'],target)
         then:
-        script.trim() == """
+        script.trim() == '''
                     uploads=()
-                    uploads+=("nxf_s3_upload 'file-01\\(A\\).txt' s3://foo/bar")
-                    nxf_parallel "\${uploads[@]}"
-                    """
+                    IFS=$'\\n'
+                    for name in $(eval "ls -1d file-01\\(A\\).txt f\\ o\\ o.txt" | sort | uniq); do
+                        uploads+=("nxf_s3_upload '$name' s3://foo/bar")
+                    done
+                    unset IFS
+                    nxf_parallel "${uploads[@]}"
+                    '''
                     .stripIndent().trim()
     }
 
@@ -109,23 +128,9 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         1 * opts.getStorageClass() >> null
         1 * opts.getStorageEncryption() >> null
 
-        script ==   '''
-                    # aws helper
-                    nxf_s3_upload() {
-                        local pattern=$1
-                        local s3path=$2
-                        IFS=$'\\n'
-                        for name in $(eval "ls -1d $pattern");do
-                          if [[ -d "$name" ]]; then
-                            aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
-                          else
-                            aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
-                          fi
-                        done
-                        unset IFS
-                    }
-                    
-                    nxf_s3_retry() {
+        script ==   '''\
+                    # bash helper functions
+                    nxf_cp_retry() {
                         local max_attempts=1
                         local timeout=10
                         local attempt=0
@@ -147,6 +152,46 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                           timeout=\$(( timeout * 2 ))
                         done
                     }
+                    
+                    nxf_parallel() {
+                        IFS=$'\\n'
+                        local cmd=("$@")
+                        local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
+                        local max=$(if (( cpus>16 )); then echo 16; else echo $cpus; fi)
+                        local i=0
+                        local pid=()
+                        (
+                        set +u
+                        while ((i<${#cmd[@]})); do
+                            local copy=()
+                            for x in "${pid[@]}"; do
+                              [[ -e /proc/$x ]] && copy+=($x)
+                            done
+                            pid=("${copy[@]}")
+                    
+                            if ((${#pid[@]}>=$max)); then
+                              sleep 1
+                            else
+                              eval "${cmd[$i]}" &
+                              pid+=($!)
+                              ((i+=1))
+                            fi
+                        done
+                        ((${#pid[@]}>0)) && wait ${pid[@]}
+                        )
+                        unset IFS
+                    }
+                    
+                    # aws helper
+                    nxf_s3_upload() {
+                        local name=$1
+                        local s3path=$2
+                        if [[ -d "$name" ]]; then
+                          aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                        else
+                          aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                        fi
+                    }
 
                     nxf_s3_download() {
                         local source=$1
@@ -159,35 +204,6 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                             aws s3 cp --only-show-errors "$source" "$target"
                         fi
                     }
-                    
-                    nxf_parallel() {
-                        IFS=$'\\n\'
-                        local cmd=("$@")
-                        local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
-                        local max=$(if (( cpus>16 )); then echo 16; else echo $cpus; fi)
-                        local i=0
-                        local pid=()
-                        (
-                        set +u
-                        while ((i<${#cmd[@]})); do
-                            local copy=()
-                            for x in "${pid[@]}"; do
-                              [[ -e /proc/$x ]] && copy+=($x) 
-                            done
-                            pid=("${copy[@]}")
-                    
-                            if ((${#pid[@]}>=$max)); then 
-                              sleep 1 
-                            else 
-                              eval "${cmd[$i]}" &
-                              pid+=($!)
-                              ((i+=1))
-                            fi 
-                        done
-                        ((${#pid[@]}>0)) && wait ${pid[@]}
-                        )
-                        unset IFS
-                    }
                     '''.stripIndent(true)
 
         when:
@@ -197,23 +213,9 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         1 * opts.getStorageClass() >> 'STANDARD_IA'
         2 * opts.getStorageEncryption() >> 'AES256'
 
-        script == '''
-                # aws helper
-                nxf_s3_upload() {
-                    local pattern=$1
-                    local s3path=$2
-                    IFS=$'\\n'
-                    for name in $(eval "ls -1d $pattern");do
-                      if [[ -d "$name" ]]; then
-                        /foo/aws s3 cp --only-show-errors --recursive --sse AES256 --storage-class STANDARD_IA "$name" "$s3path/$name"
-                      else
-                        /foo/aws s3 cp --only-show-errors --sse AES256 --storage-class STANDARD_IA "$name" "$s3path/$name"
-                      fi
-                    done
-                    unset IFS
-                }
-                
-                nxf_s3_retry() {
+        script == '''\
+                # bash helper functions
+                nxf_cp_retry() {
                     local max_attempts=1
                     local timeout=10
                     local attempt=0
@@ -235,6 +237,46 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                       timeout=\$(( timeout * 2 ))
                     done
                 }
+                
+                nxf_parallel() {
+                    IFS=$'\\n'
+                    local cmd=("$@")
+                    local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
+                    local max=$(if (( cpus>16 )); then echo 16; else echo $cpus; fi)
+                    local i=0
+                    local pid=()
+                    (
+                    set +u
+                    while ((i<${#cmd[@]})); do
+                        local copy=()
+                        for x in "${pid[@]}"; do
+                          [[ -e /proc/$x ]] && copy+=($x)
+                        done
+                        pid=("${copy[@]}")
+                
+                        if ((${#pid[@]}>=$max)); then
+                          sleep 1
+                        else
+                          eval "${cmd[$i]}" &
+                          pid+=($!)
+                          ((i+=1))
+                        fi
+                    done
+                    ((${#pid[@]}>0)) && wait ${pid[@]}
+                    )
+                    unset IFS
+                }
+                
+                # aws helper
+                nxf_s3_upload() {
+                    local name=$1
+                    local s3path=$2
+                    if [[ -d "$name" ]]; then
+                      /foo/aws s3 cp --only-show-errors --recursive --sse AES256 --storage-class STANDARD_IA "$name" "$s3path/$name"
+                    else
+                      /foo/aws s3 cp --only-show-errors --sse AES256 --storage-class STANDARD_IA "$name" "$s3path/$name"
+                    fi
+                }
  
                 nxf_s3_download() {
                     local source=$1
@@ -246,35 +288,6 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                     else 
                         /foo/aws s3 cp --only-show-errors "$source" "$target"
                     fi
-                }
-                
-                nxf_parallel() {
-                    IFS=$'\\n\'
-                    local cmd=("$@")
-                    local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
-                    local max=$(if (( cpus>16 )); then echo 16; else echo $cpus; fi)
-                    local i=0
-                    local pid=()
-                    (
-                    set +u
-                    while ((i<${#cmd[@]})); do
-                        local copy=()
-                        for x in "${pid[@]}"; do
-                          [[ -e /proc/$x ]] && copy+=($x) 
-                        done
-                        pid=("${copy[@]}")
-                
-                        if ((${#pid[@]}>=$max)); then 
-                          sleep 1 
-                        else 
-                          eval "${cmd[$i]}" &
-                          pid+=($!)
-                          ((i+=1))
-                        fi 
-                    done
-                    ((${#pid[@]}>0)) && wait ${pid[@]}
-                    )
-                    unset IFS
                 }
             '''.stripIndent(true)
     }

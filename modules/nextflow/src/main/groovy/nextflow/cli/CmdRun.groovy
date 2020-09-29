@@ -379,14 +379,14 @@ class CmdRun extends CmdBase implements HubOptions {
 
     Map getParsedParams() {
 
-        def result = [:]
-
-        if( paramsFile ) {
-            def path = validateParamsFile(paramsFile)
-            def ext = path.extension.toLowerCase() ?: null
-            if( ext == 'json' )
+        final result = [:]
+        final file = paramsFile ?: env.get('NXF_PARAMS_FILE')
+        if( file ) {
+            def path = validateParamsFile(file)
+            def type = path.extension.toLowerCase() ?: null
+            if( type == 'json' )
                 readJsonFile(path, result)
-            else if( ext == 'yml' || ext == 'yaml' )
+            else if( type == 'yml' || type == 'yaml' )
                 readYamlFile(path, result)
         }
 

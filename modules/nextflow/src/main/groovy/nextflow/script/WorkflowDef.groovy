@@ -21,6 +21,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.exception.MissingProcessException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
@@ -167,6 +168,9 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
         ExecutionStack.push(this)
         try {
             return run0(args)
+        }
+        catch (MissingMethodException e) {
+            throw new MissingProcessException(this.binding.scriptMeta, e)
         }
         finally {
             ExecutionStack.pop()
