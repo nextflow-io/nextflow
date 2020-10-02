@@ -18,6 +18,7 @@
 package nextflow.container
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.util.regex.Pattern
 
 import spock.lang.Ignore
 import spock.lang.Specification
@@ -85,7 +86,7 @@ class SingularityCacheTest extends Specification {
         given:
         def dir = Files.createTempDirectory('test')
         def IMAGE = 'docker://pditommaso/test:latest'
-        def LOCAL = 'test-latest.img'
+        def LOCAL = 'pditommaso-test-latest.img'
         ContainerConfig config = [noHttps: true] 
         and:
         def cache = Spy(SingularityCache, constructorArgs: [ config ])
@@ -94,8 +95,10 @@ class SingularityCacheTest extends Specification {
         cache.downloadSingularityImage(IMAGE)
         then:
         1 * cache.localImagePath(IMAGE) >> dir.resolve(LOCAL)
-        1 * cache.runCommand({(it =~ ~"singularity pull --nohttps -F --name \\.\\S*$LOCAL\\S+ $IMAGE > /dev/null")}, dir) >> 0
+	1 * cache.runCommand( { (it =~ ~"singularity pull --nohttps --name $dir.$LOCAL\\.pulling\\.[0-9]* $IMAGE > /dev/null").find() } , _)
 
+	cleanup:
+	dir.deleteDir()
     }
 
 
