@@ -12,6 +12,7 @@ Contents:
    :maxdepth: 2
 
    getstarted
+   cli
    basic
    script
    process
