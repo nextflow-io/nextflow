@@ -82,6 +82,11 @@ class ProviderConfig {
             case 'bitbucket':
                 attr.platform = name
                 if( !attr.server ) attr.server = 'https://bitbucket.org'
+
+            case 'azure':
+                attr.platform = name
+                if( !attr.server ) attr.server = 'https://dev.azure.com'
+                if( !attr.endpoint ) attr.endpoint = 'https://dev.azure.com'
         }
 
         if( attr.path )

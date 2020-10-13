@@ -273,16 +273,16 @@ abstract class RepositoryProvider {
             case 'gitea':
                 return new GiteaRepositoryProvider(project, config)
 
+            case 'azure':
+                return new AzureDevOpsRepositoryProvider(project, config)
+
             case 'file':
                 // remove the 'local' prefix for the file provider
                 def localName = project.tokenize('/').last()
                 return new LocalRepositoryProvider(localName, config)
         }
 
-        throw new AbortOperationException("Unkwnon project repository platform: ${config.platform}")
+        throw new AbortOperationException("Unknown project repository platform: ${config.platform}")
     }
 
 }
-
-
-
