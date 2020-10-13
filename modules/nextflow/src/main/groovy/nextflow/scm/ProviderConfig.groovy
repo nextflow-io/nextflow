@@ -293,6 +293,9 @@ class ProviderConfig {
 
         if( !result.find{ it.name == 'bitbucket' })
             result << new ProviderConfig('bitbucket')
+
+        if( !result.find{ it.name == 'azure' })
+            result << new ProviderConfig('azure')
     }
 
 }
