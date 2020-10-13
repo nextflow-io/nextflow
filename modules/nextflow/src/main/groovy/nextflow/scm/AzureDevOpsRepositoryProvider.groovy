@@ -49,7 +49,7 @@ final class AzureDevOpsRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getContentUrl( String path ) {
-        "https://dev.azure.com/quantrocode/slamseq/_apis/git/repositories/slamseq/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&$format=json&path=$path"
+        "https://dev.azure.com/quantrocode/slamseq/_apis/git/repositories/slamseq/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=$path"
         //"${config.endpoint}/repos/$project/contents/$path"
     }
 
@@ -65,7 +65,7 @@ final class AzureDevOpsRepositoryProvider extends RepositoryProvider {
         if( !result )
             throw new IllegalStateException("Missing clone URL for: $project")
 
-        return result/*
+        return result*/
     }
 
     @Override
