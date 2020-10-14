@@ -63,21 +63,21 @@ Use the specified configuration file(s) overriding any defaults.
 
 **Usage** ::
 
-   $ nextflow -C nxf.config COMMAND [arg...]
+   $ nextflow -C my.config COMMAND [arg...]
 
 
 **Description**
 
 The ``-C`` option is used to override *all* settings specified in the default config file. 
-For soft override, refer the ``-c`` option.
+For soft override, please refer the ``-c`` option.
 
 
 **Examples**
 
 
-Override **any** previous config with a custom config file. ::
+- Override **any** default configuration with a custom configuration file. ::
     
-  $ nextflow -C nxf.config run nextflow-io/hello
+  $ nextflow -C my.config run nextflow-io/hello
 
 
 --------------------
@@ -93,16 +93,17 @@ Set JVM properties.
 
 **Description**
 
-The Java Virtual Machine (JVM) platform used by ``nextflow`` allows for the addition of 
-system level properties and values during the startup that can then be accessed during 
-runtime. For specifying other JVM level options, please refer to the `environment variables section <https://www.nextflow.io/docs/latest/config.html#environment-variables>`__.
+This options allows the definition of custom Java system properties that can be used to 
+properly configure or fine tuning the JVM instance used by the Nextflow runtime.
+ 
+For specifying other JVM level options, please refer to the `environment variables section <https://www.nextflow.io/docs/latest/config.html#environment-variables>`__.
 
 
 **Examples**
 
-Add ``JVM properties`` to the invoked pipeline. ::
+Add `JVM properties` to the invoked pipeline. ::
     
-    $ nextflow -Dkey=value run nextflow-io/hello
+    $ nextflow -Dfile.encoding=UTF-8 run nextflow-io/hello
 
 
 -----------------------------
@@ -161,7 +162,11 @@ Update **some** fields of the default config for any pipeline. ::
 Docker driven execution
 -----------------------
 
-Launch Nextflow via Docker (experimental).
+Launch Nextflow via Docker.
+
+
+.. warning::
+    This is an experimental unsupported feature.
 
 **Usage**
 ::
@@ -171,10 +176,11 @@ Launch Nextflow via Docker (experimental).
 
 **Description**
 
-The ``-dockerize`` option is used to invoke **nextflow runtime** as a docker container 
-itself. For invoking a pipeline with the ``docker`` profile or executor, please 
-to refer the ``-with-docker`` options the ``run`` and ``kuberun`` commands.
+The ``-dockerize`` option is used to invoke the execution of **Nextflow** within a Docker container
+itself without installing a Java VM in the hosting environment.
 
+Note, this option is *not* needed to run containerised pipeline jobs. For invoking a pipeline with the ``docker`` profile or executor,
+please to refer the ``-with-docker`` options the ``run`` command.
 
 **Examples**
 
@@ -215,14 +221,14 @@ Sets the path of the nextflow log file.
 **Description**
 
 The ``log`` option takes a path of the new log file which to be used instead of the 
-default ``.nextflow.log`` for storing execution logs.
+default ``.nextflow.log`` or to save logs files to another directory.
 
 
 **Examples**
 
-Save all execution logs to the custom ``nxf.log`` file. ::
+Save all execution logs to the custom ``/var/log/nextflow.log`` file. ::
 
-   $ nextflow -log nxf.log run nextflow-io/hello
+   $ nextflow -log /var/log/nextflow.log run nextflow-io/hello
 
 
 
@@ -255,7 +261,8 @@ Invoke the pipeline execution without the banner and pipeline information. ::
 Logging to a syslog server
 ---------------------------
 
-Send logs to syslog server.
+
+Send logs to `Syslog <https://en.wikipedia.org/wiki/Syslog>`_ server endpoint.
 
 **Usage** ::
 
@@ -264,12 +271,12 @@ Send logs to syslog server.
 
 **Description**
 
-The ``-syslog`` option is used to send logs to a ``syslog`` logging server at the specified endpoint.
+The ``-syslog`` option is used to send logs to a `Syslog` logging server at the specified endpoint.
 
 
 **Examples**
 
-Send the logs to a ``syslog`` server at specific endpoint. ::
+Send the logs to a `Syslog` server at specific endpoint. ::
 
     $ nextflow -syslog localhost:1234 run nextflow-io/hello
 
@@ -278,7 +285,7 @@ Send the logs to a ``syslog`` server at specific endpoint. ::
 Version
 --------------------
 
-Print the ``nextflow`` version information.
+Print the Nextflow version information.
 
 **Usage**
 
