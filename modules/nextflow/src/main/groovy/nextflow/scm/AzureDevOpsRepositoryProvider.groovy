@@ -46,16 +46,13 @@ final class AzureDevOpsRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getEndpointUrl() {
-        //https://dev.azure.com/quantrocode/slamseq/_apis/git/repositories/slamseq
         "${config.endpoint}/${project}/_apis/git/repositories/${repo}"
-        //"${config.endpoint}/${project}/_apis/projects?api-version=2.0"
     }
 
     /** {@inheritDoc} */
     @Override
     String getContentUrl( String path ) {
         "${config.endpoint}/${project}/_apis/git/repositories/${repo}/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=$path"
-        //"${config.endpoint}/repos/$project/contents/$path"
     }
 
     /** {@inheritDoc} */
@@ -63,26 +60,6 @@ final class AzureDevOpsRepositoryProvider extends RepositoryProvider {
     String getCloneUrl() {
 
         return "https://dev.azure.com/${project}/_git/${repo}"
-    }
-
-    @Override
-    @CompileDynamic
-    @Memoized
-    List<BranchInfo> getBranches() {
-        // https://dev.azure.com/quantrocode/slamseq/_apis/git/repositories/slamseq/refs?api-version=6.0
-        final url = "https://dev.azure.com/quantrocode/slamseq/_apis/git/repositories/slamseq/refs?api-version=6.0"
-        //final url = "${config.endpoint}/repos/$project/branches"
-        this.<BranchInfo>invokeAndResponseWithPaging(url, { Map branch -> new BranchInfo(branch.name as String, branch.commit?.sha as String) })
-    }
-
-    @Override
-    @CompileDynamic
-    @Memoized
-    List<TagInfo> getTags() {
-        // https://dev.azure.com/quantrocode/slamseq/_apis/git/repositories/slamseq/refs?filter=tags/&api-version=6.0
-        final url = "https://dev.azure.com/quantrocode/slamseq/_apis/git/repositories/slamseq/refs?filter=tags/&api-version=6.0"
-        // final url = "${config.endpoint}/repos/$project/tags"
-        this.<TagInfo>invokeAndResponseWithPaging(url, { Map tag -> new TagInfo(tag.name as String, tag.commit?.sha as String)})
     }
 
     /** {@inheritDoc} */
