@@ -29,8 +29,13 @@ import groovy.transform.Memoized
 @CompileStatic
 final class AzureDevOpsRepositoryProvider extends RepositoryProvider {
 
+    private String user
+    private String repo
+
     AzureDevOpsRepositoryProvider(String project, ProviderConfig config=null) {
         this.project = project
+        this.user = this.project.tokenize('/').first()
+        this.repo = this.project.tokenize('/').last()
         this.config = config ?: new ProviderConfig('azuredevops')
     }
 
@@ -42,14 +47,14 @@ final class AzureDevOpsRepositoryProvider extends RepositoryProvider {
     @Override
     String getEndpointUrl() {
         //https://dev.azure.com/quantrocode/slamseq/_apis/git/repositories/slamseq
-        "https://dev.azure.com/quantrocode/slamseq/_apis/git/repositories/slamseq"
+        "${config.endpoint}/${project}/_apis/git/repositories/${repo}"
         //"${config.endpoint}/${project}/_apis/projects?api-version=2.0"
     }
 
     /** {@inheritDoc} */
     @Override
     String getContentUrl( String path ) {
-        "https://dev.azure.com/quantrocode/slamseq/_apis/git/repositories/slamseq/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=$path"
+        "${config.endpoint}/${project}/_apis/git/repositories/${repo}/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=$path"
         //"${config.endpoint}/repos/$project/contents/$path"
     }
 
@@ -57,15 +62,7 @@ final class AzureDevOpsRepositoryProvider extends RepositoryProvider {
     @Override
     String getCloneUrl() {
 
-        //return "https://${organization}.visualstudio.com/${repo}/_git/${repo}"
-        return "https://dev.azure.com/quantrocode/slamseq/_git/slamseq"
-        /*Map response = invokeAndParseResponse( getEndpointUrl() )
-
-        def result = response.get('clone_url')
-        if( !result )
-            throw new IllegalStateException("Missing clone URL for: $project")
-
-        return result*/
+        return "https://dev.azure.com/${project}/_git/${repo}"
     }
 
     @Override
@@ -91,8 +88,7 @@ final class AzureDevOpsRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getRepositoryUrl() {
-        //"${config.server}/$project"
-        "https://dev.azure.com/quantrocode/_git/slamseq"
+        "${config.server}/$project"
     }
 
     /** {@inheritDoc} */
@@ -101,7 +97,8 @@ final class AzureDevOpsRepositoryProvider extends RepositoryProvider {
 
         def url = getContentUrl(path)
         Map response  = invokeAndParseResponse(url)
-        response.get('content')?.toString()?.decodeBase64()
+
+        response.get('content')?.toString().getBytes()
 
     }
 
