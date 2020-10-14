@@ -385,9 +385,9 @@ class AssetManager {
 
     File getLocalPath() { localPath }
 
-    ScriptFile getScriptFile() {
+    ScriptFile getScriptFile(String scriptName=null) {
 
-        def result = new ScriptFile(getMainScriptFile())
+        def result = new ScriptFile(getMainScriptFile(scriptName))
         result.revisionInfo = getCurrentRevisionAndName()
         result.repository = getRepositoryUrl()
         result.localPath = localPath.toPath()
@@ -396,12 +396,12 @@ class AssetManager {
         return result
     }
 
-    File getMainScriptFile() {
+    File getMainScriptFile(String scriptName=null) {
         if( !localPath.exists() ) {
             throw new AbortOperationException("Unknown project folder: $localPath")
         }
 
-        def mainScript = getMainScriptName()
+        def mainScript = scriptName ?: getMainScriptName()
         def result = new File(localPath, mainScript)
         if( !result.exists() )
             throw new AbortOperationException("Missing project main script: $result")
