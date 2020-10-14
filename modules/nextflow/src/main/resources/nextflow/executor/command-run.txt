@@ -101,6 +101,7 @@ nxf_unstage() {
 nxf_main() {
     trap on_exit EXIT
     trap on_term TERM INT USR2
+    trap '' USR1
 
     [[ "${NXF_CHDIR:-}" ]] && cd "$NXF_CHDIR"
     {{container_boxid}}
