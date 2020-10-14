@@ -1,12 +1,14 @@
 .. _cli-page:
 
-******************
-Command line interface
-******************
+*****************************
+Command line interface (CLI)
+*****************************
 
-`Nextflow` provides a robust command line interface allowing you to manage the execution of a pipeline. The top-level interface consists of two aspects, ``options`` and ``commands``.
+`Nextflow` provides a robust command line interface for the management and 
+execution pipelines. The top-level interface consists of two aspects, 
+*options** and **commands**.
 
-Here's what you'll see at the top-level upon invoking ``nextflow`` CLI. ::
+Here's what you'll see at the top-level upon invoking the ``nextflow`` CLI. ::
 
 
     $ nextflow
@@ -15,10 +17,13 @@ Here's what you'll see at the top-level upon invoking ``nextflow`` CLI. ::
 
 
 .. _cli-options:
-CLI options
+
+Options
 ============
 
-The top-level ``options`` are meant to be invoked in relation to the core **nextflow runtime**. For child options specific to any ``command``, please refer the `CLI commands` section.
+The top-level ``options`` are meant to be invoked in relation to the core 
+**nextflow runtime** and are applied to all commands. For options 
+specific to any ``command``, please refer the `CLI commands` section.
 
 An overview of the `Nextflow` top-level options. ::
 
@@ -50,23 +55,25 @@ An overview of the `Nextflow` top-level options. ::
 
     Commands...
 
---------------------
+---------------------------
 Hard configuration override
---------------------
+---------------------------
 
 
 **Description**
 
-Use the specified configuration file(s) overriding any defaults
+Use the specified configuration file(s) overriding any defaults.
 
 
-**Usage**
-::
+**Usage** ::
+
    $ nextflow -C nxf.config COMMAND [arg...]
+
 
 **Extended description**
 
-The ``C`` option is used to override *all* settings specified in the default config file. For soft override, please refer the ``c`` option.
+The ``-C`` option is used to override *all* settings specified in the default config file. 
+For soft override, please refer the ``c`` option.
 
 
 **Examples**
@@ -83,7 +90,7 @@ JVM properties
 
 **Description**
 
-Set JVM properties
+Set JVM properties.
 
 **Usage**
 ::
@@ -92,25 +99,26 @@ Set JVM properties
 
 **Extended description**
 
-The JVM platform, which is utilized by ``nextflow`` as its runtime, allows adding system level properties/values during the startup, which could be accessed during runtime. For specifying other JVM level options, please refer the
-`environment variables section <https://www.nextflow.io/docs/latest/config.html#environment-variables>`__.
+The Java Virtual Machine (JVM) platform used by ``nextflow`` allows for the addition of 
+system level properties and values during the startup that can then be accessed during 
+runtime. For specifying other JVM level options, please refer to the `environment variables section <https://www.nextflow.io/docs/latest/config.html#environment-variables>`__.
 
 
 **Examples**
 
-- Add ``JVM properties`` to the invoked pipeline. For more information on the ``-r`` child-option, please refer its parent, ``run`` command. ::
+Add ``JVM properties`` to the invoked pipeline. ::
     
-    $ nextflow -Dkey=value run nextflow-io/hello -r jvm-properties
+    $ nextflow -Dkey=value run nextflow-io/hello
 
 
---------------------
+-----------------------------
 Execution as a background job
---------------------
+-----------------------------
 
 
 **Description**
 
-Execute nextflow in background
+Execute ``nextflow`` in the background.
 
 
 **Usage**
@@ -120,25 +128,27 @@ Execute nextflow in background
 
 **Extended description**
 
-The ``bg`` option is used to invoke nextflow execution in the background and allows the user to continue interacting with the terminal. This option is similar to ``nohup`` in behavior.
+The ``-bg`` option is used to invoke the nextflow execution in the background and allows 
+the user to continue interacting with the terminal. This option is similar to ``nohup`` in 
+behavior.
 
 
 **Examples**
 
-- Invoke any execution as a background job. ::
+Invoke any execution as a background job. ::
     
     $ nextflow -bg run nextflow-io/hello 
 
 
 
---------------------
+---------------------------
 Soft configuration override
---------------------
+---------------------------
 
 
 **Description**
 
-Add the specified file to configuration set
+Add the specified file to configuration set.
 
 **Usage**
 
@@ -149,26 +159,27 @@ Add the specified file to configuration set
 
 **Extended description**
 
-The ``c`` option is used to append or derive new configuration from the default configuration. The ``c`` option allows us to update the config in an additive manner, for **hard override** please refer the ``C`` option.
-
+The ``-c`` option is used to append a new configuration to the default configuration. 
+The ``-c`` option allows us to update the config in an additive manner. For **hard override** 
+please refer the ``-C`` option.
 
 
 **Examples**
 
-- Update **some** fields of the default config for any pipeline. ::
+Update **some** fields of the default config for any pipeline. ::
 
   $ nextflow -c nxf.config run nextflow-io/hello
 
 
 
---------------------
+-----------------------
 Docker driven execution
---------------------
+-----------------------
 
 
 **Description**
 
-Launch nextflow via Docker (experimental)
+Launch ``nextflow`` via Docker (experimental).
 
 
 **Usage**
@@ -179,13 +190,15 @@ Launch nextflow via Docker (experimental)
 
 **Extended description**
 
-The ``dockerize`` option is used to invoke **nextflow runtime** as a docker container itself. For invoking a pipeline with the ``docker`` profile or executor, please refer ``with-docker`` option of the ``run`` and ``kuberun`` commands.
+The ``-dockerize`` option is used to invoke **nextflow runtime** as a docker container 
+itself. For invoking a pipeline with the ``docker`` profile or executor, please 
+to refer the ``-with-docker`` options the ``run`` and ``kuberun`` commands.
 
 
 
 **Examples**
 
-- Invoke ``nextflow`` as a docker container to execute a pipeline. ::
+Invoke ``nextflow`` as a docker container to execute a pipeline. ::
 
    $ nextflow -dockerize run nextflow-io/hello
 
@@ -199,7 +212,7 @@ Help
 
 **Description**
 
-Print this help
+Print the help message.
 
 
 **Usage**
@@ -209,7 +222,8 @@ Print this help
 
 **Extended description**
 
-The ``h`` option prints out the overview of the CLI interface and enumerates the top-level *options* and *commands*.
+The ``-h`` option prints out the overview of the CLI interface and enumerates the top-level *options* 
+and *commands*.
 
 
 --------------------
@@ -219,7 +233,7 @@ Execution logs
 
 **Description**
 
-Set nextflow log file path
+Sets the path of the nextflow log file.
 
 
 **Usage**
@@ -230,12 +244,13 @@ Set nextflow log file path
 
 **Extended description**
 
-The ``log`` option takes path of the new log file which would be used instead of the default ``.nextflow.log`` for storing execution logs for the pipeline.
+The ``log`` option takes a path of the new log file which to be used instead of the 
+default ``.nextflow.log`` for storing execution logs.
 
 
 **Examples**
 
-- Save all execution logs to the custom ``nxf.log`` file. ::
+Save all execution logs to the custom ``nxf.log`` file. ::
 
    $ nextflow -log nxf.log run nextflow-io/hello
 
@@ -248,7 +263,7 @@ Quiet execution
 
 **Description**
 
-Do not print information messages
+Disable the printing of information to the terminal.
 
 **Usage**
 ::
@@ -257,27 +272,27 @@ Do not print information messages
 
 **Extended description**
 
-The ``q`` option suppresses the banner, process related info and exits once the execution is completed. Please note that it does not affect any explicit print statement which is in the pipeline.
+The ``-q`` option suppresses the banner, process related info and exits once the 
+execution is completed. Please note that it does not affect any explicit print 
+statement within a pipeline.
 
 
 **Examples**
 
-- Invoke the pipeline execution without the banner and pipeline informaton. ::
+Invoke the pipeline execution without the banner and pipeline information. ::
 
    $ nextflow -q run nextflow-io/hello
 
 
 
-
-
---------------------
+---------------------------
 Logging to a syslog server
---------------------
+---------------------------
 
 
 **Description**
 
-Send logs to syslog server (eg. localhost:514)
+Send logs to syslog server.
 
 **Usage**
 ::
@@ -287,12 +302,12 @@ Send logs to syslog server (eg. localhost:514)
 
 **Extended description**
 
-The ``syslog`` option is used to send logs to a ``syslog`` logging server at the specified endpoint.
+The ``-syslog`` option is used to send logs to a ``syslog`` logging server at the specified endpoint.
 
 
 **Examples**
 
-- Send the logs to a ``syslog`` server at a specific endpointt. ::
+Send the logs to a ``syslog`` server at specific endpoint. ::
 
     $ nextflow -syslog localhost:1234 run nextflow-io/hello
 
@@ -307,7 +322,7 @@ Version
 
 **Description**
 
-Print the program version
+Print the ``nextflow`` version information.
 
 **Usage**
 
@@ -318,17 +333,20 @@ Print the program version
 
 **Extended description**
 
-The ``v`` option prints out information about *Nextflow* such as ``Nextflow version and build``. The ``version`` variant in addition prints out the ``citation doi`` and ``official website`` as well.
+The ``-v`` option prints out information about *Nextflow* such as the version and build. 
+The ``-version`` option in addition prints out the citation reference and official website.
 
+**Examples**
 
+- The short version. ::
 
-- The short version info with citation and website link. ::
-
+      $ nextflow -v
       nextflow version 20.07.1.5412
 
 
 - The full version info with citation and website link. ::
 
+      $ nextflow -version
       N E X T F L O W
       version 20.07.1 build 5412
       created 24-07-2020 15:18 UTC (20:48 IDT)
@@ -337,12 +355,11 @@ The ``v`` option prints out information about *Nextflow* such as ``Nextflow vers
 
 
 .. _cli-commands:
-CLI commands
+
+Commands
 ============
 
-The top-level ``commands`` are meant to be invoked to initiate and inspect a **nextflow process**. For top-level options specific to **nextflow runtime**, please refer the `CLI options` section.
-
-An overview of the `Nextflow` top-level command. ::
+An overview of the Nextflow top-level commands. ::
 
 
     $ nextflow
@@ -374,20 +391,22 @@ clean
 
 **Description**
 
-Clean up project specific *cache* and *work* directories
+Clean up *cache* and *work* directories.
 
 **Usage**
 
 
 ::
 
-    $ nextflow clean RUN_NAME [options]
+    $ nextflow clean [run_name|session_id] [options]
 
 
 **Extended description**
 
-Upon invocation within a directory, ``nextflow`` creates a project specific ``.nextflow.log`` file, ``.nextflow`` cache directory as well as a ``work`` directory. The ``clean`` option is designed to facilitate rapid iteration without the clutter introduced by previous executions. A list of ``RUN_NAME`` can be generated by invoking ``nextflow log -q``.
-
+Upon invocation within a directory, ``nextflow`` creates a project specific ``.nextflow.log`` 
+file, ``.nextflow`` cache directory as well as a ``work`` directory. The ``clean`` command is 
+designed to facilitate removal of these files from previous executions. 
+A list of of run names and session ids can be generated by invoking ``nextflow log -q``.
 
 
 **Options**
@@ -417,57 +436,58 @@ Upon invocation within a directory, ``nextflow`` creates a project specific ``.n
 
 **Examples**
 
-- Check what would be removed upon invocation of ``clean`` command using the ``dry-run`` option. ::
+Dry run to remove work directories for the run name `boring_euler`.::
 
    $ nextflow clean boring_euler -n
 
-   Would remove /Users/eklavya/projects/code/nextflow/_resources/work/92/c1a9cd9a96e0531d81ca69f5dc3bb7
-   Would remove /Users/eklavya/projects/code/nextflow/_resources/work/3f/70944c7a549b6221e1ccc7b4b21b62
-   Would remove /Users/eklavya/projects/code/nextflow/_resources/work/0e/2ebdba85f76f6068b21a1bcbf10cab
+   Would remove work/92/c1a9cd9a96e0531d81ca69f5dc3bb7
+   Would remove work/3f/70944c7a549b6221e1ccc7b4b21b62
+   Would remove work/0e/2ebdba85f76f6068b21a1bcbf10cab
 
-- Remove the execution data for a specific execution. ::
+Remove work directories for the run name `boring_euler`. ::
 
    $ nextflow clean boring_euler -f
 
-   Removed /Users/eklavya/projects/code/nextflow/_resources/work/92/c1a9cd9a96e0531d81ca69f5dc3bb7
-   Removed /Users/eklavya/projects/code/nextflow/_resources/work/3f/70944c7a549b6221e1ccc7b4b21b62
-   Removed /Users/eklavya/projects/code/nextflow/_resources/work/0e/2ebdba85f76f6068b21a1bcbf10cab
+   Removed work/92/c1a9cd9a96e0531d81ca69f5dc3bb7
+   Removed work/3f/70944c7a549b6221e1ccc7b4b21b62
+   Removed work/0e/2ebdba85f76f6068b21a1bcbf10cab
 
 
-- Remove the execution entries *except* for a specific execution. ::
+Remove the execution entries *except* for a specific execution. ::
 
     $ nextflow clean -but tiny_leavitt -f
 
-    Removed /Users/eklavya/projects/code/nextflow/_resources/work/1f/f1ea9158fb23b53d5083953121d6b6
-    Removed /Users/eklavya/projects/code/nextflow/_resources/work/bf/334115deec60929dc18edf0010032a
-    Removed /Users/eklavya/projects/code/nextflow/_resources/work/a3/06521d75da296d4dd7f4f8caaddad8
+    Removed work/1f/f1ea9158fb23b53d5083953121d6b6
+    Removed work/bf/334115deec60929dc18edf0010032a
+    Removed work/a3/06521d75da296d4dd7f4f8caaddad8
 
-- Dry run to remove the execution data *before* a specific execution. ::
+Dry run to remove the execution data *before* a specific execution. ::
 
    $ nextflow clean -before tiny_leavitt -n
 
-   Would remove /Users/eklavya/projects/code/nextflow/_resources/work/5d/ad76f7b7ab3500cf616814ef644b61
-   Would remove /Users/eklavya/projects/code/nextflow/_resources/work/c4/69a82b080a477612ba8d8e4c27b579
-   Would remove /Users/eklavya/projects/code/nextflow/_resources/work/be/a4fa2aa38f76fd324958c81c2e4603
-   Would remove /Users/eklavya/projects/code/nextflow/_resources/work/54/39116773891c47a91e3c1733aad4de
+   Would remove work/5d/ad76f7b7ab3500cf616814ef644b61
+   Would remove work/c4/69a82b080a477612ba8d8e4c27b579
+   Would remove work/be/a4fa2aa38f76fd324958c81c2e4603
+   Would remove work/54/39116773891c47a91e3c1733aad4de
 
 
-- Dry run to remove the execution data *after* a specific execution. ::
+Dry run to remove the execution data *after* a specific execution. ::
 
    $ nextflow clean -after focused_payne -n
 
-   Would remove /Users/eklavya/projects/code/nextflow/_resources/work/1f/f1ea9158fb23b53d5083953121d6b6
-   Would remove /Users/eklavya/projects/code/nextflow/_resources/work/bf/334115deec60929dc18edf0010032a
-   Would remove /Users/eklavya/projects/code/nextflow/_resources/work/a3/06521d75da296d4dd7f4f8caaddad8
+   Would remove work/1f/f1ea9158fb23b53d5083953121d6b6
+   Would remove work/bf/334115deec60929dc18edf0010032a
+   Would remove work/a3/06521d75da296d4dd7f4f8caaddad8
 
 
-- Dry run to remove the temporary execution data for a specific execution, while saving the log files. ::
+- Dry run to remove the temporary execution data for a specific execution, while keeping the log files. ::
 
    $ nextflow clean -keep-logs tiny_leavitt -n
 
-   Would remove temp files from /Users/eklavya/projects/code/nextflow/_resources/work/1f/f1ea9158fb23b53d5083953121d6b6
-   Would remove temp files from /Users/eklavya/projects/code/nextflow/_resources/work/bf/334115deec60929dc18edf0010032a
-   Would remove temp files from /Users/eklavya/projects/code/nextflow/_resources/work/a3/06521d75da296d4dd7f4f8caaddad8
+   Would remove temp files from work/1f/f1ea9158fb23b53d5083953121d6b6
+   Would remove temp files from work/bf/334115deec60929dc18edf0010032a
+   Would remove temp files from work/a3/06521d75da296d4dd7f4f8caaddad8
+
 
 --------------------
 clone         
@@ -476,8 +496,7 @@ clone
 
 **Description**
 
-Clone a project into a folder
-
+Clone a remote project into a folder.
 
 
 **Usage**
@@ -485,14 +504,15 @@ Clone a project into a folder
 
 ::
 
-    $ nextflow clone [options]
-
+    $ nextflow clone [options] [project]
 
 
 **Extended description**
 
 
-The ``clone`` command faciliatates collaboration by allowing the users to download any existing pipeline from the specified ``-hub`` into the *current directory* and modify it accordingly. For downloading a pipeline into the global cache ``~/.nextflow/assets`` , please refer ``pull`` command.
+The ``clone`` command downloads a pipeline from a Git-hosting platform into the *current directory* 
+and modifies it accordingly. For downloading a pipeline into the global cache ``~/.nextflow/assets`` , 
+please refer to the ``nextflow pull`` command.
 
 **Options**
 
@@ -515,17 +535,16 @@ The ``clone`` command faciliatates collaboration by allowing the users to downlo
 **Examples**
 
 
-- Clone the latest revision of a pipeline. ::
+Clone the latest revision of a pipeline. ::
 
     $ nextflow clone nextflow-io/hello
     nextflow-io/hello cloned to: hello
 
 
-- Clone a specific revision of a pipeline. ::
+Clone a specific revision of a pipeline. ::
 
-    $ nextflow clone nextflow-io/hello -r mybranch #OR v1.1
+    $ nextflow clone nextflow-io/hello -r v1.1
     nextflow-io/hello cloned to: hello
-
 
 
 
@@ -536,7 +555,7 @@ config
 
 **Description**
 
-Print a project configuration
+Print the resolved pipeline configuration.
 
 **Usage**
 
@@ -549,7 +568,9 @@ Print a project configuration
 **Extended description**
 
 
-The ``config`` command is used for printing the project's configuration i.e. the ``nextflow.config`` and is especially useful for accomodating alternative executors, profiles, tools and parameters. For in-depth information, please refer `config-profiles section <https://www.nextflow.io/docs/latest/config.html#config-profiles>`_.
+The ``config`` command is used for printing the project's configuration i.e. the ``nextflow.config`` 
+and is especially useful for understanding the resolved profiles and parameters that Nextflow will use 
+run a pipeline. For in-depth information, please refer `config-profiles section <https://www.nextflow.io/docs/latest/config.html#config-profiles>`_.
 
 **Options**
 
@@ -576,7 +597,7 @@ The ``config`` command is used for printing the project's configuration i.e. the
 **Examples**
 
 
-- Print out the inferred config using a the default group key-value notation. ::
+Print out the inferred config using a the default group key-value notation. ::
 
    $ nextflow config
 
@@ -588,7 +609,7 @@ The ``config`` command is used for printing the project's configuration i.e. the
       executor = 'local'
    }
 
-- Print out the config using a flat notation. ::
+Print out the config using a flat notation. ::
 
    $ nextflow config -flat
 
@@ -596,7 +617,7 @@ The ``config`` command is used for printing the project's configuration i.e. the
    process.executor = 'local'
 
 
-- Print out the config using the Java properties notation. ::
+Print out the config using the Java properties notation. ::
 
    $ nextflow config -properties
 
@@ -604,7 +625,9 @@ The ``config`` command is used for printing the project's configuration i.e. the
    process.executor = local
 
 
-- Print out all profiles from the project's configuration. ::
+Print out all profiles from the project's configuration. ::
+
+   $ nextflow config -show-profiles
 
    docker {
       enabled = true
@@ -631,7 +654,7 @@ console
 
 **Description**
 
-Launch *Nextflow* interactive console
+Launch the *Nextflow* interactive console.
 
 
 **Usage**
@@ -645,7 +668,8 @@ Launch *Nextflow* interactive console
 
 **Extended description**
 
-The ``console`` command is a wrapper over the Groovy *console* and provides a Graphic User Interface (GUI) and an interactive REPL (Read-Eval-Print-Loop) for quick experimentation.
+The ``console`` command is a wrapper over the Groovy *console* and provides a Graphic User 
+Interface (GUI) and an interactive REPL (Read-Eval-Print-Loop) for quick experimentation.
 
 
 **Options**
@@ -656,7 +680,7 @@ None available
 **Examples**
 
 
-- Launch the ``console`` GUI. ::
+Launch the ``console`` GUI. ::
 
   $ nextflow console
 
@@ -668,7 +692,7 @@ drop
 
 **Description**
 
-Delete the local copy of a project
+Delete the local copy of a project.
 
 
 **Usage**
@@ -676,15 +700,14 @@ Delete the local copy of a project
 
 ::
 
-    $ nextflow drop [options]
-
-
+    $ nextflow drop [options] [project]
 
 
 **Extended description**
 
 
-The ``drop`` command is used to remove the piplines which have already been downloaded into the global cache. Please refer the ``list`` command for generating a list of downloaded pipelines.
+The ``drop`` command is used to remove the projects which have been downloaded into the 
+global cache. Please refer the ``list`` command for generating a list of downloaded pipelines.
 
 **Options**
 
@@ -702,12 +725,12 @@ The ``drop`` command is used to remove the piplines which have already been down
 **Examples**
 
 
-- Drop the downloaded ``nextflow-io/hello`` pipeline. ::
+Drop the ``nextflow-io/hello`` project. ::
 
   $ nextflow drop nextflow-io/hello
 
 
-- Forcefully drop the ``nextflow-io/hello`` pipeline, ignoring any local changes. ::
+Forcefully drop the ``nextflow-io/hello`` pipeline, ignoring any local changes. ::
 
   $ nextflow drop nextflow-io/hello -f
 
@@ -719,7 +742,7 @@ help
 
 **Description**
 
-Print the usage help for a command
+Print the top-level help or specific help for a command.
 
 
 **Usage**
@@ -727,12 +750,14 @@ Print the usage help for a command
 
 ::
 
-    $ nextflow help [options]
+    $ nextflow help [options] [command]
 
 
 **Extended description**
 
-The ``help`` command prints out the overview of the CLI interface and enumerates the top-level *options* and *commands*. Note that, this command is equivalent to simply issuing ``nextflow`` at the command line.
+The ``help`` command prints out the overview of the CLI interface and enumerates the top-level 
+*options* and *commands*. Note that this command is equivalent to simply invoking ``nextflow`` 
+at the command line.
 
 **Options**
 
@@ -747,49 +772,19 @@ The ``help`` command prints out the overview of the CLI interface and enumerates
 
 **Examples**
 
-- Invoke the ``help`` option from the command line to see an overview of top-level commands and options. ::
+Invoke the ``help`` option for the ``drop`` command. ::
 
-    $ nextflow help
-
-    Usage: nextflow [options] COMMAND [arg...]
-
-    Options:
-      -C
-         Use the specified configuration file(s) overriding any defaults
-      -D
-         Set JVM properties
-      -bg
-         Execute nextflow in background
-      -c, -config
-         Add the specified file to configuration set
-      -d, -dockerize
-         Launch nextflow via Docker (experimental)
-      -h
-         Print this help
-      -log
-         Set nextflow log file path
-      -q, -quiet
-         Do not print information messages
-      -syslog
-         Send logs to syslog server (eg. localhost:514)
-      -v, -version
-         Print the program version
-
-    Commands:
-      clean         Clean up project cache and work directories
-      clone         Clone a project into a folder
-      config        Print a project configuration
-      console       Launch Nextflow interactive console
-      drop          Delete the local copy of a project
-      help          Print the usage help for a command
-      info          Print project and system runtime information
-      kuberun       Execute a workflow in a Kubernetes cluster (experimental)
-      list          List all downloaded projects
-      log           Print executions log and runtime info
-      pull          Download or update a project
-      run           Execute a pipeline project
-      self-update   Update nextflow runtime to the latest available version
-      view          View project script file(s)
+     $ nextflow help drop
+ 
+     Delete the local copy of a project
+     Usage: drop [options] name of the project to drop
+        Options:
+          -f
+               Delete the repository without taking care of local changes
+               Default: false
+          -h, -help
+               Print the command usage
+               Default: false
 
 
 --------------------
@@ -799,8 +794,7 @@ info
 
 **Description**
 
-Print project and system runtime information
-
+Print project or system runtime information.
 
 
 **Usage**
@@ -808,14 +802,17 @@ Print project and system runtime information
 
 ::
 
-    $ nextflow info [options]
+    $ nextflow info [options] [project]
 
 
 
 **Extended description**
 
 
-The ``info`` command prints out the nextflow runtime information about the hardware as well as the software versions of the ``Nextflow version and build``, ``Operating System`` and ``Groovy and Java runtime``.
+The ``info`` command prints out the nextflow runtime information about the hardware as 
+well as the software versions of the ``Nextflow version and build``, ``Operating System`` 
+and ``Groovy and Java runtime``. It can also be used to display information about a 
+specific project.
 
 **Options**
 
@@ -836,7 +833,7 @@ The ``info`` command prints out the nextflow runtime information about the hardw
 
 **Examples**
 
-- ::
+Display `nextflow` run-time and system info::
 
     $ nextflow info
 
@@ -846,104 +843,20 @@ The ``info`` command prints out the nextflow runtime information about the hardw
       Runtime: Groovy 2.5.11 on OpenJDK 64-Bit Server VM 1.8.0_192-b01
       Encoding: UTF-8 (UTF-8)
 
-- ::
+Display information about a specific project::
 
-    $ nextflow info -check-updates
+    $ nextflow info nextflow-io/hello
 
-      Version: 20.07.1 build 5412
-      Created: 24-07-2020 15:18 UTC (20:48 IDT)
-      System: Mac OS X 10.15.6
-      Runtime: Groovy 2.5.11 on OpenJDK 64-Bit Server VM 1.8.0_192-b01
-      Encoding: UTF-8 (UTF-8)
-
-- Print out the detaild information from the ``nextflow`` runtime and system environment. ::
-
-    $ nextflow info -d
-
-      Version: 20.07.1 build 5412
-      Created: 24-07-2020 15:18 UTC (20:48 IDT)
-      System: Mac OS X 10.15.6
-      Runtime: Groovy 2.5.11 on OpenJDK 64-Bit Server VM 1.8.0_192-b01
-      Encoding: UTF-8 (UTF-8)
-      File systems: file, jar, ftp, http, https, s3
-      JVM opts:
-        -XX:+TieredCompilation
-        -XX:TieredStopAtLevel=1
-        -Djava.io.tmpdir=/var/folders/zp/63677vtx23d_b2_nd7mm92040000gn/T/
-        -Djava.library.path=
-          /Users/eklavya/Library/Java/Extensions
-          /Library/Java/Extensions
-          /Network/Library/Java/Extensions
-          /System/Library/Java/Extensions
-          /usr/lib/java
-        -Dfile.encoding=UTF-8
-        -Djava.awt.headless=true
-      Capsule:
-        capsule.app=nextflow_20.07.1
-        capsule.jar=/Users/eklavya/.nextflow/framework/20.07.1/nextflow-20.07.1-one.jar
-      Environment:
-        NXF_CLI=/usr/local/bin/nextflow info -d
-        NXF_HOME=/Users/eklavya/.nextflow
-        NXF_ORG=nextflow-io
-      Class-path:
-        /Users/eklavya/.nextflow/framework/20.07.1/nextflow-20.07.1-one.jar
-        /Users/eklavya/.nextflow/capsule/deps/io/nextflow/nf-tower/20.07.1/nf-tower-20.07.1.jar
-        /Users/eklavya/.nextflow/capsule/deps/io/nextflow/nf-amazon/20.07.1/nf-amazon-20.07.1.jar
-        /Users/eklavya/.nextflow/capsule/deps/io/nextflow/nextflow/20.07.1/nextflow-20.07.1.jar
-        /Users/eklavya/.nextflow/capsule/deps/org/apache/ivy/ivy/2.3.0/ivy-2.3.0.jar
-        /Users/eklavya/.nextflow/capsule/deps/io/nextflow/nf-httpfs/20.07.1/nf-httpfs-20.07.1.jar
-        /Users/eklavya/.nextflow/capsule/deps/io/nextflow/nf-commons/20.07.1/nf-commons-20.07.1.jar
-        /Users/eklavya/.nextflow/capsule/deps/org/codehaus/groovy/groovy-nio/2.5.11/groovy-nio-2.5.11.jar
-        /Users/eklavya/.nextflow/capsule/deps/org/codehaus/groovy/groovy-templates/2.5.11/groovy-templates-2.5.11.jar
-        /Users/eklavya/.nextflow/capsule/deps/org/codehaus/groovy/groovy-xml/2.5.11/groovy-xml-2.5.11.jar
-        /Users/eklavya/.nextflow/capsule/deps/org/codehaus/groovy/groovy-json/2.5.11/groovy-json-2.5.11.jar
-        /Users/eklavya/.nextflow/capsule/deps/org/codehaus/groovy/groovy/2.5.11/groovy-2.5.11.jar
-        /Users/eklavya/.nextflow/capsule/deps/com/amazonaws/aws-java-sdk-s3/1.11.542/aws-java-sdk-s3-1.11.542.jar
-        /Users/eklavya/.nextflow/capsule/deps/com/amazonaws/aws-java-sdk-ec2/1.11.542/aws-java-sdk-ec2-1.11.542.jar
-        /Users/eklavya/.nextflow/capsule/deps/com/amazonaws/aws-java-sdk-batch/1.11.542/aws-java-sdk-batch-1.11.542.jar
-        /Users/eklavya/.nextflow/capsule/deps/com/amazonaws/aws-java-sdk-iam/1.11.542/aws-java-sdk-iam-1.11.542.jar
-        /Users/eklavya/.nextflow/capsule/deps/com/amazonaws/aws-java-sdk-ecs/1.11.542/aws-java-sdk-ecs-1.11.542.jar
-        /Users/eklavya/.nextflow/capsule/deps/com/amazonaws/aws-java-sdk-kms/1.11.542/aws-java-sdk-kms-1.11.542.jar
-        /Users/eklavya/.nextflow/capsule/deps/com/amazonaws/aws-java-sdk-core/1.11.542/aws-java-sdk-core-1.11.542.jar
-        /Users/eklavya/.nextflow/capsule/deps/org/apache/httpcomponents/httpclient/4.5.5/httpclient-4.5.5.jar
-        /Users/eklavya/.nextflow/capsule/deps/org/slf4j/jcl-over-slf4j/1.7.25/jcl-over-slf4j-1.7.25.jar
-        /Users/eklavya/.nextflow/capsule/deps/org/slf4j/jul-to-slf4j/1.7.25/jul-to-slf4j-1.7.25.jar
-        /Users/eklavya/.nextflow/capsule/deps/org/slf4j/log4j-over-slf4j/1.7.25/log4j-over-slf4j-1.7.25.jar
-        /Users/eklavya/.nextflow/capsule/deps/ch/qos/logback/logback-classic/1.1.11/logback-classic-1.1.11.jar
-        /Users/eklavya/.nextflow/capsule/deps/ch/qos/logback/logback-core/1.1.11/logback-core-1.1.11.jar
-        /Users/eklavya/.nextflow/capsule/deps/org/codehaus/gpars/gpars/1.2.1/gpars-1.2.1.jar
-        /Users/eklavya/.nextflow/capsule/deps/ch/grengine/grengine/1.3.0/grengine-1.3.0.jar
-        /Users/eklavya/.nextflow/capsule/deps/commons-lang/commons-lang/2.6/commons-lang-2.6.jar
-        /Users/eklavya/.nextflow/capsule/deps/commons-codec/commons-codec/1.10/commons-codec-1.10.jar
-        /Users/eklavya/.nextflow/capsule/deps/com/beust/jcommander/1.35/jcommander-1.35.jar
-        /Users/eklavya/.nextflow/capsule/deps/com/esotericsoftware/kryo/kryo/2.24.0/kryo-2.24.0.jar
-        /Users/eklavya/.nextflow/capsule/deps/org/iq80/leveldb/leveldb/0.12/leveldb-0.12.jar
-        /Users/eklavya/.nextflow/capsule/deps/org/eclipse/jgit/org.eclipse.jgit/5.2.1.201812262042-r/org.eclipse.jgit-5.2.1.201812262042-r.jar
-        /Users/eklavya/.nextflow/capsule/deps/javax/mail/mail/1.4.7/mail-1.4.7.jar
-        /Users/eklavya/.nextflow/capsule/deps/javax/activation/activation/1.1.1/activation-1.1.1.jar
-        /Users/eklavya/.nextflow/capsule/deps/org/yaml/snakeyaml/1.18/snakeyaml-1.18.jar
-        /Users/eklavya/.nextflow/capsule/deps/org/jsoup/jsoup/1.11.2/jsoup-1.11.2.jar
-        /Users/eklavya/.nextflow/capsule/deps/jline/jline/2.9/jline-2.9.jar
-        /Users/eklavya/.nextflow/capsule/deps/io/nextflow/nxf-s3fs/1.0.8/nxf-s3fs-1.0.8.jar
-        /Users/eklavya/.nextflow/capsule/deps/com/google/guava/guava/21.0/guava-21.0.jar
-        /Users/eklavya/.nextflow/capsule/deps/org/slf4j/slf4j-api/1.7.25/slf4j-api-1.7.25.jar
-        /Users/eklavya/.nextflow/capsule/deps/org/multiverse/multiverse-core/0.7.0/multiverse-core-0.7.0.jar
-        /Users/eklavya/.nextflow/capsule/deps/org/codehaus/jsr166-mirror/jsr166y/1.7.0/jsr166y-1.7.0.jar
-        /Users/eklavya/.nextflow/capsule/deps/org/objenesis/objenesis/2.1/objenesis-2.1.jar
-        /Users/eklavya/.nextflow/capsule/deps/org/iq80/leveldb/leveldb-api/0.12/leveldb-api-0.12.jar
-        /Users/eklavya/.nextflow/capsule/deps/com/jcraft/jsch/0.1.54/jsch-0.1.54.jar
-        /Users/eklavya/.nextflow/capsule/deps/com/jcraft/jzlib/1.1.1/jzlib-1.1.1.jar
-        /Users/eklavya/.nextflow/capsule/deps/com/googlecode/javaewah/JavaEWAH/1.1.6/JavaEWAH-1.1.6.jar
-        /Users/eklavya/.nextflow/capsule/deps/com/amazonaws/jmespath-java/1.11.542/jmespath-java-1.11.542.jar
-        /Users/eklavya/.nextflow/capsule/deps/software/amazon/ion/ion-java/1.0.2/ion-java-1.0.2.jar
-        /Users/eklavya/.nextflow/capsule/deps/com/fasterxml/jackson/core/jackson-databind/2.6.7.2/jackson-databind-2.6.7.2.jar
-        /Users/eklavya/.nextflow/capsule/deps/com/fasterxml/jackson/dataformat/jackson-dataformat-cbor/2.6.7/jackson-dataformat-cbor-2.6.7.jar
-        /Users/eklavya/.nextflow/capsule/deps/joda-time/joda-time/2.8.1/joda-time-2.8.1.jar
-        /Users/eklavya/.nextflow/capsule/deps/org/apache/httpcomponents/httpcore/4.4.9/httpcore-4.4.9.jar
-        /Users/eklavya/.nextflow/capsule/deps/com/fasterxml/jackson/core/jackson-annotations/2.6.0/jackson-annotations-2.6.0.jar
-        /Users/eklavya/.nextflow/capsule/deps/com/fasterxml/jackson/core/jackson-core/2.6.7/jackson-core-2.6.7.jar
-
-
+      project name: nextflow-io/hello
+      repository  : https://github.com/nextflow-io/hello
+      local path  : /Users/evanfloden/.nextflow/assets/nextflow-io/hello
+      main script : main.nf
+      revisions   : 
+      * master (default)
+        mybranch
+        testing
+        v1.1 [t]
+        v1.2 [t]
 
 
 --------------------
@@ -953,19 +866,24 @@ kuberun
 
 **Description**
 
-Execute a workflow in a Kubernetes cluster (experimental)
+Deploy Nextflow into a Kubernetes cluster (experimental)
 
 
 **Usage**
 
 ::
 
-    $ nextflow kuberun [options]
+    $ nextflow kuberun [options] [project]
 
 
 **Extended description**
 
-The ``kuberun`` command builds upon the ``run`` command and offers a deep integration with the ``Kubernetes`` execution environment. This ``command`` assumes that you've already installed the ``kubectl`` CLI. Also, please note that currently, the ``kuberun`` command does not allow the execution of **local** Nextflow scripts. For more information please refer the `Kubernetes executor section <https://www.nextflow.io/docs/latest/config/kubernetes.html>`__.
+The ``kuberun`` command builds upon the ``run`` command and offers a deep integration with 
+the Kubernetes execution environment. This command deploys the Nextflow runtime as a Kubernetes 
+pod and assumes that you've already installed the ``kubectl`` CLI. The ``kuberun`` command 
+does not allow the execution of **local** Nextflow scripts. For more information please refer 
+the `Kubernetes executor section <https://www.nextflow.io/docs/latest/config/kubernetes.html>`__.
+
 
 **Options**
 
@@ -1058,9 +976,11 @@ The ``kuberun`` command builds upon the ``run`` command and offers a deep integr
 
 
 
-
 **Examples**
-Please note that many of the options for ``kuberun`` are similar to ``run`` command, please also refer the examples from that section.
+
+Execute a pipeline into a Kubernetes cluster. ::
+
+     $ nextflow kuberun nextflow-io/hello 
 
 
 
@@ -1071,7 +991,7 @@ list
 
 **Description**
 
-List all downloaded projects
+List all downloaded projects.
 
 
 **Usage**
@@ -1101,7 +1021,7 @@ The ``list`` commands prints a list of the projects which are already downloaded
 
 **Examples**
 
-- List the downloaded pipelines. ::
+List the downloaded pipelines. ::
 
     $ nextflow list
 
@@ -1116,7 +1036,7 @@ log
 
 **Description**
 
-Print executions log and runtime info.
+Print the execution history and log information.
 
 
 **Usage**
@@ -1124,14 +1044,18 @@ Print executions log and runtime info.
 
 ::
 
-    $ nextflow log RUN_NAME [options]
+    $ nextflow log [options] [run_name | session_id]
 
 
 
 
 **Extended description**
 
-The ``log`` command is used to query the execution metadata associated with every pipeline executed by *Nextflow*, the list of executed pipelines can be generated by issuing ``nextflow log`` at the terminal. Instead of ``RUN_NAME``, it's also possible to use ``SESSION_ID`` Moreover, this command contains multiple options to facilitate the queries and is especially useful while debugging a pipeline and while inspecting the pipelines' execution metadata.
+The ``log`` command is used to query the execution metadata associated with pipelines executed 
+by Nextflow. The list of executed pipelines can be generated by issuing ``nextflow log`` at the terminal. 
+Instead of run name, it's also possible to use a session id. Moreover, this command contains multiple options 
+to facilitate the queries and is especially useful while debugging a pipeline and while inspecting pipeline 
+execution metadata.
 
 
 **Options**
@@ -1169,7 +1093,7 @@ The ``log`` command is used to query the execution metadata associated with ever
 **Examples**
 
 
-- Listing the execution logs of previous invocations of all pipelines in a project. ::
+Listing the execution logs of previous invocations of all pipelines in a project. ::
 
     $ nextflow log
 
@@ -1179,7 +1103,7 @@ The ``log`` command is used to query the execution metadata associated with ever
     2020-10-07 11:53:29	2.5s    	boring_euler 	OK    	e3b475a61b 	a6276975-7173-4208-ae09-ab9d6dce8737	nextflow run tutorial.nf
 
 
-- Listing only the *run names* of the execution logs of all pipelines invocations in a project. ::
+Listing only the *run names* of the execution logs of all pipelines invocations in a project. ::
 
     $ nextflow log -quiet
 
@@ -1187,42 +1111,42 @@ The ``log`` command is used to query the execution metadata associated with ever
     tiny_leavitt
     boring_euler
 
-- List the execution entries *only* a specific execution. ::
+List the execution entries *only* a specific execution. ::
 
    $ nextflow log tiny_leavitt
 
-   /Users/eklavya/projects/code/nextflow/_resources/work/1f/f1ea9158fb23b53d5083953121d6b6
-   /Users/eklavya/projects/code/nextflow/_resources/work/bf/334115deec60929dc18edf0010032a
-   /Users/eklavya/projects/code/nextflow/_resources/work/a3/06521d75da296d4dd7f4f8caaddad8
+   work/1f/f1ea9158fb23b53d5083953121d6b6
+   work/bf/334115deec60929dc18edf0010032a
+   work/a3/06521d75da296d4dd7f4f8caaddad8
 
 
-- List the execution entries *after* a specific execution. ::
+List the execution entries *after* a specific execution. ::
 
     $ nextflow log -after tiny_leavitt
 
-    /Users/eklavya/projects/code/nextflow/_resources/work/92/c1a9cd9a96e0531d81ca69f5dc3bb7
-    /Users/eklavya/projects/code/nextflow/_resources/work/3f/70944c7a549b6221e1ccc7b4b21b62
-    /Users/eklavya/projects/code/nextflow/_resources/work/0e/2ebdba85f76f6068b21a1bcbf10cab
+    work/92/c1a9cd9a96e0531d81ca69f5dc3bb7
+    work/3f/70944c7a549b6221e1ccc7b4b21b62
+    work/0e/2ebdba85f76f6068b21a1bcbf10cab
 
-- List the execution entries *before* a specific execution. ::
+List the execution entries *before* a specific execution. ::
 
     $ nextflow log -before tiny_leavitt
 
-    /Users/eklavya/projects/code/nextflow/_resources/work/5d/ad76f7b7ab3500cf616814ef644b61
-    /Users/eklavya/projects/code/nextflow/_resources/work/c4/69a82b080a477612ba8d8e4c27b579
-    /Users/eklavya/projects/code/nextflow/_resources/work/be/a4fa2aa38f76fd324958c81c2e4603
-    /Users/eklavya/projects/code/nextflow/_resources/work/54/39116773891c47a91e3c1733aad4de
+    work/5d/ad76f7b7ab3500cf616814ef644b61
+    work/c4/69a82b080a477612ba8d8e4c27b579
+    work/be/a4fa2aa38f76fd324958c81c2e4603
+    work/54/39116773891c47a91e3c1733aad4de
 
-- List the execution entries *except* for a specific execution. ::
+List the execution entries *except* for a specific execution. ::
 
    $ nextflow log -but tiny_leavitt
 
-    /Users/eklavya/projects/code/nextflow/_resources/work/5d/ad76f7b7ab3500cf616814ef644b61
-    /Users/eklavya/projects/code/nextflow/_resources/work/c4/69a82b080a477612ba8d8e4c27b579
-    /Users/eklavya/projects/code/nextflow/_resources/work/be/a4fa2aa38f76fd324958c81c2e4603
-    /Users/eklavya/projects/code/nextflow/_resources/work/54/39116773891c47a91e3c1733aad4de
+    work/5d/ad76f7b7ab3500cf616814ef644b61
+    work/c4/69a82b080a477612ba8d8e4c27b579
+    work/be/a4fa2aa38f76fd324958c81c2e4603
+    work/54/39116773891c47a91e3c1733aad4de
 
-- Filter specific fields from the execution log of a process. ::
+Filter specific fields from the execution log of a process. ::
 
     $ nextflow log tiny_leavitt -f 'process,exit,hash,duration'
 
@@ -1230,11 +1154,12 @@ The ``log`` command is used to query the execution metadata associated with ever
     convertToUpper	0	bf/334115	144ms
     convertToUpper	0	a3/06521d	139ms
 
-- Filter fields from the execution log of a process based on a criteria. ::
+Filter fields from the execution log of a process based on a criteria. ::
 
     $ nextflow log tiny_leavitt -F 'process =~ /splitLetters/'
 
-    /Users/eklavya/projects/code/nextflow/_resources/work/1f/f1ea9158fb23b53d5083953121d6b6
+    work/1f/f1ea9158fb23b53d5083953121d6b6
+
 
 --------------------
 pull          
@@ -1251,19 +1176,17 @@ Download or update a project.
 
 ::
 
-    $ nextflow pull REPO_NAME [options]
-
-
+    $ nextflow pull [options] [project]
 
 
 **Extended description**
 
 
-The ``pull`` command faciliatates collaboration by allowing the users to download any existing pipeline from the specified ``-hub`` and execute it using the ``run`` command. For downloading a pipeline into the project directory, please refer the ``clone`` command.
+The ``pull`` command downloads a pipeline from a Git-hosting platform into the global cache ``~/.nextflow/assets`` 
+and modifies it accordingly. For downloading a pipeline into a local directory, please refer to the ``nextflow clone`` command.
 
 
 **Options**
-
 
 
 +---------------------------+------------+--------------------------------------------------------------------------------+
@@ -1282,18 +1205,17 @@ The ``pull`` command faciliatates collaboration by allowing the users to downloa
 
 
 
-
 **Examples**
 
 
-- Download a new pipeline or pull the latest revision for a specific downloaded pipelines. ::
+Download a new pipeline or pull the latest revision for a specific project. ::
 
     $ nextflow pull nextflow-io/hello
 
     Checking nextflow-io/hello ...
     done - revision: 96eb04d6a4 [master]
 
-- Pull the latest revision for all downloaded pipelines. ::
+Pull the latest revision for all downloaded projects. ::
 
     $ nextflow pull -all
 
@@ -1302,12 +1224,12 @@ The ``pull`` command faciliatates collaboration by allowing the users to downloa
     Checking nextflow-hub/fastqc ...
     done - revision: 087659b18e [master]
 
-- Download a specific revision of a new pipeline or pull the latest revision for a specific downloaded pipelines. ::
+Download a specific revision of a new project or pull the latest revision for a specific project. ::
 
-    $ nextflow pull nextflow-io/hello -r mybranch #OR v1.1
+    $ nextflow pull nextflow-io/hello -r v1.1
 
     Checking nextflow-io/hello ...
-    checkout-out at AnyObjectId[1c3e9e7404127514d69369cd87f8036830f5cf64] - revision: 1c3e9e7404 [mybranch]
+    checkout-out at AnyObjectId[1c3e9e7404127514d69369cd87f8036830f5cf64] - revision: 1c3e9e7404 [v1.1]
 
 
 --------------------
@@ -1317,24 +1239,25 @@ run
 
 **Description**
 
-Execute a pipeline project
+Execute a pipeline.
 
 
 **Usage**
 
 ::
 
-    $ nextflow run [options]
-
+    $ nextflow run [options] [project]
 
 
 **Extended description**
 
 
-The ``run`` command is used to initiate the execution of ``nextflow`` script or downloaded pipeline. Along with serving the purpose of script execution, this command facilitates rapid iterations, inspections of any pipeline as well as debugging them via numerous options.
+The ``run`` command is used to initiate the execution of ``nextflow`` script or 
+downloaded pipeline. Along with serving the purpose of script execution, this command 
+facilitates rapid iterations, inspections of any pipeline as well as debugging.
+
 
 **Options**
-
 
 
 +---------------------------+-------------+--------------------------------------------------------------------------------+
@@ -1419,33 +1342,22 @@ The ``run`` command is used to initiate the execution of ``nextflow`` script or 
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 
 
-
-
-
-
 **Examples**
-
-- Execute the pipeline with ``dsl2`` .::
-
-    $ nextflow run nextflow-io/hello -dsl2
-
-- Invoke the pipeline with a specific workflow as the entrypoint, this option is meant to be used with ``dsl2``. For more information on ``dsl2``, please refer the `DSL2 section <https://www.nextflow.io/docs/latest/dsl2.html>`__.. ::
-
-   $ nextflow run main.nf -entry workflow_A
 
 - Run a specific revision of a downloaded pipeline. ::
 
-    $ nextflow run nextflow-io/hello -r mybranch #OR v1.1
+    $ nextflow run nextflow-io/hello -r v1.1
 
     N E X T F L O W  ~  version 20.07.1
-    Launching `nextflow-io/hello` [grave_cajal] - revision: 1c3e9e7404 [mybranch]
-    executor ...
+    Launching `nextflow-io/hello` [grave_cajal] - revision: 1c3e9e7404 [v1.1]
 
-- Choose a ``profile`` for running the project. This option assumes that the ``profiles`` have already been defined in the ``config`` file. ::
+
+- Choose a ``profile`` for running the project. Assumes that a profile named `docker` has already been defined in the config file. ::
 
     $ nextflow run main.nf -profile docker
 
-- Invoke the pipeline execution and generate the summary ``HTML report``. For more information on the metrics, please refer the `Tracing & visualization section <https://www.nextflow.io/docs/latest/tracing.html>`__. ::
+
+- Invoke the pipeline execution and generate the summary HTML report. For more information on the metrics, please refer the `Tracing & visualization section <https://www.nextflow.io/docs/latest/tracing.html>`__. ::
 
     $ nextflow run main.nf -with-report
 
@@ -1455,10 +1367,22 @@ The ``run`` command is used to initiate the execution of ``nextflow`` script or 
     $ nextflow run nextflow-io/hello -qs 4
 
 
-- Invoke the nextflow pipeline execution with integrated monitoring dashboard with ``tower.nf``. For more information, please refer `the tower.nf website <https://www.tower.nf>`__. ::
+- Execute the pipeline with ``dsl2`` .::
+
+    $ nextflow run nextflow-io/hello -dsl2
+
+
+- Invoke the pipeline with a specific workflow as the entry-point, this option is meant to be used with ``dsl2``. For more information on ``dsl2``, please refer the `DSL2 section <https://www.nextflow.io/docs/latest/dsl2.html>`__.. ::
+
+   $ nextflow run main.nf -entry workflow_A
+
+
+- Invoke the nextflow pipeline execution with the integrated monitoring dashboard Tower. For more information, please refer to the tower.nf website <https://www.tower.nf>`__. ::
 
     $ nextflow run nextflow-io/hello -with-tower
  
+
+
 --------------------
 self-update   
 --------------------
@@ -1466,7 +1390,7 @@ self-update
 
 **Description**
 
-Update nextflow runtime to the latest available version.
+Update the nextflow runtime to the latest available version.
 
 
 **Usage**
@@ -1475,14 +1399,15 @@ Update nextflow runtime to the latest available version.
 
     $ nextflow self-update
 
-**Extended description**
 
+**Extended description**
 
 The ``self-update`` command directs the ``nextflow`` cli to update itself to the latest stable release.
 
+
 **Examples**
 
-::
+Update Nextflow. ::
 
     $ nextflow self-update
 
@@ -1505,21 +1430,22 @@ view
 
 **Description**
 
-View project script file(s).
+View a projects script file(s).
 
 
 **Usage**
 
 ::
 
-    $ nextflow view [options]
+    $ nextflow view [options] [project]
 
 
 
 **Extended description**
 
 
-The ``view`` command is used to inspect the pipelines which are already stored in the global nextflow cache. For downloading a pipeline into the global cache ``~/.nextflow/assets`` , please refer ``pull`` command.
+The ``view`` command is used to inspect the pipelines which are already stored in the global nextflow cache. 
+For downloading a pipeline into the global cache ``~/.nextflow/assets``, please refer to the ``pull`` command.
 
 **Options**
 
@@ -1534,14 +1460,15 @@ The ``view`` command is used to inspect the pipelines which are already stored i
 | -q                        |  false     | Hide header line.                                                              |
 +---------------------------+------------+--------------------------------------------------------------------------------+
 
+
 **Examples**
 
 
-- Viewing the contents of a downloaded pipeline. ::
+Viewing the contents of a downloaded pipeline. ::
 
    $ nextflow view nextflow-io/hello
 
-   == content of file: /Users/eklavya/.nextflow/assets/nextflow-io/hello/main.nf
+   == content of file: .nextflow/assets/nextflow-io/hello/main.nf
    #!/usr/bin/env nextflow
 
    cheers = Channel.from 'Bonjour', 'Ciao', 'Hello', 'Hola'
@@ -1556,11 +1483,12 @@ The ``view`` command is used to inspect the pipelines which are already stored i
         """
     }
 
-- Listing the folder structure of the downloaded pipeline. ::
+
+Listing the folder structure of the downloaded pipeline. ::
 
    $ nextflow view -l nextflow-io/hello
 
-   == content of path: /Users/eklavya/.nextflow/assets/nextflow-io/hello
+   == content of path: .nextflow/assets/nextflow-io/hello
    LICENSE
    README.md
    nextflow.config
@@ -1571,8 +1499,8 @@ The ``view`` command is used to inspect the pipelines which are already stored i
    .travis.yml
    main.nf
 
-- Viewing the contents of a downloaded pipeline without the header ``== contents of file ...``. ::
 
+Viewing the contents of a downloaded pipeline without the header ``== contents of file ...``. ::
 
    $ nextflow view -q nextflow-io/hello
 

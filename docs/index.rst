@@ -12,9 +12,9 @@ Contents:
    :maxdepth: 2
 
    getstarted
-   cli
    basic
    script
+   cli
    process
    channel
    operator
