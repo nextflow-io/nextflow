@@ -286,8 +286,8 @@ that can be found in your GitLab `account page <https://gitlab.com/profile/accou
 Gitea credentials
 -----------------
 
-`Gitea <https://gitea.io>`_ is a Git repository server with GitHub-like GUI access. Since Gitea installation is quite 
-easy, it is suitable for building a private development environment in your network. To access your Gitea server, you 
+`Gitea <https://gitea.io>`_ is a Git repository server with GitHub-like GUI access. Since Gitea installation is quite
+easy, it is suitable for building a private development environment in your network. To access your Gitea server, you
 have to provide all the credential information below::
 
     providers {
@@ -304,8 +304,30 @@ have to provide all the credential information below::
     }
 
 
-See `Gitea documentation <https://docs.gitea.io/en-us/api-usage/>`_ about how to enable API access on your 
-server and how to issue a token. 
+See `Gitea documentation <https://docs.gitea.io/en-us/api-usage/>`_ about how to enable API access on your
+server and how to issue a token.
+
+Azure DevOps credentials
+------------------------
+
+`Azure DevOps <https://dev.azure.com>`_ is a Microsoft product that provides version control (either with Team Foundation Version Control (TFVC) or Git),
+reporting, requirements management, project management (for both agile software development and waterfall teams),
+automated builds, testing and release management capabilities. Since Azure DevOps access comes with most `Office 365 <https://www.office.com>`_ packages,
+both used in academia industry, it is handy to also put Git repositories there out of the box. To access your Azure DevOps server, you
+have to provide all the credential information below:
+
+    providers {
+
+        azurerepos {
+            user = 'your-user'
+            password = 'your-password'
+        }
+
+    }
+
+
+See `Azure DevOps documentation <https://docs.microsoft.com/en-us/rest/api/azure/devops/>`_ about how to enable API access on your
+server generate Git credentials.
 
 
 Private server configuration
@@ -494,7 +516,7 @@ have created. For example::
   process.container = 'my-docker-image'
   docker.enabled = true
 
-In this way when you launch the pipeline execution, the Docker image will be automatically downloaded and used to run 
+In this way when you launch the pipeline execution, the Docker image will be automatically downloaded and used to run
 your tasks.
 
 Read the :ref:`docker-page` page to lean more on how to use Docker containers with Nextflow.

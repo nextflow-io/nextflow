@@ -41,7 +41,7 @@ final class AzureDevOpsRepositoryProvider extends RepositoryProvider {
 
     /** {@inheritDoc} */
     @Override
-    String getName() { "Azure DevOps" }
+    String getName() { "Azure Repos" }
 
     /** {@inheritDoc} */
     @Override
@@ -75,7 +75,7 @@ final class AzureDevOpsRepositoryProvider extends RepositoryProvider {
         def url = getContentUrl(path)
         Map response  = invokeAndParseResponse(url)
 
-        response.get('content')?.toString().getBytes()
+        response.get('content')?.toString()?.getBytes()
 
     }
 
