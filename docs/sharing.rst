@@ -313,7 +313,7 @@ Azure DevOps credentials
 `Azure DevOps <https://dev.azure.com>`_ is a Microsoft product that provides version control (either with Team Foundation Version Control (TFVC) or Git),
 reporting, requirements management, project management (for both agile software development and waterfall teams),
 automated builds, testing and release management capabilities. Since Azure DevOps access comes with most `Office 365 <https://www.office.com>`_ packages,
-both used in academia industry, it is handy to also put Git repositories there out of the box. To access your Azure DevOps server, you
+both used in academia industry, it is handy to also put Git repositories there out of the box. To access your Azure Repos, you
 have to provide all the credential information below:
 
     providers {
