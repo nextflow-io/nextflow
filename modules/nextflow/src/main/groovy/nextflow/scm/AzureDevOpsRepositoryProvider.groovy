@@ -36,7 +36,7 @@ final class AzureDevOpsRepositoryProvider extends RepositoryProvider {
         this.project = project
         this.user = this.project.tokenize('/').first()
         this.repo = this.project.tokenize('/').last()
-        this.config = config ?: new ProviderConfig('azuredevops')
+        this.config = config ?: new ProviderConfig('azurerepos')
     }
 
     /** {@inheritDoc} */

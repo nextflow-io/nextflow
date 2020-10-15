@@ -273,7 +273,7 @@ abstract class RepositoryProvider {
             case 'gitea':
                 return new GiteaRepositoryProvider(project, config)
 
-            case 'azure':
+            case 'azurerepos':
                 return new AzureDevOpsRepositoryProvider(project, config)
 
             case 'file':
