@@ -20,6 +20,7 @@ Contents:
    executor
    config
    dsl2
+   cli
    awscloud
    amazons3
    google
@@ -34,4 +35,3 @@ Contents:
    sharing
    metadata
    mail
-   example
