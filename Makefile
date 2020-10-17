@@ -37,6 +37,7 @@ clean:
 	rm -rf work 
 	rm -rf modules/nextflow/.nextflow*
 	rm -rf modules/nextflow/work
+	find . -name build | xargs rm -rf 
 	./gradlew clean
 
 assemble:
