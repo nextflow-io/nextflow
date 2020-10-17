@@ -29,4 +29,6 @@ dependencies {
     compile 'com.google.apis:google-api-services-lifesciences:v2beta-rev20191030-1.30.3'
     compile 'com.google.cloud:google-cloud-nio:0.120.0-alpha'
     compile 'com.google.auth:google-auth-library-oauth2-http:0.18.0'
+
+    testImplementation(testFixtures(project(":nextflow")))
 }
