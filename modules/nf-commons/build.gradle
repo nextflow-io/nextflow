@@ -32,6 +32,7 @@ dependencies {
     compile "commons-lang:commons-lang:2.6"
     compile 'com.google.guava:guava:21.0'
 
-    /* testCompile inherited from top gradle build file */
+    /* testImplementation inherited from top gradle build file */
+    testImplementation(testFixtures(project(":nextflow")))
 }
 
