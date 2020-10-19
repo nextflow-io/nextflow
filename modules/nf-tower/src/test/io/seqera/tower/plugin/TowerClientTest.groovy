@@ -375,4 +375,28 @@ class TowerClientTest extends Specification {
         tower.getUrlTraceHeartbeat() == 'https://tower.nf/trace/12345/heartbeat'
         tower.getUrlTraceComplete() == 'https://tower.nf/trace/12345/complete'
     }
+
+    def 'should set the auth token' () {
+        given:
+        def http = Mock(SimpleHttpClient)
+        TowerClient client = Spy(TowerClient, constructorArgs: ['https://tower.nf'])
+        and:
+        def SIMPLE = '4ffbf1009ebabea77db3d72efefa836dfbb71271'
+        def BEARER = 'eyJ0aWQiOiA1fS5jZmM1YjVhOThjZjM2MTk1NjBjZWU1YmMwODUxYzA1ZjkzMDdmN2Iz'
+
+        when:
+        client.setAuthToken(http, SIMPLE)
+        then:
+        http.setBasicToken('@token:' + SIMPLE) >> null
+
+        when:
+        client.setAuthToken(http, SIMPLE)
+        then:
+        http.setBasicToken('@token:' + SIMPLE) >> null
+
+        when:
+        client.setAuthToken(http, BEARER)
+        then:
+        http.setBearerToken(BEARER) >> null
+    }
 }

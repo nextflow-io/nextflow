@@ -143,7 +143,7 @@ class SimpleHttpClientTest extends Specification{
 
         when:
         def client = new SimpleHttpClient()
-        client.setAuthToken(TOKEN)
+        client.setBasicToken(TOKEN)
         client.setUserAgent(AGENT)
         client.sendHttpMessage( ENDPOINT, PAYLOAD )
         then:

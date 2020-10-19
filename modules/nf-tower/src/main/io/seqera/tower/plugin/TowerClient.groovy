@@ -45,7 +45,9 @@ import nextflow.util.SimpleHttpClient
 @CompileStatic
 class TowerClient implements TraceObserver {
 
-    static final String DEF_ENDPOINT_URL = 'https://api.tower.nf'
+    static final public String DEF_ENDPOINT_URL = 'https://api.tower.nf'
+
+    static final public Duration DEF_TOKEN_MAX_AGE = Duration.of('1 hour')
 
     static private final int TASKS_PER_REQUEST = 100
 
@@ -121,6 +123,12 @@ class TowerClient implements TraceObserver {
 
     private boolean towerLaunch
 
+    private long tokenExpirationsSecs
+
+    private String refreshToken
+
+    private Duration tokenMaxAge
+
     /**
      * Constructor that consumes a URL and creates
      * a basic HTTP client.
@@ -169,6 +177,10 @@ class TowerClient implements TraceObserver {
 
     void setBackOffDelay( int value ) {
         this.backOffDelay = value
+    }
+
+    void setTokenMaxAge( Duration value) {
+        this.tokenMaxAge = value
     }
 
     /**
@@ -228,7 +240,11 @@ class TowerClient implements TraceObserver {
         this.aggregator = new ResourcesAggregator(session)
         this.runName = session.getRunName()
         this.runId = session.getUniqueId()
-        this.httpClient = new SimpleHttpClient().setAuthToken(TOKEN_PREFIX + getAccessToken())
+        this.httpClient = new SimpleHttpClient()
+        // set the auth token
+        setAuthToken( httpClient, getAccessToken() )
+        // set the current token timestamp
+        this.tokenExpirationsSecs = System.currentTimeSeconds() + tokenMaxAge.seconds
 
         // send hello to verify auth
         final req = makeCreateReq(session)
@@ -241,6 +257,31 @@ class TowerClient implements TraceObserver {
             throw new AbortOperationException("Invalid Tower response")
         if( ret.message )
             log.warn(ret.message.toString())
+    }
+
+    protected void setAuthToken(SimpleHttpClient client, String token) {
+        // check for plain jwt token
+        if( token.count('.')==2 ) {
+            client.setBearerToken(token)
+            return
+        }
+
+        // try checking personal access token
+        try {
+            final plain = new String(token.decodeBase64())
+            final p = plain.indexOf('.')
+            if( p!=-1 && new JsonSlurper().parseText(  plain.substring(0, p) )  ) {
+                // ok this is bearer token
+                client.setBearerToken(token)
+                return
+            }
+        }
+        catch ( Exception e ) {
+            log.trace "Enable to set bearer token ~ Reason: $e.message"
+        }
+
+        // fallback on simple token
+        client.setBasicToken(TOKEN_PREFIX + token)
     }
 
     protected Map makeCreateReq(Session session) {
@@ -374,6 +415,43 @@ class TowerClient implements TraceObserver {
         events << new ProcessEvent(trace: trace)
     }
 
+    @Deprecated // not used
+    protected void checkRefresh() {
+        final refresh = refreshToken ?: env.get('TOWER_REFRESH_TOKEN')
+        if( !refresh ) {
+            return
+        }
+
+        final long now = System.currentTimeSeconds()
+        if( now >= tokenExpirationsSecs ) {
+            refreshToken(refresh)
+        }
+    }
+
+    protected void refreshToken(String refresh) {
+        log.debug "+++ Requesting refresh token=$refresh"
+        final url = "$endpoint/trace/oauth/access_token"
+        httpClient.sendHttpMessage(
+                url,
+                method: 'POST',
+                contentType: "application/x-www-form-urlencoded",
+                body: "grant_type=refresh_token&refresh_token=${URLEncoder.encode(refreshToken, 'UTF-8')}" )
+
+        final authCookie = httpClient.getCookie('JWT')
+        final refreshCookie = httpClient.getCookie('JWT_REFRESH_TOKEN')
+        log.debug "+++ Refresh token auth=$authCookie ~ refresh=$refreshCookie"
+
+        // set the new bearer token
+        if( authCookie ) {
+            httpClient.setBearerToken(authCookie.value)
+            tokenExpirationsSecs = authCookie.maxAge>0 ? authCookie.maxAge : System.currentTimeSeconds()
+        }
+        // set the new refresh token
+        if( refreshCookie ) {
+            refreshToken = refreshCookie.value
+        }
+    }
+
     /**
      * Little helper method that sends a HTTP POST message as JSON with
      * the current run status, ISO 8601 UTC timestamp, run name and the TraceRecord
@@ -383,24 +461,43 @@ class TowerClient implements TraceObserver {
      * @param payload An additional object to send. Must be of type TraceRecord or Manifest
      */
     protected Response sendHttpMessage(String url, Map payload, String method='POST'){
-        // The actual HTTP request
-        final String json = payload != null ? generator.toJson(payload) : null
-        final String debug = json != null ? JsonOutput.prettyPrint(json).indent() : '-'
-        log.trace "HTTP url=$url; payload:\n${debug}\n"
-        try {
-            httpClient.sendHttpMessage(url, json, method)
-            return new Response(httpClient.responseCode, httpClient.getResponse())
-        }
-        catch( ConnectException e ) {
-            String msg = "Unable to connect Tower host: ${getHostUrl(url)}"
-            return new Response(0, msg)
-        }
-        catch (IOException e) {
-            int code = httpClient.responseCode
-            String msg = ( code == 401
-                            ? 'Unauthorized Tower access -- Make sure you have specified the correct access token'
-                            : "Unexpected response code $code for request $url"  )
-            return new Response(code, msg, httpClient.response)
+
+        int tries=0
+        final currentRefresh = refreshToken ?: env.get('TOWER_REFRESH_TOKEN')
+
+        while ( true ) {
+            // The actual HTTP request
+            final String json = payload != null ? generator.toJson(payload) : null
+            final String debug = json != null ? JsonOutput.prettyPrint(json).indent() : '-'
+            log.trace "HTTP url=$url; payload:\n${debug}\n"
+            try {
+                if( tries==1 ) {
+                    refreshToken(currentRefresh)
+                }
+
+                httpClient.sendHttpMessage(url, json, method)
+                return new Response(httpClient.responseCode, httpClient.getResponse())
+            }
+            catch( ConnectException e ) {
+                String msg = "Unable to connect Tower host: ${getHostUrl(url)}"
+                return new Response(0, msg)
+            }
+            catch (IOException e) {
+                int code = httpClient.responseCode
+
+                if( code == 401 && ++tries==1 && currentRefresh ) {
+                    log.debug "+++ Got 401 ~ try refresh token"
+                    continue
+                }
+                else {
+                    log.debug "+++ Reponse error code=$code; tries=$tries; refreshToken=$currentRefresh"
+                }
+
+                String msg = ( code == 401
+                        ? 'Unauthorized Tower access -- Make sure you have specified the correct access token'
+                        : "Unexpected response code $code for request $url"  )
+                return new Response(code, msg, httpClient.response)
+            }
         }
     }
 
@@ -597,7 +694,7 @@ class TowerClient implements TraceObserver {
         final long delay = period / 10 as long
 
         while( !complete ) {
-            final ev = events.poll(delay, TimeUnit.MILLISECONDS)
+            final ProcessEvent ev = events.poll(delay, TimeUnit.MILLISECONDS)
             // reconcile task events ie. send out only the last event
             if( ev ) {
                 log.trace "Tower event=$ev"

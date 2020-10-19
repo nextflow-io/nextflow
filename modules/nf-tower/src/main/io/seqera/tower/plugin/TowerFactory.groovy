@@ -50,7 +50,7 @@ class TowerFactory implements TraceObserverFactory {
         tower.maxRetries = config.navigate('tower.maxRetries', 5) as int
         tower.backOffBase = config.navigate('tower.backOffBase', SimpleHttpClient.DEFAULT_BACK_OFF_BASE) as int
         tower.backOffDelay = config.navigate('tower.backOffDelay', SimpleHttpClient.DEFAULT_BACK_OFF_DELAY  ) as int
-
+        tower.tokenMaxAge = config.navigate('tower.tokenMaxAge', TowerClient.DEF_TOKEN_MAX_AGE ) as Duration
         final result = new ArrayList(1)
         result.add(tower)
         return result

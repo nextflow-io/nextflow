@@ -57,7 +57,12 @@ class SimpleHttpClient {
     /**
      * Basic auth token
      */
-    private String authToken
+    private String basicToken
+
+    /**
+     * Basic Bearer token
+     */
+    private String  bearerToken
 
     /**
      * Http user agent
@@ -72,16 +77,44 @@ class SimpleHttpClient {
 
     private int backOffDelay = DEFAULT_BACK_OFF_DELAY
 
+    private CookieManager cookieManager
+
+    SimpleHttpClient() {
+        cookieManager = new CookieManager()
+        CookieHandler.setDefault(cookieManager)
+    }
+
+
+    HttpCookie getCookie(final String cookieName) {
+        for( HttpCookie it : cookieManager.cookieStore.cookies ) {
+            if( it.name == cookieName )
+                return it
+        }
+        return null
+    }
+
     /**
      * Send a json formatted string as HTTP POST request
      * @param json Message content as JSON
      */
-    void sendHttpMessage(String url, String json, String method = 'POST') throws IllegalStateException, IllegalArgumentException{
 
-        if (!url)
-            throw new IllegalStateException("URL needs to be set!")
+    void sendHttpMessage(String url, String json, String method = 'POST') throws IllegalStateException, IllegalArgumentException {
+        sendHttpMessage(url, body: json, method: method)
+    }
 
-        // reset the error count 
+    void sendHttpMessage(Map args, String url) throws IllegalStateException, IllegalArgumentException{
+
+        final method = args.method as String
+        final body = args.body as String
+        final contentType = args.contentType as String ?: "application/json"
+        final charset = args.charset as String
+
+        if( !url )
+            throw new IllegalStateException("Missing 'url' argument")
+        if( !method )
+            throw new IllegalStateException("Missing 'method' argument")
+
+        // reset the error count
         errorCount = 0
 
         while( true ) {
@@ -89,17 +122,23 @@ class SimpleHttpClient {
             def con = getHttpConnection(url)
             // Make header settings
             con.setRequestMethod(method)
-            con.setRequestProperty("Content-Type", "application/json")
+            con.setRequestProperty("Content-Type", contentType)
             con.setRequestProperty("User-Agent", userAgent)
-            if( authToken )
-                con.setRequestProperty("Authorization","Basic ${authToken.bytes.encodeBase64()}")
+            // set charset
+            if( charset )
+                con.setRequestProperty("charset", "utf-8")
+            // set auth
+            if( bearerToken )
+                con.setRequestProperty("Authorization","Bearer ${bearerToken}")
+            else if( basicToken )
+                con.setRequestProperty("Authorization","Basic ${basicToken.bytes.encodeBase64()}")
 
             con.setDoOutput(true)
 
             // Send POST request
-            if( json ) {
+            if( body ) {
                 DataOutputStream output = new DataOutputStream(con.getOutputStream())
-                output.writeBytes(json)
+                output.writeBytes(body)
                 output.flush()
                 output.close()
             }
@@ -191,10 +230,16 @@ class SimpleHttpClient {
         return this
     }
 
-    SimpleHttpClient setAuthToken(String tkn) {
-        authToken = tkn
+    SimpleHttpClient setBasicToken(String tkn) {
+        basicToken = tkn
         return this
     }
+
+    SimpleHttpClient setBearerToken(String tkn) {
+        bearerToken = tkn
+        return this
+    }
+
 
     SimpleHttpClient setMaxRetries(int value) {
         this.maxRetries = value
