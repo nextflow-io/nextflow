@@ -139,6 +139,15 @@ class ProviderConfigTest extends Specification {
         config.endpoint == 'http://my-domain.org/gitea'
 
         when:
+        config = new ProviderConfig('my-azure',[platform: 'azurerepos', server:'https://dev.azure.com'])
+        then:
+        config.name == 'my-azure'
+        config.platform == 'azurerepos'
+        config.domain == 'dev.azure.com'
+        config.server == 'https://dev.azure.com'
+        config.endpoint == 'https://dev.azure.com'
+
+        when:
         config = new ProviderConfig('github')
         config.setPassword('abc')
         then:
