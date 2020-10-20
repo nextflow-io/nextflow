@@ -430,12 +430,12 @@ class TowerClient implements TraceObserver {
 
     protected void refreshToken(String refresh) {
         log.debug "+++ Requesting refresh token=$refresh"
-        final url = "$endpoint/trace/oauth/access_token"
+        final url = "$endpoint/oauth/access_token"
         httpClient.sendHttpMessage(
                 url,
                 method: 'POST',
                 contentType: "application/x-www-form-urlencoded",
-                body: "grant_type=refresh_token&refresh_token=${URLEncoder.encode(refreshToken, 'UTF-8')}" )
+                body: "grant_type=refresh_token&refresh_token=${URLEncoder.encode(refresh, 'UTF-8')}" )
 
         final authCookie = httpClient.getCookie('JWT')
         final refreshCookie = httpClient.getCookie('JWT_REFRESH_TOKEN')
