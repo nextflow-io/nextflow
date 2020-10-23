@@ -405,7 +405,7 @@ class FunctionalTests extends Specification {
                         '''
         def saved = System.out
         def baos = new ByteArrayOutputStream()
-        System.out = new PrintStream(baos, true, StandardCharsets.UTF_8)
+        System.out = new PrintStream(baos, true, StandardCharsets.UTF_8.toString())
         def cfg = new ConfigParser().parse(CONFIG)
         def runner = new TestScriptRunner(cfg)
         runner.setScript(script).execute()
@@ -450,7 +450,7 @@ class FunctionalTests extends Specification {
                         '''
         def saved = System.out
         def baos = new ByteArrayOutputStream()
-        System.out = new PrintStream(baos, true, StandardCharsets.UTF_8)
+        System.out = new PrintStream(baos, true, StandardCharsets.UTF_8.toString())
         def cfg = new ConfigParser().parse(CONFIG)
         def runner = new TestScriptRunner(cfg)
         runner.setScript(script).execute()
