@@ -13,9 +13,16 @@ export TRAVIS_PULL_REQUEST=${TRAVIS_PULL_REQUEST:=false}
 # Tests
 #
 (
-  cd ../tests/checks; 
+  cd ../tests/
+  sudo bash cleanup.sh
+  cd checks
   bash run.sh
 )
+
+if [[ $TEST_SMOKE == true ]]; then
+  echo Skipping tests since TEST_SMOKE flag is true
+  exit 0
+fi
 
 # disable ansi log to make log more readable
 export NXF_ANSI_LOG=false

@@ -10,14 +10,13 @@ on:
 jobs:
   build:
     name: Build Nextflow
-    # This job runs on Linux
+    if: "!contains(github.event.head_commit.message, '[ci skip]')"
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        #java_version: ['8.0.222','10.0.2','11.0.4']
-        java_version: [8, 11, 14]
+        java_version: [8, 11, 15]
 
     steps:
     - name: Environment
@@ -29,17 +28,17 @@ jobs:
         fetch-depth: 1
         submodules: true
 
-    - name: Setup Java
-      uses: actions/setup-java@v1
-      with:
-        java-version: ${{matrix.java_version}}
-        architecture: x64
-
     - name: Setup env
       run: |
            rm -f $HOME/.gitconfig; 
            mkdir -p "$HOME/.nextflow";
            echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
+
+    - name: Setup Java ${{ matrix.java_version }}
+      uses: actions/setup-java@v1
+      with:
+        java-version: ${{matrix.java_version}}
+        architecture: x64
 
     - name: Compile
       run: make assemble
@@ -66,6 +65,26 @@ jobs:
         NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
         TOWER_ACCESS_TOKEN: ${{ secrets.TOWER_ACCESS_TOKEN }}
         GOOGLE_SECRET: ${{ secrets.GOOGLE_SECRET }}
+
+    - name: Setup Java 8
+      if: "matrix.java_version > 8"
+      uses: actions/setup-java@v1
+      with:
+        java-version: 8
+        architecture: x64
+
+    - name: Integration vs Java 8
+      if: "matrix.java_version > 8"
+      run: ./integration-tests.sh
+      env:
+        TEST_JDK: 8
+        TEST_SMOKE: true
+        GRADLE_OPTS: '-Dorg.gradle.daemon=false'
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        NXF_BITBUCKET_ACCESS_TOKEN: ${{ secrets.NXF_BITBUCKET_ACCESS_TOKEN }}
+        NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
+        NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
 
     - name: Publish
       if: failure()

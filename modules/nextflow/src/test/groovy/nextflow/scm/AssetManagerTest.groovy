@@ -430,6 +430,7 @@ class AssetManagerTest extends Specification {
         // create the repo dir
         dir.resolve('main.nf').text = "println 'Hello world'"
         dir.resolve('nextflow.config').text = 'manifest {  }'
+        dir.resolve('foo.nf').text = 'this is foo content'
 
         def init = Git.init()
         def repo = init.setDirectory( dir.toFile() ).call()
@@ -456,6 +457,24 @@ class AssetManagerTest extends Specification {
         script.text == "println 'Hello world'"
         script.repository == 'https://github.com/nextflow-io/nextflow'
         script.projectName == 'nextflow-io/nextflow'
+
+        when:
+        p = Mock(RepositoryProvider) { getRepositoryUrl() >> 'https://github.com/nextflow-io/nextflow' }
+        and:
+        manager = new AssetManager(provider: p)
+                .setLocalPath(dir.toFile())
+                .setProject('nextflow-io/nextflow')
+        and:
+        script = manager.getScriptFile('foo.nf')
+        then:
+        script.localPath == dir
+        script.commitId == commit.name()
+        script.revision == 'master'
+        script.parent == dir
+        script.text == "this is foo content"
+        script.repository == 'https://github.com/nextflow-io/nextflow'
+        script.projectName == 'nextflow-io/nextflow'
+
     }
 
     def 'should return project name from git url' () {

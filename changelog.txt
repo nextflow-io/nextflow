@@ -1,5 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
+20.09.1-edge - 15 Oct Sep 2020 
+- Prevent USR1 signal to stop jobs #1753
+- Add -main-script cli option [702ff64c]
+- Improve Singularity image file caching #1706 [dd92772b]
+- Fix unexpected default GLS action flags #1749
+- Patch unpexpected error on tower serialization [f922324a]
+
 20.09.0-edge - 23 Sep 2020 
 - Fix invalid error message on missing process #1719 [fc607f11]
 - Deduplicate GS file + parallel up/downloads [29d37083]

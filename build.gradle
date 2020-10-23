@@ -77,13 +77,6 @@ allprojects {
     }
 
     dependencies {
-        // test configuration
-        testFixturesCompile ("org.codehaus.groovy:groovy-test:3.0.5") { exclude group: 'org.codehaus.groovy' }
-        testFixturesRuntime ("cglib:cglib-nodep:3.3.0")
-        testFixturesRuntime ("org.objenesis:objenesis:3.1")
-        testFixturesCompile ("org.spockframework:spock-core:2.0-M3-groovy-3.0") { exclude group: 'org.codehaus.groovy'; exclude group: 'net.bytebuddy' }
-        testFixturesCompile ('org.spockframework:spock-junit4:2.0-M3-groovy-3.0') { exclude group: 'org.codehaus.groovy'; exclude group: 'net.bytebuddy' }
-        testFixturesCompile 'com.google.jimfs:jimfs:1.1'
         // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sec:module_replacement
         modules {
             module("commons-logging:commons-logging") { replacedBy("org.slf4j:jcl-over-slf4j") }
