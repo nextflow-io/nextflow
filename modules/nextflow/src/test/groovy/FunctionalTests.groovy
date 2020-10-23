@@ -25,6 +25,9 @@ import nextflow.config.ConfigParser
 import nextflow.processor.TaskProcessor
 import nextflow.util.MemoryUnit
 import nextflow.script.TestScriptRunner
+
+import java.nio.charset.StandardCharsets
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -379,6 +382,93 @@ class FunctionalTests extends Specification {
         processor.config.queue == 'legacy-queue'
     }
 
+    def 'tap should work - implicit channels creation - 1' () {
+
+        given:
+        String CONFIG = '''
+            process {
+            }
+            '''
+
+        when:
+        String script = '''
+                        Channel
+                            .from ( 'a', 'b', 'c' )
+                                .tap { log1 }
+                                .map { it * 2 }
+                                .tap { log2 }
+                                .view { "Result: $it" }
+                        
+                        
+                        log1.view { "Log 1: $it" }
+                        log2.view { "Log 2: $it" }
+                        '''
+        def saved = System.out
+        def baos = new ByteArrayOutputStream()
+        System.out = new PrintStream(baos, true, StandardCharsets.UTF_8)
+        def cfg = new ConfigParser().parse(CONFIG)
+        def runner = new TestScriptRunner(cfg)
+        runner.setScript(script).execute()
+        def processor = runner.scriptObj.taskProcessor
+        System.out = saved
+
+        then:
+        def result = baos.toString().trim()
+        result.contains("Result: aa")
+        result.contains("Result: bb")
+        result.contains("Result: cc")
+        result.contains("Log 1: a")
+        result.contains("Log 1: b")
+        result.contains("Log 1: c")
+        result.contains("Log 2: aa")
+        result.contains("Log 2: bb")
+        result.contains("Log 2: cc")
+    }
+
+    def 'tap should work - explicit channels creation - 1' () {
+
+        given:
+        String CONFIG = '''
+            process {
+            }
+            '''
+
+        when:
+        String script = '''
+                        log1 = Channel.create()
+                        log2 = Channel.create()
+                        
+                        Channel
+                            .from ( 'a', 'b', 'c' )
+                                .tap( log1 )
+                                .map { it * 2 }
+                                .tap( log2 )
+                                .view { "Result: $it" }
+
+                        log1.view { "Log 1: $it" }
+                        log2.view { "Log 2: $it" }
+                        '''
+        def saved = System.out
+        def baos = new ByteArrayOutputStream()
+        System.out = new PrintStream(baos, true, StandardCharsets.UTF_8)
+        def cfg = new ConfigParser().parse(CONFIG)
+        def runner = new TestScriptRunner(cfg)
+        runner.setScript(script).execute()
+        def processor = runner.scriptObj.taskProcessor
+        System.out = saved
+
+        then:
+        def result = baos.toString().trim()
+        result.contains("Result: aa")
+        result.contains("Result: bb")
+        result.contains("Result: cc")
+        result.contains("Log 1: a")
+        result.contains("Log 1: b")
+        result.contains("Log 1: c")
+        result.contains("Log 2: aa")
+        result.contains("Log 2: bb")
+        result.contains("Log 2: cc")
+    }
     def 'should set setting for process with name' () {
 
 

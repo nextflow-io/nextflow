@@ -1799,8 +1799,8 @@ The ``tap`` can be useful in certain scenarios where you may be required to conc
 as in the following example::
 
 
-    log1 = Channel.create().view { "Log 1: $it" }
-    log2 = Channel.create().view { "Log 2: $it" }
+    log1 = Channel.create()
+    log2 = Channel.create()
 
     Channel
         .from ( 'a', 'b', 'c' )
@@ -1808,6 +1808,9 @@ as in the following example::
   	    .map { it * 2 }
   	    .tap( log2 )
   	    .view { "Result: $it" }
+
+    log1.view { "Log 1: $it" }
+    log2.view { "Log 2: $it" }
 
 ::
 
