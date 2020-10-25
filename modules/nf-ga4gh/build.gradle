@@ -33,4 +33,6 @@ dependencies {
     compile 'com.squareup.okhttp:logging-interceptor:2.7.5'
     compile 'com.google.code.gson:gson:2.8.1'
     compile 'joda-time:joda-time:2.9.9'
+
+    testImplementation(testFixtures(project(":nextflow")))
 }

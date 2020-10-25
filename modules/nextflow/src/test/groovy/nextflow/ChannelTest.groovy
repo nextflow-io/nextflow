@@ -451,7 +451,11 @@ class ChannelTest extends Specification {
         def file3 = Files.createFile(sub1.resolve('file3.txt'))
         def file4 = Files.createFile(sub1.resolve('file4.txt'))
         Files.createSymbolicLink(folder.resolve('link_to_sub1'), sub1 )
-
+        and:
+        // weird hack to prevent test failing on Github Action test with Java 15
+        println "testFromPathWithLinks content = " + folder.list()
+        sleep 100
+        
         // -- by default traverse symlinks
         when:
         def result = Channel.fromPath( folder.toAbsolutePath().toString() + '/**/*.txt' ).toSortedList({it.name}).getVal().collect { it.getName() }
