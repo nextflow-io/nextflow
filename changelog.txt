@@ -53,7 +53,7 @@ NEXTFLOW CHANGE-LOG
 - see 20.07.0 and 20.07.0-RC1
 
 20.07.0 - (skipped)
-- Allow unqualified stdin/stdout defintions with DLS2 [bcdcaab6] 
+- Allow unqualified stdin/stdout defintions with DSL2 [bcdcaab6]
 
 20.07.0-RC1 - 21 Jul 2020 
 - Add Dsl2 enable flag [08238109]
@@ -289,7 +289,7 @@ NEXTFLOW CHANGE-LOG
 
 19.08.1-edge - 26 Aug 2019
 - Add Process named output channels #1290 [DSL] [6a756fd2]
-- Add workflow publish directive [DLS2] [287a095e]
+- Add workflow publish directive [DSL2] [287a095e]
 - Add stageAs option to input path [DSL2] [9b5f55f6]
 - Add workflow entry option [DSL2] [f29e3e04]
 - Add extension to module file name instead of simpleName [DSL2] [71a60365]
@@ -403,7 +403,7 @@ NEXTFLOW CHANGE-LOG
 - Improve Dsl-2 error reporting [4e2621ff]
 - Improve CI tests scripts [febeb530]
 - Improve docs for config profiles [8cf95a5d]
-- Syntax enhancement aka DLS-2 #984 [651af95a]
+- Syntax enhancement aka DSL-2 #984 [651af95a]
 - Print summary only the run takes > 3mins [cd459713]
 - Render last tag along with the process name #1144 [8cf8cc44]
 - Sync build scripts [a5689217]

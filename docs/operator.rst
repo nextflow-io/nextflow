@@ -1749,6 +1749,9 @@ To create a multi-map criteria as variable that can be passed as an argument to 
 into
 ----
 
+.. warning::
+    The ``into`` operator is not available when using Nextflow DSL2 syntax.
+
 The ``into`` operator connects a source channel to two or more target channels in such a way the values emitted by
 the source channel are copied to the target channels. For example::
 
@@ -1799,17 +1802,25 @@ The ``tap`` can be useful in certain scenarios where you may be required to conc
 as in the following example::
 
 
-    log1 = Channel.create().view { "Log 1: $it" }
-    log2 = Channel.create().view { "Log 2: $it" }
+    log1 = Channel.create()
+    log2 = Channel.create()
 
     Channel
-        .from ( 'a', 'b', 'c' )
-  	    .tap( log1 )
-  	    .map { it * 2 }
-  	    .tap( log2 )
-  	    .view { "Result: $it" }
+        .of ( 'a', 'b', 'c' )
+        .tap ( log1 )
+        .map { it * 2 }
+        .tap ( log2 )
+        .map { it.toUpperCase() }
+        .view { "Result: $it" }
+
+    log1.view { "Log 1: $it" }
+    log2.view { "Log 2: $it" }
 
 ::
+
+    Result: AA
+    Result: BB
+    Result: CC
 
     Log 1: a
     Log 1: b
@@ -1819,9 +1830,6 @@ as in the following example::
     Log 2: bb
     Log 2: cc
 
-    Result: aa
-    Result: bb
-    Result: cc
 
 The ``tap`` operator also allows the target channel to be specified by using a closure. The advantage of this syntax
 is that you won't need to previously create the target channel, because it is created implicitly by the operator itself.
@@ -1829,12 +1837,12 @@ is that you won't need to previously create the target channel, because it is cr
 Using the closure syntax the above example can be rewritten as shown below::
 
     Channel
-        .from ( 'a', 'b', 'c' )
-  	    .tap { log1 }
-  	    .map { it * 2 }
-  	    .tap { log2 }
-  	    .view { "Result: $it" }
-
+        .of ( 'a', 'b', 'c' )
+        .tap { log1 }
+        .map { it * 2 }
+        .tap { log2 }
+        .map { it.toUpperCase() }
+        .view { "Result: $it" }
 
     log1.view { "Log 1: $it" }
     log2.view { "Log 2: $it" }
@@ -1846,7 +1854,7 @@ See also `into`_ and `separate`_ operators.
 separate
 --------
 
-.. warning:: The `separate` operator has been deprecated. Use `multiMap`_ instead.
+.. warning:: The ``separate`` operator has been deprecated. Use `multiMap`_ instead.
 
 The ``separate`` operator lets you copy the items emitted by the source channel into multiple 
 channels, which each of these can receive a `separate` version of the same item. 
@@ -2242,7 +2250,7 @@ print
 ------
 
 .. warning::
-  The ``print`` operator is deprecated and not supported any more when using DLS2 syntax. Use
+  The ``print`` operator is deprecated and not supported any more when using DSL2 syntax. Use
   `view`_ instead.
 
 The ``print`` operator prints the items emitted by a channel to the standard output.
@@ -2265,7 +2273,7 @@ println
 --------
 
 .. warning::
-  The ``println`` operator is deprecated and not supported any more when using DLS2 syntax. Use
+  The ``println`` operator is deprecated and not supported any more when using DSL2 syntax. Use
   `view`_ instead.
 
 The ``println`` operator prints the items emitted by a channel to the console standard output appending
