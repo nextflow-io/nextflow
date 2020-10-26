@@ -216,6 +216,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-dsl2'], description = 'Execute the workflow using DSL2 syntax')
     boolean dsl2
 
+    @Parameter(names=['-main-script'], description = 'The script file to be executed when launching a project directory or repository' )
+    String mainScript
+
     @Override
     String getName() { NAME }
 
@@ -315,7 +318,7 @@ class CmdRun extends CmdBase implements HubOptions {
          */
         def script = new File(pipelineName)
         if( script.isDirectory()  ) {
-            script = new AssetManager().setLocalPath(script).getMainScriptFile()
+            script = mainScript ? new File(mainScript) : new AssetManager().setLocalPath(script).getMainScriptFile()
         }
 
         if( script.exists() ) {
@@ -346,7 +349,7 @@ class CmdRun extends CmdBase implements HubOptions {
         try {
             manager.checkout(revision)
             manager.updateModules()
-            def scriptFile = manager.getScriptFile()
+            final scriptFile = manager.getScriptFile(mainScript)
             log.info "Launching `$repo` [$runName] - revision: ${scriptFile.revisionInfo}"
             if( checkForUpdate && !offline )
                 manager.checkRemoteStatus(scriptFile.revisionInfo)
