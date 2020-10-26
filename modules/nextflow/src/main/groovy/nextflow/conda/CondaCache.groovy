@@ -211,6 +211,11 @@ class CondaCache {
     @PackageScope
     Path createLocalCondaEnv(String condaEnv) {
         final prefixPath = condaPrefixPath(condaEnv)
+        if( prefixPath.isDirectory() ) {
+            log.debug "Conda found local env for environment=$condaEnv; path=$prefixPath"
+            return prefixPath
+        }
+
         final file = new File("${prefixPath.parent}/.${prefixPath.name}.lock")
         final wait = "Another Nextflow instance is creatign the Conda environment $condaEnv -- please wait it completes"
         final err =  "Unable to acquire exclusive lock after $createTimeout on file: $file"
@@ -234,10 +239,6 @@ class CondaCache {
     @PackageScope
     Path createLocalCondaEnv0(String condaEnv, Path prefixPath) {
 
-        if( prefixPath.isDirectory() ) {
-            log.debug "Conda found local env for environment=$condaEnv; path=$prefixPath"
-            return prefixPath
-        }
         log.info "Creating Conda env: $condaEnv [cache $prefixPath]"
 
         final opts = createOptions ? "$createOptions " : ''

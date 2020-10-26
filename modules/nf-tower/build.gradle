@@ -24,4 +24,6 @@ sourceSets {
 dependencies {
     // Use the latest Groovy version for building this library
     compile project(':nextflow')
+
+    testImplementation(testFixtures(project(":nextflow")))
 }
