@@ -70,14 +70,17 @@ class GoogleLifeSciencesExecutor extends Executor {
             throw new AbortOperationException("Executor `google-lifesciences` requires a Google Storage bucket to be specified as a working directory -- Add the option `-w gs://<your-bucket/path>` to your run command line or specify a workDir in your config file")
         }
 
+        // Typically a user will set the GCP project ID in the config.
+        // If not, and they have used a service account credentials file, then we get the
+        // service account's project ID and use that as the default.
         def credsFile = env.get('GOOGLE_APPLICATION_CREDENTIALS')
         final projectId = GoogleLifeSciencesConfig.getProjectIdFromCreds(credsFile)
 
         config = GoogleLifeSciencesConfig.fromSession(session)
         if( !config.project )
-            config.project = projectId
-        else if( config.project != projectId )
-            throw new AbortOperationException("Project Id `$config.project` declared in the nextflow config file does not match the one expected by credentials file: $credsFile")
+             config.project = projectId
+        if( !config.project )
+             throw new AbortOperationException("No project ID declared in the nextflow config file")
 
         if( session.binDir && !config.disableBinDir ) {
             final cloudPath = getTempDir()
