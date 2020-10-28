@@ -181,21 +181,18 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
 
     static String getProjectIdFromCreds(String credsFilePath) {
         if( !credsFilePath )
-          return null;
+            throw new AbortOperationException('Missing Google credentials -- make sure your environment defines the GOOGLE_APPLICATION_CREDENTIALS environment variable')
 
         final file = new File(credsFilePath)
         try {
             final creds = (Map)new JsonSlurper().parse(file)
-
-            // A service accound credentials file likely has a project ID.
-            // An end user credential file (gcloud auth application-default login) will not.
             if( creds.project_id )
                 return creds.project_id
+            else
+                throw new AbortOperationException("Missing `project_id` in Google credentials file: $credsFilePath")
         }
         catch(FileNotFoundException e) {
             throw new AbortOperationException("Missing Google credentials file: $credsFilePath")
         }
-
-        return null;
     }
 }
