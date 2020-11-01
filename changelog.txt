@@ -1,5 +1,14 @@
 NEXTFLOW CHANGE-LOG
 ===================
+20.10.0 - 1 Nov 2020
+- Add warning for AWS Batch mem request lower than 4 GB [e9240fc9]
+- Fix issue with docker images tagged by SHA #1777
+- Add support for Bitbucket tags and branches retrivial [5083066e]
+- Add support for Tower client bearer authentication [532282ae]
+- Fix Skip FS lock when Conda dir exist #1771
+- Add support for Java 15 [b1f48884]
+- Fix build with Gradle 6.7 [8d7227f0] 
+
 20.09.1-edge - 15 Oct Sep 2020 
 - Prevent USR1 signal to stop jobs #1753
 - Add -main-script cli option [702ff64c]
