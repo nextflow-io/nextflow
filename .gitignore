@@ -21,6 +21,7 @@ resources/*
 test/*
 tools/*
 other
+tests_other/*
 docs/_build/
 ./*.txt
 cache/
