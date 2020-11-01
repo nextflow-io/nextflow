@@ -33,7 +33,7 @@ class CmdRunTest extends Specification {
     def 'should parse cmd param=#STR' () {
 
         expect:
-        CmdRun.parseParam(STR)  == EXPECTED
+        CmdRun.parseParamValue(STR)  == EXPECTED
 
         where:
         STR         | EXPECTED
@@ -45,6 +45,20 @@ class CmdRunTest extends Specification {
         '3000000000'| 3000000000l
         '20.33'     | 20.33d
         '--foo'     | '--foo'
+    }
+
+    def 'should parse nested params' () {
+        when:
+        CmdRun.addParam(PARAMS, KEY, VALUE)
+        then:
+        PARAMS == EXPECTED
+
+        where:
+        PARAMS          | KEY       | VALUE     | EXPECTED
+        [:]             | 'foo'     | '1'       | [foo: 1]
+        [foo: 1]        | 'bar'     | '2'       | [foo: 1, bar: 2]
+        [:]             | 'x.y.z'   | 'Hola'    | [x: [y: [z: 'Hola']]]
+        [a: [p:1], x:3] | 'a.q'     | '2'       | [a: [p:1, q: 2], x:3]
     }
 
     def 'should return parsed config' () {
