@@ -26,6 +26,7 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import nextflow.Const
@@ -216,6 +217,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-dsl2'], description = 'Execute the workflow using DSL2 syntax')
     boolean dsl2
 
+    @Parameter(names=['-main-script'], description = 'The script file to be executed when launching a project directory or repository' )
+    String mainScript
+
     @Override
     String getName() { NAME }
 
@@ -315,7 +319,7 @@ class CmdRun extends CmdBase implements HubOptions {
          */
         def script = new File(pipelineName)
         if( script.isDirectory()  ) {
-            script = new AssetManager().setLocalPath(script).getMainScriptFile()
+            script = mainScript ? new File(mainScript) : new AssetManager().setLocalPath(script).getMainScriptFile()
         }
 
         if( script.exists() ) {
@@ -346,7 +350,7 @@ class CmdRun extends CmdBase implements HubOptions {
         try {
             manager.checkout(revision)
             manager.updateModules()
-            def scriptFile = manager.getScriptFile()
+            final scriptFile = manager.getScriptFile(mainScript)
             log.info "Launching `$repo` [$runName] - revision: ${scriptFile.revisionInfo}"
             if( checkForUpdate && !offline )
                 manager.checkRemoteStatus(scriptFile.revisionInfo)
@@ -377,6 +381,7 @@ class CmdRun extends CmdBase implements HubOptions {
         return result
     }
 
+    @Memoized  // <-- avoid parse multiple times the same file and params
     Map getParsedParams() {
 
         final result = [:]
@@ -390,16 +395,41 @@ class CmdRun extends CmdBase implements HubOptions {
                 readYamlFile(path, result)
         }
 
-        // read the params file if any
-
         // set the CLI params
-        params?.each { key, value ->
-            result.put( key, parseParam(value) )
+        if( !params )
+            return result
+
+        for( Map.Entry<String,String> entry : params ) {
+            addParam( result, entry.key, entry.value )
         }
         return result
     }
 
-    static protected parseParam( String str ) {
+    static protected void addParam(Map params, String key, String value, String origin=null, List path=[]) {
+        if( !origin )
+            origin = key 
+        int p = key.indexOf('.')
+        if( p!=-1 ) {
+            final root = key.substring(0,p)
+            path.add(root)
+            def nested = params.get(root)
+            if( nested == null ) {
+                nested = new LinkedHashMap<>()
+                params.put(root, nested)
+            }
+            else if( nested !instanceof Map ) {
+                log.warn "Command line parameter --${path.join('.')} is overwritten by --${origin}"
+                nested = new LinkedHashMap<>()
+                params.put(root, nested)
+            }
+            addParam((Map)nested, key.substring(p+1), value, origin, path)
+        }
+        else {
+            params.put(key, parseParamValue(value))
+        }
+    }
+
+    static protected parseParamValue(String str ) {
 
         if ( str == null ) return null
 

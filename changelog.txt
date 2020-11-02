@@ -1,5 +1,21 @@
 NEXTFLOW CHANGE-LOG
 ===================
+20.10.0 - 1 Nov 2020
+- Add warning for AWS Batch mem request lower than 4 GB [e9240fc9]
+- Fix issue with docker images tagged by SHA #1777
+- Add support for Bitbucket tags and branches retrivial [5083066e]
+- Add support for Tower client bearer authentication [532282ae]
+- Fix Skip FS lock when Conda dir exist #1771
+- Add support for Java 15 [b1f48884]
+- Fix build with Gradle 6.7 [8d7227f0] 
+
+20.09.1-edge - 15 Oct Sep 2020 
+- Prevent USR1 signal to stop jobs #1753
+- Add -main-script cli option [702ff64c]
+- Improve Singularity image file caching #1706 [dd92772b]
+- Fix unexpected default GLS action flags #1749
+- Patch unpexpected error on tower serialization [f922324a]
+
 20.09.0-edge - 23 Sep 2020 
 - Fix invalid error message on missing process #1719 [fc607f11]
 - Deduplicate GS file + parallel up/downloads [29d37083]
@@ -46,7 +62,7 @@ NEXTFLOW CHANGE-LOG
 - see 20.07.0 and 20.07.0-RC1
 
 20.07.0 - (skipped)
-- Allow unqualified stdin/stdout defintions with DLS2 [bcdcaab6] 
+- Allow unqualified stdin/stdout defintions with DSL2 [bcdcaab6]
 
 20.07.0-RC1 - 21 Jul 2020 
 - Add Dsl2 enable flag [08238109]
@@ -282,7 +298,7 @@ NEXTFLOW CHANGE-LOG
 
 19.08.1-edge - 26 Aug 2019
 - Add Process named output channels #1290 [DSL] [6a756fd2]
-- Add workflow publish directive [DLS2] [287a095e]
+- Add workflow publish directive [DSL2] [287a095e]
 - Add stageAs option to input path [DSL2] [9b5f55f6]
 - Add workflow entry option [DSL2] [f29e3e04]
 - Add extension to module file name instead of simpleName [DSL2] [71a60365]
@@ -396,7 +412,7 @@ NEXTFLOW CHANGE-LOG
 - Improve Dsl-2 error reporting [4e2621ff]
 - Improve CI tests scripts [febeb530]
 - Improve docs for config profiles [8cf95a5d]
-- Syntax enhancement aka DLS-2 #984 [651af95a]
+- Syntax enhancement aka DSL-2 #984 [651af95a]
 - Print summary only the run takes > 3mins [cd459713]
 - Render last tag along with the process name #1144 [8cf8cc44]
 - Sync build scripts [a5689217]

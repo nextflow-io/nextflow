@@ -239,10 +239,10 @@ for example::
 
 Prints::
 
-    a
-    b
-    c
-    d
+    value: a
+    value: b
+    value: c
+    value: d
 
 
 See also: `of`_ factory method.

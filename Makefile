@@ -20,7 +20,7 @@
 # make deps config=runtime
 # 
 
-config ?= default
+config ?= compileClasspath
 
 ifdef module 
 mm = :${module}:
@@ -37,6 +37,7 @@ clean:
 	rm -rf work 
 	rm -rf modules/nextflow/.nextflow*
 	rm -rf modules/nextflow/work
+	find . -name build | xargs rm -rf 
 	./gradlew clean
 
 assemble:

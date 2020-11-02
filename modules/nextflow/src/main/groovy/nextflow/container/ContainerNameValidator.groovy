@@ -38,6 +38,11 @@ class ContainerNameValidator {
     private static final String TAG_REGEX = "[a-zA-Z0-9-_.]+";
 
     /**
+     * Docker images pinned by digest are just sha256
+     */
+    private static final String SHA_REGEX = "[a-fA-F0-9]{64}"
+
+    /**
      * The docker spec says "<i>Name components may contain lowercase
      * characters, digits and separators. A separator is defined as a period,
      * one or two underscores, or one or more dashes. A name component may not
@@ -64,7 +69,7 @@ class ContainerNameValidator {
      * A regex matching IMAGE[:TAG] (from the "docker tag" command) where IMAGE
      * matches {@link #IMAGE_NAME_REGEX} and TAG matches {@link #TAG_REGEX}.
      */
-    private static final String VALID_REPO_REGEX = "^" + IMAGE_NAME_REGEX + "(:" + TAG_REGEX + ")?\$"
+    private static final String VALID_REPO_REGEX = "^" + IMAGE_NAME_REGEX + "((:" + TAG_REGEX + ")|(@sha256:" + SHA_REGEX + "))?\$"
 
     /** Compiled version of {@link #VALID_REPO_REGEX}. */
     private static final Pattern VALID_REPO_PATTERN = Pattern.compile(VALID_REPO_REGEX)
