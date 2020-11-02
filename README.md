@@ -224,31 +224,6 @@ make install
 
 A self-contained distribution can be created with the command: `make pack`.  To include support of GA4GH and its dependencies in the binary, use `make packGA4GH` instead.
 
-Known compilation problems
----------------------------
-
-Nextflow requires JDK 8 or later to be compiled. The Java compiler used by the build process can be chosen by setting the
-`JAVA_HOME` environment variable accordingly.
-
-
-If the compilation stops reporting the error: `java.lang.VerifyError: Bad <init> method call from inside of a branch`,
-this is due to a bug affecting the following Java JDK:
-
-- 1.8.0 update 11
-- 1.8.0 update 20
-
-Upgrade to a newer JDK to avoid to this issue. Alternatively a possible workaround is to define the following variable
-in your environment:
-
-```bash
-_JAVA_OPTIONS='-Xverify:none'
-```
-
-Read more at these links:
-
-- https://bugs.openjdk.java.net/browse/JDK-8051012
-- https://jira.codehaus.org/browse/GROOVY-6951
-
 
 IntelliJ IDEA
 ---------------
