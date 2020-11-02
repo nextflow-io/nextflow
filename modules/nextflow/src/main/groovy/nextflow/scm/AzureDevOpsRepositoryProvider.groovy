@@ -55,6 +55,23 @@ final class AzureDevOpsRepositoryProvider extends RepositoryProvider {
         "${config.endpoint}/${project}/_apis/git/repositories/${repo}/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=$path"
     }
 
+    @Override
+    @CompileDynamic
+    List<BranchInfo> getBranches() {
+        // https://docs.microsoft.com/en-us/rest/api/azure/devops/git/refs/list?view=azure-devops-rest-6.0#refs-heads
+        final url = "${config.endpoint}/${project}/_apis/git/repositories/${repo}/refs?filter=heads&api-version=6.0"
+        this.<BranchInfo>invokeAndResponseWithPaging(url, { Map branch -> new BranchInfo(branch.name as String, branch.id as String) })
+    }
+
+    @Override
+    @CompileDynamic
+    @Memoized
+    List<TagInfo> getTags() {
+        // https://docs.microsoft.com/en-us/rest/api/azure/devops/git/refs/list?view=azure-devops-rest-6.0#refs-tags
+        final url = "${config.endpoint}/${project}/_apis/git/repositories/${repo}/refs?filter=tags&api-version=6.0"
+        this.<TagInfo>invokeAndResponseWithPaging(url, { Map tag -> new TagInfo(tag.name as String, tag.id as String)})
+    }
+
     /** {@inheritDoc} */
     @Override
     String getCloneUrl() {
