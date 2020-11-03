@@ -84,7 +84,7 @@ input channels as parameters as it if were a custom function. For example::
     }
 
     workflow {
-        data = channel.fromPath('/some/path/*.txt')
+        data = Channel.fromPath('/some/path/*.txt')
         foo()
         bar(data)
     }
