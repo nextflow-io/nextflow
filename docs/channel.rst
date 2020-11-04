@@ -97,7 +97,7 @@ The available factory methods are:
 * `watchPath`_
 
 .. tip::
-  As for version 20.07.0 the prefix ``channel.`` has been introduced as an alias of ``Channel.``, therefore factory
+  As of version 20.07.0 the prefix ``channel.`` has been introduced as an alias of ``Channel.``, therefore factory
   methods can be used either with the syntaxes ``channel.from()`` and ``Channel.from()``, and so on.
 
 .. _channel-create:

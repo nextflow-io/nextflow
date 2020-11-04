@@ -188,7 +188,7 @@ will look like this::
 
 
 .. tip::
-    As or version 20.11.0-edge any ``.`` (dot) character in a parameter name is interpreted as the delimiter
+    As of version 20.11.0-edge any ``.`` (dot) character in a parameter name is interpreted as the delimiter
     or nested scope e.g. ``--foo.bar Hello`` will be accessible from the script as `params.foo.bar`.
     If you want to have a parameter name including a ``.`` (dot) character escape it using the back-slash character e.g.
     ``--foo\.bar Hello``
