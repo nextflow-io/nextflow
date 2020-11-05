@@ -59,6 +59,8 @@ class CmdRunTest extends Specification {
         [foo: 1]        | 'bar'     | '2'       | [foo: 1, bar: 2]
         [:]             | 'x.y.z'   | 'Hola'    | [x: [y: [z: 'Hola']]]
         [a: [p:1], x:3] | 'a.q'     | '2'       | [a: [p:1, q: 2], x:3]
+        [:]             | /x\.y\.z/ | 'Hola'    | ['x.y.z': 'Hola']
+        [:]             | /x.y\.z/  | 'Hola'    | ['x': ['y.z': 'Hola']]
     }
 
     def 'should return parsed config' () {

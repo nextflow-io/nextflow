@@ -405,12 +405,18 @@ class CmdRun extends CmdBase implements HubOptions {
         return result
     }
 
-    static protected void addParam(Map params, String key, String value, String origin=null, List path=[]) {
-        if( !origin )
-            origin = key 
-        int p = key.indexOf('.')
-        if( p!=-1 ) {
-            final root = key.substring(0,p)
+
+    static final private Pattern DOT_ESCAPED = ~/\\\./
+    static final private Pattern DOT_NOT_ESCAPED = ~/(?<!\\)\./
+
+    static protected void addParam(Map params, String key, String value, List path=[], String fullKey=null) {
+        if( !fullKey )
+            fullKey = key
+        final m = DOT_NOT_ESCAPED.matcher(key)
+        if( m.find() ) {
+            final p = m.start()
+            final root = key.substring(0, p)
+            if( !root ) throw new AbortOperationException("Invalida parameter name: $fullKey")
             path.add(root)
             def nested = params.get(root)
             if( nested == null ) {
@@ -418,14 +424,14 @@ class CmdRun extends CmdBase implements HubOptions {
                 params.put(root, nested)
             }
             else if( nested !instanceof Map ) {
-                log.warn "Command line parameter --${path.join('.')} is overwritten by --${origin}"
+                log.warn "Command line parameter --${path.join('.')} is overwritten by --${fullKey}"
                 nested = new LinkedHashMap<>()
                 params.put(root, nested)
             }
-            addParam((Map)nested, key.substring(p+1), value, origin, path)
+            addParam((Map)nested, key.substring(p+1), value, path, fullKey)
         }
         else {
-            params.put(key, parseParamValue(value))
+            params.put(key.replaceAll(DOT_ESCAPED,'.'), parseParamValue(value))
         }
     }
 
