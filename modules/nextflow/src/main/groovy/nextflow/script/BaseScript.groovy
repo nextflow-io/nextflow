@@ -210,4 +210,44 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     protected abstract Object runScript()
 
+    @Override
+    void print(Object object) {
+        if( session.ansiLog )
+            log.info(object?.toString())
+        else
+            super.print(object)
+    }
+
+    @Override
+    void println() {
+        if( session.ansiLog )
+            log.info("")
+        else
+            super.println()
+    }
+
+    @Override
+    void println(Object object) {
+        if( session.ansiLog )
+            log.info(object?.toString())
+        else
+            super.println(object)
+    }
+
+    @Override
+    void printf(String msg, Object arg) {
+        if( session.ansiLog )
+            log.info(String.printf(msg, arg))
+        else
+            super.printf(msg, arg)
+    }
+
+    @Override
+    void printf(String msg, Object[] args) {
+        if( session.ansiLog )
+            log.info(String.printf(msg, args))
+        else
+            super.printf(msg, args)
+    }
+
 }
