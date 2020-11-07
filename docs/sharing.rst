@@ -497,7 +497,7 @@ have created. For example::
 In this way when you launch the pipeline execution, the Docker image will be automatically downloaded and used to run 
 your tasks.
 
-Read the :ref:`docker-page` page to lean more on how to use Docker containers with Nextflow.
+Read the :ref:`docker-page` page to learn more on how to use Docker containers with Nextflow.
 
 
 This mix of technologies makes it possible to write self-contained and truly reproducible pipelines which require

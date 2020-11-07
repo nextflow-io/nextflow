@@ -335,7 +335,7 @@ brackets, as shown below::
 
 
 
-Read :ref:`docker-page` page to lean more how use Docker containers with Nextflow.
+Read :ref:`docker-page` page to learn more how use Docker containers with Nextflow.
 
 
 .. _config-singularity:
@@ -362,7 +362,7 @@ pullTimeout         The amount of time the Singularity pull can last, exceeding 
 ================== ================
 
 
-Read :ref:`singularity-page` page to lean more how use Singularity containers with Nextflow.
+Read :ref:`singularity-page` page to learn more how use Singularity containers with Nextflow.
 
 .. _config-podman:
 
@@ -398,7 +398,7 @@ brackets, as shown below::
 
 
 
-Read :ref:`podman-page` page to lean more how use Podman containers with Nextflow.
+Read :ref:`podman-page` page to learn more how use Podman containers with Nextflow.
 
 .. _config-manifest:
 
@@ -497,7 +497,7 @@ to specify your bucket credentials. For example::
         region = '<REGION IDENTIFIER>'
     }
 
-Click the following link to lean more about `AWS Security Credentials <http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html>`_.
+Click the following link to learn more about `AWS Security Credentials <http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html>`_.
 
 Advanced client configuration options can be set by using the ``client`` attribute. The following properties can be used:
 
