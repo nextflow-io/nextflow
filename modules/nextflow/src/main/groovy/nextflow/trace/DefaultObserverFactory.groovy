@@ -64,7 +64,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         def report = (fileName as Path).complete()
         def observer = new ReportObserver(report)
         observer.maxTasks = maxTasks
-
+        config.navigate('report.overwrite') { observer.overwrite = true }
         result << observer
     }
 
@@ -80,6 +80,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !fileName ) fileName = TimelineObserver.DEF_FILE_NAME
         def traceFile = (fileName as Path).complete()
         def observer = new TimelineObserver(traceFile)
+        config.navigate('timeline.overwrite')  { observer.overwrite = it }
         result << observer
     }
 
@@ -92,6 +93,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !fileName ) fileName = GraphObserver.DEF_FILE_NAME
         def traceFile = (fileName as Path).complete()
         def observer = new GraphObserver(traceFile)
+        config.navigate('dag.overwrite')  { observer.overwrite = it }
         result << observer
     }
 
@@ -110,6 +112,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         config.navigate('trace.raw') { it -> observer.useRawNumbers(it == true) }
         config.navigate('trace.sep') { observer.separator = it }
         config.navigate('trace.fields') { observer.setFieldsAndFormats(it) }
+        config.navigate('trace.overwrite') { observer.overwrite = it }
         result << observer
     }
 
