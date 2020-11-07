@@ -19,6 +19,7 @@ package nextflow.extension
 
 import nextflow.Channel
 import nextflow.Session
+import spock.lang.Retry
 import spock.lang.Specification
 
 /**
@@ -164,6 +165,7 @@ class DataflowMathExtensionTest extends Specification {
 
     }
 
+    @Retry
     def 'should return a random sample' () {
 
         when:
