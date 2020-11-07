@@ -212,7 +212,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     @Override
     void print(Object object) {
-        if( session.ansiLog )
+        if( session?.ansiLog )
             log.info(object?.toString())
         else
             super.print(object)
@@ -220,7 +220,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     @Override
     void println() {
-        if( session.ansiLog )
+        if( session?.ansiLog )
             log.info("")
         else
             super.println()
@@ -228,7 +228,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     @Override
     void println(Object object) {
-        if( session.ansiLog )
+        if( session?.ansiLog )
             log.info(object?.toString())
         else
             super.println(object)
@@ -236,7 +236,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     @Override
     void printf(String msg, Object arg) {
-        if( session.ansiLog )
+        if( session?.ansiLog )
             log.info(String.printf(msg, arg))
         else
             super.printf(msg, arg)
@@ -244,7 +244,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     @Override
     void printf(String msg, Object[] args) {
-        if( session.ansiLog )
+        if( session?.ansiLog )
             log.info(String.printf(msg, args))
         else
             super.printf(msg, args)
