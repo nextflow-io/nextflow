@@ -335,7 +335,7 @@ brackets, as shown below::
 
 
 
-Read :ref:`docker-page` page to lean more how use Docker containers with Nextflow.
+Read :ref:`docker-page` page to learn more how use Docker containers with Nextflow.
 
 
 .. _config-singularity:
@@ -362,7 +362,7 @@ pullTimeout         The amount of time the Singularity pull can last, exceeding 
 ================== ================
 
 
-Read :ref:`singularity-page` page to lean more how use Singularity containers with Nextflow.
+Read :ref:`singularity-page` page to learn more how use Singularity containers with Nextflow.
 
 .. _config-podman:
 
@@ -398,7 +398,7 @@ brackets, as shown below::
 
 
 
-Read :ref:`podman-page` page to lean more how use Podman containers with Nextflow.
+Read :ref:`podman-page` page to learn more how use Podman containers with Nextflow.
 
 .. _config-manifest:
 
@@ -468,6 +468,7 @@ fields              Comma separated list of fields to be included in the report.
 file                Trace file name (default: ``trace.txt``).
 sep                 Character used to separate values in each row (default: ``\t``).
 raw                 When ``true`` turns on raw number report generation i.e. date and time are reported as milliseconds and memory as number of bytes
+overwrite           When ``true`` overwrites an existing trace file instead of rolling it.
 ================== ================
 
 The above options can be used by prefixing them with the ``trace`` scope or surrounding them by curly
@@ -497,7 +498,7 @@ to specify your bucket credentials. For example::
         region = '<REGION IDENTIFIER>'
     }
 
-Click the following link to lean more about `AWS Security Credentials <http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html>`_.
+Click the following link to learn more about `AWS Security Credentials <http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html>`_.
 
 Advanced client configuration options can be set by using the ``client`` attribute. The following properties can be used:
 
@@ -625,6 +626,7 @@ Name                Description
 ================== ================
 enabled             When ``true`` turns on the generation of the timeline report file (default: ``false``).
 file                Timeline file name (default: ``timeline.html``).
+overwrite           When ``true`` overwrites an existing timeline file instead of rolling it.
 ================== ================
 
 .. _config-mail:
@@ -700,6 +702,7 @@ Name                Description
 ================== ================
 enabled             If ``true`` it create the workflow execution report.
 file                The path of the created execution report file (default: ``report.html``).
+overwrite           When ``true`` overwrites existing report file instead of rolling it.
 ================== ================
 
 .. _config-weblog:

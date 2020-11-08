@@ -1895,7 +1895,7 @@ The ``penv`` directive  allows you to define the `parallel environment` to be us
     }
 
 This configuration depends on the parallel environment provided by your grid engine installation. Refer to your
-cluster documentation or contact your admin to lean more about this.
+cluster documentation or contact your admin to learn more about this.
 
 .. note:: This setting is available when using the :ref:`sge-executor` executor.
 

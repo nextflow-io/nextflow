@@ -71,6 +71,11 @@ class ReportObserver implements TraceObserver {
     private ResourcesAggregator aggregator
 
     /**
+     * Overwrite existing trace file instead of rolling it
+     */
+    boolean overwrite
+
+    /**
      * Creates a report observer
      *
      * @param file The file path where to store the resulting HTML report document
@@ -275,8 +280,11 @@ class ReportObserver implements TraceObserver {
         if( parent )
             Files.createDirectories(parent)
 
-        // roll the any trace files that may exist
-        reportFile.rollFile()
+        if( overwrite )
+            Files.deleteIfExists(reportFile)
+        else
+            // roll the any trace files that may exist
+            reportFile.rollFile()
 
         def writer = Files.newBufferedWriter(reportFile, Charset.defaultCharset())
         writer.withWriter { w -> w << html_output }

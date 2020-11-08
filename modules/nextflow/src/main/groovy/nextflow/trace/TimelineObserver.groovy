@@ -58,6 +58,8 @@ class TimelineObserver implements TraceObserver {
 
     private long endMillis
 
+    boolean overwrite
+
     TimelineObserver( Path file ) {
         this.reportFile = file
     }
@@ -154,8 +156,11 @@ class TimelineObserver implements TraceObserver {
         if( parent )
             Files.createDirectories(parent)
 
-        // roll the any trace files that may exist
-        reportFile.rollFile()
+        if( overwrite )
+            Files.deleteIfExists(reportFile)
+        else
+            // roll the any trace files that may exist
+            reportFile.rollFile()
 
         def writer = Files.newBufferedWriter(reportFile, Charset.defaultCharset())
         writer.write(tpl, 0, p)
