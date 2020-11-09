@@ -16,6 +16,7 @@
  */
 
 package nextflow.cli
+
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.regex.Pattern
@@ -219,6 +220,9 @@ class CmdRun extends CmdBase implements HubOptions {
 
     @Parameter(names=['-main-script'], description = 'The script file to be executed when launching a project directory or repository' )
     String mainScript
+
+    @Parameter(names=['-stub-run','-stub'], description = 'Execute the workflow replacing process scripts with command stubs')
+    boolean stubRun
 
     @Override
     String getName() { NAME }

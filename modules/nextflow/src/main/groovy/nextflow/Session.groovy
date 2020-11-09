@@ -146,6 +146,11 @@ class Session implements ISession {
     String runName
 
     /**
+     * Enable stub run mode
+     */
+    boolean stubRun
+
+    /**
      * Folder(s) containing libs and classes to be added to the classpath
      */
     List<Path> libDir
@@ -304,6 +309,9 @@ class Session implements ISession {
         // -- set the run name
         this.runName = config.runName ?: NameGenerator.next()
         log.debug "Run name: $runName"
+
+        // -- dry run
+        this.stubRun = config.stubRun
 
         // -- normalize taskConfig object
         if( config.process == null ) config.process = [:]

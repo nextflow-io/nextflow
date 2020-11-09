@@ -28,6 +28,7 @@ import nextflow.executor.Executor
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
 import nextflow.script.ScriptBinding
+import nextflow.script.TaskClosure
 import nextflow.script.TokenVar
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
@@ -836,5 +837,28 @@ class TaskRunTest extends Specification {
 
         cleanup:
         dir?.deleteDir()
+    }
+
+
+    def 'should resolve dryRun command' () {
+        given:
+        def task = new TaskRun()
+        task.processor = [:] as TaskProcessor
+        task.processor.grengine = new Grengine()
+
+        task.context = new TaskContext(holder: [foo:'world'])
+
+        and:
+        def code = { String it -> "echo Hello $foo" }
+        def dryRun = new TaskClosure(code, 'command source')
+
+        /*
+         * plain task script
+         */
+        when:
+        task.resolve(dryRun)
+        then:
+        task.script == 'echo Hello world'
+        task.source == 'command source'
     }
 }

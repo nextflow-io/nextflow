@@ -321,6 +321,43 @@ Will display::
     Hello Mr. c
 
 
+.. _process-stub:
+
+.. warning::
+    This is an incubating feature. It may change in future versions.
+
+As of version 20.11.0-edge it's possible to define a command *stub* that replaces the actual process command, when
+the `-run-stun` command line option. ::
+
+    process INDEX {
+        input:
+          path transcriptome
+        output:
+          path 'index'
+
+        script:
+          """
+          salmon index --threads $task.cpus -t $transcriptome -i index
+          """
+
+        stub:
+          """
+          mkdir index
+          touch index/seq.bin
+          touch index/info.json
+          touch index/refseq.bin
+          """
+    }
+
+This feature is meant to allow the fast prototyping and test of the workflow logic without using the real
+commands. The developer can use it to provide a dummy command which is expected to mimic the execution
+of the real one in a quicker manner. This can also be used as an alternative for the *dry-run* feature.
+
+.. tip::
+    The ``stub`` block can be defined before or after the process ``script`` definition.
+    When the execution is run with the option `-stub-run` and a process is not implementing the ``stub`` command the
+    real is executed.
+
 
 .. _process-input:
 
