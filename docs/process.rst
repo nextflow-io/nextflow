@@ -323,6 +323,9 @@ Will display::
 
 .. _process-stub:
 
+Stub
+====
+
 .. warning::
     This is an incubating feature. It may change in future versions.
 
