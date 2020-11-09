@@ -1393,7 +1393,7 @@ class TaskProcessor {
 
         // fetch the output value
         final val = collectOutEnvMap(workDir).get(param.name)
-        if( val == null )
+        if( val == null && !param.optional )
             throw new MissingValueException("Missing environment variable: $param.name")
         // set into the output set
         task.setOutput(param,val)
