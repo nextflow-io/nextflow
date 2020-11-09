@@ -26,7 +26,7 @@ import nextflow.script.TokenVar
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors
-class EnvOutParam extends BaseOutParam {
+class EnvOutParam extends BaseOutParam implements OptionalParam {
 
     protected target
 
