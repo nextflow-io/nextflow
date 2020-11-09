@@ -1401,6 +1401,21 @@ class ConfigBuilderTest extends Specification {
         config.notification.enabled == true
         config.notification.to == 'yo@nextflow.com'
     }
+
+    def 'should configure stub run mode' () {
+        given:
+        Map config
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun()).build()
+        then:
+        !config.stubRun
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(stubRun: true)).build()
+        then:
+        config.stubRun == true
+    }
     
     def 'should merge profiles' () {
         given:

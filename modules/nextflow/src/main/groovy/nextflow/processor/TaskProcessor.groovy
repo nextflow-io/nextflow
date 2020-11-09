@@ -50,6 +50,7 @@ import groovyx.gpars.group.PGroup
 import nextflow.NF
 import nextflow.Nextflow
 import nextflow.Session
+import nextflow.ast.NextflowDSLImpl
 import nextflow.ast.TaskCmdXform
 import nextflow.ast.TaskTemplateVarsXform
 import nextflow.cloud.CloudSpotTerminationException
@@ -75,6 +76,7 @@ import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptType
+import nextflow.script.TaskClosure
 import nextflow.script.params.BasicMode
 import nextflow.script.params.EachInParam
 import nextflow.script.params.EnvInParam
@@ -570,8 +572,14 @@ class TaskProcessor {
         if( !checkWhenGuard(task) )
             return
 
-        // -- resolve the task command script
-        task.resolve(taskBody)
+        TaskClosure block
+        if( session.stubRun && (block=task.config.getStubBlock()) ) {
+            task.resolve(block)
+        }
+        else {
+            // -- resolve the task command script
+            task.resolve(taskBody)
+        }
 
         // -- verify if exists a stored result for this case,
         //    if true skip the execution and return the stored data
@@ -2031,7 +2039,7 @@ class TaskProcessor {
     protected boolean checkWhenGuard(TaskRun task) {
 
         try {
-            def pass = task.config.getGuard('when')
+            def pass = task.config.getGuard(NextflowDSLImpl.PROCESS_WHEN)
             if( pass ) {
                 return true
             }

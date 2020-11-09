@@ -483,7 +483,6 @@ please refer to the ``nextflow pull`` command.
 
 
 **Examples**
-
 Clone the latest revision of a pipeline. ::
 
     $ nextflow clone nextflow-io/hello
@@ -848,6 +847,8 @@ the `Kubernetes executor section <https://www.nextflow.io/docs/latest/config/kub
 |                           |             | was stopped by an error.                                                       |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -r, -revision             |             | Revision of the project to run (either a git branch, tag or commit SHA number) |
++---------------------------+-------------+--------------------------------------------------------------------------------+
+| -stub, -stub-run          |             | Execute the workflow replacing process scripts with command stubs.             |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -test                     |             | Test a script function with the name specified.                                |
 +---------------------------+-------------+--------------------------------------------------------------------------------+

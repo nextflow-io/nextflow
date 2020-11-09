@@ -259,6 +259,10 @@ class Launcher {
                 normalized << 'true'
             }
 
+            else if( (current == '-stub' || current == '-stub-run') && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << 'true'
+            }
+
             else if( (current == '-N' || current == '-with-notification') && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << 'true'
             }

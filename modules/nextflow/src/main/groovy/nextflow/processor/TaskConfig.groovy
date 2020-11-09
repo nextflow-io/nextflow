@@ -23,6 +23,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import nextflow.Const
+import nextflow.ast.NextflowDSLImpl
 import nextflow.exception.AbortOperationException
 import nextflow.exception.FailedGuardException
 import nextflow.executor.BashWrapperBuilder
@@ -403,7 +404,16 @@ class TaskConfig extends LazyMap implements Cloneable {
         catch( Throwable e ) {
             throw new FailedGuardException("Cannot evaluate `$name` expression", source, e)
         }
+    }
 
+
+    protected TaskClosure getStubBlock() {
+        final code = target.get(NextflowDSLImpl.PROCESS_STUB)
+        if( !code )
+            return null
+        if( code instanceof TaskClosure )
+            return code
+        throw new IllegalStateException()
     }
 
 }
