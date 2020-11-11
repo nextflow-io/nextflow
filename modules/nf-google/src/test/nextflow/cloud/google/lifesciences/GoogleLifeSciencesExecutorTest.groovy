@@ -132,9 +132,11 @@ class GoogleLifeSciencesExecutorTest extends GoogleSpecification {
     }
 
 
-    def 'should stop on missing credentials' () {
+    def 'should stop on missing creds and project id' () {
         given:
-        def session = Mock(Session)
+        def session = Mock(Session) {
+            getConfig() >> [google: [region: 'west-1']]
+        }
         def path = mockGsPath('gs://foo/bar')
         session.bucketDir >> path
         session.binDir >> null
@@ -145,7 +147,7 @@ class GoogleLifeSciencesExecutorTest extends GoogleSpecification {
         executor.register()
         then:
         def err = thrown(AbortOperationException)
-        err.message.startsWith('Missing Google credentials')
+        err.message == "Missing Google project Id -- Specify it adding the setting `google.project='your-project-id'` in the nextflow.config file"
     }
 
     def 'should stop on missing bucket' () {
