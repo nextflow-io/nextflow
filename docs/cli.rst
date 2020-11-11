@@ -1255,7 +1255,7 @@ For more information on DSL-2, please refer the `DSL2 section <https://www.nextf
    $ nextflow run main.nf -entry workflow_A
 
 
-- Invoke the nextflow pipeline execution with the integrated monitoring dashboard Tower. For more information, please refer to the `tower.nf <https://www.tower.nf>`_ website. ::
+- Invoke the nextflow pipeline execution with the integrated monitoring dashboard Tower. For more information, please refer to the `tower.nf <https://tower.nf>`_ website. ::
 
     $ nextflow run nextflow-io/hello -with-tower
  
