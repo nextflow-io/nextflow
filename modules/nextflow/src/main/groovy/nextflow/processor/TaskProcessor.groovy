@@ -1965,6 +1965,10 @@ class TaskProcessor {
             keys.add(conda)
         }
 
+        if( session.stubRun ) {
+            keys.add('stub-run')
+        }
+
         final mode = config.getHashMode()
         final hash = computeHash(keys, mode)
         if( session.dumpHashes ) {
