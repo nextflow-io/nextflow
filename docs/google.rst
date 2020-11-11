@@ -19,13 +19,13 @@ in your system environment::
 Credentials
 -----------
 
-Credentials for submitting requests to the Google Pipelines API are picked up from your
+Credentials for submitting requests to the Google LifeSciences API are picked up from your
 environment using `Application Default Credentials <https://github.com/googleapis/google-auth-library-java#google-auth-library-oauth2-http>`_.
 Application Default Credentials are designed to use the credentials most natural to the
 environment in which a tool runs.
 
 The most common case will be to pick up your end-user Google credentials from your
-workstation. You can create these by running the command:
+workstation. You can create these by running the command::
 
     gcloud auth application-default login 
 
@@ -38,6 +38,24 @@ Application Default Credentials will pick up the Compute Engine Service Account
 credentials for that VM.
 
 See the `Application Default Credentials <https://github.com/googleapis/google-auth-library-java#google-auth-library-oauth2-http>`_ documentation for how to enable other use cases.
+
+
+Finally, the ``GOOGLE_APPLICATION_CREDENTIALS`` environment variable can be used to specify location
+of the Google credentials file.
+
+If you don't have it, the credentials file can be download from the Google Cloud Console following these steps:
+
+* Open the `Google Cloud Console <https://console.cloud.google.com>`_
+* Go to APIs & Services → Credentials
+* Click on the *Create credentials* (blue) drop-down and choose *Service account key*, in the following page
+* Select an existing *Service account* or create a new one if needed
+* Select JSON as *Key type*
+* Click the *Create* button and download the JSON file giving a name of your choice e.g. ``creds.json``.
+
+Then, define the following variable replacing the path in the example with the one of your
+credentials file just downloaded::
+
+    export GOOGLE_APPLICATION_CREDENTIALS=/path/your/file/creds.json
 
 .. _google-lifesciences:
 

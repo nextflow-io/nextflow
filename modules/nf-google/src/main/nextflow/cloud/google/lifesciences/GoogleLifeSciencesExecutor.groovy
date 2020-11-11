@@ -82,18 +82,17 @@ class GoogleLifeSciencesExecutor extends Executor {
 
         config = GoogleLifeSciencesConfig.fromSession(session)
 
+        def projectId
         def credsFile = env.get('GOOGLE_APPLICATION_CREDENTIALS')
-        if( credsFile ) {
-            final projectId = GoogleLifeSciencesConfig.getProjectIdFromCreds(credsFile)
-
+        if( credsFile && (projectId = GoogleLifeSciencesConfig.getProjectIdFromCreds(credsFile)) ) {
             if( !config.project )
                 config.project = projectId
             else if( config.project != projectId )
                 throw new AbortOperationException("Project Id `$config.project` declared in the nextflow config file does not match the one expected by credentials file: $credsFile")
+        }
 
-        } else {
-            if( !config.project )
-                throw new AbortOperationException("No project ID declared in the nextflow config file")
+        if( !config.project ) {
+            throw new AbortOperationException("Missing Google project Id -- Specify it adding the setting `google.project='your-project-id'` in the nextflow.config file")
         }
 
         if( session.binDir && !config.disableBinDir ) {
