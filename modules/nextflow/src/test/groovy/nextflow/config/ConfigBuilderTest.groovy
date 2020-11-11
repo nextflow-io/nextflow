@@ -404,6 +404,90 @@ class ConfigBuilderTest extends Specification {
         file?.delete()
     }
 
+    def 'params-file should override params in the config file' () {
+        setup:
+        def params = Files.createTempFile('test', '.yml')
+        params.text = '''
+            alpha: "Hello" 
+            beta: "World" 
+            omega: "Last"
+            '''.stripIndent()
+        and:
+        def file = Files.createTempFile('test',null)
+        file.text = '''
+        params {
+          alpha = 'x'
+        }
+        params.beta = 'y'
+        params.delta = 'Foo'
+        params.gamma = params.alpha
+        params {
+            omega = 'Bar'
+        }
+
+        process {
+          publishDir = [path: params.alpha]
+        }
+        '''
+        when:
+        def opt = new CliOptions()
+        def run = new CmdRun(paramsFile: params)
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+
+        then:
+        result.params.alpha == 'Hello'  // <-- params defined in the params-file overrides the ones in the config file
+        result.params.beta == 'World'   // <--   as above
+        result.params.gamma == 'Hello'  // <--   as above
+        result.params.omega == 'Last'
+        result.params.delta == 'Foo'
+        result.process.publishDir == [path: 'Hello']
+
+        cleanup:
+        file?.delete()
+        params?.delete()
+    }
+
+    def 'params should override params-file and override params in the config file' () {
+        setup:
+        def params = Files.createTempFile('test', '.yml')
+        params.text = '''
+            alpha: "Hello" 
+            beta: "World" 
+            omega: "Last"
+            '''.stripIndent()
+        and:
+        def file = Files.createTempFile('test',null)
+        file.text = '''
+        params {
+          alpha = 'x'
+        }
+        params.beta = 'y'
+        params.delta = 'Foo'
+        params.gamma = "I'm gamma"
+        params.omega = "I'm the last"
+        
+        process {
+          publishDir = [path: params.alpha]
+        }
+        '''
+        when:
+        def opt = new CliOptions()
+        def run = new CmdRun(paramsFile: params, params: [alpha: 'Hola', beta: 'Mundo'])
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+
+        then:
+        result.params.alpha == 'Hola'   // <-- this comes from the CLI
+        result.params.beta == 'Mundo'   // <-- this comes from the CLI as well
+        result.params.omega == 'Last'   // <-- this comes from the params-file
+        result.params.gamma == "I'm gamma"   // <-- from the config
+        result.params.delta == 'Foo'         // <-- from the config
+        result.process.publishDir == [path: 'Hola']
+
+        cleanup:
+        file?.delete()
+        params?.delete()
+    }
+
     def 'valid config files' () {
 
         given:

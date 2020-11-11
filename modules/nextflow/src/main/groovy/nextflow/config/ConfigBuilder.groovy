@@ -322,7 +322,7 @@ class ConfigBuilder {
         final slurper = new ConfigParser().setRenderClosureAsString(showClosures)
         ConfigObject result = new ConfigObject()
 
-        if( cmdRun?.params )
+        if( cmdRun && (cmdRun.params || cmdRun.paramsFile) )
             slurper.setParams(cmdRun.parsedParams)
 
         // add the user specified environment to the session env
