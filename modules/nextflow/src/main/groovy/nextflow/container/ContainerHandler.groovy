@@ -18,6 +18,7 @@
 package nextflow.container
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.regex.Pattern
 
 import groovy.transform.PackageScope
 import nextflow.util.Escape
@@ -62,8 +63,7 @@ class ContainerHandler {
             final normalizedImageName = normalizeSingularityImageName(imageName)
             if( !config.isEnabled() || !normalizedImageName )
                 return normalizedImageName
-            final formats = ['docker', 'docker-daemon', 'shub', 'library']
-            final requiresCaching =  formats.any { normalizedImageName.startsWith(it) }
+            final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
             final result = requiresCaching ? createCache(this.config, normalizedImageName) : normalizedImageName
             Escape.path(result)
         }
@@ -157,6 +157,9 @@ class ContainerHandler {
         return imageName
     }
 
+
+    public static final Pattern IMAGE_URL_PREFIX = ~/^[^\/:\. ]+:\/\/(.*)/
+
     /**
      * Normalize Singularity image name resolving the absolute path or
      * adding `docker://` prefix when required
@@ -179,7 +182,7 @@ class ContainerHandler {
         }
 
         // check if matches a protocol scheme such as `docker://xxx`
-        if( img =~ '^[^/:\\. ]+://(.*)' ) {
+        if( img =~ IMAGE_URL_PREFIX ) {
             return img
         }
 
