@@ -666,7 +666,7 @@ class ConfigBuilder {
         }
 
         if( cmdRun.withCharliecloud ) {
-            configContainer(config, 'charliecloud', cmdRun.withChareliecloud)
+            configContainer(config, 'charliecloud', cmdRun.withCharliecloud)
         }
     }
 

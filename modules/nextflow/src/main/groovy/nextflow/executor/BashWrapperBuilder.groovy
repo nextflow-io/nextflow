@@ -23,6 +23,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.container.CharliecloudBuilder
 import nextflow.container.ContainerBuilder
 import nextflow.container.DockerBuilder
 import nextflow.container.PodmanBuilder
@@ -427,6 +428,8 @@ class BashWrapperBuilder {
         /*
          * create a builder instance given the container engine
          */
+        if( engine == 'charliecloud' )
+            return new CharliecloudBuilder(containerImage)
         if( engine == 'docker' )
             return new DockerBuilder(containerImage)
         if( engine == 'podman' )
