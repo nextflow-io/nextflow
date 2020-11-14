@@ -60,14 +60,26 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
     @Override
     CharliecloudBuilder build(StringBuilder result) {
 
-        result << 'set +u; PATH="$PATH" '
+        // charliecloud currently can't bind mount directories that do not exist in the container
+        // charliecloud issue https://github.com/hpc/charliecloud/issues/96
+        // TODO create override for makeVolumes, this needs to be done for all mounts
+        result << 'ch-run --no-home -w ' + image + ' -- bash -c "mkdir -p $PWD";'
 
-        appendEnv(result)
+        result << 'ch-run --no-home '
+        result << '--unset-env="*" '
 
-        result << 'ch-run '
+        // get environment from container
+        // this is needed to workaround the fact that charliecloud ignores ENV layers of docker images
+        // charliecloud issue https://github.com/hpc/charliecloud/issues/719
+        // TODO create override for appendEnv, that also sets vars defined in env scope
+        result << '--set-env=' + image + '/etc/environment ' 
 
         if( runOptions )
             result << runOptions.join(' ') << ' '
+
+        // mount the input folders
+        result << makeVolumes(mounts)
+        result << '-c "$PWD" '
 
         result << image
         result << ' --'
@@ -77,7 +89,7 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
         return this
     }
 
-    protected String composeVolumePath(String path) {
-        return "-b ${escape(path)}"
+    protected String composeVolumePath(String path, boolean readOnly = false) {
+        return "-b ${escape(path)}:${escape(path)}"
     }
 }
