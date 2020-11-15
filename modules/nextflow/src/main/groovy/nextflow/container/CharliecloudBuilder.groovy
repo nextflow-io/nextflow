@@ -16,8 +16,13 @@
  */
 
 package nextflow.container
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
+import java.nio.file.Path
+
+import nextflow.util.PathTrie
 /**
  * Implements a builder for Charliecloud containerisation
  *
@@ -40,9 +45,6 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
         if( params.containsKey('temp') )
             this.temp = params.temp
 
-        if( params.containsKey('entry') )
-            this.entryPoint = params.entry
-
         if( params.containsKey('runOptions') )
             addRunOptions(params.runOptions.toString())
 
@@ -59,26 +61,17 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
 
     @Override
     CharliecloudBuilder build(StringBuilder result) {
+        assert image
 
-        // charliecloud currently can't bind mount directories that do not exist in the container
-        // charliecloud issue https://github.com/hpc/charliecloud/issues/96
-        // TODO create override for makeVolumes, this needs to be done for all mounts
-        result << 'ch-run --no-home -w ' + image + ' -- bash -c "mkdir -p $PWD";'
+        result << 'ch-run --no-home --unset-env="*" '
 
-        result << 'ch-run --no-home '
-        result << '--unset-env="*" '
-
-        // get environment from container
-        // this is needed to workaround the fact that charliecloud ignores ENV layers of docker images
-        // charliecloud issue https://github.com/hpc/charliecloud/issues/719
-        // TODO create override for appendEnv, that also sets vars defined in env scope
-        result << '--set-env=' + image + '/etc/environment ' 
+        appendEnv(result)
 
         if( runOptions )
             result << runOptions.join(' ') << ' '
 
-        // mount the input folders
-        result << makeVolumes(mounts)
+        makeVolumes(mounts, result)
+        
         result << '-c "$PWD" '
 
         result << image
@@ -91,5 +84,93 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
 
     protected String composeVolumePath(String path, boolean readOnly = false) {
         return "-b ${escape(path)}:${escape(path)}"
+    }
+
+    /**
+    * This method override is needed because charliecloud currently can't bind mount directories that do not exist in the container
+    * The workaround is to use mkdir to create the directories within the container before they are bind-mounted
+    * Can probably be removed once Charliecloud issue https://github.com/hpc/charliecloud/issues/96 has been resolved
+    */
+    @Override
+    protected CharSequence makeVolumes(List<Path> mountPaths, StringBuilder result) {
+
+        def prependDirs = ''
+
+        // add the work-dir to the list of container mounts
+        final workDirStr = workDir?.toString()
+        final allMounts = new ArrayList<Path>(mountPaths)
+        if( workDir )
+            allMounts << workDir
+
+        // find the longest commons paths and mount only them
+        final trie = new PathTrie()
+        for( String it : allMounts ) { trie.add(it) }
+
+        // when mounts are read-only make sure to remove the work-dir path
+        final paths = trie.longest()
+        if( readOnlyInputs && workDirStr && paths.contains(workDirStr) )
+            paths.remove(workDirStr)
+
+        for( String it : paths ) {
+            if(!it) continue
+            prependDirs += it + ' '
+            result << composeVolumePath(it,readOnlyInputs)
+            result << ' '
+        }
+
+        // when mounts are read-only, make sure to include the work-dir as writable
+        if( readOnlyInputs && workDir ) {
+            prependDirs += workDirStr + ' '
+            result << composeVolumePath(workDirStr)
+            result << ' '
+        }
+
+        // -- append by default the current path -- this is needed when `scratch` is set to true
+        if( mountWorkDir ) {
+            prependDirs += '"$PWD"'
+            result << composeVolumePath('$PWD')
+            result << ' '
+        }
+
+        if( prependDirs ) {
+            prependDirs = 'ch-run --no-home -w ' + image + ' -- bash -c "mkdir -p ' + prependDirs + '";'
+            result.insert(0, prependDirs)
+        }
+        return result
+    }
+    
+    /**
+    * This method override is needed because charliecloud currently does not inherit ENV layers in Docker images
+    * Charliecloud issue https://github.com/hpc/charliecloud/issues/719
+    * It relies on the presence of a key=value file at /etc/environment within the container
+    */
+    @Override
+    protected CharSequence appendEnv(StringBuilder result) {
+        result << '--set-env=' + image + '/etc/environment '
+        super.appendEnv(result)
+    }
+
+    @Override
+    protected CharSequence makeEnv( env, StringBuilder result = new StringBuilder() ) {
+
+        if( env instanceof Map ) {
+            short index = 0
+            for( Map.Entry entry : env.entrySet() ) {
+                if( index++ ) result << ' '
+                // use bash process substitution because --set-env expects a file handle
+                result << ("--set-env=<( echo \"${entry.key}=${entry.value}\" )")
+            }
+        }
+        else if( env instanceof String && env.contains('=') ) {
+            result << '--set-env=<( echo "' << env << '" )'
+        }
+        else if( env instanceof String ) {
+            result << "\${$env:+--set-env=<( echo \"$env=\$$env\" )}"
+        }
+        else if( env ) {
+            throw new IllegalArgumentException("Not a valid environment value: $env [${env.class.name}]")
+        }
+
+        return result
     }
 }

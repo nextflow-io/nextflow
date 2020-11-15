@@ -200,6 +200,8 @@ class CharliecloudCache {
 
         log.info "Pulling Charliecloud image $imageUrl [cache $targetPath]"
 
+        // FIXME: ch-grow will be renamed to ch-image in charliecloud 0.21
+        // charliecloud PR https://github.com/hpc/charliecloud/pull/904
         String cmd = "ch-grow pull $imageUrl $targetPath > /dev/null"
         try {
             runCommand( cmd, targetPath )
