@@ -239,6 +239,7 @@ class CondorExecutorTest extends Specification {
         task.processor = Mock(TaskProcessor)
         task.processor.getProcessEnvironment() >> [:]
         task.processor.getConfig() >> Mock(ProcessConfig)
+        task.processor.getExecutor() >> Mock(Executor)
         task.processor.getSession() >> session
 
         /*

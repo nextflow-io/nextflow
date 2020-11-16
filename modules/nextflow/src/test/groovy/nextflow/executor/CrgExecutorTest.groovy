@@ -430,6 +430,7 @@ class CrgExecutorTest extends Specification {
         task.processor.getSession() >> new Session()
         task.processor.getProcessEnvironment() >> [:]
         task.processor.getConfig() >> [:]
+        task.processor.getExecutor() >> Mock(Executor)
         task.name = 'the-name'
         task.config = new TaskConfig()
         def executor = [:] as CrgExecutor
@@ -454,7 +455,8 @@ class CrgExecutorTest extends Specification {
         task.processor.getProcessEnvironment() >> [:]
         task.processor.getSession() >> new Session(docker: [enabled: true])
         task.processor.getConfig() >> [:]
-
+        task.processor.getExecutor() >> Mock(Executor)
+        
         builder = executor.createBashWrapperBuilder(task)
         then:
         builder.headerScript == '''
@@ -479,6 +481,7 @@ class CrgExecutorTest extends Specification {
         task.processor.getProcessEnvironment() >> [:]
         task.processor.getSession() >> new Session(docker: [enabled: true, legacy: true])
         task.processor.getConfig() >> [:]
+        task.processor.getExecutor() >> Mock(Executor)
 
         builder = executor.createBashWrapperBuilder(task)
         then:
