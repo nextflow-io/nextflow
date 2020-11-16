@@ -51,7 +51,7 @@ allprojects {
     apply plugin: 'idea'
     apply plugin: 'groovy'
 
-    version = new File('VERSION').text.trim()
+    version = rootProject.file('VERSION').text.trim()
     group = 'io.nextflow'
 
     sourceCompatibility = 1.8
