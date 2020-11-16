@@ -105,6 +105,15 @@ abstract class Executor {
        session.getWorkDir()
     }
 
+    /**
+     * The path where project bin directory are stored
+     *
+     * @return The executor base bin directory
+     */
+    Path getBinDir() {
+       session.getBinDir()
+    }
+
     @Memoized
     Path getStageDir() {
         return getWorkDir().resolve('stage')

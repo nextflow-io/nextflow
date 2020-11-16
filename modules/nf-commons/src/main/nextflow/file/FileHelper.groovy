@@ -853,7 +853,7 @@ class FileHelper {
     }
 
     /**
-     * Move a path to a target destination. It handles file or directory both to a local
+     * Copy a path to a target destination. It handles file or directory both to a local
      * or to a foreign file system.
      *
      * @param source

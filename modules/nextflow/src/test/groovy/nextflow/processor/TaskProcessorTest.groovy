@@ -51,7 +51,7 @@ class TaskProcessorTest extends Specification {
     static class DummyProcessor extends TaskProcessor {
 
         DummyProcessor(String name, Session session, BaseScript script, ProcessConfig taskConfig) {
-            super(name, new NopeExecutor(), session, script, taskConfig, new BodyDef({}, '..'))
+            super(name, new NopeExecutor(session: session), session, script, taskConfig, new BodyDef({}, '..'))
         }
 
         @Override protected void createOperator() { }

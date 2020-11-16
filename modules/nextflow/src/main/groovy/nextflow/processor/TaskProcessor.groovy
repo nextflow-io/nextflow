@@ -1602,14 +1602,14 @@ class TaskProcessor {
 
 
         // pre-pend the 'bin' folder to the task environment
-        if( session.binDir ) {
+        if( executor.binDir ) {
             if( result.containsKey('PATH') ) {
                 // note: do not escape potential blanks in the bin path because the PATH
                 // variable is enclosed in `"` when in rendered in the launcher script -- see #630
-                result['PATH'] =  "${session.binDir}:${result['PATH']}".toString()
+                result['PATH'] =  "${executor.binDir}:${result['PATH']}".toString()
             }
             else {
-                result['PATH'] = "${session.binDir}:\$PATH".toString()
+                result['PATH'] = "${executor.binDir}:\$PATH".toString()
             }
         }
 
