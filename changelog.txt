@@ -1,5 +1,17 @@
 NEXTFLOW CHANGE-LOG
 ===================
+20.11.0-edge - 16 Nov 2020
+
+- Fix Allow nextflow to handle http protocol for Singularity images #1791
+- Fix params-file overrides config parameters [b03efcac]
+- Fix println failing test #1621 [8c6f0f97] [9d2e5850]
+- Let output env variables be optional (#1740) [3fca3655]
+- Add stub-run feature #1774 [3de45c22] [e2d6d55b]
+- Add overwrite option to trace/time/report/dag features #813 [a0615474]
+- Allow nested CLI params #1182 [19ab8a8f] [df6204e3] 
+- Allow setting google projectId in nextflow config [223b5d6c]
+- Make binDir accessible from the executor scope [1405a28f]
+
 20.10.0 - 1 Nov 2020
 - Add warning for AWS Batch mem request lower than 4 GB [e9240fc9]
 - Fix issue with docker images tagged by SHA #1777
