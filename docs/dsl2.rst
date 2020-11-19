@@ -61,7 +61,7 @@ syntax as described in the :ref:`process documentation <process-page>`. The only
 Then a process can be invoked as a function in the ``workflow`` scope, passing the expected
 input channels as parameters as it if were a custom function. For example::
 
-    nextflow.preview.dsl=2
+    nextflow.enable.dsl=2
 
     process foo {
         output:
