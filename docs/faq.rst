@@ -277,3 +277,31 @@ A: Sometimes it is necessary to use a different version of Nextflow for a specif
 ::
 
     NXF_VER=0.28.0 nextflow run main.nf
+
+
+How does nextflow allocate resources to processes?
+------------------------------------------------------
+
+*Q: How does nextflow deal with resource allocation? Can I configure nextflow to make sure that my workflow doesn't overload the resources available to it?*
+
+A: Nextflow sets processes to run and collects the results, it does **not** control what they request. Nextflow does **not** enforce resource allocation or provide resource isolation (nor do containers). For example, if your process declares, for example, 2 cpus and the task uses 20, on a compute node with 8 cpus - then, you will overload the running node. 
+
+Nextflow configuration files allow you to set expectations for resource uses, even though it does not enforce these. For example, to use a local executor expecting 4 cpus and 16GB memory, add to your configuration file: 
+
+```
+executor {
+    name   = 'local'
+    cpus   = 4
+    memory = '16GB'
+}
+```
+
+This tells nextflow to run up to 4 *processes* at once, however each of the processes that nextflow starts may (without telling nextflow) itself request multiple threads.
+
+Multi-thread applications usually have a command line option to specify the maximum number of cpus that may be used. For example, [bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/manual.shtml) has the `-p/--threads` option, [cutadapt](https://cutadapt.readthedocs.io/en/stable/guide.html) has the `-j/--cores` option, and so on. For a specific workflow, you can specify the number of threads for your process to use, and match that to the process-specific entry in your nextflow config file. Unless you explicitly specify the task cpus for a multi-thread application, it is possible that each of them will try to use all the available cpus. In this case, the total number of cpus could exceed the number specified by the executor. Essentially, nextflow only "knows" how many tasks to run, and some of your tasks, if multi-threaded, may request more resources than nextflow expects. 
+
+Also, it is not common for (bioinformatics) applications to allow you to specify maximum memory usage.
+
+In order to run a workflow on a large dataset without overloading requested resources, it can be helpful to run a workflow on a small "test" dataset and track cpu/memory usage from there. Then, afterwards, use that information to adjust which resources are requested for the full-size dataset.
+
+This is likely to be a more severe problem using a [local executor](/docs/latest/executor.html#local). Using a nextflow executor designed to run with a job submission system on a cluster (SGE/LSF/etc) allows each process to be despatched, and resources allocated, using the job submission system.
