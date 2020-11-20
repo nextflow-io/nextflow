@@ -25,6 +25,7 @@ architecture provided by the CPU.
 In a common usage scenario, the `local` executor can be useful to develop and test your pipeline script in your computer,
 switching to a cluster facility when you need to run it on production data.
 
+Nextflow does not enforce resource allocation, so the `local` executor will not prevent your processes from requesting more resources than are available. For more explanation, see :ref:`faq-no-resource-enforcement`.
 
 .. _sge-executor:
 
