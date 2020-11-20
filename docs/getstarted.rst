@@ -36,6 +36,8 @@ It only needs two easy steps:
 .. tip:: In the case you don't have ``wget`` installed you can use the ``curl`` utility instead by entering
    the following command: ``curl -s https://get.nextflow.io | bash``
 
+.. tip:: Set ``export CAPSULE_LOG=none`` to make the installation logs less verbose.
+
 
 .. _getstart-first:
 
