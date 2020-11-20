@@ -330,7 +330,7 @@ Stub
     This is an incubating feature. It may change in future versions.
 
 As of version 20.11.0-edge it's possible to define a command *stub* that replaces the actual process command, when
-the `-run-stun` command line option. ::
+the `-stub-run` or `-stub` command line option. ::
 
     process INDEX {
         input:
