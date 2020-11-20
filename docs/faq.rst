@@ -279,6 +279,8 @@ A: Sometimes it is necessary to use a different version of Nextflow for a specif
     NXF_VER=0.28.0 nextflow run main.nf
 
 
+.. _faq-no-resource-enforcement:
+
 How does nextflow allocate resources to processes?
 ------------------------------------------------------
 
