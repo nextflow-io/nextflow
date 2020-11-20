@@ -297,6 +297,8 @@ The above configuration example can be rewritten using the dot notation as shown
     executor.$local.cpus = 8
     executor.$local.memory = '32 GB'
 
+**Warning** Nextflow does not enforce resource allocation, so will not prevent your processes from requesting more resources than are specified in the executor in the config file. For more explanation, see :ref:`faq-no-resource-enforcement`.
+
 .. _config-docker:
 
 Scope `docker`
