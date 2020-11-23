@@ -39,4 +39,9 @@ class AzurePathFactory extends FileSystemPathFactory {
         return p>0 ? str.substring(0,p) : null
     }
 
+    @Override
+    protected String toUriString(Path path) {
+        return null
+    }
+
 }
