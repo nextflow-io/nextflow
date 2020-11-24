@@ -20,6 +20,7 @@ package nextflow.scm
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import groovy.json.JsonSlurper
 
 /**
  * Implements a repository provider for Azure DevOps service
@@ -32,11 +33,14 @@ final class AzureDevOpsRepositoryProvider extends RepositoryProvider {
     private String user
     private String repo
 
+    private String continuationToken
+
     AzureDevOpsRepositoryProvider(String project, ProviderConfig config=null) {
         this.project = project
         this.user = this.project.tokenize('/').first()
         this.repo = this.project.tokenize('/').last()
         this.config = config ?: new ProviderConfig('azurerepos')
+        this.continuationToken = null
     }
 
     /** {@inheritDoc} */
@@ -60,7 +64,7 @@ final class AzureDevOpsRepositoryProvider extends RepositoryProvider {
     List<BranchInfo> getBranches() {
         // https://docs.microsoft.com/en-us/rest/api/azure/devops/git/refs/list?view=azure-devops-rest-6.0#refs-heads
         final url = "${config.endpoint}/${project}/_apis/git/repositories/${repo}/refs?filter=heads&api-version=6.0"
-        this.<BranchInfo>invokeAndResponseWithPaging(url, { Map branch -> new BranchInfo(branch.name as String, branch.id as String) })
+        this.<BranchInfo>invokeAndResponseWithPaging(url, { Map branch -> new BranchInfo(branch.name.replace("refs/heads/","") as String, branch.objectId as String) })
     }
 
     @Override
@@ -69,7 +73,52 @@ final class AzureDevOpsRepositoryProvider extends RepositoryProvider {
     List<TagInfo> getTags() {
         // https://docs.microsoft.com/en-us/rest/api/azure/devops/git/refs/list?view=azure-devops-rest-6.0#refs-tags
         final url = "${config.endpoint}/${project}/_apis/git/repositories/${repo}/refs?filter=tags&api-version=6.0"
-        this.<TagInfo>invokeAndResponseWithPaging(url, { Map tag -> new TagInfo(tag.name as String, tag.id as String)})
+        this.<TagInfo>invokeAndResponseWithPaging(url, { Map tag -> new TagInfo(tag.name.replace("refs/tags/","") as String, tag.objectId as String)})
+    }
+
+    @Memoized
+    protected <T> List<T> invokeAndResponseWithPaging(String request, Closure<T> parse) {
+
+        final result = new ArrayList()
+
+        def response = invoke(request)
+
+        def map = (Map) new JsonSlurper().parseText(response)
+
+        for( def item : map.value ) {
+            result.add( parse(item) )
+        }
+
+        while (this.continuationToken) {
+
+          response = invoke(request + "&continuationToken=" + this.continuationToken)
+
+          map = (Map) new JsonSlurper().parseText(response)
+
+          for( def item : map.value ) {
+              result.add( parse(item) )
+          }
+          
+        }
+
+        return result
+    }
+
+    /**
+     * Check for response error status. Throws a {@link AbortOperationException} exception
+     * when a 401 or 403 error status is returned.
+     *
+     * @param connection A {@link HttpURLConnection} connection instance
+     */
+    protected checkResponse( HttpURLConnection connection ) {
+
+        if (connection.getHeaderFields().containsKey("x-ms-continuationtoken")) {
+            this.continuationToken = connection.getHeaderField("x-ms-continuationtoken");
+        } else {
+            this.continuationToken = null
+        }
+
+        super.checkResponse(connection)
     }
 
     /** {@inheritDoc} */
