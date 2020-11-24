@@ -45,6 +45,9 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
         if( params.containsKey('temp') )
             this.temp = params.temp
 
+        if( params.containsKey('entry') )
+            this.entryPoint = params.entry
+
         if( params.containsKey('runOptions') )
             addRunOptions(params.runOptions.toString())
 
@@ -137,17 +140,6 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
             result.insert(0, prependDirs)
         }
         return result
-    }
-    
-    /**
-    * This method override is needed because charliecloud currently does not inherit ENV layers in Docker images
-    * Charliecloud issue https://github.com/hpc/charliecloud/issues/719
-    * It relies on the presence of a key=value file at /etc/environment within the container
-    */
-    @Override
-    protected CharSequence appendEnv(StringBuilder result) {
-        result << '--set-env=' + image + '/etc/environment '
-        super.appendEnv(result)
     }
 
     @Override
