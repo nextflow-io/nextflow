@@ -150,14 +150,14 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
             for( Map.Entry entry : env.entrySet() ) {
                 if( index++ ) result << ' '
                 // use bash process substitution because --set-env expects a file handle
-                result << ("--set-env=<( echo \"${entry.key}=${entry.value}\" )")
+                result << ("--set-env=<( echo \"${entry.key}=\"${entry.value}\"\" )")
             }
         }
         else if( env instanceof String && env.contains('=') ) {
             result << '--set-env=<( echo "' << env << '" )'
         }
         else if( env instanceof String ) {
-            result << "\${$env:+--set-env=<( echo \"$env=\$$env\" )}"
+            result << "\${$env:+--set-env=<( echo \"$env=\"\$$env\"\" )}"
         }
         else if( env ) {
             throw new IllegalArgumentException("Not a valid environment value: $env [${env.class.name}]")
