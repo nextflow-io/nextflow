@@ -14,7 +14,7 @@ configuration values are listed below with the highest preference at the top:
 1. Command line individual parameter (``--something value``)
 2. Command line specified config file (``-c my_config``)
 3. A file named ``nextflow.config`` in the current directory
-4. A file named ``nextflow.config`` in the script base directory (when it is not the same as the current directory)
+4. A file named ``nextflow.config`` in the workflow project directory
 5. The file ``$HOME/.nextflow/config``
 6. Values defined within the pipeline script itself
 
