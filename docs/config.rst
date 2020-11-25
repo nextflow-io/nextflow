@@ -13,7 +13,7 @@ settings to are applied. All possible configuration sources are reported below, 
 of priority:
 
 1. Parameters specified on the command line (``--something value``)
-2. Parameters provided using the -params-file option
+2. Parameters provided using the ``-params-file`` option
 3. Config file specified using the ``-c my_config`` option
 4. The config file named ``nextflow.config`` in the current directory
 5. The config file named ``nextflow.config`` in the workflow project directory
