@@ -16,7 +16,7 @@ configuration values are listed below with the highest preference at the top:
 3. A file named ``nextflow.config`` in the current directory
 4. A file named ``nextflow.config`` in the workflow project directory
 5. The file ``$HOME/.nextflow/config``
-6. Values defined within the pipeline script itself
+6. Values defined within the pipeline script itself (e.g. ``main.nf``)
 
 When more than one of these ways of specifying configurations are used, they are merged, so that the settings in the
 first override the same ones that may appear in the second one, and so on.
