@@ -42,8 +42,9 @@ It only needs two easy steps:
 
 .. note::
     To avoid downloading the dependencies, you could also use the ``nextflow-VERSION-all`` variant available from Github for every Nextflow release version.
-   #. Simply go to the Github releases page and unfold the ``Assets`` section for a release.
+   #. Simply go to the `Github releases page <https://github.com/nextflow-io/nextflow/releases>`__ and unfold the ``Assets`` section for a release.
    #. Copy the URL of the ``nextflow-VERSION-all`` asset and issue the download command on your terminal. ``wget -qO-  ASSET-URL``. It will create the completely self-contained ``nextflow-VERSION-all`` executable file in the current directory.
+
 
 .. _getstart-first:
 
