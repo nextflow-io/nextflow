@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +26,7 @@ import groovy.transform.EqualsAndHashCode
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.Session
 import nextflow.exception.IllegalModulePath
 /**
@@ -51,15 +53,24 @@ class IncludeDef {
 
     @Deprecated
     IncludeDef( String module ) {
-        log.warn "Anonymous module inclusion is deprecated -- Replace `include '${module}'` with `include { MODULE_NAME } from '${module}'`"
+        final msg = "Anonymous module inclusion is deprecated -- Replace `include '${module}'` with `include { MODULE_NAME } from '${module}'`"
+        if( NF.isDsl2Final() )
+            throw new DeprecationException(msg)
+        log.warn msg
         this.path = module
         this.modules = new ArrayList<>(1)
         this.modules << new Module(null,null)
     }
 
-    IncludeDef(TokenVar name, String alias=null) {
+    IncludeDef(TokenVar token, String alias=null) {
+        def component = token.name; if(alias) component += " as $alias"
+        def msg = "Unwrapped module inclusion is deprecated -- Replace `include $component from './MODULE/PATH'` with `include { $component } from './MODULE/PATH'`"
+        if( NF.isDsl2Final() )
+            throw new DeprecationException(msg)
+        log.warn msg
+
         this.modules = new ArrayList<>(1)
-        this.modules << new Module(name.name, alias)
+        this.modules << new Module(token.name, alias)
     }
 
     protected IncludeDef(List<Module> modules) {

@@ -10,7 +10,7 @@ Requirements
 ============
 
 `Nextflow` can be used on any POSIX compatible system (Linux, OS X, etc).
-It requires Bash 3.2 (or later) and `Java 8 (or later, up to 11) <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_ to be installed.
+It requires Bash 3.2 (or later) and `Java 8 (or later, up to 15) <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_ to be installed.
 
 For the execution in a cluster of computers the use a shared file system is required to allow
 the sharing of tasks input/output files.
@@ -22,19 +22,28 @@ Windows system is supported through `WSL <https://en.wikipedia.org/wiki/Windows_
 Installation
 ============
 
-`Nextflow` is distributed as a self-contained executable package, which means that it does not require any special installation procedure.
+`Nextflow` is distributed as a self-installing package, which means that it does not require any special installation procedure.
 
 It only needs two easy steps:
 
-#.  Download the executable package by copying and pasting the following command in your terminal
-    window: ``wget -qO- https://get.nextflow.io | bash``.
-    It will create the ``nextflow`` main executable file in the current directory.
+#.  Download the executable package by copying and pasting either one of the following commands in your terminal
+    window: ``wget -qO- https://get.nextflow.io | bash``
+
+    Or, if you prefer `curl`: ``curl -s https://get.nextflow.io | bash``
+
+    This will create the ``nextflow`` main executable file in the current directory.
+
+#.  Make the binary executable on your system by running ``chmod +x nextflow``.
 
 #.  Optionally, move the ``nextflow`` file to a directory accessible by your ``$PATH`` variable
     (this is only required to avoid remembering and typing the full path to ``nextflow`` each time you need to run it).
 
-.. tip:: In the case you don't have ``wget`` installed you can use the ``curl`` utility instead by entering
-   the following command: ``curl -s https://get.nextflow.io | bash``
+.. tip:: Set ``export CAPSULE_LOG=none`` to make the dependency installation logs less verbose.
+
+.. note::
+    To avoid downloading the dependencies, you could also use the ``nextflow-VERSION-all`` variant available from Github for every Nextflow release version.
+   #. Go to the `Github releases page <https://github.com/nextflow-io/nextflow/releases>`__ and unfold the `Assets` section for a release.
+   #. Copy the URL of the ``nextflow-VERSION-all`` asset and issue the download command on your terminal. ``wget -qO- ASSET-URL``. It will create the completely self-contained ``nextflow-VERSION-all`` executable file in the current directory.
 
 
 .. _getstart-first:
@@ -185,3 +194,10 @@ will look like this::
     m el r
     edno
     uojnoB
+
+
+.. tip::
+    As of version 20.11.0-edge any ``.`` (dot) character in a parameter name is interpreted as the delimiter
+    or nested scope e.g. ``--foo.bar Hello`` will be accessible from the script as `params.foo.bar`.
+    If you want to have a parameter name including a ``.`` (dot) character escape it using the back-slash character e.g.
+    ``--foo\.bar Hello``

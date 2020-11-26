@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -93,7 +94,7 @@ class CacheDB implements Closeable {
         // open a LevelDB instance
         final file=dataDir.resolve('db').toFile()
         try {
-            db = Iq80DBFactory.factory.open(file, new Options().createIfMissing(true))
+            db = Iq80DBFactory.@factory.open(file, new Options().createIfMissing(true))
         }
         catch( Exception e ) {
             String msg

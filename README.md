@@ -184,7 +184,7 @@ Build from source
 Required dependencies
 ---------------------
 
-* Compiler Java 8
+* Compiler Java 8 or later
 * Runtime Java 8 or later
 
 Build from source
@@ -212,40 +212,17 @@ The self-contained runnable Nextflow packages can be created by using the follow
 
 ```bash
 make pack
-```
+```            
 
-In order to install the compiled packages use the following command:
+Once compiled use the script `./launch.sh` as a replacement for the usual `nextflow` command.
+
+The compiled packages can be locally installed using the following command:
 
 ```bash
 make install
 ```
 
-Then you will be able to run nextflow using the `nextflow` launcher script in the project root folder.
-
-Known compilation problems
----------------------------
-
-Nextflow required JDK 8 to be compiled. The Java compiler used by the build process can be choose by setting the
-`JAVA_HOME` environment variable accordingly.
-
-
-If the compilation stops reporting the error: `java.lang.VerifyError: Bad <init> method call from inside of a branch`,
-this is due to a bug affecting the following Java JDK:
-
-- 1.8.0 update 11
-- 1.8.0 update 20
-
-Upgrade to a newer JDK to avoid to this issue. Alternatively a possible workaround is to define the following variable
-in your environment:
-
-```bash
-_JAVA_OPTIONS='-Xverify:none'
-```
-
-Read more at these links:
-
-- https://bugs.openjdk.java.net/browse/JDK-8051012
-- https://jira.codehaus.org/browse/GROOVY-6951
+A self-contained distribution can be created with the command: `make pack`.  To include support of GA4GH and its dependencies in the binary, use `make packGA4GH` instead.
 
 
 IntelliJ IDEA
@@ -277,7 +254,7 @@ Build servers
 =============
 
   * [Travis-CI](https://travis-ci.org/nextflow-io/nextflow)
-  * [Groovy Joint build](http://ci.groovy-lang.org/project.html?projectId=JointBuilds_Nextflow&guest=1)
+  * [GitHub Actions](https://github.com/nextflow-io/nextflow/actions)
 
 License
 =======

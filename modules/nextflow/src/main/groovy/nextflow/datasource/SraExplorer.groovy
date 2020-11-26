@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,7 +43,7 @@ import nextflow.util.Duration
 @Slf4j
 class SraExplorer {
 
-    static public Map PARAMS = [apiKey:String, cache: Boolean, max: Integer]
+    static public Map PARAMS = [apiKey:[String,GString], cache: Boolean, max: Integer]
 
     @ToString
     static class SearchRecord {
@@ -273,8 +274,19 @@ class SraExplorer {
         if( !text )
             return
 
+        // it returns tab separated like structures
         def lines = text.trim().readLines()
-        def files = lines[1].split(';')
+        // the first line contains the field names eg. "run_accession	fastq_ftp"
+        def fields = lines[0].tokenize('\t')
+        def index = fields.indexOf('fastq_ftp')
+        if( index==-1 ) {
+            log.warn "Unable to find SRA fastq_ftp field - Offending value: ${lines[0]}"
+            return
+        }
+        // the second line holds one more tab separated values eg.
+        // "SRR1448795	ftp.sra.ebi.ac.uk/.../SRR1448795_1.fastq.gz;ftp.sra.ebi.ac.uk/.../SRR1448795_2.fastq.gz"
+        def value = lines[1].tokenize('\t')[index]
+        def files = value.split(';')
         def result = new ArrayList(files.size())
         for( def str : files ) {
             result.add( FileHelper.asPath("ftp://$str") )

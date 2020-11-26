@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,5 +37,5 @@ dependencies {
     compile ('com.amazonaws:aws-java-sdk-iam:1.11.542')
     compile ('com.amazonaws:aws-java-sdk-ecs:1.11.542')
 
-    testCompile(testFixtures(project(":nextflow")))
+    testImplementation(testFixtures(project(":nextflow")))
 }

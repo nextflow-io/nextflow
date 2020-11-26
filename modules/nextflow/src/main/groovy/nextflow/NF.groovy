@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,6 +46,10 @@ class NF {
 
     static boolean isDsl2() {
         NextflowMeta.instance.isDsl2()
+    }
+
+    static boolean isDsl2Final() {
+        NextflowMeta.instance.isDsl2Final()
     }
 
     static Binding getBinding() {

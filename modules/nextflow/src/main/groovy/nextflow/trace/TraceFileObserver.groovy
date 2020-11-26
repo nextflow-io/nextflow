@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -67,6 +68,11 @@ class TraceFileObserver implements TraceObserver {
      * The delimiter character used to separate column in the CSV file
      */
     String separator = '\t'
+
+    /**
+     * Overwrite existing trace file instead of rolling it
+     */
+    boolean overwrite
 
     /**
      * The path where the file is created. It is set by the object constructor
@@ -197,8 +203,11 @@ class TraceFileObserver implements TraceObserver {
         if( parent )
             Files.createDirectories(parent)
 
-        // roll the any trace files that may exist
-        tracePath.rollFile()
+        if( overwrite )
+            Files.deleteIfExists(tracePath)
+        else
+            // roll the any trace files that may exist
+            tracePath.rollFile()
 
         // create a new trace file
         traceFile = new PrintWriter(Files.newBufferedWriter(tracePath, Charset.defaultCharset(), StandardOpenOption.APPEND, StandardOpenOption.CREATE))

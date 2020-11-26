@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,6 +27,7 @@ sourceSets {
 
 dependencies {
     compile project(':nextflow')
-    compile "org.codehaus.groovy:groovy-console:2.5.11"
+    compile "org.codehaus.groovy:groovy-console:3.0.5"
+    compile "org.codehaus.groovy:groovy-swing:3.0.5"
 }
 

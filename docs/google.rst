@@ -19,13 +19,31 @@ in your system environment::
 Credentials
 -----------
 
-To allow the deployment in the Google Cloud you need to configure the security credentials using
-a *Security account key* JSON file.
+Credentials for submitting requests to the Google LifeSciences API are picked up from your
+environment using `Application Default Credentials <https://github.com/googleapis/google-auth-library-java#google-auth-library-oauth2-http>`_.
+Application Default Credentials are designed to use the credentials most natural to the
+environment in which a tool runs.
 
-Nextflow looks for this file using the ``GOOGLE_APPLICATION_CREDENTIALS`` variable that
-has to be defined in the launching environment.
+The most common case will be to pick up your end-user Google credentials from your
+workstation. You can create these by running the command::
 
-If you don't have it, download the credentials file from the Google Cloud Console following these steps:
+    gcloud auth application-default login 
+
+and running through the authentication flow. This will write a credential file to your gcloud
+configuration directory that will be used for any tool you run on your workstation that
+picks up default credentials.
+
+The next most common case would be when running on a Compute Engine VM. In this case,
+Application Default Credentials will pick up the Compute Engine Service Account
+credentials for that VM.
+
+See the `Application Default Credentials <https://github.com/googleapis/google-auth-library-java#google-auth-library-oauth2-http>`_ documentation for how to enable other use cases.
+
+
+Finally, the ``GOOGLE_APPLICATION_CREDENTIALS`` environment variable can be used to specify location
+of the Google credentials file.
+
+If you don't have it, the credentials file can be download from the Google Cloud Console following these steps:
 
 * Open the `Google Cloud Console <https://console.cloud.google.com>`_
 * Go to APIs & Services → Credentials
@@ -34,11 +52,10 @@ If you don't have it, download the credentials file from the Google Cloud Consol
 * Select JSON as *Key type*
 * Click the *Create* button and download the JSON file giving a name of your choice e.g. ``creds.json``.
 
-Finally define the following variable replacing the path in the example with the one of your
+Then, define the following variable replacing the path in the example with the one of your
 credentials file just downloaded::
 
     export GOOGLE_APPLICATION_CREDENTIALS=/path/your/file/creds.json
-
 
 .. _google-lifesciences:
 

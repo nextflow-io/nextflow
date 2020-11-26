@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -863,5 +864,34 @@ class BashWrapperBuilderTest extends Specification {
         binding.stage_cmd == 'nxf_stage'
         binding.unstage_cmd == 'nxf_unstage'
         
+    }
+
+
+    def 'should create wrapper with podman' () {
+        when:
+        def binding = newBashWrapperBuilder(
+                containerImage: 'busybox',
+                containerEnabled: true,
+                containerConfig: [engine: 'podman', enabled: true] ).makeBinding()
+
+        then:
+        binding.launch_cmd == 'podman run -i -v /work/dir:/work/dir -w "$PWD" --entrypoint /bin/bash --name $NXF_BOXID busybox -c "/bin/bash -ue /work/dir/.command.sh"'
+        binding.cleanup_cmd == 'podman rm $NXF_BOXID &>/dev/null || true\n'
+        binding.kill_cmd == 'podman kill $NXF_BOXID'
+    }
+
+
+    def 'should create wrapper with podman and scratch' () {
+        when:
+        def binding = newBashWrapperBuilder(
+                scratch: true,
+                containerImage: 'busybox',
+                containerEnabled: true,
+                containerConfig: [engine: 'podman', enabled: true] ).makeBinding()
+
+        then:
+        binding.launch_cmd == 'podman run -i -v /work/dir:/work/dir -v "$PWD":"$PWD" -w "$PWD" --entrypoint /bin/bash --name $NXF_BOXID busybox -c "/bin/bash -ue /work/dir/.command.sh"'
+        binding.cleanup_cmd == '(sudo -n true && sudo rm -rf "$NXF_SCRATCH" || rm -rf "$NXF_SCRATCH")&>/dev/null || true\npodman rm $NXF_BOXID &>/dev/null || true\n'
+        binding.kill_cmd == 'podman kill $NXF_BOXID'
     }
 }

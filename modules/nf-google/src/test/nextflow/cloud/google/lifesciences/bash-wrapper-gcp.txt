@@ -5,6 +5,92 @@ set -u
 NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 1 ]] && set -x
 NXF_ENTRY=${1:-nxf_main}
 
+# bash helper functions
+nxf_cp_retry() {
+    local max_attempts=1
+    local timeout=10
+    local attempt=0
+    local exitCode=0
+    while (( $attempt < $max_attempts ))
+    do
+      if "$@"
+        then
+          return 0
+      else
+        exitCode=$?
+      fi
+      if [[ $exitCode == 0 ]]
+      then
+        break
+      fi
+      sleep $timeout
+      attempt=$(( attempt + 1 ))
+      timeout=$(( timeout * 2 ))
+    done
+}
+
+nxf_parallel() {
+    IFS=$'\n'
+    local cmd=("$@")
+    local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
+    local max=$(if (( cpus>16 )); then echo 16; else echo $cpus; fi)
+    local i=0
+    local pid=()
+    (
+    set +u
+    while ((i<${#cmd[@]})); do
+        local copy=()
+        for x in "${pid[@]}"; do
+          [[ -e /proc/$x ]] && copy+=($x)
+        done
+        pid=("${copy[@]}")
+
+        if ((${#pid[@]}>=$max)); then
+          sleep 1
+        else
+          eval "${cmd[$i]}" &
+          pid+=($!)
+          ((i+=1))
+        fi
+    done
+    ((${#pid[@]}>0)) && wait ${pid[@]}
+    )
+    unset IFS
+}
+
+# google storage helper
+nxf_gs_download() {
+    local source=$1
+    local target=$2
+    local project=$3
+    local basedir=$(dirname $2)
+    local ret
+    local opts="-m -q"
+    local opts
+    if [[ $project ]]; then
+      opts=('-q' '-m' '-u' "$project")
+    else
+      opts=('-q' '-m')
+    fi
+
+    ## download assuming it's a file download
+    mkdir -p $basedir
+    ret=$(gsutil ${opts[@]} cp "$source" "$target" 2>&1) || {
+        ## if fails check if it was trying to download a directory
+        mkdir $target
+        gsutil ${opts[@]} cp -R "$source/*" "$target" || {
+          rm -rf $target
+          >&2 echo "Unable to download path: $source"
+          exit 1
+        }
+    }
+}
+
+nxf_gs_upload() {
+    local name=$1
+    local target=$2
+    gsutil -m -q cp -R "$name" "$target/$name"
+}
 
 nxf_date() {
     local ts=$(date +%s%3N);
@@ -66,7 +152,9 @@ nxf_stage() {
     true
     # stage input files
     echo start | gsutil -q cp  -c - gs://bucket/work/dir/.command.begin
-    gsutil -m -q cp gs://bucket/work/dir/.command.sh /work/dir/.command.sh
+    downloads=()
+    downloads+=("nxf_gs_download gs://bucket/work/dir/.command.sh .command.sh ")
+    nxf_parallel "${downloads[@]}"
 }
 
 nxf_unstage() {
@@ -79,7 +167,8 @@ nxf_unstage() {
 
 nxf_main() {
     trap on_exit EXIT
-    trap on_term TERM INT USR1 USR2
+    trap on_term TERM INT USR2
+    trap '' USR1
 
     [[ "${NXF_CHDIR:-}" ]] && cd "$NXF_CHDIR"
     NXF_SCRATCH={{folder}}

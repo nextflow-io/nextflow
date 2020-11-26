@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +18,7 @@
 package nextflow.container
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.regex.Pattern
 
 import groovy.transform.PackageScope
 import nextflow.util.Escape
@@ -32,9 +34,9 @@ class ContainerHandler {
 
     final private static Path CWD = Paths.get('.').toAbsolutePath()
 
-    @PackageScope ContainerConfig config
+    private ContainerConfig config
 
-    @PackageScope Path baseDir
+    private Path baseDir
 
     ContainerHandler(Map containerConfig) {
         this(containerConfig, CWD)
@@ -44,6 +46,10 @@ class ContainerHandler {
         this.config = containerConfig as ContainerConfig
         this.baseDir = dir
     }
+
+    ContainerConfig getConfig() { config }
+    
+    Path getBaseDir() { baseDir }
 
     String normalizeImageName(String imageName) {
         final engine = config.getEngine()
@@ -57,8 +63,7 @@ class ContainerHandler {
             final normalizedImageName = normalizeSingularityImageName(imageName)
             if( !config.isEnabled() || !normalizedImageName )
                 return normalizedImageName
-            final formats = ['docker', 'docker-daemon', 'shub', 'library']
-            final requiresCaching =  formats.any { normalizedImageName.startsWith(it) }
+            final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
             final result = requiresCaching ? createCache(this.config, normalizedImageName) : normalizedImageName
             Escape.path(result)
         }
@@ -152,6 +157,9 @@ class ContainerHandler {
         return imageName
     }
 
+
+    public static final Pattern IMAGE_URL_PREFIX = ~/^[^\/:\. ]+:\/\/(.*)/
+
     /**
      * Normalize Singularity image name resolving the absolute path or
      * adding `docker://` prefix when required
@@ -174,7 +182,7 @@ class ContainerHandler {
         }
 
         // check if matches a protocol scheme such as `docker://xxx`
-        if( img =~ '^[^/:\\. ]+://(.*)' ) {
+        if( img =~ IMAGE_URL_PREFIX ) {
             return img
         }
 

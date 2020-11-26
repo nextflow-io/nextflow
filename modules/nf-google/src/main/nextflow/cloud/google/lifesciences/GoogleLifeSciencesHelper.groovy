@@ -139,13 +139,13 @@ class GoogleLifeSciencesHelper {
             action.setRunInBackground(true)
         if( ActionFlags.ALWAYS_RUN in flags)
             action.setAlwaysRun(true)
-        if( ActionFlags.ENABLE_FUSE )
+        if( ActionFlags.ENABLE_FUSE in flags )
             action.setEnableFuse(true)
         if( ActionFlags.PUBLISH_EXPOSED_PORTS in flags )
             action.setPublishExposedPorts(true)
         if( ActionFlags.DISABLE_IMAGE_PREFETCH in flags )
             action.setDisableImagePrefetch(true)
-        if( ActionFlags.DISABLE_STANDARD_ERROR_CAPTURE )
+        if( ActionFlags.DISABLE_STANDARD_ERROR_CAPTURE in flags )
             action.setDisableStandardErrorCapture(true)
 
         return action

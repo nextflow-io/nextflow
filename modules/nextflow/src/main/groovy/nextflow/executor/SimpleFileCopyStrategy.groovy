@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -116,14 +117,15 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
 
         def delete = []
         def links = []
-        inputFiles.each { stageName, storePath ->
+        for( Map.Entry<String,Path> entry : inputFiles ) {
+            final stageName = entry.key
+            final storePath = entry.value
 
             // delete all previous files with the same name
             delete << "rm -f ${Escape.path(stageName)}"
 
             // link them
             links << stageInputFile( storePath, stageName )
-
         }
 
         // return a big string containing the command

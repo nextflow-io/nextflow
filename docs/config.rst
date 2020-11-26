@@ -7,18 +7,21 @@ Configuration
 Configuration file
 ==================
 
-When a pipeline script is launched Nextflow looks for a file named ``nextflow.config`` in the current directory and
-in the script base directory (if it is not the same as the current directory). Finally it checks for the file
-``$HOME/.nextflow/config``.
+When a pipeline script is launched, Nextflow looks for configuration files in multiple locations.
+Since each configuration file can contain conflicting settings, the sources are ranked to decide which
+settings to are applied. All possible configuration sources are reported below, listed in order
+of priority:
 
-When more than one of the above files exist they are merged, so that the settings in the first override the same ones
-that may appear in the second one, and so on.
+1. Parameters specified on the command line (``--something value``)
+2. Parameters provided using the ``-params-file`` option
+3. Config file specified using the ``-c my_config`` option
+4. The config file named ``nextflow.config`` in the current directory
+5. The config file named ``nextflow.config`` in the workflow project directory
+6. The config file ``$HOME/.nextflow/config``
+7. Values defined within the pipeline script itself (e.g. ``main.nf``)
 
-The default config file search mechanism can be extended proving an extra configuration file by using the command line
-option ``-c <config file>``.
-
-.. note:: It's worth noting that by doing this, the files ``nextflow.config`` and ``$HOME/.nextflow/config`` are not
-  ignored and they are merged as explained above.
+When more than one of these ways of specifying configurations are used, they are merged, so that the settings in the
+first override the same ones that may appear in the second one, and so on.
 
 .. tip:: If you want to ignore any default configuration files and use only the custom one use the command line option
   ``-C <config file>``.
@@ -335,7 +338,7 @@ brackets, as shown below::
 
 
 
-Read :ref:`docker-page` page to lean more how use Docker containers with Nextflow.
+Read :ref:`docker-page` page to learn more how use Docker containers with Nextflow.
 
 
 .. _config-singularity:
@@ -356,13 +359,13 @@ engineOptions       This attribute can be used to provide any option supported b
 envWhitelist        Comma separated list of environment variable names to be included in the container environment.
 runOptions          This attribute can be used to provide any extra command line options supported by the ``singularity exec``.
 noHttps             Turn this flag to ``true`` to pull the Singularity image with http protocol (default: ``false``).
-autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed contained. It requires the `user bind control` feature enabled in your Singularity installation (default: ``false``).
+autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Singularity installation (default: ``false``).
 cacheDir            The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
 pullTimeout         The amount of time the Singularity pull can last, exceeding which the process is terminated (default: ``20 min``).
 ================== ================
 
 
-Read :ref:`singularity-page` page to lean more how use Singularity containers with Nextflow.
+Read :ref:`singularity-page` page to learn more how use Singularity containers with Nextflow.
 
 .. _config-podman:
 
@@ -398,7 +401,7 @@ brackets, as shown below::
 
 
 
-Read :ref:`podman-page` page to lean more how use Podman containers with Nextflow.
+Read :ref:`podman-page` page to learn more how use Podman containers with Nextflow.
 
 .. _config-manifest:
 
@@ -414,7 +417,9 @@ Name                Description
 ================== ================
 author              Project author name (use a comma to separate multiple names).
 defaultBranch       Git repository default branch (default: ``master``).
+recurseSubmodules   Turn this flag to ``true`` to pull submodules recursively from the Git repository
 description         Free text describing the workflow project.
+doi                 Project related publication DOI identifier.
 homePage            Project home page URL.
 mainScript          Project main script (default: ``main.nf``).
 name                Project short name.
@@ -466,6 +471,7 @@ fields              Comma separated list of fields to be included in the report.
 file                Trace file name (default: ``trace.txt``).
 sep                 Character used to separate values in each row (default: ``\t``).
 raw                 When ``true`` turns on raw number report generation i.e. date and time are reported as milliseconds and memory as number of bytes
+overwrite           When ``true`` overwrites an existing trace file instead of rolling it.
 ================== ================
 
 The above options can be used by prefixing them with the ``trace`` scope or surrounding them by curly
@@ -495,7 +501,7 @@ to specify your bucket credentials. For example::
         region = '<REGION IDENTIFIER>'
     }
 
-Click the following link to lean more about `AWS Security Credentials <http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html>`_.
+Click the following link to learn more about `AWS Security Credentials <http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html>`_.
 
 Advanced client configuration options can be set by using the ``client`` attribute. The following properties can be used:
 
@@ -623,6 +629,7 @@ Name                Description
 ================== ================
 enabled             When ``true`` turns on the generation of the timeline report file (default: ``false``).
 file                Timeline file name (default: ``timeline.html``).
+overwrite           When ``true`` overwrites an existing timeline file instead of rolling it.
 ================== ================
 
 .. _config-mail:
@@ -698,6 +705,7 @@ Name                Description
 ================== ================
 enabled             If ``true`` it create the workflow execution report.
 file                The path of the created execution report file (default: ``report.html``).
+overwrite           When ``true`` overwrites existing report file instead of rolling it.
 ================== ================
 
 .. _config-weblog:
@@ -808,6 +816,8 @@ NXF_OFFLINE                 When ``true`` disables the project automatic downloa
 NXF_CLOUD_DRIVER            Defines the default cloud driver to be used if not specified in the config file or as command line option, either ``aws`` or ``google``.
 NXF_ANSI_LOG                Enables/disables ANSI console output (default ``true`` when ANSI terminal is detected).
 NXF_ANSI_SUMMARY            Enables/disables ANSI completion summary: `true|false` (default: print summary if execution last more than 1 minute).
+NXF_SCM_FILE                Defines the path location of the SCM config file (requires version ``20.10.0`` or later).
+NXF_PARAMS_FILE             Defines the path location of the pipeline parameters file (requires version ``20.10.0`` or later).
 JAVA_HOME                   Defines the path location of the Java VM installation used to run Nextflow.
 JAVA_CMD                    Defines the path location of the Java binary command used to launch Nextflow.
 HTTP_PROXY                  Defines the HTTP proxy server

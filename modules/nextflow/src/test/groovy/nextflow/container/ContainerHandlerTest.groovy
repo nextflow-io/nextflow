@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -107,6 +108,8 @@ class ContainerHandlerTest extends Specification {
         'foo.img'                  | 'docker://foo.img'
         'quay.io/busybox'          | 'docker://quay.io/busybox'
         'library://library/default/debian:7'    | 'library://library/default/debian:7'
+        'http://reg.io/v1/alpine:latest'        | 'http://reg.io/v1/alpine:latest'
+        'https://reg.io/v1/alpine:latest'       | 'https://reg.io/v1/alpine:latest'
     }
 
     def 'test singularity relative path exists' () {
@@ -224,5 +227,26 @@ class ContainerHandlerTest extends Specification {
         1 * handler.normalizeSingularityImageName(IMAGE) >> IMAGE
         1 * handler.createCache(_,IMAGE) >> '/some/path/foo.img'
         result == '/some/path/foo.img'
+    }
+
+    def 'should invoke singularity cache' () {
+        given:
+        def handler = Spy(ContainerHandler,constructorArgs:[[engine: 'singularity', enabled: true]])
+
+        when:
+        def result = handler.normalizeImageName(IMG)
+        then:
+        TIMES * handler.createCache(_, NORM) >> EXPECTED
+        
+        then:
+        result == EXPECTED
+
+        where:
+        IMG                     | NORM                  | TIMES | EXPECTED
+        'foo'                   | 'docker://foo'        | 1     | '/local/img/foo'
+        'library://foo:latest'  | 'library://foo:latest'| 1     | '/local/img/foo.img'
+        'http://bar:latest'     | 'http://bar:latest'   | 1     | '/local/http/foo.img'
+        'https://bar:latest'    | 'https://bar:latest'  | 1     | '/local/https/foo.img'
+        '/some/container.img'   | '/some/container.img' | 0     | '/some/container.img'
     }
 }

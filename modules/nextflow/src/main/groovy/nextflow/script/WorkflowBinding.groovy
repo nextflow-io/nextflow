@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +19,7 @@ package nextflow.script
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
 import nextflow.exception.IllegalInvocationException
 import nextflow.extension.OpCall
 import nextflow.extension.OperatorEx
@@ -27,6 +29,7 @@ import nextflow.extension.OperatorEx
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class WorkflowBinding extends Binding  {
 
@@ -63,6 +66,8 @@ class WorkflowBinding extends Binding  {
         return owner
     }
 
+    ScriptMeta getScriptMeta() { meta }
+
     @Override
     String toString() {
         "${this.getClass().getSimpleName()}[vars=${variables}]"
@@ -83,6 +88,7 @@ class WorkflowBinding extends Binding  {
     @Override
     Object invokeMethod(String name, Object args) {
         if( meta ) {
+            log.trace "Trying to invoke component: $name - args=${args}"
             final component = getComponent0(name)
             if( component ) {
                 checkScope0(component)

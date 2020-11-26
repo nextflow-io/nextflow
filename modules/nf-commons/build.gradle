@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,11 +27,12 @@ sourceSets {
 
 dependencies {
     compile "ch.qos.logback:logback-classic:1.1.11"
-    compile "org.codehaus.groovy:groovy:2.5.11"
-    compile "org.codehaus.groovy:groovy-nio:2.5.11"
+    compile "org.codehaus.groovy:groovy:3.0.5"
+    compile "org.codehaus.groovy:groovy-nio:3.0.5"
     compile "commons-lang:commons-lang:2.6"
     compile 'com.google.guava:guava:21.0'
 
-    /* testCompile inherited from top gradle build file */
+    /* testImplementation inherited from top gradle build file */
+    testImplementation(testFixtures(project(":nextflow")))
 }
 

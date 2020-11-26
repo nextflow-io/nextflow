@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +20,9 @@ package nextflow.scm
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
+import spock.lang.Timeout
 
+@Timeout(10)
 @IgnoreIf({System.getenv('NXF_SMOKE')})
 class BitbucketRepositoryProviderTest extends Specification {
 
@@ -57,5 +60,33 @@ class BitbucketRepositoryProviderTest extends Specification {
         then:
         result.trim().startsWith('#!/usr/bin/env nextflow')
 
+    }
+
+    @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
+    def 'should list tags' () {
+        given:
+        def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
+        def config = new ProviderConfig('bitbucket').setAuth(token)
+        and:
+        def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+
+        when:
+        def result = repo.getTags()
+        then:
+        result.contains( new RepositoryProvider.TagInfo('v1.1', '755ba829cbc4f28dcb3c16b9dcc1c49c7ee47ff5') )
+        result.contains( new RepositoryProvider.TagInfo('v1.0', '755ba829cbc4f28dcb3c16b9dcc1c49c7ee47ff5') )
+    }
+
+    def 'should list branches' () {
+        given:
+        def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')
+        def config = new ProviderConfig('bitbucket').setAuth(token)
+        and:
+        def repo = new BitbucketRepositoryProvider('pditommaso/tutorial', config)
+
+        when:
+        def result = repo.getBranches()
+        then:
+        result.contains( new RepositoryProvider.BranchInfo('test-branch', '755ba829cbc4f28dcb3c16b9dcc1c49c7ee47ff5') )
     }
 }

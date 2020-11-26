@@ -303,7 +303,7 @@ class OpCall implements Callable {
     protected Method getMethod0(String methodName, Object[] args) {
         def meta = owner.metaClass.getMetaMethod(methodName, args)
         if( meta == null )
-            throw new MissingMethodException(methodName, owner.getClass())
+            throw new MissingMethodException(methodName, owner.getClass(), args)
         method = owner.getClass().getMethod(methodName, meta.getNativeParameterTypes())
     }
 
@@ -315,11 +315,16 @@ class OpCall implements Callable {
 
     protected void checkDeprecation(Method method) {
         if( method.getAnnotation(Deprecated) ) {
-            log.warn "Operator `$methodName` is deprecated -- it will be removed in a future release"
+            def messg = "Operator `$methodName` is deprecated -- it will be removed in a future release"
+            if( NF.dsl2Final )
+                throw new DeprecationException(messg)
+            log.warn messg
         }
         else if( method.getAnnotation(DeprecatedDsl2) && NF.isDsl2() ) {
             def annot = method.getAnnotation(DeprecatedDsl2)
             def messg = annot.message() ?: "Operator `$methodName` is deprecated -- it will be removed in a future release".toString()
+            if( NF.dsl2Final )
+                throw new DeprecationException(messg)
             log.warn messg
         }
     }

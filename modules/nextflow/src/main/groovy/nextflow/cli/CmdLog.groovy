@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -298,7 +299,7 @@ class CmdLog extends CmdBase implements CacheBase {
                 path.withReader { reader ->
                     String line
                     while( (line=reader.readLine()) && c++<MAX_LINES ) {
-                        result << line
+                        result << line << '\n'
                     }
                 }
 

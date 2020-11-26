@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +19,7 @@ package nextflow.extension
 
 import nextflow.Channel
 import nextflow.Session
+import spock.lang.Retry
 import spock.lang.Specification
 
 /**
@@ -30,6 +32,8 @@ class DataflowMathExtensionTest extends Specification {
         new Session()
     }
 
+    Comparator makeComparator(Closure c) { c as Comparator }
+
     def 'should return the min value'() {
 
         expect:
@@ -37,7 +41,7 @@ class DataflowMathExtensionTest extends Specification {
         Channel.from("hello","hi","hey").min { it.size() } .val == "hi"
         Channel.from("hello","hi","hey").min { a,b -> a.size()<=>b.size() } .val == "hi"
         Channel.from("hello","hi","hey").min { a,b -> a.size()<=>b.size() } .val == "hi"
-        Channel.from("hello","hi","hey").min ({ a,b -> a.size()<=>b.size() } as Comparator) .val == "hi"
+        Channel.from("hello","hi","hey").min ( makeComparator({ a,b -> a.size()<=>b.size() }) ) .val == "hi"
 
     }
 
@@ -47,7 +51,7 @@ class DataflowMathExtensionTest extends Specification {
         Channel.from("hello","hi","hey").max { it.size() } .val == "hello"
         Channel.from("hello","hi","hey").max { a,b -> a.size()<=>b.size() } .val == "hello"
         Channel.from("hello","hi","hey").max { a,b -> a.size()<=>b.size() } .val == "hello"
-        Channel.from("hello","hi","hey").max ({ a,b -> a.size()<=>b.size() } as Comparator) .val == "hello"
+        Channel.from("hello","hi","hey").max (makeComparator {{ a,b -> a.size()<=>b.size() }}) .val == "hello"
 
     }
 
@@ -161,6 +165,7 @@ class DataflowMathExtensionTest extends Specification {
 
     }
 
+    @Retry
     def 'should return a random sample' () {
 
         when:

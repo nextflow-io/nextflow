@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,7 +54,7 @@ import sun.net.www.protocol.ftp.FtpURLConnection
 @CompileStatic
 abstract class XFileSystemProvider extends FileSystemProvider {
 
-    private Map<URI, FileSystem> fileSystemMap = [:]
+    private Map<URI, FileSystem> fileSystemMap = new LinkedHashMap<>(20)
 
     static public Set<String> ALL_SCHEMES = ['ftp','http','https'] as Set
 
@@ -76,9 +77,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         if (fileSystemMap.containsKey(base))
             throw new IllegalStateException("File system `$base` already exists")
 
-        def result = new XFileSystem(this, base)
-        fileSystemMap[base] = result
-        return result
+        return new XFileSystem(this, base)
     }
 
     /**
@@ -114,22 +113,28 @@ abstract class XFileSystemProvider extends FileSystemProvider {
     FileSystem getFileSystem(URI uri, boolean canCreate) {
         assert fileSystemMap != null
 
-        def scheme = uri.scheme.toLowerCase()
+        final scheme = uri.scheme.toLowerCase()
 
         if( scheme != this.getScheme() )
             throw new IllegalArgumentException("Not a valid ${getScheme().toUpperCase()} scheme: $scheme")
 
-        def key = key(uri)
+        final key = key(uri)
 
-        FileSystem result = fileSystemMap[key]
-        if( !result ) {
-            if( canCreate )
-                result = newFileSystem(uri,Collections.emptyMap())
-            else
+        if( !canCreate ) {
+            FileSystem result = fileSystemMap[key]
+            if( result==null )
                 throw new FileSystemNotFoundException("File system not found: $key")
+            return result
         }
 
-        return result
+        synchronized (fileSystemMap) {
+            FileSystem result = fileSystemMap[key]
+            if( result==null ) {
+                result = newFileSystem(uri,Collections.emptyMap())
+                fileSystemMap[key] = result
+            }
+            return result
+        }
     }
 
     @Override

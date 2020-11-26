@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -125,6 +126,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         this.traceFile = task.workDir.resolve(TaskRun.CMD_TRACE)
     }
 
+    protected String getJobId() { jobId }
 
     /**
      * @return An instance of {@link AwsOptions} holding Batch specific settings
@@ -544,8 +546,13 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         def container = new ContainerOverrides()
         container.command = getSubmitCommand()
         // set the task memory
-        if( task.config.getMemory() )
-            container.memory = (int)task.config.getMemory().toMega()
+        if( task.config.getMemory() ) {
+            final mega = (int)task.config.getMemory().toMega()
+            if( mega >= 4 )
+                container.memory = mega
+            else
+                log.warn "Ignoring task $bean.name memory directive: ${task.config.getMemory()} -- AWS Batch job memory request cannot be lower than 4 MB"
+        }
         // set the task cpus
         if( task.config.getCpus() > 1 )
             container.vcpus = task.config.getCpus()

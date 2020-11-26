@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2018, University of Tübingen, Quantitative Biology Center (QBiC)
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
@@ -142,7 +143,7 @@ class SimpleHttpClientTest extends Specification{
 
         when:
         def client = new SimpleHttpClient()
-        client.setAuthToken(TOKEN)
+        client.setBasicToken(TOKEN)
         client.setUserAgent(AGENT)
         client.sendHttpMessage( ENDPOINT, PAYLOAD )
         then:

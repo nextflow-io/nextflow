@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,7 +59,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     @Override
     String getEnvScript(Map environment, boolean container) {
         if( container )
-            throw new IllegalArgumentException("Parameter `wrapHandler` not supported by ${this.class.simpleName}")
+            throw new IllegalArgumentException("Parameter `container` not supported by ${this.class.simpleName}")
 
         final result = new StringBuilder()
         final copy = environment ? new HashMap<String,String>(environment) : Collections.<String,String>emptyMap()
@@ -94,7 +95,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     String stageInputFile( Path path, String targetName ) {
         // third param should not be escaped, because it's used in the grep match rule
         def stage_cmd = opts.maxTransferAttempts > 1
-                ? "downloads+=(\"nxf_s3_retry nxf_s3_download s3:/${Escape.path(path)} ${Escape.path(targetName)}\")"
+                ? "downloads+=(\"nxf_cp_retry nxf_s3_download s3:/${Escape.path(path)} ${Escape.path(targetName)}\")"
                 : "downloads+=(\"nxf_s3_download s3:/${Escape.path(path)} ${Escape.path(targetName)}\")"
         return stage_cmd
     }
@@ -105,21 +106,26 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     @Override
     String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
 
-        // collect all the expected names (pattern) for files to be un-staged
-        def result = []
-        def normalized = normalizeGlobStarPaths(outputFiles)
-
+        final patterns = normalizeGlobStarPaths(outputFiles)
         // create a bash script that will copy the out file to the working directory
-        log.trace "[AWS BATCH] Unstaging file path: $normalized"
-        if( normalized ) {
-            result << 'uploads=()'
-            normalized.each {
-                result << "uploads+=(\"nxf_s3_upload '${Escape.path(it)}' s3:/${Escape.path(targetDir)}\")" // <-- add true to avoid it stops on errors
-            }
-            result << 'nxf_parallel "${uploads[@]}"'
-        }
+        log.trace "[AWS BATCH] Unstaging file path: $patterns"
 
-        return result.join(separatorChar)
+        if( !patterns )
+            return null
+
+        final escape = new ArrayList(outputFiles.size())
+        for( String it : patterns )
+            escape.add( Escape.path(it) )
+
+        return """\
+            uploads=()
+            IFS=\$'\\n'
+            for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
+                uploads+=("nxf_s3_upload '\$name' s3:/${Escape.path(targetDir)}")
+            done
+            unset IFS
+            nxf_parallel "\${uploads[@]}"
+            """.stripIndent(true)
     }
 
     /**

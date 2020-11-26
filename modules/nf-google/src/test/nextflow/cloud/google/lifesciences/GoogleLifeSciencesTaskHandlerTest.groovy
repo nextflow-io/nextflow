@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -433,7 +434,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         and:
         def task = Mock(TaskRun)
         task.getProcessor() >> processor
-        task.getConfig() >> Mock(TaskConfig) { getMachineType() >> 'm1.large' }
+        task.getConfig() >> GroovyMock(TaskConfig) { getMachineType() >> 'm1.large' }
         and:
         def handler = Spy(GoogleLifeSciencesTaskHandler)
         handler.task = task

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -143,6 +144,11 @@ class Session implements ISession {
      * Mnemonic name of this run instance
      */
     String runName
+
+    /**
+     * Enable stub run mode
+     */
+    boolean stubRun
 
     /**
      * Folder(s) containing libs and classes to be added to the classpath
@@ -303,6 +309,9 @@ class Session implements ISession {
         // -- set the run name
         this.runName = config.runName ?: NameGenerator.next()
         log.debug "Run name: $runName"
+
+        // -- dry run
+        this.stubRun = config.stubRun
 
         // -- normalize taskConfig object
         if( config.process == null ) config.process = [:]
@@ -712,6 +721,7 @@ class Session implements ISession {
                 log.debug(status)
             // force termination
             notifyError(null)
+            ansiLogObserver?.forceTermination()
             executorFactory?.signalExecutors()
             processesBarrier.forceTermination()
             monitorsBarrier.forceTermination()

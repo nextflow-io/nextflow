@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -662,7 +663,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         processor.getConfig() >> new ProcessConfig(Mock(BaseScript))
         def task = Mock(TaskRun)
         task.getProcessor() >> processor
-        task.getConfig() >> Mock(TaskConfig)
+        task.getConfig() >> GroovyMock(TaskConfig)
         def proxy = Mock(AwsBatchProxy)
         def handler = Spy(AwsBatchTaskHandler)
         handler.@client = proxy

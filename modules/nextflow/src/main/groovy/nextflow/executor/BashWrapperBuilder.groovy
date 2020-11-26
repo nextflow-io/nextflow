@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -440,6 +441,10 @@ class BashWrapperBuilder {
         throw new IllegalArgumentException("Unknown container engine: $engine")
     }
 
+    protected boolean getAllowContainerMounts() {
+        return true
+    }
+
     /**
      * Build a {@link DockerBuilder} object to handle Docker commands
      *
@@ -457,16 +462,18 @@ class BashWrapperBuilder {
          * initialise the builder
          */
         // do not mount inputs when they are copied in the task work dir -- see #1105
-        if( stageInMode != 'copy' )
+        if( stageInMode != 'copy' && allowContainerMounts )
             builder.addMountForInputs(inputFiles)
 
-        builder.addMount(binDir)
+        if( allowContainerMounts )
+            builder.addMount(binDir)
 
         if(this.containerMount)
             builder.addMount(containerMount)
 
         // task work dir
-        builder.setWorkDir(workDir)
+        if( allowContainerMounts )
+            builder.setWorkDir(workDir)
 
         // set the name
         builder.setName('$NXF_BOXID')
@@ -514,6 +521,11 @@ class BashWrapperBuilder {
         if( containerOptions ) {
             builder.addRunOptions(containerOptions)
         }
+
+        // The current work directory should be mounted only when
+        // the task is executed in a temporary scratch directory (ie changeDir != null)
+        // Applying this strategy only to podman for now. See https://github.com/nextflow-io/nextflow/issues/1710
+        builder.addMountWorkDir( engine!='podman' || changeDir )
 
         builder.build()
         return builder

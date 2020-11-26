@@ -42,7 +42,7 @@ $NXF_CMD run nextflow-io/hello -name third --command hola > stdout
 [[ `grep -c 'DONE' stdout` == 1 ]] || false
 [[ `grep -c 'command: hola' stdout` == 1 ]] || false
 [[ `grep -c 'revision: master' stdout` == 1 ]] || false
-[[ `grep -c 'repository: https://github.com/nextflow-io/hello.git' stdout` == 1 ]] || false
+[[ `grep -c 'repository: https://github.com/nextflow-io/hello' stdout` == 1 ]] || false
 [[ `grep -c 'success: true' stdout` == 1 ]] || false
 [[ `grep -c 'exitStatus: 0' stdout` == 1 ]] || false
 [[ `grep -c 'runName: third' stdout` == 1 ]] || false

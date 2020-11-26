@@ -1,5 +1,5 @@
 #!/usr/bin/env nextflow
-nextflow.preview.dsl=2
+nextflow.enable.dsl=2
 
 /*
  * Defines pipeline parameters in order to specify the refence genomes
@@ -31,10 +31,10 @@ process mapping {
     input:
     path genome
     path index
-    tuple pair_id, path(reads)
+    tuple val(pair_id), path(reads)
  
     output:
-    tuple pair_id, path("tophat_out/accepted_hits.bam")
+    tuple val(pair_id), path("tophat_out/accepted_hits.bam")
  
     """
     tophat2 genome.index ${reads}
@@ -49,10 +49,10 @@ process makeTranscript {
     publishDir "results"
     
     input:
-    tuple pair_id, path(bam_file)
+    tuple val(pair_id), path(bam_file)
      
     output:
-    tuple pair_id, path('transcripts.gtf')
+    tuple val(pair_id), path('transcripts.gtf')
 
     """
     cufflinks ${bam_file}

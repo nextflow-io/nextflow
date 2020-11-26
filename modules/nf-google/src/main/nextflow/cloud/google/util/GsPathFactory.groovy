@@ -20,12 +20,12 @@ import java.nio.file.Path
 
 import com.google.cloud.storage.contrib.nio.CloudStorageConfiguration
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
+import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import groovy.transform.CompileStatic
 import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.google.lifesciences.GoogleLifeSciencesConfig
 import nextflow.file.FileSystemPathFactory
-
 /**
  * Implements FileSystemPathFactory interface for Google storage
  *
@@ -61,5 +61,13 @@ class GsPathFactory extends FileSystemPathFactory {
         return ( p==-1
                 ? CloudStorageFileSystem.forBucket(str, storageConfig).getPath('')
                 : CloudStorageFileSystem.forBucket(str.substring(0,p), storageConfig).getPath(str.substring(p)) )
+    }
+
+    @Override
+    protected String toUriString(Path path) {
+        if( path instanceof CloudStoragePath ) {
+            return "gs://${path.bucket()}$path".toString()
+        }
+        return null
     }
 }

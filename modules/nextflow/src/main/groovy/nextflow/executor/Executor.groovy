@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -102,6 +103,15 @@ abstract class Executor {
      */
     Path getWorkDir() {
        session.getWorkDir()
+    }
+
+    /**
+     * The path where project bin directory are stored
+     *
+     * @return The executor base bin directory
+     */
+    Path getBinDir() {
+       session.getBinDir()
     }
 
     @Memoized

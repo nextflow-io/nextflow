@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,12 +29,41 @@ import groovy.transform.Memoized
 @CompileStatic
 abstract class FileSystemPathFactory {
 
+    /**
+     * Converts path uri string to the corresponding {@link Path} object
+     *
+     * @param uri
+     *      A fully qualified path uri including the protocol scheme
+     * @return
+     *      A {@link Path} for the given path or {@code null} if protocol is unknown
+     */
     abstract protected Path parseUri(String uri)
 
+    /**
+     * Converts a {@link Path} object to a fully qualified uri string
+     *
+     * @param path
+     *      The {@link Path} object to be converted
+     * @return
+     *      The uri string corresponding to the specified path or {@code null}
+     *      if the no provider is found
+     */
+    abstract protected String toUriString(Path path)
+
     static Path parse(String uri) {
-        def factories = factories0()
+        final factories = factories0()
         for( int i=0; i<factories.size(); i++ ) {
             final result = factories[i].parseUri(uri)
+            if( result )
+                return result
+        }
+        return null
+    }
+
+    static String getUriString(Path path) {
+        final factories = factories0()
+        for( int i=0; i<factories.size(); i++ ) {
+            final result = factories[i].toUriString(path)
             if( result )
                 return result
         }

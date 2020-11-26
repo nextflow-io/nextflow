@@ -19,37 +19,17 @@ dependencies {
     defaultCfg project(':nf-tower')
     defaultCfg project(':nf-amazon')
     // Capsule manages the fat jar building process
-    capsule project(':my-capsule')
+    capsule 'io.nextflow:capsule:1.1.0'
+    capsule 'io.nextflow:capsule-maven:1.0.3.2'
     console project(':nf-console')
     ga4gh   project(':nf-ga4gh')
     google  project(':nf-google')
     amazon  project(':nf-amazon')
     // ignite module
-    ignite 'io.nextflow:nf-ignite:1.0.1'
+    ignite 'io.nextflow:nf-ignite:1.1.0'
     // legacy cloud support
     legacy 'io.nextflow:nf-legacy-cloud:1.0.1'
 }
-
-
-String bytesToHex(byte[] bytes) {
-    StringBuffer result = new StringBuffer();
-    for (byte byt : bytes) result.append(Integer.toString((byt & 0xff) + 0x100, 16).substring(1));
-    return result.toString();
-}
-
-task makeDigest { doLast {
-    byte[] digest
-    String  str = file('nextflow').text
-    // create sha1
-    digest = java.security.MessageDigest.getInstance("SHA1").digest(str.getBytes())
-    file('nextflow.sha1').text = new BigInteger(1, digest).toString(16) + '\n'
-    // create sha-256
-    digest = java.security.MessageDigest.getInstance("SHA-256").digest(str.getBytes())
-    file('nextflow.sha256').text = bytesToHex(digest) + '\n'
-    // create md5
-    digest = java.security.MessageDigest.getInstance("MD5").digest(str.getBytes())
-    file('nextflow.md5').text = bytesToHex(digest) + '\n'
-}}
 
 
 ext.mainClassName = 'nextflow.cli.Launcher'
@@ -118,7 +98,7 @@ protected coordinates( it ) {
  * Default nextflow package. It contains the capsule loader
  */
 task packOne(type: Jar) {
-    dependsOn ':my-capsule:jar', configurations.defaultCfg
+    dependsOn configurations.capsule, configurations.defaultCfg
     archiveName = "nextflow-${version}-one.jar"
 
     from (configurations.capsule.collect { zipTree(it) })
@@ -127,7 +107,7 @@ task packOne(type: Jar) {
     def deps = resolveDeps('defaultCfg')
 
     manifest.attributes(
-                'Main-Class'        : 'CapsuleLoader',
+                'Main-Class'        : 'NextflowLoader',
                 'Application-Name'  : 'nextflow',
                 'Application-Class' : mainClassName,
                 'Application-Version': version,
@@ -190,7 +170,7 @@ task packOne(type: Jar) {
 }
 
 task packAll(type: Jar) {
-    dependsOn ':my-capsule:jar', configurations.defaultCfg
+    dependsOn configurations.capsule, configurations.defaultCfg
     archiveName = "nextflow-${version}-all.jar"
 
     from jar // embed our application jar
@@ -198,16 +178,22 @@ task packAll(type: Jar) {
     from (configurations.capsule.collect { zipTree(it) })
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     
-    manifest.attributes( 'Main-Class'        : 'CapsuleLoader',
+    manifest.attributes( 'Main-Class'        : 'NextflowLoader',
                           'Application-Name'  : 'nextflow-all',
                           'Application-Class' : mainClassName,
                           'Application-Version': version,
                           'Min-Java-Version'  : '1.8.0'
                           )
 
-    manifest.attributes('Main-Class': 'CapsuleLoader', 'amazon')
-    manifest.attributes('Main-Class': 'CapsuleLoader', 'google')
-    manifest.attributes('Main-Class': 'CapsuleLoader', 'ignite')
+    manifest.attributes('Main-Class': 'NextflowLoader', 'amazon')
+    manifest.attributes('Main-Class': 'NextflowLoader', 'google')
+    manifest.attributes('Main-Class': 'NextflowLoader', 'ignite')
+
+    if( project.hasProperty('GA4GH') ) {
+        println "The build will include GA4GH dependencies."
+        from(configurations.ga4gh)
+        manifest.attributes('Main-Class': 'CapsuleLoader', 'ga4gh')
+    }
 
     doLast {
         file(releaseDir).mkdir()
@@ -235,7 +221,7 @@ task pack( dependsOn: [packOne, packAll]) {
 }
 
 
-task deploy( type: Exec, dependsOn: [clean, compile, pack, makeDigest]) {
+task deploy( type: Exec, dependsOn: [clean, compile, pack]) {
 
     def temp = File.createTempFile('upload',null)
     temp.deleteOnExit()

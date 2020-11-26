@@ -1,5 +1,5 @@
 #!/usr/bin/env nextflow
-nextflow.preview.dsl=2
+nextflow.enable.dsl=2
 
 params.db = "$baseDir/blast-db/tiny"
 params.query = "$baseDir/data/sample.fa"
@@ -24,7 +24,7 @@ process sort {
     path 'hits_*'
 
     output:
-    stdout()
+    stdout
 
     """
     sort hits_*

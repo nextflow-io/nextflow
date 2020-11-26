@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,8 +17,7 @@
 
 package nextflow.extension
 
-import org.codehaus.groovy.runtime.InvokerHelper
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING
+import static java.nio.file.StandardCopyOption.*
 
 import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
@@ -42,6 +42,7 @@ import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.FromString
 import groovy.util.logging.Slf4j
 import nextflow.file.FileHelper
+import nextflow.file.FileSystemPathFactory
 import nextflow.io.ByteBufferBackedInputStream
 import nextflow.util.CharsetHelper
 import nextflow.util.CheckHelper
@@ -1491,11 +1492,10 @@ class FilesEx {
             return path.toString()
         if( scheme == 's3' )
             return "$scheme:/$path".toString()
-        if( scheme == 'gs' ) {
-            final bucket = InvokerHelper.invokeMethod(path, 'bucket', InvokerHelper.EMPTY_ARGS)
-            return "$scheme://$bucket$path".toString()
-        }
-        return path.toUri().toString()
+        // resolve via extension mechanism
+        final result = FileSystemPathFactory.getUriString(path)
+        // // fallback on default uri parsing
+        return result ?: path.toUri().toString()
     }
 
     static String getScheme(Path path) {

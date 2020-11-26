@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -83,7 +84,7 @@ class CondaCacheTest extends Specification {
               - star=2.5.4a
               - bwa=0.7.15        
             '''
-            .stripIndent()
+            .stripIndent(true)  // https://issues.apache.org/jira/browse/GROOVY-9423
 
         when:
         def prefix = cache.condaPrefixPath(ENV.toString())
@@ -113,7 +114,7 @@ class CondaCacheTest extends Specification {
               - star=2.5.4a
               - bwa=0.7.15        
             '''
-                .stripIndent()
+                .stripIndent(true)
 
         when:
         def prefix = cache.condaPrefixPath(ENV.toString())
@@ -136,7 +137,7 @@ class CondaCacheTest extends Specification {
                 bwa=0.7.15   
                 multiqc=1.2.3
                 '''
-                .stripIndent()
+                .stripIndent(true)  // https://issues.apache.org/jira/browse/GROOVY-9423
 
         when:
         def prefix = cache.condaPrefixPath(ENV.toString())
@@ -180,8 +181,9 @@ class CondaCacheTest extends Specification {
 
         when:
         // the prefix directory exists ==> no conda command is executed
-        def result = cache.createLocalCondaEnv0(ENV,PREFIX)
+        def result = cache.createLocalCondaEnv(ENV)
         then:
+        1 * cache.condaPrefixPath(ENV) >> PREFIX
         0 * cache.isYamlFilePath(ENV)
         0 * cache.runCommand(_)
         result == PREFIX

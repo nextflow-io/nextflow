@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +18,7 @@
 package nextflow.container
 
 import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
@@ -27,9 +29,9 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.LazyDataflowVariable
 import nextflow.Global
+import nextflow.file.FileMutex
 import nextflow.util.Duration
 import nextflow.util.Escape
-import nextflow.file.FileMutex
 /**
  * Handle caching of remote Singularity images
  *
@@ -159,6 +161,11 @@ class SingularityCache {
         getCacheDir().resolve( simpleName(imageUrl) )
     }
 
+    @PackageScope
+    Path getTempImagePath(Path targetPath) {
+        targetPath.resolveSibling("${targetPath.name}.pulling.${System.currentTimeMillis()}")
+    }
+
     /**
      * Run the singularity tool to pull a remote image and store in the file system.
      * Requires singularity 2.3.x or later.
@@ -169,6 +176,12 @@ class SingularityCache {
     @PackageScope
     Path downloadSingularityImage(String imageUrl) {
         final localPath = localImagePath(imageUrl)
+
+        if( localPath.exists() ) {
+            log.debug "Singularity found local store for image=$imageUrl; path=$localPath"
+            return localPath
+        }
+
         final file = new File("${localPath.parent}/.${localPath.name}.lock")
         final wait = "Another Nextflow instance is pulling the Singularity image $imageUrl -- please wait the download completes"
         final err =  "Unable to acquire exclusive lock after $pullTimeout on file: $file"
@@ -186,32 +199,37 @@ class SingularityCache {
 
 
     @PackageScope
-    Path downloadSingularityImage0(String imageUrl, Path localPath) {
+    Path downloadSingularityImage0(String imageUrl, Path targetPath) {
 
-        if( localPath.exists() ) {
-            log.debug "Singularity found local store for image=$imageUrl; path=$localPath"
-            return localPath
+        if( targetPath.exists() ) {
+            // If we're here we're an additional process that has waited for the pulling
+            // before we got the mutex to advance here.
+            log.debug "Singularity found local store for image=$imageUrl; path=$targetPath"
+            return targetPath
         }
         log.trace "Singularity pulling remote image `$imageUrl`"
 
         if( missingCacheDir )
-            log.warn1 "Singularity cache directory has not been defined -- Remote image will be stored in the path: $localPath.parent -- Use env variable NXF_SINGULARITY_CACHEDIR to specify a different location"
+            log.warn1 "Singularity cache directory has not been defined -- Remote image will be stored in the path: $targetPath.parent -- Use env variable NXF_SINGULARITY_CACHEDIR to specify a different location"
 
-        log.info "Pulling Singularity image $imageUrl [cache $localPath]"
+        log.info "Pulling Singularity image $imageUrl [cache $targetPath]"
 
+        // Construct a temporary name for the image file
+        final tmpFile = getTempImagePath(targetPath)
         final noHttpsOption = (config.noHttps)? '--nohttps' : ''
 
-        String cmd = "singularity pull ${noHttpsOption} --name ${Escape.path(localPath.getFileName())} $imageUrl > /dev/null"
+        String cmd = "singularity pull ${noHttpsOption} --name ${Escape.path(tmpFile.name)} $imageUrl > /dev/null"
         try {
-            runCommand( cmd, localPath.parent )
-            log.debug "Singularity pull complete image=$imageUrl path=$localPath"
+            runCommand( cmd, tmpFile.parent )
+            Files.move( tmpFile, targetPath )
+            log.debug "Singularity pull complete image=$imageUrl path=$targetPath"
         }
         catch( Exception e ){
             // clean-up to avoid to keep eventually corrupted image file
-            localPath.delete()
+            tmpFile.delete()
             throw e
         }
-        return localPath
+        return targetPath
     }
 
     @PackageScope

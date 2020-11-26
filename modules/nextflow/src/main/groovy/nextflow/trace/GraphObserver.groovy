@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +16,8 @@
  */
 
 package nextflow.trace
+
+import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.PackageScope
@@ -47,13 +50,14 @@ class GraphObserver implements TraceObserver {
 
     private String format
 
+    boolean overwrite
+
     String getFormat() { format }
 
     String getName() { name }
 
     GraphObserver( Path file ) {
         assert file
-        file.rollFile()
         this.file = file
         this.name = file.baseName
         this.format = file.getExtension().toLowerCase() ?: 'dot'
@@ -69,6 +73,10 @@ class GraphObserver implements TraceObserver {
         // -- normalise the DAG
         dag.normalize()
         // -- render it to a file
+        if( overwrite )
+            Files.deleteIfExists(file)
+        else
+            file.rollFile()
         createRender().renderDocument(dag,file)
     }
 

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +19,7 @@ package nextflow.cloud.google
 
 import java.nio.file.Paths
 
+import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import spock.lang.Specification
 
 import java.nio.file.FileSystem
@@ -70,5 +72,9 @@ abstract class GoogleSpecification extends Specification {
     }
 
 
+    static CloudStoragePath gsPath(String path) {
+        assert path.startsWith('gs://')
+        (CloudStoragePath) Paths.get( new URI(null,null,path,null,null))
+    }
 
 }

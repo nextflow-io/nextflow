@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -62,22 +63,8 @@ class BashWrapperBuilderS3Test extends Specification {
                   '''.stripIndent().rightTrim()
 
         binding.helpers_script == '''\
-            # aws helper
-            nxf_s3_upload() {
-                local pattern=$1
-                local s3path=$2
-                IFS=$'\\n\'
-                for name in $(eval "ls -1d $pattern");do
-                  if [[ -d "$name" ]]; then
-                    aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
-                  else
-                    aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
-                  fi
-                done
-                unset IFS
-            }
-            
-            nxf_s3_retry() {
+            # bash helper functions
+            nxf_cp_retry() {
                 local max_attempts=1
                 local timeout=10
                 local attempt=0
@@ -100,18 +87,6 @@ class BashWrapperBuilderS3Test extends Specification {
                 done
             }
             
-            nxf_s3_download() {
-                local source=$1
-                local target=$2
-                local file_name=$(basename $1)
-                local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
-                if [[ $is_dir == 1 ]]; then
-                    aws s3 cp --only-show-errors --recursive "$source" "$target"
-                else 
-                    aws s3 cp --only-show-errors "$source" "$target"
-                fi
-            }
-            
             nxf_parallel() {
                 IFS=$'\\n\'
                 local cmd=("$@")
@@ -124,24 +99,47 @@ class BashWrapperBuilderS3Test extends Specification {
                 while ((i<${#cmd[@]})); do
                     local copy=()
                     for x in "${pid[@]}"; do
-                      [[ -e /proc/$x ]] && copy+=($x) 
+                      [[ -e /proc/$x ]] && copy+=($x)
                     done
                     pid=("${copy[@]}")
             
-                    if ((${#pid[@]}>=$max)); then 
-                      sleep 1 
-                    else 
+                    if ((${#pid[@]}>=$max)); then
+                      sleep 1
+                    else
                       eval "${cmd[$i]}" &
                       pid+=($!)
                       ((i+=1))
-                    fi 
+                    fi
                 done
                 ((${#pid[@]}>0)) && wait ${pid[@]}
                 )
                 unset IFS
             }
             
-            '''.stripIndent()
+            # aws helper
+            nxf_s3_upload() {
+                local name=$1
+                local s3path=$2
+                if [[ -d "$name" ]]; then
+                  aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                else
+                  aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                fi
+            }
+            
+            nxf_s3_download() {
+                local source=$1
+                local target=$2
+                local file_name=$(basename $1)
+                local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                if [[ $is_dir == 1 ]]; then
+                    aws s3 cp --only-show-errors --recursive "$source" "$target"
+                else 
+                    aws s3 cp --only-show-errors "$source" "$target"
+                fi
+            }
+            
+            '''.stripIndent(true)
     }
 
 

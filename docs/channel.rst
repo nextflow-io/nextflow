@@ -96,13 +96,17 @@ The available factory methods are:
 * `value`_
 * `watchPath`_
 
+.. tip::
+  As of version 20.07.0 the prefix ``channel.`` has been introduced as an alias of ``Channel.``, therefore factory
+  methods can be used either with the syntaxes ``channel.from()`` and ``Channel.from()``, and so on.
+
 .. _channel-create:
 
 create
 ------
 
 .. warning::
-    This method is deprecated.
+    This method is deprecated and won't be available in DSL2 syntax.
 
 Creates a new `channel` by using the ``create`` method, as shown below::
 
@@ -159,7 +163,9 @@ See also: `fromList`_ factory method.
 from
 ----
 
-.. warning:: This method is deprecated. Use `of`_ or `fromList`_ instead.
+.. warning::
+  This method is deprecated and should only be used for backward compatibility in legacy code.
+  Use `of`_ or `fromList`_ instead.
 
 The ``from`` method allows you to create a channel emitting any sequence of values that are specified as the method argument,
 for example::
@@ -233,10 +239,10 @@ for example::
 
 Prints::
 
-    a
-    b
-    c
-    d
+    value: a
+    value: b
+    value: c
+    value: d
 
 
 See also: `of`_ factory method.
@@ -334,7 +340,7 @@ pair and the second element is the list of files (sorted in lexicographical orde
 
     Channel
         .fromFilePairs('/my/data/SRR*_{1,2}.fastq')
-        .println()
+        .view()
 
 It will produce an output similar to the following::
 
@@ -355,7 +361,7 @@ For example::
 
     Channel
         .fromFilePairs('/some/data/*', size: -1) { file -> file.extension }
-        .println { ext, files -> "Files with the extension $ext are $files" }
+        .view { ext, files -> "Files with the extension $ext are $files" }
 
 
 Table of optional parameters available:
@@ -389,7 +395,7 @@ the FASTQ files matching the specified criteria i.e project or accession number(
 
     Channel
         .fromSRA('SRP043510')
-        .println()
+        .view()
 
 
 It returns::
@@ -407,7 +413,7 @@ Multiple accession IDs can be specified using a list object::
     ids = ['ERR908507', 'ERR908506', 'ERR908505']
     Channel
         .fromSRA(ids)
-        .println()
+        .view()
 
 ::
 

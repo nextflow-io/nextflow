@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +16,7 @@
  */
 
 package nextflow.cloud.google.lifesciences
+
 
 import nextflow.cloud.google.GoogleSpecification
 import nextflow.processor.TaskBean
@@ -45,7 +47,9 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         then:
         result == '''\
                 echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
-                gsutil -m -q cp gs://my-bucket/bar/foo.txt /work/xx/yy/foo.txt
+                downloads=()
+                downloads+=("nxf_gs_download gs://my-bucket/bar/foo.txt foo.txt ")
+                nxf_parallel "${downloads[@]}"
                 '''.stripIndent()
 
         // file with a different name
@@ -55,7 +59,9 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         then:
         result == '''\
                 echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
-                gsutil -m -q cp gs://my-bucket/bar/foo.txt /work/xx/yy/hola.txt
+                downloads=()
+                downloads+=("nxf_gs_download gs://my-bucket/bar/foo.txt hola.txt ")
+                nxf_parallel "${downloads[@]}"
                 '''.stripIndent()
 
         // file name with blanks
@@ -65,7 +71,9 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         then:
         result == '''\
                 echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
-                gsutil -m -q cp gs://my-bucket/bar/f\\ o\\ o.txt /work/xx/yy/f\\ o\\ o.txt
+                downloads=()
+                downloads+=("nxf_gs_download gs://my-bucket/bar/f\\ o\\ o.txt f\\ o\\ o.txt ")
+                nxf_parallel "${downloads[@]}"
                 '''.stripIndent()
 
         // file in a sub-directory
@@ -75,30 +83,11 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         then:
         result == '''\
                 echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
-                mkdir -p /work/xx/yy/subdir
-                gsutil -m -q cp gs://my-bucket/bar/foo.txt /work/xx/yy/subdir/foo.txt
+                downloads=()
+                downloads+=("nxf_gs_download gs://my-bucket/bar/foo.txt subdir/foo.txt ")
+                nxf_parallel "${downloads[@]}"
                 '''.stripIndent()
 
-        // file a directory name
-        when:
-        inputs = ['dir1': mockGsPath('gs://my-bucket/foo/dir1', true)]
-        result = strategy.getStageInputFilesScript(inputs)
-        then:
-        result == '''\
-                echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
-                gsutil -m -q cp -R gs://my-bucket/foo/dir1 /work/xx/yy
-                '''.stripIndent()
-
-        // stage file is a directory with a different name
-        when:
-        inputs = ['dir2': mockGsPath('gs://my-bucket/foo/dir1', true)]
-        result = strategy.getStageInputFilesScript(inputs)
-        then:
-        result == '''\
-                echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
-                gsutil -m -q cp -R gs://my-bucket/foo/dir1 /work/xx/yy
-                mv /work/xx/yy/dir1 /work/xx/yy/dir2
-                '''.stripIndent()
     }
 
     def 'create stage files using Requester Pays' () {
@@ -121,7 +110,9 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         then:
         result == '''\
                 echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
-                gsutil -m -q -u foo cp gs://my-bucket/bar/foo.txt /work/xx/yy/foo.txt
+                downloads=()
+                downloads+=("nxf_gs_download gs://my-bucket/bar/foo.txt foo.txt foo")
+                nxf_parallel "${downloads[@]}"
                 '''.stripIndent()
 
         // file a directory name
@@ -131,15 +122,18 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         then:
         result == '''\
                 echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
-                gsutil -m -q -u foo cp -R gs://my-bucket/foo/dir1 /work/xx/yy
+                downloads=()
+                downloads+=("nxf_gs_download gs://my-bucket/foo/dir1 dir1 foo")
+                nxf_parallel "${downloads[@]}"
                 '''.stripIndent()
 
     }
 
     def 'should unstage files' () {
         given:
+        def WORK = gsPath('gs://my-bucket/work/xx/yy')
         def bean = Mock(TaskBean) {
-            getWorkDir() >> mockGsPath('gs://my-bucket/work/xx/yy')
+            getWorkDir() >> WORK
         }
         def handler = Mock(GoogleLifeSciencesTaskHandler) {
             getExecutor() >> Mock(GoogleLifeSciencesExecutor) {
@@ -150,18 +144,32 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         def strategy = new GoogleLifeSciencesFileCopyStrategy(bean, handler)
 
         when:
-        def result = strategy.getUnstageOutputFilesScript(['foo.txt'], mockGsPath('gs://other/dir'))
+        def result = strategy.getUnstageOutputFilesScript(['foo.txt', 'dirx/'], gsPath('gs://other/dir'))
         then:
-        result == '''\
-                IFS=$'\\n'; for name in $(eval "ls -1d foo.txt" 2>/dev/null);do gsutil -m -q cp -R $name gs://other/dir/\$name; done; unset IFS
+        result ==
+                '''\
+                uploads=()
+                IFS=$'\\n'
+                for name in $(eval "ls -1d foo.txt dirx" | sort | uniq); do
+                    uploads+=("nxf_gs_upload '$name' gs://other/dir")
+                done
+                unset IFS
+                nxf_parallel "${uploads[@]}"
                 '''
                 .stripIndent()
 
         when:
-        result = strategy.getUnstageOutputFilesScript(['fo o.txt'], mockGsPath('gs://other/dir x/'))
+        result = strategy.getUnstageOutputFilesScript(['fo o.txt'], gsPath('gs://other/dir x/'))
         then:
-        result == '''\
-                IFS=$'\\n'; for name in $(eval "ls -1d fo\\ o.txt" 2>/dev/null);do gsutil -m -q cp -R $name gs://other/dir\\ x/\$name; done; unset IFS
+        result ==
+                '''\
+                uploads=()
+                IFS=$'\\n'
+                for name in $(eval "ls -1d fo\\ o.txt" | sort | uniq); do
+                    uploads+=("nxf_gs_upload '$name' gs://other/dir\\ x")
+                done
+                unset IFS
+                nxf_parallel "${uploads[@]}"
                 '''
                 .stripIndent()
 
@@ -227,29 +235,5 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
             '''.stripIndent()
     }
 
-
-    def 'should validate copy many' () {
-        given:
-        def handler = Mock(GoogleLifeSciencesTaskHandler) {
-            getExecutor() >> Mock(GoogleLifeSciencesExecutor) { getConfig() >> Mock(GoogleLifeSciencesConfig) }
-        }
-        def strategy = new GoogleLifeSciencesFileCopyStrategy(Mock(TaskBean), handler)
-
-        when:
-        def ret1 = strategy.copyMany('file.txt', mockGsPath('gs://foo/bar'))
-        then:
-        ret1 == 'IFS=$\'\\n\'; for name in $(eval "ls -1d file.txt" 2>/dev/null);do gsutil -m -q cp -R $name gs://foo/bar/$name; done; unset IFS'
-
-        when:
-        def ret2 = strategy.copyMany('file name', mockGsPath('gs://foo/bar'))
-        then:
-        ret2 == 'IFS=$\'\\n\'; for name in $(eval "ls -1d file\\ name" 2>/dev/null);do gsutil -m -q cp -R $name gs://foo/bar/$name; done; unset IFS'
-
-        when:
-        def ret3 = strategy.copyMany('dir-name/', mockGsPath('gs://foo/bar'))
-        then:
-        ret3 == 'IFS=$\'\\n\'; for name in $(eval "ls -1d dir-name" 2>/dev/null);do gsutil -m -q cp -R $name gs://foo/bar/$name; done; unset IFS'
-
-
-    }
+    
 }

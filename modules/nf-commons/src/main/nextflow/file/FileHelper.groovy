@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -852,7 +853,7 @@ class FileHelper {
     }
 
     /**
-     * Move a path to a target destination. It handles file or directory both to a local
+     * Copy a path to a target destination. It handles file or directory both to a local
      * or to a foreign file system.
      *
      * @param source

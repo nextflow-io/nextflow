@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,21 +42,29 @@ class GraphvizRenderer implements DagRenderer {
      * See http://www.graphviz.org for more info.
      */
     @Override
-    void renderDocument(DAG dag, Path file) {
+    void renderDocument(DAG dag, Path target) {
+        def result = Files.createTempFile('nxf-',".$format")
         def temp = Files.createTempFile('nxf-','.dot')
         // save the DAG as `dot` to a temp file
         temp.text = new DotRenderer(name).renderNetwork(dag)
 
-        final cmd = "command -v dot &>/dev/null || exit 128 && dot -T${format} ${temp} > ${file}"
-        final exitStatus = ["bash","-c", cmd].execute().waitFor()
+        final cmd = "command -v dot &>/dev/null || exit 128 && dot -T${format} ${temp} > ${result}"
+        final process = new ProcessBuilder().command("bash","-c", cmd).redirectErrorStream(true).start()
+        final exitStatus = process.waitFor()
         if( exitStatus == 128 ) {
-            file = file.resolveSibling( "${file.baseName}.dot" )
-            temp.moveTo(file)
+            target = target.resolveSibling( "${target.baseName}.dot" )
+            temp.copyTo(target)
             log.warn "To render the execution DAG in the required format it is required to install Graphviz -- See http://www.graphviz.org for more info."
         }
         else if( exitStatus>0 ) {
-            log.debug("Graphviz error -- command `$cmd` -- exit status: $exitStatus")
-            log.warn "Failed to render DAG file: $file"
+            log.debug("Graphviz error -- command `$cmd` -- exit status: $exitStatus\n${process.text?.indent()}")
+            log.warn "Failed to render DAG file: $target"
         }
+        else {
+            result.copyTo(target)
+        }
+
+        Files.deleteIfExists(temp)
+        Files.deleteIfExists(result)
     }
 }

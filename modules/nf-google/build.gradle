@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2019, Google Inc
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,4 +29,6 @@ dependencies {
     compile 'com.google.apis:google-api-services-lifesciences:v2beta-rev20191030-1.30.3'
     compile 'com.google.cloud:google-cloud-nio:0.120.0-alpha'
     compile 'com.google.auth:google-auth-library-oauth2-http:0.18.0'
+
+    testImplementation(testFixtures(project(":nextflow")))
 }

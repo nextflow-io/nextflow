@@ -70,14 +70,30 @@ class GoogleLifeSciencesExecutor extends Executor {
             throw new AbortOperationException("Executor `google-lifesciences` requires a Google Storage bucket to be specified as a working directory -- Add the option `-w gs://<your-bucket/path>` to your run command line or specify a workDir in your config file")
         }
 
-        def credsFile = env.get('GOOGLE_APPLICATION_CREDENTIALS')
-        final projectId = GoogleLifeSciencesConfig.getProjectIdFromCreds(credsFile)
+        // Typically the credentials picked up are the "Application Default Credentials"
+        // as described at:
+        //   https://github.com/googleapis/google-auth-library-java
+        //
+        // In that case, the project ID needs to be set in the nextflow config file.
+
+        // If instead, the GOOGLE_APPLICATION_CREDENTIALS environment variable is set,
+        // then the project ID will be picked up (along with the credentials) from the
+        // JSON file that environment variable points to.
 
         config = GoogleLifeSciencesConfig.fromSession(session)
-        if( !config.project )
-            config.project = projectId
-        else if( config.project != projectId )
-            throw new AbortOperationException("Project Id `$config.project` declared in the nextflow config file does not match the one expected by credentials file: $credsFile")
+
+        def projectId
+        def credsFile = env.get('GOOGLE_APPLICATION_CREDENTIALS')
+        if( credsFile && (projectId = GoogleLifeSciencesConfig.getProjectIdFromCreds(credsFile)) ) {
+            if( !config.project )
+                config.project = projectId
+            else if( config.project != projectId )
+                throw new AbortOperationException("Project Id `$config.project` declared in the nextflow config file does not match the one expected by credentials file: $credsFile")
+        }
+
+        if( !config.project ) {
+            throw new AbortOperationException("Missing Google project Id -- Specify it adding the setting `google.project='your-project-id'` in the nextflow.config file")
+        }
 
         if( session.binDir && !config.disableBinDir ) {
             final cloudPath = getTempDir()
@@ -108,7 +124,5 @@ class GoogleLifeSciencesExecutor extends Executor {
     protected GoogleLifeSciencesHelper getHelper() { return helper }
 
     protected GoogleLifeSciencesConfig getConfig() { return config }
-
-
 
 }

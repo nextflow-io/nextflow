@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,10 +48,10 @@ class UdockerBuilderTest extends Specification {
         def quotes =  [ Paths.get('/folder with blanks/A'), Paths.get('/folder with blanks/B') ]
 
         expect:
-        builder.makeVolumes([]).toString() == '-v "$PWD":"$PWD"'
-        builder.makeVolumes(files).toString() == '-v /folder:/folder -v "$PWD":"$PWD"'
-        builder.makeVolumes(real).toString()  == '-v /user/yo/nextflow:/user/yo/nextflow -v /db/pdb/local/data:/db/pdb/local/data -v "$PWD":"$PWD"'
-        builder.makeVolumes(quotes).toString() == '-v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v "$PWD":"$PWD"'
+        builder.makeVolumes([]).toString() == '-v "$PWD":"$PWD" '
+        builder.makeVolumes(files).toString() == '-v /folder:/folder -v "$PWD":"$PWD" '
+        builder.makeVolumes(real).toString()  == '-v /user/yo/nextflow:/user/yo/nextflow -v /db/pdb/local/data:/db/pdb/local/data -v "$PWD":"$PWD" '
+        builder.makeVolumes(quotes).toString() == '-v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v "$PWD":"$PWD" '
 
     }
 

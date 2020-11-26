@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,8 +49,9 @@ allprojects {
     apply plugin: 'java'
     apply plugin: 'java-test-fixtures'
     apply plugin: 'idea'
+    apply plugin: 'groovy'
 
-    version = new File('VERSION').text.trim()
+    version = rootProject.file('VERSION').text.trim()
     group = 'io.nextflow'
 
     sourceCompatibility = 1.8
@@ -75,15 +77,6 @@ allprojects {
     }
 
     dependencies {
-        // test configuration
-
-        testFixturesCompile ("org.codehaus.groovy:groovy-test:2.5.11") { exclude group: 'org.codehaus.groovy' }
-        testFixturesCompile ("cglib:cglib-nodep:2.2")
-        testFixturesCompile ("org.objenesis:objenesis:2.1")
-        testFixturesCompile ("org.spockframework:spock-core:1.3-groovy-2.5") { exclude group: 'org.codehaus.groovy' }
-        testFixturesCompile 'com.google.jimfs:jimfs:1.1'
-
-
         // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sec:module_replacement
         modules {
             module("commons-logging:commons-logging") { replacedBy("org.slf4j:jcl-over-slf4j") }
@@ -91,10 +84,14 @@ allprojects {
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:1.11'
-        groovyDoc "org.codehaus.groovy:groovy-groovydoc:2.5.11"
-        groovyDoc "org.codehaus.groovy:groovy-ant:2.5.11"
+        groovyDoc "org.codehaus.groovy:groovy-groovydoc:3.0.5"
+        groovyDoc "org.codehaus.groovy:groovy-ant:3.0.5"
     }
 
+    test {
+        useJUnitPlatform()
+    }
+    
     // this is required due to this IDEA bug
     // https://youtrack.jetbrains.com/issue/IDEA-129282
     sourceSets {
@@ -132,7 +129,6 @@ allprojects {
                     '--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED',
                     '--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED',
                     '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED',
-                    '--add-modules=java.xml.bind,java.activation',
             ])
         }
     }
@@ -315,11 +311,33 @@ configure(deployable) {
     signArchives.onlyIf { enableSignArchives }
 }
 
-task upload {
-    dependsOn compile
-    dependsOn deployable.uploadArchives
+
+String bytesToHex(byte[] bytes) {
+    StringBuffer result = new StringBuffer();
+    for (byte byt : bytes) result.append(Integer.toString((byt & 0xff) + 0x100, 16).substring(1));
+    return result.toString();
 }
 
+task makeDigest { doLast {
+    byte[] digest
+    String  str = file('nextflow').text
+    // create sha1
+    digest = java.security.MessageDigest.getInstance("SHA1").digest(str.getBytes())
+    file('nextflow.sha1').text = new BigInteger(1, digest).toString(16) + '\n'
+    // create sha-256
+    digest = java.security.MessageDigest.getInstance("SHA-256").digest(str.getBytes())
+    file('nextflow.sha256').text = bytesToHex(digest) + '\n'
+    // create md5
+    digest = java.security.MessageDigest.getInstance("MD5").digest(str.getBytes())
+    file('nextflow.md5').text = bytesToHex(digest) + '\n'
+}}
+
+
+task upload {
+    dependsOn compile
+    dependsOn makeDigest
+    dependsOn deployable.uploadArchives
+}
 
 /*
  * Configure Nextflow staging plugin -- https://github.com/Codearte/gradle-nexus-staging-plugin

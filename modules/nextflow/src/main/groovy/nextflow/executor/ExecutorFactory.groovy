@@ -64,6 +64,8 @@ class ExecutorFactory {
 
     private Map<Class<? extends Executor>,? extends Executor> executors = new HashMap<>()
 
+    @PackageScope Map<Class<? extends Executor>,? extends Executor> getExecutors() { executors }
+
     ExecutorFactory() {
         executorsMap = new HashMap(20)
         // add built-in executors
@@ -74,10 +76,11 @@ class ExecutorFactory {
             final name = findNameByClass(clazz)
             final current = executorsMap.get(name)
             if( current ) {
-                if( current.getAnnotation(ServiceName)?.important() )
-                    log.debug "Executor ${current.getClass().getSimpleName()} has priority over ${clazz}"
-                else
-                    log.debug "Replacing executor ${executorsMap[name]} by ${clazz}"
+                if( current.getAnnotation(ServiceName)?.important() ) {
+                    log.debug "Executor ${current.getSimpleName()} has priority - skipping ${clazz}"
+                    continue
+                }
+                log.debug "Replacing executor ${current.getSimpleName()} with ${clazz}"
             }
             executorsMap.put(name, clazz)
         }

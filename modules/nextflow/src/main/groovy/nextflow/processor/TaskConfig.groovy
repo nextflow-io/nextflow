@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +23,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import nextflow.Const
+import nextflow.ast.NextflowDSLImpl
 import nextflow.exception.AbortOperationException
 import nextflow.exception.FailedGuardException
 import nextflow.executor.BashWrapperBuilder
@@ -410,7 +412,16 @@ class TaskConfig extends LazyMap implements Cloneable {
         catch( Throwable e ) {
             throw new FailedGuardException("Cannot evaluate `$name` expression", source, e)
         }
+    }
 
+
+    protected TaskClosure getStubBlock() {
+        final code = target.get(NextflowDSLImpl.PROCESS_STUB)
+        if( !code )
+            return null
+        if( code instanceof TaskClosure )
+            return code
+        throw new IllegalStateException()
     }
 
 }
@@ -573,8 +584,9 @@ class LazyMap implements Map<String,Object> {
 
     @Override
     String toString() {
-        def result = []
-        keySet().each { key -> result << "$key: ${getProperty(key)}" }
+        final allKeys = keySet()
+        final result = new ArrayList<String>(allKeys.size())
+        for( String key : allKeys ) { result << "$key: ${getProperty(key)}".toString() }
         result.join('; ')
     }
 }

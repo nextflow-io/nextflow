@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -90,6 +91,7 @@ class TaskBean implements Serializable, Cloneable {
 
     String stageOutMode
 
+    @Deprecated
     Path sharedDir
 
     Path binDir
@@ -139,7 +141,7 @@ class TaskBean implements Serializable, Cloneable {
         this.inputFiles = task.getInputFilesMap()
         this.outputFiles = task.getOutputFilesNames()
         this.sharedDir = task.getProcessor().getSession().getWorkDir()
-        this.binDir = task.getProcessor().getSession().getBinDir()
+        this.binDir = task.getProcessor().getExecutor().getBinDir()
         this.stageInMode = task.config.stageInMode
         this.stageOutMode = task.config.stageOutMode
 
