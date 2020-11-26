@@ -22,7 +22,7 @@ Windows system is supported through `WSL <https://en.wikipedia.org/wiki/Windows_
 Installation
 ============
 
-`Nextflow` is distributed as an executable package, which means that it does not require any special installation procedure.
+`Nextflow` is distributed as a self-installer package, which means that it does not require any special installation procedure.
 
 It only needs two easy steps:
 
@@ -42,7 +42,7 @@ It only needs two easy steps:
 
 .. note::
     To avoid downloading the dependencies, you could also use the ``nextflow-VERSION-all`` variant available from Github for every Nextflow release version.
-   #. Simply go to the `Github releases page <https://github.com/nextflow-io/nextflow/releases>`__ and unfold the ``Assets`` section for a release.
+   #. Go to the `Github releases page <https://github.com/nextflow-io/nextflow/releases>`__ and unfold the ``Assets`` section for a release.
    #. Copy the URL of the ``nextflow-VERSION-all`` asset and issue the download command on your terminal. ``wget -qO-  ASSET-URL``. It will create the completely self-contained ``nextflow-VERSION-all`` executable file in the current directory.
 
 
