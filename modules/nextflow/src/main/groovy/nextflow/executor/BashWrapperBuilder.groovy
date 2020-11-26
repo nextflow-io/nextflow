@@ -428,8 +428,6 @@ class BashWrapperBuilder {
         /*
          * create a builder instance given the container engine
          */
-        if( engine == 'charliecloud' )
-            return new CharliecloudBuilder(containerImage)
         if( engine == 'docker' )
             return new DockerBuilder(containerImage)
         if( engine == 'podman' )
@@ -440,6 +438,8 @@ class BashWrapperBuilder {
             return new UdockerBuilder(containerImage)
         if( engine == 'shifter' )
             return new ShifterBuilder(containerImage)
+        if( engine == 'charliecloud' )
+            return new CharliecloudBuilder(containerImage)
         //
         throw new IllegalArgumentException("Unknown container engine: $engine")
     }
