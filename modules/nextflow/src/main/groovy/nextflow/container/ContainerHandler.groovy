@@ -64,7 +64,15 @@ class ContainerHandler {
             if( !config.isEnabled() || !normalizedImageName )
                 return normalizedImageName
             final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
-            final result = requiresCaching ? createCache(this.config, normalizedImageName) : normalizedImageName
+            
+            final result = requiresCaching ? createSingularityCache(this.config, normalizedImageName) : normalizedImageName
+            Escape.path(result)
+        }
+        else if( engine == 'charliecloud' ) {
+            // if the imagename starts with '/' it's an absolute path
+            // otherwise we assume it's in a remote registry and pull it from there
+            final requiresCaching = !imageName.startsWith('/')
+            final result = requiresCaching ? createCharliecloudCache(this.config, imageName) : imageName
             Escape.path(result)
         }
         else {
@@ -73,8 +81,13 @@ class ContainerHandler {
     }
 
     @PackageScope
-    String createCache(Map config, String imageName) {
+    String createSingularityCache(Map config, String imageName) {
         new SingularityCache(new ContainerConfig(config)) .getCachePathFor(imageName) .toString()
+    }
+
+    @PackageScope
+    String createCharliecloudCache(Map config, String imageName) {
+        new CharliecloudCache(new ContainerConfig(config)) .getCachePathFor(imageName) .toString()
     }
 
     /**

@@ -1102,6 +1102,7 @@ class Session implements ISession {
         getContainerConfig0('shifter', engines)
         getContainerConfig0('udocker', engines)
         getContainerConfig0('singularity', engines)
+        getContainerConfig0('charliecloud', engines)
 
         def enabled = engines.findAll { it.enabled?.toString() == 'true' }
         if( enabled.size() > 1 ) {
