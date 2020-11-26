@@ -97,6 +97,7 @@ following example::
    }
 
 
+.. _config-env:
 
 Scope `env`
 -----------
@@ -402,6 +403,38 @@ brackets, as shown below::
 
 
 Read :ref:`podman-page` page to learn more how use Podman containers with Nextflow.
+
+.. _config-charliecloud:
+
+Scope `charliecloud`
+--------------
+
+The ``charliecloud`` configuration scope controls how `Charliecloud <https://hpc.github.io/charliecloud/>`_ containers are executed by Nextflow.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+enabled             Turn this flag to ``true`` to enable Charliecloud execution (default: ``false``).
+envWhitelist        Comma separated list of environment variable names to be included in the container environment.
+runOptions          This attribute can be used to provide any extra command line options supported by the ``ch-run`` command.
+cacheDir            The directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
+pullTimeout         The amount of time the Charliecloud pull can last, exceeding which the process is terminated (default: ``20 min``).
+================== ================
+
+The above options can be used by prefixing them with the ``charliecloud`` scope or surrounding them by curly
+brackets, as shown below::
+
+    process.container = 'nextflow/examples'
+
+    charliecloud {
+        enabled = true
+    }
+
+
+
+Read :ref:`charliecloud-page` page to learn more how use Charliecloud containers with Nextflow.
 
 .. _config-manifest:
 
