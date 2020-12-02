@@ -4,7 +4,7 @@
 DSL 2
 ******
 
-Nextflow provides a syntax extension that implements that allow the definition of module libraries and
+Nextflow provides a syntax extension that implements the definition of module libraries and
 simplifies the writing of complex data analysis pipelines.
 
 To enable this feature you need to defined the following directive at the beginning of
