@@ -191,6 +191,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
                     accelerator: acc,
                     bootDiskSizeGb: 75,
                     cpuPlatform: 'Intel Skylake',
+                    network: 'custom-vpc',
                     usePrivateAddress: true ))
         then:
         with(resources3) {
@@ -205,6 +206,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
             getVirtualMachine().getAccelerators()[0].getType()=='nvidia-tesla-k80'
             getVirtualMachine().getBootDiskSizeGb() == 75
             getVirtualMachine().getCpuPlatform() == 'Intel Skylake'
+            getVirtualMachine().getNetwork() == 'custom-vpc'
             getVirtualMachine().getNetwork().getUsePrivateAddress()
         }
     }

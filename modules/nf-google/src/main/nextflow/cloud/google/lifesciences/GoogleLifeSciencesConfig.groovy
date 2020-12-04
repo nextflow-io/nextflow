@@ -60,6 +60,7 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
     Integer debugMode
     String copyImage
     boolean usePrivateAddress
+    String network
     boolean enableRequesterPaysBuckets
 
     int maxParallelTransfers = MAX_TRANSFER
@@ -122,6 +123,7 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
         final copyImage = config.navigate('google.lifeSciences.copyImage', DEFAULT_COPY_IMAGE) as String
         final debugMode = config.navigate('google.lifeSciences.debug', System.getenv('NXF_DEBUG'))
         final privateAddr  = config.navigate('google.lifeSciences.usePrivateAddress') as boolean
+        final network = config.navigate('google.lifeSciences.network') as String
         final requesterPays = config.navigate('google.enableRequesterPaysBuckets') as boolean
         //
         final maxParallelTransfers = config.navigate('aws.batch.maxParallelTransfers', MAX_TRANSFER) as int
@@ -146,6 +148,7 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
                 sshDaemon: sshDaemon,
                 sshImage: sshImage,
                 usePrivateAddress: privateAddr,
+                network: network,
                 enableRequesterPaysBuckets: requesterPays,
                 maxParallelTransfers: maxParallelTransfers,
                 maxTransferAttempts: maxTransferAttempts,

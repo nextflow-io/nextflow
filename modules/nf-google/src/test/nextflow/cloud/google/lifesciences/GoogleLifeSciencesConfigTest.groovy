@@ -181,6 +181,19 @@ class GoogleLifeSciencesConfigTest extends Specification {
         config.usePrivateAddress
     }
 
+    def 'should config network' () {
+        when:
+        def config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [:]]])
+        then:
+        config.network == null
+
+        when:
+        config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [network:'custom-vpc']]])
+        then:
+        config.network == 'custom-vpc'
+
+    }
+
     def 'should config debug mode' () {
         when:
         def config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [:]]])

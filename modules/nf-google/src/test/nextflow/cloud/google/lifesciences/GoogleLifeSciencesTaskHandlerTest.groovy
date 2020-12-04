@@ -182,6 +182,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         req.cpuPlatform == null
         req.entryPoint == GoogleLifeSciencesConfig.DEFAULT_ENTRY_POINT
         !req.usePrivateAddress
+        req.network == null
 
         when:
         req = handler.createPipelineRequest()
@@ -213,6 +214,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
                     getPreemptible() >> true
                     getBootDiskSize() >> MemoryUnit.of('20 GB')
                     getUsePrivateAddress() >> true
+                    getNetwork() >> 'custom-vpc'
                     getCpuPlatform() >> 'Intel Skylake'
                 }
             }
@@ -250,6 +252,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         req.cpuPlatform =='Intel Skylake'
         req.entryPoint == GoogleLifeSciencesConfig.DEFAULT_ENTRY_POINT
         req.usePrivateAddress
+        req.network == 'custom-vpc'
 
         when:
         req = handler.createPipelineRequest()

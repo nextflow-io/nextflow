@@ -183,8 +183,15 @@ class GoogleLifeSciencesHelper {
                 .setServiceAccount(serviceAccount)
                 .setPreemptible(req.preemptible)
 
+        def network = new Network()
         if( req.usePrivateAddress ) {
-            vm.setNetwork( new Network().setUsePrivateAddress(true) )
+            network.setUsePrivateAddress(true)
+        }
+        if( req.network ) {
+            network.setNetwork(req.network)
+        }
+        if(req.network || req.usePrivateAddress ) {
+            vm.setNetwork(network)
         }
 
         if( req.bootDiskSizeGb ) {

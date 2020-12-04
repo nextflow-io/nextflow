@@ -65,4 +65,6 @@ class GoogleLifeSciencesSubmitRequest {
     String entryPoint
 
     boolean usePrivateAddress
+
+    String network
 }
