@@ -327,12 +327,18 @@ class AssetManager {
         assert path
         assert !path.startsWith('/')
 
-        def project = path
+        String project = path
         if( server ) {
             // fetch prefix from the server url
             def prefix = new URL(server).path?.stripStart('/')
-            if( path.startsWith(prefix) ) {
+            if( prefix && path.startsWith(prefix) ) {
                 project = path.substring(prefix.length())
+            }
+
+            if( server == 'https://dev.azure.com' ) {
+                final parts = project.tokenize('/')
+                if( parts[2]=='_git' )
+                    project = "${parts[0]}/${parts[1]}"
             }
         }
 

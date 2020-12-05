@@ -23,6 +23,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.container.CharliecloudBuilder
 import nextflow.container.ContainerBuilder
 import nextflow.container.DockerBuilder
 import nextflow.container.PodmanBuilder
@@ -437,6 +438,8 @@ class BashWrapperBuilder {
             return new UdockerBuilder(containerImage)
         if( engine == 'shifter' )
             return new ShifterBuilder(containerImage)
+        if( engine == 'charliecloud' )
+            return new CharliecloudBuilder(containerImage)
         //
         throw new IllegalArgumentException("Unknown container engine: $engine")
     }

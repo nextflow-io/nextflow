@@ -362,13 +362,15 @@ class SessionTest extends Specification {
         session.containerConfig.engine == engine
 
         where:
-        engine      | config
-        'docker'    | [enabled: true, x:'alpha', y: 'beta']
-        'docker'    | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
-        'podman'    | [enabled: true, x:'alpha', y: 'beta']
-        'podman'    | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
-        'udocker'   | [enabled: true, x:'alpha', y: 'beta']
-        'shifter'   | [enabled: true, x:'delta', y: 'gamma']
+        engine         | config
+        'docker'       | [enabled: true, x:'alpha', y: 'beta']
+        'docker'       | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
+        'podman'       | [enabled: true, x:'alpha', y: 'beta']
+        'podman'       | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
+        'udocker'      | [enabled: true, x:'alpha', y: 'beta']
+        'shifter'      | [enabled: true, x:'delta', y: 'gamma']
+        'singularity'  | [enabled: true, x:'delta', y: 'gamma']
+        'charliecloud' | [enabled: true, x:'delta', y: 'gamma']
     }
 
     def 'should get manifest object' () {

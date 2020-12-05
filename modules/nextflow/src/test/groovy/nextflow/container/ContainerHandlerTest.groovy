@@ -190,7 +190,7 @@ class ContainerHandlerTest extends Specification {
 
         then:
         1 * handler.normalizeSingularityImageName(IMAGE) >> NORMALIZED
-        X * handler.createCache(handler.config, NORMALIZED) >> EXPECTED
+        X * handler.createSingularityCache(handler.config, NORMALIZED) >> EXPECTED
         result == EXPECTED
 
         where:
@@ -217,7 +217,7 @@ class ContainerHandlerTest extends Specification {
         def result = handler.normalizeImageName(IMAGE)
         then:
         1 * handler.normalizeSingularityImageName(IMAGE) >> IMAGE
-        0 * handler.createCache(_,_) >> null
+        0 * handler.createSingularityCache(_,_) >> null
         result == IMAGE
 
         when:
@@ -225,7 +225,7 @@ class ContainerHandlerTest extends Specification {
         result = handler.normalizeImageName(IMAGE)
         then:
         1 * handler.normalizeSingularityImageName(IMAGE) >> IMAGE
-        1 * handler.createCache(_,IMAGE) >> '/some/path/foo.img'
+        1 * handler.createSingularityCache(_,IMAGE) >> '/some/path/foo.img'
         result == '/some/path/foo.img'
     }
 
@@ -236,7 +236,7 @@ class ContainerHandlerTest extends Specification {
         when:
         def result = handler.normalizeImageName(IMG)
         then:
-        TIMES * handler.createCache(_, NORM) >> EXPECTED
+        TIMES * handler.createSingularityCache(_, NORM) >> EXPECTED
         
         then:
         result == EXPECTED

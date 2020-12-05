@@ -535,6 +535,9 @@ class AssetManagerTest extends Specification {
         'a/b/c'       | 'http://dot.com/'       | 'a/b/c'
         'a/b/c'       | 'http://dot.com/a'      | 'b/c'
         'a/b/c'       | 'http://dot.com/a/'     | 'b/c'
+        and:
+        'paolo0758/nf-azure-repo'                    | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo'
+        'paolo0758/nf-azure-repo/_git/nf-azure-repo' | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo'
     }
 
 }
