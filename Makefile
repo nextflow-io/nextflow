@@ -29,7 +29,7 @@ mm =
 endif 
 
 compile:
-	./gradlew compile exportClasspath
+	BUILD_PACK=1 ./gradlew compile exportClasspath
 	@echo "DONE `date`"
 
 clean:

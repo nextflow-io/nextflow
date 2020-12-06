@@ -211,7 +211,7 @@ task exportClasspath {
     dependsOn allprojects.jar
     doLast {
         def home = System.getProperty('user.home')
-        def all = getRuntimeConfigs()
+        def all = configurations.azure // getRuntimeConfigs()
         def libs = all.collect { File file ->  /*println file.canonicalPath.replace(home, '$HOME');*/ file.canonicalPath;  }
         file('.launch.classpath').text = libs.join(':')
     }
@@ -234,6 +234,7 @@ ext.deployable << project(':nf-httpfs')
 ext.deployable << project(':nf-ga4gh')
 ext.deployable << project(':nf-google')
 ext.deployable << project(':nf-amazon')
+ext.deployable << project(':nf-azure')
 ext.deployable << project(':nf-tower')
 
 /*

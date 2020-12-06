@@ -7,6 +7,7 @@ configurations {
     ga4gh.extendsFrom defaultCfg
     google.extendsFrom defaultCfg
     amazon.extendsFrom defaultCfg
+    azure.extendsFrom defaultCfg
     legacy.extendsFrom defaultCfg
 }
 
@@ -25,6 +26,7 @@ dependencies {
     ga4gh   project(':nf-ga4gh')
     google  project(':nf-google')
     amazon  project(':nf-amazon')
+    azure   project(':nf-azure')
     // ignite module
     ignite 'io.nextflow:nf-ignite:1.1.0'
     // legacy cloud support
@@ -151,6 +153,12 @@ task packOne(type: Jar) {
     manifest.attributes('Dependencies': deps, 'amazon')
 
     /*
+     * `azure` dependencies
+     */
+    deps = resolveDeps('azure')
+    manifest.attributes('Dependencies': deps, 'azure')
+
+    /*
      * `google` dependencies
      */
     deps = resolveDeps('google')
@@ -174,7 +182,7 @@ task packAll(type: Jar) {
     archiveName = "nextflow-${version}-all.jar"
 
     from jar // embed our application jar
-    from (configurations.ignite + configurations.amazon + configurations.google)
+    from (configurations.ignite + configurations.amazon + configurations.azure + configurations.google)
     from (configurations.capsule.collect { zipTree(it) })
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     
@@ -186,6 +194,7 @@ task packAll(type: Jar) {
                           )
 
     manifest.attributes('Main-Class': 'NextflowLoader', 'amazon')
+    manifest.attributes('Main-Class': 'NextflowLoader', 'azure')
     manifest.attributes('Main-Class': 'NextflowLoader', 'google')
     manifest.attributes('Main-Class': 'NextflowLoader', 'ignite')
 

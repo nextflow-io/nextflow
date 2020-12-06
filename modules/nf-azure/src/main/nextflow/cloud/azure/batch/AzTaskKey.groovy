@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2020, Microsoft Corp
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,21 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-apply plugin: 'groovy'
+package nextflow.cloud.azure.batch
 
-sourceSets {
-    main.java.srcDirs = []
-    main.groovy.srcDirs = ['src/main']
-    main.resources.srcDirs = ['src/resources']
-    test.groovy.srcDirs = ['src/test']
-    test.java.srcDirs = []
-    test.resources.srcDirs = []
-}
+import groovy.transform.Canonical
+import groovy.transform.CompileStatic
 
-dependencies {
-    compile project(':nextflow')
-    compile 'com.azure:azure-storage-blob-nio:12.0.0-beta.2'
-    compile 'com.microsoft.azure:azure-batch:8.0.0'
-
-    testCompile(testFixtures(project(":nextflow")))
+/**
+ * Model a fully qualified taskId ie. JobId + TaskId
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@Canonical
+@CompileStatic
+class AzTaskKey {
+    String jobId
+    String taskId
 }

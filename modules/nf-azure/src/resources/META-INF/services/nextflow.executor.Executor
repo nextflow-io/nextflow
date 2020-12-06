@@ -14,4 +14,4 @@
 # limitations under the License.
 #
 
-nextflow.cloud.azure.file.AzPathFactory
+nextflow.cloud.azure.batch.AzBatchExecutor

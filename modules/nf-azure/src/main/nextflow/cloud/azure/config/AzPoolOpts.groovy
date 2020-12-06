@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2020, Microsoft Corp
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,21 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-apply plugin: 'groovy'
 
-sourceSets {
-    main.java.srcDirs = []
-    main.groovy.srcDirs = ['src/main']
-    main.resources.srcDirs = ['src/resources']
-    test.groovy.srcDirs = ['src/test']
-    test.java.srcDirs = []
-    test.resources.srcDirs = []
-}
+package nextflow.cloud.azure.config
 
-dependencies {
-    compile project(':nextflow')
-    compile 'com.azure:azure-storage-blob-nio:12.0.0-beta.2'
-    compile 'com.microsoft.azure:azure-batch:8.0.0'
+import com.microsoft.azure.batch.protocol.models.OSType
+import com.microsoft.azure.batch.protocol.models.VerificationType
 
-    testCompile(testFixtures(project(":nextflow")))
+/**
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+class AzPoolOpts {
+
+    String publisher = "microsoft-azure-batch"
+    String offer = "ubuntu-server-container"
+    String vmType = "STANDARD_A1"
+    OSType type = OSType.LINUX
+    VerificationType verification = VerificationType.VERIFIED
+    int vmCount = 1
+
 }
