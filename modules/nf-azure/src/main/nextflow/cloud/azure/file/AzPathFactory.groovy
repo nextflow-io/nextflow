@@ -38,9 +38,9 @@ class AzPathFactory extends FileSystemPathFactory {
         final cfg = AzConfig.getConfig().storage()
 
         // parse uri
-        final tokens = AzContainerTokens.parse(uri)
+        final tokens = AzStorageContainerParser.parse(uri)
         final account = tokens.account ?: cfg.accountName
-        if( !tokens.bucket )
+        if( !tokens.container )
             throw new IllegalArgumentException("Invalid Azure storage container URI: $uri")
 
         // find the related file system 
@@ -48,7 +48,7 @@ class AzPathFactory extends FileSystemPathFactory {
         final fs = FileHelper.getOrCreateFileSystemFor(new URI(accountUri), cfg.getEnv())
 
         // compose the target path
-        return tokens.path ? fs.getPath(tokens.bucket, tokens.path) : fs.getPath(tokens.bucket)
+        return tokens.path ? fs.getPath(tokens.container, tokens.path) : fs.getPath(tokens.container)
     }
 
 

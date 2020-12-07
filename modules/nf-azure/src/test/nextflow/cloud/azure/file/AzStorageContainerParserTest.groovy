@@ -16,7 +16,7 @@
 
 package nextflow.cloud.azure.file
 
-import nextflow.cloud.azure.file.AzContainerTokens
+
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -24,17 +24,17 @@ import spock.lang.Unroll
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class AzContainerTokensTest extends Specification {
+class AzStorageContainerParserTest extends Specification {
 
     @Unroll
     def 'should parse az uri' () {
         expect:
-        AzContainerTokens.parse(AZ_URI) == TOKENS
+        AzStorageContainerParser.parse(AZ_URI) == TOKENS
 
         where:
         AZ_URI                                              | TOKENS
-        'azb://foo:/'                                       | new AzContainerTokens('foo:', '/', null)
-        'azb://foo:/this/that?account=nfstore'              | new AzContainerTokens('foo:', '/this/that', 'nfstore')
-        'azb://my-data:/nf-DE8YJPrG.txt?account=nfstore'    | new AzContainerTokens('my-data:', '/nf-DE8YJPrG.txt', 'nfstore')
+        'azb://foo:/'                                       | new AzStorageContainerParser('foo:', '/', null)
+        'azb://foo:/this/that?account=nfstore'              | new AzStorageContainerParser('foo:', '/this/that', 'nfstore')
+        'azb://my-data:/nf-DE8YJPrG.txt?account=nfstore'    | new AzStorageContainerParser('my-data:', '/nf-DE8YJPrG.txt', 'nfstore')
     }
 }

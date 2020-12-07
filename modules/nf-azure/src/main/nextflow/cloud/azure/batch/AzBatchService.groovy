@@ -21,7 +21,9 @@ import com.microsoft.azure.batch.auth.BatchSharedKeyCredentials
 import com.microsoft.azure.batch.protocol.models.CloudTask
 import com.microsoft.azure.batch.protocol.models.ContainerConfiguration
 import com.microsoft.azure.batch.protocol.models.ImageInformation
+import com.microsoft.azure.batch.protocol.models.OutputFile
 import com.microsoft.azure.batch.protocol.models.PoolInformation
+import com.microsoft.azure.batch.protocol.models.ResourceFile
 import com.microsoft.azure.batch.protocol.models.TaskAddParameter
 import com.microsoft.azure.batch.protocol.models.TaskContainerSettings
 import com.microsoft.azure.batch.protocol.models.VirtualMachineConfiguration
@@ -30,6 +32,7 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzPoolOpts
+import nextflow.cloud.azure.file.AzStorageContainerParser
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 /**
@@ -121,10 +124,39 @@ class AzBatchService {
         TaskAddParameter taskToAdd = new TaskAddParameter()
                 .withId(taskId)
                 .withContainerSettings(containerOpts)
-                .withCommandLine("echo 'Hello world'")
-
+                .withCommandLine("bash ${TaskRun.CMD_RUN}")
+                .withResourceFiles(resourceFiles(task))
+                .withOutputFiles(outputFiles(task))
         client.taskOperations().createTask(jobId, taskToAdd)
         return new AzTaskKey(jobId, taskId)
+    }
+
+    protected List<ResourceFile> resourceFiles(TaskRun task) {
+        final uri = task.workDir.toUriString()
+        final bucket = AzStorageContainerParser.parse(uri)
+
+        final result = new ArrayList(10)
+
+        // add the bash launcher + script
+        final launcher = new ResourceFile()
+                .withAutoStorageContainerName(bucket.container)
+                .withBlobPrefix("$bucket.key/${TaskRun.CMD_RUN}")
+                .withFilePath("$bucket.key/${TaskRun.CMD_RUN}")
+                .withFileMode('554')
+        result.add(launcher)
+
+        final script = new ResourceFile()
+                .withAutoStorageContainerName(bucket.container)
+                .withBlobPrefix("$bucket.key/${TaskRun.CMD_SCRIPT}")
+                .withFilePath("$bucket.key/${TaskRun.CMD_SCRIPT}")
+                .withFileMode('554')
+        result.add(script)
+
+        return result
+    }
+
+    protected List<OutputFile> outputFiles(TaskRun task) {
+
     }
 
     protected ImageInformation getImage() {

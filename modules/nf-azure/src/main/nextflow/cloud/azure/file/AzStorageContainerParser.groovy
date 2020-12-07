@@ -20,35 +20,43 @@ import java.util.regex.Matcher
 import java.util.regex.Pattern
 
 import groovy.transform.Canonical
+import nextflow.extension.Bolts
 
 /**
  * Model Azure bucket URL components
  */
 @Canonical
-class AzContainerTokens {
+class AzStorageContainerParser {
 
     private static final Pattern AZ_REGEX = ~/^azb:\/\/([^:]+:)(\/[^?]*)(?:\?account=(.+))?$/
 
-    String bucket
+    String container
     String path
     String account
 
-    AzContainerTokens(String bucket, String path, String account) {
-        this.bucket=bucket
+    AzStorageContainerParser(String container, String path, String account) {
+        this.container=container
         this.path=path
         this.account=account
     }
 
-    AzContainerTokens(Matcher m) {
-        bucket = m.group(1)
+    AzStorageContainerParser(Matcher m) {
+        container = m.group(1)
         path = m.group(2)
         account = m.group(3)
     }
 
-    static AzContainerTokens parse(String url) {
+    /**
+     * @return The same as  {@link #path} but without the starting `/`
+     */
+    String getKey() {
+        path ? Bolts.stripStart(path, '/') : path
+    }
+
+    static AzStorageContainerParser parse(String url) {
         final m = AZ_REGEX.matcher(url)
         if( m.matches() ) {
-            return new AzContainerTokens(m)
+            return new AzStorageContainerParser(m)
         }
         return null
     }

@@ -82,9 +82,9 @@ class AzBatchExecutor extends Executor {
          */
         def disableBinDir = session.getExecConfigProp(name, 'disableRemoteBinDir', false)
         if( session.binDir && !session.binDir.empty() && !disableBinDir ) {
-            def s3 = getTempDir()
-            log.info "Uploading local `bin` scripts folder to ${s3.toUriString()}/bin"
-            remoteBinDir = FilesEx.copyTo(session.binDir, s3)
+            final remote = getTempDir()
+            log.info "Uploading local `bin` scripts folder to ${remote.toUriString()}/bin"
+            remoteBinDir = FilesEx.copyTo(session.binDir, remote)
         }
     }
 
@@ -97,9 +97,9 @@ class AzBatchExecutor extends Executor {
         super.register()
         config = AzConfig.getConfig(session)
         batchService = new AzBatchService(this)
-//        validateWorkDir()
-//        validatePathDir()
-//        uploadBinDir()
+        validateWorkDir()
+        validatePathDir()
+        uploadBinDir()
     }
 
 
