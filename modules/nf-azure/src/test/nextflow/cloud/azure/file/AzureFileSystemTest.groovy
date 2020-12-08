@@ -60,7 +60,16 @@ class AzureFileSystemTest extends Specification {
 
     }
 
-    def 'should create directory' () {
+    def 'should create empty dir' () {
+        when:
+        def dir = fileSystem.getPath( 'mydir')
+        Files.createDirectory(dir)
+        then:
+        Files.exists(dir)
+        Files.isDirectory(dir)
+    }
+
+    def 'should create directory and a file' () {
         given:
         def dir = fileSystem.getPath( 'mydir')
         when:
@@ -68,6 +77,37 @@ class AzureFileSystemTest extends Specification {
         then:
         Files.exists(dir)               
         Files.isDirectory(dir)
+
+        when:
+        def file = dir.resolve('my-file.txt')
+        Files.write(file, 'Hello world'.bytes)
+        then:
+        Files.exists(file)
+        Files.readAllLines(file)[0] == 'Hello world'
     }
 
+    def 'should create directories' () {
+        when:
+        def dirs = fileSystem.getPath( 'mydir1/mydir2/mydir3')
+        Files.createDirectories(dirs)
+        then:
+        Files.isDirectory(fileSystem.getPath('mydir1'))
+        Files.isDirectory(fileSystem.getPath('mydir1/mydir2'))
+        Files.isDirectory(fileSystem.getPath('mydir1/mydir2/mydir3'))
+    }
+
+    def 'should create file' () {
+        when:
+        def file = fileSystem.getPath( 'my-file.txt')
+        Files.createFile(file)
+        then:
+        Files.exists(file)
+
+        /*
+         java.lang.UnsupportedOperationException
+            at com.azure.storage.blob.nio.AzureFileSystemProvider.newByteChannel(AzureFileSystemProvider.java:271)
+            at java.nio.file.Files.newByteChannel(Files.java:361)
+            at java.nio.file.Files.createFile(Files.java:632)
+         */
+    }
 }
