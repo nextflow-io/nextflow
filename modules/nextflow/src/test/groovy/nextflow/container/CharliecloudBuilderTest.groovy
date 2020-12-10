@@ -20,6 +20,7 @@ package nextflow.container
 import java.nio.file.Paths
 
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -87,19 +88,20 @@ class CharliecloudBuilderTest extends Specification {
         cmd == 'ch-run --no-home -w ubuntu -- bash -c "mkdir -p "$PWD"";ch-run --no-home --unset-env="*" -b "$PWD":"$PWD" -c "$PWD" ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
     }
 
+    @Unroll
     def 'test charliecloud env'() {
 
         given:
-        def builder = [:] as CharliecloudBuilder
+        def builder = Spy(CharliecloudBuilder)
 
         expect:
         builder.makeEnv(ENV).toString() == RESULT
 
         where:
-        ENV                         | RESULT
-        'X=1'                       | '--set-env=<( echo "X=1" )'
-        'BAR'                       | '${BAR:+--set-env=<( echo "BAR="$BAR"" )}'
-        [VAR_X:1, VAR_Y:2]         | '--set-env=<( echo "VAR_X="1"" ) --set-env=<( echo "VAR_Y="2"" )'
-        [FOO: 'x', BAR: 'y'] | '--set-env=<( echo "FOO="x"" ) --set-env=<( echo "BAR="y"" )'
+        ENV                     | RESULT
+        'X=1'                   | '--set-env=<( echo "X=1" )'
+        'BAR'                   | '${BAR:+--set-env=<( echo "BAR="$BAR"" )}'
+        [VAR_X:1, VAR_Y:2]      | '--set-env=<( echo "VAR_X="1"" ) --set-env=<( echo "VAR_Y="2"" )'
+        [FOO: 'x', BAR: 'y']    | '--set-env=<( echo "FOO="x"" ) --set-env=<( echo "BAR="y"" )'
     }
 }

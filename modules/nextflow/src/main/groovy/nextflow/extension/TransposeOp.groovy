@@ -116,7 +116,7 @@ class TransposeOp {
 
         for( int i=0; i<max; i++ ) {
             final c = tuple.size()
-            final buffer = new ArrayList(c)
+            final buffer = new ArrayList<Object>(c)
             for( int j=0; j<c; j++ ) {
                 // `j` is used to iterate over the `tuple`
                 if( j in indexes ) {

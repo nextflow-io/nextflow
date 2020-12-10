@@ -40,7 +40,7 @@ class ReadOnlyMap implements Map {
     ReadOnlyMap( Map map ) {
         assert map != null
         this.target.putAll(map)
-        this.readOnlyNames = new ArrayList(map.keySet())
+        this.readOnlyNames = new ArrayList<String>(map.keySet())
     }
 
     /**
