@@ -20,6 +20,8 @@ package nextflow.container
 import java.nio.file.Paths
 
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -31,7 +33,7 @@ class PodmanBuilderTest extends Specification {
     def 'test podman mounts'() {
 
         given:
-        def builder = [:] as PodmanBuilder
+        def builder = Spy(PodmanBuilder)
         def files =  [Paths.get('/folder/data'),  Paths.get('/folder/db'), Paths.get('/folder/db') ]
         def real = [ Paths.get('/user/yo/nextflow/bin'), Paths.get('/user/yo/nextflow/work'), Paths.get('/db/pdb/local/data') ]
         def quotes =  [ Paths.get('/folder with blanks/A'), Paths.get('/folder with blanks/B') ]
@@ -46,16 +48,20 @@ class PodmanBuilderTest extends Specification {
         builder.addMountWorkDir(false).makeVolumes(files).toString() == '-v /folder:/folder '
     }
 
-
+    @Unroll
     def 'test podman env'() {
 
         given:
-        def builder = [:] as PodmanBuilder
+        def builder = Spy(PodmanBuilder)
 
         expect:
-        builder.makeEnv('X=1').toString() == '-e "X=1"'
-        builder.makeEnv([VAR_X:1, VAR_Y: 2]).toString() == '-e "VAR_X=1" -e "VAR_Y=2"'
-        builder.makeEnv('BAR').toString() == '${BAR:+-e "BAR=$BAR"}'
+        builder.makeEnv(ENV).toString() == EXPECT
+
+        where:
+        ENV                 | EXPECT
+        'X=1'               | '-e "X=1"'
+        [VAR_X:1, VAR_Y: 2] | '-e "VAR_X=1" -e "VAR_Y=2"'
+        'BAR'               | '${BAR:+-e "BAR=$BAR"}'
     }
 
     def 'test podman create command line'() {

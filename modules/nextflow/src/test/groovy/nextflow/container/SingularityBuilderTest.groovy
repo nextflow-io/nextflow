@@ -20,6 +20,7 @@ package nextflow.container
 import java.nio.file.Paths
 
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -120,14 +121,13 @@ class SingularityBuilderTest extends Specification {
         cmd = new SingularityBuilder('ubuntu.img').params(entry:'/bin/sh').build().getRunCommand('bwa --this --that file.fastq')
         then:
         cmd == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec ubuntu.img /bin/sh -c "cd $PWD; bwa --this --that file.fastq"'
-
-
     }
 
+    @Unroll
     def 'test singularity env'() {
 
         given:
-        def builder = [:] as SingularityBuilder
+        def builder = Spy(SingularityBuilder)
 
         expect:
         builder.makeEnv(ENV).toString() == RESULT

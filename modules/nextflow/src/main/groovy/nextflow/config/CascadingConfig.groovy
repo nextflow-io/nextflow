@@ -116,7 +116,7 @@ abstract class CascadingConfig<K,V> {
     }
 
     Set<K> getAttributeNames() {
-        new HashSet(config.keySet())
+        new HashSet<K>(config.keySet())
     }
 
 

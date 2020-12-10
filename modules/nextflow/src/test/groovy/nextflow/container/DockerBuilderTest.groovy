@@ -21,6 +21,8 @@ import java.nio.file.Paths
 
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -31,7 +33,7 @@ class DockerBuilderTest extends Specification {
     def 'test docker mounts'() {
 
         given:
-        def builder = [:] as DockerBuilder
+        def builder = Spy(DockerBuilder)
         def files =  [Paths.get('/folder/data'),  Paths.get('/folder/db'), Paths.get('/folder/db') ]
         def real = [ Paths.get('/user/yo/nextflow/bin'), Paths.get('/user/yo/nextflow/work'), Paths.get('/db/pdb/local/data') ]
         def quotes =  [ Paths.get('/folder with blanks/A'), Paths.get('/folder with blanks/B') ]
@@ -44,16 +46,20 @@ class DockerBuilderTest extends Specification {
 
     }
 
-
+    @Unroll
     def 'test docker env'() {
 
         given:
-        def builder = [:] as DockerBuilder
+        def builder = Spy(DockerBuilder)
 
         expect:
-        builder.makeEnv('X=1').toString() == '-e "X=1"'
-        builder.makeEnv([VAR_X:1, VAR_Y: 2]).toString() == '-e "VAR_X=1" -e "VAR_Y=2"'
-        builder.makeEnv('BAR').toString() == '${BAR:+-e "BAR=$BAR"}'
+        builder.makeEnv(ENV).toString() == EXPECT
+
+        where:
+        ENV                 | EXPECT
+        'X=1'               | '-e "X=1"'
+        [VAR_X:1, VAR_Y: 2] | '-e "VAR_X=1" -e "VAR_Y=2"'
+        'BAR'               | '${BAR:+-e "BAR=$BAR"}'
     }
 
     def 'test docker create command line'() {
