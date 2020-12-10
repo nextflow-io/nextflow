@@ -13,9 +13,6 @@ different cloud platforms and on-premises installations.
 The built-in support for Kubernetes provided by Nextflow streamlines the execution of containerised workflows in
 Kubernetes clusters.
 
-.. warning:: This is an experimental feature and it may change in a future release. It requires Nextflow
-    version 0.28.0 or later.
-
 
 Concepts
 ========
