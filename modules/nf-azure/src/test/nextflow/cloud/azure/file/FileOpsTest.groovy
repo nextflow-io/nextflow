@@ -12,7 +12,7 @@ class FileOpsTest extends Specification {
 
     def setup() {
 
-        def KEY = "h3cUlUTlzgFecGm+/jHrB/AIPdGeuaupYKWIFmjsUWFihOw9RbW5rnKd2/hnd+Jg4ot1YccDtk7yhpm84fkMsQ=="
+        def KEY = "M47dC/OYTG40e76tuUSqPtcAAbhAmnL1g8auiTHOVra0E3JKw+EfsPc3jegqPNsPene9CmGblvnai/SEU8Oa2w=="
         def ACCOUNT = "nfbucket"
         def STORES = "my-data"
 

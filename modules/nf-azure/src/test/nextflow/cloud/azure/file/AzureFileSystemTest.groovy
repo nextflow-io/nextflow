@@ -17,7 +17,7 @@ class AzureFileSystemTest extends Specification {
     @Shared
     AzureFileSystem fileSystem
 
-    String MY_KEY = "h3cUlUTlzgFecGm+/jHrB/AIPdGeuaupYKWIFmjsUWFihOw9RbW5rnKd2/hnd+Jg4ot1YccDtk7yhpm84fkMsQ=="
+    String MY_KEY = "M47dC/OYTG40e76tuUSqPtcAAbhAmnL1g8auiTHOVra0E3JKw+EfsPc3jegqPNsPene9CmGblvnai/SEU8Oa2w=="
     String MY_ACCOUNT = "nfbucket"
     String MY_CONTAINER = "my-data"
 
