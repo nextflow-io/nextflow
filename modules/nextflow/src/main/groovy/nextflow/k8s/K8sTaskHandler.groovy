@@ -260,6 +260,7 @@ class K8sTaskHandler extends TaskHandler {
         if( !state || delta >= 1_000) {
             def newState = client.podState(podName)
             if( newState ) {
+                log.trace "[K8s] Get pod=$podName state=$newState"
                 state = newState
                 timestamp = now
             }
@@ -272,7 +273,8 @@ class K8sTaskHandler extends TaskHandler {
         if( !podName ) throw new IllegalStateException("Missing K8s pod name -- cannot check if running")
         if(isSubmitted()) {
             def state = getState()
-            if (state && state.running != null) {
+            // include `terminated` state to allow the handler status to progress
+            if (state && (state.running != null || state.terminated)) {
                 status = TaskStatus.RUNNING
                 return true
             }
