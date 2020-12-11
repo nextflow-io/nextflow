@@ -597,6 +597,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
         // check if it is started
         if( handler.checkIfRunning() ) {
+            log.trace "Task started > $handler"
             session.notifyTaskStart(handler)
         }
 
