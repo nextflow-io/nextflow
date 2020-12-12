@@ -1,7 +1,11 @@
 NEXTFLOW CHANGE-LOG
 ===================
-20.11.0-edge - 16 Nov 2020
+20.12.0-edge - 12 Dec 2020 
+- Add support for charliecloud container engine #1809
+- Fix glitch on K8s task progress update [668434f6]
+- Upgrade to groovy 3.0.7 [27056035]
 
+20.11.0-edge - 16 Nov 2020
 - Fix Allow nextflow to handle http protocol for Singularity images #1791
 - Fix params-file overrides config parameters [b03efcac]
 - Fix println failing test #1621 [8c6f0f97] [9d2e5850]
