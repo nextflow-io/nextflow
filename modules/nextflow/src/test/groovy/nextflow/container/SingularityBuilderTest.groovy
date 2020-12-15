@@ -123,6 +123,22 @@ class SingularityBuilderTest extends Specification {
         cmd == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec ubuntu.img /bin/sh -c "cd $PWD; bwa --this --that file.fastq"'
     }
 
+
+    def 'test memory and cpus'() {
+
+        expect:
+        new SingularityBuilder('busybox')
+                .setCpus('2')
+                .build()
+                .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec --vm-cpu 2.0 busybox'
+
+        new SingularityBuilder('busybox')
+                .setMemory('100')
+                .build()
+                .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec --vm-ram 100 busybox'
+
+    }
+
     @Unroll
     def 'test singularity env'() {
 

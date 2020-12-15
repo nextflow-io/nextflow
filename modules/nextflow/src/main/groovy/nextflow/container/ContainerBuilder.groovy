@@ -39,6 +39,8 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
     protected String cpus
 
+    protected String cpuset
+
     protected String memory
 
     protected String temp
@@ -65,8 +67,13 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
         return (V)this
     }
 
-    V setCpus( String value ) {
-        this.cpus = value
+    V setCpus(String value) {
+        this.cpus = String.format("%.1f", Float.parseFloat(value))
+        return (V)this
+    }
+
+    V setCpuset(String value) {
+        this.cpuset = value
         return (V)this
     }
 

@@ -62,6 +62,8 @@ class TaskBean implements Serializable, Cloneable {
 
     String containerCpuset
 
+    String containerCpus
+
     MemoryUnit containerMemory
 
     Path containerMount
@@ -130,6 +132,7 @@ class TaskBean implements Serializable, Cloneable {
         this.containerImage = task.getContainer()
         this.containerConfig = task.getContainerConfig()
         this.containerMemory = task.config.getMemory()
+        this.containerCpus = task.config.getCpus()
         this.containerNative = task.isContainerNative()
         this.containerEnabled = task.isContainerEnabled()
         this.containerOptions = task.config.getContainerOptions()

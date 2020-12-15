@@ -108,11 +108,20 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
         if( runOptions )
             result << runOptions.join(' ') << ' '
 
+        if( cpus ) {
+            result << "--cpus ${cpus} "
+        }
+
+        if( memory ) {
+            result << "--memory ${memory} "
+        }
+
+
         // the name is after the user option so it has precedence over any options provided by the user
-        if( name )
+        if ( name )
             result << '--name ' << name << ' '
 
-        if( registry )
+        if ( registry )
             result << registry
 
         // finally the container name

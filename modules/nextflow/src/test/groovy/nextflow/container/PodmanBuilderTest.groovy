@@ -17,6 +17,8 @@
 
 package nextflow.container
 
+import nextflow.util.MemoryUnit
+
 import java.nio.file.Paths
 
 import spock.lang.Specification
@@ -209,5 +211,17 @@ class PodmanBuilderTest extends Specification {
         true     | 'Z'      | ':ro,Z'
     }
 
+    def 'test memory and cpus'() {
 
+        expect:
+        new PodmanBuilder('fedora')
+                .setCpus('3')
+                .build()
+                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --cpus 3.0 fedora'
+
+        new PodmanBuilder('fedora')
+                .setMemory(new MemoryUnit('100m'))
+                .build()
+                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --memory 100m fedora'
+    }
 }
