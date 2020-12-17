@@ -245,7 +245,7 @@ implicitly executed. Therefore it's the entry point of the workflow application.
 
 .. note::
   Implicit workflow definition is ignored when a script is included as module. This
-  allows the writing a workflow script that can be used either as a library module and as
+  allows the writing of a workflow script that can be used either as a library module and as
   application script. 
 
 .. tip::
