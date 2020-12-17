@@ -523,8 +523,7 @@ DSL2 migration notes
 * DSL2 final version is activated using the declaration ``nextflow.enable.dsl=2`` in place of ``nextflow.preview.dsl=2``.
 * Process inputs of type ``set`` have to be replaced with :ref:`tuple <process-input-tuple>`.
 * Process outputs of type ``set`` have to be replaced with :ref:`tuple <process-out-tuple>`.
-* Process output option ``mode flatten`` is not available any more. Replace it using the :ref:`operator-flatten` to the
-  corresponding output channel.
+* Process output option ``mode flatten`` is not available any more. Replace it using the :ref:`operator-flatten` operator on the corresponding output channel.
 * Anonymous and unwrapped includes are not supported any more. Replace it with a explicit module inclusion. For example::
 
         include './some/library'
