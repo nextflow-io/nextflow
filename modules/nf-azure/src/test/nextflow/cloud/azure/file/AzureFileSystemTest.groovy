@@ -88,12 +88,12 @@ class AzureFileSystemTest extends Specification {
 
     def 'should create directories' () {
         when:
-        def dirs = fileSystem.getPath( 'mydir1/mydir2/mydir3')
+        def dirs = fileSystem.getPath( 'mydir/mydir2/mydir3')
         Files.createDirectories(dirs)
         then:
-        Files.isDirectory(fileSystem.getPath('mydir1'))
-        Files.isDirectory(fileSystem.getPath('mydir1/mydir2'))
-        Files.isDirectory(fileSystem.getPath('mydir1/mydir2/mydir3'))
+        Files.isDirectory(fileSystem.getPath('mydir'))
+        Files.isDirectory(fileSystem.getPath('mydir/mydir2'))
+        Files.isDirectory(fileSystem.getPath('mydir/mydir2/mydir3'))
     }
 
     def 'should create file' () {

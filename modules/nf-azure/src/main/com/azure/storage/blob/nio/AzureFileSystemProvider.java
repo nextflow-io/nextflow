@@ -10,6 +10,7 @@ import java.io.UncheckedIOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.channels.SeekableByteChannel;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.AccessMode;
 import java.nio.file.CopyOption;
 import java.nio.file.DirectoryNotEmptyException;
@@ -798,7 +799,26 @@ public final class AzureFileSystemProvider extends FileSystemProvider {
      */
     @Override
     public void checkAccess(Path path, AccessMode... accessModes) throws IOException {
-        readAttributes(path, AzureBasicFileAttributes.class);
+
+        if (accessModes != null && accessModes.length != 0) {
+            throw logger.logThrowableAsError(
+                    new AccessDeniedException("The access cannot be determined."));
+        }
+        AzurePath.ensureFileSystemOpen(path);
+
+        // Read attributes already wraps BlobStorageException in an IOException.
+        try {
+            readAttributes(path, BasicFileAttributes.class);
+        } catch(IOException e) {
+            if (e.getCause() != null && e.getCause() instanceof BlobStorageException
+                    && BlobErrorCode.BLOB_NOT_FOUND.equals(((BlobStorageException) e.getCause()).getErrorCode())) {
+
+                throw logger.logThrowableAsError(new NoSuchFileException(path.toString()));
+            } else {
+                throw e;
+            }
+        }
+
     }
 
     /**
