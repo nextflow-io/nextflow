@@ -76,5 +76,16 @@ class NodeMarker {
             session.dag.addSourceNode(name, source)
     }
 
+    /**
+     * Add a mapping from DataflowBroadcast node to ReadChannel node.
+     *
+     * @param readChannelNode
+     * @param dataflowBroadcastNode
+     */
+    static void addDataflowBroadcastPair( readChannelNode, dataflowBroadcastNode )  {
+        if( session && session.dag && !session.aborted )
+            session.dag.addDataflowBroadcastPair(readChannelNode, dataflowBroadcastNode)
+    }
+
 
 }

@@ -126,14 +126,19 @@ class OpCall implements Callable {
     Object[] getArgs() { args }
 
     private <T> T read0(source){
+        T readChan = (T)source;
         if( source instanceof DataflowBroadcast )
-            return (T)CH.getReadChannel(source)
+            readChan = (T)CH.getReadChannel(source)
 
         if( source instanceof DataflowQueue )
-            return (T)CH.getReadChannel(source)
+            readChan = (T)CH.getReadChannel(source)
 
-        else
-            return (T)source
+        if( !ignoreDagNode )
+            // Keep track of this relationship so we can retrieve the
+            // DataflowBroadcast or DataflowQueue when rendering the DAG.
+            NodeMarker.addDataflowBroadcastPair(readChan, source)
+
+        return readChan
     }
 
     private Object[] read1(Object[] args) {

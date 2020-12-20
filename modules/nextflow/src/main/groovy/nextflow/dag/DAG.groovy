@@ -66,6 +66,23 @@ class DAG {
      */
     private List<Vertex> vertices = new ArrayList<>(50)
 
+    /**
+     * Contains mappings of ReadChannel nodes to DataflowBroadcast nodes.
+     * This is needed for DataflowBroadcast operators that get added to the
+     * DAG as ReadChannels - we need to get back to the DataflowBroadcast
+     * given the ReadChannel.
+     */
+    static private Map dataflowBroadcastLookup = new HashMap()
+
+    /**
+     * Adds a mapping from ReadChannel node to DataflowBroadcast node.
+     */
+    static public addDataflowBroadcastPair(readChannelNode, dataflowBroadcastNode) {
+        if ( !dataflowBroadcastNode.equals(readChannelNode) ) {
+            dataflowBroadcastLookup.put(readChannelNode, dataflowBroadcastNode)
+        }
+    }
+
     @PackageScope
     List<Vertex> getVertices() { vertices }
 
@@ -251,10 +268,13 @@ class DAG {
             Collections.emptyList()
         }
         else if( entry instanceof DataflowReadChannel || entry instanceof DataflowWriteChannel ) {
-            [ new ChannelHandler(channel: entry) ]
+            [ new ChannelHandler(channel: dataflowBroadcastLookup.getOrDefault(entry, entry)) ]
         }
         else if( entry instanceof Collection || entry instanceof Object[] ) {
-            entry.collect { new ChannelHandler(channel: it) }
+            entry
+                .collect{ dataflowBroadcastLookup.getOrDefault(it, it) }
+                .unique() // removes duplicate DataflowBroadcast channels
+                .collect{ new ChannelHandler(channel: it) }
         }
         else {
             throw new IllegalArgumentException("Not a valid channel type: [${entry.class.name}]")
