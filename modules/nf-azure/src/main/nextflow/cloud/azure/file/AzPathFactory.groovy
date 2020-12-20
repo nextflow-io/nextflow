@@ -48,13 +48,13 @@ class AzPathFactory extends FileSystemPathFactory {
         final fs = FileHelper.getOrCreateFileSystemFor(new URI(accountUri), cfg.getEnv())
 
         // compose the target path
-        return tokens.path ? fs.getPath(tokens.container, tokens.path) : fs.getPath(tokens.container)
+        return tokens.path ? fs.getPath(tokens.container+':', tokens.path) : fs.getPath(tokens.container)
     }
 
 
     @Override
     protected String toUriString(Path path) {
-        return null
+        return 'azb://' + path.toAbsolutePath().toString()
     }
 
 

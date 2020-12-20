@@ -33,8 +33,8 @@ class AzStorageContainerParserTest extends Specification {
 
         where:
         AZ_URI                                              | TOKENS
-        'azb://foo:/'                                       | new AzStorageContainerParser('foo:', '/', null)
-        'azb://foo:/this/that?account=nfstore'              | new AzStorageContainerParser('foo:', '/this/that', 'nfstore')
-        'azb://my-data:/nf-DE8YJPrG.txt?account=nfstore'    | new AzStorageContainerParser('my-data:', '/nf-DE8YJPrG.txt', 'nfstore')
+        'azb://foo:/'                                       | new AzStorageContainerParser('foo', '/', null)
+        'azb://foo:/this/that?account=nfstore'              | new AzStorageContainerParser('foo', '/this/that', 'nfstore')
+        'azb://my-data:/nf-DE8YJPrG.txt?account=nfstore'    | new AzStorageContainerParser('my-data', '/nf-DE8YJPrG.txt', 'nfstore')
     }
 }

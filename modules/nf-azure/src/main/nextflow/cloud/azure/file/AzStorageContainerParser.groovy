@@ -28,7 +28,7 @@ import nextflow.extension.Bolts
 @Canonical
 class AzStorageContainerParser {
 
-    private static final Pattern AZ_REGEX = ~/^azb:\/\/([^:]+:)(\/[^?]*)(?:\?account=(.+))?$/
+    private static final Pattern AZ_REGEX = ~/^azb:\/\/([^:]+):(\/[^?]*)(?:\?account=(.+))?$/
 
     String container
     String path

@@ -73,7 +73,7 @@ class AzBatchService {
         if( !config.batch().accountKey )
             throw new IllegalArgumentException("Missing Azure Batch account key -- Specify it in the nextflow.config file using the setting 'azure.batch.accountKet'")
 
-        final cred = new BatchSharedKeyCredentials(config.batch().endpoint, config.batch().accountName, config.batch().accountKey);
+        final cred = new BatchSharedKeyCredentials(config.batch().endpoint, config.batch().accountName, config.batch().accountKey)
         return BatchClient.open(cred)
     }
 
@@ -134,6 +134,8 @@ class AzBatchService {
     protected List<ResourceFile> resourceFiles(TaskRun task) {
         final uri = task.workDir.toUriString()
         final bucket = AzStorageContainerParser.parse(uri)
+        if( !bucket )
+            throw new IllegalArgumentException("Invalid Azure data container URI: $uri")
 
         final result = new ArrayList(10)
 
@@ -141,14 +143,14 @@ class AzBatchService {
         final launcher = new ResourceFile()
                 .withAutoStorageContainerName(bucket.container)
                 .withBlobPrefix("$bucket.key/${TaskRun.CMD_RUN}")
-                .withFilePath("$bucket.key/${TaskRun.CMD_RUN}")
+                .withFilePath("$bucket.path/${TaskRun.CMD_RUN}")
                 .withFileMode('554')
         result.add(launcher)
 
         final script = new ResourceFile()
                 .withAutoStorageContainerName(bucket.container)
                 .withBlobPrefix("$bucket.key/${TaskRun.CMD_SCRIPT}")
-                .withFilePath("$bucket.key/${TaskRun.CMD_SCRIPT}")
+                .withFilePath("$bucket.path/${TaskRun.CMD_SCRIPT}")
                 .withFileMode('554')
         result.add(script)
 
@@ -156,7 +158,7 @@ class AzBatchService {
     }
 
     protected List<OutputFile> outputFiles(TaskRun task) {
-
+        return []
     }
 
     protected ImageInformation getImage() {
