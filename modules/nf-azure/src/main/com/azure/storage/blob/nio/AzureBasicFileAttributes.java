@@ -43,6 +43,7 @@ public final class AzureBasicFileAttributes implements BasicFileAttributes {
     }
 
     private final BlobProperties properties;
+    private final AzureResource resource;
 
     /*
     There are some work-arounds we could do to try to accommodate virtual directories such as making a checkDirStatus
@@ -54,7 +55,8 @@ public final class AzureBasicFileAttributes implements BasicFileAttributes {
      */
     AzureBasicFileAttributes(Path path) throws IOException {
         try {
-            this.properties = new AzureResource(path).getBlobClient().getProperties();
+            this.resource = new AzureResource(path);
+            this.properties = resource.getBlobClient().getProperties();
         } catch (BlobStorageException e) {
             throw LoggingUtility.logError(logger, new IOException(e));
         }
@@ -148,12 +150,12 @@ public final class AzureBasicFileAttributes implements BasicFileAttributes {
     }
 
     /**
-     * Unsupported.
+     * Returns the url of the resource.
      *
-     * @throws UnsupportedOperationException Operation not supported.
+     * @return The file key, which is the url.
      */
     @Override
     public Object fileKey() {
-        throw new UnsupportedOperationException();
+        return this.resource.getBlobClient().getBlobUrl();
     }
 }

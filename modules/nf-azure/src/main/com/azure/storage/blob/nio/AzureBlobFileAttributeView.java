@@ -152,6 +152,6 @@ public final class AzureBlobFileAttributeView implements BasicFileAttributeView 
      */
     @Override
     public void setTimes(FileTime lastModifiedTime, FileTime lastAccessTime, FileTime createTime) throws IOException {
-        throw new UnsupportedOperationException();
+        throw LoggingUtility.logError(logger, new UnsupportedOperationException());
     }
 }

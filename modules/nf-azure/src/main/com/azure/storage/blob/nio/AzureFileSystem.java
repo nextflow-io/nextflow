@@ -178,7 +178,7 @@ public final class AzureFileSystem extends FileSystem {
             this.fileStores = this.initializeFileStores(config);
         } catch (RuntimeException e) {
             throw LoggingUtility.logError(logger, new IllegalArgumentException("There was an error parsing the "
-                + "configurations map. Please ensure all fields are set to a legal value of the correct type."));
+                + "configurations map. Please ensure all fields are set to a legal value of the correct type.", e));
         } catch (IOException e) {
             throw LoggingUtility.logError(logger,
                 new IOException("Initializing FileStores failed. FileSystem could not be opened.", e));

@@ -42,10 +42,12 @@ public final class AzureBlobFileAttributes implements BasicFileAttributes {
     private final ClientLogger logger = new ClientLogger(AzureBlobFileAttributes.class);
 
     private final BlobProperties properties;
+    private final AzureResource resource;
 
     AzureBlobFileAttributes(Path path) throws IOException {
         try {
-            this.properties = new AzureResource(path).getBlobClient().getProperties();
+            this.resource =  new AzureResource(path);
+            this.properties = resource.getBlobClient().getProperties();
         } catch (BlobStorageException e) {
             throw LoggingUtility.logError(logger, new IOException("Path: " + path.toString(), e));
         }
@@ -321,11 +323,12 @@ public final class AzureBlobFileAttributes implements BasicFileAttributes {
     }
 
     /**
-     * Unsupported.
-     * @throws UnsupportedOperationException Operation not supported.
+     * Returns the url of the resource.
+     *
+     * @return The file key, which is the url.
      */
     @Override
     public Object fileKey() {
-        throw new UnsupportedOperationException();
+        return resource.getBlobClient().getBlobUrl();
     }
 }

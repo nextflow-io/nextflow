@@ -148,7 +148,7 @@ public final class AzureDirectoryStream implements DirectoryStream<Path> {
 
         @Override
         public void remove() {
-            throw new UnsupportedOperationException();
+            throw LoggingUtility.logError(logger, new UnsupportedOperationException());
         }
 
         private Path getNextListResult(BlobItem blobItem) {

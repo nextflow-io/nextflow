@@ -181,7 +181,8 @@ public final class AzureFileStore extends FileStore {
      */
     @Override
     public Object getAttribute(String s) throws IOException {
-        throw new UnsupportedOperationException("FileStoreAttributeViews aren't supported.");
+        throw LoggingUtility.logError(logger, new UnsupportedOperationException("FileStoreAttributeViews aren't"
+            + " supported."));
     }
 
     BlobContainerClient getContainerClient() {

@@ -3,10 +3,6 @@
 
 package com.azure.storage.blob.nio;
 
-import com.azure.core.util.logging.ClientLogger;
-import com.azure.storage.blob.BlobClient;
-import com.azure.storage.blob.BlobContainerClient;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -27,6 +23,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
+
+import com.azure.core.util.logging.ClientLogger;
+import com.azure.storage.blob.BlobClient;
+import com.azure.storage.blob.BlobContainerClient;
 
 /**
  * An object that may be used to locate a file in a file system.
@@ -727,7 +727,8 @@ public final class AzurePath implements Path {
 
         String blobName = this.withoutRoot();
         if (blobName.isEmpty()) {
-            throw new IOException("Cannot get a blob client to a path that only contains the root or is an empty path");
+            throw LoggingUtility.logError(logger, new IOException("Cannot get a blob client to a path that only "
+                + "contains the root or is an empty path"));
         }
 
         return containerClient.getBlobClient(blobName);
