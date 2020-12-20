@@ -115,7 +115,7 @@ class HttpFilesTests extends Specification {
     @IgnoreIf({ env['TRAVIS'] })
     def 'should read FTP file' () {
         when:
-        def lines = Paths.get(new URI('ftp://ftp.ebi.ac.uk/robots.txt')).text.readLines()
+        def lines = Paths.get(new URI('ftp://ftp.ncbi.nlm.nih.gov/robots.txt')).text.readLines()
         then:
         lines[0] == 'User-agent: *'
         lines[1] == 'Disallow: /'
@@ -159,7 +159,7 @@ class HttpFilesTests extends Specification {
     @IgnoreIf({ env['TRAVIS'] })
     def 'should read lines' () {
         given:
-        def path = Paths.get(new URI('ftp://ftp.ebi.ac.uk/robots.txt'))
+        def path = Paths.get(new URI('ftp://ftp.ncbi.nlm.nih.gov/robots.txt'))
 
         when:
         def lines = Files.readAllLines(path, Charset.forName('UTF-8'))
@@ -171,7 +171,7 @@ class HttpFilesTests extends Specification {
     @IgnoreIf({ env['TRAVIS'] })
     def 'should read all bytes' ( ) {
         given:
-        def path = Paths.get(new URI('ftp://ftp.ebi.ac.uk/robots.txt'))
+        def path = Paths.get(new URI('ftp://ftp.ncbi.nlm.nih.gov/robots.txt'))
 
         when:
         def bytes = Files.readAllBytes(path)
