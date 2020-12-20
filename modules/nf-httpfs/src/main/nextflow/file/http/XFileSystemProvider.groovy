@@ -157,7 +157,6 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         }
 
         final conn = new URL(path.toUri().toString()).openConnection()
-        final size = conn.getContentLengthLong()
         final stream = new BufferedInputStream(conn.getInputStream())
 
         new SeekableByteChannel() {
@@ -193,7 +192,9 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
             @Override
             long size() throws IOException {
-                return size
+                // this value is going to be used as the buffer size
+                // file related operation. See for example {@link Files#readAllBytes}
+                return 8192
             }
 
             @Override
