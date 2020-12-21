@@ -128,14 +128,23 @@ class SingularityBuilderTest extends Specification {
 
         expect:
         new SingularityBuilder('busybox')
-                .setCpus('2')
+                .setCpus(2)
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec --vm-cpu 2.0 busybox'
+
 
         new SingularityBuilder('busybox')
                 .setMemory('100')
                 .build()
                 .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec --vm-ram 100 busybox'
+
+
+        new SingularityBuilder('busybox')
+                .setCpus(2.5)
+                .setMemory('100')
+                .build()
+                .runCommand == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec --vm-cpu 2.5 --vm-ram 100 busybox'
+
 
     }
 

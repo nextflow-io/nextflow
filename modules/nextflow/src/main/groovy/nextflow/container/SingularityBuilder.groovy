@@ -86,7 +86,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
             result << runOptions.join(' ') << ' '
 
         if( cpus ) {
-            result << "--vm-cpu ${cpus} "
+            result << "--vm-cpu ${String.format("%.1f", cpus)} "
         }
 
         if( memory ) {

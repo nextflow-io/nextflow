@@ -37,7 +37,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
     protected List<String> engineOptions = []
 
-    protected String cpus
+    protected Float cpus
 
     protected String cpuset
 
