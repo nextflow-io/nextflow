@@ -67,8 +67,8 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
         return (V)this
     }
 
-    V setCpus(String value) {
-        this.cpus = String.format("%.1f", Float.parseFloat(value))
+    V setCpus(Float value) {
+        this.cpus = value
         return (V)this
     }
 
