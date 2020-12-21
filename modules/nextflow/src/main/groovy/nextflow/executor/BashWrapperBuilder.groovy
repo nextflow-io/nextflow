@@ -484,6 +484,9 @@ class BashWrapperBuilder {
         if( this.containerMemory )
             builder.setMemory(containerMemory)
 
+        if( this.containerCpus )
+            builder.setCpus(containerCpus)
+
         if( this.containerCpuset )
             builder.addRunOptions(containerCpuset)
 

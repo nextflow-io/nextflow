@@ -37,7 +37,9 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
     protected List<String> engineOptions = []
 
-    protected String cpus
+    protected Float cpus
+
+    protected String cpuset
 
     protected String memory
 
@@ -65,8 +67,13 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
         return (V)this
     }
 
-    V setCpus( String value ) {
+    V setCpus(Float value) {
         this.cpus = value
+        return (V)this
+    }
+
+    V setCpuset(String value) {
+        this.cpuset = value
         return (V)this
     }
 
