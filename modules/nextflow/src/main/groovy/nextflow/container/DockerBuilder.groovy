@@ -116,11 +116,14 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
         result << 'run -i '
 
-        if( cpus ) {
+        if( cpus )
+            result << "--cpus ${String.format("%.1f", cpus)} "
+
+        if( cpuset ) {
             if( legacy )
-                result << "--cpuset ${cpus} "
+                result << "--cpuset ${cpuset} "
             else
-                result << "--cpuset-cpus ${cpus} "
+                result << "--cpuset-cpus ${cpuset} "
         }
 
         if( memory )

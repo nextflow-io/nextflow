@@ -68,8 +68,8 @@ class UdockerBuilder extends ContainerBuilder<UdockerBuilder> {
             result << '--rm '
         }
 
-        if( cpus ) {
-            result << "--cpuset-cpus=$cpus "
+        if( cpuset ) {
+            result << "--cpuset-cpus=$cpuset "
         }
 
         // add the environment
