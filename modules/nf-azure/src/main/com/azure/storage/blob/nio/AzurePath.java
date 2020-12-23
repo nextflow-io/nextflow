@@ -712,7 +712,7 @@ public final class AzurePath implements Path {
     existence or even validity of any remote resource. It is purely a representation of a path. Therefore, we do not
     construct the client or perform any validation until it is requested.
      */
-    BlobClient toBlobClient() throws IOException {
+    public BlobClient toBlobClient() throws IOException {
         // Converting to an absolute path ensures there is a container to operate on even if it is the default.
         // Normalizing ensures the path is clean.
         Path root = this.normalize().toAbsolutePath().getRoot();

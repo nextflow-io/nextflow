@@ -16,12 +16,22 @@
 
 package nextflow.cloud.azure.batch
 
+
+import java.time.OffsetDateTime
+
+import com.azure.storage.blob.nio.AzurePath
+import com.azure.storage.blob.sas.BlobSasPermission
+import com.azure.storage.blob.sas.BlobServiceSasSignatureValues
 import com.microsoft.azure.batch.BatchClient
 import com.microsoft.azure.batch.auth.BatchSharedKeyCredentials
 import com.microsoft.azure.batch.protocol.models.CloudTask
 import com.microsoft.azure.batch.protocol.models.ContainerConfiguration
 import com.microsoft.azure.batch.protocol.models.ImageInformation
 import com.microsoft.azure.batch.protocol.models.OutputFile
+import com.microsoft.azure.batch.protocol.models.OutputFileBlobContainerDestination
+import com.microsoft.azure.batch.protocol.models.OutputFileDestination
+import com.microsoft.azure.batch.protocol.models.OutputFileUploadCondition
+import com.microsoft.azure.batch.protocol.models.OutputFileUploadOptions
 import com.microsoft.azure.batch.protocol.models.PoolInformation
 import com.microsoft.azure.batch.protocol.models.ResourceFile
 import com.microsoft.azure.batch.protocol.models.TaskAddParameter
@@ -97,7 +107,7 @@ class AzBatchService {
             return allJobIds[task]
         }
         // create a batch job
-        final jobId = makeJobId(task)
+        final jobId = makeJobId(task) + '-' + Random.newInstance().nextInt(5000)
         final poolInfo = new PoolInformation()
         poolInfo.withPoolId(poolId)
         client.jobOperations().createJob(jobId, poolInfo)
@@ -119,16 +129,68 @@ class AzBatchService {
             throw new IllegalArgumentException("Missing container image for process: $task.name")
 
         final taskId = "nf-${task.hash.toString()}"
-        final containerOpts = new TaskContainerSettings().withImageName(container)
+        final containerOpts = new TaskContainerSettings()
+                .withImageName(container)
 
         TaskAddParameter taskToAdd = new TaskAddParameter()
                 .withId(taskId)
                 .withContainerSettings(containerOpts)
                 .withCommandLine("bash ${TaskRun.CMD_RUN}")
-                .withResourceFiles(resourceFiles(task))
-                .withOutputFiles(outputFiles(task))
+                .withResourceFiles(resourceFileUrls(task))
+                .withOutputFiles(outputFileUrls(task))
         client.taskOperations().createTask(jobId, taskToAdd)
         return new AzTaskKey(jobId, taskId)
+    }
+
+    protected List<ResourceFile> resourceFileUrls(TaskRun task) {
+        final cmdRun = (AzurePath) task.workDir.resolve(TaskRun.CMD_RUN)
+        final cmdScript = (AzurePath) task.workDir.resolve(TaskRun.CMD_SCRIPT)
+
+        final result = new ArrayList(10)
+        // command bash launcher
+        final launcher = new ResourceFile()
+                .withHttpUrl(getResUrl(cmdRun, 'r'))
+                .withFilePath(TaskRun.CMD_RUN)
+        result.add(launcher)
+
+        final script = new ResourceFile()
+                .withHttpUrl(getResUrl(cmdScript, 'r'))
+                .withFilePath(TaskRun.CMD_SCRIPT)
+        result.add(script)
+
+        return result
+    }
+
+
+    protected String getResUrl(AzurePath path, String perms) {
+        final offset = OffsetDateTime.now().plusDays(1)
+        final client = path.toBlobClient()
+        final sas = client.generateSas(new BlobServiceSasSignatureValues(offset, BlobSasPermission.parse(perms)))
+//        return URLDecoder.decode("${client.getBlobUrl()}?${sas}", "utf-8")
+        return "${client.getBlobUrl()}?${sas}"
+    }
+
+    protected List<OutputFile> outputFileUrls(TaskRun task) {
+        List<OutputFile> result = new ArrayList<>(20)
+
+        result.add( destFile(TaskRun.CMD_OUTFILE, task.workDir as AzurePath) )
+//        result.add( destFile(TaskRun.CMD_ERRFILE, task.workDir as AzurePath) )
+
+        return result
+    }
+
+    protected OutputFile destFile(String localPath, AzurePath targetDir) {
+
+        final targetFile = (AzurePath) targetDir.resolve(localPath)
+        final targetUrl = getResUrl( targetFile, 'cw')
+        final container = new OutputFileBlobContainerDestination()
+                .withContainerUrl(targetUrl)
+//                .withPath( targetDir.resolve(localPath).toString().tokenize(':')[1] )
+
+        new OutputFile()
+                .withFilePattern(localPath)
+                .withDestination( new OutputFileDestination().withContainer(container) )
+                .withUploadOptions( new OutputFileUploadOptions().withUploadCondition( OutputFileUploadCondition.TASK_COMPLETION) )
     }
 
     protected List<ResourceFile> resourceFiles(TaskRun task) {
@@ -157,9 +219,6 @@ class AzBatchService {
         return result
     }
 
-    protected List<OutputFile> outputFiles(TaskRun task) {
-        return []
-    }
 
     protected ImageInformation getImage() {
         List<ImageInformation> images = client.accountOperations().listSupportedImages()

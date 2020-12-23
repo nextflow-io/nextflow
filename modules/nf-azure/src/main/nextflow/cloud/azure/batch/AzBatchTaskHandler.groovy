@@ -75,7 +75,7 @@ class AzBatchTaskHandler extends TaskHandler {
     @Override
     void submit() {
         log.debug "[AZURE BATCH] Submitting task $task.name - work-dir=${task.workDirStr}"
-        new BashWrapperBuilder(task).build()
+        new BashWrapperBuilder(taskBean, new AzFileCopyStrategy(taskBean)).build()
 
         this.opKey = batchService.submitTask(task)
         log.debug "[AZURE BATCH] Submitted task $task.name with taskId=$opKey"
