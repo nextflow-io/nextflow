@@ -63,7 +63,15 @@ abstract class XFileSystemProvider extends FileSystemProvider {
     }
 
     static private URI key(URI uri) {
-        key(uri.scheme.toLowerCase(), uri.authority.toLowerCase())
+        final base = uri.authority
+        int p = base.indexOf('@')
+        if( p==-1 )
+            return key(uri.scheme.toLowerCase(), base.toLowerCase())
+        else {
+            final user = base.substring(0,p)
+            final host = base.substring(p)
+            return key(uri.scheme.toLowerCase(), user + host.toLowerCase())
+        }
     }
 
     @Override
@@ -142,6 +150,16 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         return getFileSystem(uri,true).getPath(uri.path)
     }
 
+    private URLConnection toConnection(Path path) {
+        final url = path.toUri().toURL()
+        final conn = url.openConnection()
+        if( url.userInfo ) {
+            String basicAuth = "Basic ${url.getUserInfo().getBytes().encodeBase64()}"
+            conn.setRequestProperty("Authorization", basicAuth);
+        }
+        return conn
+    }
+
     @Override
     SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
 
@@ -156,7 +174,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
             }
         }
 
-        final conn = new URL(path.toUri().toString()).openConnection()
+        final conn = toConnection(path)
         final stream = new BufferedInputStream(conn.getInputStream())
 
         new SeekableByteChannel() {
@@ -258,7 +276,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
             }
         }
 
-        return new URL(path.toUri().toString()).openStream()
+        return toConnection(path).getInputStream()
     }
 
     /**
@@ -380,7 +398,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
     }
 
     protected XFileAttributes readHttpAttributes(XPath path) {
-        final conn = path.toUri().toURL().openConnection()
+        final conn = toConnection(path)
         if( conn instanceof FtpURLConnection ) {
             return new XFileAttributes(null,-1)
         }

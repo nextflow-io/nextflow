@@ -16,7 +16,10 @@
  */
 
 package nextflow.file.http
+
+
 import spock.lang.Specification
+import spock.lang.Unroll
 /**
  * Created by emilio on 08/11/16.
  */
@@ -93,4 +96,25 @@ class XFileSystemProviderTest extends Specification {
         attrs.lastModifiedTime() == null
         attrs.size() == -1
     }
+
+    @Unroll
+    def 'should get uri path' () {
+        given:
+        def provider = new HttpFileSystemProvider()
+
+        when:
+        def path = provider.getPath( new URI(PATH) )
+        then:
+        path.toUri().toString() == EXPECTED
+
+        where:
+        PATH                                | EXPECTED
+        'http://foo.com/this/that'          | 'http://foo.com/this/that'
+        'http://FOO.com/this/that'          | 'http://foo.com/this/that'
+        'http://MrXYZ@foo.com/this/that'    | 'http://MrXYZ@foo.com/this/that'
+        'http://MrXYZ@FOO.com/this/that'    | 'http://MrXYZ@foo.com/this/that'
+        'http://@FOO.com/this/that'         | 'http://@foo.com/this/that'
+    }
+
+
 }
