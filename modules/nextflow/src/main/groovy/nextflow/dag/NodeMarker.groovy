@@ -16,6 +16,7 @@
  */
 
 package nextflow.dag
+
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Global
@@ -76,5 +77,15 @@ class NodeMarker {
             session.dag.addSourceNode(name, source)
     }
 
+    /**
+     * Add a mapping from DataflowBroadcast node to ReadChannel node.
+     *
+     * @param readChannel The read channel associated a broadcast channel instance
+     * @param broadcastChannel The corresponding broadcast channel
+     */
+    static void addDataflowBroadcastPair(readChannel, broadcastChannel)  {
+        if( session && session.dag && !session.aborted )
+            session.dag.addDataflowBroadcastPair(readChannel, broadcastChannel)
+    }
 
 }

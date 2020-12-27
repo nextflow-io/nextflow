@@ -66,6 +66,21 @@ class DAG {
      */
     private List<Vertex> vertices = new ArrayList<>(50)
 
+    /**
+     * Contains mappings of ReadChannel nodes to DataflowBroadcast nodes.
+     * This is needed for DataflowBroadcast operators that get added to the
+     * DAG as ReadChannels - we need to get back to the DataflowBroadcast
+     * given the ReadChannel.
+     */
+    private Map dataflowBroadcastLookup = new HashMap()
+
+    /**
+     * Adds a mapping from ReadChannel node to DataflowBroadcast node.
+     */
+    void addDataflowBroadcastPair(readChannel, broadcastChannel) {
+        dataflowBroadcastLookup.put(readChannel, broadcastChannel)
+    }
+
     @PackageScope
     List<Vertex> getVertices() { vertices }
 
@@ -219,7 +234,7 @@ class DAG {
 
     }
 
-    static private List<ChannelHandler> normalizeInputs( InputsList inputs ) {
+    private List<ChannelHandler> normalizeInputs( InputsList inputs ) {
 
         inputs
                 .findAll { !( it instanceof DefaultInParam)  }
@@ -227,13 +242,13 @@ class DAG {
 
     }
 
-    static private String inputName0(InParam param) {
+    private String inputName0(InParam param) {
         if( param instanceof TupleInParam ) return null
         if( param instanceof EachInParam ) return null
         return param.name
     }
 
-    static private List<ChannelHandler> normalizeOutputs( OutputsList outputs ) {
+    private List<ChannelHandler> normalizeOutputs( OutputsList outputs ) {
 
         def result = []
         for(OutParam p :outputs) {
@@ -246,15 +261,18 @@ class DAG {
         return result
     }
 
-    static private List<ChannelHandler> normalizeChannels( entry ) {
+    private List<ChannelHandler> normalizeChannels( entry ) {
         if( entry == null ) {
             Collections.emptyList()
         }
         else if( entry instanceof DataflowReadChannel || entry instanceof DataflowWriteChannel ) {
-            [ new ChannelHandler(channel: entry) ]
+            [ new ChannelHandler(channel: dataflowBroadcastLookup.getOrDefault(entry, entry)) ]
         }
         else if( entry instanceof Collection || entry instanceof Object[] ) {
-            entry.collect { new ChannelHandler(channel: it) }
+            entry
+                .collect( it -> dataflowBroadcastLookup.getOrDefault(it, it) )
+                .unique() // removes duplicate DataflowBroadcast channels
+                .collect( it -> new ChannelHandler(channel: it) )
         }
         else {
             throw new IllegalArgumentException("Not a valid channel type: [${entry.class.name}]")
