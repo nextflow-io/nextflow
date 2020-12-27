@@ -185,7 +185,7 @@ class PodSpecBuilderTest extends Specification {
                                             [name:'DELTA', value:'world']
                                     ],
                                     resources:[
-                                            requests: ['foo.org/gpu':5],
+                                            requests: ['foo.org/gpu':5, cpu:8, memory:'100Gi'],
                                             limits:['foo.org/gpu':10, cpu:8, memory:'100Gi'] ]
                                    ]
                            ]
