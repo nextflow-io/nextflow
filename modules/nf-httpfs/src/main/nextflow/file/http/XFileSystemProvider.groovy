@@ -150,12 +150,23 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         return getFileSystem(uri,true).getPath(uri.path)
     }
 
+    protected String auth(String userInfo) {
+        final String BEARER = 'x-oauth-bearer:'
+        int p = userInfo.indexOf(BEARER)
+        if( p!=-1 ) {
+            final token = userInfo.substring(BEARER.length())
+            return "Bearer $token"
+        }
+        else {
+            return "Basic ${userInfo.getBytes().encodeBase64()}"
+        }
+    }
+
     private URLConnection toConnection(Path path) {
         final url = path.toUri().toURL()
         final conn = url.openConnection()
         if( url.userInfo ) {
-            String basicAuth = "Basic ${url.getUserInfo().getBytes().encodeBase64()}"
-            conn.setRequestProperty("Authorization", basicAuth);
+            conn.setRequestProperty("Authorization", auth(url.userInfo));
         }
         return conn
     }

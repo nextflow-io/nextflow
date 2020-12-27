@@ -116,5 +116,16 @@ class XFileSystemProviderTest extends Specification {
         'http://@FOO.com/this/that'         | 'http://@foo.com/this/that'
     }
 
+    @Unroll
+    def 'should encode user info' () {
+        given:
+        def provider = new HttpFileSystemProvider()
+        expect:
+        provider.auth(USER_INFO) == EXPECTED
+        where:
+        USER_INFO               | EXPECTED
+        "foo:bar"               | "Basic ${'foo:bar'.bytes.encodeBase64()}"
+        "x-oauth-bearer:12345"  | "Bearer 12345"
+    }
 
 }
