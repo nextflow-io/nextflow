@@ -17,6 +17,7 @@
 
 package nextflow.scm
 
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -26,7 +27,6 @@ import nextflow.config.ConfigParser
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.file.FileHelper
-
 /**
  * Models a repository provider configuration attributes
  *
@@ -46,10 +46,7 @@ class ProviderConfig {
         if( !cfg )
             return DEFAULT_SCM_FILE
         // check and return it if valid
-        final path = FileHelper.asPath(cfg)
-        if( !path.exists() )
-            throw new AbortOperationException("Missing SCM config file: $cfg - Check the env variable NXF_SCM_FILE")
-        return path
+        return FileHelper.asPath(cfg)
     }
 
     private String name
@@ -272,6 +269,13 @@ class ProviderConfig {
         try {
             parse(file.text)
         }
+        catch (NoSuchFileException | FileNotFoundException e) {
+            if( file == DEFAULT_SCM_FILE ) {
+                return new LinkedHashMap()
+            }
+            else
+                throw new AbortOperationException("Missing SCM config file: ${file.toUriString()} - Check the env variable NXF_SCM_FILE")
+        }
         catch( Exception e ) {
             def message = "Failed to parse config file: $file -- cause: ${e.message?:e.toString()}"
             throw new ConfigParseException(message,e)
@@ -280,7 +284,7 @@ class ProviderConfig {
 
     static Map getDefault() {
         final file = getScmConfigPath()
-        return file.exists() ? getFromFile(file) : [:]
+        return getFromFile(file)
     }
 
     static private void addDefaults(List<ProviderConfig> result) {
