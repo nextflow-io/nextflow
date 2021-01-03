@@ -165,6 +165,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
     private URLConnection toConnection(Path path) {
         final url = path.toUri().toURL()
         final conn = url.openConnection()
+        conn.setRequestProperty("User-Agent", 'Nextflow/httpfs')
         if( url.userInfo ) {
             conn.setRequestProperty("Authorization", auth(url.userInfo));
         }
