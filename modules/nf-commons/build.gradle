@@ -22,7 +22,7 @@ sourceSets {
     main.resources.srcDirs = ['src/resources']
     test.groovy.srcDirs = ['src/test']
     test.java.srcDirs = []
-    test.resources.srcDirs = []
+    test.resources.srcDirs = ['src/testResources']
 }
 
 dependencies {
@@ -31,6 +31,8 @@ dependencies {
     compile "org.codehaus.groovy:groovy-nio:3.0.7"
     compile "commons-lang:commons-lang:2.6"
     compile 'com.google.guava:guava:21.0'
+    compile 'org.pf4j:pf4j:3.4.1'
+    compile 'org.pf4j:pf4j-update:2.3.0'
 
     /* testImplementation inherited from top gradle build file */
     testImplementation(testFixtures(project(":nextflow")))

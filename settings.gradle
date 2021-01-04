@@ -19,13 +19,17 @@ rootProject.name = 'nextflow-prj'
 
 include 'nextflow'
 include 'nf-commons'
-include 'nf-console'
 include 'nf-httpfs'
-include 'nf-ga4gh'
-include 'nf-amazon'
-include 'nf-google'
-include 'nf-tower'
 
 rootProject.children.each { prj ->
     prj.projectDir = new File("$rootDir/modules/$prj.name")
 }
+
+include 'plugins'
+include 'plugins:nf-amazon'
+include 'plugins:nf-google'
+include 'plugins:nf-ga4gh'
+include 'plugins:nf-tower'
+include 'plugins:nf-console'
+include 'plugins:nf-ignite'
+

@@ -20,7 +20,6 @@ package nextflow.executor
 import java.nio.file.Path
 
 import groovy.transform.Memoized
-import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.file.FileHelper
@@ -147,7 +146,6 @@ abstract class Executor {
     /**
      * @return A reference to the current {@code #queueHolder} object
      */
-    @PackageScope
     TaskMonitor getTaskMonitor()  { monitor }
 
     /**

@@ -1,0 +1,148 @@
+import io.nextflow.gradle.tasks.GithubUploader
+import io.nextflow.gradle.tasks.GithubRepositoryPublisher
+import org.apache.commons.codec.digest.DigestUtils
+
+apply plugin: 'java'
+apply plugin: "io.nextflow.nf-build-plugin"
+
+ext.github_organization = 'nextflow-io'
+ext.github_username = project.findProperty('github_username') ?: 'pditommaso'
+ext.github_access_token = project.findProperty('github_access_token') ?: System.getenv('GITHUB_TOKEN')
+ext.github_commit_email = project.findProperty('github_commit_email') ?: 'paolo.ditommaso@gmail.com'
+
+jar.enabled = false
+
+String computeSha512(File file) {
+    if( !file.exists() )
+        throw new GradleException("Missing file: $file -- cannot compute SHA-512")
+    return DigestUtils.sha512Hex(file.bytes)
+}
+
+String now() {
+    "${java.time.OffsetDateTime.now().format(java.time.format.DateTimeFormatter.ISO_DATE_TIME)}"
+}
+
+List<String> allPlugins() {
+    def plugins = []
+    new File(rootProject.rootDir, 'plugins') .eachDir { if(it.name.startsWith('nf-')) plugins.add(it.name) }
+    return plugins
+}
+
+String verFromManifest(File file) {
+    def str = file.text
+    def regex = ~/(?m)^Plugin-Version:\s*([\w-\.]+)$/
+    def m = regex.matcher(str)
+    if( m.find() ) {
+        def ver = m.group(1)
+        //println "Set plugin '${file.parentFile.parentFile.parentFile.parentFile.name}' version=${ver}"
+        return ver
+    }
+    throw new GradleException("Cannot find version for plugin: $file")
+}
+
+def timestamp = now()
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'groovy'
+    apply plugin: 'io.nextflow.nf-build-plugin'
+    
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+
+    version = verFromManifest(file('src/resources/META-INF/MANIFEST.MF'))
+    
+    /*
+     * Creates plugin zip and json meta file in the plugin `build/libs` directory
+     */
+    task makeZip(type: Jar) {
+        into('classes') { with jar }
+        into('lib') { from configurations.compile }
+        manifest.from file('src/resources/META-INF/MANIFEST.MF')
+        archiveExtension = 'zip'
+        preserveFileTimestamps = false
+        reproducibleFileOrder = true
+
+        doLast {
+            // create the meta file
+            final zip = new File("$buildDir/libs/${project.name}-${project.version}.zip")
+            final json = new File("$buildDir/libs/${project.name}-${project.version}-meta.json")
+            json.text = """\
+              {
+                "version": "${project.version}",
+                "date": "${timestamp}",
+                "url": "https://github.com/nextflow-io/${project.name}/releases/download/${project.version}/${project.name}-${project.version}.zip",
+                "sha512sum": "${computeSha512(zip)}"
+              }
+            """.stripIndent()
+        }
+    }
+
+    /*
+     * Copy the plugin dependencies in the subproject `build/target/libs` directory
+     */
+    task copyPluginLibs(type: Sync) {
+        from configurations.compile
+        into 'build/target/libs'
+    }
+
+    /*
+     * Copy the plugin in the project root build/plugins directory
+     */
+    task copyPluginZip(type: Copy) {
+        from makeZip
+        into "$rootProject.buildDir/plugins"
+    }
+
+    /*
+     * Unzip the plugin artifact in the project root build/plugins directory
+     */
+    task unzipPlugin(type: Copy, dependsOn: copyPluginZip) {
+        from zipTree("$rootProject.buildDir/plugins/${project.name}-${project.version}.zip")
+        into "$rootProject.buildDir/plugins/${project.name}-${project.version}"
+    }
+
+    /*
+     * Upload the plugin zip & json meta file to the corresponding GitHub repo
+     */
+    task uploadPlugin(type: GithubUploader, dependsOn: makeZip) {
+        assets = providers.provider {["$buildDir/libs/${project.name}-${project.version}.zip",
+                                      "$buildDir/libs/${project.name}-${project.version}-meta.json" ]}
+        release = providers.provider { project.version }
+        repo = providers.provider { project.name }
+        owner = github_organization
+        userName = github_username
+        authToken = github_access_token
+        skipExisting = true
+    }
+
+}
+
+/*
+ * Upload all plugins to the corresponding GitHub repos
+ */
+task upload(dependsOn: subprojects.uploadPlugin) { }
+
+/*
+ * Copies the plugins required dependencies in the corresponding lib directory
+ */
+classes.dependsOn subprojects.copyPluginLibs
+
+/*
+ * "install" the plugin the project root build/plugins directory
+ */
+assemble.dependsOn subprojects.unzipPlugin
+
+/*
+ * Merge and publish the plugins index file
+ */
+task publishIndex( type: GithubRepositoryPublisher ) {
+    indexUrl = 'https://github.com/nextflow-io/plugins/master/plugins.json'
+    repos = allPlugins()
+    owner = github_organization
+    githubUser = github_username
+    githubEmail = github_commit_email
+    githubToken = github_access_token
+}

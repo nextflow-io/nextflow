@@ -1,5 +1,5 @@
 .idea/**
-.gradle/**
+.gradle
 .*.log*
 .cache/*
 .vagrant/*
@@ -20,8 +20,8 @@ Vagrantfile
 resources/*
 test/*
 tools/*
+tests_other
 other
-tests_other/*
 docs/_build/
 ./*.txt
 cache/
@@ -35,3 +35,4 @@ temp
 gradle.properties
 .dockerignore
 .launch.classpath
+plugins-prod

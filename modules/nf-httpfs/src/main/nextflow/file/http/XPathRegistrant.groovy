@@ -19,12 +19,14 @@ package nextflow.file.http
 
 import groovy.transform.CompileStatic
 import nextflow.util.SerializerRegistrant
+import org.pf4j.Extension
 
 /**
  * Register the {@link XPathSerializer} as Kryo serializer
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Extension
 @CompileStatic
 class XPathRegistrant implements SerializerRegistrant {
     @Override

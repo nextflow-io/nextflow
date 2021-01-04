@@ -95,6 +95,9 @@ class VersionNumberTest extends Specification {
         '1.2'       | '>1.0, <=1.2' | true
         '1.2'       | '>1.0, <1.1'  | false
 
+        '1.2-edge'  | '>=1.2-edge'  | true
+        '1.3-edge'  | '>=1.2-edge'  | true
+
     }
 
     @Unroll
