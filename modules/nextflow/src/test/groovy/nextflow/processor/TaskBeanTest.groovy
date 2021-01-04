@@ -49,6 +49,7 @@ class TaskBeanTest extends Specification {
         config.shell = ['bash', '-x']
         config.beforeScript = 'before do this'
         config.afterScript = 'after do that'
+        config.scoringFunction = 'temp scoring function'
         config.memory = '1GB'
         config.stageInMode = 'link'
         config.stageOutMode = 'rsync'
@@ -87,6 +88,7 @@ class TaskBeanTest extends Specification {
         bean.script == 'echo Ciao mondo'
         bean.beforeScript == 'before do this'
         bean.afterScript == 'after do that'
+        bean.scoringFunction == 'temp scoring function'
 
         bean.containerImage == 'busybox:latest'
         bean.containerConfig == [docker: true, registry: 'x'] as ContainerConfig

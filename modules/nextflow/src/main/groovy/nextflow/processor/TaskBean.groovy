@@ -76,6 +76,8 @@ class TaskBean implements Serializable, Cloneable {
 
     String afterScript
 
+    String scoringFunction
+
     @Deprecated
     boolean containerExecutable
 
@@ -126,6 +128,7 @@ class TaskBean implements Serializable, Cloneable {
         this.script = task.getScript()
         this.beforeScript = task.config.beforeScript
         this.afterScript = task.config.afterScript
+        this.scoringFunction = task.config.scoringFunction
         this.cleanup = task.config.cleanup
 
         // container config
