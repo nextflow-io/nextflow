@@ -1,0 +1,6 @@
+nf-amazon@1.0.0
+nf-console@1.0.0
+nf-google@1.0.0
+nf-ignite@1.2.0
+nf-tower@1.0.0
+nf-ga4gh@1.0.0

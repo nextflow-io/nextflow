@@ -542,14 +542,12 @@ class FileHelper {
      * @param clazz A class extending {@code FileSystemProvider}
      * @return An instance of the specified class
      */
-    @Deprecated
     synchronized static <T extends FileSystemProvider> T getOrInstallProvider( Class<T> clazz ) {
 
         FileSystemProvider result = FileSystemProvider.installedProviders().find { it.class == clazz }
         if( result )
             return (T)result
 
-        // try to load DnaNexus file system provider dynamically
         result = (T)clazz.newInstance()
 
         // add it manually

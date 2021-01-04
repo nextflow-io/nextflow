@@ -25,11 +25,13 @@ import nextflow.Channel
 import nextflow.Session
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Timeout
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(10)
 class CollectFileOperatorTest extends Specification {
 
     @Shared

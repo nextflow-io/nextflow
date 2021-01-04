@@ -1,0 +1,40 @@
+plugins {
+    id 'groovy-gradle-plugin'
+    id "com.gradle.plugin-publish" version "0.12.0"
+}
+
+repositories {
+    jcenter()
+    mavenCentral()
+}
+
+version = "1.0.0"
+group = "io.nextflow"
+
+dependencies {
+    implementation ('com.amazonaws:aws-java-sdk-s3:1.11.542')
+    implementation 'com.google.code.gson:gson:2.8.6'
+}
+
+gradlePlugin {
+    plugins {
+        nextflowPlugin {
+            id = 'io.nextflow.nf-build-plugin'
+            implementationClass = 'io.nextflow.gradle.NextflowBuildPlugin'
+        }
+    }
+}
+
+pluginBundle {
+    website = 'https://www.nextflow.io/'
+    vcsUrl = 'https://github.com/nextflow-io/nextflow'
+    description = 'Helper plugin for Nextflow project build'
+    tags = ['nextflow']
+
+    plugins {
+        nextflowPlugin {
+            // id is captured from java-gradle-plugin configuration
+            displayName = 'Nextflow Build plugin'
+        }
+    }
+}

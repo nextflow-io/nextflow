@@ -21,13 +21,16 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import nextflow.plugin.Plugins
+import org.pf4j.ExtensionPoint
+
 /**
  * Generic interface
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-abstract class FileSystemPathFactory {
+abstract class FileSystemPathFactory implements ExtensionPoint {
 
     /**
      * Converts path uri string to the corresponding {@link Path} object
@@ -73,7 +76,7 @@ abstract class FileSystemPathFactory {
     @Memoized
     private static List<FileSystemPathFactory> factories0() {
         final result = new ArrayList(10)
-        final itr = ServiceLoader.load(FileSystemPathFactory).iterator()
+        final itr = Plugins.getExtensions(FileSystemPathFactory).iterator()
         while( itr.hasNext() )
             result.add(itr.next())
         return result

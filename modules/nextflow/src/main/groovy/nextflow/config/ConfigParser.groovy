@@ -23,6 +23,7 @@ import ch.grengine.Grengine
 import com.google.common.hash.Hashing
 import groovy.transform.PackageScope
 import nextflow.ast.NextflowXform
+import nextflow.exception.ConfigParseException
 import nextflow.file.FileHelper
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -385,7 +386,19 @@ class ConfigParser {
                         }
                         stack.removeLast()
                     }
-                } else {
+                }
+                else if( name == 'plugins' ) {
+                    if( stack.size()>1 )
+                        throw new ConfigParseException("Plugins definition is only allowed in config top-most scope")
+                    // Implements `plugins` mini-dsl for plugins definition
+                    def dsl = new PluginsDsl()
+                    def clo = args[0] as Closure
+                    clo.delegate = dsl
+                    clo.resolveStrategy = Closure.DELEGATE_ONLY
+                    clo.call()
+                    assignName.call(name, dsl.plugins)
+                }
+                else {
                     def current = stack.last
                     def co
                     if (current.config.get(name) instanceof ConfigObject) {

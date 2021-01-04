@@ -32,6 +32,7 @@ import java.lang.annotation.Target
 
     String value()
 
+    @Deprecated
     boolean important() default Boolean.FALSE
 
 }

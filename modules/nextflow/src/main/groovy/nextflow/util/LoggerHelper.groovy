@@ -20,6 +20,7 @@ package nextflow.util
 import static nextflow.Const.*
 
 import java.lang.reflect.Field
+import java.nio.file.DirectoryNotEmptyException
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
@@ -452,6 +453,9 @@ class LoggerHelper {
         }
         else if( fail instanceof NoSuchFileException ) {
             buffer.append("No such file: ${normalize(fail.message)}")
+        }
+        else if( fail instanceof DirectoryNotEmptyException ) {
+            buffer.append("Unable to delete not empty directory: $fail.message")
         }
         else if( message && message.startsWith(STARTUP_ERROR))  {
             buffer.append(formatStartupErrorMessage(message))

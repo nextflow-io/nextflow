@@ -1,0 +1,45 @@
+apply plugin: 'java'
+apply plugin: 'java-test-fixtures'
+apply plugin: 'idea'
+apply plugin: 'groovy'
+
+sourceSets {
+    main.java.srcDirs = []
+    main.groovy.srcDirs = ['src/main']
+    main.resources.srcDirs = ['src/resources']
+    test.groovy.srcDirs = ['src/test']
+    test.java.srcDirs = []
+    test.resources.srcDirs = []
+}
+
+configurations {
+    // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
+    runtimeClasspath.exclude group: 'org.slf4j', module: 'slf4j-api'
+}
+
+dependencies {
+    compileOnly project(':nextflow')
+    compileOnly 'org.slf4j:slf4j-api:1.7.10'
+    compileOnly 'org.pf4j:pf4j:3.4.1'
+
+    compile ('org.apache.ignite:ignite-core:2.4.0')
+    compile ('org.apache.ignite:ignite-slf4j:2.4.0') { transitive = false }
+
+    testImplementation(testFixtures(project(":nextflow")))
+    testImplementation "org.codehaus.groovy:groovy:3.0.7"
+    testImplementation "org.codehaus.groovy:groovy-nio:3.0.7"
+
+    /* testCompile inherited from top gradle build file */
+    testCompile ('org.apache.ignite:ignite-spring:2.4.0') {
+        exclude group: 'commons-logging', module: 'commons-logging'
+    }
+
+    modules {
+        module("commons-logging:commons-logging") { replacedBy("org.slf4j:jcl-over-slf4j") }
+    }
+    
+}
+
+test.onlyIf { JavaVersion.current() <= JavaVersion.VERSION_11 }
+
+

@@ -28,17 +28,19 @@ else
 mm = 
 endif 
 
-compile:
-	./gradlew compile exportClasspath
-	@echo "DONE `date`"
-
 clean:
 	rm -rf .nextflow*
 	rm -rf work 
 	rm -rf modules/nextflow/.nextflow*
 	rm -rf modules/nextflow/work
-	find . -name build | xargs rm -rf 
+	rm -rf build
+	rm -rf modules/*/build
+	rm -rf plugins/*/build
 	./gradlew clean
+
+compile:
+	./gradlew compile exportClasspath
+	@echo "DONE `date`"
 
 assemble:
 	./gradlew compile assemble
@@ -56,7 +58,7 @@ install:
 # Show dependencies try `make deps config=runtime`, `make deps config=google`
 #
 deps:
-	BUILD_PACK=1 ./gradlew -q ${mm}dependencies --configuration ${config}
+	./gradlew -q ${mm}dependencies --configuration ${config}
 
 deps-all:
 	./gradlew -q dependencyInsight --configuration ${config} --dependency ${module}
@@ -130,3 +132,10 @@ dockerImage:
 #
 dockerPack:
 	BUILD_PACK=1 ./gradlew install dockerPack -Dmaven.repo.local=${PWD}/build/docker/.nextflow/capsule/deps/ -x signArchives
+
+
+upload-plugins:
+	./gradlew plugins:upload
+
+publish-index:
+	./gradlew plugins:publishIndex

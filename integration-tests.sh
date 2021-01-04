@@ -17,6 +17,7 @@ if [[ $X_BRANCH != master && $X_BRANCH != testing ]] && [ ${TEST_JDK:=8} -gt 8 ]
 fi
 
 export WITH_DOCKER='-with-docker'
+export NXF_PLUGINS_DIR=$PWD/build/plugins
 export NXF_CMD=$PWD/nextflow;
 export CAPSULE_LOG=none
 export TEST_JDK

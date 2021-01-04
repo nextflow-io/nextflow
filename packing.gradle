@@ -16,15 +16,13 @@ dependencies {
     defaultCfg "org.apache.ivy:ivy:2.3.0"
     // default cfg = runtime + httpfs + amazon + tower client
     defaultCfg project(':nf-httpfs')
-    defaultCfg project(':nf-tower')
-    defaultCfg project(':nf-amazon')
     // Capsule manages the fat jar building process
     capsule 'io.nextflow:capsule:1.1.0'
     capsule 'io.nextflow:capsule-maven:1.0.3.2'
-    console project(':nf-console')
-    ga4gh   project(':nf-ga4gh')
-    google  project(':nf-google')
-    amazon  project(':nf-amazon')
+    console project(':plugins:nf-console')
+    ga4gh   project(':plugins:nf-ga4gh')
+    google  project(':plugins:nf-google')
+    amazon  project(':plugins:nf-amazon')
     // ignite module
     ignite 'io.nextflow:nf-ignite:1.1.0'
     // legacy cloud support
@@ -124,43 +122,6 @@ task packOne(type: Jar) {
     else {
         manifest.attributes 'Repositories': 'central seqera'
     }
-
-    /*
-     * `console` dependencies
-     */
-    deps = resolveDeps('console')
-    manifest.attributes('Application-Class' : 'nextflow.ui.console.Nextflow', 'console' )
-    manifest.attributes('Dependencies': deps, 'console')
-
-    /*
-     * `ignite` dependencies
-     */
-    deps = resolveDeps('ignite')
-    manifest.attributes('Dependencies': deps, 'ignite')
-
-    /*
-     * `ga4gh` dependencies
-     */
-    deps = resolveDeps('ga4gh')
-    manifest.attributes('Dependencies': deps, 'ga4gh')
-
-    /*
-     * `amazon` dependencies
-     */
-    deps = resolveDeps('amazon')
-    manifest.attributes('Dependencies': deps, 'amazon')
-
-    /*
-     * `google` dependencies
-     */
-    deps = resolveDeps('google')
-    manifest.attributes('Dependencies': deps, 'google')
-
-    /*
-     * `legacy` dependencies
-     */
-    deps = resolveDeps('legacy')
-    manifest.attributes('Dependencies': deps, 'legacy-cloud')
 
     doLast {
         ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: releaseDir, overwrite: true)
@@ -376,15 +337,3 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
 }
 
 
-
-/*
- * Configure Nextflow staging plugin -- https://github.com/Codearte/gradle-nexus-staging-plugin
- * It adds the tasks
- * - closeRepository
- * - releaseRepository
- * - closeAndReleaseRepository
- */
-nexusStaging {
-    packageGroup = 'io.nextflow'
-    delayBetweenRetriesInMillis = 10_000
-}
