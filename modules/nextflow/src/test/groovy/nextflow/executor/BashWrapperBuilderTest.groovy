@@ -808,9 +808,9 @@ class BashWrapperBuilderTest extends Specification {
         binding.containsKey('fix_ownership')
     }
 
-    def 'should create script command' () {
+    def 'should create after script command' () {
         when:
-        def binding = newBashWrapperBuilder(afterScript: "cleanup_that" ).makeBinding()
+        def binding = newBashWrapperBuilder(afterScript: "cleanup_that").makeBinding()
         then:
         binding.after_script == "# 'afterScript' directive\ncleanup_that"
 
@@ -822,7 +822,20 @@ class BashWrapperBuilderTest extends Specification {
     }
 
 
-    def 'should get output env capture snippet' () {
+    def 'should create scoringFunction' () {
+        when:
+        def binding = newBashWrapperBuilder(scoringFunction: "compute_that").makeBinding()
+        then:
+        binding.scoring_function == "# 'scoringFunction' directive\ncompute_that"
+
+        when:
+        binding = newBashWrapperBuilder().makeBinding()
+        then:
+        binding.scoring_function == null
+        binding.containsKey('scoring_function')
+    }
+
+    def 'should get output env capture snippet'() {
         given:
         def builder = new BashWrapperBuilder()
 

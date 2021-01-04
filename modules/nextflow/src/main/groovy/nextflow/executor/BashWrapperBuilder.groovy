@@ -272,6 +272,7 @@ class BashWrapperBuilder {
         }
 
         binding.after_script = afterScript ? "# 'afterScript' directive\n$afterScript" : null
+        binding.scoring_function = scoringFunction ? "# 'scoringFunction' directive\n$scoringFunction" : null
 
         // patch root ownership problem on files created with docker
         binding.fix_ownership = fixOwnership() ? "[ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*} || true" : null
