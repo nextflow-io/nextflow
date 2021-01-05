@@ -63,7 +63,7 @@ class Channel  {
     static public NullObject VOID = NullObject.getNullObject()
 
     // only for testing purpose !
-    private static CompletableFuture fromPath0Future
+    protected static CompletableFuture fromPath0Future
 
     static private Session getSession() { Global.session as Session }
     

@@ -1,0 +1,3 @@
+moduleName=nf-sql
+moduleVersion=0.0.1-SNAPSHOT
+extensionClasses=nextflow.sql.ChannelExtension

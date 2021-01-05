@@ -2,20 +2,13 @@ package nextflow.sql
 
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.Channel
 import nextflow.NF
 import nextflow.dag.NodeMarker
-import nextflow.Channel
 
 import java.util.concurrent.CompletableFuture
 
-Channel.metaClass.static.propertyMissing = { String name ->
-    return new Channel(name) as DataflowWriteChannel
-}
-
-
-Channel.metaClass.static.create << { String title -> new Book(title: title) }
-
-class SQLChannel extends Channel {
+class ChannelExtension extends Channel {
     static DataflowWriteChannel fromSql(query) {
         fromSql(Collections.emptyMap(), query)
     }
