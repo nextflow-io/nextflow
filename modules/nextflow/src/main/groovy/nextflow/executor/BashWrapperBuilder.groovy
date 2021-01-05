@@ -271,8 +271,9 @@ class BashWrapperBuilder {
             binding.unstage_outputs = null
         }
 
+        binding.scoring_function = getScoringFunctionSnippet()
+
         binding.after_script = afterScript ? "# 'afterScript' directive\n$afterScript" : null
-        binding.scoring_function = scoringFunction ? "# 'scoringFunction' directive\n$scoringFunction" : null
 
         // patch root ownership problem on files created with docker
         binding.fix_ownership = fixOwnership() ? "[ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*} || true" : null
@@ -331,6 +332,10 @@ class BashWrapperBuilder {
 
     private String getBeforeScriptSnippet() {
         beforeScript ? "# beforeScript directive\n$beforeScript\n" : null
+    }
+
+   private String getScoringFunctionSnippet() {
+        scoringFunction ? "# 'scoringFunction' directive\n$scoringFunction" : null
     }
 
     private String getModuleLoadSnippet() {
