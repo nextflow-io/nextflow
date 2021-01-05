@@ -127,8 +127,8 @@ class TaskBean implements Serializable, Cloneable {
         this.shell = task.config.getShell() ?: BashWrapperBuilder.BASH
         this.script = task.getScript()
         this.beforeScript = task.config.beforeScript
-        this.afterScript = task.config.afterScript
         this.scoringFunction = task.config.scoringFunction
+        this.afterScript = task.config.afterScript
         this.cleanup = task.config.cleanup
 
         // container config

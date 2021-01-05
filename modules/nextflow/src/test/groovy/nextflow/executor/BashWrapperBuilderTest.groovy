@@ -810,7 +810,7 @@ class BashWrapperBuilderTest extends Specification {
 
     def 'should create after script command' () {
         when:
-        def binding = newBashWrapperBuilder(afterScript: "cleanup_that").makeBinding()
+        def binding = newBashWrapperBuilder(afterScript: "cleanup_that" ).makeBinding()
         then:
         binding.after_script == "# 'afterScript' directive\ncleanup_that"
 

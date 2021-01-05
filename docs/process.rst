@@ -2200,6 +2200,15 @@ $YOUR_VAR   Creates a scratch folder in the directory defined by the ``$YOUR_VAR
 ram-disk    Creates a scratch folder in the RAM disk ``/dev/shm/`` (experimental).
 =========== ==================
 
+
+.. _process-scoringFunction:
+
+scoringFunction
+--------
+
+TODO
+The ``scoringFunction`` directive allows you to optimize a process for a given range of parameters.
+
 .. _process-storeDir:
 
 storeDir
