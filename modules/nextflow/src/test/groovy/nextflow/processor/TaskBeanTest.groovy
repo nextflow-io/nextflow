@@ -88,7 +88,7 @@ class TaskBeanTest extends Specification {
         bean.script == 'echo Ciao mondo'
         bean.beforeScript == 'before do this'
         bean.afterScript == 'after do that'
-        bean.scoringFunction == 'temp scoring function'
+        bean.score == 'temp scoring function'
 
         bean.containerImage == 'busybox:latest'
         bean.containerConfig == [docker: true, registry: 'x'] as ContainerConfig

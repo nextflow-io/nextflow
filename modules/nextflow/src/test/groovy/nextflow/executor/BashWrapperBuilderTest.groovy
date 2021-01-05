@@ -822,17 +822,17 @@ class BashWrapperBuilderTest extends Specification {
     }
 
 
-    def 'should create scoringFunction' () {
+    def 'should create score' () {
         when:
-        def binding = newBashWrapperBuilder(scoringFunction: "compute_that").makeBinding()
+        def binding = newBashWrapperBuilder(score: "compute_that").makeBinding()
         then:
-        binding.scoring_function == "# 'scoringFunction' directive\ncompute_that"
+        binding.score == "# 'score' directive\ncompute_that"
 
         when:
         binding = newBashWrapperBuilder().makeBinding()
         then:
-        binding.scoring_function == null
-        binding.containsKey('scoring_function')
+        binding.score == null
+        binding.containsKey('score')
     }
 
     def 'should get output env capture snippet'() {

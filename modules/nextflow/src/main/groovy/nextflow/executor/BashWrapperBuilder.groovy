@@ -271,7 +271,7 @@ class BashWrapperBuilder {
             binding.unstage_outputs = null
         }
 
-        binding.scoring_function = getScoringFunctionSnippet()
+        binding.score = getScoreSnippet()
 
         binding.after_script = afterScript ? "# 'afterScript' directive\n$afterScript" : null
 
@@ -334,8 +334,8 @@ class BashWrapperBuilder {
         beforeScript ? "# beforeScript directive\n$beforeScript\n" : null
     }
 
-   private String getScoringFunctionSnippet() {
-        scoringFunction ? "# 'scoringFunction' directive\n$scoringFunction" : null
+   private String getScoreSnippet() {
+        score ? "# 'score' directive\n$score" : null
     }
 
     private String getModuleLoadSnippet() {

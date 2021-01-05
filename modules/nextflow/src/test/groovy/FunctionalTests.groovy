@@ -29,7 +29,7 @@ import nextflow.script.TestScriptRunner
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Timeout(5)
+@Timeout(10)
 class FunctionalTests extends Specification {
 
     @Shared

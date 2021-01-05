@@ -76,7 +76,7 @@ class TaskBean implements Serializable, Cloneable {
 
     String afterScript
 
-    String scoringFunction
+    String score
 
     @Deprecated
     boolean containerExecutable
@@ -127,7 +127,7 @@ class TaskBean implements Serializable, Cloneable {
         this.shell = task.config.getShell() ?: BashWrapperBuilder.BASH
         this.script = task.getScript()
         this.beforeScript = task.config.beforeScript
-        this.scoringFunction = task.config.scoringFunction
+        this.score = task.config.score
         this.afterScript = task.config.afterScript
         this.cleanup = task.config.cleanup
 

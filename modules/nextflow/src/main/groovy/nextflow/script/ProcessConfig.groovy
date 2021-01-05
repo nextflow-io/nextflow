@@ -71,7 +71,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'penv',
             'pod',
             'publishDir',
-            'scoringFunction',
+            'score',
             'scratch',
             'shell',
             'storeDir',
