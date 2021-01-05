@@ -139,7 +139,7 @@ assemble.dependsOn subprojects.unzipPlugin
  * Merge and publish the plugins index file
  */
 task publishIndex( type: GithubRepositoryPublisher ) {
-    indexUrl = 'https://github.com/nextflow-io/plugins/master/plugins.json'
+    indexUrl = 'https://github.com/nextflow-io/plugins/main/plugins.json'
     repos = allPlugins()
     owner = github_organization
     githubUser = github_username
