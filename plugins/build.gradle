@@ -9,6 +9,9 @@ ext.github_organization = 'nextflow-io'
 ext.github_username = project.findProperty('github_username') ?: 'pditommaso'
 ext.github_access_token = project.findProperty('github_access_token') ?: System.getenv('GITHUB_TOKEN')
 ext.github_commit_email = project.findProperty('github_commit_email') ?: 'paolo.ditommaso@gmail.com'
+ext.aws_access_key_id = project.findProperty('aws_access_key_id') ?: System.getenv('AWS_ACCESS_KEY_ID')
+ext.aws_secret_access_key = project.findProperty('aws_secret_access_key') ?: System.getenv('AWS_SECRET_ACCESS_KEY')
+ext.publishRepoUrl = project.findProperty('publish_repo_url') ?: System.getenv('PUBLISH_REPO_URL') ?: ( version.endsWith('-SNAPSHOT') ? "s3://maven.seqera.io/snapshots" : "s3://maven.seqera.io/releases" )
 
 jar.enabled = false
 
@@ -46,12 +49,14 @@ subprojects {
     apply plugin: 'java'
     apply plugin: 'groovy'
     apply plugin: 'io.nextflow.nf-build-plugin'
+    apply plugin: 'maven-publish'
     
     repositories {
         mavenLocal()
         mavenCentral()
     }
 
+    group = 'io.nextflow'
     version = verFromManifest(file('src/resources/META-INF/MANIFEST.MF'))
     
     /*
@@ -118,12 +123,44 @@ subprojects {
         skipExisting = true
     }
 
+    jar {
+        from sourceSets.main.allSource
+    }
+
+    tasks.withType(GenerateModuleMetadata) {
+        enabled = false
+    }
+
+    /*
+     * publish jars maven repo on S3 
+     */
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                from components.java
+                suppressPomMetadataWarningsFor('testFixturesApiElements')
+                suppressPomMetadataWarningsFor('testFixturesRuntimeElements')
+            }
+        }
+        repositories {
+            maven {
+                url = publishRepoUrl
+                credentials(AwsCredentials) {
+                    // keys are defined in the `gradle.properties` file
+                    accessKey aws_access_key_id
+                    secretKey aws_secret_access_key
+                }
+            }
+        }
+    }
+
+
 }
 
 /*
  * Upload all plugins to the corresponding GitHub repos
  */
-task upload(dependsOn: subprojects.uploadPlugin) { }
+task upload(dependsOn: [subprojects.uploadPlugin, subprojects.publish]) { }
 
 /*
  * Copies the plugins required dependencies in the corresponding lib directory
