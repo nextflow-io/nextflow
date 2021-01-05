@@ -5,7 +5,7 @@ import nextflow.plugin.BasePlugin
 import org.pf4j.PluginWrapper
 
 /**
- * Nextflow Tower plugin
+ * Nextflow SQL plugin
  *
  * @author Abhinav Sharma <abhi18av@outlook.com>
  */
