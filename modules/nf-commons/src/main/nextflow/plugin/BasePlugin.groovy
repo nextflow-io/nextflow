@@ -43,7 +43,10 @@ abstract class BasePlugin extends Plugin {
     }
 
     @PackageScope static boolean verMatches(String requires, String current=Const.APP_VER) {
-        new VersionNumber(current).matches(requires)
+        if( requires.startsWith('nextflow@'))
+            requires = requires.substring('nextflow@'.size())
+
+        requires=='*' || new VersionNumber(current).matches(requires)
     }
 
     @Override

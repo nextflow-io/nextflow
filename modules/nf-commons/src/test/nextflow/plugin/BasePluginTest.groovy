@@ -33,11 +33,14 @@ class BasePluginTest extends Specification {
         BasePlugin.verMatches(REQUIRES, CURRENT) == EXPECT
 
         where:
-        CURRENT         | REQUIRES              | EXPECT
-        '20.01.0'       | '21.01.0'             | false
-        '21.01.0'       | '21.01.0'             | true
-        '21.01.0'       | '>=21.01.0'           | true
-        '21.01.0-edge'  | '>=21.01.0-edge'      | true
-
+        CURRENT         | REQUIRES                      | EXPECT
+        '20.01.0'       | '21.01.0'                     | false
+        '21.01.0'       | '21.01.0'                     | true
+        '21.01.0'       | '>=21.01.0'                   | true
+        '21.01.0-edge'  | '>=21.01.0-edge'              | true
+        '21.01.0-edge'  | '*'                           | true
+        and:
+        '21.01.0-edge'  | 'nextflow@>=21.01.0-edge'     | true
+        '20.01.0-edge'  | 'nextflow@>=21.01.0-edge'     | false
     }
 }
