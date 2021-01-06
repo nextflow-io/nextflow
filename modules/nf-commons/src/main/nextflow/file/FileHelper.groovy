@@ -480,7 +480,8 @@ class FileHelper {
             log.debug "AWS S3 config details: ${dumpAwsConfig(result)}"
         }
         else {
-            assert Global.session, "Session is not available -- make sure to call this after Session object has been created"
+            if( !Global.session )
+                log.debug "Session is not available while creating environment for '$scheme' file system provider"
             result.session = Global.session
         }
         return result
