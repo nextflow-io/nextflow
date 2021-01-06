@@ -877,7 +877,7 @@ class TaskProcessor {
 
         }
         catch( Throwable e ) {
-            log.warn1("[$task.name] Unable to resume cached task -- See log file for details", )
+            log.warn1("[$task.name] Unable to resume cached task -- See log file for details", causedBy: e)
             return false
         }
 
