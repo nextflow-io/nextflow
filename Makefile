@@ -49,7 +49,7 @@ check:
 	./gradlew check
 
 #
-# install compiled artifacts in Mavel local dir 
+# install compiled artifacts in Maven local dir
 # 
 install:
 	BUILD_PACK=1 ./gradlew installLauncher install -Dmaven.repo.local=${HOME}/.nextflow/capsule/deps/ -x signArchives
@@ -96,6 +96,9 @@ upload:
 #
 pack:
 	BUILD_PACK=1 ./gradlew packAll
+
+packCore:
+	BUILD_PACK=1 ./gradlew packCore
 
 #
 # Create self-contained distribution package, including GA4GH support and associated dependencies

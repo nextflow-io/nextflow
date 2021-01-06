@@ -173,6 +173,39 @@ task packAll(type: Jar) {
     }
 }
 
+task packCore(type: Jar) {
+    dependsOn configurations.capsule, configurations.defaultCfg
+    archiveName = "nextflow-${version}-core.jar"
+
+    from jar // embed our application jar
+    from (configurations.defaultCfg)
+    from (configurations.capsule.collect { zipTree(it) })
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    manifest.attributes( 'Main-Class'        : 'NextflowLoader',
+            'Application-Name'  : 'nextflow-core',
+            'Application-Class' : mainClassName,
+            'Application-Version': version,
+            'Min-Java-Version'  : '1.8.0'
+    )
+
+    doLast {
+        file(releaseDir).mkdir()
+        // cleanup
+        def source = file("$buildDir/libs/nextflow-${version}-core.jar")
+        def target = file("$releaseDir/nextflow-${version}-core"); target.delete()
+        // append the big jar
+        target.withOutputStream {
+            it << file('nextflow').text.replaceAll(/NXF_PACK\=.*/, 'NXF_PACK=all')
+            it << new FileInputStream(source)
+        }
+        // execute permission
+        "chmod +x $target".execute()
+        // done
+        println "+ Nextflow package `CORE` copied to: $releaseDir\n"
+    }
+}
+
 
 /*
  * Compile and pack all packages
