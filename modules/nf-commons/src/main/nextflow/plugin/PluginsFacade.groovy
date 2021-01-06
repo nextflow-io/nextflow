@@ -202,10 +202,9 @@ class PluginsFacade implements PluginStateListener {
 
     protected List<PluginSpec> pluginsRequirement(Map config) {
         def specs = parseConf(config)
-        if( env.get('NXF_PACK')=='all' ) {
+        if( env.get('NXF_PACK')=='all' && specs ) {
             // custom plugins are not allowed for nextflow self-contained package
-            if( specs )
-                log.warn "Nextflow self-contained distribution only allows default plugins -- User config plugins will be ignored: ${specs.join(',')}"
+            log.warn "Nextflow self-contained distribution only allows default plugins -- User config plugins will be ignored: ${specs.join(',')}"
             return Collections.emptyList()
         }
         if( specs ) {
