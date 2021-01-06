@@ -19,7 +19,7 @@ class FakeIndexHandler implements HttpHandler {
                 "version": "1.0.0",
                 "url": "http://localhost:9900/download/1.0.0/nf-console-1.0.0.zip",
                 "date": "2021-01-04T17:49:04.62+01:00",
-                "sha512sum": "4e681a539a0a902c1d93bce04cb2a5e49ed286581bc1ea0202044d040566f583aa0efabe0865d351eb284e4962020bc23d62075f52b04a06ab655b53e8aeea34"
+                "sha512sum": "5875f1fd4c24ab9ecded06fa43a5b87b4e45f70085fe5c8f740da66b318ef3b45005b3dd9a15e69fff20bde52b4d42db8d25163ac49878f64d784d717102f295"
               }
             ]
           },
@@ -52,7 +52,7 @@ class FakeIndexHandler implements HttpHandler {
                 "version": "1.0.0",
                 "url": "https://github.com/nextflow-io/nf-tower/releases/download/1.0.0/nf-tower-1.0.0.zip",
                 "date": "2021-01-04T17:49:04.62+01:00",
-                "sha512sum": "4e681a539a0a902c1d93bce04cb2a5e49ed286581bc1ea0202044d040566f583aa0efabe0865d351eb284e4962020bc23d62075f52b04a06ab655b53e8aeea34"
+                "sha512sum": "c00435164b4f16e548df4bea6f0e8c271dd8d0eaf28b10f29758d0a93aca5c426507c913a2ed0828e1a79e2c01d8f06644df871ccf0de2224f56745110f4a923"
               }
             ]
           }
