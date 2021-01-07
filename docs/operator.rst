@@ -1709,9 +1709,11 @@ It prints::
     foo 2
     foo 3
     foo 4
+    foo 5
     bar 1
     bar 4
     bar 9
+    bar 16
 
 
 .. tip:: The statement expression can be omitted when the value to be emitted is the same as
