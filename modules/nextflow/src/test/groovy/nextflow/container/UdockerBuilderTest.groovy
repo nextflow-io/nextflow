@@ -72,7 +72,7 @@ class UdockerBuilderTest extends Specification {
                 .runCommandRaw == 'udocker.py run --rm -e "FOO=1" -e "BAR=hello world" -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest")'
 
         new UdockerBuilder('fedora')
-                .setCpus('1,2')
+                .setCpuset('1,2')
                 .build()
                 .runCommandRaw == 'udocker.py run --rm --cpuset-cpus=1,2 -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "fedora:latest")'
 

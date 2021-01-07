@@ -18,6 +18,7 @@
 package nextflow.util
 
 import groovy.transform.CompileStatic
+import org.pf4j.ExtensionPoint
 
 /**
  * Register a serializer class in the Kryo serializers list
@@ -25,7 +26,7 @@ import groovy.transform.CompileStatic
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-interface SerializerRegistrant {
+interface SerializerRegistrant extends ExtensionPoint {
 
     /**
      * Serializer should implement this method adding the

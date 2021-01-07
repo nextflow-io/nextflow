@@ -118,7 +118,7 @@ Nextflow workflows. However, it also provides a powerful scripting DSL.
 
 Nextflow scripting is an extension of the `Groovy programming language <http://en.wikipedia.org/wiki/Groovy_(programming_language)>`_,
 which in turn is a super-set of the Java programming language. Groovy can be considered as Python for Java
-in that is simplifies the writing of code and is more approachable.
+in that it simplifies the writing of code and is more approachable.
 
 Read the :ref:`script-page` section to learn about the Nextflow scripting language.
 

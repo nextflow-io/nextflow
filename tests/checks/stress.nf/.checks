@@ -10,7 +10,7 @@ check_range() {
 # provides only 4 cpus. Therefore it should not be used all the available
 # CPUs otherwise the reported cpu stats won't match the expected values
 #
-$NXF_CMD run $NXF_SCRIPT -qs 1 nextflow/stress -c .config | tee stdout
+$NXF_CMD run $NXF_SCRIPT -qs 1 quay.io/nextflow/stress -c .config | tee stdout
 
 # column to check
 CPU=10

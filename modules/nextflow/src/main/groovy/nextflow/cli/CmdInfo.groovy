@@ -157,6 +157,22 @@ class CmdInfo extends CmdBase {
         getInfo( detailed ? 1 : 0, true )
     }
 
+    static private String totMem(OperatingSystemMXBean os) {
+        os.totalPhysicalMemorySize>=0 ? new MemoryUnit(os.totalPhysicalMemorySize).toString() : '-'
+    }
+
+    static private String freeMem(OperatingSystemMXBean os) {
+        os.freePhysicalMemorySize>=0 ? new MemoryUnit(os.freePhysicalMemorySize).toString() : '-'
+    }
+
+    static private String totSwap(OperatingSystemMXBean os) {
+        os.totalSwapSpaceSize>=0 ? new MemoryUnit(os.totalSwapSpaceSize) : '-'
+    }
+
+    static private String freeSwap(OperatingSystemMXBean os) {
+        os.freeSwapSpaceSize>=0 ? new MemoryUnit(os.freeSwapSpaceSize) : '-'
+    }
+
     /**
      * @return A string containing some system runtime information
      */
@@ -171,9 +187,9 @@ class CmdInfo extends CmdBase {
         result << BLANK << "Encoding: ${System.getProperty('file.encoding')} (${System.getProperty('sun.jnu.encoding')})" << NEWLINE
 
         if( printProc ) {
-            def OS = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean()
+            final os = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean()
             result << BLANK << "Process: ${ManagementFactory.getRuntimeMXBean().getName()} " << getLocalAddress() << NEWLINE
-            result << BLANK << "CPUs: ${OS.availableProcessors} - Mem: ${new MemoryUnit(OS.totalPhysicalMemorySize)} (${new MemoryUnit(OS.freePhysicalMemorySize)}) - Swap: ${new MemoryUnit(OS.totalSwapSpaceSize)} (${new MemoryUnit(OS.freeSwapSpaceSize)})"
+            result << BLANK << "CPUs: ${os.availableProcessors} - Mem: ${totMem(os)} (${freeMem(os)}) - Swap: ${totSwap(os)} (${freeSwap(os)})"
         }
 
         if( level == 0  )

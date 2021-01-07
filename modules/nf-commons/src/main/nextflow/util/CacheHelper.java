@@ -65,7 +65,7 @@ public class CacheHelper {
                 if( "deep".equals(obj) )
                     return DEEP;
             }
-            log.warn("Unknown cache mode: {}", obj.toString());
+            LoggerFactory.getLogger(HashMode.class).warn("Unknown cache mode: {}", obj.toString());
             return null;
         }
     }

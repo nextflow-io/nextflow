@@ -286,7 +286,7 @@ class CmdConfigTest extends Specification {
         then:
         buffer.toString() == '''\
             process {
-               container = 'nextflow/bash'
+               container = 'quay.io/nextflow/bash'
             }
             '''
             .stripIndent()

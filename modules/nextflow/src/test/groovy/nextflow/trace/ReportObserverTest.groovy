@@ -67,7 +67,7 @@ class ReportObserverTest extends Specification {
         r3.duration = 700
         r3.process = 'beta'
 
-        def observer = [:] as ReportObserver
+        def observer = Spy(ReportObserver)
         def data = [r1, r2, r3]
 
         when:

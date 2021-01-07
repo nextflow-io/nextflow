@@ -181,11 +181,11 @@ class K8sTaskHandler extends TaskHandler {
             builder.withEnv(PodEnv.value('NXF_OWNER', getOwner()))
 
         // add computing resources
-        final cpus = taskCfg.get('cpus') as Integer
+        final cpus = taskCfg.getCpus()
         final mem = taskCfg.getMemory()
         final acc = taskCfg.getAccelerator()
         if( cpus )
-            builder.withCpus(cpus as int)
+            builder.withCpus(cpus)
         if( mem )
             builder.withMemory(mem)
         if( acc )
@@ -260,6 +260,7 @@ class K8sTaskHandler extends TaskHandler {
         if( !state || delta >= 1_000) {
             def newState = client.podState(podName)
             if( newState ) {
+                log.trace "[K8s] Get pod=$podName state=$newState"
                 state = newState
                 timestamp = now
             }
@@ -272,7 +273,8 @@ class K8sTaskHandler extends TaskHandler {
         if( !podName ) throw new IllegalStateException("Missing K8s pod name -- cannot check if running")
         if(isSubmitted()) {
             def state = getState()
-            if (state && state.running != null) {
+            // include `terminated` state to allow the handler status to progress
+            if (state && (state.running != null || state.terminated)) {
                 status = TaskStatus.RUNNING
                 return true
             }

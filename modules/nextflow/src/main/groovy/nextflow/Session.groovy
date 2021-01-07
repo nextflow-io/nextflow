@@ -17,6 +17,8 @@
 
 package nextflow
 
+import static nextflow.Const.*
+
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -46,6 +48,7 @@ import nextflow.executor.ExecutorFactory
 import nextflow.extension.CH
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
+import nextflow.plugin.Plugins
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskFault
 import nextflow.processor.TaskHandler
@@ -72,8 +75,6 @@ import nextflow.util.NameGenerator
 import nextflow.util.VersionNumber
 import sun.misc.Signal
 import sun.misc.SignalHandler
-import static nextflow.Const.APP_VER
-import static nextflow.util.SpuriousDeps.shutdownS3Uploader
 /**
  * Holds the information on the current execution
  *
@@ -360,7 +361,7 @@ class Session implements ISession {
 
         // set the byte-code target directory
         this.classesDir = FileHelper.createLocalDir()
-        this.executorFactory = new ExecutorFactory()
+        this.executorFactory = new ExecutorFactory(Plugins.manager)
         this.observers = createObservers()
         this.statsEnabled = observers.any { it.enableMetrics() }
         this.workflowMetadata = new WorkflowMetadata(this, scriptFile)
@@ -398,7 +399,7 @@ class Session implements ISession {
         statsObserver = new WorkflowStatsObserver(this)
         result.add(statsObserver)
 
-        for( TraceObserverFactory f : ServiceLoader.load(TraceObserverFactory) ) {
+        for( TraceObserverFactory f : Plugins.getExtensions(TraceObserverFactory) ) {
             log.debug "Observer factory: ${f.class.simpleName}"
             result.addAll(f.create(this))
         }
@@ -620,8 +621,8 @@ class Session implements ISession {
             // -- close db
             cache?.close()
 
-            // -- shutdown s3 uploader
-            shutdownS3Uploader()
+            // -- shutdown plugins
+            Plugins.stop()
 
             // -- cleanup script classes dir
             classesDir.deleteDir()

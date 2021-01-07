@@ -338,8 +338,7 @@ class PodSpecBuilder {
 
         // add resources
         if( res ) {
-            Map limits = [limits: res]
-            container.resources = limits
+            container.resources = [requests: res, limits: new HashMap<>(res)]
         }
 
         // add gpu settings

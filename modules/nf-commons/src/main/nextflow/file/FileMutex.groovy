@@ -40,8 +40,6 @@ class FileMutex {
 
     String errorMessage
 
-    Duration timeout
-
     File target
 
     long delayMillis = 100
@@ -87,7 +85,7 @@ class FileMutex {
              * wait to acquire a lock
              */
             boolean showed=0
-            long max = timeout ? timeout.millis : Long.MAX_VALUE
+            long max = timeoutMillis ? timeoutMillis : Long.MAX_VALUE
             long begin = System.currentTimeMillis()
             FileLock lock
             while( !(lock=file.getChannel().tryLock()) )  {

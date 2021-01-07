@@ -77,18 +77,17 @@ JVM_ARGS+=" -Dfile.encoding=UTF-8 -XX:+TieredCompilation -XX:TieredStopAtLevel=1
 
 ## flight recorded -- http://docs.oracle.com/javacomponents/jmc-5-4/jfr-runtime-guide/run.htm
 ##JVM_ARGS+=" -XX:+UnlockCommercialFeatures -XX:+FlightRecorder -XX:StartFlightRecording=duration=60s,filename=myrecording.jfr"
+NXF_PLUGINS_DIR=${NXF_PLUGINS_DIR:-$base_dir/plugins}
+NXF_PLUGINS_MODE=${NXF_PLUGINS_MODE:-dev}
+NXF_PLUGINS_DEFAULT=${NXF_PLUGINS_DEFAULT:-true}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_OPTS=${NXF_OPTS:-}
-EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}
 NXF_CLI="$0 $@"
 export NXF_CLI
 export COLUMNS
-export EXTRAE_CONFIG_FILE
-
-DRIP_INIT_CLASS=nextflow.cli.DripMain
-DRIP_INIT=''
-
-EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}
+export NXF_PLUGINS_DIR
+export NXF_PLUGINS_MODE
+export NXF_PLUGINS_DEFAULT
 
 #
 # classpath when the application is compiled with gradle

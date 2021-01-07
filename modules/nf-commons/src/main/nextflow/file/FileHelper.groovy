@@ -480,7 +480,8 @@ class FileHelper {
             log.debug "AWS S3 config details: ${dumpAwsConfig(result)}"
         }
         else {
-            assert Global.session, "Session is not available -- make sure to call this after Session object has been created"
+            if( !Global.session )
+                log.debug "Session is not available while creating environment for '$scheme' file system provider"
             result.session = Global.session
         }
         return result
@@ -542,14 +543,12 @@ class FileHelper {
      * @param clazz A class extending {@code FileSystemProvider}
      * @return An instance of the specified class
      */
-    @Deprecated
     synchronized static <T extends FileSystemProvider> T getOrInstallProvider( Class<T> clazz ) {
 
         FileSystemProvider result = FileSystemProvider.installedProviders().find { it.class == clazz }
         if( result )
             return (T)result
 
-        // try to load DnaNexus file system provider dynamically
         result = (T)clazz.newInstance()
 
         // add it manually

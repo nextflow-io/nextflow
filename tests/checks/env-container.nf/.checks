@@ -13,7 +13,7 @@ chmod +x bin/hello.sh
 #
 cat << EOF > nextflow.config
 env.FOO = 'HOLA'
-process.container = 'ubuntu:18.04'
+process.container = 'quay.io/nextflow/bash'
 EOF
 
 #

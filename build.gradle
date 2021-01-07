@@ -45,14 +45,18 @@ if (groovyVer) {
     }
 }
 
+def projects(String...args) {
+    args.collect {project(it)}
+}
+
+group = 'io.nextflow'
+version = rootProject.file('VERSION').text.trim()
+
 allprojects {
     apply plugin: 'java'
     apply plugin: 'java-test-fixtures'
     apply plugin: 'idea'
     apply plugin: 'groovy'
-
-    version = rootProject.file('VERSION').text.trim()
-    group = 'io.nextflow'
 
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
@@ -84,8 +88,8 @@ allprojects {
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:1.11'
-        groovyDoc "org.codehaus.groovy:groovy-groovydoc:3.0.5"
-        groovyDoc "org.codehaus.groovy:groovy-ant:3.0.5"
+        groovyDoc "org.codehaus.groovy:groovy-groovydoc:3.0.7"
+        groovyDoc "org.codehaus.groovy:groovy-ant:3.0.7"
     }
 
     test {
@@ -142,7 +146,7 @@ jar.enabled = false
  */
 task buildInfo { doLast {
 
-    def file0 = file('./modules/nextflow/src/main/groovy/nextflow/Const.groovy')
+    def file0 = file('./modules/nf-commons/src/main/nextflow/Const.groovy')
     def buildNum = 0
     def src = file0.text
     src.find(/APP_BUILDNUM *= *([0-9]*)/) { buildNum = it[1]?.toInteger()+1 }
@@ -175,6 +179,14 @@ task buildInfo { doLast {
     src = file0.text
     src = src.replaceAll(/releases\/v[0-9a-zA-Z_\-\.]+\//, "releases/v$version/" as String)
     file0.text = src
+
+    // -- create plugins-info file
+    def plugins = []
+    new File(rootProject.rootDir, 'plugins')
+            .eachDir { if(it.name.startsWith('nf-')) plugins << project(":plugins:${it.name}") }
+
+    def meta = plugins .collect { "$it.name@$it.version" }
+    file('modules/nextflow/src/main/resources/META-INF/plugins-info.txt').text = meta.join('\n')
 }}
 
 
@@ -183,12 +195,12 @@ task buildInfo { doLast {
  */
 task compile {
     dependsOn buildInfo
-    dependsOn allprojects.jar
+    dependsOn allprojects.classes
 }
 
 def getRuntimeConfigs() {
     def names = subprojects
-            .findAll { prj -> prj.name!='capsule-loader' }
+            .findAll { prj -> prj.name in ['nextflow','nf-commons','nf-https'] }
             .collect { it.name }
 
     FileCollection result = null
@@ -217,7 +229,6 @@ task exportClasspath {
     }
 }
 
-
 ext.nexusUsername = project.findProperty('nexusUsername')
 ext.nexusPassword = project.findProperty('nexusPassword')
 ext.nexusFullName = project.findProperty('nexusFullName')
@@ -226,22 +237,18 @@ ext.nexusEmail = project.findProperty('nexusEmail')
 // `signing.keyId` property needs to be defined in the `gradle.properties` file
 ext.enableSignArchives = project.findProperty('signing.keyId')
 
-ext.deployable = []
-ext.deployable << project(':nextflow')
-ext.deployable << project(':nf-commons')
-ext.deployable << project(':nf-console')
-ext.deployable << project(':nf-httpfs')
-ext.deployable << project(':nf-ga4gh')
-ext.deployable << project(':nf-google')
-ext.deployable << project(':nf-amazon')
-ext.deployable << project(':nf-azure')
-ext.deployable << project(':nf-tower')
+ext.coreProjects = projects( ':nextflow', ':nf-commons', ':nf-httpfs' )
+
+configure(coreProjects) {
+    group = 'io.nextflow'
+    version = rootProject.file('VERSION').text.trim()
+}
 
 /*
  * Maven central deployment
  * http://central.sonatype.org/pages/gradle.html
  */
-configure(deployable) {
+configure(coreProjects) {
     apply plugin: 'maven'
     apply plugin: 'signing'
 
@@ -337,7 +344,7 @@ task makeDigest { doLast {
 task upload {
     dependsOn compile
     dependsOn makeDigest
-    dependsOn deployable.uploadArchives
+    dependsOn coreProjects.uploadArchives
 }
 
 /*
@@ -352,5 +359,7 @@ nexusStaging {
     delayBetweenRetriesInMillis = 10_000
 }
 
-if( System.env.BUILD_PACK )
+if( System.env.BUILD_PACK ) {
     apply from: 'packing.gradle'
+}
+

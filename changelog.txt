@@ -1,7 +1,23 @@
 NEXTFLOW CHANGE-LOG
 ===================
-20.11.0-edge - 16 Nov 2020
+21.01.0-edge - 04 Jan 2021
+- Merge plugins feature [d959bfdb]
+- Prevent twice access remote scm file [b2798556]
+- Fix DAG edges not connected correctly #1486 [cece1161]
+- Fix k8s executor must provide cpu resource requests #1570 [6896e923]
+- Fix http/ftp read buffer size [a2886baf]
+- Add support for OAuth Bearer auth [5823c280]
+- Add support for basic auth for http/s file provider [6027fcba]
+- Add User-Agent info to httpfs requests [222637de]
+- Update CPU and RAM for containers (#1833) [ccf5c8ba]
+- Move test containes to quay.io [7db053eb] [773be707] [c10a7f53]
 
+20.12.0-edge - 12 Dec 2020 
+- Add support for charliecloud container engine #1809
+- Fix glitch on K8s task progress update [668434f6]
+- Upgrade to groovy 3.0.7 [27056035]
+
+20.11.0-edge - 16 Nov 2020
 - Fix Allow nextflow to handle http protocol for Singularity images #1791
 - Fix params-file overrides config parameters [b03efcac]
 - Fix println failing test #1621 [8c6f0f97] [9d2e5850]

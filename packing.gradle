@@ -17,16 +17,14 @@ dependencies {
     defaultCfg "org.apache.ivy:ivy:2.3.0"
     // default cfg = runtime + httpfs + amazon + tower client
     defaultCfg project(':nf-httpfs')
-    defaultCfg project(':nf-tower')
-    defaultCfg project(':nf-amazon')
     // Capsule manages the fat jar building process
     capsule 'io.nextflow:capsule:1.1.0'
     capsule 'io.nextflow:capsule-maven:1.0.3.2'
-    console project(':nf-console')
-    ga4gh   project(':nf-ga4gh')
-    google  project(':nf-google')
-    amazon  project(':nf-amazon')
-    azure   project(':nf-azure')
+    console project(':plugins:nf-console')
+    ga4gh   project(':plugins:nf-ga4gh')
+    google  project(':plugins:nf-google')
+    amazon  project(':plugins:nf-amazon')
+    azure   project(':plugins:nf-azure')
     // ignite module
     ignite 'io.nextflow:nf-ignite:1.1.0'
     // legacy cloud support
@@ -127,49 +125,6 @@ task packOne(type: Jar) {
         manifest.attributes 'Repositories': 'central seqera'
     }
 
-    /*
-     * `console` dependencies
-     */
-    deps = resolveDeps('console')
-    manifest.attributes('Application-Class' : 'nextflow.ui.console.Nextflow', 'console' )
-    manifest.attributes('Dependencies': deps, 'console')
-
-    /*
-     * `ignite` dependencies
-     */
-    deps = resolveDeps('ignite')
-    manifest.attributes('Dependencies': deps, 'ignite')
-
-    /*
-     * `ga4gh` dependencies
-     */
-    deps = resolveDeps('ga4gh')
-    manifest.attributes('Dependencies': deps, 'ga4gh')
-
-    /*
-     * `amazon` dependencies
-     */
-    deps = resolveDeps('amazon')
-    manifest.attributes('Dependencies': deps, 'amazon')
-
-    /*
-     * `azure` dependencies
-     */
-    deps = resolveDeps('azure')
-    manifest.attributes('Dependencies': deps, 'azure')
-
-    /*
-     * `google` dependencies
-     */
-    deps = resolveDeps('google')
-    manifest.attributes('Dependencies': deps, 'google')
-
-    /*
-     * `legacy` dependencies
-     */
-    deps = resolveDeps('legacy')
-    manifest.attributes('Dependencies': deps, 'legacy-cloud')
-
     doLast {
         ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: releaseDir, overwrite: true)
         ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: nextflowDir, overwrite: true)
@@ -218,6 +173,39 @@ task packAll(type: Jar) {
         "chmod +x $target".execute()
         // done
         println "+ Nextflow package `ALL` copied to: $releaseDir\n"
+    }
+}
+
+task packCore(type: Jar) {
+    dependsOn configurations.capsule, configurations.defaultCfg
+    archiveName = "nextflow-${version}-core.jar"
+
+    from jar // embed our application jar
+    from (configurations.defaultCfg)
+    from (configurations.capsule.collect { zipTree(it) })
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    manifest.attributes( 'Main-Class'        : 'NextflowLoader',
+            'Application-Name'  : 'nextflow-core',
+            'Application-Class' : mainClassName,
+            'Application-Version': version,
+            'Min-Java-Version'  : '1.8.0'
+    )
+
+    doLast {
+        file(releaseDir).mkdir()
+        // cleanup
+        def source = file("$buildDir/libs/nextflow-${version}-core.jar")
+        def target = file("$releaseDir/nextflow-${version}-core"); target.delete()
+        // append the big jar
+        target.withOutputStream {
+            it << file('nextflow').text.replaceAll(/NXF_PACK\=.*/, 'NXF_PACK=all')
+            it << new FileInputStream(source)
+        }
+        // execute permission
+        "chmod +x $target".execute()
+        // done
+        println "+ Nextflow package `CORE` copied to: $releaseDir\n"
     }
 }
 
@@ -385,15 +373,3 @@ task release(type: Exec, dependsOn: [pack, dockerImage]) {
 }
 
 
-
-/*
- * Configure Nextflow staging plugin -- https://github.com/Codearte/gradle-nexus-staging-plugin
- * It adds the tasks
- * - closeRepository
- * - releaseRepository
- * - closeAndReleaseRepository
- */
-nexusStaging {
-    packageGroup = 'io.nextflow'
-    delayBetweenRetriesInMillis = 10_000
-}

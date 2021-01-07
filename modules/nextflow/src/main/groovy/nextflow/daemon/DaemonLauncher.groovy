@@ -17,12 +17,14 @@
 
 package nextflow.daemon
 
+import org.pf4j.ExtensionPoint
+
 /**
  * Generic interface to launch the cluster daemon
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-public interface DaemonLauncher {
+interface DaemonLauncher extends ExtensionPoint {
 
     void launch( Map config )
 

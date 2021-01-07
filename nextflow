@@ -16,7 +16,7 @@
 #  limitations under the License.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'20.11.0-edge'}
+NXF_VER=${NXF_VER:-'21.01.0-edge'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -275,9 +275,6 @@ NXF_MPIRUN=${NXF_MPIRUN:=''}
 NXF_HOST=${HOSTNAME:-localhost}
 [[ $NXF_LAUNCHER ]] || NXF_LAUNCHER=${NXF_HOME}/tmp/launcher/nextflow-${NXF_PACK}_${NXF_VER}/${NXF_HOST}
 
-[ ! $NXF_MODE ] && [[ $NXF_CLOUD_DRIVER == google ]] && NXF_MODE='google'
-[ ! $NXF_MODE ] && [[ $GOOGLE_APPLICATION_CREDENTIALS ]] && NXF_MODE='google'
-
 if [[ $NXF_MODE == ignite ]]; then
     # Fix JDK bug when there's a limit on the OS virtual memory
     # https://bugs.openjdk.java.net/browse/JDK-8044054
@@ -366,9 +363,6 @@ if [ ! -f "$NXF_BIN" ]; then
     mv "$tmpfile" "$NXF_BIN"
 fi
 
-[[ "$cmd" == "console" ]] && NXF_MODE='console'
-[[ "$cmd" == "node" && ! "$NXF_MODE" ]] && NXF_MODE='ignite'
-
 COLUMNS=${COLUMNS:-`tty -s && tput cols 2>/dev/null || true`}
 declare -a JAVA_OPTS=()
 JAVA_OPTS+=(-Dfile.encoding=UTF-8 -Dcapsule.trampoline -Dcapsule.java.cmd="$JAVA_CMD")
@@ -376,7 +370,6 @@ if [[ $cmd == console ]]; then bg=1;
 else JAVA_OPTS+=(-Djava.awt.headless=true)
 fi
 
-[[ "$NXF_MODE" ]] && JAVA_OPTS+=(-Dcapsule.mode=$NXF_MODE)
 [[ "$JAVA_HOME" ]] && JAVA_OPTS+=(-Dcapsule.java.home="$JAVA_HOME")
 [[ "$CAPSULE_LOG" ]] && JAVA_OPTS+=(-Dcapsule.log=$CAPSULE_LOG)
 [[ "$CAPSULE_RESET" ]] && JAVA_OPTS+=(-Dcapsule.reset=true)
@@ -387,10 +380,12 @@ fi
 [[ "$COLUMNS" ]] && export COLUMNS
 [[ "$NXF_TEMP" ]] && JAVA_OPTS+=(-Djava.io.tmpdir="$NXF_TEMP")
 [[ "${jvmopts[@]}" ]] && JAVA_OPTS+=("${jvmopts[@]}")
-# use drip to speedup startup time -- https://github.com/ninjudd/drip
-[[ "$NXF_DRIP" ]] && export DRIP_INIT='' && export DRIP_INIT_CLASS='nextflow.cli.DripMain'
 export JAVA_CMD
 export CAPSULE_CACHE_DIR
+export NXF_PLUGINS_DIR
+export NXF_PLUGINS_MODE
+export NXF_PLUGINS_DEFAULT
+export NXF_PACK
 
 # lookup the a `md5` command
 if hash md5sum 2>/dev/null; then MD5=md5sum;
@@ -417,7 +412,6 @@ $NXF_VER
 $NXF_OPTS
 $NXF_GRAB
 $NXF_CLASSPATH
-$NXF_DRIP
 EOF
 }
 
@@ -440,6 +434,7 @@ else
       launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.nio=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.util=ALL-UNNAMED)
+      launcher+=(--add-opens=java.base/java.nio.file.spi=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.nio.ch=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.nio.fs=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED)

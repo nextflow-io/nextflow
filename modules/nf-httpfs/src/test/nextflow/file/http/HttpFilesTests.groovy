@@ -17,6 +17,7 @@
 
 package nextflow.file.http
 
+
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.file.Files
@@ -24,6 +25,12 @@ import java.nio.file.Paths
 
 import com.github.tomakehurst.wiremock.junit.WireMockRule
 import com.github.tomjankes.wiremock.WireMockGroovy
+import com.sun.net.httpserver.BasicAuthenticator
+import com.sun.net.httpserver.Headers
+import com.sun.net.httpserver.HttpExchange
+import com.sun.net.httpserver.HttpHandler
+import com.sun.net.httpserver.HttpServer
+import groovy.transform.CompileStatic
 import org.junit.Rule
 import spock.lang.IgnoreIf
 import spock.lang.Specification
@@ -115,7 +122,7 @@ class HttpFilesTests extends Specification {
     @IgnoreIf({ env['TRAVIS'] })
     def 'should read FTP file' () {
         when:
-        def lines = Paths.get(new URI('ftp://ftp.ebi.ac.uk/robots.txt')).text.readLines()
+        def lines = Paths.get(new URI('ftp://ftp.ncbi.nlm.nih.gov/robots.txt')).text.readLines()
         then:
         lines[0] == 'User-agent: *'
         lines[1] == 'Disallow: /'
@@ -159,7 +166,7 @@ class HttpFilesTests extends Specification {
     @IgnoreIf({ env['TRAVIS'] })
     def 'should read lines' () {
         given:
-        def path = Paths.get(new URI('ftp://ftp.ebi.ac.uk/robots.txt'))
+        def path = Paths.get(new URI('ftp://ftp.ncbi.nlm.nih.gov/robots.txt'))
 
         when:
         def lines = Files.readAllLines(path, Charset.forName('UTF-8'))
@@ -171,7 +178,7 @@ class HttpFilesTests extends Specification {
     @IgnoreIf({ env['TRAVIS'] })
     def 'should read all bytes' ( ) {
         given:
-        def path = Paths.get(new URI('ftp://ftp.ebi.ac.uk/robots.txt'))
+        def path = Paths.get(new URI('ftp://ftp.ncbi.nlm.nih.gov/robots.txt'))
 
         when:
         def bytes = Files.readAllBytes(path)
@@ -219,4 +226,62 @@ class HttpFilesTests extends Specification {
 
     }
 
+
+    def 'should use basic auth' () {
+        given:
+        def RESP = 'Hello world'
+        and:
+        // launch web server
+        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
+        def hc1 = server.createContext("/", new BasicHandler(RESP, 200));
+
+        hc1.setAuthenticator(new BasicAuthenticator("get") {
+            @Override
+            boolean checkCredentials(String user, String pwd) {
+                return user.equals("admin") && pwd.equals("Secret1");
+            } });
+
+        server.start()
+
+        when:
+        def path = Paths.get(new URI('http://admin:Secret1@localhost:9900/foo/bar'))
+        then:
+        path.text == 'Hello world'
+
+        cleanup:
+        server?.stop(0)
+    }
+
+    @CompileStatic
+    static class BasicHandler implements HttpHandler {
+
+        String body
+
+        int respCode
+
+        Map<String,String> allHeaders
+
+        BasicHandler(String s, int code, Map<String,String> headers=null) {
+            this.body=s
+            this.respCode = code
+            this.allHeaders = headers ?: Collections.<String,String>emptyMap()
+        }
+
+        @Override
+        void handle(HttpExchange request) throws IOException {
+
+            Headers header = request.getResponseHeaders()
+
+            for( Map.Entry<String,String> entry : allHeaders.entrySet() ) {
+                header.set(entry.key, entry.value)
+            }
+            
+            header.set("Content-Type", "text/plain")
+            request.sendResponseHeaders(respCode, body.size())
+
+            OutputStream os = request.getResponseBody();
+            os.write(body.bytes);
+            os.close();
+        }
+    }
 }

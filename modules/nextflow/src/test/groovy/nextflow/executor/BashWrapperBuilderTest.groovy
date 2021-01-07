@@ -199,6 +199,7 @@ class BashWrapperBuilderTest extends Specification {
         bash.getContainerImage() >> 'foo/bar'
         bash.getContainerMount() >> null
         bash.getContainerMemory() >> null
+        bash.getContainerCpus() >> null
         bash.getContainerCpuset() >> null
         bash.getContainerOptions() >> null
 

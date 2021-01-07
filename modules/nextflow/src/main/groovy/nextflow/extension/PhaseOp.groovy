@@ -194,7 +194,7 @@ class PhaseOp {
             while( true ) {
 
                 boolean fill=false
-                def result = new ArrayList(count)
+                def result = new ArrayList<Object>(count)
                 for( int i=0; i<count; i++ ) {
                     List values = entry[i]
                     if( values ) {
