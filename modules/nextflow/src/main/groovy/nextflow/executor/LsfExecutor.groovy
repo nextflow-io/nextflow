@@ -234,7 +234,32 @@ class LsfExecutor extends AbstractGridExecutor {
      */
     protected Map<String,String> parseLsfConfig() {
         def result = new LinkedHashMap<>(20)
-
+        
+        // check whether there is a custom LSF config path defined (allowing to parse lsb.params)
+        def customEnvDir = getEnv0('NXF_LSF_CUSTOMDIR')
+        if ( customEnvDir ) {
+            def envFile = Paths.get(customEnvDir).resolve("lsb.params")
+            if ( envFile.exists() ) {
+                for (def line : envFile.readLines() ){
+                    if( !KEY_REGEX.matcher(line).matches() )
+                        continue
+                    def entry = line.tokenize('=')
+                    if( entry.size() != 2 )
+                        continue
+                    def (String key,String value) = entry
+                    def matcher = QUOTED_STRING_REGEX.matcher(value)
+                    if( matcher.matches() ) {
+                        value = matcher.group(1)
+                    }
+                    else {
+                        int p = value.indexOf('#')
+                        value = p==-1 ? value.trim() : value.substring(0,p).trim()
+                    }
+                    key = key.trim()
+                    result.putAt(key,value)
+                }
+            }
+        }
         // check environment variable exists
         def envDir = getEnv0('LSF_ENVDIR')
         if ( !envDir )
