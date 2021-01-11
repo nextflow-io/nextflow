@@ -53,6 +53,12 @@ class VersionNumberTest extends Specification {
         new VersionNumber('3.5.CR2')[0] == '3'
         new VersionNumber('3.5.CR2')[1] == '5'
         new VersionNumber('3.5.CR2')[2] == 'CR2'
+        and:
+        new VersionNumber('20.10.0-edge')[0] == '20'
+        new VersionNumber('20.10.0-edge')[1] == '10'
+        new VersionNumber('20.10.0-edge')[2] == '0'
+        new VersionNumber('20.10.0-edge')[3] == 'edge'
+
     }
 
 
@@ -71,6 +77,11 @@ class VersionNumberTest extends Specification {
         new VersionNumber('3') >  new VersionNumber('2.0.1')
         new VersionNumber('1.1') > null
         new VersionNumber('1.1') < '1.2'
+        new VersionNumber('20.10.0') >= '20.10.0'
+        new VersionNumber('20.10.0-edge') >= '20.10.0'
+        new VersionNumber('20.10.0-edge') >= '20.10.0-edge'
+        new VersionNumber('20.10.0-SNAPSHOT') > '20.10.0'
+        new VersionNumber('20.10.0-SNAPSHOT') >= '20.10.0'
     }
 
     @Unroll
@@ -97,6 +108,8 @@ class VersionNumberTest extends Specification {
 
         '1.2-edge'  | '>=1.2-edge'  | true
         '1.3-edge'  | '>=1.2-edge'  | true
+
+        '1.2-SNAPSHOT'  | '>=1.2'  | true
 
     }
 

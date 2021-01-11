@@ -22,12 +22,10 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.Const
 import nextflow.exception.AbortOperationException
-import nextflow.util.VersionNumber
 import org.pf4j.Plugin
 import org.pf4j.PluginWrapper
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-
 /**
  * Base class for NF plugins
  *
@@ -42,11 +40,11 @@ abstract class BasePlugin extends Plugin {
         super(wrapper)
     }
 
-    @PackageScope static boolean verMatches(String requires, String current=Const.APP_VER) {
-        if( requires.startsWith('nextflow@'))
-            requires = requires.substring('nextflow@'.size())
-
-        requires=='*' || new VersionNumber(current).matches(requires)
+    @PackageScope boolean verMatches(String requires, String current=Const.APP_VER) {
+        return getWrapper()
+                .getPluginManager()
+                .getVersionManager()
+                .checkVersionConstraint(current, requires)
     }
 
     @Override
