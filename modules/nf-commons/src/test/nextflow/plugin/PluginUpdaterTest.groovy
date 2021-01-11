@@ -8,7 +8,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-import org.pf4j.DefaultVersionManager
+import nextflow.Const
 import org.pf4j.Plugin
 import org.pf4j.PluginWrapper
 import org.pf4j.update.PluginInfo
@@ -255,8 +255,8 @@ class PluginUpdaterTest extends Specification {
         given:
         def r1 = new PluginInfo.PluginRelease(version: '1.4.0', url: 'http://xyz')
         def r2 = new PluginInfo.PluginRelease(version: '1.5.0', url: 'http://xyz')
-        def r3 = new PluginInfo.PluginRelease(version: '1.5.1', url: 'http://xyz')
-        def r4 = new PluginInfo.PluginRelease(version: '2.0.1', url: 'http://xyz')
+        def r3 = new PluginInfo.PluginRelease(version: '1.5.1', url: 'http://xyz', requires: Const.APP_VER)
+        def r4 = new PluginInfo.PluginRelease(version: '2.0.1', url: 'http://xyz', requires: Const.APP_VER)
         def PLUGINS = [
                 'nf-foo': new PluginInfo(id:'nf-foo', releases: [r1, r2, r3, r4]),
                 'nf-bar': new PluginInfo(id:'nf-bar', releases: [])
@@ -268,7 +268,7 @@ class PluginUpdaterTest extends Specification {
         when:
         def ret = updater.findReleaseMatchingCriteria('nf-foo', '1.5.0')
         then:
-        manager.getVersionManager() >> new DefaultVersionManager()
+        manager.getVersionManager() >> new CustomVersionManager()
         updater.getPluginsMap() >> PLUGINS
         and:
         ret == r2
@@ -276,7 +276,7 @@ class PluginUpdaterTest extends Specification {
         when:
         ret = updater.findReleaseMatchingCriteria('nf-foo', '1.5.*')
         then:
-        manager.getVersionManager() >> new DefaultVersionManager()
+        manager.getVersionManager() >> new CustomVersionManager()
         updater.getPluginsMap() >> PLUGINS
         and:
         ret == r2
@@ -285,7 +285,7 @@ class PluginUpdaterTest extends Specification {
         when:
         ret = updater.findReleaseMatchingCriteria('nf-foo', '>=2.0')
         then:
-        manager.getVersionManager() >> new DefaultVersionManager()
+        manager.getVersionManager() >> new CustomVersionManager()
         updater.getPluginsMap() >> PLUGINS
         and:
         ret == r4

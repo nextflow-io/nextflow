@@ -40,7 +40,7 @@ class VersionNumber implements Comparable {
      *
      */
     VersionNumber(String str) {
-        version = str ? str.tokenize('.') : ['0']
+        version = str ? str.tokenize('.-') : ['0']
     }
 
     /**

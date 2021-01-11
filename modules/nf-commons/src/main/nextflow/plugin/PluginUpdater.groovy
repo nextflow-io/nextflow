@@ -24,6 +24,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.Const
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FileMutex
@@ -304,6 +305,9 @@ class PluginUpdater extends UpdateManager {
         PluginInfo.PluginRelease lower = null
         for (PluginInfo.PluginRelease release : pluginInfo.releases) {
             if( !versionManager.checkVersionConstraint(release.version, verConstraint) || !release.url )
+                continue
+
+            if( !versionManager.checkVersionConstraint(Const.APP_VER, release.requires) )
                 continue
 
             if( lower == null )

@@ -17,6 +17,8 @@
  */
 package nextflow.plugin
 
+import org.pf4j.PluginManager
+import org.pf4j.PluginWrapper
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -28,9 +30,17 @@ class BasePluginTest extends Specification {
 
     @Unroll
     def 'should validate version match' () {
+        given:
+        def wrapper = Mock(PluginWrapper) {
+            getPluginManager() >> Mock(PluginManager) {
+                getVersionManager() >> new CustomVersionManager()
+            }
+        }
+
+        def plugin = new BasePlugin(wrapper) { }
 
         expect:
-        BasePlugin.verMatches(REQUIRES, CURRENT) == EXPECT
+        plugin.verMatches(REQUIRES, CURRENT) == EXPECT
 
         where:
         CURRENT         | REQUIRES                      | EXPECT
@@ -42,5 +52,6 @@ class BasePluginTest extends Specification {
         and:
         '21.01.0-edge'  | 'nextflow@>=21.01.0-edge'     | true
         '20.01.0-edge'  | 'nextflow@>=21.01.0-edge'     | false
+        '21.01.0-SNAPSHOT'  | '>=21.01.0-edge'          | true
     }
 }
