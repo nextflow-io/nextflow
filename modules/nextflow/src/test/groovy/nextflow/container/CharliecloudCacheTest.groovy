@@ -78,7 +78,7 @@ class CharliecloudCacheTest extends Specification {
     }
 
 
-    def 'should run ch-grow pull command'() {
+    def 'should run ch-image pull command'() {
 
         given:
         def dir = Files.createTempDirectory('test')
@@ -93,7 +93,7 @@ class CharliecloudCacheTest extends Specification {
         then:
         1 * cache.localImagePath(IMAGE) >> TARGET_PATH
         and:
-        1 * cache.runCommand("ch-grow pull $IMAGE $TARGET_PATH > /dev/null", TARGET_PATH) >> 0
+        1 * cache.runCommand("ch-image pull $IMAGE $TARGET_PATH > /dev/null", TARGET_PATH) >> 0
         and:
         TARGET_PATH.parent.exists()
         and:
