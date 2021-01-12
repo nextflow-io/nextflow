@@ -125,7 +125,7 @@ class CharliecloudCache {
         if( str )
             return checkDir(str)
 
-        str = env.get('CH_GROW_STORAGE')
+        str = env.get('CH_IMAGE_STORAGE')
         if( str )
             return checkDir(str)
 
@@ -153,8 +153,8 @@ class CharliecloudCache {
     }
 
     /**
-     * Run ch-grow to pull a remote image and store in the file system.
-     * Requires charliecloud 0.19 or later.
+     * Run ch-image to pull a remote image and store in the file system.
+     * Requires charliecloud 0.21 or later.
      *
      * @param imageUrl The docker image remote URL
      * @return  the container image local {@link Path}
@@ -200,9 +200,7 @@ class CharliecloudCache {
 
         log.info "Pulling Charliecloud image $imageUrl [cache $targetPath]"
 
-        // FIXME: ch-grow will be renamed to ch-image in charliecloud 0.21
-        // charliecloud PR https://github.com/hpc/charliecloud/pull/904
-        String cmd = "ch-grow pull $imageUrl $targetPath > /dev/null"
+        String cmd = "ch-image pull $imageUrl $targetPath > /dev/null"
         try {
             runCommand( cmd, targetPath )
             log.debug "Charliecloud pull complete image=$imageUrl path=$targetPath"
@@ -224,7 +222,7 @@ class CharliecloudCache {
 
         final max = pullTimeout.toMillis()
         final builder = new ProcessBuilder(['bash','-c',cmd])
-        builder.environment().remove('CH_GROW_STORAGE')
+        builder.environment().remove('CH_IMAGE_STORAGE')
         final proc = builder.start()
         final err = new StringBuilder()
         final consumer = proc.consumeProcessErrorStream(err)

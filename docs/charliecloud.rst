@@ -21,7 +21,7 @@ executed on any platform supporting the Charliecloud engine.
 Prerequisites
 ==============
 
-You will need Charliecloud version ``0.19`` or later installed on your execution environment e.g. your computer or a
+You will need Charliecloud version ``0.21`` or later installed on your execution environment e.g. your computer or a
 distributed cluster, depending on where you want to run your pipeline.
 
 How it works
