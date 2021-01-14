@@ -29,6 +29,7 @@ import com.google.api.services.lifesciences.v2beta.model.CancelOperationRequest
 import com.google.api.services.lifesciences.v2beta.model.Disk
 import com.google.api.services.lifesciences.v2beta.model.Mount
 import com.google.api.services.lifesciences.v2beta.model.Network
+// import com.google.api.services.lifesciences.v2beta.model.Subnetwork
 import com.google.api.services.lifesciences.v2beta.model.Operation
 import com.google.api.services.lifesciences.v2beta.model.Pipeline
 import com.google.api.services.lifesciences.v2beta.model.Resources
@@ -183,8 +184,23 @@ class GoogleLifeSciencesHelper {
                 .setServiceAccount(serviceAccount)
                 .setPreemptible(req.preemptible)
 
+        def network = new Network()
+
         if( req.usePrivateAddress ) {
-            vm.setNetwork( new Network().setUsePrivateAddress(true) )
+            // vm.setNetwork( new Network().setUsePrivateAddress(true) )
+            network.setUsePrivateAddress(true)
+        }
+
+        if( req.network ) {
+            network.setNetwork(req.network)
+        }
+
+        if( req.subnetwork ) {
+            network.setSubnetwork(req.subnetwork)
+        }
+
+        if(req.network || req.usePrivateAddress ) {
+            vm.setNetwork(network)
         }
 
         if( req.bootDiskSizeGb ) {

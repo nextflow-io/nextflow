@@ -61,6 +61,8 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
     String copyImage
     boolean usePrivateAddress
     boolean enableRequesterPaysBuckets
+    String network
+    String subnetwork
 
     int maxParallelTransfers = MAX_TRANSFER
     int maxTransferAttempts = MAX_TRANSFER_ATTEMPTS
@@ -127,6 +129,8 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
         final maxParallelTransfers = config.navigate('aws.batch.maxParallelTransfers', MAX_TRANSFER) as int
         final maxTransferAttempts = config.navigate('aws.batch.maxTransferAttempts', MAX_TRANSFER_ATTEMPTS) as int
         final delayBetweenAttempts = config.navigate('aws.batch.delayBetweenAttempts', DEFAULT_DELAY_BETWEEN_ATTEMPTS) as Duration
+        final network = config.navigate('google.lifeSciences.network') as String
+        final subnetwork = config.navigate('google.lifeSciences.subnetwork') as String
 
         def zones = (config.navigate("google.zone") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
         def regions = (config.navigate("google.region") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
@@ -149,7 +153,9 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
                 enableRequesterPaysBuckets: requesterPays,
                 maxParallelTransfers: maxParallelTransfers,
                 maxTransferAttempts: maxTransferAttempts,
-                delayBetweenAttempts: delayBetweenAttempts
+                delayBetweenAttempts: delayBetweenAttempts,
+                network: network,
+                subnetwork: subnetwork
             )
     }
 
