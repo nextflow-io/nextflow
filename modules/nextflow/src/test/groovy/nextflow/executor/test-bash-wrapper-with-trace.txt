@@ -207,16 +207,6 @@ nxf_date() {
     fi
 }
 
-nxf_await() {
-    local pid=$1
-    local max=$2
-    if [[ $(uname) = Darwin ]]; then
-      lsof -p $pid +r 1 &>/dev/null
-    else
-      timeout ${max} tail --pid=$pid -f /dev/null
-    fi
-}
-
 nxf_env() {
     echo '============= task environment ============='
     env | sort | sed "s/\(.*\)AWS\(.*\)=\(.\{6\}\).*/\1AWS\2=\3xxxxxxxxxxxxx/"
@@ -297,8 +287,7 @@ nxf_main() {
     ( nxf_launch ) >$cout 2>$cerr &
     pid=$!
     wait $pid || nxf_main_ret=$?
-    nxf_await $tee1 1 || true
-    nxf_await $tee2 1 || true
+    wait $tee1 $tee2
     nxf_unstage
 }
 
