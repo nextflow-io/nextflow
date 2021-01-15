@@ -82,6 +82,8 @@ class LocalPluginManager extends CustomPluginManager {
     }
 
     private Path createLinkFromPath(Path pluginPath) {
+        if( pluginPath.startsWith(getPluginsRoot()))
+            return pluginPath
         if( !pluginPath )
             throw new IllegalArgumentException("Plugin path cannot be null")
         if( !Files.isDirectory(pluginPath) )
@@ -100,8 +102,19 @@ class LocalPluginManager extends CustomPluginManager {
         }
         catch (FileAlreadyExistsException e) {
             log.debug "Deleting existing local plugins root link: $symlink"
-            Files.delete(symlink)
-            Files.createSymbolicLink(symlink, pluginPath)
+            if( !sameTarget(symlink, pluginPath) ) {
+                Files.delete(symlink)
+                Files.createSymbolicLink(symlink, pluginPath)
+            }
+        }
+    }
+
+    private boolean sameTarget(Path link, Path target) {
+        try {
+            return Files.readSymbolicLink(link) == target
+        }
+        catch (IOException e) {
+            return false
         }
     }
 }
