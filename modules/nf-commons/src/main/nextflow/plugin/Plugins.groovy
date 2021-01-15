@@ -19,6 +19,7 @@ package nextflow.plugin
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.file.FileSystemPathFactory
 import org.pf4j.PluginManager
 /**
  * Plugin manager specialized for Nextflow build environment
@@ -37,6 +38,7 @@ class Plugins {
 
     static synchronized void setup(Map config = Collections.emptyMap()) {
         INSTANCE.setup(config)
+        FileSystemPathFactory.reset()
     }
 
     static void start(String pluginId) {
