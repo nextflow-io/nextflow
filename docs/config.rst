@@ -418,6 +418,7 @@ Name                Description
 ================== ================
 enabled             Turn this flag to ``true`` to enable Charliecloud execution (default: ``false``).
 envWhitelist        Comma separated list of environment variable names to be included in the container environment.
+temp                Mounts a path of your choice as the ``/tmp`` directory in the container. Use the special value ``auto`` to create a temporary directory each time a container is created.
 runOptions          This attribute can be used to provide any extra command line options supported by the ``ch-run`` command.
 cacheDir            The directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
 pullTimeout         The amount of time the Charliecloud pull can last, exceeding which the process is terminated (default: ``20 min``).
