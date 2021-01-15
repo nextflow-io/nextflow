@@ -82,7 +82,7 @@ class PbsProExecutor extends PbsExecutor {
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
-        String cmd = 'qstat -u $USER -f ' 
+        String cmd = 'qstat -f ' 
         if( queue ) {
             cmd += queue
         } else {
