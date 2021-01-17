@@ -51,9 +51,6 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
         if( params.containsKey('runOptions') )
             addRunOptions(params.runOptions.toString())
 
-        if( params.containsKey('readOnlyInputs') )
-            this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
-
         return this
     }
 
@@ -66,9 +63,12 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
     CharliecloudBuilder build(StringBuilder result) {
         assert image
 
-        result << 'ch-run --no-home --unset-env="*" '
+        result << 'ch-run --no-home --unset-env="*" -w '
 
         appendEnv(result)
+
+        if( temp )
+            result << "-b $temp:/tmp "
 
         if( runOptions )
             result << runOptions.join(' ') << ' '
@@ -85,7 +85,7 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
         return this
     }
 
-    protected String composeVolumePath(String path, boolean readOnly = false) {
+    protected String composeVolumePath(String path) {
         return "-b ${escape(path)}:${escape(path)}"
     }
 
@@ -109,22 +109,12 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
         final trie = new PathTrie()
         for( String it : allMounts ) { trie.add(it) }
 
-        // when mounts are read-only make sure to remove the work-dir path
         final paths = trie.longest()
-        if( readOnlyInputs && workDirStr && paths.contains(workDirStr) )
-            paths.remove(workDirStr)
 
         for( String it : paths ) {
             if(!it) continue
             prependDirs += it + ' '
-            result << composeVolumePath(it,readOnlyInputs)
-            result << ' '
-        }
-
-        // when mounts are read-only, make sure to include the work-dir as writable
-        if( readOnlyInputs && workDir ) {
-            prependDirs += workDirStr + ' '
-            result << composeVolumePath(workDirStr)
+            result << composeVolumePath(it)
             result << ' '
         }
 
