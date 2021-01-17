@@ -51,6 +51,8 @@ class AzBatchTaskHandler extends TaskHandler {
 
     private volatile TaskState taskState
 
+    private String sas
+
     AzBatchTaskHandler(TaskRun task, AzBatchExecutor executor) {
         super(task)
         this.executor = executor
@@ -74,10 +76,12 @@ class AzBatchTaskHandler extends TaskHandler {
 
     @Override
     void submit() {
+        //this.sas = AzHelper.generateSas(task.workDir, Duration.of('1h'), 'rw')
+        this.sas = executor.config.storage().sasToken
         log.debug "[AZURE BATCH] Submitting task $task.name - work-dir=${task.workDirStr}"
-        new BashWrapperBuilder(taskBean, new AzFileCopyStrategy(taskBean)).build()
+        new BashWrapperBuilder(taskBean, new AzFileCopyStrategy(taskBean, sas)).build()
 
-        this.opKey = batchService.submitTask(task)
+        this.opKey = batchService.submitTask(task, sas)
         log.debug "[AZURE BATCH] Submitted task $task.name with taskId=$opKey"
         this.status = TaskStatus.SUBMITTED
     }

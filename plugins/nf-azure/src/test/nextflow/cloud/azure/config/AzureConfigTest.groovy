@@ -30,13 +30,16 @@ class AzureConfigTest extends Specification {
         def KEY = 'xyz1343'
         def NAME = 'container-foo'
         def STORES = 'this-that'
+        def SAS = 'foo'
         and:
         def session = Mock(Session) {
             getConfig() >> [ azure:
                                 [storage:[
                                     accountKey: KEY,
                                     accountName: NAME,
-                                    fileStores: STORES]] ]
+                                    fileStores: STORES,
+                                    sasToken: SAS
+                                ] ]]
         }
         
         when:
@@ -45,6 +48,7 @@ class AzureConfigTest extends Specification {
         cfg.storage().accountKey == KEY
         cfg.storage().accountName == NAME
         cfg.storage().fileStores == STORES
+        cfg.storage().sasToken == SAS
         and:
         cfg.storage().getEnv() == [AzureStorageAccountKey: KEY, AzureStorageFileStores: STORES]
         
@@ -79,5 +83,6 @@ class AzureConfigTest extends Specification {
         cfg.storage().accountKey == null
         cfg.storage().accountName == null
         cfg.storage().fileStores == null
+        cfg.storage().sasToken == null
     }
 }

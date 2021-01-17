@@ -29,12 +29,14 @@ class AzStorageOpts {
     String accountKey
     String fileStores
     String accountName
+    String sasToken
 
     AzStorageOpts(Map config) {
         assert config!=null
         this.accountKey = config.accountKey
         this.accountName = config.accountName
         this.fileStores = config.fileStores
+        this.sasToken = config.sasToken
     }
 
     Map<String,Object> getEnv() {

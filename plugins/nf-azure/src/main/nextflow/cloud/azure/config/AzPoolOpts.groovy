@@ -26,7 +26,7 @@ import com.microsoft.azure.batch.protocol.models.VerificationType
 class AzPoolOpts {
 
     String publisher = "microsoft-azure-batch"
-    String offer = "ubuntu-server-container"
+    String offer = "centos-container"
     String vmType = "STANDARD_A1"
     OSType type = OSType.LINUX
     VerificationType verification = VerificationType.VERIFIED

@@ -2,5 +2,6 @@ nf-amazon@1.0.1
 nf-console@1.0.1
 nf-google@1.0.1
 nf-ignite@1.2.1
+nf-azure@0.1.0
 nf-tower@1.0.1
 nf-ga4gh@1.0.1

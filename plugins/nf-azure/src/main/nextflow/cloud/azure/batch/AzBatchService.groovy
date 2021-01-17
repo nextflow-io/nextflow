@@ -26,12 +26,14 @@ import com.microsoft.azure.batch.BatchClient
 import com.microsoft.azure.batch.auth.BatchSharedKeyCredentials
 import com.microsoft.azure.batch.protocol.models.CloudTask
 import com.microsoft.azure.batch.protocol.models.ContainerConfiguration
+import com.microsoft.azure.batch.protocol.models.EnvironmentSetting
 import com.microsoft.azure.batch.protocol.models.ImageInformation
 import com.microsoft.azure.batch.protocol.models.OutputFile
 import com.microsoft.azure.batch.protocol.models.OutputFileBlobContainerDestination
 import com.microsoft.azure.batch.protocol.models.OutputFileDestination
 import com.microsoft.azure.batch.protocol.models.OutputFileUploadCondition
 import com.microsoft.azure.batch.protocol.models.OutputFileUploadOptions
+import com.microsoft.azure.batch.protocol.models.PoolAddParameter
 import com.microsoft.azure.batch.protocol.models.PoolInformation
 import com.microsoft.azure.batch.protocol.models.ResourceFile
 import com.microsoft.azure.batch.protocol.models.TaskAddParameter
@@ -88,10 +90,10 @@ class AzBatchService {
     }
 
 
-    AzTaskKey submitTask(TaskRun task) {
+    AzTaskKey submitTask(TaskRun task, String sas) {
         final poolId = getOrCreatePool()
         final jobId = getOrCreateJob(poolId, task)
-        runTask(jobId, task)
+        runTask(jobId, task, sas)
     }
 
     CloudTask getTask(AzTaskKey key) {
@@ -123,7 +125,7 @@ class AzBatchService {
         return "nf-job-$name"
     }
 
-    AzTaskKey runTask(String jobId, TaskRun task) {
+    AzTaskKey runTask(String jobId, TaskRun task, String sas) {
         final container = task.config.container as String
         if( !container )
             throw new IllegalArgumentException("Missing container image for process: $task.name")
@@ -134,34 +136,42 @@ class AzBatchService {
 
         TaskAddParameter taskToAdd = new TaskAddParameter()
                 .withId(taskId)
+                .withEnvironmentSettings( [new EnvironmentSetting().withName('AZCOPY_LOG_LOCATION').withValue('.azcopy_log')] )
                 .withContainerSettings(containerOpts)
                 .withCommandLine("bash ${TaskRun.CMD_RUN}")
-                .withResourceFiles(resourceFileUrls(task))
-                .withOutputFiles(outputFileUrls(task))
+                .withResourceFiles(resourceFileUrls(task, sas))
+
         client.taskOperations().createTask(jobId, taskToAdd)
         return new AzTaskKey(jobId, taskId)
     }
 
-    protected List<ResourceFile> resourceFileUrls(TaskRun task) {
+    protected List<ResourceFile> resourceFileUrls(TaskRun task, String sas) {
         final cmdRun = (AzurePath) task.workDir.resolve(TaskRun.CMD_RUN)
         final cmdScript = (AzurePath) task.workDir.resolve(TaskRun.CMD_SCRIPT)
 
-        final result = new ArrayList(10)
+        final resFiles = new ArrayList(10)
         // command bash launcher
+        final copier = new ResourceFile()
+                .withHttpUrl('https://nf-xpack.s3-eu-west-1.amazonaws.com/azcopy/linux_amd64_10.8.0/azcopy')
+                .withFilePath('azcopy')
+                .withFileMode('544')
+        resFiles.add(copier)
+
         final launcher = new ResourceFile()
-                .withHttpUrl(getResUrl(cmdRun, 'r'))
+                .withHttpUrl(AzHelper.toHttpUrl(cmdRun, sas))
                 .withFilePath(TaskRun.CMD_RUN)
-        result.add(launcher)
+        resFiles.add(launcher)
 
         final script = new ResourceFile()
-                .withHttpUrl(getResUrl(cmdScript, 'r'))
+                .withHttpUrl(AzHelper.toHttpUrl(cmdScript, sas))
                 .withFilePath(TaskRun.CMD_SCRIPT)
-        result.add(script)
+        resFiles.add(script)
 
-        return result
+        log.debug "[AZURE BATCH] Task resource files: $resFiles"
+        return resFiles
     }
 
-
+    @Deprecated
     protected String getResUrl(AzurePath path, String perms) {
         final offset = OffsetDateTime.now().plusDays(1)
         final client = path.toBlobClient()
@@ -170,6 +180,7 @@ class AzBatchService {
         return "${client.getBlobUrl()}?${sas}"
     }
 
+    @Deprecated
     protected List<OutputFile> outputFileUrls(TaskRun task) {
         List<OutputFile> result = new ArrayList<>(20)
 
@@ -179,6 +190,7 @@ class AzBatchService {
         return result
     }
 
+    @Deprecated
     protected OutputFile destFile(String localPath, AzurePath targetDir) {
 
         final targetFile = (AzurePath) targetDir.resolve(localPath)
@@ -259,14 +271,18 @@ class AzBatchService {
                     .withImageReference(image.imageReference())
                     .withContainerConfiguration(containerConfig)
 
-            client.poolOperations().createPool(poolId, poolOpts.vmType, vmConfig, poolOpts.vmCount)
+            final poolParams = new PoolAddParameter()
+                    .withId(poolId)
+                    .withVirtualMachineConfiguration(vmConfig)
+                    .withVmSize(poolOpts.vmType)
+                    .withTargetDedicatedNodes(poolOpts.vmCount)
+
+            client.poolOperations().createPool(poolParams)
             // add to the list of pool ids
             allPoolIds.add(poolId)
         }
 
         return poolId
     }
-
-
 
 }
