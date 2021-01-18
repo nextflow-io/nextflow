@@ -23,7 +23,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     private int maxTransferAttempts
     private int maxParallelTransfers
     private Duration delayBetweenAttempts
-    private String azcli = './azcopy'
+    private String rcloneCli = './rclone'
     private String sas
 
     protected AzFileCopyStrategy() {}
@@ -45,18 +45,17 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     String getBeforeStartScript() {
 
         BashFunLib.body(maxParallelTransfers, maxTransferAttempts, delayBetweenAttempts) +
-        """
+                """
         SAS='$sas'
-        export AZCOPY_LOG_LOCATION=\$PWD/.azcopy_log
 
         nxf_az_upload() {
             local name=\$1
             local target=\${2%/} ## remove ending slash
         
             if [[ -d \$name ]]; then
-              $azcli cp "\$name" "\$target?\$SAS" --recursive
+              $rcloneCli copy "\$name" ":azureblob:/\$target" --azureblob-sas-url \"\$SAS\"
             else 
-              $azcli cp "\$name" "\$target/\$name?\$SAS"
+              $rcloneCli copy "\$name" ":azureblob:/\$target/\$name --azureblob-sas-url \"\$SAS\""
             fi  
         }
         
@@ -67,10 +66,10 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
             local ret
             mkdir -p "\$basedir"
         
-            ret=\$($azcli cp "\$source?\$SAS" "\$target" 2>&1) || {
+            ret=\$($rcloneCli copy :azureblob\$source "\$target" --azureblob-sas-url \"\$SAS\" 2>&1) || {
                 ## if fails check if it was trying to download a directory
                 mkdir \$target
-                $azcli cp "\$source/*?\$SAS" "\$target" --recursive >/dev/null || {
+                $rcloneCli copy ":azureblob:\$source/*" "\$target" --azureblob-sas-url \"\$SAS\" >/dev/null || {
                     rm -rf \$target
                     >&2 echo "Unable to download path: \$source"
                     exit 1
