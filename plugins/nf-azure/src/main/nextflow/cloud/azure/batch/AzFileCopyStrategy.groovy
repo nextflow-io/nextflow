@@ -53,9 +53,9 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
             local target=\${2%/} ## remove ending slash
         
             if [[ -d \$name ]]; then
-              $rcloneCli copy "\$name" ":azureblob:/\$target" --azureblob-sas-url \"\$SAS\"
+              $rcloneCli copy "\$name" ":azureblob":/"\$target" --azureblob-sas-url \"\$SAS\"
             else 
-              $rcloneCli copy "\$name" ":azureblob:/\$target/\$name --azureblob-sas-url \"\$SAS\""
+              $rcloneCli copy "\$name" ":azureblob":/"\$target"/"\$name" --azureblob-sas-url \"\$SAS\"
             fi  
         }
         
@@ -66,10 +66,10 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
             local ret
             mkdir -p "\$basedir"
         
-            ret=\$($rcloneCli copy :azureblob\$source "\$target" --azureblob-sas-url \"\$SAS\" 2>&1) || {
+            ret=\$($rcloneCli copy ":azureblob":/"\$source" "\$target" --azureblob-sas-url \"\$SAS\" 2>&1) || {
                 ## if fails check if it was trying to download a directory
                 mkdir \$target
-                $rcloneCli copy ":azureblob:\$source/*" "\$target" --azureblob-sas-url \"\$SAS\" >/dev/null || {
+                $rcloneCli copy ":azureblob":/"\$source"/* "\$target" --azureblob-sas-url \"\$SAS\" >/dev/null || {
                     rm -rf \$target
                     >&2 echo "Unable to download path: \$source"
                     exit 1
