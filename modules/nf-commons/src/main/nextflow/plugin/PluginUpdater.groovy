@@ -301,6 +301,8 @@ class PluginUpdater extends UpdateManager {
 
         final versionManager = pluginManager.getVersionManager();
         PluginInfo pluginInfo = getPluginsMap().get(id)
+        if( !pluginInfo )
+            throw new IllegalArgumentException("Unknown plugin id: $id")
 
         PluginInfo.PluginRelease lower = null
         for (PluginInfo.PluginRelease release : pluginInfo.releases) {
