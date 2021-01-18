@@ -223,7 +223,7 @@ task exportClasspath {
     dependsOn allprojects.jar
     doLast {
         def home = System.getProperty('user.home')
-        def all = configurations.azure // getRuntimeConfigs()
+        def all = getRuntimeConfigs()
         def libs = all.collect { File file ->  /*println file.canonicalPath.replace(home, '$HOME');*/ file.canonicalPath;  }
         file('.launch.classpath').text = libs.join(':')
     }
