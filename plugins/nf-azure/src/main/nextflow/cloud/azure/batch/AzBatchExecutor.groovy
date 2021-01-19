@@ -21,6 +21,7 @@ import java.nio.file.Path
 import com.azure.storage.blob.nio.AzurePath
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
@@ -38,6 +39,7 @@ import org.pf4j.ExtensionPoint
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @ServiceName('azurebatch')
 @CompileStatic
 class AzBatchExecutor extends Executor implements ExtensionPoint {

@@ -16,12 +16,9 @@
 
 package nextflow.cloud.azure.batch
 
-
-import java.time.OffsetDateTime
+import java.nio.file.Path
 
 import com.azure.storage.blob.nio.AzurePath
-import com.azure.storage.blob.sas.BlobSasPermission
-import com.azure.storage.blob.sas.BlobServiceSasSignatureValues
 import com.microsoft.azure.batch.BatchClient
 import com.microsoft.azure.batch.auth.BatchSharedKeyCredentials
 import com.microsoft.azure.batch.protocol.models.CloudTask
@@ -44,7 +41,6 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzPoolOpts
-import nextflow.cloud.azure.file.AzStorageContainerParser
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 /**
@@ -105,8 +101,9 @@ class AzBatchService {
     }
 
     synchronized String getOrCreateJob(String poolId, TaskRun task) {
-        if( allJobIds.containsKey(task.processor)) {
-            return allJobIds[task]
+        final mapKey = task.processor
+        if( allJobIds.containsKey(mapKey)) {
+            return allJobIds[mapKey]
         }
         // create a batch job
         final jobId = makeJobId(task) + '-' + Random.newInstance().nextInt(5000)
@@ -114,7 +111,7 @@ class AzBatchService {
         poolInfo.withPoolId(poolId)
         client.jobOperations().createJob(jobId, poolInfo)
         // add to the map
-        allJobIds[task.processor] = jobId
+        allJobIds[mapKey] = jobId
         return jobId
     }
 
@@ -126,6 +123,10 @@ class AzBatchService {
     }
 
     AzTaskKey runTask(String jobId, TaskRun task, String sas) {
+        assert jobId, 'Missing jobId argument'
+        assert task, 'Missing task argument'
+        assert sas, 'Missing SAS argument'
+
         final container = task.config.container as String
         if( !container )
             throw new IllegalArgumentException("Missing container image for process: $task.name")
@@ -133,13 +134,16 @@ class AzBatchService {
         final taskId = "nf-${task.hash.toString()}"
         final containerOpts = new TaskContainerSettings()
                 .withImageName(container)
+                // mount host certificates otherwise `azcopy fails
+                .withContainerRunOptions('-v /etc/ssl/certs:/etc/ssl/certs:ro')
 
         TaskAddParameter taskToAdd = new TaskAddParameter()
                 .withId(taskId)
                 .withEnvironmentSettings( [new EnvironmentSetting().withName('AZCOPY_LOG_LOCATION').withValue('.azcopy_log')] )
                 .withContainerSettings(containerOpts)
                 .withCommandLine("bash ${TaskRun.CMD_RUN}")
-                .withResourceFiles(resourceFileUrls(task, sas))
+                .withResourceFiles(resourceFileUrls(task,sas))
+                .withOutputFiles(outputFileUrls(task, sas))
 
         client.taskOperations().createTask(jobId, taskToAdd)
         return new AzTaskKey(jobId, taskId)
@@ -151,86 +155,43 @@ class AzBatchService {
 
         final resFiles = new ArrayList(10)
         // command bash launcher
-        final copier = new ResourceFile()
+        resFiles << new ResourceFile()
                 .withHttpUrl('https://nf-xpack.s3-eu-west-1.amazonaws.com/azcopy/linux_amd64_10.8.0/azcopy')
                 .withFilePath('azcopy')
                 .withFileMode('544')
-        resFiles.add(copier)
 
-        final launcher = new ResourceFile()
+        resFiles << new ResourceFile()
                 .withHttpUrl(AzHelper.toHttpUrl(cmdRun, sas))
                 .withFilePath(TaskRun.CMD_RUN)
-        resFiles.add(launcher)
 
-        final script = new ResourceFile()
+        resFiles << new ResourceFile()
                 .withHttpUrl(AzHelper.toHttpUrl(cmdScript, sas))
                 .withFilePath(TaskRun.CMD_SCRIPT)
-        resFiles.add(script)
 
-        log.debug "[AZURE BATCH] Task resource files: $resFiles"
         return resFiles
     }
 
-    @Deprecated
-    protected String getResUrl(AzurePath path, String perms) {
-        final offset = OffsetDateTime.now().plusDays(1)
-        final client = path.toBlobClient()
-        final sas = client.generateSas(new BlobServiceSasSignatureValues(offset, BlobSasPermission.parse(perms)))
-//        return URLDecoder.decode("${client.getBlobUrl()}?${sas}", "utf-8")
-        return "${client.getBlobUrl()}?${sas}"
-    }
-
-    @Deprecated
-    protected List<OutputFile> outputFileUrls(TaskRun task) {
+    protected List<OutputFile> outputFileUrls(TaskRun task, String sas) {
         List<OutputFile> result = new ArrayList<>(20)
 
-        result.add( destFile(TaskRun.CMD_OUTFILE, task.workDir as AzurePath) )
-//        result.add( destFile(TaskRun.CMD_ERRFILE, task.workDir as AzurePath) )
+        result << destFile(TaskRun.CMD_OUTFILE, task.workDir, sas)
+        result << destFile(TaskRun.CMD_ERRFILE, task.workDir, sas)
+        result << destFile(TaskRun.CMD_EXIT, task.workDir, sas)
 
         return result
     }
 
-    @Deprecated
-    protected OutputFile destFile(String localPath, AzurePath targetDir) {
+    protected OutputFile destFile(String localPath, Path targetDir, String sas) {
+        log.debug "Task output path: $localPath -> ${targetDir.toUriString()}"
+        final dest = new OutputFileBlobContainerDestination()
+                .withContainerUrl(AzHelper.toHttpUrl(targetDir,sas))
+                .withPath(localPath)
 
-        final targetFile = (AzurePath) targetDir.resolve(localPath)
-        final targetUrl = getResUrl( targetFile, 'cw')
-        final container = new OutputFileBlobContainerDestination()
-                .withContainerUrl(targetUrl)
-//                .withPath( targetDir.resolve(localPath).toString().tokenize(':')[1] )
-
-        new OutputFile()
+        return new OutputFile()
                 .withFilePattern(localPath)
-                .withDestination( new OutputFileDestination().withContainer(container) )
+                .withDestination( new OutputFileDestination().withContainer(dest) )
                 .withUploadOptions( new OutputFileUploadOptions().withUploadCondition( OutputFileUploadCondition.TASK_COMPLETION) )
     }
-
-    protected List<ResourceFile> resourceFiles(TaskRun task) {
-        final uri = task.workDir.toUriString()
-        final bucket = AzStorageContainerParser.parse(uri)
-        if( !bucket )
-            throw new IllegalArgumentException("Invalid Azure data container URI: $uri")
-
-        final result = new ArrayList(10)
-
-        // add the bash launcher + script
-        final launcher = new ResourceFile()
-                .withAutoStorageContainerName(bucket.container)
-                .withBlobPrefix("$bucket.key/${TaskRun.CMD_RUN}")
-                .withFilePath("$bucket.path/${TaskRun.CMD_RUN}")
-                .withFileMode('554')
-        result.add(launcher)
-
-        final script = new ResourceFile()
-                .withAutoStorageContainerName(bucket.container)
-                .withBlobPrefix("$bucket.key/${TaskRun.CMD_SCRIPT}")
-                .withFilePath("$bucket.path/${TaskRun.CMD_SCRIPT}")
-                .withFileMode('554')
-        result.add(script)
-
-        return result
-    }
-
 
     protected ImageInformation getImage() {
         List<ImageInformation> images = client.accountOperations().listSupportedImages()
@@ -271,11 +232,23 @@ class AzBatchService {
                     .withImageReference(image.imageReference())
                     .withContainerConfiguration(containerConfig)
 
+            final scalingFormula = '''
+                startingNumberOfVMs = 1;
+                maxNumberofVMs = 25;
+                pendingTaskSamplePercent = $PendingTasks.GetSamplePercent(180 * TimeInterval_Second);
+                pendingTaskSamples = pendingTaskSamplePercent < 70 ? startingNumberOfVMs : avg($PendingTasks.GetSample(180 * TimeInterval_Second));
+                $TargetDedicatedNodes=min(maxNumberofVMs, pendingTaskSamples);
+                $NodeDeallocationOption = taskcompletion;
+                '''.stripIndent()
+
             final poolParams = new PoolAddParameter()
                     .withId(poolId)
                     .withVirtualMachineConfiguration(vmConfig)
                     .withVmSize(poolOpts.vmType)
                     .withTargetDedicatedNodes(poolOpts.vmCount)
+//                    .withEnableAutoScale(true)
+//                    .withAutoScaleEvaluationInterval( new Period().withSeconds(300) ) // cannot be smaller
+//                    .withAutoScaleFormula(scalingFormula)
 
             client.poolOperations().createPool(poolParams)
             // add to the list of pool ids

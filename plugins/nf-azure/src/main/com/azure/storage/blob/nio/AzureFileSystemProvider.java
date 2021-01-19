@@ -373,11 +373,11 @@ public final class AzureFileSystemProvider extends FileSystemProvider {
         }
 
         // Write and truncate must be specified
-        if (!optionsList.contains(StandardOpenOption.WRITE)
-            || !optionsList.contains(StandardOpenOption.TRUNCATE_EXISTING)) {
-            throw LoggingUtility.logError(logger,
-                new IllegalArgumentException("Write and TruncateExisting must be specified to open an OutputStream"));
-        }
+//        if (!optionsList.contains(StandardOpenOption.WRITE)
+//            || !optionsList.contains(StandardOpenOption.TRUNCATE_EXISTING)) {
+//            throw LoggingUtility.logError(logger,
+//                new IllegalArgumentException("Write and TruncateExisting must be specified to open an OutputStream"));
+//        }
 
         AzureResource resource = new AzureResource(path);
         AzurePath.ensureFileSystemOpen(resource.getPath());

@@ -24,13 +24,15 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     private int maxParallelTransfers
     private Duration delayBetweenAttempts
     private String azcli = './azcopy'
-    private String sas
+    private String sasToken
+    private Path remoteBinDir
 
     protected AzFileCopyStrategy() {}
 
-    AzFileCopyStrategy(TaskBean bean, String sas) {
+    AzFileCopyStrategy(TaskBean bean, String sas, Path remoteBinDir) {
         super(bean)
-        this.sas = sas
+        this.sasToken = sas
+        this.remoteBinDir = remoteBinDir
         //
         this.maxParallelTransfers = 1 // /*config.maxParallelTransfers ?:*/ CloudTransferOptions.MAX_TRANSFER
         this.maxTransferAttempts = /*config.maxTransferAttempts ?:*/ CloudTransferOptions.MAX_TRANSFER_ATTEMPTS
@@ -38,15 +40,23 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     }
 
     protected String toAzHttpUrl(Path path) {
-        AzHelper.toHttpUrl(path, sas)
+        AzHelper.toHttpUrl(path, sasToken)
     }
 
     @Override
     String getBeforeStartScript() {
 
+        String mover = ( remoteBinDir ?
+            """
+            nxf_az_download '${toAzHttpUrl(remoteBinDir)}' \$PWD/nextflow-bin
+            chmod +x \$PWD/nextflow-bin/*
+            export PATH=\$PWD/nextflow-bin:\$PATH            
+            """.stripIndent() : '' )
+
+
         BashFunLib.body(maxParallelTransfers, maxTransferAttempts, delayBetweenAttempts) +
         """
-        SAS='$sas'
+        SAS='$sasToken'
         export AZCOPY_LOG_LOCATION=\$PWD/.azcopy_log
 
         nxf_az_upload() {
@@ -77,7 +87,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
                 }
             }
         }
-        """.stripIndent()
+        """.stripIndent() + mover
     }
 
     @Override
