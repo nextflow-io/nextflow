@@ -1,5 +1,16 @@
 NEXTFLOW CHANGE-LOG
 ===================
+21.01.1-edge - 15 Jan 2021
+- Plugins stability improvements [8d849ec9] [bf093826]
+- Charliecloud improvements [2242411a]
+- Fix issue of FS discovery with dyn plugin loading [bf5e86df]
+- Fix crash on startup when mem reported < 0 [095236b8]
+- Fix and stability [e4b8afb5]
+- Fix launcher on Java11 [c6b78034]
+- Add plugins custom version manager (4 days ago) <Paolo Di Tommaso>
+- Improve NF version checking [d33ea642]
+- Bump plugins minor upgrade [f91bc21e]
+
 21.01.0-edge - 04 Jan 2021
 - Merge plugins feature [d959bfdb]
 - Prevent twice access remote scm file [b2798556]

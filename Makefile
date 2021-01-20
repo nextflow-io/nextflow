@@ -83,7 +83,7 @@ endif
 # Run smoke tests
 #
 smoke:
-	NXF_SMOKE=1 ./gradlew test
+	NXF_SMOKE=1 ./gradlew ${mm}test
 
 #
 # Upload JAR artifacts to Maven Central
