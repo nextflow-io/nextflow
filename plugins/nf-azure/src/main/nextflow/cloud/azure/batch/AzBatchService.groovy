@@ -23,7 +23,6 @@ import com.microsoft.azure.batch.BatchClient
 import com.microsoft.azure.batch.auth.BatchSharedKeyCredentials
 import com.microsoft.azure.batch.protocol.models.CloudTask
 import com.microsoft.azure.batch.protocol.models.ContainerConfiguration
-import com.microsoft.azure.batch.protocol.models.EnvironmentSetting
 import com.microsoft.azure.batch.protocol.models.ImageInformation
 import com.microsoft.azure.batch.protocol.models.OutputFile
 import com.microsoft.azure.batch.protocol.models.OutputFileBlobContainerDestination
@@ -135,11 +134,12 @@ class AzBatchService {
         final containerOpts = new TaskContainerSettings()
                 .withImageName(container)
                 // mount host certificates otherwise `azcopy fails
-                .withContainerRunOptions('-v /etc/ssl/certs:/etc/ssl/certs:ro')
+                //.withContainerRunOptions('-v /etc/ssl/certs:/etc/ssl/certs:ro')
+                .withContainerRunOptions('-u root -v /usr/bin/docker:/usr/bin/docker -v /var/run/docker.sock:/var/run/docker.sock')
+
 
         TaskAddParameter taskToAdd = new TaskAddParameter()
                 .withId(taskId)
-                .withEnvironmentSettings( [new EnvironmentSetting().withName('AZCOPY_LOG_LOCATION').withValue('.azcopy_log')] )
                 .withContainerSettings(containerOpts)
                 .withCommandLine("bash ${TaskRun.CMD_RUN}")
                 .withResourceFiles(resourceFileUrls(task,sas))
@@ -154,11 +154,6 @@ class AzBatchService {
         final cmdScript = (AzurePath) task.workDir.resolve(TaskRun.CMD_SCRIPT)
 
         final resFiles = new ArrayList(10)
-        // command bash launcher
-        resFiles << new ResourceFile()
-                .withHttpUrl('https://nf-xpack.s3-eu-west-1.amazonaws.com/azcopy/linux_amd64_10.8.0/azcopy')
-                .withFilePath('azcopy')
-                .withFileMode('544')
 
         resFiles << new ResourceFile()
                 .withHttpUrl(AzHelper.toHttpUrl(cmdRun, sas))

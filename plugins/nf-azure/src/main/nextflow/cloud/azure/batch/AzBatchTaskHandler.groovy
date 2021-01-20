@@ -82,7 +82,10 @@ class AzBatchTaskHandler extends TaskHandler {
         //this.sas = AzHelper.generateSas(task.workDir, Duration.of('1h'), 'rw')
         this.sasToken = executor.config.storage().sasToken
         log.debug "[AZURE BATCH] Submitting task $task.name - work-dir=${task.workDirStr}"
-        new BashWrapperBuilder(taskBean, new AzFileCopyStrategy(taskBean, sasToken, remoteBinDir)).build()
+        new BashWrapperBuilder(taskBean, new AzFileCopyStrategy(taskBean, sasToken, remoteBinDir)) {
+            @Override
+            protected boolean shouldUnstageOutputs() { return true }
+        }.build()
 
         this.opKey = batchService.submitTask(task, sasToken)
         log.debug "[AZURE BATCH] Submitted task $task.name with taskId=$opKey"

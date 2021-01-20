@@ -23,7 +23,6 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     private int maxTransferAttempts
     private int maxParallelTransfers
     private Duration delayBetweenAttempts
-    private String azcli = './azcopy'
     private String sasToken
     private Path remoteBinDir
 
@@ -39,16 +38,12 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         this.delayBetweenAttempts = /*config.delayBetweenAttempts ?:*/ CloudTransferOptions.DEFAULT_DELAY_BETWEEN_ATTEMPTS
     }
 
-    protected String toAzHttpUrl(Path path) {
-        AzHelper.toHttpUrl(path, sasToken)
-    }
-
     @Override
     String getBeforeStartScript() {
 
         String mover = ( remoteBinDir ?
             """
-            nxf_az_download '${toAzHttpUrl(remoteBinDir)}' \$PWD/nextflow-bin
+            nxf_az_download '${AzHelper.toHttpUrl(remoteBinDir)}' \$PWD/nextflow-bin
             chmod +x \$PWD/nextflow-bin/*
             export PATH=\$PWD/nextflow-bin:\$PATH            
             """.stripIndent() : '' )
@@ -57,42 +52,49 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         BashFunLib.body(maxParallelTransfers, maxTransferAttempts, delayBetweenAttempts) +
         """
         SAS='$sasToken'
-        export AZCOPY_LOG_LOCATION=\$PWD/.azcopy_log
+        """.stripIndent() +
+
+        '''
+        set -x 
+        
+        azcopy() {
+            docker run -e AZCOPY_LOG_LOCATION=$PWD/.azcopy_log -w $PWD -v $PWD:$PWD quay.io/seqeralabs/azcopy azcopy "$@"
+        }
 
         nxf_az_upload() {
-            local name=\$1
-            local target=\${2%/} ## remove ending slash
+            local name=$1
+            local target=${2%/} ## remove ending slash
         
-            if [[ -d \$name ]]; then
-              $azcli cp "\$name" "\$target?\$SAS" --recursive
+            if [[ -d $name ]]; then
+              azcopy cp "$name" "$target?$SAS" --recursive
             else 
-              $azcli cp "\$name" "\$target/\$name?\$SAS"
+              azcopy cp "$name" "$target/$name?$SAS"
             fi  
         }
         
         nxf_az_download() {
-            local source=\$1
-            local target=\$2
-            local basedir=\$(dirname \$2)
+            local source=$1
+            local target=$2
+            local basedir=$(dirname $2)
             local ret
-            mkdir -p "\$basedir"
+            mkdir -p "$basedir"
         
-            ret=\$($azcli cp "\$source?\$SAS" "\$target" 2>&1) || {
+            ret=$(azcopy cp "$source?$SAS" "$target" 2>&1) || {
                 ## if fails check if it was trying to download a directory
-                mkdir \$target
-                $azcli cp "\$source/*?\$SAS" "\$target" --recursive >/dev/null || {
-                    rm -rf \$target
-                    >&2 echo "Unable to download path: \$source"
+                mkdir $target
+                azcopy cp "$source/*?$SAS" "$target" --recursive >/dev/null || {
+                    rm -rf $target
+                    >&2 echo "Unable to download path: $source"
                     exit 1
                 }
             }
         }
-        """.stripIndent() + mover
+        '''.stripIndent() + mover
     }
 
     @Override
     String getStageInputFilesScript(Map<String, Path> inputFiles) {
-        def result = 'downloads=()\n'
+        def result = 'downloads=(true)\n'
         result += super.getStageInputFilesScript(inputFiles) + '\n'
         result += 'nxf_parallel "${downloads[@]}"\n'
         return result
@@ -105,8 +107,8 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     String stageInputFile( Path path, String targetName ) {
         // third param should not be escaped, because it's used in the grep match rule
         def stage_cmd = maxTransferAttempts > 1
-                ? "downloads+=(\"nxf_cp_retry nxf_az_download '${toAzHttpUrl(path)}' ${Escape.path(targetName)}\")"
-                : "downloads+=(\"nxf_az_download '${toAzHttpUrl(path)}' ${Escape.path(targetName)}\")"
+                ? "downloads+=(\"nxf_cp_retry nxf_az_download '${AzHelper.toHttpUrl(path)}' ${Escape.path(targetName)}\")"
+                : "downloads+=(\"nxf_az_download '${AzHelper.toHttpUrl(path)}' ${Escape.path(targetName)}\")"
         return stage_cmd
     }
 
@@ -130,7 +132,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
             uploads=()
             IFS=\$'\\n'
             for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
-                uploads+=("nxf_az_upload '\$name' '${toAzHttpUrl(targetDir)}'")
+                uploads+=("nxf_az_upload '\$name' '${AzHelper.toHttpUrl(targetDir)}'")
             done
             unset IFS
             nxf_parallel "\${uploads[@]}"
@@ -142,7 +144,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String touchFile( Path file ) {
-        "echo start > .command.begin && nxf_az_upload .command.begin '${toAzHttpUrl(file.parent)}'"
+        "echo start > .command.begin"
     }
 
     /**
@@ -158,14 +160,14 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String copyFile( String name, Path target ) {
-        "nxf_az_upload ${Escape.path(name)} '${toAzHttpUrl(target.parent)}'"
+        "nxf_az_upload ${Escape.path(name)} '${AzHelper.toHttpUrl(target.parent)}'"
     }
 
     /**
      * {@inheritDoc}
      */
     String exitFile( Path path ) {
-        " > ${TaskRun.CMD_EXIT} && nxf_az_upload ${TaskRun.CMD_EXIT} '${toAzHttpUrl(path.parent)}' || true"
+        " > ${TaskRun.CMD_EXIT}"
     }
 
     /**
