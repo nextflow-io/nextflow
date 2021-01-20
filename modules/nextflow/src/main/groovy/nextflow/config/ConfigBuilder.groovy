@@ -646,6 +646,7 @@ class ConfigBuilder {
         // -- add the command line parameters to the 'taskConfig' object
         if( cmdRun.params || cmdRun.paramsFile )
             config.params = mergeMaps( config.params, cmdRun.parsedParams )
+
         if( cmdRun.withoutDocker && config.docker instanceof Map ) {
             // disable docker execution
             log.debug "Disabling execution in Docker contained as requested by cli option `-without-docker`"
@@ -734,7 +735,17 @@ class ConfigBuilder {
         buildConfigObject().toMap()
     }
 
+    /**
+     * Merge two maps recursively avoiding keys to be overwritten
+     *
+     * @param lmap
+     * @param rmap
+     * @return a map resulting of merging lmap and rmap
+     */
     def mergeMaps(Map lmap, Map rmap) {
+        if (lmap.size() == 0) {
+            return rmap
+        }
         rmap.each { k, v ->
             lmap[k] = (lmap[k] in Map ? mergeMaps(lmap[k] as Map, v as Map) : v)
         }
