@@ -1784,5 +1784,44 @@ class ConfigBuilderTest extends Specification {
         cleanup:
         folder?.deleteDir()
     }
+
+    def 'CLI params should overwrite only the key provided when nested'() {
+        given:
+        def folder = File.createTempDir()
+        def configMain = new File(folder, 'nextflow.config').absoluteFile
+
+        configMain.text = """
+        params {
+            foo = 'Hello'
+            bar = "Monde"
+            baz {
+                x = "Ciao"
+                y = "mundo"
+                z { 
+                    alpha = "Hallo"
+                    beta  = "World"
+                }
+            }
+            
+        }        
+        """
+
+        when:
+        def opt = new CliOptions()
+        def run = new CmdRun(params: [bar: "world", 'baz.y': "mondo", 'baz.z.beta': "Welt"])
+        def config = new ConfigBuilder(env: [NXF_CONFIG_FILE: configMain.toString()]).setOptions(opt).setCmdRun(run).build()
+
+        then:
+        config.params.foo == 'Hello'
+        config.params.bar == 'world'
+        config.params.baz.x == 'Ciao'
+        config.params.baz.y == 'mondo'
+        //tests recursion
+        config.params.baz.z.alpha == 'Hallo'
+        config.params.baz.z.beta == 'Welt'
+
+        cleanup:
+        folder?.deleteDir()
+    }
 }
 
