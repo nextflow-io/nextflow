@@ -647,6 +647,7 @@ class ConfigBuilder {
         if( cmdRun.params || cmdRun.paramsFile )
             config.params = mergeMaps( config.params, cmdRun.parsedParams )
 
+
         if( cmdRun.withoutDocker && config.docker instanceof Map ) {
             // disable docker execution
             log.debug "Disabling execution in Docker contained as requested by cli option `-without-docker`"
@@ -742,13 +743,24 @@ class ConfigBuilder {
      * @param rmap
      * @return a map resulting of merging lmap and rmap
      */
-    def mergeMaps(Map lmap, Map rmap) {
-        if (lmap.size() == 0) {
+    protected Map mergeMaps(Map lmap, Map rmap) {
+        Map empty = [:]
+
+        if (!lmap && rmap)  {
             return rmap
         }
-        rmap.each { k, v ->
-            lmap[k] = (lmap[k] in Map ? mergeMaps(lmap[k] as Map, v as Map) : v)
+        else if(lmap && !rmap) {
+            return lmap
         }
+        else if(!lmap && !rmap)
+        {
+            return empty
+        }
+
+        rmap.each { k, v ->
+            lmap[k] = (lmap[k] instanceof Map && v instanceof Map ? mergeMaps(lmap[k] as Map, v as Map) : v)
+        }
+
         return lmap
     }
 
