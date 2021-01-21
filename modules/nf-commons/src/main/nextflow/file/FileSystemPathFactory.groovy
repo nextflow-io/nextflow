@@ -88,6 +88,7 @@ abstract class FileSystemPathFactory implements ExtensionPoint {
         return factories
     }
 
+    @Deprecated
     static void reset() {
         factories = null
     }
