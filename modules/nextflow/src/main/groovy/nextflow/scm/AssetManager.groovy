@@ -147,6 +147,11 @@ class AssetManager {
         this.project = name
         return this
     }
+
+    protected RepositoryProvider getProvider() {
+        return provider
+    }
+
     /**
      * Sets the user credentials on the {@link RepositoryProvider} object
      *
