@@ -52,7 +52,7 @@ class BashFunLib {
                 pid=("\${copy[@]}")
                 
                 if ((\${#pid[@]}>=\$max)); then
-                  sleep 1
+                  sleep 0.2
                 else
                   eval "\${cmd[\$i]}" &
                   pid+=(\$!)
