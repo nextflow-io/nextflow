@@ -23,7 +23,9 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import nextflow.Const
 import org.pf4j.DefaultPluginManager
+import org.pf4j.ExtensionFactory
 import org.pf4j.PluginWrapper
+import org.pf4j.SingletonExtensionFactory
 import org.pf4j.VersionManager
 
 /**
@@ -59,5 +61,10 @@ class CustomPluginManager extends DefaultPluginManager {
     @Override
     String getSystemVersion() {
         return Const.APP_VER
+    }
+
+    @Override
+    protected ExtensionFactory createExtensionFactory() {
+        return new SingletonExtensionFactory()
     }
 }
