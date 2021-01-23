@@ -431,7 +431,7 @@ class CmdRun extends CmdBase implements HubOptions {
         if( m.find() ) {
             final p = m.start()
             final root = key.substring(0, p)
-            if( !root ) throw new AbortOperationException("Invalida parameter name: $fullKey")
+            if( !root ) throw new AbortOperationException("Invalid parameter name: $fullKey")
             path.add(root)
             def nested = params.get(root)
             if( nested == null ) {
