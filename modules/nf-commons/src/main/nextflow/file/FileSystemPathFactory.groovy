@@ -32,8 +32,6 @@ import org.pf4j.ExtensionPoint
 @CompileStatic
 abstract class FileSystemPathFactory implements ExtensionPoint {
 
-    private static volatile List<FileSystemPathFactory> factories
-
     /**
      * Converts path uri string to the corresponding {@link Path} object
      *
@@ -77,19 +75,11 @@ abstract class FileSystemPathFactory implements ExtensionPoint {
     }
 
     private static List<FileSystemPathFactory> factories0() {
-        if( factories!=null ) {
-            return factories
-        }
-
-        factories = new ArrayList(10)
+        final factories = new ArrayList(10)
         final itr = Plugins.getExtensions(FileSystemPathFactory).iterator()
         while( itr.hasNext() )
             factories.add(itr.next())
         return factories
     }
 
-    @Deprecated
-    static void reset() {
-        factories = null
-    }
 }
