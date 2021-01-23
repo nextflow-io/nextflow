@@ -1,4 +1,5 @@
 set -e
+export NXF_PLUGINS_DEFAULT=nf-amazon
 
 #
 # run normal mode

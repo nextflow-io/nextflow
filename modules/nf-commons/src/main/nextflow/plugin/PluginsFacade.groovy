@@ -216,7 +216,7 @@ class PluginsFacade implements PluginStateListener {
         }
 
         // add tower plugin when config contains tower options
-        if( config.containsKey('tower') && !specs.find {it.id == 'tower' } ) {
+        if( (config.containsKey('tower') || env.TOWER_ACCESS_TOKEN ) && !specs.find {it.id == 'tower' } ) {
             specs << defaultPlugins.getPlugin('nf-tower')
         }
 
@@ -244,11 +244,6 @@ class PluginsFacade implements PluginStateListener {
 
         if( executor == 'ignite' || System.getProperty('nxf.node.daemon')=='true') {
             plugins << defaultPlugins.getPlugin('nf-ignite')
-            plugins << defaultPlugins.getPlugin('nf-amazon')
-        }
-
-        if( !plugins ) {
-            // always include amazon plugin for backward compatibility
             plugins << defaultPlugins.getPlugin('nf-amazon')
         }
 
