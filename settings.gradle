@@ -32,4 +32,5 @@ include 'plugins:nf-ga4gh'
 include 'plugins:nf-tower'
 include 'plugins:nf-console'
 include 'plugins:nf-ignite'
+include 'plugins:nf-sql'
 

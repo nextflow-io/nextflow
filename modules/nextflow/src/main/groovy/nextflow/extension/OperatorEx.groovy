@@ -26,6 +26,7 @@ import java.lang.reflect.Modifier
 import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.runtime.metaclass.DelegatingPlugin
+import groovy.runtime.metaclass.ChannelFactoryExtension
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -70,6 +71,8 @@ class OperatorEx implements DelegatingPlugin {
 
     final public static Set<String> OPERATOR_NAMES
 
+    final public static Map<String, ChannelFactoryExtension> factoryExtensions = new HashMap<>()
+
     static {
         OPERATOR_NAMES = getDeclaredExtensionMethods0()
         log.trace "Dataflow extension methods: ${OPERATOR_NAMES.sort().join(',')}"
@@ -106,6 +109,18 @@ class OperatorEx implements DelegatingPlugin {
     @CompileStatic
     Object invokeExtensionMethod(Object channel, String method, Object[] args) {
         new OpCall(this,channel,method,args).call()
+    }
+
+    ChannelFactoryExtension getChannelFactoryExtension(String factoryDomain) {
+        def result = factoryExtensions.get(factoryDomain)
+        if( result )
+            return result
+
+        synchronized (factoryExtensions) {
+            result = ChannelFactoryHolder.create(factoryDomain)
+            factoryExtensions.put(factoryDomain, result)
+            return result
+        }
     }
 
     /**
