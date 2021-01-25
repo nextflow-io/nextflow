@@ -647,7 +647,6 @@ class ConfigBuilder {
         if( cmdRun.params || cmdRun.paramsFile )
             config.params = mergeMaps( config.params, cmdRun.parsedParams )
 
-
         if( cmdRun.withoutDocker && config.docker instanceof Map ) {
             // disable docker execution
             log.debug "Disabling execution in Docker contained as requested by cli option `-without-docker`"
@@ -758,10 +757,12 @@ class ConfigBuilder {
         }
 
         rmap.each { k, v ->
+            if (rmap.containsKey(k)) {
+                log.warn "Config file parameter is overwritten by command line/params-file parameter \"${k}\""
+            }
             lmap[k] = (lmap[k] instanceof Map && v instanceof Map ? mergeMaps(lmap[k] as Map, v as Map) : v)
         }
 
         return lmap
     }
-
 }
