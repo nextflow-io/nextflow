@@ -29,6 +29,7 @@ import nextflow.exception.ConfigParseException
 import nextflow.trace.WebLogObserver
 import nextflow.util.ConfigHelper
 import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -1822,6 +1823,24 @@ class ConfigBuilderTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+    }
+
+    @Unroll
+    def 'should merge maps' () {
+        given:
+        def builder = new ConfigBuilder()
+
+        expect:
+        builder.mergeMaps(LEFT, RIGHT) == EXPECTED
+
+        where:
+        LEFT                        | RIGHT                 | EXPECTED
+        [foo:1]                     | null                  | [foo:1]
+        null                        | [bar:2]               | [bar:2]
+        [foo:1]                     | [bar:2]               | [foo: 1, bar: 2]
+        [foo:1, bar:[x:1, y:2]]     | [bar: [x:10, y:20]]   | [foo: 1, bar: [x:10, y:20]]
+        [foo:1, bar:2]              | [bar: [x:10, y:20]]   | [foo: 1, bar: [x:10, y:20]]
+        [foo:1, bar:[x:1, y:2]]     | [bar: 2]              | [foo: 1, bar: 2]
     }
 }
 
