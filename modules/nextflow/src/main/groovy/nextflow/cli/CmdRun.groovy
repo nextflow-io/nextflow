@@ -228,6 +228,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-stub-run','-stub'], description = 'Execute the workflow replacing process scripts with command stubs')
     boolean stubRun
 
+    @Parameter(names=['-plugins'], description = 'Specify the plugins to be applied for this run e.g. nf-amazon,nf-tower')
+    String plugins
+
     @Override
     String getName() { NAME }
 
@@ -265,7 +268,8 @@ class CmdRun extends CmdBase implements HubOptions {
         final config = builder .build()
 
         // -- load plugins
-        Plugins.setup(config)
+        final cfg = plugins ? [plugins: plugins.tokenize(',')] : config
+        Plugins.setup( cfg )
 
         // -- create a new runner instance
         final runner = new ScriptRunner(config)
@@ -431,7 +435,7 @@ class CmdRun extends CmdBase implements HubOptions {
         if( m.find() ) {
             final p = m.start()
             final root = key.substring(0, p)
-            if( !root ) throw new AbortOperationException("Invalida parameter name: $fullKey")
+            if( !root ) throw new AbortOperationException("Invalid parameter name: $fullKey")
             path.add(root)
             def nested = params.get(root)
             if( nested == null ) {

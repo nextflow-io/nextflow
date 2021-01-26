@@ -164,7 +164,7 @@ class PluginUpdater extends UpdateManager {
         assert pluginPath.getFileName() == dir.getFileName()
 
         try {
-            Files.move(dir, pluginPath, REPLACE_EXISTING, ATOMIC_MOVE);
+            Files.move(dir, pluginPath, REPLACE_EXISTING);
         }
         catch (IOException e) {
             throw new PluginRuntimeException(e, "Failed to write file '$pluginPath' to plugins folder");
