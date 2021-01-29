@@ -612,7 +612,7 @@ processing the file. So, the previous example can be written more simply as::
 
     myFile.withReader {
         String line
-        while( line = myReader.readLine() ) {
+        while( line = it.readLine() ) {
             println line
         }
     }
