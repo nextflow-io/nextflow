@@ -646,7 +646,7 @@ class ConfigBuilder {
 
         // -- add the command line parameters to the 'taskConfig' object
         if( cmdRun.params || cmdRun.paramsFile )
-            config.params = mergeMaps( (Map)config.params, cmdRun.parsedParams )
+            config.params = mergeMaps( (Map)config.params, cmdRun.parsedParams, NF.strictMode )
 
         if( cmdRun.withoutDocker && config.docker instanceof Map ) {
             // disable docker execution
@@ -743,36 +743,43 @@ class ConfigBuilder {
      * @param params
      * @return a map resulting of merging result and right maps
      */
-    protected Map mergeMaps(Map config, Map params, List keys=[]) {
+    protected Map mergeMaps(Map config, Map params, boolean strict, List keys=[]) {
         if( config==null )
             config = new LinkedHashMap()
 
         for( Map.Entry entry : params ) {
-            final key = entry.key
+            final key = entry.key.toString()
             final value = entry.value
-            final previous = config[key]
+            final previous = getConfigVal0(config, key)
             keys << entry.key
             
             if( previous==null ) {
                 config[key] = value
             }
             else if( previous instanceof Map && value instanceof Map ) {
-                mergeMaps(previous, value, keys)
+                mergeMaps(previous, value, strict, keys)
             }
             else {
                 if( previous instanceof Map || value instanceof Map ) {
                     final msg = "Configuration setting type with key '${keys.join('.')}' does not match the parameter with the same key - Config value=$previous; parameter value=$value"
-                    if(NF.strictMode)
+                    if(strict)
                         throw new AbortOperationException(msg)
-                    else {
-                        log.warn(msg)
-                    }
+                    log.warn(msg)
                 }
                 config[key] = value
             }
         }
 
         return config
+    }
+
+    private Object getConfigVal0(Map config, String key) {
+        if( config instanceof ConfigObject ) {
+            return config.isSet(key) ? config.get(key) : null
+        }
+        else {
+            return config.get(key)
+        }
     }
 
 }

@@ -1832,7 +1832,9 @@ class ConfigBuilderTest extends Specification {
         def builder = new ConfigBuilder()
 
         expect:
-        builder.mergeMaps(CONFIG, PARAMS) == EXPECTED
+        def cfg = new ConfigObject(); if(CONFIG) cfg.putAll(CONFIG)
+        and:
+        builder.mergeMaps(cfg, PARAMS, false) == EXPECTED
 
         where:
         CONFIG                      | PARAMS | EXPECTED
@@ -1841,11 +1843,36 @@ class ConfigBuilderTest extends Specification {
         [foo:1]                     | [bar:2]                       | [foo: 1, bar: 2]
         [foo:1]                     | [bar:null]                    | [foo: 1, bar: null]
         [foo:1]                     | [foo:null]                    | [foo: null]
+        [foo:1, bar:[:]]            | [bar: [x:10, y:20]]           | [foo: 1, bar: [x:10, y:20]]
         [foo:1, bar:[x:1, y:2]]     | [bar: [x:10, y:20]]           | [foo: 1, bar: [x:10, y:20]]
         [foo:1, bar:[x:1, y:2]]     | [foo: 2, bar: [x:10, y:20]]   | [foo: 2, bar: [x:10, y:20]]
         [foo:1, bar:null]           | [bar: [x:10, y:20]]           | [foo: 1, bar: [x:10, y:20]]
         [foo:1, bar:2]              | [bar: [x:10, y:20]]           | [foo: 1, bar: [x:10, y:20]]
         [foo:1, bar:[x:1, y:2]]     | [bar: 2]                      | [foo: 1, bar: 2]
+    }
+
+    @Unroll
+    def 'should merge config strict params' () {
+        given:
+        def builder = new ConfigBuilder()
+
+        expect:
+        def cfg = new ConfigObject(); if(CONFIG) cfg.putAll(CONFIG)
+        and:
+        builder.mergeMaps(cfg, PARAMS, true) == EXPECTED
+
+        where:
+        CONFIG                      | PARAMS                        | EXPECTED
+        [:]                         | [bar:2]                       | [bar:2]
+        [foo:1]                     | null                          | [foo:1]
+        null                        | [bar:2]                       | [bar:2]
+        [foo:1]                     | [bar:2]                       | [foo: 1, bar: 2]
+        [foo:1]                     | [bar:null]                    | [foo: 1, bar: null]
+        [foo:1]                     | [foo:null]                    | [foo: null]
+        [foo:1, bar:[:]]            | [bar: [x:10, y:20]]           | [foo: 1, bar: [x:10, y:20]]
+        [foo:1, bar:[x:1, y:2]]     | [bar: [x:10, y:20]]           | [foo: 1, bar: [x:10, y:20]]
+        [foo:1, bar:[x:1, y:2]]     | [foo: 2, bar: [x:10, y:20]]   | [foo: 2, bar: [x:10, y:20]]
+
     }
 
 }
