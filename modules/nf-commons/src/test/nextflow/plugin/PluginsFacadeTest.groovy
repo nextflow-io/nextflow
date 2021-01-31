@@ -21,6 +21,7 @@ class PluginsFacadeTest extends Specification {
         and:
         def folder = Files.createTempDirectory('test')
         def plugins = new PluginsFacade(folder)
+        plugins.env = [:]
         plugins.indexUrl = 'http://localhost:9900/plugins.json'
 
         when:
@@ -72,15 +73,19 @@ class PluginsFacadeTest extends Specification {
         handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'true'])
         result = handler.pluginsRequirement([:])
         then:
-        result == [ new PluginSpec('nf-amazon', '0.1.0')]
+        result == []
 
         when:
         handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'true'])
         result = handler.pluginsRequirement([tower:[enabled:true]])
         then:
-        result == [
-                new PluginSpec('nf-amazon', '0.1.0'),
-                new PluginSpec('nf-tower', '0.1.0') ]
+        result == [ new PluginSpec('nf-tower', '0.1.0') ]
+
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [TOWER_ACCESS_TOKEN:'xyz'])
+        result = handler.pluginsRequirement([:])
+        then:
+        result == [ new PluginSpec('nf-tower', '0.1.0') ]
     }
 
     def 'should return default plugins given config' () {
@@ -118,7 +123,7 @@ class PluginsFacadeTest extends Specification {
         when:
         plugins = handler.defaultPluginsConf([:])
         then:
-        plugins.find { it.id == 'nf-amazon' }
+        !plugins.find { it.id == 'nf-amazon' }
         !plugins.find { it.id == 'nf-ignite' }
         !plugins.find { it.id == 'nf-google' }
 

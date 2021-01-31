@@ -79,7 +79,7 @@ class S3HelperTest extends Specification {
                             pid=("${copy[@]}")
                     
                             if ((${#pid[@]}>=$max)); then
-                              sleep 1
+                              sleep 0.2
                             else
                               eval "${cmd[$i]}" &
                               pid+=($!)
@@ -172,7 +172,7 @@ class S3HelperTest extends Specification {
                             pid=("${copy[@]}")
                     
                             if ((${#pid[@]}>=$max)); then
-                              sleep 1
+                              sleep 0.2
                             else
                               eval "${cmd[$i]}" &
                               pid+=($!)
