@@ -29,6 +29,8 @@ import nextflow.exception.ConfigParseException
 import nextflow.trace.WebLogObserver
 import nextflow.util.ConfigHelper
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -1784,5 +1786,67 @@ class ConfigBuilderTest extends Specification {
         cleanup:
         folder?.deleteDir()
     }
+
+    def 'CLI params should overwrite only the key provided when nested'() {
+        given:
+        def folder = File.createTempDir()
+        def configMain = new File(folder, 'nextflow.config').absoluteFile
+
+        configMain.text = """
+        params {
+            foo = 'Hello'
+            bar = "Monde"
+            baz {
+                x = "Ciao"
+                y = "mundo"
+                z { 
+                    alpha = "Hallo"
+                    beta  = "World"
+                }
+            }
+            
+        }        
+        """
+
+        when:
+        def opt = new CliOptions()
+        def run = new CmdRun(params: [bar: "world", 'baz.y': "mondo", 'baz.z.beta': "Welt"])
+        def config = new ConfigBuilder(env: [NXF_CONFIG_FILE: configMain.toString()]).setOptions(opt).setCmdRun(run).build()
+
+        then:
+        config.params.foo == 'Hello'
+        config.params.bar == 'world'
+        config.params.baz.x == 'Ciao'
+        config.params.baz.y == 'mondo'
+        //tests recursion
+        config.params.baz.z.alpha == 'Hallo'
+        config.params.baz.z.beta == 'Welt'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    @Unroll
+    def 'should merge config params' () {
+        given:
+        def builder = new ConfigBuilder()
+
+        expect:
+        builder.mergeMaps(CONFIG, PARAMS) == EXPECTED
+
+        where:
+        CONFIG                      | PARAMS | EXPECTED
+        [foo:1]                     | null                          | [foo:1]
+        null                        | [bar:2]                       | [bar:2]
+        [foo:1]                     | [bar:2]                       | [foo: 1, bar: 2]
+        [foo:1]                     | [bar:null]                    | [foo: 1, bar: null]
+        [foo:1]                     | [foo:null]                    | [foo: null]
+        [foo:1, bar:[x:1, y:2]]     | [bar: [x:10, y:20]]           | [foo: 1, bar: [x:10, y:20]]
+        [foo:1, bar:[x:1, y:2]]     | [foo: 2, bar: [x:10, y:20]]   | [foo: 2, bar: [x:10, y:20]]
+        [foo:1, bar:null]           | [bar: [x:10, y:20]]           | [foo: 1, bar: [x:10, y:20]]
+        [foo:1, bar:2]              | [bar: [x:10, y:20]]           | [foo: 1, bar: [x:10, y:20]]
+        [foo:1, bar:[x:1, y:2]]     | [bar: 2]                      | [foo: 1, bar: 2]
+    }
+
 }
 
