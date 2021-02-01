@@ -1,6 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2021, Microsoft Corp
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package nextflow.cloud.azure.batch
 
-rootProject.name = 'nextflow-prj'
 
-include 'nextflow'
-include 'nf-commons'
-include 'nf-httpfs'
+import nextflow.executor.BashWrapperBuilder
+import nextflow.processor.TaskBean
+/**
+ * Custom bash wrapper builder for Azure batch tasks
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+class AzBatchScriptLauncher extends BashWrapperBuilder {
 
-rootProject.children.each { prj ->
-    prj.projectDir = new File("$rootDir/modules/$prj.name")
+    AzBatchScriptLauncher(TaskBean bean, AzBatchExecutor executor) {
+        super(bean, new AzFileCopyStrategy(bean, executor))
+    }
+
+    @Override
+    protected boolean shouldUnstageOutputs() {
+        return true
+    }
 }
-
-include 'plugins'
-include 'plugins:nf-amazon'
-include 'plugins:nf-google'
-include 'plugins:nf-ga4gh'
-include 'plugins:nf-tower'
-include 'plugins:nf-console'
-include 'plugins:nf-ignite'
-include 'plugins:nf-azure'
-

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2021, Microsoft Corp
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,22 +14,26 @@
  * limitations under the License.
  */
 
-rootProject.name = 'nextflow-prj'
+package nextflow.cloud.azure.batch
 
-include 'nextflow'
-include 'nf-commons'
-include 'nf-httpfs'
+import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
+import groovy.transform.builder.Builder
+import nextflow.cloud.azure.config.AzPoolOpts
 
-rootProject.children.each { prj ->
-    prj.projectDir = new File("$rootDir/modules/$prj.name")
+/**
+ * Model the spec of Azure VM pool
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+
+@Builder
+@ToString(includeNames = true, includePackage = false)
+@EqualsAndHashCode
+@CompileStatic
+class AzVmPoolSpec {
+    String poolId
+    AzVmType vmType
+    AzPoolOpts opts
 }
-
-include 'plugins'
-include 'plugins:nf-amazon'
-include 'plugins:nf-google'
-include 'plugins:nf-ga4gh'
-include 'plugins:nf-tower'
-include 'plugins:nf-console'
-include 'plugins:nf-ignite'
-include 'plugins:nf-azure'
-
