@@ -1,0 +1,104 @@
+» az login
+
+» az group create --name nf-storage-group --location westeurope
+{
+  "id": "/subscriptions/f7ef67b9-51f5-4fc2-91a8-0f9cce0c6598/resourceGroups/nf-storage-group",
+  "location": "westeurope",
+  "managedBy": null,
+  "name": "nf-storage-group",
+  "properties": {
+    "provisioningState": "Succeeded"
+  },
+  "tags": null,
+  "type": "Microsoft.Resources/resourceGroups"
+}
+
+» az storage account create --resource-group nf-storage-group --name nfstore --location westeurope
+{- Finished ..
+  "accessTier": "Hot",
+  "allowBlobPublicAccess": null,
+  "azureFilesIdentityBasedAuthentication": null,
+  "blobRestoreStatus": null,
+  "creationTime": "2020-07-18T07:52:22.585318+00:00",
+  "customDomain": null,
+  "enableHttpsTrafficOnly": true,
+  "encryption": {
+    "keySource": "Microsoft.Storage",
+    "keyVaultProperties": null,
+    "requireInfrastructureEncryption": null,
+    "services": {
+      "blob": {
+        "enabled": true,
+        "keyType": "Account",
+        "lastEnabledTime": "2020-07-18T07:52:22.679222+00:00"
+      },
+      "file": {
+        "enabled": true,
+        "keyType": "Account",
+        "lastEnabledTime": "2020-07-18T07:52:22.679222+00:00"
+      },
+      "queue": null,
+      "table": null
+    }
+  },
+  "failoverInProgress": null,
+  "geoReplicationStats": null,
+  "id": "/subscriptions/f7ef67b9-51f5-4fc2-91a8-0f9cce0c6598/resourceGroups/nf-storage-group/providers/Microsoft.Storage/storageAccounts/nfstore",
+  "identity": null,
+  "isHnsEnabled": null,
+  "kind": "StorageV2",
+  "largeFileSharesState": null,
+  "lastGeoFailoverTime": null,
+  "location": "westeurope",
+  "minimumTlsVersion": null,
+  "name": "nfstore",
+  "networkRuleSet": {
+    "bypass": "AzureServices",
+    "defaultAction": "Allow",
+    "ipRules": [],
+    "virtualNetworkRules": []
+  },
+  "primaryEndpoints": {
+    "blob": "https://nfstore.blob.core.windows.net/",
+    "dfs": "https://nfstore.dfs.core.windows.net/",
+    "file": "https://nfstore.file.core.windows.net/",
+    "internetEndpoints": null,
+    "microsoftEndpoints": null,
+    "queue": "https://nfstore.queue.core.windows.net/",
+    "table": "https://nfstore.table.core.windows.net/",
+    "web": "https://nfstore.z6.web.core.windows.net/"
+  },
+  "primaryLocation": "westeurope",
+  "privateEndpointConnections": [],
+  "provisioningState": "Succeeded",
+  "resourceGroup": "nf-storage-group",
+  "routingPreference": null,
+  "secondaryEndpoints": {
+    "blob": "https://nfstore-secondary.blob.core.windows.net/",
+    "dfs": "https://nfstore-secondary.dfs.core.windows.net/",
+    "file": null,
+    "internetEndpoints": null,
+    "microsoftEndpoints": null,
+    "queue": "https://nfstore-secondary.queue.core.windows.net/",
+    "table": "https://nfstore-secondary.table.core.windows.net/",
+    "web": "https://nfstore-secondary.z6.web.core.windows.net/"
+  },
+  "secondaryLocation": "northeurope",
+  "sku": {
+    "name": "Standard_RAGRS",
+    "tier": "Standard"
+  },
+  "statusOfPrimary": "available",
+  "statusOfSecondary": "available",
+  "tags": {},
+  "type": "Microsoft.Storage/storageAccounts"
+}
+
+
+
+az storage blob generate-sas \
+    --account-name nfstore \
+    --container-name my-data \
+    --name MyBlob \
+    --permissions racdw \
+    --expiry 2021-06-15
