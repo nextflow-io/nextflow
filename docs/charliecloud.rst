@@ -60,7 +60,7 @@ your pipeline execution.
     launched container won't be able to access the linked file.
 
 Charliecloud & Docker Hub
-========================
+=========================
 
 Nextflow is able to transparently pull remote container images stored in any Docker compatible registry and converts
 them to the Charliecloud compatible format.
@@ -82,7 +82,7 @@ Whereas this would pull from Docker Hub::
     charliecloud.enabled = true
 
 Container environment
-========================
+=====================
 
 A current limitation is that Charliecloud does not inherit environment variables specified in Docker ENV layers.
 This means that if a container has software dependencies installed at a location that is not in the host system's
@@ -95,7 +95,7 @@ For example::
     env.PATH = '/opt/conda/bin:$PATH'
 
 Multiple containers
-=====================
+===================
 
 It is possible to specify a different container for each process definition in your pipeline script. For example,
 let's suppose you have two processes named ``foo`` and ``bar``. You can specify two different containers
@@ -117,7 +117,7 @@ Read the :ref:`Process scope <config-process>` section to learn more about proce
 
 
 Advanced settings 
-==================
+=================
 
 Charliecloud advanced configuration settings are described in :ref:`config-charliecloud` section in the Nextflow
 configuration page.

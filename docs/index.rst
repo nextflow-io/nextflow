@@ -29,6 +29,7 @@ Contents:
    shifter
    singularity
    podman
+   charliecloud
    ignite
    kubernetes
    tracing
