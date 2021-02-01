@@ -1,5 +1,17 @@
 NEXTFLOW CHANGE-LOG
 ===================
+21.02.0-edge - 1 Feb 2021
+- Fix Issue when merging nested cli params  #1856 [275e54c4] [fe37da6d]
+- Fix job status detection on PBS pro #1840 [c1598908]
+- Fix Issue when merging nested cli params #1856 (19 hours ago) <Paolo Di Tommaso>
+- Revert the CPU/memory options being passed to singularity VM instead of singularity container [0d04e0f9]
+- Add ability to specify plugins with cli [de91218f]
+- Decrease upload/download process polling to 0.2secs [6ca2d6ca]
+- Remove nf-amazon as default [e6810e90]
+- Make plugin services singleton [cacd9328] [5787be6d]
+- Make repository provider accessible to subclasses [988bccc6]
+- Fix error on plugin downloading #1859 [77cabb3c]
+
 21.01.1-edge - 15 Jan 2021
 - Plugins stability improvements [8d849ec9] [bf093826]
 - Charliecloud improvements [2242411a]
