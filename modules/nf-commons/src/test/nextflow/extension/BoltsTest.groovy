@@ -317,4 +317,20 @@ class BoltsTest extends Specification {
 
     }
 
+    def 'should redact secrets ' () {
+
+        expect:
+        Bolts.redact('foo') == '...'
+        Bolts.redact('12345') == '...'
+        Bolts.redact('123456') == '1...'
+        Bolts.redact('123456789') == '1234...'
+        Bolts.redact('12345678901234567890') == '12345...'
+        and:
+        Bolts.redact('foo', 3) == '...'
+        Bolts.redact('12345', 3) == '12...'
+        and:
+        Bolts.redact('foo', 3, 'xx') == 'xx'
+        Bolts.redact('12345', 3, 'xx') == '12xx'
+    }
+
 }

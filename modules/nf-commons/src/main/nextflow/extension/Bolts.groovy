@@ -902,4 +902,13 @@ class Bolts {
 
         return e.message ?: e.toString()
     }
+
+    static redact(String self, int max=5, String suffix='...') {
+        if( !self )
+            return self
+        if( self.size()<max )
+            return suffix
+        else
+            return self.substring(0,Math.min(self.size()-max, max)) + suffix
+    }
 }
