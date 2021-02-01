@@ -407,7 +407,7 @@ Read :ref:`podman-page` page to learn more how use Podman containers with Nextfl
 .. _config-charliecloud:
 
 Scope `charliecloud`
---------------
+--------------------
 
 The ``charliecloud`` configuration scope controls how `Charliecloud <https://hpc.github.io/charliecloud/>`_ containers are executed by Nextflow.
 
