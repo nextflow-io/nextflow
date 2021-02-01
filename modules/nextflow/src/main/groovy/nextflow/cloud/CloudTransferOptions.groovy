@@ -3,6 +3,7 @@ package nextflow.cloud
 import nextflow.util.Duration
 
 /**
+ * Define common cloud data transfer options
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

@@ -339,6 +339,8 @@ class TaskProcessor {
 
     int getMaxForks() { maxForks }
 
+    boolean hasErrors() { errorCount>0 }
+
     protected void checkWarn(String msg, Map opts=null) {
         if( NF.isStrictMode() )
             throw new ProcessUnrecoverableException(msg)
