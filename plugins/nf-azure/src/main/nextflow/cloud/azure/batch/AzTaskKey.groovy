@@ -1,6 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2021, Microsoft Corp
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package nextflow.cloud.azure.batch
 
-rootProject.name = 'nextflow-prj'
+import groovy.transform.Canonical
+import groovy.transform.CompileStatic
 
-include 'nextflow'
-include 'nf-commons'
-include 'nf-httpfs'
-
-rootProject.children.each { prj ->
-    prj.projectDir = new File("$rootDir/modules/$prj.name")
+/**
+ * Model a fully qualified taskId ie. JobId + TaskId
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@Canonical
+@CompileStatic
+class AzTaskKey {
+    String jobId
+    String taskId
 }
-
-include 'plugins'
-include 'plugins:nf-amazon'
-include 'plugins:nf-google'
-include 'plugins:nf-ga4gh'
-include 'plugins:nf-tower'
-include 'plugins:nf-console'
-include 'plugins:nf-ignite'
-include 'plugins:nf-azure'
-
