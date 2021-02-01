@@ -1,0 +1,116 @@
+[
+  {
+    "cloudName": "AzureCloud",
+    "homeTenantId": "7005851f-400b-4acb-8bc1-12c44a7d39e5",
+    "id": "cb4ff255-ac8c-4721-83bd-2d98e75b50d7",
+    "isDefault": true,
+    "managedByTenants": [],
+    "name": "Free Trial",
+    "state": "Enabled",
+    "tenantId": "7005851f-400b-4acb-8bc1-12c44a7d39e5",
+    "user": {
+      "name": "paolo@seqera.io",
+      "type": "user"
+    }
+  }
+]
+
+$ az login
+$ az group create --name my-storage-group --location westeurope
+$ az storage account create --resource-group my-resource-group --name nfaccount --location westeurope
+
+{- Finished ..
+  "accessTier": "Hot",
+  "azureFilesIdentityBasedAuthentication": null,
+  "blobRestoreStatus": null,
+  "creationTime": "2020-05-15T20:42:17.206927+00:00",
+  "customDomain": null,
+  "enableHttpsTrafficOnly": true,
+  "encryption": {
+    "keySource": "Microsoft.Storage",
+    "keyVaultProperties": null,
+    "services": {
+      "blob": {
+        "enabled": true,
+        "keyType": "Account",
+        "lastEnabledTime": "2020-05-15T20:42:17.300678+00:00"
+      },
+      "file": {
+        "enabled": true,
+        "keyType": "Account",
+        "lastEnabledTime": "2020-05-15T20:42:17.300678+00:00"
+      },
+      "queue": null,
+      "table": null
+    }
+  },
+  "failoverInProgress": null,
+  "geoReplicationStats": null,
+  "id": "/subscriptions/cb4ff255-ac8c-4721-83bd-2d98e75b50d7/resourceGroups/my-resource-group/providers/Microsoft.Storage/storageAccounts/nfaccount",
+  "identity": null,
+  "isHnsEnabled": null,
+  "kind": "StorageV2",
+  "largeFileSharesState": null,
+  "lastGeoFailoverTime": null,
+  "location": "westeurope",
+  "name": "nfaccount",
+  "networkRuleSet": {
+    "bypass": "AzureServices",
+    "defaultAction": "Allow",
+    "ipRules": [],
+    "virtualNetworkRules": []
+  },
+  "primaryEndpoints": {
+    "blob": "https://nfaccount.blob.core.windows.net/",
+    "dfs": "https://nfaccount.dfs.core.windows.net/",
+    "file": "https://nfaccount.file.core.windows.net/",
+    "internetEndpoints": null,
+    "microsoftEndpoints": null,
+    "queue": "https://nfaccount.queue.core.windows.net/",
+    "table": "https://nfaccount.table.core.windows.net/",
+    "web": "https://nfaccount.z6.web.core.windows.net/"
+  },
+  "primaryLocation": "westeurope",
+  "privateEndpointConnections": [],
+  "provisioningState": "Succeeded",
+  "resourceGroup": "my-resource-group",
+  "routingPreference": null,
+  "secondaryEndpoints": {
+    "blob": "https://nfaccount-secondary.blob.core.windows.net/",
+    "dfs": "https://nfaccount-secondary.dfs.core.windows.net/",
+    "file": null,
+    "internetEndpoints": null,
+    "microsoftEndpoints": null,
+    "queue": "https://nfaccount-secondary.queue.core.windows.net/",
+    "table": "https://nfaccount-secondary.table.core.windows.net/",
+    "web": "https://nfaccount-secondary.z6.web.core.windows.net/"
+  },
+  "secondaryLocation": "northeurope",
+  "sku": {
+    "name": "Standard_RAGRS",
+    "tier": "Standard"
+  },
+  "statusOfPrimary": "available",
+  "statusOfSecondary": "available",
+  "tags": {},
+  "type": "Microsoft.Storage/storageAccounts"
+}
+
+
+Connection string
+BlobEndpoint=https://nfaccount.blob.core.windows.net/;QueueEndpoint=https://nfaccount.queue.core.windows.net/;FileEndpoint=https://nfaccount.file.core.windows.net/;TableEndpoint=https://nfaccount.table.core.windows.net/;SharedAccessSignature=sv=2019-10-10&ss=bfqt&srt=sco&sp=rwdlacupx&se=2020-05-16T04:48:12Z&st=2020-05-15T20:48:12Z&spr=https&sig=9xCn8O%2FxjKroc7YOc9fHffiNOtRaY46spv9VJa4D8pU%3D
+
+SAS token
+?sv=2019-10-10&ss=bfqt&srt=sco&sp=rwdlacupx&se=2020-05-16T04:48:12Z&st=2020-05-15T20:48:12Z&spr=https&sig=9xCn8O%2FxjKroc7YOc9fHffiNOtRaY46spv9VJa4D8pU%3D
+
+Blob service SAS URL
+https://nfaccount.blob.core.windows.net/?sv=2019-10-10&ss=bfqt&srt=sco&sp=rwdlacupx&se=2020-05-16T04:48:12Z&st=2020-05-15T20:48:12Z&spr=https&sig=9xCn8O%2FxjKroc7YOc9fHffiNOtRaY46spv9VJa4D8pU%3D
+
+File service SAS URL
+https://nfaccount.file.core.windows.net/?sv=2019-10-10&ss=bfqt&srt=sco&sp=rwdlacupx&se=2020-05-16T04:48:12Z&st=2020-05-15T20:48:12Z&spr=https&sig=9xCn8O%2FxjKroc7YOc9fHffiNOtRaY46spv9VJa4D8pU%3D
+
+Queue service SAS URL
+https://nfaccount.queue.core.windows.net/?sv=2019-10-10&ss=bfqt&srt=sco&sp=rwdlacupx&se=2020-05-16T04:48:12Z&st=2020-05-15T20:48:12Z&spr=https&sig=9xCn8O%2FxjKroc7YOc9fHffiNOtRaY46spv9VJa4D8pU%3D
+
+Table service SAS URL
+https://nfaccount.table.core.windows.net/?sv=2019-10-10&ss=bfqt&srt=sco&sp=rwdlacupx&se=2020-05-16T04:48:12Z&st=2020-05-15T20:48:12Z&spr=https&sig=9xCn8O%2FxjKroc7YOc9fHffiNOtRaY46spv9VJa4D8pU%3D
