@@ -25,6 +25,7 @@ import com.microsoft.azure.batch.auth.BatchSharedKeyCredentials
 import com.microsoft.azure.batch.protocol.models.BatchErrorException
 import com.microsoft.azure.batch.protocol.models.CloudPool
 import com.microsoft.azure.batch.protocol.models.CloudTask
+import com.microsoft.azure.batch.protocol.models.ComputeNodeFillType
 import com.microsoft.azure.batch.protocol.models.ContainerConfiguration
 import com.microsoft.azure.batch.protocol.models.ImageInformation
 import com.microsoft.azure.batch.protocol.models.OutputFile
@@ -38,6 +39,7 @@ import com.microsoft.azure.batch.protocol.models.PoolState
 import com.microsoft.azure.batch.protocol.models.ResourceFile
 import com.microsoft.azure.batch.protocol.models.TaskAddParameter
 import com.microsoft.azure.batch.protocol.models.TaskContainerSettings
+import com.microsoft.azure.batch.protocol.models.TaskSchedulingPolicy
 import com.microsoft.azure.batch.protocol.models.VirtualMachineConfiguration
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
@@ -518,6 +520,14 @@ class AzBatchService implements Closeable {
                 // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
                 .withTaskSlotsPerNode( spec.vmType.numberOfCores )
 
+        // scheduling policy
+        if( spec.opts.schedulePolicy ) {
+            final pol = ComputeNodeFillType.fromString(spec.opts.schedulePolicy)
+            if( !pol ) throw new IllegalArgumentException("Unknown Azure Batch scheduling policy: ${spec.opts.schedulePolicy}")
+            poolParams.withTaskSchedulingPolicy( new TaskSchedulingPolicy().withNodeFillType(pol) )
+        }
+
+        // autoscale
         if( spec.opts.autoScale ) {
             poolParams
                     .withEnableAutoScale(true)
