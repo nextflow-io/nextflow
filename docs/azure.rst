@@ -101,6 +101,11 @@ A minimal configuration looks like the following snippet::
         accountName = '<YOUR BATCH ACCOUNT NAME>'
         accountKey = '<YOUR BATCH ACCOUNT KEY>'
         autoPoolMode = true
+        pools {
+          auto {
+            vmType = 'STANDARD_D2_V3' // Default VM type is STANDARD_A1
+         }
+        }
       }
     }
 
