@@ -50,6 +50,8 @@ class AzPoolOpts implements CacheFunnel {
     boolean autoScale
     String scaleFormula
 
+    String schedulePolicy // spread | pack
+
     AzPoolOpts() {
         this(Collections.emptyMap())
     }
@@ -61,6 +63,7 @@ class AzPoolOpts implements CacheFunnel {
         this.vmCount = opts.vmCount as Integer ?: 1
         this.autoScale = opts.autoScale as boolean
         this.scaleFormula = opts.scaleFormula
+        this.schedulePolicy = opts.schedulePolicy
     }
 
     @Override
@@ -71,6 +74,7 @@ class AzPoolOpts implements CacheFunnel {
         hasher.putInt(vmCount)
         hasher.putBoolean(autoScale)
         hasher.putUnencodedChars(scaleFormula ?: '')
+        hasher.putUnencodedChars(schedulePolicy ?: '')
         return hasher
     }
 }

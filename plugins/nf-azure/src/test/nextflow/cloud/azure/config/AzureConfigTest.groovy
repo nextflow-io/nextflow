@@ -87,7 +87,7 @@ class AzureConfigTest extends Specification {
                                              allowPoolCreation: true
 ,                                            deleteJobsOnCompletion: false,
                                              deletePoolsOnCompletion: true,
-                                             pools: [ myPool: [vmType: 'Foo_A1', autoScale: true] ]
+                                             pools: [ myPool: [vmType: 'Foo_A1', autoScale: true, schedulePolicy: 'pack'] ]
                                      ]] ]
         }
 
@@ -106,6 +106,7 @@ class AzureConfigTest extends Specification {
         and:
         cfg.batch().pool('myPool').vmType == 'Foo_A1'
         cfg.batch().pool('myPool').autoScale == true
+        cfg.batch().pool('myPool').schedulePolicy == 'pack'
         and:
         cfg.storage().accountKey == null
         cfg.storage().accountName == null
