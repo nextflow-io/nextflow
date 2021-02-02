@@ -16,6 +16,8 @@
 
 package nextflow.cloud.azure.batch
 
+import com.microsoft.azure.batch.protocol.models.StartTask
+
 import java.math.RoundingMode
 import java.nio.file.Path
 import java.time.Instant
@@ -509,6 +511,17 @@ class AzBatchService implements Closeable {
 
     protected void createPool(AzVmPoolSpec spec) {
 
+        def resourceFiles = new ArrayList(10)
+        
+        resourceFiles << new ResourceFile()
+                .withHttpUrl("https://nf-xpack.s3-eu-west-1.amazonaws.com/azcopy/linux_amd64_10.8.0/azcopy")
+                .withFilePath('azcopy')
+
+        def poolStartTask = new StartTask()
+                .withCommandLine('bash -c "chmod +x azcopy && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/" ')
+                .withResourceFiles(resourceFiles)
+
+
         final poolParams = new PoolAddParameter()
                 .withId(spec.poolId)
                 .withVirtualMachineConfiguration(poolVmConfig(spec.opts))
@@ -516,7 +529,8 @@ class AzBatchService implements Closeable {
                 .withVmSize(spec.vmType.name)
                 // same as the num ofd cores
                 // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
-                .withTaskSlotsPerNode( spec.vmType.numberOfCores )
+                .withTaskSlotsPerNode(spec.vmType.numberOfCores)
+                .withStartTask(poolStartTask)
 
         if( spec.opts.autoScale ) {
             poolParams
