@@ -62,7 +62,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         final result = new StringBuilder()
         final copy = environment ? new LinkedHashMap<String,String>(environment) : new LinkedHashMap<String,String>()
         copy.remove('PATH')
-        copy.put('PATH', '$PWD/.nextflow-bin:$PATH')
+        copy.put('PATH', '$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR:$PATH')
         copy.put('AZCOPY_LOG_LOCATION', '$PWD/.azcopy_log')
         copy.put('AZ_SAS', sasToken)
 

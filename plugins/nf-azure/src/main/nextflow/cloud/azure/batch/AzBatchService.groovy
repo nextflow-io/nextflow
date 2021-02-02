@@ -319,10 +319,6 @@ class AzBatchService implements Closeable {
         final resFiles = new ArrayList(10)
 
         resFiles << new ResourceFile()
-                .withHttpUrl('https://nf-xpack.s3-eu-west-1.amazonaws.com/azcopy/linux_amd64_10.8.0/azcopy')
-                .withFilePath('.nextflow-bin/azcopy')
-
-        resFiles << new ResourceFile()
                 .withHttpUrl(AzHelper.toHttpUrl(cmdRun, sas))
                 .withFilePath(TaskRun.CMD_RUN)
 
