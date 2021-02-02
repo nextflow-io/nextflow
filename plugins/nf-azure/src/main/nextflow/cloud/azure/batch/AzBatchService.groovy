@@ -514,7 +514,7 @@ class AzBatchService implements Closeable {
                 .withFilePath('azcopy')
 
         def poolStartTask = new StartTask()
-                .withCommandLine('bash -c "chmod +x azcopy && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/" ')
+                .withCommandLine('bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/" ')
                 .withResourceFiles(resourceFiles)
 
 
