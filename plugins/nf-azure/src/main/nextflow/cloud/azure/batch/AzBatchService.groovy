@@ -554,14 +554,14 @@ class AzBatchService implements Closeable {
 
     protected String scaleFormula(AzPoolOpts opts) {
         // https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling
-        def DEFAULT_FORMULA = '''\
-                $TargetDedicatedNodes = {{vmCount}};
-                lifespan         = time() - time("{{now}}");
-                span             = TimeInterval_Minute * 60;
-                startup          = TimeInterval_Minute * 10;
-                ratio            = 50;
-                $TargetDedicatedNodes = (lifespan > startup ? (max($RunningTasks.GetSample(span, ratio), $ActiveTasks.GetSample(span, ratio)) == 0 ? 0 : $TargetDedicatedNodes) : {{vmCount}});
-                '''.stripIndent()
+        def DEFAULT_FORMULA = """
+            cappedPoolSize = ${opts.vmCount};
+            \$samples = \$PendingTasks.GetSamplePercent(TimeInterval_Minute * 15);
+            \$tasks = \$samples < 70 ? max(0, \$PendingTasks.GetSample(1)) : max( \$PendingTasks.GetSample(1), avg(\$PendingTasks.GetSample(TimeInterval_Minute * 15)));
+            \$targetVMs = \$tasks > 0? \$tasks:max(0, \$TargetDedicatedNodes/2);
+            \$TargetDedicatedNodes = max(0, min(\$targetVMs, cappedPoolSize));
+            \$NodeDeallocationOption = taskcompletion;
+                """.stripIndent()
 
         final scaleFormula = opts.scaleFormula ?: DEFAULT_FORMULA
         final vars = new HashMap<String,String>()

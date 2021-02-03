@@ -216,8 +216,8 @@ class AzBatchServiceTest extends Specification {
         when:
         def ret = svc.scaleFormula( new AzPoolOpts(vmCount: 4) )
         then:
-        ret.contains('$TargetDedicatedNodes = 4;')
-        ret.contains('$TargetDedicatedNodes = (lifespan > startup ? (max($RunningTasks.GetSample(span, ratio), $ActiveTasks.GetSample(span, ratio)) == 0 ? 0 : $TargetDedicatedNodes) : 4);')
+        ret.contains('cappedPoolSize = 4;')
+        ret.contains('$NodeDeallocationOption = taskcompletion;')
     }
 
     def 'should guess vm' () {
