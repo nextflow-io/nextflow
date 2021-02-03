@@ -104,6 +104,7 @@ A minimal configuration looks like the following snippet::
         pools {
           auto {
             vmType = 'STANDARD_D2_V3' // Default VM type is STANDARD_A1
+            autoScale = true // Scale up/down the number of nodes based on pending tasks
          }
         }
       }
