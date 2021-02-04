@@ -554,19 +554,18 @@ class AzBatchService implements Closeable {
 
     protected String scaleFormula(AzPoolOpts opts) {
         // https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling
-        def DEFAULT_FORMULA = """
-            cappedPoolSize = ${opts.vmCount};
-            \$samples = \$PendingTasks.GetSamplePercent(TimeInterval_Minute * 15);
-            \$tasks = \$samples < 70 ? max(0, \$PendingTasks.GetSample(1)) : max( \$PendingTasks.GetSample(1), avg(\$PendingTasks.GetSample(TimeInterval_Minute * 15)));
-            \$targetVMs = \$tasks > 0? \$tasks:max(0, \$TargetDedicatedNodes/2);
-            \$TargetDedicatedNodes = max(0, min(\$targetVMs, cappedPoolSize));
-            \$NodeDeallocationOption = taskcompletion;
-                """.stripIndent()
+        def DEFAULT_FORMULA = '''
+            cappedPoolSize = {{vmCount}};
+            $samples = $PendingTasks.GetSamplePercent(TimeInterval_Minute * 15);
+            $tasks = $samples < 70 ? max(0, $PendingTasks.GetSample(1)) : max( $PendingTasks.GetSample(1), avg($PendingTasks.GetSample(TimeInterval_Minute * 15)));
+            $targetVMs = $tasks > 0? $tasks:max(0, $TargetDedicatedNodes/2);
+            $TargetDedicatedNodes = max(0, min($targetVMs, cappedPoolSize));
+            $NodeDeallocationOption = taskcompletion;
+                '''.stripIndent()
 
         final scaleFormula = opts.scaleFormula ?: DEFAULT_FORMULA
         final vars = new HashMap<String,String>()
         vars.vmCount = opts.vmCount
-        vars.now = Instant.now().toString()
         return new MustacheTemplateEngine().render(scaleFormula, vars)
     }
 
