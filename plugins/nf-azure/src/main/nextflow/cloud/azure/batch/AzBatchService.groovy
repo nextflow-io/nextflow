@@ -16,8 +16,6 @@
 
 package nextflow.cloud.azure.batch
 
-import com.microsoft.azure.batch.protocol.models.StartTask
-
 import java.math.RoundingMode
 import java.nio.file.Path
 import java.time.Instant
@@ -25,6 +23,7 @@ import java.time.Instant
 import com.microsoft.azure.batch.BatchClient
 import com.microsoft.azure.batch.auth.BatchSharedKeyCredentials
 import com.microsoft.azure.batch.protocol.models.BatchErrorException
+import com.microsoft.azure.batch.protocol.models.CloudJob
 import com.microsoft.azure.batch.protocol.models.CloudPool
 import com.microsoft.azure.batch.protocol.models.CloudTask
 import com.microsoft.azure.batch.protocol.models.ComputeNodeFillType
@@ -39,6 +38,7 @@ import com.microsoft.azure.batch.protocol.models.PoolAddParameter
 import com.microsoft.azure.batch.protocol.models.PoolInformation
 import com.microsoft.azure.batch.protocol.models.PoolState
 import com.microsoft.azure.batch.protocol.models.ResourceFile
+import com.microsoft.azure.batch.protocol.models.StartTask
 import com.microsoft.azure.batch.protocol.models.TaskAddParameter
 import com.microsoft.azure.batch.protocol.models.TaskContainerSettings
 import com.microsoft.azure.batch.protocol.models.TaskSchedulingPolicy
@@ -52,6 +52,8 @@ import nextflow.Session
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzPoolOpts
 import nextflow.cloud.azure.nio.AzPath
+import nextflow.cloud.types.CloudMachineInfo
+import nextflow.cloud.types.PriceModel
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.CacheHelper
@@ -248,6 +250,20 @@ class AzBatchService implements Closeable {
         client.taskOperations().terminateTask(key.jobId, key.taskId)
     }
 
+    CloudMachineInfo machineInfo(AzTaskKey key) {
+        if( !key || !key.jobId )
+            throw new IllegalArgumentException("Missing Azure Batch job id")
+        CloudJob job = client.jobOperations().getJob(key.jobId)
+        final poolId = job.poolInfo().poolId()
+        final AzVmPoolSpec spec = allPools.get(poolId)
+        if( !spec )
+            throw new IllegalStateException("Missing VM pool spec for pool id: $poolId")
+        final type = spec.vmType.name
+        if( !type )
+            throw new IllegalStateException("Missing VM type for pool id: $poolId")
+        new CloudMachineInfo(type: type, priceModel: PriceModel.standard, zone: config.batch().location)
+    }
+
     synchronized String getOrCreateJob(String poolId, TaskRun task) {
         final mapKey = task.processor
         if( allJobIds.containsKey(mapKey)) {
@@ -273,7 +289,10 @@ class AzBatchService implements Closeable {
                 .replaceAll(/[^a-zA-Z0-9-_]+/,'_')
 
         final key = "job-${Rnd.hex()}-${name}"
-        return key.size()>64 ? key.substring(0,64) : key
+        // Azure batch job max len is 64 characters, however we keep it a bit shorter
+        // because the jobId + taskId composition must be less then 100
+        final MAX_LEN = 62i
+        return key.size()>MAX_LEN ? key.substring(0,MAX_LEN) : key
     }
 
     AzTaskKey runTask(String poolId, String jobId, TaskRun task) {
