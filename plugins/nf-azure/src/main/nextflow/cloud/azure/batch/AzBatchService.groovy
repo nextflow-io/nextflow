@@ -555,17 +555,34 @@ class AzBatchService implements Closeable {
     protected String scaleFormula(AzPoolOpts opts) {
         // https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling
         def DEFAULT_FORMULA = '''
+            evaluationInterval = {{interval}};
             cappedPoolSize = {{vmCount}};
-            $samples = $PendingTasks.GetSamplePercent(TimeInterval_Minute * 15);
-            $tasks = $samples < 70 ? max(0, $PendingTasks.GetSample(1)) : max( $PendingTasks.GetSample(1), avg($PendingTasks.GetSample(TimeInterval_Minute * 15)));
-            $targetVMs = $tasks > 0? $tasks:max(0, $TargetDedicatedNodes/2);
-            $TargetDedicatedNodes = max(0, min($targetVMs, cappedPoolSize));
+            timeOfPoolCreation = {{poolCreationTime}};
+            
+            timeIntervalMinutes = TimeInterval_Minute * evaluationInterval;
+            currentTime = time();
+            // Get pool lifetime since creation.
+            poolLifetime = currentTime - timeOfPoolCreation;
+           
+            // Compute the target nodes based on pending tasks.
+            $samples = $PendingTasks.GetSamplePercent(timeIntervalMinutes);
+            $tasks = $samples < 70 ? max(0, $PendingTasks.GetSample(1)) : max( $PendingTasks.GetSample(1), avg($PendingTasks.GetSample(timeIntervalMinutes)));
+            $targetVMs = $tasks > 0 ? $tasks:max(0, $TargetDedicatedNodes/2);
+            nodesAfterFirstInterval = max(0, min($targetVMs, cappedPoolSize));
+            
+            // For first interval deploy 1 node, for other intervals scale up/down as per tasks.
+            $TargetDedicatedNodes = poolLifetime < timeIntervalMinutes ? 1 : nodesAfterFirstInterval;
+           
             $NodeDeallocationOption = taskcompletion;
+           
                 '''.stripIndent()
 
         final scaleFormula = opts.scaleFormula ?: DEFAULT_FORMULA
-        final vars = new HashMap<String,String>()
+        def DEFAULT_FORMULA_EVALUATION_INTERVAL = 15
+        final vars = new HashMap<String, String>()
+        vars.interval = DEFAULT_FORMULA_EVALUATION_INTERVAL
         vars.vmCount = opts.vmCount
+        vars.poolCreationTime = Instant.now()
         return new MustacheTemplateEngine().render(scaleFormula, vars)
     }
 
