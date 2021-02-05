@@ -20,12 +20,15 @@ import java.nio.file.Path
 import com.microsoft.azure.batch.protocol.models.TaskState
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.trace.TraceRecord
+
 /**
  * Implements a task handler for Azure Batch service
  * 
@@ -50,6 +53,8 @@ class AzBatchTaskHandler extends TaskHandler {
     private volatile long timestamp
 
     private volatile TaskState taskState
+
+    private CloudMachineInfo machineInfo
 
     AzBatchTaskHandler(TaskRun task, AzBatchExecutor executor) {
         super(task)
@@ -176,4 +181,21 @@ class AzBatchTaskHandler extends TaskHandler {
         batchService.terminate(taskKey)
     }
 
+    @Override
+    TraceRecord getTraceRecord() {
+        def result = super.getTraceRecord()
+        result.put('native_id', taskKey.keyPair())
+        result.machineInfo = getMachineInfo()
+        return result
+    }
+
+    protected CloudMachineInfo getMachineInfo() {
+        if( machineInfo )
+            return machineInfo
+        if( taskKey ) {
+            machineInfo = batchService.machineInfo(taskKey)
+            log.trace "[AZURE BATCH] task=$taskKey => machineInfo=$machineInfo"
+        }
+        return machineInfo
+    }
 }
