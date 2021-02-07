@@ -184,8 +184,10 @@ class AzBatchTaskHandler extends TaskHandler {
     @Override
     TraceRecord getTraceRecord() {
         def result = super.getTraceRecord()
-        result.put('native_id', taskKey.keyPair())
-        result.machineInfo = getMachineInfo()
+        if( taskKey ) {
+            result.put('native_id', taskKey.keyPair())
+            result.machineInfo = getMachineInfo()
+        }
         return result
     }
 
