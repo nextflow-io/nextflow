@@ -234,13 +234,17 @@ class PluginsFacade implements PluginStateListener {
 
         // infer from app config
         final plugins = new ArrayList<PluginSpec>()
+        final workDir = config.workDir as String
         final executor = Bolts.navigate(config, 'process.executor')
 
-        if( executor == 'awsbatch' )
+        if( executor == 'awsbatch' || workDir?.startsWith('s3://') )
             plugins << defaultPlugins.getPlugin('nf-amazon')
 
-        if( executor == 'google-lifesciences' )
+        if( executor == 'google-lifesciences' || workDir?.startsWith('gs://') )
             plugins << defaultPlugins.getPlugin('nf-google')
+
+        if( executor == 'azurebatch' || workDir?.startsWith('az://') )
+            plugins << defaultPlugins.getPlugin('nf-azure')
 
         if( executor == 'ignite' || System.getProperty('nxf.node.daemon')=='true') {
             plugins << defaultPlugins.getPlugin('nf-ignite')
