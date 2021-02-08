@@ -290,4 +290,78 @@ class PluginUpdaterTest extends Specification {
         and:
         ret == r4
     }
+
+    def 'should save move plugin directory' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        // create a plugin dir
+        def source = Files.createDirectory(folder.resolve('plugin-1.0.0'))
+        source.resolve('manifest.txt').text = 'Plugin-1.0.0'
+        source.resolve('foo.txt').text = "I'm foo"
+        source.resolve('bar.txt').text = "I'm bar"
+        Files.createDirectory(source.resolve('alpha'))
+        Files.createDirectory(source.resolve('alpha/beta'))
+        source.resolve('alpha/one.txt').text = 'File 1'
+        source.resolve('alpha/beta/two.txt').text = 'File 2'
+        source.resolve('alpha/beta/three.txt').text = 'File 3'
+        and:
+        def target = folder.resolve('new-plugin-1.0')
+        and:
+        Files.createDirectory(target); target.resolve('foo').text = 'some content'
+        and:
+        def updater = new PluginUpdater(Mock(CustomPluginManager))
+
+        when:
+        updater.safeMove0(source, target)
+
+        then:
+        Files.exists(target)
+        and:
+        target.resolve('manifest.txt').text == 'Plugin-1.0.0'
+        target.resolve('alpha/one.txt').text == 'File 1'
+        target.resolve('alpha/beta/three.txt').text == 'File 3'
+        and:
+        !Files.exists(source)
+
+        cleanup:
+        folder.deleteDir()
+    }
+
+    def 'should move plugin directory' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        // create a plugin dir
+        def source = Files.createDirectory(folder.resolve('plugin-1.0.0'))
+        source.resolve('manifest.txt').text = 'Plugin-1.0.0'
+        source.resolve('foo.txt').text = "I'm foo"
+        source.resolve('bar.txt').text = "I'm bar"
+        Files.createDirectory(source.resolve('alpha'))
+        Files.createDirectory(source.resolve('alpha/beta'))
+        source.resolve('alpha/one.txt').text = 'File 1'
+        source.resolve('alpha/beta/two.txt').text = 'File 2'
+        source.resolve('alpha/beta/three.txt').text = 'File 3'
+        and:
+        def target = folder.resolve('new-plugin-1.0')
+        and:
+        Files.createDirectory(target); target.resolve('foo').text = 'some content'
+        and:
+        def updater = new PluginUpdater(Mock(CustomPluginManager))
+
+        when:
+        updater.safeMove(source, target)
+
+        then:
+        Files.exists(target)
+        and:
+        target.resolve('manifest.txt').text == 'Plugin-1.0.0'
+        target.resolve('alpha/one.txt').text == 'File 1'
+        target.resolve('alpha/beta/three.txt').text == 'File 3'
+        and:
+        !Files.exists(source)
+
+        cleanup:
+        folder.deleteDir()
+    }
 }
