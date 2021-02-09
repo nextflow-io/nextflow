@@ -24,6 +24,7 @@ import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 import nextflow.util.CacheFunnel
 import nextflow.util.CacheHelper
+import nextflow.util.Duration
 
 /**
  * Model the setting of a VM pool
@@ -39,6 +40,7 @@ class AzPoolOpts implements CacheFunnel {
     static public final String DEFAULT_OFFER = "centos-container"
     static public final String DEFAULT_VM_TYPE = "Standard_A3"
     static public final OSType DEFAULT_OS_TYPE = OSType.LINUX
+    static public final Duration DEFAULT_SCALE_INTERVAL = Duration.of('5 min')
 
     String publisher
     String offer
@@ -49,6 +51,8 @@ class AzPoolOpts implements CacheFunnel {
     Integer vmCount = 1
     boolean autoScale
     String scaleFormula
+    Duration scaleInterval
+    Integer maxVmCount
 
     String schedulePolicy // spread | pack
 
@@ -64,6 +68,8 @@ class AzPoolOpts implements CacheFunnel {
         this.autoScale = opts.autoScale as boolean
         this.scaleFormula = opts.scaleFormula
         this.schedulePolicy = opts.schedulePolicy
+        this.scaleInterval = opts.scaleInterval as Duration ?: DEFAULT_SCALE_INTERVAL
+        this.maxVmCount = opts.maxVmCount as Integer ?: vmCount *3
     }
 
     @Override
