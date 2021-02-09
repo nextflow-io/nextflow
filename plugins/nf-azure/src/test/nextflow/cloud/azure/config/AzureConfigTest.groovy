@@ -17,6 +17,7 @@
 package nextflow.cloud.azure.config
 
 import nextflow.Session
+import nextflow.util.Duration
 import spock.lang.Specification
 /**
  *
@@ -64,6 +65,8 @@ class AzureConfigTest extends Specification {
         cfg.batch().allowPoolCreation == null
         cfg.batch().autoPoolOpts().vmType == 'Standard_A3'
         cfg.batch().autoPoolOpts().vmCount == 1
+        cfg.batch().autoPoolOpts().maxVmCount == 3
+        cfg.batch().autoPoolOpts().scaleInterval == Duration.of('5 min')
         cfg.batch().autoPoolOpts().autoScale == false
         !cfg.batch().canCreatePool()
     }
@@ -87,7 +90,14 @@ class AzureConfigTest extends Specification {
                                              allowPoolCreation: true
 ,                                            deleteJobsOnCompletion: false,
                                              deletePoolsOnCompletion: true,
-                                             pools: [ myPool: [vmType: 'Foo_A1', autoScale: true, schedulePolicy: 'pack'] ]
+                                             pools: [ myPool: [
+                                                         vmType: 'Foo_A1',
+                                                         autoScale: true,
+                                                         vmCount: 5,
+                                                         maxVmCount: 50,
+                                                         scaleFormula: 'x + y + z',
+                                                         scaleInterval:  '15 min',
+                                                         schedulePolicy: 'pack' ]]
                                      ]] ]
         }
 
@@ -107,6 +117,10 @@ class AzureConfigTest extends Specification {
         cfg.batch().pool('myPool').vmType == 'Foo_A1'
         cfg.batch().pool('myPool').autoScale == true
         cfg.batch().pool('myPool').schedulePolicy == 'pack'
+        cfg.batch().pool('myPool').vmCount == 5
+        cfg.batch().pool('myPool').maxVmCount == 50
+        cfg.batch().pool('myPool').scaleFormula == 'x + y + z'
+        cfg.batch().pool('myPool').scaleInterval == Duration.of('15 min')
         and:
         cfg.storage().accountKey == null
         cfg.storage().accountName == null

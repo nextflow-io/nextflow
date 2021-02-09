@@ -5,6 +5,7 @@ import nextflow.cloud.azure.config.AzPoolOpts
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -214,10 +215,10 @@ class AzBatchServiceTest extends Specification {
         def svc = new AzBatchService(exec)
 
         when:
-        def ret = svc.scaleFormula( new AzPoolOpts(vmCount: 4) )
+        def formula = svc.scaleFormula( new AzPoolOpts(vmCount: 3, maxVmCount: 10, scaleInterval: Duration.of('5 min')) )
         then:
-        ret.contains('$TargetDedicatedNodes = 4;')
-        ret.contains('$TargetDedicatedNodes = (lifespan > startup ? (max($RunningTasks.GetSample(span, ratio), $ActiveTasks.GetSample(span, ratio)) == 0 ? 0 : $TargetDedicatedNodes) : 4);')
+        formula.contains 'interval = TimeInterval_Minute * 5;'
+        formula.contains '$TargetDedicatedNodes = lifespan < interval ? 3 : targetPoolSize;'
     }
 
     def 'should guess vm' () {

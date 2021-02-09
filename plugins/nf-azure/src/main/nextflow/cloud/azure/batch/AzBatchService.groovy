@@ -558,12 +558,15 @@ class AzBatchService implements Closeable {
 
         // autoscale
         if( spec.opts.autoScale ) {
+            log.debug "Creating autoscale pool with id: ${spec.poolId}; vmCount=${spec.opts.vmCount}; maxVmCount=${spec.opts.maxVmCount}; interval=${spec.opts.scaleInterval}"
+            final interval = spec.opts.scaleInterval.seconds as int
             poolParams
                     .withEnableAutoScale(true)
-                    .withAutoScaleEvaluationInterval( new Period().withSeconds(300) ) // cannot be smaller
+                    .withAutoScaleEvaluationInterval( new Period().withSeconds(interval) ) 
                     .withAutoScaleFormula(scaleFormula(spec.opts))
         }
         else {
+            log.debug "Creating fixed pool with id: ${spec.poolId}; vmCount=${spec.opts.vmCount};"
             poolParams
                     .withTargetDedicatedNodes(spec.opts.vmCount)
         }
@@ -573,20 +576,32 @@ class AzBatchService implements Closeable {
 
     protected String scaleFormula(AzPoolOpts opts) {
         // https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling
-        def DEFAULT_FORMULA = '''\
-                $TargetDedicatedNodes = {{vmCount}};
-                lifespan         = time() - time("{{now}}");
-                span             = TimeInterval_Minute * 60;
-                startup          = TimeInterval_Minute * 10;
-                ratio            = 50;
-                $TargetDedicatedNodes = (lifespan > startup ? (max($RunningTasks.GetSample(span, ratio), $ActiveTasks.GetSample(span, ratio)) == 0 ? 0 : $TargetDedicatedNodes) : {{vmCount}});
-                '''.stripIndent()
+        def DEFAULT_FORMULA = '''
+            // Get pool lifetime since creation.
+            lifespan = time() - time("{{poolCreationTime}}");
+            interval = TimeInterval_Minute * {{scaleInterval}};
+            
+            // Compute the target nodes based on pending tasks.
+            // $PendingTasks == The sum of $ActiveTasks and $RunningTasks
+            $samples = $PendingTasks.GetSamplePercent(interval);
+            $tasks = $samples < 70 ? max(0, $PendingTasks.GetSample(1)) : max( $PendingTasks.GetSample(1), avg($PendingTasks.GetSample(interval)));
+            $targetVMs = $tasks > 0 ? $tasks : max(0, $TargetDedicatedNodes/2);
+            targetPoolSize = max(0, min($targetVMs, {{maxVmCount}}));
+            
+            // For first interval deploy 1 node, for other intervals scale up/down as per tasks.
+            $TargetDedicatedNodes = lifespan < interval ? {{vmCount}} : targetPoolSize;
+            $NodeDeallocationOption = taskcompletion;
+            '''.stripIndent()
 
         final scaleFormula = opts.scaleFormula ?: DEFAULT_FORMULA
-        final vars = new HashMap<String,String>()
+        final vars = new HashMap<String, String>()
+        vars.scaleInterval = opts.scaleInterval.minutes
         vars.vmCount = opts.vmCount
-        vars.now = Instant.now().toString()
-        return new MustacheTemplateEngine().render(scaleFormula, vars)
+        vars.maxVmCount = opts.maxVmCount
+        vars.poolCreationTime = Instant.now().toString()
+        final result = new MustacheTemplateEngine().render(scaleFormula, vars)
+        log.debug "Pool autoscale formula:\n$result"
+        return result
     }
 
     void deleteTask(AzTaskKey key) {
