@@ -191,6 +191,8 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
                     accelerator: acc,
                     bootDiskSizeGb: 75,
                     cpuPlatform: 'Intel Skylake',
+                    network: 'net/123',
+                    subnetwork: 'sub/192',
                     usePrivateAddress: true ))
         then:
         with(resources3) {
@@ -206,6 +208,8 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
             getVirtualMachine().getBootDiskSizeGb() == 75
             getVirtualMachine().getCpuPlatform() == 'Intel Skylake'
             getVirtualMachine().getNetwork().getUsePrivateAddress()
+            getVirtualMachine().getNetwork().getNetwork() == 'net/123'
+            getVirtualMachine().getNetwork().getSubnetwork() == 'sub/192'
         }
     }
 
