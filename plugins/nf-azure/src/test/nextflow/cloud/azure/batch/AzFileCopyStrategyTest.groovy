@@ -144,7 +144,10 @@ class AzFileCopyStrategyTest extends Specification {
                           ((i+=1))
                         fi
                     done
-                    ((${#pid[@]}>0)) && wait ${pid[@]}
+                    for p in "${pid[@]}"
+                    do
+                        wait $p
+                    done
                     )
                     unset IFS
                 }
@@ -267,7 +270,10 @@ class AzFileCopyStrategyTest extends Specification {
                           ((i+=1))
                         fi
                     done
-                    ((${#pid[@]}>0)) && wait ${pid[@]}
+                    for p in "${pid[@]}"
+                    do
+                        wait $p
+                    done
                     )
                     unset IFS
                 }
@@ -414,7 +420,10 @@ class AzFileCopyStrategyTest extends Specification {
                               ((i+=1))
                             fi
                         done
-                        ((${#pid[@]}>0)) && wait ${pid[@]}
+                        for p in "${pid[@]}"
+                        do
+                            wait $p
+                        done
                         )
                         unset IFS
                     }
