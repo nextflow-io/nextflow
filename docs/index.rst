@@ -23,6 +23,7 @@ Contents:
    cli
    awscloud
    amazons3
+   azure
    google
    conda
    docker
