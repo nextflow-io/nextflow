@@ -204,7 +204,7 @@ class ScriptRunnerTest extends Specification {
         def script = '''
             process test {
                 script:
-                "$HELLO"
+                "echo $HELLO"
             }
 
             '''
@@ -572,7 +572,7 @@ class ScriptRunnerTest extends Specification {
             process taskHello {
                 maxRetries -1
                 maxErrors -X
-                ''
+                'echo hello'
             }
             '''
         def runner = new TestScriptRunner([executor:'nope'])
