@@ -117,7 +117,7 @@ class FunctionalTests extends Specification {
             process taskHello {
                 echo true
                 maxForks 11
-                ''
+                'echo hello'
             }
 
             '''
