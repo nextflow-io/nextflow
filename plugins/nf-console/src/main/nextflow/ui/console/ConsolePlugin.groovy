@@ -30,6 +30,11 @@ class ConsolePlugin extends BasePlugin {
     @Override
     void start() {
         super.start()
+        // The console UI requires some Groovy extensions method that are not loaded automatically
+        // using the plugin system classloader.
+        // see
+        // - org.apache.groovy.swing.extensions.SwingExtensions
+        // - META-INF/groovy/org.codehuas.groovy.runtime.ExtensionModule in the 'groovy-swing' JAR
         loadExtensions()
     }
 
