@@ -301,6 +301,37 @@ The above configuration example can be rewritten using the dot notation as shown
     executor.$local.cpus = 8
     executor.$local.memory = '32 GB'
 
+
+
+.. _config-tower:
+
+Scope `tower`
+--------------
+
+The `tower` configuration scope controls the endpoints for interacting with the `Nextflow Tower <https://www.tower.nf>`_ application.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+enabled            Specify whether to enable the Nextflow-Tower integration  (default: ``false``).
+accessToken        The unique access token specific to your account on an instance of Tower.
+endpoint           The endpoint of your Tower deployment (default: ``https://www.tower.nf``).
+
+================== ================
+
+The above options can be used by prefixing them with the ``tower`` scope or surrounding them by curly
+brackets, as shown below::
+
+    tower {
+      enabled = true
+      accessToken = '<YOUR TOKEN>' // This can be obtained from your tower instance.
+      endpoint = 'http://my_custom_domain/api' // For on-premise deployments of Tower.
+    }
+
+
+
 .. _config-docker:
 
 Scope `docker`
