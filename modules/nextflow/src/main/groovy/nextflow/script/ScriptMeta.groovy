@@ -187,6 +187,10 @@ class ScriptMeta {
         (FunctionDef)getComponent(name)
     }
 
+    TestflowDef getTestflow(String name) {
+        (TestflowDef)getComponent(name)
+    }
+
     Set<String> getAllNames() {
         final result = new HashSet(definitions.size() + imports.size())
         // local definitions

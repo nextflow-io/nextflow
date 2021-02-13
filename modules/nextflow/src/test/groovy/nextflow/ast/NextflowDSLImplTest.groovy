@@ -152,4 +152,29 @@ class NextflowDSLImplTest extends BaseSpec {
         ScriptMeta.get(script).getProcessNames() == ['alpha', 'beta'] as Set
     }
 
+
+    def 'should invoke testflow' () {
+        given:
+        def config = new CompilerConfiguration()
+        config.setScriptBaseClass(BaseScript.class.name)
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+
+        def SCRIPT = '''
+                    
+            testflow foo {
+              when:
+               foo()
+              then:
+               true              
+            }
+
+
+        '''
+
+        when:
+        def script = new GroovyShell(config).parse(SCRIPT)
+        then:
+        noExceptionThrown()
+    }
+
 }

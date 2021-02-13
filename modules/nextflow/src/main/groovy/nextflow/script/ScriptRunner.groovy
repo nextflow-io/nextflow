@@ -57,6 +57,8 @@ class ScriptRunner {
      */
     private def result
 
+    private boolean testMode
+
     /**
      * Instantiate the runner object creating a new session
      */
@@ -93,7 +95,6 @@ class ScriptRunner {
      */
     def getResult() { result }
 
-
     /**
      * Execute a Nextflow script, it does the following:
      * <li>parse the script
@@ -104,8 +105,16 @@ class ScriptRunner {
      * @param args The arguments to be passed to the script
      * @return The result as returned by the {@code #run} method
      */
-
     def execute( List<String> args = null, String entryName=null ) {
+        execute0(args, entryName)
+    }
+
+    def testFlow() {
+        this.testMode=true
+        execute0()
+    }
+
+    private execute0( List<String> args = null, String entryName=null ) {
         assert scriptFile
 
         // init session
@@ -194,6 +203,7 @@ class ScriptRunner {
 
     protected void parseScript( ScriptFile scriptFile, String entryName ) {
         scriptParser = new ScriptParser(session)
+                            .setTestMode(testMode)
                             .setEntryName(entryName)
                             .parse(scriptFile.main)
         session.script = scriptParser.script
@@ -214,6 +224,10 @@ class ScriptRunner {
         result = normalizeOutput(scriptParser.getResult())
         // -- ignite dataflow network
         session.fireDataflowNetwork()
+        // -- start test validation
+        if( testMode ) {
+            scriptParser.checkTests()
+        }
     }
 
     protected terminate() {

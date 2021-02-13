@@ -55,6 +55,8 @@ class ScriptBinding extends WorkflowBinding {
 
     private String entryName
 
+    private boolean testMode
+
     /**
      * Creates a new nextflow script binding object
      *
@@ -106,8 +108,8 @@ class ScriptBinding extends WorkflowBinding {
         return this
     }
 
-    ScriptBinding setModule(boolean value ) {
-        module = value
+    ScriptBinding setTestMode(boolean value) {
+        this.testMode = value
         return this
     }
 
@@ -123,6 +125,8 @@ class ScriptBinding extends WorkflowBinding {
     Path getScriptPath() { scriptPath }
 
     String getEntryName() { entryName }
+
+    boolean getTestMode() { testMode }
 
     @Memoized
     protected Map<String,String> getSysEnv() {

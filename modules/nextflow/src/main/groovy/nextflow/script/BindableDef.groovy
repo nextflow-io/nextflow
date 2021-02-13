@@ -39,7 +39,7 @@ abstract class BindableDef extends ComponentDef {
     Object invoke_a(Object[] args) {
 
         // use this instance an workflow template, therefore clone it
-        final String prefix = ExecutionStack.workflow()?.name
+        final String prefix = ExecutionStack.flowContext()?.name
         final fqName = prefix ? prefix+SCOPE_SEP+name : name
         if( this instanceof ProcessDef && !invocations.add(fqName) ) {
             log.debug "Bindable invocations=$invocations"

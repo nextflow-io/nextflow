@@ -90,6 +90,10 @@ class NextflowDSLImpl implements ASTTransformation {
     final static public String PROCESS_WHEN = 'when'
     final static public String PROCESS_STUB = 'stub'
 
+    final static private String TESTFLOW_GIVEN = 'given'
+    final static private String TESTFLOW_WHEN = 'when'
+    final static private String TESTFLOW_THEN = 'then'
+
     static public String OUT_PREFIX = '$out'
 
     static private Set<String> RESERVED_NAMES
@@ -131,6 +135,8 @@ class NextflowDSLImpl implements ASTTransformation {
         private Set<String> processNames = []
 
         private Set<String> workflowNames = []
+
+        private Set<String> testflowNames = []
 
         private Set<String> functionNames = []
 
@@ -236,6 +242,10 @@ class NextflowDSLImpl implements ASTTransformation {
                 convertWorkflowDef(methodCall,sourceUnit)
                 super.visitMethodCallExpression(methodCall)
             }
+            else if( methodName == 'testflow' && preCondition ) {
+                convertTestflowDef(methodCall,sourceUnit)
+                super.visitMethodCallExpression(methodCall)
+            }
 
             // just apply the default behavior
             else {
@@ -330,6 +340,120 @@ class NextflowDSLImpl implements ASTTransformation {
             }
         }
 
+        protected void convertTestflowDef(MethodCallExpression methodCall, SourceUnit unit) {
+            log.trace "Convert 'testflow' ${methodCall.arguments}"
+            assert methodCall.arguments instanceof ArgumentListExpression
+            def args = (ArgumentListExpression)methodCall.arguments
+            def len = args.size()
+
+            // extract the first argument which has to be a method-call expression
+            // the name of this method represent the *testflow* name
+            if( len != 1 || !args[0].class.isAssignableFrom(MethodCallExpression) ) {
+                log.debug "Missing name in testflow definition at line: ${methodCall.lineNumber}"
+                unit.addError( new SyntaxException("Testflow definition syntax error -- A string identifier must be provided after the `testflow` keyword", methodCall.lineNumber, methodCall.columnNumber+8))
+                return
+            }
+
+            final nested = args[0] as MethodCallExpression
+            final name = nested.getMethodAsString()
+            // check the process name is not defined yet
+            if( isIllegalName(name, methodCall) ) {
+                return
+            }
+            testflowNames.add(name)
+
+            // the nested method arguments are the arguments to be passed
+            // to the process definition, plus adding the process *name*
+            // as an extra item in the arguments list
+            args = (ArgumentListExpression)nested.getArguments()
+            len = args.size()
+            log.trace "Testflow name: $name with args: $args"
+
+            // make sure to add the 'name' after the map item
+            // (which represent the named parameter attributes)
+            def newArgs = new ArgumentListExpression()
+
+            // add the workflow body def
+            if( len != 1 || !(args[0] instanceof ClosureExpression)) {
+                syntaxError(methodCall, "Invalid testflow definition")
+                return
+            }
+
+            final body = (ClosureExpression)args[0]
+            newArgs.addExpression( constX(name) )
+            newArgs.addExpression( makeTestflowClosureWrapper(body) )
+
+            // set the new list as the new arguments
+            methodCall.setArguments( newArgs )
+        }
+
+
+        protected Expression makeTestflowClosureWrapper(ClosureExpression closure ) {
+
+            final codeBlock = (BlockStatement) closure.code
+            final codeStms = codeBlock.statements
+            final scope = codeBlock.variableScope
+
+            final visited = new HashMap<String,Boolean>(5);
+            final wrap = new ArrayList<Statement>(codeStms.size())
+            final whenBody = new ArrayList<Statement>(codeStms.size())
+            final thenBody = new ArrayList<Statement>(codeStms.size())
+            final givenBody = new ArrayList<Statement>(codeStms.size())
+
+            String context = null
+            String previous = null
+            for( Statement stm : codeStms ) {
+                previous = context
+                context = stm.statementLabel ?: context
+                // check for changing context
+                if( context && context != previous ) {
+                    if( visited[context] && visited[previous] ) {
+                        syntaxError(stm, "Unexpected workflow `${context}` context here")
+                        break
+                    }
+                }
+                visited[context] = true
+
+                switch (context) {
+                    case TESTFLOW_GIVEN:
+                        givenBody.add(stm)
+                        break
+
+                    case TESTFLOW_WHEN:
+                        whenBody.add(stm)
+                        break
+
+                    case TESTFLOW_THEN:
+                        thenBody.add(stm)
+                        break
+
+                    default:
+                        if( context ) {
+                            def opts = [TESTFLOW_GIVEN, TESTFLOW_WHEN, TESTFLOW_THEN].closest(context)
+                            def msg = "Unknown testflow scope '$context:'"
+                            if( opts ) msg += " -- Did you mean ${opts.collect{"'$it'"}.join(', ')}"
+                            syntaxError(stm, msg)
+                        }
+                        else {
+                            def msg = 'Missing testflow scope'
+                            syntaxError(stm, msg)
+                        }
+                }
+            }
+
+            if( givenBody ) {
+                wrap.add( stmt(callThisX('given', closureX(null, block(scope, givenBody)))) )
+            }
+            if( whenBody ) {
+                wrap.add( stmt(callThisX('when', closureX(null, block(scope, whenBody)))) )
+            }
+            if( thenBody ) {
+                wrap.add( stmt(callThisX('then', closureX(null, block(scope, thenBody)))) )
+            }
+
+            closureX(null, block(scope, wrap))
+        }
+
         /*
          * this method transforms the DSL definition
          *
@@ -358,7 +482,7 @@ class NextflowDSLImpl implements ASTTransformation {
 
                 def newArgs = new ArgumentListExpression()
                 def body = (ClosureExpression)args[0]
-                newArgs.addExpression( makeWorkflowDefWrapper(body,true) )
+                newArgs.addExpression( makeWorkflowDefWrapper(body) )
                 methodCall.setArguments( newArgs )
                 return 
             }
@@ -398,7 +522,7 @@ class NextflowDSLImpl implements ASTTransformation {
 
             final body = (ClosureExpression)args[0]
             newArgs.addExpression( constX(name) )
-            newArgs.addExpression( makeWorkflowDefWrapper(body,false) )
+            newArgs.addExpression( makeWorkflowDefWrapper(body) )
 
             // set the new list as the new arguments
             methodCall.setArguments( newArgs )
@@ -483,7 +607,7 @@ class NextflowDSLImpl implements ASTTransformation {
             return result
         }
 
-        protected Expression makeWorkflowDefWrapper( ClosureExpression closure, boolean anonymous ) {
+        protected Expression makeWorkflowDefWrapper( ClosureExpression closure ) {
 
             final codeBlock = (BlockStatement) closure.code
             final codeStms = codeBlock.statements

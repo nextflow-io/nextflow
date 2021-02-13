@@ -46,6 +46,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     private WorkflowDef entryFlow
 
+    private List<TestflowDef> testFlows = new ArrayList<>()
+
     @Lazy InputStream stdin = { System.in }()
 
     BaseScript() {
@@ -151,6 +153,14 @@ abstract class BaseScript extends Script implements ExecutionContext {
         include .setSession(session)
     }
 
+    protected testflow(String name, Closure testflowBody) {
+        if( !name )
+            throw new IllegalArgumentException("Missing testflow name")
+        final test = new TestflowDef(this, name, testflowBody)
+        testFlows << test
+        meta.addDefinition(test)
+    }
+
     @Override
     Object invokeMethod(String name, Object args) {
         if(NF.isDsl2())
@@ -169,6 +179,14 @@ abstract class BaseScript extends Script implements ExecutionContext {
     private runDsl2() {
         final result = runScript()
         if( meta.isModule() ) {
+            return result
+        }
+
+        if( binding.testMode ) {
+            if( !testFlows ) throw new IllegalArgumentException("No tests defined")
+            for( TestflowDef test : testFlows ) {
+                test.invoke_a(EMPTY_ARGS)
+            }
             return result
         }
 
@@ -205,6 +223,14 @@ abstract class BaseScript extends Script implements ExecutionContext {
         }
         finally {
             ExecutionStack.pop()
+        }
+    }
+
+    void checkTests() {
+        if( !binding.testMode )
+            throw new IllegalStateException("Not running in test mode")
+        for( TestflowDef test : testFlows ) {
+            test.validateExecution()
         }
     }
 

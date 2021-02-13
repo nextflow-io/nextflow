@@ -99,6 +99,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-test'], description = 'Test a script function with the name specified')
     String test
 
+    @Parameter(names=['-testflow'], hidden = true)
+    Boolean testFlow
+
     @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate result files are stored')
     String workDir
 
@@ -284,6 +287,11 @@ class CmdRun extends CmdBase implements HubOptions {
 
         if( this.test ) {
             runner.test(this.test, scriptArgs)
+            return
+        }
+
+        if( this.testFlow ) {
+            runner.testFlow()
             return
         }
 

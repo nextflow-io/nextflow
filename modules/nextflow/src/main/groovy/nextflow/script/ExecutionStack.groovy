@@ -39,7 +39,7 @@ class ExecutionStack {
 
     static boolean withinWorkflow() {
         for( def entry : stack ) {
-            if( entry instanceof WorkflowDef )
+            if( entry instanceof WorkflowDef || entry instanceof TestflowDef )
                 return true
         }
         return false
@@ -69,6 +69,11 @@ class ExecutionStack {
     static WorkflowDef workflow() {
         final ctx = current()
         ctx instanceof WorkflowDef ? ctx : null
+    }
+
+    static ComponentDef flowContext() {
+        final ctx = current()
+        ctx instanceof WorkflowDef || ctx instanceof TestflowDef ? ctx : null
     }
 
     static void push(ExecutionContext script) {

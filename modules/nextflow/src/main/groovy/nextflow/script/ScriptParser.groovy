@@ -65,6 +65,8 @@ class ScriptParser {
 
     private String entryName
 
+    private boolean testMode
+
     ScriptParser(Session session) {
         this.session = session
         this.classLoader = session.classLoader
@@ -87,6 +89,11 @@ class ScriptParser {
 
     ScriptParser setEntryName(String name) {
         this.entryName = name
+        return this
+    }
+
+    ScriptParser setTestMode(boolean flag) {
+        this.testMode = flag
         return this
     }
 
@@ -213,12 +220,18 @@ class ScriptParser {
         binding.setSession(session)
         binding.setScriptPath(scriptPath)
         binding.setEntryName(entryName)
+        binding.setTestMode(testMode)
     }
 
     ScriptParser runScript() {
         assert script
         setupContext()
         result = script.run()
+        return this
+    }
+
+    ScriptParser checkTests() {
+        script.checkTests()
         return this
     }
 

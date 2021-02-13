@@ -55,17 +55,17 @@ class ChannelOut implements List<DataflowWriteChannel> {
 
     ChannelOut(OutputsList outs) {
         channels = new HashMap<>(outs.size())
-        final onlyWithName = new ArrayList<DataflowWriteChannel>(outs.size())
+        final allChannels = new ArrayList<DataflowWriteChannel>(outs.size())
         for( OutParam param : outs ) {
             final ch = param.getOutChannel()
             final name = param.channelEmitName
-            onlyWithName.add(ch)
+            allChannels.add(ch)
             if(name) {
                 if(channels.containsKey(name)) throw new DuplicateChannelNameException("Output channel name `$name` is used more than one time")
                 channels.put(name, ch)
             }
         }
-        target = Collections.unmodifiableList(onlyWithName)
+        target = Collections.unmodifiableList(allChannels)
     }
 
     Set<String> getNames() { channels.keySet().findAll { !it.startsWith(OUT_PREFIX) }  }
@@ -77,6 +77,14 @@ class ChannelOut implements List<DataflowWriteChannel> {
         }
         else
             metaClass.getProperty(this,name)
+    }
+
+    String nameOf(DataflowWriteChannel obj) {
+        for( Map.Entry<String,DataflowWriteChannel> entry : channels.entrySet() ) {
+            if( entry.value == obj )
+                return entry.key
+        }
+        return null
     }
 
     /**
