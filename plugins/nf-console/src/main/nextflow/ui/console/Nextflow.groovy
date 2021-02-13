@@ -23,8 +23,8 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import groovy.transform.ThreadInterrupt
-import groovy.ui.Console
-import groovy.ui.OutputTransforms
+import groovy.console.ui.Console
+import groovy.console.ui.OutputTransforms
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.cli.CliOptions
