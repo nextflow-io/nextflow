@@ -73,5 +73,14 @@ bash awsbatch.sh
 if [[ $GOOGLE_SECRET ]]; then
   bash gls.sh
 else
-  echo "Google Life Science test skipped because GOOGLE_SECRET env var is missing"
+  echo "Google Life Sciences tests skipped because GOOGLE_SECRET env var is missing"
+fi
+
+#
+# Azure Batch tests
+#
+if [[ $AZURE_BATCH_ACCOUNT_KEY ]]; then
+  bash azure.sh
+else
+  echo "Azure Batch tests skipped because GOOGLE_SECRET env var is missing"
 fi
