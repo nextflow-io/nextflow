@@ -82,5 +82,5 @@ fi
 if [[ $AZURE_BATCH_ACCOUNT_KEY ]]; then
   bash azure.sh
 else
-  echo "Azure Batch tests skipped because GOOGLE_SECRET env var is missing"
+  echo "Azure Batch tests skipped because AZURE_BATCH_ACCOUNT_KEY env var is missing"
 fi
