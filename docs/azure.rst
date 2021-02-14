@@ -241,6 +241,7 @@ azure.batch.accountKey                          The batch service account key.
 azure.batch.endpoint                            The batch service endpoint e.g. ``https://nfbatch1.westeurope.batch.azure.com``.
 azure.batch.location                            The batch service location e.g. ``westeurope``. This is not needed when the endpoint is specified.
 azure.batch.autoPoolMode                        Enable the automatic creation of batch pools depending the pipeline resources demand (default: ``true``)
+azure.batch.allowPoolCreation                   Enable the automatic creation of batch pools specified in the Nextflow configuration file (default: ``false``)
 azure.batch.deleteJobsOnCompletion              Enable the automatic deletion of jobs created by the pipeline execution (default: ``true``).
 azure.batch.deletePoolsOnCompletion             Enable the automatic deletion of compute node pools upon pipeline completion (default: ``false``).
 azure.batch.pools.<name>.vmType                 Specify the virtual machine type used by the pool identified with ``<name>``.

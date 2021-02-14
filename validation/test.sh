@@ -62,6 +62,15 @@ $NXF_CMD run nextflow-io/rnaseq-nf -with-docker $OPTS
 $NXF_CMD run nextflow-io/rnaseq-nf -with-docker $OPTS -resume
 
 #
+# Azure Batch tests
+#
+if [[ $AZURE_BATCH_ACCOUNT_KEY ]]; then
+  bash azure.sh
+else
+  echo "Azure Batch tests skipped because AZURE_BATCH_ACCOUNT_KEY env var is missing"
+fi
+
+#
 # AWS Batch tests
 #
 echo aws batch tests
@@ -76,11 +85,3 @@ else
   echo "Google Life Sciences tests skipped because GOOGLE_SECRET env var is missing"
 fi
 
-#
-# Azure Batch tests
-#
-if [[ $AZURE_BATCH_ACCOUNT_KEY ]]; then
-  bash azure.sh
-else
-  echo "Azure Batch tests skipped because AZURE_BATCH_ACCOUNT_KEY env var is missing"
-fi
