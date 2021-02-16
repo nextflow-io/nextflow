@@ -25,10 +25,8 @@ import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.file.FileHelper
 import nextflow.util.SerializerRegistrant
 import org.pf4j.Extension
-
 /**
  * Serializer for a {@link CloudStoragePath}
  *
@@ -53,9 +51,8 @@ class GsPathSerializer extends Serializer<CloudStoragePath> implements Serialize
     CloudStoragePath read(Kryo kryo, Input input, Class<CloudStoragePath> type) {
         final path = input.readString()
         log.trace "Google CloudStoragePath de-serialization > path=$path"
-        def uri = URI.create( CloudStorageFileSystem.URI_SCHEME + '://' + path )
-        def fs = FileHelper.getOrCreateFileSystemFor(uri)
-        (CloudStoragePath) fs.provider().getPath(uri)
+        def uri = CloudStorageFileSystem.URI_SCHEME + '://' + path
+        (CloudStoragePath) GsPathFactory.parse(uri)
     }
 
     @Override
