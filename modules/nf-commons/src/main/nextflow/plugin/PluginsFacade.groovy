@@ -227,6 +227,8 @@ class PluginsFacade implements PluginStateListener {
         // retrieve the list from the env var
         final commaSepList = env.get('NXF_PLUGINS_DEFAULT')
         if( commaSepList && commaSepList !in ['true','false'] ) {
+            // if the plugin id in the list does *not* contain the @version suffix, it picks the version
+            // specified in the defaults list. Otherwise parse the provider id@version string to the corresponding spec
             return commaSepList
                     .tokenize(',')
                     .collect( it-> defaultPlugins.hasPlugin(it) ? defaultPlugins.getPlugin(it) : PluginSpec.parse(it) )
