@@ -572,12 +572,6 @@ class LoggerHelper {
             if( allNames[name] ) {
                 final pwd = System.getProperty("user.dir")
                 def script = allNames[name].toUriString()
-                if( script.startsWith(pwd) ) {
-                    script = script.substring(pwd.length())
-                    while( script.startsWith('/') )
-                        script = script.substring(1)
-                }
-
                 return [ script, line ]
             }
         }
