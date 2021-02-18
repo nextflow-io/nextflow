@@ -71,6 +71,7 @@ class PodSpecBuilderTest extends Specification {
                 .withNamespace('xyz')
                 .withLabel('app','myApp')
                 .withLabel('runName','something')
+                .withLabel('version','3.6.1')
                 .withAnnotation("anno1", "value1")
                 .withAnnotations([anno2: "value2", anno3: "value3"])
                 .build()
@@ -83,7 +84,8 @@ class PodSpecBuilderTest extends Specification {
                            namespace:'xyz',
                            labels: [
                                    app: 'myApp',
-                                   runName: 'something'
+                                   runName: 'something',
+                                   version: '3.6.1'
                            ],
                            annotations: [
                                    anno1: "value1",
@@ -664,7 +666,7 @@ class PodSpecBuilderTest extends Specification {
         'hello_world.'  | 'hello_world'
         'hello_123'     | 'hello_123'
         'HELLO 123'     | 'HELLO_123'
-        '123hello'      | 'hello'
+        '123hello'      | '123hello'
         'x2345678901234567890123456789012345678901234567890123456789012345' | 'x23456789012345678901234567890123456789012345678901234567890123'
     }
 }
