@@ -33,9 +33,9 @@ or chaining it with a channel operator such as :ref:`operator-map`, :ref:`operat
 Queue channels are also created by process output declarations using the ``into`` clause.
 
 .. note:: The definition implies that the same queue channel cannot be used more than one time as process
- output and more then one time as process input.
+ output and more than one time as process input.
 
-In you need to connect a process output channel to more then one process or operator use the
+In you need to connect a process output channel to more than one process or operator use the
 :ref:`operator-into` operator to create two (or more) copies of the same channel and use each
 of them to connect a separate process.
 
@@ -72,7 +72,7 @@ For example::
       """
     }
 
-The process in the above snippet declare a single input which implicitly is a value channel.
+The process in the above snippet declares a single input which implicitly is a value channel.
 Therefore also the ``result`` output is a value channel that can be read by more than one process.
 
 See also: :ref:`process-understand-how-multiple-input-channels-work`.
@@ -538,7 +538,7 @@ Observing events
 subscribe
 ---------
 
-The ``subscribe`` method permits to execute a user define function each time a new value is emitted by the source channel.
+The ``subscribe`` method allows you to execute a user defined function each time a new value is emitted by the source channel.
 
 The emitted value is passed implicitly to the specified function. For example::
 
@@ -556,10 +556,10 @@ The emitted value is passed implicitly to the specified function. For example::
 
 
 .. note:: Formally the user defined function is a ``Closure`` as defined by the Groovy programming language on which
-  the `Nextflow` scripts are based on.
+  the `Nextflow` scripts are based.
 
 If needed the closure parameter can be defined explicitly, using a name other than ``it`` and, optionally,
-specifying the expected value type, as showed in the following example::
+specifying the expected value type, as shown in the following example::
 
     Channel
         .from( 'alpha', 'beta', 'lambda' )
