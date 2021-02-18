@@ -223,7 +223,7 @@ Limitation
 ----------
 
 * Currently it's not possible to specify a disk type different from the default one assigned
-  by the service depending the chosen instance type.
+  by the service depending on the chosen instance type.
 
 
 

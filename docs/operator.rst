@@ -44,8 +44,8 @@ The ``filter`` operator allows you to get only the items emitted by a channel th
 all the others. The filtering condition can be specified by using either a :ref:`regular expression <script-regexp>`,
 a literal value, a type `qualifier` (i.e. a Java class) or any boolean `predicate`.
 
-The following example shows how to filter a channel by using a regular expression that returns only string that
-begins with ``a``::
+The following example shows how to filter a channel by using a regular expression that returns only strings that
+begin with ``a``::
 
     Channel
         .from( 'a', 'b', 'aa', 'bc', 3, 4.5 )
@@ -222,7 +222,7 @@ from the channel to which is applied. For example::
 
 The above snippet will print 10 numbers in the range from 1 to 100.
 
-The operator supports a second parameter that allows to set the initial `seed` for the random number generator.
+The operator supports a second parameter that allows you to set the initial `seed` for the random number generator.
 By setting it, the ``randomSample`` operator will always return the same pseudo-random sequence. For example::
 
   Channel
@@ -340,7 +340,7 @@ flatMap
 ----------
 
 The ``flatMap`` operator applies a function of your choosing to every item emitted by a channel, and
-returns the items so obtained as a new channel. Whenever the `mapping` function returns a list of items,
+returns the items so obtained as a new channel. Whereas the `mapping` function returns a list of items,
 this list is flattened so that each single item is emitted on its own.  
 
 For example::
@@ -522,7 +522,7 @@ deep            Similar to the previous, but the hash number is created on actua
 
 .. tip:: You should always specify the number of expected element in each tuple using the ``size`` attribute
   to allow the ``groupTuple`` operator to stream the collected values as soon as possible. However there
-  are use cases in which each tuple has a different size depending grouping key. In this cases use the
+  are use cases in which each tuple has a different size depending on grouping key. In this case use the
   built-in function ``groupKey`` that allows you to create a special grouping key object to which it's possible
   to associate the group size for a given key.
 
@@ -634,7 +634,7 @@ The ``collate`` operator transforms a channel in such a way that the emitted val
         [1, 2, 3]
         [1]
 
-As shown in the above example the last tuple may be incomplete e.g. contain less elements than the specified size.
+As shown in the above example the last tuple may be incomplete e.g. contain fewer elements than the specified size.
 If you want to avoid this, specify ``false`` as the second parameter. For example::
 
     Channel
@@ -846,7 +846,7 @@ text entries. For example::
 The above example shows hows CSV text is parsed and is split into single rows. Values can be accessed
 by its column index in the row object.
 
-When the CSV begins with a header line defining the columns names, you can specify the parameter ``header: true`` which
+When the CSV begins with a header line defining the column names, you can specify the parameter ``header: true`` which
 allows you to reference each value by its name, as shown in the following example::
 
     Channel
@@ -1444,8 +1444,8 @@ The following example shows how use a `closure` to collect and sort all sequence
          .view { it.text }
 
 
-.. warning:: The ``collectFile`` operator to carry out its function need to store in a temporary folder that is
- automatically deleted on job completion. For performance reason this folder is allocated in the machine local storage,
+.. warning:: The ``collectFile`` operator needs to store files in a temporary folder that is automatically deleted on 
+  job completion. For performance reasons this folder is located in the machine's local storage,
  and it will require as much free space as are the data you are collecting. Optionally, an alternative temporary data
  folder can be specified by using the ``tempDir`` parameter.
 
@@ -1635,7 +1635,7 @@ just after the condition expression. For example::
   implicitly returned.
 
 .. warning:: The branch evaluation closure must be specified inline, ie. it *cannot* be assigned to a
-  variable and passed as argument to the operator, how it can be done with other operators.
+  variable and passed as argument to the operator, the way it can be done with other operators.
 
 To create a branch criteria as variable that can be passed as an argument to more than one
 ``branch`` operator use the ``branchCriteria`` built-in method as shown below::
@@ -1715,8 +1715,8 @@ It prints::
 
 
 .. tip:: The statement expression can be omitted when the value to be emitted is the same as
-  the following one. If you need just need to forward the same value to multiple channel
-  you can use the following the shorthand notation showed below.
+  the following one. If you need just need to forward the same value to multiple channels
+  you can use the following the shorthand notation shown below.
 
 ::
 
@@ -1725,12 +1725,12 @@ It prints::
         .multiMap { it -> foo: bar: it }
         .set { result }
 
-As before creates two channels, however both of them receive the same source items.
+As before this creates two channels but now both of them receive the same source items.
 
 
 .. warning::
   The multi-map evaluation closure must be specified inline, ie. it *cannot* be assigned to a
-  variable and passed as argument to the operator, how it can be done with other operators.
+  variable and passed as argument to the operator, the way it can be done with other operators.
 
 To create a multi-map criteria as variable that can be passed as an argument to more than one
 ``multiMap`` operator use the ``multiMapCriteria`` built-in method as shown below::
@@ -2250,7 +2250,7 @@ print
 ------
 
 .. warning::
-  The ``print`` operator is deprecated and not supported any more when using DSL2 syntax. Use
+  The ``print`` operator is deprecated and not supported anymore when using DSL2 syntax. Use
   `view`_ instead.
 
 The ``print`` operator prints the items emitted by a channel to the standard output.
@@ -2273,7 +2273,7 @@ println
 --------
 
 .. warning::
-  The ``println`` operator is deprecated and not supported any more when using DSL2 syntax. Use
+  The ``println`` operator is deprecated and not supported anymore when using DSL2 syntax. Use
   `view`_ instead.
 
 The ``println`` operator prints the items emitted by a channel to the console standard output appending
@@ -2322,8 +2322,8 @@ The ``view`` operator prints the items emitted by a channel to the console stand
 
 Each item is printed on a separate line unless otherwise specified by using the ``newLine: false`` optional parameter.
 
-How the channel items are printed can be controlled by using an optional closure parameter. The closure it must return
-the actual value of the item being to be printed::
+How the channel items are printed can be controlled by using an optional closure parameter. The closure must return
+the actual value of the item to be printed::
 
     Channel.from(1,2,3)
             .map { it -> [it, it*it] }
@@ -2336,9 +2336,9 @@ It prints::
     Square of: 3 is 9
 
 
-.. note:: Both the *view* and `print`_ (or `println`_) operators consume them items emitted by the source channel to which they
-    are applied. However, the main difference between them is that the former returns a newly create channel whose content
-    is identical to the source one. This allows the *view* operator to be chained like other operators.
+.. note:: Both the *view* and `print`_ (or `println`_) operators consume the items emitted by the source channel to which they
+    are applied. The main difference between them is that the former returns a newly created channel whose content
+    is identical to the source channel while the latter does not. This allows the *view* operator to be chained like other operators.
 
 .. _operator-close:
 

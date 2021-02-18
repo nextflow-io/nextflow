@@ -329,8 +329,8 @@ Inputs
 
 Nextflow processes are isolated from each other but can communicate between themselves sending values through channels.
 
-The `input` block defines which channels the process is expecting to receive inputs data from. You can only define one
-input block at a time and it must contain one or more inputs declarations.
+The `input` block defines from which channels the process expects to receive data. You can only define one
+input block at a time and it must contain one or more input declarations.
 
 The input block follows the syntax shown below::
 
@@ -883,11 +883,10 @@ See also: :ref:`channel-types`.
 Outputs
 =======
 
-The `output` declaration block allows to define the channels used by the process to send out the results produced.
+The `output` declaration block allows you to define the channels used by the process to send out the results produced.
+You can only define one output block at a time and it must contain one or more output declarations.
 
-It can be defined at most one output block and it can contain one or more outputs declarations.
 The output block follows the syntax shown below::
-
     output:
       <output qualifier> <output name> [into <target channel>[,channel,..]] [attribute [,..]]
 
@@ -897,26 +896,26 @@ one or more channels over which outputs are sent. Finally some optional attribut
 .. note:: When the output name is the same as the channel name, the ``into`` part of the declaration can be omitted.
 
 
-.. TODO the channel is implicitly create if does not exist
+.. TODO the channel is implicitly created if does not exist
 
 The qualifiers that can be used in the output declaration block are the ones listed in the following table:
 
 =========== =============
 Qualifier   Semantic
 =========== =============
-val         Sends variable's with the name specified over the output channel.
+val         Sends variables with the name specified over the output channel.
 file        Sends a file produced by the process with the name specified over the output channel.
 path        Sends a file produced by the process with the name specified over the output channel (replaces ``file``).
 env         Sends the variable defined in the process environment with the name specified over the output channel.
 stdout      Sends the executed process `stdout` over the output channel.
-tuple       Lets to send multiple values over the same output channel.
+tuple       Sends multiple values over the same output channel.
 =========== =============
 
 
 Output values
 -------------
 
-The ``val`` qualifier allows to output a `value` defined in the script context. In a common usage scenario,
+The ``val`` qualifier allows you to output a `value` defined in the script context. In a common usage scenario,
 this is a value which has been defined in the `input` declaration block, as shown in the following example::
 
    methods = ['prot','dna', 'rna']
@@ -937,7 +936,7 @@ this is a value which has been defined in the `input` declaration block, as show
    receiver.view { "Received: $it" }
 
 
-Valid output values are value literals, input values identifiers, variables accessible in the process scope and
+Valid output values are value literals, input value identifiers, variables accessible in the process scope and
 value expressions. For example::
 
     process foo {
@@ -962,7 +961,7 @@ value expressions. For example::
 Output files
 ------------
 
-The ``file`` qualifier allows to output one or more files, produced by the process, over the specified channel.
+The ``file`` qualifier allows you to output one or more files, produced by the process, over the specified channel.
 For example::
 
 
@@ -986,7 +985,7 @@ file is sent over the ``numbers`` channel. A downstream `process` declaring the 
 be able to receive it.
 
 .. note:: If the channel specified as output has not been previously declared in the pipeline script, it
-  will implicitly created by the output declaration itself.
+  will implicitly be created by the output declaration itself.
 
 
 .. TODO explain Path object
@@ -995,7 +994,7 @@ Multiple output files
 ---------------------
 
 When an output file name contains a ``*`` or ``?`` wildcard character it is interpreted as a `glob`_ path matcher.
-This allows to *capture* multiple files into a list object and output them as a sole emission. For example::
+This allows you to *capture* multiple files into a list object and output them as a sole emission. For example::
 
     process splitLetters {
 
@@ -1024,7 +1023,7 @@ It prints::
 Some caveats on glob pattern behavior:
 
 * Input files are not included in the list of possible matches.
-* Glob pattern matches against both files and directories path.
+* Glob pattern matches against both files and directory paths.
 * When a two stars pattern ``**`` is used to recourse across directories, only file paths are matched
   i.e. directories are not included in the result list.
 
@@ -1039,7 +1038,7 @@ By default all the files matching the specified glob pattern are emitted by the 
 It is also possible to emit each file as a sole item by adding the ``mode flatten`` attribute in the output file
 declaration.
 
-By using the ``mode`` attribute the previous example can be re-written as show below::
+By using the ``mode`` attribute the previous example can be re-written as shown below::
 
     process splitLetters {
 
@@ -1090,7 +1089,7 @@ In the above example, each time the process is executed an alignment file is pro
 on the actual value of the ``x`` input.
 
 .. tip:: The management of output files is a very common misunderstanding when using Nextflow.
-  With other tools, it is generally necessary to organize the outputs files into some kind of directory 
+  With other tools it is generally necessary to organize the output files into some kind of directory 
   structure or to guarantee a unique file name scheme, so that result files won't overwrite each other 
   and that they can be referenced univocally by downstream tasks.
 
@@ -1112,7 +1111,7 @@ for the ``file`` output qualifier, therefore it's backward compatible with the s
 and the semantic for the input ``file`` described above.
 
 The main advantage of ``path`` over the ``file`` qualifier is that it allows the specification
-of a number of output to fine-control the output files.
+of a number of outputs to fine-control the output files.
 
 ============== =====================
 Name            Description
@@ -1128,7 +1127,7 @@ includeInputs   When ``true`` any input files matching an output file glob patte
 
 .. warning::
     Breaking change: the ``file`` qualifier interprets ``:`` as path separator, therefore ``file 'foo:bar'``
-    captures both files ``foo`` and ``bar``. The ``path`` qualifier interprets it just a plain file name character,
+    captures both files ``foo`` and ``bar``. The ``path`` qualifier interprets it as just a plain file name character,
     and therefore the output definition ``path 'foo:bar'`` captures the output file with name ``foo:bar``.
 
 
@@ -1189,7 +1188,7 @@ Output 'set' of values
 Output 'tuple' of values
 ------------------------
 
-The ``tuple`` qualifier allows to send multiple values into a single channel. This feature is useful
+The ``tuple`` qualifier allows you to send multiple values into a single channel. This feature is useful
 when you need to `group together` the results of multiple executions of the same process, as shown in the following
 example::
 
@@ -1249,7 +1248,7 @@ When
 The ``when`` declaration allows you to define a condition that must be verified in order to execute the process.
 This can be any expression that evaluates a boolean value.
 
-It is useful to enable/disable the process execution depending the state of various inputs and parameters. For example::
+It is useful to enable/disable the process execution depending on the state of various inputs and parameters. For example::
 
 
     process find {
@@ -1381,7 +1380,7 @@ along with the same inputs, will cause the process execution to be skipped, prod
 the actual results.
 
 The caching feature generates a unique `key` by indexing the process script and inputs. This key is used
-identify univocally the outputs produced by the process execution.
+to identify univocally the outputs produced by the process execution.
 
 
 The cache is enabled by default, you can disable it for a specific process by setting the ``cache``
@@ -1461,7 +1460,7 @@ Simply replace in the above script ``dockerbox:tag`` with the Docker image name 
 
 .. tip:: This can be very useful to execute your scripts into a replicable self-contained environment or to deploy your pipeline in the cloud.
 
-.. note:: This directive is ignore for processes :ref:`executed natively <process-native>`.
+.. note:: This directive is ignored for processes :ref:`executed natively <process-native>`.
 
 
 .. _process-containerOptions:
@@ -1997,7 +1996,7 @@ saveAs          A closure which, given the name of the file being published, ret
                 a custom strategy.
                 Return the value ``null`` from the closure to *not* publish a file.
                 This is useful when the process has multiple output files, but you want to publish only some of them.
-enabled         Allow to enable or disable the publish rule depending the boolean value specified (default: ``true``).
+enabled         Enable or disable the publish rule depending on the boolean value specified (default: ``true``).
 =============== =================
 
 Table of publish modes:
@@ -2109,7 +2108,7 @@ scratch
 
 The ``scratch`` directive allows you to execute the process in a temporary folder that is local to the execution node.
 
-This is useful when your pipeline is launched by using a `grid` executor, because it permits to decrease the NFS
+This is useful when your pipeline is launched by using a `grid` executor, because it allows you to decrease the NFS
 overhead by running the pipeline processes in a temporary directory in the local disk of the actual execution node.
 Only the files declared as output in the process definition will be copied in the pipeline working area.
 
@@ -2249,7 +2248,7 @@ See also: `scratch`_.
 tag
 ---
 
-The ``tag`` directive allows you to associate each process executions with a custom label, so that it will be easier
+The ``tag`` directive allows you to associate each process execution with a custom label, so that it will be easier
 to identify them in the log file or in the trace execution report. For example::
 
     process foo {

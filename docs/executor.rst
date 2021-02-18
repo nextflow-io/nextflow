@@ -106,7 +106,7 @@ The amount of resources requested by each job submission is defined by the follo
 * :ref:`process-memory`
 * :ref:`process-clusterOptions`
 
-.. note:: SLURM `partitions` can be considered jobs queues. Nextflow allows to set partitions by using the above ``queue``
+.. note:: SLURM `partitions` can be considered jobs queues. Nextflow allows you to set partitions by using the above ``queue``
     directive.
 
 .. tip:: Nextflow does not provide a direct support for SLURM multi-clusters feature. If you need to

@@ -265,7 +265,7 @@ the current task configuration directives. For examples::
 
 
 In the above snippet the ``task.cpus`` report the value for the :ref:`cpus directive<process-cpus>` and
-the ``task.memory`` the current value for :ref:`memory directive<process-memory>` depending the actual
+the ``task.memory`` the current value for :ref:`memory directive<process-memory>` depending on the actual
 setting given in the workflow configuration file.
 
 See :ref:`Process directives <process-directives>` for details.
