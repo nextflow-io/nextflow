@@ -60,6 +60,7 @@ class AzFileSystemProvider extends FileSystemProvider {
 
     public static final String SCHEME = 'az'
 
+    private Map<String,String> env = new HashMap<>(System.getenv())
     private Map<String,AzFileSystem> fileSystems = [:]
 
     /**
@@ -257,7 +258,7 @@ class AzFileSystemProvider extends FileSystemProvider {
         def fs = fileSystems.get(bucket)
         if( !fs ) {
             if( canCreate )
-                fs = newFileSystem0(bucket, System.getenv())
+                fs = newFileSystem0(bucket, env)
             else
                 throw new FileSystemNotFoundException("Missing Azure storage blob file system for bucket: `$bucket`")
         }
