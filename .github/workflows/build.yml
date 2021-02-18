@@ -6,7 +6,9 @@ on:
       - '*'
     tags-ignore:
       - '*'  
-
+  pull_request:
+    branches:
+      - '*'
 jobs:
   build:
     name: Build Nextflow
