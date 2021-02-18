@@ -14,7 +14,7 @@ Nextflow provides built-in support for Singularity. This allows you to precisely
 of the processes in your pipeline by running them in isolated containers along all their dependencies.
 
 Moreover the support provided by Nextflow for different container technologies, allows the same pipeline to be
-transparently executed both with Docker or Singularity containers, depending the available engine in the target
+transparently executed both with Docker or Singularity containers, depending on the available engine in the target
 execution platforms.
 
 
@@ -139,7 +139,7 @@ Nextflow version 18.10 introduced support for the `Singularity Library <https://
    
    process.container = 'library://library/default/alpine:3.8'
 
-The pseudo-protocol allow to import Singularity using a local Docker installation instead of downloading
+The pseudo-protocol allows you to import Singularity using a local Docker installation instead of downloading
 the container image from the Docker registry. It requires Nextflow 19.04.0 or later and Singularity 3.0.3 or later.
 
 .. note:: This feature requires the availability of the ``singularity`` tool in the computer

@@ -149,7 +149,7 @@ Named pools
 -------------
 
 If you want to have a more precise control on the computing nodes pools used in your pipeline using a different pool
-depending the task in your pipeline, you can use the Nextflow :ref:`process-queue` directive the specify the *name* of a
+depending on the task in your pipeline, you can use the Nextflow :ref:`process-queue` directive the specify the *name* of a
 Azure Batch compute pool that has to be used to run that process' tasks.
 
 The pool is expected to be already available in the Batch environment, unless the setting ``allowPoolCreation=true`` is
@@ -240,7 +240,7 @@ azure.batch.accountName                         The batch service account name.
 azure.batch.accountKey                          The batch service account key.
 azure.batch.endpoint                            The batch service endpoint e.g. ``https://nfbatch1.westeurope.batch.azure.com``.
 azure.batch.location                            The batch service location e.g. ``westeurope``. This is not needed when the endpoint is specified.
-azure.batch.autoPoolMode                        Enable the automatic creation of batch pools depending the pipeline resources demand (default: ``true``)
+azure.batch.autoPoolMode                        Enable the automatic creation of batch pools depending on the pipeline resources demand (default: ``true``)
 azure.batch.allowPoolCreation                   Enable the automatic creation of batch pools specified in the Nextflow configuration file (default: ``false``)
 azure.batch.deleteJobsOnCompletion              Enable the automatic deletion of jobs created by the pipeline execution (default: ``true``).
 azure.batch.deletePoolsOnCompletion             Enable the automatic deletion of compute node pools upon pipeline completion (default: ``false``).
