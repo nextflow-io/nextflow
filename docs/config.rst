@@ -776,7 +776,7 @@ brackets, as shown below::
 Scope `weblog`
 --------------
 
-The ``weblog`` scope allows to send detailed :ref:`trace scope<trace-fields>` information as HTTP POST request to a webserver, shipped as a JSON object.
+The ``weblog`` scope allows you to send detailed :ref:`trace scope<trace-fields>` information as HTTP POST request to a webserver, shipped as a JSON object.
 
 Detailed information about the JSON fields can be found in the :ref:`weblog description<weblog-service>`.
 
