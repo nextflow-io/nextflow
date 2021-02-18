@@ -487,7 +487,7 @@ class PodSpecBuilder {
             str = str.substring(0,63)
         }
         str = str.replaceAll(/[^a-zA-Z0-9\.\_\-]+/, '_')
-        str = str.replaceAll(/^[^a-zA-Z]+/, '')
+        str = str.replaceAll(/^[^a-zA-Z0-9]+/, '')
         str = str.replaceAll(/[^a-zA-Z0-9]+$/, '')
         return str
     }
