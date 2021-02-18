@@ -1184,17 +1184,18 @@ Output 'stdout' special file
 The ``stdout`` qualifier allows you to `capture` the `stdout` output of the executed process and send it over
 the channel specified in the output parameter declaration. For example::
 
-    process echoSomething {
+    process sayHello {
         output:
-        stdout channel
+        stdout ch
 
         """
         echo Hello world!
         """
     }
 
-    channel.subscribe { print "I say..  $it" }
+    ch.view { print "I say..  $it" }
 
+In the above example ``ch`` represents an arbitrary channel variable that holds the process outputs.
 
 .. _process-env:
 
