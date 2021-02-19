@@ -1389,6 +1389,7 @@ The following parameters can be used with the ``collectFile`` operator:
 =============== ========================
 Name            Description
 =============== ========================
+``cache``       Caches the resulting file(s), so that pipelines can be resumed without recreating the file in each execution (default: ``false``)
 ``keepHeader``  Prepend the resulting file with the header fetched in the first collected file. The header size (ie. lines) can be specified by using the ``skip`` parameter (default: ``false``), to determine how many lines to remove from all collected files except for the first (where no lines will be removed).
 ``name``        Name of the file where all received values are stored.
 ``newLine``     Appends a ``newline`` character automatically after each entry (default: ``false``).
