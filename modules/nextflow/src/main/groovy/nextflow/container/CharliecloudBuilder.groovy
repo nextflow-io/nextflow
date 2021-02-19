@@ -63,7 +63,7 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
     CharliecloudBuilder build(StringBuilder result) {
         assert image
 
-        result << 'ch-run --no-home --unset-env="*" -w '
+        result << 'ch-run --no-home --unset-env="*" -w --set-env=' + image + '/ch/environment '
 
         appendEnv(result)
 
