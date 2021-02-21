@@ -1,5 +1,6 @@
 package nextflow.cloud.azure.batch
 
+import com.microsoft.azure.batch.protocol.models.CloudPool
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzPoolOpts
 import nextflow.processor.TaskConfig
@@ -384,4 +385,37 @@ class AzBatchServiceTest extends Specification {
         then:
         0 * svc.cleanupPools() >> null
     }
+
+    def 'should get spec from pool config' () {
+        given:
+        def POOL_ID = 'foo'
+        def CONFIG = [batch:[location: 'northeurope', pools: [(POOL_ID): [vmType: 'Standard_D2_v2']]]]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+
+        when:
+        def result = svc.specFromPoolConfig(POOL_ID)
+        then:
+        result.vmType.name == 'Standard_D2_v2'
+        result.vmType.numberOfCores == 2
+        and:
+        0 * svc.getPool(_) >> null
+    }
+
+    def 'should get spec from existing pool' () {
+        given:
+        def POOL_ID = 'foo'
+        def CONFIG = [batch:[location: 'northeurope']]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+
+        when:
+        def result = svc.specFromPoolConfig(POOL_ID)
+        then:
+        1 * svc.getPool(_) >> new CloudPool(vmSize: 'Standard_D2_v2')
+        and:        
+        result.vmType.name == 'Standard_D2_v2'
+        result.vmType.numberOfCores == 2
+    }
+
 }
