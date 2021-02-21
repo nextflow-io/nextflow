@@ -393,13 +393,14 @@ class AzBatchService implements Closeable {
         throw new IllegalStateException("Cannot find a matching VM image with publister=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; verification type=$opts.verification")
     }
 
-    protected AzVmPoolSpec specFromConfigPool(String poolId) {
+    protected AzVmPoolSpec specFromPoolConfig(String poolId) {
 
         def opts = config.batch().pool(poolId)
-        if( !opts )
+        def name = opts ? opts.vmType : getPool(poolId)?.vmSize()
+        if( !name )
             throw new IllegalArgumentException("Cannot find Azure Batch config for pool: $poolId")
 
-        def type = getVmType(config.batch().location, opts.vmType)
+        def type = getVmType(config.batch().location, name)
         if( !type )
             throw new IllegalArgumentException("Cannot find Azure Batch VM type '$poolId' - Check pool definition $poolId in the Nextflow config file")
 
@@ -464,7 +465,7 @@ class AzBatchService implements Closeable {
         }
 
         return poolId
-                ? specFromConfigPool(poolId)
+                ? specFromPoolConfig(poolId)
                 : specFromAutoPool(task)
 
     }
