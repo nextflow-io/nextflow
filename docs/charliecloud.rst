@@ -13,7 +13,7 @@ be extremely useful to package the binary dependencies of a script into a standa
 executed on any platform supporting the Charliecloud engine.
 
 .. note::
-    This feature requires Nextflow version ``20.12.0-edge`` or later.
+    This feature requires Nextflow version ``21.03.0-edge`` or later and Charliecloud ``v0.22` or later.
 
 .. warning::
     This is an incubating feature. The use in production environment is not recommended.
