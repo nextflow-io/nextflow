@@ -396,7 +396,7 @@ Then, parameters are inherited from the including context. For example::
 
 The above snippet prints::
 
-    Hola mundo
+    Hola Mundo
 
 
 The option ``addParams`` can be used to extend the module parameters without affecting the external
