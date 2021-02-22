@@ -38,7 +38,7 @@ class AzPoolOpts implements CacheFunnel {
 
     static public final String DEFAULT_PUBLISHER = "microsoft-azure-batch"
     static public final String DEFAULT_OFFER = "centos-container"
-    static public final String DEFAULT_VM_TYPE = "Standard_A3"
+    static public final String DEFAULT_VM_TYPE = "STANDARD_D2_V3"
     static public final OSType DEFAULT_OS_TYPE = OSType.LINUX
     static public final Duration DEFAULT_SCALE_INTERVAL = Duration.of('5 min')
 
