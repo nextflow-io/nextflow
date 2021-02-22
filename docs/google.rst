@@ -203,6 +203,7 @@ if the virtual machine was terminated preemptively::
       maxRetries = 5
     }
 
+.. tip:: For an exhaustive list of all possible error codes, please refer to the official Google LifeSciences `documentation <https://cloud.google.com/life-sciences/docs/troubleshooting#error_codes>`_.
 
 Hybrid execution
 ----------------
