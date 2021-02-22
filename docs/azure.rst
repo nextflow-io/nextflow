@@ -4,19 +4,17 @@
 Azure Cloud
 ************
 
-
 Requirements
 ============
 
-Nextflow
---------
-The support for Azure Cloud requires Nextflow version ``21.02.0-edge`` or later. Make sure to have it installed
-using the following command::
+The support for Azure Cloud requires Nextflow version ``21.02.0-edge`` or later. If you don't have it installed
+use the following command to download it in your computer::
 
-  nextflow info
+    export NXF_EDGE=1
+    curl get.nextflow.io | bash
 
 Also the support for Azure Cloud requires adding the following setting at 
-the beginning of your `nextflow.config` file:: 
+the beginning of your ``nextflow.config`` file::
 
   plugins { 
     id 'nf-azure'
@@ -28,7 +26,7 @@ the beginning of your `nextflow.config` file::
 Azure Blob Storage
 ===================
 
-Nextflow as a built-in support for `Azure Blob Storage <https://azure.microsoft.com/en-us/services/storage/blobs/>`_
+Nextflow has built-in support for `Azure Blob Storage <https://azure.microsoft.com/en-us/services/storage/blobs/>`_.    
 Files stored in a Azure blob container can be accessed transparently in your pipeline script like any other file
 in the local file system.
 
@@ -46,7 +44,7 @@ of the ``accountKey`` attribute.
 
 .. tip::
     When creating the `Shared Access Token` make sure to allow the resource types `Container` and `Object` and allow
-the permissions: `Read`, `Write`, `Delete`, `List`, `Add`, `Create`.
+    the permissions: `Read`, `Write`, `Delete`, `List`, `Add`, `Create`.
 
 
 Once the Blob Storage credentials are set you can access the files in the blob container like local files prepending
@@ -70,7 +68,7 @@ Get started
 
 1 - Create Batch account in Azure portal. Take note of the Batch account name and key.
 
-2 - Make sure to have a Azure blob storage account in the same location where the Batch account was created.
+2 - Make sure to have a Azure Blob Storage account in the same location where the Batch account was created.
 
 3 - Make sure your pipeline processes specifies one or more Docker containers by using the :ref:`process-container` directive.
 
@@ -112,10 +110,10 @@ Then launch the execution of the pipeline using the following command::
     nextflow run <PIPELINE NAME> -w az://YOUR-CONTAINER/work
 
 
-Replacing `<PIPELINE NAME>` with a pipeline name e.g. ``nextflow-io/rnaseq-nf`` and ``YOUR-CONTAINER`` a blob
+Replacing ``<PIPELINE NAME>`` with a pipeline name e.g. ``nextflow-io/rnaseq-nf`` and ``YOUR-CONTAINER`` a blob
 container in the storage account defined in the above configuration.
 
-See the `Batch documentation <https://docs.microsoft.com/en-us/azure/batch/quick-create-portal>_ for further
+See the `Batch documentation <https://docs.microsoft.com/en-us/azure/batch/quick-create-portal>`_ for further
 details about the configuration for the Azure Batch service.
 
 
