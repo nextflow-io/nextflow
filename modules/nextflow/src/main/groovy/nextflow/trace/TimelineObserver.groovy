@@ -16,6 +16,9 @@
  */
 
 package nextflow.trace
+
+import groovy.text.GStringTemplateEngine
+
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
@@ -145,11 +148,21 @@ class TimelineObserver implements TraceObserver {
     }
 
 
-    final private String REPLACE_STR = '/*REPLACE_WITH_TIMELINE_DATA*/'
-
     protected void renderHtml() {
-        final tpl = readTemplate()
-        final p = tpl.indexOf(REPLACE_STR)
+        // render HTML timeline template
+        final tpl_fields = [
+                payload : renderData(),
+                assets_js : [
+                        readTemplate('assets/jquery-3.2.1.min.js'),
+                        readTemplate('assets/d3.min.js'),
+                        readTemplate('assets/d3-timeline.js')
+                ]
+        ]
+
+        final tpl = readTemplate('TimelineTemplate.html')
+        def engine = new GStringTemplateEngine()
+        def html_template = engine.createTemplate(tpl)
+        def html_output = html_template.make(tpl_fields).toString()
 
         // make sure the parent path exists
         def parent = reportFile.getParent()
@@ -159,13 +172,11 @@ class TimelineObserver implements TraceObserver {
         if( overwrite )
             Files.deleteIfExists(reportFile)
         else
-            // roll the any trace files that may exist
+        // roll the any trace files that may exist
             reportFile.rollFile()
 
         def writer = Files.newBufferedWriter(reportFile, Charset.defaultCharset())
-        writer.write(tpl, 0, p)
-        writer.append( renderData() )
-        writer.write(tpl, p+REPLACE_STR.size(), tpl.size() -p-REPLACE_STR.size())
+        writer.withWriter { w -> w << html_output }
         writer.close()
     }
 
@@ -233,9 +244,15 @@ class TimelineObserver implements TraceObserver {
         result.join(' / ')
     }
 
-    protected String readTemplate() {
+    /**
+     * Read the document HTML template from the application classpath
+     *
+     * @param path A resource path location
+     * @return The loaded template as a string
+     */
+    private String readTemplate( String path ) {
         StringWriter writer = new StringWriter();
-        def res =  this.class.getResourceAsStream('TimelineTemplate.html')
+        def res =  this.class.getResourceAsStream( path )
         int ch
         while( (ch=res.read()) != -1 ) {
             writer.append(ch as char);

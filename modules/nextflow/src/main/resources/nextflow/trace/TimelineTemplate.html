@@ -19,10 +19,7 @@
 <head>
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <script type="text/javascript">
-var prot = (("https:" == document.location.protocol) ? "https://" : "http://");
-document.write(unescape("%3Cscript src='" + prot + "code.jquery.com/jquery-latest.min.js' type='text/javascript' %3E%3C/script%3E"));
-document.write(unescape("%3Cscript src='" + prot + "d3js.org/d3.v3.min.js' charset='utf-8' type='text/javascript' %3E%3C/script%3E"));
-document.write(unescape("%3Cscript src='" + prot + "cdn.rawgit.com/nextflow-io/d3-timeline/82622c4cc35bac7283b3a317826b0709ac1ae476/src/d3-timeline.js' type='text/javascript' %3E%3C/script%3E"));
+${ assets_js.join("\n\n\n\n") }
 </script>
 <style type="text/css">
 * {
@@ -78,7 +75,7 @@ function c0(index) { return "#9c9c9c"; }
 function c1(index) { return "#bdbdbd"; }
 function c2(index) { return colors[index % 16]; } // <-- note: uses only the first 16 colors
 
-/*REPLACE_WITH_TIMELINE_DATA*/
+${ payload }
 
 function getTickFormat() {
   var MIN = 1000 * 60
