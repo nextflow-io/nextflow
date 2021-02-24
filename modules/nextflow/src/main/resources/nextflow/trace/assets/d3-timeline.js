@@ -1,6 +1,14 @@
 // vim: ts=2 sw=2
 // Downloaded on 2021-02-23 from http://cdn.rawgit.com/nextflow-io/d3-timeline/82622c4cc35bac7283b3a317826b0709ac1ae476/src/d3-timeline.js
 (function () {
+
+  // see https://github.com/mbostock/d3/wiki/Ordinal-Scales#category20c
+  var colors = d3.scale.category20c().domain(d3.range(0,20)).range()
+  function color_cycler(index) { return colors[index % 16]; } // mid section. note: uses only the first 16 colors
+  var color_cached = "#9c9c9c";
+  var color_scheduling = "#bdbdbd";
+  var color_termination = "#cecece";
+
   d3.timeline = function() {
     var DISPLAY_TYPES = ["circle", "rect"];
 
@@ -237,6 +245,8 @@
       g.each(function(d, i) {
         chartData = d;
         d.forEach( function(datum, index){
+          var cached = datum.cached;
+          var process_index = datum.index;
           var data = datum.times;
           var hasLabel = (typeof(datum.label) != "undefined");
 
@@ -263,8 +273,17 @@
             .attr("r", itemHeight / 2)
             .attr("height", itemHeight)
             .style("fill", function(d, i){
-              var dColorPropName;
-              if (d.color) return d.color;
+              if (i == 0) return color_scheduling;
+              if (i == 1) {  // execution time
+                if (cached) {
+                  return color_cached;
+                }
+                return color_cycler(process_index);
+              }
+
+              return color_scheduling;
+              // TODO: whenever the original d3-timeline behaviour is needed, uncomment and adapt
+              /* var dColorPropName;
               if( colorPropertyName ){
                 dColorPropName = d[colorPropertyName];
                 if ( dColorPropName ) {
@@ -273,7 +292,7 @@
                   return colorCycle( datum[colorPropertyName] );
                 }
               }
-              return colorCycle(index);
+              return colorCycle(index);*/
             })
             .on("mousemove", function (d, i) {
               hover(d, index, datum);
