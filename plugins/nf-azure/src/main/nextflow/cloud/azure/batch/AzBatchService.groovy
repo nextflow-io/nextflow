@@ -70,6 +70,8 @@ import org.joda.time.Period
 @CompileStatic
 class AzBatchService implements Closeable {
 
+    static private final String AZCOPY_URL = 'https://github.com/nextflow-io/azcopy-tool/raw/linux_amd64_10.8.0/azcopy'
+
     static private final long _1GB = 1 << 30
 
     static final private Map<String,AzVmPoolSpec> allPools = new HashMap<>(50)
@@ -342,7 +344,7 @@ class AzBatchService implements Closeable {
         if( config.batch().installAzCopy!=Boolean.FALSE && !config.batch().canCreatePool() ) {
             log.debug "[AZURE BATCH] installing azcopy as task resource"
             resFiles << new ResourceFile()
-                    .withHttpUrl('https://github.com/nextflow-io/azcopy-tool/raw/linux_amd64_10.8.0/azcopy')
+                    .withHttpUrl(AZCOPY_URL)
                     .withFilePath('.nextflow-bin/azcopy')
         }
 
@@ -539,7 +541,7 @@ class AzBatchService implements Closeable {
         def resourceFiles = new ArrayList(10)
         
         resourceFiles << new ResourceFile()
-                .withHttpUrl("https://github.com/nextflow-io/azcopy-tool/raw/linux_amd64_10.8.0/azcopy")
+                .withHttpUrl(AZCOPY_URL)
                 .withFilePath('azcopy')
 
         def poolStartTask = new StartTask()
