@@ -189,17 +189,17 @@ class TimelineObserver implements TraceObserver {
     protected String renderData() {
         // Returns a JSON formatted string
         final result = new StringBuilder()
+        final indent = "    ";
         result << '{\n'
-        result << '"elapsed": "' << new Duration(endMillis-startMillis).toString() << '",\n'
-        result << '"beginningMillis": ' << beginMillis << ',\n'
-        result << '"endingMillis": ' << endMillis << ',\n'
-        result << '"processes": [\n'
+        result << indent << '"elapsed": "' << new Duration(endMillis-startMillis).toString() << '",\n'
+        result << indent << '"beginningMillis": ' << beginMillis << ',\n'
+        result << indent << '"endingMillis": ' << endMillis << ',\n'
+        result << indent << '"processes": [\n'
         records.values().eachWithIndex { TraceRecord it, index ->
             if( index ) result << ',\n'
             append(result, it)
         }
-        result << '\n'
-        result << ']\n'
+        result << '\n' << indent << ']\n'
         result << '}\n'
         return result.toString()
     }
@@ -212,8 +212,9 @@ class TimelineObserver implements TraceObserver {
         final process = record.get('process') as String
         final complete = record.get('complete') as Long
         final index = colorIndexes.getOrCreate(process) { colorIndexes.size() }
+        final indent = "    ";
 
-        template << '{'
+        template << indent << indent << '{'
         template << "\"label\": \"${StringEscapeUtils.escapeJavaScript(name)}\", "
         template << "\"cached\": ${record.cached}, "
         template << "\"index\": $index, "
@@ -233,8 +234,7 @@ class TimelineObserver implements TraceObserver {
             }
         }
 
-        template << "]"
-        template << '}'
+        template << "]}"
     }
 
     protected String labelString( TraceRecord record ) {

@@ -92,9 +92,9 @@ class TimelineObserverTest extends Specification {
                 "beginningMillis": 1000,
                 "endingMillis": 3500,
                 "processes": [
-                    {"label": "foo", "cached": false, "times": []},
-                    {"label": "bar", "cached": true, "times": [{"starting_time": 1429821425141, "ending_time": 1429821425241}, {"starting_time": 1429821425241, "ending_time": 1429821425641, "label": "500ms \\/ 57.2 MB"}]},
-                    {"label": "baz", "cached": false, "times": [{"starting_time": 1429821425141, "ending_time": 1429821425341}, {"starting_time": 1429821425341, "ending_time": 1429821425841, "label": "700ms \\/ 66.8 MB"}]}
+                    {"label": "foo", "cached": false, "index": 0, "times": []},
+                    {"label": "bar", "cached": true, "index": 0, "times": [{"starting_time": 1429821425141, "ending_time": 1429821425241}, {"starting_time": 1429821425241, "ending_time": 1429821425641, "label": "500ms \\/ 57.2 MB \\/ CACHED"}]},
+                    {"label": "baz", "cached": false, "index": 1, "times": [{"starting_time": 1429821425141, "ending_time": 1429821425341}, {"starting_time": 1429821425341, "ending_time": 1429821425841, "label": "700ms \\/ 66.8 MB"}]}
                 ]
             }
             /
