@@ -87,14 +87,16 @@ class TimelineObserverTest extends Specification {
 
         expect:
         observer.renderData().toString() == /
-            var elapsed="2.5s"
-            var beginningMillis=1000;
-            var endingMillis=3500;
-            var processes=[
-            {"label": "foo", "cached": false, "times": []},
-            {"label": "bar", "cached": true, "times": [{"starting_time": 1429821425141, "ending_time": 1429821425241}, {"starting_time": 1429821425241, "ending_time": 1429821425641, "label": "500ms \\/ 57.2 MB"}]},
-            {"label": "baz", "cached": false, "times": [{"starting_time": 1429821425141, "ending_time": 1429821425341}, {"starting_time": 1429821425341, "ending_time": 1429821425841, "label": "700ms \\/ 66.8 MB"}]}
-            ]
+            {
+                "elapsed": "2.5s",
+                "beginningMillis": 1000,
+                "endingMillis": 3500,
+                "processes": [
+                    {"label": "foo", "cached": false, "times": []},
+                    {"label": "bar", "cached": true, "times": [{"starting_time": 1429821425141, "ending_time": 1429821425241}, {"starting_time": 1429821425241, "ending_time": 1429821425641, "label": "500ms \\/ 57.2 MB"}]},
+                    {"label": "baz", "cached": false, "times": [{"starting_time": 1429821425141, "ending_time": 1429821425341}, {"starting_time": 1429821425341, "ending_time": 1429821425841, "label": "700ms \\/ 66.8 MB"}]}
+                ]
+            }
             /
             .stripIndent().leftTrim()
     }
