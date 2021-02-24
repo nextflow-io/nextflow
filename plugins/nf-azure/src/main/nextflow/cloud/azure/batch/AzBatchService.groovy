@@ -539,7 +539,7 @@ class AzBatchService implements Closeable {
         def resourceFiles = new ArrayList(10)
         
         resourceFiles << new ResourceFile()
-                .withHttpUrl("https://nf-xpack.s3-eu-west-1.amazonaws.com/azcopy/linux_amd64_10.8.0/azcopy")
+                .withHttpUrl("https://github.com/nextflow-io/azcopy-tool/raw/linux_amd64_10.8.0/azcopy")
                 .withFilePath('azcopy')
 
         def poolStartTask = new StartTask()
