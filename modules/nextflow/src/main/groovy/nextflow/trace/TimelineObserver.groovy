@@ -220,14 +220,11 @@ class TimelineObserver implements TraceObserver {
         template << "\"times\": ["
 
         if( submit && start ) {
-            //final index = colorIndexes.getOrCreate(process) { colorIndexes.size() }
-            //template << "{\"starting_time\": $submit, \"ending_time\": $start, \"color\":c1($index)}"
             template << "{\"starting_time\": $submit, \"ending_time\": $start}"
 
             if( start && realtime ) {
                 def label = StringEscapeUtils.escapeJavaScript(labelString(record))
                 def ending = start+realtime
-                //def clr = record.cached ? 'c0' : 'c2'
                 template << ", {\"starting_time\": $start, \"ending_time\": $ending, \"label\": \"$label\"}"
 
                 if( complete && ending < complete ) {
