@@ -216,7 +216,7 @@ Template
 --------
 
 Process script can be externalised by using *template* files which can be reused across different processes and tested
-independently by the overall pipeline execution.
+independently from the overall pipeline execution.
 
 A template is simply a shell script file that Nextflow is able to execute by using the ``template`` function
 as shown below::
