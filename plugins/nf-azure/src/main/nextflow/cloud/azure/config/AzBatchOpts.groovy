@@ -33,6 +33,8 @@ class AzBatchOpts implements CloudTransferOptions {
 
     static final private Pattern ENDPOINT_PATTERN = ~/https:\/\/(\w+)\.(\w+)\.batch\.azure\.com/
 
+    private Map<String,String> sysEnv
+
     int maxParallelTransfers
     int maxTransferAttempts
     Duration delayBetweenAttempts
@@ -48,10 +50,11 @@ class AzBatchOpts implements CloudTransferOptions {
 
     Map<String,AzPoolOpts> pools
 
-    AzBatchOpts(Map config) {
+    AzBatchOpts(Map config, Map<String,String> env=null) {
         assert config!=null
-        accountName = config.accountName
-        accountKey = config.accountKey
+        sysEnv = env==null ? new HashMap<String,String>(System.getenv()) : env
+        accountName = config.accountName ?: sysEnv.get('AZURE_BATCH_ACCOUNT_NAME')
+        accountKey = config.accountKey ?: sysEnv.get('AZURE_BATCH_ACCOUNT_KEY')
         endpoint = config.endpoint
         location = config.location
         autoPoolMode = config.autoPoolMode

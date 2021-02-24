@@ -29,15 +29,17 @@ import nextflow.util.Duration
 @CompileStatic
 class AzStorageOpts {
 
+    private Map<String,String> sysEnv
     String accountKey
     String accountName
     String sasToken
     Duration tokenDuration
 
-    AzStorageOpts(Map config) {
+    AzStorageOpts(Map config, Map<String,String> env=null) {
         assert config!=null
-        this.accountKey = config.accountKey
-        this.accountName = config.accountName
+        this.sysEnv = env==null ? new HashMap<String,String>(System.getenv()) : env
+        this.accountKey = config.accountKey ?: sysEnv.get('AZURE_STORAGE_ACCOUNT_KEY')
+        this.accountName = config.accountName ?: sysEnv.get('AZURE_STORAGE_ACCOUNT_NAME')
         this.sasToken = config.sasToken
         this.tokenDuration = (config.tokenDuration as Duration) ?: Duration.of('12h')
     }

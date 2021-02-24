@@ -13,7 +13,7 @@ class AzBatchOptsTest extends Specification {
     def 'should fetch location' ()  {
 
         expect:
-        new AzBatchOpts(endpoint: ENDPOINT, location: LOC).getLocation() == EXPECTED
+        new AzBatchOpts(endpoint: ENDPOINT, location: LOC, [:]).getLocation() == EXPECTED
 
         where:
         LOC                 | ENDPOINT                                  |  EXPECTED
@@ -28,14 +28,39 @@ class AzBatchOptsTest extends Specification {
     def 'should fetch account name' ()  {
 
         expect:
-        new AzBatchOpts(endpoint: ENDPOINT, accountName: NAME).getAccountName() == EXPECTED
+        new AzBatchOpts(endpoint: ENDPOINT, accountName: NAME, [:]).getAccountName() == EXPECTED
 
         where:
-        NAME                | ENDPOINT |  EXPECTED
+        NAME                | ENDPOINT                                  |  EXPECTED
         null                | null                                      | null
         'foo'               | null                                      | 'foo'
         'foo'               | 'https://bar.eu1.batch.azure.com'         | 'foo'
         null                | 'https://bar.eu2.batch.azure.com'         | 'bar'
 
+    }
+
+    def 'should get account name & key'() {
+        when:
+        def opts1 = new AzBatchOpts([:], [:])
+        then:
+        opts1.accountName == null
+        opts1.accountKey == null
+
+        when:
+        def opts2 = new AzBatchOpts(
+                [accountName: 'xyz', accountKey: '123'],
+                [AZURE_BATCH_ACCOUNT_NAME: 'env-name', AZURE_BATCH_ACCOUNT_KEY:'env-key'])
+        then:
+        opts2.accountName == 'xyz'
+        opts2.accountKey == '123'
+
+
+        when:
+        def opts3 = new AzBatchOpts(
+                [:],
+                [AZURE_BATCH_ACCOUNT_NAME: 'env-name', AZURE_BATCH_ACCOUNT_KEY:'env-key'])
+        then:
+        opts3.accountName == 'env-name'
+        opts3.accountKey == 'env-key'
     }
 }
