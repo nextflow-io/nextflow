@@ -83,7 +83,12 @@ class TimelineObserver implements TraceObserver {
     void onFlowComplete() {
         log.debug "Flow completing -- rendering html timeline"
         endMillis = System.currentTimeMillis()
-        renderHtml()
+        try {
+            renderHtml()
+        }
+        catch (Exception e) {
+            log.warn "Failed to render execution report -- see the log file for details", e
+        }
     }
 
 
@@ -154,8 +159,9 @@ class TimelineObserver implements TraceObserver {
                 payload : renderData(),
                 assets_js : [
                         readTemplate('assets/jquery-3.2.1.min.js'),
-                        readTemplate('assets/d3.min.js'),
-                        readTemplate('assets/d3-timeline.js')
+                        readTemplate('assets/d3.v3.min.js'),
+                        readTemplate('assets/d3-timeline.js'),
+                        readTemplate('assets/TimelineTemplate.js')
                 ]
         ]
 
@@ -172,7 +178,7 @@ class TimelineObserver implements TraceObserver {
         if( overwrite )
             Files.deleteIfExists(reportFile)
         else
-        // roll the any trace files that may exist
+            // roll the any trace files that may exist
             reportFile.rollFile()
 
         def writer = Files.newBufferedWriter(reportFile, Charset.defaultCharset())
@@ -180,19 +186,22 @@ class TimelineObserver implements TraceObserver {
         writer.close()
     }
 
-    protected StringBuilder renderData() {
+    protected String renderData() {
+        // Returns a JSON formatted string
         final result = new StringBuilder()
-        result << 'var elapsed="' << new Duration(endMillis-startMillis).toString() << '"\n'
-        result << 'var beginningMillis=' << beginMillis << ';\n'
-        result << 'var endingMillis=' << endMillis << ';\n'
-        result << 'var data=[\n'
+        result << '{\n'
+        result << '"elapsed": "' << new Duration(endMillis-startMillis).toString() << '",\n'
+        result << '"beginningMillis": ' << beginMillis << ',\n'
+        result << '"endingMillis": ' << endMillis << ',\n'
+        result << '"processes": [\n'
         records.values().eachWithIndex { TraceRecord it, index ->
             if( index ) result << ',\n'
             append(result, it)
         }
         result << '\n'
         result << ']\n'
-        result
+        result << '}\n'
+        return result.toString()
     }
 
     protected void append(StringBuilder template, TraceRecord record) {
@@ -202,23 +211,27 @@ class TimelineObserver implements TraceObserver {
         final realtime = record.get('realtime') as Long
         final process = record.get('process') as String
         final complete = record.get('complete') as Long
+        final index = colorIndexes.getOrCreate(process) { colorIndexes.size() }
 
         template << '{'
         template << "\"label\": \"${StringEscapeUtils.escapeJavaScript(name)}\", "
+        template << "\"cached\": ${record.cached}, "
+        template << "\"index\": $index, "
         template << "\"times\": ["
 
         if( submit && start ) {
-            final index = colorIndexes.getOrCreate(process) { colorIndexes.size() }
-            template << "{\"starting_time\": $submit, \"ending_time\": $start, \"color\":c1($index)}"
+            //final index = colorIndexes.getOrCreate(process) { colorIndexes.size() }
+            //template << "{\"starting_time\": $submit, \"ending_time\": $start, \"color\":c1($index)}"
+            template << "{\"starting_time\": $submit, \"ending_time\": $start}"
 
             if( start && realtime ) {
                 def label = StringEscapeUtils.escapeJavaScript(labelString(record))
                 def ending = start+realtime
-                def clr = record.cached ? 'c0' : 'c2'
-                template << ", {\"starting_time\": $start, \"ending_time\": $ending, \"color\":$clr($index), \"label\": \"$label\"}"
+                //def clr = record.cached ? 'c0' : 'c2'
+                template << ", {\"starting_time\": $start, \"ending_time\": $ending, \"label\": \"$label\"}"
 
                 if( complete && ending < complete ) {
-                    template << ", {\"starting_time\": $ending, \"ending_time\": $complete, \"color\":c1($index)}"
+                    template << ", {\"starting_time\": $ending, \"ending_time\": $complete}"
                 }
             }
         }
