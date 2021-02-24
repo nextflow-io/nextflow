@@ -342,7 +342,7 @@ class AzBatchService implements Closeable {
         if( config.batch().installAzCopy!=Boolean.FALSE && !config.batch().canCreatePool() ) {
             log.debug "[AZURE BATCH] installing azcopy as task resource"
             resFiles << new ResourceFile()
-                    .withHttpUrl('https://nf-xpack.s3-eu-west-1.amazonaws.com/azcopy/linux_amd64_10.8.0/azcopy')
+                    .withHttpUrl('https://github.com/nextflow-io/azcopy-tool/raw/linux_amd64_10.8.0/azcopy')
                     .withFilePath('.nextflow-bin/azcopy')
         }
 
