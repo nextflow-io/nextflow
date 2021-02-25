@@ -121,7 +121,7 @@ Pools configuration
 -------------------
 
 When using the ``autoPoolMode`` the setting Nextflow automatically creates a `pool` of computing nodes to execute the
-jobs run by your pipeline. By default it only uses 1 compute node of ``Standard_A3`` type.
+jobs run by your pipeline. By default it only uses 1 compute node of ``Standard_D4_v3`` type.
 
 The pool is not removed when the pipeline execution terminates, unless the configuration setting ``deletePoolsOnCompletion=true``
 is added in your pipeline configuration file.
