@@ -31,19 +31,6 @@ import test.TestHelper
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class TimelineObserverTest extends Specification {
-
-    def 'should read html template' () {
-
-        given:
-        def observer = Spy(TimelineObserver)
-        when:
-        def tpl = observer.readTemplate()
-        then:
-        tpl.startsWith '<!doctype html>'
-        tpl.contains 'REPLACE_WITH_TIMELINE_DATA'
-
-    }
-
     def 'should return timeline in json format' () {
 
         given:
