@@ -178,7 +178,7 @@ class TimelineObserver implements TraceObserver {
         if( overwrite )
             Files.deleteIfExists(reportFile)
         else
-            // roll the any trace files that may exist
+            // roll any trace files that may exist
             reportFile.rollFile()
 
         def writer = Files.newBufferedWriter(reportFile, Charset.defaultCharset())
