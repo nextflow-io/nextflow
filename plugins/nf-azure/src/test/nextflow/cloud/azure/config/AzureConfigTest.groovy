@@ -55,15 +55,13 @@ class AzureConfigTest extends Specification {
                                    AZURE_STORAGE_SAS_TOKEN: SAS ]
         
         and:
-        cfg.batch().accountKey == null
-        cfg.batch().accountName == null
         cfg.batch().endpoint == null
         cfg.batch().deleteJobsOnCompletion == null
         cfg.batch().deletePoolsOnCompletion == null
         cfg.batch().location == null
         cfg.batch().autoPoolMode == null
         cfg.batch().allowPoolCreation == null
-        cfg.batch().autoPoolOpts().vmType == 'Standard_A3'
+        cfg.batch().autoPoolOpts().vmType == 'Standard_D4_v3'
         cfg.batch().autoPoolOpts().vmCount == 1
         cfg.batch().autoPoolOpts().maxVmCount == 3
         cfg.batch().autoPoolOpts().scaleInterval == Duration.of('5 min')
@@ -121,10 +119,6 @@ class AzureConfigTest extends Specification {
         cfg.batch().pool('myPool').maxVmCount == 50
         cfg.batch().pool('myPool').scaleFormula == 'x + y + z'
         cfg.batch().pool('myPool').scaleInterval == Duration.of('15 min')
-        and:
-        cfg.storage().accountKey == null
-        cfg.storage().accountName == null
-        cfg.storage().sasToken == null
     }
 
     def 'should get azure batch endpoint from account and location' () {
