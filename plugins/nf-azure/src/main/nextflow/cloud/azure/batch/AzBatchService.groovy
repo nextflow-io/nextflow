@@ -51,6 +51,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzPoolOpts
+import nextflow.cloud.azure.config.CopyToolInstallMode
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
@@ -69,6 +70,8 @@ import org.joda.time.Period
 @Slf4j
 @CompileStatic
 class AzBatchService implements Closeable {
+
+    static private final String AZCOPY_URL = 'https://github.com/nextflow-io/azcopy-tool/raw/linux_amd64_10.8.0/azcopy'
 
     static private final long _1GB = 1 << 30
 
@@ -339,6 +342,13 @@ class AzBatchService implements Closeable {
 
         final resFiles = new ArrayList(10)
 
+        if( config.batch().copyToolInstallMode == CopyToolInstallMode.task ) {
+            log.trace "[AZURE BATCH] installing azcopy as task resource"
+            resFiles << new ResourceFile()
+                    .withHttpUrl(AZCOPY_URL)
+                    .withFilePath('.nextflow-bin/azcopy')
+        }
+
         resFiles << new ResourceFile()
                 .withHttpUrl(AzHelper.toHttpUrl(cmdRun, sas))
                 .withFilePath(TaskRun.CMD_RUN)
@@ -532,7 +542,7 @@ class AzBatchService implements Closeable {
         def resourceFiles = new ArrayList(10)
         
         resourceFiles << new ResourceFile()
-                .withHttpUrl("https://nf-xpack.s3-eu-west-1.amazonaws.com/azcopy/linux_amd64_10.8.0/azcopy")
+                .withHttpUrl(AZCOPY_URL)
                 .withFilePath('azcopy')
 
         def poolStartTask = new StartTask()

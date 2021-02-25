@@ -63,4 +63,24 @@ class AzBatchOptsTest extends Specification {
         opts3.accountName == 'env-name'
         opts3.accountKey == 'env-key'
     }
+
+    @Unroll
+    def 'should check azcopy install' () {
+        given:
+        AzBatchOpts opts = Spy(AzBatchOpts, constructorArgs: [ CONFIG,[:] ])
+
+        expect:
+        opts.getCopyToolInstallMode() == EXPECTED
+
+        where:
+        EXPECTED                    | CONFIG
+        CopyToolInstallMode.task    | [:]
+        CopyToolInstallMode.node    | [allowPoolCreation: true]
+        CopyToolInstallMode.node    | [autoPoolMode: true]
+        CopyToolInstallMode.node    | [allowPoolCreation: true, copyToolInstallMode: 'node']
+        CopyToolInstallMode.task    | [allowPoolCreation: true, copyToolInstallMode: 'task']
+        CopyToolInstallMode.task    | [copyToolInstallMode: 'task']
+        CopyToolInstallMode.node    | [copyToolInstallMode: 'node']
+
+    }
 }

@@ -47,6 +47,7 @@ class AzBatchOpts implements CloudTransferOptions {
     Boolean allowPoolCreation
     Boolean deleteJobsOnCompletion
     Boolean deletePoolsOnCompletion
+    CopyToolInstallMode copyToolInstallMode
 
     Map<String,AzPoolOpts> pools
 
@@ -65,6 +66,7 @@ class AzBatchOpts implements CloudTransferOptions {
         maxParallelTransfers = config.maxParallelTransfers ? config.maxParallelTransfers as int : MAX_TRANSFER
         maxTransferAttempts = config.maxTransferAttempts ? config.maxTransferAttempts as int : MAX_TRANSFER_ATTEMPTS
         delayBetweenAttempts = config.delayBetweenAttempts ? config.delayBetweenAttempts as Duration : DEFAULT_DELAY_BETWEEN_ATTEMPTS
+        copyToolInstallMode = config.copyToolInstallMode as CopyToolInstallMode
     }
 
     static Map<String,AzPoolOpts> parsePools(Map<String,Map> pools) {
@@ -123,5 +125,15 @@ class AzBatchOpts implements CloudTransferOptions {
 
     boolean canCreatePool() {
         allowPoolCreation || autoPoolMode
+    }
+
+    CopyToolInstallMode getCopyToolInstallMode() {
+        // if the `installAzCopy` is not specified
+        // `true` is returned when the pool is not create by Nextflow
+        // since it can be a pol provided by the user which does not
+        // provide the required `azcopy` tool
+        if( copyToolInstallMode )
+            return copyToolInstallMode
+        canCreatePool() ? CopyToolInstallMode.node : CopyToolInstallMode.task
     }
 }
