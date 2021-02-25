@@ -491,8 +491,7 @@ class AssetManager {
 
     String getBaseName() {
         def result = project.tokenize('/')
-        if( result.size() > 2 ) throw new IllegalArgumentException("Not a valid project name: $project")
-        return result.size()==1 ? result[0] : result[1]
+        return result.size() == 1 ? result[0] : result[-1]
     }
 
     boolean isLocal() {
