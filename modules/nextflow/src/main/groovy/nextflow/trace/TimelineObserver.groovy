@@ -160,7 +160,7 @@ class TimelineObserver implements TraceObserver {
                 assets_js : [
                         readTemplate('assets/jquery-3.2.1.min.js'),
                         readTemplate('assets/d3.v3.min.js'),
-                        readTemplate('assets/d3-timeline.js'),
+                        readTemplate('assets/d3-timeline.min.js'),
                         readTemplate('assets/TimelineTemplate.js')
                 ]
         ]
