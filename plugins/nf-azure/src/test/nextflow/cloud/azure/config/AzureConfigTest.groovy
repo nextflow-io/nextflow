@@ -61,7 +61,7 @@ class AzureConfigTest extends Specification {
         cfg.batch().location == null
         cfg.batch().autoPoolMode == null
         cfg.batch().allowPoolCreation == null
-        cfg.batch().autoPoolOpts().vmType == 'Standard_A3'
+        cfg.batch().autoPoolOpts().vmType == 'Standard_D4_v3'
         cfg.batch().autoPoolOpts().vmCount == 1
         cfg.batch().autoPoolOpts().maxVmCount == 3
         cfg.batch().autoPoolOpts().scaleInterval == Duration.of('5 min')
