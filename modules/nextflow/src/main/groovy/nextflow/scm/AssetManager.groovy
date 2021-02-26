@@ -491,7 +491,7 @@ class AssetManager {
 
     String getBaseName() {
         def result = project.tokenize('/')
-        return result.size() == 1 ? result[0] : result[-1]
+        return result[-1]
     }
 
     boolean isLocal() {
