@@ -101,7 +101,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                         pid=("${copy[@]}")
                 
                         if ((${#pid[@]}>=$max)); then
-                          sleep 0.2
+                          sleep 0.2 2>/dev/null || sleep 1
                         else
                           eval "${cmd[$i]}" &
                           pid+=($!)
@@ -276,7 +276,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                             pid=("${copy[@]}")
                     
                             if ((${#pid[@]}>=$max)); then
-                              sleep 0.2
+                              sleep 0.2 2>/dev/null || sleep 1
                             else
                               eval "${cmd[$i]}" &
                               pid+=($!)
@@ -417,7 +417,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                             pid=("${copy[@]}")
                     
                             if ((${#pid[@]}>=$max)); then
-                              sleep 0.2
+                              sleep 0.2 2>/dev/null || sleep 1
                             else
                               eval "${cmd[$i]}" &
                               pid+=($!)
