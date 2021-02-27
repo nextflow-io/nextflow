@@ -144,29 +144,29 @@ $(function() {
   }
 
   // Build the trace table
-  function make_duration(ms){
+  function make_duration(ms, type){
     if($('#nf-table-humanreadable').val() == 'false'){
       return ms;
     }
-    if (ms == '-' || ms == 0){
+    if (type == 'sort' || ms == '-' || ms == 0){
       return ms;
     }
     return humanize(moment.duration( parseInt(ms) ));
   }
-  function make_date(ms){
+  function make_date(ms, type){
     if($('#nf-table-humanreadable').val() == 'false'){
       return ms;
     }
-    if (ms == '-' || ms == 0){
+    if (type == 'sort' || ms == '-' || ms == 0){
       return ms;
     }
     return moment( parseInt(ms) ).format();
   }
-  function make_memory(bytes){
+  function make_memory(bytes, type){
     if($('#nf-table-humanreadable').val() == 'false'){
       return bytes;
     }
-    if (bytes == '-' || bytes == 0){
+    if (type == 'sort' || bytes == '-' || bytes == 0){
       return bytes;
     }
     // https://stackoverflow.com/a/14919494
