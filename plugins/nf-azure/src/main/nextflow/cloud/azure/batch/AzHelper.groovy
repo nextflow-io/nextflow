@@ -20,6 +20,7 @@ import java.time.OffsetDateTime
 
 import com.azure.storage.blob.BlobContainerClient
 import com.azure.storage.blob.sas.BlobContainerSasPermission
+import com.azure.storage.blob.sas.BlobSasPermission
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues
 import groovy.transform.CompileStatic
 import nextflow.cloud.azure.nio.AzPath
@@ -64,10 +65,22 @@ class AzHelper {
             .setTagsPermission(true)
             .setWritePermission(true)
 
+    static BlobSasPermission BLOB_PERMS = new BlobSasPermission()
+            .setAddPermission(true)
+            .setCreatePermission(true)
+            .setDeletePermission(true)
+            .setListPermission(true)
+            .setMovePermission(true)
+            .setReadPermission(true)
+            .setTagsPermission(true)
+            .setWritePermission(true)
+
+
     static String generateSas(BlobContainerClient client, Duration duration) {
         final now = OffsetDateTime .now()
 
         final signature = new BlobServiceSasSignatureValues()
+                .setPermissions(BLOB_PERMS)
                 .setPermissions(CONTAINER_PERMS)
                 .setStartTime(now)
                 .setExpiryTime( now.plusSeconds(duration.toSeconds()) )
