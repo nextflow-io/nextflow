@@ -67,10 +67,6 @@ nxf_stat() {
     nxf_stat_ret=(${sum[*]})
 }
 
-nxf_sleep() {
-  sleep $1 2>/dev/null || sleep 1;
-}
-
 nxf_mem_watch() {
     set -o pipefail
     local pid=$1
@@ -195,6 +191,10 @@ nxf_trace() {
     else
         nxf_trace_linux
     fi
+}
+
+nxf_sleep() {
+  sleep $1 2>/dev/null || sleep 1;
 }
 
 nxf_date() {

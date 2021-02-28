@@ -8,6 +8,10 @@ NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 1 ]] && set -x
 NXF_ENTRY=${1:-nxf_main}
 
 
+nxf_sleep() {
+  sleep $1 2>/dev/null || sleep 1;
+}
+
 nxf_date() {
     local ts=$(date +%s%3N);
     if [[ ${#ts} == 10 ]]; then echo ${ts}000
