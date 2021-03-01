@@ -7,7 +7,6 @@ get_abs_filename() {
 
 export NXF_IGNORE_WARN_DSL2=true
 export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
-export TRAVIS_PULL_REQUEST=${TRAVIS_PULL_REQUEST:=false}
 
 #
 # Tests
@@ -37,11 +36,6 @@ git clone https://github.com/nextflow-io/hello
   $NXF_CMD run . -resume
 )
 
-if [[ $TRAVIS_PULL_REQUEST != false ]]; then
-echo Skipping tests requiring secret vars
-exit 0
-fi
-
 #
 # AMPA-NF
 #
@@ -61,27 +55,27 @@ echo nextflow-io/rnaseq-nf
 $NXF_CMD run nextflow-io/rnaseq-nf -with-docker $OPTS
 $NXF_CMD run nextflow-io/rnaseq-nf -with-docker $OPTS -resume
 
-#
-# Azure Batch tests
-#
-if [[ $AZURE_BATCH_ACCOUNT_KEY ]]; then
-  bash azure.sh
-else
-  echo "Azure Batch tests skipped because AZURE_BATCH_ACCOUNT_KEY env var is missing"
+if [[ $GITHUB_EVENT_NAME == pull_request ]]; then
+  echo "Skipping cloud integration tests on PR event"
+  exit 0
 fi
 
 #
 # AWS Batch tests
 #
-echo aws batch tests
+echo "AWS batch tests"
 bash awsbatch.sh
+
+#
+# Azure Batch tests
+#
+echo "Azure batch tests"
+bash azure.sh
 
 #
 # Google Life Sciences
 #
-if [[ $GOOGLE_SECRET ]]; then
-  bash gls.sh
-else
-  echo "Google Life Sciences tests skipped because GOOGLE_SECRET env var is missing"
-fi
+echo "Google LS tests"
+bash gls.sh
+
 
