@@ -30,7 +30,7 @@ Nextflow has built-in support for `Azure Blob Storage <https://azure.microsoft.c
 Files stored in a Azure blob container can be accessed transparently in your pipeline script like any other file
 in the local file system.
 
-The Blob storage account `name` and `key` needs to be provided in the Nextflow configuration file as shown below::
+The Blob storage account `name` and `key` need to be provided in the Nextflow configuration file as shown below::
 
     azure {
       storage {
@@ -39,7 +39,7 @@ The Blob storage account `name` and `key` needs to be provided in the Nextflow c
       }
     }
 
-As an alternative to the account key it can also used `Shared Access Token` using the setting ``sasToken`` in place
+As an alternative to the account key, it can also be used `Shared Access Token` using the setting ``sasToken`` in place
 of the ``accountKey`` attribute.
 
 .. tip::
@@ -47,9 +47,9 @@ of the ``accountKey`` attribute.
     the permissions: `Read`, `Write`, `Delete`, `List`, `Add`, `Create`.
 
 
-Once the Blob Storage credentials are set you can access the files in the blob container like local files prepending
+Once the Blob Storage credentials are set, you can access the files in the blob container like local files prepending
 the file path with the ``az://`` prefix followed by the container name. For example, having a container named ``my-data``
-container a file named ``foo.txt`` you can access it in your Nextflow script using the following fully qualified
+container with a file named ``foo.txt``, you can access it in your Nextflow script using the following fully qualified
 file path ``az://my-data/foo.txt``.
 
 .. _azure-batch:
@@ -91,11 +91,11 @@ A minimal configuration looks like the following snippet::
 
     azure {
       storage {
-        accountName = "<YOUR STORAGE ACCOUNT NAME>"
-        accountKey = "<YOUR STORAGE ACCOUNT KEY>"
+        accountName = '<YOUR STORAGE ACCOUNT NAME>'
+        accountKey = '<YOUR STORAGE ACCOUNT KEY>'
       }
       batch {
-        location = 'westeurope'
+        location = '<YOUR LOCATION>'
         accountName = '<YOUR BATCH ACCOUNT NAME>'
         accountKey = '<YOUR BATCH ACCOUNT KEY>'
         autoPoolMode = true
@@ -120,16 +120,16 @@ details about the configuration for the Azure Batch service.
 Pools configuration
 -------------------
 
-When using the ``autoPoolMode`` the setting Nextflow automatically creates a `pool` of computing nodes to execute the
+When using the ``autoPoolMode`` setting Nextflow automatically creates a `pool` of computing nodes to execute the
 jobs run by your pipeline. By default it only uses 1 compute node of ``Standard_D4_v3`` type.
 
 The pool is not removed when the pipeline execution terminates, unless the configuration setting ``deletePoolsOnCompletion=true``
-is added in your pipeline configuration file.
+is added to your pipeline configuration file.
 
 .. warning::
     Don't forget to clean up the Batch pools to avoid in extra charges in the Batch account or use the auto scaling feature.
 
-Pool specific setting e.g. VM type and count should be provided in the ``auto`` pool configuration scope e.g. ::
+Pool specific settings, e.g. VM type and count, should be provided in the ``auto`` pool configuration scope e.g. ::
 
     azure {
         batch {
@@ -147,13 +147,13 @@ Named pools
 -------------
 
 If you want to have a more precise control on the computing nodes pools used in your pipeline using a different pool
-depending on the task in your pipeline, you can use the Nextflow :ref:`process-queue` directive the specify the *name* of a
+depending on the task in your pipeline, you can use the Nextflow :ref:`process-queue` directive to specify the *name* of a
 Azure Batch compute pool that has to be used to run that process' tasks.
 
 The pool is expected to be already available in the Batch environment, unless the setting ``allowPoolCreation=true`` is
-provided in the ``batch`` setting in the pipeline configuration file. In the latter case Nextflow will create the pools on-demand.
+provided in the ``batch`` setting of the pipeline configuration file. In the latter case Nextflow will create the pools on-demand.
 
-The configuration details for each pool can be configured using the a snippet as shown below in your configuration::
+The configuration details for each pool can be set in your configuration as shown below ::
 
     azure {
         batch {
@@ -172,7 +172,7 @@ The configuration details for each pool can be configured using the a snippet as
     }
 
 The above example defines the configuration for two node pools. The first will provision 10 compute nodes of type ``Standard_D2_v2``,
-the second 5 nodes of type ``Standard_E2_v3``. See the `Advanced settings`_ below for the complete list of available.
+the second 5 nodes of type ``Standard_E2_v3``. See the `Advanced settings`_ below for the complete list of available
 configuration options.
 
 Pool autoscaling
@@ -181,7 +181,7 @@ Pool autoscaling
 Azure Batch can automatically scale pools based on parameters that you define, saving you time and money. With automatic scaling,
 Batch dynamically adds nodes to a pool as task demands increase, and removes compute nodes as task demands decrease.
 
-To enable this feature for pools created by Nextflow add the option ``autoScale = true`` in the corresponding pool configuration scope.
+To enable this feature for pools created by Nextflow, add the option ``autoScale = true`` to the corresponding pool configuration scope.
 For example when using the ``autoPoolMode``, the setting looks like::
 
     azure {
@@ -215,7 +215,7 @@ Nextflow uses the formula shown below to determine the number of VMs to be provi
         $NodeDeallocationOption = taskcompletion;
 
 
-The above formula initialise a pool with the number of VMs specified by the ``vmCount`` option, it grows the pool on-demand,
+The above formula initialises a pool with the number of VMs specified by the ``vmCount`` option, it grows the pool on-demand,
 based on the number of pending tasks up to ``maxVmCount`` nodes. If no jobs are submitted for execution it scales to zero nodes automatically.
 
 If you need a different strategy you can provide your own formula using the ``scaleFormula`` option.
