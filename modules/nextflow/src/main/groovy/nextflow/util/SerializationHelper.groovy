@@ -32,11 +32,11 @@ import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.file.FileHelper
+import nextflow.io.SerializableMarker
 import nextflow.plugin.Plugins
 import org.codehaus.groovy.runtime.GStringImpl
 import org.objenesis.instantiator.ObjectInstantiator
 import org.pf4j.Extension
-
 /**
  * Helper class to get a {@code Kryo} object ready to be used
  */
@@ -215,6 +215,7 @@ class DefaultSerializers implements SerializerRegistrant {
         serializers.put( File, FileSerializer )
         serializers.put( Pattern, PatternSerializer )
         serializers.put( ArrayTuple, ArrayTupleSerializer )
+        serializers.put( SerializableMarker, null )
     }
 }
 
