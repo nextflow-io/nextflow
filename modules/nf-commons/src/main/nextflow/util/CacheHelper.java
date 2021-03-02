@@ -37,6 +37,7 @@ import com.google.common.hash.Hashing;
 import nextflow.extension.Bolts;
 import nextflow.extension.FilesEx;
 import nextflow.file.FileHolder;
+import nextflow.io.SerializableMarker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -184,6 +185,10 @@ public class CacheHelper {
         }
 
         if( value instanceof VersionNumber ) {
+            return hasher.putInt( value.hashCode() );
+        }
+
+        if( value instanceof SerializableMarker) {
             return hasher.putInt( value.hashCode() );
         }
 

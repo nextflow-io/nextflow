@@ -17,8 +17,10 @@
 
 package nextflow.util
 
+import groovy.transform.EqualsAndHashCode
 import nextflow.container.ContainerConfig
 import nextflow.file.FileHelper
+import nextflow.io.SerializableMarker
 import spock.lang.Specification
 /**
  *
@@ -164,5 +166,21 @@ class KryoHelperTest extends  Specification {
         KryoHelper.deserialize(buffer).toUri() == new URI('http://host.com/foo.txt')
     }
 
+    @EqualsAndHashCode
+    static class Foo implements SerializableMarker {
+        String foo
+        String bar
+    }
+
+    def 'should ser-deser generic data'() {
+        given:
+        def data = new Foo(foo: 'Hello', bar: 'world')
+        when:
+        def buffer = KryoHelper.serialize(data)
+        then:
+        def copy = KryoHelper.deserialize(buffer)
+        and:
+        copy == data
+    }
 
 }
