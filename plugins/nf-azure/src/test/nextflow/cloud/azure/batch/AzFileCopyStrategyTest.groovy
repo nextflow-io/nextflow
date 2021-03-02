@@ -114,7 +114,7 @@ class AzFileCopyStrategyTest extends Specification {
                       then
                         break
                       fi
-                      sleep \$timeout
+                      nxf_sleep \$timeout
                       attempt=\$(( attempt + 1 ))
                       timeout=\$(( timeout * 2 ))
                     done
@@ -137,7 +137,7 @@ class AzFileCopyStrategyTest extends Specification {
                         pid=("${copy[@]}")
                 
                         if ((${#pid[@]}>=$max)); then
-                          sleep 0.2
+                          nxf_sleep 0.2
                         else
                           eval "${cmd[$i]}" &
                           pid+=($!)
@@ -239,7 +239,7 @@ class AzFileCopyStrategyTest extends Specification {
                       then
                         break
                       fi
-                      sleep \$timeout
+                      nxf_sleep \$timeout
                       attempt=\$(( attempt + 1 ))
                       timeout=\$(( timeout * 2 ))
                     done
@@ -262,7 +262,7 @@ class AzFileCopyStrategyTest extends Specification {
                         pid=("${copy[@]}")
                 
                         if ((${#pid[@]}>=$max)); then
-                          sleep 0.2
+                          nxf_sleep 0.2
                         else
                           eval "${cmd[$i]}" &
                           pid+=($!)
@@ -388,7 +388,7 @@ class AzFileCopyStrategyTest extends Specification {
                           then
                             break
                           fi
-                          sleep \$timeout
+                          nxf_sleep \$timeout
                           attempt=\$(( attempt + 1 ))
                           timeout=\$(( timeout * 2 ))
                         done
@@ -411,7 +411,7 @@ class AzFileCopyStrategyTest extends Specification {
                             pid=("${copy[@]}")
 
                             if ((${#pid[@]}>=$max)); then
-                              sleep 0.2
+                              nxf_sleep 0.2
                             else
                               eval "${cmd[$i]}" &
                               pid+=($!)

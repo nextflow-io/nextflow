@@ -25,6 +25,10 @@ NXF_ENTRY=${1:-nxf_main}
 {{helpers_script}}
 {{container_env}}
 
+nxf_sleep() {
+  sleep $1 2>/dev/null || sleep 1;
+}
+
 nxf_date() {
     ## should return the current timestamp in milliseconds
     ## note1: some linux silently ignores the `%3N` option and returns the ts in seconds (len==10)
