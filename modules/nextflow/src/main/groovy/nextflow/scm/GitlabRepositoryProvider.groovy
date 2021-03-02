@@ -81,7 +81,11 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getContentUrl( String path ) {
-        "${config.endpoint}/api/v4/projects/${getProjectName()}/repository/files/${path}?ref=${getDefaultBranch()}"
+        // see
+        //  https://docs.gitlab.com/ee/api/repository_files.html#get-raw-file-from-repository
+        //
+        final ref = revision ?: getDefaultBranch()
+        return "${config.endpoint}/api/v4/projects/${getProjectName()}/repository/files/${path}?ref=${ref}"
     }
 
     /** {@inheritDoc} */

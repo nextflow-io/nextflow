@@ -89,4 +89,28 @@ class BitbucketRepositoryProviderTest extends Specification {
         then:
         result.contains( new RepositoryProvider.BranchInfo('test-branch', '755ba829cbc4f28dcb3c16b9dcc1c49c7ee47ff5') )
     }
+
+    def 'should return content URL' () {
+        given:
+        String CONFIG = '''
+        providers {
+            mybitbucket {
+                server = 'https://bitbucket.org'
+                endpoint = 'https://bitbucket.org'
+                platform = 'bitbucket'
+                user = 'myname'
+                password = 'mypassword'
+            }
+        }
+        '''
+
+        def config = new ConfigSlurper().parse(CONFIG)
+        def obj = new ProviderConfig('bitbucket', config.providers.mybitbucket as ConfigObject)
+
+        expect:
+        new BitbucketRepositoryProvider('pditommaso/hello', obj)
+                .setRevision('foo')
+                .getContentUrl('main.nf') == 'https://bitbucket.org/api/2.0/repositories/pditommaso/hello/src/foo/main.nf'
+
+    }
 }

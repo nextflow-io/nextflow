@@ -52,7 +52,13 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
 
     @Override
     String getContentUrl( String path ) {
-        return  "${config.endpoint}/rest/api/1.0/projects/${project}/repos/${repository}/raw/${path}"    
+        // see
+        // https://docs.atlassian.com/bitbucket-server/rest/7.10.0/bitbucket-rest.html#idp358
+        //
+        def result = "${config.endpoint}/rest/api/1.0/projects/${project}/repos/${repository}/raw/${path}"
+        if( revision )
+            result += "?at=$revision"
+        return result
     }
 
     private String getMainBranchUrl() {

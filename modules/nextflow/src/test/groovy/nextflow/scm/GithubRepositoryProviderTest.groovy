@@ -57,5 +57,33 @@ class GithubRepositoryProviderTest extends Specification {
         result.trim().startsWith('#!/usr/bin/env nextflow')
 
     }
+
+    def 'should return content URL' () {
+        given:
+        String CONFIG = '''
+        providers {
+            mygithub {
+                server = 'https://github.com'
+                endpoint = 'https://github.com'
+                platform = 'bitbucket'
+                user = 'myname'
+                password = 'mypassword'
+            }
+        }
+        '''
+
+        def config = new ConfigSlurper().parse(CONFIG)
+        def obj = new ProviderConfig('github', config.providers.mygithub as ConfigObject)
+
+        expect:
+        new GithubRepositoryProvider('pditommaso/hello', obj)
+                .getContentUrl('main.nf') == 'https://github.com/repos/pditommaso/hello/contents/main.nf'
+
+        and:
+        new GithubRepositoryProvider('pditommaso/hello', obj)
+                .setRevision('the-commit-id')
+                .getContentUrl('main.nf') == 'https://github.com/repos/pditommaso/hello/contents/main.nf?ref=the-commit-id'
+
+    }
 }
 

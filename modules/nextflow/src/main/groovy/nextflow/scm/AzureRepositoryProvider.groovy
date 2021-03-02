@@ -55,7 +55,10 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getContentUrl( String path ) {
-        "${config.endpoint}/${project}/_apis/git/repositories/${repo}/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=$path"
+        // see
+        // https://docs.microsoft.com/en-us/rest/api/azure/devops/git/items/get?view=azure-devops-rest-6.0
+        //
+        return "${config.endpoint}/${project}/_apis/git/repositories/${repo}/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=$path"
     }
 
     @Override
@@ -100,7 +103,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
                     result.add(item)
             }
 
-            // the continuation token is extract when parsign the response
+            // the continuation token is extract when parsing the response
             // see the method `checkResponse`
             url = continuationToken  ? "${url}&continuationToken=${continuationToken}" : null
         }

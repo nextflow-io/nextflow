@@ -43,6 +43,18 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
     }
 
     @Override
+    protected void auth( URLConnection connection ) {
+        if( config.token ) {
+            // set the token in the request header
+            // https://docs.gitea.io/en-us/api-usage/#authentication
+            connection.setRequestProperty("Authorization", "token $config.token")
+        }
+        else {
+            super.auth(connection)
+        }
+    }
+
+    @Override
     @CompileDynamic
     List<BranchInfo> getBranches() {
         // https://try.gitea.io/api/swagger#/repository/repoListBranches
@@ -61,7 +73,13 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getContentUrl( String path ) {
-        "${config.endpoint}/repos/$project/raw/$path"
+        // see
+        // https://try.gitea.io/api/swagger#/repository/repoGetRawFile
+        // note: `ref` is undocumented
+        def result = "${config.endpoint}/repos/$project/raw/$path"
+        if( revision )
+            result += "?ref=$revision"
+        return result
     }
 
     /** {@inheritDoc} */
