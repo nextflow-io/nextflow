@@ -23,7 +23,7 @@ nxf_cp_retry() {
       then
         break
       fi
-      sleep $timeout
+      nxf_sleep $timeout
       attempt=$(( attempt + 1 ))
       timeout=$(( timeout * 2 ))
     done
@@ -46,7 +46,7 @@ nxf_parallel() {
         pid=("${copy[@]}")
 
         if ((${#pid[@]}>=$max)); then
-          sleep 0.2
+          nxf_sleep 0.2
         else
           eval "${cmd[$i]}" &
           pid+=($!)
@@ -92,6 +92,10 @@ nxf_gs_upload() {
     local name=$1
     local target=$2
     gsutil -m -q cp -R "$name" "$target/$name"
+}
+
+nxf_sleep() {
+  sleep $1 2>/dev/null || sleep 1;
 }
 
 nxf_date() {
