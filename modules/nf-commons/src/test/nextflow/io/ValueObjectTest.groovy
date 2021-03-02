@@ -44,4 +44,41 @@ class ValueObjectTest extends Specification {
             '''
     }
 
+    void 'should be cloneable'() {
+        expect:
+        GroovyAssert.assertScript '''
+            import nextflow.io.SerializableMarker
+            import nextflow.io.ValueObject
+            
+            @ValueObject
+            class Obj {
+                String foo
+                String bar
+            }
+            
+            def obj = new Obj(foo: 'hello', bar:'world')
+            assert obj == obj.clone()
+            '''
+    }
+
+    void 'should be copyable'() {
+        expect:
+        GroovyAssert.assertScript '''
+            import nextflow.io.SerializableMarker
+            import nextflow.io.ValueObject
+            
+            @ValueObject
+            class Obj {
+                String foo
+                String bar
+            }
+            
+            def obj = new Obj(foo: 'hello', bar:'world')
+            def that = obj.copyWith(foo:'hola')
+            
+            assert that.foo == 'hola'
+            assert that.bar == 'world' 
+            '''
+    }
+
 }

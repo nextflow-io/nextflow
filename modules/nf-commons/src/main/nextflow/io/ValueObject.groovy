@@ -24,14 +24,16 @@ import java.lang.annotation.Target
 
 import groovy.transform.AnnotationCollector
 import groovy.transform.AnnotationCollectorMode
-import groovy.transform.EqualsAndHashCode
+import groovy.transform.AutoClone
+import groovy.transform.Immutable
 /**
  * Declares an AST xform to automatically add the {@link SerializableMarker} interface
  * for a class marked as @SerializableObject
  *
  *  @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@EqualsAndHashCode
+@AutoClone
+@Immutable(copyWith=true)
 @SerializableObject
 @AnnotationCollector(mode = AnnotationCollectorMode.PREFER_EXPLICIT_MERGED)
 @Retention(RetentionPolicy.RUNTIME)
