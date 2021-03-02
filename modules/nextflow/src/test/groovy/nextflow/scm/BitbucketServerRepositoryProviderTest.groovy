@@ -16,9 +16,8 @@
 
 package nextflow.scm
 
-import spock.lang.Requires
-import spock.lang.Specification
 
+import spock.lang.Specification
 /**
  *
  * @author Piotr Faba <piotr.faba@ardigen.com>
@@ -66,10 +65,15 @@ class BitbucketServerRepositoryProviderTest extends Specification {
         given:
         def config = new ConfigSlurper().parse(CONFIG)
         def obj = new ProviderConfig('bitbucketserver', config.providers.bbserver as ConfigObject)
-        def testString = new GiteaRepositoryProvider('pditommaso/hello', obj).getContentUrl('main.nf')
 
         expect:
-        new BitbucketServerRepositoryProvider('pditommaso/hello', obj).getContentUrl('main.nf') == 'https://bitbucket.server.com/rest/api/1.0/projects/pditommaso/repos/hello/raw/main.nf'
+        new BitbucketServerRepositoryProvider('pditommaso/hello', obj)
+                .getContentUrl('main.nf') == 'https://bitbucket.server.com/rest/api/1.0/projects/pditommaso/repos/hello/raw/main.nf'
+
+        and:
+        new BitbucketServerRepositoryProvider('pditommaso/hello', obj)
+                .setRevision('foo')
+                .getContentUrl('main.nf') == 'https://bitbucket.server.com/rest/api/1.0/projects/pditommaso/repos/hello/raw/main.nf?at=foo'
 
     }
 

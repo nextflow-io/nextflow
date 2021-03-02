@@ -51,7 +51,8 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
     @Override
     String getContentUrl( String path ) {
-        "${config.endpoint}/api/2.0/repositories/$project/src/${getMainBranch()}/$path"
+        final ref = revision ?: getMainBranch()
+        return "${config.endpoint}/api/2.0/repositories/$project/src/$ref/$path"
     }
 
     private String getMainBranchUrl() {
