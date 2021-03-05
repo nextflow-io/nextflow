@@ -138,6 +138,11 @@ class AzBatchServiceTest extends Specification {
         ret = svc.findBestVm('northeurope', 4, null, 'standard_a?')
         then:
         ret.name == 'Standard_A6'
+
+        when:
+        ret = svc.findBestVm('northeurope', 4, MemoryUnit.of(7168), 'standard_a2,standard_a*')
+        then:
+        ret.name == 'Standard_A3'
     }
 
     def 'should match familty' () {
