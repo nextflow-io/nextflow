@@ -142,16 +142,29 @@ class AzBatchService implements Closeable {
         return result
     }
 
-    AzVmType findBestVm(String location, int cpus, MemoryUnit mem, String family) {
+    /**
+     * Find the best VM matching the specified criteria
+     *
+     * @param location The azure location
+     * @param cpus The requested number of cpus
+     * @param mem The requested amount of memory. Can be null if no mem has been specified
+     * @param allFamilies Comma separate list of Azure VM machine types, each value can also contain wildcard characters ie. `*` and `?`
+     * @return The `AzVmType` instance that best accommodate the resource requirement
+     */
+    AzVmType findBestVm(String location, int cpus, MemoryUnit mem, String allFamilies) {
         def all = listAllVms(location)
         def scores = new TreeMap<Double,String>()
-        for( Map entry : all ) {
-            if( !matchType(family, entry.name as String) )
-                continue
-            def score = computeScore(cpus, mem, entry)
-            if( score != null )
-                scores.put(score, entry.name as String)
+        def list = allFamilies ? allFamilies.tokenize(',') : ['']
+        for( String family : list ) {
+            for( Map entry : all ) {
+                if( !matchType(family, entry.name as String) )
+                    continue
+                def score = computeScore(cpus, mem, entry)
+                if( score != null )
+                    scores.put(score, entry.name as String)
+            }
         }
+
         return getVmType(location, scores.firstEntry().value)
     }
 
