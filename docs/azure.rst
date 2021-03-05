@@ -46,6 +46,9 @@ of the ``accountKey`` attribute.
     When creating the `Shared Access Token` make sure to allow the resource types `Container` and `Object` and allow
     the permissions: `Read`, `Write`, `Delete`, `List`, `Add`, `Create`.
 
+.. tip::
+    The value of ``sasToken`` is the token stripped by the character '?' from the beginning of the token.
+
 
 Once the Blob Storage credentials are set you can access the files in the blob container like local files prepending
 the file path with the ``az://`` prefix followed by the container name. For example, having a container named ``my-data``
@@ -66,17 +69,22 @@ offloading the process executions as Batch jobs.
 Get started
 -------------
 
-1 - Create Batch account in Azure portal. Take note of the Batch account name and key.
+1 - Create a Batch account in Azure portal. Take note of the account name and key.
 
-2 - Make sure to have a Azure Blob Storage account in the same location where the Batch account was created.
+2 - Make sure to adjust your quotas on the pipeline's needs. There are limits on certain resources associated with the
+Batch account. Many of these limits are default quotas applied by Azure at the subscription or account level.
+Quotas impact on the number of Pools, CPUs and Jobs you can create at any given time.
 
-3 - Make sure your pipeline processes specifies one or more Docker containers by using the :ref:`process-container` directive.
+3 - Create a Storage account and, within, an Azure Blob Container in the same location where the Batch account was created.
+Take note of the account name and key.
 
-4 - The container images need to be published into Docker registry such as `Docker Hub <https://hub.docker.com/>`_,
+4 - Associate the Blob Storage account with the Azure Batch account.
+
+5 - Make sure your pipeline processes specify one or more Docker containers by using the :ref:`process-container` directive.
+
+6 - The container images need to be published into Docker registry such as `Docker Hub <https://hub.docker.com/>`_,
 `Quay <https://quay.io/>`_ or `Azure Container Registry <https://docs.microsoft.com/en-us/azure/container-registry/>`_
 that can be reached by Azure Batch environment.
-
-5 - Specify the Azure Batch :ref:`executor <azurebatch-executor>` in the pipeline configuration file.
 
 
 A minimal configuration looks like the following snippet::
@@ -95,17 +103,17 @@ A minimal configuration looks like the following snippet::
         accountKey = "<YOUR STORAGE ACCOUNT KEY>"
       }
       batch {
-        location = 'westeurope'
+        location = '<YOUR LOCATION>'
         accountName = '<YOUR BATCH ACCOUNT NAME>'
         accountKey = '<YOUR BATCH ACCOUNT KEY>'
         autoPoolMode = true
       }
     }
 
-Replace in the above example the location and the account placeholders with the value corresponding to your configuration and
+In the above example, replace the location and the account placeholders with the value corresponding to your configuration and
 save it to a file named ``nextflow.config``.
 
-Then launch the execution of the pipeline using the following command::
+Given the previous configuration, launch the execution of the pipeline using the following command::
 
     nextflow run <PIPELINE NAME> -w az://YOUR-CONTAINER/work
 
@@ -129,7 +137,10 @@ is added in your pipeline configuration file.
 .. warning::
     Don't forget to clean up the Batch pools to avoid in extra charges in the Batch account or use the auto scaling feature.
 
-Pool specific setting e.g. VM type and count should be provided in the ``auto`` pool configuration scope e.g. ::
+.. warning::
+   Make sure your Batch account has enough resources to satisfy the pipeline's requirements and the pool configuration.
+
+Pool specific settings, e.g. VM type and count, should be provided in the ``auto`` pool configuration scope, e.g. ::
 
     azure {
         batch {
@@ -147,13 +158,13 @@ Named pools
 -------------
 
 If you want to have a more precise control on the computing nodes pools used in your pipeline using a different pool
-depending on the task in your pipeline, you can use the Nextflow :ref:`process-queue` directive the specify the *name* of a
+depending on the task in your pipeline, you can use the Nextflow :ref:`process-queue` directive to specify the *name* of a
 Azure Batch compute pool that has to be used to run that process' tasks.
 
 The pool is expected to be already available in the Batch environment, unless the setting ``allowPoolCreation=true`` is
 provided in the ``batch`` setting in the pipeline configuration file. In the latter case Nextflow will create the pools on-demand.
 
-The configuration details for each pool can be configured using the a snippet as shown below in your configuration::
+The configuration details for each pool can be specified using a snippet as shown below::
 
     azure {
         batch {
@@ -172,7 +183,7 @@ The configuration details for each pool can be configured using the a snippet as
     }
 
 The above example defines the configuration for two node pools. The first will provision 10 compute nodes of type ``Standard_D2_v2``,
-the second 5 nodes of type ``Standard_E2_v3``. See the `Advanced settings`_ below for the complete list of available.
+the second 5 nodes of type ``Standard_E2_v3``. See the `Advanced settings`_ below for the complete list of available
 configuration options.
 
 Pool autoscaling
@@ -181,8 +192,8 @@ Pool autoscaling
 Azure Batch can automatically scale pools based on parameters that you define, saving you time and money. With automatic scaling,
 Batch dynamically adds nodes to a pool as task demands increase, and removes compute nodes as task demands decrease.
 
-To enable this feature for pools created by Nextflow add the option ``autoScale = true`` in the corresponding pool configuration scope.
-For example when using the ``autoPoolMode``, the setting looks like::
+To enable this feature for pools created by Nextflow, add the option ``autoScale = true`` to the corresponding pool configuration scope.
+For example, when using the ``autoPoolMode``, the setting looks like::
 
     azure {
         batch {
@@ -215,11 +226,12 @@ Nextflow uses the formula shown below to determine the number of VMs to be provi
         $NodeDeallocationOption = taskcompletion;
 
 
-The above formula initialise a pool with the number of VMs specified by the ``vmCount`` option, it grows the pool on-demand,
-based on the number of pending tasks up to ``maxVmCount`` nodes. If no jobs are submitted for execution it scales to zero nodes automatically.
+The above formula initialises a pool with the number of VMs specified by the ``vmCount`` option, it scales up the pool on-demand,
+based on the number of pending tasks up to ``maxVmCount`` nodes. If no jobs are submitted for execution, it scales down
+to zero nodes automatically.
 
 If you need a different strategy you can provide your own formula using the ``scaleFormula`` option.
-`Azure Batch <https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling>`_ documentation for details.
+See the `Azure Batch <https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling>`_ documentation for details.
 
 
 Advanced settings
