@@ -17,15 +17,13 @@
 
 package nextflow.cloud.aws.batch
 
-
-import nextflow.util.Duration
-import spock.lang.Specification
-
 import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.Session
 import nextflow.processor.TaskBean
+import nextflow.util.Duration
+import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -455,6 +453,25 @@ class AwsBatchScriptLauncherTest extends Specification {
                     }
                     
                     '''.stripIndent(true)
+
+    }
+
+
+    def 'should include fix ownership command' () {
+        given:
+        def opts = new AwsOptions(cliPath:'/conda/bin/aws', region: 'eu-west-1')
+        def builder = new AwsBatchScriptLauncher([
+                name: 'Hello 1',
+                workDir: Paths.get('/work/dir'),
+                script: 'echo Hello world!',
+                containerConfig: [fixOwnership: true],
+                input: 'Ciao ciao' ] as TaskBean, opts)
+
+        when:
+        def binding = builder.makeBinding()
+        then:
+        builder.fixOwnership() >> true
+        binding.fix_ownership == '[ ${NXF_OWNER:=\'\'} ] && chown -fR --from root $NXF_OWNER /work/dir/{*,.*} || true'
 
     }
 
