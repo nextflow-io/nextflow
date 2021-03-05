@@ -1,5 +1,28 @@
 NEXTFLOW CHANGE-LOG
 ===================
+21.03.0-edge - 5 Mar 2021
+- Add support for serializable ValueObject [8dfaadf3]
+- Add abilitity to fetch revisioned git assets 
+- Add support for FixOwnership to AWS batch [24f83741]
+- Add support for custom network to GLS #1810 [171f4aa8]
+- Add ability to handle list of az vm types [00ced0b3]
+- Add tower config scope to docs #1890 f2bd96fa
+- Add charliecloud container environment from file (#1909) 4553648b
+- Add azcopy tool install mode opts [9e9337d3]
+- Update Az default vm type to Standard_D4_v3 [4c6e76b6]
+- Update NF console dependency [a2d06e15]
+- Remove CDN from timeline reports and make them offline readable #1927 [c0e5a941]
+- Fix plugins install failing in some file systems #1882 [8cc43391]
+- Fix catch failing commands in nxf_parallel #1884 [dd56f6c1]
+- Fix missing error on empty process script [3607f84e]
+- Fix GSL path de-serialization issue [c6cf784f]
+- Fix Memory unit cannot be a negative number #1902 [abd1c9d9]
+- Fix pod spec labels to start with numbers in addition to alphas [79740edf]
+- Fix OAR executor log files #1761 [6f2ff4e4]
+- Fix issue cause by sleep with subsecond argument [c4be8d00] [63974ac6]
+- Fix az blob storage SAS permissions [18a33213]
+- Fix sort human-readable tasks in report [6d68f28d]
+
 21.02.0-edge - 1 Feb 2021
 - Fix Issue when merging nested cli params  #1856 [275e54c4] [fe37da6d]
 - Fix job status detection on PBS pro #1840 [c1598908]
