@@ -92,9 +92,7 @@ a channel emitting numbers so that the `odd` values are returned::
 
 .. tip:: In the above example the filter condition is wrapped in curly brackets,
   instead of round brackets, since it specifies a :ref:`closure <script-closure>` as the operator's argument.
-  This just is a language syntax-sugar for ``filter({ it.toString().size() == 1 })``
-
-
+  This is just a language syntax-sugar for ``filter({ it % 2 == 1 })``
 
 
 unique
