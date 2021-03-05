@@ -45,4 +45,8 @@ class AwsBatchScriptLauncher extends BashWrapperBuilder {
         }
     }
 
+    @Override
+    protected boolean fixOwnership() {
+        return containerConfig?.fixOwnership
+    }
 }
