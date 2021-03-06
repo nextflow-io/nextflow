@@ -23,7 +23,6 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.Channel
 import nextflow.extension.CH
-
 /**
  * Wrap a process or workflow output
  *
@@ -33,52 +32,73 @@ import nextflow.extension.CH
 @CompileStatic
 class TestflowDsl {
 
-    private List<EmissionValues> emissions = new ArrayList<>()
+    private String type
+    private String name
     private int outputsCount
+    private List<ChannelEntry> channelEntries
+    @Lazy private List<EmissionValues> emissions = {  fetchOutputs()  }()
 
-    TestflowDsl(ChannelOut outputs) {
+    TestflowDsl(ProcessDef process) {
+        this.type = process.type
+        this.name = process.name
+        init(process.getOut())
+    }
+
+    TestflowDsl(WorkflowDef workflow) {
+        this.type = workflow.type
+        this.name = workflow.name
+        init(workflow.getOut())
+    }
+
+    protected TestflowDsl(ChannelOut outputs) {
         init(outputs)
     }
 
+
     private void init(ChannelOut outputs) {
         this.outputsCount = outputs.size()
-        //
-        List<ChannelEntry> channels = readable(outputs)
-        boolean single=true
-        boolean terminated=false
-        for( int i=0; !terminated && channels.size()>0; i++ ) {
-            def values = new ArrayList()
-            def named = new HashMap()
-            for( int j=0; !terminated && j<channels.size(); j++ ) {
-                final x = channels[j].read()
-                if( Channel.STOP.is(x) ) {
-                    terminated=true
-                    break
-                }
-                values[j] = x
-                if( channels[j].name )
-                    named[ channels[j].name ] = x
-                if( i==0 )
-                    single &= channels[j].isValue()
-            }
-            //
-            if( !terminated ) {
-                emissions << new EmissionValues(values, named)
-            }
-            if( single ) {
-                // if channel are all dataflow variables stop at the first iteration
-                break
-            }
-        }
+        this.channelEntries = readable0(outputs)
     }
 
-    private List<ChannelEntry> readable(ChannelOut output ) {
+    private List<ChannelEntry> readable0(ChannelOut output) {
         final result = new ArrayList(output.size())
         for( int i=0; i<output.size(); i++ ) {
             final ch = output.get(i)
             final name = output.nameOf(ch)
             final read = CH.getReadChannel(ch)
             result << new ChannelEntry(i, name, read)
+        }
+        return result
+    }
+
+    private List<EmissionValues> fetchOutputs() {
+        List<EmissionValues> result = []
+        boolean single=true
+        boolean terminated=false
+        for( int i=0; !terminated && channelEntries.size()>0; i++ ) {
+            def values = new ArrayList()
+            def named = new HashMap()
+            for( int j=0; !terminated && j<channelEntries.size(); j++ ) {
+                final x = channelEntries[j].read()
+                log.trace "Read test output value: '$x' produced by $type '$name'"
+                if( Channel.STOP.is(x) ) {
+                    terminated=true
+                    break
+                }
+                values[j] = x
+                if( channelEntries[j].name )
+                    named[ channelEntries[j].name ] = x
+                if( i==0 )
+                    single &= channelEntries[j].isValue()
+            }
+            //
+            if( !terminated ) {
+                result << new EmissionValues(values, named)
+            }
+            if( single ) {
+                // if channel are all dataflow variables stop at the first iteration
+                break
+            }
         }
         return result
     }

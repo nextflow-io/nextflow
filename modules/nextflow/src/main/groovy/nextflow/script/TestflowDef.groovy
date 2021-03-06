@@ -104,6 +104,10 @@ class TestflowDef extends ComponentDef implements ExecutionContext {
         }
         // when part
         invoke(when, binding)
+        // wrap processes
+        // NOTE: this must be invoked here ie. *before* firing the dataflow network (see Session#fireDataflowNetwork)
+        // otherwise the DAG is not properly constructed and some output values can be missed
+        wrapComponents(binding)
     }
 
 
@@ -119,18 +123,15 @@ class TestflowDef extends ComponentDef implements ExecutionContext {
         for( String key : ctx.keySet() ) {
             final value = ctx.get(key)
             if( value instanceof ProcessDef ) {
-                ctx.put(key, new TestflowDsl(value.getOut()))
+                ctx.put(key, new TestflowDsl(value))
             }
             else if( value instanceof WorkflowDef ) {
-                ctx.put(key, new TestflowDsl(value.getOut()))
+                ctx.put(key, new TestflowDsl(value))
             }
         }
     }
 
     void validateExecution() {
-        String error
-        // wrap processes
-        wrapComponents(binding)
         // then part
         invoke(then, binding)
     }
