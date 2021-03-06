@@ -12,6 +12,7 @@ use the following command to download it in your computer::
 
     export NXF_EDGE=1
     curl get.nextflow.io | bash
+    ./nextflow -self-update
 
 Also the support for Azure Cloud requires adding the following setting at 
 the beginning of your ``nextflow.config`` file::
