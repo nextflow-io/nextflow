@@ -65,6 +65,9 @@ class AwsOptions implements CloudTransferOptions {
      */
     List<String> volumes
 
+    /**
+     * @return A list of volume mounts using the docker cli convention ie. `/some/path` or `/some/path:/container/path` or `/some/path:/container/path:ro`
+     */
     List<String> getVolumes() { volumes != null ? Collections.unmodifiableList(volumes) : Collections.<String>emptyList() }
 
     /* Only for testing purpose */
