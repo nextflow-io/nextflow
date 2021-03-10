@@ -10,9 +10,11 @@ import java.util.zip.ZipOutputStream
 
 import nextflow.Const
 import org.pf4j.Plugin
+import org.pf4j.PluginDescriptor
 import org.pf4j.PluginWrapper
 import org.pf4j.update.PluginInfo
 import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -266,7 +268,7 @@ class PluginUpdaterTest extends Specification {
 
 
         when:
-        def ret = updater.findReleaseMatchingCriteria('nf-foo', '1.5.0')
+        def ret = updater.findFirstMatchingRelease('nf-foo', '1.5.0')
         then:
         manager.getVersionManager() >> new CustomVersionManager()
         updater.getPluginsMap() >> PLUGINS
@@ -274,7 +276,7 @@ class PluginUpdaterTest extends Specification {
         ret == r2
 
         when:
-        ret = updater.findReleaseMatchingCriteria('nf-foo', '1.5.*')
+        ret = updater.findFirstMatchingRelease('nf-foo', '1.5.*')
         then:
         manager.getVersionManager() >> new CustomVersionManager()
         updater.getPluginsMap() >> PLUGINS
@@ -283,7 +285,7 @@ class PluginUpdaterTest extends Specification {
 
 
         when:
-        ret = updater.findReleaseMatchingCriteria('nf-foo', '>=2.0')
+        ret = updater.findFirstMatchingRelease('nf-foo', '>=2.0')
         then:
         manager.getVersionManager() >> new CustomVersionManager()
         updater.getPluginsMap() >> PLUGINS
@@ -363,5 +365,32 @@ class PluginUpdaterTest extends Specification {
 
         cleanup:
         folder.deleteDir()
+    }
+
+    @Unroll
+    def 'validate should update method' () {
+        given:
+        def manager = Mock(CustomPluginManager) {
+            getVersionManager() >> new CustomVersionManager()
+        }
+        and:
+        def updater = new PluginUpdater(manager)
+
+        and:
+        def wrapper = Mock(PluginWrapper) {
+            getDescriptor() >> Mock(PluginDescriptor) {
+                getVersion() >> CURRENT
+            }
+        }
+
+        expect:
+        updater.shouldUpdate(ID, REQUIRED, wrapper) == EXPECT
+
+        where:
+        ID              | REQUIRED      | CURRENT | EXPECT
+        'nf-amazon'     | '1.0.0'       | '1.0.0'   | false
+        'nf-amazon'     | '1.0.0'       | '1.1.0'   | false
+        'nf-amazon'     | '1.1.0'       | '1.0.0'   | true
+
     }
 }
