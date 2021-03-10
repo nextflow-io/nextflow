@@ -115,6 +115,6 @@ class RateUnit {
     }
 
     String toString() {
-        String.format("%.2f", rate) + '/sec'
+        String.format(Locale.ROOT, "%.2f", rate) + '/sec'
     }
 }

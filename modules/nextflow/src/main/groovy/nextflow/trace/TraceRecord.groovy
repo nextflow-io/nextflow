@@ -223,10 +223,10 @@ class TraceRecord implements Serializable {
         if( value == null ) return NA
         try {
             if( value instanceof Number )
-                return String.format('%.1f%%', value.toFloat())
+                return String.format(Locale.ROOT, '%.1f%%', value.toFloat())
             else {
                 def x = value.toString().toFloat()
-                return String.format('%.1f%%', x)
+                return String.format(Locale.ROOT, '%.1f%%', x)
             }
 
         }
