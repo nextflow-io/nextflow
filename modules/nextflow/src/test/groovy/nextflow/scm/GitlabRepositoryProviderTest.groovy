@@ -113,5 +113,9 @@ class GitlabRepositoryProviderTest extends Specification {
                 .setRevision('the-commit-id')
                 .getContentUrl('main.nf') == 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/files/main.nf?ref=the-commit-id'
 
+        and:
+        new GitlabRepositoryProvider('pditommaso/hello', obj)
+                .getContentUrl('conf/extra.conf') == 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/files/conf%2Fextra.conf?ref=master'
+
     }
 }
