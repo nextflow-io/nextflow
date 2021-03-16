@@ -17,6 +17,8 @@
 
 package nextflow.config
 
+import java.util.regex.Pattern
+
 import static nextflow.util.ConfigHelper.*
 
 import java.nio.file.Path
@@ -323,21 +325,18 @@ class ConfigBuilder {
         final slurper = new ConfigParser().setRenderClosureAsString(showClosures)
         ConfigObject result = new ConfigObject()
 
+        // the configuration object binds always the current environment
+        // so that in the configuration file may be referenced any variable
+        // in the current environment
+        final binding = buildBinding(env)
+
         if( cmdRun && (cmdRun.params || cmdRun.paramsFile) )
-            slurper.setParams(cmdRun.parsedParams)
+            slurper.setParams(bindParameters(cmdRun.parsedParams, binding))
 
         // add the user specified environment to the session env
         env.sort().each { name, value -> result.env.put(name,value) }
 
         if( configEntries ) {
-            // the configuration object binds always the current environment
-            // so that in the configuration file may be referenced any variable
-            // in the current environment
-            final binding = new HashMap(System.getenv())
-            binding.putAll(env)
-            binding.put('baseDir', baseDir)
-            binding.put('projectDir', baseDir)
-            binding.put('launchDir', Paths.get('.').toRealPath())
 
             slurper.setBinding(binding)
 
@@ -646,7 +645,7 @@ class ConfigBuilder {
 
         // -- add the command line parameters to the 'taskConfig' object
         if( cmdRun.params || cmdRun.paramsFile )
-            config.params = mergeMaps( (Map)config.params, cmdRun.parsedParams, NF.strictMode )
+            config.params = mergeMaps( (Map)config.params, bindParameters(cmdRun.parsedParams, buildBinding(env)), NF.strictMode )
 
         if( cmdRun.withoutDocker && config.docker instanceof Map ) {
             // disable docker execution
@@ -780,6 +779,36 @@ class ConfigBuilder {
         else {
             return config.get(key)
         }
+    }
+
+    Map bindParameters(Map params, Map binding) {
+        return params.collectEntries {
+            k, v -> [k, v instanceof String ? bindValue(v, binding): v]
+        }
+    }
+
+    private static Pattern PATTERN_VAR = ~/^(.*)\$\{([\d\w_-]+)}(.*)$/
+    private String bindValue(String param, Map binding) {
+        def matcher = PATTERN_VAR.matcher(param)
+        if( matcher.matches() ) {
+            final name = matcher.group(2)
+            if( !binding.containsKey(name) )
+                throw new IllegalArgumentException("Missing variable: $name")
+            final String prefix = matcher.group(1)
+            final String suffix = matcher.group(3)
+            final String value = binding.get(name)
+            return "${prefix}${value}${suffix}"
+        }
+        return param
+    }
+
+    private Map buildBinding(Map env) {
+        final binding = new HashMap(System.getenv())
+        binding.putAll(env)
+        binding.put('baseDir', baseDir)
+        binding.put('projectDir', baseDir)
+        binding.put('launchDir', Paths.get('.').toRealPath())
+        binding
     }
 
 }
