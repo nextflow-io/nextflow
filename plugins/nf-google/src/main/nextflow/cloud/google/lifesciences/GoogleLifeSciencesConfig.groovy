@@ -46,6 +46,10 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
 
     public final static String DEFAULT_ENTRY_POINT = '/bin/bash'
 
+    public final static Integer DEFAULT_PARALLEL_THREAD_COUNT = 5
+
+    public final static Integer DEFAULT_SLICED_OBJECT_DOWNLOAD_MAX_COMPONENTS = 4
+
     String project
     List<String> zones
     List<String> regions
@@ -63,6 +67,8 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
     boolean enableRequesterPaysBuckets
     String network
     String subnetwork
+    Integer parallelThreadCount
+    Integer slicedObjectDownloadMaxComponents
 
     int maxParallelTransfers = MAX_TRANSFER
     int maxTransferAttempts = MAX_TRANSFER_ATTEMPTS
@@ -131,6 +137,9 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
         final delayBetweenAttempts = config.navigate('aws.batch.delayBetweenAttempts', DEFAULT_DELAY_BETWEEN_ATTEMPTS) as Duration
         final network = config.navigate('google.lifeSciences.network') as String
         final subnetwork = config.navigate('google.lifeSciences.subnetwork') as String
+        //
+        final parallelThreadCount = config.navigate('google.lifeSciences.parallelThreadCount', DEFAULT_PARALLEL_THREAD_COUNT) as int
+        final slicedObjectDownloadMaxComponents = config.navigate('google.lifeSciences.slicedObjectDownloadMaxComponents', DEFAULT_SLICED_OBJECT_DOWNLOAD_MAX_COMPONENTS) as int
 
         def zones = (config.navigate("google.zone") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
         def regions = (config.navigate("google.region") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
