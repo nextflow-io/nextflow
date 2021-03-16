@@ -55,8 +55,12 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
         def attempts = config.maxTransferAttempts ?: CloudTransferOptions.MAX_TRANSFER_ATTEMPTS
         def delayBetweenAttempts = config.delayBetweenAttempts ?: CloudTransferOptions.DEFAULT_DELAY_BETWEEN_ATTEMPTS
 
-        BashFunLib.body(maxConnect, attempts, delayBetweenAttempts) +
+        def threads = config.parallelThreadCount ?: GoogleLifeSciencesConfig.DEFAULT_PARALLEL_THREAD_COUNT
+        def slices = config.slicedObjectDownloadMaxComponents ?: GoogleLifeSciencesConfig.DEFAULT_SLICED_OBJECT_DOWNLOAD_MAX_COMPONENTS
 
+        def gsutil_opts = "local opts=('-q' '-m' '-o' 'GSUtil:parallel_thread_count=$threads' '-o' 'GSUtil:sliced_object_download_max_components=$slices')"
+
+        BashFunLib.body(maxConnect, attempts, delayBetweenAttempts) +
         '''
         # google storage helper
         nxf_gs_download() {
@@ -65,12 +69,10 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
             local project=$3
             local basedir=$(dirname $2)
             local ret
-            local opts="-m -q"
-            local opts
+        '''  + gsutil_opts +
+        '''    
             if [[ $project ]]; then
-              opts=('-q' '-m' '-u' "$project")
-            else
-              opts=('-q' '-m')
+              opts+=('-u' "$project")
             fi
              
             ## download assuming it's a file download
