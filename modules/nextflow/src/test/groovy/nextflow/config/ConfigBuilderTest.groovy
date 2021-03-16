@@ -17,6 +17,10 @@
 
 package nextflow.config
 
+import sun.nio.fs.UnixFileSystemProvider
+import sun.nio.fs.UnixPath
+
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
 
@@ -455,7 +459,7 @@ class ConfigBuilderTest extends Specification {
         params.text = '''
             alpha: "Hello" 
             beta: "World" 
-            omega: "Last"
+            omega: "${baseDir}/data/omega.txt"            
             '''.stripIndent()
         and:
         def file = Files.createTempFile('test',null)
@@ -475,12 +479,13 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions()
         def run = new CmdRun(paramsFile: params, params: [alpha: 'Hola', beta: 'Mundo'])
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+        def baseDir = Files.createTempDirectory('assets')
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).setBaseDir(baseDir).buildGivenFiles(file)
 
         then:
         result.params.alpha == 'Hola'   // <-- this comes from the CLI
         result.params.beta == 'Mundo'   // <-- this comes from the CLI as well
-        result.params.omega == 'Last'   // <-- this comes from the params-file
+        result.params.omega == "${baseDir.toUriString()}/data/omega.txt"   // <-- this comes from the params-file and replaces parameters
         result.params.gamma == "I'm gamma"   // <-- from the config
         result.params.delta == 'Foo'         // <-- from the config
         result.process.publishDir == [path: 'Hola']
@@ -1873,6 +1878,22 @@ class ConfigBuilderTest extends Specification {
         [foo:1, bar:[x:1, y:2]]     | [bar: [x:10, y:20]]           | [foo: 1, bar: [x:10, y:20]]
         [foo:1, bar:[x:1, y:2]]     | [foo: 2, bar: [x:10, y:20]]   | [foo: 2, bar: [x:10, y:20]]
 
+    }
+
+    @Unroll
+    def 'should bind parameters variables' () {
+        given:
+        def builder = new ConfigBuilder()
+
+        expect:
+        builder.bindParameters(PARAMS, BINDING) == EXPECTED
+
+        where:
+        PARAMS                        | BINDING               | EXPECTED
+        [:]                           | [:]                   | [:]
+        ['a': '${baseDir}/a/b']       | ['baseDir': 'base']   | ['a': 'base/a/b']
+        ['a': 1, 'b': '$baseDir/a/b'] | ['baseDir': 'base']   | ['a': 1, 'b': '$baseDir/a/b']
+        ['a': 1, 'b': '${ENV_VAR}']   | ['ENV_VAR': 'varenv'] | ['a': 1, 'b': 'varenv']
     }
 
 }
