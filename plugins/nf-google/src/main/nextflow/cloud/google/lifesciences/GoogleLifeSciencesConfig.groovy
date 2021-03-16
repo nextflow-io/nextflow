@@ -40,7 +40,7 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class GoogleLifeSciencesConfig implements CloudTransferOptions {
 
-    public final static String DEFAULT_COPY_IMAGE = 'google/cloud-sdk:alpine'
+    public final static String DEFAULT_COPY_IMAGE = 'google/cloud-sdk:slim'
 
     public final static String DEFAULT_SSH_IMAGE = 'gcr.io/cloud-genomics-pipelines/tools'
 
