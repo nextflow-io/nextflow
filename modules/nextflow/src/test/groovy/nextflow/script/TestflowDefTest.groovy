@@ -1,6 +1,9 @@
 package nextflow.script
 
 import nextflow.ast.NextflowDSL
+import nextflow.script.BaseScript
+import nextflow.script.ScriptBinding
+import nextflow.script.ScriptMeta
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.runtime.typehandling.GroovyCastException

@@ -16,13 +16,20 @@
  */
 package nextflow.script
 
+import java.nio.file.Path
+
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.Channel
 import nextflow.extension.CH
+import nextflow.processor.TaskMeta
+
 /**
  * Wrap a process or workflow output
  *
@@ -32,15 +39,19 @@ import nextflow.extension.CH
 @CompileStatic
 class TestflowDsl {
 
+    private int current
     private String type
     private String name
     private int outputsCount
     private List<ChannelEntry> channelEntries
-    @Lazy private List<EmissionValues> emissions = {  fetchOutputs()  }()
+    private DataflowQueue tasksMetaChannel
+    @Lazy private List<EmissionValues> emissions = { fetchOutputs() }()
+    @Lazy private List<TaskMeta> tasksMetaList = { fetchTasksMeta() }()
 
     TestflowDsl(ProcessDef process) {
         this.type = process.type
         this.name = process.name
+        this.tasksMetaChannel = process.tasksMeta
         init(process.getOut())
     }
 
@@ -54,7 +65,6 @@ class TestflowDsl {
         init(outputs)
     }
 
-
     private void init(ChannelOut outputs) {
         this.outputsCount = outputs.size()
         this.channelEntries = readable0(outputs)
@@ -67,6 +77,19 @@ class TestflowDsl {
             final name = output.nameOf(ch)
             final read = CH.getReadChannel(ch)
             result << new ChannelEntry(i, name, read)
+        }
+        return result
+    }
+
+    private List<TaskMeta> fetchTasksMeta() {
+        if( tasksMetaChannel==null )
+            return null
+        final result = new ArrayList()
+        while( true ) {
+            final value = tasksMetaChannel.getVal()
+            if( value == Channel.STOP )
+                break
+            result.add(value)
         }
         return result
     }
@@ -111,13 +134,53 @@ class TestflowDsl {
         return emissions.size()
     }
 
-    void withEmission(int index, Closure body) {
-        final values = emissions.get(index)
-        final ctx = [out: values]
-        body.cloneWith(ctx).call()
+    void emissionWith(Map opts, Closure body) {
+        if( type!='process' )
+            throw new IllegalArgumentException("Test 'emissionWith' can only be applied to process outputs")
+
+        int pos
+        if( opts.tag!=null ) {
+            pos = tasksMetaList.findIndexOf { it.tag == opts.tag }
+            if( pos==-1 ) throw new IllegalArgumentException("Unable to find any task with tag=$opts.tag")
+        }
+        else if( opts.index!=null ) {
+            pos = tasksMetaList.findIndexOf { it.index == opts.index }
+            if( pos==-1 ) throw new IllegalArgumentException("Unable to find any task with index=$opts.index")
+        }
+        else
+            throw new IllegalArgumentException("Test 'emissionWith' requires 'tag' or 'index' argument")
+
+        apply0(pos,body)
     }
 
+    void emissionNext(Closure body) {
+        apply0(current++, body)
+    }
+
+    private void apply0(int index, Closure body) {
+        if( type=='process' ) {
+            final meta = tasksMetaList.get(index)
+            final values = emissions.get(index)
+            final ctx = new TaskDsl( values, meta )
+            invoke(body, ctx)
+        }
+        else {
+            final values = emissions.get(index)
+            final ctx = new WorkflowDsl( values )
+            invoke(body, ctx)
+        }
+    }
+
+    private void invoke(Closure closure, Object binding) {
+        def copy = (Closure) closure.clone()
+        copy.setDelegate(binding)
+        copy.setResolveStrategy(Closure.DELEGATE_FIRST)
+        copy.call()
+    }
+
+
     @TupleConstructor(includeFields = true)
+    @ToString(includeNames = true, includePackage = false)
     static class ChannelEntry {
         private int index
         private String name
@@ -129,6 +192,7 @@ class TestflowDsl {
         def read() { channel.getVal() }
     }
 
+    @ToString(includeNames = true, includePackage = false, includeFields = true)
     @TupleConstructor(includeFields = true)
     static class EmissionValues {
         private List values
@@ -144,5 +208,22 @@ class TestflowDsl {
                 ? named.get(name)
                 : metaClass.getProperty(this,name)
         }
+    }
+
+    @Canonical
+    @ToString(includeNames = true, includePackage = false)
+    static class TaskDsl {
+        EmissionValues out
+        TaskMeta meta
+
+        Path path(String path) {
+            meta.workDir.resolve(path)
+        }
+    }
+
+    @Canonical
+    @ToString(includeNames = true, includePackage = false)
+    static class WorkflowDsl {
+        EmissionValues out
     }
 }

@@ -21,17 +21,17 @@ class TestflowDslTest extends Specification {
         then:
         flow.emissionsCount() == 3
         and:
-        flow.withEmission(0) {
+        flow.emissionNext {
             assert out[0] == 1
             assert out[1] == 'A'
         }
         and:
-        flow.withEmission(1) {
+        flow.emissionNext {
             assert out[0] == 2
             assert out[1] == 'B'
         }
         and:
-        flow.withEmission(2) {
+        flow.emissionNext {
             assert out[0] == 3
             assert out[1] == 'C'
         }
@@ -48,12 +48,12 @@ class TestflowDslTest extends Specification {
         then:
         flow.emissionsCount() == 2
         and:
-        flow.withEmission(0) {
+        flow.emissionNext {
             assert out[0] == 1
             assert out[1] == 'A'
         }
         and:
-        flow.withEmission(1) {
+        flow.emissionNext {
             assert out[0] == 2
             assert out[1] == 'B'
         }
@@ -70,17 +70,17 @@ class TestflowDslTest extends Specification {
         then:
         flow.emissionsCount() == 3
         and:
-        flow.withEmission(0) {
+        flow.emissionNext {
             assert out[0] == 10
             assert out[1] == 'A'
         }
         and:
-        flow.withEmission(1) {
+        flow.emissionNext {
             assert out[0] == 10
             assert out[1] == 'B'
         }
         and:
-        flow.withEmission(2) {
+        flow.emissionNext {
             assert out[0] == 10
             assert out[1] == 'C'
         }
@@ -112,21 +112,21 @@ class TestflowDslTest extends Specification {
         then:
         flow.emissionsCount() == 3
         and:
-        flow.withEmission(0) {
+        flow.emissionNext {
             assert out[0] == 10
             assert out[0] == out.foo
             assert out[1] == 'A'
             assert out[1] == out.bar
         }
         and:
-        flow.withEmission(1) {
+        flow.emissionNext {
             assert out[0] == 10
             assert out[1] == 'B'
             assert out[0] == out.foo
             assert out[1] == out.bar
         }
         and:
-        flow.withEmission(2) {
+        flow.emissionNext{
             assert out[0] == 10
             assert out[1] == 'C'
             assert out[0] == out.foo
@@ -160,7 +160,7 @@ class TestflowDslTest extends Specification {
         then:
         flow.emissionsCount() == 1
         and:
-        flow.withEmission(0) {
+        flow.emissionNext {
             assert out[0] == 10
             assert out[0] == out.foo
             assert out[1] == 20

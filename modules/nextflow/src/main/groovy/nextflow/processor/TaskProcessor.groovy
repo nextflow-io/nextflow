@@ -47,6 +47,7 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import groovyx.gpars.group.PGroup
+import nextflow.Channel
 import nextflow.NF
 import nextflow.Nextflow
 import nextflow.Session
@@ -236,6 +237,8 @@ class TaskProcessor {
 
     private static LockManager lockManager = new LockManager()
 
+    private DataflowQueue<TaskMeta> tasksMeta = new DataflowQueue<>()
+
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
         config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskTemplateVarsXform) )
@@ -340,6 +343,8 @@ class TaskProcessor {
     int getMaxForks() { maxForks }
 
     boolean hasErrors() { errorCount>0 }
+
+    DataflowQueue<TaskMeta> getTasksMeta() { tasksMeta }
 
     protected void checkWarn(String msg, Map opts=null) {
         if( NF.isStrictMode() )
@@ -2231,6 +2236,7 @@ class TaskProcessor {
         @Override
         void afterRun(DataflowProcessor processor, List<Object> messages) {
             log.trace "<${name}> After run"
+            tasksMeta.bind( new TaskMeta(currentTask.get()) )
             currentTask.remove()
         }
 
@@ -2267,6 +2273,7 @@ class TaskProcessor {
         @Override
         void afterStop(final DataflowProcessor processor) {
             log.trace "<${name}> After stop"
+            tasksMeta.bind( Channel.STOP )
         }
 
         /**

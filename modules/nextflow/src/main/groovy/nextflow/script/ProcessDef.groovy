@@ -19,17 +19,19 @@ package nextflow.script
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Const
 import nextflow.Global
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
+import nextflow.processor.TaskMeta
+import nextflow.processor.TaskProcessor
 import nextflow.script.params.BaseInParam
 import nextflow.script.params.BaseOutParam
 import nextflow.script.params.EachInParam
 import nextflow.script.params.InputsList
 import nextflow.script.params.OutputsList
-
 /**
  * Models a nextflow process definition
  *
@@ -82,6 +84,8 @@ class ProcessDef extends BindableDef implements ChainableDef {
      * The result of the process execution
      */
     private transient ChannelOut output
+
+    private TaskProcessor processor
 
     ProcessDef(BaseScript owner, Closure<BodyDef> body, String name ) {
         this.owner = owner
@@ -152,6 +156,10 @@ class ProcessDef extends BindableDef implements ChainableDef {
         return output
     }
 
+    DataflowQueue<TaskMeta> getTasksMeta() {
+        processor.getTasksMeta()
+    }
+
     String getType() { 'process' }
 
     private String missMatchErrMessage(String name, int expected, int actual) {
@@ -200,10 +208,9 @@ class ProcessDef extends BindableDef implements ChainableDef {
                 .getExecutor(processName, processConfig, taskBody, session)
 
         // create processor class
-        session
-                .newProcessFactory(owner)
-                .newTaskProcessor(processName, executor, processConfig, taskBody)
-                .run()
+        final factory = session .newProcessFactory(owner)
+        processor = factory.newTaskProcessor(processName, executor, processConfig, taskBody)
+        processor.run()
 
         // the result channels
         assert declaredOutputs.size()>0, "Process output should contains at least one channel"
