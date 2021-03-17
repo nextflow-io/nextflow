@@ -47,10 +47,16 @@ class AzPathFactory extends FileSystemPathFactory {
         final cfg = AzConfig.getConfig().storage()
 
         // find the related file system
-        final fs = getFileSystem(new URI(uri), cfg.getEnv())
+        final fs = getFileSystem(uri0(uri), cfg.getEnv())
 
         // resulting az path
         return fs.getPath(uri.substring(4))
+    }
+
+    private URI uri0(String uri) {
+        // note: this is needed to allow URI to handle glob characrers
+        // see https://github.com/nextflow-io/nextflow/issues/1969
+        new URI(null, null, uri, null, null)
     }
 
     protected FileSystem getFileSystem(URI uri, Map env) {
