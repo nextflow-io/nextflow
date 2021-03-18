@@ -138,8 +138,8 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
         final network = config.navigate('google.lifeSciences.network') as String
         final subnetwork = config.navigate('google.lifeSciences.subnetwork') as String
         //
-        final parallelThreadCount = config.navigate('google.lifeSciences.parallelThreadCount', DEFAULT_PARALLEL_THREAD_COUNT) as int
-        final slicedObjectDownloadMaxComponents = config.navigate('google.lifeSciences.slicedObjectDownloadMaxComponents', DEFAULT_SLICED_OBJECT_DOWNLOAD_MAX_COMPONENTS) as int
+        final parallelThreadCount = config.navigate('google.lifeSciences.parallelThreadCount', DEFAULT_PARALLEL_THREAD_COUNT) as Integer
+        final slicedObjectDownloadMaxComponents = config.navigate('google.lifeSciences.slicedObjectDownloadMaxComponents', DEFAULT_SLICED_OBJECT_DOWNLOAD_MAX_COMPONENTS) as Integer
 
         def zones = (config.navigate("google.zone") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
         def regions = (config.navigate("google.region") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
