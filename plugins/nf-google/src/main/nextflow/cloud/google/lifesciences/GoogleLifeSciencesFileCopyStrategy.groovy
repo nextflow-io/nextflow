@@ -55,9 +55,8 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
         def attempts = config.maxTransferAttempts ?: CloudTransferOptions.MAX_TRANSFER_ATTEMPTS
         def delayBetweenAttempts = config.delayBetweenAttempts ?: CloudTransferOptions.DEFAULT_DELAY_BETWEEN_ATTEMPTS
 
-        def threads = config.parallelThreadCount ?: GoogleLifeSciencesConfig.DEFAULT_PARALLEL_THREAD_COUNT
-        def slices = config.slicedObjectDownloadMaxComponents ?: GoogleLifeSciencesConfig.DEFAULT_SLICED_OBJECT_DOWNLOAD_MAX_COMPONENTS
-
+        def threads = config.parallelThreadCount ?: 5
+        def slices = config.slicedObjectDownloadMaxComponents ?: 4
         def gsutil_opts = "local opts=('-q' '-m' '-o' 'GSUtil:parallel_thread_count=$threads' '-o' 'GSUtil:sliced_object_download_max_components=$slices')"
 
         BashFunLib.body(maxConnect, attempts, delayBetweenAttempts) +
