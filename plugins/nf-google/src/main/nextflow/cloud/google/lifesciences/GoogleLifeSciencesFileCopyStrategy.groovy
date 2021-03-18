@@ -57,42 +57,42 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
 
         def threads = config.parallelThreadCount ?: 5
         def slices = config.slicedObjectDownloadMaxComponents ?: 4
-        def gsutil_opts = "local opts=('-q' '-m' '-o' 'GSUtil:parallel_thread_count=$threads' '-o' 'GSUtil:sliced_object_download_max_components=$slices')"
+        def gsutil_opts = "('-q' '-m' '-o' 'GSUtil:parallel_thread_count=$threads' '-o' 'GSUtil:sliced_object_download_max_components=$slices')"
 
         BashFunLib.body(maxConnect, attempts, delayBetweenAttempts) +
-        '''
+        """
         # google storage helper
         nxf_gs_download() {
-            local source=$1
-            local target=$2
-            local project=$3
-            local basedir=$(dirname $2)
+            local source=\$1
+            local target=\$2
+            local project=\$3
+            local basedir=\$(dirname \$2)
             local ret
-        '''  + gsutil_opts +
-        '''    
-            if [[ $project ]]; then
-              opts+=('-u' "$project")
+            local opts=$gsutil_opts
+
+            if [[ \$project ]]; then
+              opts+=('-u' "\$project")
             fi
              
             ## download assuming it's a file download
-            mkdir -p $basedir
-            ret=$(gsutil ${opts[@]} cp "$source" "$target" 2>&1) || {
+            mkdir -p \$basedir
+            ret=\$(gsutil \${opts[@]} cp "\$source" "\$target" 2>&1) || {
                 ## if fails check if it was trying to download a directory
-                mkdir $target
-                gsutil ${opts[@]} cp -R "$source/*" "$target" || {
-                  rm -rf $target
-                  >&2 echo "Unable to download path: $source"
+                mkdir \$target
+                gsutil \${opts[@]} cp -R "\$source/*" "\$target" || {
+                  rm -rf \$target
+                  >&2 echo "Unable to download path: \$source"
                   exit 1
                 }
             }
         }
 
         nxf_gs_upload() {
-            local name=$1
-            local target=$2
-            gsutil -m -q cp -R "$name" "$target/$name"
+            local name=\$1
+            local target=\$2
+            gsutil -m -q cp -R "\$name" "\$target/\$name"
         }
-        '''.stripIndent()
+        """.stripIndent()
     }
 
     @Override
