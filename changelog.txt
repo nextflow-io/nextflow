@@ -1,5 +1,8 @@
 NEXTFLOW CHANGE-LOG
 ===================
+20.12.1-edge - 18 Mar 2021
+- Bump nxf-s3fs 1.0.9
+
 20.12.0-edge - 12 Dec 2020 
 - Add support for charliecloud container engine #1809
 - Fix glitch on K8s task progress update [668434f6]
