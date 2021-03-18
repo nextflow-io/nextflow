@@ -54,7 +54,7 @@ class AzPathFactory extends FileSystemPathFactory {
     }
 
     private URI uri0(String uri) {
-        // note: this is needed to allow URI to handle glob characrers
+        // note: this is needed to allow URI to handle curly brackets characters
         // see https://github.com/nextflow-io/nextflow/issues/1969
         new URI(null, null, uri, null, null)
     }
