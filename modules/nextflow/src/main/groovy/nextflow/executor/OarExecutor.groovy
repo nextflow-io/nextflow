@@ -184,5 +184,8 @@ class OarExecutor extends AbstractGridExecutor {
         return p!=-1 ? line.substring(p+prefix.size()).trim() : null
     }
 
-
+    @Override
+    protected String sanitizeJobName(String name) {
+        name.size() > 100 ? name.substring(0,100) : name
+    }
 }
