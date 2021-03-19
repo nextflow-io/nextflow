@@ -27,6 +27,12 @@ import nextflow.util.SimpleHttpClient
 @CompileStatic
 class TowerFactory implements TraceObserverFactory {
 
+    private Map<String,String> env
+
+    TowerFactory(){
+        env = System.getenv()
+    }
+
     @Override
     Collection<TraceObserver> create(Session session) {
         final config = session.config
@@ -39,7 +45,7 @@ class TowerFactory implements TraceObserverFactory {
             return Collections.emptyList()
 
         if ( !endpoint || endpoint=='-' )
-            endpoint = System.getenv('TOWER_API_ENDPOINT') ?: TowerClient.DEF_ENDPOINT_URL
+            endpoint = env.get('TOWER_API_ENDPOINT') ?: TowerClient.DEF_ENDPOINT_URL
 
         final tower = new TowerClient(endpoint)
         if( aliveInterval )
@@ -50,7 +56,7 @@ class TowerFactory implements TraceObserverFactory {
         tower.maxRetries = config.navigate('tower.maxRetries', 5) as int
         tower.backOffBase = config.navigate('tower.backOffBase', SimpleHttpClient.DEFAULT_BACK_OFF_BASE) as int
         tower.backOffDelay = config.navigate('tower.backOffDelay', SimpleHttpClient.DEFAULT_BACK_OFF_DELAY  ) as int
-
+        tower.workspaceId = config.navigate('tower.workspaceId', env.get('TOWER_WORKSPACE_ID'))
         final result = new ArrayList(1)
         result.add(tower)
         return result

@@ -123,6 +123,8 @@ class TowerClient implements TraceObserver {
 
     private String refreshToken
 
+    private String workspaceId 
+
     /**
      * Constructor that consumes a URL and creates
      * a basic HTTP client.
@@ -152,7 +154,7 @@ class TowerClient implements TraceObserver {
     String getRunName() { runName }
 
     String getRunId() { runId }
-    
+
     void setAliveInterval(Duration d) {
         this.aliveInterval = d
     }
@@ -172,6 +174,12 @@ class TowerClient implements TraceObserver {
     void setBackOffDelay( int value ) {
         this.backOffDelay = value
     }
+
+    void setWorkspaceId( String workspaceId ) {
+        this.workspaceId = workspaceId
+    }
+
+    String getWorkspaceId() { workspaceId }
 
     /**
      * Check the URL and create an HttpPost() object. If a invalid i.e. protocol is used,
@@ -197,23 +205,38 @@ class TowerClient implements TraceObserver {
     }
 
     protected String getUrlTraceCreate() {
-        this.endpoint + '/trace/create'
+        def result = this.endpoint + '/trace/create'
+        if( workspaceId )
+            result += "?workspaceId=$workspaceId"
+        return result
     }
 
     protected String getUrlTraceBegin() {
-        "$endpoint/trace/$workflowId/begin"
+        def result = "$endpoint/trace/$workflowId/begin"
+        if( workspaceId )
+            result += "?workspaceId=$workspaceId"
+        return result
     }
 
     protected String getUrlTraceComplete() {
-        "$endpoint/trace/$workflowId/complete"
+        def result = "$endpoint/trace/$workflowId/complete"
+        if( workspaceId )
+            result += "?workspaceId=$workspaceId"
+        return result
     }
 
     protected String getUrlTraceHeartbeat() {
-        "$endpoint/trace/$workflowId/heartbeat"
+        def result = "$endpoint/trace/$workflowId/heartbeat"
+        if( workspaceId )
+            result += "?workspaceId=$workspaceId"
+        return result
     }
 
     protected String getUrlTraceProgress() {
-        "$endpoint/trace/$workflowId/progress"
+        def result = "$endpoint/trace/$workflowId/progress"
+        if( workspaceId )
+            result += "?workspaceId=$workspaceId"
+        return result
     }
 
     /**

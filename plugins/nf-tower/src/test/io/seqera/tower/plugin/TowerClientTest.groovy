@@ -376,6 +376,20 @@ class TowerClientTest extends Specification {
         tower.getUrlTraceComplete() == 'https://tower.nf/trace/12345/complete'
     }
 
+    def 'should get trace endpoint with workspace' () {
+        given:
+        def tower = new TowerClient('https://tower.nf')
+        tower.workflowId = '12345'
+        tower.workspaceId = '300'
+
+        expect:
+        tower.getUrlTraceCreate() == 'https://tower.nf/trace/create?workspaceId=300'
+        tower.getUrlTraceBegin() == 'https://tower.nf/trace/12345/begin?workspaceId=300'
+        tower.getUrlTraceProgress() == 'https://tower.nf/trace/12345/progress?workspaceId=300'
+        tower.getUrlTraceHeartbeat() == 'https://tower.nf/trace/12345/heartbeat?workspaceId=300'
+        tower.getUrlTraceComplete() == 'https://tower.nf/trace/12345/complete?workspaceId=300'
+    }
+
     def 'should set the auth token' () {
         given:
         def http = Mock(SimpleHttpClient)
