@@ -1876,7 +1876,35 @@ class ConfigBuilderTest extends Specification {
         [foo:1, bar:[:]]            | [bar: [x:10, y:20]]           | [foo: 1, bar: [x:10, y:20]]
         [foo:1, bar:[x:1, y:2]]     | [bar: [x:10, y:20]]           | [foo: 1, bar: [x:10, y:20]]
         [foo:1, bar:[x:1, y:2]]     | [foo: 2, bar: [x:10, y:20]]   | [foo: 2, bar: [x:10, y:20]]
+    }
 
+    def 'prevent config side effects' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def config = folder.resolve('nf.config')
+        config.text = '''\
+        params.test.foo = "foo_def"
+        params.test.bar = "bar_def"        
+        '''.stripIndent()
+
+        when:
+        def cfg1 = new ConfigBuilder()
+                .setOptions( new CliOptions(userConfig: [config.toString()]))
+                .build()
+        then:
+        cfg1.params.test.foo == "foo_def"
+        cfg1.params.test.bar == "bar_def"
+
+        
+        when:
+        def cfg2 = new ConfigBuilder()
+                .setOptions( new CliOptions(userConfig: [config.toString()]))
+                .setCmdRun( new CmdRun(params: ['test.foo': 'CLI_FOO'] ))
+                .build()
+        then:
+        cfg2.params.test.foo == "CLI_FOO"
+        cfg2.params.test.bar == "bar_def"
     }
 
 }
