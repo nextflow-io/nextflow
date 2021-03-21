@@ -408,11 +408,14 @@ class ConfigBuilderTest extends Specification {
 
     def 'params-file should override params in the config file' () {
         setup:
+        def baseDir = Paths.get('/my/base/dir')
+        and:
         def params = Files.createTempFile('test', '.yml')
         params.text = '''
             alpha: "Hello" 
             beta: "World" 
             omega: "Last"
+            theta: "${baseDir}/something"
             '''.stripIndent()
         and:
         def file = Files.createTempFile('test',null)
@@ -434,7 +437,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions()
         def run = new CmdRun(paramsFile: params)
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).setBaseDir(baseDir).buildGivenFiles(file)
 
         then:
         result.params.alpha == 'Hello'  // <-- params defined in the params-file overrides the ones in the config file
@@ -442,6 +445,7 @@ class ConfigBuilderTest extends Specification {
         result.params.gamma == 'Hello'  // <--   as above
         result.params.omega == 'Last'
         result.params.delta == 'Foo'
+        result.params.theta == "$baseDir/something"
         result.process.publishDir == [path: 'Hello']
 
         cleanup:
