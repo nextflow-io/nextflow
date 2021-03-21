@@ -17,7 +17,6 @@
 
 package nextflow.cli
 
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.regex.Pattern
 
@@ -31,6 +30,7 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import nextflow.Const
+import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
@@ -234,6 +234,10 @@ class CmdRun extends CmdBase implements HubOptions {
     @Override
     String getName() { NAME }
 
+    String getParamsFile() { paramsFile ?: env.get('NXF_PARAMS_FILE') }
+
+    boolean hasParams() { params || getParamsFile() }
+
     @Override
     void run() {
         final scriptArgs = (args?.size()>1 ? args[1..-1] : []) as List<String>
@@ -401,17 +405,17 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
     @Memoized  // <-- avoid parse multiple times the same file and params
-    Map getParsedParams() {
+    Map parsedParams(Map configVars) {
 
         final result = [:]
-        final file = paramsFile ?: env.get('NXF_PARAMS_FILE')
+        final file = getParamsFile()
         if( file ) {
             def path = validateParamsFile(file)
             def type = path.extension.toLowerCase() ?: null
             if( type == 'json' )
-                readJsonFile(path, result)
+                readJsonFile(path, configVars, result)
             else if( type == 'yml' || type == 'yaml' )
-                readYamlFile(path, result)
+                readYamlFile(path, configVars, result)
         }
 
         // set the CLI params
@@ -481,20 +485,45 @@ class CmdRun extends CmdBase implements HubOptions {
         return result
     }
 
+    static private Pattern PARAMS_VAR = ~/(?m)\$\{(\p{javaJavaIdentifierStart}\p{javaJavaIdentifierPart}*)}/
 
-    private void readJsonFile(Path file, Map result) {
-        try {
-            def json = (Map)new JsonSlurper().parse(Files.newInputStream(file))
-            result.putAll(json)
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Cannot parse params file: $file", e)
+    protected String replaceVars0(String content, Map binding) {
+        content.replaceAll(PARAMS_VAR) { List<String> matcher ->
+            // - the regex matcher is represented as list
+            // - the first element is the matching string ie. `${something}`
+            // - the second element is the group content ie. `something`
+            // - make sure the regex contains at least a group otherwise the closure
+            // parameter is a string instead of a list of the call fail
+            final placeholder = matcher.get(0)
+            final key = matcher.get(1)
+
+            if( !binding.containsKey(key) ) {
+                final msg = "Missing params file variable: $placeholder"
+                if(NF.strictMode)
+                    throw new AbortOperationException(msg)
+                log.warn msg
+                return placeholder
+            }
+
+            return binding.get(key)
         }
     }
 
-    private void readYamlFile(Path file, Map result) {
+    private void readJsonFile(Path file, Map configVars, Map result) {
         try {
-            def yaml = (Map)new Yaml().load(Files.newInputStream(file))
+            def text = configVars ? replaceVars0(file.text, configVars) : file.text
+            def json = (Map)new JsonSlurper().parseText(text)
+            result.putAll(json)
+        }
+        catch( Exception e ) {
+            throw new AbortOperationException("Cannot parse params file: $file - Cause: ${e.message}", e)
+        }
+    }
+
+    private void readYamlFile(Path file, Map configVars, Map result) {
+        try {
+            def text = configVars ? replaceVars0(file.text, configVars) : file.text
+            def yaml = (Map)new Yaml().load(text)
             result.putAll(yaml)
         }
         catch( Exception e ) {
