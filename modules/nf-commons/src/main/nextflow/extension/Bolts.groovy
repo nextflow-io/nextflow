@@ -911,4 +911,26 @@ class Bolts {
         else
             return self.substring(0,Math.min(self.size()-max, max)) + suffix
     }
+
+    static <T extends Serializable> T deepClone(T obj) {
+        final buffer = new ByteArrayOutputStream()
+        final oos = new ObjectOutputStream(buffer)
+        oos.writeObject(obj)
+        oos.flush()
+
+        final inputStream = new ByteArrayInputStream(buffer.toByteArray())
+        return (T) new ObjectInputStream(inputStream).readObject()
+    }
+
+    @CompileDynamic
+    static <T extends Map> T deepClone(T map) {
+        final result = map.clone()
+        for( def key : map.keySet() ) {
+            def value = map.get(key)
+            if( value instanceof Map ) {
+               map.put(key, deepClone(value))
+            }
+        }
+        return (T)result
+    }
 }
