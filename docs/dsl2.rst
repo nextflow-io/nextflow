@@ -383,12 +383,13 @@ A module script can define one or more parameters using the same syntax of a Nex
     }
 
 
-Then, parameters are inherited from the including context. For example::
+Parameters set before the include statement are inherited from the including context but parameters set later are not. For example::
 
     params.foo = 'Hola'
-    params.bar = 'Mundo'
 
     include {sayHello} from './some/module'
+
+    params.bar = 'Mundo'
 
     workflow {
         sayHello()
@@ -396,7 +397,7 @@ Then, parameters are inherited from the including context. For example::
 
 The above snippet prints::
 
-    Hola Mundo
+    Hola world!
 
 
 The option ``addParams`` can be used to extend the module parameters without affecting the external
