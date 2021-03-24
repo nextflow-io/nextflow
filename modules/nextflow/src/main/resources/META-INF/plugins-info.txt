@@ -3,5 +3,5 @@ nf-console@1.0.2
 nf-google@1.0.3
 nf-ignite@1.2.2
 nf-azure@0.9.6
-nf-tower@1.0.2
+nf-tower@1.1.0
 nf-ga4gh@1.0.2
