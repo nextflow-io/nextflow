@@ -124,6 +124,7 @@ class AzBatchService implements Closeable {
     }
 
     AzVmType guessBestVm(String location, int cpus, MemoryUnit mem, String family) {
+        log.debug "[AZURE BATCH] guess best VM given location=$location; cpus=$cpus; mem=$mem; family=$family"
         if( !family.contains('*') && !family.contains('?') )
             return findBestVm(location, cpus, mem, family)
 
@@ -165,7 +166,7 @@ class AzBatchService implements Closeable {
             }
         }
 
-        return getVmType(location, scores.firstEntry().value)
+        return scores ? getVmType(location, scores.firstEntry().value) : null
     }
 
     protected boolean matchType(String family, String vmType) {
@@ -441,11 +442,11 @@ class AzBatchService implements Closeable {
         final cpus = task.config.getCpus()
         final type = task.config.getMachineType() ?: opts.vmType
         if( !type )
-            throw new IllegalArgumentException("Missing Azure Batch VM type")
+            throw new IllegalArgumentException("Missing Azure Batch VM type for task '${task.name}'")
 
         final vmType = guessBestVm(loc, cpus, mem, type)
         if( !vmType ) {
-            def msg = "Cannot find a VM matching this requirements: type=$type, cpus=${cpus}, mem=${mem?:'-'}, location=${loc}"
+            def msg = "Cannot find a VM for task '${task.name}' matching this requirements: type=$type, cpus=${cpus}, mem=${mem?:'-'}, location=${loc}"
             throw new IllegalArgumentException(msg)
         }
 
