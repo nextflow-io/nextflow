@@ -101,7 +101,8 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
     @Override
     protected CharSequence appendEnv(StringBuilder result) {
-        result << 'SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" '
+        makeEnv('TMP',result) .append(' ')
+        makeEnv('TMPDIR',result) .append(' ')
         super.appendEnv(result)
     }
 
@@ -114,7 +115,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
     }
 
     @Override
-    protected CharSequence makeEnv( env, StringBuilder result = new StringBuilder() ) {
+    protected StringBuilder makeEnv( env, StringBuilder result = new StringBuilder() ) {
 
         if( env instanceof Map ) {
             int index=0
