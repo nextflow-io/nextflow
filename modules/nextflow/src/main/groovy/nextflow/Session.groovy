@@ -165,6 +165,11 @@ class Session implements ISession {
 
     String commandLine
 
+    /*
+     * Project repository commit ID
+     */
+    String commitId
+
     /**
      * Local path where script generated classes are saved
      */
