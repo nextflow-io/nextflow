@@ -83,7 +83,8 @@ class ShifterBuilder extends ContainerBuilder<ShifterBuilder> {
      * @param result
      * @return
      */
-    protected CharSequence makeEnv( env, StringBuilder result = new StringBuilder() ) {
+    @Override
+    protected StringBuilder makeEnv( env, StringBuilder result = new StringBuilder() ) {
 
         if( env instanceof Map ) {
             short index = 0

@@ -133,7 +133,7 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
     }
 
     @Override
-    protected CharSequence makeEnv( env, StringBuilder result = new StringBuilder() ) {
+    protected StringBuilder makeEnv( env, StringBuilder result = new StringBuilder() ) {
 
         if( env instanceof Map ) {
             short index = 0
