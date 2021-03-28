@@ -65,4 +65,6 @@ interface ISession {
 
     boolean isResumeMode()
 
+    String getCommitId()
+
 }
