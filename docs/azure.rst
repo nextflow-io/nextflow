@@ -48,7 +48,7 @@ of the ``accountKey`` attribute.
     the permissions: `Read`, `Write`, `Delete`, `List`, `Add`, `Create`.
 
 .. tip::
-    The value of ``sasToken`` is the token stripped by the character '?' from the beginning of the token.
+    The value of ``sasToken`` is the token stripped by the character ``?`` from the beginning of the token.
 
 
 Once the Blob Storage credentials are set you can access the files in the blob container like local files prepending
