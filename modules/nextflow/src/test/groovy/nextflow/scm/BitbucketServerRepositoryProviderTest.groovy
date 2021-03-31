@@ -18,6 +18,8 @@ package nextflow.scm
 
 
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Piotr Faba <piotr.faba@ardigen.com>
@@ -38,26 +40,43 @@ class BitbucketServerRepositoryProviderTest extends Specification {
         }
         '''
 
-    def 'should return repo url' () {
+    @Unroll
+    def 'should return endpoint url' () {
 
         given:
         def config = new ConfigSlurper().parse(CONFIG)
         def obj = new ProviderConfig('bitbucketserver', config.providers.bbserver as ConfigObject)
 
         expect:
-        new BitbucketServerRepositoryProvider('pditommaso/hello', obj).getEndpointUrl() == 'https://bitbucket.server.com/rest/api/1.0/projects/pditommaso/repos/hello'
+        new BitbucketServerRepositoryProvider(NAME, obj).getEndpointUrl() == ENDPOINT
+
+        where:
+        NAME                                    | ENDPOINT
+        'pditommaso/hello'                      | 'https://bitbucket.server.com/rest/api/1.0/projects/pditommaso/repos/hello'
+        'scm/pditommaso/hello'                  | 'https://bitbucket.server.com/rest/api/1.0/projects/pditommaso/repos/hello'
+        'projects/DA/repos/crispr-pipeline'     | 'https://bitbucket.server.com/rest/api/1.0/projects/DA/repos/crispr-pipeline'
     }
 
+    @Unroll
     def 'should return project URL' () {
 
         given:
         def config = new ConfigSlurper().parse(CONFIG)
         def obj = new ProviderConfig('bitbucketserver', config.providers.bbserver as ConfigObject)
-        def testString = new BitbucketServerRepositoryProvider('pditommaso/hello', obj).getRepositoryUrl()
 
         expect:
-        new BitbucketServerRepositoryProvider('pditommaso/hello', obj).getRepositoryUrl() == 'https://bitbucket.server.com/scm/pditommaso/hello'
+        new BitbucketServerRepositoryProvider(NAME, obj).getRepositoryUrl() == REPO_URL
 
+        where:
+        NAME                                | REPO_URL
+//        'pditommaso/hello'                  | 'https://bitbucket.server.com/pditommaso/hello'
+        '/pditommaso/hello'                 | 'https://bitbucket.server.com/pditommaso/hello'
+//        and:
+//        'scm/pditommaso/hello'              | 'https://bitbucket.server.com/scm/pditommaso/hello'
+//        '/scm/pditommaso/hello'             | 'https://bitbucket.server.com/scm/pditommaso/hello'
+//        and:
+//        'projects/DA/repos/crispr-pipeline' | 'https://bitbucket.server.com/projects/DA/repos/crispr-pipeline'
+//        '/projects/DA/repos/crispr-pipeline'| 'https://bitbucket.server.com/projects/DA/repos/crispr-pipeline'
     }
 
     def 'should return content URL' () {
