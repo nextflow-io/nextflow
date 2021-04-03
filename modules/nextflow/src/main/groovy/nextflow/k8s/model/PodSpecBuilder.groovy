@@ -365,6 +365,8 @@ class PodSpecBuilder {
             final claim = [name: name, mountPath: entry.mountPath ]
             if( entry.subPath )
                 claim.subPath = entry.subPath
+            if( entry.readOnly )
+                claim.readOnly = entry.readOnly
             mounts << claim
         }
 
