@@ -40,6 +40,7 @@ import nextflow.util.RateUnit
 import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import org.codehaus.groovy.runtime.GStringImpl
+import org.codehaus.groovy.runtime.InvokerHelper
 import org.codehaus.groovy.runtime.ResourceGroovyMethods
 import org.codehaus.groovy.runtime.StringGroovyMethods
 import org.slf4j.Logger
@@ -912,7 +913,7 @@ class Bolts {
             return self.substring(0,Math.min(self.size()-max, max)) + suffix
     }
 
-    static <T extends Serializable> T deepClone(T obj) {
+    protected static <T extends Serializable> T deepClone0(T obj) {
         final buffer = new ByteArrayOutputStream()
         final oos = new ObjectOutputStream(buffer)
         oos.writeObject(obj)
@@ -922,9 +923,8 @@ class Bolts {
         return (T) new ObjectInputStream(inputStream).readObject()
     }
 
-    @CompileDynamic
     static <T extends Map> T deepClone(T map) {
-        final result = map.clone()
+        final result = InvokerHelper.invokeMethod(map, 'clone', null)
         for( def key : map.keySet() ) {
             def value = map.get(key)
             if( value instanceof Map ) {
