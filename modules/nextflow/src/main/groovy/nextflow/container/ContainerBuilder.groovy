@@ -196,7 +196,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
      * @param result
      * @return
      */
-    protected CharSequence makeEnv( env, StringBuilder result = new StringBuilder() ) {
+    protected StringBuilder makeEnv( env, StringBuilder result = new StringBuilder() ) {
 
         if( env instanceof Map ) {
             short index = 0

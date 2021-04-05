@@ -285,7 +285,8 @@ class CmdRun extends CmdBase implements HubOptions {
         // note config files are collected during the build process
         // this line should be after `ConfigBuilder#build`
         runner.session.configFiles = builder.parsedConfigFiles
-
+        // set the commit id (if any)
+        runner.session.commitId = scriptFile.commitId
         if( this.test ) {
             runner.test(this.test, scriptArgs)
             return

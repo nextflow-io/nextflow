@@ -338,7 +338,7 @@ class BoltsTest extends Specification {
         Map map = [foo: 1, bar: [x: 2, y: 3]]
 
         when:
-        def copy = Bolts.deepClone((Serializable)map)
+        def copy = Bolts.deepClone0((Serializable)map)
         then:
         copy == map
 
