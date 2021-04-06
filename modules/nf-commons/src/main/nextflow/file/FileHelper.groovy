@@ -46,9 +46,9 @@ import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
+import nextflow.plugin.Plugins
 import nextflow.util.CacheHelper
 import nextflow.util.Escape
-
 /**
  * Provides some helper method handling files
  *
@@ -254,6 +254,8 @@ class FileHelper {
             return Paths.get(str)
         }
 
+        checkForMissingPlugins(str)
+
         final result = FileSystemPathFactory.parse(str)
         if( result )
             return result
@@ -261,6 +263,19 @@ class FileHelper {
         asPath(toPathURI(str))
     }
 
+    static private Map<String,String> PLUGINS_MAP = [s3:'nf-amazon', gs:'nf-google', az:'nf-azure']
+
+    static protected void checkForMissingPlugins(String str) {
+        final scheme = getUrlProtocol(str)
+        final pluginId = PLUGINS_MAP.get(scheme)
+        if( pluginId ) try {
+            if( Plugins.startIfMissing(pluginId) )
+                log.debug "Started plugin '$pluginId' required to handle file: $str"
+        }
+        catch (Exception e) {
+            log.warn ("Unable to start plugin '$pluginId' required by $str")
+        }
+    }
 
     /**
      * Given a {@link URI} return a {@link Path} object
