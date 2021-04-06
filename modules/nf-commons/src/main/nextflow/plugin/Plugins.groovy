@@ -47,6 +47,10 @@ class Plugins {
         INSTANCE.stop()
     }
 
+    static boolean hasPlugin(String pluginId) {
+        INSTANCE.hasPlugin(pluginId)
+    }
+
     static <T> List<T> getExtensions(Class<T> type) {
         INSTANCE.getExtensions(type)
     }
@@ -58,5 +62,14 @@ class Plugins {
 
     static void pull(List<String> ids) {
         INSTANCE.pullPlugins(ids)
+    }
+
+    static boolean startIfMissing(String pluginId) {
+        if( INSTANCE ) {
+            return INSTANCE.startIfMissing(pluginId)
+        } else {
+            log.debug "Plugins subsystem not available - Ignoring installIfMissing('$pluginId')"
+            return false
+        }
     }
 }
