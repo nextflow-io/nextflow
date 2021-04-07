@@ -35,7 +35,7 @@ Queue channels are also created by process output declarations using the ``into`
 .. note:: The definition implies that the same queue channel cannot be used more than one time as process
  output and more than one time as process input.
 
-In you need to connect a process output channel to more than one process or operator use the
+If you need to connect a process output channel to more than one process or operator use the
 :ref:`operator-into` operator to create two (or more) copies of the same channel and use each
 of them to connect a separate process.
 
