@@ -101,6 +101,7 @@ class CmdLogTest extends Specification {
                 .readLines()
                 // remove the log part
                 .findResults { line -> !line.contains('DEBUG') ? line : null }
+                .findResults { line -> !line.contains('INFO') ? line : null }
                 .join('\n')
         then:
         stdout.readLines().size() == 3

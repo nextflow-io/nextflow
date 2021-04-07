@@ -39,12 +39,15 @@ class PodVolumeClaim {
 
     String subPath
 
-    PodVolumeClaim(String name, String mount, String subPath=null) {
+    boolean readOnly
+
+    PodVolumeClaim(String name, String mount, String subPath=null, boolean readOnly=false) {
         assert name
         assert mount
         this.claimName = name
         this.mountPath = sanitize(mount)
         this.subPath = subPath
+        this.readOnly = readOnly
         validate(mountPath)
     }
 
@@ -54,6 +57,7 @@ class PodVolumeClaim {
         this.claimName = entry.volumeClaim
         this.mountPath = sanitize(entry.mountPath)
         this.subPath = entry.subPath
+        this.readOnly = entry.readOnly ?: false
         validate(mountPath)
     }
 

@@ -28,6 +28,7 @@ import nextflow.extension.FilesEx
 import nextflow.util.CacheHelper
 import org.pf4j.DefaultPluginManager
 import org.pf4j.PluginManager
+import org.pf4j.PluginState
 import org.pf4j.PluginStateEvent
 import org.pf4j.PluginStateListener
 /**
@@ -200,6 +201,14 @@ class PluginsFacade implements PluginStateListener {
         }
     }
 
+    boolean hasPlugin(String pluginId) {
+        return manager.getPlugin(pluginId) != null
+    }
+
+    boolean isStarted(String pluginId) {
+        manager.getPlugin(pluginId)?.pluginState == PluginState.STARTED
+    }
+
     protected List<PluginSpec> pluginsRequirement(Map config) {
         def specs = parseConf(config)
         if( env.get('NXF_PACK')=='all' && specs ) {
@@ -275,4 +284,18 @@ class PluginsFacade implements PluginStateListener {
         updater.pullPlugins(ids)
     }
 
+    boolean startIfMissing(String pluginId) {
+        if( env.NXF_PLUGINS_DEFAULT == 'false' )
+            return false
+
+        if( isStarted(pluginId) )
+            return false
+
+        synchronized (this) {
+            if( isStarted(pluginId) )
+                return false
+            start(pluginId)
+            return true
+        }
+    }
 }
