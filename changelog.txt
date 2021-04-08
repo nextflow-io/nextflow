@@ -1,5 +1,30 @@
 NEXTFLOW CHANGE-LOG
 ===================
+21.04.0-edge - 8 Apr 2021
+- Add readOnly flag to k8s volume mounts (#2013) [33bd24ac]
+- Add Start default plugins on-demand #1964 [cf2a9d73]
+- Add support for tower workspaceId [e2977688]
+- Improve suppor for BitBucket server repos [eb946e27]
+- Fix toInt/Long/Float/Double operator hangs with value channel [7c35d985]
+- Fix regression caused by nested params handling #1923 [b25af49b]
+- Fix Cache invalidation when repo is cloned between runs #1989 [ac526f38]
+- Fix Invalid setting of TMP var with singularity #1997 [23f80121] [472cfbdd]
+- Fix issue overriding nested params from cli #1923  [cfe6b1d1]
+- Fix az path handling curly brackets globs #1969 [c78a1bbf]
+- Fix Missing git credentials when checking last commit id [f101308e]
+- Fix plugins version check against local installation [535c2bb5]
+- Fix local dependant formatting #1962 [2a5cbac1]
+- Fix Encode path parameter at GitLab getContentUrl [6f80f651]
+- Fix Only use sudo rm with docker #1956 [f9490423]
+- Prevent AZ NPE when missing vmtype + better logging #1992 [711362ca]
+- Refactor params file var binding #1860 #1972 [330f044a]
+- Prevent jobs names longer than 100 chars OAR exec [6daa21b9]
+- Bump nf-azure@0.9.6 + nf-amazon@1.0.3 [aff1d355]
+- Bump nf-amazon@1.0.3 - s3fs@1.0.9 - solve #1830 [b3b221c1]
+- Bump nf-tower@1.1.0 [29fdd9f7]
+- Bump nf-amazon@1.0.4 + nxf-s3fs@1.1.0 [c638af80]
+- Bump nf-azure@0.9.7 [07c59946]
+
 21.03.0-edge - 5 Mar 2021
 - Add support for serializable ValueObject [8dfaadf3]
 - Add abilitity to fetch revisioned git assets 
