@@ -1186,7 +1186,7 @@ class OperatorExTest extends Specification {
 
     }
 
-    def testGroupTupleWithClosure() {
+    def testGroupTupleWithClosureWithSingle() {
 
         when:
         def result = Channel
@@ -1197,6 +1197,21 @@ class OperatorExTest extends Specification {
         result.val == [1, ['a', 'b','c','w','z'] ]
         result.val == [2, ['x','y'] ]
         result.val == [3, ['p', 'q'] ]
+        result.val == Channel.STOP
+
+    }
+
+    def testGroupTupleWithComparatorWithPair() {
+
+        when:
+        def result = Channel
+                .from([1,'z'], [1,'w'], [1,'a'], [1,'b'], [2, 'y'], [2,'x'], [3, 'q'], [1,'c'], [3, 'p'])
+                .groupTuple(sort: { o1, o2 -> o2<=>o1 } )
+
+        then:
+        result.val == [1, ['z','w','c','b','a'] ]
+        result.val == [2, ['y','x'] ]
+        result.val == [3, ['q','p'] ]
         result.val == Channel.STOP
 
     }
