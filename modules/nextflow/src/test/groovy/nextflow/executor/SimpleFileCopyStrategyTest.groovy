@@ -119,7 +119,7 @@ class SimpleFileCopyStrategyTest extends Specification {
         '/some/path/to/file.txt'    | 'file.txt'           | 'copy'            | 'cp -fRL /some/path/to/file.txt file.txt'
         '/some/path/to/file.txt'    | 'here/to/abc.txt'    | 'copy'            | 'cp -fRL /some/path/to/file.txt here/to/abc.txt'
 
-        // Check the various combinations of relative/absolute inputs to 
+        // Check the various combinations of relative/absolute inputs to
         // rellink when workDir is defined:
         '/some/path/to/file.txt'    | 'abc.txt'            | 'rellink' | 'ln -s ../../../some/path/to/file.txt abc.txt'
         '/some/path/to/file.txt'    | 'xyz/abc.txt'        | 'rellink' | 'ln -s ../../../../some/path/to/file.txt xyz/abc.txt'
@@ -160,6 +160,30 @@ class SimpleFileCopyStrategyTest extends Specification {
     }
 
     @Unroll
+    def 'glob to regex' () {
+        given:
+        SimpleFileCopyStrategy strategy = [:] as SimpleFileCopyStrategy
+        expect:
+        strategy.globToRegex( glob ) == regex
+
+        where:
+        glob               | regex
+        'abc'              | 'abc'
+        'abc*'             | 'abc[^/]*'
+        'abc**'            | 'abc.*'
+        'abc\\*'           | 'abc\\*'
+        'abc\\**'          | 'abc\\*[^/]*'
+        './[\\ab]'         | '\\./[\\ab]'
+        '{abcd,def}'       | '\\(abcd\\|def\\)'
+        '{abcd*,def}'      | '\\(abcd[^/]*\\|def\\)'
+        '{ab|cd,def}'      | '\\(ab|cd\\|def\\)'
+        '?.\\?.[?]\\[?\\]' | '.\\.\\?\\.[?]\\[.\\]'
+        '[abc]'            | '[abc]'
+        '[a-z,A-Z]'        | '[a-z,A-Z]'
+        '{a\\,b,c}/*.txt'  | '\\(a,b\\|c\\)/[^/]*\\.txt'
+    }
+
+    @Unroll
     def 'should return a valid stage-out command' () {
 
         given:
@@ -168,14 +192,21 @@ class SimpleFileCopyStrategyTest extends Specification {
         strategy.stageOutCommand(source, target, 'copy') == result
 
         where:
-        source              | target    | result
-        'file.txt'          | '/to/dir' | "cp -fRL file.txt /to/dir"
-        "file'3.txt"        | '/to dir' | "cp -fRL file\\'3.txt /to\\ dir"
-        'path_name'         | '/to/dir' | "cp -fRL path_name /to/dir"
-        'input/file.txt'    | '/to/dir' | "mkdir -p /to/dir/input && cp -fRL input/file.txt /to/dir/input"
-        'long/path/name'    | '/to/dir' | "mkdir -p /to/dir/long/path && cp -fRL long/path/name /to/dir/long/path"
-        'path_name/*'       | '/to/dir' | "mkdir -p /to/dir/path_name && cp -fRL path_name/* /to/dir/path_name"
-        'path_name/'        | '/to/dir' | "mkdir -p /to/dir/path_name && cp -fRL path_name/ /to/dir/path_name"
+        source                  | target    | result
+        'file.txt'              | '/to/dir' | "find -L -regex \"\\./file\\.txt\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
+        "file'3.txt"            | '/to dir' | "find -L -regex \"\\./file'3\\.txt\" -exec cp -fRLn --parents \"{}\" /to\\ dir \\;"
+        'path_name'             | '/to/dir' | "find -L -regex \"\\./path_name\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
+        'input/file.txt'        | '/to/dir' | "find -L -regex \"\\./input/file\\.txt\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
+        'long/path/name'        | '/to/dir' | "find -L -regex \"\\./long/path/name\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
+        'path_name/*'           | '/to/dir' | "find -L -regex \"\\./path_name/[^/]*\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
+        'path_name/'            | '/to/dir' | "find -L -type d -regex \"\\./path_name\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
+        'input/*/file.txt'      | '/to/dir' | "find -L -regex \"\\./input/[^/]*/file\\.txt\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
+        'input/**/file.txt'     | '/to/dir' | "find -L -regex \"\\./input/.*/file\\.txt\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
+        'input/**/a/**/file.txt'| '/to/dir' | "find -L -regex \"\\./input/.*/a/.*/file\\.txt\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
+        'input/?/file.txt'      | '/to/dir' | "find -L -regex \"\\./input/./file\\.txt\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
+        'input/{a,b}/file.txt'  | '/to/dir' | "find -L -regex \"\\./input/\\(a\\|b\\)/file\\.txt\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
+        'input/{a,b,c}/file.txt'| '/to/dir' | "find -L -regex \"\\./input/\\(a\\|b\\|c\\)/file\\.txt\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
+        'input/[A-Z]/file.txt'  | '/to/dir' | "find -L -regex \"\\./input/[A-Z]/file\\.txt\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
 
     }
 
@@ -267,14 +298,21 @@ class SimpleFileCopyStrategyTest extends Specification {
         strategy.stageOutCommand(source, target, 'move') == result
 
         where:
-        source              | target    | result
-        'file.txt'          | '/to/dir' | "mv -f file.txt /to/dir"
-        "file'3.txt"        | '/to dir' | "mv -f file\\'3.txt /to\\ dir"
-        'path_name'         | '/to/dir' | "mv -f path_name /to/dir"
-        'input/file.txt'    | '/to/dir' | "mkdir -p /to/dir/input && mv -f input/file.txt /to/dir/input"
-        'long/path/name'    | '/to/dir' | "mkdir -p /to/dir/long/path && mv -f long/path/name /to/dir/long/path"
-        'path_name/*'       | '/to/dir' | "mkdir -p /to/dir/path_name && mv -f path_name/* /to/dir/path_name"
-        'path_name/'        | '/to/dir' | "mkdir -p /to/dir/path_name && mv -f path_name/ /to/dir/path_name"
+        source                  | target    | result
+        'file.txt'              | '/to/dir' | "find -L -regex \"\\./file\\.txt\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
+        "file'3.txt"            | '/to dir' | "find -L -regex \"\\./file'3\\.txt\" -exec sh -c 'mkdir -p \"/to\\ dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to\\ dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
+        'path_name'             | '/to/dir' | "find -L -regex \"\\./path_name\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
+        'input/file.txt'        | '/to/dir' | "find -L -regex \"\\./input/file\\.txt\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
+        'long/path/name'        | '/to/dir' | "find -L -regex \"\\./long/path/name\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
+        'path_name/*'           | '/to/dir' | "find -L -regex \"\\./path_name/[^/]*\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
+        'path_name/'            | '/to/dir' | "find -L -type d -regex \"\\./path_name\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
+        'input/*/file.txt'      | '/to/dir' | "find -L -regex \"\\./input/[^/]*/file\\.txt\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
+        'input/**/file.txt'     | '/to/dir' | "find -L -regex \"\\./input/.*/file\\.txt\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
+        'input/**/a/**/file.txt'| '/to/dir' | "find -L -regex \"\\./input/.*/a/.*/file\\.txt\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
+        'input/?/file.txt'      | '/to/dir' | "find -L -regex \"\\./input/./file\\.txt\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
+        'input/{a,b}/file.txt'  | '/to/dir' | "find -L -regex \"\\./input/\\(a\\|b\\)/file\\.txt\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
+        'input/{a,b,c}/file.txt'| '/to/dir' | "find -L -regex \"\\./input/\\(a\\|b\\|c\\)/file\\.txt\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
+        'input/[A-Z]/file.txt'  | '/to/dir' | "find -L -regex \"\\./input/[A-Z]/file\\.txt\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
 
     }
 
@@ -431,8 +469,8 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 mkdir -p /target/work\\ dir
-                cp -fRL simple.txt /target/work\\ dir || true
-                mkdir -p /target/work\\ dir/my/path && cp -fRL my/path/file.bam /target/work\\ dir/my/path || true
+                find -L -regex "\\./simple\\.txt" -exec cp -fRLn --parents "{}" /target/work\\ dir \\; || true
+                find -L -regex "\\./my/path/file\\.bam" -exec cp -fRLn --parents "{}" /target/work\\ dir \\; || true
                 '''
                 .stripIndent().trim()
 
@@ -452,8 +490,8 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 mkdir -p /target/store
-                mv -f simple.txt /target/store || true
-                mkdir -p /target/store/my/path && mv -f my/path/file.bam /target/store/my/path || true
+                find -L -regex \"\\./simple\\.txt\" -exec sh -c 'mkdir -p \"/target/store/`dirname \\\"$1\\\"`\"; mv \"$1\" \"/target/store/`dirname \\\"$1\\\"`\";' _ {} \\; || true
+                find -L -regex \"\\./my/path/file\\.bam\" -exec sh -c 'mkdir -p \"/target/store/`dirname \\\"$1\\\"`\"; mv \"$1\" \"/target/store/`dirname \\\"$1\\\"`\";' _ {} \\; || true
                 '''
                 .stripIndent().trim()
 

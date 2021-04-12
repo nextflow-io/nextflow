@@ -163,17 +163,16 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
 
         // collect all the expected names (pattern) for files to be un-staged
         def result = []
-        def normalized = normalizeGlobStarPaths(outputFiles)
 
         // create a bash script that will copy the out file to the working directory
-        log.trace "Unstaging file path: $normalized"
-        if( normalized ) {
+        log.trace "Unstaging file path: $outputFiles"
+        if( outputFiles ) {
             final mode = stageoutMode ?: ( workDir==targetDir ? 'copy' : 'move' )
             def prefix = getUnstagePrefix(targetDir)
             if( prefix )
                 result << prefix
-            for( int i=0; i<normalized.size(); i++ ) {
-                final path = normalized[i]
+            for( int i=0; i<outputFiles.size(); i++ ) {
+                final path = outputFiles[i]
                 final cmd = stageOutCommand(path, targetDir, mode) + ' || true' // <-- add true to avoid it stops on errors
                 result << cmd
             }
@@ -268,21 +267,98 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
 
         def cmd
         if( mode == 'copy' )
-            cmd = 'cp -fRL'
+            cmd = "cp -fRLn --parents \"{}\" ${Escape.path(target)}"
         else if( mode == 'move' )
-            cmd = 'mv -f'
+            cmd = "sh -c 'mkdir -p \"${Escape.path(target)}/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"${Escape.path(target)}/`dirname \\\"\$1\\\"`\";' _ {}"
         else if( mode == 'rsync' )
+        //This will not work for glob terms
             return "rsync -rRl ${Escape.path(source)} ${Escape.path(target)}"
         else
             throw new IllegalArgumentException("Unknown stage-out strategy: $mode")
 
-        final p = source.lastIndexOf('/')
-        if( p<=0 ) {
-            return "$cmd ${Escape.path(source)} ${Escape.path(target)}"
+        //Find does not accept a slash at the end
+        String dir = ""
+        if ( source.endsWith('/') ) {
+            source = source.substring( 0, source.length() - 1 )
+            dir = "-type d "
         }
 
-        def path  = new File(target,source.substring(0,p)).toString()
-        return "mkdir -p ${Escape.path(path)} && $cmd ${Escape.path(source)} ${Escape.path(path)}"
+        //find always generates pathes starting with ./
+        if ( !source.startsWith( './' ) && !source.startsWith( '/' ) ){
+            source = './' + source
+        }
+
+        source = globToRegex( source )
+        source = source.replaceAll( '"', '\\\\"' )
+
+        return "find -L ${dir}-regex \"${source}\" -exec $cmd \\;"
+
+    }
+
+    /**
+     * This method follows the https://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob definition
+     * @param glob
+     * @return a regex equal to the glob
+     */
+    protected String globToRegex( String glob ){
+        StringBuilder sb = new StringBuilder()
+        boolean escape = false
+        boolean squaredBracket = false
+        boolean curlyBracket = false;
+
+        for (Integer i = 0 ; i < glob.length() ; i++) {
+            char c = glob.charAt( i )
+            if( escape ){
+                if ( c == ',' && curlyBracket ){
+                    sb.deleteCharAt( sb.length() - 1 )
+                }
+                escape = false
+            } else if( c == '\\' && !squaredBracket ){
+                escape = true
+            } else {
+
+                if (c == '.'){
+                    sb.append( '\\' )
+                } else if ( c == '[') {
+                    if( squaredBracket ) throw new IllegalArgumentException( "A squared bracket was not closed" )
+                    squaredBracket = true
+                } else if ( c == ']') {
+                    if( !squaredBracket ) throw new IllegalArgumentException( "A squared bracket was not opened" )
+                    squaredBracket = false
+                } else if ( c == '{') {
+                    if( curlyBracket ) throw new IllegalArgumentException( "A curly bracket was not closed" )
+                    curlyBracket = true
+                    sb.append( '\\(' )
+                    continue
+                } else if ( c == '}') {
+                    if( !curlyBracket ) throw new IllegalArgumentException( "A curly bracket was not opened" )
+                    curlyBracket = false
+                    sb.append( '\\)' )
+                    continue
+                } else if ( !squaredBracket ){
+                    if ( c == '*' ){
+                        if ( i + 1 < glob.length() && glob.charAt( i + 1 ) == '*' ){
+                            sb.append( '.*' )
+                            i++
+                        } else {
+                            sb.append( '[^/]*' )
+                        }
+                        continue
+                    } else if ( c == '?' ){
+                        sb.append( '.' )
+                        continue
+                    } else if ( curlyBracket && c == ',' ){
+                        sb.append( '\\|' )
+                        continue
+                    }
+                }
+
+            }
+            sb.append( c )
+        }
+
+        return sb.toString()
+
     }
 
     /**
