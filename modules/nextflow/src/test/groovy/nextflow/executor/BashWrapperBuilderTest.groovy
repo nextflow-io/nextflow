@@ -400,8 +400,8 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.unstage_outputs == '''\
                 mkdir -p /work/dir
-                cp -fRL test.bam /work/dir || true
-                cp -fRL test.bai /work/dir || true
+                find -L -regex "\\./test\\.bam" -exec cp -fRLn --parents "{}" /work/dir \\; || true
+                find -L -regex "\\./test\\.bai" -exec cp -fRLn --parents "{}" /work/dir \\; || true
                 '''.stripIndent().rightTrim()
 
 
@@ -415,8 +415,8 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.unstage_outputs == '''\
                 mkdir -p /another/dir
-                mv -f test.bam /another/dir || true
-                mv -f test.bai /another/dir || true
+                find -L -regex \"\\./test\\.bam\" -exec sh -c 'mkdir -p \"/another/dir/`dirname \\\"$1\\\"`\"; mv \"$1\" \"/another/dir/`dirname \\\"$1\\\"`\";' _ {} \\; || true
+                find -L -regex \"\\./test\\.bai\" -exec sh -c 'mkdir -p \"/another/dir/`dirname \\\"$1\\\"`\"; mv \"$1\" \"/another/dir/`dirname \\\"$1\\\"`\";' _ {} \\; || true
                 '''.stripIndent().rightTrim()
     }
 
