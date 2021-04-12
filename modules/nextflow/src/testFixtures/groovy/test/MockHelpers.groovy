@@ -22,8 +22,8 @@ class MockScriptRunner extends ScriptRunner {
         super(new MockSession())
     }
 
-    MockScriptRunner setScript(String str) {
-        def script = TestHelper.createInMemTempFile('main.nf', str)
+    MockScriptRunner setScript(String str, String fileName = 'main.nf') {
+        def script = TestHelper.createInMemTempFile(fileName, str)
         setScript(script)
         return this
     }

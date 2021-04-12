@@ -17,6 +17,10 @@
 
 package nextflow.script
 
+import nextflow.script.testflow.TestCase
+import nextflow.script.testflow.TestFailure
+import nextflow.script.testflow.TestSuite
+
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
 
@@ -26,6 +30,12 @@ import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.processor.TaskProcessor
+
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
+
 /**
  * Any user defined script will extends this class, it provides the base execution context
  *
@@ -226,12 +236,61 @@ abstract class BaseScript extends Script implements ExecutionContext {
         }
     }
 
-    void checkTests() {
-        if( !binding.testMode )
+    TestSuite checkTests() {
+        if (!binding.testMode)
             throw new IllegalStateException("Not running in test mode")
-        for( TestflowDef test : testFlows ) {
-            test.validateExecution()
+
+        int tests = 0
+        int skipped = 0
+        int failures = 0
+        int errors = 0
+        final scriptName = session.scriptName.replace(".nf", "")
+
+        Instant suiteIni = Instant.now()
+        List<TestCase> testCase = new ArrayList<>()
+        for (TestflowDef test : testFlows) {
+
+            tests += 1
+            TestCase testcase = new TestCase(name: test.name, className: "nf.${scriptName}")
+            Instant caseIni = Instant.now()
+            try {
+                test.validateExecution()
+            } catch (AssertionError e) {
+                failures += 1
+                testcase.failure = new TestFailure(
+                        message: "assertion error",
+                        type: e.class.name,
+                        content: e.message
+                )
+            } catch (RuntimeException e) {
+                errors += 1
+                testcase.failure = new TestFailure(
+                        message: "runtime error",
+                        type: e.class.name,
+                        content: e.message
+                )
+            } finally {
+                Instant caseEnd = Instant.now()
+                testcase.time = Duration.between(caseIni, caseEnd)
+            }
+
+            testCase.add(testcase)
+
         }
+        Instant suiteEnd = Instant.now()
+
+        return new TestSuite(
+                name: scriptName,
+                tests: tests,
+                skipped: skipped,
+                failures: failures,
+                errors: errors,
+                testcase: testCase,
+                systemErr: "",
+                systemOut: "",
+                time: Duration.between(suiteIni, suiteEnd),
+                timestamp: LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS)
+        )
     }
 
     protected abstract Object runScript()

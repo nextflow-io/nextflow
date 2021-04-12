@@ -17,6 +17,10 @@
 
 package nextflow.script
 
+import nextflow.exception.AbortOperationException
+import nextflow.script.testflow.HtmlRenderer
+import nextflow.script.testflow.XmlRenderer
+
 import java.nio.file.Path
 
 import com.google.common.hash.Hashing
@@ -231,7 +235,24 @@ class ScriptParser {
     }
 
     ScriptParser checkTests() {
-        script.checkTests()
+
+        // Run tests
+        final testsuite = script.checkTests()
+
+        // Write XML results
+        final testDir = session.workDir.resolve("test-results")
+        XmlRenderer.write(testsuite, testDir)
+
+        // Create HTML reports
+        final reportDir = session.workDir.resolve("test-reports")
+        HtmlRenderer.write(testDir, reportDir)
+
+        // Report errors
+        if (testsuite.errors > 0 || testsuite.failures > 0) {
+            final reportIndex = reportDir.resolve("index.html")
+            throw new AbortOperationException("There were failing tests. See the report at: file://${reportIndex}")
+        }
+
         return this
     }
 

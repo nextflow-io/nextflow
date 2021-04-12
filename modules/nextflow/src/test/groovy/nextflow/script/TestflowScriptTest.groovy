@@ -1,5 +1,6 @@
 package nextflow.script
 
+import groovy.xml.XmlSlurper
 import test.Dsl2Spec
 import test.MockScriptRunner
 
@@ -9,8 +10,10 @@ import test.MockScriptRunner
  */
 class TestflowScriptTest extends Dsl2Spec {
 
-    protected testflow_eval(String str) {
-        new MockScriptRunner() .setScript(str).testFlow()
+    protected ScriptRunner testflow_eval(String str, String fileName) {
+        final runner = new MockScriptRunner()
+        runner.setScript(str, fileName).testFlow()
+        return runner
     }
 
     def 'should run test' () {
@@ -53,9 +56,17 @@ class TestflowScriptTest extends Dsl2Spec {
         '''
 
         when:
-        testflow_eval(SCRIPT)
+        def runner = testflow_eval(SCRIPT, "test_run.nf")
+
         then:
         noExceptionThrown()
+
+        and: 'there is a XUnit report'
+        def result = new XmlSlurper().parseText(runner.session.workDir.resolve("test-results/TEST-test_run.xml").text)
+        result.@tests == 2
+        result.@failures == 0
+        result.@errors == 0
+        result.testcase.size() == 2
 
     }
 
@@ -89,9 +100,17 @@ class TestflowScriptTest extends Dsl2Spec {
         '''
 
         when:
-        testflow_eval(SCRIPT)
+        def runner = testflow_eval(SCRIPT, "test_run_with_tag.nf")
+
         then:
         noExceptionThrown()
+
+        and: 'there is a XUnit report'
+        def result = new XmlSlurper().parseText(runner.session.workDir.resolve("test-results/TEST-test_run_with_tag.xml").text)
+        result.@tests == 1
+        result.@failures == 0
+        result.@errors == 0
+        result.testcase.size() == 1
 
     }
 
@@ -129,9 +148,17 @@ class TestflowScriptTest extends Dsl2Spec {
         '''
 
         when:
-        testflow_eval(SCRIPT)
+        def runner = testflow_eval(SCRIPT, "test_run_with_index.nf")
+
         then:
         noExceptionThrown()
+
+        and: 'there is a XUnit report'
+        def result = new XmlSlurper().parseText(runner.session.workDir.resolve("test-results/TEST-test_run_with_index.xml").text)
+        result.@tests == 1
+        result.@failures == 0
+        result.@errors == 0
+        result.testcase.size() == 1
 
     }
 
