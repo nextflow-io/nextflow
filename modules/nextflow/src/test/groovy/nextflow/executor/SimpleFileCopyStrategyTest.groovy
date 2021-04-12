@@ -227,7 +227,7 @@ class SimpleFileCopyStrategyTest extends Specification {
                 new File( p + "/" + it.substring(0, it.lastIndexOf('/')) ).mkdirs()
             }
             if( !it.endsWith("/") ) {
-                Files.createFile(Path.of(p + "/" + it))
+                new File(p + "/" + it).createNewFile()
             }
         }
 
@@ -333,7 +333,7 @@ class SimpleFileCopyStrategyTest extends Specification {
                 new File( p + "/" + it.substring(0, it.lastIndexOf('/')) ).mkdirs()
             }
             if( !it.endsWith("/") ) {
-                Files.createFile(Path.of(p + "/" + it))
+                new File(p + "/" + it).createNewFile()
             }
         }
 
