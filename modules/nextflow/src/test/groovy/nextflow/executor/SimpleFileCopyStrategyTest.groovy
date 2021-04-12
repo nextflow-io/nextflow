@@ -17,8 +17,10 @@
 
 package nextflow.executor
 
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.TimeUnit
 
 import nextflow.processor.TaskBean
 import spock.lang.Specification
@@ -177,6 +179,86 @@ class SimpleFileCopyStrategyTest extends Specification {
 
     }
 
+    @Unroll
+    def 'should copy the right files' () {
+
+        given:
+        SimpleFileCopyStrategy strategy = [:] as SimpleFileCopyStrategy
+        strategy.stageoutMode = "copy"
+        Path infolder = Files.createTempDirectory('in')
+        Path outfolder = Files.createTempDirectory('out')
+
+        inputffiles.forEach {
+            String p = infolder.toAbsolutePath().toString()
+            //create subdirectories, if needed
+            if( it.contains("/") ) {
+                println("path: $p/${it.substring(0, it.lastIndexOf('/'))}")
+                new File( p + "/" + it.substring(0, it.lastIndexOf('/')) ).mkdirs()
+            }
+            if( !it.endsWith("/") ) {
+                Files.createFile(Path.of(p + "/" + it))
+            }
+        }
+
+        String command = strategy.getUnstageOutputFilesScript([source], outfolder.toAbsolutePath()).replaceAll( "\n", " && ")
+        println("Command: $command")
+        Process process = [ "sh", "-c", command ].execute(null, infolder.toFile() )
+        process.consumeProcessOutput( System.out, System.err )
+        process.waitFor(2, TimeUnit.SECONDS )
+
+        expect:
+        process.exitValue() == 0
+
+        for( String r : outputfiles ){
+            assert new File(outfolder.toString(), r).exists()
+        }
+        for( String r : inputffiles ){
+            assert new File(infolder.toString(), r).exists()
+        }
+        for( String r : (inputffiles - outputfiles) ){
+            assert !new File(outfolder.toString(), r).exists()
+        }
+
+        cleanup:
+        infolder?.deleteDir()
+        outfolder?.deleteDir()
+
+        where:
+        source              | inputffiles                                                                                           | outputfiles
+        '*.txt'             | ['file.txt', 'file2.txt', 'file3.txta']                                                               | ['file.txt', 'file2.txt']
+        '*'                 | ['file.txt', 'file2.txt', 'file3.txta']                                                               | ['file.txt', 'file2.txt', 'file3.txta']
+        'a/*'               | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/', 'file.txt']                                        | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/']
+        'a/'                | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/', 'file.txt']                                        | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/']
+        'a'                 | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/', 'file.txt']                                        | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/']
+        'a b/*'             | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/', 'file.txt']                                | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/']
+        'a b/'              | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/', 'file.txt']                                | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/']
+        'a b'               | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/', 'file.txt']                                | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/']
+        'a/*/c/*'           | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt']
+        'a/**/c/*'          | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt']
+        'a/*/c/'            | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt']
+        'a/**/c/'           | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt']
+        'a/*/c'             | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt']
+        'a/**/c'            | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt']
+        'a/?/c/*'           | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt']
+        'a/?/c/'            | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt']
+        'a/?/c'             | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt']
+        '{a,b,c}/*'         | ['a/file.txt', 'a/file2.txt', 'b/file.txt', 'b/file2.txt', 'd/file.txt', 'file.txt']                  | ['a/file.txt', 'a/file2.txt', 'b/file.txt', 'b/file2.txt']
+        '{a,b,c}/'          | ['a/file.txt', 'a/file2.txt', 'b/file.txt', 'b/file2.txt', 'd/file.txt', 'file.txt']                  | ['a/file.txt', 'a/file2.txt', 'b/file.txt', 'b/file2.txt']
+        '{a,b,c}'           | ['a/file.txt', 'a/file2.txt', 'b/file.txt', 'b/file2.txt', 'd/file.txt', 'file.txt']                  | ['a/file.txt', 'a/file2.txt', 'b/file.txt', 'b/file2.txt']
+        '{ab*,b*/*,c}/*'    | ['a/file.txt', 'abcd/file2.txt', 'b/file.txt', 'b/file2.txt', 'd/file.txt', 'file.txt']               | ['abcd/file2.txt']
+        '{a[ab]c,b*/*}/*'   | ['acc/file.txt', 'abc/file2.txt', 'b/file.txt', 'b/file2.txt', 'd/file.txt', 'file.txt']              | ['abc/file2.txt']
+        '{a|c*,b*/*}/*'     | ['a|c/file.txt', 'abc/file2.txt', 'b/file.txt', 'b/file2.txt', 'd/file.txt', 'file.txt']              | ['a|c/file.txt']
+        '[A-Z]/*'           | ['A/file.txt', 'a/file2.txt', 'b/file.txt', 'b/file2.txt', 'd/file.txt', 'file.txt']                  | ['A/file.txt']
+        '[A-Z]/'            | ['A/file.txt', 'a/file2.txt', 'b/file.txt', 'b/file2.txt', 'd/file.txt', 'file.txt']                  | ['A/file.txt']
+        '[A-Z]'             | ['A/file.txt', 'a/file2.txt', 'b/file.txt', 'b/file2.txt', 'd/file.txt', 'file.txt']                  | ['A/file.txt']
+        'a'                 | ['A/file.txt', 'a/', 'b/file.txt', 'b/file2.txt', 'd/file.txt', 'file.txt']                           | ['a/']
+        'a/b/c'             | ['A/file.txt', 'a/b/c/', 'a/b/file.txt', 'b/file2.txt', 'd/file.txt', 'file.txt']                     | ['a/b/c/']
+        'abc?\\?.txt'       | ['abcde.txt', 'abcd.txt', 'abcd?.txt']                                                                | ['abcd?.txt']
+        'a"b.txt'           | ['a\\"b.txt', 'a"b.txt', 'abc.txt']                                                                   | ['a"b.txt']
+        'a/**/b/*/d.txt'    | ['a/c/d/b/x/d.txt', 'a/c/d/b/x/Y/d.txt']                                                              | ['a/c/d/b/x/d.txt']
+
+    }
+
     def 'should return a valid `mv` command' () {
 
         given:
@@ -193,6 +275,85 @@ class SimpleFileCopyStrategyTest extends Specification {
         'long/path/name'    | '/to/dir' | "mkdir -p /to/dir/long/path && mv -f long/path/name /to/dir/long/path"
         'path_name/*'       | '/to/dir' | "mkdir -p /to/dir/path_name && mv -f path_name/* /to/dir/path_name"
         'path_name/'        | '/to/dir' | "mkdir -p /to/dir/path_name && mv -f path_name/ /to/dir/path_name"
+
+    }
+
+    @Unroll
+    def 'should move the right files' () {
+
+        given:
+        SimpleFileCopyStrategy strategy = [:] as SimpleFileCopyStrategy
+        strategy.stageoutMode = "move"
+        Path infolder = Files.createTempDirectory('in')
+        Path outfolder = Files.createTempDirectory('out')
+
+        inputffiles.forEach {
+            String p = infolder.toAbsolutePath().toString()
+            //create subdirectories, if needed
+            if( it.contains("/") ) {
+                println("path: $p/${it.substring(0, it.lastIndexOf('/'))}")
+                new File( p + "/" + it.substring(0, it.lastIndexOf('/')) ).mkdirs()
+            }
+            if( !it.endsWith("/") ) {
+                Files.createFile(Path.of(p + "/" + it))
+            }
+        }
+
+        String command = strategy.getUnstageOutputFilesScript([source], outfolder.toAbsolutePath()).replaceAll( "\n", " && ")
+        println("Command: $command")
+        Process process = [ "sh", "-c", command ].execute(null, infolder.toFile() )
+        process.consumeProcessOutput( System.out, System.err )
+        process.waitFor(2, TimeUnit.SECONDS )
+
+        expect:
+        process.exitValue() == 0
+
+        for( String r : outputfiles ){
+            assert new File(outfolder.toString(), r).exists()
+            assert !new File(infolder.toString(), r).exists()
+        }
+        for( String r : (inputffiles - outputfiles) ){
+            assert !new File(outfolder.toString(), r).exists()
+            assert new File(infolder.toString(), r).exists()
+        }
+
+        cleanup:
+        infolder?.deleteDir()
+        outfolder?.deleteDir()
+
+        where:
+        source              | inputffiles                                                                                           | outputfiles
+        '*.txt'             | ['file.txt', 'file2.txt', 'file3.txta']                                                               | ['file.txt', 'file2.txt']
+        '*'                 | ['file.txt', 'file2.txt', 'file3.txta']                                                               | ['file.txt', 'file2.txt', 'file3.txta']
+        'a/*'               | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/', 'file.txt']                                        | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/']
+        'a/'                | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/', 'file.txt']                                        | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/']
+        'a'                 | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/', 'file.txt']                                        | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/']
+        'a b/*'             | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/', 'file.txt']                                | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/']
+        'a b/'              | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/', 'file.txt']                                | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/']
+        'a b'               | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/', 'file.txt']                                | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/']
+        'a/*/c/*'           | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt']
+        'a/**/c/*'          | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt']
+        'a/*/c/'            | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt']
+        'a/**/c/'           | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt']
+        'a/*/c'             | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt']
+        'a/**/c'            | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt']
+        'a/?/c/*'           | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt']
+        'a/?/c/'            | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt']
+        'a/?/c'             | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt']
+        '{a,b,c}/*'         | ['a/file.txt', 'a/file2.txt', 'b/file.txt', 'b/file2.txt', 'd/file.txt', 'file.txt']                  | ['a/file.txt', 'a/file2.txt', 'b/file.txt', 'b/file2.txt']
+        '{a,b,c}/'          | ['a/file.txt', 'a/file2.txt', 'b/file.txt', 'b/file2.txt', 'd/file.txt', 'file.txt']                  | ['a/file.txt', 'a/file2.txt', 'b/file.txt', 'b/file2.txt']
+        '{a,b,c}'           | ['a/file.txt', 'a/file2.txt', 'b/file.txt', 'b/file2.txt', 'd/file.txt', 'file.txt']                  | ['a/file.txt', 'a/file2.txt', 'b/file.txt', 'b/file2.txt']
+        '{ab*,b*/*,c}/*'    | ['a/file.txt', 'abcd/file2.txt', 'b/file.txt', 'b/file2.txt', 'd/file.txt', 'file.txt']               | ['abcd/file2.txt']
+        '{a[ab]c,b*/*}/*'   | ['acc/file.txt', 'abc/file2.txt', 'b/file.txt', 'b/file2.txt', 'd/file.txt', 'file.txt']              | ['abc/file2.txt']
+        '{a|c*,b*/*}/*'     | ['a|c/file.txt', 'abc/file2.txt', 'b/file.txt', 'b/file2.txt', 'd/file.txt', 'file.txt']              | ['a|c/file.txt']
+        '[A-Z]/*'           | ['A/file.txt', 'a/file2.txt', 'b/file.txt', 'b/file2.txt', 'd/file.txt', 'file.txt']                  | ['A/file.txt']
+        '[A-Z]/'            | ['A/file.txt', 'a/file2.txt', 'b/file.txt', 'b/file2.txt', 'd/file.txt', 'file.txt']                  | ['A/file.txt']
+        '[A-Z]'             | ['A/file.txt', 'a/file2.txt', 'b/file.txt', 'b/file2.txt', 'd/file.txt', 'file.txt']                  | ['A/file.txt']
+        'a'                 | ['A/file.txt', 'a/', 'b/file.txt', 'b/file2.txt', 'd/file.txt', 'file.txt']                           | ['a/']
+        'a/b/c'             | ['A/file.txt', 'a/b/c/', 'a/b/file.txt', 'b/file2.txt', 'd/file.txt', 'file.txt']                     | ['a/b/c/']
+        'abc?\\?.txt'       | ['abcde.txt', 'abcd.txt', 'abcd?.txt']                                                                | ['abcd?.txt']
+        'a"b.txt'           | ['a\\"b.txt', 'a"b.txt', 'abc.txt']                                                                   | ['a"b.txt']
+        'a/**/b/*/d.txt'    | ['a/c/d/b/x/d.txt', 'a/c/d/b/x/Y/d.txt']                                                              | ['a/c/d/b/x/d.txt']
 
     }
 
