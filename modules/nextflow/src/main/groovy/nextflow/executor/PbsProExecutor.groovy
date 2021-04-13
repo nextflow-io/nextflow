@@ -44,6 +44,11 @@ class PbsProExecutor extends PbsExecutor {
     @Override
     protected List<String> getDirectives(TaskRun task, List<String> result ) {
         assert result !=null
+        
+        // -- at the beginning append the custom cluster options
+        if( task.config.clusterOptions ) {
+            result << task.config.clusterOptions.toString() << ''
+        }
 
         result << '-N' << getJobNameFor(task)
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
@@ -70,11 +75,6 @@ class PbsProExecutor extends PbsExecutor {
         if( task.config.time ) {
             final duration = task.config.getTime()
             result << "-l" << "walltime=${duration.format('HH:mm:ss')}".toString()
-        }
-
-        // -- at the end append the command script wrapped file name
-        if( task.config.clusterOptions ) {
-            result << task.config.clusterOptions.toString() << ''
         }
 
         return result
