@@ -17,6 +17,7 @@
 
 package nextflow.cli
 
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 
 import java.nio.file.Files
@@ -287,15 +288,22 @@ class LauncherTest extends Specification {
     def 'should parse proxy env variables'( ) {
 
         expect:
-        Launcher.parseProxy(null) == []
-        Launcher.parseProxy('http://domain') == ['domain']
-        Launcher.parseProxy('http://domain:333') == ['domain', '333']
-        Launcher.parseProxy('http://10.20.30.40') == ['10.20.30.40']
-        Launcher.parseProxy('http://10.20.30.40:333') == ['10.20.30.40', '333']
-        Launcher.parseProxy('http://10.20.30.40:333/some/path') == ['10.20.30.40', '333']
+        Launcher.parseProxy(null) == [:]
 
-        Launcher.parseProxy('foo') == ['foo']
-        Launcher.parseProxy('foo:123') == ['foo','123']
+        Launcher.parseProxy('http://domain') == [host: 'domain']
+        Launcher.parseProxy('http://domain:333') == [host: 'domain', port: '333']
+        Launcher.parseProxy('http://10.20.30.40') == [host: '10.20.30.40']
+        Launcher.parseProxy('http://10.20.30.40:333') == [host: '10.20.30.40', port: '333']
+        Launcher.parseProxy('http://10.20.30.40:333/some/path') == [host: '10.20.30.40', port: '333']
+
+        Launcher.parseProxy('http://user:pass@domain') == [host: 'domain', username: 'user', password: 'pass']
+        Launcher.parseProxy('http://user:pass@domain:333') == [host: 'domain', port: '333', username: 'user', password: 'pass']
+        Launcher.parseProxy('http://user:pass@10.20.30.40') == [host: '10.20.30.40', username: 'user', password: 'pass']
+        Launcher.parseProxy('http://user:pass@10.20.30.40:333') == [host: '10.20.30.40', port: '333', username: 'user', password: 'pass']
+        Launcher.parseProxy('http://user:pass@10.20.30.40:333/some/path') == [host: '10.20.30.40', port: '333', username: 'user', password: 'pass']
+
+        Launcher.parseProxy('foo') == [host: 'foo']
+        Launcher.parseProxy('foo:123') == [host: 'foo', port: '123']
 
     }
 
@@ -326,6 +334,70 @@ class LauncherTest extends Specification {
         System.getProperty('https.proxyHost') == 'zeta.com'
         System.getProperty('https.proxyPort') == '6646'
 
+        when:
+        Launcher.setProxy('FTP', [FTP_PROXY: 'delta.com:7566'])
+        then:
+        System.getProperty('ftp.proxyHost') == 'delta.com'
+        System.getProperty('ftp.proxyPort') == '7566'
+
+        when:
+        Launcher.setProxy('ftp', [ftp_proxy: 'epsilon.com:6658'])
+        then:
+        System.getProperty('ftp.proxyHost') == 'epsilon.com'
+        System.getProperty('ftp.proxyPort') == '6658'
+    }
+
+    @IgnoreIf({ javaVersion < 1.9 })
+    @RestoreSystemProperties
+    def 'should setup proxy properties and configure the network authenticator'() {
+
+        when:
+        Launcher.setProxy('HTTP', [HTTP_PROXY: 'http://alphauser:alphapass@alpha.com:333'])
+        then:
+        System.getProperty('http.proxyHost') == 'alpha.com'
+        System.getProperty('http.proxyPort') == '333'
+        Authenticator.getDefault().getPasswordAuthentication().getUserName() == 'alphauser'
+        Authenticator.getDefault().getPasswordAuthentication().getPassword() == 'alphapass'.toCharArray()
+
+        when:
+        Launcher.setProxy('http', [http_proxy: 'http://gammauser:gammapass@gamma.com:444'])
+        then:
+        System.getProperty('http.proxyHost') == 'gamma.com'
+        System.getProperty('http.proxyPort') == '444'
+        Authenticator.getDefault().getPasswordAuthentication().getUserName() == 'gammauser'
+        Authenticator.getDefault().getPasswordAuthentication().getPassword() == 'gammapass'.toCharArray()
+
+        when:
+        Launcher.setProxy('HTTPS', [HTTPS_PROXY: 'https://betauser:betapass@beta.com:5466'])
+        then:
+        System.getProperty('https.proxyHost') == 'beta.com'
+        System.getProperty('https.proxyPort') == '5466'
+        Authenticator.getDefault().getPasswordAuthentication().getUserName() == 'betauser'
+        Authenticator.getDefault().getPasswordAuthentication().getPassword() == 'betapass'.toCharArray()
+
+        when:
+        Launcher.setProxy('https', [https_proxy: 'https://zetauser:zetapass@zeta.com:6646'])
+        then:
+        System.getProperty('https.proxyHost') == 'zeta.com'
+        System.getProperty('https.proxyPort') == '6646'
+        Authenticator.getDefault().getPasswordAuthentication().getUserName() == 'zetauser'
+        Authenticator.getDefault().getPasswordAuthentication().getPassword() == 'zetapass'.toCharArray()
+
+        when:
+        Launcher.setProxy('FTP', [FTP_PROXY: 'ftp://deltauser:deltapass@delta.com:7566'])
+        then:
+        System.getProperty('ftp.proxyHost') == 'delta.com'
+        System.getProperty('ftp.proxyPort') == '7566'
+        Authenticator.getDefault().getPasswordAuthentication().getUserName() == 'deltauser'
+        Authenticator.getDefault().getPasswordAuthentication().getPassword() == 'deltapass'.toCharArray()
+
+        when:
+        Launcher.setProxy('ftp', [ftp_proxy: 'ftp://epsilonuser:epsilonpass@epsilon.com:6658'])
+        then:
+        System.getProperty('ftp.proxyHost') == 'epsilon.com'
+        System.getProperty('ftp.proxyPort') == '6658'
+        Authenticator.getDefault().getPasswordAuthentication().getUserName() == 'epsilonuser'
+        Authenticator.getDefault().getPasswordAuthentication().getPassword() == 'epsilonpass'.toCharArray()
     }
 
     @RestoreSystemProperties

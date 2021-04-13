@@ -549,17 +549,21 @@ class Launcher {
      * environment variables:
      * <li>http_proxy</li>
      * <li>https_proxy</li>
+     * <li>ftp_proxy</li>
      * <li>HTTP_PROXY</li>
      * <li>HTTPS_PROXY</li>
+     * <li>FTP_PROXY</li>
      * <li>NO_PROXY</li>
      */
     private void setupEnvironment() {
 
         setProxy('HTTP',System.getenv())
         setProxy('HTTPS',System.getenv())
+        setProxy('FTP',System.getenv())
 
         setProxy('http',System.getenv())
         setProxy('https',System.getenv())
+        setProxy('ftp',System.getenv())
 
         setNoProxy(System.getenv())
     }
@@ -582,7 +586,7 @@ class Launcher {
 
 
     /**
-     * Setup proxy system properties
+     * Setup proxy system properties and optionally configure the network authenticator
      *
      * See:
      * http://docs.oracle.com/javase/6/docs/technotes/guides/net/proxies.html
@@ -593,17 +597,30 @@ class Launcher {
      */
     @PackageScope
     static void setProxy(String qualifier, Map<String,String> env ) {
-        assert qualifier in ['http','https','HTTP','HTTPS']
+        assert qualifier in ['http','https','ftp','HTTP','HTTPS','FTP']
         def str = null
         def var = "${qualifier}_" + (qualifier.isLowerCase() ? 'proxy' : 'PROXY')
 
         // -- setup HTTP proxy
         try {
-            List<String> proxy = parseProxy(str = env.get(var.toString()))
+            Map<String,String> proxy = parseProxy(str = env.get(var.toString()))
             if( proxy ) {
+                // avoid logging usernames and passwords
+                def username = proxy.remove('username')
+                def password = proxy.remove('password')
+
                 log.debug "Setting $qualifier proxy: $proxy"
-                System.setProperty("${qualifier.toLowerCase()}.proxyHost", proxy[0])
-                if( proxy[1] ) System.setProperty("${qualifier.toLowerCase()}.proxyPort", proxy[1])
+                System.setProperty("${qualifier.toLowerCase()}.proxyHost", proxy.host)
+                if( proxy.port ) System.setProperty("${qualifier.toLowerCase()}.proxyPort", proxy.port)
+                if( username && password ) {
+                    log.debug "Setting $qualifier proxy authenticator ..."
+                    Authenticator authenticator = new Authenticator() {
+                        protected PasswordAuthentication getPasswordAuthentication() {
+                            return new PasswordAuthentication( username, password.toCharArray() )
+                        }
+                    }
+                    Authenticator.setDefault(authenticator);
+                }
             }
         }
         catch ( MalformedURLException e ) {
@@ -613,34 +630,38 @@ class Launcher {
     }
 
     /**
-     * Parse a proxy URL string retrieving the host and port components
+     * Parse a proxy URL string retrieving the host, port, username and password components
      *
-     * @param value A proxy string e.g. {@code hostname}, {@code hostname:port}, {@code http://hostname:port}
-     * @return A list object containing at least the host name and optionally a second entry for the port.
-     *      An empty list if the specified value is empty
+     * @param value A proxy string e.g. {@code hostname}, {@code hostname:port}, {@code http://hostname:port},
+     *      {@code http://username:password@hostname:port}
+     * @return A map object containing at least the host name and, optionally, values for port, username and password.
+     *      An empty map if the specified value is empty
      *
      * @throws MalformedURLException when the specified value is not a valid proxy url
      */
     @PackageScope
-    static List parseProxy( String value ) {
-        List<String> result = []
+    static Map parseProxy( String value ) {
+        Map<String,String> result = [:]
         int p
 
         if( !value ) return result
 
         if( value.contains('://') ) {
             def url = new URL(value)
-            result.add(url.host)
+            result.host = url.host
             if( url.port > 0 )
-                result.add(url.port as String)
-
+                result.port = url.port as String
+            if( (p=url.userInfo?.indexOf(':') ?: -1) != -1 ) {
+                result.username = url.userInfo.substring(0,p)
+                result.password = url.userInfo.substring(p+1)
+            }
         }
         else if( (p=value.indexOf(':')) != -1 ) {
-            result.add( value.substring(0,p) )
-            result.add( value.substring(p+1) )
+            result.host = value.substring(0,p)
+            result.port = value.substring(p+1)
         }
         else {
-            result.add( value )
+            result.host = value
         }
 
         return result
