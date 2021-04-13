@@ -2339,8 +2339,10 @@ Unit    Description
 s       Seconds
 m       Minutes
 h       Hours
-d       Days
+day     Days
 ======= =============
+
+Multiple units can be used in a single declaration, for example: ``'1day 6h 3m 30s'``
 
 .. note:: This directive is taken in account only when using one of the following grid based executors:
   :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor`,
