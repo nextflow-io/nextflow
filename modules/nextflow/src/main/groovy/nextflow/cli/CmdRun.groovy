@@ -467,9 +467,9 @@ class CmdRun extends CmdBase implements HubOptions {
         if ( str.toLowerCase() == 'true') return Boolean.TRUE
         if ( str.toLowerCase() == 'false' ) return Boolean.FALSE
 
-        if ( str==~/\d+(.\d+)?/ && str.isInteger() ) return str.toInteger()
-        if ( str==~/\d+(.\d+)?/ && str.isLong() ) return str.toLong()
-        if ( str==~/\d+(.\d+)?/ && str.isDouble() ) return str.toDouble()
+        if ( str==~/\d+(\.\d+)?/ && str.isInteger() ) return str.toInteger()
+        if ( str==~/\d+(\.\d+)?/ && str.isLong() ) return str.toLong()
+        if ( str==~/\d+(\.\d+)?/ && str.isDouble() ) return str.toDouble()
 
         return str
     }
