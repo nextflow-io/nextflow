@@ -42,9 +42,16 @@ class CmdRunTest extends Specification {
         'false'     | false
         'foo'       | 'foo'
         '10'        | 10i
+        '20.00'     | 20i
         '3000000000'| 3000000000l
         '20.33'     | 20.33d
         '--foo'     | '--foo'
+        '20x0'      | '20x0'
+        '20.d'      | '20.d'
+        '20d'       | '20d'
+        '20..0'     | '20..0'
+        '20..'      | '20..'
+        '..20'      | '..20'
     }
 
     def 'should parse nested params' () {
