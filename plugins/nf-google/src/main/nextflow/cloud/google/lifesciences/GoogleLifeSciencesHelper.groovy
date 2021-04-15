@@ -176,6 +176,9 @@ class GoogleLifeSciencesHelper {
         disk.setSizeGb(req.diskSizeGb)
 
         def serviceAccount = new ServiceAccount().setScopes( [SCOPE_CLOUD_PLATFORM] )
+        if(req.serviceAccountEmail) {
+            serviceAccount.setEmail(req.serviceAccountEmail);
+        }
 
         def vm = new VirtualMachine()
                 .setMachineType(req.machineType)

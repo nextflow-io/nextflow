@@ -69,4 +69,6 @@ class GoogleLifeSciencesSubmitRequest {
     String network
 
     String subnetwork
+
+    String serviceAccountEmail
 }
