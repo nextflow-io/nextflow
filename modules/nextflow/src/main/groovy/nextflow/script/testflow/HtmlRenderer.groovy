@@ -236,6 +236,7 @@ class HtmlRenderer {
                         ul(class: 'tabLinks') {
                             li { a("Failed tests", href: '#tab0') }
                             li { a("Tests", href: '#tab1') }
+                            li { a("Details", href: '#tab2') }
                         }
 
                         div(id: 'tab0', class: 'tab') {
@@ -267,6 +268,15 @@ class HtmlRenderer {
                                             td(testcase.failed ? "failed" : "success", class: testcase.failed ? "failures" : "success")
                                         }
                                     }
+                                }
+                            }
+                        }
+
+                        div(id: 'tab2', class: 'tab') {
+                            h2("Details")
+                            ul {
+                                li {
+                                    a("WorkDir",  href: "file://$testSuite.workDir")
                                 }
                             }
                         }

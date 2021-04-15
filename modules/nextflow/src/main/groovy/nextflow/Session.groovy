@@ -247,6 +247,8 @@ class Session implements ISession {
 
     String testName
 
+    Path testResults
+
     /**
      * Creates a new session with an 'empty' (default) configuration
      */

@@ -251,7 +251,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         for (TestflowDef test : testFlows) {
 
             tests += 1
-            suiteTime += test.getRunTime()
+            suiteTime += test.runTime
 
             TestCase testcase = new TestCase(name: test.name, className: scriptName, time: test.getRunTime())
             try {

@@ -80,7 +80,8 @@ class CmdTest extends CmdRun {
                 .setCmdRun(this)
                 .setBaseDir(localPath)
         final config = builder.build()
-
+        final configWorkDir = config.workDir as Path
+        final testResults = configWorkDir.resolve("test-results")
         TestRun testRun = new TestRun()
         for (script in testScripts) {
             String testName = localPath.relativize(script).toString()
@@ -88,9 +89,9 @@ class CmdTest extends CmdRun {
                     .replace(".nf", "")
             log.info ""
             log.info printAnsi(Ansi.Color.WHITE,"Running test > ${testName}")
-
+            config.workDir = configWorkDir.resolve("test-runs/${testName}")
             testRun.addSuite(
-                runTest(testName, script, config)
+                runTest(testName, script, testResults, config)
             )
         }
 
@@ -119,8 +120,7 @@ class CmdTest extends CmdRun {
 
         // Create HTML reports
         if (!skipReport) {
-            final workDir = config.workDir as Path
-            final reportDir = workDir.resolve("test-reports")
+            final reportDir = configWorkDir.resolve("test-reports")
             HtmlRenderer.write(testRun, reportDir)
 
             final reportIndex = reportDir.toAbsolutePath().resolve("index.html")
@@ -142,7 +142,7 @@ class CmdTest extends CmdRun {
         return message
     }
 
-    protected TestSuite runTest(String testName, Path testScript, Map config) {
+    protected TestSuite runTest(String testName, Path testScript, Path testResults, Map config) {
 
         // -- load plugins
         final cfg = plugins ? [plugins: plugins.tokenize(',')] : config
@@ -154,6 +154,7 @@ class CmdTest extends CmdRun {
         runner.session.commandLine = launcher.cliString
         runner.session.ansiLog = launcher.options.ansiLog
         runner.session.testName = testName
+        runner.session.testResults = testResults
 
         runner.testFlow()
 

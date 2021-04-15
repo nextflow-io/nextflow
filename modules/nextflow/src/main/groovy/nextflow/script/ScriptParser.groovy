@@ -242,9 +242,10 @@ class ScriptParser {
 
         // Run tests
         testSuite = script.checkTests()
+        testSuite.workDir = session.workDir
 
         // Write XML results
-        final testDir = session.workDir.resolve("test-results")
+        final testDir = session.testResults ?: session.workDir.resolve("test-results")
         XmlRenderer.write(testSuite, testDir)
 
         return this

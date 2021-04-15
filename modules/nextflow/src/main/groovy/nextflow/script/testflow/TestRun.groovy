@@ -2,6 +2,10 @@ package nextflow.script.testflow
 
 import java.time.Duration
 
+/**
+ *
+ * @author Jordi Deu-Pons <jordi@jordeu.net>
+ */
 class TestRun {
 
     private List<TestSuite> testSuites = new ArrayList<>()
