@@ -116,7 +116,7 @@ class TestflowDsl {
             }
             //
             if( !terminated ) {
-                result << new EmissionValues(values, named)
+                result << new EmissionValues(values, named, this)
             }
             if( single ) {
                 // if channel are all dataflow variables stop at the first iteration
@@ -178,6 +178,8 @@ class TestflowDsl {
         copy.call()
     }
 
+    String toString() { return "$type:$name" }
+
 
     @TupleConstructor(includeFields = true)
     @ToString(includeNames = true, includePackage = false)
@@ -192,11 +194,11 @@ class TestflowDsl {
         def read() { channel.getVal() }
     }
 
-    @ToString(includeNames = true, includePackage = false, includeFields = true)
     @TupleConstructor(includeFields = true)
     static class EmissionValues {
         private List values
         private Map<String,Object> named
+        private TestflowDsl parent
 
         int size() { return values.size() }
         int getLength() { values.size() }
@@ -208,6 +210,8 @@ class TestflowDsl {
                 ? named.get(name)
                 : metaClass.getProperty(this,name)
         }
+
+        String toString() { return "${parent.type}:${parent.name}" }
     }
 
     @Canonical

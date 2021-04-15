@@ -244,17 +244,7 @@ class CmdRun extends CmdBase implements HubOptions {
         if( !pipeline )
             throw new AbortOperationException("No project name was specified")
 
-        if( withPodman && withoutPodman )
-            throw new AbortOperationException("Command line options `-with-podman` and `-without-podman` cannot be specified at the same time")
-
-        if( withDocker && withoutDocker )
-            throw new AbortOperationException("Command line options `-with-docker` and `-without-docker` cannot be specified at the same time")
-
-        if( offline && latest )
-            throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
-
-        if( dsl2 )
-            NextflowMeta.instance.enableDsl2()
+        checkValidParams()
         
         checkRunName()
 
@@ -303,6 +293,20 @@ class CmdRun extends CmdBase implements HubOptions {
 
         // -- run it!
         runner.execute(scriptArgs, this.entryName)
+    }
+
+    protected void checkValidParams() {
+        if (withPodman && withoutPodman)
+            throw new AbortOperationException("Command line options `-with-podman` and `-without-podman` cannot be specified at the same time")
+
+        if (withDocker && withoutDocker)
+            throw new AbortOperationException("Command line options `-with-docker` and `-without-docker` cannot be specified at the same time")
+
+        if (offline && latest)
+            throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
+
+        if (dsl2)
+            NextflowMeta.instance.enableDsl2()
     }
 
     protected void checkRunName() {

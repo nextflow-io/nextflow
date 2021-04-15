@@ -17,6 +17,9 @@
 
 package nextflow.script
 
+import nextflow.script.testflow.TestCase
+import nextflow.script.testflow.TestSuite
+
 import static nextflow.util.ConfigHelper.*
 
 import java.nio.file.Path
@@ -57,6 +60,11 @@ class ScriptRunner {
      */
     private def result
 
+    /**
+     * The tests results
+     */
+    private TestSuite testSuite
+
     private boolean testMode
 
     /**
@@ -94,6 +102,8 @@ class ScriptRunner {
      * @return The result produced by the script execution
      */
     def getResult() { result }
+
+    TestSuite getTestSuite() { testSuite }
 
     /**
      * Execute a Nextflow script, it does the following:
@@ -227,6 +237,7 @@ class ScriptRunner {
         // -- start test validation
         if( testMode ) {
             scriptParser.checkTests()
+            testSuite = scriptParser.getTestSuite()
         }
     }
 

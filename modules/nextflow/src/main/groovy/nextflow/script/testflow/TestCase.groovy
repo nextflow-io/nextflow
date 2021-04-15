@@ -13,4 +13,8 @@ class TestCase {
     TestFailure failure
     Duration time
 
+    boolean isFailed() {
+        failure != null
+    }
+
 }

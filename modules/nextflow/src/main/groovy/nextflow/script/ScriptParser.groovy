@@ -17,8 +17,8 @@
 
 package nextflow.script
 
-import nextflow.exception.AbortOperationException
-import nextflow.script.testflow.HtmlRenderer
+
+import nextflow.script.testflow.TestSuite
 import nextflow.script.testflow.XmlRenderer
 
 import java.nio.file.Path
@@ -62,6 +62,8 @@ class ScriptParser {
     private BaseScript script
 
     private Object result
+
+    private TestSuite testSuite
 
     private ScriptBinding binding
 
@@ -113,6 +115,8 @@ class ScriptParser {
     ScriptBinding getBinding() { binding }
 
     Object getResult() { result }
+
+    TestSuite getTestSuite() { testSuite }
 
     BaseScript getScript() { script }
 
@@ -237,21 +241,11 @@ class ScriptParser {
     ScriptParser checkTests() {
 
         // Run tests
-        final testsuite = script.checkTests()
+        testSuite = script.checkTests()
 
         // Write XML results
         final testDir = session.workDir.resolve("test-results")
-        XmlRenderer.write(testsuite, testDir)
-
-        // Create HTML reports
-        final reportDir = session.workDir.resolve("test-reports")
-        HtmlRenderer.write(testDir, reportDir)
-
-        // Report errors
-        if (testsuite.errors > 0 || testsuite.failures > 0) {
-            final reportIndex = reportDir.resolve("index.html")
-            throw new AbortOperationException("There were failing tests. See the report at: file://${reportIndex}")
-        }
+        XmlRenderer.write(testSuite, testDir)
 
         return this
     }

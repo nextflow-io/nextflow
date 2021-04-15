@@ -102,7 +102,8 @@ class Launcher {
                 new CmdView(),
                 new CmdHelp(),
                 new CmdSelfUpdate(),
-                new CmdPlugins()
+                new CmdPlugins(),
+                new CmdTest()
         ]
 
         // legacy command

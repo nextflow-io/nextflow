@@ -244,15 +244,16 @@ abstract class BaseScript extends Script implements ExecutionContext {
         int skipped = 0
         int failures = 0
         int errors = 0
-        final scriptName = session.scriptName.replace(".nf", "")
+        final scriptName = session.testName ?: session.scriptName.replace(".nf", "")
 
-        Instant suiteIni = Instant.now()
+        Duration suiteTime = Duration.ZERO
         List<TestCase> testCase = new ArrayList<>()
         for (TestflowDef test : testFlows) {
 
             tests += 1
-            TestCase testcase = new TestCase(name: test.name, className: "nf.${scriptName}")
-            Instant caseIni = Instant.now()
+            suiteTime += test.getRunTime()
+
+            TestCase testcase = new TestCase(name: test.name, className: scriptName, time: test.getRunTime())
             try {
                 test.validateExecution()
             } catch (AssertionError e) {
@@ -269,15 +270,11 @@ abstract class BaseScript extends Script implements ExecutionContext {
                         type: e.class.name,
                         content: e.message
                 )
-            } finally {
-                Instant caseEnd = Instant.now()
-                testcase.time = Duration.between(caseIni, caseEnd)
             }
 
             testCase.add(testcase)
 
         }
-        Instant suiteEnd = Instant.now()
 
         return new TestSuite(
                 name: scriptName,
@@ -288,7 +285,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
                 testcase: testCase,
                 systemErr: "",
                 systemOut: "",
-                time: Duration.between(suiteIni, suiteEnd),
+                time: suiteTime,
                 timestamp: LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS)
         )
     }

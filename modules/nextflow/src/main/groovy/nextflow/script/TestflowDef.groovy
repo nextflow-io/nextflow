@@ -19,6 +19,10 @@ package nextflow.script
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.MissingProcessException
+
+import java.time.Duration
+import java.time.Instant
+
 /**
  * Model a testflow DSL definition
  *
@@ -34,6 +38,7 @@ class TestflowDef extends ComponentDef implements ExecutionContext {
     private String name
     private BaseScript owner
     private WorkflowBinding binding
+    private Duration runTime
 
     void given(Closure arg) {
         this.given = arg
@@ -64,6 +69,8 @@ class TestflowDef extends ComponentDef implements ExecutionContext {
     @Override
     String getName() { name }
 
+    Duration getRunTime() { runTime }
+
     WorkflowBinding getBinding() { binding }
 
     @Override
@@ -82,6 +89,7 @@ class TestflowDef extends ComponentDef implements ExecutionContext {
     private void run(Object[] args) {
         binding = new WorkflowBinding(owner)
         ExecutionStack.push(this)
+        final runStart = Instant.now()
         try {
             run0(args)
         }
@@ -89,6 +97,7 @@ class TestflowDef extends ComponentDef implements ExecutionContext {
             throw new MissingProcessException(this.binding.scriptMeta, e)
         }
         finally {
+            runTime = Duration.between(runStart, Instant.now())
             ExecutionStack.pop()
         }
     }
