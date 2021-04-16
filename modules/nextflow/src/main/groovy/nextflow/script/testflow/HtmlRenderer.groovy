@@ -105,11 +105,11 @@ class HtmlRenderer {
                             ul(class: 'linkList') {
                                 testRun.suites.each { suite ->
                                     suite.testcase.each { testcase ->
-                                        li {
+                                        testcase.failed ? li {
                                             a(suite.name, href: "${suite.name}.html")
                                             span(" > ")
                                             a(testcase.name, href: "${suite.name}.html#${testcase.name}")
-                                        }
+                                        } : null
                                     }
                                 }
                             }
@@ -243,12 +243,12 @@ class HtmlRenderer {
                         div(id: 'tab0', class: 'tab') {
                             h2("Failed tests")
                             testSuite.testcase.each { testcase ->
-                                div(class: 'test') {
+                                testcase.failed ? div(class: 'test') {
                                     a("", name: testcase.name)
                                     h3(testcase.name, class: 'failures')
                                     testcase.workDir ? a("[${processDirReference(testcase.workDir)}]", href:relativeURL(reportDir, testcase.workDir), class:'workdir') : null
                                     span(class: 'code') { pre(testcase.failure.content) }
-                                }
+                                } : null
                             }
                         }
 
