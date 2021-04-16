@@ -162,12 +162,20 @@ class TestflowDsl {
             final meta = tasksMetaList.get(index)
             final values = emissions.get(index)
             final ctx = new TaskDsl( values, meta )
-            invoke(body, ctx)
+            try {
+                invoke(body, ctx)
+            } catch(AssertionError e) {
+                throw new TaskAssertionError(message: e.message,  context: ctx)
+            }
         }
         else {
             final values = emissions.get(index)
             final ctx = new WorkflowDsl( values )
-            invoke(body, ctx)
+            try {
+                invoke(body, ctx)
+            } catch(AssertionError e) {
+                throw new WorkflowAssertionError(message: e.message, context: ctx)
+            }
         }
     }
 
@@ -226,8 +234,22 @@ class TestflowDsl {
     }
 
     @Canonical
+    static class TaskAssertionError extends AssertionError {
+        String message
+        TaskDsl context
+    }
+
+    @Canonical
     @ToString(includeNames = true, includePackage = false)
     static class WorkflowDsl {
         EmissionValues out
     }
+
+    @Canonical
+    static class WorkflowAssertionError extends AssertionError {
+        String message
+        WorkflowDsl context
+    }
+
+
 }

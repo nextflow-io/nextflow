@@ -17,7 +17,6 @@
 
 package nextflow.script
 
-import nextflow.script.testflow.TestCase
 import nextflow.script.testflow.TestSuite
 
 import static nextflow.util.ConfigHelper.*

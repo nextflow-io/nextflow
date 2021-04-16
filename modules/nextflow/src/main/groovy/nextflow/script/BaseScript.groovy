@@ -263,6 +263,11 @@ abstract class BaseScript extends Script implements ExecutionContext {
                         type: e.class.name,
                         content: e.message
                 )
+
+                if (e instanceof TestflowDsl.TaskAssertionError) {
+                    testcase.workDir = e.context.meta.workDir
+                }
+
             } catch (RuntimeException e) {
                 errors += 1
                 testcase.failure = new TestFailure(

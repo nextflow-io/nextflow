@@ -172,6 +172,7 @@ class HtmlRenderer {
         Writer writer = Files.newBufferedWriter(outFile, charset)
         writer.write("<!DOCTYPE html>\n")
         def builder = new MarkupBuilder(writer)
+        builder.omitNullAttributes = true
         builder.html {
             head {
                 meta('http-equiv': 'Content-Type', content: 'text/html; charset=utf-8')
@@ -186,6 +187,7 @@ class HtmlRenderer {
                     div(class: 'breadcrumbs') {
                         a("all", href: 'index.html')
                         span(" > ${testSuite.name}")
+                        a("[workdir]",  href: relativeURL(reportDir, testSuite.workDir))
                     }
                     div(id: 'summary') {
                         table {
@@ -236,7 +238,6 @@ class HtmlRenderer {
                         ul(class: 'tabLinks') {
                             li { a("Failed tests", href: '#tab0') }
                             li { a("Tests", href: '#tab1') }
-                            li { a("Details", href: '#tab2') }
                         }
 
                         div(id: 'tab0', class: 'tab') {
@@ -245,6 +246,7 @@ class HtmlRenderer {
                                 div(class: 'test') {
                                     a("", name: testcase.name)
                                     h3(testcase.name, class: 'failures')
+                                    testcase.workDir ? a("[${processDirReference(testcase.workDir)}]", href:relativeURL(reportDir, testcase.workDir), class:'workdir') : null
                                     span(class: 'code') { pre(testcase.failure.content) }
                                 }
                             }
@@ -263,20 +265,14 @@ class HtmlRenderer {
                                 tbody {
                                     testSuite.testcase.each { testcase ->
                                         tr {
-                                            td(testcase.name, class: testcase.failed ? "failures" : "success")
+                                            td(class: testcase.failed ? "failures" : "success") {
+                                                span(testcase.name)
+                                                testcase.workDir ? a("[${processDirReference(testcase.workDir)}]", href:relativeURL(reportDir, testcase.workDir), class:'workdir') : null
+                                            }
                                             td(humanReadable(testcase.time), class: testcase.failed ? "failures" : "success")
                                             td(testcase.failed ? "failed" : "success", class: testcase.failed ? "failures" : "success")
                                         }
                                     }
-                                }
-                            }
-                        }
-
-                        div(id: 'tab2', class: 'tab') {
-                            h2("Details")
-                            ul {
-                                li {
-                                    a("WorkDir",  href: "file://$testSuite.workDir")
                                 }
                             }
                         }
@@ -298,6 +294,14 @@ class HtmlRenderer {
                 .substring(2)
                 .replaceAll('(\\d[HMS])(?!$)', '$1 ')
                 .toLowerCase()
+    }
+
+    static String relativeURL(Path base, Path inner) {
+        base.toAbsolutePath().relativize(inner)
+    }
+
+    static String processDirReference(Path processDir) {
+        "${processDir.parent.name}/${processDir.name.substring(0, 6)}"
     }
 
     private static void writeJs(Path reportDir) {
@@ -773,6 +777,22 @@ ul.linkList li {
     list-style: none;
     margin-bottom: 5px;
 }
+
+div.test h3 {
+    display: inline;
+}
+
+span.code {
+    display: block;
+    margin-top: 10px;
+    margin-bottom: 30px;
+}
+
+a.workdir {
+    display: inline;
+    margin-left: 5px;
+}
+
 """)
 
         writer.flush()

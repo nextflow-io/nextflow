@@ -1,5 +1,6 @@
 package nextflow.script.testflow
 
+import java.nio.file.Path
 import java.time.Duration
 
 /**
@@ -12,6 +13,7 @@ class TestCase {
     String className
     TestFailure failure
     Duration time
+    Path workDir
 
     boolean isFailed() {
         failure != null
