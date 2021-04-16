@@ -246,12 +246,10 @@ abstract class BaseScript extends Script implements ExecutionContext {
         int errors = 0
         final scriptName = session.testName ?: session.scriptName.replace(".nf", "")
 
-        Duration suiteTime = Duration.ZERO
         List<TestCase> testCase = new ArrayList<>()
         for (TestflowDef test : testFlows) {
 
             tests += 1
-            suiteTime += test.runTime
 
             TestCase testcase = new TestCase(name: test.name, className: scriptName, time: test.getRunTime())
             try {
@@ -290,7 +288,6 @@ abstract class BaseScript extends Script implements ExecutionContext {
                 testcase: testCase,
                 systemErr: "",
                 systemOut: "",
-                time: suiteTime,
                 timestamp: LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS)
         )
     }

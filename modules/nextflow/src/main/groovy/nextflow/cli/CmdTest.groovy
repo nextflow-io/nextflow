@@ -35,6 +35,8 @@ import org.fusesource.jansi.Ansi
 import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.Duration
+import java.time.Instant
 
 /**
  * CLI sub-command TEST
@@ -178,6 +180,7 @@ class CmdTest extends CmdBase implements HubOptions {
 
         Plugins.setup( config )
 
+        final runStart = Instant.now()
         final runner = new ScriptRunner(config)
         runner.setScript(testScript)
         runner.session.profile = profile
@@ -188,7 +191,9 @@ class CmdTest extends CmdBase implements HubOptions {
 
         runner.testFlow()
 
-        return runner.getTestSuite()
+        final suite = runner.getTestSuite()
+        suite.time = Duration.between(runStart, Instant.now())
+        return suite
     }
 
     protected Path getLocalPath(String repoName) {
