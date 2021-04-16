@@ -21,6 +21,7 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
+import nextflow.NextflowMeta
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
@@ -43,9 +44,27 @@ import java.nio.file.Paths
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Run all the project tests")
-class CmdTest extends CmdRun {
+class CmdTest extends CmdBase implements HubOptions {
 
     static final public NAME = 'test'
+
+    @Parameter(description = 'Project name or repository url')
+    List<String> args
+
+    @Parameter(names=['-profile'], description = 'Choose a configuration profile')
+    String profile
+
+    @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
+    String revision
+
+    @Parameter(names=['-latest'], description = 'Pull latest changes before run')
+    boolean latest
+
+    @Parameter(names=['-offline'], description = 'Do not check for remote project updates')
+    boolean offline = System.getenv('NXF_OFFLINE') as boolean
+
+    @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate result files are stored')
+    String workDir
 
     @Parameter(names='-pattern', description = 'Pattern to find test scripts')
     String pattern = "**/*_test.nf"
@@ -61,7 +80,9 @@ class CmdTest extends CmdRun {
         log.info "N E X T F L O W  ~  version ${Const.APP_VER}"
 
         checkValidParams()
-        checkRunName()
+
+        // Test are only supported with DSL2
+        NextflowMeta.instance.enableDsl2()
 
         final repoName = args ? args[0] : Paths.get("").toAbsolutePath().toString()
         final localPath = getLocalPath(repoName)
@@ -77,9 +98,15 @@ class CmdTest extends CmdRun {
         // create the config object
         final builder = new ConfigBuilder()
                 .setOptions(launcher.options)
-                .setCmdRun(this)
                 .setBaseDir(localPath)
         final config = builder.build()
+
+        // -- sets the working directory
+        if( workDir )
+            config.workDir = workDir
+        else if( !config.workDir )
+            config.workDir = System.getenv().get('NXF_WORK') ?: 'work'
+
         final configWorkDir = config.workDir as Path
         final testResults = configWorkDir.resolve("test-results")
         TestRun testRun = new TestRun()
@@ -136,6 +163,11 @@ class CmdTest extends CmdRun {
 
     }
 
+    protected void checkValidParams() {
+        if (offline && latest)
+            throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
+    }
+
     private String printAnsi(Ansi.Color color, String message) {
         if (launcher.options.ansiLog)
             return Ansi.ansi().fg(color).a(message).reset()
@@ -144,9 +176,7 @@ class CmdTest extends CmdRun {
 
     protected TestSuite runTest(String testName, Path testScript, Path testResults, Map config) {
 
-        // -- load plugins
-        final cfg = plugins ? [plugins: plugins.tokenize(',')] : config
-        Plugins.setup( cfg )
+        Plugins.setup( config )
 
         final runner = new ScriptRunner(config)
         runner.setScript(testScript)
@@ -207,8 +237,5 @@ class CmdTest extends CmdRun {
         catch( Exception e ) {
             throw new AbortOperationException("Unknown error accessing project `$repo` -- Repository may be corrupted: ${manager.localPath}", e)
         }
-
-
     }
-
 }
