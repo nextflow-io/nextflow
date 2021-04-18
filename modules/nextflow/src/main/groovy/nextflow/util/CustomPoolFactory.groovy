@@ -42,6 +42,11 @@ class CustomPoolFactory implements PoolFactory {
         def type = property(NXF_POOL_TYPE, 'default')
         switch (type) {
             case 'default':
+                int poolSize = Runtime.runtime.availableProcessors() +1
+                int maxThreads = property(NXF_MAX_THREADS, 1000) as int
+                return CustomThreadPool.defaultPool(poolSize, maxThreads)
+
+            case 'legacy':
                 return new ResizeablePool(true, 1)
 
             case 'sync':
