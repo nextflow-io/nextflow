@@ -687,13 +687,13 @@ class Bolts {
      */
     static <T extends Closure> T cloneWith( T self, binding ) {
 
-        def copy = (T)self.clone()
+        def copy = (Closure)self.clone()
         if( binding != null ) {
             copy.setDelegate(binding)
             copy.setResolveStrategy( Closure.DELEGATE_FIRST )
         }
 
-        return copy
+        return (T)copy
     }
 
     /**
@@ -711,8 +711,7 @@ class Bolts {
         for( int i=0; i<self.valueCount; i++ ) {
             values[i] = ( self.values[i] instanceof Closure
                     ? cloneWith(self.values[i] as Closure, binding)
-                    : self.values[i]
-            )
+                    : self.values[i] )
         }
 
         new GStringImpl(values, self.strings)
