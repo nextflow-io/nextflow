@@ -275,8 +275,9 @@ class AmazonCloudDriverTest extends Specification {
                     #
                     # set instance name
                     #
-                    instance="$(curl -s http://169.254.169.254/latest/meta-data/instance-id)"
-                    zone="$(curl -s 169.254.169.254/latest/meta-data/placement/availability-zone)"
+
+                    instance="$(TOKEN=`curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"` && curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/instance-id)"
+                    zone="$(TOKEN=`curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"` && curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/placement/availability-zone)"
                     region="${zone::-1}"
 
                     #
@@ -417,7 +418,7 @@ class AmazonCloudDriverTest extends Specification {
         def snippet = driver.scriptMountEFS('/dev/xyz', '/mnt/scratch', 'ubuntu')
         then:
         snippet ==  '''
-                    zone="$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)"
+                    zone="$(TOKEN=`curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"` && curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/placement/availability-zone)"
                     region="${zone::-1}"
                     command -v nfsstat >/dev/null 2>&1 || yum install -y nfs-utils || apt-get -y install nfs-common
                     mkdir -p /mnt/scratch

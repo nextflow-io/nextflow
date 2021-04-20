@@ -189,7 +189,8 @@ class AmazonCloudDriver implements CloudDriver {
      */
     protected String fetchIamRole() {
         try {
-            def role = getUrl('http://169.254.169.254/latest/meta-data/iam/security-credentials/').readLines()
+            def role = "$(TOKEN=`curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"` && curl -H "X-aws-ec2-
+metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/iam/security-credentials/)"
             if( role.size() != 1 )
                 throw new IllegalArgumentException("Not a valid EC2 IAM role")
             return role.get(0)
@@ -210,7 +211,8 @@ class AmazonCloudDriver implements CloudDriver {
      */
     protected String fetchRegion() {
         try {
-            def zone = getUrl('http://169.254.169.254/latest/meta-data/placement/availability-zone')
+            def zone = "$(TOKEN=`curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"` && curl -H "X-aws-ec2-
+metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/placement/availability-zone)"
             zone ? zone.substring(0,zone.length()-1) : null
         }
         catch (IOException e) {
@@ -369,7 +371,7 @@ class AmazonCloudDriver implements CloudDriver {
     String scriptMountEFS(String fileSystemId, String fileSystemMount, String userName) {
 
         """\
-        zone="\$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)"
+        zone="\$(TOKEN=`curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"` && curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/placement/availability-zone)"
         region="\${zone::-1}"
         command -v nfsstat >/dev/null 2>&1 || yum install -y nfs-utils || apt-get -y install nfs-common
         mkdir -p $fileSystemMount
@@ -1267,7 +1269,9 @@ class AmazonCloudDriver implements CloudDriver {
     @Override
     String getLocalInstanceId() {
         try {
-            return getUrl('http://169.254.169.254/latest/meta-data/instance-id')
+            def instance = "$(TOKEN=`curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"` && curl -H "X-aws-ec2-
+metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/instance-id)"
+            return instance
         }
         catch( Exception e ) {
             log.debug "Oops.. Can't discover EC2 instance-id -- Cause: ${e.message ?: e}"
@@ -1288,7 +1292,9 @@ class AmazonCloudDriver implements CloudDriver {
     @Override
     String getLocalTerminationNotice() {
         try {
-            return getUrl('http://169.254.169.254/latest/meta-data/spot/termination-time')
+            def spottime = "$(TOKEN=`curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"` && curl -H "X-aws-ec2-
+metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/spot/termination-time)"
+            return spottime
         }
         catch (Exception e) {
             return null
