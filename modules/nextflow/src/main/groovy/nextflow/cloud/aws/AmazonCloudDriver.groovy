@@ -856,6 +856,11 @@ metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/placement/ava
         req.instanceType = cfg.instanceType
         req.userData = getUserDataAsBase64(cfg)
         req.setBlockDeviceMappings( getBlockDeviceMappings(cfg) )
+        req.setMetadataOptions( new InstanceMetadataOptionsRequest()
+                    .setHttpPutResponseHopLimit(10)
+                    .setHttpTokens("required")
+                    .setHttpEndpoint("enabled")
+        )
         if( cfg.instanceRole ) {
             def role = new IamInstanceProfileSpecification().withName(cfg.instanceRole)
             req.setIamInstanceProfile(role)
@@ -917,6 +922,11 @@ metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/placement/ava
                 .withInstanceCount(instanceCount)
                 .withSpotPrice( cfg.getSpotPrice() )
                 .withLaunchSpecification(spec)
+                .modifyInstanceMetadataOptions(new ModifyInstanceMetadataOptionsRequest()
+                    .setHttpPutResponseHopLimit(10)
+                    .setHttpTokens("required")
+                    .setHttpEndpoint("enabled")
+                 )
     }
 
     @Override
