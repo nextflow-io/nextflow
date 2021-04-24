@@ -35,7 +35,7 @@ import nextflow.file.FileSystemPathFactory
 class GsPathFactory extends FileSystemPathFactory {
 
     @Lazy
-    static private final CloudStorageConfiguration storageConfig = {
+    private CloudStorageConfiguration storageConfig = {
         return getCloudStorageConfig()
     } ()
 
