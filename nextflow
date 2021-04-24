@@ -333,8 +333,8 @@ else
     version_check="^(1.7|1.8)"
     version_message="Java 7 or 8"
   else
-    version_check="^(1.8|9|10|11|12|13|14|15)"
-    version_message="Java 8 or later"
+    version_check="^(1.8|9|10|11|12|13|14|15|16)"
+    version_message="Java 8 or later (up to 16)"
   fi
   if [[ ! $JAVA_VER =~ $version_check ]]; then
       echo_red "ERROR: Cannot find Java or it's a wrong version -- please make sure that $version_message is installed"
@@ -345,8 +345,8 @@ else
       fi
       exit 1
   fi
-  if [[ ! $JAVA_VER =~ ^(1.8|9|10|11|12|13|14|15) ]]; then
-      echo_yellow "NOTE: Nextflow is not tested with Java $JAVA_VER -- It's recommended the use of version 8 up to 15\n"
+  if [[ ! $JAVA_VER =~ ^(1.8|9|10|11|12|13|14|15|16) ]]; then
+      echo_yellow "NOTE: Nextflow is not tested with Java $JAVA_VER -- It's recommended the use of version 8 up to 16\n"
   elif [[ ! $JAVA_VER =~ ^(1.8|9|10|11) && $NXF_MODE == ignite ]]; then
       echo_yellow "WARN: Apache Ignite executor is not tested with Java $JAVA_VER -- It's recommended the use of version 8 up to 11\n"
   fi
@@ -428,12 +428,15 @@ else
     cli=($("$JAVA_CMD" "${JAVA_OPTS[@]}" -jar "$NXF_BIN"))
     [[ $? -ne 0 ]] && echo_red 'Unable to initialize nextflow environment' && exit 1
 
-    if [[ "$JAVA_VER" =~ ^(9|10|11|12|13|14|15) ]]; then
+    if [[ "$JAVA_VER" =~ ^(9|10|11|12|13|14|15|16) ]]; then
       launcher=("${cli[@]:0:1}")
       launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.nio=ALL-UNNAMED)
+      launcher+=(--add-opens=java.base/java.net=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.util=ALL-UNNAMED)
+      launcher+=(--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED)
+      launcher+=(--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.nio.file.spi=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.nio.ch=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.nio.fs=ALL-UNNAMED)
