@@ -189,7 +189,7 @@ class PluginsFacade implements PluginStateListener {
 
     void start( String pluginId ) {
         if( isSelfContained() ) {
-            log.debug "Plugin 'start' is not required in self-contained mode -- ingoring it for plugin: $pluginId"
+            log.debug "Plugin 'start' is not required in self-contained mode -- ignoring it for plugin: $pluginId"
             return
         }
 
@@ -198,7 +198,7 @@ class PluginsFacade implements PluginStateListener {
 
     void start(PluginSpec plugin) {
         if( isSelfContained() ) {
-            log.debug "Plugin 'start' is not required in self-contained mode -- ingoring it for plugin: $plugin.id"
+            log.debug "Plugin 'start' is not required in self-contained mode -- ignoring it for plugin: $plugin.id"
             return
         }
 
@@ -207,7 +207,7 @@ class PluginsFacade implements PluginStateListener {
 
     void start(List<PluginSpec> specs) {
         if( isSelfContained() ) {
-            log.debug "Plugin 'start' is not required in self-contained mode -- ingoring it for plugins: $specs"
+            log.debug "Plugin 'start' is not required in self-contained mode -- ignoring it for plugins: $specs"
             return
         }
 
