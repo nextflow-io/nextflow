@@ -47,10 +47,6 @@ class Plugins {
         INSTANCE.stop()
     }
 
-    static boolean hasPlugin(String pluginId) {
-        INSTANCE.hasPlugin(pluginId)
-    }
-
     static <T> List<T> getExtensions(Class<T> type) {
         INSTANCE.getExtensions(type)
     }
