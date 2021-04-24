@@ -57,6 +57,7 @@ allprojects {
     apply plugin: 'java-test-fixtures'
     apply plugin: 'idea'
     apply plugin: 'groovy'
+    apply plugin: 'java-library'
 
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
@@ -87,8 +88,8 @@ allprojects {
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:1.11'
-        groovyDoc "org.codehaus.groovy:groovy-groovydoc:3.0.7"
-        groovyDoc "org.codehaus.groovy:groovy-ant:3.0.7"
+        groovyDoc "org.codehaus.groovy:groovy-groovydoc:3.0.8"
+        groovyDoc "org.codehaus.groovy:groovy-ant:3.0.8"
     }
 
     test {
@@ -111,11 +112,15 @@ allprojects {
         }
     }
 
+    tasks.withType(Jar) {
+        duplicatesStrategy = DuplicatesStrategy.WARN
+    }
+
     // patched as described here
     // http://forums.gradle.org/gradle/topics/gradle_task_groovydoc_failing_with_noclassdeffounderror
     tasks.withType(Groovydoc) {
         groovyClasspath = project.configurations.groovyDoc
-        includes  = ["nextflow/**"]
+        includes = ["nextflow/**"]
     }
 
     // Required to run tests on Java 9 and higher in compatibility mode
@@ -125,8 +130,12 @@ allprojects {
                     '--add-opens=java.base/java.lang=ALL-UNNAMED',
                     '--add-opens=java.base/java.io=ALL-UNNAMED',
                     '--add-opens=java.base/java.nio=ALL-UNNAMED',
+                    '--add-opens=java.base/java.net=ALL-UNNAMED',
                     '--add-opens=java.base/java.util=ALL-UNNAMED',
+                    '--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED',
+                    '--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED',
                     '--add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
+                    '--add-opens=java.base/sun.nio.fs=ALL-UNNAMED',
                     '--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED',
                     '--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED',
                     '--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED',
@@ -248,7 +257,7 @@ configure(coreProjects) {
  * http://central.sonatype.org/pages/gradle.html
  */
 configure(coreProjects) {
-    apply plugin: 'maven'
+    apply plugin: 'maven-publish'
     apply plugin: 'signing'
 
     task javadocJar(type: Jar) {
@@ -269,47 +278,53 @@ configure(coreProjects) {
         sign configurations.archives
     }
 
-    uploadArchives {
-        repositories {
-            mavenDeployer {
-                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-
-                repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-                    authentication(userName: nexusUsername, password: nexusPassword)
-                }
-
-                snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-                    authentication(userName: nexusUsername, password: nexusPassword)
-                }
-
-                pom.project {
-                    name 'Nextflow'
-                    packaging 'jar'
-                    // optionally artifactId can be defined here
-                    description 'A DSL modelled around the UNIX pipe concept, that simplifies writing parallel and scalable pipelines in a portable manner'
-                    url 'http://www.nextflow.io'
-
-                    scm {
-                        connection 'scm:git:https://github.com/nextflow-io/nextflow'
-                        developerConnection 'scm:git:git@github.com:nextflow-io/nextflow.git'
-                        url 'https://github.com/nextflow-io/nextflow'
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                from components.java
+                versionMapping {
+                    usage('java-api') {
+                        fromResolutionOf('runtimeClasspath')
                     }
-
+                    usage('java-runtime') {
+                        fromResolutionResult()
+                    }
+                }
+                pom {
+                    name = 'Nextflow'
+                    description = 'A DSL modelled around the UNIX pipe concept, that simplifies writing parallel and scalable pipelines in a portable manner'
+                    url = 'http://www.nextflow.io'
                     licenses {
                         license {
-                            name 'Apache 2.0'
-                            url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                            name = 'The Apache License, Version 2.0'
+                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
                         }
                     }
-
                     developers {
                         developer {
-                            id nexusUsername
-                            name nexusFullName
-                            email nexusEmail
+                            id = nexusUsername
+                            name = nexusFullName
+                            email = nexusEmail
                         }
                     }
+                    scm {
+                        connection = 'scm:git:https://github.com/nextflow-io/nextflow'
+                        developerConnection = 'scm:git:git@github.com:nextflow-io/nextflow.git'
+                        url = 'https://github.com/nextflow-io/nextflow'
+                    }
+                }
+            }
+        }
 
+        repositories {
+            maven {
+                // change URLs to point to your repos, e.g. http://my.org/repo
+                def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+                def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
+                url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+                credentials(PasswordCredentials) {
+                    username nexusUsername
+                    password nexusPassword
                 }
             }
         }
@@ -343,7 +358,7 @@ task makeDigest { doLast {
 task upload {
     dependsOn compile
     dependsOn makeDigest
-    dependsOn coreProjects.uploadArchives
+    dependsOn coreProjects.publishing
 }
 
 /*

@@ -38,12 +38,12 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-api:1.7.10'
     compileOnly 'org.pf4j:pf4j:3.4.1'
 
-    compile ('io.nextflow:nxf-s3fs:1.1.0') { transitive = false }
-    compile ('com.amazonaws:aws-java-sdk-s3:1.11.542')
-    compile ('com.amazonaws:aws-java-sdk-ec2:1.11.542')
-    compile ('com.amazonaws:aws-java-sdk-batch:1.11.542')
-    compile ('com.amazonaws:aws-java-sdk-iam:1.11.542')
-    compile ('com.amazonaws:aws-java-sdk-ecs:1.11.542')
+    api ('io.nextflow:nxf-s3fs:1.1.0') { transitive = false }
+    api ('com.amazonaws:aws-java-sdk-s3:1.11.542')
+    api ('com.amazonaws:aws-java-sdk-ec2:1.11.542')
+    api ('com.amazonaws:aws-java-sdk-batch:1.11.542')
+    api ('com.amazonaws:aws-java-sdk-iam:1.11.542')
+    api ('com.amazonaws:aws-java-sdk-ecs:1.11.542')
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
