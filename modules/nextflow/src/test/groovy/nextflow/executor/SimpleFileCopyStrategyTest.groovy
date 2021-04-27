@@ -160,53 +160,41 @@ class SimpleFileCopyStrategyTest extends Specification {
     }
 
     @Unroll
-    def 'glob to regex' () {
-        given:
-        SimpleFileCopyStrategy strategy = [:] as SimpleFileCopyStrategy
-        expect:
-        strategy.globToRegex( glob ) == regex
-
-        where:
-        glob               | regex
-        'abc'              | 'abc'
-        'abc*'             | 'abc[^/]*'
-        'abc**'            | 'abc.*'
-        'abc\\*'           | 'abc\\*'
-        'abc\\**'          | 'abc\\*[^/]*'
-        './[\\ab]'         | '\\./[\\ab]'
-        '{abcd,def}'       | '\\(abcd\\|def\\)'
-        '{abcd*,def}'      | '\\(abcd[^/]*\\|def\\)'
-        '{ab|cd,def}'      | '\\(ab|cd\\|def\\)'
-        '?.\\?.[?]\\[?\\]' | '.\\.\\?\\.[?]\\[.\\]'
-        '[abc]'            | '[abc]'
-        '[a-z,A-Z]'        | '[a-z,A-Z]'
-        '{a\\,b,c}/*.txt'  | '\\(a,b\\|c\\)/[^/]*\\.txt'
-    }
-
-    @Unroll
     def 'should return a valid stage-out command' () {
 
         given:
         def strategy = [:] as SimpleFileCopyStrategy
+        def cmd = """\
+            shopt -s globstar extglob
+            IFS=\$'\\n'
+            pathes=`ls -1d ${source_escaped}`
+            set -f
+            for name in \$pathes; do
+                cp -fRLn --parents \"\$name\" ${target_escaped} || true
+            done
+            set +f
+            shopt -u globstar extglob
+            unset IFS""".stripIndent(true)
+
         expect:
-        strategy.stageOutCommand(source, target, 'copy') == result
+        strategy.stageOutCommand([source], target, 'copy') == cmd
 
         where:
-        source                  | target    | result
-        'file.txt'              | '/to/dir' | "find -L -regex \"\\./file\\.txt\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
-        "file'3.txt"            | '/to dir' | "find -L -regex \"\\./file'3\\.txt\" -exec cp -fRLn --parents \"{}\" /to\\ dir \\;"
-        'path_name'             | '/to/dir' | "find -L -regex \"\\./path_name\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
-        'input/file.txt'        | '/to/dir' | "find -L -regex \"\\./input/file\\.txt\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
-        'long/path/name'        | '/to/dir' | "find -L -regex \"\\./long/path/name\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
-        'path_name/*'           | '/to/dir' | "find -L -regex \"\\./path_name/[^/]*\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
-        'path_name/'            | '/to/dir' | "find -L -type d -regex \"\\./path_name\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
-        'input/*/file.txt'      | '/to/dir' | "find -L -regex \"\\./input/[^/]*/file\\.txt\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
-        'input/**/file.txt'     | '/to/dir' | "find -L -regex \"\\./input/.*/file\\.txt\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
-        'input/**/a/**/file.txt'| '/to/dir' | "find -L -regex \"\\./input/.*/a/.*/file\\.txt\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
-        'input/?/file.txt'      | '/to/dir' | "find -L -regex \"\\./input/./file\\.txt\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
-        'input/{a,b}/file.txt'  | '/to/dir' | "find -L -regex \"\\./input/\\(a\\|b\\)/file\\.txt\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
-        'input/{a,b,c}/file.txt'| '/to/dir' | "find -L -regex \"\\./input/\\(a\\|b\\|c\\)/file\\.txt\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
-        'input/[A-Z]/file.txt'  | '/to/dir' | "find -L -regex \"\\./input/[A-Z]/file\\.txt\" -exec cp -fRLn --parents \"{}\" /to/dir \\;"
+        source                  | target    | source_escaped           | target_escaped
+        'file.txt'              | '/to/dir' | 'file.txt'               | '/to/dir'
+        "file'3.txt"            | '/to dir' | "file\\'3.txt"           | '/to\\ dir'
+        'path_name'             | '/to/dir' | 'path_name'              | '/to/dir'
+        'input/file.txt'        | '/to/dir' | 'input/file.txt'         | '/to/dir'
+        'long/path/name'        | '/to/dir' | 'long/path/name'         | '/to/dir'
+        'path_name/*'           | '/to/dir' | 'path_name/*'            | '/to/dir'
+        'path_name/'            | '/to/dir' | 'path_name/'             | '/to/dir'
+        'input/*/file.txt'      | '/to/dir' | 'input/*/file.txt'       | '/to/dir'
+        'input/**/file.txt'     | '/to/dir' | 'input/**/file.txt'      | '/to/dir'
+        'input/**/a/**/file.txt'| '/to/dir' | 'input/**/a/**/file.txt' | '/to/dir'
+        'input/?/file.txt'      | '/to/dir' | 'input/?/file.txt'       | '/to/dir'
+        'input/{a,b}/file.txt'  | '/to/dir' | 'input/{a,b}/file.txt'   | '/to/dir'
+        'input/{a,b,c}/file.txt'| '/to/dir' | 'input/{a,b,c}/file.txt' | '/to/dir'
+        'input/[A-Z]/file.txt'  | '/to/dir' | 'input/[A-Z]/file.txt'   | '/to/dir'
 
     }
 
@@ -233,7 +221,7 @@ class SimpleFileCopyStrategyTest extends Specification {
 
         String command = strategy.getUnstageOutputFilesScript([source], outfolder.toAbsolutePath())
         println("Command: $command")
-        Process process = [ "sh", "-c", command ].execute(null, infolder.toFile() )
+        Process process = [ "bash", "-c", command ].execute(null, infolder.toFile() )
         process.consumeProcessOutput( System.out, System.err )
         process.waitFor(2, TimeUnit.SECONDS )
 
@@ -294,29 +282,94 @@ class SimpleFileCopyStrategyTest extends Specification {
 
     }
 
+    @Unroll
+    def 'should copy the right files, multiple outputs' () {
+
+        given:
+        SimpleFileCopyStrategy strategy = [:] as SimpleFileCopyStrategy
+        strategy.stageoutMode = "copy"
+        Path infolder = Files.createTempDirectory('in')
+        Path outfolder = Files.createTempDirectory('out')
+
+        inputffiles.forEach {
+            String p = infolder.toAbsolutePath().toString()
+            //create subdirectories, if needed
+            if( it.contains("/") ) {
+                println("path: $p/${it.substring(0, it.lastIndexOf('/'))}")
+                new File( p + "/" + it.substring(0, it.lastIndexOf('/')) ).mkdirs()
+            }
+            if( !it.endsWith("/") ) {
+                new File(p + "/" + it).createNewFile()
+            }
+        }
+
+        String command = strategy.getUnstageOutputFilesScript(source, outfolder.toAbsolutePath())
+        println("Command: $command")
+        Process process = [ "bash", "-c", command ].execute(null, infolder.toFile() )
+        process.consumeProcessOutput( System.out, System.err )
+        process.waitFor(2, TimeUnit.SECONDS )
+
+        expect:
+        process.exitValue() == 0
+
+        for( String r : outputfiles ){
+            assert new File(outfolder.toString(), r).exists()
+        }
+        for( String r : inputffiles ){
+            assert new File(infolder.toString(), r).exists()
+        }
+        for( String r : (inputffiles - outputfiles) ){
+            assert !new File(outfolder.toString(), r).exists()
+        }
+
+        cleanup:
+        infolder?.deleteDir()
+        outfolder?.deleteDir()
+
+        where:
+        source                          | inputffiles                                                                                           | outputfiles
+        ['*.txt', 'a/*.txt']            | ['file.txt', 'file2.txt', 'file3.txta', 'a/file.txt', 'a/file3.txta', 'b/file.txt']                   | ['file.txt', 'file2.txt', 'a/file.txt']
+        ['a/*.txt', '*.txt']            | ['file.txt', 'file2.txt', 'file3.txta', 'a/file.txt', 'a/file3.txta', 'b/file.txt']                   | ['file.txt', 'file2.txt', 'a/file.txt']
+        ['a/*.txt', '**.txt']           | ['file.txt', 'file2.txt', 'file3.txta', 'a/file.txt', 'a/file3.txta', 'b/file.txt']                   | ['file.txt', 'file2.txt', 'a/file.txt', 'b/file.txt']
+        ['**.txt', 'a/*.txt']           | ['file.txt', 'file2.txt', 'file3.txta', 'a/file.txt', 'a/file3.txta', 'b/file.txt']                   | ['file.txt', 'file2.txt', 'a/file.txt', 'b/file.txt']
+
+    }
+
     def 'should return a valid `mv` command' () {
 
         given:
         def strategy = [:] as SimpleFileCopyStrategy
+        def cmd = """\
+            shopt -s globstar extglob
+            IFS=\$'\\n'
+            pathes=`ls -1d ${source_escaped}`
+            set -f
+            for name in \$pathes; do
+                sh -c 'mkdir -p \"${target_escaped}/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"${target_escaped}/`dirname \\\"\$1\\\"`\";' _ \"\$name\" || true
+            done
+            set +f
+            shopt -u globstar extglob
+            unset IFS""".stripIndent(true)
+
         expect:
-        strategy.stageOutCommand(source, target, 'move') == result
+        strategy.stageOutCommand([source], target, 'move') == cmd
 
         where:
-        source                  | target    | result
-        'file.txt'              | '/to/dir' | "find -L -regex \"\\./file\\.txt\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
-        "file'3.txt"            | '/to dir' | "find -L -regex \"\\./file'3\\.txt\" -exec sh -c 'mkdir -p \"/to\\ dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to\\ dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
-        'path_name'             | '/to/dir' | "find -L -regex \"\\./path_name\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
-        'input/file.txt'        | '/to/dir' | "find -L -regex \"\\./input/file\\.txt\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
-        'long/path/name'        | '/to/dir' | "find -L -regex \"\\./long/path/name\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
-        'path_name/*'           | '/to/dir' | "find -L -regex \"\\./path_name/[^/]*\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
-        'path_name/'            | '/to/dir' | "find -L -type d -regex \"\\./path_name\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
-        'input/*/file.txt'      | '/to/dir' | "find -L -regex \"\\./input/[^/]*/file\\.txt\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
-        'input/**/file.txt'     | '/to/dir' | "find -L -regex \"\\./input/.*/file\\.txt\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
-        'input/**/a/**/file.txt'| '/to/dir' | "find -L -regex \"\\./input/.*/a/.*/file\\.txt\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
-        'input/?/file.txt'      | '/to/dir' | "find -L -regex \"\\./input/./file\\.txt\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
-        'input/{a,b}/file.txt'  | '/to/dir' | "find -L -regex \"\\./input/\\(a\\|b\\)/file\\.txt\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
-        'input/{a,b,c}/file.txt'| '/to/dir' | "find -L -regex \"\\./input/\\(a\\|b\\|c\\)/file\\.txt\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
-        'input/[A-Z]/file.txt'  | '/to/dir' | "find -L -regex \"\\./input/[A-Z]/file\\.txt\" -exec sh -c 'mkdir -p \"/to/dir/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/to/dir/`dirname \\\"\$1\\\"`\";' _ {} \\;"
+        source                  | target    | source_escaped           | target_escaped
+        'file.txt'              | '/to/dir' | 'file.txt'               | '/to/dir'
+        "file'3.txt"            | '/to dir' | "file\\'3.txt"           | '/to\\ dir'
+        'path_name'             | '/to/dir' | 'path_name'              | '/to/dir'
+        'input/file.txt'        | '/to/dir' | 'input/file.txt'         | '/to/dir'
+        'long/path/name'        | '/to/dir' | 'long/path/name'         | '/to/dir'
+        'path_name/*'           | '/to/dir' | 'path_name/*'            | '/to/dir'
+        'path_name/'            | '/to/dir' | 'path_name/'             | '/to/dir'
+        'input/*/file.txt'      | '/to/dir' | 'input/*/file.txt'       | '/to/dir'
+        'input/**/file.txt'     | '/to/dir' | 'input/**/file.txt'      | '/to/dir'
+        'input/**/a/**/file.txt'| '/to/dir' | 'input/**/a/**/file.txt' | '/to/dir'
+        'input/?/file.txt'      | '/to/dir' | 'input/?/file.txt'       | '/to/dir'
+        'input/{a,b}/file.txt'  | '/to/dir' | 'input/{a,b}/file.txt'   | '/to/dir'
+        'input/{a,b,c}/file.txt'| '/to/dir' | 'input/{a,b,c}/file.txt' | '/to/dir'
+        'input/[A-Z]/file.txt'  | '/to/dir' | 'input/[A-Z]/file.txt'   | '/to/dir'
 
     }
 
@@ -343,7 +396,7 @@ class SimpleFileCopyStrategyTest extends Specification {
 
         String command = strategy.getUnstageOutputFilesScript([source], outfolder.toAbsolutePath())
         println("Command: $command")
-        Process process = [ "sh", "-c", command ].execute(null, infolder.toFile() )
+        Process process = [ "bash", "-c", command ].execute(null, infolder.toFile() )
         process.consumeProcessOutput( System.out, System.err )
         process.waitFor(2, TimeUnit.SECONDS )
 
@@ -403,12 +456,64 @@ class SimpleFileCopyStrategyTest extends Specification {
 
     }
 
+    @Unroll
+    def 'should move the right files, multiple outputs' () {
+
+        given:
+        SimpleFileCopyStrategy strategy = [:] as SimpleFileCopyStrategy
+        strategy.stageoutMode = "move"
+        Path infolder = Files.createTempDirectory('in')
+        Path outfolder = Files.createTempDirectory('out')
+
+        inputffiles.forEach {
+            String p = infolder.toAbsolutePath().toString()
+            //create subdirectories, if needed
+            if( it.contains("/") ) {
+                println("path: $p/${it.substring(0, it.lastIndexOf('/'))}")
+                new File( p + "/" + it.substring(0, it.lastIndexOf('/')) ).mkdirs()
+            }
+            if( !it.endsWith("/") ) {
+                new File(p + "/" + it).createNewFile()
+            }
+        }
+
+        String command = strategy.getUnstageOutputFilesScript(source, outfolder.toAbsolutePath())
+        println("Command: $command")
+        Process process = [ "bash", "-c", command ].execute(null, infolder.toFile() )
+        process.consumeProcessOutput( System.out, System.err )
+        process.waitFor(2, TimeUnit.SECONDS )
+
+        expect:
+        process.exitValue() == 0
+
+        for( String r : outputfiles ){
+            assert new File(outfolder.toString(), r).exists()
+            assert !new File(infolder.toString(), r).exists()
+        }
+        for( String r : (inputffiles - outputfiles) ){
+            assert !new File(outfolder.toString(), r).exists()
+            assert new File(infolder.toString(), r).exists()
+        }
+
+        cleanup:
+        infolder?.deleteDir()
+        outfolder?.deleteDir()
+
+        where:
+        source                          | inputffiles                                                                                           | outputfiles
+        ['*.txt', 'a/*.txt']            | ['file.txt', 'file2.txt', 'file3.txta', 'a/file.txt', 'a/file3.txta', 'b/file.txt']                   | ['file.txt', 'file2.txt', 'a/file.txt']
+        ['a/*.txt', '*.txt']            | ['file.txt', 'file2.txt', 'file3.txta', 'a/file.txt', 'a/file3.txta', 'b/file.txt']                   | ['file.txt', 'file2.txt', 'a/file.txt']
+        ['a/*.txt', '**.txt']           | ['file.txt', 'file2.txt', 'file3.txta', 'a/file.txt', 'a/file3.txta', 'b/file.txt']                   | ['file.txt', 'file2.txt', 'a/file.txt', 'b/file.txt']
+        ['**.txt', 'a/*.txt']           | ['file.txt', 'file2.txt', 'file3.txta', 'a/file.txt', 'a/file3.txta', 'b/file.txt']                   | ['file.txt', 'file2.txt', 'a/file.txt', 'b/file.txt']
+
+    }
+
     def 'should return a valid `rsync` command' () {
 
         given:
         def strategy = [:] as SimpleFileCopyStrategy
         expect:
-        strategy.stageOutCommand(source, target, 'rsync') == result
+        strategy.stageOutCommand([source], target, 'rsync') == "$result || true"
 
         where:
         source              | target    | result
@@ -477,8 +582,16 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 mkdir -p /target/work\\ dir
-                find -L -regex "\\./simple\\.txt" -exec cp -fRLn --parents "{}" /target/work\\ dir \\; || true
-                find -L -regex "\\./my/path/file\\.bam" -exec cp -fRLn --parents "{}" /target/work\\ dir \\; || true
+                shopt -s globstar extglob
+                IFS=\$'\\n'
+                pathes=`ls -1d simple.txt my/path/file.bam | sort | uniq`
+                set -f
+                for name in \$pathes; do
+                    cp -fRLn --parents \"\$name\" /target/work\\ dir || true
+                done
+                set +f
+                shopt -u globstar extglob
+                unset IFS
                 '''
                 .stripIndent().trim()
 
@@ -498,8 +611,16 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 mkdir -p /target/store
-                find -L -regex \"\\./simple\\.txt\" -exec sh -c 'mkdir -p \"/target/store/`dirname \\\"$1\\\"`\"; mv \"$1\" \"/target/store/`dirname \\\"$1\\\"`\";' _ {} \\; || true
-                find -L -regex \"\\./my/path/file\\.bam\" -exec sh -c 'mkdir -p \"/target/store/`dirname \\\"$1\\\"`\"; mv \"$1\" \"/target/store/`dirname \\\"$1\\\"`\";' _ {} \\; || true
+                shopt -s globstar extglob
+                IFS=\$'\\n'
+                pathes=`ls -1d simple.txt my/path/file.bam | sort | uniq`
+                set -f
+                for name in \$pathes; do
+                    sh -c 'mkdir -p \"/target/store/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/target/store/`dirname \\\"\$1\\\"`\";' _ \"\$name\" || true
+                done
+                set +f
+                shopt -u globstar extglob
+                unset IFS
                 '''
                 .stripIndent().trim()
 
@@ -518,8 +639,7 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 mkdir -p /target/work\\'s
-                rsync -rRl simple.txt /target/work\\'s || true
-                rsync -rRl my/path/file.bam /target/work\\'s || true
+                rsync -rRl simple.txt my/path/file.bam /target/work\\'s || true
                 '''
                 .stripIndent().trim()
 
@@ -537,7 +657,7 @@ class SimpleFileCopyStrategyTest extends Specification {
         when:
         def script = strategy.getUnstageOutputFilesScript(outputs, target)
         then:
-        3 * strategy.getPathScheme(target) >> 's3'
+        2 * strategy.getPathScheme(target) >> 's3'
         2 * target.toString() >> '/foo/bar'
         script == '''
                 nxf_s3_upload 'simple.txt' s3://foo/bar || true

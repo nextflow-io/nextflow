@@ -171,11 +171,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
             def prefix = getUnstagePrefix(targetDir)
             if( prefix )
                 result << prefix
-            for( int i=0; i<outputFiles.size(); i++ ) {
-                final path = outputFiles[i]
-                final cmd = stageOutCommand(path, targetDir, mode) + ' || true' // <-- add true to avoid it stops on errors
-                result << cmd
-            }
+            result << stageOutCommand(outputFiles, targetDir, mode)
         }
 
         return result.join(separatorChar)
@@ -251,114 +247,58 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * @return A shell copy or move command string
      */
 
-    protected String stageOutCommand( String source, Path targetDir, String mode ) {
+    protected String stageOutCommand( List<String> source, Path targetDir, String mode ) {
         def scheme = getPathScheme(targetDir)
         if( scheme == 'file' )
             return stageOutCommand(source, targetDir.toString(), mode)
 
         if( scheme == 's3' )
-            return "nxf_s3_upload '$source' s3:/$targetDir"
+            return source
+                    .collect {"nxf_s3_upload '$it' s3:/$targetDir || true" }
+                    .join(separatorChar)
 
         throw new IllegalArgumentException("Unsupported target path: ${targetDir.toUriString()}")
     }
 
-    protected String stageOutCommand( String source, String target, String mode ) {
+    protected String stageOutCommand( List<String> source, String target, String mode ) {
         assert mode
 
         def cmd
         if( mode == 'copy' )
-            cmd = "cp -fRLn --parents \"{}\" ${Escape.path(target)}"
+            cmd = "cp -fRLn --parents \"\$name\" ${Escape.path(target)}"
         else if( mode == 'move' )
-            cmd = "sh -c 'mkdir -p \"${Escape.path(target)}/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"${Escape.path(target)}/`dirname \\\"\$1\\\"`\";' _ {}"
+            cmd = "sh -c 'mkdir -p \"${Escape.path(target)}/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"${Escape.path(target)}/`dirname \\\"\$1\\\"`\";' _ \"\$name\""
         else if( mode == 'rsync' )
-        //This will not work for glob terms
-            return "rsync -rRl ${Escape.path(source)} ${Escape.path(target)}"
+            //This will not work for glob terms
+            return "rsync -rRl ${source.collect{ Escape.path(it) }.join(' ')} ${Escape.path(target)} || true"
         else
             throw new IllegalArgumentException("Unknown stage-out strategy: $mode")
 
-        //Find does not accept a slash at the end
-        String dir = ""
-        if ( source.endsWith('/') ) {
-            source = source.substring( 0, source.length() - 1 )
-            dir = "-type d "
-        }
-
-        //find always generates pathes starting with ./
-        if ( !source.startsWith( './' ) && !source.startsWith( '/' ) ){
-            source = './' + source
-        }
-
-        source = globToRegex( source )
-        source = source.replaceAll( '"', '\\\\"' )
-
-        return "find -L ${dir}-regex \"${source}\" -exec $cmd \\;"
-
-    }
-
-    /**
-     * This method follows the https://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob definition
-     * @param glob
-     * @return a regex equal to the glob
-     */
-    protected String globToRegex( String glob ){
-        StringBuilder sb = new StringBuilder()
-        boolean escape = false
-        boolean squaredBracket = false
-        boolean curlyBracket = false;
-
-        for (Integer i = 0 ; i < glob.length() ; i++) {
-            char c = glob.charAt( i )
-            if( escape ){
-                if ( c == ',' && curlyBracket ){
-                    sb.deleteCharAt( sb.length() - 1 )
-                }
-                escape = false
-            } else if( c == '\\' && !squaredBracket ){
-                escape = true
-            } else {
-
-                if (c == '.'){
-                    sb.append( '\\' )
-                } else if ( c == '[') {
-                    if( squaredBracket ) throw new IllegalArgumentException( "A squared bracket was not closed" )
-                    squaredBracket = true
-                } else if ( c == ']') {
-                    if( !squaredBracket ) throw new IllegalArgumentException( "A squared bracket was not opened" )
-                    squaredBracket = false
-                } else if ( c == '{') {
-                    if( curlyBracket ) throw new IllegalArgumentException( "A curly bracket was not closed" )
-                    curlyBracket = true
-                    sb.append( '\\(' )
-                    continue
-                } else if ( c == '}') {
-                    if( !curlyBracket ) throw new IllegalArgumentException( "A curly bracket was not opened" )
-                    curlyBracket = false
-                    sb.append( '\\)' )
-                    continue
-                } else if ( !squaredBracket ){
-                    if ( c == '*' ){
-                        if ( i + 1 < glob.length() && glob.charAt( i + 1 ) == '*' ){
-                            sb.append( '.*' )
-                            i++
-                        } else {
-                            sb.append( '[^/]*' )
-                        }
-                        continue
-                    } else if ( c == '?' ){
-                        sb.append( '.' )
-                        continue
-                    } else if ( curlyBracket && c == ',' ){
-                        sb.append( '\\|' )
-                        continue
+        final List<String> escape = source
+                .collect {
+                    String escaped = Escape.path( it, true )
+                    //Bash glob behaves different than Javan Glob, if the path starts with **
+                    //https://unix.stackexchange.com/questions/49913/recursive-glob
+                    if( escaped.startsWith("**") && escaped.size() > 2 ) {
+                        escaped = "**/*" + escaped.substring(2)
                     }
+                    return escaped
                 }
 
-            }
-            sb.append( c )
-        }
 
-        return sb.toString()
+        String searchCmd = escape.size() == 1 ? "ls -1d ${escape.get(0)}" : "ls -1d ${escape.join(' ')} | sort | uniq"
 
+        return """\
+            shopt -s globstar extglob
+            IFS=\$'\\n'
+            pathes=`$searchCmd`
+            set -f
+            for name in \$pathes; do
+                $cmd || true
+            done
+            set +f
+            shopt -u globstar extglob
+            unset IFS""".stripIndent(true)
     }
 
     /**

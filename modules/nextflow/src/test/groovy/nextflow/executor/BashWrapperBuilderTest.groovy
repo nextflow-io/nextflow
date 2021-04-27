@@ -400,9 +400,16 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.unstage_outputs == '''\
                 mkdir -p /work/dir
-                find -L -regex "\\./test\\.bam" -exec cp -fRLn --parents "{}" /work/dir \\; || true
-                find -L -regex "\\./test\\.bai" -exec cp -fRLn --parents "{}" /work/dir \\; || true
-                '''.stripIndent().rightTrim()
+                shopt -s globstar extglob
+                IFS=\$'\\n'
+                pathes=`ls -1d test.bam test.bai | sort | uniq`
+                set -f
+                for name in \$pathes; do
+                    cp -fRLn --parents "\$name" /work/dir || true
+                done
+                set +f
+                shopt -u globstar extglob
+                unset IFS'''.stripIndent().rightTrim()
 
 
         when:
@@ -415,9 +422,16 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.unstage_outputs == '''\
                 mkdir -p /another/dir
-                find -L -regex \"\\./test\\.bam\" -exec sh -c 'mkdir -p \"/another/dir/`dirname \\\"$1\\\"`\"; mv \"$1\" \"/another/dir/`dirname \\\"$1\\\"`\";' _ {} \\; || true
-                find -L -regex \"\\./test\\.bai\" -exec sh -c 'mkdir -p \"/another/dir/`dirname \\\"$1\\\"`\"; mv \"$1\" \"/another/dir/`dirname \\\"$1\\\"`\";' _ {} \\; || true
-                '''.stripIndent().rightTrim()
+                shopt -s globstar extglob
+                IFS=\$'\\n'
+                pathes=`ls -1d test.bam test.bai | sort | uniq`
+                set -f
+                for name in \$pathes; do
+                    sh -c 'mkdir -p "/another/dir/`dirname \\"\$1\\"`"; mv "\$1" "/another/dir/`dirname \\"\$1\\"`";' _ "\$name" || true
+                done
+                set +f
+                shopt -u globstar extglob
+                unset IFS'''.stripIndent().rightTrim()
     }
 
     def 'should create env' () {
