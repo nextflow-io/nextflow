@@ -231,7 +231,7 @@ class SimpleFileCopyStrategyTest extends Specification {
             }
         }
 
-        String command = strategy.getUnstageOutputFilesScript([source], outfolder.toAbsolutePath()).replaceAll( "\n", " && ")
+        String command = strategy.getUnstageOutputFilesScript([source], outfolder.toAbsolutePath())
         println("Command: $command")
         Process process = [ "sh", "-c", command ].execute(null, infolder.toFile() )
         process.consumeProcessOutput( System.out, System.err )
@@ -256,14 +256,18 @@ class SimpleFileCopyStrategyTest extends Specification {
 
         where:
         source              | inputffiles                                                                                           | outputfiles
+        '**.txt'            | ['file.txt', 'file2.txt', 'file3.txta', 'a/file.txt', 'a/file3.txta', 'b/file.txt']                   | ['file.txt', 'file2.txt', 'a/file.txt', 'b/file.txt']
+        '**.foo'            | ['file.txt', 'file2.txt', 'file3.txta', 'a/file.txt', 'a/file3.txta', 'b/file.txt']                   | []
         '*.txt'             | ['file.txt', 'file2.txt', 'file3.txta']                                                               | ['file.txt', 'file2.txt']
-        '*'                 | ['file.txt', 'file2.txt', 'file3.txta']                                                               | ['file.txt', 'file2.txt', 'file3.txta']
+        '*'                 | ['file.txt', 'file2.txt', 'file3.txta', 'a/b.txt']                                                    | ['file.txt', 'file2.txt', 'file3.txta', 'a/b.txt']
+        '**'                | ['file.txt', 'file2.txt', 'file3.txta', 'a/b.txt']                                                    | ['file.txt', 'file2.txt', 'file3.txta', 'a/b.txt']
         'a/*'               | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/', 'file.txt']                                        | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/']
         'a/'                | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/', 'file.txt']                                        | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/']
         'a'                 | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/', 'file.txt']                                        | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/']
         'a b/*'             | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/', 'file.txt']                                | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/']
         'a b/'              | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/', 'file.txt']                                | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/']
         'a b'               | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/', 'file.txt']                                | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/']
+        'a|b/*'             | ['a|b/file.txt', 'a|b/file2.txt', 'a|b/b/a.txt', 'a|b/d/', 'file.txt']                                | ['a|b/file.txt', 'a|b/file2.txt', 'a|b/b/a.txt', 'a|b/d/']
         'a/*/c/*'           | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt']
         'a/**/c/*'          | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt']
         'a/*/c/'            | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt']
@@ -337,7 +341,7 @@ class SimpleFileCopyStrategyTest extends Specification {
             }
         }
 
-        String command = strategy.getUnstageOutputFilesScript([source], outfolder.toAbsolutePath()).replaceAll( "\n", " && ")
+        String command = strategy.getUnstageOutputFilesScript([source], outfolder.toAbsolutePath())
         println("Command: $command")
         Process process = [ "sh", "-c", command ].execute(null, infolder.toFile() )
         process.consumeProcessOutput( System.out, System.err )
@@ -361,14 +365,18 @@ class SimpleFileCopyStrategyTest extends Specification {
 
         where:
         source              | inputffiles                                                                                           | outputfiles
+        '**.txt'            | ['file.txt', 'file2.txt', 'file3.txta', 'a/file.txt', 'a/file3.txta', 'b/file.txt']                   | ['file.txt', 'file2.txt', 'a/file.txt', 'b/file.txt']
+        '**.foo'            | ['file.txt', 'file2.txt', 'file3.txta', 'a/file.txt', 'a/file3.txta', 'b/file.txt']                   | []
         '*.txt'             | ['file.txt', 'file2.txt', 'file3.txta']                                                               | ['file.txt', 'file2.txt']
-        '*'                 | ['file.txt', 'file2.txt', 'file3.txta']                                                               | ['file.txt', 'file2.txt', 'file3.txta']
+        '*'                 | ['file.txt', 'file2.txt', 'file3.txta', 'a/b.txt']                                                    | ['file.txt', 'file2.txt', 'file3.txta', 'a/b.txt']
+        '**'                | ['file.txt', 'file2.txt', 'file3.txta', 'a/b.txt']                                                    | ['file.txt', 'file2.txt', 'file3.txta', 'a/b.txt']
         'a/*'               | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/', 'file.txt']                                        | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/']
         'a/'                | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/', 'file.txt']                                        | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/']
         'a'                 | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/', 'file.txt']                                        | ['a/file.txt', 'a/file2.txt', 'a/b/a.txt', 'a/d/']
         'a b/*'             | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/', 'file.txt']                                | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/']
         'a b/'              | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/', 'file.txt']                                | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/']
         'a b'               | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/', 'file.txt']                                | ['a b/file.txt', 'a b/file2.txt', 'a b/b/a.txt', 'a b/d/']
+        'a|b/*'             | ['a|b/file.txt', 'a|b/file2.txt', 'a|b/b/a.txt', 'a|b/d/', 'file.txt']                                | ['a|b/file.txt', 'a|b/file2.txt', 'a|b/b/a.txt', 'a|b/d/']
         'a/*/c/*'           | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt']
         'a/**/c/*'          | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt']
         'a/*/c/'            | ['a/b/c/file.txt', 'a/b/c/file2.txt', 'a/b/d/c/file2.txt', 'a/b/file.txt', 'a/file.txt', 'file.txt']  | ['a/b/c/file.txt', 'a/b/c/file2.txt']
