@@ -84,6 +84,26 @@ class CsvSplitterTest extends Specification {
         items[2] == ['mu', 'nu', 'xi']
     }
 
+    def testSkipRowsWithHeaderCols() {
+        when:
+        def items = new CsvSplitter().target(text).options(skip:1, header: true).list()
+
+        then:
+        items.size() == 3
+
+        items[0].alpha == 'eta'
+        items[0].beta == 'theta'
+        items[0].delta == 'iota'
+
+        items[1].alpha == 'mu'
+        items[1].beta == 'nu'
+        items[1].delta == 'xi'
+
+        items[2].alpha == 'pi'
+        items[2].beta == 'rho'
+        items[2].delta == 'sigma'
+    }
+
     def testSplitWithCount() {
 
         when:

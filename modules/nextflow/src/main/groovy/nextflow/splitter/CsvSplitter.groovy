@@ -128,9 +128,6 @@ class CsvSplitter extends AbstractTextSplitter {
     protected void parseHeader(BufferedReader reader) {
 
         String line
-        int z = 0
-
-        while( z++ < skipLines && reader.readLine()) { /* nope */ }
 
         if( firstLineAsHeader ) {
             line = reader.readLine()
@@ -143,6 +140,10 @@ class CsvSplitter extends AbstractTextSplitter {
                 columnsHeader[i] = col
             }
         }
+
+        int z = 0
+
+        while( z++ < skipLines && reader.readLine()) { /* nope */ }
     }
 
     /**

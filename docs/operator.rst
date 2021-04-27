@@ -878,7 +878,7 @@ quote       Values may be quoted by single or double quote characters.
 header      When ``true`` the first line is used as columns names. Alternatively it can be used to provide the list of columns names.
 charset     Parse the content by using the specified charset e.g. ``UTF-8``
 strip       Removes leading and trailing blanks from values (default: ``false``)
-skip        Number of lines since the file beginning to ignore when parsing the CSV content.
+skip        Number of records since the file beginning to ignore when parsing the CSV content.
 limit       Limits the number of retrieved records for each file to the specified value.
 decompress  When ``true`` decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically)
 elem        The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)
