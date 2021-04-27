@@ -212,7 +212,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             this.status = TaskStatus.RUNNING
         // fetch the task arn
         if( !taskArn )
-            taskArn = job.getContainer().getTaskArn()
+            taskArn = job?.getContainer()?.getTaskArn()
         return result
     }
 
