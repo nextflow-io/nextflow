@@ -17,6 +17,9 @@
 
 package nextflow.config
 
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
+
 import java.nio.file.Files
 import java.nio.file.Paths
 
@@ -1348,6 +1351,53 @@ class ConfigBuilderTest extends Specification {
         config = new ConfigBuilder().setOptions(new CliOptions(config: [configFile])).setCmdRun(new CmdRun(paramsFile: jsonFile, params: [foo:'Ciao'])).build()
         then:
         config.params == [foo:'Ciao', bar:20, data: '/some/path']
+    }
+
+    def 'should parse object params into config object' () {
+
+        given:
+        def configFile = Files.createTempFile('test','config').toFile()
+        configFile.deleteOnExit()
+        configFile.text = '''
+          params.duration = 5.h
+          params.memory = 5.GB
+        '''
+        configFile = configFile.toString()
+
+        def jsonFile = Files.createTempFile('test','.json').toFile()
+        jsonFile.text = '''
+          {
+            "duration": "10.h",
+            "memory": "10.GB"
+          }
+        '''
+        jsonFile = jsonFile.toString()
+
+        def config
+
+        // get params from config file
+        when:
+        config = new ConfigBuilder().setOptions(new CliOptions(config: [configFile])).setCmdRun(new CmdRun()).build()
+        then:
+        config.params == [duration: Duration.of('5.h'), memory: MemoryUnit.of('5.GB')]
+
+        // cli override config and objects are parsed
+        when:
+        config = new ConfigBuilder().setOptions(new CliOptions(config: [configFile])).setCmdRun(new CmdRun(params:[duration:'20.h', memory:'20.GB'])).build()
+        then:
+        config.params == [duration: Duration.of('20.h'), memory: MemoryUnit.of('20.GB')]
+
+        // CLI override JSON that override config
+        when:
+        config = new ConfigBuilder().setOptions(new CliOptions(config: [configFile])).setCmdRun(new CmdRun(params:[duration:'20.h', memory:'20.GB'], paramsFile: jsonFile)).build()
+        then:
+        config.params == [duration: Duration.of('20.h'), memory: MemoryUnit.of('20.GB')]
+
+        // JSON override config
+        when:
+        config = new ConfigBuilder().setOptions(new CliOptions(config: [configFile])).setCmdRun(new CmdRun(paramsFile: jsonFile)).build()
+        then:
+        config.params == [duration: Duration.of('10.h'), memory: MemoryUnit.of('10.GB')]
     }
 
     def 'should run with conda' () {
