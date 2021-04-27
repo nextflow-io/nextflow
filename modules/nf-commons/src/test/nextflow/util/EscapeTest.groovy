@@ -60,6 +60,16 @@ class EscapeTest extends Specification {
 
     }
 
+    def 'should ignore globs in file names' () {
+
+        expect:
+        Escape.path('hell?.txt', true ) == "hell?.txt"
+        Escape.path('hell\\?.txt', true ) == "hell\\?.txt"
+        Escape.path('hell*.txt', true ) == "hell*.txt"
+        Escape.path('hell**.txt', true ) == "hell**.txt"
+
+    }
+
     def 'should escape wildcards' () {
 
         expect: 
