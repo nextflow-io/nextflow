@@ -259,6 +259,23 @@ class ConfigHelperTest extends Specification {
         "withName:2foo"     | "'withName:2foo'"     | "withName:'2foo'"
     }
 
+    @Unroll
+    def 'should convert types'() {
+        expect:
+        ConfigHelper.convertType(PREVIOUS, VALUE) == EXPECTED
+
+        where:
+        PREVIOUS               | VALUE   | EXPECTED
+        null                   | 23      | 23
+        24                     | null    | null
+        26                     | "35"    | 35
+        MemoryUnit.of("10.GB") | "20 GB" | MemoryUnit.of("20.GB")
+        MemoryUnit.of("10.GB") | "20.GB" | MemoryUnit.of("20.GB")
+        Duration.of("2.h")     | "5.h"   | Duration.of("5.h")
+        "foo"                  | "faa"   | "faa"
+        true                   | "false" | false
+    }
+
 
 
 }
