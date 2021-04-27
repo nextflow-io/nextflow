@@ -17,6 +17,8 @@
 
 package nextflow.config
 
+import nextflow.util.ConfigHelper
+
 import java.nio.file.Path
 
 import ch.grengine.Grengine
@@ -346,7 +348,9 @@ class ConfigParser {
                 }
             }
             if( name=='params' && result instanceof Map && paramVars ) {
-                result.putAll(paramVars)
+                paramVars.each {
+                    result.put(it.key, ConfigHelper.convertType(result[it.key], it.value))
+                }
             }
             result
         }

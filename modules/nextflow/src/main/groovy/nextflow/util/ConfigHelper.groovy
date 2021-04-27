@@ -17,6 +17,8 @@
 
 package nextflow.util
 
+import nextflow.exception.AbortOperationException
+
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -314,6 +316,17 @@ class ConfigHelper {
         }
 
         return true;
+    }
+
+    static Object convertType(Object previous, Object value) {
+        if (value == null || previous == null || previous.class.isAssignableFrom(value.class)) {
+            return value
+        }
+        try {
+            return previous.class.getConstructor(value.class).newInstance(value)
+        } catch (ReflectiveOperationException e) {
+            return value
+        }
     }
 
 

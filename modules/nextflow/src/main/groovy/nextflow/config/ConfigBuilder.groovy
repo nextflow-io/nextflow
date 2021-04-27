@@ -652,7 +652,7 @@ class ConfigBuilder {
 
         // -- add the command line parameters to the 'taskConfig' object
         if( cmdRun.hasParams() )
-            config.params = mergeMaps( (Map)config.params, cmdRun.parsedParams(configVars()), NF.strictMode )
+            config.params = mergeMaps( (Map)config.params, cmdRun.parsedParams(configVars()), NF.strictMode, [], true )
 
         if( cmdRun.withoutDocker && config.docker instanceof Map ) {
             // disable docker execution
@@ -745,11 +745,14 @@ class ConfigBuilder {
     /**
      * Merge two maps recursively avoiding keys to be overwritten
      *
-     * @param config
-     * @param params
-     * @return a map resulting of merging result and right maps
+     * @param config Base map
+     * @param params Map to merge
+     * @param strict Do not merge incompatible map layout throw an AbortOperationException
+     * @param keys List of nested keys to current value
+     * @param keepType When true, try to convert values to the previous value type before overwriting
+     * @return The two maps recursively merged
      */
-    protected Map mergeMaps(Map config, Map params, boolean strict, List keys=[]) {
+    protected Map mergeMaps(Map config, Map params, boolean strict, List keys=[], boolean keepType=false) {
         if( config==null )
             config = new LinkedHashMap()
 
@@ -763,16 +766,21 @@ class ConfigBuilder {
                 config[key] = value
             }
             else if( previous instanceof Map && value instanceof Map ) {
-                mergeMaps(previous, value, strict, keys)
+                mergeMaps(previous, value, strict, keys, keepType)
             }
             else {
-                if( previous instanceof Map || value instanceof Map ) {
+                if (previous instanceof Map || value instanceof Map) {
                     final msg = "Configuration setting type with key '${keys.join('.')}' does not match the parameter with the same key - Config value=$previous; parameter value=$value"
-                    if(strict)
+                    if (strict)
                         throw new AbortOperationException(msg)
                     log.warn(msg)
                 }
-                config[key] = value
+
+                if (keepType) {
+                    config[key] = convertType(previous, value)
+                } else {
+                    config[key] = value
+                }
             }
         }
 
