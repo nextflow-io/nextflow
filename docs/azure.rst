@@ -198,19 +198,6 @@ requirements:
 2 - the task slots per node must match with the number of cores for the selected VM. Nextflow would return an error like
 "Azure Batch pool 'ID' slots per node does not match the VM num cores (slots: N, cores: Y)".
 
-3 - the ``azcopy`` command must be installed on each node of the pool. A way to do it is to define a Start Task with:
-
-   * a resource file with the following settings:
-        - type of ``Http Url``
-        - value sets to ``https://github.com/nextflow-io/azcopy-tool/raw/linux_amd64_10.8.0/azcopy``
-        - path sets to ``azcopy``
-   * and the following command::
-
-        bash -c "chmod +x azcopy &&
-        mkdir $AZ_BATCH_NODE_SHARED_DIR/bin/ &&
-        cp azcopy $AZ_BATCH_NODE_SHARED_DIR/bin/"
-
-
 Pool autoscaling
 ----------------
 
