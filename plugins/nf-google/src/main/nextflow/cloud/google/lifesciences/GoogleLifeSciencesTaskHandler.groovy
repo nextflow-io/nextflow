@@ -309,6 +309,7 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
         req.usePrivateAddress = executor.config.usePrivateAddress
         req.network = executor.config.network
         req.subnetwork = executor.config.subnetwork
+        req.serviceAccountEmail = executor.config.serviceAccountEmail
         return req
     }
 
