@@ -141,4 +141,4 @@ upload-plugins:
 	./gradlew plugins:upload
 
 publish-index:
-	./gradlew plugins:publishIndex:w
+	./gradlew plugins:publishIndex:
