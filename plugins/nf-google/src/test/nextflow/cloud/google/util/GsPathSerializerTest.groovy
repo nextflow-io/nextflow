@@ -21,6 +21,8 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
+import nextflow.Global
+import nextflow.Session
 import nextflow.util.KryoHelper
 import spock.lang.Specification
 
@@ -31,6 +33,11 @@ import spock.lang.Specification
 class GsPathSerializerTest extends Specification {
 
     def 'should serialize a google cloud path'() {
+        given:
+        Global.session = Mock(Session) {
+            getConfig() >> [google:[project:'foo', region:'x']]
+        }
+        
         when:
         def uri = URI.create("gs://my-seq/data/ggal/sample.fq")
         def path = Paths.get(uri)
