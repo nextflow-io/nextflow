@@ -274,7 +274,7 @@ azure.batch.pools.<name>.autoScale              Enable autoscaling feature for t
 azure.batch.pools.<name>.scaleFormula           Specify the scale formula for the pool identified with ``<name>``. See Azure Batch `scaling documentation <https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling>`_ for details.
 azure.batch.pools.<name>.scaleInterval          Specify the interval at which to automatically adjust the Pool size according to the autoscale formula. The minimum and maximum value are 5 minutes and 168 hours respectively (default: `10 mins`)
 azure.batch.pools.<name>.schedulePolicy         Specify the scheduling policy for the pool identified with ``<name>``. It can be either ``spread`` or ``pack`` (default: ``spread``).
-azure.batch.pools.<name>.registry               Specify the container registry from which to pull the Docker images (default: ``docker.io``).
+azure.batch.pools.<name>.registry               Specify the container registry from which to pull the Docker images.
 azure.batch.pools.<name>.userName               Specify the username to connect to a private container registry.
 azure.batch.pools.<name>.password               Specify the password to connect to a private container registry.
 ============================================== =================
