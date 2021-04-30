@@ -93,6 +93,9 @@ class AzureConfigTest extends Specification {
                                                          autoScale: true,
                                                          vmCount: 5,
                                                          maxVmCount: 50,
+                                                         registry: 'docker.io',
+                                                         userName: 'regUser',
+                                                         password: 'regPassword',
                                                          scaleFormula: 'x + y + z',
                                                          scaleInterval:  '15 min',
                                                          schedulePolicy: 'pack' ]]
@@ -117,6 +120,9 @@ class AzureConfigTest extends Specification {
         cfg.batch().pool('myPool').schedulePolicy == 'pack'
         cfg.batch().pool('myPool').vmCount == 5
         cfg.batch().pool('myPool').maxVmCount == 50
+        cfg.batch().pool('myPool').registry == 'docker.io'
+        cfg.batch().pool('myPool').userName == 'regUser'
+        cfg.batch().pool('myPool').password == 'regPassword'
         cfg.batch().pool('myPool').scaleFormula == 'x + y + z'
         cfg.batch().pool('myPool').scaleInterval == Duration.of('15 min')
     }
