@@ -28,6 +28,7 @@ import com.microsoft.azure.batch.protocol.models.CloudPool
 import com.microsoft.azure.batch.protocol.models.CloudTask
 import com.microsoft.azure.batch.protocol.models.ComputeNodeFillType
 import com.microsoft.azure.batch.protocol.models.ContainerConfiguration
+import com.microsoft.azure.batch.protocol.models.ContainerRegistry
 import com.microsoft.azure.batch.protocol.models.ImageInformation
 import com.microsoft.azure.batch.protocol.models.OutputFile
 import com.microsoft.azure.batch.protocol.models.OutputFileBlobContainerDestination
@@ -179,7 +180,7 @@ class AzBatchService implements Closeable {
 
         return vmType =~ /(?i)^${family}$/
     }
-    
+
     protected Double computeScore(int cpus, MemoryUnit mem, Map entry) {
         def vmCores = entry.numberOfCores as int
         double vmMemGb = (entry.memoryInMb as int) /1024
@@ -535,7 +536,7 @@ class AzBatchService implements Closeable {
         }
     }
 
-    protected VirtualMachineConfiguration poolVmConfig(AzPoolOpts opts) {
+    protected VirtualMachineConfiguration poolVmConfig(String poolId, AzPoolOpts opts) {
         /**
          * A container configuration must be provided for a task to run in a specific container.
          * Such container can be pre-fetched on VM creation or when running the task
@@ -543,6 +544,19 @@ class AzBatchService implements Closeable {
          * https://github.com/MicrosoftDocs/azure-docs/blob/master/articles/batch/batch-docker-container-workloads.md#:~:text=Run%20container%20applications%20on%20Azure,compatible%20containers%20on%20the%20nodes.
          */
         final containerConfig = new ContainerConfiguration();
+        if (opts.registry) {
+            if (opts.userName && opts.password) {
+                List<ContainerRegistry> containerRegistries = new ArrayList(1)
+                containerRegistries << new ContainerRegistry()
+                        .withRegistryServer(opts.registry)
+                        .withUserName(opts.userName)
+                        .withPassword(opts.password)
+                containerConfig.withContainerRegistries(containerRegistries).withType('dockerCompatible')
+                log.debug "[AZURE BATCH] Connecting Azure Batch pool '$poolId' to Container Registry '$opts.registry'"
+            } else {
+                throw new IllegalArgumentException("Invalid Container Registry configuration for Azure Batch pool '$poolId' - Make sure both userName and password are set for Container Registry '$opts.registry'")
+            }
+        }
         final image = getImage(opts)
 
         new VirtualMachineConfiguration()
@@ -566,8 +580,8 @@ class AzBatchService implements Closeable {
 
         final poolParams = new PoolAddParameter()
                 .withId(spec.poolId)
-                .withVirtualMachineConfiguration(poolVmConfig(spec.opts))
-                // https://docs.microsoft.com/en-us/azure/batch/batch-pool-vm-sizes
+                .withVirtualMachineConfiguration(poolVmConfig(spec.poolId, spec.opts))
+        // https://docs.microsoft.com/en-us/azure/batch/batch-pool-vm-sizes
                 .withVmSize(spec.vmType.name)
                 // same as the num ofd cores
                 // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
