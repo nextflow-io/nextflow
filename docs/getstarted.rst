@@ -41,10 +41,31 @@ It only needs two easy steps:
 .. tip:: Set ``export CAPSULE_LOG=none`` to make the dependency installation logs less verbose.
 
 .. note::
-    To avoid downloading the dependencies, you could also use the ``nextflow-VERSION-all`` variant available from Github for every Nextflow release version.
+    To avoid downloading the dependencies, you could also use the ``nextflow-VERSION-all`` variant available from Github for every `Nextflow` release version.
    #. Go to the `Github releases page <https://github.com/nextflow-io/nextflow/releases>`__ and unfold the `Assets` section for a release.
    #. Copy the URL of the ``nextflow-VERSION-all`` asset and issue the download command on your terminal. ``wget -qO- ASSET-URL``. It will create the completely self-contained ``nextflow-VERSION-all`` executable file in the current directory.
 
+.. _getstart-edge:
+
+Edge releases
+============
+
+Stable releases will be becoming more infrequent as `Nextflow` shifts its development model to becoming more dynamic via the usage of plugins. 
+This will allow functionality to be added as an extension to the core codebase with a release cycle that could potentially be independent to that of `Nextflow` itself. 
+As a result of the reduction in stable releases, you may be required to use `Nextflow` ``edge`` releases in order to be able to exploit cutting "edge" features.
+
+There are a number of ways you can install `Nextflow` ``edge`` releases, the main difference with stable releases being that you have to ``export`` the version you would like to install before issuing the appropriate installation/execution commands as highlighted below:
+
+#.  If you have `Nextflow` installed already, you can issue the version you would like to use on the same line as the pipeline command and it will be fetched if required before the pipeline execution:
+    ``NXF_VER="20.11.0-edge" nextflow run tutorial.nf``.
+
+#.  If you have `Nextflow` installed already, another alternative to the option above is to ``export`` it as an environment variable before you run the pipeline command:
+    ``export NXF_VER="20.11.0-edge" && nextflow run tutorial.nf``.
+
+#.  If you would like to download and install a `Nextflow` ``edge`` release from scratch with minimal fuss:
+    ``export NXF_VER="20.11.0-edge" && wget -qO- https://get.nextflow.io | bash``.
+    
+    You can then follow the steps in the section above to make the ``nextflow`` binary executable and to add it to your ``$PATH`` variable.
 
 .. _getstart-first:
 
@@ -126,7 +147,7 @@ Thus, it is perfectly possible that you will get the final result printed out in
 Modify and resume
 -----------------
 
-Nextflow keeps track of all the processes executed in your pipeline. If you modify some parts of your script,
+`Nextflow` keeps track of all the processes executed in your pipeline. If you modify some parts of your script,
 only the processes that are actually changed will be re-executed. The execution of the processes that are not changed
 will be skipped and the cached result used instead.
 
