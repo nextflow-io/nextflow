@@ -57,13 +57,13 @@ As a result of the reduction in stable releases, you may be required to use `Nex
 There are a number of ways you can install `Nextflow` ``edge`` releases, the main difference with stable releases being that you have to ``export`` the version you would like to install before issuing the appropriate installation/execution commands as highlighted below:
 
 #.  If you have `Nextflow` installed already, you can issue the version you would like to use on the same line as the pipeline command and it will be fetched if required before the pipeline execution
-    window: ``NXF_VER="20.11.0-edge" nextflow run tutorial.nf``.
+    window: ``NXF_VER="20.11.0-edge" nextflow run tutorial.nf``
 
 #.  If you have `Nextflow` installed already, another alternative to the option above is to ``export`` it as an environment variable before you run the pipeline command
-    window: ``export NXF_VER="20.11.0-edge" && nextflow run tutorial.nf``.
+    window: ``export NXF_VER="20.11.0-edge" && nextflow run tutorial.nf``
 
 #.  If you would like to download and install a `Nextflow` ``edge`` release from scratch with minimal fuss
-    window: ``export NXF_VER="20.11.0-edge" && wget -qO- https://get.nextflow.io | bash``.
+    window: ``export NXF_VER="20.11.0-edge" && wget -qO- https://get.nextflow.io | bash``
     
     You can then follow the steps in the section above to make the ``nextflow`` binary executable and to add it to your ``$PATH`` variable.
 
