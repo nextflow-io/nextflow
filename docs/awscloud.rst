@@ -92,7 +92,7 @@ Custom AMI
 ----------
 
 In the EC2 Dashboard, click the `Launch Instance` button, then choose `AWS Marketplace` in the left pane and enter
-`ECS` in the search box. In result list select `Amazon ECS-Optimized Amazon Linux AMI`, then continue as usual to
+`ECS` in the search box. In result list select `Amazon ECS-Optimized Amazon Linux 2 AMI`, then continue as usual to
 configure and launch the instance.
 
 .. note:: The selected instance has a bootstrap volume of 8GB and a second EBS volume 22G for computation which is
@@ -101,36 +101,6 @@ configure and launch the instance.
 
 When the instance is running, SSH into it, install the AWS CLI tools as explained below or any other required tool
 that may be required.
-
-Also make sure the Docker configuration reflects the amount of storage you have specified when launching the instance
-as shown below::
-
-    $ docker info | grep -i data
-     Data file:
-     Metadata file:
-     Data Space Used: 500.2 MB
-     Data Space Total: 1.061 TB
-     Data Space Available: 1.06 TB
-     Metadata Space Used: 733.2 kB
-     Metadata Space Total: 1.074 GB
-     Metadata Space Available: 1.073 GB
-
-The above example shows the Docker data configuration for a 1000GB EBS data volume. See the `ECS Storage documentation <http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-ami-storage-config.html>`_
-for more details.
-
-.. warning:: The maximum storage size of a single Docker container is by default 10GB, independently the amount of data space available
-  in the underlying volume (see `Base device size <https://docs.docker.com/engine/reference/commandline/dockerd/#dmbasesize>`_ for more details).
-
-You can verify the current setting by using this command::
-
-     $ docker info | grep -i base
-       Base Device Size: 10.74 GB
-
-If your pipeline needs more storage for a single task execution, you will need to specify the ``dm.basesize`` setting
-with a proper value in the ``/etc/sysconfig/docker-storage`` configuration file.
-See `here <https://forums.aws.amazon.com/message.jspa?messageID=811761#811761>`_
-and `here <https://www.projectatomic.io/blog/2016/03/daemon_option_basedevicesize/>`_ for details.
-
 
 Once done that, create a new AMI by using the *Create Image* option in the EC2 Dashboard or the AWS command line tool.
 
