@@ -15,7 +15,6 @@ Here's what you'll see at the top-level upon invoking the Nextflow CLI. ::
     Usage: nextflow [options] COMMAND [arg...]
 
 
-
 .. _cli-options:
 
 Options
@@ -24,6 +23,11 @@ Options
 The top-level options are meant to be invoked in relation to the core 
 Nextflow application and are applied to all commands. For options 
 specific to any command, refer the CLI Commands section.
+
+.. note::
+  Nextflow options only use single dash prefix e.g. ``-foo``. Do not confuse
+  double dash notation e.g. ``--foo`` that is instead used for
+  :ref:`Pipeline parameters <cli-params>`.
 
 An overview of the top-level options. ::
 
