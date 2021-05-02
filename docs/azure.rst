@@ -7,19 +7,11 @@ Azure Cloud
 Requirements
 ============
 
-The support for Azure Cloud requires Nextflow version ``21.02.0-edge`` or later. If you don't have it installed
+The support for Azure Cloud requires Nextflow version ``21.04.0`` or later. If you don't have it installed
 use the following command to download it in your computer::
 
-    export NXF_EDGE=1
     curl get.nextflow.io | bash
-    ./nextflow -self-update
-
-Also the support for Azure Cloud requires adding the following setting at
-the beginning of your ``nextflow.config`` file::
-
-  plugins {
-    id 'nf-azure'
-  }
+    ./nextflow self-update
 
 
 .. _azure-blobstorage:
@@ -89,10 +81,6 @@ that can be reached by Azure Batch environment.
 
 
 A minimal configuration looks like the following snippet::
-
-    plugins {
-      id 'nf-azure'
-    }
 
     process {
       executor = 'azurebatch'

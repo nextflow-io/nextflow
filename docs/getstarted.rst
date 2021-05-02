@@ -50,7 +50,7 @@ Updates
 
 Having Nextflow installed in your computer you can update to the latest version using the following command::
 
-    nextflow -self-update
+    nextflow self-update
 
 
 .. tip::
@@ -70,7 +70,7 @@ use most recent updates and experimental features.
 To use the latest `edge` release run the following snippet in your shell terminal::
 
     export NXF_EDGE=1
-    nextflow -self-update
+    nextflow self-update
 
 
 .. _getstart-first:
