@@ -399,6 +399,14 @@ The above snippet prints::
     Hola Mundo
 
 
+.. note::
+  The module inherits the parameters define *before* the ``include`` statement, therefore any further
+  parameter set later is ignored.
+
+.. tip::
+  Define all pipeline parameters at the beginning of the script *before*
+  any ``include`` declaration.
+
 The option ``addParams`` can be used to extend the module parameters without affecting the external
 scope. For example::
 
