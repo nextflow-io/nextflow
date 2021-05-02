@@ -1411,6 +1411,7 @@ For example::
 
     }
 
+.. _process-cache:
 
 cache
 -----

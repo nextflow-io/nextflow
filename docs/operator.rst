@@ -1388,6 +1388,7 @@ The following parameters can be used with the ``collectFile`` operator:
 =============== ========================
 Name            Description
 =============== ========================
+``cache``       Controls the caching ability of the ``collectFile`` operator when using the *resume* feature. It follows the same semantic of the :ref:`process-cache` directive (default: ``true``).
 ``keepHeader``  Prepend the resulting file with the header fetched in the first collected file. The header size (ie. lines) can be specified by using the ``skip`` parameter (default: ``false``), to determine how many lines to remove from all collected files except for the first (where no lines will be removed).
 ``name``        Name of the file where all received values are stored.
 ``newLine``     Appends a ``newline`` character automatically after each entry (default: ``false``).
