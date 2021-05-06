@@ -66,7 +66,7 @@ class CondaCache {
 
     @PackageScope String getCreateOptions() { createOptions }
 
-    @PackageScope Boolean getUseMamba() { useMamba }
+    @PackageScope Boolean isUsingMamba() { useMamba }
 
     @PackageScope Duration getCreateTimeout() { createTimeout }
 
