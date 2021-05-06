@@ -60,9 +60,13 @@ class CondaCache {
 
     private String createOptions
 
+    private Boolean useMamba
+
     private Path configCacheDir0
 
     @PackageScope String getCreateOptions() { createOptions }
+
+    @PackageScope Boolean getUseMamba() { useMamba }
 
     @PackageScope Duration getCreateTimeout() { createTimeout }
 
@@ -90,6 +94,10 @@ class CondaCache {
 
         if( config.cacheDir )
             configCacheDir0 = (config.cacheDir as Path).toAbsolutePath()
+
+        if( config.useMamba )
+            useMamba = config.useMamba as Boolean
+
     }
 
     /**

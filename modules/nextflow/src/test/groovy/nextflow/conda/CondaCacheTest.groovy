@@ -31,7 +31,7 @@ class CondaCacheTest extends Specification {
 
         given:
         def cache = new CondaCache()
-        
+
         expect:
         !cache.isYamlFilePath('foo=1.0')
         cache.isYamlFilePath('env.yml')
@@ -196,7 +196,7 @@ class CondaCacheTest extends Specification {
         0 * cache.makeAbsolute(_)
         1 * cache.runCommand( "conda create --mkdir --yes --quiet --prefix $PREFIX $ENV" ) >> null
         result == PREFIX
-        
+
     }
 
     def 'should create conda env with options' () {
@@ -262,13 +262,14 @@ class CondaCacheTest extends Specification {
         cache.createTimeout.minutes == 20
         cache.createOptions == null
         cache.configCacheDir0 == null
-        
+        cache.useMamba == null
         when:
-        cache = new CondaCache(new CondaConfig(createTimeout: '5 min', createOptions: '--foo --bar', cacheDir: '/conda/cache'))
+        cache = new CondaCache(new CondaConfig(createTimeout: '5 min', createOptions: '--foo --bar', cacheDir: '/conda/cache', useMamba: true))
         then:
         cache.createTimeout.minutes == 5
         cache.createOptions == '--foo --bar'
         cache.configCacheDir0 == Paths.get('/conda/cache')
+        cache.useMamba == true
     }
 
     def 'should define cache dir from config' () {
