@@ -122,11 +122,9 @@ class AzBatchTaskHandler extends TaskHandler {
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
-            TaskExecutionInformation info = taskExecutionInfo(taskKey)
-            if (info.result() == TaskExecutionResult.FAILURE) {
-                log.error("[AZURE BATCH] Task failed. ERROR code: ${info.failureInfo().code()}; message: ${info.failureInfo().message()}.")
-                task.error = new ProcessUnrecoverableException(info.failureInfo().message())
-            }
+            TaskExecutionInformation info = batchService.getTask(taskKey).executionInfo()
+            if (info.result() == TaskExecutionResult.FAILURE)
+                task.error = new ProcessUnrecoverableException("ERROR code: ${info.failureInfo().code()}; message: ${info.failureInfo().message()}.")
             deleteTask(taskKey, task)
             return true
         }
@@ -169,13 +167,6 @@ class AzBatchTaskHandler extends TaskHandler {
             }
         }
         return taskState
-    }
-
-    /**
-     * @return Retrieve the executionInfo for the executed task
-     */
-    protected TaskExecutionInformation taskExecutionInfo(AzTaskKey key) {
-        return batchService.getTask(key).executionInfo()
     }
 
     protected int readExitFile() {
