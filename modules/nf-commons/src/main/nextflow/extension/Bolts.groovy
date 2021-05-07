@@ -924,11 +924,11 @@ class Bolts {
     }
 
     static <T extends Map> T deepClone(T map) {
-        final result = InvokerHelper.invokeMethod(map, 'clone', null)
+        final result = (Map)InvokerHelper.invokeMethod(map, 'clone', null)
         for( def key : map.keySet() ) {
             def value = map.get(key)
             if( value instanceof Map ) {
-               map.put(key, deepClone(value))
+                result.put(key, deepClone(value))
             }
         }
         return (T)result
