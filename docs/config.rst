@@ -787,6 +787,7 @@ Name                Description
 enabled            When ``true`` Nextflow sends the workflow tracing and execution metrics to the Nextflow Tower service (default: ``false``).
 accessToken        The unique access token specific to your account on an instance of Tower.
 endpoint           The endpoint of your Tower deployment (default: ``https://tower.nf``).
+workspaceId        The ID of your workspace (default: your personal workspace).
 ================== ================
 
 The above options can be used by prefixing them with the ``tower`` scope or surrounding them by curly
@@ -795,10 +796,11 @@ brackets, as shown below::
     tower {
       enabled = true
       accessToken = '<YOUR TOKEN>'
+      workspaceId = '<YOUR WORKPSACE ID>'
     }
 
 .. tip::
-  Your ``accessToken`` can be obtained from your Tower instance in the page *Your Token*.
+  Your ``accessToken`` can be obtained from your Tower instance in the `Tokens page <https://tower.nf/tokens>`.
 
 .. _config-weblog:
 
