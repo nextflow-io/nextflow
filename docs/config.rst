@@ -796,7 +796,7 @@ brackets, as shown below::
     tower {
       enabled = true
       accessToken = '<YOUR TOKEN>'
-      workspaceId = '<YOUR WORKPSACE ID>'
+      workspaceId = '<YOUR WORKSPACE ID>'
     }
 
 .. tip::
