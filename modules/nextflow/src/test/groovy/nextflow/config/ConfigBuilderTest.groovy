@@ -1919,7 +1919,13 @@ class ConfigBuilderTest extends Specification {
         {
             "title": "something",
             "nested": {
-                "name": "Mike"
+                "name": "Mike",
+                "and": {
+                    "more": "nesting",
+                    "still": {
+                        "another": "layer"
+                    }
+                }
             }
         }
         '''.stripIndent()
@@ -1929,8 +1935,10 @@ class ConfigBuilderTest extends Specification {
 
         then:
         cfg1.params.title == "something"
-        cfg1.params.nested == [name: 'Mike']
-        
+        cfg1.params.nested.name == 'Mike'
+        cfg1.params.nested.and.more == 'nesting'
+        cfg1.params.nested.and.still.another == 'layer'
+
         cleanup:
         folder?.deleteDir()
     }
@@ -1943,7 +1951,11 @@ class ConfigBuilderTest extends Specification {
         config.text = '''\
             title: "something"
             nested: 
-                name: "Mike"
+              name: "Mike"
+              and:
+                more: nesting
+                still:
+                  another: layer      
         '''.stripIndent()
 
         when:
@@ -1951,7 +1963,9 @@ class ConfigBuilderTest extends Specification {
 
         then:
         cfg1.params.title == "something"
-        cfg1.params.nested == [name: 'Mike']
+        cfg1.params.nested.name == 'Mike'
+        cfg1.params.nested.and.more == 'nesting'
+        cfg1.params.nested.and.still.another == 'layer'
 
         cleanup:
         folder?.deleteDir()
