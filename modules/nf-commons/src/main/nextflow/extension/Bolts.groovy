@@ -40,7 +40,6 @@ import nextflow.util.RateUnit
 import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import org.codehaus.groovy.runtime.GStringImpl
-import org.codehaus.groovy.runtime.InvokerHelper
 import org.codehaus.groovy.runtime.ResourceGroovyMethods
 import org.codehaus.groovy.runtime.StringGroovyMethods
 import org.slf4j.Logger
@@ -923,7 +922,9 @@ class Bolts {
     }
 
     static <T extends Map> T deepClone(T map) {
-        final result = (Map)InvokerHelper.invokeMethod(map, 'clone', null)
+        if( map == null)
+            return null
+        final result = map instanceof LinkedHashMap ? new LinkedHashMap<>(map) : new HashMap<>(map)
         for( def key : map.keySet() ) {
             def value = map.get(key)
             if( value instanceof Map ) {
