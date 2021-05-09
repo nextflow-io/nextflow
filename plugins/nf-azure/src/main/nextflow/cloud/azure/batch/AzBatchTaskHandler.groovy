@@ -124,7 +124,7 @@ class AzBatchTaskHandler extends TaskHandler {
             status = TaskStatus.COMPLETED
             TaskExecutionInformation info = batchService.getTask(taskKey).executionInfo()
             if (info.result() == TaskExecutionResult.FAILURE)
-                task.error = new ProcessUnrecoverableException("ERROR code: ${info.failureInfo().code()}; message: ${info.failureInfo().message()}.")
+                task.error = new ProcessUnrecoverableException(info.failureInfo().message())
             deleteTask(taskKey, task)
             return true
         }
