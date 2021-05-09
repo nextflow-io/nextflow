@@ -18,6 +18,8 @@ package nextflow.cloud.azure.batch
 import java.nio.file.Path
 
 import com.microsoft.azure.batch.protocol.models.TaskState
+import com.microsoft.azure.batch.protocol.models.TaskExecutionInformation
+import com.microsoft.azure.batch.protocol.models.TaskExecutionResult
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
@@ -31,7 +33,7 @@ import nextflow.trace.TraceRecord
 
 /**
  * Implements a task handler for Azure Batch service
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -120,6 +122,9 @@ class AzBatchTaskHandler extends TaskHandler {
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
+            TaskExecutionInformation info = batchService.getTask(taskKey).executionInfo()
+            if (info.result() == TaskExecutionResult.FAILURE)
+                task.error = new ProcessUnrecoverableException(info.failureInfo().message())
             deleteTask(taskKey, task)
             return true
         }
