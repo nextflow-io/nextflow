@@ -16,10 +16,10 @@
  */
 
 package nextflow.trace
+
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardOpenOption
 import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
@@ -210,7 +210,7 @@ class TraceFileObserver implements TraceObserver {
             tracePath.rollFile()
 
         // create a new trace file
-        traceFile = new PrintWriter(Files.newBufferedWriter(tracePath, Charset.defaultCharset(), StandardOpenOption.APPEND, StandardOpenOption.CREATE))
+        traceFile = new PrintWriter(Files.newBufferedWriter(tracePath, Charset.defaultCharset()))
 
         // launch the agent
         writer = new Agent<PrintWriter>(traceFile)
