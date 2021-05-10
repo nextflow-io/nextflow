@@ -50,7 +50,7 @@ class AzRegistryOpts {
     }
 
     boolean isIncomplete() {
-        //check whether one of the two mandatory options is missing, but not both (which would me, no config is provided)
+        //check whether one of the two mandatory options is missing, but not both (which would mean, no config is provided)
         return (!this.userName && this.password) || (this.userName && !this.password)
     }
 }
