@@ -85,8 +85,7 @@ class AzureConfigTest extends Specification {
                                              endpoint: ENDPOINT,
                                              location: LOCATION,
                                              autoPoolMode: true,
-                                             allowPoolCreation: true
-                                             ,                                            deleteJobsOnCompletion: false,
+                                             allowPoolCreation: true,                                            deleteJobsOnCompletion: false,
                                              deletePoolsOnCompletion: true,
                                              pools: [ myPool: [
                                                      vmType: 'Foo_A1',
