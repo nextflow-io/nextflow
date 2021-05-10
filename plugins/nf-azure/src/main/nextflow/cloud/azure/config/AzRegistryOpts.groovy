@@ -20,9 +20,9 @@ package nextflow.cloud.azure.config
 import groovy.transform.CompileStatic
 
 /**
- *  * Model Azure Batch registry config settings from nextflow config file
+ * Model Azure Batch registry config settings from nextflow config file
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Manuele Simi <manuele.simi@gmail.com>
  */
 @CompileStatic
 class AzRegistryOpts {

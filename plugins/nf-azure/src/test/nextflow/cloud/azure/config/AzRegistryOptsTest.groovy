@@ -4,7 +4,7 @@ import spock.lang.Specification
 
 /**
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Manuele Simi <manuele.simi@gmail.com>
  */
 class AzRegistryOptsTest extends Specification {
 

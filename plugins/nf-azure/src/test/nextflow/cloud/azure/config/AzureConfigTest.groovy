@@ -36,10 +36,10 @@ class AzureConfigTest extends Specification {
         def session = Mock(Session) {
             getConfig() >> [ azure:
                                      [storage:[
-                                             accountKey: KEY,
-                                             accountName: NAME,
-                                             fileStores: STORES,
-                                             sasToken: SAS
+                                        accountKey: KEY,
+                                        accountName: NAME,
+                                        fileStores: STORES,
+                                        sasToken: SAS
                                      ] ]]
         }
 
