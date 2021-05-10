@@ -546,17 +546,17 @@ class AzBatchService implements Closeable {
         final containerConfig = new ContainerConfiguration();
         final registryOpts = config.registry()
 
-        if (registryOpts && registryOpts.configured()) {
-            if (registryOpts.userName && registryOpts.password) {
+        if (registryOpts) {
+            if (registryOpts.isConfigured()) {
                 List<ContainerRegistry> containerRegistries = new ArrayList(1)
                 containerRegistries << new ContainerRegistry()
-                        .withRegistryServer(registryOpts.server)
-                        .withUserName(registryOpts.userName)
-                        .withPassword(registryOpts.password)
+                    .withRegistryServer(registryOpts.server)
+                    .withUserName(registryOpts.userName)
+                    .withPassword(registryOpts.password)
                 containerConfig.withContainerRegistries(containerRegistries).withType('dockerCompatible')
                 log.debug "[AZURE BATCH] Connecting Azure Batch pool to Container Registry '$registryOpts.server'"
-            } else {
-                throw new IllegalArgumentException("Invalid Container Registry configuration - Make sure userName and password are set for Container Registry")
+            } else if (registryOpts.isIncomplete()) {
+                    throw new IllegalArgumentException("Invalid Container Registry configuration - Make sure userName and password are set for Container Registry")
             }
         }
         final image = getImage(opts)

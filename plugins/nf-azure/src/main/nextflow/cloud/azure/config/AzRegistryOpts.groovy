@@ -45,7 +45,12 @@ class AzRegistryOpts {
         this.password = config.password ?: sysEnv.get('AZURE_REGISTRY_PASSWORD')
     }
 
-    boolean configured() {
-        return this.userName || this.password
+    boolean isConfigured() {
+        return this.userName && this.password
+    }
+
+    boolean isIncomplete() {
+        //check whether one of the two mandatory options is missing, but not both (which would me, no config is provided)
+        return (!this.userName && this.password) || (this.userName && !this.password)
     }
 }
