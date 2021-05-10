@@ -536,7 +536,7 @@ class AzBatchService implements Closeable {
         }
     }
 
-    protected VirtualMachineConfiguration poolVmConfig(String poolId, AzPoolOpts opts) {
+    protected VirtualMachineConfiguration poolVmConfig(AzPoolOpts opts) {
         /**
          * A container configuration must be provided for a task to run in a specific container.
          * Such container can be pre-fetched on VM creation or when running the task
@@ -544,17 +544,19 @@ class AzBatchService implements Closeable {
          * https://github.com/MicrosoftDocs/azure-docs/blob/master/articles/batch/batch-docker-container-workloads.md#:~:text=Run%20container%20applications%20on%20Azure,compatible%20containers%20on%20the%20nodes.
          */
         final containerConfig = new ContainerConfiguration();
-        if (opts.registry) {
-            if (opts.userName && opts.password) {
+        final registryOpts = config.registry()
+
+        if (registryOpts && registryOpts.configured()) {
+            if (registryOpts.userName && registryOpts.password) {
                 List<ContainerRegistry> containerRegistries = new ArrayList(1)
                 containerRegistries << new ContainerRegistry()
-                        .withRegistryServer(opts.registry)
-                        .withUserName(opts.userName)
-                        .withPassword(opts.password)
+                        .withRegistryServer(registryOpts.server)
+                        .withUserName(registryOpts.userName)
+                        .withPassword(registryOpts.password)
                 containerConfig.withContainerRegistries(containerRegistries).withType('dockerCompatible')
-                log.debug "[AZURE BATCH] Connecting Azure Batch pool '$poolId' to Container Registry '$opts.registry'"
+                log.debug "[AZURE BATCH] Connecting Azure Batch pool to Container Registry '$registryOpts.server'"
             } else {
-                throw new IllegalArgumentException("Invalid Container Registry configuration for Azure Batch pool '$poolId' - Make sure both userName and password are set for Container Registry '$opts.registry'")
+                throw new IllegalArgumentException("Invalid Container Registry configuration - Make sure userName and password are set for Container Registry")
             }
         }
         final image = getImage(opts)
@@ -580,7 +582,7 @@ class AzBatchService implements Closeable {
 
         final poolParams = new PoolAddParameter()
                 .withId(spec.poolId)
-                .withVirtualMachineConfiguration(poolVmConfig(spec.poolId, spec.opts))
+                .withVirtualMachineConfiguration(poolVmConfig(spec.opts))
         // https://docs.microsoft.com/en-us/azure/batch/batch-pool-vm-sizes
                 .withVmSize(spec.vmType.name)
                 // same as the num ofd cores
