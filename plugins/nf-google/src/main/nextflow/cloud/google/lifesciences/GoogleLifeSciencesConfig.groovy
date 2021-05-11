@@ -63,6 +63,7 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
     boolean enableRequesterPaysBuckets
     String network
     String subnetwork
+    String serviceAccountEmail
 
     int maxParallelTransfers = MAX_TRANSFER
     int maxTransferAttempts = MAX_TRANSFER_ATTEMPTS
@@ -131,6 +132,7 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
         final delayBetweenAttempts = config.navigate('aws.batch.delayBetweenAttempts', DEFAULT_DELAY_BETWEEN_ATTEMPTS) as Duration
         final network = config.navigate('google.lifeSciences.network') as String
         final subnetwork = config.navigate('google.lifeSciences.subnetwork') as String
+        final serviceAccountEmail = config.navigate('google.lifeSciences.serviceAccountEmail') as String
 
         def zones = (config.navigate("google.zone") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
         def regions = (config.navigate("google.region") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
@@ -155,7 +157,8 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
                 maxTransferAttempts: maxTransferAttempts,
                 delayBetweenAttempts: delayBetweenAttempts,
                 network: network,
-                subnetwork: subnetwork
+                subnetwork: subnetwork,
+                serviceAccountEmail: serviceAccountEmail
             )
     }
 

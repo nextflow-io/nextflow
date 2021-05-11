@@ -1,5 +1,17 @@
 NEXTFLOW CHANGE-LOG
 ===================
+21.04.0 [stable] - 2 May 2021
+- Fix NPE when AWS Batch job container is not returned [412b6fde]
+- Fix execution hang when native task fail to submit #2060 [1253485d]
+- Update preview message [e1eebdcd]
+- Fix nf-ignite all packaging [72b6a428]
+- Fix GS failing tests [be4f91e9]
+- Fix AWS batch executor fails when using self-contained distribution #2058 [2e344c18]
+- Fix groupTuple sort criteria with closure #2020 [28a579a9]
+- Patch invalid double number cli parsing #2039 [4de4670c] [dcadaaeb]
+- Update sphinx_rtd_theme 0.5.2 [4a165f43]
+- Disable cpus option when running docker with legacy opt [1a7854a5]
+
 21.04.0-edge - 8 Apr 2021
 - Add readOnly flag to k8s volume mounts (#2013) [33bd24ac]
 - Add Start default plugins on-demand #1964 [cf2a9d73]

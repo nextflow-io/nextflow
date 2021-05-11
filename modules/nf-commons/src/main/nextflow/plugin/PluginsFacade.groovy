@@ -188,30 +188,50 @@ class PluginsFacade implements PluginStateListener {
     }
 
     void start( String pluginId ) {
-         start( defaultPlugins.getPlugin(pluginId) )
+        if( isSelfContained() ) {
+            log.debug "Plugin 'start' is not required in self-contained mode -- ignoring it for plugin: $pluginId"
+            return
+        }
+
+        start( defaultPlugins.getPlugin(pluginId) )
     }
 
     void start(PluginSpec plugin) {
+        if( isSelfContained() ) {
+            log.debug "Plugin 'start' is not required in self-contained mode -- ignoring it for plugin: $plugin.id"
+            return
+        }
+
         updater.prepareAndStart(plugin.id, plugin.version)
     }
 
     void start(List<PluginSpec> specs) {
+        if( isSelfContained() ) {
+            log.debug "Plugin 'start' is not required in self-contained mode -- ignoring it for plugins: $specs"
+            return
+        }
+
         for( PluginSpec it : specs ) {
             start(it)
         }
-    }
-
-    boolean hasPlugin(String pluginId) {
-        return manager.getPlugin(pluginId) != null
     }
 
     boolean isStarted(String pluginId) {
         manager.getPlugin(pluginId)?.pluginState == PluginState.STARTED
     }
 
+    /**
+     * @return {@code true} when running in self-contained mode ie. the nextflow distribution
+     * include also plugin libraries. When running is this mode, plugins should not be started
+     * and cannot be updated. 
+     */
+    protected boolean isSelfContained() {
+        return env.get('NXF_PACK')=='all'
+    }
+
     protected List<PluginSpec> pluginsRequirement(Map config) {
         def specs = parseConf(config)
-        if( env.get('NXF_PACK')=='all' && specs ) {
+        if( isSelfContained() && specs ) {
             // custom plugins are not allowed for nextflow self-contained package
             log.warn "Nextflow self-contained distribution only allows default plugins -- User config plugins will be ignored: ${specs.join(',')}"
             return Collections.emptyList()

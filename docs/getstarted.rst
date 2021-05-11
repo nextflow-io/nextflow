@@ -41,9 +41,36 @@ It only needs two easy steps:
 .. tip:: Set ``export CAPSULE_LOG=none`` to make the dependency installation logs less verbose.
 
 .. note::
-    To avoid downloading the dependencies, you could also use the ``nextflow-VERSION-all`` variant available from Github for every Nextflow release version.
+    To avoid downloading the dependencies, you could also use the ``nextflow-VERSION-all`` distribution available from Github for every `Nextflow` release version.
    #. Go to the `Github releases page <https://github.com/nextflow-io/nextflow/releases>`__ and unfold the `Assets` section for a release.
    #. Copy the URL of the ``nextflow-VERSION-all`` asset and issue the download command on your terminal. ``wget -qO- ASSET-URL``. It will create the completely self-contained ``nextflow-VERSION-all`` executable file in the current directory.
+
+Updates
+=======
+
+Having Nextflow installed in your computer you can update to the latest version using the following command::
+
+    nextflow self-update
+
+
+.. tip::
+  You can temporary switch or stick to a specific version of Nextflow just prefixing the ``nextflow`` command
+  with the ``NXF_VER`` environment variable. For example::
+
+    NXF_VER=20.04.0 nextflow run hello
+
+Stable & Edge releases
+======================
+
+A *stable* version of Nextflow is released on a six-months basic schedule, in the 1st and 3rd quarter of every year.
+
+Along with the stable release, an `edge` version is released on a monthly basis. This version is useful to test and
+use most recent updates and experimental features.
+
+To use the latest `edge` release run the following snippet in your shell terminal::
+
+    export NXF_EDGE=1
+    nextflow self-update
 
 
 .. _getstart-first:
@@ -126,7 +153,7 @@ Thus, it is perfectly possible that you will get the final result printed out in
 Modify and resume
 -----------------
 
-Nextflow keeps track of all the processes executed in your pipeline. If you modify some parts of your script,
+`Nextflow` keeps track of all the processes executed in your pipeline. If you modify some parts of your script,
 only the processes that are actually changed will be re-executed. The execution of the processes that are not changed
 will be skipped and the cached result used instead.
 

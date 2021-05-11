@@ -15,7 +15,6 @@ Here's what you'll see at the top-level upon invoking the Nextflow CLI. ::
     Usage: nextflow [options] COMMAND [arg...]
 
 
-
 .. _cli-options:
 
 Options
@@ -24,6 +23,11 @@ Options
 The top-level options are meant to be invoked in relation to the core 
 Nextflow application and are applied to all commands. For options 
 specific to any command, refer the CLI Commands section.
+
+.. note::
+  Nextflow options only use single dash prefix e.g. ``-foo``. Do not confuse
+  double dash notation e.g. ``--foo`` that is instead used for
+  :ref:`Pipeline parameters <cli-params>`.
 
 An overview of the top-level options. ::
 
@@ -1387,3 +1391,28 @@ Viewing the contents of a downloaded pipeline without omitting the header. ::
         echo '$x world!'
         """
     }
+
+
+.. _cli-params:
+
+Pipeline parameters
+====================
+
+Pipeline script can use an arbitrary number of parameters that can be overridden either
+using the command line or the Nextflow configuration file. Any script parameter can be specified
+on the command line prefixing the parameter name with double dash characters e.g.::
+
+    nextflow run <my script> --foo Hello
+
+Then, the parameter can be accessed in the pipeline script using the ``params.foo`` identifier.
+
+.. note::
+  When the parameter name is formatted using the `camelCase` notation e.g. ``fooBar``, a second parameter
+  is created with the same value using the `kebab-case` notation e.g. ``foo-bar``, and the other way around.
+
+.. warning::
+  When a command line parameters includes one or more glob characters i.e. wildcards like ``*`` or ``?``,
+  the parameter value needs to be enclosed with double-quote character to prevent Bash expansion and preserve
+  the glob characters. For example::
+
+        nextflow run <my script> --files "*.fasta"

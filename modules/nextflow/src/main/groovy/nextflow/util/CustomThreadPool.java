@@ -75,6 +75,19 @@ public class CustomThreadPool extends DefaultPool {
 
     }
 
+    static Pool defaultPool(int poolSize, int maxThreads) {
+        log.debug(String.format("Creating default thread pool > poolSzie: %s; maxThreads: %s", poolSize, maxThreads));
+
+        return new CustomThreadPool(
+                new ThreadPoolExecutor(
+                        poolSize,
+                        maxThreads,
+                        KEEP_ALIVE_TIME,
+                        TimeUnit.SECONDS,
+                        new SynchronousQueue<Runnable>(),
+                        newDaemonThreadFactory(),
+                        new ThreadPoolExecutor.CallerRunsPolicy()) );
+    }
 
     static Pool synchronousPool(int maxThreads) {
         log.debug(String.format("Creating synchronous thread pool > maxThread: %s", maxThreads));

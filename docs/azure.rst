@@ -7,19 +7,11 @@ Azure Cloud
 Requirements
 ============
 
-The support for Azure Cloud requires Nextflow version ``21.02.0-edge`` or later. If you don't have it installed
+The support for Azure Cloud requires Nextflow version ``21.04.0`` or later. If you don't have it installed
 use the following command to download it in your computer::
 
-    export NXF_EDGE=1
     curl get.nextflow.io | bash
-    ./nextflow -self-update
-
-Also the support for Azure Cloud requires adding the following setting at 
-the beginning of your ``nextflow.config`` file::
-
-  plugins { 
-    id 'nf-azure'
-  }
+    ./nextflow self-update
 
 
 .. _azure-blobstorage:
@@ -27,7 +19,7 @@ the beginning of your ``nextflow.config`` file::
 Azure Blob Storage
 ===================
 
-Nextflow has built-in support for `Azure Blob Storage <https://azure.microsoft.com/en-us/services/storage/blobs/>`_.    
+Nextflow has built-in support for `Azure Blob Storage <https://azure.microsoft.com/en-us/services/storage/blobs/>`_.
 Files stored in a Azure blob container can be accessed transparently in your pipeline script like any other file
 in the local file system.
 
@@ -90,10 +82,6 @@ that can be reached by Azure Batch environment.
 
 A minimal configuration looks like the following snippet::
 
-    plugins {
-      id 'nf-azure'
-    }
-
     process {
       executor = 'azurebatch'
     }
@@ -129,7 +117,7 @@ details about the configuration for the Azure Batch service.
 Pools configuration
 -------------------
 
-When using the ``autoPoolMode`` the setting Nextflow automatically creates a `pool` of computing nodes to execute the
+When using the ``autoPoolMode`` setting Nextflow automatically creates a `pool` of computing nodes to execute the
 jobs run by your pipeline. By default it only uses 1 compute node of ``Standard_D4_v3`` type.
 
 The pool is not removed when the pipeline execution terminates, unless the configuration setting ``deletePoolsOnCompletion=true``
@@ -159,7 +147,7 @@ Named pools
 -------------
 
 If you want to have a more precise control on the computing nodes pools used in your pipeline using a different pool
-depending on the task in your pipeline, you can use the Nextflow :ref:`process-queue` directive to specify the *name* of a
+depending on the task in your pipeline, you can use the Nextflow :ref:`process-queue` directive to specify the *ID* of a
 Azure Batch compute pool that has to be used to run that process' tasks.
 
 The pool is expected to be already available in the Batch environment, unless the setting ``allowPoolCreation=true`` is
@@ -187,9 +175,20 @@ The above example defines the configuration for two node pools. The first will p
 the second 5 nodes of type ``Standard_E2_v3``. See the `Advanced settings`_ below for the complete list of available
 configuration options.
 
+Requirements on pre-existing named pools
+----------------------------------------
+
+When Nextflow is configured to use a pool already available in the Batch account, the target pool must satisfy the following
+requirements:
+
+1 - the pool must be declared as ``dockerCompatible`` (``Container Type`` property)
+
+2 - the task slots per node must match with the number of cores for the selected VM. Nextflow would return an error like
+"Azure Batch pool 'ID' slots per node does not match the VM num cores (slots: N, cores: Y)".
+
 Pool autoscaling
 ----------------
- 
+
 Azure Batch can automatically scale pools based on parameters that you define, saving you time and money. With automatic scaling,
 Batch dynamically adds nodes to a pool as task demands increase, and removes compute nodes as task demands decrease.
 

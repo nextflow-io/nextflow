@@ -1905,6 +1905,70 @@ class ConfigBuilderTest extends Specification {
         then:
         cfg2.params.test.foo == "CLI_FOO"
         cfg2.params.test.bar == "bar_def"
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'parse nested json' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def config = folder.resolve('nf.json')
+        config.text = '''\
+        {
+            "title": "something",
+            "nested": {
+                "name": "Mike",
+                "and": {
+                    "more": "nesting",
+                    "still": {
+                        "another": "layer"
+                    }
+                }
+            }
+        }
+        '''.stripIndent()
+
+        when:
+        def cfg1 = new ConfigBuilder().setCmdRun(new CmdRun(paramsFile: config.toString())).build()
+
+        then:
+        cfg1.params.title == "something"
+        cfg1.params.nested.name == 'Mike'
+        cfg1.params.nested.and.more == 'nesting'
+        cfg1.params.nested.and.still.another == 'layer'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'parse nested yaml' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def config = folder.resolve('nf.yaml')
+        config.text = '''\
+            title: "something"
+            nested: 
+              name: "Mike"
+              and:
+                more: nesting
+                still:
+                  another: layer      
+        '''.stripIndent()
+
+        when:
+        def cfg1 = new ConfigBuilder().setCmdRun(new CmdRun(paramsFile: config.toString())).build()
+
+        then:
+        cfg1.params.title == "something"
+        cfg1.params.nested.name == 'Mike'
+        cfg1.params.nested.and.more == 'nesting'
+        cfg1.params.nested.and.still.another == 'layer'
+
+        cleanup:
+        folder?.deleteDir()
     }
 
 }

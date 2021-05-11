@@ -7,7 +7,7 @@ Operators
 Nextflow `operators` are methods that allow you to connect channels to each other or to transform values
 emitted by a channel applying some user provided rules.
 
-Operators can be separated in to seven groups:
+Operators can be separated into seven groups:
 
 * `Filtering operators`_
 * `Transforming operators`_
@@ -17,8 +17,8 @@ Operators can be separated in to seven groups:
 * `Maths operators`_
 * `Other operators`_
 
-.. note:: The operators :ref:`operator-set` and ``operator-subscribe`` are *terminal* operators
-  and therefore need to be the last operator in a chain of combined operators.
+.. note:: The operators :ref:`operator-set` and ``subscribe`` are *final* operators
+  and therefore, if used, they must be the last operator in a chain of combined operators.
 
 
 Filtering operators
@@ -26,7 +26,7 @@ Filtering operators
 
 Given a channel, filtering operators allow you to select only the items that comply with a given rule.
 
-The available filter operators are:
+The available filtering operators are:
 
 * `distinct`_
 * `filter`_
@@ -442,8 +442,8 @@ For example::
     [ b:['bonjour'], c:['ciao'], h:['hello','hola','hi'] ]
     
 
-The `mapping` function is an optional parameter. When omitted the values are grouped 
-following these rules: 
+The `mapping` function is an optional parameter. When omitted, the values are grouped
+according to these rules:
 
 * Any value of type ``Map`` is associated with the value of its first entry, or ``null`` when the map itself is empty.
 * Any value of type ``Map.Entry`` is associated with the value of its ``key`` attribute.
@@ -459,7 +459,7 @@ groupTuple
 The ``groupTuple`` operator collects tuples (or lists) of values emitted by the source channel grouping together the
 elements that share the same key. Finally it emits a new tuple object for each distinct key collected.
 
-In other words transform a sequence of tuple like *(K, V, W, ..)* into a new channel emitting a sequence of
+In other words, the operator transforms a sequence of tuple like *(K, V, W, ..)* into a new channel emitting a sequence of
 *(K, list(V), list(W), ..)*
 
 For example::
@@ -475,15 +475,16 @@ It prints::
     [2, [C, A]]
     [3, [B, D]]
 
-By default the first entry in the tuple is used a the grouping key. A different key can be chosen by using the
-``by`` parameter and specifying the index of entry to be used as key (the index is zero-based). For example::
+By default the first entry in the tuple is used as grouping key. A different key can be chosen by using the
+``by`` parameter and specifying the index of the entry to be used as key (the index is zero-based). For example,
+grouping by the second value in each tuple::
 
    Channel
         .from( [1,'A'], [1,'B'], [2,'C'], [3, 'B'], [1,'C'], [2, 'A'], [3, 'D'] )
         .groupTuple(by: 1)
         .view()
 
-Grouping by the second value in each tuple the result is::
+The result is::
 
     [[1, 2], A]
     [[1, 3], B]
@@ -513,14 +514,14 @@ Sort            Description
 false           No sorting is applied (default).
 true            Order the grouped items by the item natural ordering i.e. numerical for number, lexicographic for string, etc. See http://docs.oracle.com/javase/tutorial/collections/interfaces/order.html
 hash            Order the grouped items by the hash number associated to each entry.
-deep            Similar to the previous, but the hash number is created on actual entries content e.g. when the item is a file the hash is created on the actual file content.
+deep            Similar to the previous, but the hash number is created on actual entries content e.g. when the item is a file, the hash is created on the actual file content.
 `custom`        A custom sorting criteria used to order the tuples element holding list of values. It can be specified by using either a :ref:`Closure <script-closure>` or a `Comparator <http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html>`_ object.
 =============== ========================
 
 
-.. tip:: You should always specify the number of expected element in each tuple using the ``size`` attribute
+.. tip:: You should always specify the number of expected elements in each tuple using the ``size`` attribute
   to allow the ``groupTuple`` operator to stream the collected values as soon as possible. However there
-  are use cases in which each tuple has a different size depending on grouping key. In this case use the
+  are use cases in which each tuple has a different size depending on the grouping key. In this case use the
   built-in function ``groupKey`` that allows you to create a special grouping key object to which it's possible
   to associate the group size for a given key.
 
@@ -570,7 +571,7 @@ the source channel into subsets:
   
 
 * ``buffer( size: n )``: transform the source channel in such a way that it emits tuples 
-  made up of ``n`` elements. An incomplete tuple is discarded. For example::
+  made up of `n` elements. An incomplete tuple is discarded. For example::
 
     Channel
         .from( 1,2,3,1,2,3,1 ) 
@@ -582,7 +583,7 @@ the source channel into subsets:
     [3, 1]
     [2, 3]
 
-If you want to emit the last items in a tuple containing less than ``n`` elements, simply 
+If you want to emit the last items in a tuple containing less than `n` elements, simply 
 add the parameter ``remainder`` specifying ``true``, for example::
 
     Channel
@@ -598,8 +599,8 @@ add the parameter ``remainder`` specifying ``true``, for example::
 
 
 
-* ``buffer( size: n, skip: m )``: as in the previous example, it emits tuples containing ``n`` elements, 
-  but skips `m` values before starting to collect the values for the next tuple (including the first emission). For example::
+* ``buffer( size: n, skip: m )``: as in the previous example, it emits tuples containing `n` elements, 
+  but skips ``m`` values before starting to collect the values for the next tuple (including the first emission). For example::
 
     Channel
         .from( 1,2,3,4,5,1,2,3,4,5,1,2 ) 
@@ -610,7 +611,7 @@ add the parameter ``remainder`` specifying ``true``, for example::
     [3, 4, 5]
     [3, 4, 5]
 
-If you want to emit the remaining items in a tuple containing less than ``n`` elements, simply
+If you want to emit the remaining items in a tuple containing less than `n` elements, simply
 add the parameter ``remainder`` specifying ``true``, as shown in the previous example.
 
 See also: `collate`_ operator.
@@ -740,7 +741,7 @@ and emits the resulting collection as a single item. For example::
     Channel
     	.from( 1, 2, 3, 4 )
     	.toList() 
-    	.subscribe onNext: { println it }, onComplete: 'Done'
+    	.subscribe onNext: { println it }, onComplete: { println 'Done' }
     	
 ::
  
@@ -759,7 +760,7 @@ and emits the resulting collection as a single item. For example::
     Channel
     	.from( 3, 2, 1, 4 )
     	.toSortedList()
-    	.subscribe onNext: { println it }, onComplete: 'Done'
+    	.subscribe onNext: { println it }, onComplete: { println 'Done' }
 
 ::
 
@@ -1387,6 +1388,7 @@ The following parameters can be used with the ``collectFile`` operator:
 =============== ========================
 Name            Description
 =============== ========================
+``cache``       Controls the caching ability of the ``collectFile`` operator when using the *resume* feature. It follows the same semantic of the :ref:`process-cache` directive (default: ``true``).
 ``keepHeader``  Prepend the resulting file with the header fetched in the first collected file. The header size (ie. lines) can be specified by using the ``skip`` parameter (default: ``false``), to determine how many lines to remove from all collected files except for the first (where no lines will be removed).
 ``name``        Name of the file where all received values are stored.
 ``newLine``     Appends a ``newline`` character automatically after each entry (default: ``false``).
