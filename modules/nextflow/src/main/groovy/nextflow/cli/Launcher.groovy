@@ -612,11 +612,18 @@ class Launcher {
                 log.debug "Setting $qualifier proxy: $proxy"
                 System.setProperty("${qualifier.toLowerCase()}.proxyHost", proxy.host)
                 if( proxy.port ) System.setProperty("${qualifier.toLowerCase()}.proxyPort", proxy.port)
-                if( username && password ) {
+                if( username != null && password != null ) {
                     log.debug "Setting $qualifier proxy authenticator ..."
                     Authenticator authenticator = new Authenticator() {
                         protected PasswordAuthentication getPasswordAuthentication() {
-                            return new PasswordAuthentication( username, password.toCharArray() )
+                            if( getRequestorType() == RequestorType.PROXY ) {
+                                if( getRequestingHost().equalsIgnoreCase(proxy.host) ) {
+                                    if( getRequestingPort() == Integer.parseInt(proxy.port) ) {
+                                        return new PasswordAuthentication( username, password.toCharArray() )
+                                    }
+                                }
+                            }
+                            return null
                         }
                     }
                     Authenticator.setDefault(authenticator);
