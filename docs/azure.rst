@@ -233,6 +233,24 @@ to zero nodes automatically.
 If you need a different strategy you can provide your own formula using the ``scaleFormula`` option.
 See the `Azure Batch <https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling>`_ documentation for details.
 
+Private container registry
+----------------------------
+A private container registry from where to pull Docker images can be optionally specified as follows ::
+
+    azure {
+        batch {
+            registry {
+                server =  '<YOUR REGISTRY SERVER>' // e.g.: docker.io, quay.io, <ACCOUNT>.azurecr.io, etc.
+                userName =  '<YOUR REGISTRY USER NAME>'
+                password =  '<YOUR REGISTRY PASSWORD>'
+            }
+        }
+    }
+
+
+
+The private registry is not exclusive, rather it is an addition to the configuration.
+Public images from other registries are still pulled (if requested by a Task) when a private registry is configured.
 
 Advanced settings
 ==================
@@ -262,4 +280,7 @@ azure.batch.pools.<name>.autoScale              Enable autoscaling feature for t
 azure.batch.pools.<name>.scaleFormula           Specify the scale formula for the pool identified with ``<name>``. See Azure Batch `scaling documentation <https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling>`_ for details.
 azure.batch.pools.<name>.scaleInterval          Specify the interval at which to automatically adjust the Pool size according to the autoscale formula. The minimum and maximum value are 5 minutes and 168 hours respectively (default: `10 mins`)
 azure.batch.pools.<name>.schedulePolicy         Specify the scheduling policy for the pool identified with ``<name>``. It can be either ``spread`` or ``pack`` (default: ``spread``).
+azure.batch.registry.server                     Specify the container registry from which to pull the Docker images (default: ``docker.io``).
+azure.batch.registry.userName                   Specify the username to connect to a private container registry.
+azure.batch.registry.password                   Specify the password to connect to a private container registry.
 ============================================== =================
