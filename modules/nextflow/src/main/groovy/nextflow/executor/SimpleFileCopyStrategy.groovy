@@ -270,7 +270,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
             cmd = "sh -c 'mkdir -p \"${Escape.path(target)}/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"${Escape.path(target)}/`dirname \\\"\$1\\\"`\";' _ \"\$name\""
         else if( mode == 'rsync' )
             //This will not work for glob terms
-            return "rsync -rRl ${source.collect{ Escape.path(it) }.join(' ')} ${Escape.path(target)} || true"
+            return "rsync -rRl ${normalizeGlobStarPaths( source ).collect{ Escape.path( it ) }.join(' ')} ${Escape.path(target)} || true"
         else
             throw new IllegalArgumentException("Unknown stage-out strategy: $mode")
 
