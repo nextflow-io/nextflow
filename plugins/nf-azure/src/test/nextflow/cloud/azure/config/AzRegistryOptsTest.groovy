@@ -32,8 +32,8 @@ class AzRegistryOptsTest extends Specification {
                 [AZURE_REGISTRY_USER_NAME: 'env-userName', AZURE_REGISTRY_PASSWORD:'env-password'])
         then:
         opts3.server == 'docker.io'
-        opts3.accountName == 'env-userName'
-        opts3.accountKey == 'env-password'
+        opts3.userName == 'env-userName'
+        opts3.password == 'env-password'
     }
 
 }

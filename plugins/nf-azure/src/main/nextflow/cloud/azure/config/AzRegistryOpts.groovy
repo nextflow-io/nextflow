@@ -46,11 +46,11 @@ class AzRegistryOpts {
     }
 
     boolean isConfigured() {
-        return this.userName && this.password
+        if( userName && password )
+            return true
+        if( !userName && !password )
+            return false
+        throw new IllegalArgumentException("Invalid Container Registry configuration - Make sure userName and password are set for Container Registry")
     }
 
-    boolean isIncomplete() {
-        //check whether one of the two mandatory options is missing, but not both (which would mean, no config is provided)
-        return (!this.userName && this.password) || (this.userName && !this.password)
-    }
 }
