@@ -27,7 +27,7 @@ import nextflow.util.CacheHelper
 import nextflow.util.Duration
 
 /**
- * Model the setting of a VM pool
+ * Model the settings of a VM pool
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -55,6 +55,9 @@ class AzPoolOpts implements CacheFunnel {
     Integer maxVmCount
 
     String schedulePolicy // spread | pack
+    String registry
+    String userName
+    String password
 
     AzPoolOpts() {
         this(Collections.emptyMap())
@@ -70,6 +73,9 @@ class AzPoolOpts implements CacheFunnel {
         this.schedulePolicy = opts.schedulePolicy
         this.scaleInterval = opts.scaleInterval as Duration ?: DEFAULT_SCALE_INTERVAL
         this.maxVmCount = opts.maxVmCount as Integer ?: vmCount *3
+        this.registry = opts.registry
+        this.userName = opts.userName
+        this.password = opts.password
     }
 
     @Override
@@ -77,6 +83,9 @@ class AzPoolOpts implements CacheFunnel {
         hasher.putUnencodedChars(publisher)
         hasher.putUnencodedChars(offer)
         hasher.putUnencodedChars(vmType)
+        hasher.putUnencodedChars(registry ?: '')
+        hasher.putUnencodedChars(userName ?: '')
+        hasher.putUnencodedChars(password ?: '')
         hasher.putInt(vmCount)
         hasher.putBoolean(autoScale)
         hasher.putUnencodedChars(scaleFormula ?: '')

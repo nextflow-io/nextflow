@@ -28,6 +28,7 @@ import com.microsoft.azure.batch.protocol.models.CloudPool
 import com.microsoft.azure.batch.protocol.models.CloudTask
 import com.microsoft.azure.batch.protocol.models.ComputeNodeFillType
 import com.microsoft.azure.batch.protocol.models.ContainerConfiguration
+import com.microsoft.azure.batch.protocol.models.ContainerRegistry
 import com.microsoft.azure.batch.protocol.models.ImageInformation
 import com.microsoft.azure.batch.protocol.models.OutputFile
 import com.microsoft.azure.batch.protocol.models.OutputFileBlobContainerDestination
@@ -179,7 +180,7 @@ class AzBatchService implements Closeable {
 
         return vmType =~ /(?i)^${family}$/
     }
-    
+
     protected Double computeScore(int cpus, MemoryUnit mem, Map entry) {
         def vmCores = entry.numberOfCores as int
         double vmMemGb = (entry.memoryInMb as int) /1024
@@ -543,6 +544,18 @@ class AzBatchService implements Closeable {
          * https://github.com/MicrosoftDocs/azure-docs/blob/master/articles/batch/batch-docker-container-workloads.md#:~:text=Run%20container%20applications%20on%20Azure,compatible%20containers%20on%20the%20nodes.
          */
         final containerConfig = new ContainerConfiguration();
+        final registryOpts = config.registry()
+
+        if( registryOpts && registryOpts.isConfigured() ) {
+            List<ContainerRegistry> containerRegistries = new ArrayList(1)
+            containerRegistries << new ContainerRegistry()
+                .withRegistryServer(registryOpts.server)
+                .withUserName(registryOpts.userName)
+                .withPassword(registryOpts.password)
+            containerConfig.withContainerRegistries(containerRegistries).withType('dockerCompatible')
+            log.debug "[AZURE BATCH] Connecting Azure Batch pool to Container Registry '$registryOpts.server'"
+        }
+
         final image = getImage(opts)
 
         new VirtualMachineConfiguration()

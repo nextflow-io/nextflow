@@ -35,14 +35,14 @@ class AzureConfigTest extends Specification {
         and:
         def session = Mock(Session) {
             getConfig() >> [ azure:
-                                [storage:[
-                                    accountKey: KEY,
-                                    accountName: NAME,
-                                    fileStores: STORES,
-                                    sasToken: SAS
-                                ] ]]
+                                     [storage:[
+                                        accountKey: KEY,
+                                        accountName: NAME,
+                                        fileStores: STORES,
+                                        sasToken: SAS
+                                     ] ]]
         }
-        
+
         when:
         def cfg = AzConfig.getConfig(session)
         then:
@@ -53,7 +53,7 @@ class AzureConfigTest extends Specification {
         cfg.storage().getEnv() == [AZURE_STORAGE_ACCOUNT_KEY: KEY,
                                    AZURE_STORAGE_ACCOUNT_NAME: NAME,
                                    AZURE_STORAGE_SAS_TOKEN: SAS ]
-        
+
         and:
         cfg.batch().endpoint == null
         cfg.batch().deleteJobsOnCompletion == null
@@ -85,17 +85,16 @@ class AzureConfigTest extends Specification {
                                              endpoint: ENDPOINT,
                                              location: LOCATION,
                                              autoPoolMode: true,
-                                             allowPoolCreation: true
-,                                            deleteJobsOnCompletion: false,
+                                             allowPoolCreation: true,                                            deleteJobsOnCompletion: false,
                                              deletePoolsOnCompletion: true,
                                              pools: [ myPool: [
-                                                         vmType: 'Foo_A1',
-                                                         autoScale: true,
-                                                         vmCount: 5,
-                                                         maxVmCount: 50,
-                                                         scaleFormula: 'x + y + z',
-                                                         scaleInterval:  '15 min',
-                                                         schedulePolicy: 'pack' ]]
+                                                     vmType: 'Foo_A1',
+                                                     autoScale: true,
+                                                     vmCount: 5,
+                                                     maxVmCount: 50,
+                                                     scaleFormula: 'x + y + z',
+                                                     scaleInterval:  '15 min',
+                                                     schedulePolicy: 'pack' ]]
                                      ]] ]
         }
 
