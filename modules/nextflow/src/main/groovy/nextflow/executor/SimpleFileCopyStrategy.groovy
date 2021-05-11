@@ -265,7 +265,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
 
         def cmd
         if( mode == 'copy' )
-            cmd = "cp -fRLn --parents \"\$name\" ${Escape.path(target)}"
+            cmd = "cp -fRL --parents \"\$name\" ${Escape.path(target)}"
         else if( mode == 'move' )
             cmd = "sh -c 'mkdir -p \"${Escape.path(target)}/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"${Escape.path(target)}/`dirname \\\"\$1\\\"`\";' _ \"\$name\""
         else if( mode == 'rsync' )
