@@ -72,8 +72,6 @@ class CondaCache {
 
     @PackageScope Path getConfigCacheDir0() { configCacheDir0 }
 
-    Boolean isUsingMamba() { useMamba }
-
     /** Only for debugging purpose - do not use */
     @PackageScope
     CondaCache() {}
@@ -315,7 +313,7 @@ class CondaCache {
         synchronized (condaPrefixPaths) {
             def result = condaPrefixPaths[condaEnv]
             if( result == null ) {
-                final binaryName = isUsingMamba() ? "mamba" : "conda"
+                final binaryName = useMamba ? "mamba" : "conda"
                 result = new LazyDataflowVariable<Path>({ createLocalCondaEnv(condaEnv, binaryName) })
                 condaPrefixPaths[condaEnv] = result
             }

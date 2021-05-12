@@ -300,7 +300,7 @@ def 'should create conda env with options - using mamba' () {
     def 'should get options from the config' () {
 
         when:
-        def cache = new CondaCache()
+        def cache = new CondaCache(new CondaConfig())
         then:
         cache.createTimeout.minutes == 20
         cache.createOptions == null
