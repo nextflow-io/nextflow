@@ -34,8 +34,7 @@ class S3Helper {
         def attempts = opts.maxTransferAttempts ?: AwsOptions.MAX_TRANSFER_ATTEMPTS
         def delayBetweenAttempts = opts.delayBetweenAttempts ?: AwsOptions.DEFAULT_DELAY_BETWEEN_ATTEMPTS
 
-        BashFunLib.body(maxConnect, attempts, delayBetweenAttempts) +
-
+        BashFunLib.body(maxConnect, attempts, delayBetweenAttempts) + retryEnv(opts) +
         """
         # aws helper
         nxf_s3_upload() {
@@ -60,6 +59,16 @@ class S3Helper {
             fi
         }
         """.stripIndent()
+    }
+
+    static String retryEnv(AwsOptions opts) {
+        if( !opts.retryMode )
+            return ''
+        """
+        # aws cli retry config
+        export AWS_RETRY_MODE=${opts.retryMode} 
+        export AWS_MAX_ATTEMPTS=${opts.maxTransferAttempts}
+        """.stripIndent().rightTrim()
     }
 
     static String getUploaderScript() {

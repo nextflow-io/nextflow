@@ -94,7 +94,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     @Override
     String stageInputFile( Path path, String targetName ) {
         // third param should not be escaped, because it's used in the grep match rule
-        def stage_cmd = opts.maxTransferAttempts > 1
+        def stage_cmd = opts.maxTransferAttempts > 1 && !opts.retryMode
                 ? "downloads+=(\"nxf_cp_retry nxf_s3_download s3:/${Escape.path(path)} ${Escape.path(targetName)}\")"
                 : "downloads+=(\"nxf_s3_download s3:/${Escape.path(path)} ${Escape.path(targetName)}\")"
         return stage_cmd
