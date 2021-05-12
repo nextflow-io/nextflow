@@ -60,13 +60,11 @@ class CondaCache {
 
     private String createOptions
 
-    private Boolean useMamba
+    private Boolean useMamba = false
 
     private Path configCacheDir0
 
     @PackageScope String getCreateOptions() { createOptions }
-
-    @PackageScope Boolean isUsingMamba() { useMamba }
 
     @PackageScope Duration getCreateTimeout() { createTimeout }
 
@@ -217,20 +215,20 @@ class CondaCache {
      * @return the conda environment prefix {@link Path}
      */
     @PackageScope
-    Path createLocalCondaEnv(String condaEnv) {
+    Path createLocalCondaEnv(String condaEnv, String binaryName = "conda") {
         final prefixPath = condaPrefixPath(condaEnv)
         if( prefixPath.isDirectory() ) {
-            log.debug "Conda found local env for environment=$condaEnv; path=$prefixPath"
+            log.debug "${binaryName.capitalize()} found local env for environment=$condaEnv; path=$prefixPath"
             return prefixPath
         }
 
         final file = new File("${prefixPath.parent}/.${prefixPath.name}.lock")
-        final wait = "Another Nextflow instance is creatign the Conda environment $condaEnv -- please wait it completes"
+        final wait = "Another Nextflow instance is creating the ${binaryName.capitalize()} environment $condaEnv -- please wait till it completes"
         final err =  "Unable to acquire exclusive lock after $createTimeout on file: $file"
 
         final mutex = new FileMutex(target: file, timeout: createTimeout, waitMessage: wait, errorMessage: err)
         try {
-            mutex .lock { createLocalCondaEnv0(condaEnv, prefixPath) }
+            mutex .lock { createLocalCondaEnv0(condaEnv, prefixPath, binaryName) }
         }
         finally {
             file.delete()
@@ -245,25 +243,23 @@ class CondaCache {
     }
 
     @PackageScope
-    Path createLocalCondaEnv0(String condaEnv, Path prefixPath) {
+    Path createLocalCondaEnv0(String condaEnv, Path prefixPath, String binaryName = "conda") {
 
-        log.info "Creating Conda env: $condaEnv [cache $prefixPath]"
+        log.info "Creating ${binaryName.capitalize()} env: $condaEnv [cache $prefixPath]"
 
         final opts = createOptions ? "$createOptions " : ''
         def cmd
         if( isYamlFilePath(condaEnv) ) {
-            cmd = "conda env create --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
-        }
-        else if( isTextFilePath(condaEnv) ) {
-            cmd = "conda create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
-        }
-        else {
-            cmd = "conda create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} $condaEnv"
+            cmd = "${binaryName} env create --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
+        } else if( isTextFilePath(condaEnv) ) {
+            cmd = "${binaryName} create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
+        } else {
+            cmd = "${binaryName} create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} $condaEnv"
         }
 
         try {
             runCommand( cmd )
-            log.debug "Conda create complete env=$condaEnv path=$prefixPath"
+            log.debug "${binaryName.capitalize()} create complete env=$condaEnv path=$prefixPath"
         }
         catch( Exception e ){
             // clean-up to avoid to keep eventually corrupted image file

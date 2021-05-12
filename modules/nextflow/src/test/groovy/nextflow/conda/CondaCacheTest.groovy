@@ -199,6 +199,35 @@ class CondaCacheTest extends Specification {
 
     }
 
+    def 'should create a conda environment using mamba' () {
+
+        given:
+        def ENV = 'bwa=1.1.1'
+        def PREFIX = Files.createTempDirectory('foo')
+        def cache = Spy(CondaCache)
+
+        when:
+        // the prefix directory exists ==> no mamba command is executed
+        def result = cache.createLocalCondaEnv(ENV, "mamba")
+        then:
+        1 * cache.condaPrefixPath(ENV) >> PREFIX
+        0 * cache.isYamlFilePath(ENV)
+        0 * cache.runCommand(_)
+        result == PREFIX
+
+        when:
+        PREFIX.deleteDir()
+        result = cache.createLocalCondaEnv0(ENV,PREFIX, "mamba")
+        then:
+        1 * cache.isYamlFilePath(ENV)
+        0 * cache.makeAbsolute(_)
+        1 * cache.runCommand( "mamba create --mkdir --yes --quiet --prefix $PREFIX $ENV" ) >> null
+        result == PREFIX
+
+    }
+
+
+
     def 'should create conda env with options' () {
         given:
         def ENV = 'bwa=1.1.1'
@@ -215,6 +244,24 @@ class CondaCacheTest extends Specification {
         1 * cache.runCommand( "conda create --this --that --mkdir --yes --quiet --prefix $PREFIX $ENV" ) >> null
         result == PREFIX
     }
+
+    def 'should create mamba env with options' () {
+        given:
+        def ENV = 'bwa=1.1.1'
+        def PREFIX = Paths.get('/foo/bar')
+        def cache = Spy(CondaCache)
+
+        when:
+        cache.createOptions = '--this --that'
+        def result = cache.createLocalCondaEnv0(ENV, PREFIX, "mamba")
+        then:
+        1 * cache.isYamlFilePath(ENV)
+        1 * cache.isTextFilePath(ENV)
+        0 * cache.makeAbsolute(_)
+        1 * cache.runCommand("mamba create --this --that --mkdir --yes --quiet --prefix $PREFIX $ENV") >> null
+        result == PREFIX
+    }
+
 
 
     def 'should create a conda env with a yaml file' () {
@@ -257,12 +304,12 @@ class CondaCacheTest extends Specification {
     def 'should get options from the config' () {
 
         when:
-        def cache = new CondaCache(new CondaConfig())
+        def cache = new CondaCache()
         then:
         cache.createTimeout.minutes == 20
         cache.createOptions == null
         cache.configCacheDir0 == null
-        cache.useMamba == null
+        cache.useMamba == false
         when:
         cache = new CondaCache(new CondaConfig(createTimeout: '5 min', createOptions: '--foo --bar', cacheDir: '/conda/cache', useMamba: true))
         then:
