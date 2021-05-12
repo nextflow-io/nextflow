@@ -405,7 +405,7 @@ class BashWrapperBuilderTest extends Specification {
                 pathes=`ls -1d test.bam test.bai | sort | uniq`
                 set -f
                 for name in \$pathes; do
-                    cp -fRL --parents "\$name" /work/dir || true
+                    sh -c 'mkdir -p "/work/dir/`dirname \\"\$1\\"`"; cp -fRL "\$1" "/work/dir/`dirname \\"\$1\\"`";' _ "\$name" || true
                 done
                 set +f
                 shopt -u globstar extglob

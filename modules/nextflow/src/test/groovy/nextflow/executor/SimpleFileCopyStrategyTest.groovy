@@ -170,7 +170,7 @@ class SimpleFileCopyStrategyTest extends Specification {
             pathes=`ls -1d ${source_escaped}`
             set -f
             for name in \$pathes; do
-                cp -fRL --parents \"\$name\" ${target_escaped} || true
+                sh -c 'mkdir -p \"${target_escaped}/`dirname \\\"\$1\\\"`\"; cp -fRL \"\$1\" \"${target_escaped}/`dirname \\\"\$1\\\"`\";' _ \"\$name\" || true
             done
             set +f
             shopt -u globstar extglob
@@ -587,7 +587,7 @@ class SimpleFileCopyStrategyTest extends Specification {
                 pathes=`ls -1d simple.txt my/path/file.bam | sort | uniq`
                 set -f
                 for name in \$pathes; do
-                    cp -fRL --parents \"\$name\" /target/work\\ dir || true
+                    sh -c 'mkdir -p \"/target/work\\ dir/`dirname \\\"\$1\\\"`\"; cp -fRL \"\$1\" \"/target/work\\ dir/`dirname \\\"\$1\\\"`\";' _ \"\$name\" || true
                 done
                 set +f
                 shopt -u globstar extglob

@@ -263,16 +263,18 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
     protected String stageOutCommand( List<String> source, String target, String mode ) {
         assert mode
 
-        def cmd
+        String cmd
         if( mode == 'copy' )
-            cmd = "cp -fRL --parents \"\$name\" ${Escape.path(target)}"
+            cmd = 'cp -fRL'
         else if( mode == 'move' )
-            cmd = "sh -c 'mkdir -p \"${Escape.path(target)}/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"${Escape.path(target)}/`dirname \\\"\$1\\\"`\";' _ \"\$name\""
+            cmd = 'mv'
         else if( mode == 'rsync' )
             //This will not work for glob terms
             return "rsync -rRl ${normalizeGlobStarPaths( source ).collect{ Escape.path( it ) }.join(' ')} ${Escape.path(target)} || true"
         else
             throw new IllegalArgumentException("Unknown stage-out strategy: $mode")
+
+        cmd = "sh -c 'mkdir -p \"${Escape.path(target)}/`dirname \\\"\$1\\\"`\"; $cmd \"\$1\" \"${Escape.path(target)}/`dirname \\\"\$1\\\"`\";' _ \"\$name\""
 
         final List<String> escape = source
                 .collect {
