@@ -267,14 +267,14 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         if( mode == 'copy' )
             cmd = 'cp -fRL'
         else if( mode == 'move' )
-            cmd = 'mv'
+            cmd = 'mv -f'
         else if( mode == 'rsync' )
             //This will not work for glob terms
             return "rsync -rRl ${normalizeGlobStarPaths( source ).collect{ Escape.path( it ) }.join(' ')} ${Escape.path(target)} || true"
         else
             throw new IllegalArgumentException("Unknown stage-out strategy: $mode")
 
-        cmd = "sh -c 'mkdir -p \"${Escape.path(target)}/`dirname \\\"\$1\\\"`\"; $cmd \"\$1\" \"${Escape.path(target)}/\$1\";' _ \"\$name\""
+        cmd = "sh -c 'mkdir -p \"${Escape.path(target)}/`dirname \\\"\$1\\\"`\"; $cmd \"\$1\" \"${Escape.path(target)}/\$1\";' _ \"\$name\" || true"
 
         final List<String> escape = source
                 .collect {
@@ -287,19 +287,27 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
                     return escaped
                 }
 
-        return """\
+        if( mode == 'copy' ){
+            cmd = """\
+            if [[ ! -e "${Escape.path(target)}/\$name" ]]; then
+                $cmd
+            fi""".stripIndent(true )
+        }
+
+        String begin = """\
             shopt -s globstar extglob || true
             IFS=\$'\\n'
             pathes=`ls -1d ${escape.join(' ')} | sort | uniq`
             set -f
-            for name in \$pathes; do
-                if [[ ! -e "${Escape.path(target)}/\$name" ]]; then
-                    $cmd || true
-                fi
+            for name in \$pathes; do""".stripIndent(true)
+
+        String end = """\
             done
             set +f
             shopt -u globstar extglob || true
             unset IFS""".stripIndent(true)
+
+        return "$begin\n${cmd.indent('    ')}$end"
     }
 
     /**

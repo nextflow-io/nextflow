@@ -429,9 +429,7 @@ class BashWrapperBuilderTest extends Specification {
                 pathes=`ls -1d test.bam test.bai | sort | uniq`
                 set -f
                 for name in \$pathes; do
-                    if [[ ! -e "/another/dir/\$name" ]]; then
-                        sh -c 'mkdir -p "/another/dir/`dirname \\"\$1\\"`"; mv "\$1" "/another/dir/\$1";' _ "\$name" || true
-                    fi
+                    sh -c 'mkdir -p "/another/dir/`dirname \\"\$1\\"`"; mv -f "\$1" "/another/dir/\$1";' _ "\$name" || true
                 done
                 set +f
                 shopt -u globstar extglob || true

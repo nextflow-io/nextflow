@@ -347,9 +347,7 @@ class SimpleFileCopyStrategyTest extends Specification {
             pathes=`ls -1d ${source_escaped} | sort | uniq`
             set -f
             for name in \$pathes; do
-                if [[ ! -e "${target_escaped}/\$name" ]]; then
-                    sh -c 'mkdir -p \"${target_escaped}/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"${target_escaped}/\$1\";' _ \"\$name\" || true
-                fi
+                sh -c 'mkdir -p \"${target_escaped}/`dirname \\\"\$1\\\"`\"; mv -f \"\$1\" \"${target_escaped}/\$1\";' _ \"\$name\" || true
             done
             set +f
             shopt -u globstar extglob || true
@@ -622,9 +620,7 @@ class SimpleFileCopyStrategyTest extends Specification {
                 pathes=`ls -1d simple.txt my/path/file.bam | sort | uniq`
                 set -f
                 for name in \$pathes; do
-                    if [[ ! -e "/target/store/\$name" ]]; then
-                        sh -c 'mkdir -p \"/target/store/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/target/store/\$1\";' _ \"\$name\" || true
-                    fi
+                    sh -c 'mkdir -p \"/target/store/`dirname \\\"\$1\\\"`\"; mv -f \"\$1\" \"/target/store/\$1\";' _ \"\$name\" || true
                 done
                 set +f
                 shopt -u globstar extglob || true
