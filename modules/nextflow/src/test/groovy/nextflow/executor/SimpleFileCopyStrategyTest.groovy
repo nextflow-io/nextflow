@@ -165,7 +165,7 @@ class SimpleFileCopyStrategyTest extends Specification {
         given:
         def strategy = [:] as SimpleFileCopyStrategy
         def cmd = """\
-            shopt -s globstar extglob
+            shopt -s globstar extglob || true
             IFS=\$'\\n'
             pathes=`ls -1d ${source_escaped}`
             set -f
@@ -173,7 +173,7 @@ class SimpleFileCopyStrategyTest extends Specification {
                 sh -c 'mkdir -p \"${target_escaped}/`dirname \\\"\$1\\\"`\"; cp -fRL \"\$1\" \"${target_escaped}/`dirname \\\"\$1\\\"`\";' _ \"\$name\" || true
             done
             set +f
-            shopt -u globstar extglob
+            shopt -u globstar extglob || true
             unset IFS""".stripIndent(true)
 
         expect:
@@ -340,7 +340,7 @@ class SimpleFileCopyStrategyTest extends Specification {
         given:
         def strategy = [:] as SimpleFileCopyStrategy
         def cmd = """\
-            shopt -s globstar extglob
+            shopt -s globstar extglob || true
             IFS=\$'\\n'
             pathes=`ls -1d ${source_escaped}`
             set -f
@@ -348,7 +348,7 @@ class SimpleFileCopyStrategyTest extends Specification {
                 sh -c 'mkdir -p \"${target_escaped}/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"${target_escaped}/`dirname \\\"\$1\\\"`\";' _ \"\$name\" || true
             done
             set +f
-            shopt -u globstar extglob
+            shopt -u globstar extglob || true
             unset IFS""".stripIndent(true)
 
         expect:
@@ -582,7 +582,7 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 mkdir -p /target/work\\ dir
-                shopt -s globstar extglob
+                shopt -s globstar extglob || true
                 IFS=\$'\\n'
                 pathes=`ls -1d simple.txt my/path/file.bam | sort | uniq`
                 set -f
@@ -590,7 +590,7 @@ class SimpleFileCopyStrategyTest extends Specification {
                     sh -c 'mkdir -p \"/target/work\\ dir/`dirname \\\"\$1\\\"`\"; cp -fRL \"\$1\" \"/target/work\\ dir/`dirname \\\"\$1\\\"`\";' _ \"\$name\" || true
                 done
                 set +f
-                shopt -u globstar extglob
+                shopt -u globstar extglob || true
                 unset IFS
                 '''
                 .stripIndent().trim()
@@ -611,7 +611,7 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 mkdir -p /target/store
-                shopt -s globstar extglob
+                shopt -s globstar extglob || true
                 IFS=\$'\\n'
                 pathes=`ls -1d simple.txt my/path/file.bam | sort | uniq`
                 set -f
@@ -619,7 +619,7 @@ class SimpleFileCopyStrategyTest extends Specification {
                     sh -c 'mkdir -p \"/target/store/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/target/store/`dirname \\\"\$1\\\"`\";' _ \"\$name\" || true
                 done
                 set +f
-                shopt -u globstar extglob
+                shopt -u globstar extglob || true
                 unset IFS
                 '''
                 .stripIndent().trim()

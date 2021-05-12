@@ -400,7 +400,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.unstage_outputs == '''\
                 mkdir -p /work/dir
-                shopt -s globstar extglob
+                shopt -s globstar extglob || true
                 IFS=\$'\\n'
                 pathes=`ls -1d test.bam test.bai | sort | uniq`
                 set -f
@@ -408,7 +408,7 @@ class BashWrapperBuilderTest extends Specification {
                     sh -c 'mkdir -p "/work/dir/`dirname \\"\$1\\"`"; cp -fRL "\$1" "/work/dir/`dirname \\"\$1\\"`";' _ "\$name" || true
                 done
                 set +f
-                shopt -u globstar extglob
+                shopt -u globstar extglob || true
                 unset IFS'''.stripIndent().rightTrim()
 
 
@@ -422,7 +422,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.unstage_outputs == '''\
                 mkdir -p /another/dir
-                shopt -s globstar extglob
+                shopt -s globstar extglob || true
                 IFS=\$'\\n'
                 pathes=`ls -1d test.bam test.bai | sort | uniq`
                 set -f
@@ -430,7 +430,7 @@ class BashWrapperBuilderTest extends Specification {
                     sh -c 'mkdir -p "/another/dir/`dirname \\"\$1\\"`"; mv "\$1" "/another/dir/`dirname \\"\$1\\"`";' _ "\$name" || true
                 done
                 set +f
-                shopt -u globstar extglob
+                shopt -u globstar extglob || true
                 unset IFS'''.stripIndent().rightTrim()
     }
 

@@ -291,7 +291,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         String searchCmd = escape.size() == 1 ? "ls -1d ${escape.get(0)}" : "ls -1d ${escape.join(' ')} | sort | uniq"
 
         return """\
-            shopt -s globstar extglob
+            shopt -s globstar extglob || true
             IFS=\$'\\n'
             pathes=`$searchCmd`
             set -f
@@ -299,7 +299,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
                 $cmd || true
             done
             set +f
-            shopt -u globstar extglob
+            shopt -u globstar extglob || true
             unset IFS""".stripIndent(true)
     }
 
