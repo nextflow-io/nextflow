@@ -199,7 +199,7 @@ class CondaCacheTest extends Specification {
 
     }
 
-    def 'should create a conda environment using mamba' () {
+    def 'should create a conda environment - using mamba' () {
 
         given:
         def ENV = 'bwa=1.1.1'
@@ -226,8 +226,6 @@ class CondaCacheTest extends Specification {
 
     }
 
-
-
     def 'should create conda env with options' () {
         given:
         def ENV = 'bwa=1.1.1'
@@ -245,7 +243,7 @@ class CondaCacheTest extends Specification {
         result == PREFIX
     }
 
-    def 'should create mamba env with options' () {
+def 'should create conda env with options - using mamba' () {
         given:
         def ENV = 'bwa=1.1.1'
         def PREFIX = Paths.get('/foo/bar')
@@ -253,16 +251,14 @@ class CondaCacheTest extends Specification {
 
         when:
         cache.createOptions = '--this --that'
-        def result = cache.createLocalCondaEnv0(ENV, PREFIX, "mamba")
+        def result = cache.createLocalCondaEnv0(ENV,PREFIX, "mamba")
         then:
         1 * cache.isYamlFilePath(ENV)
         1 * cache.isTextFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand("mamba create --this --that --mkdir --yes --quiet --prefix $PREFIX $ENV") >> null
+        1 * cache.runCommand( "mamba create --this --that --mkdir --yes --quiet --prefix $PREFIX $ENV" ) >> null
         result == PREFIX
     }
-
-
 
     def 'should create a conda env with a yaml file' () {
 
