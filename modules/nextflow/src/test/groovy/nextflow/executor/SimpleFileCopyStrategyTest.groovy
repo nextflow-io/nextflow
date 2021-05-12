@@ -167,10 +167,12 @@ class SimpleFileCopyStrategyTest extends Specification {
         def cmd = """\
             shopt -s globstar extglob || true
             IFS=\$'\\n'
-            pathes=`ls -1d ${source_escaped}`
+            pathes=`ls -1d ${source_escaped} | sort | uniq`
             set -f
             for name in \$pathes; do
-                sh -c 'mkdir -p \"${target_escaped}/`dirname \\\"\$1\\\"`\"; cp -fRL \"\$1\" \"${target_escaped}/`dirname \\\"\$1\\\"`\";' _ \"\$name\" || true
+                if [[ ! -e "${target_escaped}/\$name" ]]; then
+                    sh -c 'mkdir -p \"${target_escaped}/`dirname \\\"\$1\\\"`\"; cp -fRL \"\$1\" \"${target_escaped}/`dirname \\\"\$1\\\"`\";' _ \"\$name\" || true
+                fi
             done
             set +f
             shopt -u globstar extglob || true
@@ -342,10 +344,12 @@ class SimpleFileCopyStrategyTest extends Specification {
         def cmd = """\
             shopt -s globstar extglob || true
             IFS=\$'\\n'
-            pathes=`ls -1d ${source_escaped}`
+            pathes=`ls -1d ${source_escaped} | sort | uniq`
             set -f
             for name in \$pathes; do
-                sh -c 'mkdir -p \"${target_escaped}/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"${target_escaped}/`dirname \\\"\$1\\\"`\";' _ \"\$name\" || true
+                if [[ ! -e "${target_escaped}/\$name" ]]; then
+                    sh -c 'mkdir -p \"${target_escaped}/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"${target_escaped}/`dirname \\\"\$1\\\"`\";' _ \"\$name\" || true
+                fi
             done
             set +f
             shopt -u globstar extglob || true
@@ -587,7 +591,9 @@ class SimpleFileCopyStrategyTest extends Specification {
                 pathes=`ls -1d simple.txt my/path/file.bam | sort | uniq`
                 set -f
                 for name in \$pathes; do
-                    sh -c 'mkdir -p \"/target/work\\ dir/`dirname \\\"\$1\\\"`\"; cp -fRL \"\$1\" \"/target/work\\ dir/`dirname \\\"\$1\\\"`\";' _ \"\$name\" || true
+                    if [[ ! -e "/target/work\\ dir/\$name" ]]; then
+                        sh -c 'mkdir -p \"/target/work\\ dir/`dirname \\\"\$1\\\"`\"; cp -fRL \"\$1\" \"/target/work\\ dir/`dirname \\\"\$1\\\"`\";' _ \"\$name\" || true
+                    fi
                 done
                 set +f
                 shopt -u globstar extglob || true
@@ -616,7 +622,9 @@ class SimpleFileCopyStrategyTest extends Specification {
                 pathes=`ls -1d simple.txt my/path/file.bam | sort | uniq`
                 set -f
                 for name in \$pathes; do
-                    sh -c 'mkdir -p \"/target/store/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/target/store/`dirname \\\"\$1\\\"`\";' _ \"\$name\" || true
+                    if [[ ! -e "/target/store/\$name" ]]; then
+                        sh -c 'mkdir -p \"/target/store/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/target/store/`dirname \\\"\$1\\\"`\";' _ \"\$name\" || true
+                    fi
                 done
                 set +f
                 shopt -u globstar extglob || true

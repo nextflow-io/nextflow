@@ -287,16 +287,15 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
                     return escaped
                 }
 
-
-        String searchCmd = escape.size() == 1 ? "ls -1d ${escape.get(0)}" : "ls -1d ${escape.join(' ')} | sort | uniq"
-
         return """\
             shopt -s globstar extglob || true
             IFS=\$'\\n'
-            pathes=`$searchCmd`
+            pathes=`ls -1d ${escape.join(' ')} | sort | uniq`
             set -f
             for name in \$pathes; do
-                $cmd || true
+                if [[ ! -e "${Escape.path(target)}/\$name" ]]; then
+                    $cmd || true
+                fi
             done
             set +f
             shopt -u globstar extglob || true
