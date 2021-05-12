@@ -51,7 +51,7 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
     }
 
     String getBeforeStartScript() {
-        def maxConnect = config.maxParallelTransfers ?: CloudTransferOptions.MAX_TRANSFER
+        def maxConnect = config.maxParallelTransfers ?: CloudTransferOptions.MAX_PARALLEL_TRANSFERS
         def attempts = config.maxTransferAttempts ?: CloudTransferOptions.MAX_TRANSFER_ATTEMPTS
         def delayBetweenAttempts = config.delayBetweenAttempts ?: CloudTransferOptions.DEFAULT_DELAY_BETWEEN_ATTEMPTS
 

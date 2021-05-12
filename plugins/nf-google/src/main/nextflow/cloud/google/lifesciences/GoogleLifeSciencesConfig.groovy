@@ -65,7 +65,7 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
     String subnetwork
     String serviceAccountEmail
 
-    int maxParallelTransfers = MAX_TRANSFER
+    int maxParallelTransfers = MAX_PARALLEL_TRANSFERS
     int maxTransferAttempts = MAX_TRANSFER_ATTEMPTS
     Duration delayBetweenAttempts = DEFAULT_DELAY_BETWEEN_ATTEMPTS
 
@@ -127,7 +127,7 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
         final privateAddr  = config.navigate('google.lifeSciences.usePrivateAddress') as boolean
         final requesterPays = config.navigate('google.enableRequesterPaysBuckets') as boolean
         //
-        final maxParallelTransfers = config.navigate('aws.batch.maxParallelTransfers', MAX_TRANSFER) as int
+        final maxParallelTransfers = config.navigate('aws.batch.maxParallelTransfers', MAX_PARALLEL_TRANSFERS) as int
         final maxTransferAttempts = config.navigate('aws.batch.maxTransferAttempts', MAX_TRANSFER_ATTEMPTS) as int
         final delayBetweenAttempts = config.navigate('aws.batch.delayBetweenAttempts', DEFAULT_DELAY_BETWEEN_ATTEMPTS) as Duration
         final network = config.navigate('google.lifeSciences.network') as String
