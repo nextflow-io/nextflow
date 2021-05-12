@@ -30,7 +30,7 @@ class S3Helper {
         def cli = opts.getAwsCli()
         def storage = opts.storageClass ?: 'STANDARD'
         def encryption = opts.storageEncryption ? "--sse $opts.storageEncryption " : ''
-        def maxConnect = opts.maxParallelTransfers ?: AwsOptions.MAX_TRANSFER
+        def maxConnect = opts.maxParallelTransfers ?: AwsOptions.MAX_PARALLEL_TRANSFERS
         def attempts = opts.maxTransferAttempts ?: AwsOptions.MAX_TRANSFER_ATTEMPTS
         def delayBetweenAttempts = opts.delayBetweenAttempts ?: AwsOptions.DEFAULT_DELAY_BETWEEN_ATTEMPTS
 

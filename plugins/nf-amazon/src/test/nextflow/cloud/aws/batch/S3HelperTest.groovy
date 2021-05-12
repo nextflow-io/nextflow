@@ -66,7 +66,7 @@ class S3HelperTest extends Specification {
                         IFS=$'\\n\'
                         local cmd=("$@")
                         local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
-                        local max=$(if (( cpus>16 )); then echo 16; else echo $cpus; fi)
+                        local max=$(if (( cpus>4 )); then echo 4; else echo $cpus; fi)
                         local i=0
                         local pid=()
                         (
