@@ -17,7 +17,6 @@
 
 package nextflow.cli
 
-import spock.lang.IgnoreIf
 import spock.lang.Specification
 
 import java.nio.file.Files
@@ -347,57 +346,80 @@ class LauncherTest extends Specification {
         System.getProperty('ftp.proxyPort') == '6658'
     }
 
-    @IgnoreIf({ javaVersion < 1.9 })
     @RestoreSystemProperties
     def 'should setup proxy properties and configure the network authenticator'() {
 
         when:
         Launcher.setProxy('HTTP', [HTTP_PROXY: 'http://alphauser:alphapass@alpha.com:333'])
+        PasswordAuthentication auth = Authenticator.requestPasswordAuthentication(
+            'alpha.com', null, 333, null, null, null, null, Authenticator.RequestorType.PROXY
+        )
         then:
         System.getProperty('http.proxyHost') == 'alpha.com'
         System.getProperty('http.proxyPort') == '333'
-        Authenticator.getDefault().getPasswordAuthentication().getUserName() == 'alphauser'
-        Authenticator.getDefault().getPasswordAuthentication().getPassword() == 'alphapass'.toCharArray()
+        and:
+        auth.getUserName() == 'alphauser'
+        auth.getPassword() == 'alphapass'.toCharArray()
 
         when:
         Launcher.setProxy('http', [http_proxy: 'http://gammauser:gammapass@gamma.com:444'])
+        auth = Authenticator.requestPasswordAuthentication(
+            'gamma.com', null, 444, null, null, null, null, Authenticator.RequestorType.PROXY
+        )
         then:
         System.getProperty('http.proxyHost') == 'gamma.com'
         System.getProperty('http.proxyPort') == '444'
-        Authenticator.getDefault().getPasswordAuthentication().getUserName() == 'gammauser'
-        Authenticator.getDefault().getPasswordAuthentication().getPassword() == 'gammapass'.toCharArray()
+        and:
+        auth.getUserName() == 'gammauser'
+        auth.getPassword() == 'gammapass'.toCharArray()
 
         when:
         Launcher.setProxy('HTTPS', [HTTPS_PROXY: 'https://betauser:betapass@beta.com:5466'])
+        auth = Authenticator.requestPasswordAuthentication(
+            'beta.com', null, 5466, null, null, null, null, Authenticator.RequestorType.PROXY
+        )
         then:
         System.getProperty('https.proxyHost') == 'beta.com'
         System.getProperty('https.proxyPort') == '5466'
-        Authenticator.getDefault().getPasswordAuthentication().getUserName() == 'betauser'
-        Authenticator.getDefault().getPasswordAuthentication().getPassword() == 'betapass'.toCharArray()
+        and:
+        auth.getUserName() == 'betauser'
+        auth.getPassword() == 'betapass'.toCharArray()
 
         when:
         Launcher.setProxy('https', [https_proxy: 'https://zetauser:zetapass@zeta.com:6646'])
+        auth = Authenticator.requestPasswordAuthentication(
+            'zeta.com', null, 6646, null, null, null, null, Authenticator.RequestorType.PROXY
+        )
         then:
         System.getProperty('https.proxyHost') == 'zeta.com'
         System.getProperty('https.proxyPort') == '6646'
-        Authenticator.getDefault().getPasswordAuthentication().getUserName() == 'zetauser'
-        Authenticator.getDefault().getPasswordAuthentication().getPassword() == 'zetapass'.toCharArray()
+        and:
+        auth.getUserName() == 'zetauser'
+        auth.getPassword() == 'zetapass'.toCharArray()
 
         when:
         Launcher.setProxy('FTP', [FTP_PROXY: 'ftp://deltauser:deltapass@delta.com:7566'])
+        auth = Authenticator.requestPasswordAuthentication(
+            'delta.com', null, 7566, null, null, null, null, Authenticator.RequestorType.PROXY
+        )
         then:
         System.getProperty('ftp.proxyHost') == 'delta.com'
         System.getProperty('ftp.proxyPort') == '7566'
-        Authenticator.getDefault().getPasswordAuthentication().getUserName() == 'deltauser'
-        Authenticator.getDefault().getPasswordAuthentication().getPassword() == 'deltapass'.toCharArray()
+        and:
+        auth.getUserName() == 'deltauser'
+        auth.getPassword() == 'deltapass'.toCharArray()
 
         when:
         Launcher.setProxy('ftp', [ftp_proxy: 'ftp://epsilonuser:epsilonpass@epsilon.com:6658'])
+        auth = Authenticator.requestPasswordAuthentication(
+            'epsilon.com', null, 6658, null, null, null, null, Authenticator.RequestorType.PROXY
+        )
         then:
         System.getProperty('ftp.proxyHost') == 'epsilon.com'
         System.getProperty('ftp.proxyPort') == '6658'
-        Authenticator.getDefault().getPasswordAuthentication().getUserName() == 'epsilonuser'
-        Authenticator.getDefault().getPasswordAuthentication().getPassword() == 'epsilonpass'.toCharArray()
+        and:
+        auth.getUserName() == 'epsilonuser'
+        auth.getPassword() == 'epsilonpass'.toCharArray()
     }
 
     @RestoreSystemProperties
