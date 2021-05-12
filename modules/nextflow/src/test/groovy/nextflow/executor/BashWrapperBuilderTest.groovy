@@ -406,7 +406,7 @@ class BashWrapperBuilderTest extends Specification {
                 set -f
                 for name in \$pathes; do
                     if [[ ! -e "/work/dir/\$name" ]]; then
-                        sh -c 'mkdir -p "/work/dir/`dirname \\"\$1\\"`"; cp -fRL "\$1" "/work/dir/`dirname \\"\$1\\"`";' _ "\$name" || true
+                        sh -c 'mkdir -p "/work/dir/`dirname \\"\$1\\"`"; cp -fRL "\$1" "/work/dir/\$1";' _ "\$name" || true
                     fi
                 done
                 set +f
@@ -430,7 +430,7 @@ class BashWrapperBuilderTest extends Specification {
                 set -f
                 for name in \$pathes; do
                     if [[ ! -e "/another/dir/\$name" ]]; then
-                        sh -c 'mkdir -p "/another/dir/`dirname \\"\$1\\"`"; mv "\$1" "/another/dir/`dirname \\"\$1\\"`";' _ "\$name" || true
+                        sh -c 'mkdir -p "/another/dir/`dirname \\"\$1\\"`"; mv "\$1" "/another/dir/\$1";' _ "\$name" || true
                     fi
                 done
                 set +f

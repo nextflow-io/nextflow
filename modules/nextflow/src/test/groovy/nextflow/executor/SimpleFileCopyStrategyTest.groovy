@@ -171,7 +171,7 @@ class SimpleFileCopyStrategyTest extends Specification {
             set -f
             for name in \$pathes; do
                 if [[ ! -e "${target_escaped}/\$name" ]]; then
-                    sh -c 'mkdir -p \"${target_escaped}/`dirname \\\"\$1\\\"`\"; cp -fRL \"\$1\" \"${target_escaped}/`dirname \\\"\$1\\\"`\";' _ \"\$name\" || true
+                    sh -c 'mkdir -p \"${target_escaped}/`dirname \\\"\$1\\\"`\"; cp -fRL \"\$1\" \"${target_escaped}/\$1\";' _ \"\$name\" || true
                 fi
             done
             set +f
@@ -348,7 +348,7 @@ class SimpleFileCopyStrategyTest extends Specification {
             set -f
             for name in \$pathes; do
                 if [[ ! -e "${target_escaped}/\$name" ]]; then
-                    sh -c 'mkdir -p \"${target_escaped}/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"${target_escaped}/`dirname \\\"\$1\\\"`\";' _ \"\$name\" || true
+                    sh -c 'mkdir -p \"${target_escaped}/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"${target_escaped}/\$1\";' _ \"\$name\" || true
                 fi
             done
             set +f
@@ -592,7 +592,7 @@ class SimpleFileCopyStrategyTest extends Specification {
                 set -f
                 for name in \$pathes; do
                     if [[ ! -e "/target/work\\ dir/\$name" ]]; then
-                        sh -c 'mkdir -p \"/target/work\\ dir/`dirname \\\"\$1\\\"`\"; cp -fRL \"\$1\" \"/target/work\\ dir/`dirname \\\"\$1\\\"`\";' _ \"\$name\" || true
+                        sh -c 'mkdir -p \"/target/work\\ dir/`dirname \\\"\$1\\\"`\"; cp -fRL \"\$1\" \"/target/work\\ dir/\$1\";' _ \"\$name\" || true
                     fi
                 done
                 set +f
@@ -623,7 +623,7 @@ class SimpleFileCopyStrategyTest extends Specification {
                 set -f
                 for name in \$pathes; do
                     if [[ ! -e "/target/store/\$name" ]]; then
-                        sh -c 'mkdir -p \"/target/store/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/target/store/`dirname \\\"\$1\\\"`\";' _ \"\$name\" || true
+                        sh -c 'mkdir -p \"/target/store/`dirname \\\"\$1\\\"`\"; mv \"\$1\" \"/target/store/\$1\";' _ \"\$name\" || true
                     fi
                 done
                 set +f

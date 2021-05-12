@@ -274,7 +274,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         else
             throw new IllegalArgumentException("Unknown stage-out strategy: $mode")
 
-        cmd = "sh -c 'mkdir -p \"${Escape.path(target)}/`dirname \\\"\$1\\\"`\"; $cmd \"\$1\" \"${Escape.path(target)}/`dirname \\\"\$1\\\"`\";' _ \"\$name\""
+        cmd = "sh -c 'mkdir -p \"${Escape.path(target)}/`dirname \\\"\$1\\\"`\"; $cmd \"\$1\" \"${Escape.path(target)}/\$1\";' _ \"\$name\""
 
         final List<String> escape = source
                 .collect {
