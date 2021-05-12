@@ -305,20 +305,22 @@ class CondaCache {
      */
     @PackageScope
     DataflowVariable<Path> getLazyImagePath(String condaEnv) {
+
+        final binaryName = useMamba ? "mamba" : "conda"
+
         if( condaEnv in condaPrefixPaths ) {
-            log.trace "Conda found local environment `$condaEnv`"
+            log.trace "${binaryName.capitalize()} found local environment `$condaEnv`"
             return condaPrefixPaths[condaEnv]
         }
 
         synchronized (condaPrefixPaths) {
             def result = condaPrefixPaths[condaEnv]
             if( result == null ) {
-                final binaryName = useMamba ? "mamba" : "conda"
                 result = new LazyDataflowVariable<Path>({ createLocalCondaEnv(condaEnv, binaryName) })
                 condaPrefixPaths[condaEnv] = result
             }
             else {
-                log.trace "Conda found local cache for environment `$condaEnv` (2)"
+                log.trace "${binaryName.capitalize()} found local cache for environment `$condaEnv` (2)"
             }
             return result
         }
