@@ -37,6 +37,8 @@ import nextflow.util.Duration
 @CompileStatic
 class AwsOptions implements CloudTransferOptions {
 
+    static final List<String> VALID_RETRY_MODES = ['legacy','standard','adaptive']
+
     String cliPath
 
     String storageClass
@@ -91,6 +93,9 @@ class AwsOptions implements CloudTransferOptions {
         volumes = makeVols(session.config.navigate('aws.batch.volumes'))
         jobRole = session.config.navigate('aws.batch.jobRole')
         fetchInstanceType = session.config.navigate('aws.batch.fetchInstanceType')
+        retryMode = session.config.navigate('aws.batch.retryMode')
+        if( retryMode && retryMode !in VALID_RETRY_MODES )
+            log.warn "Unexpected value for 'aws.batch.retryMode' config setting - offending value: $retryMode - valid values: ${VALID_RETRY_MODES.join(',')}"
         if( fetchInstanceType==null )
             fetchInstanceType = session.config.navigate('tower.enabled',false)
     }
