@@ -1,4 +1,4 @@
-nf-amazon@1.0.5
+nf-amazon@1.0.6
 nf-console@1.0.2
 nf-google@1.0.3
 nf-ignite@1.2.2
