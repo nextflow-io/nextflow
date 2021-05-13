@@ -72,6 +72,10 @@ class CondaCache {
 
     @PackageScope Path getConfigCacheDir0() { configCacheDir0 }
 
+    @PackageScope String binaryName() {
+        useMamba ? "mamba" : "conda"
+    }
+
     /** Only for debugging purpose - do not use */
     @PackageScope
     CondaCache() {}
@@ -215,10 +219,10 @@ class CondaCache {
      * @return the conda environment prefix {@link Path}
      */
     @PackageScope
-    Path createLocalCondaEnv(String condaEnv, String binaryName = "conda") {
+    Path createLocalCondaEnv(String condaEnv) {
         final prefixPath = condaPrefixPath(condaEnv)
         if( prefixPath.isDirectory() ) {
-            log.debug "The binary '${binaryName}' found local env for environment=$condaEnv; path=$prefixPath"
+            log.debug "The binary '${binaryName()}' found local env for environment=$condaEnv; path=$prefixPath"
             return prefixPath
         }
 
@@ -228,7 +232,7 @@ class CondaCache {
 
         final mutex = new FileMutex(target: file, timeout: createTimeout, waitMessage: wait, errorMessage: err)
         try {
-            mutex .lock { createLocalCondaEnv0(condaEnv, prefixPath, binaryName) }
+            mutex .lock { createLocalCondaEnv0(condaEnv, prefixPath) }
         }
         finally {
             file.delete()
@@ -243,27 +247,27 @@ class CondaCache {
     }
 
     @PackageScope
-    Path createLocalCondaEnv0(String condaEnv, Path prefixPath, String binaryName = "conda") {
+    Path createLocalCondaEnv0(String condaEnv, Path prefixPath) {
 
-        log.info "Creating env using ${binaryName}: $condaEnv [cache $prefixPath]"
+        log.info "Creating env using ${binaryName()}: $condaEnv [cache $prefixPath]"
 
         final opts = createOptions ? "$createOptions " : ''
         def cmd
         if( isYamlFilePath(condaEnv) ) {
-            cmd = "${binaryName} env create --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
+            cmd = "${binaryName()} env create --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
         }
         else if( isTextFilePath(condaEnv) ) {
 
-            cmd = "${binaryName} create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
+            cmd = "${binaryName()} create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
         }
 
         else {
-            cmd = "${binaryName} create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} $condaEnv"
+            cmd = "${binaryName()} create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} $condaEnv"
         }
 
         try {
             runCommand( cmd )
-            log.debug "${binaryName.capitalize()} create complete env=$condaEnv path=$prefixPath"
+            log.debug "'${binaryName()}' create complete env=$condaEnv path=$prefixPath"
         }
         catch( Exception e ){
             // clean-up to avoid to keep eventually corrupted image file
@@ -310,21 +314,19 @@ class CondaCache {
     @PackageScope
     DataflowVariable<Path> getLazyImagePath(String condaEnv) {
 
-        final binaryName = useMamba ? "mamba" : "conda"
-
         if( condaEnv in condaPrefixPaths ) {
-            log.trace "${binaryName.capitalize()} found local environment `$condaEnv`"
+            log.trace "The binary '${binaryName()}' found local environment `$condaEnv`"
             return condaPrefixPaths[condaEnv]
         }
 
         synchronized (condaPrefixPaths) {
             def result = condaPrefixPaths[condaEnv]
             if( result == null ) {
-                result = new LazyDataflowVariable<Path>({ createLocalCondaEnv(condaEnv, binaryName) })
+                result = new LazyDataflowVariable<Path>({ createLocalCondaEnv(condaEnv) })
                 condaPrefixPaths[condaEnv] = result
             }
             else {
-                log.trace "${binaryName.capitalize()} found local cache for environment `$condaEnv` (2)"
+                log.trace "The binary '${binaryName()}' found local cache for environment `$condaEnv` (2)"
             }
             return result
         }

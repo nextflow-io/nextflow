@@ -207,8 +207,9 @@ class CondaCacheTest extends Specification {
         def cache = Spy(CondaCache)
 
         when:
+        cache.useMamba = true
         // the prefix directory exists ==> no mamba command is executed
-        def result = cache.createLocalCondaEnv(ENV, "mamba")
+        def result = cache.createLocalCondaEnv(ENV)
         then:
         1 * cache.condaPrefixPath(ENV) >> PREFIX
         0 * cache.isYamlFilePath(ENV)
@@ -217,11 +218,12 @@ class CondaCacheTest extends Specification {
 
         when:
         PREFIX.deleteDir()
-        result = cache.createLocalCondaEnv0(ENV,PREFIX, "mamba")
+        cache.useMamba = true
+        result = cache.createLocalCondaEnv0(ENV, PREFIX)
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand( "mamba create --mkdir --yes --quiet --prefix $PREFIX $ENV" ) >> null
+        1 * cache.runCommand("mamba create --mkdir --yes --quiet --prefix $PREFIX $ENV") >> null
         result == PREFIX
 
     }
@@ -251,12 +253,13 @@ def 'should create conda env with options - using mamba' () {
 
         when:
         cache.createOptions = '--this --that'
-        def result = cache.createLocalCondaEnv0(ENV,PREFIX, "mamba")
+        cache.useMamba = true
+        def result = cache.createLocalCondaEnv0(ENV, PREFIX)
         then:
         1 * cache.isYamlFilePath(ENV)
         1 * cache.isTextFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand( "mamba create --this --that --mkdir --yes --quiet --prefix $PREFIX $ENV" ) >> null
+        1 * cache.runCommand("mamba create --this --that --mkdir --yes --quiet --prefix $PREFIX $ENV") >> null
         result == PREFIX
     }
 
@@ -306,6 +309,7 @@ def 'should create conda env with options - using mamba' () {
         cache.createOptions == null
         cache.configCacheDir0 == null
         cache.useMamba == false
+        cache.binaryName() == "conda"
         when:
         cache = new CondaCache(new CondaConfig(createTimeout: '5 min', createOptions: '--foo --bar', cacheDir: '/conda/cache', useMamba: true))
         then:
@@ -313,6 +317,7 @@ def 'should create conda env with options - using mamba' () {
         cache.createOptions == '--foo --bar'
         cache.configCacheDir0 == Paths.get('/conda/cache')
         cache.useMamba == true
+        cache.binaryName() == "mamba"
     }
 
     def 'should define cache dir from config' () {
