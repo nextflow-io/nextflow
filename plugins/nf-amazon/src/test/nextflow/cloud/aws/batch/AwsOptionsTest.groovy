@@ -61,7 +61,7 @@ class AwsOptionsTest extends Specification {
         when:
         opts = new AwsOptions()
         then:
-        opts.maxParallelTransfers == AwsOptions.MAX_PARALLEL_TRANSFERS
+        opts.maxParallelTransfers == AwsOptions.MAX_TRANSFER
 
         when:
         opts = new AwsOptions(sess)
