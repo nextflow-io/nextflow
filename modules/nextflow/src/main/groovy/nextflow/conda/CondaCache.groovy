@@ -218,12 +218,12 @@ class CondaCache {
     Path createLocalCondaEnv(String condaEnv, String binaryName = "conda") {
         final prefixPath = condaPrefixPath(condaEnv)
         if( prefixPath.isDirectory() ) {
-            log.debug "${binaryName.capitalize()} found local env for environment=$condaEnv; path=$prefixPath"
+            log.debug "The binary '${binaryName}' found local env for environment=$condaEnv; path=$prefixPath"
             return prefixPath
         }
 
         final file = new File("${prefixPath.parent}/.${prefixPath.name}.lock")
-        final wait = "Another Nextflow instance is creating the ${binaryName.capitalize()} environment $condaEnv -- please wait till it completes"
+        final wait = "Another Nextflow instance is creating the conda environment $condaEnv -- please wait till it completes"
         final err =  "Unable to acquire exclusive lock after $createTimeout on file: $file"
 
         final mutex = new FileMutex(target: file, timeout: createTimeout, waitMessage: wait, errorMessage: err)
@@ -245,15 +245,19 @@ class CondaCache {
     @PackageScope
     Path createLocalCondaEnv0(String condaEnv, Path prefixPath, String binaryName = "conda") {
 
-        log.info "Creating ${binaryName.capitalize()} env: $condaEnv [cache $prefixPath]"
+        log.info "Creating env using ${binaryName}: $condaEnv [cache $prefixPath]"
 
         final opts = createOptions ? "$createOptions " : ''
         def cmd
         if( isYamlFilePath(condaEnv) ) {
             cmd = "${binaryName} env create --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
-        } else if( isTextFilePath(condaEnv) ) {
+        }
+        else if( isTextFilePath(condaEnv) ) {
+
             cmd = "${binaryName} create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
-        } else {
+        }
+
+        else {
             cmd = "${binaryName} create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} $condaEnv"
         }
 
