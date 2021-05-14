@@ -1124,7 +1124,7 @@ class Session implements ISession {
         def config = this.config?.get(engine)
         if( config instanceof Map ) {
             config.engine = engine
-            drivers << config
+            drivers.add((Map)config)
         }
         else if( config!=null ) {
             log.warn "Malformed configuration for container engine '$engine' -- One or more attributes should be provided"
