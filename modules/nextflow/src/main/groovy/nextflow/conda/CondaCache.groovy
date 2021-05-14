@@ -279,7 +279,7 @@ class CondaCache {
 
     @PackageScope
     int runCommand( String cmd ) {
-        log.trace """Conda create
+        log.trace """${binaryName} create
                      command: $cmd
                      timeout: $createTimeout""".stripIndent()
 
