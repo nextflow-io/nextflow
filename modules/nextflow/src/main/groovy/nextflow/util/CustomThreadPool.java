@@ -76,7 +76,7 @@ public class CustomThreadPool extends DefaultPool {
     }
 
     static Pool defaultPool(int poolSize, int maxThreads) {
-        log.debug(String.format("Creating default thread pool > poolSzie: %s; maxThreads: %s", poolSize, maxThreads));
+        log.debug(String.format("Creating default thread pool > poolSize: %s; maxThreads: %s", poolSize, maxThreads));
 
         return new CustomThreadPool(
                 new ThreadPoolExecutor(

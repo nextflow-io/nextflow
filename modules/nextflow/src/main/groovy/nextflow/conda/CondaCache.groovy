@@ -60,7 +60,7 @@ class CondaCache {
 
     private String createOptions
 
-    private Boolean useMamba = false
+    private boolean useMamba 
 
     private Path configCacheDir0
 
@@ -72,7 +72,7 @@ class CondaCache {
 
     @PackageScope Path getConfigCacheDir0() { configCacheDir0 }
 
-    @PackageScope String binaryName() {
+    @PackageScope String getBinaryName() {
         useMamba ? "mamba" : "conda"
     }
 
@@ -98,7 +98,7 @@ class CondaCache {
             configCacheDir0 = (config.cacheDir as Path).toAbsolutePath()
 
         if( config.useMamba )
-            useMamba = config.useMamba as Boolean
+            useMamba = config.useMamba as boolean
 
     }
 
@@ -222,7 +222,7 @@ class CondaCache {
     Path createLocalCondaEnv(String condaEnv) {
         final prefixPath = condaPrefixPath(condaEnv)
         if( prefixPath.isDirectory() ) {
-            log.debug "The binary '${binaryName()}' found local env for environment=$condaEnv; path=$prefixPath"
+            log.debug "The binary '${binaryName}' found local env for environment=$condaEnv; path=$prefixPath"
             return prefixPath
         }
 
@@ -249,25 +249,25 @@ class CondaCache {
     @PackageScope
     Path createLocalCondaEnv0(String condaEnv, Path prefixPath) {
 
-        log.info "Creating env using ${binaryName()}: $condaEnv [cache $prefixPath]"
+        log.info "Creating env using ${binaryName}: $condaEnv [cache $prefixPath]"
 
         final opts = createOptions ? "$createOptions " : ''
         def cmd
         if( isYamlFilePath(condaEnv) ) {
-            cmd = "${binaryName()} env create --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
+            cmd = "${binaryName} env create --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
         }
         else if( isTextFilePath(condaEnv) ) {
 
-            cmd = "${binaryName()} create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
+            cmd = "${binaryName} create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
         }
 
         else {
-            cmd = "${binaryName()} create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} $condaEnv"
+            cmd = "${binaryName} create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} $condaEnv"
         }
 
         try {
             runCommand( cmd )
-            log.debug "'${binaryName()}' create complete env=$condaEnv path=$prefixPath"
+            log.debug "'${binaryName}' create complete env=$condaEnv path=$prefixPath"
         }
         catch( Exception e ){
             // clean-up to avoid to keep eventually corrupted image file
@@ -315,7 +315,7 @@ class CondaCache {
     DataflowVariable<Path> getLazyImagePath(String condaEnv) {
 
         if( condaEnv in condaPrefixPaths ) {
-            log.trace "The binary '${binaryName()}' found local environment `$condaEnv`"
+            log.trace "The binary '${binaryName}' found local environment `$condaEnv`"
             return condaPrefixPaths[condaEnv]
         }
 
@@ -326,7 +326,7 @@ class CondaCache {
                 condaPrefixPaths[condaEnv] = result
             }
             else {
-                log.trace "The binary '${binaryName()}' found local cache for environment `$condaEnv` (2)"
+                log.trace "The binary '${binaryName}' found local cache for environment `$condaEnv` (2)"
             }
             return result
         }

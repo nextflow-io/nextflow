@@ -309,7 +309,7 @@ def 'should create conda env with options - using mamba' () {
         cache.createOptions == null
         cache.configCacheDir0 == null
         cache.useMamba == false
-        cache.binaryName() == "conda"
+        cache.binaryName == "conda"
         when:
         cache = new CondaCache(new CondaConfig(createTimeout: '5 min', createOptions: '--foo --bar', cacheDir: '/conda/cache', useMamba: true))
         then:
@@ -317,7 +317,7 @@ def 'should create conda env with options - using mamba' () {
         cache.createOptions == '--foo --bar'
         cache.configCacheDir0 == Paths.get('/conda/cache')
         cache.useMamba == true
-        cache.binaryName() == "mamba"
+        cache.binaryName == "mamba"
     }
 
     def 'should define cache dir from config' () {
