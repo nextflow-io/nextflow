@@ -1,5 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
+21.04.1 [stable] - 14 May 2021
+- Fix nested params file parse #2091
+- Fix Malformed config error reporting #2105
+- Fix Use default opts for trace file creation [09e6c6ac]
+
 21.04.0 [stable] - 2 May 2021
 - Fix NPE when AWS Batch job container is not returned [412b6fde]
 - Fix execution hang when native task fail to submit #2060 [1253485d]
