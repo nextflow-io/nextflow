@@ -222,7 +222,7 @@ class CondaCache {
     Path createLocalCondaEnv(String condaEnv) {
         final prefixPath = condaPrefixPath(condaEnv)
         if( prefixPath.isDirectory() ) {
-            log.debug "The binary '${binaryName}' found local env for environment=$condaEnv; path=$prefixPath"
+            log.debug "${binaryName} found local env for environment=$condaEnv; path=$prefixPath"
             return prefixPath
         }
 
@@ -315,7 +315,7 @@ class CondaCache {
     DataflowVariable<Path> getLazyImagePath(String condaEnv) {
 
         if( condaEnv in condaPrefixPaths ) {
-            log.trace "The binary '${binaryName}' found local environment `$condaEnv`"
+            log.trace "${binaryName} found local environment `$condaEnv`"
             return condaPrefixPaths[condaEnv]
         }
 
@@ -326,7 +326,7 @@ class CondaCache {
                 condaPrefixPaths[condaEnv] = result
             }
             else {
-                log.trace "The binary '${binaryName}' found local cache for environment `$condaEnv` (2)"
+                log.trace "${binaryName} found local cache for environment `$condaEnv` (2)"
             }
             return result
         }
