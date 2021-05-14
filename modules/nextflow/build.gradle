@@ -36,7 +36,7 @@ dependencies {
     compile('org.eclipse.jgit:org.eclipse.jgit:5.2.1.201812262042-r')
     compile ('javax.activation:activation:1.1.1')
     compile ('javax.mail:mail:1.4.7')
-    compile ('org.yaml:snakeyaml:1.18')
+    compile ('org.yaml:snakeyaml:1.28')
     compile ('org.jsoup:jsoup:1.11.2')
     compile 'jline:jline:2.9'
     compile 'org.pf4j:pf4j:3.4.1'
