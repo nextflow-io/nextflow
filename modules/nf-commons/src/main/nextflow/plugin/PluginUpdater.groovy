@@ -212,7 +212,7 @@ class PluginUpdater extends UpdateManager {
             return mutex.lock { download0(id, version) }
         }
         finally {
-            sentinel.deleteDir()
+            sentinel.delete()
         }
     }
 
