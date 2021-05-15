@@ -280,7 +280,9 @@ configure(coreProjects) {
 
     publishing {
         publications {
-            mavenJava(MavenPublication) {
+            maven(MavenPublication) {
+                suppressPomMetadataWarningsFor('testFixturesApiElements')
+                suppressPomMetadataWarningsFor('testFixturesRuntimeElements')
                 from components.java
                 versionMapping {
                     usage('java-api') {
@@ -358,7 +360,7 @@ task makeDigest { doLast {
 task upload {
     dependsOn compile
     dependsOn makeDigest
-    dependsOn coreProjects.publishing
+    dependsOn coreProjects.publish
 }
 
 /*
