@@ -113,7 +113,7 @@ allprojects {
     }
 
     tasks.withType(Jar) {
-        duplicatesStrategy = DuplicatesStrategy.WARN
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
     }
 
     // patched as described here
