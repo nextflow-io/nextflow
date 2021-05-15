@@ -445,7 +445,6 @@ else
       launcher+=(--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
-      launcher+=(--illegal-access=deny)
       launcher+=("${cli[@]:1}")
     else
       launcher=("${cli[@]}")

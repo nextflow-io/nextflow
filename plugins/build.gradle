@@ -136,7 +136,7 @@ subprojects {
      */
     publishing {
         publications {
-            mavenJava(MavenPublication) {
+            maven(MavenPublication) {
                 from components.java
                 suppressPomMetadataWarningsFor('testFixturesApiElements')
                 suppressPomMetadataWarningsFor('testFixturesRuntimeElements')
