@@ -64,7 +64,7 @@ class TowerClient implements TraceObserver {
     }
 
     @ToString(includeNames = true)
-    class ProcessEvent {
+    static class ProcessEvent {
         TraceRecord trace
         boolean completed
     }
@@ -260,12 +260,19 @@ class TowerClient implements TraceObserver {
         // send hello to verify auth
         final req = makeCreateReq(session)
         final resp = sendHttpMessage(urlTraceCreate, req, 'POST')
-        if( resp.error )
+        if( resp.error ) {
+            log.debug """\
+                Unexpected HTTP response
+                - endpoint    : $urlTraceCreate
+                - status code : $resp.code
+                - response msg: $resp.cause
+                """.stripIndent()
             throw new AbortOperationException(resp.message)
+        }
         final ret = parseTowerResponse(resp)
         this.workflowId = ret.workflowId
         if( !workflowId )
-            throw new AbortOperationException("Invalid Tower response")
+            throw new AbortOperationException("Invalid Tower response - Missing workflow Id")
         if( ret.message )
             log.warn(ret.message.toString())
     }
@@ -322,8 +329,15 @@ class TowerClient implements TraceObserver {
 
         final req = makeBeginReq(session)
         final resp = sendHttpMessage(urlTraceBegin, req, 'PUT')
-        if( resp.error )
+        if( resp.error ) {
+            log.debug """\
+                Unexpected HTTP response
+                - endpoint    : $urlTraceBegin
+                - status code : $resp.code
+                - response msg: $resp.cause
+                """.stripIndent()
             throw new AbortOperationException(resp.message)
+        }
 
         final payload = parseTowerResponse(resp)
         this.watchUrl = payload.watchUrl
@@ -500,9 +514,13 @@ class TowerClient implements TraceObserver {
                     log.trace("Got error $code - refreshTries=$refreshTries - currentRefresh=$currentRefresh")
                 }
 
-                String msg = ( code == 401
-                        ? 'Unauthorized Tower access -- Make sure you have specified the correct access token'
-                        : "Unexpected response code $code for request $url"  )
+                String msg
+                if( code == 401 ) {
+                    msg = 'Unauthorized Tower access -- Make sure you have specified the correct access token'
+                }
+                else {
+                    msg = parseCause(httpClient.response) ?: "Unexpected response for request $url"
+                }
                 return new Response(code, msg, httpClient.response)
             }
         }
@@ -629,7 +647,7 @@ class TowerClient implements TraceObserver {
             def msg = """\
                 Unexpected HTTP response.
                 Failed to send message to ${endpoint} -- received 
-                - status code : $resp.code    
+                - status code : $resp.code
                 - response msg: $resp.message
                 """.stripIndent()
             // append separately otherwise formatting get broken
@@ -648,7 +666,7 @@ class TowerClient implements TraceObserver {
         def msg = """\
                 Unexpected Tower response
                 - endpoint url: $endpoint
-                - status code : $resp.code    
+                - status code : $resp.code
                 - response msg: ${resp.message} 
                 """.stripIndent()
         // append separately otherwise formatting get broken
