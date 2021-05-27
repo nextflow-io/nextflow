@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -181,7 +182,7 @@ class TaskPollingMonitor implements TaskMonitor {
      *      by the polling monitor
      */
     protected boolean canSubmit(TaskHandler handler) {
-        capacity>0 ? runningQueue.size() < capacity : true
+        (capacity>0 ? runningQueue.size() < capacity : true) && handler.canForkProcess()
     }
 
     /**
@@ -367,7 +368,7 @@ class TaskPollingMonitor implements TaskMonitor {
     private void awaitSlots() {
         pendingLock.lock()
         try {
-            slotAvail.await()
+            slotAvail.await(1, TimeUnit.SECONDS)
         }
         finally {
             pendingLock.unlock()
@@ -407,7 +408,11 @@ class TaskPollingMonitor implements TaskMonitor {
             // check all running tasks for termination
             checkAllTasks(tasks)
 
-            if( (session.isTerminated() && runningQueue.size()==0 && pendingQueue.size()==0) || session.isAborted() ) {
+            final shouldBreak
+                    =  (session.isTerminated() && runningQueue.size()==0 && pendingQueue.size()==0)
+                    || (session.isCancelled() && runningQueue.size()==0) // cancel is set when error 'finish' is set, therefore tasks in the pending queue should not be taken in consideration
+                    || session.isAborted()
+            if( shouldBreak ) {
                 break
             }
 
@@ -545,25 +550,24 @@ class TaskPollingMonitor implements TaskMonitor {
 
         int count = 0
         def itr = pendingQueue.iterator()
-        while( itr.hasNext() ) {
+        while( itr.hasNext() && session.isSuccess() ) {
             final handler = itr.next()
+            submitRateLimit?.acquire()
             try {
-                submitRateLimit?.acquire()
-
                 if( !canSubmit(handler) )
                     continue
 
-                if( session.isSuccess() ) {
-                    itr.remove(); count++   // <-- remove the task in all cases
-                    submit(handler)
-                }
-                else
-                    break
+                count++
+                handler.incProcessForks()
+                submit(handler)
             }
             catch ( Throwable e ) {
                 handleException(handler, e)
                 session.notifyTaskComplete(handler)
             }
+            // remove processed handler either on successful submit or failed one (managed by catch section)
+            // when `canSubmit` return false the handler should be retained to be tried in a following iteration
+            itr.remove()
         }
 
         return count
@@ -595,20 +599,21 @@ class TaskPollingMonitor implements TaskMonitor {
 
         // check if it is started
         if( handler.checkIfRunning() ) {
+            log.trace "Task started > $handler"
             session.notifyTaskStart(handler)
         }
 
         // check if it is terminated
         if( handler.checkIfCompleted() ) {
             log.debug "Task completed > $handler"
+            // decrement forks count
+            handler.decProcessForks()
 
             // since completed *remove* the task from the processing queue
             evict(handler)
 
             // finalize the tasks execution
             final fault = handler.task.processor.finalizeTask(handler.task)
-            // trigger the count down latch when it is a blocking task
-            handler.latch?.countDown()
 
             // notify task completion
             session.notifyTaskComplete(handler)

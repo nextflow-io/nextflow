@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -118,7 +119,7 @@ class PbsProExecutorTest extends Specification {
                 '-o', '/foo/bar/.command.log',
                 '-j', 'oe',
                 '-q', 'my-queue',
-                '-l', 'select=1:mem=2048mb'
+                '-l', 'select=1:ncpus=1:mem=2048mb'
         ]
     }
 
@@ -151,7 +152,7 @@ class PbsProExecutorTest extends Specification {
         def executor = [:] as PbsProExecutor
 
         expect:
-        executor.queueStatusCommand(null) == ['bash','-c', "set -o pipefail; qstat -f | { egrep '(Job Id:|job_state =)' || true; }"]
+		executor.queueStatusCommand(null) == ['bash','-c', "set -o pipefail; qstat -f \$( qstat -B | egrep -v '(^Server|^---)' | awk -v ORS=' ' '{print \"@\"\$1}' ) | { egrep '(Job Id:|job_state =)' || true; }"]
         executor.queueStatusCommand('xxx') == ['bash','-c', "set -o pipefail; qstat -f xxx | { egrep '(Job Id:|job_state =)' || true; }"]
         executor.queueStatusCommand('xxx').each { assert it instanceof String }
     }

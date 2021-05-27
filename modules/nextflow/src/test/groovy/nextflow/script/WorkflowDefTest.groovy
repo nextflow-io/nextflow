@@ -59,8 +59,8 @@ class WorkflowDefTest extends Dsl2Spec {
             }
         
             workflow bravo() {
-              get: foo
-              get: bar
+              take: foo
+              take: bar
               main:
                 print foo
                 print bar
@@ -69,8 +69,8 @@ class WorkflowDefTest extends Dsl2Spec {
             }
             
             workflow delta() {
-                get: foo
-                get: bar
+                take: foo
+                take: bar
                 main:
                 println foo+bar
             }
@@ -81,33 +81,33 @@ class WorkflowDefTest extends Dsl2Spec {
         when:
         def script = (TestScript)new GroovyShell(new ScriptBinding(), config).parse(SCRIPT).run()
         def meta = ScriptMeta.get(script)
-        println meta.getWorkflow('bravo') .source.stripIndent()
+
         then:
         meta.definitions.size() == 4
         meta.getWorkflow('alpha') .declaredInputs == []
         meta.getWorkflow('alpha') .declaredVariables == []
-        meta.getWorkflow('alpha') .source.stripIndent() == "print 'Hello world'\n"
+        meta.getWorkflow('alpha') .source.stripIndent(true) == "print 'Hello world'\n"
 
         meta.getWorkflow('bravo') .declaredInputs == ['foo', 'bar']
         meta.getWorkflow('bravo') .declaredVariables == ['$out0']
-        meta.getWorkflow('bravo') .source.stripIndent() == '''\
-              get: foo
-              get: bar
+        meta.getWorkflow('bravo') .source.stripIndent(true) == '''\
+              take: foo
+              take: bar
               main:
                 print foo
                 print bar
               emit: 
                 foo+bar
-              '''.stripIndent()
+              '''.stripIndent(true)
 
         meta.getWorkflow('delta') .declaredInputs == ['foo','bar']
         meta.getWorkflow('delta') .declaredVariables == [] 
-        meta.getWorkflow('delta') .source.stripIndent() == '''\
-                get: foo
-                get: bar
+        meta.getWorkflow('delta') .source.stripIndent(true) == '''\
+                take: foo
+                take: bar
                 main:
                 println foo+bar
-                '''.stripIndent()
+                '''.stripIndent(true)
 
         meta.getWorkflow('empty') .source == ''
         meta.getWorkflow('empty') .declaredInputs == []
@@ -128,7 +128,7 @@ class WorkflowDefTest extends Dsl2Spec {
         def runner = new MockScriptRunner().setScript(SCRIPT).invoke()
         def meta = ScriptMeta.get(runner.getScript())
         then:
-        meta.getWorkflow(null).getSource().stripIndent() == 'print 1\nprint 2\n'
+        meta.getWorkflow(null).getSource().stripIndent(true) == 'print 1\nprint 2\n'
 
     }
 
@@ -142,7 +142,7 @@ class WorkflowDefTest extends Dsl2Spec {
         def SCRIPT = '''
                     
             workflow alpha {
-              get: foo
+              take: foo
               emit: bar
               emit: baz  
               
@@ -183,12 +183,8 @@ class WorkflowDefTest extends Dsl2Spec {
 
         when:
         def script = (TestScript)new GroovyShell(new ScriptBinding(), config).parse(SCRIPT).run()
-        def meta = ScriptMeta.get(script)
         then:
-        meta.definitions.size() == 1
-        meta.getWorkflow(null) .declaredInputs == []
-        meta.getWorkflow(null) .declaredVariables == ['baz.out', 'x', '$out0']
-        meta.getWorkflow(null) .getDeclaredPublish() == [foo: [:], bar: [to:'some/path'], '$out0': [to:'other/path']]
+        thrown(MultipleCompilationErrorsException)
     }
 
     def 'should not allow publish is sub-workflow' () {
@@ -223,9 +219,9 @@ class WorkflowDefTest extends Dsl2Spec {
         def SCRIPT = '''
                     
             workflow alpha {
-              get: foo
+              take: foo
               main: println foo
-              get: bar
+              take: bar
             }
        
         '''
@@ -236,7 +232,7 @@ class WorkflowDefTest extends Dsl2Spec {
         def workflow = ScriptMeta.get(script).getWorkflow('alpha')
         then:
         def e = thrown(MultipleCompilationErrorsException)
-        e.message.contains('Unexpected workflow `get` context here')
+        e.message.contains('Unexpected workflow `take` context here')
 
     }
 
@@ -327,7 +323,7 @@ class WorkflowDefTest extends Dsl2Spec {
         def SCRIPT = '''
                     
             workflow alpha {
-              get:
+              take:
                 foo
               main:
                 print x 
@@ -341,14 +337,14 @@ class WorkflowDefTest extends Dsl2Spec {
         def script = (TestScript)new GroovyShell(binding,config).parse(SCRIPT).run()
         def workflow = ScriptMeta.get(script).getWorkflow('alpha')
         then:
-        workflow.getSource().stripIndent() == '''\
-                            get:
+        workflow.getSource().stripIndent(true) == '''\
+                            take:
                               foo
                             main:
                               print x 
                             emit: 
                               foo  
-                            '''.stripIndent()
+                            '''.stripIndent(true)
     }
 
     def 'should capture empty workflow code'  () {

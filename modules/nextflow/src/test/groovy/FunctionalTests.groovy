@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -116,7 +117,7 @@ class FunctionalTests extends Specification {
             process taskHello {
                 echo true
                 maxForks 11
-                ''
+                'echo hello'
             }
 
             '''
@@ -143,7 +144,7 @@ class FunctionalTests extends Specification {
         def CONFIG = '''
             process.ext.foo = 'hello'
         '''
-        def cfg = new ConfigSlurper().parse(CONFIG)
+        def cfg = new ConfigParser().parse(CONFIG)
 
         when:
         def script = '''
@@ -183,7 +184,7 @@ class FunctionalTests extends Specification {
                 }
             }
         '''
-        def cfg = new ConfigSlurper().parse(configStr)
+        def cfg = new ConfigParser().parse(configStr)
 
         when:
         def script = '''
@@ -215,11 +216,10 @@ class FunctionalTests extends Specification {
                 cpus = { 2 * task.attempt }
                 memory = { 1.GB * task.attempt  }
                 time = { 1.h * task.attempt }
-
-                $taskHello.errorStrategy = 'finish'
+                withName: taskHello{ errorStrategy = 'finish' }
             }
             '''
-        def cfg = new ConfigSlurper().parse(configStr)
+        def cfg = new ConfigParser().parse(configStr)
 
 
         when:
@@ -273,8 +273,10 @@ class FunctionalTests extends Specification {
                     queue = 'big-partition'                
                 }
                 
-                $legacy.cpus = 3 
-                $legacy.queue = 'legacy-queue'
+                withName: legacy {
+                    cpus = 3 
+                    queue = 'legacy-queue'
+                }
             }
             '''
 

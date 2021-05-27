@@ -3,7 +3,7 @@ set -e
 #
 # run normal mode
 #
-$NXF_RUN -with-docker nextflow/rnatoy | tee stdout
+$NXF_RUN -with-docker quay.io/nextflow/rnatoy | tee stdout
 
 [[ `grep INFO .nextflow.log | grep -c 'Submitted process > mapping'` == 2 ]] || false
 [[ `grep INFO .nextflow.log | grep -c 'Submitted process > buildIndex'` == 1 ]] || false
@@ -13,7 +13,7 @@ $NXF_RUN -with-docker nextflow/rnatoy | tee stdout
 #
 # run resume mode
 #
-$NXF_RUN -with-docker nextflow/rnatoy -resume | tee stdout
+$NXF_RUN -with-docker quay.io/nextflow/rnatoy -resume | tee stdout
 
 [[ `grep INFO .nextflow.log | grep -c 'Cached process > mapping'` == 2 ]] || false
 [[ `grep INFO .nextflow.log | grep -c 'Cached process > buildIndex'` == 1 ]] || false

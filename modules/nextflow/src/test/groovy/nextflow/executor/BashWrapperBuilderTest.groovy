@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,22 +17,18 @@
 
 package nextflow.executor
 
-import spock.lang.Specification
-import spock.lang.Unroll
-
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
 import nextflow.Session
-import nextflow.cloud.aws.batch.AwsOptions
 import nextflow.container.ContainerConfig
 import nextflow.container.DockerBuilder
-import nextflow.container.PodmanBuilder
 import nextflow.container.SingularityBuilder
 import nextflow.processor.TaskBean
 import nextflow.util.MustacheTemplateEngine
-
+import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -202,6 +199,7 @@ class BashWrapperBuilderTest extends Specification {
         bash.getContainerImage() >> 'foo/bar'
         bash.getContainerMount() >> null
         bash.getContainerMemory() >> null
+        bash.getContainerCpus() >> null
         bash.getContainerCpuset() >> null
         bash.getContainerOptions() >> null
 
@@ -726,8 +724,23 @@ class BashWrapperBuilderTest extends Specification {
         done
         shifter --image docker:ubuntu:latest /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"
         '''.stripIndent().rightTrim()
-        binding.kill_cmd == null
         binding.cleanup_cmd == ""
+        binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
+
+    }
+
+    def 'should create wrapper with singularity'() {
+        when:
+        def binding = newBashWrapperBuilder(
+                containerEnabled: true,
+                containerImage: 'docker:ubuntu:latest',
+                environment: [PATH: '/path/to/bin:$PATH', FOO: 'xxx'],
+                containerConfig: [enabled: true, engine: 'singularity'] as ContainerConfig ).makeBinding()
+
+        then:
+        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec docker:ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
+        binding.cleanup_cmd == ""
+        binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
 
     }
 
@@ -808,118 +821,6 @@ class BashWrapperBuilderTest extends Specification {
         binding.containsKey('after_script')
     }
 
-    def 'should include s3 helpers' () {
-        given:
-        def folder = Paths.get('/work/dir')
-        def target = Mock(Path)
-        target.toString() >> '/some/bucket'
-
-        def bean = new TaskBean([
-                name: 'Hello 1',
-                workDir: folder,
-                targetDir: target,
-                scratch: true,
-                outputFiles: ['test.bam','test.bai'],
-                script: 'echo Hello world!',
-        ])
-
-        def copy = Spy(SimpleFileCopyStrategy, constructorArgs:[bean])
-        copy.getPathScheme(target) >> 's3'
-        copy.getAwsOptions() >> new AwsOptions()
-
-        /*
-         * simple bash run
-         */
-        when:
-        def binding = new BashWrapperBuilder(bean,copy).makeBinding()
-        then:
-        binding.unstage_outputs == '''\
-                  nxf_s3_upload 'test.bam' s3://some/bucket || true
-                  nxf_s3_upload 'test.bai' s3://some/bucket || true
-                  '''.stripIndent().rightTrim()
-
-        binding.helpers_script == '''\
-            # aws helper
-            nxf_s3_upload() {
-                local pattern=$1
-                local s3path=$2
-                IFS=$'\\n\'
-                for name in $(eval "ls -1d $pattern");do
-                  if [[ -d "$name" ]]; then
-                    aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
-                  else
-                    aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
-                  fi
-                done
-                unset IFS
-            }
-            
-            nxf_s3_retry() {
-                local max_attempts=1
-                local timeout=10
-                local attempt=0
-                local exitCode=0
-                while (( \$attempt < \$max_attempts ))
-                do
-                  if "\$@"
-                    then
-                      return 0
-                  else
-                    exitCode=\$?
-                  fi
-                  if [[ \$exitCode == 0 ]]
-                  then
-                    break
-                  fi
-                  sleep \$timeout
-                  attempt=\$(( attempt + 1 ))
-                  timeout=\$(( timeout * 2 ))
-                done
-            }
-            
-            nxf_s3_download() {
-                local source=$1
-                local target=$2
-                local file_name=$(basename $1)
-                local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
-                if [[ $is_dir == 1 ]]; then
-                    aws s3 cp --only-show-errors --recursive "$source" "$target"
-                else 
-                    aws s3 cp --only-show-errors "$source" "$target"
-                fi
-            }
-            
-            nxf_parallel() {
-                IFS=$'\\n\'
-                local cmd=("$@")
-                local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
-                local max=$(if (( cpus>16 )); then echo 16; else echo $cpus; fi)
-                local i=0
-                local pid=()
-                (
-                set +u
-                while ((i<${#cmd[@]})); do
-                    local copy=()
-                    for x in "${pid[@]}"; do
-                      [[ -e /proc/$x ]] && copy+=($x) 
-                    done
-                    pid=("${copy[@]}")
-            
-                    if ((${#pid[@]}>=$max)); then 
-                      sleep 1 
-                    else 
-                      eval "${cmd[$i]}" &
-                      pid+=($!)
-                      ((i+=1))
-                    fi 
-                done
-                ((${#pid[@]}>0)) && wait ${pid[@]}
-                )
-                unset IFS
-            }
-            
-            '''.stripIndent()
-    }
 
     def 'should get output env capture snippet' () {
         given:
@@ -964,5 +865,34 @@ class BashWrapperBuilderTest extends Specification {
         binding.stage_cmd == 'nxf_stage'
         binding.unstage_cmd == 'nxf_unstage'
         
+    }
+
+
+    def 'should create wrapper with podman' () {
+        when:
+        def binding = newBashWrapperBuilder(
+                containerImage: 'busybox',
+                containerEnabled: true,
+                containerConfig: [engine: 'podman', enabled: true] ).makeBinding()
+
+        then:
+        binding.launch_cmd == 'podman run -i -v /work/dir:/work/dir -w "$PWD" --entrypoint /bin/bash --name $NXF_BOXID busybox -c "/bin/bash -ue /work/dir/.command.sh"'
+        binding.cleanup_cmd == 'podman rm $NXF_BOXID &>/dev/null || true\n'
+        binding.kill_cmd == 'podman kill $NXF_BOXID'
+    }
+
+
+    def 'should create wrapper with podman and scratch' () {
+        when:
+        def binding = newBashWrapperBuilder(
+                scratch: true,
+                containerImage: 'busybox',
+                containerEnabled: true,
+                containerConfig: [engine: 'podman', enabled: true] ).makeBinding()
+
+        then:
+        binding.launch_cmd == 'podman run -i -v /work/dir:/work/dir -v "$PWD":"$PWD" -w "$PWD" --entrypoint /bin/bash --name $NXF_BOXID busybox -c "/bin/bash -ue /work/dir/.command.sh"'
+        binding.cleanup_cmd == 'rm -rf $NXF_SCRATCH || true\npodman rm $NXF_BOXID &>/dev/null || true\n'
+        binding.kill_cmd == 'podman kill $NXF_BOXID'
     }
 }

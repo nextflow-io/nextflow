@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -102,7 +103,25 @@ class ProviderConfigTest extends Specification {
     def 'should return provider attributes' () {
 
         when:
-        def config = new ProviderConfig('custom',[platform: 'github', server:'http://local.host'])
+        def config = new ProviderConfig('local',[platform: 'file', path:'/local/repo'])
+        then:
+        config.name == 'local'
+        config.platform == 'file'
+        config.domain == '/local/repo'
+        config.server == null
+        config.endpoint == null
+
+        when:
+        config = new ProviderConfig('local',[platform: 'file', path:'file:///local/repo'])
+        then:
+        config.name == 'local'
+        config.platform == 'file'
+        config.domain == '/local/repo'
+        config.server == null
+        config.endpoint == null
+
+        when:
+        config = new ProviderConfig('custom',[platform: 'github', server:'http://local.host'])
         then:
         config.name == 'custom'
         config.platform == 'github'
@@ -118,6 +137,15 @@ class ProviderConfigTest extends Specification {
         config.domain == 'my-domain.org'
         config.server == 'http://my-domain.org/gitea'
         config.endpoint == 'http://my-domain.org/gitea'
+
+        when:
+        config = new ProviderConfig('my-azure',[platform: 'azurerepos', server:'https://dev.azure.com'])
+        then:
+        config.name == 'my-azure'
+        config.platform == 'azurerepos'
+        config.domain == 'dev.azure.com'
+        config.server == 'https://dev.azure.com'
+        config.endpoint == 'https://dev.azure.com'
 
         when:
         config = new ProviderConfig('github')
@@ -176,7 +204,7 @@ class ProviderConfigTest extends Specification {
         when:
         def result = ProviderConfig.createFromText(CONFIG)
         then:
-        result.size() == 6
+        result.size() == 7
 
         result.find { it.name == 'github' }.server == 'https://github.com'
         result.find { it.name == 'github' }.auth == '12732:35454'

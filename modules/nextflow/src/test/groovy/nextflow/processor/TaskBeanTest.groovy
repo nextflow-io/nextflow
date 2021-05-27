@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +21,7 @@ import java.nio.file.Paths
 
 import nextflow.Session
 import nextflow.container.ContainerConfig
+import nextflow.executor.Executor
 import nextflow.script.ProcessConfig
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
@@ -32,15 +34,15 @@ class TaskBeanTest extends Specification {
     def 'should create a bean object' () {
 
         given:
-
         def session = Mock(Session)
         session.getStatsEnabled() >> true
-        session.getWorkDir() >> Paths.get('/work/dir')
-        session.getBinDir() >> Paths.get('/bin/dir')
 
         def process = Mock(TaskProcessor)
         process.getConfig() >> Mock(ProcessConfig)
         process.getSession() >> session
+        process.getExecutor() >> Mock(Executor) {
+            getBinDir() >> Paths.get('/bin/dir')
+        }
 
         def config = new TaskConfig()
         config.module = ['blast/1.1']

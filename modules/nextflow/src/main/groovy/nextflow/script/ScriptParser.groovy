@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +18,6 @@
 package nextflow.script
 
 import java.nio.file.Path
-import java.util.regex.Pattern
 
 import com.google.common.hash.Hashing
 import groovy.transform.CompileStatic
@@ -25,12 +25,13 @@ import nextflow.Channel
 import nextflow.Nextflow
 import nextflow.NextflowMeta
 import nextflow.Session
-import nextflow.ast.OpXform
 import nextflow.ast.NextflowDSL
 import nextflow.ast.NextflowXform
+import nextflow.ast.OpXform
 import nextflow.exception.ScriptCompilationException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
+import nextflow.io.ValueObject
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import org.apache.commons.lang.StringUtils
@@ -45,8 +46,6 @@ import org.codehaus.groovy.control.customizers.ImportCustomizer
  */
 @CompileStatic
 class ScriptParser {
-
-    private static final Pattern DSL2_DECLARATION = ~/(?m)^\s*(nextflow\.(?:preview|enable)\.dsl\s*=\s*2)\s*;?\s*$/
 
     private ClassLoader classLoader
 
@@ -68,7 +67,7 @@ class ScriptParser {
 
     ScriptParser(Session session) {
         this.session = session
-        this.classLoader = session.getClassLoader()
+        this.classLoader = session.classLoader
     }
 
     ScriptParser(ClassLoader loader) {
@@ -117,6 +116,8 @@ class ScriptParser {
         importCustomizer.addImports( Channel.name )
         importCustomizer.addImports( Duration.name )
         importCustomizer.addImports( MemoryUnit.name )
+        importCustomizer.addImports( ValueObject.name )
+        importCustomizer.addImport( 'channel', Channel.name )
         importCustomizer.addStaticStars( Nextflow.name )
 
         config = new CompilerConfiguration()
@@ -130,10 +131,6 @@ class ScriptParser {
             config.setTargetDirectory(session.classesDir.toFile())
 
         return config
-    }
-
-    protected boolean isDsl2(String script) {
-        script.find(DSL2_DECLARATION) != null
     }
 
     /**
@@ -171,12 +168,11 @@ class ScriptParser {
     ScriptParser parse(String scriptText, GroovyShell interpreter) {
         final String clazzName = computeClassName(scriptText)
         try {
+            NextflowMeta.instance.checkDsl2Mode(scriptText)
             script = (BaseScript)interpreter.parse(scriptText, clazzName)
             final meta = ScriptMeta.get(script)
             meta.setScriptPath(scriptPath)
             meta.setModule(module)
-            if( isDsl2(scriptText) )
-                NextflowMeta.instance.enableDsl2()
             return this
         }
         catch (CompilationFailedException e) {

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,8 +55,8 @@ class PbsProExecutor extends PbsExecutor {
         }
 
         def res = []
-        if( task.config.cpus > 1 ) {
-            res << "ncpus=${task.config.cpus}".toString()
+        if( task.config.hasCpus() || task.config.memory ) {
+            res << "ncpus=${task.config.getCpus()}".toString()
         }
         if( task.config.memory ) {
             // https://www.osc.edu/documentation/knowledge_base/out_of_memory_oom_or_excessive_memory_usage
@@ -81,8 +82,12 @@ class PbsProExecutor extends PbsExecutor {
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
-        String cmd = 'qstat -f'
-        if( queue ) cmd += ' ' + queue
+        String cmd = 'qstat -f ' 
+        if( queue ) {
+            cmd += queue
+        } else {
+            cmd += '$( qstat -B | egrep -v \'(^Server|^---)\' | awk -v ORS=\' \' \'{print \"@\"\$1}\' )'
+        }
         return ['bash','-c', "set -o pipefail; $cmd | { egrep '(Job Id:|job_state =)' || true; }".toString()]
     }
 

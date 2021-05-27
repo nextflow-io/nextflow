@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,12 +17,14 @@
 
 package nextflow.daemon
 
+import org.pf4j.ExtensionPoint
+
 /**
  * Generic interface to launch the cluster daemon
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-public interface DaemonLauncher {
+interface DaemonLauncher extends ExtensionPoint {
 
     void launch( Map config )
 

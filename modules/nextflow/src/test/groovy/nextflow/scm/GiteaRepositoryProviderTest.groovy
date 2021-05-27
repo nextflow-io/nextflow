@@ -29,12 +29,11 @@ class GiteaRepositoryProviderTest extends Specification {
         providers {
 
             mygitea {
-                server = 'https://git.mydomain.com'
-                endpoint = 'https://git.mydomain.com/api/v1'
+                server = 'https://git.seqera.io'
+                endpoint = 'https://git.seqera.io/api/v1'
                 platform = 'gitea'
                 user = 'myname'
                 password = 'mypassword'
-                token = '65eaa9c8ef52460d22a93307fe0aee76289dc675'
             }
 
         }
@@ -47,7 +46,7 @@ class GiteaRepositoryProviderTest extends Specification {
         def obj = new ProviderConfig('gitea', config.providers.mygitea as ConfigObject)
 
         expect:
-        new GiteaRepositoryProvider('pditommaso/hello', obj).getEndpointUrl() == 'https://git.mydomain.com/api/v1/repos/pditommaso/hello'
+        new GiteaRepositoryProvider('pditommaso/hello', obj).getEndpointUrl() == 'https://git.seqera.io/api/v1/repos/pditommaso/hello'
     }
 
     def 'should return project URL' () {
@@ -57,7 +56,7 @@ class GiteaRepositoryProviderTest extends Specification {
         def obj = new ProviderConfig('gitea', config.providers.mygitea as ConfigObject)
 
         expect:
-        new GiteaRepositoryProvider('pditommaso/hello', obj).getRepositoryUrl() == 'https://git.mydomain.com/pditommaso/hello'
+        new GiteaRepositoryProvider('pditommaso/hello', obj).getRepositoryUrl() == 'https://git.seqera.io/pditommaso/hello'
 
     }
 
@@ -68,7 +67,34 @@ class GiteaRepositoryProviderTest extends Specification {
         def obj = new ProviderConfig('gitea', config.providers.mygitea as ConfigObject)
 
         expect:
-        new GiteaRepositoryProvider('pditommaso/hello', obj).getContentUrl('main.nf') == 'https://git.mydomain.com/api/v1/repos/pditommaso/hello/raw/main.nf'
+        new GiteaRepositoryProvider('pditommaso/hello', obj)
+                .getContentUrl('main.nf') == 'https://git.seqera.io/api/v1/repos/pditommaso/hello/raw/main.nf'
+        and:
+        new GiteaRepositoryProvider('pditommaso/hello', obj)
+                .setRevision('12345')
+                .getContentUrl('main.nf') == 'https://git.seqera.io/api/v1/repos/pditommaso/hello/raw/main.nf?ref=12345'
+
+    }
+
+    @Requires({System.getenv('NXF_GITEA_ACCESS_TOKEN')})
+    def 'should read file content'() {
+
+        given:
+        def token = System.getenv('NXF_GITEA_ACCESS_TOKEN')
+        def config = new ProviderConfig('gitea', new ConfigSlurper().parse(CONFIG).providers.mygitea as ConfigObject).setAuth(token)
+
+        when:
+        def repo = new GiteaRepositoryProvider('test-org/nextflow-ci-repo', config)
+        def result = repo.readText('README.md')
+        then:
+        result.contains('nextflow-ci-repo')
+
+//        when:
+//        repo = new GiteaRepositoryProvider('test-org/nextflow-ci-repo', config)
+//                        .setRevision('foo')
+//        result = repo.readText('README.md')
+//        then:
+//        result.contains("foo branch")
 
     }
 

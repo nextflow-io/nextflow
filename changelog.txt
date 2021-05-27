@@ -1,5 +1,277 @@
 NEXTFLOW CHANGE-LOG
 ===================
+21.04.1 [stable] - 14 May 2021
+- Fix nested params file parse #2091
+- Fix Malformed config error reporting #2105
+- Fix Use default opts for trace file creation [09e6c6ac]
+
+21.04.0 [stable] - 2 May 2021
+- Fix NPE when AWS Batch job container is not returned [412b6fde]
+- Fix execution hang when native task fail to submit #2060 [1253485d]
+- Update preview message [e1eebdcd]
+- Fix nf-ignite all packaging [72b6a428]
+- Fix GS failing tests [be4f91e9]
+- Fix AWS batch executor fails when using self-contained distribution #2058 [2e344c18]
+- Fix groupTuple sort criteria with closure #2020 [28a579a9]
+- Patch invalid double number cli parsing #2039 [4de4670c] [dcadaaeb]
+- Update sphinx_rtd_theme 0.5.2 [4a165f43]
+- Disable cpus option when running docker with legacy opt [1a7854a5]
+
+21.04.0-edge - 8 Apr 2021
+- Add readOnly flag to k8s volume mounts (#2013) [33bd24ac]
+- Add Start default plugins on-demand #1964 [cf2a9d73]
+- Add support for tower workspaceId [e2977688]
+- Improve suppor for BitBucket server repos [eb946e27]
+- Fix toInt/Long/Float/Double operator hangs with value channel [7c35d985]
+- Fix regression caused by nested params handling #1923 [b25af49b]
+- Fix Cache invalidation when repo is cloned between runs #1989 [ac526f38]
+- Fix Invalid setting of TMP var with singularity #1997 [23f80121] [472cfbdd]
+- Fix issue overriding nested params from cli #1923  [cfe6b1d1]
+- Fix az path handling curly brackets globs #1969 [c78a1bbf]
+- Fix Missing git credentials when checking last commit id [f101308e]
+- Fix plugins version check against local installation [535c2bb5]
+- Fix local dependant formatting #1962 [2a5cbac1]
+- Fix Encode path parameter at GitLab getContentUrl [6f80f651]
+- Fix Only use sudo rm with docker #1956 [f9490423]
+- Prevent AZ NPE when missing vmtype + better logging #1992 [711362ca]
+- Refactor params file var binding #1860 #1972 [330f044a]
+- Prevent jobs names longer than 100 chars OAR exec [6daa21b9]
+- Bump nf-azure@0.9.6 + nf-amazon@1.0.3 [aff1d355]
+- Bump nf-amazon@1.0.3 - s3fs@1.0.9 - solve #1830 [b3b221c1]
+- Bump nf-tower@1.1.0 [29fdd9f7]
+- Bump nf-amazon@1.0.4 + nxf-s3fs@1.1.0 [c638af80]
+- Bump nf-azure@0.9.7 [07c59946]
+
+21.03.0-edge - 5 Mar 2021
+- Add support for serializable ValueObject [8dfaadf3]
+- Add abilitity to fetch revisioned git assets 
+- Add support for FixOwnership to AWS batch [24f83741]
+- Add support for custom network to GLS #1810 [171f4aa8]
+- Add ability to handle list of az vm types [00ced0b3]
+- Add tower config scope to docs #1890 f2bd96fa
+- Add charliecloud container environment from file (#1909) 4553648b
+- Add azcopy tool install mode opts [9e9337d3]
+- Update Az default vm type to Standard_D4_v3 [4c6e76b6]
+- Update NF console dependency [a2d06e15]
+- Remove CDN from timeline reports and make them offline readable #1927 [c0e5a941]
+- Fix plugins install failing in some file systems #1882 [8cc43391]
+- Fix catch failing commands in nxf_parallel #1884 [dd56f6c1]
+- Fix missing error on empty process script [3607f84e]
+- Fix GSL path de-serialization issue [c6cf784f]
+- Fix Memory unit cannot be a negative number #1902 [abd1c9d9]
+- Fix pod spec labels to start with numbers in addition to alphas [79740edf]
+- Fix OAR executor log files #1761 [6f2ff4e4]
+- Fix issue cause by sleep with subsecond argument [c4be8d00] [63974ac6]
+- Fix az blob storage SAS permissions [18a33213]
+- Fix sort human-readable tasks in report [6d68f28d]
+
+21.02.0-edge - 1 Feb 2021
+- Fix Issue when merging nested cli params  #1856 [275e54c4] [fe37da6d]
+- Fix job status detection on PBS pro #1840 [c1598908]
+- Fix Issue when merging nested cli params #1856 (19 hours ago) <Paolo Di Tommaso>
+- Revert the CPU/memory options being passed to singularity VM instead of singularity container [0d04e0f9]
+- Add ability to specify plugins with cli [de91218f]
+- Decrease upload/download process polling to 0.2secs [6ca2d6ca]
+- Remove nf-amazon as default [e6810e90]
+- Make plugin services singleton [cacd9328] [5787be6d]
+- Make repository provider accessible to subclasses [988bccc6]
+- Fix error on plugin downloading #1859 [77cabb3c]
+
+21.01.1-edge - 15 Jan 2021
+- Plugins stability improvements [8d849ec9] [bf093826]
+- Charliecloud improvements [2242411a]
+- Fix issue of FS discovery with dyn plugin loading [bf5e86df]
+- Fix crash on startup when mem reported < 0 [095236b8]
+- Fix and stability [e4b8afb5]
+- Fix launcher on Java11 [c6b78034]
+- Add plugins custom version manager (4 days ago) <Paolo Di Tommaso>
+- Improve NF version checking [d33ea642]
+- Bump plugins minor upgrade [f91bc21e]
+
+21.01.0-edge - 04 Jan 2021
+- Merge plugins feature [d959bfdb]
+- Prevent twice access remote scm file [b2798556]
+- Fix DAG edges not connected correctly #1486 [cece1161]
+- Fix k8s executor must provide cpu resource requests #1570 [6896e923]
+- Fix http/ftp read buffer size [a2886baf]
+- Add support for OAuth Bearer auth [5823c280]
+- Add support for basic auth for http/s file provider [6027fcba]
+- Add User-Agent info to httpfs requests [222637de]
+- Update CPU and RAM for containers (#1833) [ccf5c8ba]
+- Move test containes to quay.io [7db053eb] [773be707] [c10a7f53]
+
+20.12.0-edge - 12 Dec 2020 
+- Add support for charliecloud container engine #1809
+- Fix glitch on K8s task progress update [668434f6]
+- Upgrade to groovy 3.0.7 [27056035]
+
+20.11.0-edge - 16 Nov 2020
+- Fix Allow nextflow to handle http protocol for Singularity images #1791
+- Fix params-file overrides config parameters [b03efcac]
+- Fix println failing test #1621 [8c6f0f97] [9d2e5850]
+- Let output env variables be optional (#1740) [3fca3655]
+- Add stub-run feature #1774 [3de45c22] [e2d6d55b]
+- Add overwrite option to trace/time/report/dag features #813 [a0615474]
+- Allow nested CLI params #1182 [19ab8a8f] [df6204e3] 
+- Allow setting google projectId in nextflow config [223b5d6c]
+- Make binDir accessible from the executor scope [1405a28f]
+
+20.10.0 - 1 Nov 2020
+- Add warning for AWS Batch mem request lower than 4 GB [e9240fc9]
+- Fix issue with docker images tagged by SHA #1777
+- Add support for Bitbucket tags and branches retrivial [5083066e]
+- Add support for Tower client bearer authentication [532282ae]
+- Fix Skip FS lock when Conda dir exist #1771
+- Add support for Java 15 [b1f48884]
+- Fix build with Gradle 6.7 [8d7227f0] 
+
+20.09.1-edge - 15 Oct Sep 2020 
+- Prevent USR1 signal to stop jobs #1753
+- Add -main-script cli option [702ff64c]
+- Improve Singularity image file caching #1706 [dd92772b]
+- Fix unexpected default GLS action flags #1749
+- Patch unpexpected error on tower serialization [f922324a]
+
+20.09.0-edge - 23 Sep 2020 
+- Fix invalid error message on missing process #1719 [fc607f11]
+- Deduplicate GS file + parallel up/downloads [29d37083]
+- Deduplicate S3 file uploads [0b65d61f]
+- Fix issue on GS path composition [276f0ed3]
+- Add NXF_PARAMS_FILE env var [2e3c9232]
+- Allow configurable container mounts [8dc0adf4]
+- Refactor common Bash helper functions [22a0ff34] [502309b7]
+- Fix race condition creating FTP file system #1725 
+- Fix invalid checkWarn method invocation [ba052a02]
+- Move makeDigest into build.gradle file [a2b5de8f]
+- Add variable NXF_CONFIG_FILE [83365aa3]
+- Patch use of GString for fromSra apiKey option [a8b81ada]
+- Use repository URL instead of Git clone URL [75a04d90]
+- Fix Invalid exception capture for missing config [ce427924]
+- Fix podman issue on duplicate mounts [661a40e9]
+- Fix FromSra illegal character error [5a86d180]
+- Fix Allow custom SCM file location #1657 [a90e66e3]
+
+20.08.1-edge - 2 Sep 2020 
+- Add variable NXF_CONFIG_FILE [d15edcb8]
+
+20.08.0-edge - 24 Aug 2020
+- Merge Groovy3 runtime and support for Java 12/13/14
+- Use repository URL instead of Git clone URL [102f8b01]
+- Fix Invalid exception capture for missing config [8c7accca]
+- Fix podman issue on duplicate mounts #1710 [d0cc38de]
+- Fix FromSra illegal character error #1700 [a45decfb]
+- Fix Allow custom SCM file location #1657 [7c27f895]
+- Fix dynamic executors loading [7b9ce82f]
+- Fix missing newline on cmd log stdout/err #1705 [1416a388]
+- Fix k8s timeline start #1687 [24dff871]
+- Remove unneeded parentheses from stdout declaration [dc029c04]
+- Merge execution logs command docs [577ec744]
+- Passing exact memory to TES executor in GiB #1696 [c8a15545]
+- Improve docs replacing suscribe{println it} with view() [f84ccb6f] [cb2d607d]
+- Use current environment Bash #1598 #1614 [e70ef87a]
+- Include GA4GH support into the standalone binary (make pack) #1666 [e2175d45]
+- Update Bitbucket docs [b9b57f83]
+- Clone/Pull submodules recursively #1615 [5f20ab6a]
+- Bump nf-ignite to version 1.1.0
+
+20.07.1 - 24 Jul 2020
+- see 20.07.0 and 20.07.0-RC1
+
+20.07.0 - (skipped)
+- Allow unqualified stdin/stdout defintions with DSL2 [bcdcaab6]
+
+20.07.0-RC1 - 21 Jul 2020 
+- Add Dsl2 enable flag [08238109]
+- Add check on invalid scope syntax definition [23c92021]
+- Add channel as alias for Channel [05c358c9]
+- Add DSL2 deprecation + clean up syntax [1b4b1307]
+- Add DOI field to NF manifest #1676 [ec6ee223]
+- Improve join duplicate detection [33eb9ef5]
+- Improve mix operator error message [8074d714]
+- Remove invalid log message [48b1b9f1]
+- Fix hidden error message on fail fast run [3b4b377c]
+- Disallow upwrapped includes + hard deprecation [19130f87]
+- Suppress trap for SIGUSR1 signal #1656 [ca5bcf46]
+- Improve error reporting on invalid task id [3921de1a]
+
+20.06.0-edge - 5 Jul 2020 
+- Add more debug logging for AWS helper [2a62fdf7]
+- Add join options failOnDuplicate and failOnMismatch [387366aa]
+- Add strict mode flag [4ba5ac18]
+- Add support for selecting minimum CPU platform on GCP (#1633) [afc4375d]
+- Add missing trace fields to docs [bf2e1637]
+- Fix Invalid GLS path composition in staging directories #1654 [e33fff98]
+- Fix for feature 1647 that allows non gpu k8s accelerator resources. (#1649) [c1efa29d]
+- Fix Issue accessing S3 bucket #1596 [ffc6f843]
+- Fix Update getDomain method in ProviderConfig to support local repositories - #1492 (#1624) [651501ac]
+
+20.05.0-edge - 31 May 2020
+- Add support for NXF_LOG_NAME env var [cf496615]
+- Add exception specialiation for ambiguous repo [a34b1d2a]
+- Add support for tower_workflow_id env var [53188126]
+- Add config profile names accessor [2784cdb8]
+- Add support for Google Cloud buckets with Requester Pays set #1466 [bc9db8d8]
+- Add Git tag and branch retrieval [7c97f23f]
+- Fix PublishDir error caused by duplicates output files [5f3b69c1]
+- Fix weird issue on config resolution [0d0fef4b]
+- Fix resolution of malformed configs [fe213e41]
+- Fix K8s labels and annotation normalization [6434b9d] #1577 #1584 
+- Fix minor git path provider ending slash [9888be29]
+- Fix bugs in GA4GH TES support (#1589) [26708335]
+
+20.04.1-edge - 19 Apr 2020
+- Fix AWS auth with temporary security token [6a7b11b8]
+
+20.04.0-edge - 13 Apr 2020
+- Add SGE hr status handling (#1558) [f4db0049]
+- Add moduleDir, projectDir and launchDir vars [7832a697] [576a5694]
+- Add executor display name rendering [74c90ca9]
+- Add ability to pipe custom fun [DSL2] [80bb6485]
+- Add Aws Batch container image validation [e73951fa]
+- Recognizes more UGE states (#1536) [4dacebbf]
+- Prevent invalid process tag values [f2da1357]
+- Report Tower backend error cause on failure [da8ac8f5]
+- Fix Config cmd should resolve remote projects #889 [c2e0ac0b]
+- Fix issue applying branch/multiMap to value channel [e69f39fa]
+- Fix Kill signal is not propagated for Singularity container #1561
+- Fix docs typos [d7261d2e]
+- Fix Minor docs update #1545 
+- Revert "Bump jline 2.14.9" [ef7040cb]
+- Deprecate validExitStatus directive #1564
+- Improve error message [DSL2] [f8a0ee1c]
+- Add sluper parse method for Path [a54fd03d]
+- Report error message when accessing invalid out #1553 [83bd009c]
+- Remove deprecated $ config syntax [0a31f9df]
+- Remove deprecated workflow publish [DSL2] [1bd7b4a4]
+- Remove support for workflow 'get' [d9b91149]
+- Remove deprecated process output getter [013a323b]
+- Remove deprecated out cardinal getters [414fae94]
+- Remove deprecated gpu directive [f48b2c24]
+- Minor executor logging [7f94299b]
+- Minor improvement createDirIfNotExists API [34211675]
+- Bump groovy 2.5.11 
+
+20.03.0-edge - 28 Mar 2020
+- Add support for GLS private addr #1545 [a481b42b]
+- Add AWS batch job def normalise function [79239f05]
+- Fix Escape Singularity env variables #1535 [b651a371]
+- Add Local executor file system check [ffc92926]
+- Add Launch Id to Tower client [d768d2d1]
+- Add workflow progress on completion [aea41f37]
+- Remove deprecated onFlowStart method [14f12b5f]
+- Minor method visibility change [43bc9697]
+- Minor log change [130a963b]
+- Fix docs broken link [0a1ec9a9]
+- Fix typo CVS -> CSV #1500 [d89281c3]
+
+20.02.0-edge - 29 Feb 2020
+- Fix Unable to create AWS helper class warn #1504
+- Fix Ansi log flickers when variable-length tags are used #1288
+- Fix Directive maxForks may cause execution to hang #1432
+- Fix Missing tag in ansi log #1503
+- Fix PBSPRO res req should always include cpus #1510 
+- Deprecate workflow publish 7f315a63
+
 20.01.0 - 12 Feb 2020
 - Fix ansi logging and line count [4f5c7187]
 - Fix Division by 0 in launcher script with Biocontainers #1488
@@ -142,7 +414,7 @@ NEXTFLOW CHANGE-LOG
 
 19.08.1-edge - 26 Aug 2019
 - Add Process named output channels #1290 [DSL] [6a756fd2]
-- Add workflow publish directive [DLS2] [287a095e]
+- Add workflow publish directive [DSL2] [287a095e]
 - Add stageAs option to input path [DSL2] [9b5f55f6]
 - Add workflow entry option [DSL2] [f29e3e04]
 - Add extension to module file name instead of simpleName [DSL2] [71a60365]
@@ -256,7 +528,7 @@ NEXTFLOW CHANGE-LOG
 - Improve Dsl-2 error reporting [4e2621ff]
 - Improve CI tests scripts [febeb530]
 - Improve docs for config profiles [8cf95a5d]
-- Syntax enhancement aka DLS-2 #984 [651af95a]
+- Syntax enhancement aka DSL-2 #984 [651af95a]
 - Print summary only the run takes > 3mins [cd459713]
 - Render last tag along with the process name #1144 [8cf8cc44]
 - Sync build scripts [a5689217]

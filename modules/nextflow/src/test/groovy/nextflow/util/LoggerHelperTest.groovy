@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -142,9 +143,9 @@ class LoggerHelperTest extends Specification {
 
         where:
         CLAZZ           | METHOD        | MSG
-        ScriptBinding   | 'printx'      | 'Unknown method `printx`'
-        BaseScript      | 'printq'      | 'Unknown method `printq` -- Did you mean?\n  print\n  printf'
-        DataflowQueue   | 'view'        | 'Unknown method `view` on channel type'
+        ScriptBinding   | 'printx'      | 'Unknown method invocation `printx`'
+        BaseScript      | 'printq'      | 'Unknown method invocation `printq` -- Did you mean?\n  print\n  printf'
+        DataflowQueue   | 'view'        | 'Unknown method invocation `view` on channel type'
     }
 
     @Unroll

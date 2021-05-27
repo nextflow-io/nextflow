@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,13 +21,11 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.Global
-import nextflow.Session
-import nextflow.cloud.aws.batch.AwsOptions
-import nextflow.cloud.aws.batch.S3Helper
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.util.Escape
+import static nextflow.util.SpuriousDeps.getS3UploaderScript
+
 /**
  * Simple file strategy that stages input files creating symlinks
  * and copies the output files using the {@code cp} command.
@@ -118,14 +117,15 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
 
         def delete = []
         def links = []
-        inputFiles.each { stageName, storePath ->
+        for( Map.Entry<String,Path> entry : inputFiles ) {
+            final stageName = entry.key
+            final storePath = entry.value
 
             // delete all previous files with the same name
             delete << "rm -f ${Escape.path(stageName)}"
 
             // link them
             links << stageInputFile( storePath, stageName )
-
         }
 
         // return a big string containing the command
@@ -228,10 +228,6 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
             return "cp -fRL ${Escape.path(source)} ${Escape.path(target)}"
 
         throw new IllegalArgumentException("Unknown stage-in strategy: $mode")
-    }
-
-    protected AwsOptions getAwsOptions() {
-        new AwsOptions(Global.session as Session)
     }
 
     protected String getPathScheme(Path path) {
@@ -343,7 +339,9 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
     @Override
     String getBeforeStartScript() {
         if( getPathScheme(targetDir) == 's3' ) {
-            return S3Helper.getUploaderScript(getAwsOptions()).leftTrim()
+            final script = getS3UploaderScript()
+            if( !script ) throw new IllegalStateException("Missing required nf-amazon module")
+            return script.leftTrim()
         }
         return null
     }

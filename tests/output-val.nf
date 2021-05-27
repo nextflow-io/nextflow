@@ -1,5 +1,6 @@
 #!/usr/bin/env nextflow
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,7 +36,7 @@ process foo {
   """
 }
 
-x_channel.println { "x: $it" }
-y_channel.println { "y: $it" }
-str_channel.println { "str: $it" }
-exp_channel.println { "exp: $it" }
+x_channel.view { "x: $it" }
+y_channel.view { "y: $it" }
+str_channel.view { "str: $it" }
+exp_channel.view { "exp: $it" }

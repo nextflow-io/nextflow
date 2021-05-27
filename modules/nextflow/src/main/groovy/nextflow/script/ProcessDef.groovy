@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -146,13 +147,10 @@ class ProcessDef extends BindableDef implements ChainableDef {
 
     ProcessConfig getProcessConfig() { processConfig }
 
-    @Deprecated
-    ChannelOut getOutput() {
-        log.warn1 "Property `output` has been deprecated use `${name}.out` instead"
+    ChannelOut getOut() {
+        if(!output) throw new ScriptRuntimeException("Access to '${processName}.out' is undefined since process doesn't declare any output")
         return output
     }
-
-    ChannelOut getOut() { output }
 
     String getType() { 'process' }
 
@@ -193,6 +191,9 @@ class ProcessDef extends BindableDef implements ChainableDef {
             }
         }
 
+        // make a copy of the output list because execution can change it
+        final copyOuts = declaredOutputs.clone()
+
         // create the executor
         final executor = session
                 .executorFactory
@@ -206,7 +207,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
 
         // the result channels
         assert declaredOutputs.size()>0, "Process output should contains at least one channel"
-        return output = new ChannelOut(declaredOutputs)
+        return output = new ChannelOut(copyOuts)
     }
 
 }

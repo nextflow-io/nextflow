@@ -160,6 +160,9 @@ Downloaded pipelines can be deleted by using the ``drop`` command, as shown belo
 
     nextflow drop nextflow-io/hello
 
+
+.. _sharing-scm-file:
+
 SCM configuration file
 =======================
 
@@ -196,11 +199,14 @@ token               Private API access token (used only when the specified platf
 
 The attributes marked with a * are only required when defining the configuration of a private SCM server.
 
+.. tip::
+  A custom location for the SCM file can be specified using the ``NXF_SCM_FILE`` environment variable (requires
+ version ``20.10.0`` or later).
 
 BitBucket credentials
 ---------------------
 
-Create a ``bitbucket`` entry in the `SCM configuration file`_ specifying your user name and password, as shown below::
+Create a ``bitbucket`` entry in the `SCM configuration file`_ specifying your user name and app password, as shown below::
 
     providers {
 
@@ -210,6 +216,12 @@ Create a ``bitbucket`` entry in the `SCM configuration file`_ specifying your us
         }
 
     }
+
+
+.. note::
+   App passwords are substitute passwords for a user account which you can use for scripts and integrating
+   tools to avoid putting your real password into configuration files.
+   Learn more at `this link <https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/>`_.
 
 BitBucket Server credentials
 -----------------------------
@@ -274,8 +286,8 @@ that can be found in your GitLab `account page <https://gitlab.com/profile/accou
 Gitea credentials
 -----------------
 
-`Gitea <https://gitea.io>`_ is a Git repository server with GitHub-like GUI access. Since Gitea installation is quite 
-easy, it is suitable for building a private development environment in your network. To access your Gitea server, you 
+`Gitea <https://gitea.io>`_ is a Git repository server with GitHub-like GUI access. Since Gitea installation is quite
+easy, it is suitable for building a private development environment in your network. To access your Gitea server, you
 have to provide all the credential information below::
 
     providers {
@@ -292,9 +304,27 @@ have to provide all the credential information below::
     }
 
 
-See `Gitea documentation <https://docs.gitea.io/en-us/api-usage/>`_ about how to enable API access on your 
-server and how to issue a token. 
+See `Gitea documentation <https://docs.gitea.io/en-us/api-usage/>`_ about how to enable API access on your
+server and how to issue a token.
 
+Azure Repos credentials
+-----------------------
+
+Nextflow has a builtin support for `Azure Repos <https://azure.microsoft.com/en-us/services/devops/repos/>`_, a Git source
+code management service hosted in the Azure cloud. To access your Azure Repos with Nextflow provide the repository credentials
+using the configuration snippet shown below:
+
+    providers {
+
+        azurerepos {
+            user = 'your-user-name'
+            password = 'your-personal-access-token'
+        }
+
+    }
+
+.. tip::
+  The Personal access token can be generated in the repository `Clone Repository` dialog.
 
 Private server configuration
 ============================
@@ -482,10 +512,10 @@ have created. For example::
   process.container = 'my-docker-image'
   docker.enabled = true
 
-In this way when you launch the pipeline execution, the Docker image will be automatically downloaded and used to run 
+In this way when you launch the pipeline execution, the Docker image will be automatically downloaded and used to run
 your tasks.
 
-Read the :ref:`docker-page` page to lean more on how to use Docker containers with Nextflow.
+Read the :ref:`docker-page` page to learn more on how to use Docker containers with Nextflow.
 
 
 This mix of technologies makes it possible to write self-contained and truly reproducible pipelines which require

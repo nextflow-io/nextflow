@@ -11,8 +11,11 @@ By using this feature any process in a Nextflow script can be transparently exec
 be extremely useful to package the binary dependencies of a script into a standard and portable format that can be 
 executed on any platform supporting the Podman engine.
 
+.. note::
+    This feature requires Nextflow version ``20.01.0`` or later.
+
 .. warning::
-    This is an incubating feature. It may change in future Nextflow releases.
+    This is an incubating feature. The use in production environment is not recommended.
 
 Prerequisites
 ==============

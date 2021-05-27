@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +17,8 @@
 
 package nextflow.extension
 
+import static nextflow.extension.DataflowHelper.*
+
 import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.CompileStatic
@@ -24,8 +27,9 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
+import nextflow.NF
+import nextflow.exception.AbortOperationException
 import nextflow.util.CheckHelper
-import static nextflow.extension.DataflowHelper.addToList
 /**
  * Implements {@link OperatorEx#join} operator logic
  *
@@ -35,7 +39,7 @@ import static nextflow.extension.DataflowHelper.addToList
 @CompileStatic
 class JoinOp {
 
-    static final private Map JOIN_PARAMS = [remainder: Boolean, by: [List,Integer]]
+    static final private Map JOIN_PARAMS = [remainder: Boolean, by: [List,Integer], failOnMismatch: Boolean, failOnDuplicate: Boolean]
 
     private DataflowReadChannel source
 
@@ -47,12 +51,25 @@ class JoinOp {
 
     private Boolean[] singleton = [null,null] as Boolean[]
 
+    private boolean failOnMismatch
+
+    private boolean failOnDuplicate
+
+    private volatile boolean failed
+
+    private Set uniqueKeys = new LinkedHashSet()
+
     JoinOp( DataflowReadChannel source, DataflowReadChannel target, Map params = null ) {
         CheckHelper.checkParams('join', params, JOIN_PARAMS)
         this.source = source
         this.target = target
         this.pivot = parsePivot(params?.by)
         this.remainder = params?.remainder ? params.remainder as boolean : false
+        this.failOnMismatch = params?.failOnMismatch || (!this.remainder && NF.isStrictMode())
+        this.failOnDuplicate = params?.failOnDuplicate || NF.isStrictMode()
+        // sanity check
+        if( remainder && failOnMismatch )
+            throw new AbortOperationException("Conflicting join operator options `remainder` and `failOnMismatch`")
     }
 
     private List<Integer> parsePivot(value) {
@@ -96,18 +113,31 @@ class JoinOp {
         final Map<String,Closure> result = new HashMap<>(2)
 
         result.onNext = {
-            synchronized (buffer) {
-                def entries = join0(buffer, size, index, it)
-                if( entries ) {
-                    target.bind( entries.size()==1 ? entries[0] : entries )
+            synchronized (this) {
+                if(!failed) try {
+                    def entries = join0(buffer, size, index, it)
+                    if( entries ) {
+                        target.bind( entries.size()==1 ? entries[0] : entries )
+                    }
+                }
+                catch (Exception e) {
+                    failed = true
+                    target << Channel.STOP
+                    throw e
                 }
             }}
 
         result.onComplete = {
-            if( stopCount.decrementAndGet()==0) {
-                if( remainder )
-                    remainder0(buffer,size,target)
-                target << Channel.STOP
+            if( stopCount.decrementAndGet()==0 && !failed ) {
+                try {
+                    if( remainder || failOnDuplicate )
+                        checkRemainder(buffer,size,target)
+                    if( failOnMismatch )
+                        checkForMismatch(buffer)
+                }
+                finally {
+                    target << Channel.STOP
+                }
             }}
         
         return result
@@ -144,8 +174,11 @@ class JoinOp {
         // get the index key for this object
         final item0 = DataflowHelper.makeKey(pivot, data)
 
+        // check for unique keys
+        checkForDuplicate(item0.keys, item0.values, index, false)
+
         // given a key we expect to receive on object with the same key on each channel
-        def channels = buffer.get(item0.keys)
+        Map<Integer,List> channels = buffer.get(item0.keys)
         if( channels==null ) {
             channels = new TreeMap<Integer, List>()
             buffer[item0.keys] = channels
@@ -154,6 +187,7 @@ class JoinOp {
         if( !channels.containsKey(index) ) {
             channels[index] = []
         }
+
         def entries = channels[index]
 
         // add the received item to the list
@@ -183,10 +217,12 @@ class JoinOp {
             }
         }
 
+        // track unique keys
+        checkForDuplicate(item0.keys, item0.values, index, true)
         return result
     }
 
-    private final void remainder0( Map<Object,Map<Integer,List>> buffers, int count, DataflowWriteChannel target ) {
+    private final void checkRemainder(Map<Object,Map<Integer,List>> buffers, int count, DataflowWriteChannel target ) {
        log.trace "Operator `join` remainder buffer: ${-> buffers}"
 
         for( Object key : buffers.keySet() ) {
@@ -201,6 +237,9 @@ class JoinOp {
                 for( int i=0; i<count; i++ ) {
                     List values = entry[i]
                     if( values ) {
+                        // track unique keys
+                        checkForDuplicate(key, values[0], i,false)
+
                         addToList(result, values[0])
                         fill |= true
                         values.remove(0)
@@ -210,13 +249,52 @@ class JoinOp {
                     }
                 }
 
-                if( fill )
-                    target.bind( singleton() ? result[0] : result )
+                if( fill ) {
+                    final value = singleton() ? result[0] : result
+                    // bind value to target channel
+                    if( remainder ) target.bind(value)
+                }
                 else
                     break
             }
 
         }
+    }
+
+    protected void checkForDuplicate( key, value, int dir, boolean add ) {
+        if( failOnDuplicate && ( (add && !uniqueKeys.add(key)) || (!add && uniqueKeys.contains(key)) ) ) {
+            final msg = "Detected join operation duplicate emission on ${dir==0 ? 'left' : 'right'} channel -- offending element: key=${csv0(key,',')}; value=${csv0(value,',')}"
+            throw new AbortOperationException(msg)
+        }
+    }
+
+    protected void checkForMismatch( Map<Object,Map<Integer,List>> buffers ) {
+        final result = new HashMap<Object,List>()
+        for( Object key : buffers.keySet() ) {
+            Map<Integer,List> el = buffers.get(key)
+            final remainder0 = el.entrySet()
+            if( !remainder0 )
+                continue
+
+            result[key] = []
+            for( Map.Entry entry : remainder0 ) {
+                result[key].add(csv0(entry.value,','))
+            }
+        }
+
+        if( result ) {
+            final list = result.take(10).collect { k,v -> "key=${csv0(k,';')} values=${csv0(v,';')}" }
+            final str = result.size() == 1 ? list[0] : list.collect { "\n- $it" }.join(' ')
+            def message = "Join mismatch for the following entries: $str"
+            if( list.size()!=result.size() )
+                message += '\n(more omitted)'
+            throw new AbortOperationException(message)
+        }
+    }
+
+
+    private String csv0(value, String sep) {
+        value instanceof List ? value.join(sep) : value.toString()
     }
 
     private boolean singleton(int i=-1) {

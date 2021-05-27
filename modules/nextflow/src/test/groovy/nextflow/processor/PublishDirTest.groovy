@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,14 +17,14 @@
 
 package nextflow.processor
 
+import spock.lang.Specification
+
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
 import nextflow.Session
-import nextflow.file.FileHelper
-import spock.lang.Specification
 import test.TestHelper
 /**
  *
@@ -90,14 +91,14 @@ class PublishDirTest extends Specification {
 
         def workDir = folder.resolve('work-dir')
         def publishDir = folder.resolve('pub-dir')
-        def task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
+        def task = new TaskRun(workDir: workDir, config: new TaskConfig())
 
         when:
         def outputs =  [
                 workDir.resolve('file1.txt'),
                 workDir.resolve('file2.bam'),
                 workDir.resolve('file3.fastq')
-        ]
+        ] as Set
         def publisher = new PublishDir(path: publishDir)
         publisher.apply(outputs, task)
 
@@ -117,7 +118,7 @@ class PublishDirTest extends Specification {
                 workDir.resolve('file1.txt'),
                 workDir.resolve('file2.bam'),
                 workDir.resolve('file3.fastq')
-        ]
+        ] as Set
         publishDir.deleteDir()
         publisher = new PublishDir(path: publishDir, pattern: '*.bam')
         publisher.apply( outputs, task )
@@ -151,7 +152,7 @@ class PublishDirTest extends Specification {
 
         def workDir = folder.resolve('work-dir')
         def publishDir = folder.resolve('pub-dir')
-        def task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
+        def task = new TaskRun(workDir: workDir, config: new TaskConfig())
 
         when:
         def outputs = [
@@ -159,7 +160,7 @@ class PublishDirTest extends Specification {
                 workDir.resolve('file2.bam'),
                 workDir.resolve('dir-x'),
                 workDir.resolve('dir-y/file.3')
-        ]
+        ] as Set
         def publisher = new PublishDir(path: publishDir, mode: 'copy')
         publisher.apply( outputs, task )
 
@@ -203,7 +204,7 @@ class PublishDirTest extends Specification {
         def workDir = folder.resolve('work-dir')
         def target1 = folder.resolve('pub-dir1')
         def target2 = folder.resolve('pub-dir2')
-        def task = new TaskRun(workDir: workDir, config: Mock(TaskConfig))
+        def task = new TaskRun(workDir: workDir, config: new TaskConfig())
 
         when:
         def outputs = [
@@ -211,7 +212,7 @@ class PublishDirTest extends Specification {
                 workDir.resolve('file2.bam'),
                 workDir.resolve('file3.fastq'),
                 workDir.resolve('file4.temp')
-        ]
+        ] as Set
         def rule = { String it ->
             if( it == 'file1.txt' ) return 'file_one.txt'
             if( it !='file4.temp' ) return target2.resolve(it)
@@ -248,21 +249,6 @@ class PublishDirTest extends Specification {
         publisher.mode == PublishDir.Mode.SYMLINK
     }
 
-
-    def 'should change mode to `copy`' () {
-
-        given:
-        def processor = [:] as TaskProcessor
-        processor.name = 'foo'
-
-        def targetDir = FileHelper.asPath( 's3://bucket/work' )
-        def publisher = new PublishDir(mode:'symlink', path: targetDir, sourceFileSystem: FileSystems.default)
-
-        when:
-        publisher.validatePublishMode()
-        then:
-        publisher.mode == PublishDir.Mode.COPY
-    }
 
     def 'should change mode to `copy` when the target is a foreign file system' () {
 
@@ -305,7 +291,7 @@ class PublishDirTest extends Specification {
         when:
         def outputs =  [
                 workDir.resolve('file1.txt'),
-        ]
+        ] as Set
         def publisher = new PublishDir(path: publishDir, enabled: false)
         publisher.apply(outputs, task)
 

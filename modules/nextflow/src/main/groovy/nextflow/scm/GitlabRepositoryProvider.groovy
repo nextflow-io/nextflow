@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +16,8 @@
  */
 
 package nextflow.scm
+
+
 import groovy.util.logging.Slf4j
 /**
  * Implements a repository provider for GitHub service
@@ -61,10 +64,29 @@ class GitlabRepositoryProvider extends RepositoryProvider {
         return result
     }
 
+    @Override
+    List<BranchInfo> getBranches() {
+        // https://docs.gitlab.com/ee/api/branches.html
+        final url = "${config.endpoint}/api/v4/projects/${getProjectName()}/repository/branches"
+        this.<BranchInfo>invokeAndResponseWithPaging(url, { Map branch -> new BranchInfo(branch.name as String, branch.commit?.id as String) })
+    }
+
+    @Override
+    List<TagInfo> getTags() {
+        // https://docs.gitlab.com/ee/api/tags.html
+        final url = "${config.endpoint}/api/v4/projects/${getProjectName()}/repository/tags"
+        this.<TagInfo>invokeAndResponseWithPaging(url, { Map tag -> new TagInfo(tag.name as String, tag.commit?.id as String) })
+    }
+
     /** {@inheritDoc} */
     @Override
     String getContentUrl( String path ) {
-        "${config.endpoint}/api/v4/projects/${getProjectName()}/repository/files/${path}?ref=${getDefaultBranch()}"
+        // see
+        //  https://docs.gitlab.com/ee/api/repository_files.html#get-raw-file-from-repository
+        //
+        final ref = revision ?: getDefaultBranch()
+        final encodedPath = URLEncoder.encode(path,'utf-8')
+        return "${config.endpoint}/api/v4/projects/${getProjectName()}/repository/files/${encodedPath}?ref=${ref}"
     }
 
     /** {@inheritDoc} */

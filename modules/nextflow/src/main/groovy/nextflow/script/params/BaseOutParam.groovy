@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -194,8 +195,11 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
 
     BaseOutParam mode( def mode ) {
-        if( NF.isDsl2() )
-            log.warn "Process output `mode` is not supported any more"
+        final msg = "Process output `mode` is not supported any more"
+        if( NF.isDsl2Final() )
+            throw new DeprecationException(msg)
+        else if( NF.isDsl2() )
+            log.warn(msg)
         this.mode = BasicMode.parseValue(mode)
         return this
     }

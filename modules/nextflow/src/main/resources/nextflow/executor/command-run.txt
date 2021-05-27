@@ -1,4 +1,5 @@
 ##
+##  Copyright 2020-2021, Seqera Labs
 ##  Copyright 2013-2019, Centre for Genomic Regulation (CRG)
 ##
 ##  Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,6 +24,10 @@ NXF_ENTRY=${1:-nxf_main}
 {{trace_script}}
 {{helpers_script}}
 {{container_env}}
+
+nxf_sleep() {
+  sleep $1 2>/dev/null || sleep 1;
+}
 
 nxf_date() {
     ## should return the current timestamp in milliseconds
@@ -99,7 +104,8 @@ nxf_unstage() {
 
 nxf_main() {
     trap on_exit EXIT
-    trap on_term TERM INT USR1 USR2
+    trap on_term TERM INT USR2
+    trap '' USR1
 
     [[ "${NXF_CHDIR:-}" ]] && cd "$NXF_CHDIR"
     {{container_boxid}}

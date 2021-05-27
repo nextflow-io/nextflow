@@ -20,22 +20,20 @@ Contents:
    executor
    config
    dsl2
+   cli
    awscloud
    amazons3
+   azure
    google
    conda
    docker
    shifter
    singularity
    podman
+   charliecloud
    ignite
    kubernetes
    tracing
    sharing
    metadata
    mail
-   example
-   faq
-
-
-

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,6 +37,7 @@ import nextflow.exception.ScriptCompilationException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.util.Escape
 import nextflow.util.LoggerHelper
+import nextflow.util.SpuriousDeps
 import org.eclipse.jgit.api.errors.GitAPIException
 /**
  * Main application entry point. It parses the command line and
@@ -84,7 +86,6 @@ class Launcher {
         allCommands = (List<CmdBase>)[
                 new CmdClean(),
                 new CmdClone(),
-                new CmdCloud(),
                 new CmdConsole(),
                 new CmdFs(),
                 new CmdHistory(),
@@ -100,8 +101,14 @@ class Launcher {
                 new CmdNode(),
                 new CmdView(),
                 new CmdHelp(),
-                new CmdSelfUpdate()
+                new CmdSelfUpdate(),
+                new CmdPlugins()
         ]
+
+        // legacy command
+        final cmdCloud = SpuriousDeps.cmdCloud()
+        if( cmdCloud )
+            allCommands.add(cmdCloud)
 
         options = new CliOptions()
         jcommander = new JCommander(options)
@@ -154,9 +161,9 @@ class Launcher {
     private void checkLogFileName() {
         if( !options.logFile ) {
             if( isDaemon() )
-                options.logFile = '.node-nextflow.log'
+                options.logFile = System.getenv('NXF_LOG_FILE') ?: '.node-nextflow.log'
             else if( command instanceof CmdRun || options.debug || options.trace )
-                options.logFile = ".nextflow.log"
+                options.logFile = System.getenv('NXF_LOG_FILE') ?: ".nextflow.log"
         }
     }
 
@@ -241,6 +248,10 @@ class Launcher {
                 normalized << '-'
             }
 
+            else if( current == '-with-charliecloud' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
+            }
+
             else if( current == '-with-weblog' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << '-'
             }
@@ -250,6 +261,10 @@ class Launcher {
             }
 
             else if( current == '-ansi-log' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << 'true'
+            }
+
+            else if( (current == '-stub' || current == '-stub-run') && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << 'true'
             }
 

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +25,7 @@ import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicIntegerArray
+import java.util.concurrent.atomic.LongAdder
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
@@ -48,6 +50,7 @@ import groovyx.gpars.group.PGroup
 import nextflow.NF
 import nextflow.Nextflow
 import nextflow.Session
+import nextflow.ast.NextflowDSLImpl
 import nextflow.ast.TaskCmdXform
 import nextflow.ast.TaskTemplateVarsXform
 import nextflow.cloud.CloudSpotTerminationException
@@ -59,6 +62,7 @@ import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.ShowOnlyExceptionMessage
+import nextflow.exception.UnexpectedException
 import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
 import nextflow.executor.StoredTaskHandler
@@ -72,6 +76,7 @@ import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptType
+import nextflow.script.TaskClosure
 import nextflow.script.params.BasicMode
 import nextflow.script.params.EachInParam
 import nextflow.script.params.EnvInParam
@@ -95,7 +100,6 @@ import nextflow.util.CollectionHelper
 import nextflow.util.LockManager
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
-
 /**
  * Implement nextflow process execution logic
  *
@@ -199,12 +203,6 @@ class TaskProcessor {
     protected boolean hasEachParams
 
     /**
-     * Whenever the process execution is required to be blocking in order to handle
-     * shared object in a thread safe manner
-     */
-    protected boolean blocking
-
-    /**
      * The state is maintained by using an agent
      */
     protected Agent<StateObj> state
@@ -230,9 +228,13 @@ class TaskProcessor {
      */
     private final int id
 
+    private LongAdder forksCount
+
+    private int maxForks
+
     private static int processCount
 
-    private static LockManager lockManager = new LockManager();
+    private static LockManager lockManager = new LockManager()
 
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
@@ -277,6 +279,8 @@ class TaskProcessor {
         this.config = config
         this.taskBody = taskBody
         this.name = name
+        this.maxForks = config.maxForks as Integer ?: 0
+        this.forksCount = maxForks ? new LongAdder() : null
     }
 
     /**
@@ -331,6 +335,21 @@ class TaskProcessor {
         return result
     }
 
+    LongAdder getForksCount() { forksCount }
+
+    int getMaxForks() { maxForks }
+
+    boolean hasErrors() { errorCount>0 }
+
+    protected void checkWarn(String msg, Map opts=null) {
+        if( NF.isStrictMode() )
+            throw new ProcessUnrecoverableException(msg)
+        if( opts )
+            log.warn1(opts, msg)
+        else
+            log.warn(msg)
+    }
+
     /**
      * Launch the 'script' define by the code closure as a local bash script
      *
@@ -356,12 +375,12 @@ class TaskProcessor {
         // -- check that input set defines at least two elements
         def invalidInputSet = config.getInputs().find { it instanceof TupleInParam && it.inner.size()<2 }
         if( invalidInputSet )
-            log.warn "Input `set` must define at least two component -- Check process `$name`"
+            checkWarn "Input `set` must define at least two component -- Check process `$name`"
 
         // -- check that output set defines at least two elements
         def invalidOutputSet = config.getOutputs().find { it instanceof TupleOutParam && it.inner.size()<2 }
         if( invalidOutputSet )
-            log.warn "Output `set` must define at least two component -- Check process `$name`"
+            checkWarn "Output `set` must define at least two component -- Check process `$name`"
 
         /**
          * Verify if this process run only one time
@@ -485,12 +504,8 @@ class TaskProcessor {
          * - by default the process execution is parallel using the poolSize value
          * - otherwise use the value defined by the user via 'taskConfig'
          */
-        def maxForks = session.poolSize
-        if( config.maxForks ) {
-            maxForks = config.maxForks
-            blocking = true
-        }
-        log.debug "Creating operator > $name -- maxForks: $maxForks; blocking: $blocking"
+        final maxForks = maxForks ?: session.poolSize
+        log.trace "Creating operator > $name -- maxForks: $maxForks"
 
         /*
          * finally create the operator
@@ -559,8 +574,14 @@ class TaskProcessor {
         if( !checkWhenGuard(task) )
             return
 
-        // -- resolve the task command script
-        task.resolve(taskBody)
+        TaskClosure block
+        if( session.stubRun && (block=task.config.getStubBlock()) ) {
+            task.resolve(block)
+        }
+        else {
+            // -- resolve the task command script
+            task.resolve(taskBody)
+        }
 
         // -- verify if exists a stored result for this case,
         //    if true skip the execution and return the stored data
@@ -586,7 +607,8 @@ class TaskProcessor {
             final actual = entry instanceof Collection ? entry.size() : (entry instanceof Map ? entry.size() : 1)
 
             if( actual != expected ) {
-                log.warn1("Input tuple does not match input set cardinality declared by process `$name` -- offending value: $entry", firstOnly: true, cacheKey: this)
+                final msg = "Input tuple does not match input set cardinality declared by process `$name` -- offending value: $entry"
+                checkWarn(msg, [firstOnly: true, cacheKey: this])
             }
         }
     }
@@ -620,7 +642,7 @@ class TaskProcessor {
         assert script != null
 
         def result = new StringBuilder()
-        result << script.stripIndent().trim()
+        result << script.stripIndent(true).trim()
         result << '\n'
 
         if( result[0] != '#' || result[1] != '!') {
@@ -775,7 +797,7 @@ class TaskProcessor {
             return true
         }
         if( invalid ) {
-            log.warn "[$task.name] StoreDir can only be used when using 'file' outputs"
+            checkWarn "[$task.name] StoreDir can only be used when using 'file' outputs"
             return false
         }
 
@@ -1067,7 +1089,7 @@ class TaskProcessor {
 
         if( error.source )  {
             message << "\nWhen block:"
-            error.source.stripIndent().eachLine {
+            error.source.stripIndent(true).eachLine {
                 message << "  $it"
             }
         }
@@ -1089,7 +1111,7 @@ class TaskProcessor {
         if( task?.script ) {
             // - print the executed command
             message << "Command executed${task.template ? " [$task.template]": ''}:\n"
-            task.script?.stripIndent()?.trim()?.eachLine {
+            task.script?.stripIndent(true)?.trim()?.eachLine {
                 message << "  ${it}"
             }
 
@@ -1130,7 +1152,7 @@ class TaskProcessor {
         else {
             if( task?.source )  {
                 message << "Source block:"
-                task.source.stripIndent().eachLine {
+                task.source.stripIndent(true).eachLine {
                     message << "  $it"
                 }
             }
@@ -1226,7 +1248,7 @@ class TaskProcessor {
             publish.overwrite = !task.cached
         }
 
-        List<Path> files = []
+        HashSet<Path> files = []
         def outputs = task.getOutputsByType(FileOutParam)
         for( Map.Entry entry : outputs ) {
             final value = entry.value
@@ -1373,7 +1395,7 @@ class TaskProcessor {
 
         // fetch the output value
         final val = collectOutEnvMap(workDir).get(param.name)
-        if( val == null )
+        if( val == null && !param.optional )
             throw new MissingValueException("Missing environment variable: $param.name")
         // set into the output set
         task.setOutput(param,val)
@@ -1582,14 +1604,14 @@ class TaskProcessor {
 
 
         // pre-pend the 'bin' folder to the task environment
-        if( session.binDir ) {
+        if( executor.binDir ) {
             if( result.containsKey('PATH') ) {
                 // note: do not escape potential blanks in the bin path because the PATH
                 // variable is enclosed in `"` when in rendered in the launcher script -- see #630
-                result['PATH'] =  "${session.binDir}:${result['PATH']}".toString()
+                result['PATH'] =  "${executor.binDir}:${result['PATH']}".toString()
             }
             else {
-                result['PATH'] = "${session.binDir}:\$PATH".toString()
+                result['PATH'] = "${executor.binDir}:\$PATH".toString()
             }
         }
 
@@ -1913,11 +1935,11 @@ class TaskProcessor {
 
         List keys = [ session.uniqueId, name, task.source ]
 
-        if( task.containerEnabled )
+        if( task.isContainerEnabled() )
             keys << task.container
 
         // add all the input name-value pairs to the key generator
-        task.inputs.each {
+        for( Map.Entry<InParam,Object> it : task.inputs ) {
             keys.add( it.key.name )
             keys.add( it.value )
         }
@@ -1945,13 +1967,28 @@ class TaskProcessor {
             keys.add(conda)
         }
 
+        if( session.stubRun ) {
+            keys.add('stub-run')
+        }
+
         final mode = config.getHashMode()
-        final hash = CacheHelper.hasher(keys, mode).hash()
+        final hash = computeHash(keys, mode)
         if( session.dumpHashes ) {
             traceInputsHashes(task, keys, mode, hash)
         }
         return hash
     }
+
+    HashCode computeHash(List keys, CacheHelper.HashMode mode) {
+        try {
+            return CacheHelper.hasher(keys, mode).hash()
+        }
+        catch (Throwable e) {
+            final msg = "Oops.. something wrong happened while creating task '$name' unique id -- Offending keys: ${ keys.collect {"\n - type=${it.getClass().getName()} value=$it"} }"
+            throw new UnexpectedException(msg,e)
+        }
+    }
+
 
     /**
      * This method scans the task command string looking for invocations of scripts
@@ -2001,14 +2038,14 @@ class TaskProcessor {
         makeTaskContextStage3(task, hash, folder)
 
         // add the task to the collection of running tasks
-        executor.submit(task, blocking)
+        executor.submit(task)
 
     }
 
     protected boolean checkWhenGuard(TaskRun task) {
 
         try {
-            def pass = task.config.getGuard('when')
+            def pass = task.config.getGuard(NextflowDSLImpl.PROCESS_WHEN)
             if( pass ) {
                 return true
             }

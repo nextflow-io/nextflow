@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -429,6 +430,7 @@ class AssetManagerTest extends Specification {
         // create the repo dir
         dir.resolve('main.nf').text = "println 'Hello world'"
         dir.resolve('nextflow.config').text = 'manifest {  }'
+        dir.resolve('foo.nf').text = 'this is foo content'
 
         def init = Git.init()
         def repo = init.setDirectory( dir.toFile() ).call()
@@ -440,9 +442,12 @@ class AssetManagerTest extends Specification {
         dir.resolve('.git/config').text = GIT_CONFIG_TEXT
 
         when:
-        def manager = new AssetManager()
+        def p = Mock(RepositoryProvider) { getRepositoryUrl() >> 'https://github.com/nextflow-io/nextflow' }
+        and:
+        def manager = new AssetManager(provider: p)
                 .setLocalPath(dir.toFile())
                 .setProject('nextflow-io/nextflow')
+        and:
         def script = manager.getScriptFile()
         then:
         script.localPath == dir
@@ -450,8 +455,26 @@ class AssetManagerTest extends Specification {
         script.revision == 'master'
         script.parent == dir
         script.text == "println 'Hello world'"
-        script.repository == 'https://github.com/nextflow-io/nextflow.git'
+        script.repository == 'https://github.com/nextflow-io/nextflow'
         script.projectName == 'nextflow-io/nextflow'
+
+        when:
+        p = Mock(RepositoryProvider) { getRepositoryUrl() >> 'https://github.com/nextflow-io/nextflow' }
+        and:
+        manager = new AssetManager(provider: p)
+                .setLocalPath(dir.toFile())
+                .setProject('nextflow-io/nextflow')
+        and:
+        script = manager.getScriptFile('foo.nf')
+        then:
+        script.localPath == dir
+        script.commitId == commit.name()
+        script.revision == 'master'
+        script.parent == dir
+        script.text == "this is foo content"
+        script.repository == 'https://github.com/nextflow-io/nextflow'
+        script.projectName == 'nextflow-io/nextflow'
+
     }
 
     def 'should return project name from git url' () {
@@ -512,6 +535,9 @@ class AssetManagerTest extends Specification {
         'a/b/c'       | 'http://dot.com/'       | 'a/b/c'
         'a/b/c'       | 'http://dot.com/a'      | 'b/c'
         'a/b/c'       | 'http://dot.com/a/'     | 'b/c'
+        and:
+        'paolo0758/nf-azure-repo'                    | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo'
+        'paolo0758/nf-azure-repo/_git/nf-azure-repo' | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo'
     }
 
 }

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +17,7 @@
 
 package nextflow.executor
 
+import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.util.concurrent.Callable
 import java.util.concurrent.Future
@@ -31,7 +33,7 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.script.ScriptType
 import nextflow.trace.TraceRecord
-import nextflow.util.PosixProcess
+import nextflow.util.ProcessHelper
 /**
  * Executes the specified task on the locally exploiting the underlying Java thread pool
  *
@@ -61,6 +63,13 @@ class LocalExecutor extends Executor {
 
     }
 
+    @Override
+    protected void register() {
+        super.register()
+        if( workDir.fileSystem != FileSystems.default ) {
+            log.warn "Local executor only supports default file system -- Check work directory: ${getWorkDir().toUriString()}"
+        }
+    }
 }
 
 
@@ -83,7 +92,7 @@ class LocalTaskHandler extends TaskHandler {
 
     private final Path errorFile
 
-    private PosixProcess process
+    private Process process
 
     private boolean destroyed
 
@@ -130,7 +139,7 @@ class LocalTaskHandler extends TaskHandler {
                         .command(cmd)
 
                 // -- start the execution and notify the event to the monitor
-                process = new PosixProcess(builder.start())
+                process = builder.start()
                 result = process.waitFor()
             }
             catch( Throwable ex ) {
@@ -210,8 +219,9 @@ class LocalTaskHandler extends TaskHandler {
     @Override
     void kill() {
         if( !process ) return
-        log.trace("Killing process with pid: ${process.pid}")
-        def cmd = "kill -TERM $process.pid"
+        final pid = ProcessHelper.pid(process)
+        log.trace("Killing process with pid: ${pid}")
+        def cmd = "kill -TERM $pid"
         def proc = new ProcessBuilder('bash', '-c', cmd ).redirectErrorStream(true).start()
         def status = proc.waitFor()
         if( status != 0 ) {
@@ -243,8 +253,9 @@ class LocalTaskHandler extends TaskHandler {
      */
     @Override
     TraceRecord getTraceRecord() {
-        def result = super.getTraceRecord()
-        result.put('native_id', this.process?.pid)
+        final result = super.getTraceRecord()
+        if( process )
+            result.put('native_id', ProcessHelper.pid(process))
         return result
     }
 

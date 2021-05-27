@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -140,7 +141,7 @@ class OperatorEx implements DelegatingPlugin {
      */
     DataflowWriteChannel chain(final DataflowReadChannel<?> source, final Closure closure) {
         final target = CH.createBy(source)
-        newOperator(source, target, new ChainWithClosure(closure))
+        newOperator(source, target, stopErrorListener(source,target), new ChainWithClosure(closure))
         return target
     }
 
@@ -866,7 +867,7 @@ class OperatorEx implements DelegatingPlugin {
         return target
     }
 
-
+    @Deprecated
     DataflowWriteChannel spread( final DataflowReadChannel source, Object other ) {
 
         final target = CH.create()
@@ -1104,7 +1105,8 @@ class OperatorEx implements DelegatingPlugin {
      * @return
      */
     DataflowWriteChannel mix( DataflowReadChannel source, DataflowReadChannel[] others ) {
-        assert others.size()>0
+        if( others.size()==0 )
+            throw new IllegalArgumentException("Operator 'mix' should have at least one right operand")
 
         def target = CH.create()
         def count = new AtomicInteger( others.size()+1 )
@@ -1480,27 +1482,19 @@ class OperatorEx implements DelegatingPlugin {
     }
 
     DataflowWriteChannel toInteger(final DataflowReadChannel source) {
-        final target = CH.createBy(source)
-        newOperator(source, target, new ChainWithClosure({ it -> it as Integer }))
-        return target;
+        return chain(source, { it -> it as Integer })
     }
 
     DataflowWriteChannel toLong(final DataflowReadChannel source) {
-        final target = CH.createBy(source)
-        newOperator(source, target, new ChainWithClosure({ it -> it as Long }))
-        return target;
+        return chain(source, { it -> it as Long })
     }
 
     DataflowWriteChannel toFloat(final DataflowReadChannel source) {
-        final target = CH.createBy(source)
-        newOperator(source, target, new ChainWithClosure({ it -> it as Float }))
-        return target;
+        return chain(source, { it -> it as Float })
     }
 
     DataflowWriteChannel toDouble(final DataflowReadChannel source) {
-        final target = CH.createBy(source)
-        newOperator(source, target, new ChainWithClosure({ it -> it as Double }))
-        return target;
+        return chain(source, { it -> it as Double })
     }
 
     DataflowWriteChannel transpose( final DataflowReadChannel source, final Map params=null ) {

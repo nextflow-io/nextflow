@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -79,7 +80,6 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
         if( autoMounts ) {
             makeVolumes(mounts, result)
-            result << ' '
         }
 
         if( runOptions )
@@ -101,7 +101,8 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
     @Override
     protected CharSequence appendEnv(StringBuilder result) {
-        result << 'SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" '
+        makeEnv('TMP',result) .append(' ')
+        makeEnv('TMPDIR',result) .append(' ')
         super.appendEnv(result)
     }
 
@@ -114,7 +115,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
     }
 
     @Override
-    protected CharSequence makeEnv( env, StringBuilder result = new StringBuilder() ) {
+    protected StringBuilder makeEnv( env, StringBuilder result = new StringBuilder() ) {
 
         if( env instanceof Map ) {
             int index=0
@@ -124,10 +125,10 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
             }
         }
         else if( env instanceof String && env.contains('=') ) {
-            result << 'SINGULARITYENV_' << env
+            result << prefixEnv(env)
         }
         else if( env instanceof String ) {
-            result << "\${$env:+SINGULARITYENV_$env=\"\$$env\"}"
+            result << "\${$env:+${prefixEnv(env)}=\"\$$env\"}"
         }
         else if( env ) {
             throw new IllegalArgumentException("Not a valid environment value: $env [${env.getClass().name}]")

@@ -1,17 +1,15 @@
 package nextflow.script
 
-import spock.lang.Timeout
-
 import nextflow.Channel
+import nextflow.exception.MissingProcessException
 import nextflow.exception.ScriptCompilationException
+import nextflow.exception.ScriptRuntimeException
 import test.Dsl2Spec
 import test.MockScriptRunner
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Timeout(5)
 class ScriptDslTest extends Dsl2Spec {
 
 
@@ -125,7 +123,7 @@ class ScriptDslTest extends Dsl2Spec {
         }   
         
         workflow alpha {
-            get: 
+            take: 
                 data
             
             main:
@@ -151,7 +149,7 @@ class ScriptDslTest extends Dsl2Spec {
     def 'should access nextflow enabling property' () {
         when:
         def result = dsl_eval '''
-        return nextflow.preview.dsl 
+        return nextflow.enable.dsl 
         '''
 
         then:
@@ -341,4 +339,245 @@ class ScriptDslTest extends Dsl2Spec {
         
     }
 
+    def 'should not allow composition' () {
+        when:
+        dsl_eval('''
+        process foo {
+          /echo foo/
+        }
+        
+        process bar {
+          input: val x 
+          /echo bar $x/
+        }
+        
+        workflow {
+          bar(foo())
+        }
+        ''')
+
+
+        then:
+        def err = thrown(ScriptRuntimeException)
+        err.message == 'Process `bar` declares 1 input channel but 0 were specified'
+    }
+
+    def 'should report error accessing undefined out/a' () {
+        when:
+        dsl_eval('''
+        process foo {
+          /echo foo/
+        }
+        
+        process bar {
+          input: val x 
+          /echo bar $x/
+        }
+        
+        workflow {
+          bar(foo.out)
+        }
+        ''')
+
+        then:
+        def err = thrown(ScriptRuntimeException)
+        err.message == "Access to 'foo.out' is undefined since process doesn't declare any output"
+    }
+
+    def 'should report error accessing undefined out/b' () {
+        when:
+        dsl_eval('''
+        process foo {
+          /echo foo/
+        }
+        
+        process bar {
+          input: val x 
+          /echo bar $x/
+        }
+        
+        workflow {
+          bar(foo.out)
+        }
+        ''')
+
+        then:
+        def err = thrown(ScriptRuntimeException)
+        err.message == "Access to 'foo.out' is undefined since process doesn't declare any output"
+    }
+
+    def 'should report error accessing undefined out/c' () {
+        when:
+        dsl_eval('''
+        process foo {
+          /echo foo/
+        }
+        
+        workflow flow1 {
+            foo()
+        }
+        
+        workflow {
+          flow1()
+          flow1.out.view()
+        }
+        ''')
+
+        then:
+        def err = thrown(ScriptRuntimeException)
+        err.message == "Access to 'flow1.out' is undefined since workflow doesn't declare any output"
+    }
+
+    def 'should report error accessing undefined out/d' () {
+        when:
+        dsl_eval('''
+        process foo {
+          /echo foo/
+        }
+        
+        process bar {
+          input: val x 
+          /echo bar $x/
+        }
+        
+        workflow flow1 {
+            foo()
+        }
+        
+        workflow {
+          flow1 | bar
+        }
+        ''')
+
+        then:
+        def err = thrown(ScriptRuntimeException)
+        err.message == "Process `bar` declares 1 input channel but 0 were specified"
+    }
+
+
+    def 'should report unsupported error' () {
+        when:
+        dsl_eval('''
+        process foo {
+          /echo foo/
+        }
+        
+        workflow {
+          get: 
+            x
+          main: 
+          flow()
+        }
+        ''')
+
+        then:
+        def err = thrown(ScriptCompilationException)
+        err.message.contains "Workflow 'get' is not supported anymore use 'take' instead"
+    }
+
+    def 'should fail with wrong scope'() {
+        when:
+        dsl_eval('''\
+        process foo {
+          /echo foo/
+        }
+        
+        workflow {
+          main: 
+          flow()
+          emmit:
+          flow.out
+        }
+        ''')
+
+        then:
+        def err = thrown(ScriptCompilationException)
+        err.message.contains "Unknown execution scope 'emmit:' -- Did you mean 'emit'"
+    }
+
+
+    def 'should fail because process is not defined'() {
+        when:
+        dsl_eval(
+        '''
+        process sleeper {
+            exec:
+            """
+            sleep 5
+            """
+        }
+        
+        workflow {
+            main:
+                sleeper()
+                hello()      
+        }
+        
+        ''')
+
+        then:
+        def err = thrown(MissingProcessException)
+        err.message == "Missing process or function with name 'hello'"
+    }
+
+
+    def 'should fail because is not defined /2' () {
+        when:
+        dsl_eval('''
+        process sleeper {
+            exec:
+            """
+            sleep 5
+            """
+        }
+        
+        workflow nested {
+            main:
+                sleeper()
+                sleeper_2()      
+        }
+        
+        workflow{
+            nested()
+        }
+        ''')
+
+        then:
+        def err = thrown(MissingProcessException)
+        err.message == "Missing process or function with name 'sleeper_2' -- Did you mean 'sleeper' instead?"
+    }
+
+    def 'should fail because is not defined /3' () {
+        when:
+        dsl_eval('''
+        process sleeper1 {
+            /echo 1/
+        }
+        
+        process sleeper2 {
+            /echo 3/
+        }
+
+        
+        workflow nested {
+            main:
+                sleeper1()
+                sleeper3()      
+        }
+        
+        workflow{
+            nested()
+        }
+        ''')
+
+        then:
+        def err = thrown(MissingProcessException)
+        err.message ==  '''\
+                        Missing process or function with name 'sleeper3'
+                        
+                        Did you mean any of these instead?
+                          sleeper1
+                          sleeper2
+                        '''.stripIndent()
+    }
 }

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +20,7 @@ package nextflow.script
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Session
+import nextflow.config.ConfigParser
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -202,7 +204,7 @@ class ScriptRunnerTest extends Specification {
         def script = '''
             process test {
                 script:
-                "$HELLO"
+                "echo $HELLO"
             }
 
             '''
@@ -268,13 +270,11 @@ class ScriptRunnerTest extends Specification {
         // -- this represent the configuration file
         def config = '''
             executor = 'nope'
-
-            process.memory = '333'
-            process.$hola.cpus = '222'
-            process.$hola.time = '555'
-
-            process.$ciao.cpus = '999'
-
+            process {
+                memory = '333'
+                withName: hola { cpus = '222'; time = '555' }
+                withName: ciao { cpus = '999' }
+            }
             '''
 
         def script = '''
@@ -286,7 +286,7 @@ class ScriptRunnerTest extends Specification {
             }
             '''
 
-        def session = new Session( new ConfigSlurper().parse(config))
+        def session = new Session( new ConfigParser().parse(config))
 
         when:
         def process = new TestParser(session).parseAndGetProcess(script)
@@ -310,17 +310,15 @@ class ScriptRunnerTest extends Specification {
             process {
                 memory = '333'
 
-                $hola {
+                withName: hola {
                     cpus = '222'
                     time = '555'
                 }
 
-                $ciao {
+                withName: ciao {
                     cpus = '999'
                 }
             }
-
-
             '''
 
         def script = '''
@@ -332,7 +330,7 @@ class ScriptRunnerTest extends Specification {
             }
             '''
 
-        def session = new Session( new ConfigSlurper().parse(config))
+        def session = new Session( new ConfigParser().parse(config))
 
         when:
         def process = new TestParser(session).parseAndGetProcess(script)
@@ -364,7 +362,7 @@ class ScriptRunnerTest extends Specification {
             }               
             '''
 
-        def session = new Session(new ConfigSlurper().parse(config))
+        def session = new Session(new ConfigParser().parse(config))
 
         when:
         def process = new TestParser(session).parseAndGetProcess(script)
@@ -384,8 +382,10 @@ class ScriptRunnerTest extends Specification {
          */
         def config = '''
             executor = 'nope'
-            process.module = 'a/1'
-            process.$hola.module = 'b/2:z/9'
+            process {
+                module = 'a/1'
+                withName: hola { module = 'b/2:z/9' }
+            }
             '''
 
         def script = '''
@@ -397,7 +397,7 @@ class ScriptRunnerTest extends Specification {
             }
             '''
 
-        def session = new Session(new ConfigSlurper().parse(config))
+        def session = new Session(new ConfigParser().parse(config))
 
         when:
         def process = new TestParser(session).parseAndGetProcess(script)
@@ -426,7 +426,7 @@ class ScriptRunnerTest extends Specification {
             }
             '''
 
-        def session = new Session(new ConfigSlurper().parse(config))
+        def session = new Session(new ConfigParser().parse(config))
 
         when:
         def process = new TestParser(session).parseAndGetProcess(script)
@@ -468,7 +468,7 @@ class ScriptRunnerTest extends Specification {
             }
             '''
 
-        def config = new ConfigSlurper().parse(configText)
+        def config = new ConfigParser().parse(configText)
 
 
         when:
@@ -572,7 +572,7 @@ class ScriptRunnerTest extends Specification {
             process taskHello {
                 maxRetries -1
                 maxErrors -X
-                ''
+                'echo hello'
             }
             '''
         def runner = new TestScriptRunner([executor:'nope'])
@@ -610,4 +610,113 @@ class ScriptRunnerTest extends Specification {
     }
 
 
+    def 'test stub command'() {
+
+        given:
+        /*
+         * the module defined in the config file 'b/2' has priority and overrides the 'a/1' and 'c/3'
+         */
+        def config = '''
+            executor = 'nope'
+            stubRun = true
+            '''
+
+        def script = '''
+            process hola {
+
+                stub:
+                 /echo foo/
+                 
+                script:
+                  /echo bar/
+            }
+            '''
+
+        and:
+        def session = new Session(new ConfigParser().parse(config))
+        and:
+        def runner = new TestScriptRunner(session).setScript(script)
+
+        when:
+        runner.execute()
+
+        // when no outputs are specified, the 'stdout' is the default output
+        then:
+        runner.result instanceof DataflowQueue
+        runner.result.val == "echo foo"
+
+    }
+
+    def 'test stub after script'() {
+
+        given:
+        /*
+         * the module defined in the config file 'b/2' has priority and overrides the 'a/1' and 'c/3'
+         */
+        def config = '''
+            executor = 'nope'
+            stubRun = true
+            '''
+
+        def script = '''
+            process hola {
+                 
+                script:
+                  /echo bar/
+ 
+                stub:
+                 /echo foo/
+ 
+            }
+            '''
+
+        and:
+        def session = new Session(new ConfigParser().parse(config))
+        and:
+        def runner = new TestScriptRunner(session).setScript(script)
+
+        when:
+        runner.execute()
+
+        // when no outputs are specified, the 'stdout' is the default output
+        then:
+        runner.result instanceof DataflowQueue
+        runner.result.val == "echo foo"
+
+    }
+
+    def 'test stub only script'() {
+
+        given:
+        /*
+         * the module defined in the config file 'b/2' has priority and overrides the 'a/1' and 'c/3'
+         */
+        def config = '''
+            executor = 'nope'
+            stubRun = true
+            '''
+
+        def script = '''
+            process hola {
+                 
+                stub:
+                 /echo foo/
+ 
+            }
+            '''
+
+        and:
+        def session = new Session(new ConfigParser().parse(config))
+        and:
+        def runner = new TestScriptRunner(session).setScript(script)
+
+        when:
+        runner.execute()
+
+        // when no outputs are specified, the 'stdout' is the default output
+        then:
+        runner.result instanceof DataflowQueue
+        runner.result.val == "echo foo"
+
+    }
 }

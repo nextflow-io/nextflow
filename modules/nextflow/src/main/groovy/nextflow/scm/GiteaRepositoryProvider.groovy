@@ -16,6 +16,7 @@
 
 package nextflow.scm
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
 /**
@@ -41,10 +42,44 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
         "${config.endpoint}/repos/${project}"
     }
 
+    @Override
+    protected void auth( URLConnection connection ) {
+        if( config.token ) {
+            // set the token in the request header
+            // https://docs.gitea.io/en-us/api-usage/#authentication
+            connection.setRequestProperty("Authorization", "token $config.token")
+        }
+        else {
+            super.auth(connection)
+        }
+    }
+
+    @Override
+    @CompileDynamic
+    List<BranchInfo> getBranches() {
+        // https://try.gitea.io/api/swagger#/repository/repoListBranches
+        final url = "${config.endpoint}/repos/${project}/branches"
+        this.<BranchInfo>invokeAndResponseWithPaging(url, { Map branch -> new BranchInfo(branch.name as String, branch.commit?.id as String) })
+    }
+
+    @Override
+    @CompileDynamic
+    List<TagInfo> getTags() {
+        // https://try.gitea.io/api/swagger#/repository/repoListTags
+        final url = "${config.endpoint}/repos/${project}/tags"
+        this.<TagInfo>invokeAndResponseWithPaging(url, { Map tag -> new TagInfo(tag.name as String, tag.commit?.sha as String) })
+    }
+
     /** {@inheritDoc} */
     @Override
     String getContentUrl( String path ) {
-        "${config.endpoint}/repos/$project/raw/$path"
+        // see
+        // https://try.gitea.io/api/swagger#/repository/repoGetRawFile
+        // note: `ref` is undocumented
+        def result = "${config.endpoint}/repos/$project/raw/$path"
+        if( revision )
+            result += "?ref=$revision"
+        return result
     }
 
     /** {@inheritDoc} */

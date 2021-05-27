@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,14 +28,15 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
-import com.upplication.s3fs.S3Path
 import de.javakaffee.kryoserializers.UnmodifiableCollectionsSerializer
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.file.FileHelper
-import nextflow.file.http.XPath
+import nextflow.io.SerializableMarker
+import nextflow.plugin.Plugins
 import org.codehaus.groovy.runtime.GStringImpl
 import org.objenesis.instantiator.ObjectInstantiator
+import org.pf4j.Extension
 /**
  * Helper class to get a {@code Kryo} object ready to be used
  */
@@ -48,7 +50,7 @@ class KryoHelper {
     static {
         serializers = [:]
 
-        for( SerializerRegistrant s : ServiceLoader.load(SerializerRegistrant).iterator() ) {
+        for( SerializerRegistrant s : Plugins.getExtensions(SerializerRegistrant).iterator() ) {
             log.trace "Registering serializer: ${s.class.name}"
             s.register(serializers)
         }
@@ -199,26 +201,7 @@ class KryoHelper {
 
 }
 
-/**
- * Register a serializer class in the Kryo serializers list
- */
-@CompileStatic
-interface SerializerRegistrant {
-
-    /**
-     * Serializer should implement this method adding the
-     * serialized class and the serializer class to the
-     * map passed as argument
-     *
-     * @param
-     *      serializers The serializer map, where the key element
-     *      represent the class to be serialized and the value
-     *      the serialization object
-     */
-    void register(Map<Class,Object> serializers)
-
-}
-
+@Extension
 @CompileStatic
 class DefaultSerializers implements SerializerRegistrant {
 
@@ -230,10 +213,9 @@ class DefaultSerializers implements SerializerRegistrant {
         serializers.put( URL, URLSerializer )
         serializers.put( UUID, UUIDSerializer )
         serializers.put( File, FileSerializer )
-        serializers.put( S3Path, PathSerializer )
-        serializers.put( XPath, XPathSerializer )
         serializers.put( Pattern, PatternSerializer )
         serializers.put( ArrayTuple, ArrayTupleSerializer )
+        serializers.put( SerializableMarker, null )
     }
 }
 
@@ -305,24 +287,6 @@ class PathSerializer extends Serializer<Path> {
     }
 }
 
-@Slf4j
-@CompileStatic
-class XPathSerializer extends Serializer<XPath> {
-
-    @Override
-    void write(Kryo kryo, Output output, XPath target) {
-        final uri = target.toUri().toString()
-        log.trace "XPath serialization > uri=$uri"
-        output.writeString(uri)
-    }
-
-    @Override
-    XPath read(Kryo kryo, Input input, Class<XPath> type) {
-        final uri = input.readString()
-        log.trace "Path de-serialization > uri=$uri"
-        (XPath)FileHelper.asPath(new URI(uri))
-    }
-}
 
 /**
  * Serializer / de-serializer for Groovy GString

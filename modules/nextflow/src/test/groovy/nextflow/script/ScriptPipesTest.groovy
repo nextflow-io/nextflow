@@ -1,5 +1,7 @@
 package nextflow.script
 
+import java.nio.file.Files
+
 import spock.lang.Timeout
 import test.Dsl2Spec
 import test.MockScriptRunner
@@ -244,7 +246,7 @@ class ScriptPipesTest extends Dsl2Spec {
 
     def 'should pipe branch output to processes' () {
         given:
-        def SCRIPT ='''                                                              
+        def SCRIPT ='''
         process foo {
           input: val x 
           input: val y
@@ -262,4 +264,89 @@ class ScriptPipesTest extends Dsl2Spec {
         then:
         result.val == 40
     }
+
+    def 'should compose custom funs' () {
+        given:
+        def SCRIPT = """
+        process foo {
+          output: val ret
+          exec: ret=10
+        }
+        
+        def bar(ch) {
+          ch.map { it +1 }
+        }
+
+        workflow {
+            emit: foo | bar | map{ it*2 } 
+        }
+        """
+
+        when:
+        def result = new MockScriptRunner().setScript(SCRIPT).execute()
+        then:
+        result.val == 22
+
+    }
+
+    def 'should compose custom funs/2' () {
+        given:
+        def SCRIPT = """
+        process foo {
+          output: 
+            val x
+            val y
+          exec: 
+            x=1; y=2
+        }
+
+        def bar(ch1, ch2) {
+          ch1.combine(ch2)
+        }
+
+        workflow {
+            emit: foo | bar | view
+        }
+        """
+
+        when:
+        def result = new MockScriptRunner().setScript(SCRIPT).execute()
+        then:
+        result.val == [1,2]
+
+    }
+
+    def 'should compose imported funs' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module.nf')
+        MODULE.text = '''
+        process foo {
+          output: val ret
+          exec: ret=10
+        }
+
+        def bar(ch) {
+          ch.map { it +1 }
+        }
+
+        '''
+        def SCRIPT = """
+        include{ foo; bar } from "$MODULE"
+
+        workflow {
+            emit: foo | bar | map{ it*3 }
+        }
+        """
+
+        when:
+        def result = new MockScriptRunner().setScript(SCRIPT).execute()
+        then:
+        result.val == 33
+
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 }

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -89,6 +90,9 @@ class Escape {
         final uri = FilesEx.toUriString(file)
         final prefix = "$scheme://"
         assert uri.startsWith(prefix)
-        return prefix + path(uri.substring(prefix.length()))
+        def loc = uri.substring(prefix.length())
+        while( loc.size()>1 && loc.endsWith('/') )
+            loc = loc.substring(0,loc.length()-1)
+        return prefix + path(loc)
     }
 }

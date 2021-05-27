@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -146,18 +147,18 @@ class FileHelperTest extends Specification {
         uri.scheme == 's3'
 
         when:
-        uri = FileHelper.toPathURI('dxfs://grape:/data/ggal/ggal_test_1.fq')
+        uri = FileHelper.toPathURI('dx://grape:/data/ggal/ggal_test_1.fq')
         then:
-        uri == new URI('dxfs://grape:/data/ggal/ggal_test_1.fq')
-        uri.scheme == 'dxfs'
+        uri == new URI('dx://grape:/data/ggal/ggal_test_1.fq')
+        uri.scheme == 'dx'
         uri.path == '/data/ggal/ggal_test_1.fq'
         uri.authority == 'grape:'
 
         when:
-        uri = FileHelper.toPathURI('dxfs://grape:/data/ggal/ggal_test_?.fq')
+        uri = FileHelper.toPathURI('dx://grape:/data/ggal/ggal_test_?.fq')
         then:
-        uri == new URI('dxfs://grape:/data/ggal/ggal_test_%3F.fq')
-        uri.scheme == 'dxfs'
+        uri == new URI('dx://grape:/data/ggal/ggal_test_%3F.fq')
+        uri.scheme == 'dx'
         uri.path == '/data/ggal/ggal_test_?.fq'
         uri.authority == 'grape:'
 
@@ -320,7 +321,7 @@ class FileHelperTest extends Specification {
         FileHelper.envFor0('s3', env).secret_key == 's1'
 
         // any other return just the session
-        FileHelper.envFor0('dxfs', env).session == sess
+        FileHelper.envFor0('dx', env).session == sess
 
     }
 

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,12 +16,17 @@
  */
 
 package nextflow.scm
+
+import java.nio.file.NoSuchFileException
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.Const
 import nextflow.config.ConfigParser
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
+import nextflow.file.FileHelper
 /**
  * Models a repository provider configuration attributes
  *
@@ -30,7 +36,18 @@ import nextflow.exception.ConfigParseException
 class ProviderConfig {
 
     @PackageScope
-    static public File SCM_FILE = Const.APP_HOME_DIR.resolve('scm').toFile()
+    static Path DEFAULT_SCM_FILE = Const.APP_HOME_DIR.resolve('scm')
+
+    @PackageScope
+    static Map<String,String> env = new HashMap<>(System.getenv())
+
+    static Path getScmConfigPath() {
+        def cfg = env.get('NXF_SCM_FILE')
+        if( !cfg )
+            return DEFAULT_SCM_FILE
+        // check and return it if valid
+        return FileHelper.asPath(cfg)
+    }
 
     private String name
 
@@ -62,13 +79,20 @@ class ProviderConfig {
             case 'bitbucket':
                 attr.platform = name
                 if( !attr.server ) attr.server = 'https://bitbucket.org'
+                break
+
+            case 'azurerepos':
+                attr.platform = name
+                if( !attr.server ) attr.server = 'https://dev.azure.com'
+                if( !attr.endpoint ) attr.endpoint = 'https://dev.azure.com'
+                break
         }
 
         if( attr.path )
             attr.platform = 'file'
 
         if( !attr.platform ) {
-            throw new AbortOperationException("Missing `platform` attribute for `$name` scm provider configuration -- Check file: ${SCM_FILE}")
+            throw new AbortOperationException("Missing `platform` attribute for `$name` scm provider configuration -- Check file: ${getScmConfigPath().toUriString()}")
         }
 
         if( attr.auth ) {
@@ -110,9 +134,14 @@ class ProviderConfig {
         def p = result.indexOf('://')
         if( p != -1 )
             result = result.substring(p+3)
+        // a local file url (e.g. file:///path/to/repo or /path/to/repo)
+        // so we need to return the full path as the domain
+        if ( result.startsWith('/') )
+            return result
+        // a server url so we look for the domain without subdirectories
         p = result.indexOf('/')
         if( p != -1 )
-            result = result.substring(0,p)
+            result = result.substring(0, p)
         return result
     }
 
@@ -203,7 +232,6 @@ class ProviderConfig {
     @PackageScope
     static Map parse(String text) {
         def slurper = new ConfigParser()
-        def env = new HashMap( System.getenv() )
         slurper.setBinding(env)
         return slurper.parse(text)
     }
@@ -237,9 +265,16 @@ class ProviderConfig {
     }
 
     @PackageScope
-    static Map getFromFile(File file) {
+    static Map getFromFile(Path file) {
         try {
             parse(file.text)
+        }
+        catch (NoSuchFileException | FileNotFoundException e) {
+            if( file == DEFAULT_SCM_FILE ) {
+                return new LinkedHashMap()
+            }
+            else
+                throw new AbortOperationException("Missing SCM config file: ${file.toUriString()} - Check the env variable NXF_SCM_FILE")
         }
         catch( Exception e ) {
             def message = "Failed to parse config file: $file -- cause: ${e.message?:e.toString()}"
@@ -248,8 +283,8 @@ class ProviderConfig {
     }
 
     static Map getDefault() {
-        def file = SCM_FILE
-        return file.exists() ? getFromFile(file) : [:]
+        final file = getScmConfigPath()
+        return getFromFile(file)
     }
 
     static private void addDefaults(List<ProviderConfig> result) {
@@ -264,6 +299,9 @@ class ProviderConfig {
 
         if( !result.find{ it.name == 'bitbucket' })
             result << new ProviderConfig('bitbucket')
+
+        if( !result.find{ it.name == 'azurerepos' })
+            result << new ProviderConfig('azurerepos')
     }
 
 }

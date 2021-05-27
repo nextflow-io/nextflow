@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +23,8 @@ import ch.grengine.Grengine
 import com.google.common.hash.Hashing
 import groovy.transform.PackageScope
 import nextflow.ast.NextflowXform
+import nextflow.exception.ConfigParseException
+import nextflow.extension.Bolts
 import nextflow.file.FileHelper
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -98,6 +101,7 @@ class ConfigParser {
     private final Map<String, List<String>> conditionValues = [:]
     private final Stack<Map<String, ConfigObject>> conditionalBlocks = new Stack<Map<String,ConfigObject>>()
     private final Set<String> conditionalNames = new HashSet<>()
+    private final Set<String> profileNames = new HashSet<>()
 
     private boolean ignoreIncludes
 
@@ -150,6 +154,12 @@ class ConfigParser {
         Collections.unmodifiableSet(conditionalNames)
     }
 
+    /**
+     * Returns the profile names defined in the config file
+     *
+     * @return The set of profile names.
+     */
+    Set<String> getProfileNames() { profileNames }
 
     private Grengine getGrengine() {
         if( grengine ) {
@@ -186,7 +196,9 @@ class ConfigParser {
     }
 
     ConfigParser setParams(Map vars) {
-        this.paramVars = vars
+        // deep clone the map to prevent side-effect
+        // see https://github.com/nextflow-io/nextflow/issues/1923
+        this.paramVars = Bolts.deepClone(vars)
         return this
     }
 
@@ -308,6 +320,7 @@ class ConfigParser {
         def mc = script.class.metaClass
         def prefix = ""
         LinkedList stack = new LinkedList()
+        LinkedList profileStack = new LinkedList()
         stack << [config: config, scope: [:]]
         def pushStack = { co ->
             stack << [config: co, scope: stack.last.scope.clone()]
@@ -342,6 +355,9 @@ class ConfigParser {
         mc.invokeMethod = { String name, args ->
             def result
             if (args.length == 1 && args[0] instanceof Closure) {
+                if( profileStack && profileStack.last == 'profiles' )
+                    profileNames.add(name)
+
                 if (name in conditionValues.keySet()) {
                     try {
                         currentConditionalBlock.push(name)
@@ -373,7 +389,19 @@ class ConfigParser {
                         }
                         stack.removeLast()
                     }
-                } else {
+                }
+                else if( name == 'plugins' ) {
+                    if( stack.size()>1 )
+                        throw new ConfigParseException("Plugins definition is only allowed in config top-most scope")
+                    // Implements `plugins` mini-dsl for plugins definition
+                    def dsl = new PluginsDsl()
+                    def clo = args[0] as Closure
+                    clo.delegate = dsl
+                    clo.resolveStrategy = Closure.DELEGATE_ONLY
+                    clo.call()
+                    assignName.call(name, dsl.plugins)
+                }
+                else {
                     def current = stack.last
                     def co
                     if (current.config.get(name) instanceof ConfigObject) {
@@ -386,10 +414,12 @@ class ConfigParser {
                         co = new ConfigObject()
                     }
 
+                    profileStack.add(name)
                     assignName.call(name, co)
                     pushStack.call(co)
                     args[0].call()
                     stack.removeLast()
+                    profileStack.removeLast()
                 }
             } else if (args.length == 2 && args[1] instanceof Closure) {
                 try {

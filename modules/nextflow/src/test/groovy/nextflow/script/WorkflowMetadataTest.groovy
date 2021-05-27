@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,19 +17,17 @@
 
 package nextflow.script
 
-import java.nio.file.Files
+
 import java.nio.file.Paths
 import java.time.OffsetDateTime
 
 import nextflow.Const
 import nextflow.Session
-import nextflow.scm.AssetManager
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStats
 import nextflow.trace.WorkflowStatsObserver
 import nextflow.util.Duration
 import nextflow.util.VersionNumber
-import org.eclipse.jgit.api.Git
 import spock.lang.Specification
 import test.TestHelper
 /**
@@ -41,37 +40,18 @@ class WorkflowMetadataTest extends Specification {
 
         given:
         final begin = OffsetDateTime.now()
-        def dir = Files.createTempDirectory('test')
-        /*
-         * create the github repository
-         */
-        dir.resolve('main.nf').text = "println 'Hello world'"
-        dir.resolve('nextflow.config').text = 'manifest {  }'
 
-        def init = Git.init()
-        def repo = init.setDirectory( dir.toFile() ).call()
-        repo.add().addFilepattern('.').call()
-        def commit = repo.commit().setAll(true).setMessage('First commit').call()
-        repo.close()
-
-        // append fake remote data
-        dir.resolve('.git/config') << '''
-            [remote "origin"]
-                url = https://github.com/nextflow-io/rnaseq-nf.git
-                fetch = +refs/heads/*:refs/remotes/origin/*
-            [branch "master"]
-                remote = origin
-                merge = refs/heads/master
-            '''
-                .stripIndent()
-
-        /*
-         * create ScriptFile object
-         */
-        def manager = new AssetManager()
-                    .setLocalPath(dir.toFile())
-                    .setProject('nextflow-io/rnaseq-nf')
-        def script = manager.getScriptFile()
+        def localDir = Paths.get('/local/dir')
+        def mainFile = Paths.get('/some/path/main.nf')
+        def script = Mock(ScriptFile) {
+            getScriptId() >> '0e44b16bdeb8ef9f4d8aadcf520e717d'
+            getMain() >> mainFile
+            getRepository() >> 'https://github.com/nextflow-io/rnaseq-nf'
+            getCommitId() >> '1112223344455aaabbbccc'
+            getRevision() >> 'master'
+            getLocalPath() >> localDir
+            getProjectName() >> 'nextflow-io/rnaseq-nf'
+        }
 
         /*
          * config file onComplete handler
@@ -91,13 +71,13 @@ class WorkflowMetadataTest extends Specification {
         session.binding.setVariable('workflow',metadata)
         then:
         metadata.scriptId == '0e44b16bdeb8ef9f4d8aadcf520e717d'
-        metadata.scriptFile == manager.scriptFile.main
+        metadata.scriptFile == mainFile
         metadata.scriptName == 'main.nf'
-        metadata.repository == 'https://github.com/nextflow-io/rnaseq-nf.git'
-        metadata.commitId == commit.name()
+        metadata.repository == 'https://github.com/nextflow-io/rnaseq-nf'
+        metadata.commitId == '1112223344455aaabbbccc'
         metadata.revision == 'master'
         metadata.container == 'busybox/latest'
-        metadata.projectDir == dir
+        metadata.projectDir == localDir
         metadata.projectName == 'nextflow-io/rnaseq-nf'
         metadata.start >= begin
         metadata.start <= OffsetDateTime.now()
@@ -132,8 +112,6 @@ class WorkflowMetadataTest extends Specification {
         then:
         metadata.profile == 'foo_profile'
 
-        cleanup:
-        dir?.deleteDir()
     }
 
     def foo_test_method() {

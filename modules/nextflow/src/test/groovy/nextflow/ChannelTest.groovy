@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -432,14 +433,6 @@ class ChannelTest extends Specification {
     }
 
 
-    def testFromPathS3() {
-
-        when:
-        Channel.fromPath('s3://bucket/some/data.txt')
-        then:
-        noExceptionThrown()
-    }
-
     def testFromPathWithLinks() {
 
         setup:
@@ -450,7 +443,11 @@ class ChannelTest extends Specification {
         def file3 = Files.createFile(sub1.resolve('file3.txt'))
         def file4 = Files.createFile(sub1.resolve('file4.txt'))
         Files.createSymbolicLink(folder.resolve('link_to_sub1'), sub1 )
-
+        and:
+        // weird hack to prevent test failing on Github Action test with Java 15
+        println "testFromPathWithLinks content = " + folder.list()
+        sleep 100
+        
         // -- by default traverse symlinks
         when:
         def result = Channel.fromPath( folder.toAbsolutePath().toString() + '/**/*.txt' ).toSortedList({it.name}).getVal().collect { it.getName() }

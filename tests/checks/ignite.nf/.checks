@@ -13,7 +13,7 @@ $NXF_RUN -process.executor ignite | tee stdout
 [[ `< stdout grep -c 'Square: 4'` == 1 ]] || false
 [[ `< stdout grep -c 'Square: 9'` == 1 ]] || false
 
-
+if [[ $AWS_ACCESS_KEY_ID ]]; then
 #
 # Run Ignite using S3 as working directory 
 #
@@ -29,6 +29,9 @@ $NXF_RUN -process.executor ignite -w s3://nextflow-ci/work | tee stdout
 [[ `< stdout grep -c 'Square: 4'` == 1 ]] || false
 [[ `< stdout grep -c 'Square: 9'` == 1 ]] || false
 
+else
+  echo "Skip Ignite test since AWS keys are not available"
+fi
 
 #
 # Launch a nextflow daemon in background  

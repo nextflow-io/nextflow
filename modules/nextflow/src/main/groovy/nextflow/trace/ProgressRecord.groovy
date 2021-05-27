@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,7 +32,8 @@ class ProgressRecord implements Cloneable {
 
     final int index
     final String name     // process name
-    String hash     // process hash
+    String hash     // current task hash
+    String taskName // current task name
     int pending     // number of new tasks ready to be submitted
     int submitted   // number of tasks submitted for execution not yet started
     int running     // number of tasks whose execution started
@@ -57,6 +59,7 @@ class ProgressRecord implements Cloneable {
     ProgressRecord(int processId, String processName) {
         this.index = processId
         this.name = processName
+        this.taskName = processName
     }
 
     int getTotalCount() {

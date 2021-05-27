@@ -1,5 +1,6 @@
 #!/usr/bin/env nextflow
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,13 +27,9 @@ process foo {
     val y
 
     output:
-    val y into channel
+    val y into result
 
     "echo $x - $y"
-
 }
 
-
-channel.subscribe {
-    println "foo out: $it"
-}
+result.view { "foo out: $it" }

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,21 +34,6 @@ import static nextflow.ast.NextflowDSLImpl.OUT_PREFIX
 @CompileStatic
 class ChannelOut implements List<DataflowWriteChannel> {
 
-    final private static Map<String,Integer> NUMS = new HashMap<>(10)
-
-    static {
-        NUMS['first'] = 0
-        NUMS['second'] = 1
-        NUMS['third'] = 2
-        NUMS['fourth'] = 3
-        NUMS['fifth'] = 4
-        NUMS['sixth'] = 5
-        NUMS['seventh'] = 6
-        NUMS['eighth'] = 7
-        NUMS['ninth'] = 8
-        NUMS['tenth'] = 9
-    }
-
     private @Delegate List<DataflowWriteChannel> target
 
     private Map<String,DataflowWriteChannel> channels
@@ -69,7 +55,7 @@ class ChannelOut implements List<DataflowWriteChannel> {
 
     ChannelOut(OutputsList outs) {
         channels = new HashMap<>(outs.size())
-        final onlyWithName = new ArrayList(outs.size())
+        final onlyWithName = new ArrayList<DataflowWriteChannel>(outs.size())
         for( OutParam param : outs ) {
             final ch = param.getOutChannel()
             final name = param.channelEmitName
@@ -88,12 +74,6 @@ class ChannelOut implements List<DataflowWriteChannel> {
     def getProperty(String name) {
         if( this.channels.containsKey(name) ) {
             return channels.get(name)
-        }
-        else if(NUMS.containsKey(name)) {
-            // this has been deprecated
-            final i = NUMS[name]
-            log.warn1 "Property `out.${name}` has been deprecated -- Use `out[$i]` instead"
-            return target[i]
         }
         else
             metaClass.getProperty(this,name)
@@ -123,5 +103,17 @@ class ChannelOut implements List<DataflowWriteChannel> {
 
     static List spread(List args) {
         spread(args as Object[])
+    }
+
+    static Object[] spreadToArray(Object[] args) {
+        if(!args)
+            return args
+        // check if needed
+        boolean found=false
+        for( short i=0; i<args.length && !found; i++)
+            found = args[i] instanceof ChannelOut
+        if(!found)
+            return args
+        spread(args).toArray()
     }
 }

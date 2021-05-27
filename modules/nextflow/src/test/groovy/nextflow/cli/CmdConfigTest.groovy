@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +16,8 @@
  */
 
 package nextflow.cli
+
+import spock.lang.IgnoreIf
 
 import java.nio.file.Files
 
@@ -265,6 +268,28 @@ class CmdConfigTest extends Specification {
         result.params.gamma == [p:'SOMETHING/a', q:['SOMETHING']]
         result.params.omega == [p:111, q:'bbb']
 
+    }
+
+
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    def 'should resolve remote config' () {
+        given:
+        def buffer = new ByteArrayOutputStream()
+        def cmd = new CmdConfig(
+                args: ['https://github.com/nextflow-io/hello'],
+                showAllProfiles: true,
+                launcher: Mock(Launcher),
+                stdout: buffer  )
+
+        when:
+        cmd.run()
+        then:
+        buffer.toString() == '''\
+            process {
+               container = 'quay.io/nextflow/bash'
+            }
+            '''
+            .stripIndent()
     }
 
 }

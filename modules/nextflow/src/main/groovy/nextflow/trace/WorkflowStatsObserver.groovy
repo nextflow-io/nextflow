@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -62,31 +63,31 @@ class WorkflowStatsObserver implements TraceObserver {
 
     @Override
     void onProcessPending(TaskHandler handler, TraceRecord trace){
-        log.trace "== event pending pid=${handler.getTask().processor.id}"
+        log.trace "== event pending pid=${handler.getTask().processor.id}; status=$handler.status"
         agent.send { data.markPending(handler.getTask().processor) }
     }
 
     @Override
     void onProcessSubmit(TaskHandler handler, TraceRecord trace){
-        log.trace "== event submit pid=${handler.getTask().processor.id}"
+        log.trace "== event submit pid=${handler.getTask().processor.id}; status=$handler.status"
         agent.send { data.markSubmitted(handler.getTask()) }
     }
 
     @Override
     void onProcessStart(TaskHandler handler, TraceRecord trace){
-        log.trace "== event start pid=${handler.getTask().processor.id}"
+        log.trace "== event start pid=${handler.getTask().processor.id}; status=$handler.status"
         agent.send { data.markRunning(handler.getTask()) }
     }
 
     @Override
     void onProcessComplete(TaskHandler handler, TraceRecord trace) {
-        log.trace "== event complete pid=${handler.getTask().processor.id}"
+        log.trace "== event complete pid=${handler.getTask().processor.id}; status=$handler.status"
         agent.send { data.markCompleted(handler.getTask(), trace) }
     }
 
     @Override
     void onProcessCached(TaskHandler handler, TraceRecord trace){
-        log.trace "== event cached pid=${handler.getTask().processor.id}"
+        log.trace "== event cached pid=${handler.getTask().processor.id}; status=$handler.status"
         agent.send { data.markCached(handler.getTask(), trace) }
     }
 

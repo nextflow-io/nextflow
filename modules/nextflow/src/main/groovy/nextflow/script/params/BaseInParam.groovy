@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -151,7 +152,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
         throw new IllegalArgumentException("Invalid process input definition")
     }
 
-    BaseInParam bind( def obj ) {
+    BaseInParam bind( Object obj ) {
         this.bindObject = obj
         return this
     }
@@ -170,7 +171,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
     }
 
     BaseInParam from( def obj ) {
-        if(NF.isDsl2())
+        if( NF.isDsl2() )
             throw new ScriptRuntimeException("Process clause `from` should not be provided when using DSL 2")
         setFrom(obj)
         return this

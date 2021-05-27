@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,9 +17,6 @@
 
 package nextflow.trace
 
-import static nextflow.util.LoggerHelper.*
-import static org.fusesource.jansi.Ansi.*
-
 import groovy.transform.CompileStatic
 import jline.TerminalFactory
 import nextflow.Session
@@ -26,6 +24,10 @@ import nextflow.processor.TaskHandler
 import nextflow.util.Duration
 import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.AnsiConsole
+import static nextflow.util.LoggerHelper.isHashLogPrefix
+import static org.fusesource.jansi.Ansi.Attribute
+import static org.fusesource.jansi.Ansi.Color
+import static org.fusesource.jansi.Ansi.ansi
 /**
  * Implements an observer which display workflow
  * execution progress and notifications using
@@ -87,6 +89,8 @@ class AnsiLogObserver implements TraceObserver {
 
     private long endTimestamp
 
+    private long lastWidthReset
+
     private Boolean enableSummary = System.getenv('NXF_ANSI_SUMMARY') as Boolean
 
     private final int WARN_MESSAGE_TIMEOUT = 35_000
@@ -96,6 +100,10 @@ class AnsiLogObserver implements TraceObserver {
     private void markModified() {
         changeTimestamp = System.currentTimeMillis()
     }
+
+    boolean getStarted() { started }
+
+    boolean  getStopped() { stopped }
 
     private boolean hasProgressChanges() {
         final long progress = statsObserver.changeTimestamp ?: 0
@@ -135,8 +143,9 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     synchronized void appendError(String message) {
-        if( !started || !statsObserver.hasProgressRecords() )
+        if( !started || !statsObserver.hasProgressRecords() ) {
             printAnsi(message, Color.RED)
+        }
         else {
             errors << new Event(message)
             markModified()
@@ -205,12 +214,16 @@ class AnsiLogObserver implements TraceObserver {
         }
     }
 
+    protected String getExecutorName(String key) {
+        session.getExecutorFactory().getDisplayName(key)
+    }
+    
     protected void renderExecutors(Ansi term) {
         int count=0
         def line = ''
         for( Map.Entry<String,Integer> entry : executors ) {
             if( count++ ) line += ","
-            line += " $entry.key ($entry.value)"
+            line += " ${getExecutorName(entry.key)} ($entry.value)"
         }
 
         if( count ) {
@@ -230,10 +243,16 @@ class AnsiLogObserver implements TraceObserver {
         cols = TerminalFactory.get().getWidth()
 
         // calc max width
-        labelWidth = 0
+        final now = System.currentTimeMillis()
+        if( now-lastWidthReset>20_000 )
+            labelWidth = 0
+
+        final lastWidth = labelWidth
         for( ProgressRecord entry : processes ) {
-            labelWidth = Math.max(labelWidth, entry.name.size())
+            labelWidth = Math.max(labelWidth, entry.taskName.size())
         }
+        if( lastWidth != labelWidth )
+            lastWidthReset = now
 
         // render line
         for( ProgressRecord entry : processes ) {
@@ -346,7 +365,7 @@ class AnsiLogObserver implements TraceObserver {
     protected String line(ProgressRecord stats) {
         final float tot = stats.getTotalCount()
         final float com = stats.getCompletedCount()
-        final label = fmtWidth(stats.name, labelWidth, Math.max(cols-50, 5))
+        final label = fmtWidth(stats.taskName, labelWidth, Math.max(cols-50, 5))
         final hh = (stats.hash && tot>0 ? stats.hash : '-').padRight(9)
 
         if( tot == 0  )
@@ -400,4 +419,8 @@ class AnsiLogObserver implements TraceObserver {
         markModified()
     }
 
+    void forceTermination() {
+        stopped = true
+        endTimestamp = System.currentTimeMillis()
+    }
 }

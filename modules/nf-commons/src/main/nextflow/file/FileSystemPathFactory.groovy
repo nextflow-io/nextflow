@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,19 +20,42 @@ package nextflow.file
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
+import groovy.util.logging.Slf4j
+import nextflow.plugin.Plugins
+import org.pf4j.ExtensionPoint
 /**
  * Generic interface
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
-abstract class FileSystemPathFactory {
+abstract class FileSystemPathFactory implements ExtensionPoint {
 
+    /**
+     * Converts path uri string to the corresponding {@link Path} object
+     *
+     * @param uri
+     *      A fully qualified path uri including the protocol scheme
+     * @return
+     *      A {@link Path} for the given path or {@code null} if protocol is unknown
+     */
     abstract protected Path parseUri(String uri)
 
+    /**
+     * Converts a {@link Path} object to a fully qualified uri string
+     *
+     * @param path
+     *      The {@link Path} object to be converted
+     * @return
+     *      The uri string corresponding to the specified path or {@code null}
+     *      if the no provider is found
+     */
+    abstract protected String toUriString(Path path)
+
     static Path parse(String uri) {
-        def factories = factories0()
+        final factories = factories0()
+        log.trace "File system path factories: ${factories}"
         for( int i=0; i<factories.size(); i++ ) {
             final result = factories[i].parseUri(uri)
             if( result )
@@ -40,12 +64,22 @@ abstract class FileSystemPathFactory {
         return null
     }
 
-    @Memoized
-    private static List<FileSystemPathFactory> factories0() {
-        final result = new ArrayList(10)
-        final itr = ServiceLoader.load(FileSystemPathFactory).iterator()
-        while( itr.hasNext() )
-            result.add(itr.next())
-        return result
+    static String getUriString(Path path) {
+        final factories = factories0()
+        for( int i=0; i<factories.size(); i++ ) {
+            final result = factories[i].toUriString(path)
+            if( result )
+                return result
+        }
+        return null
     }
+
+    private static List<FileSystemPathFactory> factories0() {
+        final factories = new ArrayList(10)
+        final itr = Plugins.getExtensions(FileSystemPathFactory).iterator()
+        while( itr.hasNext() )
+            factories.add(itr.next())
+        return factories
+    }
+
 }

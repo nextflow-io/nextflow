@@ -70,6 +70,9 @@ class OpCall implements Callable {
             return this
         }
 
+        if( left.size()== 0 ) {
+            throw new ScriptRuntimeException("Operator '${methodName}' cannot be applied to an undefined output")
+        }
         if( left.size()==1 ) {
             this.source = left[0] as DataflowWriteChannel
             return this
@@ -123,14 +126,21 @@ class OpCall implements Callable {
     Object[] getArgs() { args }
 
     private <T> T read0(source){
-        if( source instanceof DataflowBroadcast )
-            return (T)CH.getReadChannel(source)
-
-        if( source instanceof DataflowQueue )
-            return (T)CH.getReadChannel(source)
-
-        else
-            return (T)source
+        T result
+        if( source instanceof DataflowBroadcast ) {
+            result = (T)CH.getReadChannel(source)
+        }
+        else if( source instanceof DataflowQueue ) {
+            result = (T)CH.getReadChannel(source)
+        }
+        else {
+            result = (T)source
+        } 
+        // Keep track of this relationship so we can retrieve the
+        // DataflowBroadcast or DataflowQueue when rendering the DAG.
+        if( !ignoreDagNode && source != result )
+            NodeMarker.addDataflowBroadcastPair(result, source)
+        return result
     }
 
     private Object[] read1(Object[] args) {
@@ -300,7 +310,7 @@ class OpCall implements Callable {
     protected Method getMethod0(String methodName, Object[] args) {
         def meta = owner.metaClass.getMetaMethod(methodName, args)
         if( meta == null )
-            throw new MissingMethodException(methodName, owner.getClass())
+            throw new MissingMethodException(methodName, owner.getClass(), args)
         method = owner.getClass().getMethod(methodName, meta.getNativeParameterTypes())
     }
 
@@ -312,11 +322,16 @@ class OpCall implements Callable {
 
     protected void checkDeprecation(Method method) {
         if( method.getAnnotation(Deprecated) ) {
-            log.warn "Operator `$methodName` is deprecated -- it will be removed in a future release"
+            def messg = "Operator `$methodName` is deprecated -- it will be removed in a future release"
+            if( NF.dsl2Final )
+                throw new DeprecationException(messg)
+            log.warn messg
         }
         else if( method.getAnnotation(DeprecatedDsl2) && NF.isDsl2() ) {
             def annot = method.getAnnotation(DeprecatedDsl2)
             def messg = annot.message() ?: "Operator `$methodName` is deprecated -- it will be removed in a future release".toString()
+            if( NF.dsl2Final )
+                throw new DeprecationException(messg)
             log.warn messg
         }
     }

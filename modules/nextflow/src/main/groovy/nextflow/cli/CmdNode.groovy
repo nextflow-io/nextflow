@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +23,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.config.ConfigBuilder
 import nextflow.daemon.DaemonLauncher
+import nextflow.plugin.Plugins
 import nextflow.util.ServiceName
 import nextflow.util.ServiceDiscover
 /**
@@ -51,6 +53,7 @@ class CmdNode extends CmdBase {
 
     @Override
     void run() {
+        System.setProperty('nxf.node.daemon', 'true')
         launchDaemon(provider ? provider[0] : null)
     }
 
@@ -138,11 +141,12 @@ class CmdNode extends CmdBase {
      * @throws IllegalStateException when no class implementing {@code DaemonLauncher} is available
      */
     static DaemonLauncher loadDaemonFirst() {
-        def loader = ServiceLoader.load(DaemonLauncher).iterator()
-        if( !loader.hasNext() )
+        Plugins.setup()
+        final loader = Plugins.getExtension(DaemonLauncher)
+        if( !loader )
             throw new IllegalStateException("No cluster services are available -- Cannot launch Nextflow in cluster mode")
 
-        return loader.next()
+        return loader
     }
 
 }

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -496,7 +497,27 @@ class K8sDriverLauncher {
     }
 
     protected Path getScmFile() {
-        ProviderConfig.SCM_FILE.toPath()
+        ProviderConfig.getScmConfigPath()
+    }
+
+    protected String getPipelineName() {
+        return pipelineName
+    }
+
+    protected boolean getInteractive() {
+        return interactive
+    }
+
+    protected Map getConfig() {
+        return config
+    }
+
+    protected K8sConfig getK8sConfig() {
+        return k8sConfig
+    }
+
+    protected K8sClient getK8sClient() {
+        return k8sClient
     }
 
     /**

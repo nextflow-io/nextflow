@@ -33,9 +33,9 @@ or chaining it with a channel operator such as :ref:`operator-map`, :ref:`operat
 Queue channels are also created by process output declarations using the ``into`` clause.
 
 .. note:: The definition implies that the same queue channel cannot be used more than one time as process
- output and more then one time as process input.
+ output and more than one time as process input.
 
-In you need to connect a process output channel to more then one process or operator use the
+If you need to connect a process output channel to more than one process or operator use the
 :ref:`operator-into` operator to create two (or more) copies of the same channel and use each
 of them to connect a separate process.
 
@@ -72,7 +72,7 @@ For example::
       """
     }
 
-The process in the above snippet declare a single input which implicitly is a value channel.
+The process in the above snippet declares a single input which implicitly is a value channel.
 Therefore also the ``result`` output is a value channel that can be read by more than one process.
 
 See also: :ref:`process-understand-how-multiple-input-channels-work`.
@@ -96,13 +96,17 @@ The available factory methods are:
 * `value`_
 * `watchPath`_
 
+.. tip::
+  As of version 20.07.0 the prefix ``channel.`` has been introduced as an alias of ``Channel.``, therefore factory
+  methods can be used either with the syntaxes ``channel.from()`` and ``Channel.from()``, and so on.
+
 .. _channel-create:
 
 create
 ------
 
 .. warning::
-    This method is deprecated.
+    This method is deprecated and won't be available in DSL2 syntax.
 
 Creates a new `channel` by using the ``create`` method, as shown below::
 
@@ -159,7 +163,9 @@ See also: `fromList`_ factory method.
 from
 ----
 
-.. warning:: This method is deprecated. Use `of`_ or `fromList`_ instead.
+.. warning::
+  This method is deprecated and should only be used for backward compatibility in legacy code.
+  Use `of`_ or `fromList`_ instead.
 
 The ``from`` method allows you to create a channel emitting any sequence of values that are specified as the method argument,
 for example::
@@ -233,10 +239,10 @@ for example::
 
 Prints::
 
-    a
-    b
-    c
-    d
+    value: a
+    value: b
+    value: c
+    value: d
 
 
 See also: `of`_ factory method.
@@ -334,7 +340,7 @@ pair and the second element is the list of files (sorted in lexicographical orde
 
     Channel
         .fromFilePairs('/my/data/SRR*_{1,2}.fastq')
-        .println()
+        .view()
 
 It will produce an output similar to the following::
 
@@ -355,7 +361,7 @@ For example::
 
     Channel
         .fromFilePairs('/some/data/*', size: -1) { file -> file.extension }
-        .println { ext, files -> "Files with the extension $ext are $files" }
+        .view { ext, files -> "Files with the extension $ext are $files" }
 
 
 Table of optional parameters available:
@@ -389,7 +395,7 @@ the FASTQ files matching the specified criteria i.e project or accession number(
 
     Channel
         .fromSRA('SRP043510')
-        .println()
+        .view()
 
 
 It returns::
@@ -407,7 +413,7 @@ Multiple accession IDs can be specified using a list object::
     ids = ['ERR908507', 'ERR908506', 'ERR908505']
     Channel
         .fromSRA(ids)
-        .println()
+        .view()
 
 ::
 
@@ -532,7 +538,7 @@ Observing events
 subscribe
 ---------
 
-The ``subscribe`` method permits to execute a user define function each time a new value is emitted by the source channel.
+The ``subscribe`` method allows you to execute a user defined function each time a new value is emitted by the source channel.
 
 The emitted value is passed implicitly to the specified function. For example::
 
@@ -550,10 +556,10 @@ The emitted value is passed implicitly to the specified function. For example::
 
 
 .. note:: Formally the user defined function is a ``Closure`` as defined by the Groovy programming language on which
-  the `Nextflow` scripts are based on.
+  the `Nextflow` scripts are based.
 
 If needed the closure parameter can be defined explicitly, using a name other than ``it`` and, optionally,
-specifying the expected value type, as showed in the following example::
+specifying the expected value type, as shown in the following example::
 
     Channel
         .from( 'alpha', 'beta', 'lambda' )

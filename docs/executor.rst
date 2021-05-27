@@ -106,7 +106,7 @@ The amount of resources requested by each job submission is defined by the follo
 * :ref:`process-memory`
 * :ref:`process-clusterOptions`
 
-.. note:: SLURM `partitions` can be considered jobs queues. Nextflow allows to set partitions by using the above ``queue``
+.. note:: SLURM `partitions` can be considered jobs queues. Nextflow allows you to set partitions by using the above ``queue``
     directive.
 
 .. tip:: Nextflow does not provide a direct support for SLURM multi-clusters feature. If you need to
@@ -293,6 +293,25 @@ running workloads. Moreover a S3 bucket must be used as pipeline work directory.
 
 See the :ref:`AWS Batch<awscloud-batch>` page for further configuration details.
 
+.. _azurebatch-executor:
+
+Azure Batch
+============
+
+Nextflow supports `Azure Batch <https://azure.microsoft.com/en-us/services/batch/>`_ service which allows submitting jobs in the cloud
+without having to spin out and manage a cluster of virtual machines. Azure Batch uses Docker containers to run tasks,
+which makes deploying pipelines much simpler.
+
+The pipeline processes must specify the Docker image to use by defining the ``container`` directive, either in the pipeline
+script or the ``nextflow.config`` file.
+
+To enable this executor set the property ``process.executor = 'azurebatch'`` in the ``nextflow.config`` file.
+
+The pipeline can be launched either in a local computer or a cloud virtual machine. The latter is suggested for heavy or long
+running workloads. Moreover a Azure Blob storage container must be used as pipeline work directory.
+
+See the :ref:`Azure Batch <azure-batch>` page for further configuration details.
+
 .. _google-lifesciences-executor:
 
 Google Life Sciences
@@ -334,9 +353,13 @@ To use this feature define the following variables in the workflow launching env
     export NXF_EXECUTOR_TES_ENDPOINT='http://back.end.com'
     
 
-Then you will be able to run your workflow over TES using the usual Nextflow command line, i.e.::
+It is important that the endpoint is specified without the trailing slash; otherwise, the resulting URLs will be not
+normalized and the requests to TES will fail.
 
-    nextflow run rnaseq-nf
+Then you will be able to run your workflow over TES using the usual Nextflow command line. Be sure to specify the Docker
+image to use, i.e.::
+
+    nextflow run rnaseq-nf -with-docker alpine
 
 .. note:: If the variable ``NXF_EXECUTOR_TES_ENDPOINT`` is omitted the default endpoint is ``http://localhost:8000``.
 

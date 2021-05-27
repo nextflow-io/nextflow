@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +25,7 @@ import com.sun.net.httpserver.Headers
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
+import nextflow.exception.ConfigParseException
 import spock.lang.Specification
 
 import nextflow.util.Duration
@@ -34,6 +36,49 @@ import nextflow.util.MemoryUnit
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ConfigParserTest extends Specification {
+
+    def 'should parse plugins id' () {
+        given:
+        def CONFIG = '''
+        plugins {
+            id 'foo'
+            id 'bar'
+            id 'bar'
+        } 
+             
+        process {
+            cpus = 1
+            mem = 2 
+        }
+        '''
+
+        when:
+        def config = new ConfigParser().parse(CONFIG)
+
+        then:
+        config.plugins == ['foo','bar'] as Set
+        and:
+        config.process.cpus == 1
+    }
+
+    def 'should fail plugins id' () {
+        given:
+        def CONFIG = '''
+        profiles {
+            plugins {
+                id 'foo'
+            } 
+        }
+        '''
+
+        when:
+        def config = new ConfigParser().parse(CONFIG)
+
+        then:
+        def e = thrown(ConfigParseException)
+        e.message == 'Plugins definition is only allowed in config top-most scope'
+    }
+
 
     def 'should parse composed config files' () {
 
@@ -384,6 +429,40 @@ class ConfigParserTest extends Specification {
         slurper.parse(text)
         then:
         slurper.getConditionalBlockNames() == [] as Set
+    }
+
+    def 'should return the profile names' () {
+        given:
+        def text = '''
+        profiles {
+            alpha {
+                a = 1
+            }
+            beta {
+                b = 2
+            }
+        }
+
+        servers {
+            local {
+                x = 1
+            }
+            test {
+                y = 2
+            }
+            prod {
+                z = 3
+            }
+        }
+        '''
+
+        when:
+        def slurper = new ConfigParser()
+        slurper.parse(text)
+        then:
+        slurper.getProfileNames() == ['alpha','beta'] as Set
+        slurper.getConditionalBlockNames() == [] as Set
+
     }
 
     def 'should disable includeConfig parsing' () {

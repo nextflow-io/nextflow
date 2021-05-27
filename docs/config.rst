@@ -7,18 +7,21 @@ Configuration
 Configuration file
 ==================
 
-When a pipeline script is launched Nextflow looks for a file named ``nextflow.config`` in the current directory and
-in the script base directory (if it is not the same as the current directory). Finally it checks for the file
-``$HOME/.nextflow/config``.
+When a pipeline script is launched, Nextflow looks for configuration files in multiple locations.
+Since each configuration file can contain conflicting settings, the sources are ranked to decide which
+settings to are applied. All possible configuration sources are reported below, listed in order
+of priority:
 
-When more than one of the above files exist they are merged, so that the settings in the first override the same ones
-that may appear in the second one, and so on.
+1. Parameters specified on the command line (``--something value``)
+2. Parameters provided using the ``-params-file`` option
+3. Config file specified using the ``-c my_config`` option
+4. The config file named ``nextflow.config`` in the current directory
+5. The config file named ``nextflow.config`` in the workflow project directory
+6. The config file ``$HOME/.nextflow/config``
+7. Values defined within the pipeline script itself (e.g. ``main.nf``)
 
-The default config file search mechanism can be extended proving an extra configuration file by using the command line
-option ``-c <config file>``.
-
-.. note:: It's worth noting that by doing this, the files ``nextflow.config`` and ``$HOME/.nextflow/config`` are not
-  ignored and they are merged as explained above.
+When more than one of these ways of specifying configurations are used, they are merged, so that the settings in the
+first override the same ones that may appear in the second one, and so on.
 
 .. tip:: If you want to ignore any default configuration files and use only the custom one use the command line option
   ``-C <config file>``.
@@ -94,6 +97,7 @@ following example::
    }
 
 
+.. _config-env:
 
 Scope `env`
 -----------
@@ -257,9 +261,9 @@ dumpInterval          Determines how often the executor status is written in the
 queueStatInterval     Determines how often the queue status is fetched from the cluster system. This setting is used only by grid executors (default: ``1min``).
 exitReadTimeout       Determines how long the executor waits before return an error status when a process is terminated but the `exit` file does not exist or it is empty. This setting is used only by grid executors (default: ``270 sec``).
 killBatchSize         Determines the number of jobs that can be `killed` in a single command execution (default: ``100``).
-submitRateLimit       Determines the max rate of jobs that can be executed per time unit, for example ``'10 sec'`` eg. max 10 jobs per second (default: `unlimited`).
+submitRateLimit       Determines the max rate of job submission per time unit, for example ``'10sec'`` eg. max 10 jobs per second or ``'50/2min'`` i.e. 50 job submissions every 2 minutes (default: `unlimited`).
 perJobMemLimit        Specifies Platform LSF *per-job* memory limit mode. See :ref:`lsf-executor`.
-jobName               Determines the name of jobs submitted to the underlying cluster executor e.g. ``executor.jobName = { "$task.name - $task.hash" }`` .
+jobName               Determines the name of jobs submitted to the underlying cluster executor e.g. ``executor.jobName = { "$task.name - $task.hash" }`` Note: when using this option you need to make sure the resulting job name matches the validation constraints of the underlying batch scheduler.
 cpus                  The maximum number of CPUs made available by the underlying system (only used by the ``local`` executor).
 memory                The maximum amount of memory made available by the underlying system (only used by the ``local`` executor).
 ===================== =====================
@@ -335,7 +339,7 @@ brackets, as shown below::
 
 
 
-Read :ref:`docker-page` page to lean more how use Docker containers with Nextflow.
+Read :ref:`docker-page` page to learn more how use Docker containers with Nextflow.
 
 
 .. _config-singularity:
@@ -356,13 +360,13 @@ engineOptions       This attribute can be used to provide any option supported b
 envWhitelist        Comma separated list of environment variable names to be included in the container environment.
 runOptions          This attribute can be used to provide any extra command line options supported by the ``singularity exec``.
 noHttps             Turn this flag to ``true`` to pull the Singularity image with http protocol (default: ``false``).
-autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed contained. It requires the `user bind control` feature enabled in your Singularity installation (default: ``false``).
+autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Singularity installation (default: ``false``).
 cacheDir            The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
 pullTimeout         The amount of time the Singularity pull can last, exceeding which the process is terminated (default: ``20 min``).
 ================== ================
 
 
-Read :ref:`singularity-page` page to lean more how use Singularity containers with Nextflow.
+Read :ref:`singularity-page` page to learn more how use Singularity containers with Nextflow.
 
 .. _config-podman:
 
@@ -398,7 +402,40 @@ brackets, as shown below::
 
 
 
-Read :ref:`podman-page` page to lean more how use Podman containers with Nextflow.
+Read :ref:`podman-page` page to learn more how use Podman containers with Nextflow.
+
+.. _config-charliecloud:
+
+Scope `charliecloud`
+--------------------
+
+The ``charliecloud`` configuration scope controls how `Charliecloud <https://hpc.github.io/charliecloud/>`_ containers are executed by Nextflow.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+enabled             Turn this flag to ``true`` to enable Charliecloud execution (default: ``false``).
+envWhitelist        Comma separated list of environment variable names to be included in the container environment.
+temp                Mounts a path of your choice as the ``/tmp`` directory in the container. Use the special value ``auto`` to create a temporary directory each time a container is created.
+runOptions          This attribute can be used to provide any extra command line options supported by the ``ch-run`` command.
+cacheDir            The directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
+pullTimeout         The amount of time the Charliecloud pull can last, exceeding which the process is terminated (default: ``20 min``).
+================== ================
+
+The above options can be used by prefixing them with the ``charliecloud`` scope or surrounding them by curly
+brackets, as shown below::
+
+    process.container = 'nextflow/examples'
+
+    charliecloud {
+        enabled = true
+    }
+
+
+
+Read :ref:`charliecloud-page` page to learn more how use Charliecloud containers with Nextflow.
 
 .. _config-manifest:
 
@@ -414,7 +451,9 @@ Name                Description
 ================== ================
 author              Project author name (use a comma to separate multiple names).
 defaultBranch       Git repository default branch (default: ``master``).
+recurseSubmodules   Turn this flag to ``true`` to pull submodules recursively from the Git repository
 description         Free text describing the workflow project.
+doi                 Project related publication DOI identifier.
 homePage            Project home page URL.
 mainScript          Project main script (default: ``main.nf``).
 name                Project short name.
@@ -466,6 +505,7 @@ fields              Comma separated list of fields to be included in the report.
 file                Trace file name (default: ``trace.txt``).
 sep                 Character used to separate values in each row (default: ``\t``).
 raw                 When ``true`` turns on raw number report generation i.e. date and time are reported as milliseconds and memory as number of bytes
+overwrite           When ``true`` overwrites an existing trace file instead of rolling it.
 ================== ================
 
 The above options can be used by prefixing them with the ``trace`` scope or surrounding them by curly
@@ -479,6 +519,33 @@ brackets. For example::
 
 
 To learn more about the execution report that can be generated by Nextflow read :ref:`trace-report` documentation page.
+
+.. _config-dag:
+
+Scope `dag`
+-------------
+
+The ``dag`` scope allows you to control the layout of the execution graph file generated by Nextflow.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+enabled             When ``true`` turns on the generation of the execution graph report file (default: ``false``).
+file                Graph file name (default: ``dag.dot``).
+================== ================
+
+The above options can be used by prefixing them with the ``dag`` scope or surrounding them by curly
+brackets. For example::
+
+    dag {
+        enabled = true
+        file = 'pipeline_dag.html'
+    }
+
+
+To learn more about the execution graph that can be generated by Nextflow read :ref:`dag-visualisation` documentation page.
 
 .. _config-aws:
 
@@ -495,13 +562,14 @@ to specify your bucket credentials. For example::
         region = '<REGION IDENTIFIER>'
     }
 
-Click the following link to lean more about `AWS Security Credentials <http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html>`_.
+Click the following link to learn more about `AWS Security Credentials <http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html>`_.
 
 Advanced client configuration options can be set by using the ``client`` attribute. The following properties can be used:
 
 =========================== ================
 Name                        Description
 =========================== ================
+acl                         Allow the setting of a predefined bucket permissions also known as *canned ACL*. Permitted values are ``Private``, ``PublicRead``, ``PublicReadWrite``, ``AuthenticatedRead``, ``LogDeliveryWrite``, ``BucketOwnerRead``, ``BucketOwnerFullControl`` and ``AwsExecRead``. See `Amazon docs <https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl>`_ for details.
 connectionTimeout           The amount of time to wait (in milliseconds) when initially establishing a connection before giving up and timing out.
 endpoint                    The AWS S3 API entry point e.g. `s3-us-west-1.amazonaws.com`.
 maxConnections              The maximum number of allowed open HTTP connections.
@@ -547,7 +615,7 @@ cliPath                     The path where the AWS command line tool is installe
 jobRole                     The AWS Job Role ARN that needs to be used to execute the Batch Job.
 volumes                     One or more container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. ``/host/path:/mount/path[:ro|rw]``. Multiple mounts can be specifid separating them with a comma or using a list object.
 delayBetweenAttempts        Delay between download attempts from S3 (default `10 sec`).
-maxParallelTransfers        Max parallel upload/download transfer operations *per job* (default: ``16``).
+maxParallelTransfers        Max parallel upload/download transfer operations *per job* (default: ``4``).
 maxTransferAttempts         Max number of downloads attempts from S3 (default: `1`).
 =========================== ================
 
@@ -556,48 +624,9 @@ maxTransferAttempts         Max number of downloads attempts from S3 (default: `
 Scope `cloud`
 -------------
 
-The ``cloud`` scope allows you to define the settings of the computing cluster that can be deployed in the cloud
-by Nextflow.
+.. note::
+    The ``cloud`` configuration scope has been retired.
 
-The following settings are available:
-
-=========================== ================
-Name                        Description
-=========================== ================
-bootStorageSize             Boot storage volume size e.g. ``10 GB``.
-imageId                     Identifier of the virtual machine(s) to launch e.g. ``ami-43f49030``.
-instanceRole                IAM role granting required permissions and authorizations in the launched instances.
-                            When specifying an IAM role no access/security keys are installed in the cluster deployed in the cloud.
-instanceType                Type of the virtual machine(s) to launch e.g. ``m4.xlarge``.
-instanceStorageMount        Ephemeral instance storage mount path e.g. ``/mnt/scratch``.
-instanceStorageDevice       Ephemeral instance storage device name e.g. ``/dev/xvdc`` (optional).
-keyName                     SSH access key name given by the cloud provider.
-keyHash                     SSH access public key hash string.
-keyFile                     SSH access public key file path.
-securityGroup               Identifier of the security group to be applied e.g. ``sg-df72b9ba``.
-sharedStorageId             Identifier of the shared file system instance e.g. ``fs-1803efd1``.
-sharedStorageMount          Mount path of the shared file system e.g. ``/mnt/efs``.
-subnetId                    Identifier of the VPC subnet to be applied e.g. ``subnet-05222a43``.
-spotPrice                   Price bid for spot/preemptive instances.
-userName                    SSH access user name (don't specify it to use the image default user name).
-autoscale                   See below.
-=========================== ================
-
-The autoscale configuration group provides the following settings:
-
-=========================== ================
-Name                        Description
-=========================== ================
-enabled                     Enable cluster auto-scaling.
-terminateWhenIdle           Enable cluster automatic scale-down i.e. instance terminations when idle (default: ``false``).
-idleTimeout                 Amount of time in idle state after which an instance is candidate to be terminated (default: ``5 min``).
-starvingTimeout             Amount of time after which one ore more tasks pending for execution trigger an auto-scale request (default: ``5 min``).
-minInstances                Minimum number of instances in the cluster.
-maxInstances                Maximum number of instances in the cluster.
-imageId                     Identifier of the virtual machine(s) to launch when new instances are added to the cluster.
-instanceType                Type of the virtual machine(s) to launch when new instances are added to the cluster.
-spotPrice                   Price bid for spot/preemptive instances launched while auto-scaling the cluster.
-=========================== ================
 
 .. _config-conda:
 
@@ -613,7 +642,9 @@ The following settings are available:
 Name                Description
 ================== ================
 cacheDir            Defines the path where Conda environments are stored. When using a compute cluster make sure to provide a shared file system path accessible from all computing nodes.
+createOptions       Defines any extra command line options supported by the ``conda create`` command. For details see: https://docs.conda.io/projects/conda/en/latest/commands/create.html.
 createTimeout       Defines the amount of time the Conda environment creation can last. The creation process is terminated when the timeout is exceeded (default: ``20 min``).
+useMamba            Uses the ``mamba`` binary instead of ``conda`` to create the conda environments. For details see: https://github.com/mamba-org/mamba.
 ================== ================
 
 
@@ -662,6 +693,7 @@ Name                Description
 ================== ================
 enabled             When ``true`` turns on the generation of the timeline report file (default: ``false``).
 file                Timeline file name (default: ``timeline.html``).
+overwrite           When ``true`` overwrites an existing timeline file instead of rolling it.
 ================== ================
 
 .. _config-mail:
@@ -737,14 +769,49 @@ Name                Description
 ================== ================
 enabled             If ``true`` it create the workflow execution report.
 file                The path of the created execution report file (default: ``report.html``).
+overwrite           When ``true`` overwrites existing report file instead of rolling it.
 ================== ================
+
+
+.. _config-tower:
+
+Scope `tower`
+--------------
+
+The ``tower`` configuration scope controls the settings for the `Nextflow Tower <https://tower.nf>`_ monitoring and tracing service.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+enabled            When ``true`` Nextflow sends the workflow tracing and execution metrics to the Nextflow Tower service (default: ``false``).
+accessToken        The unique access token specific to your account on an instance of Tower.
+endpoint           The endpoint of your Tower deployment (default: ``https://tower.nf``).
+workspaceId        The ID of the Tower workspace where the run should be added (default: the launching user personal workspace).
+================== ================
+
+The above options can be used by prefixing them with the ``tower`` scope or surrounding them by curly
+brackets, as shown below::
+
+    tower {
+      enabled = true
+      accessToken = '<YOUR TOKEN>'
+      workspaceId = '<YOUR WORKSPACE ID>'
+    }
+
+.. tip::
+  Your ``accessToken`` can be obtained from your Tower instance in the `Tokens page <https://tower.nf/tokens>`.
+
+.. tip:: 
+  The Tower workspace ID can also the specified using the environment variable ``TOWER_WORKSPACE_ID`` (config file has priority over the environment variable). 
 
 .. _config-weblog:
 
 Scope `weblog`
 --------------
 
-The ``weblog`` scope allows to send detailed :ref:`trace scope<trace-fields>` information as HTTP POST request to a webserver, shipped as a JSON object.
+The ``weblog`` scope allows you to send detailed :ref:`trace scope<trace-fields>` information as HTTP POST request to a webserver, shipped as a JSON object.
 
 Detailed information about the JSON fields can be found in the :ref:`weblog description<weblog-service>`.
 
@@ -856,11 +923,14 @@ NXF_DEBUG                   Defines scripts debugging level: ``1`` dump task env
 NXF_EXECUTOR                Defines the default process executor e.g. `sge`
 NXF_CONDA_CACHEDIR          Directory where Conda environments are store. When using a computing cluster it must be a shared folder accessible from all computing nodes.
 NXF_SINGULARITY_CACHEDIR    Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all computing nodes.
+NXF_CHARLIECLOUD_CACHEDIR   Directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible from all computing nodes.
 NXF_JAVA_HOME               Defines the path location of the Java VM installation used to run Nextflow. This variable overrides the ``JAVA_HOME`` variable if defined.
 NXF_OFFLINE                 When ``true`` disables the project automatic download and update from remote repositories (default: ``false``).
 NXF_CLOUD_DRIVER            Defines the default cloud driver to be used if not specified in the config file or as command line option, either ``aws`` or ``google``.
 NXF_ANSI_LOG                Enables/disables ANSI console output (default ``true`` when ANSI terminal is detected).
 NXF_ANSI_SUMMARY            Enables/disables ANSI completion summary: `true|false` (default: print summary if execution last more than 1 minute).
+NXF_SCM_FILE                Defines the path location of the SCM config file (requires version ``20.10.0`` or later).
+NXF_PARAMS_FILE             Defines the path location of the pipeline parameters file (requires version ``20.10.0`` or later).
 JAVA_HOME                   Defines the path location of the Java VM installation used to run Nextflow.
 JAVA_CMD                    Defines the path location of the Java binary command used to launch Nextflow.
 HTTP_PROXY                  Defines the HTTP proxy server

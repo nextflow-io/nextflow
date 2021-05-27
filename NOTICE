@@ -1,5 +1,6 @@
 NEXTFLOW
 
+Copyright 2020-2021, Seqera Labs
 Copyright 2013-2019, Centre for Genomic Regulation (CRG)
 
 
@@ -45,6 +46,10 @@ This software includes source code and libraries developed by:
     Copyright 2010-2014 Amazon.com, Inc. or its affiliates
     Licensed under Apache License, Version 2.0
 
+    Azure Cloud plugin for Nextflow
+    Copyright 2021, Microsoft Corp
+    Licensed under Apache License, Version 2.0
+       
     Gpars
     Copyright (c) 2008-2011, The Gpars authors
     Licensed under the Apache License, Version 2.0

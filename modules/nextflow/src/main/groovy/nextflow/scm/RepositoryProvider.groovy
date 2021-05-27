@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +16,10 @@
  */
 
 package nextflow.scm
+
+
 import groovy.json.JsonSlurper
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
@@ -31,6 +35,18 @@ import nextflow.exception.AbortOperationException
 @CompileStatic
 abstract class RepositoryProvider {
 
+    @Canonical
+    static class TagInfo {
+        String name
+        String commitId
+    }
+
+    @Canonical
+    static class BranchInfo {
+        String name
+        String commitId
+    }
+
     /**
      * The pipeline qualified name following the syntax {@code owner/repository}
      */
@@ -41,9 +57,19 @@ abstract class RepositoryProvider {
      */
     protected ProviderConfig config
 
+    /**
+     * The name of the commit/branch/tag
+     */
+    protected String revision
+
     RepositoryProvider setCredentials(String userName, String password) {
         config.user = userName
         config.password = password
+        return this
+    }
+
+    RepositoryProvider setRevision(String revision) {
+        this.revision = revision
         return this
     }
 
@@ -87,6 +113,10 @@ abstract class RepositoryProvider {
      */
     abstract String getRepositoryUrl()
 
+    List<BranchInfo> getBranches() { throw new UnsupportedOperationException("Get branches operation not support by ${this.getClass().getSimpleName()} provider") }
+
+    List<TagInfo> getTags() { throw new UnsupportedOperationException("Get tags operation not support by ${this.getClass().getSimpleName()} provider") }
+
     /**
      * Invoke the API request specified
      *
@@ -125,7 +155,6 @@ abstract class RepositoryProvider {
             String authString = "${config.user}:${config.password}".bytes.encodeBase64().toString()
             connection.setRequestProperty("Authorization","Basic " + authString)
         }
-
     }
 
     /**
@@ -157,9 +186,25 @@ abstract class RepositoryProvider {
                 log.debug "Response status: $code -- ${connection.getErrorStream()?.text}"
                 throw new AbortOperationException("Remote resource not found: ${connection.getURL()}")
         }
-
     }
 
+    @Memoized
+    protected <T> List<T> invokeAndResponseWithPaging(String request, Closure<T> parse) {
+        int page = 0
+        final result = new ArrayList()
+        while( true ) {
+            final url = request + (request.contains('?') ? "&page=${++page}": "?page=${++page}")
+            final response = invoke(url)
+            final list = (List) new JsonSlurper().parseText(response)
+            if( !list )
+                break
+
+            for( def item : list ) {
+                result.add( parse(item) )
+            }
+        }
+        return result
+    }
 
     /**
      * Invoke the API request specified and parse the JSON response
@@ -237,16 +282,16 @@ abstract class RepositoryProvider {
             case 'gitea':
                 return new GiteaRepositoryProvider(project, config)
 
+            case 'azurerepos':
+                return new AzureRepositoryProvider(project, config)
+
             case 'file':
                 // remove the 'local' prefix for the file provider
                 def localName = project.tokenize('/').last()
                 return new LocalRepositoryProvider(localName, config)
         }
 
-        throw new AbortOperationException("Unkwnon project repository platform: ${config.platform}")
+        throw new AbortOperationException("Unknown project repository platform: ${config.platform}")
     }
 
 }
-
-
-

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +16,10 @@
  */
 
 package nextflow.file.http
+
+
 import spock.lang.Specification
+import spock.lang.Unroll
 /**
  * Created by emilio on 08/11/16.
  */
@@ -92,4 +96,36 @@ class XFileSystemProviderTest extends Specification {
         attrs.lastModifiedTime() == null
         attrs.size() == -1
     }
+
+    @Unroll
+    def 'should get uri path' () {
+        given:
+        def provider = new HttpFileSystemProvider()
+
+        when:
+        def path = provider.getPath( new URI(PATH) )
+        then:
+        path.toUri().toString() == EXPECTED
+
+        where:
+        PATH                                | EXPECTED
+        'http://foo.com/this/that'          | 'http://foo.com/this/that'
+        'http://FOO.com/this/that'          | 'http://foo.com/this/that'
+        'http://MrXYZ@foo.com/this/that'    | 'http://MrXYZ@foo.com/this/that'
+        'http://MrXYZ@FOO.com/this/that'    | 'http://MrXYZ@foo.com/this/that'
+        'http://@FOO.com/this/that'         | 'http://@foo.com/this/that'
+    }
+
+    @Unroll
+    def 'should encode user info' () {
+        given:
+        def provider = new HttpFileSystemProvider()
+        expect:
+        provider.auth(USER_INFO) == EXPECTED
+        where:
+        USER_INFO               | EXPECTED
+        "foo:bar"               | "Basic ${'foo:bar'.bytes.encodeBase64()}"
+        "x-oauth-bearer:12345"  | "Bearer 12345"
+    }
+
 }

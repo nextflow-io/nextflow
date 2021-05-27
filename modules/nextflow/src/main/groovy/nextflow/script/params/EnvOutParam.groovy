@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,7 +26,7 @@ import nextflow.script.TokenVar
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors
-class EnvOutParam extends BaseOutParam {
+class EnvOutParam extends BaseOutParam implements OptionalParam {
 
     protected target
 

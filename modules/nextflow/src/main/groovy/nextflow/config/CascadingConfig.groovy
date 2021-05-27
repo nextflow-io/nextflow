@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -80,7 +81,7 @@ abstract class CascadingConfig<K,V> {
 
     protected Map<String,Object> copyPublicAttributes() {
         def skip = privateFields()
-        def copy = [:]
+        def copy = new LinkedHashMap()
         this.config.each { k,v -> if(!skip.contains(k)) copy[k]=v }
         return copy
     }
@@ -115,7 +116,7 @@ abstract class CascadingConfig<K,V> {
     }
 
     Set<K> getAttributeNames() {
-        new HashSet(config.keySet())
+        new HashSet<K>(config.keySet())
     }
 
 

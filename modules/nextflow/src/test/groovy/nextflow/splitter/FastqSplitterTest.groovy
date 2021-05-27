@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -370,7 +371,7 @@ class FastqSplitterTest extends Specification {
                     AAGGTCTTCAAGCGTGCCAAGAAGAATAGTAATAAG
                     +V00-HWI-EAS132_5_30HYMAAXX:4:1:746:1938
                     ]]]]]]]][]]][]X[[L]X]]][TX[]]HZCXXZV
-                   '''
+                    '''
             .stripIndent().trim()
 
 

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,10 +17,12 @@
 
 package nextflow.extension
 
+import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.Channel
+import nextflow.Global
 import nextflow.Session
+import nextflow.exception.AbortOperationException
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -166,7 +169,7 @@ class JoinOpTest extends Specification {
     }
 
 
-    def 'should join pair with singleton and reminder' () {
+    def 'should join pair with singleton and remainder' () {
 
         when:
         def left = Channel.from(['P', 0], ['X', 1], ['Y', 2], ['Z', 3])
@@ -205,4 +208,137 @@ class JoinOpTest extends Specification {
 
     }
 
+
+    def 'should not fail on mismatches' () {
+        given:
+        def ch1 = (DataflowReadChannel) Channel.of(['X', 1], ['Y', 2])
+        def ch2 = (DataflowReadChannel) Channel.of(['X', 6], ['Y', 5])
+
+        when:
+        def op = new JoinOp(ch1, ch2, [failOnMismatch:true])
+        def result = op.apply().toList().getVal()
+        then:
+        result.size() == 2
+        result.contains( ['X', 1, 6] )
+        result.contains( ['Y', 2, 5] )
+    }
+
+    def 'should should fail on mismatches' () {
+        given:
+        def ch1 = (DataflowReadChannel) Channel.of(['X', 1])
+        def ch2 = (DataflowReadChannel) Channel.of(['X', 6], ['Y', 5])
+        and:
+        def sess = Global.session as Session
+
+        when:
+        def op = new JoinOp(ch1, ch2, [failOnMismatch:true])
+        def result = op.apply().toList().getVal()
+        and:
+        await(sess)
+        then:
+        sess.isAborted()
+        sess.getError().message == 'Join mismatch for the following entries: key=Y values=[5]'
+    }
+
+    def 'should format error message '() {
+        given:
+        def op = new JoinOp(Mock(DataflowReadChannel), Mock(DataflowReadChannel), [:])
+
+        when:
+        op.checkForMismatch([:])
+        then:
+        noExceptionThrown()
+
+        when:
+        def buffer1 = [
+                X: [:],
+                Y: [(1): ['a','b']] ]
+        op.checkForMismatch(buffer1)
+        then:
+        def e1 = thrown(AbortOperationException)
+        e1.message == 'Join mismatch for the following entries: key=Y values=a,b'
+
+        when:
+        def buffer2 = [
+                X: [(0): ['foo']],
+                Y: [(1): ['a','b']] ]
+        op.checkForMismatch(buffer2)
+        then:
+        def e2 = thrown(AbortOperationException)
+        e2.message == 'Join mismatch for the following entries: \n- key=X values=foo \n- key=Y values=a,b'
+    }
+
+    def 'should not fail on duplicate matches' () {
+        given:
+        def ch1 = (DataflowReadChannel) Channel.of(['X', 1], ['X', 3])
+        def ch2 = (DataflowReadChannel) Channel.of(['X', 2], ['X', 4])
+
+        when:
+        def op = new JoinOp(ch1, ch2, [:])
+        def result = op.apply().toList().getVal()
+        then:
+        result.size() == 2
+        result.contains( ['X', 1, 2] )
+        result.contains( ['X', 3, 4] )
+    }
+
+    def 'should fail on duplicate matches' () {
+        given:
+        def ch1 = (DataflowReadChannel) Channel.of(['X', 1], ['X', 3], ['X', 5])
+        def ch2 = (DataflowReadChannel) Channel.of(['X', 2], ['X', 4], ['X', 6])
+        and:
+        def sess = Global.session as Session
+
+        when:
+        def op = new JoinOp(ch1, ch2, [failOnDuplicate:true])
+        def result = op.apply().toList().getVal()
+        println "result=$result"
+        and:
+        await(sess)
+        then:
+        sess.isAborted()
+        and:
+        sess.error.message ==~ /Detected join operation duplicate emission on (left|right) channel -- offending element: key=X; value=(3|4|5|6)/
+    }
+
+    def 'should fail on duplicate with remainder' () {
+        given:
+        def ch1 = (DataflowReadChannel) Channel.of(['X', 1], ['X', 3])
+        def ch2 = (DataflowReadChannel) Channel.of(['X', 2])
+        and:
+        def sess = Global.session as Session
+
+        when:
+        def op = new JoinOp(ch1, ch2, [failOnDuplicate:true, remainder: true])
+        def result = op.apply().toList().getVal()
+        and:
+        await(sess)
+        then:
+        sess.isAborted()
+        sess.getError().message == 'Detected join operation duplicate emission on left channel -- offending element: key=X; value=3'
+    }
+
+    def 'should fail on duplicate without remainder' () {
+        given:
+        def ch1 = (DataflowReadChannel) Channel.of(['X', 1], ['X', 3])
+        def ch2 = (DataflowReadChannel) Channel.of(['X', 2])
+        and:
+        def sess = Global.session as Session
+
+        when:
+        def op = new JoinOp(ch1, ch2, [failOnDuplicate:true])
+        def result = op.apply().toList().getVal()
+        then:
+        await(sess)
+        then:
+        sess.isAborted()
+        sess.getError().message == 'Detected join operation duplicate emission on left channel -- offending element: key=X; value=3'
+    }
+
+
+    protected void await(Session session) {
+        def begin = System.currentTimeMillis()
+        while( !session.isAborted() && System.currentTimeMillis()-begin<5_000 )
+            sleep 100
+    }
 }

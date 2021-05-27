@@ -1,5 +1,5 @@
 #!/usr/bin/env nextflow
-nextflow.preview.dsl=2
+nextflow.enable.dsl=2
  
 process foo {
 
@@ -9,7 +9,7 @@ process foo {
   output:
   path x
   path 'file-\\*.txt'
-  path 'file-?.txt' glob false
+  path 'file-?.txt', glob: false
 
   '''
   touch file-\\*.txt
@@ -21,8 +21,8 @@ process foo {
 workflow {
     Channel.fromPath("$baseDir/data/file\\[a-b\\].txt") | foo
 
-    foo.out[0].println { "match: ${it.name}" }
-    foo.out[1].println { "match: ${it.name}" }
-    foo.out[2].println { "match: ${it.name}" }
+    foo.out[0].view { "match: ${it.name}" }
+    foo.out[1].view { "match: ${it.name}" }
+    foo.out[2].view { "match: ${it.name}" }
 }
 

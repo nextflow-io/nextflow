@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -180,7 +181,7 @@ class ReportSummary {
         }
 
         void add( TraceRecord record ) {
-            final Double value = metric(record)
+            final Double value = metric.call(record)
             if( value == null )
                 return
             count++
@@ -218,7 +219,7 @@ class ReportSummary {
                 return null
 
             final result = new LinkedHashMap<String,?>(12)
-            final sorted = tasks.sort( false, { TraceRecord record -> metric(record) } )
+            final sorted = tasks.sort( false, { TraceRecord record -> metric.call(record) } )
 
             result.mean = round(total / count as double)
             result.min = round(quantile(sorted, 0))
@@ -253,12 +254,12 @@ class ReportSummary {
             if( q==0 ) {
                 final X = items[0]
                 label(X,q)
-                return metric(X)
+                return metric.call(X)
             }
             if( q==100 ) {
                 final X = items[items.size()-1]
                 label(X,q)
-                return metric(X)
+                return metric.call(X)
             }
 
             int n = items.size()
@@ -266,13 +267,13 @@ class ReportSummary {
             if( j == Math.floor(j) ) {
                 final item = items[(int)j]
                 label(item,q)
-                return metric(item)
+                return metric.call(item)
             }
             else {
                 int i = (int)Math.floor(j); int k = (int)Math.ceil(j)
                 label(items[i],q)
-                final Xi = metric(items[i])
-                final Xk = metric(items[k])
+                final Xi = metric.call(items[i])
+                final Xk = metric.call(items[k])
                 return Xi + (j-i) * (Xk-Xi)
             }
         }

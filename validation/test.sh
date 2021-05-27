@@ -7,15 +7,21 @@ get_abs_filename() {
 
 export NXF_IGNORE_WARN_DSL2=true
 export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
-export TRAVIS_PULL_REQUEST=${TRAVIS_PULL_REQUEST:=false}
 
 #
 # Tests
 #
 (
-  cd ../tests/checks; 
+  cd ../tests/
+  sudo bash cleanup.sh
+  cd checks
   bash run.sh
 )
+
+if [[ $TEST_SMOKE == true ]]; then
+  echo Skipping tests since TEST_SMOKE flag is true
+  exit 0
+fi
 
 # disable ansi log to make log more readable
 export NXF_ANSI_LOG=false
@@ -29,11 +35,6 @@ git clone https://github.com/nextflow-io/hello
   $NXF_CMD run .
   $NXF_CMD run . -resume
 )
-
-if [[ $TRAVIS_PULL_REQUEST != false ]]; then
-echo Skipping tests requiring secret vars
-exit 0
-fi
 
 #
 # AMPA-NF
@@ -54,17 +55,27 @@ echo nextflow-io/rnaseq-nf
 $NXF_CMD run nextflow-io/rnaseq-nf -with-docker $OPTS
 $NXF_CMD run nextflow-io/rnaseq-nf -with-docker $OPTS -resume
 
+if [[ $GITHUB_EVENT_NAME == pull_request ]]; then
+  echo "Skipping cloud integration tests on PR event"
+  exit 0
+fi
+
 #
 # AWS Batch tests
 #
-echo aws batch tests
-./await.sh bash awsbatch.sh
+echo "AWS batch tests"
+bash awsbatch.sh
+
+#
+# Azure Batch tests
+#
+echo "Azure batch tests"
+bash azure.sh
 
 #
 # Google Life Sciences
 #
-if [[ $GOOGLE_SECRET ]]; then
-  ./await.sh bash gls.sh
-else
-  echo "Google Life Science test skipped because GOOGLE_SECRET env var is missing"
-fi
+echo "Google LS tests"
+bash gls.sh
+
+

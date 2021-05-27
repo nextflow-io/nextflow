@@ -1,13 +1,13 @@
 package nextflow.trace
 
 import nextflow.Session
-
+import org.pf4j.ExtensionPoint
 /**
  * Factory class creating {@link TraceObserver} instances
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface TraceObserverFactory {
+interface TraceObserverFactory extends ExtensionPoint {
 
     /**
      * Register the observer on the current session object

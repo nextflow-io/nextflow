@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -66,7 +67,7 @@ class ReportObserverTest extends Specification {
         r3.duration = 700
         r3.process = 'beta'
 
-        def observer = [:] as ReportObserver
+        def observer = Spy(ReportObserver)
         def data = [r1, r2, r3]
 
         when:

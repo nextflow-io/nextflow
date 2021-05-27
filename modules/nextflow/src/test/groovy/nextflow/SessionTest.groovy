@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -361,13 +362,15 @@ class SessionTest extends Specification {
         session.containerConfig.engine == engine
 
         where:
-        engine      | config
-        'docker'    | [enabled: true, x:'alpha', y: 'beta']
-        'docker'    | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
-        'podman'    | [enabled: true, x:'alpha', y: 'beta']
-        'podman'    | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
-        'udocker'   | [enabled: true, x:'alpha', y: 'beta']
-        'shifter'   | [enabled: true, x:'delta', y: 'gamma']
+        engine         | config
+        'docker'       | [enabled: true, x:'alpha', y: 'beta']
+        'docker'       | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
+        'podman'       | [enabled: true, x:'alpha', y: 'beta']
+        'podman'       | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
+        'udocker'      | [enabled: true, x:'alpha', y: 'beta']
+        'shifter'      | [enabled: true, x:'delta', y: 'gamma']
+        'singularity'  | [enabled: true, x:'delta', y: 'gamma']
+        'charliecloud' | [enabled: true, x:'delta', y: 'gamma']
     }
 
     def 'should get manifest object' () {

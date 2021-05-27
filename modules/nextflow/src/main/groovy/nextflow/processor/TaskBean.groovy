@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -61,6 +62,8 @@ class TaskBean implements Serializable, Cloneable {
 
     String containerCpuset
 
+    Float containerCpus
+
     MemoryUnit containerMemory
 
     Path containerMount
@@ -90,6 +93,7 @@ class TaskBean implements Serializable, Cloneable {
 
     String stageOutMode
 
+    @Deprecated
     Path sharedDir
 
     Path binDir
@@ -128,6 +132,7 @@ class TaskBean implements Serializable, Cloneable {
         this.containerImage = task.getContainer()
         this.containerConfig = task.getContainerConfig()
         this.containerMemory = task.config.getMemory()
+        this.containerCpus = task.config.getCpus()
         this.containerNative = task.isContainerNative()
         this.containerEnabled = task.isContainerEnabled()
         this.containerOptions = task.config.getContainerOptions()
@@ -139,7 +144,7 @@ class TaskBean implements Serializable, Cloneable {
         this.inputFiles = task.getInputFilesMap()
         this.outputFiles = task.getOutputFilesNames()
         this.sharedDir = task.getProcessor().getSession().getWorkDir()
-        this.binDir = task.getProcessor().getSession().getBinDir()
+        this.binDir = task.getProcessor().getExecutor().getBinDir()
         this.stageInMode = task.config.stageInMode
         this.stageOutMode = task.config.stageOutMode
 

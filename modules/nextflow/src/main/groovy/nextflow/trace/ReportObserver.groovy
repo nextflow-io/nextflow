@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -68,6 +69,11 @@ class ReportObserver implements TraceObserver {
      * Compute resources usage stats
      */
     private ResourcesAggregator aggregator
+
+    /**
+     * Overwrite existing trace file instead of rolling it
+     */
+    boolean overwrite
 
     /**
      * Creates a report observer
@@ -274,8 +280,11 @@ class ReportObserver implements TraceObserver {
         if( parent )
             Files.createDirectories(parent)
 
-        // roll the any trace files that may exist
-        reportFile.rollFile()
+        if( overwrite )
+            Files.deleteIfExists(reportFile)
+        else
+            // roll the any trace files that may exist
+            reportFile.rollFile()
 
         def writer = Files.newBufferedWriter(reportFile, Charset.defaultCharset())
         writer.withWriter { w -> w << html_output }

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +23,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.Session
 import org.apache.commons.lang.StringUtils
 /**
@@ -182,8 +184,11 @@ class ScriptBinding extends WorkflowBinding {
 
     @Override
     void setVariable( String name, Object value ) {
-        if( name == 'channel' )
-            log.warn 'The use of the identifier `channel` as variable name is discouraged and will be deprecated in a future version'
+        if( name == 'channel' ) {
+            final msg = 'The use of the identifier `channel` as variable name is discouraged and will be deprecated in a future version'
+            if( NF.isDsl2Final() ) throw new DeprecationException(msg)
+            log.warn(msg)
+        }
         if( name != 'args' && name != 'params' )
             super.setVariable(name, value)
     }
