@@ -69,7 +69,7 @@ major=${BASH_REMATCH[1]}
 minor=${BASH_REMATCH[2]}
 version_check="^(1.8|9|10|11|12|13|14|15)"
 if [[ ! $JAVA_VER =~ $version_check ]]; then
-    echo "Error: cannot find Java or it's a wrong version -- please make sure that Java 8 or higher is installed"
+    echo "Error: cannot find Java or it's a wrong version -- please make sure that Java 8 or higher up to 15 is installed"
     exit 1
 fi
 JVM_ARGS+=" -Dfile.encoding=UTF-8 -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
