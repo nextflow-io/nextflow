@@ -128,8 +128,12 @@ secrets and config maps when using the :ref:`k8s-executor` executor. See the :re
 Limitation
 ==========
 
-Currently, the ``kuberun`` command does not allow the execution of local Nextflow scripts.
+.. note::
+  The ``kuberun`` command does not allow the execution of local Nextflow scripts and it's has been designed to
+  provide a shortcut to simple pipeline deployment into a Kubernetes cluster.
 
+  For stable pipeline deployment, Nextflow needs to be executed as a pod as mentioned in the `Running in a pod`_ section.
+  In alternative take in consideration a managed provisioning service such as `Nextflow Tower <https://tower.nf>`_.
 
 Advanced configuration
 ======================

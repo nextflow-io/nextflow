@@ -64,7 +64,7 @@ subprojects {
      */
     task makeZip(type: Jar) {
         into('classes') { with jar }
-        into('lib') { from configurations.compile }
+        into('lib') { from configurations.runtimeClasspath }
         manifest.from file('src/resources/META-INF/MANIFEST.MF')
         archiveExtension = 'zip'
         preserveFileTimestamps = false
@@ -89,7 +89,7 @@ subprojects {
      * Copy the plugin dependencies in the subproject `build/target/libs` directory
      */
     task copyPluginLibs(type: Sync) {
-        from configurations.compile
+        from configurations.runtimeClasspath
         into 'build/target/libs'
     }
 
@@ -136,7 +136,7 @@ subprojects {
      */
     publishing {
         publications {
-            mavenJava(MavenPublication) {
+            maven(MavenPublication) {
                 from components.java
                 suppressPomMetadataWarningsFor('testFixturesApiElements')
                 suppressPomMetadataWarningsFor('testFixturesRuntimeElements')

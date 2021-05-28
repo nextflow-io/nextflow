@@ -263,7 +263,7 @@ Ignite cluster in your infrastructure.
 Kubernetes
 ==========
 
-Nextflow provides an experimental support for `Kubernetes <http://kubernetes.io/>`_ clustering technology. It allows
+Nextflow provides built-in support for `Kubernetes <http://kubernetes.io/>`_ clustering technology. It allows
 you to deploy and transparently run a Nextflow pipeline in a Kubernetes cluster.
 
 The following directives can be used to define the amount of computing resources needed and the container(s) to use:
