@@ -234,8 +234,8 @@ If you need a different strategy you can provide your own formula using the ``sc
 See the `Azure Batch <https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling>`_ documentation for details.
 
 Private container registry
-----------------------------
-A private container registry from where to pull Docker images can be optionally specified as follows ::
+--------------------------
+As of version ``21.05.0-edge``, a private container registry from where to pull Docker images can be optionally specified as follows ::
 
     azure {
         batch {
@@ -246,7 +246,6 @@ A private container registry from where to pull Docker images can be optionally 
             }
         }
     }
-
 
 
 The private registry is not exclusive, rather it is an addition to the configuration.
@@ -280,7 +279,7 @@ azure.batch.pools.<name>.autoScale              Enable autoscaling feature for t
 azure.batch.pools.<name>.scaleFormula           Specify the scale formula for the pool identified with ``<name>``. See Azure Batch `scaling documentation <https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling>`_ for details.
 azure.batch.pools.<name>.scaleInterval          Specify the interval at which to automatically adjust the Pool size according to the autoscale formula. The minimum and maximum value are 5 minutes and 168 hours respectively (default: `10 mins`)
 azure.batch.pools.<name>.schedulePolicy         Specify the scheduling policy for the pool identified with ``<name>``. It can be either ``spread`` or ``pack`` (default: ``spread``).
-azure.batch.registry.server                     Specify the container registry from which to pull the Docker images (default: ``docker.io``).
-azure.batch.registry.userName                   Specify the username to connect to a private container registry.
-azure.batch.registry.password                   Specify the password to connect to a private container registry.
+azure.batch.registry.server                     Specify the container registry from which to pull the Docker images (default: ``docker.io``, requires ``nf-azure@0.9.8``).
+azure.batch.registry.userName                   Specify the username to connect to a private container registry (requires ``nf-azure@0.9.8``).
+azure.batch.registry.password                   Specify the password to connect to a private container registry (requires ``nf-azure@0.9.8``).
 ============================================== =================
