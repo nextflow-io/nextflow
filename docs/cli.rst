@@ -100,7 +100,7 @@ Set JVM properties.
 This options allows the definition of custom Java system properties that can be used to 
 properly configure or fine tuning the JVM instance used by the Nextflow runtime.
  
-For specifying other JVM level options, please refer to the `environment variables section <https://www.nextflow.io/docs/latest/config.html#environment-variables>`__.
+For specifying other JVM level options, please refer to the :ref:`config-env-vars` section.
 
 
 **Examples**
@@ -515,7 +515,7 @@ Print the resolved pipeline configuration.
 
 The ``config`` command is used for printing the project's configuration i.e. the ``nextflow.config`` 
 and is especially useful for understanding the resolved profiles and parameters that Nextflow will use 
-run a pipeline. For in-depth information, please refer `config-profiles section <https://www.nextflow.io/docs/latest/config.html#config-profiles>`_.
+run a pipeline. For in-depth information, please refer the :ref:`config-profiles` section.
 
 **Options**
 
@@ -796,7 +796,7 @@ The ``kuberun`` command builds upon the ``run`` command and offers a deep integr
 the Kubernetes execution environment. This command deploys the Nextflow runtime as a Kubernetes 
 pod and assumes that you've already installed the ``kubectl`` CLI. The ``kuberun`` command 
 does not allow the execution of **local** Nextflow scripts. For more information please refer 
-the `Kubernetes executor section <https://www.nextflow.io/docs/latest/config/kubernetes.html>`__.
+the :ref:`k8s-page` section.
 
 
 **Options**
@@ -1238,7 +1238,7 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
     $ nextflow run main.nf -profile docker
 
 
-- Invoke the pipeline execution and generate the summary HTML report. For more information on the metrics, please refer the `Tracing & visualization section <https://www.nextflow.io/docs/latest/tracing.html>`__. ::
+- Invoke the pipeline execution and generate the summary HTML report. For more information on the metrics, please refer the :ref:`perfanalysis-page` section::
 
     $ nextflow run main.nf -with-report
 
@@ -1254,7 +1254,9 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
 
 
 - Invoke the pipeline with a specific workflow as the entry-point, this option is meant to be used with DSL-2.
-For more information on DSL-2, please refer the `DSL2 section <https://www.nextflow.io/docs/latest/dsl2.html>`__. ::
+For more information on DSL-2, please
+
+refer the :ref:`dsl2-page`::
 
    $ nextflow run main.nf -entry workflow_A
 
