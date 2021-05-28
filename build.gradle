@@ -270,17 +270,9 @@ configure(coreProjects) {
         from sourceSets.main.allSource
     }
 
-    artifacts {
-        archives javadocJar, sourcesJar
-    }
-
-    signing {
-        sign configurations.archives
-    }
-
     publishing {
         publications {
-            maven(MavenPublication) {
+            mavenJava(MavenPublication) {
                 suppressPomMetadataWarningsFor('testFixturesApiElements')
                 suppressPomMetadataWarningsFor('testFixturesRuntimeElements')
                 from components.java
@@ -315,6 +307,9 @@ configure(coreProjects) {
                         url = 'https://github.com/nextflow-io/nextflow'
                     }
                 }
+
+                artifact sourcesJar
+                artifact javadocJar
             }
         }
 
@@ -332,7 +327,11 @@ configure(coreProjects) {
         }
     }
 
-    signArchives.onlyIf { enableSignArchives }
+    signing {
+        required { enableSignArchives }
+        sign publishing.publications.mavenJava
+    }
+
 }
 
 
