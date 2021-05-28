@@ -880,6 +880,8 @@ when no other profile is specified by the user.
 
 The above feature requires version 0.28.x or higher.
 
+.. _config-env-vars:
+
 Environment variables
 =====================
 
