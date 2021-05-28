@@ -146,7 +146,7 @@ that can be used to reference the channel in the external scope. For example::
 Process named stdout
 --------------------
 
-The process can name stdout using the ``emit`` option:
+The process can name stdout using the ``emit`` option::
 
     process sayHello {
         input:
@@ -161,8 +161,8 @@ The process can name stdout using the ``emit`` option:
 
     workflow {
         things = channel.of('Hello world!', 'Yo, dude!', 'Duck!')
-        greetings = sayHello(things)
-        greetings.verbiage.subscribe {println "$it" }
+        sayHello(things)
+        sayHello.out.verbiage.view()
     }
 
 Workflow
