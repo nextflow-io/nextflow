@@ -219,8 +219,8 @@ The `ECS container agent <https://docs.aws.amazon.com/AmazonECS/latest/developer
 allows EC2 instances to connect to your `Amazon Elastic Container Service (Amazon ECS) <https://docs.aws.amazon.com/AmazonECS/latest/developerguide/Welcome.html>`_
 to manage Docker images.
 
-The Amazon ECS container agent is included in the `Amazon ECS-Optimized Amazon Linux 2 AMI`, but you can also install it
-on any Amazon EC2 instance that supports the Amazon ECS specification.
+The ECS container agent is included in the `Amazon ECS-Optimized Amazon Linux 2 AMI`, but you can also install it
+on any EC2 instance that supports the Amazon ECS specification.
 
 To install the agent, follow these steps::
 
@@ -365,7 +365,7 @@ Other places to check for error information:
     executor >  awsbatch (1)
     process > <your process> (1) [  0%] 0 of ....
 
-It may happen that the pipeline execution hangs indefinitely because one of the jobs is held in the queue and never get
+It may happen that the pipeline execution hangs indefinitely because one of the jobs is held in the queue and never gets
 executed. In AWS Console, the queue reports the job as ``RUNNABLE`` but it never moves from there.
 
 There are multiple reasons why this can happen. They are mainly related to the Compute Environment workload/configuration,
