@@ -208,18 +208,19 @@ task compile {
 
 def getRuntimeConfigs() {
     def names = subprojects
-            .findAll { prj -> prj.name in ['nextflow','nf-commons','nf-https'] }
+            .findAll { prj -> prj.name in ['nextflow','nf-commons','nf-httpfs'] }
             .collect { it.name }
 
     FileCollection result = null
     for( def it : names ) {
-        def cfg = project(it).configurations.getByName('runtime')
+        def cfg = project(it).configurations.getByName('runtimeClasspath')
         if( result==null )
             result = cfg
         else
             result += cfg
         // this include the module actual jar file
-        result = result + cfg.getOutgoing().getArtifacts().getFiles()
+        // note: migrating to gradle 7 does not work any more
+        //result = result + cfg.getOutgoing().getArtifacts().getFiles()
     }
     return result
 }
@@ -233,7 +234,8 @@ task exportClasspath {
         def home = System.getProperty('user.home')
         def all = getRuntimeConfigs()
         def libs = all.collect { File file ->  /*println file.canonicalPath.replace(home, '$HOME');*/ file.canonicalPath;  }
-        file('.launch.classpath').text = libs.join(':')
+        ['nextflow','nf-commons','nf-httfs'].each {libs << file("modules/$it/build/libs/${it}-${version}.jar").canonicalPath }
+        file('.launch.classpath').text = libs.unique().join(':')
     }
 }
 
