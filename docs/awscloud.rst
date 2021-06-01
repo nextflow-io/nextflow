@@ -43,7 +43,9 @@ AWS Batch
     Requires Nextflow version `0.26.0` or later.
 
 `AWS Batch <https://aws.amazon.com/batch/>`_ is a managed computing service that allows the execution of containerised
-workloads in the Amazon cloud infrastructure.
+workloads in the Amazon cloud infrastructure. It dynamically provisions the optimal quantity and type of compute
+resources (e.g., CPU or memory optimized compute resources) based on the volume and specific resource requirements
+of the jobs submitted.
 
 Nextflow provides a built-in support for AWS Batch which allows the seamless deployment of a Nextflow pipeline
 in the cloud offloading the process executions as Batch jobs.
@@ -74,19 +76,19 @@ Get started
 1 - In the AWS Console, create a `Compute environment <http://docs.aws.amazon.com/batch/latest/userguide/compute_environments.html>`_ (CE) in your AWS Batch Service.
     * if are using a custom AMI (see following sections), the AMI ID must be specified in the CE configuration
     * make sure to select an AMI (either custom or existing) with Docker installed (see following sections)
-    * make sure the policy ``AmazonS3FullAccess`` (granting access to S3 buckets) is attached to instance role configured for the CE
-    * if you plan to pull Docker images from Amazon ECS container, make sure the ``AmazonEC2ContainerServiceforEC2Role`` policy is also attached to instance role
+    * make sure the policy ``AmazonS3FullAccess`` (granting access to S3 buckets) is attached to the instance role configured for the CE
+    * if you plan to use Docker images from Amazon ECS container, make sure the ``AmazonEC2ContainerServiceforEC2Role`` policy is also attached to the instance role
 
-2 - In the AWS Console, create (at least) one `Job Queue <https://docs.aws.amazon.com/batch/latest/userguide/job_queues.html>`_ and bind it to the Compute Environment
+2 - In the AWS Console, create (at least) one `Job Queue <https://docs.aws.amazon.com/batch/latest/userguide/job_queues.html>`_
+and bind it to the Compute environment
 
-3 - In the AWS Console, create an S3 storage's bucket for the bucket-dir (see below) and others for the input data and results, if/as needed
+3 - In the AWS Console, create an S3 storage's bucket for the bucket-dir (see below) and others for the input data and
+results, if/as needed
 
 4 - Make sure your pipeline processes specifies one or more Docker containers by using the :ref:`process-container` directive.
 
 5 - Container images need to be published in a Docker registry such as `Docker Hub <https://hub.docker.com/>`_,
-`Quay <https://quay.io/>`_ or `ECS Container Registry <https://aws.amazon.com/ecr/>`_ that can be reached
-by ECS Batch.
-
+`Quay <https://quay.io/>`_ or `ECS Container Registry <https://aws.amazon.com/ecr/>`_ that can be reached by ECS Batch.
 
 Configuration
 -------------
@@ -117,7 +119,7 @@ An example ``nextflow.config`` file is shown below::
         region = 'us-east-1'
     }
 
-Different queues can be configured for different processes, according to each process' requirements.
+Different queues bound to the same or different Compute environments can be configured according to each process' requirements.
 
 Custom AMI
 ==========
@@ -128,11 +130,10 @@ to use in your Compute environments. Typically:
 
 - the existing AMI (selected from the marketplace) does not have Docker installed
 
-- you need to attach a larger storage to your EC2 instance (the default ECS instance AMI has only a 22 GB storage
-    volume which may not be enough for real world data analysis pipelines)
+- you need to attach a larger storage to your EC2 instance (the default ECS instance AMI has only a 30G storage
+    volume which may not be enough for most data analysis pipelines)
 
 - you need to install additional software, not available in the Docker image used to execute the job
-
 
 Create your custom AMI
 ----------------------
@@ -208,24 +209,26 @@ The following snippet shows how to install Docker on an Amazon EC2 instance::
 
 Then, add the ``ec2-user`` to the docker group so you can execute Docker commands without using ``sudo``::
 
-        sudo usermod -a -G docker ec2-user
+    sudo usermod -a -G docker ec2-user
 
 You may have to reboot your instance to provide permissions for the ``ec2-user`` to access the Docker daemon. This has
 to be done BEFORE creating the AMI from the current EC2 instance.
 
 Amazon ECS container agent installation
 ---------------------------------------
-The `ECS container agent <https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_agent.html>`_
-allows EC2 instances to connect to your `Amazon Elastic Container Service (Amazon ECS) <https://docs.aws.amazon.com/AmazonECS/latest/developerguide/Welcome.html>`_
-to manage Docker images.
+The `ECS container agent <https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_agent.html>`_ is a component
+of Amazon Elastic Container Service (Amazon ECS) and is responsible for managing containers on behalf of Amazon ECS.
+AWS Batch uses Amazon ECS to execute containerized jobs and therefore requires the agent to be installed on compute
+resources within your Compute environments.
 
-The ECS container agent is included in the `Amazon ECS-Optimized Amazon Linux 2 AMI`, but you can also install it
-on any EC2 instance that supports the Amazon ECS specification.
+The ECS container agent is included in the `Amazon ECS-Optimized Amazon Linux 2 AMI`, but if you select a different AMI
+you can also install it on any EC2 instance that supports the Amazon ECS specification.
 
 To install the agent, follow these steps::
 
     sudo amazon-linux-extras disable docker
-    sudo amazon-linux-extras install -y ecs; sudo systemctl enable --now ecs
+    sudo amazon-linux-extras install -y ecs
+    sudo systemctl enable --now ecs
 
 To test the installation::
 
