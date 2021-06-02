@@ -70,4 +70,9 @@ class GsPathFactory extends FileSystemPathFactory {
         }
         return null
     }
+
+    @Override
+    protected String getHelperScript(Path path) {
+        return null
+    }
 }

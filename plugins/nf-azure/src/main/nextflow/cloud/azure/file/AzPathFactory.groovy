@@ -82,4 +82,8 @@ class AzPathFactory extends FileSystemPathFactory {
         return path instanceof AzPath ? ((AzPath)path).toUriString() : null
     }
 
+    @Override
+    protected String getHelperScript(Path path) {
+        return null
+    }
 }

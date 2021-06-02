@@ -43,16 +43,6 @@ class SpuriousDeps {
         }
     }
 
-    static String getS3UploaderScript() {
-        try {
-            final clazz = Class.forName('nextflow.cloud.aws.batch.S3Helper')
-            final m = clazz.getMethod('getUploaderScript')
-            return m.invoke(null)
-        }
-        catch (ClassNotFoundException e) {
-            return null
-        }
-    }
 
     static void shutdownS3Uploader() {
         if( classWasLoaded(S3_UPLOADER_CLASS) ) {

@@ -1,6 +1,6 @@
 package nextflow.cloud.aws
 
-import static nextflow.util.SpuriousDeps.*
+import static nextflow.util.SpuriousDeps.shutdownS3Uploader
 
 import com.upplication.s3fs.S3FileSystemProvider
 import groovy.transform.CompileStatic

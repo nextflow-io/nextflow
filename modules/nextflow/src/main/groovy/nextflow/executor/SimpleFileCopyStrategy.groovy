@@ -21,11 +21,10 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.file.FileSystemPathFactory
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.util.Escape
-import static nextflow.util.SpuriousDeps.getS3UploaderScript
-
 /**
  * Simple file strategy that stages input files creating symlinks
  * and copies the output files using the {@code cp} command.
@@ -338,12 +337,8 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
 
     @Override
     String getBeforeStartScript() {
-        if( getPathScheme(targetDir) == 's3' ) {
-            final script = getS3UploaderScript()
-            if( !script ) throw new IllegalStateException("Missing required nf-amazon module")
-            return script.leftTrim()
-        }
-        return null
+        final script = FileSystemPathFactory.helperScript(targetDir)
+        return script ? script.leftTrim() : null
     }
 
     /**

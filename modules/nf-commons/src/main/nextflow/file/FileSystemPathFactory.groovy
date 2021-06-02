@@ -53,6 +53,14 @@ abstract class FileSystemPathFactory implements ExtensionPoint {
      */
     abstract protected String toUriString(Path path)
 
+    /**
+     * Retrieve file system dependant Bash helpers
+     *
+     * @param path A path on a remote path
+     * @return A Bash snippet implementing the helper script or null otherwise
+     */
+    abstract protected String getHelperScript(Path path)
+
     static Path parse(String uri) {
         final factories = factories0()
         log.trace "File system path factories: ${factories}"
@@ -68,6 +76,16 @@ abstract class FileSystemPathFactory implements ExtensionPoint {
         final factories = factories0()
         for( int i=0; i<factories.size(); i++ ) {
             final result = factories[i].toUriString(path)
+            if( result )
+                return result
+        }
+        return null
+    }
+
+    static String helperScript(Path path) {
+        final factories = factories0()
+        for( int i=0; i<factories.size(); i++ ) {
+            final result = factories[i].getHelperScript(path)
             if( result )
                 return result
         }

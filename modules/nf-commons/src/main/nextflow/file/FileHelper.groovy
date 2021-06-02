@@ -330,12 +330,8 @@ class FileHelper {
     @PackageScope
     static URI toPathURI( String str ) {
 
-        // normalise 's3' path
-        if( str.startsWith('s3://') && str[5]!='/' ) {
-            str = "s3:///${str.substring(5)}"
-        }
         // normalise 'igfs' path
-        else if( str.startsWith('igfs://') && str[7]!='/' ) {
+        if( str.startsWith('igfs://') && str[7]!='/' ) {
             str = "igfs:///${str.substring(7)}"
         }
 
