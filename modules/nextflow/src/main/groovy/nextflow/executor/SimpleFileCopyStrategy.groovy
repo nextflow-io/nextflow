@@ -256,8 +256,9 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         if( scheme == 'file' )
             return stageOutCommand(source, targetDir.toString(), mode)
 
-        if( scheme == 's3' )
-            return "nxf_s3_upload '$source' s3:/$targetDir"
+        final cmd = FileSystemPathFactory.bashFunExt(targetDir)?.uploadCmd(source,targetDir)
+        if( cmd )
+            return cmd
 
         throw new IllegalArgumentException("Unsupported target path: ${targetDir.toUriString()}")
     }
@@ -337,7 +338,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
 
     @Override
     String getBeforeStartScript() {
-        final script = FileSystemPathFactory.helperScript(targetDir)
+        final script = FileSystemPathFactory.bashFunExt(targetDir)?.helperLib()
         return script ? script.leftTrim() : null
     }
 

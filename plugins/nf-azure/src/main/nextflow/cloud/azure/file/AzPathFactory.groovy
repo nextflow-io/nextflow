@@ -83,7 +83,7 @@ class AzPathFactory extends FileSystemPathFactory {
     }
 
     @Override
-    protected String getHelperScript(Path path) {
+    protected String getBashFileExt(Path path) {
         return null
     }
 }

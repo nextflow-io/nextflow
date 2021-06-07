@@ -17,14 +17,13 @@
 
 package nextflow.executor
 
-import spock.lang.Specification
-
-import java.nio.file.Path
 import java.nio.file.Paths
 
 import nextflow.Global
 import nextflow.Session
+import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.processor.TaskBean
+import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -36,8 +35,7 @@ class BashWrapperBuilderS3Test extends Specification {
         Global.session = Mock(Session) { getConfig() >> [:] }
         and:
         def folder = Paths.get('/work/dir')
-        def target = Mock(Path)
-        target.toString() >> '/some/bucket'
+        def target = S3PathFactory.parse('s3://some/bucket')
 
         def bean = new TaskBean([
                 name: 'Hello 1',
@@ -48,8 +46,7 @@ class BashWrapperBuilderS3Test extends Specification {
                 script: 'echo Hello world!',
         ])
 
-        SimpleFileCopyStrategy copy = Spy(SimpleFileCopyStrategy, constructorArgs:[bean])
-        copy.getPathScheme(target) >> 's3'
+        SimpleFileCopyStrategy copy = new SimpleFileCopyStrategy(bean)
 
         /*
          * simple bash run

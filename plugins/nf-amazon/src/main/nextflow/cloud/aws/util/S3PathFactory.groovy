@@ -1,9 +1,11 @@
 package nextflow.cloud.aws.util
 
+
 import java.nio.file.Path
 
 import com.upplication.s3fs.S3Path
 import nextflow.cloud.aws.batch.S3Helper
+import nextflow.file.BashFunExt
 import nextflow.file.FileHelper
 import nextflow.file.FileSystemPathFactory
 /**
@@ -11,7 +13,7 @@ import nextflow.file.FileSystemPathFactory
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class S3PathFactory extends FileSystemPathFactory {
+class S3PathFactory extends FileSystemPathFactory implements BashFunExt {
 
     @Override
     protected Path parseUri(String str) {
@@ -31,7 +33,20 @@ class S3PathFactory extends FileSystemPathFactory {
     }
 
     @Override
-    protected String getHelperScript(Path path) {
-        return path instanceof S3Path ? S3Helper.getUploaderScript() : null
+    protected BashFunExt getBashFunExt(String scheme) {
+        return scheme=='s3' ? this : null
     }
+
+    @Override
+    String helperLib() {
+        return S3Helper.getUploaderScript()
+    }
+
+    @Override
+    String uploadCmd(String source, Path targetDir) {
+        return targetDir instanceof S3Path
+            ? "nxf_s3_upload '$source' s3:/$targetDir"
+            : null
+    }
+
 }

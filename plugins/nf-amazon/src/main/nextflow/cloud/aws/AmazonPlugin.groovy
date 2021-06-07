@@ -1,8 +1,8 @@
 package nextflow.cloud.aws
 
-import static nextflow.util.SpuriousDeps.shutdownS3Uploader
 
 import com.upplication.s3fs.S3FileSystemProvider
+import com.upplication.s3fs.S3OutputStream
 import groovy.transform.CompileStatic
 import nextflow.file.FileHelper
 import nextflow.plugin.BasePlugin
@@ -28,6 +28,7 @@ class AmazonPlugin extends BasePlugin {
     @Override
     void stop() {
         super.stop()
-        shutdownS3Uploader()
+        // shutdown s3 uploader
+        S3OutputStream.shutdownExecutor()
     }
 }

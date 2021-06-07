@@ -17,12 +17,10 @@
 
 package nextflow.util
 
-import java.lang.reflect.Method
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cli.CmdBase
-import static nextflow.Const.S3_UPLOADER_CLASS
 /**
  * This class is used to resolve at runtime some spurious dependencies
  * with optional modules
@@ -30,6 +28,7 @@ import static nextflow.Const.S3_UPLOADER_CLASS
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@Deprecated
 @CompileStatic
 class SpuriousDeps {
 
@@ -41,21 +40,6 @@ class SpuriousDeps {
         catch (ClassNotFoundException e) {
             return null
         }
-    }
-
-
-    static void shutdownS3Uploader() {
-        if( classWasLoaded(S3_UPLOADER_CLASS) ) {
-            log.debug "AWS S3 uploader shutdown"
-            final s3 = Class.forName(S3_UPLOADER_CLASS)
-            s3.getMethod('shutdownExecutor').invoke(null)
-        }
-    }
-
-    static private boolean classWasLoaded(String className) {
-        Method find = ClassLoader.class.getDeclaredMethod("findLoadedClass", [String.class] as Class[] );
-        find.setAccessible(true)
-        return find.invoke(ClassLoader.getSystemClassLoader(), className)
     }
 
 }

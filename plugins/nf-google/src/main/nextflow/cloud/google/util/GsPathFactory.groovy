@@ -25,6 +25,7 @@ import groovy.transform.CompileStatic
 import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.google.lifesciences.GoogleLifeSciencesConfig
+import nextflow.file.BashFunExt
 import nextflow.file.FileSystemPathFactory
 /**
  * Implements FileSystemPathFactory interface for Google storage
@@ -72,7 +73,8 @@ class GsPathFactory extends FileSystemPathFactory {
     }
 
     @Override
-    protected String getHelperScript(Path path) {
-        return null
+    protected BashFunExt getBashFunExt(String scheme) {
+        return scheme=='gs' ? this : null
     }
+
 }

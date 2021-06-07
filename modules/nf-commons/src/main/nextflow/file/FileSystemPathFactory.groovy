@@ -23,9 +23,10 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.plugin.Plugins
 import org.pf4j.ExtensionPoint
+
 /**
- * Generic interface
- * 
+ * Generic interface t
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -59,7 +60,7 @@ abstract class FileSystemPathFactory implements ExtensionPoint {
      * @param path A path on a remote path
      * @return A Bash snippet implementing the helper script or null otherwise
      */
-    abstract protected String getHelperScript(Path path)
+    abstract protected BashFunExt getBashFunExt(String scheme)
 
     static Path parse(String uri) {
         final factories = factories0()
@@ -82,10 +83,17 @@ abstract class FileSystemPathFactory implements ExtensionPoint {
         return null
     }
 
-    static String helperScript(Path path) {
+    static BashFunExt bashFunExt(Path path) {
+        return path ? bashFunExt(path.getScheme()) : null
+    }
+
+    static BashFunExt bashFunExt(String scheme) {
+        if( !scheme )
+            return null
+
         final factories = factories0()
         for( int i=0; i<factories.size(); i++ ) {
-            final result = factories[i].getHelperScript(path)
+            BashFunExt result = factories[i].getBashFunExt(scheme)
             if( result )
                 return result
         }
