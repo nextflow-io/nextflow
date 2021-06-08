@@ -267,18 +267,20 @@ azure.batch.accountName                         The batch service account name.
 azure.batch.accountKey                          The batch service account key.
 azure.batch.endpoint                            The batch service endpoint e.g. ``https://nfbatch1.westeurope.batch.azure.com``.
 azure.batch.location                            The batch service location e.g. ``westeurope``. This is not needed when the endpoint is specified.
-azure.batch.autoPoolMode                        Enable the automatic creation of batch pools depending on the pipeline resources demand (default: ``true``)
-azure.batch.allowPoolCreation                   Enable the automatic creation of batch pools specified in the Nextflow configuration file (default: ``false``)
+azure.batch.autoPoolMode                        Enable the automatic creation of batch pools depending on the pipeline resources demand (default: ``true``).
+azure.batch.allowPoolCreation                   Enable the automatic creation of batch pools specified in the Nextflow configuration file (default: ``false``).
 azure.batch.deleteJobsOnCompletion              Enable the automatic deletion of jobs created by the pipeline execution (default: ``true``).
 azure.batch.deletePoolsOnCompletion             Enable the automatic deletion of compute node pools upon pipeline completion (default: ``false``).
-azure.batch.copyToolInstallMode                 Specify where the `azcopy` tool used by Nextflow. When ``node`` is specified it's copied once during the pool creation. When ``task`` is provider, it's installed for each task execution (default: ``node``)
+azure.batch.copyToolInstallMode                 Specify where the `azcopy` tool used by Nextflow. When ``node`` is specified it's copied once during the pool creation. When ``task`` is provider, it's installed for each task execution (default: ``node``).
 azure.batch.pools.<name>.vmType                 Specify the virtual machine type used by the pool identified with ``<name>``.
 azure.batch.pools.<name>.vmCount                Specify the number of virtual machines provisioned by the pool identified with ``<name>``.
 azure.batch.pools.<name>.maxVmCount             Specify the max of virtual machine when using auto scale option.
 azure.batch.pools.<name>.autoScale              Enable autoscaling feature for the pool identified with ``<name>``.
 azure.batch.pools.<name>.scaleFormula           Specify the scale formula for the pool identified with ``<name>``. See Azure Batch `scaling documentation <https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling>`_ for details.
-azure.batch.pools.<name>.scaleInterval          Specify the interval at which to automatically adjust the Pool size according to the autoscale formula. The minimum and maximum value are 5 minutes and 168 hours respectively (default: `10 mins`)
+azure.batch.pools.<name>.scaleInterval          Specify the interval at which to automatically adjust the Pool size according to the autoscale formula. The minimum and maximum value are 5 minutes and 168 hours respectively (default: `10 mins`).
 azure.batch.pools.<name>.schedulePolicy         Specify the scheduling policy for the pool identified with ``<name>``. It can be either ``spread`` or ``pack`` (default: ``spread``).
+azure.batch.pools.<name>.privileged             Enable the task to run with elevated access. Ignored if `runAs` is set (default: ``false``).
+azure.batch.pools.<name>.runAs                  Specify the username under which the task is run. The user must already exist on each node of the pool.
 azure.batch.registry.server                     Specify the container registry from which to pull the Docker images (default: ``docker.io``, requires ``nf-azure@0.9.8``).
 azure.batch.registry.userName                   Specify the username to connect to a private container registry (requires ``nf-azure@0.9.8``).
 azure.batch.registry.password                   Specify the password to connect to a private container registry (requires ``nf-azure@0.9.8``).

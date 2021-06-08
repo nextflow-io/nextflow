@@ -16,6 +16,11 @@
 
 package nextflow.cloud.azure.batch
 
+import com.microsoft.azure.batch.protocol.models.AutoUserScope
+import com.microsoft.azure.batch.protocol.models.AutoUserSpecification
+import com.microsoft.azure.batch.protocol.models.ElevationLevel
+import com.microsoft.azure.batch.protocol.models.UserIdentity
+
 import java.math.RoundingMode
 import java.nio.file.Path
 import java.time.Instant
@@ -290,10 +295,10 @@ class AzBatchService implements Closeable {
         // create a batch job
         final jobId = makeJobId(task)
         final poolInfo = new PoolInformation()
-                            .withPoolId(poolId)
+                .withPoolId(poolId)
         client
-            .jobOperations()
-            .createJob(jobId, poolInfo)
+                .jobOperations()
+                .createJob(jobId, poolInfo)
         // add to the map
         allJobIds[mapKey] = jobId
         return jobId
@@ -341,12 +346,12 @@ class AzBatchService implements Closeable {
 
         final taskToAdd = new TaskAddParameter()
                 .withId(taskId)
+                .withUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs))
                 .withContainerSettings(containerOpts)
                 .withCommandLine("sh -c 'bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}'")
                 .withResourceFiles(resourceFileUrls(task,sas))
                 .withOutputFiles(outputFileUrls(task, sas))
                 .withRequiredSlots(slots)
-
         client.taskOperations().createTask(jobId, taskToAdd)
         return new AzTaskKey(jobId, taskId)
     }
@@ -500,7 +505,7 @@ class AzBatchService implements Closeable {
         final spec = specForTask(task)
         if( spec && allPools.containsKey(spec.poolId) )
             return spec.poolId
-        
+
         // check existence and create if needed
         log.debug "[AZURE BATCH] Checking VM pool id=$spec.poolId; size=$spec.vmType"
         def pool = getPool(spec.poolId)
@@ -549,9 +554,9 @@ class AzBatchService implements Closeable {
         if( registryOpts && registryOpts.isConfigured() ) {
             List<ContainerRegistry> containerRegistries = new ArrayList(1)
             containerRegistries << new ContainerRegistry()
-                .withRegistryServer(registryOpts.server)
-                .withUserName(registryOpts.userName)
-                .withPassword(registryOpts.password)
+                    .withRegistryServer(registryOpts.server)
+                    .withUserName(registryOpts.userName)
+                    .withPassword(registryOpts.password)
             containerConfig.withContainerRegistries(containerRegistries).withType('dockerCompatible')
             log.debug "[AZURE BATCH] Connecting Azure Batch pool to Container Registry '$registryOpts.server'"
         }
@@ -567,7 +572,7 @@ class AzBatchService implements Closeable {
     protected void createPool(AzVmPoolSpec spec) {
 
         def resourceFiles = new ArrayList(10)
-        
+
         resourceFiles << new ResourceFile()
                 .withHttpUrl(AZCOPY_URL)
                 .withFilePath('azcopy')
@@ -580,10 +585,10 @@ class AzBatchService implements Closeable {
         final poolParams = new PoolAddParameter()
                 .withId(spec.poolId)
                 .withVirtualMachineConfiguration(poolVmConfig(spec.opts))
-                // https://docs.microsoft.com/en-us/azure/batch/batch-pool-vm-sizes
+        // https://docs.microsoft.com/en-us/azure/batch/batch-pool-vm-sizes
                 .withVmSize(spec.vmType.name)
-                // same as the num ofd cores
-                // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
+        // same as the num ofd cores
+        // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
                 .withTaskSlotsPerNode(spec.vmType.numberOfCores)
                 .withStartTask(poolStartTask)
 
@@ -600,7 +605,7 @@ class AzBatchService implements Closeable {
             final interval = spec.opts.scaleInterval.seconds as int
             poolParams
                     .withEnableAutoScale(true)
-                    .withAutoScaleEvaluationInterval( new Period().withSeconds(interval) ) 
+                    .withAutoScaleEvaluationInterval( new Period().withSeconds(interval) )
                     .withAutoScaleFormula(scaleFormula(spec.opts))
         }
         else {
@@ -676,6 +681,17 @@ class AzBatchService implements Closeable {
         }
     }
 
+    protected UserIdentity userIdentity(boolean  privileged, String runAs) {
+        UserIdentity identity = new UserIdentity()
+        if (runAs) {
+            identity.withUserName(runAs)
+        } else  {
+            identity.withAutoUser(new AutoUserSpecification()
+                    .withElevationLevel(privileged ? ElevationLevel.ADMIN : ElevationLevel.NON_ADMIN)
+                    .withScope(AutoUserScope.TASK))
+        }
+        return identity
+    }
     @Override
     void close() {
         // cleanup app successful jobs
