@@ -295,10 +295,10 @@ class AzBatchService implements Closeable {
         // create a batch job
         final jobId = makeJobId(task)
         final poolInfo = new PoolInformation()
-                .withPoolId(poolId)
+                            .withPoolId(poolId)
         client
-                .jobOperations()
-                .createJob(jobId, poolInfo)
+            .jobOperations()
+            .createJob(jobId, poolInfo)
         // add to the map
         allJobIds[mapKey] = jobId
         return jobId
@@ -554,9 +554,9 @@ class AzBatchService implements Closeable {
         if( registryOpts && registryOpts.isConfigured() ) {
             List<ContainerRegistry> containerRegistries = new ArrayList(1)
             containerRegistries << new ContainerRegistry()
-                    .withRegistryServer(registryOpts.server)
-                    .withUserName(registryOpts.userName)
-                    .withPassword(registryOpts.password)
+                .withRegistryServer(registryOpts.server)
+                .withUserName(registryOpts.userName)
+                .withPassword(registryOpts.password)
             containerConfig.withContainerRegistries(containerRegistries).withType('dockerCompatible')
             log.debug "[AZURE BATCH] Connecting Azure Batch pool to Container Registry '$registryOpts.server'"
         }
@@ -585,10 +585,10 @@ class AzBatchService implements Closeable {
         final poolParams = new PoolAddParameter()
                 .withId(spec.poolId)
                 .withVirtualMachineConfiguration(poolVmConfig(spec.opts))
-        // https://docs.microsoft.com/en-us/azure/batch/batch-pool-vm-sizes
+                // https://docs.microsoft.com/en-us/azure/batch/batch-pool-vm-sizes
                 .withVmSize(spec.vmType.name)
-        // same as the num ofd cores
-        // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
+                // same as the num ofd cores
+                // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
                 .withTaskSlotsPerNode(spec.vmType.numberOfCores)
                 .withStartTask(poolStartTask)
 
