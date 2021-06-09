@@ -1,6 +1,6 @@
 configurations {
     capsule
-    defaultCfg.extendsFrom runtime
+    defaultCfg.extendsFrom api 
     //provided
     console.extendsFrom defaultCfg
     ignite.extendsFrom defaultCfg
@@ -12,7 +12,7 @@ configurations {
 }
 
 dependencies {
-    compile project(':nextflow')
+    api project(':nextflow')
     // include Ivy at runtime in order to have Grape @Grab work correctly
     defaultCfg "org.apache.ivy:ivy:2.3.0"
     // default cfg = runtime + httpfs + amazon + tower client

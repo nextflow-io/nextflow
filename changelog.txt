@@ -1,5 +1,23 @@
 NEXTFLOW CHANGE-LOG
 ===================
+21.05.0-edge - 28 May 2021
+- Add support for using mamba with conda (#2030) [10c8385b]
+- Add AWS cli native error fail-over [fd7670ef]
+- Add support for Container Registry to Az Batch executor (#2078) [12bf2da6]
+- Add support for Tower workspace  (#2097) [8a4dd3ab]
+- Add support custom service account email in Google Cloud LifeSciences executor (#2044) [a642c9ea]
+- Add support for Java 16 + Gradle 7 [caace1c5] [e2dd4510] [74e466e0] [1245ab1c] [bfc69fb6]
+- Improve tower client error reporting [4efb6bf6]
+- Fix Plugin install lock file is not deleted #2103 [b7fdffac]
+- Fix Use caller runs policy of default thread pool #2021 [48b4e8ee]
+- Fix Error reporting for malformed config [68e5ca18]
+- Decrease max par transfers to 4 [c7ea816a]
+- Prevent fetching aws instance type when missing container id [f5f96049]
+- Use default opts for trace file creation [d8ae94bf]
+- Improve Azure Batch executor error code and messages for failed Tasks (#2099) [1d5fa5d5]
+- Bump groovy 3.0.8 [aa695e12]
+- Bump snakeyaml@1.28 [8d361954]
+
 21.04.1 [stable] - 14 May 2021
 - Fix nested params file parse #2091
 - Fix Malformed config error reporting #2105
