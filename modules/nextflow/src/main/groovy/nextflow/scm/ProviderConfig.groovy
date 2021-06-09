@@ -277,7 +277,7 @@ class ProviderConfig {
                 throw new AbortOperationException("Missing SCM config file: ${file.toUriString()} - Check the env variable NXF_SCM_FILE")
         }
         catch( Exception e ) {
-            def message = "Failed to parse config file: $file -- cause: ${e.message?:e.toString()}"
+            def message = "Failed to parse config file: ${file?.toUriString()} -- cause: ${e.message?:e.toString()}"
             throw new ConfigParseException(message,e)
         }
     }
