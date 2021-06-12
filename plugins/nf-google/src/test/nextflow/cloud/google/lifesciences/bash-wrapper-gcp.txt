@@ -61,18 +61,17 @@ nxf_parallel() {
 }
 
 # google storage helper
+gs_opts=('-q' '-m' '-o' 'GSUtil:parallel_thread_count=1' '-o' 'GSUtil:sliced_object_download_max_components=8')
+
 nxf_gs_download() {
     local source=$1
     local target=$2
     local project=$3
     local basedir=$(dirname $2)
     local ret
-    local opts="-m -q"
-    local opts
+    local opts=("${gs_opts[@]}")
     if [[ $project ]]; then
-      opts=('-q' '-m' '-u' "$project")
-    else
-      opts=('-q' '-m')
+      opts+=('-u' "$project")
     fi
 
     ## download assuming it's a file download
@@ -91,7 +90,7 @@ nxf_gs_download() {
 nxf_gs_upload() {
     local name=$1
     local target=$2
-    gsutil -m -q cp -R "$name" "$target/$name"
+    gsutil ${gs_opts[@]} cp -R "$name" "$target/$name"
 }
 
 nxf_sleep() {
