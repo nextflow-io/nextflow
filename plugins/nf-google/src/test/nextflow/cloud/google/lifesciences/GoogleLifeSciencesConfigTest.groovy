@@ -255,4 +255,17 @@ class GoogleLifeSciencesConfigTest extends Specification {
 
     }
 
+    def 'should config thread count & max components' () {
+        when:
+        def config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [:]]])
+        then:
+        config.parallelThreadCount == 1
+        config.downloadMaxComponents == 8
+
+        when:
+        config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [parallelThreadCount: 10, downloadMaxComponents: 20]]])
+        then:
+        config.parallelThreadCount == 10
+        config.downloadMaxComponents == 20
+    }
 }
