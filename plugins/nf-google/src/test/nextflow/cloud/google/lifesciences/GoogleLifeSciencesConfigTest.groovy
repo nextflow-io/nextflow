@@ -16,6 +16,7 @@
  */
 package nextflow.cloud.google.lifesciences
 
+import nextflow.util.Duration
 import spock.lang.Unroll
 
 import nextflow.exception.AbortOperationException
@@ -267,5 +268,21 @@ class GoogleLifeSciencesConfigTest extends Specification {
         then:
         config.parallelThreadCount == 10
         config.downloadMaxComponents == 20
+    }
+
+    def 'should config parallel transfer' () {
+        when:
+        def config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [:]]])
+        then:
+        config.maxTransferAttempts == 1
+        config.maxParallelTransfers == 4
+        config.delayBetweenAttempts == Duration.of('10 sec')
+
+        when:
+        config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [maxTransferAttempts: 10, maxParallelTransfers: 20, delayBetweenAttempts: '30s']]])
+        then:
+        config.maxTransferAttempts == 10
+        config.maxParallelTransfers == 20
+        config.delayBetweenAttempts == Duration.of('30 sec')
     }
 }
