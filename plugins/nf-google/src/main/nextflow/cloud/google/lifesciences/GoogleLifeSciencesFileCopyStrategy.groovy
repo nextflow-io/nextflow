@@ -50,27 +50,31 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
         this.task = bean
     }
 
+    protected makeGsEnv(GoogleLifeSciencesConfig cfg) {
+        def threadCount = cfg.parallelThreadCount ?: GoogleLifeSciencesConfig.DEF_PARALLEL_THREAD_COUNT
+        def maxComps = cfg.downloadMaxComponents ?: GoogleLifeSciencesConfig.DEF_DOWNLOAD_MAX_COMPONENTS
+        """
+        # google storage helper
+        gs_opts=('-q' '-m' '-o' 'GSUtil:parallel_thread_count=$threadCount' '-o' 'GSUtil:sliced_object_download_max_components=$maxComps')
+        """.stripIndent()
+    }
+
     String getBeforeStartScript() {
         def maxConnect = config.maxParallelTransfers ?: CloudTransferOptions.MAX_TRANSFER
         def attempts = config.maxTransferAttempts ?: CloudTransferOptions.MAX_TRANSFER_ATTEMPTS
         def delayBetweenAttempts = config.delayBetweenAttempts ?: CloudTransferOptions.DEFAULT_DELAY_BETWEEN_ATTEMPTS
 
-        BashFunLib.body(maxConnect, attempts, delayBetweenAttempts) +
-
+        BashFunLib.body(maxConnect, attempts, delayBetweenAttempts) + makeGsEnv(config) +
         '''
-        # google storage helper
         nxf_gs_download() {
             local source=$1
             local target=$2
             local project=$3
             local basedir=$(dirname $2)
             local ret
-            local opts="-m -q"
-            local opts
+            local opts=("${gs_opts[@]}")
             if [[ $project ]]; then
-              opts=('-q' '-m' '-u' "$project")
-            else
-              opts=('-q' '-m')
+              opts+=('-u' "$project")
             fi
              
             ## download assuming it's a file download
@@ -89,7 +93,7 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
         nxf_gs_upload() {
             local name=$1
             local target=$2
-            gsutil -m -q cp -R "$name" "$target/$name"
+            gsutil ${gs_opts[@]} cp -R "$name" "$target/$name"
         }
         '''.stripIndent()
     }

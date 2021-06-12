@@ -42,6 +42,8 @@ class AzPoolOpts implements CacheFunnel {
     static public final OSType DEFAULT_OS_TYPE = OSType.LINUX
     static public final Duration DEFAULT_SCALE_INTERVAL = Duration.of('5 min')
 
+    String runAs
+    boolean privileged
     String publisher
     String offer
     OSType osType = DEFAULT_OS_TYPE
@@ -64,6 +66,8 @@ class AzPoolOpts implements CacheFunnel {
     }
 
     AzPoolOpts(Map opts) {
+        this.runAs = opts.runAs ?: ''
+        this.privileged = opts.privileged ?: false
         this.publisher = opts.publisher ?: DEFAULT_PUBLISHER
         this.offer = opts.offer ?: DEFAULT_OFFER
         this.vmType = opts.vmType ?: DEFAULT_VM_TYPE
@@ -80,6 +84,8 @@ class AzPoolOpts implements CacheFunnel {
 
     @Override
     Hasher funnel(Hasher hasher, CacheHelper.HashMode mode) {
+        hasher.putUnencodedChars(runAs)
+        hasher.putBoolean(privileged)
         hasher.putUnencodedChars(publisher)
         hasher.putUnencodedChars(offer)
         hasher.putUnencodedChars(vmType)

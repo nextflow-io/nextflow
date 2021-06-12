@@ -40,11 +40,14 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class GoogleLifeSciencesConfig implements CloudTransferOptions {
 
-    public final static String DEFAULT_COPY_IMAGE = 'google/cloud-sdk:alpine'
+    public final static String DEFAULT_COPY_IMAGE = 'google/cloud-sdk:slim'
 
     public final static String DEFAULT_SSH_IMAGE = 'gcr.io/cloud-genomics-pipelines/tools'
 
     public final static String DEFAULT_ENTRY_POINT = '/bin/bash'
+
+    public final static int DEF_PARALLEL_THREAD_COUNT =1
+    public final static int DEF_DOWNLOAD_MAX_COMPONENTS =8
 
     String project
     List<String> zones
@@ -64,6 +67,8 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
     String network
     String subnetwork
     String serviceAccountEmail
+    int parallelThreadCount
+    int downloadMaxComponents
 
     int maxParallelTransfers = MAX_TRANSFER
     int maxTransferAttempts = MAX_TRANSFER_ATTEMPTS
@@ -127,9 +132,9 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
         final privateAddr  = config.navigate('google.lifeSciences.usePrivateAddress') as boolean
         final requesterPays = config.navigate('google.enableRequesterPaysBuckets') as boolean
         //
-        final maxParallelTransfers = config.navigate('aws.batch.maxParallelTransfers', MAX_TRANSFER) as int
-        final maxTransferAttempts = config.navigate('aws.batch.maxTransferAttempts', MAX_TRANSFER_ATTEMPTS) as int
-        final delayBetweenAttempts = config.navigate('aws.batch.delayBetweenAttempts', DEFAULT_DELAY_BETWEEN_ATTEMPTS) as Duration
+        final maxParallelTransfers = config.navigate('google.lifeSciences.maxParallelTransfers', MAX_TRANSFER) as int
+        final maxTransferAttempts = config.navigate('google.lifeSciences.maxTransferAttempts', MAX_TRANSFER_ATTEMPTS) as int
+        final delayBetweenAttempts = config.navigate('google.lifeSciences.delayBetweenAttempts', DEFAULT_DELAY_BETWEEN_ATTEMPTS) as Duration
         final network = config.navigate('google.lifeSciences.network') as String
         final subnetwork = config.navigate('google.lifeSciences.subnetwork') as String
         final serviceAccountEmail = config.navigate('google.lifeSciences.serviceAccountEmail') as String
@@ -137,6 +142,9 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
         def zones = (config.navigate("google.zone") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
         def regions = (config.navigate("google.region") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
         def location = config.navigate("google.location") as String ?: fallbackToRegionOrZone(regions,zones)
+
+        def parallelThreadCount = config.navigate('google.lifeSciences.parallelThreadCount', DEF_PARALLEL_THREAD_COUNT) as int
+        def downloadMaxComponents = config.navigate('google.lifeSciences.downloadMaxComponents', DEF_DOWNLOAD_MAX_COMPONENTS) as int
 
         new GoogleLifeSciencesConfig(
                 project: project,
@@ -158,7 +166,9 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
                 delayBetweenAttempts: delayBetweenAttempts,
                 network: network,
                 subnetwork: subnetwork,
-                serviceAccountEmail: serviceAccountEmail
+                serviceAccountEmail: serviceAccountEmail,
+                parallelThreadCount: parallelThreadCount,
+                downloadMaxComponents: downloadMaxComponents
             )
     }
 
