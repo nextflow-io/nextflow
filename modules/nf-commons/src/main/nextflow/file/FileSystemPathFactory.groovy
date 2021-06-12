@@ -73,7 +73,6 @@ abstract class FileSystemPathFactory implements ExtensionPoint {
     abstract protected String getUploadCmd(String source, Path target)
 
 
-
     static Path parse(String uri) {
         lookup0 { it.parseUri(uri) }
     }

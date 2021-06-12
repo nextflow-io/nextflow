@@ -6,6 +6,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.azure.batch.AzBatchExecutor
 import nextflow.cloud.azure.batch.AzFileCopyStrategy
+import nextflow.cloud.azure.batch.AzHelper
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.file.AzPathFactory
 import nextflow.processor.TaskBean
@@ -41,10 +42,10 @@ class BashWrapperBuilderWithAzTest extends Specification {
         when:
         def binding = new BashWrapperBuilder(bean,copy).makeBinding()
         then:
-        binding.unstage_outputs == '''\
-                    nxf_az_upload 'test.bam' 'https://nfazurestore.blob.core.windows.net/some/bucket' || true
-                    nxf_az_upload 'test.bai' 'https://nfazurestore.blob.core.windows.net/some/bucket' || true
-                    '''.stripIndent().rightTrim()
+        binding.unstage_outputs == """\
+                    nxf_az_upload 'test.bam' '${AzHelper.toHttpUrl(target)}' || true
+                    nxf_az_upload 'test.bai' '${AzHelper.toHttpUrl(target)}' || true
+                    """.stripIndent().rightTrim()
 
         binding.helpers_script == '''\
             nxf_az_upload() {
@@ -107,15 +108,15 @@ class BashWrapperBuilderWithAzTest extends Specification {
         when:
         def binding = new BashWrapperBuilder(bean,copy).makeBinding()
         then:
-        binding.unstage_outputs == '''\
+        binding.unstage_outputs == """\
                     uploads=()
-                    IFS=$'\\n'
-                    for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                        uploads+=("nxf_az_upload '$name' 'https://nfazurestore.blob.core.windows.net/some/bucket'")
+                    IFS=\$'\\n'
+                    for name in \$(eval "ls -1d test.bam test.bai" | sort | uniq); do
+                        uploads+=("nxf_az_upload '\$name' '${AzHelper.toHttpUrl(target)}'")
                     done
                     unset IFS
-                    nxf_parallel "${uploads[@]}"
-                    '''.stripIndent()
+                    nxf_parallel "\${uploads[@]}"
+                    """.stripIndent()
 
         binding.helpers_script == '''\
             # bash helper functions
