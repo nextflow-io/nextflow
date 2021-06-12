@@ -20,6 +20,8 @@ package nextflow.file
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import groovy.transform.stc.ClosureParams
+import groovy.transform.stc.SimpleType
 import groovy.util.logging.Slf4j
 import nextflow.plugin.Plugins
 import org.pf4j.ExtensionPoint
@@ -55,49 +57,37 @@ abstract class FileSystemPathFactory implements ExtensionPoint {
     abstract protected String toUriString(Path path)
 
     /**
-     * Retrieve file system dependant Bash helpers
+     * Bash helper library that implements the support for third-party storage
+     * to be included in the job command wrapper script
      *
-     * @param path A path on a remote path
-     * @return A Bash snippet implementing the helper script or null otherwise
+     * @return The Bash snippet implementing the support for third-party such as AWS S3
+     * or {@code null} if not supported
      */
-    abstract protected BashFunExt getBashFunExt(String scheme)
+    abstract protected String getBashLib(Path target)
+
+    /**
+     * The name of a Bash helper function to upload a file to a remote file storage
+     *
+     * @return The name of the upload function or {@code null} if not supported
+     */
+    abstract protected String getUploadCmd(String source, Path target)
+
+
 
     static Path parse(String uri) {
-        final factories = factories0()
-        log.trace "File system path factories: ${factories}"
-        for( int i=0; i<factories.size(); i++ ) {
-            final result = factories[i].parseUri(uri)
-            if( result )
-                return result
-        }
-        return null
+        lookup0 { it.parseUri(uri) }
     }
 
     static String getUriString(Path path) {
-        final factories = factories0()
-        for( int i=0; i<factories.size(); i++ ) {
-            final result = factories[i].toUriString(path)
-            if( result )
-                return result
-        }
-        return null
+        lookup0 { it.toUriString(path) }
     }
 
-    static BashFunExt bashFunExt(Path path) {
-        return path ? bashFunExt(path.getScheme()) : null
+    static String bashLib(Path target) {
+        lookup0 { it.getBashLib(target) }
     }
 
-    static BashFunExt bashFunExt(String scheme) {
-        if( !scheme )
-            return null
-
-        final factories = factories0()
-        for( int i=0; i<factories.size(); i++ ) {
-            BashFunExt result = factories[i].getBashFunExt(scheme)
-            if( result )
-                return result
-        }
-        return null
+    static String uploadCmd(String source, Path target) {
+        lookup0 { it.getUploadCmd(source, target) }
     }
 
     private static List<FileSystemPathFactory> factories0() {
@@ -105,7 +95,19 @@ abstract class FileSystemPathFactory implements ExtensionPoint {
         final itr = Plugins.getExtensions(FileSystemPathFactory).iterator()
         while( itr.hasNext() )
             factories.add(itr.next())
+        log.trace "File system path factories: ${factories}"
         return factories
+    }
+
+    private static <T> T lookup0( @ClosureParams(value = SimpleType, options = ['nextflow.file.FileSystemPathFactory']) Closure<T> criteria) {
+        final factories = factories0()
+        for( int i=0; i<factories.size(); i++ ) {
+            final FileSystemPathFactory it = factories[i]
+            final result = criteria.call(it)
+            if( result!=null )
+                return result
+        }
+        return null
     }
 
 }

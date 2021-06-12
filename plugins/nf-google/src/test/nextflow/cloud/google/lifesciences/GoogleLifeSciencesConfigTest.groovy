@@ -264,7 +264,7 @@ class GoogleLifeSciencesConfigTest extends Specification {
         config.downloadMaxComponents == 8
 
         when:
-        config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [parallelThreadCount: 10, downloadMaxComponents: 20]]])
+        config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', storage: [parallelThreadCount: 10, downloadMaxComponents: 20]]])
         then:
         config.parallelThreadCount == 10
         config.downloadMaxComponents == 20

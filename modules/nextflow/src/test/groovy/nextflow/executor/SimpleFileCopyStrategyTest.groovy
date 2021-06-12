@@ -17,7 +17,7 @@
 
 package nextflow.executor
 
-import java.nio.file.Path
+
 import java.nio.file.Paths
 
 import nextflow.processor.TaskBean
@@ -318,27 +318,6 @@ class SimpleFileCopyStrategyTest extends Specification {
 
     }
 
-
-    def 'should return cp script to unstage output files to S3' () {
-
-        given:
-        def outputs =  [ 'simple.txt', 'my/path/file.bam' ]
-        def task = new TaskBean()
-        def target = Mock(Path)
-        def strategy = Spy(SimpleFileCopyStrategy, constructorArgs: [task])
-
-        when:
-        def script = strategy.getUnstageOutputFilesScript(outputs, target)
-        then:
-        3 * strategy.getPathScheme(target) >> 's3'
-        2 * target.toString() >> '/foo/bar'
-        script == '''
-                nxf_s3_upload 'simple.txt' s3://foo/bar || true
-                nxf_s3_upload 'my/path/file.bam' s3://foo/bar || true
-                '''
-                .stripIndent().trim()
-
-    }
 
     def 'should return staging dir' () {
 

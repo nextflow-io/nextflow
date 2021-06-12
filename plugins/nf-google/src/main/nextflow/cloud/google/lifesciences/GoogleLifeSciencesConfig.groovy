@@ -70,7 +70,7 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
     int parallelThreadCount
     int downloadMaxComponents
 
-    int maxParallelTransfers = MAX_TRANSFER
+    int maxParallelTransfers = MAX_PARALLEL_TRANSFERS
     int maxTransferAttempts = MAX_TRANSFER_ATTEMPTS
     Duration delayBetweenAttempts = DEFAULT_DELAY_BETWEEN_ATTEMPTS
 
@@ -132,7 +132,7 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
         final privateAddr  = config.navigate('google.lifeSciences.usePrivateAddress') as boolean
         final requesterPays = config.navigate('google.enableRequesterPaysBuckets') as boolean
         //
-        final maxParallelTransfers = config.navigate('google.lifeSciences.maxParallelTransfers', MAX_TRANSFER) as int
+        final maxParallelTransfers = config.navigate('google.lifeSciences.maxParallelTransfers', MAX_PARALLEL_TRANSFERS) as int
         final maxTransferAttempts = config.navigate('google.lifeSciences.maxTransferAttempts', MAX_TRANSFER_ATTEMPTS) as int
         final delayBetweenAttempts = config.navigate('google.lifeSciences.delayBetweenAttempts', DEFAULT_DELAY_BETWEEN_ATTEMPTS) as Duration
         final network = config.navigate('google.lifeSciences.network') as String
@@ -143,8 +143,8 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
         def regions = (config.navigate("google.region") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
         def location = config.navigate("google.location") as String ?: fallbackToRegionOrZone(regions,zones)
 
-        def parallelThreadCount = config.navigate('google.lifeSciences.parallelThreadCount', DEF_PARALLEL_THREAD_COUNT) as int
-        def downloadMaxComponents = config.navigate('google.lifeSciences.downloadMaxComponents', DEF_DOWNLOAD_MAX_COMPONENTS) as int
+        def parallelThreadCount = config.navigate('google.storage.parallelThreadCount', DEF_PARALLEL_THREAD_COUNT) as int
+        def downloadMaxComponents = config.navigate('google.storage.downloadMaxComponents', DEF_DOWNLOAD_MAX_COMPONENTS) as int
 
         new GoogleLifeSciencesConfig(
                 project: project,

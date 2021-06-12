@@ -256,7 +256,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         if( scheme == 'file' )
             return stageOutCommand(source, targetDir.toString(), mode)
 
-        final cmd = FileSystemPathFactory.bashFunExt(targetDir)?.uploadCmd(source,targetDir)
+        final cmd = FileSystemPathFactory.uploadCmd(source,targetDir)
         if( cmd )
             return cmd
 
@@ -338,7 +338,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
 
     @Override
     String getBeforeStartScript() {
-        final script = FileSystemPathFactory.bashFunExt(targetDir)?.helperLib()
+        final script = FileSystemPathFactory.bashLib(targetDir)
         return script ? script.leftTrim() : null
     }
 

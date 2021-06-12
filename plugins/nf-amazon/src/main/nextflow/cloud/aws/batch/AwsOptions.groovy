@@ -49,7 +49,7 @@ class AwsOptions implements CloudTransferOptions {
 
     String region
 
-    int maxParallelTransfers = MAX_TRANSFER
+    int maxParallelTransfers = MAX_PARALLEL_TRANSFERS
 
     int maxTransferAttempts = MAX_TRANSFER_ATTEMPTS
 
@@ -86,7 +86,7 @@ class AwsOptions implements CloudTransferOptions {
         cliPath = getCliPath0(session)
         storageClass = session.config.navigate('aws.client.uploadStorageClass') as String
         storageEncryption = session.config.navigate('aws.client.storageEncryption') as String
-        maxParallelTransfers = session.config.navigate('aws.batch.maxParallelTransfers', MAX_TRANSFER) as int
+        maxParallelTransfers = session.config.navigate('aws.batch.maxParallelTransfers', MAX_PARALLEL_TRANSFERS) as int
         maxTransferAttempts = session.config.navigate('aws.batch.maxTransferAttempts', MAX_TRANSFER_ATTEMPTS) as int
         delayBetweenAttempts = session.config.navigate('aws.batch.delayBetweenAttempts', DEFAULT_DELAY_BETWEEN_ATTEMPTS) as Duration
         region = session.config.navigate('aws.region') as String

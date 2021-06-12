@@ -17,13 +17,14 @@
 
 package nextflow.cloud.aws.batch
 
+import nextflow.cloud.aws.util.S3BashLib
 import spock.lang.Specification
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class S3HelperTest extends Specification {
+class S3BashLibTest extends Specification {
 
     def 'should get uploader script' () {
 
@@ -31,7 +32,7 @@ class S3HelperTest extends Specification {
         def opts = Mock(AwsOptions)
 
         when:
-        def script = S3Helper.getUploaderScript(opts)
+        def script = S3BashLib.script(opts)
         then:
         1 * opts.getAwsCli() >> 'aws'
         1 * opts.getStorageClass() >> null
@@ -125,7 +126,7 @@ class S3HelperTest extends Specification {
         def opts = Mock(AwsOptions)
 
         when:
-        def script = S3Helper.getUploaderScript(opts)
+        def script = S3BashLib.script(opts)
         then:
         opts.getStorageClass() >> 'S-CLAZZ'
         opts.getStorageEncryption() >> 'S-ENCRYPT'
