@@ -236,7 +236,7 @@ class S3BashLibTest extends Specification {
                     aws s3 cp --only-show-errors "$source" "$target"
                 fi
             }
-            '''.stripIndent()
+            '''.stripIndent(true)
     }
 
     def 'should create base script with custom settings' () {
@@ -246,7 +246,7 @@ class S3BashLibTest extends Specification {
         }
 
         expect:
-        S3BashLib.script()  == '''
+        S3BashLib.script() == '''
             # aws cli retry config
             export AWS_RETRY_MODE=legacy 
             export AWS_MAX_ATTEMPTS=99
