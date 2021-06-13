@@ -358,6 +358,11 @@ Or, in alternative, using the Git clone URL::
 
     $ nextflow run http://gitlab.acme.org/foo/bar.git
 
+.. note::
+    You must also specify the server API endpoint URL if it differs from the server
+    base URL. For example, for GitHub Enterprise V3, add
+    ``endpoint = 'https://git.your-domain.com/api/v3'``.
+
 .. warning:: When accessing a private SCM installation over ``https`` and that server uses a custom SSL certificate
   you may need to import such certificate into your local Java keystore. Read more
   `here <https://docs.oracle.com/javase/tutorial/security/toolsign/rstep2.html>`_.
