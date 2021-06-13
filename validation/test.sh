@@ -11,12 +11,12 @@ export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
 #
 # Tests
 #
-#(
-#  cd ../tests/
-#  sudo bash cleanup.sh
-#  cd checks
-#  bash run.sh
-#)
+(
+  cd ../tests/
+  sudo bash cleanup.sh
+  cd checks
+  bash run.sh
+)
 
 if [[ $TEST_SMOKE == true ]]; then
   echo Skipping tests since TEST_SMOKE flag is true

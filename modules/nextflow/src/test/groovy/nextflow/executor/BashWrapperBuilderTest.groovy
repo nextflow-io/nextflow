@@ -399,9 +399,11 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.unstage_outputs == '''\
-                mkdir -p /work/dir
-                cp -fRL test.bam /work/dir || true
-                cp -fRL test.bai /work/dir || true
+                IFS=$'\\n'
+                for name in $(shopt -s globstar extglob; eval "ls -1d test.bam test.bai" | sort | uniq); do
+                    nxf_fs_copy "$name" /work/dir || true
+                done
+                unset IFS
                 '''.stripIndent().rightTrim()
 
 
@@ -414,9 +416,11 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.unstage_outputs == '''\
-                mkdir -p /another/dir
-                mv -f test.bam /another/dir || true
-                mv -f test.bai /another/dir || true
+                IFS=$'\\n'
+                for name in $(shopt -s globstar extglob; eval "ls -1d test.bam test.bai" | sort | uniq); do
+                    nxf_fs_move "$name" /another/dir || true
+                done
+                unset IFS
                 '''.stripIndent().rightTrim()
     }
 

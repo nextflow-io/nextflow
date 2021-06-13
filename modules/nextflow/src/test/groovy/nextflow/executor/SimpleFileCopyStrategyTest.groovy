@@ -269,9 +269,11 @@ class SimpleFileCopyStrategyTest extends Specification {
         def script = strategy.getUnstageOutputFilesScript(outputs, target)
         then:
         script == '''
-                mkdir -p /target/work\\ dir
-                cp -fRL simple.txt /target/work\\ dir || true
-                mkdir -p /target/work\\ dir/my/path && cp -fRL my/path/file.bam /target/work\\ dir/my/path || true
+                IFS=$'\\n'
+                for name in $(shopt -s globstar extglob; eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
+                    nxf_fs_copy "$name" /target/work\\ dir || true
+                done
+                unset IFS
                 '''
                 .stripIndent().trim()
 
@@ -290,9 +292,11 @@ class SimpleFileCopyStrategyTest extends Specification {
         def script = strategy.getUnstageOutputFilesScript(outputs, storeDir)
         then:
         script == '''
-                mkdir -p /target/store
-                mv -f simple.txt /target/store || true
-                mkdir -p /target/store/my/path && mv -f my/path/file.bam /target/store/my/path || true
+                IFS=$'\\n'
+                for name in $(shopt -s globstar extglob; eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
+                    nxf_fs_move "$name" /target/store || true
+                done
+                unset IFS
                 '''
                 .stripIndent().trim()
 
@@ -310,9 +314,11 @@ class SimpleFileCopyStrategyTest extends Specification {
         def script = strategy.getUnstageOutputFilesScript(outputs,target)
         then:
         script == '''
-                mkdir -p /target/work\\'s
-                rsync -rRl simple.txt /target/work\\'s || true
-                rsync -rRl my/path/file.bam /target/work\\'s || true
+                IFS=$'\\n'
+                for name in $(shopt -s globstar extglob; eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
+                    nxf_fs_rsync "$name" /target/work\\'s || true
+                done
+                unset IFS
                 '''
                 .stripIndent().trim()
 
