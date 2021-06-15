@@ -1,0 +1,20 @@
+#
+# run normal mode 
+#
+aws s3 rm s3://nextflow-ci/work/ci-test/publish-s3/HELLO.tsv || true
+
+$NXF_RUN | tee .stdout
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process'` == 1 ]] || false
+[[ `aws s3 cp s3://nextflow-ci/work/ci-test/publish-s3/HELLO.tsv -| grep 'Hello, world' -c ` == 1 ]] || false
+
+
+#
+# run resume mode 
+#
+aws s3 rm s3://nextflow-ci/work/ci-test/publish-s3/HELLO.tsv || true
+
+$NXF_RUN -resume | tee .stdout
+[[ `grep INFO .nextflow.log | grep -c 'Cached process'` == 1 ]] || false
+[[ `aws s3 cp s3://nextflow-ci/work/ci-test/publish-s3/HELLO.tsv -| grep 'Hello, world' -c ` == 1 ]] || false
+
+

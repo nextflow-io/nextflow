@@ -1490,8 +1490,6 @@ class FilesEx {
         final scheme = getScheme(path)
         if( scheme == 'file' )
             return path.toString()
-        if( scheme == 's3' )
-            return "$scheme:/$path".toString()
         // resolve via extension mechanism
         final result = FileSystemPathFactory.getUriString(path)
         // // fallback on default uri parsing

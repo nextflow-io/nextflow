@@ -451,6 +451,9 @@ class LoggerHelper {
         else if( fail instanceof MissingMethodException ) {
             buffer.append(getMissingMethodMessage(fail))
         }
+        else if( fail instanceof NoSuchFieldError ) {
+            buffer.append("No such field: ${normalize(fail.message)}")
+        }
         else if( fail instanceof NoSuchFileException ) {
             buffer.append("No such file: ${normalize(fail.message)}")
         }
