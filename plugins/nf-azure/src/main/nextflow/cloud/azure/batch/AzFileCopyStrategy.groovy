@@ -20,7 +20,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.azure.config.AzConfig
-import nextflow.executor.BashFunLib
+import nextflow.cloud.azure.file.AzBashLib
 import nextflow.executor.SimpleFileCopyStrategy
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
@@ -74,40 +74,13 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
 
     }
 
+    static String uploadCmd(String source, Path targetDir) {
+        "nxf_az_upload '$source' '${AzHelper.toHttpUrl(targetDir)}'"
+    }
+
     @Override
     String getBeforeStartScript() {
-
-        BashFunLib.body(maxParallelTransfers, maxTransferAttempts, delayBetweenAttempts) +
-        '''
-        nxf_az_upload() {
-            local name=$1
-            local target=${2%/} ## remove ending slash
-        
-            if [[ -d $name ]]; then
-              azcopy cp "$name" "$target?$AZ_SAS" --recursive
-            else
-              azcopy cp "$name" "$target/$name?$AZ_SAS"
-            fi
-        }
-        
-        nxf_az_download() {
-            local source=$1
-            local target=$2
-            local basedir=$(dirname $2)
-            local ret
-            mkdir -p "$basedir"
-        
-            ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
-                ## if fails check if it was trying to download a directory
-                mkdir -p $target
-                azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
-                    rm -rf $target
-                    >&2 echo "Unable to download path: $source"
-                    exit 1
-                }
-            }
-        }
-        '''.stripIndent()
+        AzBashLib.script(maxParallelTransfers, maxTransferAttempts, delayBetweenAttempts)
     }
 
     @Override

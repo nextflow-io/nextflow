@@ -21,11 +21,10 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.file.FileSystemPathFactory
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.util.Escape
-import static nextflow.util.SpuriousDeps.getS3UploaderScript
-
 /**
  * Simple file strategy that stages input files creating symlinks
  * and copies the output files using the {@code cp} command.
@@ -257,8 +256,9 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         if( scheme == 'file' )
             return stageOutCommand(source, targetDir.toString(), mode)
 
-        if( scheme == 's3' )
-            return "nxf_s3_upload '$source' s3:/$targetDir"
+        final cmd = FileSystemPathFactory.uploadCmd(source,targetDir)
+        if( cmd )
+            return cmd
 
         throw new IllegalArgumentException("Unsupported target path: ${targetDir.toUriString()}")
     }
@@ -338,12 +338,8 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
 
     @Override
     String getBeforeStartScript() {
-        if( getPathScheme(targetDir) == 's3' ) {
-            final script = getS3UploaderScript()
-            if( !script ) throw new IllegalStateException("Missing required nf-amazon module")
-            return script.leftTrim()
-        }
-        return null
+        final script = FileSystemPathFactory.bashLib(targetDir)
+        return script ? script.leftTrim() : null
     }
 
     /**

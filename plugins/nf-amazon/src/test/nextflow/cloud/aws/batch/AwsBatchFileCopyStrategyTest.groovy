@@ -213,7 +213,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         then:
         1 * opts.getAwsCli() >> '/foo/aws'
         1 * opts.getStorageClass() >> 'STANDARD_IA'
-        2 * opts.getStorageEncryption() >> 'AES256'
+        1 * opts.getStorageEncryption() >> 'AES256'
 
         script == '''\
                 # bash helper functions
