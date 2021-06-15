@@ -96,7 +96,7 @@ class BashFunLibTest extends Specification {
         scriptFile.text = script
 
         def process = "bash ${scriptFile}".execute()
-        process.waitFor(1, TimeUnit.SECONDS)
+        process.waitFor(30, TimeUnit.SECONDS)
 
         expect:
         process.exitValue() == 1
@@ -128,7 +128,7 @@ class BashFunLibTest extends Specification {
         scriptFile.text = script
 
         def process = "bash ${scriptFile}".execute()
-        process.waitFor(1, TimeUnit.SECONDS)
+        process.waitFor(30, TimeUnit.SECONDS)
 
         expect:
         process.exitValue() == 0
