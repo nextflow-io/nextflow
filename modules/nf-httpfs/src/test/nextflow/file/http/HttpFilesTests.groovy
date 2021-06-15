@@ -119,7 +119,7 @@ class HttpFilesTests extends Specification {
 
     }
 
-    @IgnoreIf({ env['TRAVIS'] })
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def 'should read FTP file' () {
         when:
         def lines = Paths.get(new URI('ftp://ftp.ncbi.nlm.nih.gov/robots.txt')).text.readLines()
@@ -163,7 +163,7 @@ class HttpFilesTests extends Specification {
 
     }
 
-    @IgnoreIf({ env['TRAVIS'] })
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def 'should read lines' () {
         given:
         def path = Paths.get(new URI('ftp://ftp.ncbi.nlm.nih.gov/robots.txt'))
@@ -175,7 +175,7 @@ class HttpFilesTests extends Specification {
         lines[1] == 'Disallow: /'
     }
 
-    @IgnoreIf({ env['TRAVIS'] })
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     def 'should read all bytes' ( ) {
         given:
         def path = Paths.get(new URI('ftp://ftp.ncbi.nlm.nih.gov/robots.txt'))

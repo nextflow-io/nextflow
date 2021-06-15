@@ -264,7 +264,7 @@ class GoogleLifeSciencesConfigTest extends Specification {
         config.downloadMaxComponents == 8
 
         when:
-        config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [parallelThreadCount: 10, downloadMaxComponents: 20]]])
+        config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', storage: [parallelThreadCount: 10, downloadMaxComponents: 20]]])
         then:
         config.parallelThreadCount == 10
         config.downloadMaxComponents == 20
@@ -279,7 +279,7 @@ class GoogleLifeSciencesConfigTest extends Specification {
         config.delayBetweenAttempts == Duration.of('10 sec')
 
         when:
-        config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [maxTransferAttempts: 10, maxParallelTransfers: 20, delayBetweenAttempts: '30s']]])
+        config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', storage: [maxTransferAttempts: 10, maxParallelTransfers: 20, delayBetweenAttempts: '30s']]])
         then:
         config.maxTransferAttempts == 10
         config.maxParallelTransfers == 20
