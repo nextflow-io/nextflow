@@ -48,6 +48,7 @@ profile                     Used configuration profile.
 runName                     Mnemonic name assigned to this execution instance.
 sessionId                   Unique identifier (UUID) associated to current execution.
 resume                      Returns ``true`` whenever the current instance is resumed from a previous execution.
+stubRun                     Returns ``true`` whenever the current instance is a stub-run execution .
 start                       Timestamp of workflow at execution start.
 manifest                    Entries of the workflow manifest.
 :sup:`✝` complete           Timestamp of workflow when execution is completed.
