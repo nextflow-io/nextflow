@@ -338,6 +338,25 @@ class K8sClient {
      *      the second element is the text (json) response
      */
     protected K8sResponseApi makeRequest(String method, String path, String body=null) throws K8sResponseException {
+
+        int remainingTrials = 5
+
+        while ( remainingTrials > 0 ) {
+            remainingTrials--
+
+            try {
+                return makeRequestCall( method, path, body )
+            } catch ( SocketException e ) {
+                log.error "[K8s] API request throw socket exception: $e.localizedMessage for $method $path ${body ? '\n'+prettyPrint(body).indent() : ''}"
+                if ( remainingTrials ) log.info( "[K8s] Try API request again, remaining trials: $remainingTrials" )
+                else throw e
+                sleep( 1500 )
+            }
+        }
+    }
+
+
+    private K8sResponseApi makeRequestCall(String method, String path, String body=null) throws K8sResponseException {
         assert config.server, 'Missing Kubernetes server name'
         assert path.startsWith('/'), 'Kubernetes API request path must starts with a `/` character'
 
