@@ -92,6 +92,7 @@ class WorkflowMetadataTest extends Specification {
         metadata.containerEngine == 'docker'
         metadata.configFiles == [Paths.get('foo').toAbsolutePath(), Paths.get('bar').toAbsolutePath()]
         metadata.resume == false
+        metadata.stubRun == false
         metadata.userName == System.getProperty('user.name')
         metadata.homeDir == Paths.get(System.getProperty('user.home'))
         metadata.manifest.version == '1.0.0'
@@ -108,10 +109,13 @@ class WorkflowMetadataTest extends Specification {
 
         when:
         session.profile >> 'foo_profile'
+        session.resumeMode >> true
+        session.stubRun >> true
         metadata = new WorkflowMetadata(session, script)
         then:
         metadata.profile == 'foo_profile'
-
+        metadata.resume
+        metadata.stubRun
     }
 
     def foo_test_method() {
