@@ -347,7 +347,7 @@ class K8sClient {
             try {
                 return makeRequestCall( method, path, body )
             } catch ( SocketException e ) {
-                log.error "[K8s] API request throw socket exception: $e.localizedMessage for $method $path ${body ? '\n'+prettyPrint(body).indent() : ''}"
+                log.error "[K8s] API request throw socket exception: $e.message for $method $path ${body ? '\n'+prettyPrint(body).indent() : ''}"
                 if ( remainingTrials ) log.info( "[K8s] Try API request again, remaining trials: $remainingTrials" )
                 else throw e
                 sleep( 1500 )
