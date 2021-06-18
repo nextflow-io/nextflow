@@ -348,7 +348,7 @@ class K8sClient {
             try {
                 return makeRequestCall( method, path, body )
             } catch ( SocketException e ) {
-                log.error "[K8s] API request throw socket exception: $e.message for $method $path ${body ? '\n'+prettyPrint(body).indent() : ''}"
+                log.error "[K8s] API request threw socket exception: $e.message for $method $path ${body ? '\n'+prettyPrint(body).indent() : ''}"
                 if ( trial < maxTrials ) log.info( "[K8s] Try API request again, remaining trials: ${ maxTrials - trial }" )
                 else throw e
                 final long delay = (Math.pow(3, trial - 1) as long) * 250
