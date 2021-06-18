@@ -339,18 +339,20 @@ class K8sClient {
      */
     protected K8sResponseApi makeRequest(String method, String path, String body=null) throws K8sResponseException {
 
-        int remainingTrials = 5
+        final int maxTrials = 5
+        int trial = 0
 
-        while ( remainingTrials > 0 ) {
-            remainingTrials--
+        while ( trial < maxTrials ) {
+            trial++
 
             try {
                 return makeRequestCall( method, path, body )
             } catch ( SocketException e ) {
                 log.error "[K8s] API request throw socket exception: $e.message for $method $path ${body ? '\n'+prettyPrint(body).indent() : ''}"
-                if ( remainingTrials ) log.info( "[K8s] Try API request again, remaining trials: $remainingTrials" )
+                if ( trial < maxTrials ) log.info( "[K8s] Try API request again, remaining trials: ${ maxTrials - trial }" )
                 else throw e
-                sleep( 1500 )
+                final long delay = (Math.pow(3, trial - 1) as long) * 250
+                sleep( delay )
             }
         }
     }
