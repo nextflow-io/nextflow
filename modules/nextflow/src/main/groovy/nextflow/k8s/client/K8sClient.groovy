@@ -338,6 +338,27 @@ class K8sClient {
      *      the second element is the text (json) response
      */
     protected K8sResponseApi makeRequest(String method, String path, String body=null) throws K8sResponseException {
+
+        final int maxTrials = 5
+        int trial = 0
+
+        while ( trial < maxTrials ) {
+            trial++
+
+            try {
+                return makeRequestCall( method, path, body )
+            } catch ( SocketException e ) {
+                log.error "[K8s] API request threw socket exception: $e.message for $method $path ${body ? '\n'+prettyPrint(body).indent() : ''}"
+                if ( trial < maxTrials ) log.info( "[K8s] Try API request again, remaining trials: ${ maxTrials - trial }" )
+                else throw e
+                final long delay = (Math.pow(3, trial - 1) as long) * 250
+                sleep( delay )
+            }
+        }
+    }
+
+
+    private K8sResponseApi makeRequestCall(String method, String path, String body=null) throws K8sResponseException {
         assert config.server, 'Missing Kubernetes server name'
         assert path.startsWith('/'), 'Kubernetes API request path must starts with a `/` character'
 
