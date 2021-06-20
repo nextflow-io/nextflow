@@ -1,6 +1,5 @@
 package nextflow.sql
 
-
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
@@ -8,6 +7,7 @@ import nextflow.NF
 import nextflow.Session
 import nextflow.extension.CH
 import nextflow.extension.ChannelExtensionPoint
+import nextflow.sql.config.SqlConfig
 /**
  * Provide a channel factory extension that allows the execution of Sql queries
  *
@@ -18,11 +18,11 @@ import nextflow.extension.ChannelExtensionPoint
 class ChannelSqlExtension implements ChannelExtensionPoint {
 
     private Session session
-    private Map config
+    private SqlConfig config
 
     void init(Session session) {
         this.session = session
-        this.config = (Map) session.config.dataSources
+        this.config = new SqlConfig((Map) session.config.dataSources)
     }
 
     @Override
@@ -31,7 +31,7 @@ class ChannelSqlExtension implements ChannelExtensionPoint {
     }
 
     DataflowWriteChannel fromQuery(String query) {
-        fromQuery([:], query)
+        fromQuery(Collections.emptyMap(), query)
     }
 
     DataflowWriteChannel fromQuery(Map opts, String query) {
@@ -40,15 +40,16 @@ class ChannelSqlExtension implements ChannelExtensionPoint {
 
     protected DataflowWriteChannel queryToChannel(String query, Map opts) {
         final channel = CH.create()
+        final dsName = (opts?.dataSource ?: 'default') as String
+        final dataSource = config.getDatasource(dsName)
+        if( dataSource==null )
+            throw new IllegalArgumentException("Unknown dataSource name: $dsName")
+        final handler = new QueryHandler().withDatasource(dataSource).withStatement(query).withTarget(channel)
         if(NF.dsl2) {
-            session.addIgniter {-> new QueryOpImpl().withOpts(opts).withStatement(query).withTarget(channel).perform(true) }
+            session.addIgniter {-> handler.perform(true) }
         }
         else {
-            new QueryOpImpl()
-                    .withOpts(opts)
-                    .withStatement(query)
-                    .withTarget(channel)
-                    .perform(true)
+            handler.perform(true)
         }
         return channel
     }

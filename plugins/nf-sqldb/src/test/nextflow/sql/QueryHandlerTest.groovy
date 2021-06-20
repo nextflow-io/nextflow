@@ -4,39 +4,30 @@ import java.nio.file.Files
 
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Channel
+import nextflow.sql.config.SqlDatasource
 import spock.lang.Specification
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class QueryOpImplTest extends Specification {
+class QueryHandlerTest extends Specification {
 
     def 'should normalise query' () {
         given:
-        def ext = new QueryOpImpl()
+        def ext = new QueryHandler()
 
         expect:
         ext.normalize('select * from x; ') == 'select * from x;'
         ext.normalize('select * from x ')  == 'select * from x;'
     }
 
-    def 'should create db params' () {
-        given:
-        def ext = new QueryOpImpl()
-        when:
-        def props = ext.dbProps([:])
-        then:
-        props.driver == 'org.h2.Driver'
-        props.url == 'jdbc:h2:mem:'
-
-    }
 
     def 'should connect db' () {
         given:
-        def ext = new QueryOpImpl()
+        def ext = new QueryHandler()
         when:
-        def conn = ext.connect([:])
+        def conn = ext.connect(new SqlDatasource([:]))
         then:
         conn != null
         cleanup:
@@ -58,7 +49,7 @@ class QueryOpImplTest extends Specification {
         when:
         def result = new DataflowQueue()
         def query = "SELECT * FROM CSVREAD('${folder.resolve('test.csv')}') where FOO > 2;"
-        new QueryOpImpl()
+        new QueryHandler()
                 .withTarget(result)
                 .withStatement(query)
                 .perform()

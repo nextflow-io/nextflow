@@ -23,14 +23,13 @@ import java.sql.Statement
 import java.util.concurrent.CompletableFuture
 
 import groovy.sql.Sql
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
-
+import nextflow.sql.config.SqlDatasource
 /**
  * Implement the logic for query a DB in async manner
  *
@@ -38,11 +37,7 @@ import nextflow.Session
  */
 @Slf4j
 @CompileStatic
-class QueryOpImpl implements QueryOp {
-
-    public static String DEFAULT_URL = 'jdbc:h2:mem:'
-    public static String DEFAULT_DRIVER = 'org.h2.Driver'
-    public static String DEFAULT_USER = 'sa'
+class QueryHandler implements QueryOp {
 
     private static Map<String,Class<?>> type_mapping = [:]
 
@@ -68,9 +63,9 @@ class QueryOpImpl implements QueryOp {
         type_mapping.TIMESTAMP= java.sql.Timestamp
     }
 
-    private Map opts = Collections.emptyMap()
     private DataflowWriteChannel target
     private String statement
+    private SqlDatasource datasource
 
     @Override
     QueryOp withStatement(String stm) {
@@ -85,33 +80,23 @@ class QueryOpImpl implements QueryOp {
     }
 
     @Override
-    QueryOp withOpts(Map opts) {
-        this.opts = opts ?: Collections.emptyMap()
+    QueryOp withDatasource(SqlDatasource datasource) {
+        this.datasource = datasource
         return this
     }
 
     @Override
     void perform(boolean async=false) {
-        final conn = connect(opts)
+        final conn = connect(datasource ?: SqlDatasource.DEFAULT)
         if( async )
             queryAsync(conn)
         else
             query0(conn)
     }
 
-    protected Map<String,Object> dbProps(Map<String,Object> opts) {
-        Map result = new HashMap()
-        result.driver = opts.driver ?: DEFAULT_DRIVER
-        result.url = opts.url ?: DEFAULT_URL
-        result.user = opts.user ?: DEFAULT_USER
-        result.password = opts.password
-        return result
-    }
-
-    @CompileDynamic
-    protected Connection connect(Map<String,Object> opts) {
-        def props = dbProps(opts)
-        Sql.newInstance(props).getConnection()
+    protected Connection connect(SqlDatasource ds) {
+        log.debug "Creating SQL connection: ${ds}"
+        Sql.newInstance(ds.toMap()).getConnection()
     }
 
     protected String normalize(String q) {

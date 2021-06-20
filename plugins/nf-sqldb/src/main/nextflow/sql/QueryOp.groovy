@@ -18,6 +18,7 @@
 package nextflow.sql
 
 import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.sql.config.SqlDatasource
 
 /**
  * Declares core main interface for SQL query operation
@@ -28,7 +29,7 @@ interface QueryOp {
 
     QueryOp withStatement(String stm)
     QueryOp withTarget(DataflowWriteChannel channel)
-    QueryOp withOpts(Map opts)
+    QueryOp withDatasource(SqlDatasource ds)
 
     void perform()
     void perform(boolean async)
