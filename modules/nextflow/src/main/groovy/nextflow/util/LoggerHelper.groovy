@@ -506,7 +506,7 @@ class LoggerHelper {
 
     static String getMissingMethodMessage(MissingMethodException error) {
         try {
-            return getMissingMethodMessage0(error)
+            return error.class==MissingMethodException ? getMissingMethodMessage0(error) : error.message
         }
         catch( Throwable e ) {
             return error?.message

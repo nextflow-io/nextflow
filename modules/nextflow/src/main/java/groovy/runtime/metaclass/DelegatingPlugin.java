@@ -29,4 +29,6 @@ public interface DelegatingPlugin {
 
     Object invokeExtensionMethod(Object channel, String method, Object[] args);
 
+    ChannelFactory getChannelFactory(String factoryDomain);
+
 }
