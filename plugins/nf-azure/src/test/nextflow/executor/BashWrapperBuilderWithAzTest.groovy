@@ -18,7 +18,7 @@ import spock.lang.Specification
  */
 class BashWrapperBuilderWithAzTest extends Specification {
 
-    def 'should include s3 helpers' () {
+    def 'should include az helpers' () {
         given:
         Global.session = Mock(Session) { getConfig() >> [:] }
         and:
@@ -43,8 +43,11 @@ class BashWrapperBuilderWithAzTest extends Specification {
         def binding = new BashWrapperBuilder(bean,copy).makeBinding()
         then:
         binding.unstage_outputs == """\
-                    nxf_az_upload 'test.bam' '${AzHelper.toHttpUrl(target)}' || true
-                    nxf_az_upload 'test.bai' '${AzHelper.toHttpUrl(target)}' || true
+                    IFS=\$'\\n'
+                    for name in \$(eval "ls -1d test.bam test.bai" | sort | uniq); do
+                        nxf_az_upload '\$name' '${AzHelper.toHttpUrl(target)}' || true
+                    done
+                    unset IFS
                     """.stripIndent().rightTrim()
 
         binding.helpers_script == '''\
@@ -80,7 +83,7 @@ class BashWrapperBuilderWithAzTest extends Specification {
             '''.stripIndent(true)
     }
 
-    def 'should include s3 helpers and bash lib' () {
+    def 'should include az helpers and bash lib' () {
         given:
         Global.session = Mock(Session) { getConfig() >> [:] }
         and:
