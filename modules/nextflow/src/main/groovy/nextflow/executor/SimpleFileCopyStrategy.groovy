@@ -159,26 +159,24 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     @Override
     String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
-
-        // collect all the expected names (pattern) for files to be un-staged
-        def result = []
-        def normalized = normalizeGlobStarPaths(outputFiles)
-
+        final patterns = normalizeGlobStarPaths(outputFiles)
         // create a bash script that will copy the out file to the working directory
-        log.trace "Unstaging file path: $normalized"
-        if( normalized ) {
-            final mode = stageoutMode ?: ( workDir==targetDir ? 'copy' : 'move' )
-            def prefix = getUnstagePrefix(targetDir)
-            if( prefix )
-                result << prefix
-            for( int i=0; i<normalized.size(); i++ ) {
-                final path = normalized[i]
-                final cmd = stageOutCommand(path, targetDir, mode) + ' || true' // <-- add true to avoid it stops on errors
-                result << cmd
-            }
-        }
+        log.trace "Unstaging file path: $patterns"
 
-        return result.join(separatorChar)
+        if( !patterns )
+            return null
+
+        final escape = new ArrayList(outputFiles.size())
+        for( String it : patterns )
+            escape.add( Escape.path(it) )
+
+        final mode = stageoutMode ?: ( workDir==targetDir ? 'copy' : 'move' )
+        return """\
+            IFS=\$'\\n'
+            for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
+                ${stageOutCommand('$name', targetDir, mode)} || true
+            done
+            unset IFS""".stripIndent(true)
     }
 
     /**
@@ -251,10 +249,14 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * @return A shell copy or move command string
      */
 
+    static final List<String> VALID_STAGE_OUT_MODES = ['copy', 'move', 'rsync']
+
     protected String stageOutCommand( String source, Path targetDir, String mode ) {
         def scheme = getPathScheme(targetDir)
-        if( scheme == 'file' )
-            return stageOutCommand(source, targetDir.toString(), mode)
+        if( scheme == 'file' ) {
+            if( mode !in VALID_STAGE_OUT_MODES ) throw new IllegalArgumentException("Unknown stage-out strategy: $mode")
+            return "nxf_fs_$mode \"$source\" ${Escape.path(targetDir)}"
+        }
 
         final cmd = FileSystemPathFactory.uploadCmd(source,targetDir)
         if( cmd )
@@ -263,6 +265,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         throw new IllegalArgumentException("Unsupported target path: ${targetDir.toUriString()}")
     }
 
+    @Deprecated
     protected String stageOutCommand( String source, String target, String mode ) {
         assert mode
 

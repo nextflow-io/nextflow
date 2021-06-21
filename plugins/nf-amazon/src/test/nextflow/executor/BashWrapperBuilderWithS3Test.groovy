@@ -57,9 +57,12 @@ class BashWrapperBuilderWithS3Test extends Specification {
         def binding = new BashWrapperBuilder(bean,copy).makeBinding()
         then:
         binding.unstage_outputs == '''\
-                  nxf_s3_upload 'test.bam' s3://some/bucket || true
-                  nxf_s3_upload 'test.bai' s3://some/bucket || true
-                  '''.stripIndent().rightTrim()
+                    IFS=$'\\n'
+                    for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
+                        nxf_s3_upload '$name' s3://some/bucket || true
+                    done
+                    unset IFS
+                    '''.stripIndent().rightTrim()
 
         binding.helpers_script == '''\
             # aws helper
