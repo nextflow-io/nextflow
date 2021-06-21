@@ -379,12 +379,34 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @return An instance of {@link com.amazonaws.services.batch.model.RegisterJobDefinitionRequest} for the specified Docker image
      */
     protected RegisterJobDefinitionRequest makeJobDefRequest(String image) {
+        final uniq = new ArrayList()
+        final result = configJobDefRequest(image, uniq)
+
+        // create a job marker uuid
+        def uuid = CacheHelper.hasher(uniq).hash().toString()
+        result.setParameters(['nf-token':uuid])
+
+        return result
+    }
+
+    /**
+     * Create and configure the actual RegisterJobDefinitionRequest object
+     *
+     * @param image
+     *      The Docker container image for which is required to create a Batch job definition
+     * @param hashingTokens
+     *      A list used to collect values that should be used to create a unique job definition Id for the given job request.
+     *      It should be used to return such values in the calling context
+     * @return
+     *      An instance of {@link com.amazonaws.services.batch.model.RegisterJobDefinitionRequest} for the specified Docker image
+     */
+    protected RegisterJobDefinitionRequest configJobDefRequest(String image, List hashingTokens) {
         final name = normalizeJobDefinitionName(image)
-        final result = new RegisterJobDefinitionRequest()
         final opts = getAwsOptions()
+
+        final result = new RegisterJobDefinitionRequest()
         result.setJobDefinitionName(name)
         result.setType(JobDefinitionType.Container)
-
 
         // container definition
         final container = new ContainerProperties()
@@ -397,7 +419,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final jobRole = opts.getJobRole()
         if( jobRole )
             container.setJobRoleArn(jobRole)
-        
+
         final mountsMap = new LinkedHashMap( 10)
         final awscli = opts.cliPath
         if( awscli ) {
@@ -417,9 +439,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // finally set the container options
         result.setContainerProperties(container)
 
-        // create a job marker uuid
-        def uuid = CacheHelper.hasher([name, image, awscli, volumes, jobRole]).hash().toString()
-        result.setParameters(['nf-token':uuid])
+        // add to this list all values that has to contribute to the
+        // job definition unique name creation
+        hashingTokens.addAll([name, image, awscli, volumes, jobRole])
 
         return result
     }
