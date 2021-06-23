@@ -53,8 +53,10 @@ nxf_fs_copy() {
   local source=$1
   local target=$2
   local basedir=$(dirname $1)
-  mkdir -p $target/$basedir
-  cp -fRL $source $target/$basedir
+  if [[ ! -e "$target/$1" ]]; then
+      mkdir -p $target/$basedir
+      cp -fRL $source $target/$basedir
+  fi
 }
 
 nxf_fs_move() {
