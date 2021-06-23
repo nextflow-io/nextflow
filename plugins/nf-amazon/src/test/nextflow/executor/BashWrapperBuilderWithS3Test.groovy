@@ -58,9 +58,12 @@ class BashWrapperBuilderWithS3Test extends Specification {
         then:
         binding.unstage_outputs == '''\
                     IFS=$'\\n'
-                    for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
+                    pathes=`ls -1d test.bam test.bai | sort | uniq`
+                    set -f
+                    for name in $pathes; do
                         nxf_s3_upload '$name' s3://some/bucket || true
                     done
+                    set +f
                     unset IFS
                     '''.stripIndent().rightTrim()
 

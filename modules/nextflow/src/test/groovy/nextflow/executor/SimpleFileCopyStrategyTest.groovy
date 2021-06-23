@@ -572,9 +572,12 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 IFS=$'\\n'
-                for name in $(eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
+                pathes=`ls -1d simple.txt my/path/file.bam | sort | uniq`
+                set -f
+                for name in $pathes; do
                     nxf_fs_copy "$name" /target/work\\ dir || true
                 done
+                set +f
                 unset IFS
                 '''
                 .stripIndent().trim()
@@ -595,9 +598,12 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 IFS=$'\\n'
-                for name in $(eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
+                pathes=`ls -1d simple.txt my/path/file.bam | sort | uniq`
+                set -f
+                for name in $pathes; do
                     nxf_fs_move "$name" /target/store || true
                 done
+                set +f
                 unset IFS
                 '''
                 .stripIndent().trim()
@@ -617,9 +623,12 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 IFS=$'\\n'
-                for name in $(eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
+                pathes=`ls -1d simple.txt my/path/file.bam | sort | uniq`
+                set -f
+                for name in $pathes; do
                     nxf_fs_rsync "$name" /target/work\\'s || true
                 done
+                set +f
                 unset IFS
                 '''
                 .stripIndent().trim()
