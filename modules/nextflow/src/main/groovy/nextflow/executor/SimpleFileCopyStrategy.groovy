@@ -159,21 +159,27 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      */
     @Override
     String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
-        final patterns = normalizeGlobStarPaths(outputFiles)
-        // create a bash script that will copy the out file to the working directory
-        log.trace "Unstaging file path: $patterns"
 
-        if( !patterns )
+        if( !outputFiles )
             return null
 
         final escape = new ArrayList(outputFiles.size())
-        for( String it : patterns )
-            escape.add( Escape.path( it, true ) )
+        for( String it : outputFiles ){
+            String escaped = Escape.path( it, true )
+            //Bash glob behaves different than Java's Glob, if the path starts with **
+            //https://unix.stackexchange.com/questions/49913/recursive-glob
+            if( escaped.startsWith("**") && escaped.size() > 2 ) {
+                escaped = "**/*" + escaped.substring(2)
+            }
+            escape.add( escaped )
+        }
 
         final mode = stageoutMode ?: ( workDir==targetDir ? 'copy' : 'move' )
         return """\
             IFS=\$'\\n'
+            shopt -s globstar extglob || true
             pathes=`ls -1d ${escape.join(' ')} | sort | uniq`
+            shopt -u globstar extglob || true
             set -f
             for name in \$pathes; do
                 ${stageOutCommand('$name', targetDir, mode)} || true

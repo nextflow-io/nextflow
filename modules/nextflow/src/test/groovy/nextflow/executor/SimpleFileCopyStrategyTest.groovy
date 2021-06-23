@@ -572,7 +572,9 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 IFS=$'\\n'
+                shopt -s globstar extglob || true
                 pathes=`ls -1d simple.txt my/path/file.bam | sort | uniq`
+                shopt -u globstar extglob || true
                 set -f
                 for name in $pathes; do
                     nxf_fs_copy "$name" /target/work\\ dir || true
@@ -598,7 +600,9 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 IFS=$'\\n'
+                shopt -s globstar extglob || true
                 pathes=`ls -1d simple.txt my/path/file.bam | sort | uniq`
+                shopt -u globstar extglob || true
                 set -f
                 for name in $pathes; do
                     nxf_fs_move "$name" /target/store || true
@@ -623,7 +627,9 @@ class SimpleFileCopyStrategyTest extends Specification {
         then:
         script == '''
                 IFS=$'\\n'
+                shopt -s globstar extglob || true
                 pathes=`ls -1d simple.txt my/path/file.bam | sort | uniq`
+                shopt -u globstar extglob || true
                 set -f
                 for name in $pathes; do
                     nxf_fs_rsync "$name" /target/work\\'s || true

@@ -44,7 +44,9 @@ class BashWrapperBuilderWithAzTest extends Specification {
         then:
         binding.unstage_outputs == """\
                     IFS=\$'\\n'
+                    shopt -s globstar extglob || true
                     pathes=`ls -1d test.bam test.bai | sort | uniq`
+                    shopt -u globstar extglob || true
                     set -f
                     for name in \$pathes; do
                         nxf_az_upload '\$name' '${AzHelper.toHttpUrl(target)}' || true
