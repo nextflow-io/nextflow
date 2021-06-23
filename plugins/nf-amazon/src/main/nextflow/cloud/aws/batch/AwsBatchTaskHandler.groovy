@@ -54,6 +54,7 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
+
 /**
  * Implements a task handler for AWS Batch jobs
  */
@@ -383,10 +384,14 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final result = configJobDefRequest(image, uniq)
 
         // create a job marker uuid
-        def uuid = CacheHelper.hasher(uniq).hash().toString()
+        def uuid = computeUniqueToken(uniq)
         result.setParameters(['nf-token':uuid])
 
         return result
+    }
+
+    protected String computeUniqueToken(List uniq) {
+        return CacheHelper.hasher(uniq).hash().toString()
     }
 
     /**
