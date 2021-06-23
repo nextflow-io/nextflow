@@ -168,14 +168,17 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
 
         final escape = new ArrayList(outputFiles.size())
         for( String it : patterns )
-            escape.add( Escape.path(it) )
+            escape.add( Escape.path( it, true ) )
 
         final mode = stageoutMode ?: ( workDir==targetDir ? 'copy' : 'move' )
         return """\
             IFS=\$'\\n'
-            for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
+            pathes=`ls -1d ${escape.join(' ')} | sort | uniq`
+            set -f
+            for name in \$pathes; do
                 ${stageOutCommand('$name', targetDir, mode)} || true
             done
+            set +f
             unset IFS""".stripIndent(true)
     }
 

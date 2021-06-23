@@ -70,6 +70,16 @@ class EscapeTest extends Specification {
         Escape.wildcards('file_[!a].txt') == 'file_\\[\\!a\\].txt'
     }
 
+    def 'should ignore globs in file names' () {
+
+        expect:
+        Escape.path('hell?.txt', true ) == "hell?.txt"
+        Escape.path('hell\\?.txt', true ) == "hell\\?.txt"
+        Escape.path('hell*.txt', true ) == "hell*.txt"
+        Escape.path('hell**.txt', true ) == "hell**.txt"
+
+    }
+
     def 'should escape cli' () {
         expect: 
         Escape.cli('nextflow','run','this') == 'nextflow run this'
