@@ -6,7 +6,6 @@ import java.nio.file.Paths
 import com.sun.net.httpserver.HttpServer
 import spock.lang.Specification
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -247,5 +246,58 @@ class PluginsFacadeTest extends Specification {
         [NXF_PLUGINS_DIR: '/some/dir']      | Paths.get('/some/dir')
         [NXF_HOME: '/my/home']              | Paths.get('/my/home/plugins')
         [:]                                 | Paths.get('plugins')
+    }
+
+
+    // -- check Priority annotation
+
+    @Priority(100)
+    static class Foo { }
+
+    def 'should get priority from object' () {
+        given:
+        def facade = new PluginsFacade()
+        expect:
+        facade.priorityValue('foo') == 0
+        facade.priorityValue(new Foo()) == 100
+    }
+
+    // -- check priority ordering
+
+    interface Bar { }
+
+    @Priority(10)
+    static class XXX implements Bar {}
+
+    @Priority(20)
+    static class YYY implements Bar {}
+
+    @Priority(30)
+    static class WWW implements Bar {}
+
+    @Priority(40)
+    static class ZZZ implements Bar {}
+
+    def 'should get priority extensions' () {
+        given:
+        def xxx = new XXX()
+        def yyy = new YYY()
+        def zzz = new ZZZ()
+        def www = new WWW()
+        and:
+        def THE_LIST = [yyy, xxx, zzz, www]; THE_LIST.shuffle()
+        and:
+        def facade = Spy( new PluginsFacade() ) {
+            getExtensions(Foo) >> THE_LIST
+        }
+
+        when:
+        def result = facade.getPriorityExtensions(Foo)
+        then:
+        // items are returned ordered by priority
+        result.head() == xxx
+        result.first() == xxx
+        and:
+        result == [xxx,yyy,www,zzz]
     }
 }
