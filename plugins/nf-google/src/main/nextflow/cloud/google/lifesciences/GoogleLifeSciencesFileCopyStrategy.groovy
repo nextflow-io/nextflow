@@ -77,7 +77,7 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
 
         // stage files
         if( stagingCommands ) {
-            result.append('downloads=()\n')
+            result.append('downloads=(true)\n')
             result.append(stagingCommands.join('\n')).append('\n')
             result.append('nxf_parallel "${downloads[@]}"\n')
         }
