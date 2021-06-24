@@ -457,6 +457,9 @@ class LoggerHelper {
         else if( fail instanceof NoSuchFileException ) {
             buffer.append("No such file: ${normalize(fail.message)}")
         }
+        else if( fail instanceof ClassNotFoundException ) {
+            buffer.append("Class not found: ${normalize(fail.message)}")
+        }
         else if( fail instanceof DirectoryNotEmptyException ) {
             buffer.append("Unable to delete not empty directory: $fail.message")
         }
