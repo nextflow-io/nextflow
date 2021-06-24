@@ -42,37 +42,36 @@ class Trie<T> {
         this.vertex = obj
     }
 
-    Trie append( T value ) {
+    protected Trie addNode( T value ) {
 
         if( children == null ) {
-            def result = new Trie<T>(value)
+            final result = new Trie<T>(value)
             children = new LinkedList<Trie<T>>()
-            children << result
+            children.add(result)
             return result
         }
 
         def result = children?.find { node -> node.vertex == value }
         if( !result ) {
             result = new Trie<T>(value)
-            children << result
+            children.add(result)
             return result
         }
 
         return result
     }
 
-    Trie append( List<T> values ) {
+    Trie addPath( List<T> values ) {
         if(!values)
             return null
 
-        def v = values.head()
-        def node = append(v)
-        node.append( values.tail() )
+        def node = addNode(values.head())
+        node.addPath(values.tail())
         return node
     }
 
-    Trie append( T... values ) {
-        append( values as List<T> )
+    Trie addPath( T... values ) {
+        addPath( values as List<T> )
     }
 
     Trie getChild( T value ) {
@@ -91,7 +90,22 @@ class Trie<T> {
         return result
     }
 
+    List<List<T>> traverse(T stop=null) {
+        def result = new ArrayList<List<T>>()
+        traverse0(new LinkedList<T>(), result, stop)
+        return result
+    }
 
+    private void traverse0(List<T> current, List<List<T>> result, T stop) {
+        current.add(vertex)
+        if( !children || children.any { it.vertex==stop } ) {
+            result.add(current)
+            return
+        }
+        for( Trie t : children ) {
+            t.traverse0(new ArrayList<T>(current), result, stop)
+        }
+    }
 
 }
 
