@@ -358,15 +358,21 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             if( jobDefinitions.containsKey(container) )
                 return jobDefinitions[container]
 
+            def msg
             def req = makeJobDefRequest(container)
             def name = findJobDef(req.jobDefinitionName, req.parameters?.'nf-token')
             if( name ) {
-                log.debug "[AWS BATCH] Found job definition name=$name; container=$container"
+                msg = "[AWS BATCH] Found job definition name=$name; container=$container"
             }
             else {
                 name = createJobDef(req)
-                log.debug "[AWS BATCH] Created job definition name=$name; container=$container"
+                msg = "[AWS BATCH] Created job definition name=$name; container=$container"
             }
+            // log the request
+            if( log.isTraceEnabled() )
+                log.debug "[AWS BATCH] $msg; request=${req.toString().indent()}"
+            else
+                log.debug "[AWS BATCH] $msg"
 
             jobDefinitions[container] = name
             return name
