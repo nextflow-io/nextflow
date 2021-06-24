@@ -83,7 +83,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
 
     @Override
     String getStageInputFilesScript(Map<String,Path> inputFiles) {
-        def result = 'downloads=()\n'
+        def result = 'downloads=(true)\n'
         result += super.getStageInputFilesScript(inputFiles) + '\n'
         result += 'nxf_parallel "${downloads[@]}"\n'
         return result
