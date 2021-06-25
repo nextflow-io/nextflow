@@ -211,7 +211,7 @@ class BashWrapperBuilder {
 
         final binding = new HashMap<String,String>(20)
         binding.header_script = headerScript
-        binding.task_name = name
+        binding.task_name = name.replaceAll("[\n\r]", "");
         binding.helpers_script = getHelpersScript()
 
         if( runWithContainer ) {

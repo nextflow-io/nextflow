@@ -307,6 +307,14 @@ class BashWrapperBuilderTest extends Specification {
         newBashWrapperBuilder(name: 'bar').makeBinding().task_name == 'bar'
     }
 
+    def 'task name should not include newlines' () {
+        expect:
+        newBashWrapperBuilder(name: 'foo\n').makeBinding().task_name == 'foo'
+        newBashWrapperBuilder(name: 'foo\r\nbar').makeBinding().task_name == 'foobar'
+        newBashWrapperBuilder(name: '\n\nfoo').makeBinding().task_name == 'foo'
+        newBashWrapperBuilder(name: '\rbar').makeBinding().task_name == 'bar'
+    }
+
     def 'should return header directives' () {
         when:
         def bash = newBashWrapperBuilder()
