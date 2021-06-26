@@ -208,7 +208,7 @@ class AwsBatchScriptLauncherTest extends Specification {
 
         binding.stage_inputs == '''\
                 # stage input files
-                downloads=()
+                downloads=(true)
                 rm -f .command.sh
                 rm -f .command.run
                 rm -f .command.in
@@ -367,7 +367,7 @@ class AwsBatchScriptLauncherTest extends Specification {
 
         binding.stage_inputs == '''\
                 # stage input files
-                downloads=()
+                downloads=(true)
                 rm -f .command.sh
                 downloads+=("nxf_cp_retry nxf_s3_download s3://bucket/work/.command.sh .command.sh")
                 nxf_parallel "${downloads[@]}"
@@ -479,7 +479,7 @@ class AwsBatchScriptLauncherTest extends Specification {
 
         binding.stage_inputs == '''\
                 # stage input files
-                downloads=()
+                downloads=(true)
                 rm -f .command.sh
                 downloads+=("nxf_s3_download s3://bucket/work/.command.sh .command.sh")
                 nxf_parallel "${downloads[@]}"

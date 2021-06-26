@@ -54,6 +54,7 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
+
 /**
  * Implements a task handler for AWS Batch jobs
  */
@@ -357,15 +358,21 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             if( jobDefinitions.containsKey(container) )
                 return jobDefinitions[container]
 
+            def msg
             def req = makeJobDefRequest(container)
             def name = findJobDef(req.jobDefinitionName, req.parameters?.'nf-token')
             if( name ) {
-                log.debug "[AWS BATCH] Found job definition name=$name; container=$container"
+                msg = "[AWS BATCH] Found job definition name=$name; container=$container"
             }
             else {
                 name = createJobDef(req)
-                log.debug "[AWS BATCH] Created job definition name=$name; container=$container"
+                msg = "[AWS BATCH] Created job definition name=$name; container=$container"
             }
+            // log the request
+            if( log.isTraceEnabled() )
+                log.debug "[AWS BATCH] $msg; request=${req.toString().indent()}"
+            else
+                log.debug "[AWS BATCH] $msg"
 
             jobDefinitions[container] = name
             return name
@@ -379,12 +386,38 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @return An instance of {@link com.amazonaws.services.batch.model.RegisterJobDefinitionRequest} for the specified Docker image
      */
     protected RegisterJobDefinitionRequest makeJobDefRequest(String image) {
+        final uniq = new ArrayList()
+        final result = configJobDefRequest(image, uniq)
+
+        // create a job marker uuid
+        def uuid = computeUniqueToken(uniq)
+        result.setParameters(['nf-token':uuid])
+
+        return result
+    }
+
+    protected String computeUniqueToken(List uniq) {
+        return CacheHelper.hasher(uniq).hash().toString()
+    }
+
+    /**
+     * Create and configure the actual RegisterJobDefinitionRequest object
+     *
+     * @param image
+     *      The Docker container image for which is required to create a Batch job definition
+     * @param hashingTokens
+     *      A list used to collect values that should be used to create a unique job definition Id for the given job request.
+     *      It should be used to return such values in the calling context
+     * @return
+     *      An instance of {@link com.amazonaws.services.batch.model.RegisterJobDefinitionRequest} for the specified Docker image
+     */
+    protected RegisterJobDefinitionRequest configJobDefRequest(String image, List hashingTokens) {
         final name = normalizeJobDefinitionName(image)
-        final result = new RegisterJobDefinitionRequest()
         final opts = getAwsOptions()
+
+        final result = new RegisterJobDefinitionRequest()
         result.setJobDefinitionName(name)
         result.setType(JobDefinitionType.Container)
-
 
         // container definition
         final container = new ContainerProperties()
@@ -397,7 +430,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final jobRole = opts.getJobRole()
         if( jobRole )
             container.setJobRoleArn(jobRole)
-        
+
         final mountsMap = new LinkedHashMap( 10)
         final awscli = opts.cliPath
         if( awscli ) {
@@ -417,9 +450,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // finally set the container options
         result.setContainerProperties(container)
 
-        // create a job marker uuid
-        def uuid = CacheHelper.hasher([name, image, awscli, volumes, jobRole]).hash().toString()
-        result.setParameters(['nf-token':uuid])
+        // add to this list all values that has to contribute to the
+        // job definition unique name creation
+        hashingTokens.addAll([name, image, awscli, volumes, jobRole])
 
         return result
     }

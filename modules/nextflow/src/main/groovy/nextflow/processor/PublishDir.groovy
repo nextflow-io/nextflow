@@ -22,10 +22,12 @@ import java.nio.file.FileSystem
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.LinkOption
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.util.concurrent.ExecutorService
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
@@ -35,6 +37,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
+import nextflow.util.PathTrie
 /**
  * Implements the {@code publishDir} directory. It create links or copies the output
  * files of a given task to a user specified directory.
@@ -44,6 +47,7 @@ import nextflow.file.FileHelper
 @Slf4j
 @ToString
 @EqualsAndHashCode
+@CompileStatic
 class PublishDir {
 
     enum Mode { SYMLINK, LINK, COPY, MOVE, COPY_NO_FOLLOW, RELLINK }
@@ -128,6 +132,7 @@ class PublishDir {
      *
      * @return An instance of {@link PublishDir} class
      */
+    @CompileDynamic
     static PublishDir create( Map params ) {
         assert params
 
@@ -174,9 +179,33 @@ class PublishDir {
         /*
          * iterate over the file parameter and publish each single file
          */
-        for( Path value : files ) {
+        for( Path value : dedupPaths(files) ) {
             apply1(value, inProcess)
         }
+    }
+
+    /**
+     * Find out only path not overlapping each other using prefix tree.
+     * This is require to avoid copy multiple times the same files, when
+     * the output declares both directory and files nested in the same directory.
+     *
+     * See also https://github.com/nextflow-io/nextflow/issues/2177
+     *
+     * @param files A collection of files. NOTE: MUST be local files. Remote file scheme e.g. S# is not supported
+     * @return
+     */
+    protected List<Path> dedupPaths(Collection<Path> files) {
+        if( !files )
+            return Collections.emptyList()
+        final trie = new PathTrie()
+        for( Path it : files )
+            trie.add(it)
+        // convert to paths
+        final result = new ArrayList()
+        for( String it : trie.traverse() ) {
+            result.add( FileHelper.asPath(it) )
+        }
+        return result
     }
 
     void apply( Set<Path> files, Path sourceDir ) {
@@ -274,12 +303,51 @@ class PublishDir {
             processFileImpl(source, destination)
         }
         catch( FileAlreadyExistsException e ) {
+            // make sure destination and source does not overlap
+            // see https://github.com/nextflow-io/nextflow/issues/2177
+            if( checkSourcePathConflicts(destination))
+                return
+            
             if( !overwrite )
                 return
 
             FileHelper.deletePath(destination)
             processFileImpl(source, destination)
         }
+    }
+
+    private String real0(Path p) {
+        try {
+            // resolve symlink if it's file in the default (posix) file system
+            return p.fileSystem == FileSystems.default
+                    ? p.toRealPath().toString()
+                    : p.toUriString()
+        }
+        catch (NoSuchFileException e) {
+            return p.toString()
+        }
+        catch (Exception e) {
+            log.warn "Unable to determine real path for '$p'"
+            return p.toString()
+        }
+    }
+
+    protected boolean checkSourcePathConflicts(Path target) {
+        if( sourceDir.fileSystem!=target.fileSystem )
+            return false
+
+        final t1 = real0(target)
+        final s1 = real0(sourceDir)
+        if( t1.startsWith(s1) ) {
+            def msg = "Refuse to publish file since destination path conflicts with task work directory!"
+            msg += "\n- offending file  : $target"
+            if( t1 != target.toString() )
+                msg += "\n- real destination: $t1"
+            msg += "\n- task directory  : $s1"
+            log.warn1(msg)
+            return true
+        }
+        return false
     }
 
     @CompileStatic

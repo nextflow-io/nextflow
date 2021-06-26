@@ -170,6 +170,14 @@ class PluginsFacade implements PluginStateListener {
         }
     }
 
+    /**
+     * Return a list of extension matching the requested interface type
+     *
+     * @param type
+     *      The request extension interface
+     * @return
+     *      The list of extensions matching the requested interface.
+     */
     def <T> List<T> getExtensions(Class<T> type) {
         if( manager ) {
             return manager.getExtensions(type)
@@ -180,6 +188,27 @@ class PluginsFacade implements PluginStateListener {
             // a plugin extension
             return defaultManager().getExtensions(type)
         }
+    }
+
+    /**
+     * Return a list of extension matching the requested type
+     * ordered by a priority value. The element at the beginning
+     * of the list (index 0) has higher priority
+     *
+     * @param type
+     *      The request extension interface
+     * @return
+     *      The list of extensions matching the requested interface.
+     *      The extension with higher priority appears first (lower index)
+     */
+    def <T> List<T> getPriorityExtensions(Class<T> type) {
+        final result = getExtensions(type)
+        return result.sort( it -> priorityValue(it) )
+    }
+
+    protected int priorityValue(it) {
+        final annot = it.getClass().getAnnotation(Priority)
+        return annot ? annot.value() : 0
     }
 
     @Memoized
