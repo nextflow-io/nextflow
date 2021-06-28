@@ -258,21 +258,21 @@ class PluginsFacadeTest extends Specification {
         given:
         def facade = new PluginsFacade()
         expect:
-        facade.priorityValue('foo') == 0
-        facade.priorityValue(new Foo()) == 100
+        facade.priority0('foo') == 0
+        facade.priority0(new Foo()) == 100
     }
 
     // -- check priority ordering
 
     interface Bar { }
 
-    @Priority(10)
+    @Priority(value = 10, group = 'alpha')
     static class XXX implements Bar {}
 
-    @Priority(20)
+    @Priority(value = 20, group = 'alpha')
     static class YYY implements Bar {}
 
-    @Priority(30)
+    @Priority(value = 30, group = 'beta')
     static class WWW implements Bar {}
 
     @Priority(40)
@@ -299,5 +299,16 @@ class PluginsFacadeTest extends Specification {
         result.first() == xxx
         and:
         result == [xxx,yyy,www,zzz]
+
+        when:
+        result = facade.getPriorityExtensions(Foo, 'alpha')
+        then:
+        result == [xxx,yyy]
+
+        when:
+        result = facade.getPriorityExtensions(Foo, 'beta')
+        then:
+        result == [www]
+
     }
 }
