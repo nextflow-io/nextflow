@@ -38,6 +38,8 @@ dependencies {
     compileOnly 'org.pf4j:pf4j:3.4.1'
     api("org.codehaus.groovy:groovy-sql:3.0.7") { transitive = false }
     api 'com.h2database:h2:1.4.200'
+    api 'mysql:mysql-connector-java:8.0.22'
+    api 'org.mariadb.jdbc:mariadb-java-client:2.7.0'
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
