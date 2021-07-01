@@ -33,7 +33,6 @@ import nextflow.script.ScriptType
 import nextflow.util.Duration
 import nextflow.util.ServiceName
 import org.pf4j.ExtensionPoint
-
 /**
  * Google Pipelines Executor.
  *
@@ -63,15 +62,14 @@ class GoogleLifeSciencesExecutor extends Executor implements ExtensionPoint {
         session.bucketDir ?: session.workDir
     }
 
-    @Override
-    protected void register() {
-        super.register()
-
+    protected void validateWorkDir() {
         if ( getWorkDir()?.scheme != 'gs' ) {
             session.abort()
             throw new AbortOperationException("Executor `google-lifesciences` requires a Google Storage bucket to be specified as a working directory -- Add the option `-w gs://<your-bucket/path>` to your run command line or specify a workDir in your config file")
         }
+    }
 
+    protected void createConfig() {
         // Typically the credentials picked up are the "Application Default Credentials"
         // as described at:
         //   https://github.com/googleapis/google-auth-library-java
@@ -97,16 +95,31 @@ class GoogleLifeSciencesExecutor extends Executor implements ExtensionPoint {
             throw new AbortOperationException("Missing Google project Id -- Specify it adding the setting `google.project='your-project-id'` in the nextflow.config file")
         }
 
+    }
+
+    protected void uploadBinDir() {
         if( session.binDir && !config.disableBinDir ) {
             final cloudPath = getTempDir()
             log.info "Uploading local `bin` scripts folder to ${cloudPath.toUriString()}/bin"
             config.remoteBinDir = FilesEx.copyTo(session.binDir, cloudPath)
         }
+    }
 
+    protected void createClient() {
         log.debug "Google Life Science config=$config"
         helper = initClient()
         // validate specified location
         helper.checkValidLocation()
+    }
+
+    @Override
+    protected void register() {
+        super.register()
+
+        validateWorkDir()
+        createConfig()
+        uploadBinDir()
+        createClient()
     }
 
     protected GoogleLifeSciencesHelper initClient() {
