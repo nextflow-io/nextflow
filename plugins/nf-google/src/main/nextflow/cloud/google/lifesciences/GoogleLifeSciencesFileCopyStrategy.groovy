@@ -31,7 +31,7 @@ import nextflow.util.Escape
 /**
  * Defines the file/script copy strategies for Google Pipelines.
  *
- * @author Paolo Di Tommaso
+ * @author  Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Ólafur Haukur Flygenring <olafurh@wuxinextcode.com>
  */
 @Slf4j
