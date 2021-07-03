@@ -36,20 +36,30 @@ class PluginsFacadeTest extends Specification {
 
     def 'should parse plugins config' () {
         given:
-        def handler = new PluginsFacade()
+        def defaults = new DefaultPlugins(plugins: [
+                'delta': new PluginSpec('delta', '0.1.0'),
+        ])
+
+        def handler = new PluginsFacade(defaultPlugins: defaults)
         and:
-        def cfg = [plugins: [ 'foo@1.2.3', 'bar@3.2.1' ]]
+        def cfg = [plugins: [ 'foo@1.2.3', 'bar@3.2.1', 'delta', 'omega' ]]
 
         when:
         final plugins = handler.parseConf(cfg)
         then:
-        plugins.size() == 2
+        plugins.size() == 4
         and:
         plugins[0].id == 'foo'
         plugins[0].version == '1.2.3'
         and:
         plugins[1].id == 'bar'
         plugins[1].version == '3.2.1'
+        and:
+        plugins[2].id == 'delta'
+        plugins[2].version == '0.1.0'
+        and:
+        plugins[3].id == 'omega'
+        plugins[3].version == null
     }
 
     def 'should return plugin requirements' () {
