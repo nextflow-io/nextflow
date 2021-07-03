@@ -34,6 +34,7 @@ import nextflow.util.MemoryUnit
  * Helper class wrapping configuration required for Google Pipelines.
  *
  * @author Ólafur Haukur Flygenring <olafurh@wuxinextcode.com>
+ * @author  Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @ToString(includePackage = false, includeNames = true)
@@ -69,6 +70,7 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
     String serviceAccountEmail
     int parallelThreadCount
     int downloadMaxComponents
+    boolean keepAliveOnFailure
 
     int maxParallelTransfers = MAX_TRANSFER
     int maxTransferAttempts = MAX_TRANSFER_ATTEMPTS
@@ -135,6 +137,7 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
         final network = config.navigate('google.lifeSciences.network') as String
         final subnetwork = config.navigate('google.lifeSciences.subnetwork') as String
         final serviceAccountEmail = config.navigate('google.lifeSciences.serviceAccountEmail') as String
+        final keepAlive = config.navigate('google.lifeSciences.keepAliveOnFailure', false) as boolean
 
         def zones = (config.navigate("google.zone") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
         def regions = (config.navigate("google.region") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
@@ -145,6 +148,7 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
         final delayBetweenAttempts = config.navigate('google.storage.delayBetweenAttempts', DEFAULT_DELAY_BETWEEN_ATTEMPTS) as Duration
         final parallelThreadCount = config.navigate('google.storage.parallelThreadCount', DEF_PARALLEL_THREAD_COUNT) as int
         final downloadMaxComponents = config.navigate('google.storage.downloadMaxComponents', DEF_DOWNLOAD_MAX_COMPONENTS) as int
+
 
         new GoogleLifeSciencesConfig(
                 project: project,
@@ -168,7 +172,8 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
                 subnetwork: subnetwork,
                 serviceAccountEmail: serviceAccountEmail,
                 parallelThreadCount: parallelThreadCount,
-                downloadMaxComponents: downloadMaxComponents
+                downloadMaxComponents: downloadMaxComponents,
+                keepAliveOnFailure: keepAlive
             )
     }
 

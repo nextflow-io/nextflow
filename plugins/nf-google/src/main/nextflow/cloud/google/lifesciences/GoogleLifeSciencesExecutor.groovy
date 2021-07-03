@@ -115,7 +115,6 @@ class GoogleLifeSciencesExecutor extends Executor implements ExtensionPoint {
     @Override
     protected void register() {
         super.register()
-
         validateWorkDir()
         createConfig()
         uploadBinDir()

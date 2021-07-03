@@ -46,7 +46,7 @@ import nextflow.util.Escape
  * Helper class for Google Pipelines.
  *
  * @author Ólafur Haukur Flygenring <olafurh@wuxinextcode.com>
- * @author  Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
@@ -119,7 +119,7 @@ class GoogleLifeSciencesHelper {
         return result
     }
 
-    Action createAction(String name, String imageUri, List<String> commands, List<Mount> mounts, List<ActionFlags> flags = [], String entrypoint = null) {
+    protected Action createAction0(String name, String imageUri, List<String> commands, List<Mount> mounts, List<ActionFlags> flags = [], String entrypoint = null) {
         final action = new Action()
                 .setContainerName(name)
                 .setImageUri(imageUri)
@@ -157,12 +157,13 @@ class GoogleLifeSciencesHelper {
 
     protected List<Action> createActions(GoogleLifeSciencesSubmitRequest req) {
         def result = []
-        if( config.sshDaemon ) {
+        if( config.sshDaemon || config.keepAliveOnFailure ) 
             result.add(createSshDaemonAction(req))
-        }
         result.add(createStagingAction(req))
         result.add(createMainAction(req))
         result.add(createUnstagingAction(req))
+        if( config.keepAliveOnFailure )
+            result.add(createKeepAlive(req))
         return result
     }
 
@@ -244,7 +245,7 @@ class GoogleLifeSciencesHelper {
         if( !req.entryPoint )
             cmd.add(0, 'bash')
 
-        createAction(
+        createAction0(
                 "$req.taskName-main",
                 req.containerImage,
                 cmd,
@@ -254,7 +255,7 @@ class GoogleLifeSciencesHelper {
     }
 
     protected Action createStagingAction(GoogleLifeSciencesSubmitRequest req) {
-        createAction(
+        createAction0(
                 "$req.taskName-stage",
                 config.copyImage,
                 ["bash", "-c", getStagingScript(req.workDir)],
@@ -262,10 +263,19 @@ class GoogleLifeSciencesHelper {
     }
 
     protected Action createUnstagingAction(GoogleLifeSciencesSubmitRequest req) {
-        createAction(
+        createAction0(
                 "$req.taskName-unstage",
                 config.copyImage,
                 ["bash", "-c", getUnstagingScript(req.workDir)],
+                createMounts(req),
+                [ActionFlags.ALWAYS_RUN, ActionFlags.IGNORE_EXIT_STATUS])
+    }
+
+    protected Action createKeepAlive(GoogleLifeSciencesSubmitRequest req) {
+        createAction0(
+                "$req.taskName-keepalive",
+                config.copyImage,
+                ["bash", "-c", "[ \$GOOGLE_PIPELINE_FAILED -eq 1 ] && sleep 60m"],
                 createMounts(req),
                 [ActionFlags.ALWAYS_RUN, ActionFlags.IGNORE_EXIT_STATUS])
     }
