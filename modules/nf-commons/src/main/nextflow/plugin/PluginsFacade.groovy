@@ -295,7 +295,7 @@ class PluginsFacade implements PluginStateListener {
         final pluginsConf = config.plugins as List<String>
         final result = new ArrayList( pluginsConf?.size() ?: 0 )
         if(pluginsConf) for( String it : pluginsConf ) {
-            result.add( PluginSpec.parse(it) )
+            result.add( PluginSpec.parse(it, defaultPlugins) )
         }
         return result
     }
