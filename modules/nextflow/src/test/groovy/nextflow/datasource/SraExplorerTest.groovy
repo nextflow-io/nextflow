@@ -17,13 +17,14 @@
 
 package nextflow.datasource
 
+import spock.lang.IgnoreIf
+import spock.lang.Requires
+import spock.lang.Specification
+
 import java.nio.file.Files
 import java.nio.file.Path
 
 import nextflow.Const
-import spock.lang.Ignore
-import spock.lang.Requires
-import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -178,8 +179,7 @@ class SraExplorerTest extends Specification {
         slurper.cachePath('SRP043510') == Const.APP_HOME_DIR.resolve('ncbi/sra/11/SRP043510.fastq_ftp.cache')
     }
 
-    @Ignore // temporary disable since eutils host is down
-    //@IgnoreIf({System.getenv('NXF_SMOKE')})
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
     @Requires({System.getenv('NCBI_API_KEY')})
     def 'should explore sra' () {
         given:
