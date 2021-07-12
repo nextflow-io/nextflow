@@ -309,6 +309,7 @@ class TowerClient implements TraceObserver {
         result.projectName = session.workflowMetadata.projectName
         result.repository = session.workflowMetadata.repository
         result.workflowId = env.get('TOWER_WORKFLOW_ID')
+        result.instant = Instant.now().toEpochMilli()
         this.towerLaunch = result.workflowId != null
         return result
     }
@@ -526,6 +527,18 @@ class TowerClient implements TraceObserver {
         }
     }
 
+    protected String getOperationId() {
+        return env.get('AWS_BATCH_JOB_ID')
+    }
+
+    protected String getLogFile() {
+        return env.get('NXF_LOG_FILE')
+    }
+
+    protected String getOutFile() {
+        return env.get('NXF_OUT_FILE')
+    }
+
     protected Map makeBeginReq(Session session) {
         def workflow = session.getWorkflowMetadata().toMap()
         workflow.params = session.getParams()
@@ -535,11 +548,16 @@ class TowerClient implements TraceObserver {
         // render as a string
         workflow.container = mapToString(workflow.container)
         workflow.configText = session.resolvedConfig
+        // extra metadata
+        workflow.operationId = getOperationId()
+        workflow.logFile = getLogFile()
+        workflow.outFile = getOutFile()
 
         def result = new LinkedHashMap(5)
         result.workflow = workflow
         result.processNames = new ArrayList(processNames)
         result.towerLaunch = towerLaunch
+        result.instant = Instant.now().toEpochMilli()
         return result
     }
 
@@ -550,17 +568,23 @@ class TowerClient implements TraceObserver {
         // render as a string
         workflow.container = mapToString(workflow.container)
         workflow.configText = session.resolvedConfig
+        // extra metadata
+        workflow.operationId = getOperationId()
+        workflow.logFile = getLogFile()
+        workflow.outFile = getOutFile()
 
         def result = new LinkedHashMap(5)
         result.workflow = workflow
         result.metrics = getMetricsList()
         result.progress = getWorkflowProgress(false)
+        result.instant = Instant.now().toEpochMilli()
         return result
     }
 
     protected Map makeHeartbeatReq() {
         def result = new HashMap(1)
         result.progress = getWorkflowProgress(true)
+        result.instant = Instant.now().toEpochMilli()
         return result
     }
 
@@ -623,6 +647,7 @@ class TowerClient implements TraceObserver {
         final result = new LinkedHashMap(5)
         result.put('tasks', payload)
         result.put('progress', getWorkflowProgress(true))
+        result.instant = Instant.now().toEpochMilli()
         return result
     }
 
