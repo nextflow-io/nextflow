@@ -34,6 +34,7 @@ import nextflow.trace.TraceObserver
 import nextflow.trace.TraceRecord
 import nextflow.util.Duration
 import nextflow.util.LoggerHelper
+import nextflow.util.ProcessHelper
 import nextflow.util.SimpleHttpClient
 /**
  * Send out messages via HTTP to a configured URL on different workflow
@@ -528,7 +529,16 @@ class TowerClient implements TraceObserver {
     }
 
     protected String getOperationId() {
-        return env.get('AWS_BATCH_JOB_ID')
+        try {
+            if( env.get('AWS_BATCH_JOB_ID') )
+                return  "aws-batch::${env.get('AWS_BATCH_JOB_ID')}"
+            else
+                return "local::${ProcessHelper.selfPid()}"
+        }
+        catch (Exception e) {
+            log.warn "Unable to retrieve native environment operation id", e
+            return null
+        }
     }
 
     protected String getLogFile() {

@@ -11,6 +11,7 @@
 
 package io.seqera.tower.plugin
 
+import nextflow.util.ProcessHelper
 import spock.lang.Specification
 
 import java.nio.file.Files
@@ -454,8 +455,8 @@ class TowerClientTest extends Specification {
         client.getOutFile() == OUT_FILE
 
         where:
-        OP_ID       | OUT_FILE      | LOG_FILE    | ENV
-        null        | null          | null        | [:]
-        '1234z'     | 'xyz.out'     | 'hola.log'  | [AWS_BATCH_JOB_ID: '1234z', NXF_OUT_FILE: 'xyz.out', NXF_LOG_FILE: 'hola.log']
+        OP_ID                               | OUT_FILE      | LOG_FILE    | ENV
+        "local::${ProcessHelper.selfPid()}" | null          | null        | [:]
+        'aws-batch::1234z'                  | 'xyz.out'     | 'hola.log'  | [AWS_BATCH_JOB_ID: '1234z', NXF_OUT_FILE: 'xyz.out', NXF_LOG_FILE: 'hola.log']
     }
 }
