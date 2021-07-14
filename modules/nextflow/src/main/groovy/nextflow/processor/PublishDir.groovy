@@ -125,9 +125,9 @@ class PublishDir {
         }
         // then check if obj is a string-like
         if (obj instanceof CharSequence) {
-            obj = obj.toString().toBoolean()
+            obj = Boolean.parseBoolean(obj.toString())
         }
-        this.enabled = obj as boolean
+        this.enabled = obj
     }
 
     void setOverwrite( obj ) {
@@ -137,9 +137,9 @@ class PublishDir {
         }
         // then check if obj is a string-like
         if (obj instanceof CharSequence) {
-            obj = obj.toString().toBoolean()
+            obj = Boolean.parseBoolean(obj.toString())
         }
-        this.overwrite = obj as Boolean
+        this.overwrite = obj
     }
 
     void setPattern( obj ) {
@@ -182,13 +182,13 @@ class PublishDir {
         if( params.pattern )
             result.pattern = params.pattern
 
-        if( params.overwrite )
+        if( params.overwrite != null )
             result.overwrite = params.overwrite
 
         if( params.saveAs )
             result.saveAs = params.saveAs
 
-        if( params.enabled )
+        if( params.enabled != null )
             result.enabled = params.enabled
 
         return result

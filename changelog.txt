@@ -1,5 +1,11 @@
 NEXTFLOW CHANGE-LOG
 ===================
+21.04.2 [stable] - 12 Jul 2021
+- Fix Plugin install lock file is not deleted #2103 [29c3e516c]
+- Fix Default plugin version lookup [d340a221f]
+- Fix BatchCleanup toString method [3c67fa3ae]
+- Implicit variable projectDir breaks caching #2186 [7a4d1f1a2]
+
 21.06.0-edge - 3 Jul 2021
 - Add Keep alive option to Google LS executor [994222074]
 - Add support for FTP proxy and proxy servers authentication [8ec33b04d]

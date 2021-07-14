@@ -70,7 +70,24 @@ class PublishDirTest extends Specification {
         !publish.enabled
 
         when:
+        publish =  PublishDir.create( [path: '/some/data', mode: 'copy', enabled: 'false'] )
+        then:
+        publish.path == Paths.get('/some/data')
+        publish.mode == PublishDir.Mode.COPY
+        publish.pattern == null
+        publish.overwrite == null
+        !publish.enabled
+
+        when:
         publish =  PublishDir.create( [path:'this/folder', overwrite: false, pattern: '*.txt', mode: 'copy'] )
+        then:
+        publish.path == Paths.get('this/folder').complete()
+        publish.mode == PublishDir.Mode.COPY
+        publish.pattern == '*.txt'
+        publish.overwrite == false
+
+        when:
+        publish =  PublishDir.create( [path:'this/folder', overwrite: 'false', pattern: '*.txt', mode: 'copy'] )
         then:
         publish.path == Paths.get('this/folder').complete()
         publish.mode == PublishDir.Mode.COPY
