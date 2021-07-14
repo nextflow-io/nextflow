@@ -118,6 +118,42 @@ class PublishDir {
         this.mode = mode
     }
 
+    void setEnabled( obj ) {
+        // first check if obj is a closure
+        if (obj instanceof Closure) {
+            obj = obj.call()
+        }
+        // then check if obj is a string-like
+        if (obj instanceof CharSequence) {
+            obj = obj.toString().toBoolean()
+        }
+        this.enabled = obj as boolean
+    }
+
+    void setOverwrite( obj ) {
+        // first check if obj is a closure
+        if (obj instanceof Closure) {
+            obj = obj.call()
+        }
+        // then check if obj is a string-like
+        if (obj instanceof CharSequence) {
+            obj = obj.toString().toBoolean()
+        }
+        this.overwrite = obj as Boolean
+    }
+
+    void setPattern( obj ) {
+        // first check if obj is a closure
+        if (obj instanceof Closure) {
+            obj = obj.call()
+        }
+        // then check if obj is a string-like
+        if (obj instanceof CharSequence) {
+            obj = obj.toString()
+        }
+        this.pattern = obj as String
+    }
+
     @PackageScope boolean checkNull(String str) {
         ( str =~ /\bnull\b/  ).find()
     }
@@ -146,14 +182,14 @@ class PublishDir {
         if( params.pattern )
             result.pattern = params.pattern
 
-        if( params.overwrite != null )
+        if( params.overwrite )
             result.overwrite = params.overwrite
 
         if( params.saveAs )
             result.saveAs = params.saveAs
 
-        if( params.enabled!=null )
-            result.enabled = params.enabled as boolean
+        if( params.enabled )
+            result.enabled = params.enabled
 
         return result
     }
