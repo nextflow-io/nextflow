@@ -147,13 +147,13 @@ class PublishDir {
             result.pattern = params.pattern
 
         if( params.overwrite != null )
-            result.overwrite = params.overwrite
+            result.overwrite = Boolean.parseBoolean(params.overwrite.toString())
 
         if( params.saveAs )
             result.saveAs = params.saveAs
 
-        if( params.enabled!=null )
-            result.enabled = params.enabled as boolean
+        if( params.enabled != null )
+            result.enabled = Boolean.parseBoolean(params.enabled.toString())
 
         return result
     }
