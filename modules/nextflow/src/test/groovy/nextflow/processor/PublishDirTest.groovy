@@ -69,14 +69,43 @@ class PublishDirTest extends Specification {
         publish.overwrite == null
         !publish.enabled
 
+        // check for string for enabled and overwrite
         when:
-        publish =  PublishDir.create( [path: '/some/data', mode: 'copy', enabled: 'false'] )
+        publish =  PublishDir.create( [path: '/some/data', mode: 'copy', enabled: 'false', overwrite: 'true'] )
         then:
         publish.path == Paths.get('/some/data')
         publish.mode == PublishDir.Mode.COPY
         publish.pattern == null
-        publish.overwrite == null
+        publish.overwrite
         !publish.enabled
+
+        when:
+        publish =  PublishDir.create( [path: '/some/data', mode: 'copy', enabled: 'true', overwrite: 'false'] )
+        then:
+        publish.path == Paths.get('/some/data')
+        publish.mode == PublishDir.Mode.COPY
+        publish.pattern == null
+        !publish.overwrite
+        publish.enabled
+
+        // check for boolean closure for enabled and overwrite
+        when:
+        publish =  PublishDir.create( [path: '/some/data', mode: 'copy', enabled: { false }, overwrite: { true }, pattern: { '*.txt' }] )
+        then:
+        publish.path == Paths.get('/some/data')
+        publish.mode == PublishDir.Mode.COPY
+        publish.pattern == '*.txt'
+        publish.overwrite
+        !publish.enabled
+
+        when:
+        publish =  PublishDir.create( [path: '/some/data', mode: 'copy', enabled: { true }, overwrite: { false }] )
+        then:
+        publish.path == Paths.get('/some/data')
+        publish.mode == PublishDir.Mode.COPY
+        publish.pattern == null
+        !publish.overwrite
+        publish.enabled
 
         when:
         publish =  PublishDir.create( [path:'this/folder', overwrite: false, pattern: '*.txt', mode: 'copy'] )
