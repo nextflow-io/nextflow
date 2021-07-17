@@ -616,9 +616,12 @@ class Session implements ISession {
                 log.trace "Session > after processors join"
             }
 
+            // invoke shutdown callbacks
             shutdown0()
             log.trace "Session > after cleanup"
-
+            // shutdown executors
+            executorFactory.shutdown()
+            // shutdown executor service
             execService.shutdown()
             execService = null
             log.trace "Session > executor shutdown"

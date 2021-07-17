@@ -161,4 +161,8 @@ abstract class Executor {
         return false
     }
 
+    /**
+     * Allow graceful termination of executor resources
+     */
+    void shutdown() { }
 }
