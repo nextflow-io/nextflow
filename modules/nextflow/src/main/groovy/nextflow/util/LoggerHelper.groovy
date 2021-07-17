@@ -436,7 +436,7 @@ class LoggerHelper {
         final message = event.getFormattedMessage()
         final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException || ScriptRuntimeException
         final normalize = { String str -> str ?. replace("${className}.", '')}
-        List error = fail ? findErrorLine(fail, ScriptMeta.allScriptNames()) : null
+        List error = fail ? findErrorLine(fail) : null
 
         // error string is not shown for abort operation
         if( !quiet ) {
@@ -546,7 +546,11 @@ class LoggerHelper {
         return msg
     }
 
-    static @PackageScope List<String> findErrorLine( Throwable e, Map<String, Path> allNames ) {
+    static List<String> findErrorLine( Throwable e ) {
+        return findErrorLine(e, ScriptMeta.allScriptNames())
+    }
+
+    static List<String> findErrorLine( Throwable e, Map<String, Path> allNames ) {
         def lines = getErrorLines(e)
         List error = null
         for( String str : lines ) {
