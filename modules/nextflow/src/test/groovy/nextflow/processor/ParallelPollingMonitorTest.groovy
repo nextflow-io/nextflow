@@ -54,9 +54,7 @@ class ParallelPollingMonitorTest extends Specification {
 
         def exec = ThrottlingExecutor.create(opts)
 
-        def reaper = Mock(ThrottlingExecutor)
-
-        def mon = new ParallelPollingMonitor(exec, reaper, [session:session, name:'foo', pollInterval:'1sec'])
+        def mon = new ParallelPollingMonitor(exec, [session:session, name:'foo', pollInterval:'1sec'])
         when:
         mon.submitter = exec
         mon.submit(handler)
