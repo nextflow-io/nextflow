@@ -214,6 +214,78 @@ class S3BashLibTest extends Specification {
 
         expect:
         S3BashLib.script()  == '''
+            # aws cli retry config
+            export AWS_RETRY_MODE=standard 
+            export AWS_MAX_ATTEMPTS=5
+            # aws helper
+            nxf_s3_upload() {
+                local name=$1
+                local s3path=$2
+                if [[ -d "$name" ]]; then
+                  aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                else
+                  aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                fi
+            }
+            
+            nxf_s3_download() {
+                local source=$1
+                local target=$2
+                local file_name=$(basename $1)
+                local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                if [[ $is_dir == 1 ]]; then
+                    aws s3 cp --only-show-errors --recursive "$source" "$target"
+                else 
+                    aws s3 cp --only-show-errors "$source" "$target"
+                fi
+            }
+            '''.stripIndent(true)
+    }
+
+    def 'should create base script with legacy retry mode' () {
+        given:
+        Global.session = Mock(Session) {
+            getConfig() >> [aws:[batch: [maxTransferAttempts: 100, retryMode: 'legacy']]]
+        }
+
+        expect:
+        S3BashLib.script()  == '''
+            # aws cli retry config
+            export AWS_RETRY_MODE=legacy 
+            export AWS_MAX_ATTEMPTS=100
+            # aws helper
+            nxf_s3_upload() {
+                local name=$1
+                local s3path=$2
+                if [[ -d "$name" ]]; then
+                  aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                else
+                  aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                fi
+            }
+            
+            nxf_s3_download() {
+                local source=$1
+                local target=$2
+                local file_name=$(basename $1)
+                local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                if [[ $is_dir == 1 ]]; then
+                    aws s3 cp --only-show-errors --recursive "$source" "$target"
+                else 
+                    aws s3 cp --only-show-errors "$source" "$target"
+                fi
+            }
+            '''.stripIndent(true)
+    }
+
+    def 'should create base script with built-in retry mode' () {
+        given:
+        Global.session = Mock(Session) {
+            getConfig() >> [aws:[batch: [retryMode: 'built-in']]]
+        }
+
+        expect:
+        S3BashLib.script()  == '''
             # aws helper
             nxf_s3_upload() {
                 local name=$1
