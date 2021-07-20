@@ -483,7 +483,8 @@ class FileHelper {
             if( region ) result.region = region
 
             // -- remaining client config options
-            def config = Global.getAwsClientConfig()
+            def config = Global.getAwsClientConfig() ?: new HashMap<>(10)
+            config = checkDefaultErrorRetry(config, env)
             if( config ) {
                 result.putAll(config)
             }
@@ -495,6 +496,26 @@ class FileHelper {
                 log.debug "Session is not available while creating environment for '$scheme' file system provider"
             result.session = Global.session
         }
+        return result
+    }
+
+    @PackageScope
+    static Map checkDefaultErrorRetry(Map result, Map env) {
+        if( result == null )
+            result = new HashMap(10)
+
+        if( result.max_error_retry==null ) {
+            result.max_error_retry = env?.AWS_MAX_ATTEMPTS
+        }
+        // fallback to default
+        if( result.max_error_retry==null ) {
+            result.max_error_retry = '5'
+        }
+        // make sure that's a string value as it's expected by the client
+        else {
+            result.max_error_retry = result.max_error_retry.toString()
+        }
+
         return result
     }
 

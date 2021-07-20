@@ -942,4 +942,19 @@ class FileHelperTest extends Specification {
         null        | '/a/bc/'
     }
 
+    @Unroll
+    def 'should add max error retry' () {
+
+        expect:
+        FileHelper.checkDefaultErrorRetry(SOURCE, ENV) == EXPECTED
+
+        where:
+        SOURCE                          | ENV                   | EXPECTED
+        null                            | null                  | [max_error_retry: '5']
+        [foo: 1]                        | [:]                   | [max_error_retry: '5', foo: 1]
+        [foo: 1]                        | [AWS_MAX_ATTEMPTS:'3']| [max_error_retry: '3', foo: 1]
+        [max_error_retry: '2', foo: 1]  | [:]                   | [max_error_retry: '2', foo: 1]
+        [:]                             | [:]                   | [max_error_retry: '5']
+    }
+
 }
