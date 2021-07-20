@@ -134,6 +134,12 @@ google.lifeSciences.serviceAccountEmail        Define the Google service account
 google.lifeSciences.subnetwork                 Define the name of the subnetwork to attach the instance to must be specified here, when the specified network is configured for custom subnet creation. The value is prefixed with `regions/subnetworks/` unless it contains a `/`, in which case it is assumed to be a fully specified subnetwork resource URL. Requires version ``21.03.0-edge`` or later.
 google.lifeSciences.sshDaemon                  When ``true`` runs SSH daemon in the VM carrying out the job to which it's possible to connect for debugging purposes (default: ``false``).
 google.lifeSciences.sshImage                   The container image used to run the SSH daemon (default: ``gcr.io/cloud-genomics-pipelines/tools``).
+google.lifeSciences.keepAliveOnFailure         When ``true`` and a task complete with an unexpected exit status the associated computing node is kept up for 1 hour. This options implies ``sshDaemon=true`` (default: ``false``, requires Nextflow version ``21.06.0-edge`` or later).
+google.storage.delayBetweenAttempts            Delay between download attempts from Google Storage (default `10 sec`, requires version ``21.06.0-edge`` or later).
+google.storage.maxParallelTransfers            Max parallel upload/download transfer operations *per job* (default: ``4``, requires version ``21.06.0-edge`` or later).
+google.storage.maxTransferAttempts             Max number of downloads attempts from Google Storage (default: `1`, requires version ``21.06.0-edge`` or later).
+google.storage.parallelThreadCount             Defines the value for the option ``GSUtil:parallel_thread_count`` used by ``gsutil`` for transfer input and output data (default: ``1``, requires version ``21.06.0-edge`` or later).
+google.storage.downloadMaxComponents           Defines the value for the option ``GSUtil:sliced_object_download_max_components`` used by ``gsutil`` for transfer input and output data (default: ``8``, requires version ``21.06.0-edge`` or later).
 ============================================== =================
 
 

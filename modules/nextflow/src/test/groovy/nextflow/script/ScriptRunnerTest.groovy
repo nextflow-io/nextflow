@@ -215,7 +215,7 @@ class ScriptRunnerTest extends Specification {
         session.fault.error instanceof ProcessUnrecoverableException
         session.fault.error.cause instanceof MissingPropertyException
         session.fault.error.cause.message =~ /Unknown variable 'HELLO' -- .*/
-        session.fault.report =~ /Unknown variable 'HELLO' -- .*/
+        session.fault.report =~ /No such variable: HELLO -- .*/
 
     }
 

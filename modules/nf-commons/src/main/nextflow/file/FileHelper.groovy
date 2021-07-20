@@ -330,12 +330,8 @@ class FileHelper {
     @PackageScope
     static URI toPathURI( String str ) {
 
-        // normalise 's3' path
-        if( str.startsWith('s3://') && str[5]!='/' ) {
-            str = "s3:///${str.substring(5)}"
-        }
         // normalise 'igfs' path
-        else if( str.startsWith('igfs://') && str[7]!='/' ) {
+        if( str.startsWith('igfs://') && str[7]!='/' ) {
             str = "igfs:///${str.substring(7)}"
         }
 
@@ -911,27 +907,29 @@ class FileHelper {
         if( !attr )
             return
 
-        // if it's not a dir just delete the file
-        if( !attr.isDirectory() ) {
-            Files.delete(path)
-            return
+        if( attr.isDirectory() ) {
+            deleteDir0(path)
         }
+        else {
+            Files.delete(path)
+        }
+    }
 
+    static private deleteDir0(Path path) {
         Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
 
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+            FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
                 Files.delete(file)
                 FileVisitResult.CONTINUE
             }
 
-            public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
+            FileVisitResult postVisitDirectory(Path dir, IOException exc) {
                 Files.delete(dir)
                 FileVisitResult.CONTINUE
             }
 
         })
     }
-
     /**
      * List the content of a file system path
      *

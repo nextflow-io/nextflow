@@ -17,27 +17,27 @@
 
 package nextflow.executor
 
-import spock.lang.Specification
-
-import java.nio.file.Path
 import java.nio.file.Paths
 
 import nextflow.Global
 import nextflow.Session
+import nextflow.cloud.aws.batch.AwsBatchFileCopyStrategy
+import nextflow.cloud.aws.batch.AwsOptions
+import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.processor.TaskBean
+import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class BashWrapperBuilderS3Test extends Specification {
+class BashWrapperBuilderWithS3Test extends Specification {
 
     def 'should include s3 helpers' () {
         given:
         Global.session = Mock(Session) { getConfig() >> [:] }
         and:
         def folder = Paths.get('/work/dir')
-        def target = Mock(Path)
-        target.toString() >> '/some/bucket'
+        def target = S3PathFactory.parse('s3://some/bucket')
 
         def bean = new TaskBean([
                 name: 'Hello 1',
@@ -48,8 +48,7 @@ class BashWrapperBuilderS3Test extends Specification {
                 script: 'echo Hello world!',
         ])
 
-        SimpleFileCopyStrategy copy = Spy(SimpleFileCopyStrategy, constructorArgs:[bean])
-        copy.getPathScheme(target) >> 's3'
+        def copy = new SimpleFileCopyStrategy(bean)
 
         /*
          * simple bash run
@@ -58,9 +57,73 @@ class BashWrapperBuilderS3Test extends Specification {
         def binding = new BashWrapperBuilder(bean,copy).makeBinding()
         then:
         binding.unstage_outputs == '''\
-                  nxf_s3_upload 'test.bam' s3://some/bucket || true
-                  nxf_s3_upload 'test.bai' s3://some/bucket || true
-                  '''.stripIndent().rightTrim()
+                    IFS=$'\\n'
+                    for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
+                        nxf_s3_upload '$name' s3://some/bucket || true
+                    done
+                    unset IFS
+                    '''.stripIndent().rightTrim()
+
+        binding.helpers_script == '''\
+            # aws helper
+            nxf_s3_upload() {
+                local name=$1
+                local s3path=$2
+                if [[ -d "$name" ]]; then
+                  aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                else
+                  aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                fi
+            }
+            
+            nxf_s3_download() {
+                local source=$1
+                local target=$2
+                local file_name=$(basename $1)
+                local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                if [[ $is_dir == 1 ]]; then
+                    aws s3 cp --only-show-errors --recursive "$source" "$target"
+                else 
+                    aws s3 cp --only-show-errors "$source" "$target"
+                fi
+            }
+            
+            '''.stripIndent(true)
+    }
+
+    def 'should include s3 helpers and bash lib' () {
+        given:
+        Global.session = Mock(Session) { getConfig() >> [:] }
+        and:
+        def folder = Paths.get('/work/dir')
+        def target = S3PathFactory.parse('s3://some/bucket')
+
+        def bean = new TaskBean([
+                name: 'Hello 1',
+                workDir: folder,
+                targetDir: target,
+                scratch: true,
+                outputFiles: ['test.bam','test.bai'],
+                script: 'echo Hello world!',
+        ])
+
+        def copy = new AwsBatchFileCopyStrategy(bean, Mock(AwsOptions))
+
+        /*
+         * simple bash run
+         */
+        when:
+        def binding = new BashWrapperBuilder(bean,copy).makeBinding()
+        then:
+        binding.unstage_outputs == '''\
+                    uploads=()
+                    IFS=$'\\n'
+                    for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
+                        uploads+=("nxf_s3_upload '$name' s3://some/bucket")
+                    done
+                    unset IFS
+                    nxf_parallel "${uploads[@]}"
+                    '''.stripIndent()
 
         binding.helpers_script == '''\
             # bash helper functions
@@ -143,6 +206,4 @@ class BashWrapperBuilderS3Test extends Specification {
             
             '''.stripIndent(true)
     }
-
-
 }

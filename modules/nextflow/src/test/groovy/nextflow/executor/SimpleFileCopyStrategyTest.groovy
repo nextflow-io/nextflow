@@ -17,7 +17,7 @@
 
 package nextflow.executor
 
-import java.nio.file.Path
+
 import java.nio.file.Paths
 
 import nextflow.processor.TaskBean
@@ -269,9 +269,11 @@ class SimpleFileCopyStrategyTest extends Specification {
         def script = strategy.getUnstageOutputFilesScript(outputs, target)
         then:
         script == '''
-                mkdir -p /target/work\\ dir
-                cp -fRL simple.txt /target/work\\ dir || true
-                mkdir -p /target/work\\ dir/my/path && cp -fRL my/path/file.bam /target/work\\ dir/my/path || true
+                IFS=$'\\n'
+                for name in $(eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
+                    nxf_fs_copy "$name" /target/work\\ dir || true
+                done
+                unset IFS
                 '''
                 .stripIndent().trim()
 
@@ -290,9 +292,11 @@ class SimpleFileCopyStrategyTest extends Specification {
         def script = strategy.getUnstageOutputFilesScript(outputs, storeDir)
         then:
         script == '''
-                mkdir -p /target/store
-                mv -f simple.txt /target/store || true
-                mkdir -p /target/store/my/path && mv -f my/path/file.bam /target/store/my/path || true
+                IFS=$'\\n'
+                for name in $(eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
+                    nxf_fs_move "$name" /target/store || true
+                done
+                unset IFS
                 '''
                 .stripIndent().trim()
 
@@ -310,35 +314,16 @@ class SimpleFileCopyStrategyTest extends Specification {
         def script = strategy.getUnstageOutputFilesScript(outputs,target)
         then:
         script == '''
-                mkdir -p /target/work\\'s
-                rsync -rRl simple.txt /target/work\\'s || true
-                rsync -rRl my/path/file.bam /target/work\\'s || true
+                IFS=$'\\n'
+                for name in $(eval "ls -1d simple.txt my/path/file.bam" | sort | uniq); do
+                    nxf_fs_rsync "$name" /target/work\\'s || true
+                done
+                unset IFS
                 '''
                 .stripIndent().trim()
 
     }
 
-
-    def 'should return cp script to unstage output files to S3' () {
-
-        given:
-        def outputs =  [ 'simple.txt', 'my/path/file.bam' ]
-        def task = new TaskBean()
-        def target = Mock(Path)
-        def strategy = Spy(SimpleFileCopyStrategy, constructorArgs: [task])
-
-        when:
-        def script = strategy.getUnstageOutputFilesScript(outputs, target)
-        then:
-        3 * strategy.getPathScheme(target) >> 's3'
-        2 * target.toString() >> '/foo/bar'
-        script == '''
-                nxf_s3_upload 'simple.txt' s3://foo/bar || true
-                nxf_s3_upload 'my/path/file.bam' s3://foo/bar || true
-                '''
-                .stripIndent().trim()
-
-    }
 
     def 'should return staging dir' () {
 
