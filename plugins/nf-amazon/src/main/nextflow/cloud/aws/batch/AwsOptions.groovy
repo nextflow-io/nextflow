@@ -37,7 +37,11 @@ import nextflow.util.Duration
 @CompileStatic
 class AwsOptions implements CloudTransferOptions {
 
-    static final List<String> VALID_RETRY_MODES = ['legacy','standard','adaptive']
+    public static final List<String> VALID_RETRY_MODES = ['legacy','standard','adaptive']
+
+    public static final int DEFAULT_AWS_MAX_ATTEMPTS = 5
+
+    private Map<String,String> env = System.getenv()
 
     String cliPath
 
@@ -87,17 +91,23 @@ class AwsOptions implements CloudTransferOptions {
         storageClass = session.config.navigate('aws.client.uploadStorageClass') as String
         storageEncryption = session.config.navigate('aws.client.storageEncryption') as String
         maxParallelTransfers = session.config.navigate('aws.batch.maxParallelTransfers', MAX_TRANSFER) as int
-        maxTransferAttempts = session.config.navigate('aws.batch.maxTransferAttempts', MAX_TRANSFER_ATTEMPTS) as int
+        maxTransferAttempts = session.config.navigate('aws.batch.maxTransferAttempts', defaultMaxTransferAttempts()) as int
         delayBetweenAttempts = session.config.navigate('aws.batch.delayBetweenAttempts', DEFAULT_DELAY_BETWEEN_ATTEMPTS) as Duration
         region = session.config.navigate('aws.region') as String
         volumes = makeVols(session.config.navigate('aws.batch.volumes'))
         jobRole = session.config.navigate('aws.batch.jobRole')
         fetchInstanceType = session.config.navigate('aws.batch.fetchInstanceType')
-        retryMode = session.config.navigate('aws.batch.retryMode')
+        retryMode = session.config.navigate('aws.batch.retryMode', 'standard')
+        if( retryMode == 'built-in' )
+            retryMode = null // this force falling back on NF built-in retry mode instead of delegating to AWS CLI tool
         if( retryMode && retryMode !in VALID_RETRY_MODES )
             log.warn "Unexpected value for 'aws.batch.retryMode' config setting - offending value: $retryMode - valid values: ${VALID_RETRY_MODES.join(',')}"
         if( fetchInstanceType==null )
             fetchInstanceType = session.config.navigate('tower.enabled',false)
+    }
+
+    protected int defaultMaxTransferAttempts() {
+        return env.AWS_MAX_ATTEMPTS ? env.AWS_MAX_ATTEMPTS as int : DEFAULT_AWS_MAX_ATTEMPTS
     }
 
     protected String getCliPath0(Session session) {
