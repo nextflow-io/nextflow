@@ -17,7 +17,7 @@ version ?= none
 
 build: dist/docker 
 	cp ../nextflow .
-	docker build -t nextflow/nextflow:${version} .
+	docker buildx build -o type=docker -t nextflow/nextflow:${version} .
 
 dist/docker:
 	curl -fsSLO https://get.docker.com/builds/Linux/x86_64/docker-17.03.1-ce.tgz
