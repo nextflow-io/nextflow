@@ -463,6 +463,9 @@ class LoggerHelper {
         else if( fail instanceof DirectoryNotEmptyException ) {
             buffer.append("Unable to delete not empty directory: $fail.message")
         }
+        else if( fail instanceof UnknownHostException ) {
+            buffer.append("Unknown network host: $fail.message")
+        }
         else if( message && message.startsWith(STARTUP_ERROR))  {
             buffer.append(formatStartupErrorMessage(message))
         }
