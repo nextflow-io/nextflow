@@ -1176,6 +1176,8 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -params-file              |             | Load script parameters from a JSON/YAML file.                                  |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
+| -plugins                  |             | Comma separated list of plugin ids to be applied in the pipeline execution.    |
++---------------------------+-------------+--------------------------------------------------------------------------------+
 | -process.                 | {}          | Set process options. Syntax ``-process.key=value``                             |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -profile                  |             | Choose a configuration profile.                                                |
