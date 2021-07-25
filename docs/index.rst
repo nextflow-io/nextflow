@@ -37,3 +37,4 @@ Contents:
    sharing
    metadata
    mail
+   plugins
