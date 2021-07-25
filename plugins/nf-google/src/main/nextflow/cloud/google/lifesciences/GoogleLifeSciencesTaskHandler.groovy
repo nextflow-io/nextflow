@@ -25,6 +25,7 @@ import com.google.api.services.lifesciences.v2beta.model.Event
 import com.google.api.services.lifesciences.v2beta.model.Metadata
 import com.google.api.services.lifesciences.v2beta.model.Mount
 import com.google.api.services.lifesciences.v2beta.model.Operation
+import com.google.api.services.lifesciences.v2beta.model.UnexpectedExitStatusEvent
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -33,6 +34,7 @@ import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.exception.ProcessSubmitException
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.executor.BashWrapperBuilder
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
@@ -72,6 +74,19 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
     private volatile String assignedZone
 
     private volatile String assignedInstance
+
+    /**
+     * When `keepAliveOnFailure` configure option is enabled, this field holds the
+     * event that signals the "keep alive" task action is started
+     */
+    private volatile boolean isKepAlive
+
+    /**
+     * This field capture the unexpected exit status of task execution
+     */
+    private volatile UnexpectedExitStatusEvent unexpectedErrorEvent
+
+    private volatile String sshDaemonIp
 
     GoogleLifeSciencesTaskHandler(TaskRun task, GoogleLifeSciencesExecutor executor) {
         super(task)
@@ -125,9 +140,12 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
         return machineType
     }
 
+    protected String sshCmd() {
+        return "gcloud compute --project ${executor.config.project} ssh --zone ${assignedZone} ${assignedInstance}"
+    }
 
     protected void logEvents(Operation operation) {
-        final events = getEventsFromOp(operation)
+        final List<Event> events = getEventsFromOp(operation)
         if( !events )
             return
 
@@ -144,9 +162,14 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
             // fetch the assigned instance
             if( !assignedInstance && ev.getWorkerAssigned() )
                 assignedInstance = ev.getWorkerAssigned().getInstance()
+            // detected an unexpected error
+            if( !unexpectedErrorEvent && ev.getUnexpectedExitStatus() )
+                unexpectedErrorEvent = ev.getUnexpectedExitStatus()
             // dump SSH daemon info
-            if( ev.getContainerStarted() && d?.contains(SSH_DAEMON_NAME) )
-                log.debug "[GLS] SSH daemon IP ${ev.getContainerStarted().getIpAddress()}; connect command: `gcloud compute --project ${executor.config.project} ssh --zone ${assignedZone} ${assignedInstance}`"
+            if( ev.getContainerStarted() && d?.contains(SSH_DAEMON_NAME) ){
+                this.sshDaemonIp = ev.getContainerStarted().getIpAddress()
+                log.debug "[GLS] SSH daemon IP ${sshDaemonIp}; connect command: `${sshCmd()}`"
+            }
         }
 
         if( warns ) {
@@ -157,12 +180,21 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
             log.trace "[GLS] New event > $task.name - Pipeline Id: $pipelineId\n${prettyPrint(events)}"
         }
 
+        // check for keep alive task running
+        if( executor.config.keepAliveOnFailure && unexpectedErrorEvent && !isKepAlive ) {
+            for( Event it : events ) {
+                if( it.getDescription() =~ /Started running "nf-.+-keepalive"/ ) {
+                    this.isKepAlive = it
+                    break
+                }
+            }
+        }
     }
 
     /**
      * @return
      *      It should return {@code true} only the very first time the
-     *      the task status transitions from SUBMITTED to RUNNING, in all other
+     *      the task status transientions from SUBMITTED to RUNNING, in all other
      *      cases if should return {@code false}
      */
     @Override
@@ -209,7 +241,17 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
             task.stderr = xs  != null ?  errorFile : operation.getError()?.getMessage()
             status = TaskStatus.COMPLETED
             return true
-        } else
+        }
+        else if( unexpectedErrorEvent && isKepAlive ) {
+            // an error has been detected and keep alive
+            log.warn "Task completed unsuccessfully and computing node is kept alive as requested\n- SSH daemon IP  : ${sshDaemonIp}\n- Connect command: ${sshCmd()}"
+            status = TaskStatus.COMPLETED
+            task.exitStatus = unexpectedErrorEvent.getExitStatus()
+            task.stdout = outputFile
+            task.stderr = errorFile
+            return true
+        }
+        else
             return false
     }
 
@@ -252,7 +294,7 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
 
     @Override
     void submit() {
-        createTaskWrapper()
+        createTaskWrapper().build()
         final req = createPipelineRequest()
         log.trace "[GLS] Task created > $task.name - Request: $req"
 
@@ -276,9 +318,8 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
         operation.getName().tokenize('/')[-1]
     }
 
-    @PackageScope
-    void createTaskWrapper() {
-        new GoogleLifeSciencesScriptLauncher(this.taskBean, this) .build()
+    protected BashWrapperBuilder createTaskWrapper() {
+        new GoogleLifeSciencesScriptLauncher(this.taskBean, this)
     }
 
     @PackageScope
@@ -310,6 +351,7 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
         req.network = executor.config.network
         req.subnetwork = executor.config.subnetwork
         req.serviceAccountEmail = executor.config.serviceAccountEmail
+        req.keepAliveOnFailure = executor.config.keepAliveOnFailure
         return req
     }
 

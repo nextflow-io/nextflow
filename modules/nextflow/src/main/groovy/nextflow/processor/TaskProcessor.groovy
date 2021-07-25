@@ -18,6 +18,7 @@ package nextflow.processor
 
 import static nextflow.processor.ErrorStrategy.*
 
+import java.lang.reflect.InvocationTargetException
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -98,6 +99,7 @@ import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.CollectionHelper
 import nextflow.util.LockManager
+import nextflow.util.LoggerHelper
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 /**
@@ -1213,15 +1215,34 @@ class TaskProcessor {
 
         def message
         if( error instanceof ShowOnlyExceptionMessage || !error.cause )
-            message = error.getErrMessage()
+            message = err0(error)
         else
-            message = error.cause.getErrMessage()
+            message = err0(error.cause)
 
         result
             .append('  ')
             .append(message)
             .append('\n')
             .toString()
+    }
+
+
+    static String err0(Throwable e) {
+        final fail = e instanceof InvocationTargetException ? e.targetException : e
+
+        if( fail instanceof NoSuchFileException ) {
+            return "No such file: $fail.message"
+        }
+        if( fail instanceof MissingPropertyException ) {
+            def name = fail.property ?: LoggerHelper.getDetailMessage(fail)
+            def result = "No such variable: ${name}"
+            def details = LoggerHelper.findErrorLine(fail)
+            if( details )
+                result += " -- Check script '${details[0]}' at line: ${details[1]}"
+            return result
+        }
+
+        return fail.message ?: fail.toString()
     }
 
     /**

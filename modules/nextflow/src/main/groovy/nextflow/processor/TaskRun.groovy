@@ -17,6 +17,7 @@
 
 package nextflow.processor
 
+import java.lang.reflect.InvocationTargetException
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 

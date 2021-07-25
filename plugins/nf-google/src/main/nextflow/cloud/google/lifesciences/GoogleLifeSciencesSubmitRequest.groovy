@@ -71,4 +71,6 @@ class GoogleLifeSciencesSubmitRequest {
     String subnetwork
 
     String serviceAccountEmail
+
+    boolean keepAliveOnFailure
 }

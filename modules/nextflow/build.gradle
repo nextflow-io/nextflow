@@ -1,4 +1,5 @@
 apply plugin: 'groovy'
+apply plugin: 'application'
 
 sourceSets {
     main.java.srcDirs = []
@@ -57,4 +58,8 @@ dependencies {
 test {
     minHeapSize = "512m"
     maxHeapSize = "2048m"
+}
+
+application {
+    mainClass = 'nextflow.cli.Launcher'
 }

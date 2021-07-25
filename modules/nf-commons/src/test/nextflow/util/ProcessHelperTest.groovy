@@ -1,5 +1,7 @@
 package nextflow.util
 
+import java.lang.management.ManagementFactory
+
 import spock.lang.Specification
 
 /**
@@ -19,5 +21,13 @@ class ProcessHelperTest extends Specification {
         process.waitFor()
         then:
         process.text.trim() == pid.toString()
+    }
+
+    def 'should return self pid' () {
+        when:
+        def pid = ProcessHelper.selfPid()
+        then:
+        pid > 0
+        pid == Long.parseLong(ManagementFactory.getRuntimeMXBean().getName().split("@")[0])
     }
 }

@@ -436,7 +436,7 @@ class LoggerHelper {
         final message = event.getFormattedMessage()
         final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException || ScriptRuntimeException
         final normalize = { String str -> str ?. replace("${className}.", '')}
-        List error = fail ? findErrorLine(fail, ScriptMeta.allScriptNames()) : null
+        List error = fail ? findErrorLine(fail) : null
 
         // error string is not shown for abort operation
         if( !quiet ) {
@@ -462,6 +462,9 @@ class LoggerHelper {
         }
         else if( fail instanceof DirectoryNotEmptyException ) {
             buffer.append("Unable to delete not empty directory: $fail.message")
+        }
+        else if( fail instanceof UnknownHostException ) {
+            buffer.append("Unknown network host: $fail.message")
         }
         else if( message && message.startsWith(STARTUP_ERROR))  {
             buffer.append(formatStartupErrorMessage(message))
@@ -546,7 +549,11 @@ class LoggerHelper {
         return msg
     }
 
-    static @PackageScope List<String> findErrorLine( Throwable e, Map<String, Path> allNames ) {
+    static List<String> findErrorLine( Throwable e ) {
+        return findErrorLine(e, ScriptMeta.allScriptNames())
+    }
+
+    static List<String> findErrorLine( Throwable e, Map<String, Path> allNames ) {
         def lines = getErrorLines(e)
         List error = null
         for( String str : lines ) {

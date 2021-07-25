@@ -15,17 +15,23 @@
 
 version ?= none
 
-build: dist/docker 
+build: dist/docker
 	cp ../nextflow .
-	docker build -t nextflow/nextflow:${version} .
+	docker buildx build --platform linux/amd64,linux/arm64 -t nextflow/nextflow:${version} .
+
+release:
+	docker buildx build --platform linux/amd64,linux/arm64 -t nextflow/nextflow:${version} --push .
+#	docker buildx build --platform linux/amd64,linux/arm64 -t public.ecr.aws/seqera-labs/nextflow:${version} --push .
+
+#Static builds can now be found at:
+#
+#  Linux:   https://download.docker.com/linux/static
+#  MacOS:   https://download.docker.com/mac/static
+#  Windows: https://download.docker.com/win/static
 
 dist/docker:
-	curl -fsSLO https://get.docker.com/builds/Linux/x86_64/docker-17.03.1-ce.tgz
-	mkdir dist
-	tar --strip-components=1 -xvzf docker-17.03.1-ce.tgz -C dist
-	rm docker-17.03.1-ce.tgz
+	mkdir -p dist/linux/amd64
+	curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-17.09.0-ce.tgz | tar --strip-components=1 -xvz -C dist/linux/amd64
+	mkdir -p dist/linux/arm64
+	curl -fsSL https://download.docker.com/linux/static/stable/aarch64/docker-17.09.0-ce.tgz | tar --strip-components=1 -xvz -C dist/linux/arm64
 
-release: build
-	docker tag nextflow/nextflow:${version} nextflow/nextflow:latest
-	docker push nextflow/nextflow:${version}
-	docker push nextflow/nextflow:latest

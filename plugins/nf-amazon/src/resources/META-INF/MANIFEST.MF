@@ -3,4 +3,4 @@ Plugin-Class: nextflow.cloud.aws.AmazonPlugin
 Plugin-Id: nf-amazon
 Plugin-Version: 1.1.0
 Plugin-Provider: Seqera Labs
-Plugin-Requires: >=21.06.0-SNAPSHOT
+Plugin-Requires: >=21.06.0-edge

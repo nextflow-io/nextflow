@@ -201,14 +201,21 @@ class PluginsFacade implements PluginStateListener {
      *      The list of extensions matching the requested interface.
      *      The extension with higher priority appears first (lower index)
      */
-    def <T> List<T> getPriorityExtensions(Class<T> type) {
-        final result = getExtensions(type)
-        return result.sort( it -> priorityValue(it) )
+    def <T> List<T> getPriorityExtensions(Class<T> type,String group=null) {
+        def result = getExtensions(type)
+        if( group )
+            result = result.findAll(it -> group0(it)==group )
+        return result.sort( it -> priority0(it) )
     }
 
-    protected int priorityValue(it) {
+    protected int priority0(Object it) {
         final annot = it.getClass().getAnnotation(Priority)
         return annot ? annot.value() : 0
+    }
+
+    protected String group0(Object it) {
+        final annot = it.getClass().getAnnotation(Priority)
+        return annot && annot.group() ? annot.group() : null
     }
 
     @Memoized
@@ -324,7 +331,7 @@ class PluginsFacade implements PluginStateListener {
         final pluginsConf = config.plugins as List<String>
         final result = new ArrayList( pluginsConf?.size() ?: 0 )
         if(pluginsConf) for( String it : pluginsConf ) {
-            result.add( PluginSpec.parse(it) )
+            result.add( PluginSpec.parse(it, defaultPlugins) )
         }
         return result
     }

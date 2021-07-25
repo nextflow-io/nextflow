@@ -21,9 +21,11 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import com.amazonaws.services.batch.AWSBatch
+import com.amazonaws.services.batch.model.AWSBatchException
 import com.amazonaws.services.batch.model.ContainerOverrides
 import com.amazonaws.services.batch.model.ContainerProperties
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
+import com.amazonaws.services.batch.model.DescribeJobDefinitionsResult
 import com.amazonaws.services.batch.model.DescribeJobsRequest
 import com.amazonaws.services.batch.model.DescribeJobsResult
 import com.amazonaws.services.batch.model.Host
@@ -34,14 +36,17 @@ import com.amazonaws.services.batch.model.JobTimeout
 import com.amazonaws.services.batch.model.KeyValuePair
 import com.amazonaws.services.batch.model.MountPoint
 import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
+import com.amazonaws.services.batch.model.RegisterJobDefinitionResult
 import com.amazonaws.services.batch.model.ResourceRequirement
 import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
+import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.TerminateJobRequest
 import com.amazonaws.services.batch.model.Volume
 import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.container.ContainerNameValidator
+import nextflow.exception.ProcessSubmitException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
@@ -54,7 +59,6 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
-
 /**
  * Implements a task handler for AWS Batch jobs
  */
@@ -291,7 +295,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
          */
         // note use the real client object because this method
         // is supposed to be invoked by the thread pool
-        final resp = bypassProxy(client).submitJob(req)
+        final resp = submit0(bypassProxy(client), req)
         this.jobId = resp.jobId
         this.status = TaskStatus.SUBMITTED
         this.queueName = req.getJobQueue()
@@ -501,7 +505,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // bypass the proxy because this method is invoked during a
         // job submit request that's already in a separate thread pool request
         // therefore it's protected by a TooManyRequestsException
-        final res = bypassProxy(this.client).describeJobDefinitions(req)
+        final res = describeJobDefinitions0(bypassProxy(this.client), req)
         final jobs = res.getJobDefinitions()
         if( jobs.size()==0 )
             return null
@@ -517,7 +521,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @return The fully qualified Batch job definition name eg {@code my-job-definition:3}
      */
     protected String createJobDef(RegisterJobDefinitionRequest req) {
-        final res = bypassProxy(client).registerJobDefinition(req) // bypass the client proxy! see #1024
+        final res = createJobDef0(bypassProxy(client), req) // bypass the client proxy! see #1024
         return "${res.jobDefinitionName}:$res.revision"
     }
 
@@ -665,5 +669,50 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         result.machineInfo = getMachineInfo()
         return result
     }
+
+    // -- helpers
+
+    static private SubmitJobResult submit0(AWSBatch client, SubmitJobRequest req) {
+        try {
+            return client.submitJob(req)
+        }
+        catch (AWSBatchException e) {
+            if( e.statusCode>=500 )
+                // raise a process exception so that nextflow can try to recover it
+                throw new ProcessSubmitException("Failed submit job execution: ${req.jobName} - Reason: ${e.errorCode}", e)
+            else
+                // status code < 500 are not expected to be recoverable, just throw it again
+                throw e
+        }
+    }
+
+    static private DescribeJobDefinitionsResult describeJobDefinitions0(AWSBatch client, DescribeJobDefinitionsRequest req) {
+        try {
+            client.describeJobDefinitions(req)
+        }
+        catch (AWSBatchException e) {
+            if( e.statusCode>=500 )
+                // raise a process exception so that nextflow can try to recover it
+                throw new ProcessSubmitException("Failed to describe job definitions: ${req.jobDefinitions} - Reason: ${e.errorCode}", e)
+            else
+                // status code < 500 are not expected to be recoverable, just throw it again
+                throw e
+        }
+    }
+
+    static private RegisterJobDefinitionResult createJobDef0(AWSBatch client, RegisterJobDefinitionRequest req) {
+        try {
+            return client.registerJobDefinition(req)
+        }
+        catch (AWSBatchException e) {
+            if( e.statusCode>=500 )
+                // raise a process exception so that nextflow can try to recover it
+                throw new ProcessSubmitException("Failed to register job defintion: ${req.jobDefinitionName} - Reason: ${e.errorCode}", e)
+            else
+                // status code < 500 are not expected to be recoverable, just throw it again
+                throw e
+        }
+    }
+
 }
 
