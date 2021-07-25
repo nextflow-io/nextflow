@@ -164,7 +164,7 @@ class GithubRepositoryPublisher extends DefaultTask {
         final githubOrg = tokns[0]
         final githubRepo = tokns[1]
         final githubBranch = tokns[2]
-        final targetFile = tokns[3]
+        final targetFileName = tokns[3]
 
         // init github client
         final github = new GithubClient()
@@ -181,7 +181,7 @@ class GithubRepositoryPublisher extends DefaultTask {
 
         // fetch the plugins public index
         logger.quiet("Parsing current index $indexUrl")
-        def mainIndex = parseMainIndex(github, targetFile)
+        def mainIndex = parseMainIndex(github, targetFileName)
 
         // merge indexes
         logger.quiet("Merging index")
@@ -190,7 +190,7 @@ class GithubRepositoryPublisher extends DefaultTask {
         // push to github
         logger.quiet("Publish merged index to $indexUrl")
 
-        github.pushChange(targetFile, result.toString() + '\n', "Nextflow plugins update")
+        github.pushChange(targetFileName, result.toString() + '\n', "Nextflow plugins update")
     }
 
 }
