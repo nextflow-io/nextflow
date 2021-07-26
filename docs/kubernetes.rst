@@ -117,7 +117,8 @@ with the directory in the volume to be mounted (default: ``/``).
 .. warning:: The running pod must have been created with the same persistent volume claim name and mount as the
     one specified in your Nextflow configuration file.
     Note also that the ``run`` command does not support the ``-v`` option.
-   
+
+.. tip:: It is also possible to mount multiple volumes using the ``pod`` directive, setting such as ``k8s.pod = [ [volumeClaim: "other-pvc", mountPath: "/other" ]]``
 
 Pod settings
 ============
