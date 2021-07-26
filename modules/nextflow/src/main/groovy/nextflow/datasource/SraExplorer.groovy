@@ -255,7 +255,7 @@ class SraExplorer {
     }
 
     protected String readRunUrl(String acc) {
-        final url = "https://www.ebi.ac.uk/ena/data/warehouse/filereport?result=read_run&fields=fastq_ftp&accession=$acc"
+        final url = "https://www.ebi.ac.uk/ena/portal/api/filereport?result=read_run&fields=fastq_ftp&accession=$acc"
         log.debug "SRA fetch ftp fastq url=$url"
         String result = new URL(url).text.trim()
         log.trace "SRA fetch ftp fastq url result:\n${result?.indent()}"
