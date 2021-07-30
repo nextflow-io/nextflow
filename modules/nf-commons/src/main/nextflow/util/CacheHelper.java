@@ -238,6 +238,9 @@ public class CacheHelper {
         try {
             attrs = Files.readAttributes(path, BasicFileAttributes.class);
         }
+        catch(IOException e) {
+            log.debug("Unable to get file attributes file: {} -- Cause: {}", FilesEx.toUriString(path), e.toString());
+        }
         catch(ProviderMismatchException e) {
             // see https://github.com/nextflow-io/nextflow/pull/1382
             log.warn("File system is unable to get file attributes file: {} -- Cause: {}", FilesEx.toUriString(path), e.toString());

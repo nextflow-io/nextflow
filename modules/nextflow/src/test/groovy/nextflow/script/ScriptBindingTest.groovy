@@ -40,8 +40,8 @@ class ScriptBindingTest extends Specification {
                 .setScriptPath(path)
 
         then:
-        binding.scriptPath == path
-        binding.session == session
+        binding.getScriptPath() == path
+        binding.getSession() == session
     }
 
     def 'should test params' () {

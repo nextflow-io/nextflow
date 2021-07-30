@@ -104,6 +104,25 @@ class WorkflowBinding extends Binding  {
     }
 
     @Override
+    void setProperty(String name, Object value) {
+        // when a script variable name matches a BaseScript attribute name
+        // set it directly via `setVariable` otherwise groovy will try to
+        // set into the base script attribute
+        if( name in BaseScriptConsts.PRIVATE_NAMES )
+            setVariable(name, value)
+        else
+            super.setProperty(name, value)
+    }
+
+    @Override
+    Object getProperty(String name) {
+        if( name in BaseScriptConsts.PRIVATE_NAMES )
+            return getVariable(name)
+        else
+            return super.getProperty(name)
+    }
+
+    @Override
     void setVariable(String name, Object value) {
         lookupTable.put(value, name)
         super.setVariable(name, value)
