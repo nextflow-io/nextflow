@@ -110,6 +110,15 @@ class SingularityCache {
         return result.toAbsolutePath()
     }
 
+    @PackageScope
+    Path existsDir(String str) {
+        def result = Paths.get(str)
+        if( !result.exists() ) {
+            throw new IOException("Missing Singularity library directory: $str")
+        }
+        return result.toAbsolutePath()
+    }
+
     /**
      * Retrieve the directory where store the singularity images once downloaded.
      * If tries these setting in the following order:
@@ -150,6 +159,24 @@ class SingularityCache {
         return result
     }
 
+    @PackageScope
+    Path getLibraryDir() {
+        def str = config.libraryDir as String
+        if( str )
+            return existsDir(str)
+
+        str = env.get('NXF_SINGULARITY_LIBRARY')
+        if( str )
+            return existsDir(str)
+
+        return null
+    }
+
+    @PackageScope
+    Path localLibraryPath(String imageUrl) {
+        getLibraryDir()?.resolve( simpleName(imageUrl) )
+    }
+
     /**
      * Get the path on the file system where store a remote singularity image
      *
@@ -157,7 +184,7 @@ class SingularityCache {
      * @return the container image local {@link Path}
      */
     @PackageScope
-    Path localImagePath(String imageUrl) {
+    Path localCachePath(String imageUrl) {
         getCacheDir().resolve( simpleName(imageUrl) )
     }
 
@@ -175,8 +202,17 @@ class SingularityCache {
      */
     @PackageScope
     Path downloadSingularityImage(String imageUrl) {
-        final localPath = localImagePath(imageUrl)
+        // check for the image in the local library dir
+        // see https://github.com/nextflow-io/nextflow/issues/1879
+        final libraryPath = localLibraryPath(imageUrl)
+        if( libraryPath?.exists() ) {
+            log.debug "Singularity found local library for image=$imageUrl; path=$libraryPath"
+            return libraryPath
+        }
 
+        // check for the image in teh cache dir
+        // if the image does not exist in the cache dir, download it
+        final localPath = localCachePath(imageUrl)
         if( localPath.exists() ) {
             log.debug "Singularity found local store for image=$imageUrl; path=$localPath"
             return localPath
