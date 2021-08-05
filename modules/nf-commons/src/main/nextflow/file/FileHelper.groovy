@@ -273,7 +273,7 @@ class FileHelper {
                 log.debug "Started plugin '$pluginId' required to handle file: $str"
         }
         catch (Exception e) {
-            log.warn ("Unable to start plugin '$pluginId' required by $str")
+            log.warn ("Unable to start plugin '$pluginId' required by $str", e)
         }
     }
 
