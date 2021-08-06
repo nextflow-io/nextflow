@@ -11,9 +11,6 @@
 
 package io.seqera.tower.plugin
 
-import nextflow.util.ProcessHelper
-import spock.lang.Specification
-
 import java.nio.file.Files
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -29,7 +26,9 @@ import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStats
 import nextflow.trace.WorkflowStatsObserver
+import nextflow.util.ProcessHelper
 import nextflow.util.SimpleHttpClient
+import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -455,8 +454,9 @@ class TowerClientTest extends Specification {
         client.getOutFile() == OUT_FILE
 
         where:
-        OP_ID                               | OUT_FILE      | LOG_FILE    | ENV
-        "local::${ProcessHelper.selfPid()}" | null          | null        | [:]
-        'aws-batch::1234z'                  | 'xyz.out'     | 'hola.log'  | [AWS_BATCH_JOB_ID: '1234z', NXF_OUT_FILE: 'xyz.out', NXF_LOG_FILE: 'hola.log']
+        OP_ID                                           | OUT_FILE      | LOG_FILE    | ENV
+        null                                            | null          | null        | [:]
+        "local-platform::${ProcessHelper.selfPid()}"    | null          | null        | [TOWER_ALLOW_NEXTFLOW_LOGS:'true']
+        'aws-batch::1234z'                              | 'xyz.out'     | 'hola.log'  | [TOWER_ALLOW_NEXTFLOW_LOGS:'true', AWS_BATCH_JOB_ID: '1234z', NXF_OUT_FILE: 'xyz.out', NXF_LOG_FILE: 'hola.log']
     }
 }
