@@ -528,12 +528,18 @@ class TowerClient implements TraceObserver {
         }
     }
 
+    protected boolean isCliLogsEnabled() {
+        return env.get('TOWER_ALLOW_NEXTFLOW_LOGS') == 'true'
+    }
+
     protected String getOperationId() {
+        if( !isCliLogsEnabled() )
+            return null
         try {
             if( env.get('AWS_BATCH_JOB_ID') )
                 return  "aws-batch::${env.get('AWS_BATCH_JOB_ID')}"
             else
-                return "local::${ProcessHelper.selfPid()}"
+                return "local-platform::${ProcessHelper.selfPid()}"
         }
         catch (Exception e) {
             log.warn "Unable to retrieve native environment operation id", e
@@ -542,11 +548,11 @@ class TowerClient implements TraceObserver {
     }
 
     protected String getLogFile() {
-        return env.get('NXF_LOG_FILE')
+        return isCliLogsEnabled() ? env.get('NXF_LOG_FILE') : null
     }
 
     protected String getOutFile() {
-        return env.get('NXF_OUT_FILE')
+        return isCliLogsEnabled() ? env.get('NXF_OUT_FILE') : null
     }
 
     protected Map makeBeginReq(Session session) {
