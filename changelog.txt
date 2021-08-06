@@ -1,5 +1,25 @@
 NEXTFLOW CHANGE-LOG
 ===================
+21.07.0-edge - 6 Aug 2021
+- Add support for AWS_MAX_ATTEMPTS variable [3cc543589]
+- Add app plugin to gradle build [007bc1cb4]
+- Add self pid to tower client [d2e54ea22]
+- Add support for head job operationId + log/out files [a7a76cf91]
+- Add enable CA Issuers option to NF launcher [8f51dc787]
+- Fix Clean cmd fails removing foreign files [8bf8ab720]
+- Fix Prevent script var names conflicting with private names #2246 [82bbc180e]
+- Fix ENA download URL #2239 [befbabbc8]
+- Fix Tower client is not activated launching all packaging #2145 [c507518c2]
+- Fix orphaned AWS Batch jobs after pipeline interruption #2169 [65e2a4d05]
+- Fix Process error report on target exception #1896 [1bac3f17b]
+- Fix Unexpected bool conversion on publishDir enable/overwrite attributes #2220 [651835d2d]
+- Fix BatchCleanup toString method [ec9bb5648]
+- Improve error reporting [49ac01dbb]
+- Improve Unknown host error message [ad41d1e98]
+- Improve AWS Batch task handler [eb1aff275]
+- Use AWS cli standard retry mode by default [f2f1fdea4]
+- Report warn on cache hashing failures [7bf93de06] [3b579c954]
+
 21.04.3 [stable] - 21 Jl 2021
 - Fix Tower client is not activated launching all packaging
 
