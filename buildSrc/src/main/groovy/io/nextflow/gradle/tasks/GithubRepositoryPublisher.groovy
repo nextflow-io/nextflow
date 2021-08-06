@@ -99,6 +99,7 @@ class GithubRepositoryPublisher extends DefaultTask {
 
         new GsonBuilder()
                 .setPrettyPrinting()
+                .disableHtmlEscaping()
                 .create()
                 .toJson(mainIndex)
     }
