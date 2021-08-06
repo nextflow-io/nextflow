@@ -1,0 +1,6 @@
+nf-amazon changelog
+===================
+1.2.0 - 6 Aug 2021
+- Use AWS cli standard retry mode by default [f2f1fdea4]
+- Fix orphaned AWS Batch jobs after pipeline interruption #2169 [65e2a4d05]
+- Strengthen AWS Batch task handler [eb1aff275]
