@@ -19,7 +19,7 @@ build: dist/docker
 	cp ../nextflow .
 	docker buildx build --platform linux/amd64,linux/arm64 -t nextflow/nextflow:${version} .
 
-release:
+release: dist/docker
 	docker buildx build --platform linux/amd64,linux/arm64 -t nextflow/nextflow:${version} --push .
 #	docker buildx build --platform linux/amd64,linux/arm64 -t public.ecr.aws/seqera-labs/nextflow:${version} --push .
 
