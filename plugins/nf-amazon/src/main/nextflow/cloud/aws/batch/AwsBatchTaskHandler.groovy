@@ -526,7 +526,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     /**
-     * Make a name string complaint with the Batch job definition format
+     * Make a name string compliant with the Batch job definition format
      *
      * @param name A job name
      * @return A given name formatted to be used as Job definition name
