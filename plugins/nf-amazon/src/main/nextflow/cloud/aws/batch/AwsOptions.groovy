@@ -144,8 +144,7 @@ class AwsOptions implements CloudTransferOptions {
     }
 
     void setStorageEncryptionKey(String value) {
-        if( value && this.storageEncryption in ['aws:kms'] )
-            this.storageEncryptionKey = value
+        this.storageEncryptionKey = value
     }
 
     void setCliPath(String value) {
