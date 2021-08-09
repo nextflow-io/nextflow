@@ -49,6 +49,8 @@ class AwsOptions implements CloudTransferOptions {
 
     String storageEncryption
 
+    String storageEncryptionKey
+
     String remoteBinDir
 
     String region
@@ -90,6 +92,7 @@ class AwsOptions implements CloudTransferOptions {
         cliPath = getCliPath0(session)
         storageClass = session.config.navigate('aws.client.uploadStorageClass') as String
         storageEncryption = session.config.navigate('aws.client.storageEncryption') as String
+        storageEncryptionKey = session.config.navigate('aws.client.storageEncryptionKey') as String
         maxParallelTransfers = session.config.navigate('aws.batch.maxParallelTransfers', MAX_TRANSFER) as int
         maxTransferAttempts = session.config.navigate('aws.batch.maxTransferAttempts', defaultMaxTransferAttempts()) as int
         delayBetweenAttempts = session.config.navigate('aws.batch.delayBetweenAttempts', DEFAULT_DELAY_BETWEEN_ATTEMPTS) as Duration
@@ -134,10 +137,15 @@ class AwsOptions implements CloudTransferOptions {
     }
 
     void setStorageEncryption(String value) {
-        if( value in [null,'AES256'] )
+        if( value in [null, 'AES256', 'aws:kms'] )
             this.storageEncryption = value
         else
             log.warn "Unsupported AWS storage-encryption: $value"
+    }
+
+    void setStorageEncryptionKey(String value) {
+        log.warn "Supported AWS storage-encryption: $value woring #############"
+        this.storageEncryptionKey = value
     }
 
     void setCliPath(String value) {
