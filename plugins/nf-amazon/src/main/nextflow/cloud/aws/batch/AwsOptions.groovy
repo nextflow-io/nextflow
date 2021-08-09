@@ -144,8 +144,8 @@ class AwsOptions implements CloudTransferOptions {
     }
 
     void setStorageEncryptionKey(String value) {
-        log.warn "Supported AWS storage-encryption: $value woring #############"
-        this.storageEncryptionKey = value
+        if( value && this.storageEncryption in ['aws:kms'] )
+            this.storageEncryptionKey = value
     }
 
     void setCliPath(String value) {

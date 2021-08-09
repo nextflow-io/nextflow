@@ -29,6 +29,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
 
     private String storageClass = 'STANDARD'
     private String encryptionEncryption = ''
+    private String encryptionKey = ''
     private String debug = ''
     private String cli = 'aws'
     private String retryMode
@@ -62,6 +63,12 @@ class S3BashLib extends BashFunLib<S3BashLib> {
         return this
     }
 
+    S3BashLib withStorageEncryptionKey(String value) {
+        if( value && this.encryptionEncryption.equalsIgnoreCase('aws:kms'))
+            this.encryptionKey = value ? "--sse-kms-key-id $value " : ''
+        return this
+    }
+
     protected String retryEnv() {
         if( !retryMode )
             return ''
@@ -79,9 +86,9 @@ class S3BashLib extends BashFunLib<S3BashLib> {
             local name=\$1
             local s3path=\$2
             if [[ -d "\$name" ]]; then
-              $cli s3 cp --only-show-errors --recursive $debug$encryptionEncryption--storage-class $storageClass "\$name" "\$s3path/\$name"
+              $cli s3 cp --only-show-errors --recursive $debug$encryptionEncryption$encryptionKey--storage-class $storageClass "\$name" "\$s3path/\$name"
             else
-              $cli s3 cp --only-show-errors $debug$encryptionEncryption--storage-class $storageClass "\$name" "\$s3path/\$name"
+              $cli s3 cp --only-show-errors $debug$encryptionEncryption$encryptionKey--storage-class $storageClass "\$name" "\$s3path/\$name"
             fi
         }
         
@@ -112,6 +119,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
                 .withCliPath( opts.awsCli )
                 .withStorageClass(opts.storageClass )
                 .withStorageEncryption( opts.storageEncryption )
+                .withStorageEncryptionKey( opts.storageEncryptionKey )
                 .withRetryMode( opts.retryMode )
     }
 
