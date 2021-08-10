@@ -67,9 +67,10 @@ fi
 JAVA_VER=$(echo "$JAVA_VER" | awk '/version/ {gsub(/"/, "", $3); print $3}')
 major=${BASH_REMATCH[1]}
 minor=${BASH_REMATCH[2]}
-version_check="^(1.8|9|10|11|12|13|14|15)"
+supported_versions="1.8|9|10|11|12|13|14|15"
+version_check="^($supported_versions)"
 if [[ ! $JAVA_VER =~ $version_check ]]; then
-    echo "Error: cannot find Java or it's a wrong version -- please make sure that Java 8 or higher is installed"
+    echo "Error: cannot find Java or it's a wrong version -- please make sure that Java 8 or higher is installed (supported versions: $supported_versions)"
     exit 1
 fi
 JVM_ARGS+=" -Dfile.encoding=UTF-8 -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
@@ -102,7 +103,7 @@ while [ "$*" != "" ]; do
   if [[ "$1" == '-debug' || "$1" == '-trace' ]]; then
     args+=("$1")
 
-  elif [ "$1" == --with-yourkit ]; then 
+  elif [ "$1" == --with-yourkit ]; then
     JVM_ARGS+=" -agentpath:/Applications/YourKit_Java_Profiler_2014_build_14104.app/bin/mac/libyjpagent.jnilib=onexit=snapshot,tracing,dir=$PWD/snapshot "
   elif [ "$1" == '--with-jrebel' ]; then
     if [ "$JREBEL_HOME" ]; then
