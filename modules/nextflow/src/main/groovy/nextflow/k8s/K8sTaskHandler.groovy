@@ -293,7 +293,7 @@ class K8sTaskHandler extends TaskHandler {
      * (less than 1 second) that it skips right over the RUNNING status.
      * If this happens, the startTimeMillis never gets set and remains equal to 0.
      * To make sure startTimeMillis is non-zero we update it with the pod start time.
-     * We update completTimeMillis from the same pod info to be consistent.
+     * We update completeTimeMillis from the same pod info to be consistent.
      */
     void updateTimestamps(Map terminated) {
         try {
