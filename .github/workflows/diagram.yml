@@ -1,0 +1,21 @@
+name: Create diagram
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - main
+jobs:
+  # read more
+  # https://octo.github.com/projects/repo-visualization
+  create_diagram:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+      - name: Update diagram
+        uses: githubocto/repo-visualizer@main
+        with:
+          # https://github.com/githubocto/repo-visualizer
+          excluded_paths: ".github,tests,docs,docker,validation,gradle,config"
+          max_depth: 15
+          branch: 'repo-visualizer'

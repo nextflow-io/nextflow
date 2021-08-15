@@ -243,7 +243,10 @@ If you have it installed in your computer, follow the steps below in order to us
    the "Project SDK" choice on the right contains Java 8.
 8. Set the code formatting options with setting provided [here](https://github.com/nextflow-io/nextflow/blob/master/CONTRIBUTING.md#ide-settings).
 
+Codebase diagram 
+----------------
 
+![Visualization of the codebase](./diagram.svg)
 
 Contributing
 ============
@@ -254,7 +257,6 @@ Project contribution are more than welcome. See the [CONTRIBUTING](CONTRIBUTING.
 Build servers
 =============
 
-  * [Travis-CI](https://travis-ci.org/nextflow-io/nextflow)
   * [GitHub Actions](https://github.com/nextflow-io/nextflow/actions)
 
 License
