@@ -20,29 +20,27 @@ Google Cloud Life Sciences, and Kubernetes. Additionally, it provides support fo
 through built-in support for Conda, Docker, Singularity, and Modules.
 
 ## Contents
+- [Quick overview](#quick-overview)
+  - [Contents](#contents)
 - [Rationale](#rationale)
 - [Quick start](#quick-start)
+  - [Download the package](#download-the-package)
+  - [Download from Conda](#download-from-conda)
 - [Documentation](#documentation)
-- [Tool Management](#tool-management)
-  - [Conda environments](#conda-environments)
-  - [Docker and Singularity](#containers)
-  - [Environment Modules](#environment-modules)
 - [HPC Schedulers](#hpc-schedulers)
-  - [SGE](#hpc-schedulers)
-  - [Univa Grid Engine](#hpc-schedulers)
-  - [LSF](#hpc-schedulers)
-  - [SLURM](#hpc-schedulers)
-  - [PBS/Torque](#hpc-schedulers)
-  - [HTCondor (experimental)](#hpc-schedulers)
-- [Cloud Support](#cloud-support)
-  - [AWS Batch](#cloud-support)
-  - [AWS EC2](#cloud-support)
-  - [Google Cloud](#cloud-support)
-  - [Google Genomics Pipelines](#cloud-support)
-  - [Kubernetes](#cloud-support)
+- [Cloud support](#cloud-support)
+- [Tool management](#tool-management)
+  - [Containers](#containers)
+  - [Conda environments](#conda-environments)
+  - [Environment Modules](#environment-modules)
 - [Community](#community)
 - [Build from source](#build-from-source)
+  - [Required dependencies](#required-dependencies)
+  - [Build from source](#build-from-source-1)
+  - [IntelliJ IDEA](#intellij-idea)
+  - [Codebase diagram](#codebase-diagram)
 - [Contributing](#contributing)
+- [Build servers](#build-servers)
 - [License](#license)
 - [Citations](#citations)
 - [Credits](#credits)
@@ -246,7 +244,7 @@ If you have it installed in your computer, follow the steps below in order to us
 Codebase diagram 
 ----------------
 
-![Visualization of the codebase](./diagram.svg)
+![Visualization of the codebase](https://github.com/nextflow-io/nextflow/raw/repo-visualizer/diagram.svg)
 
 Contributing
 ============

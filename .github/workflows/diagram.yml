@@ -1,12 +1,11 @@
+# read more
+# https://octo.github.com/projects/repo-visualization
 name: Create diagram
 on:
-  workflow_dispatch: {}
   push:
     branches:
-      - main
+      - 'master'
 jobs:
-  # read more
-  # https://octo.github.com/projects/repo-visualization
   create_diagram:
     runs-on: ubuntu-latest
     steps:
@@ -16,6 +15,6 @@ jobs:
         uses: githubocto/repo-visualizer@main
         with:
           # https://github.com/githubocto/repo-visualizer
-          excluded_paths: ".github,tests,docs,docker,validation,gradle,config"
+          excluded_paths: ".github,tests,docker,validation,gradle,config"
           max_depth: 15
           branch: 'repo-visualizer'
