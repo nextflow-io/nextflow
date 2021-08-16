@@ -2081,7 +2081,7 @@ For example::
 
     Channel
         .from( 8, 6, 2, 5 )
-        .min()
+        .max()
         .view { "Max value is $it" }
 
 ::
