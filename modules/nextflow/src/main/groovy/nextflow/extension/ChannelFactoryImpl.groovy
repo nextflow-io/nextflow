@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentHashMap
 import groovy.runtime.metaclass.ChannelFactory
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Channel
 import nextflow.Global
@@ -23,7 +24,10 @@ import org.codehaus.groovy.runtime.InvokerHelper
 @Slf4j
 @CompileStatic
 @Canonical
-class ChannelFactoryHolder implements ChannelFactory {
+class ChannelFactoryImpl implements ChannelFactory {
+
+    @PackageScope
+    static List<ChannelExtensionPoint> allExtensions
 
     /**
      * The scope of implemented by this channel factory holder. For example
@@ -34,27 +38,27 @@ class ChannelFactoryHolder implements ChannelFactory {
     /**
      * The set of channel extensions held by this scope
      */
-    private Set<ChannelExtensionPoint> exts = new HashSet<>()
+    private Set<ChannelExtensionPoint> extensions = new HashSet<>()
 
     private ConcurrentHashMap<ChannelExtensionPoint,Boolean> markInitialized = new ConcurrentHashMap<>()
 
-    ChannelFactoryHolder(String scope, Collection<ChannelExtensionPoint> extensions) {
+    ChannelFactoryImpl(String scope, Collection<ChannelExtensionPoint> extensions) {
         this.scope = scope
-        this.exts = new HashSet<>(extensions)
+        this.extensions = new HashSet<>(extensions)
     }
 
     /*
      * Invoke the init method exactly once
      */
     protected void checkInit(ChannelExtensionPoint target) {
-        def wasInit = markInitialized.putIfAbsent(target, true)
+        final wasInit = markInitialized.putIfAbsent(target, true)
         if( !wasInit )
             target.init(Global.session as Session)
     }
 
     private Object invoke0(String methodName, Object[] args) {
-        for( int i=0; i<exts.size(); i++ ) {
-            final target = exts[i]
+        for(int i=0; i<extensions.size(); i++ ) {
+            final target = extensions[i]
             final meta = target.metaClass.getMetaMethod(methodName, args)
             if( meta ) {
                 checkInit(target)
@@ -75,23 +79,28 @@ class ChannelFactoryHolder implements ChannelFactory {
     }
 
     /**
-     * Create a {@link ChannelFactoryHolder} object for the given scope
+     * Create a {@link ChannelFactoryImpl} object for the given scope
      *
      * @param scope
-     * @return The {@link ChannelFactoryHolder} instance holding the extensions matching the specified scope
+     * @return The {@link ChannelFactoryImpl} instance holding the extensions matching the specified scope
      */
-    static ChannelFactoryHolder create(String scope) {
-        final all = Plugins.getExtensions(ChannelExtensionPoint)
-        log.debug "Loading factory extensions: $all"
-        final matchingType = []
-        for( ChannelExtensionPoint ext : all ) {
-            if( ext.scope == scope ) {
-                matchingType.add(ext)
+    static ChannelFactoryImpl create(String scope) {
+        final all = findAllExtensions()
+        log.debug "Loading channel factory extensions: $all"
+        final matchingClasses = new ArrayList(10)
+        for( ChannelExtensionPoint it : all ) {
+            if( it.getScope() == scope ) {
+                matchingClasses.add(it)
             }
         }
-        return new ChannelFactoryHolder(scope, matchingType)
+        return matchingClasses ? new ChannelFactoryImpl(scope, matchingClasses) : null
     }
 
+    static protected List<ChannelExtensionPoint> findAllExtensions() {
+        if( allExtensions==null )
+            allExtensions = Plugins.getExtensions(ChannelExtensionPoint)
+        return allExtensions
+    }
 
     /**
      * Customized missing method  extension

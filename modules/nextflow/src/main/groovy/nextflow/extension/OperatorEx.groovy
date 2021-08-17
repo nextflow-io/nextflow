@@ -71,7 +71,7 @@ class OperatorEx implements DelegatingPlugin {
 
     final public static Set<String> OPERATOR_NAMES
 
-    final public static Map<String, ChannelFactory> factoryExtensions = new HashMap<>()
+    final public static Map<String, ChannelFactory> channelFactories = new HashMap<>()
 
     static {
         OPERATOR_NAMES = getDeclaredExtensionMethods0()
@@ -112,13 +112,12 @@ class OperatorEx implements DelegatingPlugin {
     }
 
     ChannelFactory getChannelFactory(String factoryScope) {
-        def result = factoryExtensions.get(factoryScope)
-        if( result )
-            return result
+        if( channelFactories.containsKey(factoryScope) )
+            return channelFactories.get(factoryScope)
 
-        synchronized (factoryExtensions) {
-            result = ChannelFactoryHolder.create(factoryScope)
-            factoryExtensions.put(factoryScope, result)
+        synchronized (channelFactories) {
+            final result = ChannelFactoryImpl.create(factoryScope)
+            channelFactories.put(factoryScope, result)
             return result
         }
     }

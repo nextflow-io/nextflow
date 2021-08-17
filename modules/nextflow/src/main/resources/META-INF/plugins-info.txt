@@ -1,8 +1,8 @@
 nf-amazon@1.2.0
+nf-sqldb@0.1.0
 nf-console@1.0.3
 nf-google@1.1.0
 nf-ignite@1.2.3
 nf-azure@0.10.0
 nf-tower@1.2.0
 nf-ga4gh@1.0.3
-nf-sqldb@0.1.0
