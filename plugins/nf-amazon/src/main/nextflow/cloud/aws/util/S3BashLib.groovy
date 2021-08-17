@@ -35,42 +35,42 @@ class S3BashLib extends BashFunLib<S3BashLib> {
     private String retryMode
 
     S3BashLib withCliPath(String cliPath) {
-        if( cliPath )
+        if (cliPath)
             this.cli = cliPath
         return this
     }
 
     S3BashLib withRetryMode(String value) {
-        if( value )
+        if (value)
             retryMode = value
         return this
     }
 
-    S3BashLib withDebug(boolean  value) {
+    S3BashLib withDebug(boolean value) {
         this.debug = value ? '--debug ' : ''
         return this
     }
 
     S3BashLib withStorageClass(String value) {
-        if( value )
+        if (value)
             this.storageClass = value
         return this
     }
 
     S3BashLib withStorageEncryption(String value) {
-        if( value )
+        if (value)
             this.encryptionEncryption = value ? "--sse $value " : ''
         return this
     }
 
     S3BashLib withStorageEncryptionKey(String value) {
-        if( value && this.encryptionEncryption.equalsIgnoreCase('aws:kms'))
+        if (value && this.encryptionEncryption.equalsIgnoreCase('aws:kms'))
             this.encryptionKey = value ? "--sse-kms-key-id $value " : ''
         return this
     }
 
     protected String retryEnv() {
-        if( !retryMode )
+        if (!retryMode)
             return ''
         """
         # aws cli retry config
@@ -113,22 +113,22 @@ class S3BashLib extends BashFunLib<S3BashLib> {
     static private S3BashLib lib0(AwsOptions opts, boolean includeCore) {
         new S3BashLib()
                 .includeCoreFun(includeCore)
-                .withMaxParallelTransfers( opts.maxParallelTransfers )
-                .withDelayBetweenAttempts(opts.delayBetweenAttempts )
-                .withMaxTransferAttempts( opts.maxTransferAttempts )
-                .withCliPath( opts.awsCli )
-                .withStorageClass(opts.storageClass )
-                .withStorageEncryption( opts.storageEncryption )
-                .withStorageEncryptionKey( opts.storageEncryptionKey )
-                .withRetryMode( opts.retryMode )
+                .withMaxParallelTransfers(opts.maxParallelTransfers)
+                .withDelayBetweenAttempts(opts.delayBetweenAttempts)
+                .withMaxTransferAttempts(opts.maxTransferAttempts)
+                .withCliPath(opts.awsCli)
+                .withStorageClass(opts.storageClass)
+                .withStorageEncryption(opts.storageEncryption)
+                .withStorageEncryptionKey(opts.storageEncryptionKey)
+                .withRetryMode(opts.retryMode)
     }
 
     static String script(AwsOptions opts) {
-        lib0(opts,true).render()
+        lib0(opts, true).render()
     }
 
     static String script() {
         final opts = new AwsOptions(Global.session as Session)
-        lib0(opts,false).render()
+        lib0(opts, false).render()
     }
 }
