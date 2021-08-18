@@ -254,27 +254,44 @@ class FileHelper {
             return Paths.get(str)
         }
 
-        checkForMissingPlugins(str)
-
-        final result = FileSystemPathFactory.parse(str)
-        if( result )
-            return result
+        while(true) {
+            final result = FileSystemPathFactory.parse(str)
+            if( result )
+                return result
+            if( !autoStartMissingPlugin(str) )
+                break
+        }
 
         asPath(toPathURI(str))
     }
 
     static private Map<String,String> PLUGINS_MAP = [s3:'nf-amazon', gs:'nf-google', az:'nf-azure']
 
-    static protected void checkForMissingPlugins(String str) {
+    static final private Map<String,Boolean> SCHEME_CHECKED = new HashMap<>()
+
+    static protected boolean autoStartMissingPlugin(String str) {
         final scheme = getUrlProtocol(str)
-        final pluginId = PLUGINS_MAP.get(scheme)
-        if( pluginId ) try {
-            if( Plugins.startIfMissing(pluginId) )
-                log.debug "Started plugin '$pluginId' required to handle file: $str"
+        if( SCHEME_CHECKED[scheme] )
+            return false
+        // find out the default plugin for the given scheme and try to load it
+        synchronized (SCHEME_CHECKED) {
+            final pluginId = PLUGINS_MAP.get(scheme)
+            if( pluginId ) try {
+                if( Plugins.startIfMissing(pluginId) ) {
+                    log.debug "Started plugin '$pluginId' required to handle file: $str"
+                    // return true to signal a new plugin was laoded
+                    return true
+                }
+            }
+            catch (Exception e) {
+                log.warn ("Unable to start plugin '$pluginId' required by $str", e)
+            }
+            finally {
+                SCHEME_CHECKED[scheme] = true
+            }
         }
-        catch (Exception e) {
-            log.warn ("Unable to start plugin '$pluginId' required by $str", e)
-        }
+        // no change in the plugin loaded, therefore return false
+        return false
     }
 
     /**
