@@ -1,7 +1,7 @@
 package groovy.runtime.metaclass;
 
 /**
- * Interface to create Nextflow channel factory extensions e.g
+ * Interface to define channel factory extensions e.g.
  *
  *   Channel.foo.fromSomething(params)
  *

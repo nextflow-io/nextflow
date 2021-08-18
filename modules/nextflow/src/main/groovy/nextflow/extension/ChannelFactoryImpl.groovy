@@ -16,8 +16,10 @@ import nextflow.plugin.Plugins
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Object holding a set of {@link ChannelExtensionPoint} instances
- * for a given scope. In practical term it collect all channel factory extensions
- * for a scope.
+ * for a given scope.
+ *
+ * It collects all channel factory extension classes provided by plugins
+ * for a scope context.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -51,16 +53,23 @@ class ChannelFactoryImpl implements ChannelFactory {
      * Invoke the init method exactly once
      */
     protected void checkInit(ChannelExtensionPoint target) {
-        final wasInit = markInitialized.putIfAbsent(target, true)
-        if( !wasInit )
+        final wasInitialized = markInitialized.putIfAbsent(target, true)
+        if( !wasInitialized )
             target.init(Global.session as Session)
     }
 
+    /**
+     * Implements extension method invocation login
+     *
+     * @param methodName The name of the extension method to be invoked
+     * @param args The array holding the arguments method arguments
+     * @return The extension method result
+     */
     private Object invoke0(String methodName, Object[] args) {
         for(int i=0; i<extensions.size(); i++ ) {
             final target = extensions[i]
             final meta = target.metaClass.getMetaMethod(methodName, args)
-            if( meta ) {
+            if( meta && meta.isPublic() ) {
                 checkInit(target)
                 final Method method = target.getClass().getMethod(methodName, meta.getNativeParameterTypes())
                 // or -- owner.metaClass.invokeMethod(owner, methodName, args)
@@ -70,11 +79,18 @@ class ChannelFactoryImpl implements ChannelFactory {
 
         throw new MissingFactoryMethodException(this.scope, methodName, args)
     }
-    
+
+    /**
+     * Invokes the extension method with the given arguments
+     *
+     * @param methodName The name of the extension method to be invoked
+     * @param args The array holding the arguments method arguments
+     * @return The extension method result
+     */
     @Override
     Object invokeExtensionMethod(String method, Object[] args) {
         def result = invoke0(method,args)
-        NodeMarker.addSourceNode("Channel.${this.scope}.${method}", result)
+        NodeMarker.addSourceNode("channel.${this.scope}.${method}", result)
         return result
     }
 
