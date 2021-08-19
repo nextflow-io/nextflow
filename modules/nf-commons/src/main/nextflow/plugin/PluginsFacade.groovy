@@ -213,6 +213,36 @@ class PluginsFacade implements PluginStateListener {
         return annot ? annot.value() : 0
     }
 
+    protected int priority1(Object it) {
+        final annot = it.getClass().getAnnotation(Scoped)
+        return annot ? annot.priority() : 0
+    }
+
+    /**
+     * Find out all extensions classed with with {@code @Scoped} annotation
+     * return one and exactly with for each different scope value
+     *
+     * @param type
+     * @param scope
+     * @return
+     */
+    def <T> Set<T> getScopedExtensions(Class<T> type,String scope=null) {
+        def result = getExtensions(type).sort(it->priority1(it))
+        def groups = new HashMap<String,T>()
+        for( T it : result ) {
+            final annot = it.getClass().getAnnotation(Scoped)
+            if( annot==null )
+                continue
+            if( !annot.value() )
+                continue
+            if( groups.containsKey(annot.value()) )
+                continue
+            if( scope==null || annot.value()==scope )
+                groups.put(annot.value(), it)
+        }
+        return new HashSet<T>(groups.values())
+    }
+
     protected String group0(Object it) {
         final annot = it.getClass().getAnnotation(Priority)
         return annot && annot.group() ? annot.group() : null

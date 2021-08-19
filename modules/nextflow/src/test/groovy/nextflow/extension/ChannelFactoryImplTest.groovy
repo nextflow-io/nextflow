@@ -18,9 +18,11 @@
 package nextflow.extension
 
 import groovyx.gpars.dataflow.DataflowQueue
+import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.Session
+import nextflow.plugin.Scoped
 import spock.lang.Specification
 import test.MockScriptRunner
 /**
@@ -29,7 +31,8 @@ import test.MockScriptRunner
  */
 class ChannelFactoryImplTest extends Specification {
 
-    class Ext1 implements ChannelExtensionPoint {
+    @Scoped('foo')
+    class Ext1 extends ChannelExtensionPoint {
 
         int initCount
         Session initSession
@@ -39,21 +42,23 @@ class ChannelFactoryImplTest extends Specification {
             initSession = sess
             initCount += 1
         }
-
-        @Override
-        String getScope() { return 'foo' }
 
         DataflowWriteChannel alpha(List args) {
             def ch = new DataflowQueue()
             return CH.emitAndClose(ch, args)
         }
 
-        DataflowWriteChannel delta() {
+        DataflowWriteChannel omega() {
             Channel.value('Hello world')
+        }
+
+        DataflowWriteChannel plusOne( DataflowReadChannel ch ) {
+            ch.map { it +1 }
         }
     }
 
-    class Ext2 implements ChannelExtensionPoint {
+    @Scoped('bar')
+    class Ext2 extends ChannelExtensionPoint {
         int initCount
         Session initSession
 
@@ -62,8 +67,6 @@ class ChannelFactoryImplTest extends Specification {
             initSession = sess
             initCount += 1
         }
-
-        String getScope() { 'foo' }
 
         DataflowWriteChannel omega(List args) {
             def ch = new DataflowQueue()
@@ -101,7 +104,7 @@ class ChannelFactoryImplTest extends Specification {
     }
 
 
-    def 'should invoke multiple extensions ' () {
+    def 'should invoke multiple extensions' () {
         given:
         OperatorEx.channelFactories.clear()
         and:
@@ -110,7 +113,7 @@ class ChannelFactoryImplTest extends Specification {
         and:
         def SCRIPT = '''
             def ch1 = channel.foo.alpha([1,2,3])
-            def ch2 = channel.foo.omega(['X','Y','Z'])
+            def ch2 = channel.bar.omega(['X','Y','Z'])
             
             process sayHello {
               input:
@@ -140,6 +143,35 @@ class ChannelFactoryImplTest extends Specification {
         cleanup:
         ChannelFactoryImpl.allExtensions=null
 
+    }
+
+    def 'should invoke operator extension' () {
+        given:
+        OperatorEx.channelFactories.clear()
+        and:
+        def ext1 = new Ext1();
+        ChannelFactoryImpl.allExtensions = [ext1]
+        and:
+        def SCRIPT = '''
+            channel
+                .fromList([1,2,3])
+                .plusOne()
+            '''
+
+        when:
+        def runner = new MockScriptRunner()
+        def result = runner.setScript(SCRIPT).execute()
+        then:
+        result.val == 2
+        result.val == 3
+        result.val == 4
+
+        and:
+        ext1.initCount == 1
+        ext1.initSession instanceof Session
+
+        cleanup:
+        ChannelFactoryImpl.allExtensions=null
     }
 
 }

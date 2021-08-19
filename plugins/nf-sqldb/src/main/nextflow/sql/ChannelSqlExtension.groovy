@@ -7,6 +7,7 @@ import nextflow.NF
 import nextflow.Session
 import nextflow.extension.CH
 import nextflow.extension.ChannelExtensionPoint
+import nextflow.plugin.Scoped
 import nextflow.sql.config.SqlConfig
 /**
  * Provide a channel factory extension that allows the execution of Sql queries
@@ -15,19 +16,15 @@ import nextflow.sql.config.SqlConfig
  */
 @Slf4j
 @CompileStatic
-class ChannelSqlExtension implements ChannelExtensionPoint {
+@Scoped('sql')
+class ChannelSqlExtension extends ChannelExtensionPoint {
 
     private Session session
     private SqlConfig config
 
-    void init(Session session) {
+    protected void init(Session session) {
         this.session = session
         this.config = new SqlConfig((Map) session.config.dataSources)
-    }
-
-    @Override
-    String getScope() {
-        return 'sql'
     }
 
     DataflowWriteChannel fromQuery(String query) {

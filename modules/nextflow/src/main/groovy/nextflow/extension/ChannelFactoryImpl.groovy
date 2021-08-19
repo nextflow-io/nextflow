@@ -1,7 +1,6 @@
 package nextflow.extension
 
 import java.lang.reflect.Method
-import java.util.concurrent.ConcurrentHashMap
 
 import groovy.runtime.metaclass.ChannelFactory
 import groovy.transform.Canonical
@@ -13,6 +12,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.dag.NodeMarker
 import nextflow.plugin.Plugins
+import nextflow.plugin.Scoped
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Object holding a set of {@link ChannelExtensionPoint} instances
@@ -40,23 +40,13 @@ class ChannelFactoryImpl implements ChannelFactory {
     /**
      * The set of channel extensions held by this scope
      */
-    private Set<ChannelExtensionPoint> extensions = new HashSet<>()
+    private ChannelExtensionPoint target
 
-    private ConcurrentHashMap<ChannelExtensionPoint,Boolean> markInitialized = new ConcurrentHashMap<>()
-
-    ChannelFactoryImpl(String scope, Collection<ChannelExtensionPoint> extensions) {
+    ChannelFactoryImpl(String scope, ChannelExtensionPoint extensionClass) {
         this.scope = scope
-        this.extensions = new HashSet<>(extensions)
+        this.target = extensionClass
     }
 
-    /*
-     * Invoke the init method exactly once
-     */
-    protected void checkInit(ChannelExtensionPoint target) {
-        final wasInitialized = markInitialized.putIfAbsent(target, true)
-        if( !wasInitialized )
-            target.init(Global.session as Session)
-    }
 
     /**
      * Implements extension method invocation login
@@ -66,17 +56,13 @@ class ChannelFactoryImpl implements ChannelFactory {
      * @return The extension method result
      */
     private Object invoke0(String methodName, Object[] args) {
-        for(int i=0; i<extensions.size(); i++ ) {
-            final target = extensions[i]
-            final meta = target.metaClass.getMetaMethod(methodName, args)
-            if( meta && meta.isPublic() ) {
-                checkInit(target)
-                final Method method = target.getClass().getMethod(methodName, meta.getNativeParameterTypes())
-                // or -- owner.metaClass.invokeMethod(owner, methodName, args)
-                return method.invoke(target, args)
-            }
+        final meta = target.metaClass.getMetaMethod(methodName, args)
+        if( meta && meta.isPublic() ) {
+            target.checkInit((Session)Global.session)
+            final Method method = target.getClass().getMethod(methodName, meta.getNativeParameterTypes())
+            // or -- owner.metaClass.invokeMethod(target, methodName, args)
+            return method.invoke(target, args)
         }
-
         throw new MissingFactoryMethodException(this.scope, methodName, args)
     }
 
@@ -103,18 +89,17 @@ class ChannelFactoryImpl implements ChannelFactory {
     static ChannelFactoryImpl create(String scope) {
         final all = findAllExtensions()
         log.debug "Loading channel factory extensions: $all"
-        final matchingClasses = new ArrayList(10)
         for( ChannelExtensionPoint it : all ) {
-            if( it.getScope() == scope ) {
-                matchingClasses.add(it)
-            }
+            final annot = it.getClass().getAnnotation(Scoped)
+            if( annot && annot.value()==scope )
+                return new ChannelFactoryImpl(scope, it)
         }
-        return matchingClasses ? new ChannelFactoryImpl(scope, matchingClasses) : null
+        return null
     }
 
     static protected List<ChannelExtensionPoint> findAllExtensions() {
         if( allExtensions==null )
-            allExtensions = Plugins.getExtensions(ChannelExtensionPoint)
+            allExtensions = Plugins.getScopedExtensions(ChannelExtensionPoint).toList()
         return allExtensions
     }
 

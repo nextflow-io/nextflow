@@ -1,5 +1,6 @@
 package nextflow.extension
 
+import groovy.transform.PackageScope
 import nextflow.Session
 import org.pf4j.ExtensionPoint
 /**
@@ -12,7 +13,18 @@ import org.pf4j.ExtensionPoint
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface ChannelExtensionPoint extends ExtensionPoint {
+abstract class ChannelExtensionPoint implements ExtensionPoint {
+
+    private boolean initialised
+
+    @PackageScope
+    synchronized void checkInit(Session session) {
+        if( !initialised ) {
+            init(session)
+            initialised = true
+        }
+    }
+
 
     /**
      * Channel factory initialization. This method is invoked one and only once before
@@ -20,11 +32,6 @@ interface ChannelExtensionPoint extends ExtensionPoint {
      *
      * @param session The current nextflow {@link Session}
      */
-    void init(Session session)
-
-    /**
-     * @return Declare the channel factory scope
-     */
-    String getScope()
+    abstract protected void init(Session session)
 
 }
