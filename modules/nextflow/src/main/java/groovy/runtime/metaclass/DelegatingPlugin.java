@@ -17,6 +17,8 @@
 
 package groovy.runtime.metaclass;
 
+import java.util.Set;
+
 /**
  * Define the interface to plug the delegating metaclass
  * extension methods implementing the nextflow operators
@@ -31,4 +33,5 @@ public interface DelegatingPlugin {
 
     ChannelFactory getChannelFactory(String factoryDomain);
 
+    Set<String> operatorNames();
 }

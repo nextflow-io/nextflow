@@ -21,12 +21,8 @@ import static nextflow.extension.DataflowHelper.*
 import static nextflow.splitter.SplitterFactory.*
 import static nextflow.util.CheckHelper.*
 
-import java.lang.reflect.Modifier
 import java.util.concurrent.atomic.AtomicInteger
 
-import groovy.runtime.metaclass.ChannelFactory
-import groovy.runtime.metaclass.DelegatingPlugin
-import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
@@ -44,7 +40,6 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.NF
 import nextflow.Session
-import nextflow.plugin.Plugins
 import nextflow.script.ChannelOut
 import nextflow.script.TokenBranchDef
 import nextflow.script.TokenMultiMapDef
@@ -63,108 +58,11 @@ import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
  */
 
 @Slf4j
-class OperatorEx implements DelegatingPlugin {
+class OperatorEx  {
 
     static final public OperatorEx instance = new OperatorEx()
 
     private static Session getSession() { Global.getSession() as Session }
-
-    final public static Set<String> OPERATOR_NAMES
-
-    final public static Map<String, ChannelFactory> channelFactories = new HashMap<>()
-
-    final public static Map<String,Object> operatorExtensions = new HashMap<>()
-
-    static {
-        // add default operators
-        final defaultOps = loadDefaultOperators()
-        log.trace "Dataflow default extension methods: ${defaultOps.sort().join(',')}"
-        final customOps = loadCustomOperators()
-        log.trace "Dataflow custom extension methods: ${customOps.sort().join(',')}"
-        OPERATOR_NAMES = defaultOps + customOps
-    }
-
-    @CompileStatic
-    static private Set<String> loadDefaultOperators() {
-        final result = getDeclaredExtensionMethods0(OperatorEx.class)
-        for( String it : result )
-            operatorExtensions.put(it, instance)
-        return result
-    }
-
-    @CompileStatic
-    static private Set<String> loadCustomOperators() {
-        final extensions = Plugins.getScopedExtensions(ChannelExtensionPoint)
-        final allNames = new HashSet()
-        for( ChannelExtensionPoint ext : extensions ) {
-            // find out the extension method names for the extension obj
-            final names = getDeclaredExtensionMethods0(ext.getClass())
-            // check if exists already and add it
-            for( String it : names ) {
-                final existing = operatorExtensions.get(it)
-                if( existing.is(instance) ) {
-                    throw new IllegalStateException("Operator '$it' is already defined as a built-in operator - Offending plugin class: $ext")
-                }
-                else if( existing != null ) {
-                    throw new IllegalStateException("Operator '$it' is already defined as a built-in operator - Offending plugin class: $ext")
-                }
-                else {
-                    allNames.add(it)
-                    operatorExtensions.put(it, ext)
-                }
-            }
-        }
-
-        return allNames
-    }
-
-    @CompileStatic
-    static private Set<String> getDeclaredExtensionMethods0(Class clazz) {
-        def result = new HashSet<String>(30)
-        def methods = clazz.getDeclaredMethods()
-        for( def handle : methods ) {
-            if( !Modifier.isPublic(handle.getModifiers()) ) continue
-            if( Modifier.isStatic(handle.getModifiers()) ) continue
-            def params=handle.getParameterTypes()
-            if( params.length>0 && isReadChannel(params[0]) )
-                result.add(handle.name)
-        }
-        return result
-    }
-
-    @CompileStatic
-    static boolean isReadChannel(Class clazz) {
-        DataflowReadChannel.class.isAssignableFrom(clazz)
-    }
-
-    @CompileStatic
-    boolean isExtensionMethod(Object obj, String name) {
-        if( obj instanceof DataflowReadChannel || obj instanceof DataflowBroadcast || obj instanceof ChannelOut ) {
-            return OPERATOR_NAMES.contains(name)
-        }
-        return false
-    }
-
-    @CompileStatic
-    Object invokeExtensionMethod(Object channel, String method, Object[] args) {
-        final target = operatorExtensions.get(method)
-        if( target==null )
-            throw new IllegalStateException("Missing target class for operator '$method'")
-        if( target instanceof ChannelExtensionPoint )
-            target.checkInit(getSession())
-        new OpCall(target,channel,method,args).call()
-    }
-
-    ChannelFactory getChannelFactory(String factoryScope) {
-        if( channelFactories.containsKey(factoryScope) )
-            return channelFactories.get(factoryScope)
-
-        synchronized (channelFactories) {
-            final result = ChannelFactoryImpl.create(factoryScope)
-            channelFactories.put(factoryScope, result)
-            return result
-        }
-    }
 
     /**
      * Subscribe *onNext* event

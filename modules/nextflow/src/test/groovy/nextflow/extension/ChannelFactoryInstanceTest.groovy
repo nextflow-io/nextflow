@@ -29,7 +29,7 @@ import test.MockScriptRunner
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ChannelFactoryImplTest extends Specification {
+class ChannelFactoryInstanceTest extends Specification {
 
     @Scoped('foo')
     class Ext1 extends ChannelExtensionPoint {
@@ -53,7 +53,12 @@ class ChannelFactoryImplTest extends Specification {
         }
 
         DataflowWriteChannel plusOne( DataflowReadChannel ch ) {
-            ch.map { it +1 }
+            def result = new DataflowQueue()
+            result.bind(2)
+            result.bind(3)
+            result.bind(4)
+            result.bind(Channel.STOP)
+            return result
         }
     }
 
@@ -76,10 +81,8 @@ class ChannelFactoryImplTest extends Specification {
 
     def 'should invoke custom plugin factory' () {
         given:
-        OperatorEx.channelFactories.clear()
-        and:
         def ext1 = new Ext1(); def ext2 = new Ext2()
-        ChannelFactoryImpl.allExtensions = [ext1,ext2]
+        new ChannelExtensionDelegate(channelExtensionPoints: [ext1, ext2]).install()
         and:
         def SCRIPT = '''
         Channel.foo.alpha(['one','two','three'])
@@ -99,17 +102,16 @@ class ChannelFactoryImplTest extends Specification {
         and:
         ext2.initCount == 0
         ext2.initSession == null
+
         cleanup:
-        ChannelFactoryImpl.allExtensions=null
+        ChannelExtensionDelegate.reset()
     }
 
 
     def 'should invoke multiple extensions' () {
         given:
-        OperatorEx.channelFactories.clear()
-        and:
         def ext1 = new Ext1(); def ext2 = new Ext2()
-        ChannelFactoryImpl.allExtensions = [ext1,ext2]
+        new ChannelExtensionDelegate(channelExtensionPoints: [ext1, ext2]).install()
         and:
         def SCRIPT = '''
             def ch1 = channel.foo.alpha([1,2,3])
@@ -140,17 +142,15 @@ class ChannelFactoryImplTest extends Specification {
         and:
         ext2.initCount == 1
         ext2.initSession instanceof Session
-        cleanup:
-        ChannelFactoryImpl.allExtensions=null
 
+        cleanup:
+        ChannelExtensionDelegate.reset()
     }
 
     def 'should invoke operator extension' () {
         given:
-        OperatorEx.channelFactories.clear()
-        and:
         def ext1 = new Ext1();
-        ChannelFactoryImpl.allExtensions = [ext1]
+        new ChannelExtensionDelegate(channelExtensionPoints: [ext1]).install()
         and:
         def SCRIPT = '''
             channel
@@ -171,7 +171,7 @@ class ChannelFactoryImplTest extends Specification {
         ext1.initSession instanceof Session
 
         cleanup:
-        ChannelFactoryImpl.allExtensions=null
+        ChannelExtensionDelegate.reset()
     }
 
 }

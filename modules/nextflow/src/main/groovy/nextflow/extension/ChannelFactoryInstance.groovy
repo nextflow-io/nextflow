@@ -5,14 +5,11 @@ import java.lang.reflect.Method
 import groovy.runtime.metaclass.ChannelFactory
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
 import nextflow.dag.NodeMarker
-import nextflow.plugin.Plugins
-import nextflow.plugin.Scoped
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Object holding a set of {@link ChannelExtensionPoint} instances
@@ -26,10 +23,7 @@ import org.codehaus.groovy.runtime.InvokerHelper
 @Slf4j
 @CompileStatic
 @Canonical
-class ChannelFactoryImpl implements ChannelFactory {
-
-    @PackageScope
-    static List<ChannelExtensionPoint> allExtensions
+class ChannelFactoryInstance implements ChannelFactory {
 
     /**
      * The scope of implemented by this channel factory holder. For example
@@ -42,11 +36,10 @@ class ChannelFactoryImpl implements ChannelFactory {
      */
     private ChannelExtensionPoint target
 
-    ChannelFactoryImpl(String scope, ChannelExtensionPoint extensionClass) {
+    ChannelFactoryInstance(String scope, ChannelExtensionPoint extensionClass) {
         this.scope = scope
         this.target = extensionClass
     }
-
 
     /**
      * Implements extension method invocation login
@@ -80,28 +73,7 @@ class ChannelFactoryImpl implements ChannelFactory {
         return result
     }
 
-    /**
-     * Create a {@link ChannelFactoryImpl} object for the given scope
-     *
-     * @param scope
-     * @return The {@link ChannelFactoryImpl} instance holding the extensions matching the specified scope
-     */
-    static ChannelFactoryImpl create(String scope) {
-        final all = findAllExtensions()
-        log.debug "Loading channel factory extensions: $all"
-        for( ChannelExtensionPoint it : all ) {
-            final annot = it.getClass().getAnnotation(Scoped)
-            if( annot && annot.value()==scope )
-                return new ChannelFactoryImpl(scope, it)
-        }
-        return null
-    }
 
-    static protected List<ChannelExtensionPoint> findAllExtensions() {
-        if( allExtensions==null )
-            allExtensions = Plugins.getScopedExtensions(ChannelExtensionPoint).toList()
-        return allExtensions
-    }
 
     /**
      * Customized missing method  extension
