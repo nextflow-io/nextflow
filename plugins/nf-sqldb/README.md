@@ -45,3 +45,30 @@ or even CSV/TSV files.
    ```
 
 
+### MySQL examples 
+
+1. Create `nextflow.config` file with this snippet 
+
+   ```
+   plugins {
+     id 'nf-sqldb'
+   }
+   
+   dataSources {
+       mysql {
+         url = 'jdbc:mysql://localhost:3306/demo'
+         user = 'demo'
+         password = 'demo'
+       }
+   }
+   
+   ```
+  
+2. Insert data into a MySQL table
+
+   ```
+   channel
+     .of('one','two','three')
+     .map { it -> tuple(it, it.size()) }
+     .sqlInsert( 'insert into sample (name, count) values (?, ?)', dataSource: 'mysql')
+   ```
