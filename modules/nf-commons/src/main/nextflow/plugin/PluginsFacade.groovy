@@ -54,6 +54,8 @@ class PluginsFacade implements PluginStateListener {
     PluginsFacade() {
         mode = getPluginsMode()
         root = getPluginsDir()
+        if( mode=='dev' && root.toString()=='plugins' )
+            root = detectDevPluginsRoot()
         System.setProperty('pf4j.mode', mode)
         defaultPlugins = new DefaultPlugins()
     }
@@ -79,6 +81,20 @@ class PluginsFacade implements PluginStateListener {
             log.trace "Using local plugins directory"
             return Paths.get('plugins')
         }
+    }
+
+    protected Path detectDevPluginsRoot() {
+        def file = new File('.').absoluteFile
+        do {
+            if( file.name=='nextflow' && file.isDirectory() && new File(file, 'settings.gradle').isFile() ) {
+                final root = file.toPath().resolve('plugins')
+                log.debug "Detected dev plugins root: $root"
+                return root
+            }
+            file = file.parentFile
+        }
+        while( file!=null )
+        throw new IllegalStateException("Unable to detect local plugins root")
     }
 
     protected String getPluginsMode() {
@@ -186,6 +202,7 @@ class PluginsFacade implements PluginStateListener {
             // this should oly be used to load system extensions
             // i.e. included in the app class path not provided by
             // a plugin extension
+            log.debug "Using Default plugins manager"
             return defaultManager().getExtensions(type)
         }
     }

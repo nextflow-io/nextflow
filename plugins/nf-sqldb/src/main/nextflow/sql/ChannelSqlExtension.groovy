@@ -1,12 +1,11 @@
 package nextflow.sql
 
-import groovy.transform.CompileDynamic
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
-import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import nextflow.NF
 import nextflow.Session
@@ -69,26 +68,24 @@ class ChannelSqlExtension extends ChannelExtensionPoint {
         return dataSource
     }
 
-    @CompileDynamic
     DataflowWriteChannel sqlInsert( DataflowReadChannel source, Map opts=null ) {
         CheckHelper.checkParams('sqlInsert', opts, INSERT_PARAMS)
         final dataSource = dataSourceFromOpts(opts)
         final target = CH.createBy(source)
-        final stopOnFirst = source instanceof DataflowExpression
+        final singleton = target instanceof DataflowExpression
         final insert = new InsertHandler(dataSource, opts)
 
-        DataflowHelper.newOperator(source, target) { it ->
-            // perform sql insert
+        final next = { it ->
             insert.perform(it)
-            // bind to the target
             target.bind(it)
-            // check for termination
-            if( it == Channel.STOP || stopOnFirst ) {
-                ((DataflowProcessor) getDelegate()).terminate()
-                insert.close()
-            }
         }
 
+        final done = {
+            insert.close()
+            if( !singleton ) target.bind(Channel.STOP)
+        }
+
+        DataflowHelper.subscribeImpl(source, [onNext: next, onComplete: done])
         return target
     }
 

@@ -175,4 +175,11 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
         return channelExtensionPoints
     }
 
+    static void reloadExtensionPoints() {
+        if( !instance )
+            return
+        instance.channelExtensionPoints=null
+        instance.operatorExtensions.clear()
+        instance.install()
+    }
 }

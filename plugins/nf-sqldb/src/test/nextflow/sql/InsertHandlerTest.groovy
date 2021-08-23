@@ -125,6 +125,7 @@ class InsertHandlerTest extends Specification {
         result.size() == 3
         and:
         result.id == [1,2,3]
+        result.alpha == ['Hola', 'Ciao', 'Hello']
     }
 
 }
