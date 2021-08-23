@@ -6,13 +6,9 @@ on:
       - '*'
     tags-ignore:
       - '*'  
-    paths:
-      - '!docs/**'
   pull_request:
     branches:
       - '*'
-    paths:
-      - '!docs/**'
 jobs:
   build:
     name: Build Nextflow
