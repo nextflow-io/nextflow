@@ -41,7 +41,8 @@ import org.pf4j.PluginStateListener
 class PluginsFacade implements PluginStateListener {
 
     private Path PLUGINS_LOCAL_ROOT = Paths.get('.nextflow/plr')
-
+    private static final String DEV_MODE = 'dev'
+    private static final String PROD_MODE = 'prod'
     private Map<String,String> env = new HashMap<>(System.getenv())
 
     private String mode
@@ -58,7 +59,7 @@ class PluginsFacade implements PluginStateListener {
         defaultPlugins = new DefaultPlugins()
     }
 
-    PluginsFacade(Path root, String mode='prod') {
+    PluginsFacade(Path root, String mode=PROD_MODE) {
         this.mode = mode
         this.root = root
         System.setProperty('pf4j.mode', mode)
@@ -89,11 +90,11 @@ class PluginsFacade implements PluginStateListener {
         }
         else if( env.containsKey('NXF_HOME') ) {
             log.trace "Detected NXF_HOME - Using plugins mode=prod"
-            return 'prod'
+            return PROD_MODE
         }
         else {
             log.trace "Using dev plugins mode"
-            return 'dev'
+            return DEV_MODE
         }
     }
 
@@ -126,13 +127,13 @@ class PluginsFacade implements PluginStateListener {
     }
 
     protected CustomPluginManager createManager(Path root, List<PluginSpec> specs) {
-        final result = mode!='dev' ? new LocalPluginManager( localRoot(specs) ) : new DevPluginManager(root)
+        final result = mode!=DEV_MODE ? new LocalPluginManager( localRoot(specs) ) : new DevPluginManager(root)
         result.addPluginStateListener(this)
         return result
     }
 
     protected PluginUpdater createUpdater(Path root, CustomPluginManager manager) {
-        return ( mode!='dev'
+        return ( mode!=DEV_MODE
                 ? new PluginUpdater(manager, root, new URL(indexUrl))
                 : new DevPluginUpdater(manager) )
     }
@@ -154,7 +155,7 @@ class PluginsFacade implements PluginStateListener {
         else {
             log.debug "Setting up plugin manager > mode=${mode}; plugins-dir=$root"
             // make sure plugins dir exists
-            if( mode!='dev' && !FilesEx.mkdirs(root) )
+            if( mode!=DEV_MODE && !FilesEx.mkdirs(root) )
                 throw new IOException("Unable to create plugins dir: $root")
             final specs = pluginsRequirement(config)
             init(root, specs)
