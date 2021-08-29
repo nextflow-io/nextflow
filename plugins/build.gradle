@@ -117,6 +117,7 @@ subprojects {
         assets = providers.provider {["$buildDir/libs/${project.name}-${project.version}.zip",
                                       "$buildDir/libs/${project.name}-${project.version}-meta.json" ]}
         release = providers.provider { project.version }
+        unstable = providers.provider { project.version }
         repo = providers.provider { project.name }
         owner = github_organization
         userName = github_username
