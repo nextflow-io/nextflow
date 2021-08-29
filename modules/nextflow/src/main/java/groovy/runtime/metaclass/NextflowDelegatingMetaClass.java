@@ -21,6 +21,7 @@ import java.io.File;
 import java.nio.file.Path;
 
 import groovy.lang.MetaClass;
+import nextflow.Channel;
 import nextflow.file.FileHelper;
 
 /**
@@ -58,8 +59,20 @@ public class NextflowDelegatingMetaClass extends groovy.lang.DelegatingMetaClass
         else if( plugin!=null && plugin.isExtensionMethod(obj,methodName) ) {
             return plugin.invokeExtensionMethod(obj, methodName, args);
         }
+        else if( obj instanceof ChannelFactory ) {
+            return ((ChannelFactory) obj).invokeExtensionMethod(methodName, args);
+        }
 
         return delegate.invokeMethod(obj, methodName, args);
+    }
+
+    @Override
+    public Object getProperty(Object object, String property) {
+        // check if the property name is
+        ChannelFactory ext = Channel.class.equals(object) && plugin!=null
+                ? plugin.getChannelFactory(property)
+                : null;
+        return ext != null ? ext : delegate.getProperty(object, property);
     }
 
 }

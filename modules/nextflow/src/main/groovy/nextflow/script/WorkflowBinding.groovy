@@ -20,10 +20,9 @@ package nextflow.script
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.exception.IllegalInvocationException
 import nextflow.extension.OpCall
-import nextflow.extension.OperatorEx
-
 /**
  * Models the execution context of a workflow component
  *
@@ -96,7 +95,7 @@ class WorkflowBinding extends Binding  {
             }
 
             // check it's an operator name
-            if( OperatorEx.OPERATOR_NAMES.contains(name) )
+            if( NF.hasOperator(name) )
                 return OpCall.create(name, args)
         }
 
@@ -141,7 +140,7 @@ class WorkflowBinding extends Binding  {
                 return component
 
             // check it's an operator name
-            if( OperatorEx.OPERATOR_NAMES.contains(name) )
+            if( NF.hasOperator(name) )
                 return OpCall.create(name)
 
             throw e
