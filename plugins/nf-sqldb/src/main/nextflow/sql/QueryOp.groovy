@@ -1,6 +1,5 @@
 /*
  * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,25 +12,25 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-rootProject.name = 'nextflow-prj'
+package nextflow.sql
 
-include 'nextflow'
-include 'nf-commons'
-include 'nf-httpfs'
+import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.sql.config.SqlDatasource
 
-rootProject.children.each { prj ->
-    prj.projectDir = new File("$rootDir/modules/$prj.name")
+/**
+ * Declares core main interface for SQL query operation
+ * 
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+interface QueryOp {
+
+    QueryOp withStatement(String stm)
+    QueryOp withTarget(DataflowWriteChannel channel)
+    QueryOp withDatasource(SqlDatasource ds)
+
+    void perform()
+    void perform(boolean async)
 }
-
-include 'plugins'
-include 'plugins:nf-amazon'
-include 'plugins:nf-google'
-include 'plugins:nf-ga4gh'
-include 'plugins:nf-tower'
-include 'plugins:nf-console'
-include 'plugins:nf-ignite'
-include 'plugins:nf-azure'
-include 'plugins:nf-sqldb'
-

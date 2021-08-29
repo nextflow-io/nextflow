@@ -27,7 +27,6 @@ import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.exception.DuplicateModuleIncludeException
 import nextflow.exception.MissingModuleComponentException
-import nextflow.extension.OperatorEx
 /**
  * Holds a nextflow script meta-data such as the
  * defines processes and workflows, the included modules
@@ -154,7 +153,7 @@ class ScriptMeta {
 
     ScriptMeta addDefinition(ComponentDef component) {
         final name = component.name
-        if( !module && name in OperatorEx.OPERATOR_NAMES )
+        if( !module && NF.hasOperator(name) )
             log.warn "${component.type.capitalize()} with name '$name' overrides a built-in operator with the same name"
         definitions.put(component.name, component)
         return this

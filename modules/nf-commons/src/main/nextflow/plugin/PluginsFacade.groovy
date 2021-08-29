@@ -55,6 +55,8 @@ class PluginsFacade implements PluginStateListener {
     PluginsFacade() {
         mode = getPluginsMode()
         root = getPluginsDir()
+        if( mode=='dev' && root.toString()=='plugins' )
+            root = detectDevPluginsRoot()
         System.setProperty('pf4j.mode', mode)
         defaultPlugins = new DefaultPlugins()
     }
@@ -80,6 +82,20 @@ class PluginsFacade implements PluginStateListener {
             log.trace "Using local plugins directory"
             return Paths.get('plugins')
         }
+    }
+
+    protected Path detectDevPluginsRoot() {
+        def file = new File('.').absoluteFile
+        do {
+            if( file.name=='nextflow' && file.isDirectory() && new File(file, 'settings.gradle').isFile() ) {
+                final root = file.toPath().resolve('plugins')
+                log.debug "Detected dev plugins root: $root"
+                return root
+            }
+            file = file.parentFile
+        }
+        while( file!=null )
+        throw new IllegalStateException("Unable to detect local plugins root")
     }
 
     protected String getPluginsMode() {
@@ -187,6 +203,7 @@ class PluginsFacade implements PluginStateListener {
             // this should oly be used to load system extensions
             // i.e. included in the app class path not provided by
             // a plugin extension
+            log.debug "Using Default plugins manager"
             return defaultManager().getExtensions(type)
         }
     }
@@ -212,6 +229,36 @@ class PluginsFacade implements PluginStateListener {
     protected int priority0(Object it) {
         final annot = it.getClass().getAnnotation(Priority)
         return annot ? annot.value() : 0
+    }
+
+    protected int priority1(Object it) {
+        final annot = it.getClass().getAnnotation(Scoped)
+        return annot ? annot.priority() : 0
+    }
+
+    /**
+     * Find out all extensions classed with with {@code @Scoped} annotation
+     * return one and exactly with for each different scope value
+     *
+     * @param type
+     * @param scope
+     * @return
+     */
+    def <T> Set<T> getScopedExtensions(Class<T> type,String scope=null) {
+        def result = getExtensions(type).sort(it->priority1(it))
+        def groups = new HashMap<String,T>()
+        for( T it : result ) {
+            final annot = it.getClass().getAnnotation(Scoped)
+            if( annot==null )
+                continue
+            if( !annot.value() )
+                continue
+            if( groups.containsKey(annot.value()) )
+                continue
+            if( scope==null || annot.value()==scope )
+                groups.put(annot.value(), it)
+        }
+        return new HashSet<T>(groups.values())
     }
 
     protected String group0(Object it) {
