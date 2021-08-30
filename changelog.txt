@@ -1,5 +1,17 @@
 NEXTFLOW CHANGE-LOG
 ===================
+21.08.0-edge - 30 Aug 2021
+- Fix plugin updater version logging [d162eb8b4]
+- Fix Nextflow launcher breaks when java path contains blanks #2265 [8097a2a90]
+- Fix docker build [efb2f449b]
+- Fix NPE in AnsiLogObserver #2283 [cffc683df]
+- Fix run script when fixing ownership in aws batch #2262
+- Improve plugins auto start [283144474]
+- Improve log error reporting [401863085]
+- Improve handling of K8s node shutdown [67250c041]
+- Update GitHub docs [4532b8e1e]
+- Merge nf-sqldb 0.1.0
+
 21.07.0-edge - 6 Aug 2021
 - Add support for AWS_MAX_ATTEMPTS variable [3cc543589]
 - Add app plugin to gradle build [007bc1cb4]
