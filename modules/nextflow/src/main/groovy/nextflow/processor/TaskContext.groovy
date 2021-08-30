@@ -311,6 +311,14 @@ class TaskContext implements Map<String,Object>, Cloneable {
         if( path.isAbsolute() )
             return path
 
+        // make from the module dir
+        def module = this.script.getBinding()?.getVariable('moduleDir') as Path
+        if( module ) {
+            def target = module.resolve('templates').resolve(path)
+            if (Files.exists(target))
+                return target
+        }
+
         // otherwise make from the base dir
         def base = Global.session.baseDir
         if( base ) {
@@ -319,13 +327,6 @@ class TaskContext implements Map<String,Object>, Cloneable {
                 return target
         }
 
-        //.. or make from the module dir
-        def module = this.script.getBinding()?.getVariable('moduleDir') as Path
-        if( module ) {
-            def target = module.resolve('templates').resolve(path)
-            if (Files.exists(target))
-                return target
-        }
         // if the base dir is not available just use as it is
         return path
     }
