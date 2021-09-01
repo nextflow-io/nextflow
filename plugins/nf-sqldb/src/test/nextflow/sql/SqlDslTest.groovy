@@ -49,11 +49,11 @@ class SqlDslTest extends BaseSpec {
         sql.execute("insert into FOO (id, alpha, omega) values (2, 'ciao', 20) ")
         sql.execute("insert into FOO (id, alpha, omega) values (3, 'hello', 30) ")
         and:
-        def config = [ dataSources: [test: [url: JDBC_URL]]]
+        def config = [sql: [db: [test: [url: JDBC_URL]]]]
 
         when:
         def SCRIPT = '''
-            channel.sql.fromQuery("select * from FOO", dataSource: "test") 
+            channel.sql.fromQuery("select * from FOO", db: "test") 
             '''
         and:
         def result = new MockScriptRunner(config).setScript(SCRIPT).execute()
@@ -72,13 +72,13 @@ class SqlDslTest extends BaseSpec {
         and:
         sql.execute('create table FOO(id int primary key, alpha varchar(255), omega int);')
         and:
-        def config = [ dataSources: [ds1: [url: JDBC_URL]]]
+        def config = [sql: [db: [ds1: [url: JDBC_URL]]]]
 
         when:
         def SCRIPT = '''
             channel
               .of(100,200,300)
-              .sqlInsert(into:"FOO", columns:'id', dataSource:"ds1")
+              .sqlInsert(into:"FOO", columns:'id', db:"ds1")
             '''
         and:
         def result = new MockScriptRunner(config).setScript(SCRIPT).execute()

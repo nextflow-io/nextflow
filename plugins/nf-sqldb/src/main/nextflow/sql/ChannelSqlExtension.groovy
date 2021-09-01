@@ -14,7 +14,7 @@ import nextflow.extension.ChannelExtensionPoint
 import nextflow.extension.DataflowHelper
 import nextflow.plugin.Scoped
 import nextflow.sql.config.SqlConfig
-import nextflow.sql.config.SqlDatasource
+import nextflow.sql.config.SqlDataSource
 import nextflow.util.CheckHelper
 /**
  * Provide a channel factory extension that allows the execution of Sql queries
@@ -26,16 +26,16 @@ import nextflow.util.CheckHelper
 @Scoped('sql')
 class ChannelSqlExtension extends ChannelExtensionPoint {
 
-    private static final Map QUERY_PARAMS = [dataSource: String]
+    private static final Map QUERY_PARAMS = [db: CharSequence]
 
-    private static final Map INSERT_PARAMS = [dataSource: CharSequence, into: CharSequence, columns: [CharSequence, List], statement: CharSequence]
+    private static final Map INSERT_PARAMS = [db: CharSequence, into: CharSequence, columns: [CharSequence, List], statement: CharSequence]
 
     private Session session
     private SqlConfig config
 
     protected void init(Session session) {
         this.session = session
-        this.config = new SqlConfig((Map) session.config.dataSources)
+        this.config = new SqlConfig((Map) session.config.navigate('sql.db'))
     }
 
     DataflowWriteChannel fromQuery(String query) {
@@ -50,7 +50,7 @@ class ChannelSqlExtension extends ChannelExtensionPoint {
     protected DataflowWriteChannel queryToChannel(String query, Map opts) {
         final channel = CH.create()
         final dataSource = dataSourceFromOpts(opts)
-        final handler = new QueryHandler().withDatasource(dataSource).withStatement(query).withTarget(channel)
+        final handler = new QueryHandler().withDataSource(dataSource).withStatement(query).withTarget(channel)
         if(NF.dsl2) {
             session.addIgniter {-> handler.perform(true) }
         }
@@ -60,8 +60,8 @@ class ChannelSqlExtension extends ChannelExtensionPoint {
         return channel
     }
 
-    protected SqlDatasource dataSourceFromOpts(Map opts) {
-        final dsName = (opts?.dataSource ?: 'default') as String
+    protected SqlDataSource dataSourceFromOpts(Map opts) {
+        final dsName = (opts?.db ?: 'default') as String
         final dataSource = config.getDatasource(dsName)
         if( dataSource==null )
             throw new IllegalArgumentException("Unknown dataSource name: $dsName")

@@ -23,34 +23,36 @@ plugins {
 ```
                                                               
 The above declaration allow the use of the SQL plugin functionalities in your Nextflow pipelines. See the section 
-below to configure a data source connection with a database instance. 
+below to configure the connection properties with a database instance. 
 
 ## Configuration
 
 The target database connection coordinates are specified in the `nextflow.config` file using the
-`dataSource` scope. The following are available
+`sql.db` scope. The following are available
 
 | Config option 	                    | Description 	                |
 |---	                                |---	                        |
-| `dataSources.'<DB-NAME>'.url`         | The database connection URL based on Java [JDBC standard](https://docs.oracle.com/javase/tutorial/jdbc/basics/connecting.html#db_connection_url). 
-| `dataSources.'<DB-NAME>'.driver`      | The database driver class name (optional).
-| `dataSources.'<DB-NAME>'.user`        | The database connection user name.
-| `dataSources.'<DB-NAME>'.password`    | The database connection password.
+| `sql.db.'<DB-NAME>'.url`      | The database connection URL based on Java [JDBC standard](https://docs.oracle.com/javase/tutorial/jdbc/basics/connecting.html#db_connection_url). 
+| `sql.db.'<DB-NAME>'.driver`   | The database driver class name (optional).
+| `sql.db.'<DB-NAME>'.user`     | The database connection user name.
+| `sql.db.'<DB-NAME>'.password` | The database connection password.
 
 For example:
 
 ```
-dataSources {
-    foo {
-      url = 'jdbc:mysql://localhost:3306/demo'
-      user = 'my-user'
-      password = 'my-password'
+sql {
+    db {
+        foo {
+              url = 'jdbc:mysql://localhost:3306/demo'
+              user = 'my-user'
+              password = 'my-password'
+            }
     }
 }
 
 ```
 
-The above snippet defines SQL datasource named *foo* that connects to a MySQL server running locally at port 3306 and
+The above snippet defines SQL DB named *foo* that connects to a MySQL server running locally at port 3306 and
 using `demo` schema, with `my-name` and `my-password` as credentials.
 
 ## Available operations
@@ -63,7 +65,7 @@ The `fromQuery` factory method allows performing a query against a SQL database 
 a tuple for each row in the corresponding result set. For example:
 
 ```
-ch = channel.sql.fromQuery('select alpha, delta, omega from SAMPLE', dataSource: 'foo')
+ch = channel.sql.fromQuery('select alpha, delta, omega from SAMPLE', db: 'foo')
 ```
 
 ### insertInto
@@ -75,7 +77,7 @@ by a Nextflow channels and therefore produced as result by a pipeline process or
 channel
     .of('Hello','world!')
     .map( it -> tuple(it, it.length) )
-    .sqlInsert( into: 'SAMPLE', columns: 'NAME, LEN', dataSource: 'foo' )
+    .sqlInsert( into: 'SAMPLE', columns: 'NAME, LEN', db: 'foo' )
 
 ```
 
@@ -91,12 +93,12 @@ NOTE: the target table (e.g. `SAMPLE` in the above example) must be created ahea
 
 The following options are available:
 
-| Operator option 	    | Description 	                |
-|---	                |---	                        |
-| `into`                | The database table name into with the data needs to be stored.
-| `columns`             | The database table column names to be filled with the channel data. The column names order and cardinality must match the tuple values emitted by the channel. The columns can be specified as a `List` object or a comma-separated value string.
-| `statement`           | The SQL `insert` statement to be performed to insert values in the database using `?` as placeholder for the actual values, for example: `insert into SAMPLE(X,Y) values (?,?)`. When provided the `into` and `columsn` parameters are ignored.
-| `dataSource`          | The database handle. It must must a `dataSource` name defined in the `nextflow.config` file.
+| Operator option 	| Description 	                |
+|---	            |---	                        |
+| `into`            | The database table name into with the data needs to be stored.
+| `columns`         | The database table column names to be filled with the channel data. The column names order and cardinality must match the tuple values emitted by the channel. The columns can be specified as a `List` object or a comma-separated value string.
+| `statement`       | The SQL `insert` statement to be performed to insert values in the database using `?` as placeholder for the actual values, for example: `insert into SAMPLE(X,Y) values (?,?)`. When provided the `into` and `columsn` parameters are ignored.
+| `db`              | The database handle. It must must a `sql.db` name defined in the `nextflow.config` file.
 
 
 ## Query CSV files
