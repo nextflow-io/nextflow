@@ -18,7 +18,9 @@ package nextflow.cloud.azure.batch
 
 import com.microsoft.azure.batch.protocol.models.AutoUserScope
 import com.microsoft.azure.batch.protocol.models.AutoUserSpecification
+import com.microsoft.azure.batch.protocol.models.AzureFileShareConfiguration
 import com.microsoft.azure.batch.protocol.models.ElevationLevel
+import com.microsoft.azure.batch.protocol.models.MountConfiguration
 import com.microsoft.azure.batch.protocol.models.UserIdentity
 
 import java.math.RoundingMode
@@ -599,6 +601,22 @@ class AzBatchService implements Closeable {
             poolParams.withTaskSchedulingPolicy( new TaskSchedulingPolicy().withNodeFillType(pol) )
         }
 
+        // mount point
+        if ( config.storage().fileName ) {
+            if ( config.storage().relativeMountPoint ) {
+                List<MountConfiguration> mountConfigs = new ArrayList(1)
+                def azureFileShareConfiguration = new AzureFileShareConfiguration()
+                        .withAccountKey(config.storage().accountKey)
+                        .withAccountName(config.storage().accountName)
+                        .withAzureFileUrl("https://${config.storage().accountName}.file.core.windows.net/${config.storage().fileName}")
+                        .withMountOptions(config.storage().mountOptions)
+                        .withRelativeMountPath(config.storage().relativeMountPoint)
+                mountConfigs << new MountConfiguration().withAzureFileShareConfiguration(azureFileShareConfiguration)
+                poolParams.withMountConfiguration(mountConfigs)
+            } else {
+                throw new IllegalArgumentException("Can't mount the specified Azure Files. The mount point is missing")
+            }
+        }
         // autoscale
         if( spec.opts.autoScale ) {
             log.debug "Creating autoscale pool with id: ${spec.poolId}; vmCount=${spec.opts.vmCount}; maxVmCount=${spec.opts.maxVmCount}; interval=${spec.opts.scaleInterval}"

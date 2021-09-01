@@ -32,6 +32,9 @@ class AzStorageOpts {
     private Map<String,String> sysEnv
     String accountKey
     String accountName
+    String fileName
+    String relativeMountPoint
+    String mountOptions
     String sasToken
     Duration tokenDuration
 
@@ -40,6 +43,9 @@ class AzStorageOpts {
         this.sysEnv = env==null ? new HashMap<String,String>(System.getenv()) : env
         this.accountKey = config.accountKey ?: sysEnv.get('AZURE_STORAGE_ACCOUNT_KEY')
         this.accountName = config.accountName ?: sysEnv.get('AZURE_STORAGE_ACCOUNT_NAME')
+        this.fileName = config.fileName ?: sysEnv.get('AZURE_STORAGE_FILE_NAME')
+        this.relativeMountPoint = config.relativeMountPoint ?: sysEnv.get('AZURE_STORAGE_MOUNT_POINT')
+        this.mountOptions = config.mountOptions ?: '-o vers=3.0,dir_mode=0777,file_mode=0777,sec=ntlmssp'
         this.sasToken = config.sasToken
         this.tokenDuration = (config.tokenDuration as Duration) ?: Duration.of('12h')
     }
@@ -48,6 +54,8 @@ class AzStorageOpts {
         Map<String, Object> props = new HashMap<>();
         props.put(AzFileSystemProvider.AZURE_STORAGE_ACCOUNT_KEY, accountKey)
         props.put(AzFileSystemProvider.AZURE_STORAGE_ACCOUNT_NAME, accountName)
+        props.put(AzFileSystemProvider.AZURE_STORAGE_FILE_NAME, fileName)
+        props.put(AzFileSystemProvider.AZURE_STORAGE_MOUNT_POINT, relativeMountPoint)
         props.put(AzFileSystemProvider.AZURE_STORAGE_SAS_TOKEN, sasToken)
         return props
     }
