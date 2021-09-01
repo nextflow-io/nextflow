@@ -603,14 +603,14 @@ class AzBatchService implements Closeable {
 
         // mount point
         if ( config.storage().fileName ) {
-            if ( config.storage().relativeMountPoint ) {
+            if ( config.storage().relativeMountPath ) {
                 List<MountConfiguration> mountConfigs = new ArrayList(1)
                 def azureFileShareConfiguration = new AzureFileShareConfiguration()
                         .withAccountKey(config.storage().accountKey)
                         .withAccountName(config.storage().accountName)
                         .withAzureFileUrl("https://${config.storage().accountName}.file.core.windows.net/${config.storage().fileName}")
                         .withMountOptions(config.storage().mountOptions)
-                        .withRelativeMountPath(config.storage().relativeMountPoint)
+                        .withRelativeMountPath(config.storage().relativeMountPath)
                 mountConfigs << new MountConfiguration().withAzureFileShareConfiguration(azureFileShareConfiguration)
                 poolParams.withMountConfiguration(mountConfigs)
             } else {

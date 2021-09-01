@@ -58,7 +58,7 @@ class AzFileSystemProvider extends FileSystemProvider {
     public static final String AZURE_STORAGE_ACCOUNT_KEY = 'AZURE_STORAGE_ACCOUNT_KEY'
     public static final String AZURE_STORAGE_SAS_TOKEN = 'AZURE_STORAGE_SAS_TOKEN'
     public static final String AZURE_STORAGE_FILE_NAME = 'AZURE_STORAGE_FILE_NAME'
-    public static final String AZURE_STORAGE_MOUNT_POINT = 'AZURE_STORAGE_MOUNT_POINT'
+    public static final String AZURE_STORAGE_MOUNT_PATH = 'AZURE_STORAGE_MOUNT_PATH'
 
     public static final String SCHEME = 'az'
 
