@@ -614,7 +614,7 @@ class AzBatchService implements Closeable {
                 mountConfigs << new MountConfiguration().withAzureFileShareConfiguration(azureFileShareConfiguration)
                 poolParams.withMountConfiguration(mountConfigs)
             } else {
-                throw new IllegalArgumentException("Can't mount the specified Azure Files. The mount point is missing")
+                throw new IllegalArgumentException("Can't mount the specified Azure Files. The target mount path is missing")
             }
         }
         // autoscale
