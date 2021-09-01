@@ -12,6 +12,8 @@ provides out-of-the-box support for the following databases:
                     
 NOTE: THIS IS A PREVIEW TECHNOLOGY, FEATURES AND CONFIGURATION SETTINGS CAN CHANGE IN FUTURE RELEASES.
 
+This repository only holds plugin artefacts. Source code is available at this [link](https://github.com/nextflow-io/nextflow/tree/master/plugins/nf-sqldb).
+
 ## Get started 
   
 Make sure to have Nextflow 21.08.0 or later. Add the following snippet to your `nextflow.config` file. 
