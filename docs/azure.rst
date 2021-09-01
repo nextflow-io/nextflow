@@ -48,6 +48,34 @@ the file path with the ``az://`` prefix followed by the container name. For exam
 container a file named ``foo.txt`` you can access it in your Nextflow script using the following fully qualified
 file path ``az://my-data/foo.txt``.
 
+Azure File Shares
+==================
+
+Nextflow has built-in support also for `Azure Files <https://azure.microsoft.com/en-us/services/storage/files/>`_.
+Files available in the serverless Azure File shares can be mounted concurrently on the nodes of a pool executing the pipeline.
+These files become immediately available in the file system and can be referred as local files within the processes. This
+is especially useful when a task needs to access large amount of data (such as genome indexes) during its execution.
+
+The Azure File share must exist in the storage account configured for Blob Storage.
+The `fileName` (the source Azure File share) and `relativeMountPath` (the destination path where the files are mounted) must be provided.
+Additional mount options (see the Azure Files documentation) can be set as well for further customisation of the mounting process.
+
+For example::
+
+    azure {
+      storage {
+        accountName = "<YOUR BLOB ACCOUNT NAME>"
+        accountKey = "<YOUR BLOB ACCOUNT KEY>"
+        fileName = '<YOUR SOURCE FILE SHARE>'
+        relativeMountPath = '<YOUR MOUNT DESTINATION>'
+        mountOptions = '<YOUR OPTIONAL MOUNT SETTINGS>'
+      }
+    }
+
+The mount path is relative to the Batch mounts directory. This location is accessible via the `AZ_BATCH_NODE_MOUNTS_DIR`
+environment variable available on the pool node. For instance, if the mount path is set to `myResources` the mounted files
+can be from the process' script with `$AZ_BATCH_NODE_MOUNTS_DIR\myResources'.
+
 .. _azure-batch:
 
 Azure Batch
@@ -71,11 +99,14 @@ Quotas impact on the number of Pools, CPUs and Jobs you can create at any given 
 3 - Create a Storage account and, within, an Azure Blob Container in the same location where the Batch account was created.
 Take note of the account name and key.
 
-4 - Associate the Blob Storage account with the Azure Batch account.
+4 - If planning to use Azure files, create an Azure File share within the same Storage account and upload there
+the data to mount on the pool nodes.
 
-5 - Make sure your pipeline processes specify one or more Docker containers by using the :ref:`process-container` directive.
+5 - Associate the Storage account with the Azure Batch account.
 
-6 - The container images need to be published into Docker registry such as `Docker Hub <https://hub.docker.com/>`_,
+6 - Make sure your pipeline processes specify one or more Docker containers by using the :ref:`process-container` directive.
+
+7 - The container images need to be published into Docker registry such as `Docker Hub <https://hub.docker.com/>`_,
 `Quay <https://quay.io/>`_ or `Azure Container Registry <https://docs.microsoft.com/en-us/azure/container-registry/>`_
 that can be reached by Azure Batch environment.
 
