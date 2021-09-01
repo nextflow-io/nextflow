@@ -30,6 +30,8 @@ class AzureConfigTest extends Specification {
         given:
         def KEY = 'xyz1343'
         def NAME = 'container-foo'
+        def FILENAME = 'filename-foo'
+        def MOUNTPATH = 'mountpath-foo'
         def STORES = 'this-that'
         def SAS = 'foo'
         and:
@@ -38,6 +40,8 @@ class AzureConfigTest extends Specification {
                                      [storage:[
                                         accountKey: KEY,
                                         accountName: NAME,
+                                        fileName: FILENAME,
+                                        mountPath: MOUNTPATH,
                                         fileStores: STORES,
                                         sasToken: SAS
                                      ] ]]
@@ -48,10 +52,14 @@ class AzureConfigTest extends Specification {
         then:
         cfg.storage().accountKey == KEY
         cfg.storage().accountName == NAME
+        cfg.storage().fileName == FILENAME
+        cfg.storage().relativeMountPath == MOUNTPATH
         cfg.storage().sasToken == SAS
         and:
         cfg.storage().getEnv() == [AZURE_STORAGE_ACCOUNT_KEY: KEY,
                                    AZURE_STORAGE_ACCOUNT_NAME: NAME,
+                                   AZURE_STORAGE_FILE_NAME: FILENAME,
+                                   AZURE_STORAGE_MOUNT_PATH: MOUNTPATH,
                                    AZURE_STORAGE_SAS_TOKEN: SAS ]
 
         and:
