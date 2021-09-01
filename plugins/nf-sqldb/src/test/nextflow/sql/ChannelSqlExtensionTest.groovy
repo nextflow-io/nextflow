@@ -42,12 +42,12 @@ class ChannelSqlExtensionTest extends Specification {
         sql.execute("insert into FOO (id, alpha, omega) values (3, 'hello', 30) ")
         and:
         def session = Mock(Session) {
-            getConfig() >> [ dataSources: [test: [url: JDBC_URL]]]
+            getConfig() >> [sql: [db: [test: [url: JDBC_URL]]]]
         }
         def sqlExtension = new ChannelSqlExtension(); sqlExtension.init(session)
 
         when:
-        def result = sqlExtension.fromQuery('select * from FOO', dataSource: 'test')
+        def result = sqlExtension.fromQuery('select * from FOO', db: 'test')
         then:
         result.val == [1, 'hola', 10]
         result.val == [2, 'ciao', 20]
@@ -55,7 +55,7 @@ class ChannelSqlExtensionTest extends Specification {
         result.val == Channel.STOP
 
         when:
-        result = sqlExtension.fromQuery('select alpha, omega from FOO where id=3', dataSource: 'test')
+        result = sqlExtension.fromQuery('select alpha, omega from FOO where id=3', db: 'test')
         then:
         result.val == ['hello', 30]
         result.val == Channel.STOP
@@ -70,7 +70,7 @@ class ChannelSqlExtensionTest extends Specification {
         sql.execute('create table FOO(id int primary key, alpha varchar(255), omega int);')
         and:
         def session = Mock(Session) {
-            getConfig() >> [ dataSources: [test: [url: JDBC_URL]]]
+            getConfig() >> [sql: [db: [test: [url: JDBC_URL]]]]
         }
         def sqlExtension = new ChannelSqlExtension(); sqlExtension.init(session)
         and:
@@ -81,7 +81,7 @@ class ChannelSqlExtensionTest extends Specification {
         ch.bind( Channel.STOP )
 
         when:
-        def ret = sqlExtension.sqlInsert(ch, [dataSource: 'test', into:'FOO', columns: 'id, alpha'])
+        def ret = sqlExtension.sqlInsert(ch, [db: 'test', into:'FOO', columns: 'id, alpha'])
         then:
         ret.val == [1, 'x1']
         ret.val == [2, 'y2']

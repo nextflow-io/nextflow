@@ -24,7 +24,7 @@ import groovy.sql.Sql
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-import nextflow.sql.config.SqlDatasource
+import nextflow.sql.config.SqlDataSource
 import nextflow.util.TupleHelper
 /**
  * Handle SQL insert operation
@@ -38,13 +38,13 @@ class InsertHandler implements Closeable {
     static final List<String> QM = ['?']
 
     private Map opts
-    private SqlDatasource ds
+    private SqlDataSource ds
     private Connection connection
     private String sqlStatement
     private String into
     private List<String> columns
 
-    InsertHandler(SqlDatasource ds, Map opts) {
+    InsertHandler(SqlDataSource ds, Map opts) {
         this.ds = ds
         this.opts = opts ?: Collections.emptyMap()
         this.into = this.opts.into
