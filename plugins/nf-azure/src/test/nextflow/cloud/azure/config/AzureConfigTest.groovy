@@ -41,7 +41,7 @@ class AzureConfigTest extends Specification {
                                         accountKey: KEY,
                                         accountName: NAME,
                                         fileName: FILENAME,
-                                        mountPath: MOUNTPATH,
+                                        relativeMountPath: MOUNTPATH,
                                         fileStores: STORES,
                                         sasToken: SAS
                                      ] ]]
