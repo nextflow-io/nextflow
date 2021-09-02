@@ -321,4 +321,53 @@ class PluginsFacadeTest extends Specification {
         result == [www]
 
     }
+
+    // -- check scoped exceptions
+
+    @Scoped(priority = 10, value = 'alpha')
+    static class EXT1 implements Bar {}
+
+    @Scoped(priority  = 20, value = 'alpha')
+    static class EXT2 implements Bar {}
+
+    @Scoped(priority  = 30, value = 'beta')
+    static class EXT3 implements Bar {}
+
+    @Scoped(priority  = -1, value = 'beta')
+    static class EXT4 implements Bar {}
+
+    @Scoped('')
+    static class EXT5 implements Bar {}
+
+    def 'should get scoped extensions' () {
+        given:
+        def ext1 = new EXT1()
+        def ext2 = new EXT2()
+        def ext3 = new EXT3()
+        def ext4 = new EXT4()
+        def ext5 = new EXT5()
+        and:
+        def THE_LIST = [ext1, ext2, ext3, ext4, ext5]; THE_LIST.shuffle()
+        and:
+        def facade = Spy( new PluginsFacade() ) {
+            getExtensions(Foo) >> THE_LIST
+        }
+
+        when:
+        def result = facade.getScopedExtensions(Foo)
+        then:
+        // items are returned ordered by priority
+        result == [ ext1, ext4 ] as Set
+
+        when:
+        result = facade.getScopedExtensions(Foo, 'alpha')
+        then:
+        result == [ ext1 ] as Set
+
+        when:
+        result = facade.getScopedExtensions(Foo, 'beta')
+        then:
+        result == [ ext4 ] as Set
+
+    }
 }

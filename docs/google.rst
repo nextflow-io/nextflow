@@ -9,12 +9,13 @@ Requirements
 
 Nextflow
 --------
-The support for Google Cloud requires Nextflow version ``20.01.0``. To install it define the following variables
+The support for Google Cloud requires Nextflow version ``20.01.0`` or later. To install it define the following variables
 in your system environment::
 
     export NXF_VER=20.01.0
     export NXF_MODE=google
 
+.. note:: As of version ``21.04.0`` or later the above variables are not required anymore and therefore should not be used.
 
 Credentials
 -----------

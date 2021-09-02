@@ -380,6 +380,9 @@ class BashWrapperBuilder {
         * process stats
         */
         String launcher
+
+        // NOTE: the isTraceRequired() check must match the logic in launchers (i.e. AwsBatchScriptLauncher)
+        // that determines when to stage the file.
         final traceWrapper = isTraceRequired()
         if( traceWrapper ) {
             // executes the stub which in turn executes the target command

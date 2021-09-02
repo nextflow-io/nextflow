@@ -22,6 +22,10 @@ class MockScriptRunner extends ScriptRunner {
         super(new MockSession())
     }
 
+    MockScriptRunner(Map config) {
+        super(new MockSession(config))
+    }
+
     MockScriptRunner setScript(String str) {
         def script = TestHelper.createInMemTempFile('main.nf', str)
         setScript(script)
@@ -79,6 +83,9 @@ class MockSession extends Session {
         super()
     }
 
+    MockSession(Map config) {
+        super(config)
+    }
 }
 
 class MockExecutorFactory extends ExecutorFactory {

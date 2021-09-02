@@ -17,16 +17,12 @@
 
 package nextflow.extension
 
-
 import static nextflow.extension.DataflowHelper.*
 import static nextflow.splitter.SplitterFactory.*
 import static nextflow.util.CheckHelper.*
 
-import java.lang.reflect.Modifier
 import java.util.concurrent.atomic.AtomicInteger
 
-import groovy.runtime.metaclass.DelegatingPlugin
-import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
@@ -62,51 +58,11 @@ import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
  */
 
 @Slf4j
-class OperatorEx implements DelegatingPlugin {
+class OperatorEx  {
 
     static final public OperatorEx instance = new OperatorEx()
 
     private static Session getSession() { Global.getSession() as Session }
-
-    final public static Set<String> OPERATOR_NAMES
-
-    static {
-        OPERATOR_NAMES = getDeclaredExtensionMethods0()
-        log.trace "Dataflow extension methods: ${OPERATOR_NAMES.sort().join(',')}"
-    }
-
-    @CompileStatic
-    static private Set<String> getDeclaredExtensionMethods0() {
-        def result = new HashSet<String>(30)
-        def methods = OperatorEx.class.getDeclaredMethods()
-        for( def handle : methods ) {
-            if( !Modifier.isPublic(handle.getModifiers()) ) continue
-            if( Modifier.isStatic(handle.getModifiers()) ) continue
-            def params=handle.getParameterTypes()
-            if( params.length>0 && isReadChannel(params[0]) )
-                result.add(handle.name)
-        }
-        return result
-    }
-
-    @CompileStatic
-    static boolean isReadChannel(Class clazz) {
-        DataflowReadChannel.class.isAssignableFrom(clazz)
-    }
-
-    @CompileStatic
-    boolean isExtensionMethod(Object obj, String name) {
-        if( obj instanceof DataflowReadChannel || obj instanceof DataflowBroadcast || obj instanceof ChannelOut ) {
-            return OPERATOR_NAMES.contains(name)
-        }
-        return false
-    }
-
-
-    @CompileStatic
-    Object invokeExtensionMethod(Object channel, String method, Object[] args) {
-        new OpCall(this,channel,method,args).call()
-    }
 
     /**
      * Subscribe *onNext* event

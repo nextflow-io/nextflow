@@ -170,9 +170,9 @@ class GithubClient {
         }
     }
 
-    Map createRelease(String version) {
+    Map createRelease(String version, boolean prerelease=false) {
         final action = "https://api.github.com/repos/${owner}/${repo}/releases"
-        final payload = "{\"tag_name\":\"$version\", \"name\": \"Version $version\", \"draft\":false, \"prerelease\":false}"
+        final payload = "{\"tag_name\":\"$version\", \"name\": \"Version $version\", \"draft\":false, \"prerelease\":$prerelease}"
         Map resp = sendHttpMessage(action, payload, 'POST')
         return resp
     }
