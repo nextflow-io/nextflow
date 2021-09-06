@@ -299,20 +299,20 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
         mins = secs.intdiv(60)
         secs = secs % 60
         if( secs )
-            result.add( secs+'seconds' )
+            result.add( secs+'s' )
 
         hours = mins.intdiv(60)
         mins = mins % 60
         if( mins )
-            result.add(0, mins+'minutes' )
+            result.add(0, mins+'m' )
 
         days = hours.intdiv(24)
         hours = hours % 24
         if( hours )
-            result.add(0, hours+'hours' )
+            result.add(0, hours+'h' )
 
         if( days )
-            result.add(0, days+'days')
+            result.add(0, days+'d')
 
         return result.join(' ')
     }
