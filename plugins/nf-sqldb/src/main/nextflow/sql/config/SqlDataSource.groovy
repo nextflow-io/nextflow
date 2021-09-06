@@ -60,6 +60,7 @@ class SqlDataSource {
         if( !url.startsWith('jdbc:') ) throw new IllegalArgumentException("Invalid database JDBC connection url: $url")
         switch (url.tokenize(':')[1]) {
             case 'h2': return 'org.h2.Driver'
+            case 'sqlite': return 'org.sqlite.JDBC'
             case 'mysql': return 'com.mysql.cj.jdbc.Driver'
             case 'mariadb': return 'org.mariadb.jdbc.Driver'
             case 'postgresql': return 'org.postgresql.Driver'

@@ -64,6 +64,7 @@ class SqlDataSourceTest extends Specification {
         where:
         JBDC_URL                        | DRIVER
         'jdbc:postgresql:database'      | 'org.postgresql.Driver'
+        'jdbc:sqlite:database'          | 'org.sqlite.Driver'
         'jdbc:h2:mem:'                  | 'org.h2.Driver'
         'jdbc:mysql:some-host'          | 'com.mysql.cj.jdbc.Driver'
         'jdbc:mariadb:other-host'       | 'org.mariadb.jdbc.Driver'
