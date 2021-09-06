@@ -93,7 +93,8 @@ class PluginUpdater extends UpdateManager {
             updatePlugin(pluginId, version)
         }
         else {
-            log.debug "Starting plugin ${pluginId} version: ${version ?: 'latest'}"
+            if( !version ) version = current.descriptor.version
+            log.debug "Starting plugin ${pluginId} version: ${version}"
             pluginManager.startPlugin(pluginId)
         }
     }
@@ -156,7 +157,7 @@ class PluginUpdater extends UpdateManager {
         // 2. Download to temporary location
         Path downloaded = downloadPlugin(id, version);
 
-        // 3. unzip the content and delete download filed
+        // 3. unzip the content and delete downloaded file
         Path dir = FileUtils.expandIfZip(downloaded)
         FileHelper.deletePath(downloaded)
 
@@ -212,7 +213,7 @@ class PluginUpdater extends UpdateManager {
             return mutex.lock { download0(id, version) }
         }
         finally {
-            sentinel.deleteDir()
+            sentinel.delete()
         }
     }
 

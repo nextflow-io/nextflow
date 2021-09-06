@@ -23,8 +23,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.cloud.CloudTransferOptions
-import nextflow.executor.BashFunLib
+import nextflow.cloud.google.util.GsBashLib
 import nextflow.executor.SimpleFileCopyStrategy
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
@@ -32,7 +31,7 @@ import nextflow.util.Escape
 /**
  * Defines the file/script copy strategies for Google Pipelines.
  *
- * @author Paolo Di Tommaso
+ * @author  Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Ólafur Haukur Flygenring <olafurh@wuxinextcode.com>
  */
 @Slf4j
@@ -51,47 +50,7 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
     }
 
     String getBeforeStartScript() {
-        def maxConnect = config.maxParallelTransfers ?: CloudTransferOptions.MAX_TRANSFER
-        def attempts = config.maxTransferAttempts ?: CloudTransferOptions.MAX_TRANSFER_ATTEMPTS
-        def delayBetweenAttempts = config.delayBetweenAttempts ?: CloudTransferOptions.DEFAULT_DELAY_BETWEEN_ATTEMPTS
-
-        BashFunLib.body(maxConnect, attempts, delayBetweenAttempts) +
-
-        '''
-        # google storage helper
-        nxf_gs_download() {
-            local source=$1
-            local target=$2
-            local project=$3
-            local basedir=$(dirname $2)
-            local ret
-            local opts="-m -q"
-            local opts
-            if [[ $project ]]; then
-              opts=('-q' '-m' '-u' "$project")
-            else
-              opts=('-q' '-m')
-            fi
-             
-            ## download assuming it's a file download
-            mkdir -p $basedir
-            ret=$(gsutil ${opts[@]} cp "$source" "$target" 2>&1) || {
-                ## if fails check if it was trying to download a directory
-                mkdir $target
-                gsutil ${opts[@]} cp -R "$source/*" "$target" || {
-                  rm -rf $target
-                  >&2 echo "Unable to download path: $source"
-                  exit 1
-                }
-            }
-        }
-
-        nxf_gs_upload() {
-            local name=$1
-            local target=$2
-            gsutil -m -q cp -R "$name" "$target/$name"
-        }
-        '''.stripIndent()
+        GsBashLib.fromConfig(config)
     }
 
     @Override
@@ -118,7 +77,7 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
 
         // stage files
         if( stagingCommands ) {
-            result.append('downloads=()\n')
+            result.append('downloads=(true)\n')
             result.append(stagingCommands.join('\n')).append('\n')
             result.append('nxf_parallel "${downloads[@]}"\n')
         }
@@ -206,4 +165,7 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
         return result.toString()
     }
 
+    static String uploadCmd(String source, Path target) {
+        "nxf_gs_upload '$source' ${Escape.uriPath(target)}"
+    }
 }

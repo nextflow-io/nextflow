@@ -22,15 +22,15 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-api:1.7.10'
     compileOnly 'org.pf4j:pf4j:3.4.1'
 
-    compile ('org.apache.ignite:ignite-core:2.4.0')
-    compile ('org.apache.ignite:ignite-slf4j:2.4.0') { transitive = false }
+    api ('org.apache.ignite:ignite-core:2.4.0')
+    api ('org.apache.ignite:ignite-slf4j:2.4.0') { transitive = false }
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.codehaus.groovy:groovy:3.0.7"
-    testImplementation "org.codehaus.groovy:groovy-nio:3.0.7"
+    testImplementation "org.codehaus.groovy:groovy:3.0.8"
+    testImplementation "org.codehaus.groovy:groovy-nio:3.0.8"
 
     /* testCompile inherited from top gradle build file */
-    testCompile ('org.apache.ignite:ignite-spring:2.4.0') {
+    testImplementation ('org.apache.ignite:ignite-spring:2.4.0') {
         exclude group: 'commons-logging', module: 'commons-logging'
     }
 

@@ -34,8 +34,6 @@ import nextflow.processor.TaskProcessor
 @Slf4j
 abstract class BaseScript extends Script implements ExecutionContext {
 
-    private static Object[] EMPTY_ARGS = [] as Object[]
-
     private Session session
 
     private ProcessFactory processFactory
@@ -147,7 +145,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
     protected IncludeDef include( IncludeDef include ) {
         if(!NF.isDsl2())
             throw new IllegalStateException("Module feature not enabled -- Set `nextflow.enable.dsl=2` to import module files")
-
+        if(ExecutionStack.withinWorkflow())
+            throw new IllegalStateException("Include statement is not allowed within a workflow definition")
         include .setSession(session)
     }
 
@@ -188,7 +187,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
         // invoke the entry workflow
         session.notifyBeforeWorkflowExecution()
-        final ret = entryFlow.invoke_a(EMPTY_ARGS)
+        final ret = entryFlow.invoke_a(BaseScriptConsts.EMPTY_ARGS)
         session.notifyAfterWorkflowExecution()
         return ret
     }

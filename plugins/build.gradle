@@ -31,16 +31,16 @@ List<String> allPlugins() {
     return plugins
 }
 
-String verFromManifest(File file) {
+String metaFromManifest(String meta, File file) {
     def str = file.text
-    def regex = ~/(?m)^Plugin-Version:\s*([\w-\.]+)$/
+    def regex = ~/(?m)^$meta:\s*([\w-\.<>=]+)$/
     def m = regex.matcher(str)
     if( m.find() ) {
         def ver = m.group(1)
         //println "Set plugin '${file.parentFile.parentFile.parentFile.parentFile.name}' version=${ver}"
         return ver
     }
-    throw new GradleException("Cannot find version for plugin: $file")
+    throw new GradleException("Cannot find '$meta' for plugin: $file")
 }
 
 def timestamp = now()
@@ -57,14 +57,14 @@ subprojects {
     }
 
     group = 'io.nextflow'
-    version = verFromManifest(file('src/resources/META-INF/MANIFEST.MF'))
-    
+    version = metaFromManifest('Plugin-Version',file('src/resources/META-INF/MANIFEST.MF'))
+
     /*
      * Creates plugin zip and json meta file in the plugin `build/libs` directory
      */
     task makeZip(type: Jar) {
         into('classes') { with jar }
-        into('lib') { from configurations.compile }
+        into('lib') { from configurations.runtimeClasspath }
         manifest.from file('src/resources/META-INF/MANIFEST.MF')
         archiveExtension = 'zip'
         preserveFileTimestamps = false
@@ -79,6 +79,7 @@ subprojects {
                 "version": "${project.version}",
                 "date": "${timestamp}",
                 "url": "https://github.com/nextflow-io/${project.name}/releases/download/${project.version}/${project.name}-${project.version}.zip",
+                "requires": "${metaFromManifest('Plugin-Requires',file('src/resources/META-INF/MANIFEST.MF'))}",
                 "sha512sum": "${computeSha512(zip)}"
               }
             """.stripIndent()
@@ -89,7 +90,7 @@ subprojects {
      * Copy the plugin dependencies in the subproject `build/target/libs` directory
      */
     task copyPluginLibs(type: Sync) {
-        from configurations.compile
+        from configurations.runtimeClasspath
         into 'build/target/libs'
     }
 
@@ -116,11 +117,11 @@ subprojects {
         assets = providers.provider {["$buildDir/libs/${project.name}-${project.version}.zip",
                                       "$buildDir/libs/${project.name}-${project.version}-meta.json" ]}
         release = providers.provider { project.version }
+        unstable = providers.provider { project.version.endsWith('-SNAPSHOT') }
         repo = providers.provider { project.name }
         owner = github_organization
         userName = github_username
         authToken = github_access_token
-        skipExisting = true
     }
 
     jar {
@@ -136,7 +137,7 @@ subprojects {
      */
     publishing {
         publications {
-            mavenJava(MavenPublication) {
+            maven(MavenPublication) {
                 from components.java
                 suppressPomMetadataWarningsFor('testFixturesApiElements')
                 suppressPomMetadataWarningsFor('testFixturesRuntimeElements')

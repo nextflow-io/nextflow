@@ -32,14 +32,19 @@ class AzConfig {
 
     private AzBatchOpts batchOpts
 
+    private AzRegistryOpts registryOpts
+
     AzConfig(Map azure) {
         this.batchOpts = new AzBatchOpts( (Map)azure.batch ?: Collections.emptyMap() )
         this.storageOpts = new AzStorageOpts( (Map)azure.storage ?: Collections.emptyMap() )
+        this.registryOpts = new AzRegistryOpts( (Map)azure.registry ?: Collections.emptyMap() )
     }
 
     AzBatchOpts batch() { batchOpts }
 
     AzStorageOpts storage() { storageOpts }
+
+    AzRegistryOpts registry() { registryOpts }
 
     static AzConfig getConfig(Session session) {
         if( !session )

@@ -1,6 +1,6 @@
 configurations {
     capsule
-    defaultCfg.extendsFrom runtime
+    defaultCfg.extendsFrom api 
     //provided
     console.extendsFrom defaultCfg
     ignite.extendsFrom defaultCfg
@@ -9,10 +9,11 @@ configurations {
     amazon.extendsFrom defaultCfg
     azure.extendsFrom defaultCfg
     legacy.extendsFrom defaultCfg
+    tower.extendsFrom defaultCfg
 }
 
 dependencies {
-    compile project(':nextflow')
+    api project(':nextflow')
     // include Ivy at runtime in order to have Grape @Grab work correctly
     defaultCfg "org.apache.ivy:ivy:2.3.0"
     // default cfg = runtime + httpfs + amazon + tower client
@@ -25,10 +26,8 @@ dependencies {
     google  project(':plugins:nf-google')
     amazon  project(':plugins:nf-amazon')
     azure   project(':plugins:nf-azure')
-    // ignite module
-    ignite 'io.nextflow:nf-ignite:1.1.0'
-    // legacy cloud support
-    legacy 'io.nextflow:nf-legacy-cloud:1.0.1'
+    ignite  project(':plugins:nf-ignite')
+    tower   project(':plugins:nf-tower')
 }
 
 
@@ -137,7 +136,7 @@ task packAll(type: Jar) {
     archiveName = "nextflow-${version}-all.jar"
 
     from jar // embed our application jar
-    from (configurations.ignite + configurations.amazon + configurations.google)
+    from (configurations.ignite + configurations.amazon + configurations.google + configurations.tower)
     from (configurations.capsule.collect { zipTree(it) })
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     

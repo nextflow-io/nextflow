@@ -89,6 +89,7 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH -J nf-the_task_name
                 #SBATCH -o /work/path/.command.log
                 #SBATCH --no-requeue
+                #SBATCH --signal B:USR2@30
                 '''
                 .stripIndent().leftTrim()
 
@@ -101,6 +102,7 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH -J nf-the_task_name
                 #SBATCH -o /work/path/.command.log
                 #SBATCH --no-requeue
+                #SBATCH --signal B:USR2@30
                 #SBATCH -p delta
                 '''
                 .stripIndent().leftTrim()
@@ -114,6 +116,7 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH -J nf-the_task_name
                 #SBATCH -o /work/path/.command.log
                 #SBATCH --no-requeue
+                #SBATCH --signal B:USR2@30
                 #SBATCH -t 00:01:00
                 '''
                 .stripIndent().leftTrim()
@@ -122,7 +125,7 @@ class SlurmExecutorTest extends Specification {
         task.config = new TaskConfig()
         task.config.time = '1h'
         task.config.memory = '50 M'
-        task.config.clusterOptions = '-a 1'
+        task.config.clusterOptions = '-a 1 --signal=KILL'
 
         then:
         executor.getHeaders(task) == '''
@@ -132,7 +135,7 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH --no-requeue
                 #SBATCH -t 01:00:00
                 #SBATCH --mem 50M
-                #SBATCH -a 1
+                #SBATCH -a 1 --signal=KILL
                 '''
                 .stripIndent().leftTrim()
 
@@ -149,6 +152,7 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH -J nf-the_task_name
                 #SBATCH -o /work/path/.command.log
                 #SBATCH --no-requeue
+                #SBATCH --signal B:USR2@30
                 #SBATCH -c 2
                 #SBATCH -t 02:00:00
                 #SBATCH --mem 200M
@@ -169,6 +173,7 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH -J nf-the_task_name
                 #SBATCH -o /work/path/.command.log
                 #SBATCH --no-requeue
+                #SBATCH --signal B:USR2@30
                 #SBATCH -c 8
                 #SBATCH -t 51:00:00
                 #SBATCH --mem 3072M
@@ -201,6 +206,7 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH -J nf-the_task_name
                 #SBATCH -o "/work/some\\ data/path/.command.log"
                 #SBATCH --no-requeue
+                #SBATCH --signal B:USR2@30
                 '''
                 .stripIndent().leftTrim()
 

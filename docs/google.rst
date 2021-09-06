@@ -9,12 +9,13 @@ Requirements
 
 Nextflow
 --------
-The support for Google Cloud requires Nextflow version ``20.01.0``. To install it define the following variables
+The support for Google Cloud requires Nextflow version ``20.01.0`` or later. To install it define the following variables
 in your system environment::
 
     export NXF_VER=20.01.0
     export NXF_MODE=google
 
+.. note:: As of version ``21.04.0`` or later the above variables are not required anymore and therefore should not be used.
 
 Credentials
 -----------
@@ -130,9 +131,16 @@ google.lifeSciences.debug                      When ``true`` copies the `/google
 google.lifeSciences.preemptible                When ``true`` enables the usage of *preemptible* virtual machines or ``false`` otherwise (default: ``true``)
 google.lifeSciences.usePrivateAddress          When ``true`` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: ``false``). Requires version ``20.03.0-edge`` or later.
 google.lifeSciences.network                    Set network name to attach the VM's network interface to. The value will be prefixed with global/networks/ unless it contains a /, in which case it is assumed to be a fully specified network resource URL. If unspecified, the global default network is used. Requires version ``21.03.0-edge`` or later.
+google.lifeSciences.serviceAccountEmail        Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used. Requires version ``20.05.0-edge`` or later.
 google.lifeSciences.subnetwork                 Define the name of the subnetwork to attach the instance to must be specified here, when the specified network is configured for custom subnet creation. The value is prefixed with `regions/subnetworks/` unless it contains a `/`, in which case it is assumed to be a fully specified subnetwork resource URL. Requires version ``21.03.0-edge`` or later.
 google.lifeSciences.sshDaemon                  When ``true`` runs SSH daemon in the VM carrying out the job to which it's possible to connect for debugging purposes (default: ``false``).
 google.lifeSciences.sshImage                   The container image used to run the SSH daemon (default: ``gcr.io/cloud-genomics-pipelines/tools``).
+google.lifeSciences.keepAliveOnFailure         When ``true`` and a task complete with an unexpected exit status the associated computing node is kept up for 1 hour. This options implies ``sshDaemon=true`` (default: ``false``, requires Nextflow version ``21.06.0-edge`` or later).
+google.storage.delayBetweenAttempts            Delay between download attempts from Google Storage (default `10 sec`, requires version ``21.06.0-edge`` or later).
+google.storage.maxParallelTransfers            Max parallel upload/download transfer operations *per job* (default: ``4``, requires version ``21.06.0-edge`` or later).
+google.storage.maxTransferAttempts             Max number of downloads attempts from Google Storage (default: `1`, requires version ``21.06.0-edge`` or later).
+google.storage.parallelThreadCount             Defines the value for the option ``GSUtil:parallel_thread_count`` used by ``gsutil`` for transfer input and output data (default: ``1``, requires version ``21.06.0-edge`` or later).
+google.storage.downloadMaxComponents           Defines the value for the option ``GSUtil:sliced_object_download_max_components`` used by ``gsutil`` for transfer input and output data (default: ``8``, requires version ``21.06.0-edge`` or later).
 ============================================== =================
 
 

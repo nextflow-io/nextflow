@@ -251,7 +251,7 @@ class ScriptRunner {
 
 
         ArgsList(List<String> values) {
-            super( values ?: [] )
+            super( values ?: new LinkedHashSet<String>() )
         }
 
         String get( int pos ) {

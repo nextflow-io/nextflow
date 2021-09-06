@@ -27,7 +27,7 @@ import nextflow.util.CacheHelper
 import nextflow.util.Duration
 
 /**
- * Model the setting of a VM pool
+ * Model the settings of a VM pool
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -42,6 +42,8 @@ class AzPoolOpts implements CacheFunnel {
     static public final OSType DEFAULT_OS_TYPE = OSType.LINUX
     static public final Duration DEFAULT_SCALE_INTERVAL = Duration.of('5 min')
 
+    String runAs
+    boolean privileged
     String publisher
     String offer
     OSType osType = DEFAULT_OS_TYPE
@@ -55,12 +57,17 @@ class AzPoolOpts implements CacheFunnel {
     Integer maxVmCount
 
     String schedulePolicy // spread | pack
+    String registry
+    String userName
+    String password
 
     AzPoolOpts() {
         this(Collections.emptyMap())
     }
 
     AzPoolOpts(Map opts) {
+        this.runAs = opts.runAs ?: ''
+        this.privileged = opts.privileged ?: false
         this.publisher = opts.publisher ?: DEFAULT_PUBLISHER
         this.offer = opts.offer ?: DEFAULT_OFFER
         this.vmType = opts.vmType ?: DEFAULT_VM_TYPE
@@ -70,13 +77,21 @@ class AzPoolOpts implements CacheFunnel {
         this.schedulePolicy = opts.schedulePolicy
         this.scaleInterval = opts.scaleInterval as Duration ?: DEFAULT_SCALE_INTERVAL
         this.maxVmCount = opts.maxVmCount as Integer ?: vmCount *3
+        this.registry = opts.registry
+        this.userName = opts.userName
+        this.password = opts.password
     }
 
     @Override
     Hasher funnel(Hasher hasher, CacheHelper.HashMode mode) {
+        hasher.putUnencodedChars(runAs)
+        hasher.putBoolean(privileged)
         hasher.putUnencodedChars(publisher)
         hasher.putUnencodedChars(offer)
         hasher.putUnencodedChars(vmType)
+        hasher.putUnencodedChars(registry ?: '')
+        hasher.putUnencodedChars(userName ?: '')
+        hasher.putUnencodedChars(password ?: '')
         hasher.putInt(vmCount)
         hasher.putBoolean(autoScale)
         hasher.putUnencodedChars(scaleFormula ?: '')

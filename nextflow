@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-#  Copyright 2020, Seqera Labs
+#  Copyright 2020-2021, Seqera Labs
 #  Copyright 2013-2019, Centre for Genomic Regulation (CRG)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,7 @@
 #  limitations under the License.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'21.04.0-edge'}
+NXF_VER=${NXF_VER:-'21.08.0-edge'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -98,10 +98,10 @@ function resolve_link() {
       realpath "$1"
     elif command -v readlink &>/dev/null; then
       local target="$1"
-      cd $(dirname $target); target=$(basename $target)
+      cd "$(dirname "$target")"; target="$(basename "$target")"
       while [ -L "$target" ]; do
         target="$(readlink "$target")"
-        cd $(dirname $target); target=$(basename $target)
+        cd "$(dirname "$target")"; target="$(basename "$target")"
       done
       echo "$(cd "$(dirname "$target")"; pwd -P)/$target"
     else
@@ -333,8 +333,8 @@ else
     version_check="^(1.7|1.8)"
     version_message="Java 7 or 8"
   else
-    version_check="^(1.8|9|10|11|12|13|14|15)"
-    version_message="Java 8 or later"
+    version_check="^(1.8|9|10|11|12|13|14|15|16)"
+    version_message="Java 8 or later (up to 16)"
   fi
   if [[ ! $JAVA_VER =~ $version_check ]]; then
       echo_red "ERROR: Cannot find Java or it's a wrong version -- please make sure that $version_message is installed"
@@ -345,8 +345,8 @@ else
       fi
       exit 1
   fi
-  if [[ ! $JAVA_VER =~ ^(1.8|9|10|11|12|13|14|15) ]]; then
-      echo_yellow "NOTE: Nextflow is not tested with Java $JAVA_VER -- It's recommended the use of version 8 up to 15\n"
+  if [[ ! $JAVA_VER =~ ^(1.8|9|10|11|12|13|14|15|16) ]]; then
+      echo_yellow "NOTE: Nextflow is not tested with Java $JAVA_VER -- It's recommended the use of version 8 up to 16\n"
   elif [[ ! $JAVA_VER =~ ^(1.8|9|10|11) && $NXF_MODE == ignite ]]; then
       echo_yellow "WARN: Apache Ignite executor is not tested with Java $JAVA_VER -- It's recommended the use of version 8 up to 11\n"
   fi
@@ -373,7 +373,7 @@ fi
 [[ "$JAVA_HOME" ]] && JAVA_OPTS+=(-Dcapsule.java.home="$JAVA_HOME")
 [[ "$CAPSULE_LOG" ]] && JAVA_OPTS+=(-Dcapsule.log=$CAPSULE_LOG)
 [[ "$CAPSULE_RESET" ]] && JAVA_OPTS+=(-Dcapsule.reset=true)
-[[ "$cmd" != "run" && "$cmd" != "node" ]] && JAVA_OPTS+=(-XX:+TieredCompilation -XX:TieredStopAtLevel=1)
+[[ "$cmd" != "run" && "$cmd" != "node" ]] && JAVA_OPTS+=(-XX:+TieredCompilation -XX:TieredStopAtLevel=1 -Dcom.sun.security.enableAIAcaIssuers=true)
 [[ "$NXF_OPTS" ]] && JAVA_OPTS+=($NXF_OPTS)
 [[ "$NXF_CLASSPATH" ]] && export NXF_CLASSPATH
 [[ "$NXF_GRAB" ]] && export NXF_GRAB
@@ -422,18 +422,21 @@ else
   LAUNCH_FILE="${NXF_LAUNCHER}/classpath-$(env_md5)"
 fi
 if [ -s "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ]; then
-    launcher=($(cat "$LAUNCH_FILE"))
+    declare -a launcher="($(cat "$LAUNCH_FILE"))"
 else
     # otherwise run the capsule and get the result classpath in the 'launcher' and save it to a file
     cli=($("$JAVA_CMD" "${JAVA_OPTS[@]}" -jar "$NXF_BIN"))
     [[ $? -ne 0 ]] && echo_red 'Unable to initialize nextflow environment' && exit 1
 
-    if [[ "$JAVA_VER" =~ ^(9|10|11|12|13|14|15) ]]; then
+    if [[ "$JAVA_VER" =~ ^(9|10|11|12|13|14|15|16) ]]; then
       launcher=("${cli[@]:0:1}")
       launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.nio=ALL-UNNAMED)
+      launcher+=(--add-opens=java.base/java.net=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.util=ALL-UNNAMED)
+      launcher+=(--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED)
+      launcher+=(--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.nio.file.spi=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.nio.ch=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.nio.fs=ALL-UNNAMED)
@@ -442,7 +445,6 @@ else
       launcher+=(--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
-      launcher+=(--illegal-access=deny)
       launcher+=("${cli[@]:1}")
     else
       launcher=("${cli[@]}")

@@ -43,6 +43,13 @@ accessible from all computing nodes.
 .. warning:: The Conda environment feature is not supported by executors which use
   a remote object storage as a work directory eg. AWS Batch.
 
+Use Mamba to resolve packages
+=============================
+
+It is also possible to use `mamba <https://github.com/mamba-org/mamba>`_ for speeding up creation of conda environments. For more information on how to enable this feature please refer :ref:`Conda <config-conda>`.
+
+.. warning:: The use of ``mamba`` to create conda environments is an experimental feature and the functionality may change in future releases.
+
 
 Use Conda package names
 =======================
@@ -155,6 +162,5 @@ The above configuration snippet allows the execution either with Conda or Docker
 Advanced settings
 -----------------
 
-Conda advanced configuration settings are described in the :ref:`Conda <config-conda>` section on the Nextflow
-configuration page.
 
+Conda advanced configuration settings are described in the :ref:`Conda <config-conda>` section on the Nextflow configuration page.

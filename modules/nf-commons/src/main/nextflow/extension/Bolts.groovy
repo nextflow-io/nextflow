@@ -17,7 +17,7 @@
 
 package nextflow.extension
 
-import java.nio.file.NoSuchFileException
+
 import java.nio.file.Path
 import java.text.DateFormat
 import java.text.SimpleDateFormat
@@ -40,7 +40,6 @@ import nextflow.util.RateUnit
 import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import org.codehaus.groovy.runtime.GStringImpl
-import org.codehaus.groovy.runtime.InvokerHelper
 import org.codehaus.groovy.runtime.ResourceGroovyMethods
 import org.codehaus.groovy.runtime.StringGroovyMethods
 import org.slf4j.Logger
@@ -687,13 +686,13 @@ class Bolts {
      */
     static <T extends Closure> T cloneWith( T self, binding ) {
 
-        def copy = (T)self.clone()
+        def copy = (Closure)self.clone()
         if( binding != null ) {
             copy.setDelegate(binding)
             copy.setResolveStrategy( Closure.DELEGATE_FIRST )
         }
 
-        return copy
+        return (T)copy
     }
 
     /**
@@ -711,8 +710,7 @@ class Bolts {
         for( int i=0; i<self.valueCount; i++ ) {
             values[i] = ( self.values[i] instanceof Closure
                     ? cloneWith(self.values[i] as Closure, binding)
-                    : self.values[i]
-            )
+                    : self.values[i] )
         }
 
         new GStringImpl(values, self.strings)
@@ -896,14 +894,6 @@ class Bolts {
         }
     }
 
-    static String getErrMessage(Throwable e) {
-        if( e instanceof NoSuchFileException ) {
-            return "No such file: $e.message"
-        }
-
-        return e.message ?: e.toString()
-    }
-
     static redact(String self, int max=5, String suffix='...') {
         if( !self )
             return self
@@ -924,11 +914,13 @@ class Bolts {
     }
 
     static <T extends Map> T deepClone(T map) {
-        final result = InvokerHelper.invokeMethod(map, 'clone', null)
+        if( map == null)
+            return null
+        final result = map instanceof LinkedHashMap ? new LinkedHashMap<>(map) : new HashMap<>(map)
         for( def key : map.keySet() ) {
             def value = map.get(key)
             if( value instanceof Map ) {
-               map.put(key, deepClone(value))
+                result.put(key, deepClone(value))
             }
         }
         return (T)result

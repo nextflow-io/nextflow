@@ -1,5 +1,110 @@
 NEXTFLOW CHANGE-LOG
 ===================
+21.08.0-edge - 30 Aug 2021
+- Fix plugin updater version logging [d162eb8b4]
+- Fix Nextflow launcher breaks when java path contains blanks #2265 [8097a2a90]
+- Fix docker build [efb2f449b]
+- Fix NPE in AnsiLogObserver #2283 [cffc683df]
+- Fix run script when fixing ownership in aws batch #2262
+- Improve plugins auto start [283144474]
+- Improve log error reporting [401863085]
+- Improve handling of K8s node shutdown [67250c041]
+- Update GitHub docs [4532b8e1e]
+- Merge nf-sqldb 0.1.0
+
+21.07.0-edge - 6 Aug 2021
+- Add support for AWS_MAX_ATTEMPTS variable [3cc543589]
+- Add app plugin to gradle build [007bc1cb4]
+- Add self pid to tower client [d2e54ea22]
+- Add support for head job operationId + log/out files [a7a76cf91]
+- Add enable CA Issuers option to NF launcher [8f51dc787]
+- Fix Clean cmd fails removing foreign files [8bf8ab720]
+- Fix Prevent script var names conflicting with private names #2246 [82bbc180e]
+- Fix ENA download URL #2239 [befbabbc8]
+- Fix Tower client is not activated launching all packaging #2145 [c507518c2]
+- Fix orphaned AWS Batch jobs after pipeline interruption #2169 [65e2a4d05]
+- Fix Process error report on target exception #1896 [1bac3f17b]
+- Fix Unexpected bool conversion on publishDir enable/overwrite attributes #2220 [651835d2d]
+- Fix BatchCleanup toString method [ec9bb5648]
+- Improve error reporting [49ac01dbb]
+- Improve Unknown host error message [ad41d1e98]
+- Improve AWS Batch task handler [eb1aff275]
+- Use AWS cli standard retry mode by default [f2f1fdea4]
+- Report warn on cache hashing failures [7bf93de06] [3b579c954]
+
+21.04.3 [stable] - 21 Jl 2021
+- Fix Tower client is not activated launching all packaging
+
+21.04.2 [stable] - 12 Jul 2021
+- Fix Plugin install lock file is not deleted #2103 [29c3e516c]
+- Fix Default plugin version lookup [d340a221f]
+- Fix BatchCleanup toString method [3c67fa3ae]
+- Implicit variable projectDir breaks caching #2186 [7a4d1f1a2]
+
+21.06.0-edge - 3 Jul 2021
+- Add Keep alive option to Google LS executor [994222074]
+- Add support for FTP proxy and proxy servers authentication [8ec33b04d]
+- Add support for plugins groupping [aa5bc7d34]
+- Add More details about the reason why a AWS Batch job has failed #2146 [27a4e88b2]
+- Add support for extensions priority [ae083f1aa]
+- Add stubRun attribute to workflow metadata #2164 [86cfc66fd]
+- Add Run tasks under user accounts in Azure Batch #2157 [1c9fc4a40]
+- Refactor GLS executor [2c86b79a4] [97fc49c09]
+- Refactor AWS batch job def creation [89ce364c9] [986894287]
+- Fix Default plugin version lookup [e0c8151d9]
+- Fix Negative labels do not work as expected #2155 [491191811]
+- Fix PublishDir overwriting task output files [190aa4eaf]
+- Fix directory deletion strategy [b96fcedc8]
+- Fix Implicit variable projectDir breaks caching #2186 [76417d273]
+- Fix Prevent empty download array [9492cde5d]
+- Fix output unstage with glob pattern [2d4c3dfcf]
+- Fix Connection-reset crashes the workflow [3ee4fd0eb] [1400ded6d] [61bbc240a] [175c66584]
+- Fix Slurm does not send soft kill message #2163 [f0ccfc7e8]
+- Fix storeDir directive does not work with S3 #2141 [2e95a6a76]
+- Fix maven local publish [05cfb7cf7]
+- Fix GLS transfer attempts opts [f7c705db5]
+- Fix build exportClasspath task [88d27f0c8]
+- Fix PbsPro clusterOptions directive priority #2036 [75e3f225e]
+- Disallow include nested within a workflow block [7dbf64bea]
+- Upgrade AWS SDK minor version #2167 [296afaa8f]
+- Improve gsutil transfer throughput [2da120b91]
+- Improve config error reporting [6aa102430]
+
+21.05.0-edge - 28 May 2021
+- Add support for using mamba with conda (#2030) [10c8385b]
+- Add AWS cli native error fail-over [fd7670ef]
+- Add support for Container Registry to Az Batch executor (#2078) [12bf2da6]
+- Add support for Tower workspace  (#2097) [8a4dd3ab]
+- Add support custom service account email in Google Cloud LifeSciences executor (#2044) [a642c9ea]
+- Add support for Java 16 + Gradle 7 [caace1c5] [e2dd4510] [74e466e0] [1245ab1c] [bfc69fb6]
+- Improve tower client error reporting [4efb6bf6]
+- Fix Plugin install lock file is not deleted #2103 [b7fdffac]
+- Fix Use caller runs policy of default thread pool #2021 [48b4e8ee]
+- Fix Error reporting for malformed config [68e5ca18]
+- Decrease max par transfers to 4 [c7ea816a]
+- Prevent fetching aws instance type when missing container id [f5f96049]
+- Use default opts for trace file creation [d8ae94bf]
+- Improve Azure Batch executor error code and messages for failed Tasks (#2099) [1d5fa5d5]
+- Bump groovy 3.0.8 [aa695e12]
+- Bump snakeyaml@1.28 [8d361954]
+
+21.04.1 [stable] - 14 May 2021
+- Fix nested params file parse #2091
+- Fix Malformed config error reporting #2105
+- Fix Use default opts for trace file creation [09e6c6ac]
+
+21.04.0 [stable] - 2 May 2021
+- Fix NPE when AWS Batch job container is not returned [412b6fde]
+- Fix execution hang when native task fail to submit #2060 [1253485d]
+- Update preview message [e1eebdcd]
+- Fix nf-ignite all packaging [72b6a428]
+- Fix GS failing tests [be4f91e9]
+- Fix AWS batch executor fails when using self-contained distribution #2058 [2e344c18]
+- Fix groupTuple sort criteria with closure #2020 [28a579a9]
+- Patch invalid double number cli parsing #2039 [4de4670c] [dcadaaeb]
+- Update sphinx_rtd_theme 0.5.2 [4a165f43]
+- Disable cpus option when running docker with legacy opt [1a7854a5]
+
 21.04.0-edge - 8 Apr 2021
 - Add readOnly flag to k8s volume mounts (#2013) [33bd24ac]
 - Add Start default plugins on-demand #1964 [cf2a9d73]

@@ -7,19 +7,11 @@ Azure Cloud
 Requirements
 ============
 
-The support for Azure Cloud requires Nextflow version ``21.02.0-edge`` or later. If you don't have it installed
+The support for Azure Cloud requires Nextflow version ``21.04.0`` or later. If you don't have it installed
 use the following command to download it in your computer::
 
-    export NXF_EDGE=1
     curl get.nextflow.io | bash
-    ./nextflow -self-update
-
-Also the support for Azure Cloud requires adding the following setting at 
-the beginning of your ``nextflow.config`` file::
-
-  plugins { 
-    id 'nf-azure'
-  }
+    ./nextflow self-update
 
 
 .. _azure-blobstorage:
@@ -27,7 +19,7 @@ the beginning of your ``nextflow.config`` file::
 Azure Blob Storage
 ===================
 
-Nextflow has built-in support for `Azure Blob Storage <https://azure.microsoft.com/en-us/services/storage/blobs/>`_.    
+Nextflow has built-in support for `Azure Blob Storage <https://azure.microsoft.com/en-us/services/storage/blobs/>`_.
 Files stored in a Azure blob container can be accessed transparently in your pipeline script like any other file
 in the local file system.
 
@@ -90,10 +82,6 @@ that can be reached by Azure Batch environment.
 
 A minimal configuration looks like the following snippet::
 
-    plugins {
-      id 'nf-azure'
-    }
-
     process {
       executor = 'azurebatch'
     }
@@ -129,7 +117,7 @@ details about the configuration for the Azure Batch service.
 Pools configuration
 -------------------
 
-When using the ``autoPoolMode`` the setting Nextflow automatically creates a `pool` of computing nodes to execute the
+When using the ``autoPoolMode`` setting Nextflow automatically creates a `pool` of computing nodes to execute the
 jobs run by your pipeline. By default it only uses 1 compute node of ``Standard_D4_v3`` type.
 
 The pool is not removed when the pipeline execution terminates, unless the configuration setting ``deletePoolsOnCompletion=true``
@@ -159,7 +147,7 @@ Named pools
 -------------
 
 If you want to have a more precise control on the computing nodes pools used in your pipeline using a different pool
-depending on the task in your pipeline, you can use the Nextflow :ref:`process-queue` directive to specify the *name* of a
+depending on the task in your pipeline, you can use the Nextflow :ref:`process-queue` directive to specify the *ID* of a
 Azure Batch compute pool that has to be used to run that process' tasks.
 
 The pool is expected to be already available in the Batch environment, unless the setting ``allowPoolCreation=true`` is
@@ -187,9 +175,20 @@ The above example defines the configuration for two node pools. The first will p
 the second 5 nodes of type ``Standard_E2_v3``. See the `Advanced settings`_ below for the complete list of available
 configuration options.
 
+Requirements on pre-existing named pools
+----------------------------------------
+
+When Nextflow is configured to use a pool already available in the Batch account, the target pool must satisfy the following
+requirements:
+
+1 - the pool must be declared as ``dockerCompatible`` (``Container Type`` property)
+
+2 - the task slots per node must match with the number of cores for the selected VM. Nextflow would return an error like
+"Azure Batch pool 'ID' slots per node does not match the VM num cores (slots: N, cores: Y)".
+
 Pool autoscaling
 ----------------
- 
+
 Azure Batch can automatically scale pools based on parameters that you define, saving you time and money. With automatic scaling,
 Batch dynamically adds nodes to a pool as task demands increase, and removes compute nodes as task demands decrease.
 
@@ -234,6 +233,23 @@ to zero nodes automatically.
 If you need a different strategy you can provide your own formula using the ``scaleFormula`` option.
 See the `Azure Batch <https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling>`_ documentation for details.
 
+Private container registry
+--------------------------
+As of version ``21.05.0-edge``, a private container registry from where to pull Docker images can be optionally specified as follows ::
+
+    azure {
+        batch {
+            registry {
+                server =  '<YOUR REGISTRY SERVER>' // e.g.: docker.io, quay.io, <ACCOUNT>.azurecr.io, etc.
+                userName =  '<YOUR REGISTRY USER NAME>'
+                password =  '<YOUR REGISTRY PASSWORD>'
+            }
+        }
+    }
+
+
+The private registry is not exclusive, rather it is an addition to the configuration.
+Public images from other registries are still pulled (if requested by a Task) when a private registry is configured.
 
 Advanced settings
 ==================
@@ -251,16 +267,21 @@ azure.batch.accountName                         The batch service account name.
 azure.batch.accountKey                          The batch service account key.
 azure.batch.endpoint                            The batch service endpoint e.g. ``https://nfbatch1.westeurope.batch.azure.com``.
 azure.batch.location                            The batch service location e.g. ``westeurope``. This is not needed when the endpoint is specified.
-azure.batch.autoPoolMode                        Enable the automatic creation of batch pools depending on the pipeline resources demand (default: ``true``)
-azure.batch.allowPoolCreation                   Enable the automatic creation of batch pools specified in the Nextflow configuration file (default: ``false``)
+azure.batch.autoPoolMode                        Enable the automatic creation of batch pools depending on the pipeline resources demand (default: ``true``).
+azure.batch.allowPoolCreation                   Enable the automatic creation of batch pools specified in the Nextflow configuration file (default: ``false``).
 azure.batch.deleteJobsOnCompletion              Enable the automatic deletion of jobs created by the pipeline execution (default: ``true``).
 azure.batch.deletePoolsOnCompletion             Enable the automatic deletion of compute node pools upon pipeline completion (default: ``false``).
-azure.batch.copyToolInstallMode                 Specify where the `azcopy` tool used by Nextflow. When ``node`` is specified it's copied once during the pool creation. When ``task`` is provider, it's installed for each task execution (default: ``node``)
+azure.batch.copyToolInstallMode                 Specify where the `azcopy` tool used by Nextflow. When ``node`` is specified it's copied once during the pool creation. When ``task`` is provider, it's installed for each task execution (default: ``node``).
 azure.batch.pools.<name>.vmType                 Specify the virtual machine type used by the pool identified with ``<name>``.
 azure.batch.pools.<name>.vmCount                Specify the number of virtual machines provisioned by the pool identified with ``<name>``.
 azure.batch.pools.<name>.maxVmCount             Specify the max of virtual machine when using auto scale option.
 azure.batch.pools.<name>.autoScale              Enable autoscaling feature for the pool identified with ``<name>``.
 azure.batch.pools.<name>.scaleFormula           Specify the scale formula for the pool identified with ``<name>``. See Azure Batch `scaling documentation <https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling>`_ for details.
-azure.batch.pools.<name>.scaleInterval          Specify the interval at which to automatically adjust the Pool size according to the autoscale formula. The minimum and maximum value are 5 minutes and 168 hours respectively (default: `10 mins`)
+azure.batch.pools.<name>.scaleInterval          Specify the interval at which to automatically adjust the Pool size according to the autoscale formula. The minimum and maximum value are 5 minutes and 168 hours respectively (default: `10 mins`).
 azure.batch.pools.<name>.schedulePolicy         Specify the scheduling policy for the pool identified with ``<name>``. It can be either ``spread`` or ``pack`` (default: ``spread``).
+azure.batch.pools.<name>.privileged             Enable the task to run with elevated access. Ignored if `runAs` is set (default: ``false``).
+azure.batch.pools.<name>.runAs                  Specify the username under which the task is run. The user must already exist on each node of the pool.
+azure.batch.registry.server                     Specify the container registry from which to pull the Docker images (default: ``docker.io``, requires ``nf-azure@0.9.8``).
+azure.batch.registry.userName                   Specify the username to connect to a private container registry (requires ``nf-azure@0.9.8``).
+azure.batch.registry.password                   Specify the password to connect to a private container registry (requires ``nf-azure@0.9.8``).
 ============================================== =================

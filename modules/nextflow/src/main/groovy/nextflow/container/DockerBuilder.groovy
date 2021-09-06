@@ -45,7 +45,7 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
     private kill = true
 
-    private boolean legacy
+    private boolean legacy = System.getenv('NXF_DOCKER_LEGACY')=='true'
 
     private String mountFlags0
 
@@ -116,7 +116,7 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
         result << 'run -i '
 
-        if( cpus )
+        if( cpus && !legacy )
             result << "--cpus ${String.format(Locale.ROOT, "%.1f", cpus)} "
 
         if( cpuset ) {

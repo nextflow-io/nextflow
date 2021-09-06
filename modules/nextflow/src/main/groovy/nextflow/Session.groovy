@@ -616,9 +616,12 @@ class Session implements ISession {
                 log.trace "Session > after processors join"
             }
 
+            // invoke shutdown callbacks
             shutdown0()
             log.trace "Session > after cleanup"
-
+            // shutdown executors
+            executorFactory.shutdown()
+            // shutdown executor service
             execService.shutdown()
             execService = null
             log.trace "Session > executor shutdown"
@@ -1121,10 +1124,13 @@ class Session implements ISession {
 
 
     private void getContainerConfig0(String engine, List<Map> drivers) {
-        def config = this.config?.get(engine) as Map
-        if( config ) {
+        def config = this.config?.get(engine)
+        if( config instanceof Map ) {
             config.engine = engine
             drivers << config
+        }
+        else if( config!=null ) {
+            log.warn "Malformed configuration for container engine '$engine' -- One or more attributes should be provided"
         }
     }
 

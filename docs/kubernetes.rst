@@ -117,7 +117,8 @@ with the directory in the volume to be mounted (default: ``/``).
 .. warning:: The running pod must have been created with the same persistent volume claim name and mount as the
     one specified in your Nextflow configuration file.
     Note also that the ``run`` command does not support the ``-v`` option.
-   
+
+.. tip:: It is also possible to mount multiple volumes using the ``pod`` directive, setting such as ``k8s.pod = [ [volumeClaim: "other-pvc", mountPath: "/other" ]]``
 
 Pod settings
 ============
@@ -128,8 +129,12 @@ secrets and config maps when using the :ref:`k8s-executor` executor. See the :re
 Limitation
 ==========
 
-Currently, the ``kuberun`` command does not allow the execution of local Nextflow scripts.
+.. note::
+  The ``kuberun`` command does not allow the execution of local Nextflow scripts and it's has been designed to
+  provide a shortcut to simple pipeline deployment into a Kubernetes cluster.
 
+  For stable pipeline deployment, Nextflow needs to be executed as a pod as mentioned in the `Running in a pod`_ section.
+  In alternative take in consideration a managed provisioning service such as `Nextflow Tower <https://tower.nf>`_.
 
 Advanced configuration
 ======================

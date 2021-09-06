@@ -17,6 +17,7 @@
 
 package nextflow.processor
 
+import java.lang.reflect.InvocationTargetException
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -792,7 +793,7 @@ class TaskRun implements Cloneable {
 
                 // value for 'workDir' and 'baseDir' folders are added always as string
                 // in order to avoid to invalid the cache key when resuming the execution
-                if( varName=='workDir' || varName=='baseDir' )
+                if( varName=='workDir' || varName=='baseDir' || varName=='projectDir' )
                     value = value.toString()
 
                 result.put( varName, value )

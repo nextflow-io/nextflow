@@ -22,12 +22,13 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.azure.AzurePlugin
+import nextflow.cloud.azure.batch.AzFileCopyStrategy
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.file.FileHelper
 import nextflow.file.FileSystemPathFactory
 /**
- * Create Azure path objects for azb:// prefixed URIs
+ * Create Azure path objects for az:// prefixed URIs
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -80,6 +81,16 @@ class AzPathFactory extends FileSystemPathFactory {
     @Override
     protected String toUriString(Path path) {
         return path instanceof AzPath ? ((AzPath)path).toUriString() : null
+    }
+
+    @Override
+    protected String getBashLib(Path path) {
+        return path instanceof AzPath ? AzBashLib.script() : null
+    }
+
+    @Override
+    protected String getUploadCmd(String source, Path target) {
+        return target instanceof AzPath ?  AzFileCopyStrategy.uploadCmd(source, target) : null
     }
 
 }

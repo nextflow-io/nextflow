@@ -36,16 +36,16 @@ dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:1.7.10'
     compileOnly 'org.pf4j:pf4j:3.4.1'
-    compile('com.azure:azure-storage-blob:12.9.0') {
+    api('com.azure:azure-storage-blob:12.9.0') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
-    compile('com.microsoft.azure:azure-batch:9.0.0') {
+    api('com.microsoft.azure:azure-batch:9.0.0') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
         exclude group: 'com.google.guava', module: 'guava'
     }
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.codehaus.groovy:groovy:3.0.7"
-    testImplementation "org.codehaus.groovy:groovy-nio:3.0.7"
+    testImplementation "org.codehaus.groovy:groovy:3.0.8"
+    testImplementation "org.codehaus.groovy:groovy-nio:3.0.8"
 }

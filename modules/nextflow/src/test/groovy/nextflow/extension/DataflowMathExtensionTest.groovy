@@ -28,7 +28,7 @@ import spock.lang.Specification
  */
 class DataflowMathExtensionTest extends Specification {
 
-    def setupSpec() {
+    def setup() {
         new Session()
     }
 

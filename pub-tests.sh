@@ -1,5 +1,7 @@
 #!/bin/bash
 set -x
+set +e
+
 #
 # Make test results available through
 #    https://www.nextflow.io/tests/travis/index.html
@@ -28,3 +30,6 @@ done
 
 # upload integration test results
 aws --region $AWS_DEFAULT_REGION s3 sync --only-show-errors tests/checks $base/integration
+
+# upload validation test results
+aws --region $AWS_DEFAULT_REGION s3 sync --only-show-errors validation $base/validation

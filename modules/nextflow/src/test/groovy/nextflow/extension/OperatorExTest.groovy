@@ -19,7 +19,6 @@ package nextflow.extension
 
 import java.nio.file.Paths
 
-import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
@@ -38,35 +37,7 @@ class OperatorExTest extends Specification {
         new Session()
     }
 
-    def 'should check dataflow read channel' () {
-        expect:
-        OperatorEx.isReadChannel(DataflowVariable.class)
-        OperatorEx.isReadChannel(DataflowQueue.class)
-        !OperatorEx.isReadChannel(DataflowBroadcast.class)
-    }
 
-    def 'should check extension method' () {
-        given:
-        def ext = new OperatorEx()
-        expect:
-        ext.isExtensionMethod(new DataflowVariable(), 'map')
-        ext.isExtensionMethod(new DataflowVariable(), 'flatMap')
-        !ext.isExtensionMethod(new DataflowVariable(), 'foo')
-    }
-
-    def 'should invoke ext method' () {
-        given:
-        def ext = new OperatorEx()
-        def ch = new DataflowQueue(); ch<<1<<2<<3
-
-        when:
-        def result = ext.invokeExtensionMethod(ch, 'map', { it -> it * it })
-        then:
-        result instanceof DataflowReadChannel
-        result.val == 1
-        result.val == 4
-        result.val == 9 
-    }
 
     def testFilter() {
 

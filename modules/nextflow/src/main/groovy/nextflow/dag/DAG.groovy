@@ -203,6 +203,7 @@ class DAG {
         // thus throws an exception
         else {
             final name = getChannelName(entering)
+            log.debug "Before MultipleInputChannelException: entering=$entering; name=$name; vertex=$vertex; edge.to=$edge.to"
             throw new MultipleInputChannelException(name, vertex, edge.to)
         }
     }

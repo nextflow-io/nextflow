@@ -85,4 +85,29 @@ class BatchCleanupTest extends Specification {
 
     }
 
+    def 'should render as string' () {
+
+        given:
+        def batch = new BatchCleanup()
+        def lsf = Stub(LsfExecutor)
+        lsf.getName() >> 'lsf'
+        def sge = Stub(SgeExecutor)
+        sge.getName() >> 'sge'
+
+        and:
+        batch.collect(lsf, 100)
+        batch.collect(lsf, 101)
+        batch.collect(sge, 311)
+
+        when:
+        def str = batch.toString()
+        then:
+        str ==  '''
+                BatchCleanup[
+                executor: sge; jobs to kill: 311
+                executor: lsf; jobs to kill: 100,101
+                ]
+                '''.stripIndent().trim()
+    }
+
 }

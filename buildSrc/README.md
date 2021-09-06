@@ -4,5 +4,4 @@ The plugin is uploaded to the Gradle plugins portal.
 
 To check the status use [this link](https://plugins.gradle.org/u/nextflowio). 
 
-Use the task `./gradlew publishPlugins` to publish the plugin. 
-
+Use the task `../gradlew publishPlugins` in the `buildSrc` directory to publish the plugin.

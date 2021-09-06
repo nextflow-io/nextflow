@@ -6,7 +6,6 @@ import java.nio.file.Paths
 import com.sun.net.httpserver.HttpServer
 import spock.lang.Specification
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -37,20 +36,30 @@ class PluginsFacadeTest extends Specification {
 
     def 'should parse plugins config' () {
         given:
-        def handler = new PluginsFacade()
+        def defaults = new DefaultPlugins(plugins: [
+                'delta': new PluginSpec('delta', '0.1.0'),
+        ])
+
+        def handler = new PluginsFacade(defaultPlugins: defaults)
         and:
-        def cfg = [plugins: [ 'foo@1.2.3', 'bar@3.2.1' ]]
+        def cfg = [plugins: [ 'foo@1.2.3', 'bar@3.2.1', 'delta', 'omega' ]]
 
         when:
         final plugins = handler.parseConf(cfg)
         then:
-        plugins.size() == 2
+        plugins.size() == 4
         and:
         plugins[0].id == 'foo'
         plugins[0].version == '1.2.3'
         and:
         plugins[1].id == 'bar'
         plugins[1].version == '3.2.1'
+        and:
+        plugins[2].id == 'delta'
+        plugins[2].version == '0.1.0'
+        and:
+        plugins[3].id == 'omega'
+        plugins[3].version == null
     }
 
     def 'should return plugin requirements' () {
@@ -247,5 +256,118 @@ class PluginsFacadeTest extends Specification {
         [NXF_PLUGINS_DIR: '/some/dir']      | Paths.get('/some/dir')
         [NXF_HOME: '/my/home']              | Paths.get('/my/home/plugins')
         [:]                                 | Paths.get('plugins')
+    }
+
+
+    // -- check Priority annotation
+
+    @Priority(100)
+    static class Foo { }
+
+    def 'should get priority from object' () {
+        given:
+        def facade = new PluginsFacade()
+        expect:
+        facade.priority0('foo') == 0
+        facade.priority0(new Foo()) == 100
+    }
+
+    // -- check priority ordering
+
+    interface Bar { }
+
+    @Priority(value = 10, group = 'alpha')
+    static class XXX implements Bar {}
+
+    @Priority(value = 20, group = 'alpha')
+    static class YYY implements Bar {}
+
+    @Priority(value = 30, group = 'beta')
+    static class WWW implements Bar {}
+
+    @Priority(40)
+    static class ZZZ implements Bar {}
+
+    def 'should get priority extensions' () {
+        given:
+        def xxx = new XXX()
+        def yyy = new YYY()
+        def zzz = new ZZZ()
+        def www = new WWW()
+        and:
+        def THE_LIST = [yyy, xxx, zzz, www]; THE_LIST.shuffle()
+        and:
+        def facade = Spy( new PluginsFacade() ) {
+            getExtensions(Foo) >> THE_LIST
+        }
+
+        when:
+        def result = facade.getPriorityExtensions(Foo)
+        then:
+        // items are returned ordered by priority
+        result.head() == xxx
+        result.first() == xxx
+        and:
+        result == [xxx,yyy,www,zzz]
+
+        when:
+        result = facade.getPriorityExtensions(Foo, 'alpha')
+        then:
+        result == [xxx,yyy]
+
+        when:
+        result = facade.getPriorityExtensions(Foo, 'beta')
+        then:
+        result == [www]
+
+    }
+
+    // -- check scoped exceptions
+
+    @Scoped(priority = 10, value = 'alpha')
+    static class EXT1 implements Bar {}
+
+    @Scoped(priority  = 20, value = 'alpha')
+    static class EXT2 implements Bar {}
+
+    @Scoped(priority  = 30, value = 'beta')
+    static class EXT3 implements Bar {}
+
+    @Scoped(priority  = -1, value = 'beta')
+    static class EXT4 implements Bar {}
+
+    @Scoped('')
+    static class EXT5 implements Bar {}
+
+    def 'should get scoped extensions' () {
+        given:
+        def ext1 = new EXT1()
+        def ext2 = new EXT2()
+        def ext3 = new EXT3()
+        def ext4 = new EXT4()
+        def ext5 = new EXT5()
+        and:
+        def THE_LIST = [ext1, ext2, ext3, ext4, ext5]; THE_LIST.shuffle()
+        and:
+        def facade = Spy( new PluginsFacade() ) {
+            getExtensions(Foo) >> THE_LIST
+        }
+
+        when:
+        def result = facade.getScopedExtensions(Foo)
+        then:
+        // items are returned ordered by priority
+        result == [ ext1, ext4 ] as Set
+
+        when:
+        result = facade.getScopedExtensions(Foo, 'alpha')
+        then:
+        result == [ ext1 ] as Set
+
+        when:
+        result = facade.getScopedExtensions(Foo, 'beta')
+        then:
+        result == [ ext4 ] as Set
+
     }
 }

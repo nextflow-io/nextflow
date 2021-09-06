@@ -276,8 +276,16 @@ class ProviderConfig {
             else
                 throw new AbortOperationException("Missing SCM config file: ${file.toUriString()} - Check the env variable NXF_SCM_FILE")
         }
+        catch ( UnknownHostException e ) {
+            final message = "Unable to access config file '${file?.toUriString()}' -- Unknown host: ${e}"
+            throw new ConfigParseException(message,e)
+        }
+        catch( IOException e ) {
+            final message = "Unable to access config file '${file?.toUriString()}' -- Cause: ${e.message?:e.toString()}"
+            throw new ConfigParseException(message,e)
+        }
         catch( Exception e ) {
-            def message = "Failed to parse config file: $file -- cause: ${e.message?:e.toString()}"
+            final message = "Failed to parse config file '${file?.toUriString()}' -- Cause: ${e.message?:e.toString()}"
             throw new ConfigParseException(message,e)
         }
     }

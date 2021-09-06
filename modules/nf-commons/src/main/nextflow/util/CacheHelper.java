@@ -245,6 +245,9 @@ public class CacheHelper {
             // see https://github.com/nextflow-io/nextflow/pull/1382
             log.warn("File system is unable to get file attributes file: {} -- Cause: {}", FilesEx.toUriString(path), e.toString());
         }
+        catch(Exception e) {
+            log.warn("Unable to get file attributes file: {} -- Cause: {}", FilesEx.toUriString(path), e.toString());
+        }
 
         if( mode==HashMode.STANDARD && isAssetFile(path) ) {
             return attrs==null || attrs.isDirectory()

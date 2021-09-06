@@ -127,26 +127,6 @@ class FileHelperTest extends Specification {
         uri.scheme == 'file'
 
         when:
-        uri = FileHelper.toPathURI('s3:///cbcrg-eu/raw/**_R1*{fastq,fq,fastq.gz,fq.gz}')
-        then:
-        uri.path == '/cbcrg-eu/raw/**_R1*{fastq,fq,fastq.gz,fq.gz}'
-        uri.scheme == 's3'
-
-        when:
-        uri = FileHelper.toPathURI('s3:///cbcrg-eu//raw/x_r1.fq')
-        then:
-        uri == new URI('s3:///cbcrg-eu//raw/x_r1.fq')
-        uri.path == '/cbcrg-eu//raw/x_r1.fq'
-        uri.scheme == 's3'
-
-        when:
-        uri = FileHelper.toPathURI('s3://cbcrg-eu//raw/x_r1.fq')
-        then:
-        uri == new URI('s3:///cbcrg-eu//raw/x_r1.fq')
-        uri.path == '/cbcrg-eu//raw/x_r1.fq'
-        uri.scheme == 's3'
-
-        when:
         uri = FileHelper.toPathURI('dx://grape:/data/ggal/ggal_test_1.fq')
         then:
         uri == new URI('dx://grape:/data/ggal/ggal_test_1.fq')
@@ -960,6 +940,21 @@ class FileHelperTest extends Specification {
         null        | '3s://bucket/abc'
         null        | 'abc:xyz'
         null        | '/a/bc/'
+    }
+
+    @Unroll
+    def 'should add max error retry' () {
+
+        expect:
+        FileHelper.checkDefaultErrorRetry(SOURCE, ENV) == EXPECTED
+
+        where:
+        SOURCE                          | ENV                   | EXPECTED
+        null                            | null                  | [max_error_retry: '5']
+        [foo: 1]                        | [:]                   | [max_error_retry: '5', foo: 1]
+        [foo: 1]                        | [AWS_MAX_ATTEMPTS:'3']| [max_error_retry: '3', foo: 1]
+        [max_error_retry: '2', foo: 1]  | [:]                   | [max_error_retry: '2', foo: 1]
+        [:]                             | [:]                   | [max_error_retry: '5']
     }
 
 }

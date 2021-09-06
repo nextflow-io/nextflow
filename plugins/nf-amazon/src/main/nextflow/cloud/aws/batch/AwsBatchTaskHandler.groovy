@@ -21,9 +21,11 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import com.amazonaws.services.batch.AWSBatch
+import com.amazonaws.services.batch.model.AWSBatchException
 import com.amazonaws.services.batch.model.ContainerOverrides
 import com.amazonaws.services.batch.model.ContainerProperties
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
+import com.amazonaws.services.batch.model.DescribeJobDefinitionsResult
 import com.amazonaws.services.batch.model.DescribeJobsRequest
 import com.amazonaws.services.batch.model.DescribeJobsResult
 import com.amazonaws.services.batch.model.Host
@@ -34,14 +36,17 @@ import com.amazonaws.services.batch.model.JobTimeout
 import com.amazonaws.services.batch.model.KeyValuePair
 import com.amazonaws.services.batch.model.MountPoint
 import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
+import com.amazonaws.services.batch.model.RegisterJobDefinitionResult
 import com.amazonaws.services.batch.model.ResourceRequirement
 import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
+import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.TerminateJobRequest
 import com.amazonaws.services.batch.model.Volume
 import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.container.ContainerNameValidator
+import nextflow.exception.ProcessSubmitException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
@@ -212,7 +217,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             this.status = TaskStatus.RUNNING
         // fetch the task arn
         if( !taskArn )
-            taskArn = job.getContainer().getTaskArn()
+            taskArn = job?.getContainer()?.getTaskArn()
         return result
     }
 
@@ -229,6 +234,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( done ) {
             // finalize the task
             task.exitStatus = readExitFile()
+            if (job?.status == 'FAILED')
+                task.error = new ProcessUnrecoverableException(job?.getStatusReason())
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
@@ -288,7 +295,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
          */
         // note use the real client object because this method
         // is supposed to be invoked by the thread pool
-        final resp = bypassProxy(client).submitJob(req)
+        final resp = submit0(bypassProxy(client), req)
         this.jobId = resp.jobId
         this.status = TaskStatus.SUBMITTED
         this.queueName = req.getJobQueue()
@@ -355,15 +362,21 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             if( jobDefinitions.containsKey(container) )
                 return jobDefinitions[container]
 
+            def msg
             def req = makeJobDefRequest(container)
             def name = findJobDef(req.jobDefinitionName, req.parameters?.'nf-token')
             if( name ) {
-                log.debug "[AWS BATCH] Found job definition name=$name; container=$container"
+                msg = "[AWS BATCH] Found job definition name=$name; container=$container"
             }
             else {
                 name = createJobDef(req)
-                log.debug "[AWS BATCH] Created job definition name=$name; container=$container"
+                msg = "[AWS BATCH] Created job definition name=$name; container=$container"
             }
+            // log the request
+            if( log.isTraceEnabled() )
+                log.debug "[AWS BATCH] $msg; request=${req.toString().indent()}"
+            else
+                log.debug "[AWS BATCH] $msg"
 
             jobDefinitions[container] = name
             return name
@@ -377,12 +390,38 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @return An instance of {@link com.amazonaws.services.batch.model.RegisterJobDefinitionRequest} for the specified Docker image
      */
     protected RegisterJobDefinitionRequest makeJobDefRequest(String image) {
+        final uniq = new ArrayList()
+        final result = configJobDefRequest(image, uniq)
+
+        // create a job marker uuid
+        def uuid = computeUniqueToken(uniq)
+        result.setParameters(['nf-token':uuid])
+
+        return result
+    }
+
+    protected String computeUniqueToken(List uniq) {
+        return CacheHelper.hasher(uniq).hash().toString()
+    }
+
+    /**
+     * Create and configure the actual RegisterJobDefinitionRequest object
+     *
+     * @param image
+     *      The Docker container image for which is required to create a Batch job definition
+     * @param hashingTokens
+     *      A list used to collect values that should be used to create a unique job definition Id for the given job request.
+     *      It should be used to return such values in the calling context
+     * @return
+     *      An instance of {@link com.amazonaws.services.batch.model.RegisterJobDefinitionRequest} for the specified Docker image
+     */
+    protected RegisterJobDefinitionRequest configJobDefRequest(String image, List hashingTokens) {
         final name = normalizeJobDefinitionName(image)
-        final result = new RegisterJobDefinitionRequest()
         final opts = getAwsOptions()
+
+        final result = new RegisterJobDefinitionRequest()
         result.setJobDefinitionName(name)
         result.setType(JobDefinitionType.Container)
-
 
         // container definition
         final container = new ContainerProperties()
@@ -395,7 +434,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final jobRole = opts.getJobRole()
         if( jobRole )
             container.setJobRoleArn(jobRole)
-        
+
         final mountsMap = new LinkedHashMap( 10)
         final awscli = opts.cliPath
         if( awscli ) {
@@ -415,9 +454,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // finally set the container options
         result.setContainerProperties(container)
 
-        // create a job marker uuid
-        def uuid = CacheHelper.hasher([name, image, awscli, volumes, jobRole]).hash().toString()
-        result.setParameters(['nf-token':uuid])
+        // add to this list all values that has to contribute to the
+        // job definition unique name creation
+        hashingTokens.addAll([name, image, awscli, volumes, jobRole])
 
         return result
     }
@@ -466,7 +505,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // bypass the proxy because this method is invoked during a
         // job submit request that's already in a separate thread pool request
         // therefore it's protected by a TooManyRequestsException
-        final res = bypassProxy(this.client).describeJobDefinitions(req)
+        final res = describeJobDefinitions0(bypassProxy(this.client), req)
         final jobs = res.getJobDefinitions()
         if( jobs.size()==0 )
             return null
@@ -482,12 +521,12 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @return The fully qualified Batch job definition name eg {@code my-job-definition:3}
      */
     protected String createJobDef(RegisterJobDefinitionRequest req) {
-        final res = bypassProxy(client).registerJobDefinition(req) // bypass the client proxy! see #1024
+        final res = createJobDef0(bypassProxy(client), req) // bypass the client proxy! see #1024
         return "${res.jobDefinitionName}:$res.revision"
     }
 
     /**
-     * Make a name string complaint with the Batch job definition format
+     * Make a name string compliant with the Batch job definition format
      *
      * @param name A job name
      * @return A given name formatted to be used as Job definition name
@@ -630,5 +669,50 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         result.machineInfo = getMachineInfo()
         return result
     }
+
+    // -- helpers
+
+    static private SubmitJobResult submit0(AWSBatch client, SubmitJobRequest req) {
+        try {
+            return client.submitJob(req)
+        }
+        catch (AWSBatchException e) {
+            if( e.statusCode>=500 )
+                // raise a process exception so that nextflow can try to recover it
+                throw new ProcessSubmitException("Failed submit job execution: ${req.jobName} - Reason: ${e.errorCode}", e)
+            else
+                // status code < 500 are not expected to be recoverable, just throw it again
+                throw e
+        }
+    }
+
+    static private DescribeJobDefinitionsResult describeJobDefinitions0(AWSBatch client, DescribeJobDefinitionsRequest req) {
+        try {
+            client.describeJobDefinitions(req)
+        }
+        catch (AWSBatchException e) {
+            if( e.statusCode>=500 )
+                // raise a process exception so that nextflow can try to recover it
+                throw new ProcessSubmitException("Failed to describe job definitions: ${req.jobDefinitions} - Reason: ${e.errorCode}", e)
+            else
+                // status code < 500 are not expected to be recoverable, just throw it again
+                throw e
+        }
+    }
+
+    static private RegisterJobDefinitionResult createJobDef0(AWSBatch client, RegisterJobDefinitionRequest req) {
+        try {
+            return client.registerJobDefinition(req)
+        }
+        catch (AWSBatchException e) {
+            if( e.statusCode>=500 )
+                // raise a process exception so that nextflow can try to recover it
+                throw new ProcessSubmitException("Failed to register job defintion: ${req.jobDefinitionName} - Reason: ${e.errorCode}", e)
+            else
+                // status code < 500 are not expected to be recoverable, just throw it again
+                throw e
+        }
+    }
+
 }
 

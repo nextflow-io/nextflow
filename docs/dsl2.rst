@@ -142,7 +142,28 @@ that can be used to reference the channel in the external scope. For example::
         foo()
         foo.out.samples_bam.view()
     }
+    
+Process named stdout
+--------------------
 
+The process can name stdout using the ``emit`` option::
+
+    process sayHello {
+        input:
+            val cheers
+        output:
+            stdout emit: verbiage
+        script:
+        """
+        echo -n $cheers
+        """
+    }
+
+    workflow {
+        things = channel.of('Hello world!', 'Yo, dude!', 'Duck!')
+        sayHello(things)
+        sayHello.out.verbiage.view()
+    }
 
 Workflow
 ========
@@ -398,6 +419,14 @@ The above snippet prints::
 
     Hola Mundo
 
+
+.. note::
+  The module inherits the parameters define *before* the ``include`` statement, therefore any further
+  parameter set later is ignored.
+
+.. tip::
+  Define all pipeline parameters at the beginning of the script *before*
+  any ``include`` declaration.
 
 The option ``addParams`` can be used to extend the module parameters without affecting the external
 scope. For example::

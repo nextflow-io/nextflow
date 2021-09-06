@@ -184,6 +184,11 @@ class WorkflowMetadata {
     boolean resume
 
     /**
+     * Returns ``true`` whenever the current instance is a stub-run execution
+     */
+    boolean stubRun
+
+    /**
      * Which container engine was used to execute the workflow
      */
     String containerEngine
@@ -233,6 +238,7 @@ class WorkflowMetadata {
         this.profile = session.profile ?:  ConfigBuilder.DEFAULT_PROFILE
         this.sessionId = session.uniqueId
         this.resume = session.resumeMode
+        this.stubRun = session.stubRun
         this.runName = session.runName
         this.containerEngine = session.containerConfig.with { isEnabled() ? getEngine() : null }
         this.configFiles = session.configFiles?.collect { it.toAbsolutePath() }

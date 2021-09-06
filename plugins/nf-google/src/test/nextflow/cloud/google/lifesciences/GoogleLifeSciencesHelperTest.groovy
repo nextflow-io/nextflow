@@ -88,7 +88,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
 
         when:
         helper.config = Mock(GoogleLifeSciencesConfig)
-        def action1 = helper.createAction(actionName,imageName,commands,mounts,flags,entryPoint)
+        def action1 = helper.createAction0(actionName,imageName,commands,mounts,flags,entryPoint)
         then:
         with(action1) {
             getContainerName() == actionName
@@ -102,7 +102,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
 
         when:
         helper.config = Mock(GoogleLifeSciencesConfig) { getDebugMode() >> 2 }
-        def action2 = helper.createAction(actionName,imageName,commands,mounts)
+        def action2 = helper.createAction0(actionName,imageName,commands,mounts)
         then:
 
         with(action2) {
@@ -193,6 +193,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
                     cpuPlatform: 'Intel Skylake',
                     network: 'net/123',
                     subnetwork: 'sub/192',
+                    serviceAccountEmail: 'myaccount@developer.gserviceaccount.com',
                     usePrivateAddress: true ))
         then:
         with(resources3) {
@@ -210,6 +211,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
             getVirtualMachine().getNetwork().getUsePrivateAddress()
             getVirtualMachine().getNetwork().getNetwork() == 'net/123'
             getVirtualMachine().getNetwork().getSubnetwork() == 'sub/192'
+            getVirtualMachine().getServiceAccount().getEmail() == 'myaccount@developer.gserviceaccount.com'
         }
     }
 
@@ -280,8 +282,9 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
 
         then:
         1 * helper.getMainScript(workDir) >> 'main.sh'
+        1 * helper.createMounts(req) >> [mount]
         and:
-        1 * helper.createAction(
+        1 * helper.createAction0(
                 'foo-main',
                 'my/image',
                 ['-o','pipefail','-c', 'main.sh'],
@@ -318,8 +321,9 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
 
         then:
         1 * helper.getMainScript(workDir) >> 'main.sh'
+        1 * helper.createMounts(req) >> [mount]
         and:
-        1 * helper.createAction(
+        1 * helper.createAction0(
                 'foo-main',
                 'my/image',
                 ['bash','-o','pipefail','-c', 'main.sh'],
@@ -355,8 +359,9 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
         def action = helper.createStagingAction(req)
         then:
         1 * helper.getStagingScript(workDir) >> 'stage.sh'
+        1 * helper.createMounts(req) >> [mount]
         and:
-        1 * helper.createAction(
+        1 * helper.createAction0(
                 'bar-stage',
                 'alpine',
                 ['bash', '-c', 'stage.sh'],
@@ -391,8 +396,9 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
 
         then:
         1 * helper.getUnstagingScript(workDir) >> 'unstage.sh'
+        1 * helper.createMounts(req) >> [mount]
         and:
-        1 * helper.createAction(
+        1 * helper.createAction0(
                 'bar-unstage',
                 'alpine',
                 ['bash', '-c', 'unstage.sh'],
@@ -408,6 +414,54 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
         action.getEnvironment() == [:]
         action.getAlwaysRun()
         action.getIgnoreExitStatus()
+    }
+
+    def 'should create pipeline actions' () {
+        given:
+        def helper = Spy(GoogleLifeSciencesHelper)
+        helper.config = Mock(GoogleLifeSciencesConfig)
+        and:
+        def req = Mock(GoogleLifeSciencesSubmitRequest)
+
+        when:
+        def result = helper.createActions(req)
+        then:
+        1 * helper.createStagingAction(req) >> new Action().setContainerName('staging')
+        1 * helper.createMainAction(req) >> new Action().setContainerName('main')
+        1 * helper.createUnstagingAction(req) >> new Action().setContainerName('unstaging')
+
+        and:
+        result.size() == 3
+        result[0].getContainerName() == 'staging'
+        result[1].getContainerName() == 'main'
+        result[2].getContainerName() == 'unstaging'
+    }
+
+    def 'should create pipeline actions with keepalive' () {
+        given:
+        def helper = Spy(GoogleLifeSciencesHelper)
+        helper.config = Mock(GoogleLifeSciencesConfig) {
+            getKeepAliveOnFailure() >> true
+        }
+        and:
+        def req = Mock(GoogleLifeSciencesSubmitRequest)
+
+        when:
+        def result = helper.createActions(req)
+        then:
+        1 * helper.createSshDaemonAction(req) >> new Action().setContainerName('ssh-daemon')
+        1 * helper.createStagingAction(req) >> new Action().setContainerName('staging')
+        1 * helper.createMainAction(req) >> new Action().setContainerName('main')
+        1 * helper.createUnstagingAction(req) >> new Action().setContainerName('unstaging')
+        1 * helper.createKeepAlive(req) >> new Action().setContainerName('keep-alive')
+
+        and:
+        result.size() == 5
+        result[0].getContainerName() == 'ssh-daemon'
+        result[1].getContainerName() == 'staging'
+        result[2].getContainerName() == 'main'
+        result[3].getContainerName() == 'unstaging'
+        result[4].getContainerName() == 'keep-alive'
     }
 
     def 'should submit pipeline request' () {

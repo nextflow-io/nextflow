@@ -9,7 +9,7 @@ import nextflow.util.Duration
  */
 interface CloudTransferOptions {
 
-    static final public int MAX_TRANSFER = 16
+    static final public int MAX_TRANSFER = 4
 
     static final public int MAX_TRANSFER_ATTEMPTS = 1
 

@@ -17,6 +17,7 @@
 
 package nextflow.executor
 
+import java.nio.file.FileSystemException
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -30,11 +31,11 @@ import nextflow.container.PodmanBuilder
 import nextflow.container.ShifterBuilder
 import nextflow.container.SingularityBuilder
 import nextflow.container.UdockerBuilder
+import nextflow.exception.ProcessException
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Escape
-
 /**
  * Builder to create the BASH script which is used to
  * wrap and launch the user task
@@ -307,11 +308,22 @@ class BashWrapperBuilder {
             log.warn1("Task runtime metrics are not reported when using macOS without a container engine")
 
         final wrapper = buildNew0()
-        Files.write(wrapperFile, wrapper.getBytes())
-        Files.write(scriptFile, script.getBytes())
+        write0(wrapperFile, wrapper)
+        write0(scriptFile, script)
         if( input != null )
-            Files.write(inputFile, input.toString().getBytes())
+            write0(inputFile, input.toString())
         return wrapperFile
+    }
+
+    private void write0(Path path, String data) {
+        try {
+            Files.write(path, data.getBytes())
+        }
+        catch (FileSystemException e) {
+            // throw a ProcessStageException so that the error can be recovered
+            // via nextflow re-try mechanism
+            new ProcessException("Unable to create file ${path.toUriString()}", e)
+        }
     }
 
     private String getHelpersScript() {
@@ -368,6 +380,9 @@ class BashWrapperBuilder {
         * process stats
         */
         String launcher
+
+        // NOTE: the isTraceRequired() check must match the logic in launchers (i.e. AwsBatchScriptLauncher)
+        // that determines when to stage the file.
         final traceWrapper = isTraceRequired()
         if( traceWrapper ) {
             // executes the stub which in turn executes the target command

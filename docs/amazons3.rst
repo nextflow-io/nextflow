@@ -40,7 +40,7 @@ Amazon access credentials can be provided in two ways:
 AWS access and secret keys
 ===========================
 
-The AWS access and secret keys can be specified by using the ``aws`` section in the ``nextflow.config`` configuration.
+The AWS access and secret keys can be specified by using the ``aws`` section in the ``nextflow.config`` configuration
 file as shown below::
 
   aws {
