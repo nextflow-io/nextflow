@@ -2332,16 +2332,23 @@ The ``time`` directive allows you to define how long a process is allowed to run
 
 
 
-The following time unit suffix can be used when specifying the duration value:
+The following time unit suffixes can be used when specifying the duration value:
 
-======= =============
-Unit    Description
-======= =============
-s       Seconds
-m       Minutes
-h       Hours
-d       Days
-======= =============
++---------------------------------+--------------+
+| Unit                            | Description  |
++=================================+==============+
+| `ms`, `milli`, `millis`         | Milliseconds |
++---------------------------------+--------------+
+| `s`, `sec`, `second`, `seconds` | Seconds      |
++---------------------------------+--------------+
+| `m`, `min`, `minute`, `minutes` | Minutes      |
++---------------------------------+--------------+
+| `h`, `hour`, `hours`            | Hours        |
++---------------------------------+--------------+
+| `d`, `day`, `days`              | Days         |
++---------------------------------+--------------+
+
+Multiple units can be used in a single declaration, for example: ``'1day 6hours 3minutes 30seconds'``
 
 .. note:: This directive is taken in account only when using one of the following grid based executors:
   :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor`,
