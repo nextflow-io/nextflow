@@ -56,6 +56,8 @@ class PluginUpdater extends UpdateManager {
 
     private boolean pullOnly
 
+    private DefaultPlugins defaultPlugins = new DefaultPlugins()
+
     protected PluginUpdater(CustomPluginManager pluginManager) {
         super(pluginManager)
         this.pluginManager = pluginManager
@@ -256,7 +258,11 @@ class PluginUpdater extends UpdateManager {
             }
 
             // 2. find latest satisfying req
-            final depVersion = findFirstMatchingRelease(it.pluginId, it.pluginVersionSupport)?.version
+            // -- if it's a core nextflow plugin use the version expected by it
+            def depVersion = defaultPlugins.getPlugin(it.pluginId)?.version
+            // -- otherwise try to find the newest matching release
+            if( !depVersion )
+                depVersion = findFirstMatchingRelease(it.pluginId, it.pluginVersionSupport)?.version
             log.debug "Plugin $id requires $it.pluginId supported version: $it.pluginVersionSupport - available version: $depVersion"
             if( pullOnly )
                 pullPlugin0(it.pluginId, depVersion)
