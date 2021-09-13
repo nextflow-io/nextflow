@@ -256,11 +256,12 @@ class PluginUpdaterTest extends Specification {
     def 'should find matching plugin' () {
         given:
         def r1 = new PluginInfo.PluginRelease(version: '1.4.0', url: 'http://xyz')
-        def r2 = new PluginInfo.PluginRelease(version: '1.5.0', url: 'http://xyz')
-        def r3 = new PluginInfo.PluginRelease(version: '1.5.1', url: 'http://xyz', requires: Const.APP_VER)
-        def r4 = new PluginInfo.PluginRelease(version: '2.0.1', url: 'http://xyz', requires: Const.APP_VER)
+        def r2 = new PluginInfo.PluginRelease(version: '1.5.0', url: 'http://xyz', requires: ">=${Const.APP_VER}")
+        def r3 = new PluginInfo.PluginRelease(version: '1.5.1', url: 'http://xyz', requires: ">=${Const.APP_VER}")
+        def r4 = new PluginInfo.PluginRelease(version: '2.0.1', url: 'http://xyz', requires: ">=${Const.APP_VER}")
+        def r5 = new PluginInfo.PluginRelease(version: '3.0.0', url: 'http://xyz', requires: '99.01.0')
         def PLUGINS = [
-                'nf-foo': new PluginInfo(id:'nf-foo', releases: [r1, r2, r3, r4]),
+                'nf-foo': new PluginInfo(id:'nf-foo', releases: [r1, r2, r3, r4, r5]),
                 'nf-bar': new PluginInfo(id:'nf-bar', releases: [])
         ]
         def manager = Mock(CustomPluginManager)
@@ -268,7 +269,7 @@ class PluginUpdaterTest extends Specification {
 
 
         when:
-        def ret = updater.findFirstMatchingRelease('nf-foo', '1.5.0')
+        def ret = updater.findNewestMatchingRelease('nf-foo', '1.5.0')
         then:
         manager.getVersionManager() >> new CustomVersionManager()
         updater.getPluginsMap() >> PLUGINS
@@ -276,16 +277,15 @@ class PluginUpdaterTest extends Specification {
         ret == r2
 
         when:
-        ret = updater.findFirstMatchingRelease('nf-foo', '1.5.*')
+        ret = updater.findNewestMatchingRelease('nf-foo', '1.5.*')
         then:
         manager.getVersionManager() >> new CustomVersionManager()
         updater.getPluginsMap() >> PLUGINS
         and:
-        ret == r2
-
+        ret == r3
 
         when:
-        ret = updater.findFirstMatchingRelease('nf-foo', '>=2.0')
+        ret = updater.findNewestMatchingRelease('nf-foo', '>=2.0')
         then:
         manager.getVersionManager() >> new CustomVersionManager()
         updater.getPluginsMap() >> PLUGINS
