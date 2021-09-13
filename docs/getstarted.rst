@@ -40,6 +40,11 @@ It only needs two easy steps:
 
 .. tip:: Set ``export CAPSULE_LOG=none`` to make the dependency installation logs less verbose.
 
+.. tip::
+    If you don't have ``curl`` nor ``wget``, you can also download the Nextflow launcher script from the
+    `project releases page <https://github.com/nextflow-io/nextflow/releases/latest>`_ on GitHub . Once downloaded
+    continue the installation from the point 2 in the above guide.
+
 .. note::
     To avoid downloading the dependencies, you could also use the ``nextflow-VERSION-all`` distribution available from Github for every `Nextflow` release version.
    #. Go to the `Github releases page <https://github.com/nextflow-io/nextflow/releases>`__ and unfold the `Assets` section for a release.
