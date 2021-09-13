@@ -2420,6 +2420,15 @@ All directives can be assigned to a dynamic value except the following:
 * `maxForks`_
 
 
+.. tip::
+  Directives taking a string value containing one or more variables are always resolved in a dynamic manner, and therefore
+  it's semantically equivalent to the above above syntax. Therefore the above directive can also be written as::
+
+    queue "${ entries > 100 ? 'long' : 'short' }"
+
+  Note however the latter syntax can be used both for directive main argument (like in the ``queue`` example) and for directive
+  optional named attributes. Instead the closure based syntax is only resolved dynamically for the directive main argument.
+
 .. note:: You can retrieve the current value of a dynamic directive in the process script by using the implicit variable ``task``
   which holds the directive values defined in the current process instance.
 
