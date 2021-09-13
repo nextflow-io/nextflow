@@ -27,8 +27,8 @@ sourceSets {
 
 dependencies {
     api "ch.qos.logback:logback-classic:1.1.11"
-    api "org.codehaus.groovy:groovy:3.0.8"
-    api "org.codehaus.groovy:groovy-nio:3.0.8"
+    api "org.codehaus.groovy:groovy:3.0.9"
+    api "org.codehaus.groovy:groovy-nio:3.0.9"
     api "commons-lang:commons-lang:2.6"
     api 'com.google.guava:guava:24.1.1-jre'
     api 'org.pf4j:pf4j:3.4.1'

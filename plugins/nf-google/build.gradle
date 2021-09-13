@@ -42,8 +42,8 @@ dependencies {
     api 'com.google.auth:google-auth-library-oauth2-http:0.18.0'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.codehaus.groovy:groovy:3.0.8"
-    testImplementation "org.codehaus.groovy:groovy-nio:3.0.8"
+    testImplementation "org.codehaus.groovy:groovy:3.0.9"
+    testImplementation "org.codehaus.groovy:groovy-nio:3.0.9"
 }
 
 test {
