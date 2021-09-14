@@ -33,6 +33,8 @@ import java.security.cert.X509Certificate
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.exception.NodeTerminationException
+import nextflow.exception.ProcessFailedException
 import org.yaml.snakeyaml.Yaml
 /**
  * Kubernetes API client
@@ -258,6 +260,16 @@ class K8sClient {
             }
             // undetermined status -- return an empty response
             return Collections.emptyMap()
+        }
+
+        if( status?.phase == 'Failed' ) {
+            def msg = "K8s pod '$podName' execution failed"
+            if( status.reason ) msg += " - reason: ${status.reason}"
+            if( status.message ) msg += " - message: ${status.message}"
+            final err = status.reason == 'Shutdown'
+                    ? new NodeTerminationException(msg)
+                    : new ProcessFailedException(msg)
+            throw err
         }
 
         throw new K8sResponseException("K8s undetermined status conditions for pod $podName", resp)

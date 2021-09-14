@@ -59,6 +59,7 @@ import nextflow.dag.NodeMarker
 import nextflow.exception.FailedGuardException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
+import nextflow.exception.NodeTerminationException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessUnrecoverableException
@@ -969,12 +970,23 @@ class TaskProcessor {
             if( error instanceof Error ) throw error
 
             // -- retry without increasing the error counts
-            if( task && error.cause instanceof CloudSpotTerminationException ) {
-                log.info "[$task.hashLog] NOTE: ${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
+            if( task && (error instanceof NodeTerminationException || error.cause instanceof CloudSpotTerminationException) ) {
+                if( error instanceof NodeTerminationException )
+                    log.info "[$task.hashLog] NOTE: ${error.message} -- Execution is retried"
+                else
+                    log.info "[$task.hashLog] NOTE: ${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
                 task.failCount+=1
                 final taskCopy = task.makeCopy()
-                taskCopy.runType = RunType.RETRY
-                session.getExecService().submit { checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false ) }
+                session.getExecService().submit {
+                    try {
+                        taskCopy.runType = RunType.RETRY
+                        checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
+                    }
+                    catch( Throwable e ) {
+                        log.error("Unable to re-submit task `${taskCopy.name}`", e)
+                        session.abort(e)
+                    }
+                }
                 task.failed = true
                 task.errorAction = RETRY
                 return RETRY

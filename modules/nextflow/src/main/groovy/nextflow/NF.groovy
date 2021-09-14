@@ -19,10 +19,9 @@ package nextflow
 
 import groovy.runtime.metaclass.NextflowDelegatingMetaClass
 import nextflow.extension.CH
-import nextflow.extension.OperatorEx
+import nextflow.extension.ChannelExtensionDelegate
 import nextflow.script.ExecutionStack
 import nextflow.script.WorkflowBinding
-
 /**
  * Helper class to shortcut common api 
  *
@@ -35,9 +34,13 @@ class NF {
     }
 
     static void init() {
-        NextflowDelegatingMetaClass.plugin = OperatorEx.instance
+        NextflowDelegatingMetaClass.plugin = ChannelExtensionDelegate.INSTANCE()
         CH.init()
         WorkflowBinding.init()
+    }
+
+    static boolean hasOperator(String name) {
+        NextflowDelegatingMetaClass.plugin.operatorNames().contains(name)
     }
 
     static boolean isDsl1() {

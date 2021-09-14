@@ -48,6 +48,8 @@ class GithubUploader extends DefaultTask {
 
     @Input final Property<String> release = project.objects.property(String)
 
+    @Input final Property<Boolean> unstable = project.objects.property(Boolean)
+
     @Input String owner
 
     @Input boolean overwrite = false
@@ -119,7 +121,7 @@ class GithubUploader extends DefaultTask {
         }
         else {
             logger.quiet("Uploading ${sourceFile} → github.com://$owner/${repo.get()}")
-            final rel = client.getRelease(release.get()) ?: client.createRelease(release.get())
+            final rel = client.getRelease(release.get()) ?: client.createRelease(release.get(), unstable.get())
             final releaseId = (rel.id as Long).toString()
             client.uploadReleaseAsset(releaseId, sourceFile, mime(sourceFile.name))
         }

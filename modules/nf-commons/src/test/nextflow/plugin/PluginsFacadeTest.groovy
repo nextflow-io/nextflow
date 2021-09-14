@@ -195,6 +195,49 @@ class PluginsFacadeTest extends Specification {
 
     }
 
+    def 'should return default plugins given bucket dir' () {
+        given:
+        def defaults = new DefaultPlugins(plugins: [
+                'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
+                'nf-google': new PluginSpec('nf-google', '0.1.0'),
+                'nf-azure': new PluginSpec('nf-azure', '0.1.0'),
+                'nf-ignite': new PluginSpec('nf-ignite', '0.1.0'),
+                'nf-tower': new PluginSpec('nf-tower', '0.1.0')
+        ])
+        and:
+        def handler = new PluginsFacade(defaultPlugins: defaults)
+
+        when:
+        def plugins = handler.defaultPluginsConf([bucketDir: 's3://foo'])
+        then:
+        plugins.find { it.id == 'nf-amazon' }
+        !plugins.find { it.id == 'nf-google' }
+        !plugins.find { it.id == 'nf-azure' }
+
+        when:
+        plugins = handler.defaultPluginsConf([bucketDir: 'gs://foo'])
+        then:
+        plugins.find { it.id == 'nf-google' }
+        !plugins.find { it.id == 'nf-amazon' }
+        !plugins.find { it.id == 'nf-azure' }
+
+        when:
+        plugins = handler.defaultPluginsConf([bucketDir: 'az://foo'])
+        then:
+        !plugins.find { it.id == 'nf-google' }
+        !plugins.find { it.id == 'nf-amazon' }
+        plugins.find { it.id == 'nf-azure' }
+
+        when:
+        plugins = handler.defaultPluginsConf([:])
+        then:
+        !plugins.find { it.id == 'nf-amazon' }
+        !plugins.find { it.id == 'nf-ignite' }
+        !plugins.find { it.id == 'nf-google' }
+        !plugins.find { it.id == 'nf-azure' }
+
+    }
+
     def 'should get plugins list from env' () {
 
         given:
@@ -319,6 +362,55 @@ class PluginsFacadeTest extends Specification {
         result = facade.getPriorityExtensions(Foo, 'beta')
         then:
         result == [www]
+
+    }
+
+    // -- check scoped exceptions
+
+    @Scoped(priority = 10, value = 'alpha')
+    static class EXT1 implements Bar {}
+
+    @Scoped(priority  = 20, value = 'alpha')
+    static class EXT2 implements Bar {}
+
+    @Scoped(priority  = 30, value = 'beta')
+    static class EXT3 implements Bar {}
+
+    @Scoped(priority  = -1, value = 'beta')
+    static class EXT4 implements Bar {}
+
+    @Scoped('')
+    static class EXT5 implements Bar {}
+
+    def 'should get scoped extensions' () {
+        given:
+        def ext1 = new EXT1()
+        def ext2 = new EXT2()
+        def ext3 = new EXT3()
+        def ext4 = new EXT4()
+        def ext5 = new EXT5()
+        and:
+        def THE_LIST = [ext1, ext2, ext3, ext4, ext5]; THE_LIST.shuffle()
+        and:
+        def facade = Spy( new PluginsFacade() ) {
+            getExtensions(Foo) >> THE_LIST
+        }
+
+        when:
+        def result = facade.getScopedExtensions(Foo)
+        then:
+        // items are returned ordered by priority
+        result == [ ext1, ext4 ] as Set
+
+        when:
+        result = facade.getScopedExtensions(Foo, 'alpha')
+        then:
+        result == [ ext1 ] as Set
+
+        when:
+        result = facade.getScopedExtensions(Foo, 'beta')
+        then:
+        result == [ ext4 ] as Set
 
     }
 }

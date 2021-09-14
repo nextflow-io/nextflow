@@ -20,6 +20,7 @@ package nextflow.script
 import java.nio.file.Files
 
 import nextflow.exception.DuplicateModuleIncludeException
+import nextflow.exception.MissingProcessException
 import spock.lang.Timeout
 import test.Dsl2Spec
 import test.MockScriptRunner
@@ -983,7 +984,7 @@ class ScriptIncludesTest extends Dsl2Spec {
 
     }
 
-    def 'should not allow include nested withint a workflow' () {
+    def 'should not allow include nested within a workflow' () {
         given:
         def folder = TestHelper.createInMemTempDir()
         def MODULE = folder.resolve('module.nf')
@@ -1007,8 +1008,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         when:
         new MockScriptRunner().setScript(SCRIPT).execute()
         then:
-        def e = thrown(IllegalStateException)
-        e.message == "Include statement is not allowed within a workflow definition"
+        def e = thrown(MissingProcessException)
 
     }
 }

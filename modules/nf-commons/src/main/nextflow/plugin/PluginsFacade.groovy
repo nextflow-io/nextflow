@@ -41,7 +41,8 @@ import org.pf4j.PluginStateListener
 class PluginsFacade implements PluginStateListener {
 
     private Path PLUGINS_LOCAL_ROOT = Paths.get('.nextflow/plr')
-
+    private static final String DEV_MODE = 'dev'
+    private static final String PROD_MODE = 'prod'
     private Map<String,String> env = new HashMap<>(System.getenv())
 
     private String mode
@@ -54,11 +55,13 @@ class PluginsFacade implements PluginStateListener {
     PluginsFacade() {
         mode = getPluginsMode()
         root = getPluginsDir()
+        if( mode=='dev' && root.toString()=='plugins' )
+            root = detectDevPluginsRoot()
         System.setProperty('pf4j.mode', mode)
         defaultPlugins = new DefaultPlugins()
     }
 
-    PluginsFacade(Path root, String mode='prod') {
+    PluginsFacade(Path root, String mode=PROD_MODE) {
         this.mode = mode
         this.root = root
         System.setProperty('pf4j.mode', mode)
@@ -81,6 +84,20 @@ class PluginsFacade implements PluginStateListener {
         }
     }
 
+    protected Path detectDevPluginsRoot() {
+        def file = new File('.').absoluteFile
+        do {
+            if( file.name=='nextflow' && file.isDirectory() && new File(file, 'settings.gradle').isFile() ) {
+                final root = file.toPath().resolve('plugins')
+                log.debug "Detected dev plugins root: $root"
+                return root
+            }
+            file = file.parentFile
+        }
+        while( file!=null )
+        throw new IllegalStateException("Unable to detect local plugins root")
+    }
+
     protected String getPluginsMode() {
         final mode = env.get('NXF_PLUGINS_MODE')
         if( mode ) {
@@ -89,11 +106,11 @@ class PluginsFacade implements PluginStateListener {
         }
         else if( env.containsKey('NXF_HOME') ) {
             log.trace "Detected NXF_HOME - Using plugins mode=prod"
-            return 'prod'
+            return PROD_MODE
         }
         else {
             log.trace "Using dev plugins mode"
-            return 'dev'
+            return DEV_MODE
         }
     }
 
@@ -126,13 +143,13 @@ class PluginsFacade implements PluginStateListener {
     }
 
     protected CustomPluginManager createManager(Path root, List<PluginSpec> specs) {
-        final result = mode!='dev' ? new LocalPluginManager( localRoot(specs) ) : new DevPluginManager(root)
+        final result = mode!=DEV_MODE ? new LocalPluginManager( localRoot(specs) ) : new DevPluginManager(root)
         result.addPluginStateListener(this)
         return result
     }
 
     protected PluginUpdater createUpdater(Path root, CustomPluginManager manager) {
-        return ( mode!='dev'
+        return ( mode!=DEV_MODE
                 ? new PluginUpdater(manager, root, new URL(indexUrl))
                 : new DevPluginUpdater(manager) )
     }
@@ -154,7 +171,7 @@ class PluginsFacade implements PluginStateListener {
         else {
             log.debug "Setting up plugin manager > mode=${mode}; plugins-dir=$root"
             // make sure plugins dir exists
-            if( mode!='dev' && !FilesEx.mkdirs(root) )
+            if( mode!=DEV_MODE && !FilesEx.mkdirs(root) )
                 throw new IOException("Unable to create plugins dir: $root")
             final specs = pluginsRequirement(config)
             init(root, specs)
@@ -186,6 +203,7 @@ class PluginsFacade implements PluginStateListener {
             // this should oly be used to load system extensions
             // i.e. included in the app class path not provided by
             // a plugin extension
+            log.debug "Using Default plugins manager"
             return defaultManager().getExtensions(type)
         }
     }
@@ -211,6 +229,36 @@ class PluginsFacade implements PluginStateListener {
     protected int priority0(Object it) {
         final annot = it.getClass().getAnnotation(Priority)
         return annot ? annot.value() : 0
+    }
+
+    protected int priority1(Object it) {
+        final annot = it.getClass().getAnnotation(Scoped)
+        return annot ? annot.priority() : 0
+    }
+
+    /**
+     * Find out all extensions classed with with {@code @Scoped} annotation
+     * return one and exactly with for each different scope value
+     *
+     * @param type
+     * @param scope
+     * @return
+     */
+    def <T> Set<T> getScopedExtensions(Class<T> type,String scope=null) {
+        def result = getExtensions(type).sort(it->priority1(it))
+        def groups = new HashMap<String,T>()
+        for( T it : result ) {
+            final annot = it.getClass().getAnnotation(Scoped)
+            if( annot==null )
+                continue
+            if( !annot.value() )
+                continue
+            if( groups.containsKey(annot.value()) )
+                continue
+            if( scope==null || annot.value()==scope )
+                groups.put(annot.value(), it)
+        }
+        return new HashSet<T>(groups.values())
     }
 
     protected String group0(Object it) {
@@ -302,15 +350,16 @@ class PluginsFacade implements PluginStateListener {
         // infer from app config
         final plugins = new ArrayList<PluginSpec>()
         final workDir = config.workDir as String
+        final bucketDir = config.bucketDir as String
         final executor = Bolts.navigate(config, 'process.executor')
 
-        if( executor == 'awsbatch' || workDir?.startsWith('s3://') )
+        if( executor == 'awsbatch' || workDir?.startsWith('s3://') || bucketDir?.startsWith('s3://') )
             plugins << defaultPlugins.getPlugin('nf-amazon')
 
-        if( executor == 'google-lifesciences' || workDir?.startsWith('gs://') )
+        if( executor == 'google-lifesciences' || workDir?.startsWith('gs://') || bucketDir?.startsWith('gs://')  )
             plugins << defaultPlugins.getPlugin('nf-google')
 
-        if( executor == 'azurebatch' || workDir?.startsWith('az://') )
+        if( executor == 'azurebatch' || workDir?.startsWith('az://') || bucketDir?.startsWith('az://') )
             plugins << defaultPlugins.getPlugin('nf-azure')
 
         if( executor == 'ignite' || System.getProperty('nxf.node.daemon')=='true') {
