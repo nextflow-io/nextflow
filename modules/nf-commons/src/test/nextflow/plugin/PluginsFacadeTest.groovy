@@ -195,6 +195,49 @@ class PluginsFacadeTest extends Specification {
 
     }
 
+    def 'should return default plugins given bucket dir' () {
+        given:
+        def defaults = new DefaultPlugins(plugins: [
+                'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
+                'nf-google': new PluginSpec('nf-google', '0.1.0'),
+                'nf-azure': new PluginSpec('nf-azure', '0.1.0'),
+                'nf-ignite': new PluginSpec('nf-ignite', '0.1.0'),
+                'nf-tower': new PluginSpec('nf-tower', '0.1.0')
+        ])
+        and:
+        def handler = new PluginsFacade(defaultPlugins: defaults)
+
+        when:
+        def plugins = handler.defaultPluginsConf([bucketDir: 's3://foo'])
+        then:
+        plugins.find { it.id == 'nf-amazon' }
+        !plugins.find { it.id == 'nf-google' }
+        !plugins.find { it.id == 'nf-azure' }
+
+        when:
+        plugins = handler.defaultPluginsConf([bucketDir: 'gs://foo'])
+        then:
+        plugins.find { it.id == 'nf-google' }
+        !plugins.find { it.id == 'nf-amazon' }
+        !plugins.find { it.id == 'nf-azure' }
+
+        when:
+        plugins = handler.defaultPluginsConf([bucketDir: 'az://foo'])
+        then:
+        !plugins.find { it.id == 'nf-google' }
+        !plugins.find { it.id == 'nf-amazon' }
+        plugins.find { it.id == 'nf-azure' }
+
+        when:
+        plugins = handler.defaultPluginsConf([:])
+        then:
+        !plugins.find { it.id == 'nf-amazon' }
+        !plugins.find { it.id == 'nf-ignite' }
+        !plugins.find { it.id == 'nf-google' }
+        !plugins.find { it.id == 'nf-azure' }
+
+    }
+
     def 'should get plugins list from env' () {
 
         given:
