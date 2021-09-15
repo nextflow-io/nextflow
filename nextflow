@@ -24,6 +24,7 @@ NXF_BASE=${NXF_BASE:-$NXF_PROT://www.nextflow.io/releases}
 NXF_TEMP=${NXF_TEMP:-$TMPDIR}
 NXF_DIST=${NXF_DIST:-$NXF_HOME/framework}
 NXF_CLI="$0 $@"
+NXF_CLI_OPTS=${NXF_CLI_OPTS:-}
 
 export NXF_CLI
 export NXF_ORG
@@ -196,6 +197,10 @@ dockerize=''
 declare -a jvmopts=()
 declare -a args=("$@")
 declare -a commands=(clone config drop help history info ls pull run view node console kuberun)
+# $NXF_CLI_OPTS allow to pass arbitrary cli opts via the environment
+# note: do not wrap with quotes because the variable can be used to specify more than on option separate by blanks
+[ "$NXF_CLI_OPTS" ] && args+=($NXF_CLI_OPTS)
+
 cmd=''
 while [[ $# != 0 ]]; do
     case $1 in
