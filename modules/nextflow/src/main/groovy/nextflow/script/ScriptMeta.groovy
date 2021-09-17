@@ -93,8 +93,6 @@ class ScriptMeta {
 
     Path getModuleDir () { moduleDir?.parent }
 
-    void setModuleDir(Path path) { moduleDir = path }
-
     String getScriptName() { clazz.getName() }
 
     boolean isModule() { module }
@@ -112,6 +110,7 @@ class ScriptMeta {
     @PackageScope
     void setScriptPath(Path path) {
         scriptPath = path
+        moduleDir = path
     }
 
     @PackageScope
