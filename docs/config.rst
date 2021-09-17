@@ -924,5 +924,5 @@ JAVA_CMD                    Defines the path location of the Java binary command
 HTTP_PROXY                  Defines the HTTP proxy server. As of version ``21.06.0-edge``, proxy authentication is supported providing the credentials in the proxy URL e.g. ``http://user:password@proxy-host.com:port``.
 HTTPS_PROXY                 Defines the HTTPS proxy server. As of version ``21.06.0-edge``, proxy authentication is supported providing the credentials in the proxy URL e.g. ``https://user:password@proxy-host.com:port``.
 FTP_PROXY                   Defines the FTP proxy server. Proxy authentication is supported providing the credentials in the proxy URL e.g. ``ftp://user:password@proxy-host.com:port``. FTP proxy support requires version ``21.06.0-edge`` or later.
-NO_PROXY                    Defines one or more host names that should *not* use the proxy server. Separate multiple names using a comma character.
+NO_PROXY                    Defines one or more host names that should not use the proxy server. Separate multiple names using a comma character.
 =========================== ================
