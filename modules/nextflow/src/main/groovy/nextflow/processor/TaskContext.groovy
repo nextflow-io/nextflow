@@ -17,6 +17,8 @@
 
 package nextflow.processor
 
+import nextflow.script.ScriptMeta
+
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.Files
@@ -312,7 +314,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
             return path
 
         // make from the module dir
-        def module = this.script.getBinding()?.getVariable('moduleDir') as Path
+        def module = ScriptMeta.get(this.script)?.getModuleDir()
         if( module ) {
             def target = module.resolve('templates').resolve(path)
             if (Files.exists(target))

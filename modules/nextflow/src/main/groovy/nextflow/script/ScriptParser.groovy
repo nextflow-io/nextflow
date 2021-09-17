@@ -172,6 +172,7 @@ class ScriptParser {
             script = (BaseScript)interpreter.parse(scriptText, clazzName)
             final meta = ScriptMeta.get(script)
             meta.setScriptPath(scriptPath)
+            meta.setModuleDir(scriptPath)
             meta.setModule(module)
             return this
         }
