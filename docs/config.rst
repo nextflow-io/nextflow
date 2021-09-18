@@ -266,6 +266,7 @@ perJobMemLimit        Specifies Platform LSF *per-job* memory limit mode. See :r
 jobName               Determines the name of jobs submitted to the underlying cluster executor e.g. ``executor.jobName = { "$task.name - $task.hash" }`` Note: when using this option you need to make sure the resulting job name matches the validation constraints of the underlying batch scheduler.
 cpus                  The maximum number of CPUs made available by the underlying system (only used by the ``local`` executor).
 memory                The maximum amount of memory made available by the underlying system (only used by the ``local`` executor).
+disableRemoteBinDir   Disables `bin </docs/latest/faq.html#how-do-i-invoke-custom-scripts-and-tools>`_ directory distribution to remote processes (default: ``false``).
 ===================== =====================
 
 
