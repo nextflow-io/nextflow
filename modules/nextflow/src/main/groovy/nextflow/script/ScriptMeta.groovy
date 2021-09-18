@@ -47,7 +47,7 @@ class ScriptMeta {
 
     static ScriptMeta get(BaseScript script) {
         if( !script ) throw new IllegalStateException("Missing current script context")
-        REGISTRY.get(script)
+        return REGISTRY.get(script)
     }
 
     static Set<String> allProcessNames() {
@@ -74,9 +74,6 @@ class ScriptMeta {
     /** The location path from where the script has been loaded */
     private Path scriptPath
 
-    /** The location path from where the template file is loaded */
-    private Path moduleDir
-
     /** The list of function, procs and workflow defined in this script */
     private Map<String,ComponentDef> definitions = new HashMap<>(10)
 
@@ -90,7 +87,7 @@ class ScriptMeta {
 
     Path getScriptPath() { scriptPath }
 
-    Path getModuleDir () { moduleDir?.parent }
+    Path getModuleDir () { scriptPath?.parent }
 
     String getScriptName() { clazz.getName() }
 
@@ -109,7 +106,6 @@ class ScriptMeta {
     @PackageScope
     void setScriptPath(Path path) {
         scriptPath = path
-        moduleDir = path
     }
 
     @PackageScope

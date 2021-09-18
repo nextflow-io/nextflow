@@ -17,6 +17,7 @@
 
 package nextflow.processor
 
+import nextflow.NF
 import nextflow.script.ScriptMeta
 
 import java.nio.file.Path
@@ -306,7 +307,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
         if( !path )
             throw new ProcessException("Process `$name` missing template name")
 
-        if( !(path instanceof Path) )
+        if( path !instanceof Path )
             path = Paths.get(path.toString())
 
         // if the path is already absolute just return it
@@ -314,7 +315,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
             return path
 
         // make from the module dir
-        def module = ScriptMeta.get(this.script)?.getModuleDir()
+        def module = NF.isDsl2Final() ? ScriptMeta.get(this.script)?.getModuleDir() : null
         if( module ) {
             def target = module.resolve('templates').resolve(path)
             if (Files.exists(target))
