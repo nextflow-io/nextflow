@@ -71,8 +71,11 @@ class ScriptMeta {
     /** the script {@link Class} object */
     private Class<? extends BaseScript> clazz
 
-    /** The location path from there the script has been loaded */
+    /** The location path from where the script has been loaded */
     private Path scriptPath
+
+    /** The location path from where the template file is loaded */
+    private Path moduleDir
 
     /** The list of function, procs and workflow defined in this script */
     private Map<String,ComponentDef> definitions = new HashMap<>(10)
@@ -86,6 +89,8 @@ class ScriptMeta {
     private boolean module
 
     Path getScriptPath() { scriptPath }
+
+    Path getModuleDir () { moduleDir?.parent }
 
     String getScriptName() { clazz.getName() }
 
@@ -104,6 +109,7 @@ class ScriptMeta {
     @PackageScope
     void setScriptPath(Path path) {
         scriptPath = path
+        moduleDir = path
     }
 
     @PackageScope

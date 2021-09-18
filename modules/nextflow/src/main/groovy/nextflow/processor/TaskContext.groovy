@@ -17,8 +17,11 @@
 
 package nextflow.processor
 
+import nextflow.script.ScriptMeta
+
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.esotericsoftware.kryo.io.Input
@@ -310,10 +313,21 @@ class TaskContext implements Map<String,Object>, Cloneable {
         if( path.isAbsolute() )
             return path
 
-        // otherwise make
+        // make from the module dir
+        def module = ScriptMeta.get(this.script)?.getModuleDir()
+        if( module ) {
+            def target = module.resolve('templates').resolve(path)
+            if (Files.exists(target))
+                return target
+        }
+
+        // otherwise make from the base dir
         def base = Global.session.baseDir
-        if( base )
-            return base.resolve('templates').resolve(path)
+        if( base ) {
+            def target = base.resolve('templates').resolve(path)
+            if (Files.exists(target))
+                return target
+        }
 
         // if the base dir is not available just use as it is
         return path
