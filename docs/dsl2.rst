@@ -463,8 +463,6 @@ The template files can be made available under the local ``templates`` directory
 			|-P1-template.sh
 			|-P2-template.sh
 
-
-
 Then, we have a second project A with a workflow that includes P1 and P2::
 
 	Pipeline A
