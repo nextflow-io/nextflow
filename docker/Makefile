@@ -17,11 +17,15 @@ version ?= none
 
 build: dist/docker
 	cp ../nextflow .
-	docker buildx build --platform linux/amd64,linux/arm64 -t nextflow/nextflow:${version} .
+	docker build --output=type=docker --progress=plain --tag nextflow/nextflow:${version} .
 
-release: dist/docker
-	docker buildx build --platform linux/amd64,linux/arm64 -t nextflow/nextflow:${version} --push .
-#	docker buildx build --platform linux/amd64,linux/arm64 -t public.ecr.aws/seqera-labs/nextflow:${version} --push .
+release: build
+	docker tag nextflow/nextflow:${version} nextflow/nextflow:latest
+	docker push nextflow/nextflow:${version}
+	docker push nextflow/nextflow:latest
+	#
+	docker tag nextflow:${version} public.ecr.aws/seqera-labs/nextflow:${version}
+	docker push public.ecr.aws/seqera-labs/nextflow:${version}
 
 #Static builds can now be found at:
 #
@@ -32,6 +36,6 @@ release: dist/docker
 dist/docker:
 	mkdir -p dist/linux/amd64
 	curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-17.09.0-ce.tgz | tar --strip-components=1 -xvz -C dist/linux/amd64
-	mkdir -p dist/linux/arm64
-	curl -fsSL https://download.docker.com/linux/static/stable/aarch64/docker-17.09.0-ce.tgz | tar --strip-components=1 -xvz -C dist/linux/arm64
+#	mkdir -p dist/linux/arm64
+#	curl -fsSL https://download.docker.com/linux/static/stable/aarch64/docker-17.09.0-ce.tgz | tar --strip-components=1 -xvz -C dist/linux/arm64
 
