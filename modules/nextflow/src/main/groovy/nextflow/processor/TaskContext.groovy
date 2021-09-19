@@ -324,11 +324,8 @@ class TaskContext implements Map<String,Object>, Cloneable {
 
         // otherwise make from the base dir
         def base = Global.session.baseDir
-        if( base ) {
-            def target = base.resolve('templates').resolve(path)
-            if (Files.exists(target))
-                return target
-        }
+        if( base )
+            return base.resolve('templates').resolve(path)
 
         // if the base dir is not available just use as it is
         return path
