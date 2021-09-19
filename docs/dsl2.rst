@@ -455,28 +455,28 @@ The module script can be defined in an external :ref:`template <process-template
 can be placed under the ``templates`` directory where the module script is located.
 
 For example, let's suppose to have a project L with a module script defining 2 processes (P1 and P2) and both use templates.
-The template files are available under the local ``templates`` directory::
+The template files can be made available under the local ``templates`` directory::
 
 	Project L
-      |-myModules.nf
-      |-templates
-        |-P1-template.sh
-        |-P2-template.sh
+		|-myModules.nf
+		|-templates
+			|-P1-template.sh
+			|-P2-template.sh
 
 
 
-Then, we have a second project with a workflow that includes P1 and P2::
+Then, we have a second project A with a workflow that includes P1 and P2::
 
 	Pipeline A
 		|-main.nf
 
-Finally, we have a third project with a workflow that includes again P1 and P2::
+Finally, we have a third project B with a workflow that includes again P1 and P2::
 
 	Pipeline B
 		|-main.nf
 
 With the possibility to keep the template files inside the project L, A and B can use the modules defined in L without any changes.
-A future Pipeline C would do the same, just cloning L (if not available on the system) and including its module script.
+A future prject C would do the same, just cloning L (if not available on the system) and including its module script.
 
 Beside promoting sharing modules across pipelines, there are several advantages in keeping the module template under the script path::
 1 - module components are *self-contained*
