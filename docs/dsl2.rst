@@ -489,22 +489,22 @@ has several module components, and all them use templates, the project could gro
 		|-Phase0-Modules
 			|-mymodules1.nf
 			|-mymodules2.nf
-				|-templates
-					|-P1-template.sh
-					|-P2-template.sh
+			|-templates
+				|-P1-template.sh
+				|-P2-template.sh
 		|-Phase1-Modules
 			|-mymodules3.nf
 			|-mymodules4.nf
-				|-templates
-					|-P3-template.sh
-					|-P4-template.sh
+			|-templates
+				|-P3-template.sh
+				|-P4-template.sh
 		|-Phase2-Modules
 			|-mymodules5.nf
 			|-mymodules6.nf
-				|-templates
-					|-P5-template.sh
-					|-P6-template.sh
-					|-P7-template.sh
+			|-templates
+				|-P5-template.sh
+				|-P6-template.sh
+				|-P7-template.sh
 
 
 Channel forking
