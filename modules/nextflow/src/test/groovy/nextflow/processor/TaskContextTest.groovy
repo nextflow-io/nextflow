@@ -24,6 +24,7 @@ import groovy.runtime.metaclass.DelegatingPlugin
 import groovy.runtime.metaclass.NextflowDelegatingMetaClass
 import groovy.transform.InheritConstructors
 import nextflow.Global
+import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.script.BaseScript
@@ -41,6 +42,10 @@ import spock.lang.Specification
  */
 class TaskContextTest extends Specification {
 
+    def setupSpec() {
+        NF.init()
+    }
+    
     def 'should save and read TaskContext object' () {
 
         setup:
@@ -83,8 +88,8 @@ class TaskContextTest extends Specification {
 
         setup:
         def bind = new ScriptBinding([x:1, y:2])
-        def script = new MockScript(bind)
-
+        def script = Mock(BaseScript) { getBinding() >> bind }
+        and:
         def local = [p:3, q:4, path: Paths.get('some/path')]
         def delegate = new TaskContext( script, local, 'hola' )
 
@@ -171,13 +176,6 @@ class TaskContextTest extends Specification {
         then:
         // the path is returned
         result == absolutePath
-
-        when:
-        // a relative path is specified
-        result = context.template('foo.txt')
-        then:
-        // return it as Path object if there's no concrete file math
-        result == Paths.get('foo.txt')
 
         when:
         // when a rel file path is matched against the project
