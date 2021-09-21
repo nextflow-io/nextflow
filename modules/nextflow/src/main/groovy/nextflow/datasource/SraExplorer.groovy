@@ -109,7 +109,14 @@ class SraExplorer {
         return target
     }
 
-    protected Map getEnv() { System.getenv() }
+    protected Map env() {
+        return System.getenv()
+    }
+
+    protected Map config() {
+        final session = Global.session as Session
+        return session.getConfig()
+    }
 
     protected Path getCacheFolder() {
         if( cacheFolder )
@@ -120,10 +127,9 @@ class SraExplorer {
     }
 
     protected String getConfigApiKey() {
-        def session = Global.session as Session
-        def result = session ?.config ?. navigate('ncbi.apiKey')
+        def result = config().navigate('ncbi.apiKey')
         if( !result )
-            result = getEnv().get('NCBI_API_KEY')
+            result = env().get('NCBI_API_KEY')
         if( !result )
             log.warn1("Define the NCBI_API_KEY env variable to use NCBI search service -- Read more https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities/")
         return result
