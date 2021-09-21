@@ -102,9 +102,9 @@ jobs:
         AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
         AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
-    - name: Publish
+    - name: Publish tests report
       if: failure()
       uses: actions/upload-artifact@v2
       with:
-        name: test-reports
-        path: "*build/reports/tests/test"
+        name: test-reports-jdk-${{ matrix.java_version }}
+        path: "**/build/reports/tests/test"
