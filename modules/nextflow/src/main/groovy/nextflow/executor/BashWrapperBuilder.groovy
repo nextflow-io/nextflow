@@ -72,7 +72,7 @@ class BashWrapperBuilder {
         catch( Exception e ) {
             log.warn "Invalid value for `NXF_DEBUG` variable: $str -- See http://www.nextflow.io/docs/latest/config.html#environment-variables"
         }
-        BASH = Collections.unmodifiableList( level > 0 ? ['/bin/bash','-uex'] : ['/bin/bash','-ue'] )
+        BASH = Collections.unmodifiableList( level > 0 ? ['/usr/bin/env','bash','-uex'] : ['/usr/bin/env','bash','-ue'] )
 
     }
 
@@ -386,7 +386,7 @@ class BashWrapperBuilder {
         final traceWrapper = isTraceRequired()
         if( traceWrapper ) {
             // executes the stub which in turn executes the target command
-            launcher = "/bin/bash ${fileStr(wrapperFile)} nxf_trace"
+            launcher = "/usr/bin/env bash ${fileStr(wrapperFile)} nxf_trace"
         }
         else {
             launcher = "${interpreter} ${fileStr(scriptFile)}"

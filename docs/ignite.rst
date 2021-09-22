@@ -151,7 +151,7 @@ Platform LSF launcher
 
 The following example shows a launcher script for the `Platform LSF <https://en.wikipedia.org/wiki/Platform_LSF/>`_ resource manager::
 
-    #!/bin/bash
+    #!/usr/bin/env bash
     #BSUB -oo output_%J.out
     #BSUB -eo output_%J.err
     #BSUB -J <job name>
@@ -175,7 +175,7 @@ Univa Grid Engine launcher
 
 The following example shows a launcher script for the `Univa Grid Engine <https://en.wikipedia.org/wiki/Univa_Grid_Engine>`_ (aka SGE)::
 
-    #!/bin/bash
+    #!/usr/bin/env bash
     #$ -cwd
     #$ -j y
     #$ -o <output file name>
@@ -195,7 +195,7 @@ Linux SLURM launcher
 
 When using Linux SLURM you will need to use ``srun`` instead ``mpirun`` in your launcher script. For example::
 
-    #!/bin/bash
+    #!/usr/bin/env bash
     #SBATCH --job-name=<job name>
     #SBATCH --output=<log file %j>
     #SBATCH --ntasks=5

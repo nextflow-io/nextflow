@@ -163,7 +163,7 @@ class K8sDriverLauncherTest extends Specification {
                         containers:[
                                 [name:'foo-boo',
                                  image:'the-image',
-                                 command:['/bin/bash', '-c', "source /etc/nextflow/init.sh; nextflow run foo"],
+                                 command:['/usr/bin/env'. 'bash', '-c', "source /etc/nextflow/init.sh; nextflow run foo"],
                                  env:[
                                          [name:'NXF_WORK', value:'/the/work/dir'],
                                          [name:'NXF_ASSETS', value:'/the/project/dir'],
@@ -212,7 +212,7 @@ class K8sDriverLauncherTest extends Specification {
                         containers:[
                                 [name:'foo-boo',
                                  image:'foo/bar',
-                                 command:['/bin/bash', '-c', "source /etc/nextflow/init.sh; nextflow run foo"],
+                                 command:['/usr/bin/env', 'bash', '-c', "source /etc/nextflow/init.sh; nextflow run foo"],
                                  env:[
                                          [name:'NXF_WORK', value:'/the/work/dir'],
                                          [name:'NXF_ASSETS', value:'/the/project/dir'],

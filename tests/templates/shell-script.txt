@@ -1,2 +1,2 @@
-#!/bin/bash
+#!/usr/bin/env bash
 echo "Hello $USER !{family} !{params.data}" > file.out

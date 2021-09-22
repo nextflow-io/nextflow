@@ -86,7 +86,7 @@ class K8sTaskHandlerTest extends Specification {
                             containers:[
                                     [name:'nf-123',
                                      image:'debian:latest',
-                                     command:['/bin/bash', '-ue','.command.run'],
+                                     command:['/usr/bin/env', 'bash', '-ue','.command.run'],
                                      workingDir:'/some/work/dir']
                             ]
                     ]
@@ -116,7 +116,7 @@ class K8sTaskHandlerTest extends Specification {
                             containers:[
                                     [name:'nf-foo',
                                      image:'debian:latest',
-                                     command:['/bin/bash', '-ue','.command.run'],
+                                     command:['/usr/bin/env', 'bash', '-ue','.command.run'],
                                      workingDir:'/some/work/dir',
                                      resources:[ requests: [cpu:1], limits:[cpu:1] ],
                                      env: [  [name:'NXF_OWNER', value:'501:502'] ]
@@ -148,7 +148,7 @@ class K8sTaskHandlerTest extends Specification {
                             containers:[
                                     [name:'nf-abc',
                                      image:'user/alpine:1.0',
-                                     command:['/bin/bash', '-ue', '.command.run'],
+                                     command:['/usr/bin/env', 'bash', '-ue', '.command.run'],
                                      workingDir:'/some/work/dir',
                                      resources:[ requests: [cpu:4, memory:'16384Mi'], limits:[cpu:4, memory:'16384Mi'] ]
                                     ]
@@ -195,7 +195,7 @@ class K8sTaskHandlerTest extends Specification {
                             containers:[
                                     [name:'nf-123',
                                      image:'debian:latest',
-                                     command:['/bin/bash', '-ue','.command.run'],
+                                     command:['/usr/bin/env', 'bash', '-ue','.command.run'],
                                      workingDir:'/some/work/dir',
                                      resources:[requests:[cpu:1], limits:[cpu:1]]
                                     ]
@@ -243,7 +243,7 @@ class K8sTaskHandlerTest extends Specification {
                             containers:[
                                     [name:'nf-123',
                                      image:'debian:latest',
-                                     command:['/bin/bash', '-ue','.command.run'],
+                                     command:['/usr/bin/env', 'bash', '-ue','.command.run'],
                                      workingDir:'/some/work/dir',
                                      env:[[name:'FOO', value:'bar']],
                                      volumeMounts:[ [name:'vol-1', mountPath:'/etc'],
@@ -299,7 +299,7 @@ class K8sTaskHandlerTest extends Specification {
                             containers:[
                                     [name: 'nf-123',
                                      image: 'debian:latest',
-                                     command: ['/bin/bash', '-ue', '.command.run'],
+                                     command: ['/usr/bin/env', 'bash', '-ue', '.command.run'],
                                      workingDir: '/some/work/dir',
                                      volumeMounts: [
                                              [name:'vol-1', mountPath:'/work'],
@@ -335,7 +335,7 @@ class K8sTaskHandlerTest extends Specification {
                             containers:[
                                     [name: 'nf-123',
                                      image: 'debian:latest',
-                                     command: ['/bin/bash', '-ue', '.command.run'],
+                                     command: ['/usr/bin/env', 'bash', '-ue', '.command.run'],
                                      workingDir: '/some/work/dir',
                                      volumeMounts: [
                                              [name:'vol-3', mountPath:'/tmp'],

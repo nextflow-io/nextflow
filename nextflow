@@ -178,7 +178,7 @@ function launch_nextflow() {
 }
 
 # check self-install
-if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then
+if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ] || { [ "$0" = "/usr/bin/env" ] && [ "$1" = "bash" ]; } ; then
     if [ -d nextflow ]; then
         echo 'Please note:'
         echo "- The install procedure needs to create a file named 'nextflow' in this folder, but a directory with this name already exists."

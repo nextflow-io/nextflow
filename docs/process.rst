@@ -242,7 +242,7 @@ where the Nextflow script file is located (any other location can be provided by
 
 The template script can contain any piece of code that can be executed by the underlying system. For example::
 
-  #!/bin/bash
+  #!/usr/bin/env bash
   echo "process started at `date`"
   echo $STR
   :

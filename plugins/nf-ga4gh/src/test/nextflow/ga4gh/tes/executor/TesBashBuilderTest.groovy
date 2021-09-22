@@ -51,7 +51,7 @@ class TesBashBuilderTest extends Specification {
 
         folder.resolve('.command.sh').text ==
                 '''
-                #!/bin/bash -ue
+                #!/usr/bin/env -S bash -ue
                 echo Hello world!
                 '''
                         .stripIndent().leftTrim()

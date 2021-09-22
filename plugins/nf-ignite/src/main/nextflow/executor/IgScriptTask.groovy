@@ -110,7 +110,7 @@ class IgScriptTask extends IgBaseTask<Integer>   {
         // NOTE: the actual command is wrapped by another bash whose streams
         // are redirected to null. This is important  to consume the stdout/stderr
         // of the wrapped job otherwise that output will cause the inner `tee`s hang
-        List cmd = ['/bin/bash','-c', job.join(' ') + ' &>' + TaskRun.CMD_LOG]
+        List cmd = ['/usr/bin/env','bash','-c', job.join(' ') + ' &>' + TaskRun.CMD_LOG]
 
         log.debug "Running task > ${bean.name} -- taskId=${taskId}; workdir=${localWorkDir}; remote=${isRemoteWorkDir}"
         ProcessBuilder builder = new ProcessBuilder()

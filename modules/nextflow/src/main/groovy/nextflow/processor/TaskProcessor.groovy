@@ -360,7 +360,7 @@ class TaskProcessor {
      *          <pre>
      *              {
      *                 """
-     *                 #!/bin/bash
+     *                 #!/usr/bin/env bash
      *                 do this ${x}
      *                 do that ${y}
      *                 :

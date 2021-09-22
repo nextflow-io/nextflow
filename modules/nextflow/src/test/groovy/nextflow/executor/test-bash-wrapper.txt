@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #BSUB -x 1
 #BSUB -y 2
 # NEXTFLOW TASK: Hello 1
@@ -85,7 +85,7 @@ on_term() {
 }
 
 nxf_launch() {
-    /bin/bash -ue {{folder}}/.command.sh
+    bash -ue {{folder}}/.command.sh
 }
 
 nxf_stage() {

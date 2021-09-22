@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # NEXTFLOW TASK: Hello 1
 set -e
 set -u
@@ -170,7 +170,7 @@ on_term() {
 }
 
 nxf_launch() {
-    /bin/bash -ue {{folder}}/.command.sh
+    bash -ue {{folder}}/.command.sh
 }
 
 nxf_stage() {

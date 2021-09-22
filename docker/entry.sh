@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #  Copyright 2013-2019, Centre for Genomic Regulation (CRG)
 #
@@ -43,7 +43,7 @@ if [[ "$NXF_USRMAP" ]]; then
 # create a `nextflow` user with the provided ID 
 # then change the docker socker ownership to `nextflow` user 
 addgroup docker
-adduser -u $NXF_USRMAP -G docker -s /bin/bash -D nextflow
+adduser -u $NXF_USRMAP -G docker -s "$(which bash)" -D nextflow
 chown nextflow /var/run/docker.sock  
 # finally run the target command with `nextflow` user
 su nextflow << EOF

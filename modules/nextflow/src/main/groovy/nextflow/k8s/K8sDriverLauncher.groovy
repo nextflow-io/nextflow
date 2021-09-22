@@ -465,7 +465,7 @@ class K8sDriverLauncher {
         new PodSpecBuilder()
             .withPodName(runName)
             .withImageName(podImage ?: k8sConfig.getNextflowImageName())
-            .withCommand(['/bin/bash', '-c', cmd])
+            .withCommand(['/usr/bin/env', 'bash', '-c', cmd])
             .withLabels([ app: 'nextflow', runName: runName ])
             .withNamespace(k8sClient.config.namespace)
             .withServiceAccount(k8sClient.config.serviceAccount)

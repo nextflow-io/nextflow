@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # NEXTFLOW TASK: Hello 2
 set -e
 set -u
@@ -120,7 +120,7 @@ nxf_write_trace() {
 nxf_trace_mac() {
     local start_millis=$(nxf_date)
 
-    /bin/bash -ue {{folder}}/.command.sh
+    bash -ue {{folder}}/.command.sh
 
     local end_millis=$(nxf_date)
     local wall_time=$((end_millis-start_millis))
@@ -145,7 +145,7 @@ nxf_trace_linux() {
     local start_millis=$(nxf_date)
     trap 'kill $mem_proc' ERR
     
-    /bin/bash -ue {{folder}}/.command.sh &
+    bash -ue {{folder}}/.command.sh &
     local task=$!
 
     mem_fd=$(nxf_fd)
@@ -270,7 +270,7 @@ on_term() {
 }
 
 nxf_launch() {
-    /bin/bash {{folder}}/.command.run nxf_trace
+    bash {{folder}}/.command.run nxf_trace
 }
 
 nxf_stage() {

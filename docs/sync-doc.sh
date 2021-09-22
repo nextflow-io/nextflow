@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 TARGET=../../nextflow-website/assets
 if egrep "^release = '.*edge|.*SNAPSHOT'$" -c conf.py >/dev/null; then
 MODE=edge

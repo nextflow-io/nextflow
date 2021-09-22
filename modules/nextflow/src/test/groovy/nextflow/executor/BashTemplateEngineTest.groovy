@@ -31,7 +31,7 @@ class BashTemplateEngineTest extends Specification {
         def engine = new BashTemplateEngine()
         def template = '''\
             ## comment
-            #!/bin/bash
+            #!/usr/bin/env bash
             # NEXTFLOW TASK: foo
             line 1
               ## comment
@@ -42,7 +42,7 @@ class BashTemplateEngineTest extends Specification {
 
         expect:
         engine.render(template, [:]) == '''\
-                #!/bin/bash
+                #!/usr/bin/env bash
                 # NEXTFLOW TASK: foo
                 line 1
                 line 2

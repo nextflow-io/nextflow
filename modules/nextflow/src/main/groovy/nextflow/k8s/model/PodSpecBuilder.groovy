@@ -125,7 +125,7 @@ class PodSpecBuilder {
 
     PodSpecBuilder withCommand( cmd ) {
         assert cmd instanceof List || cmd instanceof CharSequence, "Missing or invalid K8s command parameter: $cmd"
-        this.command = cmd instanceof List ? cmd : ['/bin/bash','-c', cmd.toString()]
+        this.command = cmd instanceof List ? cmd : ['/usr/bin/env','bash','-c', cmd.toString()]
         return this
     }
 

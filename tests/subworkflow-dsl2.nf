@@ -1,4 +1,4 @@
-#!/bin/bash nextflow
+#!/usr/bin/env -S bash nextflow
 nextflow.enable.dsl=2
 
 process foo {

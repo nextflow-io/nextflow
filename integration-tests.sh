@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 TEST_JDK=${TEST_JDK:=8}
 X_BRANCH=${TRAVIS_BRANCH:-${CIRCLE_BRANCH:-'master'}}
 X_PULL_REQUEST=${TRAVIS_PULL_REQUEST:-false}

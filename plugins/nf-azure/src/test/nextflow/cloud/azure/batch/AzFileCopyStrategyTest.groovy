@@ -92,7 +92,7 @@ class AzFileCopyStrategyTest extends Specification {
                 nxf_az_upload .command.err 'http://account.blob.core.windows.net/my-data/work/dir' || true
                 '''.stripIndent()
 
-        binding.launch_cmd == '/bin/bash -ue .command.sh < .command.in'
+        binding.launch_cmd == '/usr/bin/env bash -ue .command.sh < .command.in'
         binding.unstage_outputs == null
 
         binding.helpers_script == '''\
@@ -361,7 +361,7 @@ class AzFileCopyStrategyTest extends Specification {
                     nxf_parallel "${uploads[@]}"
                     '''.stripIndent().leftTrim()
 
-        binding.launch_cmd == '/bin/bash .command.run nxf_trace'
+        binding.launch_cmd == '/usr/bin/env bash .command.run nxf_trace'
 
         binding.task_env == '''\
                     export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"

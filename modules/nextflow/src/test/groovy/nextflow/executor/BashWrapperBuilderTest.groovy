@@ -101,7 +101,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.sh').text ==
                 '''
-                #!/bin/bash -ue
+                #!/usr/bin/env -S bash -ue
                 echo Hello world!
                 ''' .stripIndent().leftTrim()
 
@@ -132,7 +132,7 @@ class BashWrapperBuilderTest extends Specification {
 
         folder.resolve('.command.sh').text ==
                 '''
-                #!/bin/bash -ue
+                #!/usr/bin/env -S bash -ue
                 echo Hello world!
                 '''.stripIndent().leftTrim()
 
@@ -475,21 +475,21 @@ class BashWrapperBuilderTest extends Specification {
         when:
         def binding = newBashWrapperBuilder(statsEnabled: false).makeBinding()
         then:
-        binding.launch_cmd == '/bin/bash -ue /work/dir/.command.sh'
+        binding.launch_cmd == '/usr/bin/env bash -ue /work/dir/.command.sh'
         binding.unstage_controls == null
         binding.containsKey('unstage_controls')
 
         when:
         binding = newBashWrapperBuilder(statsEnabled: true).makeBinding()
         then:
-        binding.launch_cmd == '/bin/bash /work/dir/.command.run nxf_trace'
+        binding.launch_cmd == '/usr/bin/env bash /work/dir/.command.run nxf_trace'
         binding.unstage_controls == null
         binding.containsKey('unstage_controls')
 
         when:
         binding = newBashWrapperBuilder(statsEnabled: true, scratch: true).makeBinding()
         then:
-        binding.launch_cmd == '/bin/bash /work/dir/.command.run nxf_trace'
+        binding.launch_cmd == '/usr/bin/env bash /work/dir/.command.run nxf_trace'
         binding.unstage_controls == '''\
                         cp .command.out /work/dir/.command.out || true
                         cp .command.err /work/dir/.command.err || true
@@ -503,13 +503,13 @@ class BashWrapperBuilderTest extends Specification {
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
-        binding.launch_cmd == '/bin/bash -ue /work/dir/.command.sh'
+        binding.launch_cmd == '/usr/bin/env bash -ue /work/dir/.command.sh'
         binding.trace_cmd == binding.launch_cmd
 
         when:
         binding = newBashWrapperBuilder(input: 'Ciao ciao').makeBinding()
         then:
-        binding.launch_cmd == '/bin/bash -ue /work/dir/.command.sh < /work/dir/.command.in'
+        binding.launch_cmd == '/usr/bin/env bash -ue /work/dir/.command.sh < /work/dir/.command.in'
         binding.trace_cmd == binding.launch_cmd
 
         when:
@@ -851,6 +851,8 @@ class BashWrapperBuilderTest extends Specification {
         builder.isBash('/usr/bin/bash')
         builder.isBash('/bin/env bash')
         builder.isBash('/bin/bash -eu')
+        builder.isBash('/usr/bin/env bash')
+        builder.isBash('/usr/bin/env bash -eu')
         !builder.isBash('/bin/env perl')
 
     }

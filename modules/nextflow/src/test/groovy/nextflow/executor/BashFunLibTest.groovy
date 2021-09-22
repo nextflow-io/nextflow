@@ -79,7 +79,7 @@ class BashFunLibTest extends Specification {
         given:
         def scriptFile = Files.createTempFile("test", "sh")
         def script = """
-        #!/bin/bash
+        #!/usr/bin/env bash
 
         set -e
         """.stripIndent() +
@@ -111,7 +111,7 @@ class BashFunLibTest extends Specification {
         given:
         def scriptFile = Files.createTempFile("test", "sh")
         def script = """
-        #!/bin/bash
+        #!/usr/bin/env bash
 
         set -e
         """.stripIndent() +

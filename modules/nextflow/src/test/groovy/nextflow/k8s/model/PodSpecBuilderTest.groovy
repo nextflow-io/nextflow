@@ -180,7 +180,7 @@ class PodSpecBuilderTest extends Specification {
                            containers:[
                                    [name:'foo',
                                     image:'busybox',
-                                    command:['/bin/bash', '-c', 'echo hello'],
+                                    command:['/usr/bin/env', 'bash', '-c', 'echo hello'],
                                     workingDir:'/some/work/dir',
                                     env: [
                                             [name:'ALPHA', value:'hello'],

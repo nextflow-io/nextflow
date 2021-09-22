@@ -163,7 +163,7 @@ class TesTaskHandler extends TaskHandler {
     protected final TesTask newTesTask() {
         // the cmd list to launch it
         def job = new ArrayList(BashWrapperBuilder.BASH) << wrapperFile.getName()
-        List cmd = ['/bin/bash','-c', job.join(' ') + " &> $TaskRun.CMD_LOG" ]
+        List cmd = ['/usr/bin/env','bash','-c', job.join(' ') + " &> $TaskRun.CMD_LOG" ]
 
         def exec = new TesExecutorModel()
         exec.command = cmd
