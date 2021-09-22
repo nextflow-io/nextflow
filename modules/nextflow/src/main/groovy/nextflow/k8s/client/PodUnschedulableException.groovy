@@ -18,6 +18,7 @@
 package nextflow.k8s.client
 
 import groovy.transform.CompileStatic
+import nextflow.exception.ProcessException
 import nextflow.exception.ShowOnlyExceptionMessage
 
 /**
@@ -28,7 +29,7 @@ import nextflow.exception.ShowOnlyExceptionMessage
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class PodUnschedulableException extends Exception implements ShowOnlyExceptionMessage {
+class PodUnschedulableException extends ProcessException implements ShowOnlyExceptionMessage {
 
     PodUnschedulableException(String message, Throwable cause) {
         super(message,cause)

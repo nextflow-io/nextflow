@@ -29,7 +29,7 @@ class SqlConfigTest extends Specification {
         when:
         def config = new SqlConfig(null)
         then:
-        config.getDatasource('default') == SqlDatasource.DEFAULT
+        config.getDataSource('default') == SqlDataSource.DEFAULT
     }
 
     def 'should create custom config' () {
@@ -43,7 +43,7 @@ class SqlConfigTest extends Specification {
         when:
         def config = new SqlConfig(map)
         then:
-        with(config.getDatasource('myDatabase')) {
+        with(config.getDataSource('myDatabase')) {
             url == 'X1'
             driver == 'X2'
             user == 'X3'
@@ -59,17 +59,17 @@ class SqlConfigTest extends Specification {
         when:
         def config = new SqlConfig(map)
         then:
-        with(config.getDatasource('myDatabase')) {
+        with(config.getDataSource('myDatabase')) {
             url == 'jdbc:postgresql:host.name'
             driver == 'org.postgresql.Driver'
-            user == SqlDatasource.DEFAULT_USER
+            user == SqlDataSource.DEFAULT_USER
             password == null
         }
         and:
-        with(config.getDatasource('default')) {
-            url == SqlDatasource.DEFAULT_URL
-            driver == SqlDatasource.DEFAULT_DRIVER
-            user == SqlDatasource.DEFAULT_USER
+        with(config.getDataSource('default')) {
+            url == SqlDataSource.DEFAULT_URL
+            driver == SqlDataSource.DEFAULT_DRIVER
+            user == SqlDataSource.DEFAULT_USER
             password == null
         }
     }
@@ -82,14 +82,14 @@ class SqlConfigTest extends Specification {
         when:
         def config = new SqlConfig(map)
         then:
-        with(config.getDatasource('myDatabase')) {
+        with(config.getDataSource('myDatabase')) {
             url == 'jdbc:foo:mem'
             driver == 'org.foo.Driver'
             user == 'user-x'
             password == 'pass-y'
         }
         and:
-        with(config.getDatasource('default')) {
+        with(config.getDataSource('default')) {
             url == 'jdbc:foo:mem'
             driver == 'org.foo.Driver'
             user == 'user-x'
@@ -105,7 +105,7 @@ class SqlConfigTest extends Specification {
         when:
         def config = new SqlConfig(map)
         then:
-        with(config.getDatasource('myDatabase')) {
+        with(config.getDataSource('myDatabase')) {
             url == 'jdbc:foo:mem:custom'
             driver == 'org.foo.Driver'
             user == 'user-x'
@@ -113,7 +113,7 @@ class SqlConfigTest extends Specification {
         }
         and:
         and:
-        with(config.getDatasource('default')) {
+        with(config.getDataSource('default')) {
             url == 'jdbc:foo:mem'
             driver == 'org.foo.Driver'
             user == 'user-x'
