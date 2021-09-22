@@ -251,19 +251,19 @@ To access your local BitBucket Server create an entry in the `SCM configuration 
 GitHub credentials
 ------------------
 
-Create a ``github`` entry in the `SCM configuration file`_ specifying your user name and password as shown below::
+Create a ``github`` entry in the `SCM configuration file`_ specifying your user name and access token as shown below::
 
     providers {
 
         github {
-            user = 'me'
-            password = 'my-secret'
+            user = 'your-user-name'
+            password = 'your-personal-access-token;'
         }
 
     }
 
-.. tip:: You can use use a `Personal API token <https://github.com/blog/1509-personal-api-tokens>`_ in place of your
-    GitHub password.
+.. tip:: GitHub requires the use of the personal access token (PAT) in place of password field when accessing APIs.
+  Learn more about PAT and how to create it at `this link <https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token>`_.
 
 
 GitLab credentials
@@ -286,8 +286,8 @@ that can be found in your GitLab `account page <https://gitlab.com/profile/accou
 Gitea credentials
 -----------------
 
-`Gitea <https://gitea.io>`_ is a Git repository server with GitHub-like GUI access. Since Gitea installation is quite 
-easy, it is suitable for building a private development environment in your network. To access your Gitea server, you 
+`Gitea <https://gitea.io>`_ is a Git repository server with GitHub-like GUI access. Since Gitea installation is quite
+easy, it is suitable for building a private development environment in your network. To access your Gitea server, you
 have to provide all the credential information below::
 
     providers {
@@ -304,9 +304,27 @@ have to provide all the credential information below::
     }
 
 
-See `Gitea documentation <https://docs.gitea.io/en-us/api-usage/>`_ about how to enable API access on your 
-server and how to issue a token. 
+See `Gitea documentation <https://docs.gitea.io/en-us/api-usage/>`_ about how to enable API access on your
+server and how to issue a token.
 
+Azure Repos credentials
+-----------------------
+
+Nextflow has a builtin support for `Azure Repos <https://azure.microsoft.com/en-us/services/devops/repos/>`_, a Git source
+code management service hosted in the Azure cloud. To access your Azure Repos with Nextflow provide the repository credentials
+using the configuration snippet shown below:
+
+    providers {
+
+        azurerepos {
+            user = 'your-user-name'
+            password = 'your-personal-access-token'
+        }
+
+    }
+
+.. tip::
+  The Personal access token can be generated in the repository `Clone Repository` dialog.
 
 Private server configuration
 ============================
@@ -339,6 +357,11 @@ Then you will be able to run/pull a project with Nextflow using the following co
 Or, in alternative, using the Git clone URL::
 
     $ nextflow run http://gitlab.acme.org/foo/bar.git
+
+.. note::
+    You must also specify the server API endpoint URL if it differs from the server
+    base URL. For example, for GitHub Enterprise V3, add
+    ``endpoint = 'https://git.your-domain.com/api/v3'``.
 
 .. warning:: When accessing a private SCM installation over ``https`` and that server uses a custom SSL certificate
   you may need to import such certificate into your local Java keystore. Read more
@@ -494,10 +517,10 @@ have created. For example::
   process.container = 'my-docker-image'
   docker.enabled = true
 
-In this way when you launch the pipeline execution, the Docker image will be automatically downloaded and used to run 
+In this way when you launch the pipeline execution, the Docker image will be automatically downloaded and used to run
 your tasks.
 
-Read the :ref:`docker-page` page to lean more on how to use Docker containers with Nextflow.
+Read the :ref:`docker-page` page to learn more on how to use Docker containers with Nextflow.
 
 
 This mix of technologies makes it possible to write self-contained and truly reproducible pipelines which require

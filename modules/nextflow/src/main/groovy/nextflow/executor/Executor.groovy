@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,6 @@ package nextflow.executor
 import java.nio.file.Path
 
 import groovy.transform.Memoized
-import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.file.FileHelper
@@ -105,6 +104,15 @@ abstract class Executor {
        session.getWorkDir()
     }
 
+    /**
+     * The path where project bin directory are stored
+     *
+     * @return The executor base bin directory
+     */
+    Path getBinDir() {
+       session.getBinDir()
+    }
+
     @Memoized
     Path getStageDir() {
         return getWorkDir().resolve('stage')
@@ -138,7 +146,6 @@ abstract class Executor {
     /**
      * @return A reference to the current {@code #queueHolder} object
      */
-    @PackageScope
     TaskMonitor getTaskMonitor()  { monitor }
 
     /**
@@ -154,4 +161,8 @@ abstract class Executor {
         return false
     }
 
+    /**
+     * Allow graceful termination of executor resources
+     */
+    void shutdown() { }
 }

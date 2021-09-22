@@ -1,6 +1,5 @@
 package nextflow.ast
 
-
 import nextflow.script.BaseScript
 import nextflow.script.ScriptMeta
 import org.codehaus.groovy.control.CompilerConfiguration
@@ -152,7 +151,5 @@ class NextflowDSLImplTest extends BaseSpec {
         ScriptMeta.get(script).getDsl1ProcessNames() == ['alpha', 'beta']
         ScriptMeta.get(script).getProcessNames() == ['alpha', 'beta'] as Set
     }
-
-
 
 }

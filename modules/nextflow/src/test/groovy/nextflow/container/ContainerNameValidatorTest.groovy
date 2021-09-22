@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,11 +40,16 @@ class ContainerNameValidatorTest extends Specification {
         true        | 'registry/image-name'
         true        | 'image-name'
         true        | 'registry.example.com/org/image-name:version'
+        true        | 'registry.example.com/org/image-name@sha256:c0e9560cda118f9ec63ddefb4a173a2b2a0347082d7dff7dc14272e7841a5b5a'
         true        | 'registry/org/image-name:version'
+        true        | 'registry/org/image-name@sha256:c0e9560cda118f9ec63ddefb4a173a2b2a0347082d7dff7dc14272e7841a5b5a'
         true        | 'registry/image-name:version'
+        true        | 'registry/image-name@sha256:c0e9560cda118f9ec63ddefb4a173a2b2a0347082d7dff7dc14272e7841a5b5a'
         true        | 'registry:8000/image-name:version'
+        true        | 'registry:8000/image-name@sha256:c0e9560cda118f9ec63ddefb4a173a2b2a0347082d7dff7dc14272e7841a5b5a'
         true        | 'image-name:version'
         true        | 'image-name:VERSION'
+        true        | 'image-name@sha256:c0e9560cda118f9ec63ddefb4a173a2b2a0347082d7dff7dc14272e7841a5b5a'
         and:
         false       | 'IMAGE-NAME:123'
         false       | '/some/image'

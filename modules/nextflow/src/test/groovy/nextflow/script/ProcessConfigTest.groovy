@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -382,7 +382,7 @@ class ProcessConfigTest extends Specification {
 
         when:
         def process = new ProcessConfig([:])
-        process.applyConfigSelector(settings, 'withLabel:', 'short')
+        process.applyConfigSelectorWithLabels(settings, ['short'])
         then:
         process.cpus == 1
         process.time == '1h'
@@ -390,7 +390,7 @@ class ProcessConfigTest extends Specification {
 
         when:
         process = new ProcessConfig([:])
-        process.applyConfigSelector(settings, 'withLabel:', 'long')
+        process.applyConfigSelectorWithLabels(settings, ['long'])
         then:
         process.cpus == 32
         process.queue == 'cn-long'
@@ -398,7 +398,7 @@ class ProcessConfigTest extends Specification {
 
         when:
         process = new ProcessConfig([:])
-        process.applyConfigSelector(settings, 'withLabel:', 'foo')
+        process.applyConfigSelectorWithLabels(settings, ['foo'])
         then:
         process.cpus == 2
         process.disk == '100GB'
@@ -407,7 +407,7 @@ class ProcessConfigTest extends Specification {
 
         when:
         process = new ProcessConfig([:])
-        process.applyConfigSelector(settings, 'withLabel:', 'bar')
+        process.applyConfigSelectorWithLabels(settings, ['bar'])
         then:
         process.cpus == 32
         process.disk == '100GB'
@@ -416,7 +416,7 @@ class ProcessConfigTest extends Specification {
 
         when:
         process = new ProcessConfig([:])
-        process.applyConfigSelector(settings, 'withLabel:', 'gpu-1')
+        process.applyConfigSelectorWithLabels(settings, ['gpu-1'])
         then:
         process.cpus == 4
         process.queue == 'cn-long'
@@ -436,13 +436,13 @@ class ProcessConfigTest extends Specification {
 
         when:
         def process = new ProcessConfig([:])
-        process.applyConfigSelector(settings, 'withName:', 'xx')
+        process.applyConfigSelectorWithName(settings, 'xx')
         then:
         process.size() == 0
 
         when:
         process = new ProcessConfig([:])
-        process.applyConfigSelector(settings, 'withName:', 'alpha')
+        process.applyConfigSelectorWithName(settings, 'alpha')
         then:
         process.cpus == 1
         process.time == '1h'
@@ -450,7 +450,7 @@ class ProcessConfigTest extends Specification {
 
         when:
         process =  new ProcessConfig([:])
-        process.applyConfigSelector(settings, 'withName:', 'delta')
+        process.applyConfigSelectorWithName(settings, 'delta')
         then:
         process.cpus == 2
         process.disk == '100GB'
@@ -458,14 +458,14 @@ class ProcessConfigTest extends Specification {
 
         when:
         process =  new ProcessConfig([:])
-        process.applyConfigSelector(settings, 'withName:', 'gamma')
+        process.applyConfigSelectorWithName(settings, 'gamma')
         then:
         process.disk == '100GB'
         process.size() == 1
 
         when:
         process = new ProcessConfig([:])
-        process.applyConfigSelector(settings, 'withName:', 'omega_x')
+        process.applyConfigSelectorWithName(settings, 'omega_x')
         then:
         process.cpus == 4
         process.size() == 1
@@ -652,5 +652,36 @@ class ProcessConfigTest extends Specification {
         cleanup:
         ProviderConfig.env.remove('NXF_SCM_FILE')
         cfg.delete()
+    }
+
+    def 'should not apply config on negative label' () {
+        given:
+        def settings = [
+                'withLabel:foo': [ cpus: 2 ],
+                'withLabel:!foo': [ cpus: 4 ],
+                'withLabel:!nodisk_.*': [ disk: '100.GB']
+        ]
+
+        when:
+        def p1 = new ProcessConfig([label: ['foo', 'other']])
+        p1.applyConfig(settings, "processName", null, null)
+        then:
+        p1.cpus == 2
+        p1.disk == '100.GB'
+
+        when:
+        def p2 = new ProcessConfig([label: ['foo', 'other', 'nodisk_label']])
+        p2.applyConfig(settings, "processName", null, null)
+        then:
+        p2.cpus == 2
+        !p2.disk
+
+        when:
+        def p3 = new ProcessConfig([label: ['other', 'nodisk_label']])
+        p3.applyConfig(settings, "processName", null, null)
+        then:
+        p3.cpus == 4
+        !p3.disk
+
     }
 }

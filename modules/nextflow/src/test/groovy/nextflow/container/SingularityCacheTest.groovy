@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,7 @@
  */
 
 package nextflow.container
+
 import java.nio.file.Files
 import java.nio.file.Paths
 
@@ -86,16 +87,27 @@ class SingularityCacheTest extends Specification {
         def dir = Files.createTempDirectory('test')
         def IMAGE = 'docker://pditommaso/foo:latest'
         def LOCAL = 'foo-latest.img'
-        ContainerConfig config = [noHttps: true] 
+        def TARGET_FILE = dir.resolve(LOCAL)
+        def TEMP_FILE = dir.resolve('foo-latest.pulling'); TEMP_FILE.text = 'foo'
+        ContainerConfig config = [noHttps: true]
         and:
         def cache = Spy(SingularityCache, constructorArgs: [ config ])
 
         when:
-        cache.downloadSingularityImage(IMAGE)
+        def result = cache.downloadSingularityImage(IMAGE)
         then:
-        1 * cache.localImagePath(IMAGE) >> dir.resolve(LOCAL)
-        1 * cache.runCommand("singularity pull --nohttps --name $LOCAL $IMAGE > /dev/null", dir) >> 0
+        1 * cache.localImagePath(IMAGE) >> TARGET_FILE
+        1 * cache.getTempImagePath(TARGET_FILE) >> TEMP_FILE
+        and:
+        1 * cache.runCommand("singularity pull --nohttps --name ${TEMP_FILE.name} $IMAGE > /dev/null", dir) >> 0
+        and:
+        TARGET_FILE.exists()
+        !TEMP_FILE.exists()
+        and:
+        result == TARGET_FILE
 
+        cleanup:
+        dir.deleteDir()
     }
 
 
@@ -111,10 +123,12 @@ class SingularityCacheTest extends Specification {
         def cache = Spy(SingularityCache)
 
         when:
-        cache.downloadSingularityImage(IMAGE)
+        def result = cache.downloadSingularityImage(IMAGE)
         then:
         1 * cache.localImagePath(IMAGE) >> container
         0 * cache.runCommand(_) >> 0
+        and:
+        result == dir.resolve(LOCAL)
 
         cleanup:
         dir.deleteDir()

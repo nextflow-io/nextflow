@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,7 @@
 
 package nextflow.scm
 
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -26,7 +27,6 @@ import nextflow.config.ConfigParser
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.file.FileHelper
-
 /**
  * Models a repository provider configuration attributes
  *
@@ -46,10 +46,7 @@ class ProviderConfig {
         if( !cfg )
             return DEFAULT_SCM_FILE
         // check and return it if valid
-        final path = FileHelper.asPath(cfg)
-        if( !path.exists() )
-            throw new AbortOperationException("Missing SCM config file: $cfg - Check the env variable NXF_SCM_FILE")
-        return path
+        return FileHelper.asPath(cfg)
     }
 
     private String name
@@ -82,6 +79,13 @@ class ProviderConfig {
             case 'bitbucket':
                 attr.platform = name
                 if( !attr.server ) attr.server = 'https://bitbucket.org'
+                break
+
+            case 'azurerepos':
+                attr.platform = name
+                if( !attr.server ) attr.server = 'https://dev.azure.com'
+                if( !attr.endpoint ) attr.endpoint = 'https://dev.azure.com'
+                break
         }
 
         if( attr.path )
@@ -265,15 +269,30 @@ class ProviderConfig {
         try {
             parse(file.text)
         }
+        catch (NoSuchFileException | FileNotFoundException e) {
+            if( file == DEFAULT_SCM_FILE ) {
+                return new LinkedHashMap()
+            }
+            else
+                throw new AbortOperationException("Missing SCM config file: ${file.toUriString()} - Check the env variable NXF_SCM_FILE")
+        }
+        catch ( UnknownHostException e ) {
+            final message = "Unable to access config file '${file?.toUriString()}' -- Unknown host: ${e}"
+            throw new ConfigParseException(message,e)
+        }
+        catch( IOException e ) {
+            final message = "Unable to access config file '${file?.toUriString()}' -- Cause: ${e.message?:e.toString()}"
+            throw new ConfigParseException(message,e)
+        }
         catch( Exception e ) {
-            def message = "Failed to parse config file: $file -- cause: ${e.message?:e.toString()}"
+            final message = "Failed to parse config file '${file?.toUriString()}' -- Cause: ${e.message?:e.toString()}"
             throw new ConfigParseException(message,e)
         }
     }
 
     static Map getDefault() {
         final file = getScmConfigPath()
-        return file.exists() ? getFromFile(file) : [:]
+        return getFromFile(file)
     }
 
     static private void addDefaults(List<ProviderConfig> result) {
@@ -288,6 +307,9 @@ class ProviderConfig {
 
         if( !result.find{ it.name == 'bitbucket' })
             result << new ProviderConfig('bitbucket')
+
+        if( !result.find{ it.name == 'azurerepos' })
+            result << new ProviderConfig('azurerepos')
     }
 
 }

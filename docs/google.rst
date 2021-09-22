@@ -9,23 +9,42 @@ Requirements
 
 Nextflow
 --------
-The support for Google Cloud requires Nextflow version ``20.01.0``. To install it define the following variables
+The support for Google Cloud requires Nextflow version ``20.01.0`` or later. To install it define the following variables
 in your system environment::
 
     export NXF_VER=20.01.0
     export NXF_MODE=google
 
+.. note:: As of version ``21.04.0`` or later the above variables are not required anymore and therefore should not be used.
 
 Credentials
 -----------
 
-To allow the deployment in the Google Cloud you need to configure the security credentials using
-a *Security account key* JSON file.
+Credentials for submitting requests to the Google LifeSciences API are picked up from your
+environment using `Application Default Credentials <https://github.com/googleapis/google-auth-library-java#google-auth-library-oauth2-http>`_.
+Application Default Credentials are designed to use the credentials most natural to the
+environment in which a tool runs.
 
-Nextflow looks for this file using the ``GOOGLE_APPLICATION_CREDENTIALS`` variable that
-has to be defined in the launching environment.
+The most common case will be to pick up your end-user Google credentials from your
+workstation. You can create these by running the command::
 
-If you don't have it, download the credentials file from the Google Cloud Console following these steps:
+    gcloud auth application-default login 
+
+and running through the authentication flow. This will write a credential file to your gcloud
+configuration directory that will be used for any tool you run on your workstation that
+picks up default credentials.
+
+The next most common case would be when running on a Compute Engine VM. In this case,
+Application Default Credentials will pick up the Compute Engine Service Account
+credentials for that VM.
+
+See the `Application Default Credentials <https://github.com/googleapis/google-auth-library-java#google-auth-library-oauth2-http>`_ documentation for how to enable other use cases.
+
+
+Finally, the ``GOOGLE_APPLICATION_CREDENTIALS`` environment variable can be used to specify location
+of the Google credentials file.
+
+If you don't have it, the credentials file can be download from the Google Cloud Console following these steps:
 
 * Open the `Google Cloud Console <https://console.cloud.google.com>`_
 * Go to APIs & Services → Credentials
@@ -34,11 +53,10 @@ If you don't have it, download the credentials file from the Google Cloud Consol
 * Select JSON as *Key type*
 * Click the *Create* button and download the JSON file giving a name of your choice e.g. ``creds.json``.
 
-Finally define the following variable replacing the path in the example with the one of your
+Then, define the following variable replacing the path in the example with the one of your
 credentials file just downloaded::
 
     export GOOGLE_APPLICATION_CREDENTIALS=/path/your/file/creds.json
-
 
 .. _google-lifesciences:
 
@@ -111,9 +129,18 @@ google.lifeSciences.bootDiskSize               Set the size of the virtual machi
 google.lifeSciences.copyImage                  The container image run to copy input and output files. It must include the ``gsutil`` tool (default: ``google/cloud-sdk:alpine``).
 google.lifeSciences.debug                      When ``true`` copies the `/google` debug directory in that task bucket directory (default: ``false``)
 google.lifeSciences.preemptible                When ``true`` enables the usage of *preemptible* virtual machines or ``false`` otherwise (default: ``true``)
-google.lifeSciences.usePrivateAddress          When ``true`` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: ``false``). Requires version `20.03.0-edge` or later.
+google.lifeSciences.usePrivateAddress          When ``true`` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: ``false``). Requires version ``20.03.0-edge`` or later.
+google.lifeSciences.network                    Set network name to attach the VM's network interface to. The value will be prefixed with global/networks/ unless it contains a /, in which case it is assumed to be a fully specified network resource URL. If unspecified, the global default network is used. Requires version ``21.03.0-edge`` or later.
+google.lifeSciences.serviceAccountEmail        Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used. Requires version ``20.05.0-edge`` or later.
+google.lifeSciences.subnetwork                 Define the name of the subnetwork to attach the instance to must be specified here, when the specified network is configured for custom subnet creation. The value is prefixed with `regions/subnetworks/` unless it contains a `/`, in which case it is assumed to be a fully specified subnetwork resource URL. Requires version ``21.03.0-edge`` or later.
 google.lifeSciences.sshDaemon                  When ``true`` runs SSH daemon in the VM carrying out the job to which it's possible to connect for debugging purposes (default: ``false``).
 google.lifeSciences.sshImage                   The container image used to run the SSH daemon (default: ``gcr.io/cloud-genomics-pipelines/tools``).
+google.lifeSciences.keepAliveOnFailure         When ``true`` and a task complete with an unexpected exit status the associated computing node is kept up for 1 hour. This options implies ``sshDaemon=true`` (default: ``false``, requires Nextflow version ``21.06.0-edge`` or later).
+google.storage.delayBetweenAttempts            Delay between download attempts from Google Storage (default `10 sec`, requires version ``21.06.0-edge`` or later).
+google.storage.maxParallelTransfers            Max parallel upload/download transfer operations *per job* (default: ``4``, requires version ``21.06.0-edge`` or later).
+google.storage.maxTransferAttempts             Max number of downloads attempts from Google Storage (default: `1`, requires version ``21.06.0-edge`` or later).
+google.storage.parallelThreadCount             Defines the value for the option ``GSUtil:parallel_thread_count`` used by ``gsutil`` for transfer input and output data (default: ``1``, requires version ``21.06.0-edge`` or later).
+google.storage.downloadMaxComponents           Defines the value for the option ``GSUtil:sliced_object_download_max_components`` used by ``gsutil`` for transfer input and output data (default: ``8``, requires version ``21.06.0-edge`` or later).
 ============================================== =================
 
 
@@ -184,6 +211,7 @@ if the virtual machine was terminated preemptively::
       maxRetries = 5
     }
 
+.. tip:: For an exhaustive list of all possible error codes, please refer to the official Google LifeSciences `documentation <https://cloud.google.com/life-sciences/docs/troubleshooting#error_codes>`_.
 
 Hybrid execution
 ----------------
@@ -223,7 +251,7 @@ Limitation
 ----------
 
 * Currently it's not possible to specify a disk type different from the default one assigned
-  by the service depending the chosen instance type.
+  by the service depending on the chosen instance type.
 
 
 

@@ -125,13 +125,14 @@ automatically and transparently manage the processes synchronisation, file(s) st
 
 Cloud support
 =============
-*Nextflow* also supports running workflows across various clouds and cloud technologies. *Nextflow* can create AWS EC2 or Google GCE clusters and deploy your workflow. Managed solutions from both Amazon and Google are also supported through AWS Batch and Google Genomics Pipelines. Additionally, *Nextflow* can run workflows on either on-prem or managed cloud Kubernetes clusters. 
+*Nextflow* also supports running workflows across various clouds and cloud technologies. Managed solutions from major 
+cloud providers are also supported through AWS Batch, Azure Batch and Google Cloud compute services. 
+Additionally, *Nextflow* can run workflows on either on-prem or managed cloud Kubernetes clusters. 
 
 Currently supported cloud platforms:
   + [AWS Batch](https://www.nextflow.io/docs/latest/awscloud.html#aws-batch)
-  + [AWS EC2](https://www.nextflow.io/docs/latest/awscloud.html)
-  + [Google GCE](https://www.nextflow.io/docs/latest/google.html)
-  + [Google Genomics Pipelines](https://www.nextflow.io/docs/latest/google.html#google-pipelines)
+  + [Azure Batch](https://azure.microsoft.com/en-us/services/batch/)
+  + [Google Cloud Life Sciences](https://cloud.google.com/life-sciences)
   + [Kubernetes](https://www.nextflow.io/docs/latest/kubernetes.html)
 
 
@@ -223,31 +224,6 @@ make install
 ```
 
 A self-contained distribution can be created with the command: `make pack`.  To include support of GA4GH and its dependencies in the binary, use `make packGA4GH` instead.
-
-Known compilation problems
----------------------------
-
-Nextflow requires JDK 8 or later to be compiled. The Java compiler used by the build process can be chosen by setting the
-`JAVA_HOME` environment variable accordingly.
-
-
-If the compilation stops reporting the error: `java.lang.VerifyError: Bad <init> method call from inside of a branch`,
-this is due to a bug affecting the following Java JDK:
-
-- 1.8.0 update 11
-- 1.8.0 update 20
-
-Upgrade to a newer JDK to avoid to this issue. Alternatively a possible workaround is to define the following variable
-in your environment:
-
-```bash
-_JAVA_OPTIONS='-Xverify:none'
-```
-
-Read more at these links:
-
-- https://bugs.openjdk.java.net/browse/JDK-8051012
-- https://jira.codehaus.org/browse/GROOVY-6951
 
 
 IntelliJ IDEA

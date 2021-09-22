@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,7 @@
 
 package nextflow.executor
 
+import nextflow.processor.TaskProcessor
 import spock.lang.Specification
 
 import java.nio.file.Paths
@@ -152,7 +153,7 @@ class PbsProExecutorTest extends Specification {
         def executor = [:] as PbsProExecutor
 
         expect:
-        executor.queueStatusCommand(null) == ['bash','-c', "set -o pipefail; qstat -f | { egrep '(Job Id:|job_state =)' || true; }"]
+		executor.queueStatusCommand(null) == ['bash','-c', "set -o pipefail; qstat -f \$( qstat -B | egrep -v '(^Server|^---)' | awk -v ORS=' ' '{print \"@\"\$1}' ) | { egrep '(Job Id:|job_state =)' || true; }"]
         executor.queueStatusCommand('xxx') == ['bash','-c', "set -o pipefail; qstat -f xxx | { egrep '(Job Id:|job_state =)' || true; }"]
         executor.queueStatusCommand('xxx').each { assert it instanceof String }
     }
@@ -191,5 +192,32 @@ class PbsProExecutorTest extends Specification {
 
     }
 
+    def 'should report cluster as first' () {
+
+        setup:
+        def executor = [:] as PbsProExecutor
+
+        // mock process
+        def proc = Mock(TaskProcessor)
+
+        // task object
+        def task = new TaskRun()
+        task.processor = proc
+        task.workDir = Paths.get('/work/dir')
+        task.name = 'task name'
+
+        when:
+        task.config = new TaskConfig()
+        task.config.clusterOptions = '-X abc'
+        then:
+        executor.getHeaders(task) == '''
+                #PBS -X abc
+                #PBS -N nf-task_name
+                #PBS -o /work/dir/.command.log
+                #PBS -j oe
+                NXF_CHDIR=/work/dir
+                '''
+                .stripIndent().leftTrim()
+    }
 
 }

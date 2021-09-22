@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,7 @@
 package nextflow.container
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.regex.Pattern
 
 import groovy.transform.PackageScope
 import nextflow.util.Escape
@@ -62,9 +63,16 @@ class ContainerHandler {
             final normalizedImageName = normalizeSingularityImageName(imageName)
             if( !config.isEnabled() || !normalizedImageName )
                 return normalizedImageName
-            final formats = ['docker', 'docker-daemon', 'shub', 'library']
-            final requiresCaching =  formats.any { normalizedImageName.startsWith(it) }
-            final result = requiresCaching ? createCache(this.config, normalizedImageName) : normalizedImageName
+            final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
+            
+            final result = requiresCaching ? createSingularityCache(this.config, normalizedImageName) : normalizedImageName
+            Escape.path(result)
+        }
+        else if( engine == 'charliecloud' ) {
+            // if the imagename starts with '/' it's an absolute path
+            // otherwise we assume it's in a remote registry and pull it from there
+            final requiresCaching = !imageName.startsWith('/')
+            final result = requiresCaching ? createCharliecloudCache(this.config, imageName) : imageName
             Escape.path(result)
         }
         else {
@@ -73,8 +81,13 @@ class ContainerHandler {
     }
 
     @PackageScope
-    String createCache(Map config, String imageName) {
+    String createSingularityCache(Map config, String imageName) {
         new SingularityCache(new ContainerConfig(config)) .getCachePathFor(imageName) .toString()
+    }
+
+    @PackageScope
+    String createCharliecloudCache(Map config, String imageName) {
+        new CharliecloudCache(new ContainerConfig(config)) .getCachePathFor(imageName) .toString()
     }
 
     /**
@@ -157,6 +170,9 @@ class ContainerHandler {
         return imageName
     }
 
+
+    public static final Pattern IMAGE_URL_PREFIX = ~/^[^\/:\. ]+:\/\/(.*)/
+
     /**
      * Normalize Singularity image name resolving the absolute path or
      * adding `docker://` prefix when required
@@ -179,7 +195,7 @@ class ContainerHandler {
         }
 
         // check if matches a protocol scheme such as `docker://xxx`
-        if( img =~ '^[^/:\\. ]+://(.*)' ) {
+        if( img =~ IMAGE_URL_PREFIX ) {
             return img
         }
 

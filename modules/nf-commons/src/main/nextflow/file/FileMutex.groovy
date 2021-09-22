@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,8 +39,6 @@ class FileMutex {
     String waitMessage
 
     String errorMessage
-
-    Duration timeout
 
     File target
 
@@ -87,7 +85,7 @@ class FileMutex {
              * wait to acquire a lock
              */
             boolean showed=0
-            long max = timeout ? timeout.millis : Long.MAX_VALUE
+            long max = timeoutMillis ? timeoutMillis : Long.MAX_VALUE
             long begin = System.currentTimeMillis()
             FileLock lock
             while( !(lock=file.getChannel().tryLock()) )  {

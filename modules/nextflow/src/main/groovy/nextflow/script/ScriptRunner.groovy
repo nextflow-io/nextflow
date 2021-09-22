@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,17 +17,17 @@
 
 package nextflow.script
 
+import static nextflow.util.ConfigHelper.*
+
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.util.HistoryFile
-import static nextflow.util.ConfigHelper.parseValue
 /**
  * Run a nextflow script file
  *
@@ -79,13 +79,6 @@ class ScriptRunner {
     ScriptRunner setScript( ScriptFile script ) {
         this.scriptFile = script
         return this
-    }
-
-    ScriptRunner( ConfigBuilder builder ) {
-        this.session = new Session(builder.build())
-        // note config files are collected during the build process
-        // this line should be after `ConfigBuilder#build`
-        this.session.configFiles = builder.parsedConfigFiles
     }
 
     Session getSession() { session }
@@ -258,7 +251,7 @@ class ScriptRunner {
 
 
         ArgsList(List<String> values) {
-            super( values ?: [] )
+            super( values ?: new LinkedHashSet<String>() )
         }
 
         String get( int pos ) {

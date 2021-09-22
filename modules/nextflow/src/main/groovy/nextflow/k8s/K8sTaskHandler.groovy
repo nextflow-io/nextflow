@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -181,11 +181,11 @@ class K8sTaskHandler extends TaskHandler {
             builder.withEnv(PodEnv.value('NXF_OWNER', getOwner()))
 
         // add computing resources
-        final cpus = taskCfg.get('cpus') as Integer
+        final cpus = taskCfg.getCpus()
         final mem = taskCfg.getMemory()
         final acc = taskCfg.getAccelerator()
         if( cpus )
-            builder.withCpus(cpus as int)
+            builder.withCpus(cpus)
         if( mem )
             builder.withMemory(mem)
         if( acc )
@@ -260,6 +260,7 @@ class K8sTaskHandler extends TaskHandler {
         if( !state || delta >= 1_000) {
             def newState = client.podState(podName)
             if( newState ) {
+                log.trace "[K8s] Get pod=$podName state=$newState"
                 state = newState
                 timestamp = now
             }
@@ -272,7 +273,8 @@ class K8sTaskHandler extends TaskHandler {
         if( !podName ) throw new IllegalStateException("Missing K8s pod name -- cannot check if running")
         if(isSubmitted()) {
             def state = getState()
-            if (state && state.running != null) {
+            // include `terminated` state to allow the handler status to progress
+            if (state && (state.running != null || state.terminated)) {
                 status = TaskStatus.RUNNING
                 return true
             }
@@ -291,7 +293,7 @@ class K8sTaskHandler extends TaskHandler {
      * (less than 1 second) that it skips right over the RUNNING status.
      * If this happens, the startTimeMillis never gets set and remains equal to 0.
      * To make sure startTimeMillis is non-zero we update it with the pod start time.
-     * We update completTimeMillis from the same pod info to be consistent.
+     * We update completeTimeMillis from the same pod info to be consistent.
      */
     void updateTimestamps(Map terminated) {
         try {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,12 +19,14 @@ package nextflow.file.http
 
 import groovy.transform.CompileStatic
 import nextflow.util.SerializerRegistrant
+import org.pf4j.Extension
 
 /**
  * Register the {@link XPathSerializer} as Kryo serializer
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Extension
 @CompileStatic
 class XPathRegistrant implements SerializerRegistrant {
     @Override

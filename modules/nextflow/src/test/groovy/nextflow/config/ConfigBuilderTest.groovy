@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,6 +29,8 @@ import nextflow.exception.ConfigParseException
 import nextflow.trace.WebLogObserver
 import nextflow.util.ConfigHelper
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -402,6 +404,94 @@ class ConfigBuilderTest extends Specification {
 
         cleanup:
         file?.delete()
+    }
+
+    def 'params-file should override params in the config file' () {
+        setup:
+        def baseDir = Paths.get('/my/base/dir')
+        and:
+        def params = Files.createTempFile('test', '.yml')
+        params.text = '''
+            alpha: "Hello" 
+            beta: "World" 
+            omega: "Last"
+            theta: "${baseDir}/something"
+            '''.stripIndent()
+        and:
+        def file = Files.createTempFile('test',null)
+        file.text = '''
+        params {
+          alpha = 'x'
+        }
+        params.beta = 'y'
+        params.delta = 'Foo'
+        params.gamma = params.alpha
+        params {
+            omega = 'Bar'
+        }
+
+        process {
+          publishDir = [path: params.alpha]
+        }
+        '''
+        when:
+        def opt = new CliOptions()
+        def run = new CmdRun(paramsFile: params)
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).setBaseDir(baseDir).buildGivenFiles(file)
+
+        then:
+        result.params.alpha == 'Hello'  // <-- params defined in the params-file overrides the ones in the config file
+        result.params.beta == 'World'   // <--   as above
+        result.params.gamma == 'Hello'  // <--   as above
+        result.params.omega == 'Last'
+        result.params.delta == 'Foo'
+        result.params.theta == "$baseDir/something"
+        result.process.publishDir == [path: 'Hello']
+
+        cleanup:
+        file?.delete()
+        params?.delete()
+    }
+
+    def 'params should override params-file and override params in the config file' () {
+        setup:
+        def params = Files.createTempFile('test', '.yml')
+        params.text = '''
+            alpha: "Hello" 
+            beta: "World" 
+            omega: "Last"
+            '''.stripIndent()
+        and:
+        def file = Files.createTempFile('test',null)
+        file.text = '''
+        params {
+          alpha = 'x'
+        }
+        params.beta = 'y'
+        params.delta = 'Foo'
+        params.gamma = "I'm gamma"
+        params.omega = "I'm the last"
+        
+        process {
+          publishDir = [path: params.alpha]
+        }
+        '''
+        when:
+        def opt = new CliOptions()
+        def run = new CmdRun(paramsFile: params, params: [alpha: 'Hola', beta: 'Mundo'])
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+
+        then:
+        result.params.alpha == 'Hola'   // <-- this comes from the CLI
+        result.params.beta == 'Mundo'   // <-- this comes from the CLI as well
+        result.params.omega == 'Last'   // <-- this comes from the params-file
+        result.params.gamma == "I'm gamma"   // <-- from the config
+        result.params.delta == 'Foo'         // <-- from the config
+        result.process.publishDir == [path: 'Hola']
+
+        cleanup:
+        file?.delete()
+        params?.delete()
     }
 
     def 'valid config files' () {
@@ -1401,6 +1491,21 @@ class ConfigBuilderTest extends Specification {
         config.notification.enabled == true
         config.notification.to == 'yo@nextflow.com'
     }
+
+    def 'should configure stub run mode' () {
+        given:
+        Map config
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun()).build()
+        then:
+        !config.stubRun
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(stubRun: true)).build()
+        then:
+        config.stubRun == true
+    }
     
     def 'should merge profiles' () {
         given:
@@ -1685,5 +1790,186 @@ class ConfigBuilderTest extends Specification {
         cleanup:
         folder?.deleteDir()
     }
+
+    def 'CLI params should overwrite only the key provided when nested'() {
+        given:
+        def folder = File.createTempDir()
+        def configMain = new File(folder, 'nextflow.config').absoluteFile
+
+        configMain.text = """
+        params {
+            foo = 'Hello'
+            bar = "Monde"
+            baz {
+                x = "Ciao"
+                y = "mundo"
+                z { 
+                    alpha = "Hallo"
+                    beta  = "World"
+                }
+            }
+            
+        }        
+        """
+
+        when:
+        def opt = new CliOptions()
+        def run = new CmdRun(params: [bar: "world", 'baz.y': "mondo", 'baz.z.beta': "Welt"])
+        def config = new ConfigBuilder(env: [NXF_CONFIG_FILE: configMain.toString()]).setOptions(opt).setCmdRun(run).build()
+
+        then:
+        config.params.foo == 'Hello'
+        config.params.bar == 'world'
+        config.params.baz.x == 'Ciao'
+        config.params.baz.y == 'mondo'
+        //tests recursion
+        config.params.baz.z.alpha == 'Hallo'
+        config.params.baz.z.beta == 'Welt'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    @Unroll
+    def 'should merge config params' () {
+        given:
+        def builder = new ConfigBuilder()
+
+        expect:
+        def cfg = new ConfigObject(); if(CONFIG) cfg.putAll(CONFIG)
+        and:
+        builder.mergeMaps(cfg, PARAMS, false) == EXPECTED
+
+        where:
+        CONFIG                      | PARAMS | EXPECTED
+        [foo:1]                     | null                          | [foo:1]
+        null                        | [bar:2]                       | [bar:2]
+        [foo:1]                     | [bar:2]                       | [foo: 1, bar: 2]
+        [foo:1]                     | [bar:null]                    | [foo: 1, bar: null]
+        [foo:1]                     | [foo:null]                    | [foo: null]
+        [foo:1, bar:[:]]            | [bar: [x:10, y:20]]           | [foo: 1, bar: [x:10, y:20]]
+        [foo:1, bar:[x:1, y:2]]     | [bar: [x:10, y:20]]           | [foo: 1, bar: [x:10, y:20]]
+        [foo:1, bar:[x:1, y:2]]     | [foo: 2, bar: [x:10, y:20]]   | [foo: 2, bar: [x:10, y:20]]
+        [foo:1, bar:null]           | [bar: [x:10, y:20]]           | [foo: 1, bar: [x:10, y:20]]
+        [foo:1, bar:2]              | [bar: [x:10, y:20]]           | [foo: 1, bar: [x:10, y:20]]
+        [foo:1, bar:[x:1, y:2]]     | [bar: 2]                      | [foo: 1, bar: 2]
+    }
+
+    @Unroll
+    def 'should merge config strict params' () {
+        given:
+        def builder = new ConfigBuilder()
+
+        expect:
+        def cfg = new ConfigObject(); if(CONFIG) cfg.putAll(CONFIG)
+        and:
+        builder.mergeMaps(cfg, PARAMS, true) == EXPECTED
+
+        where:
+        CONFIG                      | PARAMS                        | EXPECTED
+        [:]                         | [bar:2]                       | [bar:2]
+        [foo:1]                     | null                          | [foo:1]
+        null                        | [bar:2]                       | [bar:2]
+        [foo:1]                     | [bar:2]                       | [foo: 1, bar: 2]
+        [foo:1]                     | [bar:null]                    | [foo: 1, bar: null]
+        [foo:1]                     | [foo:null]                    | [foo: null]
+        [foo:1, bar:[:]]            | [bar: [x:10, y:20]]           | [foo: 1, bar: [x:10, y:20]]
+        [foo:1, bar:[x:1, y:2]]     | [bar: [x:10, y:20]]           | [foo: 1, bar: [x:10, y:20]]
+        [foo:1, bar:[x:1, y:2]]     | [foo: 2, bar: [x:10, y:20]]   | [foo: 2, bar: [x:10, y:20]]
+    }
+
+    def 'prevent config side effects' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def config = folder.resolve('nf.config')
+        config.text = '''\
+        params.test.foo = "foo_def"
+        params.test.bar = "bar_def"        
+        '''.stripIndent()
+
+        when:
+        def cfg1 = new ConfigBuilder()
+                .setOptions( new CliOptions(userConfig: [config.toString()]))
+                .build()
+        then:
+        cfg1.params.test.foo == "foo_def"
+        cfg1.params.test.bar == "bar_def"
+
+        
+        when:
+        def cfg2 = new ConfigBuilder()
+                .setOptions( new CliOptions(userConfig: [config.toString()]))
+                .setCmdRun( new CmdRun(params: ['test.foo': 'CLI_FOO'] ))
+                .build()
+        then:
+        cfg2.params.test.foo == "CLI_FOO"
+        cfg2.params.test.bar == "bar_def"
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'parse nested json' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def config = folder.resolve('nf.json')
+        config.text = '''\
+        {
+            "title": "something",
+            "nested": {
+                "name": "Mike",
+                "and": {
+                    "more": "nesting",
+                    "still": {
+                        "another": "layer"
+                    }
+                }
+            }
+        }
+        '''.stripIndent()
+
+        when:
+        def cfg1 = new ConfigBuilder().setCmdRun(new CmdRun(paramsFile: config.toString())).build()
+
+        then:
+        cfg1.params.title == "something"
+        cfg1.params.nested.name == 'Mike'
+        cfg1.params.nested.and.more == 'nesting'
+        cfg1.params.nested.and.still.another == 'layer'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'parse nested yaml' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def config = folder.resolve('nf.yaml')
+        config.text = '''\
+            title: "something"
+            nested: 
+              name: "Mike"
+              and:
+                more: nesting
+                still:
+                  another: layer      
+        '''.stripIndent()
+
+        when:
+        def cfg1 = new ConfigBuilder().setCmdRun(new CmdRun(paramsFile: config.toString())).build()
+
+        then:
+        cfg1.params.title == "something"
+        cfg1.params.nested.name == 'Mike'
+        cfg1.params.nested.and.more == 'nesting'
+        cfg1.params.nested.and.still.another == 'layer'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 }
 

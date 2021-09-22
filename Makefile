@@ -1,5 +1,5 @@
 #
-#  Copyright 2020, Seqera Labs
+#  Copyright 2020-2021, Seqera Labs
 #  Copyright 2013-2019, Centre for Genomic Regulation (CRG)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,24 +20,27 @@
 # make deps config=runtime
 # 
 
-config ?= default
+config ?= compileClasspath
 
 ifdef module 
 mm = :${module}:
 else 
-mm = 
+mm = :nextflow:
 endif 
-
-compile:
-	./gradlew compile exportClasspath
-	@echo "DONE `date`"
 
 clean:
 	rm -rf .nextflow*
 	rm -rf work 
 	rm -rf modules/nextflow/.nextflow*
 	rm -rf modules/nextflow/work
+	rm -rf build
+	rm -rf modules/*/build
+	rm -rf plugins/*/build
 	./gradlew clean
+
+compile:
+	./gradlew compile exportClasspath
+	@echo "DONE `date`"
 
 assemble:
 	./gradlew compile assemble
@@ -46,16 +49,16 @@ check:
 	./gradlew check
 
 #
-# install compiled artifacts in Mavel local dir 
+# install compiled artifacts in Maven local dir
 # 
 install:
-	BUILD_PACK=1 ./gradlew installLauncher install -Dmaven.repo.local=${HOME}/.nextflow/capsule/deps/ -x signArchives
+	BUILD_PACK=1 ./gradlew installLauncher publishToMavenLocal -Dmaven.repo.local=${HOME}/.nextflow/capsule/deps/
 
 #
 # Show dependencies try `make deps config=runtime`, `make deps config=google`
 #
 deps:
-	BUILD_PACK=1 ./gradlew -q ${mm}dependencies --configuration ${config}
+	./gradlew -q ${mm}dependencies --configuration ${config}
 
 deps-all:
 	./gradlew -q dependencyInsight --configuration ${config} --dependency ${module}
@@ -80,7 +83,7 @@ endif
 # Run smoke tests
 #
 smoke:
-	NXF_SMOKE=1 ./gradlew test
+	NXF_SMOKE=1 ./gradlew ${mm}test
 
 #
 # Upload JAR artifacts to Maven Central
@@ -93,6 +96,9 @@ upload:
 #
 pack:
 	BUILD_PACK=1 ./gradlew packAll
+
+packCore:
+	BUILD_PACK=1 ./gradlew packCore
 
 #
 # Create self-contained distribution package, including GA4GH support and associated dependencies
@@ -128,4 +134,11 @@ dockerImage:
 # Create local docker image
 #
 dockerPack:
-	BUILD_PACK=1 ./gradlew install dockerPack -Dmaven.repo.local=${PWD}/build/docker/.nextflow/capsule/deps/ -x signArchives
+	BUILD_PACK=1 ./gradlew publishToMavenLocal dockerPack -Dmaven.repo.local=${PWD}/build/docker/.nextflow/capsule/deps/
+
+
+upload-plugins:
+	./gradlew plugins:upload
+
+publish-index:
+	./gradlew plugins:publishIndex

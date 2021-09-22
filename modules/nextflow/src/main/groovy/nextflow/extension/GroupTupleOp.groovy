@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -189,12 +189,19 @@ class GroupTupleOp {
                 break
 
             case Closure:
-                comparator = { o1, o2 ->
-                    def closure = (Closure)sort
-                    def v1 = closure.call(o1)
-                    def v2 = closure.call(o2)
-                    return v1 <=> v2
-                } as Comparator
+                final closure = (Closure)sort
+                if( closure.getMaximumNumberOfParameters()==2 ) {
+                    comparator = sort as Comparator
+                }
+                else if( closure.getMaximumNumberOfParameters()==1 ) {
+                    comparator = { o1, o2 ->
+                        def v1 = closure.call(o1)
+                        def v2 = closure.call(o2)
+                        return v1 <=> v2
+                    } as Comparator
+                }
+                else
+                    throw new IllegalArgumentException("Invalid groupTuple option - The closure should have 1 or 2 arguments")
                 break
 
             default:

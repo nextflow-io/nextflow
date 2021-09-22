@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -109,7 +109,14 @@ class SraExplorer {
         return target
     }
 
-    protected Map getEnv() { System.getenv() }
+    protected Map env() {
+        return System.getenv()
+    }
+
+    protected Map config() {
+        final session = Global.session as Session
+        return session.getConfig()
+    }
 
     protected Path getCacheFolder() {
         if( cacheFolder )
@@ -120,10 +127,9 @@ class SraExplorer {
     }
 
     protected String getConfigApiKey() {
-        def session = Global.session as Session
-        def result = session ?.config ?. navigate('ncbi.apiKey')
+        def result = config().navigate('ncbi.apiKey')
         if( !result )
-            result = getEnv().get('NCBI_API_KEY')
+            result = env().get('NCBI_API_KEY')
         if( !result )
             log.warn1("Define the NCBI_API_KEY env variable to use NCBI search service -- Read more https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities/")
         return result
@@ -255,7 +261,7 @@ class SraExplorer {
     }
 
     protected String readRunUrl(String acc) {
-        final url = "https://www.ebi.ac.uk/ena/data/warehouse/filereport?result=read_run&fields=fastq_ftp&accession=$acc"
+        final url = "https://www.ebi.ac.uk/ena/portal/api/filereport?result=read_run&fields=fastq_ftp&accession=$acc"
         log.debug "SRA fetch ftp fastq url=$url"
         String result = new URL(url).text.trim()
         log.trace "SRA fetch ftp fastq url result:\n${result?.indent()}"

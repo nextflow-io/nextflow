@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,23 +17,25 @@
 
 package nextflow.executor
 
+import java.nio.file.FileSystemException
 import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.container.CharliecloudBuilder
 import nextflow.container.ContainerBuilder
 import nextflow.container.DockerBuilder
 import nextflow.container.PodmanBuilder
 import nextflow.container.ShifterBuilder
 import nextflow.container.SingularityBuilder
 import nextflow.container.UdockerBuilder
+import nextflow.exception.ProcessException
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.Escape
-
 /**
  * Builder to create the BASH script which is used to
  * wrap and launch the user task
@@ -137,7 +139,7 @@ class BashWrapperBuilder {
     }
 
     protected boolean shouldUnstageOutputs() {
-        return workDir != targetDir
+        return targetDir && workDir!=targetDir
     }
 
     protected boolean fixOwnership() {
@@ -261,7 +263,7 @@ class BashWrapperBuilder {
         binding.launch_cmd = getLaunchCommand(interpreter,env)
         binding.stage_cmd = getStageCommand()
         binding.unstage_cmd = getUnstageCommand()
-        binding.unstage_controls = changeDir ? getUnstageControls() : null
+        binding.unstage_controls = changeDir || shouldUnstageOutputs() ? getUnstageControls() : null
 
         if( changeDir || shouldUnstageOutputs() ) {
             binding.unstage_outputs = copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)
@@ -306,11 +308,22 @@ class BashWrapperBuilder {
             log.warn1("Task runtime metrics are not reported when using macOS without a container engine")
 
         final wrapper = buildNew0()
-        Files.write(wrapperFile, wrapper.getBytes())
-        Files.write(scriptFile, script.getBytes())
+        write0(wrapperFile, wrapper)
+        write0(scriptFile, script)
         if( input != null )
-            Files.write(inputFile, input.toString().getBytes())
+            write0(inputFile, input.toString())
         return wrapperFile
+    }
+
+    private void write0(Path path, String data) {
+        try {
+            Files.write(path, data.getBytes())
+        }
+        catch (FileSystemException e) {
+            // throw a ProcessStageException so that the error can be recovered
+            // via nextflow re-try mechanism
+            new ProcessException("Unable to create file ${path.toUriString()}", e)
+        }
     }
 
     private String getHelpersScript() {
@@ -367,6 +380,9 @@ class BashWrapperBuilder {
         * process stats
         */
         String launcher
+
+        // NOTE: the isTraceRequired() check must match the logic in launchers (i.e. AwsBatchScriptLauncher)
+        // that determines when to stage the file.
         final traceWrapper = isTraceRequired()
         if( traceWrapper ) {
             // executes the stub which in turn executes the target command
@@ -404,7 +420,7 @@ class BashWrapperBuilder {
         String result = ''
         // -- cleanup the scratch dir
         if( scratch && cleanup != false ) {
-            result += (!containerBuilder ? 'rm -rf $NXF_SCRATCH || true' : '(sudo -n true && sudo rm -rf "$NXF_SCRATCH" || rm -rf "$NXF_SCRATCH")&>/dev/null || true')
+            result += (containerBuilder !instanceof DockerBuilder ? 'rm -rf $NXF_SCRATCH || true' : '(sudo -n true && sudo rm -rf "$NXF_SCRATCH" || rm -rf "$NXF_SCRATCH")&>/dev/null || true')
             result += '\n'
         }
         // -- remove the container in this way because 'docker run --rm'  fail in some cases -- see https://groups.google.com/d/msg/docker-user/0Ayim0wv2Ls/-mZ-ymGwg8EJ
@@ -437,6 +453,8 @@ class BashWrapperBuilder {
             return new UdockerBuilder(containerImage)
         if( engine == 'shifter' )
             return new ShifterBuilder(containerImage)
+        if( engine == 'charliecloud' )
+            return new CharliecloudBuilder(containerImage)
         //
         throw new IllegalArgumentException("Unknown container engine: $engine")
     }
@@ -480,6 +498,9 @@ class BashWrapperBuilder {
 
         if( this.containerMemory )
             builder.setMemory(containerMemory)
+
+        if( this.containerCpus )
+            builder.setCpus(containerCpus)
 
         if( this.containerCpuset )
             builder.addRunOptions(containerCpuset)

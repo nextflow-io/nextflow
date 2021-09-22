@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,8 +40,8 @@ class ScriptBindingTest extends Specification {
                 .setScriptPath(path)
 
         then:
-        binding.scriptPath == path
-        binding.session == session
+        binding.getScriptPath() == path
+        binding.getSession() == session
     }
 
     def 'should test params' () {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,7 @@
 
 package nextflow.scm
 
+
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 /**
@@ -26,18 +27,32 @@ import nextflow.exception.AbortOperationException
  *  https://confluence.atlassian.com/bitbucketserver
  *  
  * @author Piotr Faba <piotr.faba@ardigen.com>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 final class BitbucketServerRepositoryProvider extends RepositoryProvider {
     private String repository
+    private String givenName
 
     BitbucketServerRepositoryProvider(String name, ProviderConfig config=null) {
-        def parts = name.split('/') as List<String>
-        if( parts.size() != 2 )
+        this.givenName = name
+
+        final parts = name.tokenize('/')
+        if( parts.size() == 2 ) {
+            this.project = parts[0]
+            this.repository = parts[1]
+        }
+        else if( parts.size()==3 && parts[0]=='scm' ) {
+            this.project = parts[1]
+            this.repository = parts[2]
+        }
+        else if( parts.size() == 4 && parts[0]=='projects' && parts[2]=='repos') {
+            this.project = parts[1]
+            this.repository = parts[3]
+        }
+        else
             throw new AbortOperationException("Not a valid project name: $name")
 
-        this.project = parts[0]
-        this.repository = parts[1]
         this.config = config ?: new ProviderConfig('bitbucketserver')
     }
 
@@ -52,7 +67,13 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
 
     @Override
     String getContentUrl( String path ) {
-        return  "${config.endpoint}/rest/api/1.0/projects/${project}/repos/${repository}/raw/${path}"    
+        // see
+        // https://docs.atlassian.com/bitbucket-server/rest/7.10.0/bitbucket-rest.html#idp358
+        //
+        def result = "${config.endpoint}/rest/api/1.0/projects/${project}/repos/${repository}/raw/${path}"
+        if( revision )
+            result += "?at=$revision"
+        return result
     }
 
     private String getMainBranchUrl() {
@@ -80,7 +101,7 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
 
     @Override
     String getRepositoryUrl() {
-        return "${config.server}/scm/${project}/${repository}"
+        return "${config.server}/${givenName.stripStart('/')}"
     }
 
     @Override

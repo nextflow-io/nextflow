@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,7 +45,7 @@ import groovy.transform.PackageScope
 import sun.net.www.protocol.ftp.FtpURLConnection
 
 /**
- * Implements a read-only JSR-203 complaint file system provider for http/ftp protocols
+ * Implements a read-only JSR-203 compliant file system provider for http/ftp protocols
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Emilio Palumbo <emilio.palumbo@crg.eu>
@@ -63,7 +63,15 @@ abstract class XFileSystemProvider extends FileSystemProvider {
     }
 
     static private URI key(URI uri) {
-        key(uri.scheme.toLowerCase(), uri.authority.toLowerCase())
+        final base = uri.authority
+        int p = base.indexOf('@')
+        if( p==-1 )
+            return key(uri.scheme.toLowerCase(), base.toLowerCase())
+        else {
+            final user = base.substring(0,p)
+            final host = base.substring(p)
+            return key(uri.scheme.toLowerCase(), user + host.toLowerCase())
+        }
     }
 
     @Override
@@ -142,6 +150,28 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         return getFileSystem(uri,true).getPath(uri.path)
     }
 
+    protected String auth(String userInfo) {
+        final String BEARER = 'x-oauth-bearer:'
+        int p = userInfo.indexOf(BEARER)
+        if( p!=-1 ) {
+            final token = userInfo.substring(BEARER.length())
+            return "Bearer $token"
+        }
+        else {
+            return "Basic ${userInfo.getBytes().encodeBase64()}"
+        }
+    }
+
+    private URLConnection toConnection(Path path) {
+        final url = path.toUri().toURL()
+        final conn = url.openConnection()
+        conn.setRequestProperty("User-Agent", 'Nextflow/httpfs')
+        if( url.userInfo ) {
+            conn.setRequestProperty("Authorization", auth(url.userInfo));
+        }
+        return conn
+    }
+
     @Override
     SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
 
@@ -156,8 +186,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
             }
         }
 
-        final conn = new URL(path.toUri().toString()).openConnection()
-        final size = conn.getContentLengthLong()
+        final conn = toConnection(path)
         final stream = new BufferedInputStream(conn.getInputStream())
 
         new SeekableByteChannel() {
@@ -193,7 +222,9 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
             @Override
             long size() throws IOException {
-                return size
+                // this value is going to be used as the buffer size
+                // file related operation. See for example {@link Files#readAllBytes}
+                return 8192
             }
 
             @Override
@@ -257,7 +288,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
             }
         }
 
-        return new URL(path.toUri().toString()).openStream()
+        return toConnection(path).getInputStream()
     }
 
     /**
@@ -379,7 +410,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
     }
 
     protected XFileAttributes readHttpAttributes(XPath path) {
-        final conn = path.toUri().toURL().openConnection()
+        final conn = toConnection(path)
         if( conn instanceof FtpURLConnection ) {
             return new XFileAttributes(null,-1)
         }

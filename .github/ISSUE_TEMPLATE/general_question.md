@@ -9,6 +9,7 @@ If you need help about Nextflow scripting language,
 configuration options and general Nextflow usage the better 
 channels to post this kind of questions are: 
 
+* GitHub discussions: https://github.com/nextflow-io/nextflow/discussions
 * Google group: https://groups.google.com/forum/#!forum/nextflow
 * Gitter channel: https://gitter.im/nextflow-io/nextflow
 

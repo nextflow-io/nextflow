@@ -85,8 +85,8 @@ class OarExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #OAR -d /work/path
                 #OAR -n nf-the_task_name
-                #OAR -O /work/path/.command.out
-                #OAR -E /work/path/.command.err
+                #OAR -O /work/path/.command.log
+                #OAR -E /work/path/.command.log
                 '''
                 .stripIndent().leftTrim()
 
@@ -97,8 +97,8 @@ class OarExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #OAR -d /work/path
                 #OAR -n nf-the_task_name
-                #OAR -O /work/path/.command.out
-                #OAR -E /work/path/.command.err
+                #OAR -O /work/path/.command.log
+                #OAR -E /work/path/.command.log
                 #OAR -q delta
                 '''
                 .stripIndent().leftTrim()
@@ -110,8 +110,8 @@ class OarExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #OAR -d /work/path
                 #OAR -n nf-the_task_name
-                #OAR -O /work/path/.command.out
-                #OAR -E /work/path/.command.err
+                #OAR -O /work/path/.command.log
+                #OAR -E /work/path/.command.log
                 #OAR -l walltime=00:01:00
                 '''
                 .stripIndent().leftTrim()
@@ -125,8 +125,8 @@ class OarExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #OAR -d /work/path
                 #OAR -n nf-the_task_name
-                #OAR -O /work/path/.command.out
-                #OAR -E /work/path/.command.err
+                #OAR -O /work/path/.command.log
+                #OAR -E /work/path/.command.log
                 #OAR -p "memnode=1"
                 #OAR -l walltime=01:00:00
                 #OAR -a 1
@@ -142,8 +142,8 @@ class OarExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #OAR -d /work/path
                 #OAR -n nf-the_task_name
-                #OAR -O /work/path/.command.out
-                #OAR -E /work/path/.command.err
+                #OAR -O /work/path/.command.log
+                #OAR -E /work/path/.command.log
                 #OAR -p "memnode=2"
                 #OAR -l walltime=01:00:00
                 #OAR -a 1
@@ -160,8 +160,8 @@ class OarExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #OAR -d /work/path
                 #OAR -n nf-the_task_name
-                #OAR -O /work/path/.command.out
-                #OAR -E /work/path/.command.err
+                #OAR -O /work/path/.command.log
+                #OAR -E /work/path/.command.log
                 #OAR -p "memnode=4"
                 #OAR -l /nodes=1/core=2,walltime=02:00:00
                 #OAR -b 2
@@ -178,8 +178,8 @@ class OarExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #OAR -d /work/path
                 #OAR -n nf-the_task_name
-                #OAR -O /work/path/.command.out
-                #OAR -E /work/path/.command.err
+                #OAR -O /work/path/.command.log
+                #OAR -E /work/path/.command.log
                 #OAR -p "memnode=6"
                 #OAR -l /nodes=1/core=8,walltime=51:00:00
                 #OAR -x 3
@@ -209,8 +209,8 @@ class OarExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #OAR -d "/work/some\\ data/path"
                 #OAR -n nf-the_task_name
-                #OAR -O "/work/some\\ data/path/.command.out"
-                #OAR -E "/work/some\\ data/path/.command.err"
+                #OAR -O "/work/some\\ data/path/.command.log"
+                #OAR -E "/work/some\\ data/path/.command.log"
                 '''
                 .stripIndent().leftTrim()
 

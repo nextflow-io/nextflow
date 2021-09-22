@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -71,7 +71,7 @@ class PublishOp {
     protected void publish0(entry) {
         log.debug "Publish operator got: $entry"
         sourceDir = null
-        // use an set to avoid duplicates
+        // use a set to avoid duplicates
         final result = new HashSet(10)
         collectFiles(entry, result)
         publisher.apply(result, sourceDir)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,15 +28,23 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.hash.Funnels;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
+import com.google.common.io.ByteStreams;
+import nextflow.Global;
+import nextflow.ISession;
 import nextflow.extension.Bolts;
 import nextflow.extension.FilesEx;
 import nextflow.file.FileHolder;
+import nextflow.io.SerializableMarker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,7 +58,7 @@ public class CacheHelper {
 
     public enum HashMode {
 
-        STANDARD, DEEP, LENIENT;
+        STANDARD, DEEP, LENIENT, SHA256;
 
         public static HashMode of( Object obj ) {
             if( obj==null || obj instanceof Boolean )
@@ -64,8 +72,10 @@ public class CacheHelper {
                     return LENIENT;
                 if( "deep".equals(obj) )
                     return DEEP;
+                if( "sha256".equals(obj) )
+                    return SHA256;
             }
-            log.warn("Unknown cache mode: {}", obj.toString());
+            LoggerFactory.getLogger(HashMode.class).warn("Unknown cache mode: {}", obj.toString());
             return null;
         }
     }
@@ -187,6 +197,10 @@ public class CacheHelper {
             return hasher.putInt( value.hashCode() );
         }
 
+        if( value instanceof SerializableMarker) {
+            return hasher.putInt( value.hashCode() );
+        }
+
         if( value instanceof CacheFunnel ) {
             return ((CacheFunnel) value).funnel(hasher,mode);
         }
@@ -231,11 +245,65 @@ public class CacheHelper {
             // see https://github.com/nextflow-io/nextflow/pull/1382
             log.warn("File system is unable to get file attributes file: {} -- Cause: {}", FilesEx.toUriString(path), e.toString());
         }
+        catch(Exception e) {
+            log.warn("Unable to get file attributes file: {} -- Cause: {}", FilesEx.toUriString(path), e.toString());
+        }
+
+        if( mode==HashMode.STANDARD && isAssetFile(path) ) {
+            return attrs==null || attrs.isDirectory()
+                    // when file attributes are not avail or it's a directory
+                    // hash the file using the file name path and the repository
+                    ? hashFileAsset(hasher, path)
+                    // when it's not a directory, hash the content being an asset file
+                    // (i.e. included in the project repository) it's expected to small file
+                    // which makes the content hashing doable
+                    : hashFileSha256(hasher, path);
+        }
 
         if( mode==HashMode.DEEP && attrs!=null && attrs.isRegularFile() )
             return hashFileContent(hasher, path);
-        else
-            return hashFileMetadata(hasher, path, attrs, mode);
+        if( mode==HashMode.SHA256 && attrs!=null && attrs.isRegularFile() )
+            return hashFileSha256(hasher, path);
+        // default
+        return hashFileMetadata(hasher, path, attrs, mode);
+    }
+
+
+    static private LoadingCache<Path,String> sha256Cache = CacheBuilder
+            .newBuilder()
+            .maximumSize(10_000)
+            .build(new CacheLoader<Path, String>() {
+                @Override
+                public String load(Path key) throws Exception {
+                    return hashFileSha256Impl0(key);
+                }
+            });
+
+    static private Hasher hashFileSha256( Hasher hasher, Path path ) {
+        try {
+            // file content hash
+            String sha256 = sha256Cache.get(path);
+            hasher.putUnencodedChars(sha256);
+        }
+        catch (ExecutionException t) {
+            Throwable err = t.getCause()!=null ? t.getCause() : t;
+            String msg = err.getMessage()!=null ? err.getMessage() : err.toString();
+            log.warn("Unable to compute sha-256 hashing for file: {} - Cause: {}", FilesEx.toUriString(path), msg);
+        }
+        return hasher;
+    }
+
+    static protected String hashFileSha256Impl0(Path path) throws IOException {
+        log.debug("Hash asset file sha-256: {}", path);
+        Hasher hasher = Hashing.sha256().newHasher();
+        ByteStreams.copy(Files.newInputStream(path), Funnels.asOutputStream(hasher));
+        return hasher.hash().toString();
+    }
+
+    static private Hasher hashFileAsset( Hasher hasher, Path path ) {
+        log.debug("Hash asset file: {}", path);
+        hasher.putUnencodedChars( Global.getSession().getCommitId() );
+        return hasher;
     }
 
     /**
@@ -282,7 +350,7 @@ public class CacheHelper {
             Files.copy(path, output);
         }
         catch( IOException e ) {
-            throw new IllegalStateException("Unable to hash content: " + path, e);
+            throw new IllegalStateException("Unable to hash content: " + FilesEx.toUriString(path), e);
         }
         finally {
             FilesEx.closeQuietly(output);
@@ -319,6 +387,27 @@ public class CacheHelper {
 
         return hasher.putBytes(resultBytes);
 
+    }
+
+    /**
+     * Check if the argument is an asset file i.e. a file that makes part of the
+     * pipeline Git repository
+     *
+     * @param path
+     * @return
+     */
+    static protected boolean isAssetFile(Path path) {
+        final ISession session = Global.getSession();
+        if( session==null )
+            return false;
+        // if the commit ID is null the current run is not launched from a repo
+        if( session.getCommitId()==null )
+            return false;
+        // if the file belong to different file system, cannot be a file belonging to the repo
+        if( session.getBaseDir().getFileSystem()!=path.getFileSystem() )
+            return false;
+        // if the file is in the same directory as the base dir it's a asset by definition
+        return path.startsWith(session.getBaseDir());
     }
 
 }

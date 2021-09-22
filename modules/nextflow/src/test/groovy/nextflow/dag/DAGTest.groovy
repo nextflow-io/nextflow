@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,7 +21,12 @@ import spock.lang.Specification
 
 import groovyx.gpars.dataflow.DataflowChannel
 import groovyx.gpars.dataflow.DataflowQueue
+import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowVariable
+import nextflow.script.params.InputsList;
+import nextflow.script.params.InParam;
+import nextflow.script.params.OutputsList;
+import nextflow.script.params.OutParam;
 import nextflow.Session
 /**
  *
@@ -270,6 +275,53 @@ class DAGTest extends Specification {
         dag.edges[0].label == 'channel_1'
         dag.edges[1].label == 'funnel_2'
 
+    }
+
+    def 'should convert dataflow broadcast to dataflow channel' () {
+
+        given:
+        def ch1 = new DataflowBroadcast()
+        def ch2 = new DataflowBroadcast()
+        def ch1r = Mock(DataflowChannel)
+        def ch2r = Mock(DataflowChannel)
+
+        def chC = new DataflowBroadcast()
+        def chE = new DataflowBroadcast()
+        def chV = new DataflowBroadcast()
+
+        def dag = new DAG()
+
+        def pInList = new InputsList()
+        def ip1 = Mock(InParam) { rawChannel >> chC }
+        pInList.add( ip1 )
+
+        def pOutList = new OutputsList()
+        def op1 = Mock(OutParam) { getOutChannels() >> [chE] }
+        pOutList.add( op1 )
+
+        when:
+        dag.addDataflowBroadcastPair(ch1r, ch1)
+        dag.addDataflowBroadcastPair(ch2r, ch2)
+
+        dag.addSourceNode( 'Channel.from', ch1r)
+        dag.addSourceNode( 'Channel.from', ch2r)
+
+        dag.addOperatorNode( 'combine', [ch1r, ch2r], chC )
+
+        dag.addProcessNode( 'example', pInList, pOutList )
+
+        dag.addOperatorNode( 'view', chE, chV )
+
+        then:
+        // Only 5 vertices because DAG.normalize() hasn't been called,
+        // which would add the 6th.
+        dag.vertices.size() == 5
+
+        // 5 edges because of the outging edge from view.
+        dag.edges.size() == 5
+
+        // All channels converted back to DataflowBroadcast.
+        dag.edges.each{ it.channel instanceof DataflowBroadcast }
     }
 
 }

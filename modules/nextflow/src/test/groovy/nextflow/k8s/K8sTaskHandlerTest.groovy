@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,8 +38,6 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
-import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -73,7 +71,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.get('cpus') >> null
+        1 * config.getCpus() >> 0
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         result == [ apiVersion: 'v1',
@@ -108,7 +106,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.get('cpus') >> 1
+        1 * config.getCpus() >> 1
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         result == [ apiVersion: 'v1',
@@ -121,7 +119,7 @@ class K8sTaskHandlerTest extends Specification {
                                      image:'debian:latest',
                                      command:['/bin/bash', '-ue','.command.run'],
                                      workingDir:'/some/work/dir',
-                                     resources:[ limits:[cpu:1] ],
+                                     resources:[ requests: [cpu:1], limits:[cpu:1] ],
                                      env: [  [name:'NXF_OWNER', value:'501:502'] ]
                                     ]
                             ]
@@ -140,7 +138,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'user/alpine:1.0'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.get('cpus') >> 4
+        1 * config.getCpus() >> 4
         1 * config.getMemory() >> MemoryUnit.of('16GB')
         1 * client.getConfig() >> new ClientConfig(namespace: 'namespace-x')
         result == [ apiVersion: 'v1',
@@ -153,7 +151,7 @@ class K8sTaskHandlerTest extends Specification {
                                      image:'user/alpine:1.0',
                                      command:['/bin/bash', '-ue', '.command.run'],
                                      workingDir:'/some/work/dir',
-                                     resources:[ limits:[cpu:4, memory:'16384Mi'] ]
+                                     resources:[ requests: [cpu:4, memory:'16384Mi'], limits:[cpu:4, memory:'16384Mi'] ]
                                     ]
                             ]
                     ]
@@ -199,7 +197,9 @@ class K8sTaskHandlerTest extends Specification {
                                     [name:'nf-123',
                                      image:'debian:latest',
                                      command:['/bin/bash', '-ue','.command.run'],
-                                     workingDir:'/some/work/dir']
+                                     workingDir:'/some/work/dir',
+                                     resources:[requests:[cpu:1], limits:[cpu:1]]
+                                    ]
                             ]
                     ]
         ]
@@ -291,7 +291,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.get('cpus') >> null
+        1 * config.getCpus() >> 0
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         2 * podOptions.getVolumeClaims() >> CLAIMS
@@ -334,7 +334,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        1 * config.get('cpus') >> null
+        1 * config.getCpus() >> 0
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -1490,8 +1490,6 @@ class FilesEx {
         final scheme = getScheme(path)
         if( scheme == 'file' )
             return path.toString()
-        if( scheme == 's3' )
-            return "$scheme:/$path".toString()
         // resolve via extension mechanism
         final result = FileSystemPathFactory.getUriString(path)
         // // fallback on default uri parsing

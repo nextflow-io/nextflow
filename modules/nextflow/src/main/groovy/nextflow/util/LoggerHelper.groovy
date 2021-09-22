@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,7 @@ package nextflow.util
 import static nextflow.Const.*
 
 import java.lang.reflect.Field
+import java.nio.file.DirectoryNotEmptyException
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
@@ -392,7 +393,7 @@ class LoggerHelper {
         @Override
         String doLayout(ILoggingEvent event) {
             final session = (Session)Global.session
-            fmtEvent(event, session)
+            fmtEvent(event, session, true)
         }
     }
 
@@ -403,10 +404,10 @@ class LoggerHelper {
      * @param session Nextflow session object
      * @return the formatted logging message
      */
-    static protected String fmtEvent(ILoggingEvent event, Session session) {
+    static protected String fmtEvent(ILoggingEvent event, Session session, boolean newLine) {
         final buffer = new StringBuilder(512);
         if( event.level == Level.INFO ) {
-            buffer .append(event.getFormattedMessage()) .append(CoreConstants.LINE_SEPARATOR)
+            buffer .append(event.getFormattedMessage())
         }
         else if( event.level == Level.ERROR ) {
             def error = ( event.getThrowableProxy() instanceof ThrowableProxy
@@ -419,8 +420,10 @@ class LoggerHelper {
             buffer
                     .append( event.getLevel().toString() ) .append(": ")
                     .append(event.getFormattedMessage())
-                    .append(CoreConstants.LINE_SEPARATOR)
         }
+
+        if( newLine )
+            buffer.append(CoreConstants.LINE_SEPARATOR)
 
         return buffer.toString()
     }
@@ -433,7 +436,7 @@ class LoggerHelper {
         final message = event.getFormattedMessage()
         final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException || ScriptRuntimeException
         final normalize = { String str -> str ?. replace("${className}.", '')}
-        List error = fail ? findErrorLine(fail, ScriptMeta.allScriptNames()) : null
+        List error = fail ? findErrorLine(fail) : null
 
         // error string is not shown for abort operation
         if( !quiet ) {
@@ -448,8 +451,20 @@ class LoggerHelper {
         else if( fail instanceof MissingMethodException ) {
             buffer.append(getMissingMethodMessage(fail))
         }
+        else if( fail instanceof NoSuchFieldException ) {
+            buffer.append("No such field: ${normalize(fail.message)}")
+        }
         else if( fail instanceof NoSuchFileException ) {
             buffer.append("No such file: ${normalize(fail.message)}")
+        }
+        else if( fail instanceof ClassNotFoundException ) {
+            buffer.append("Class not found: ${normalize(fail.message)}")
+        }
+        else if( fail instanceof DirectoryNotEmptyException ) {
+            buffer.append("Unable to delete not empty directory: $fail.message")
+        }
+        else if( fail instanceof UnknownHostException ) {
+            buffer.append("Unknown network host: $fail.message")
         }
         else if( message && message.startsWith(STARTUP_ERROR))  {
             buffer.append(formatStartupErrorMessage(message))
@@ -469,11 +484,9 @@ class LoggerHelper {
         // extra formatting
         if( error ) {
             buffer.append(" -- Check script '${error[0]}' at line: ${error[1]} or see '${logFileName}' file for more details")
-            buffer.append(CoreConstants.LINE_SEPARATOR)
         }
         else if( logFileName && !quiet ) {
             buffer.append(" -- Check '${logFileName}' file for details")
-            buffer.append(CoreConstants.LINE_SEPARATOR)
         }
 
     }
@@ -499,7 +512,7 @@ class LoggerHelper {
 
     static String getMissingMethodMessage(MissingMethodException error) {
         try {
-            return getMissingMethodMessage0(error)
+            return error.class==MissingMethodException ? getMissingMethodMessage0(error) : error.message
         }
         catch( Throwable e ) {
             return error?.message
@@ -536,7 +549,11 @@ class LoggerHelper {
         return msg
     }
 
-    static @PackageScope List<String> findErrorLine( Throwable e, Map<String, Path> allNames ) {
+    static List<String> findErrorLine( Throwable e ) {
+        return findErrorLine(e, ScriptMeta.allScriptNames())
+    }
+
+    static List<String> findErrorLine( Throwable e, Map<String, Path> allNames ) {
         def lines = getErrorLines(e)
         List error = null
         for( String str : lines ) {
@@ -606,7 +623,8 @@ class LoggerHelper {
     }
 
     /**
-     * Capture logging events and forward them to
+     * Capture logging events and forward them to. This is only used when
+     * ANSI interactive logging is enabled
      */
     static private class CaptureAppender extends AppenderBase<ILoggingEvent> {
 
@@ -615,7 +633,7 @@ class LoggerHelper {
             final session = (Session)Global.session
 
             try {
-                final message = fmtEvent(event, session).trim()
+                final message = fmtEvent(event, session, false)
                 final renderer = session?.ansiLogObserver
                 if( !renderer || !renderer.started || renderer.stopped )
                     System.out.println(message)

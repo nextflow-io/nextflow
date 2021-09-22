@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,13 +17,14 @@
 
 package nextflow.cli
 
+import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
+import nextflow.plugin.Plugins
+import nextflow.ui.console.ConsoleExtension
 
 /**
- * Note the console command is implemented by the launcher script.
- * This command is only provided to render the `console` command
- * in the nextflow command line help
+ * Launch the Nextflow Console plugin
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -31,7 +32,22 @@ import groovy.transform.CompileStatic
 @Parameters(commandDescription = "Launch Nextflow interactive console")
 class CmdConsole extends CmdBase {
 
+    @Parameter(description = 'Nextflow console arguments')
+    List<String> args
+
     String getName() { 'console' }
 
-    void run() { /* do nothing */ }
+    void run() {
+        Plugins.setup()
+        Plugins.start('nf-console')
+        final console = Plugins.getExtension(ConsoleExtension)
+        if( !console )
+            throw new IllegalStateException("Failed to find Nextflow Console extension")
+        // normalise the console args prepending the `console` command itself
+        if( args == null )
+            args = []
+        args.add(0, 'console')
+        // go !
+        console.run(args as String[])
+    }
 }

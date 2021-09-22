@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -109,11 +109,11 @@ class BatchCleanup {
      */
     @Override
     String toString() {
-        def result = new StringBuilder()
-        result += "${this.class.simpleName}[\n"
-        aggregate.values().each { result+="${it}\n" }
-        result += "]"
-        return result
+        StringBuilder result = new StringBuilder()
+        result.append "${this.class.simpleName}[\n"
+        aggregate.values().each { result.append "${it}\n" }
+        result.append "]"
+        return result.toString()
     }
 
 }

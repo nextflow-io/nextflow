@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,7 +45,7 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
     private kill = true
 
-    private boolean legacy
+    private boolean legacy = System.getenv('NXF_DOCKER_LEGACY')=='true'
 
     private String mountFlags0
 
@@ -116,11 +116,14 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
         result << 'run -i '
 
-        if( cpus ) {
+        if( cpus && !legacy )
+            result << "--cpus ${String.format(Locale.ROOT, "%.1f", cpus)} "
+
+        if( cpuset ) {
             if( legacy )
-                result << "--cpuset ${cpus} "
+                result << "--cpuset ${cpuset} "
             else
-                result << "--cpuset-cpus ${cpus} "
+                result << "--cpuset-cpus ${cpuset} "
         }
 
         if( memory )

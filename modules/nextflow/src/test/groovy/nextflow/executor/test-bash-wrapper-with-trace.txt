@@ -67,10 +67,6 @@ nxf_stat() {
     nxf_stat_ret=(${sum[*]})
 }
 
-nxf_sleep() {
-  sleep $1 2>/dev/null || sleep 1;
-}
-
 nxf_mem_watch() {
     set -o pipefail
     local pid=$1
@@ -197,6 +193,10 @@ nxf_trace() {
     fi
 }
 
+nxf_sleep() {
+  sleep $1 2>/dev/null || sleep 1;
+}
+
 nxf_date() {
     local ts=$(date +%s%3N);
     if [[ ${#ts} == 10 ]]; then echo ${ts}000
@@ -234,6 +234,26 @@ nxf_mktemp() {
     fi
 }
 
+nxf_fs_copy() {
+  local source=$1
+  local target=$2
+  local basedir=$(dirname $1)
+  mkdir -p $target/$basedir
+  cp -fRL $source $target/$basedir
+}
+
+nxf_fs_move() {
+  local source=$1
+  local target=$2
+  local basedir=$(dirname $1)
+  mkdir -p $target/$basedir
+  mv -f $source $target/$basedir
+}
+
+nxf_fs_rsync() {
+  rsync -rRl $1 $2
+}
+
 on_exit() {
     exit_status=${nxf_main_ret:=$?}
     printf $exit_status > {{folder}}/.exitcode
@@ -265,6 +285,7 @@ nxf_unstage() {
 nxf_main() {
     trap on_exit EXIT
     trap on_term TERM INT USR2
+    trap '' USR1
 
     [[ "${NXF_CHDIR:-}" ]] && cd "$NXF_CHDIR"
     NXF_SCRATCH=''

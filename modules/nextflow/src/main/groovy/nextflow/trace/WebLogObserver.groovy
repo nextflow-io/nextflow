@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2018, University of Tübingen, Quantitative Biology Center (QBiC)
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *

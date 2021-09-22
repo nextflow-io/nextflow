@@ -1,0 +1,186 @@
+import io.nextflow.gradle.tasks.GithubUploader
+import io.nextflow.gradle.tasks.GithubRepositoryPublisher
+import org.apache.commons.codec.digest.DigestUtils
+
+apply plugin: 'java'
+apply plugin: "io.nextflow.nf-build-plugin"
+
+ext.github_organization = 'nextflow-io'
+ext.github_username = project.findProperty('github_username') ?: 'pditommaso'
+ext.github_access_token = project.findProperty('github_access_token') ?: System.getenv('GITHUB_TOKEN')
+ext.github_commit_email = project.findProperty('github_commit_email') ?: 'paolo.ditommaso@gmail.com'
+ext.aws_access_key_id = project.findProperty('aws_access_key_id') ?: System.getenv('AWS_ACCESS_KEY_ID')
+ext.aws_secret_access_key = project.findProperty('aws_secret_access_key') ?: System.getenv('AWS_SECRET_ACCESS_KEY')
+ext.publishRepoUrl = project.findProperty('publish_repo_url') ?: System.getenv('PUBLISH_REPO_URL') ?: ( version.endsWith('-SNAPSHOT') ? "s3://maven.seqera.io/snapshots" : "s3://maven.seqera.io/releases" )
+
+jar.enabled = false
+
+String computeSha512(File file) {
+    if( !file.exists() )
+        throw new GradleException("Missing file: $file -- cannot compute SHA-512")
+    return DigestUtils.sha512Hex(file.bytes)
+}
+
+String now() {
+    "${java.time.OffsetDateTime.now().format(java.time.format.DateTimeFormatter.ISO_DATE_TIME)}"
+}
+
+List<String> allPlugins() {
+    def plugins = []
+    new File(rootProject.rootDir, 'plugins') .eachDir { if(it.name.startsWith('nf-')) plugins.add(it.name) }
+    return plugins
+}
+
+String metaFromManifest(String meta, File file) {
+    def str = file.text
+    def regex = ~/(?m)^$meta:\s*([\w-\.<>=]+)$/
+    def m = regex.matcher(str)
+    if( m.find() ) {
+        def ver = m.group(1)
+        //println "Set plugin '${file.parentFile.parentFile.parentFile.parentFile.name}' version=${ver}"
+        return ver
+    }
+    throw new GradleException("Cannot find '$meta' for plugin: $file")
+}
+
+def timestamp = now()
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'groovy'
+    apply plugin: 'io.nextflow.nf-build-plugin'
+    apply plugin: 'maven-publish'
+    
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+
+    group = 'io.nextflow'
+    version = metaFromManifest('Plugin-Version',file('src/resources/META-INF/MANIFEST.MF'))
+
+    /*
+     * Creates plugin zip and json meta file in the plugin `build/libs` directory
+     */
+    task makeZip(type: Jar) {
+        into('classes') { with jar }
+        into('lib') { from configurations.runtimeClasspath }
+        manifest.from file('src/resources/META-INF/MANIFEST.MF')
+        archiveExtension = 'zip'
+        preserveFileTimestamps = false
+        reproducibleFileOrder = true
+
+        doLast {
+            // create the meta file
+            final zip = new File("$buildDir/libs/${project.name}-${project.version}.zip")
+            final json = new File("$buildDir/libs/${project.name}-${project.version}-meta.json")
+            json.text = """\
+              {
+                "version": "${project.version}",
+                "date": "${timestamp}",
+                "url": "https://github.com/nextflow-io/${project.name}/releases/download/${project.version}/${project.name}-${project.version}.zip",
+                "requires": "${metaFromManifest('Plugin-Requires',file('src/resources/META-INF/MANIFEST.MF'))}",
+                "sha512sum": "${computeSha512(zip)}"
+              }
+            """.stripIndent()
+        }
+    }
+
+    /*
+     * Copy the plugin dependencies in the subproject `build/target/libs` directory
+     */
+    task copyPluginLibs(type: Sync) {
+        from configurations.runtimeClasspath
+        into 'build/target/libs'
+    }
+
+    /*
+     * Copy the plugin in the project root build/plugins directory
+     */
+    task copyPluginZip(type: Copy) {
+        from makeZip
+        into "$rootProject.buildDir/plugins"
+    }
+
+    /*
+     * Unzip the plugin artifact in the project root build/plugins directory
+     */
+    task unzipPlugin(type: Copy, dependsOn: copyPluginZip) {
+        from zipTree("$rootProject.buildDir/plugins/${project.name}-${project.version}.zip")
+        into "$rootProject.buildDir/plugins/${project.name}-${project.version}"
+    }
+
+    /*
+     * Upload the plugin zip & json meta file to the corresponding GitHub repo
+     */
+    task uploadPlugin(type: GithubUploader, dependsOn: makeZip) {
+        assets = providers.provider {["$buildDir/libs/${project.name}-${project.version}.zip",
+                                      "$buildDir/libs/${project.name}-${project.version}-meta.json" ]}
+        release = providers.provider { project.version }
+        unstable = providers.provider { project.version.endsWith('-SNAPSHOT') }
+        repo = providers.provider { project.name }
+        owner = github_organization
+        userName = github_username
+        authToken = github_access_token
+    }
+
+    jar {
+        from sourceSets.main.allSource
+    }
+
+    tasks.withType(GenerateModuleMetadata) {
+        enabled = false
+    }
+
+    /*
+     * publish jars maven repo on S3 
+     */
+    publishing {
+        publications {
+            maven(MavenPublication) {
+                from components.java
+                suppressPomMetadataWarningsFor('testFixturesApiElements')
+                suppressPomMetadataWarningsFor('testFixturesRuntimeElements')
+            }
+        }
+        repositories {
+            maven {
+                url = publishRepoUrl
+                credentials(AwsCredentials) {
+                    // keys are defined in the `gradle.properties` file
+                    accessKey aws_access_key_id
+                    secretKey aws_secret_access_key
+                }
+            }
+        }
+    }
+
+
+}
+
+/*
+ * Upload all plugins to the corresponding GitHub repos
+ */
+task upload(dependsOn: [subprojects.uploadPlugin, subprojects.publish]) { }
+
+/*
+ * Copies the plugins required dependencies in the corresponding lib directory
+ */
+classes.dependsOn subprojects.copyPluginLibs
+
+/*
+ * "install" the plugin the project root build/plugins directory
+ */
+assemble.dependsOn subprojects.unzipPlugin
+
+/*
+ * Merge and publish the plugins index file
+ */
+task publishIndex( type: GithubRepositoryPublisher ) {
+    indexUrl = 'https://github.com/nextflow-io/plugins/main/plugins.json'
+    repos = allPlugins()
+    owner = github_organization
+    githubUser = github_username
+    githubEmail = github_commit_email
+    githubToken = github_access_token
+}

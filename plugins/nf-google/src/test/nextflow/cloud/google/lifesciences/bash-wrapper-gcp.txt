@@ -1,0 +1,219 @@
+#!/bin/bash
+# NEXTFLOW TASK: Hello 1
+set -e
+set -u
+NXF_DEBUG=${NXF_DEBUG:=0}; [[ $NXF_DEBUG > 1 ]] && set -x
+NXF_ENTRY=${1:-nxf_main}
+
+# bash helper functions
+nxf_cp_retry() {
+    local max_attempts=1
+    local timeout=10
+    local attempt=0
+    local exitCode=0
+    while (( $attempt < $max_attempts ))
+    do
+      if "$@"
+        then
+          return 0
+      else
+        exitCode=$?
+      fi
+      if [[ $exitCode == 0 ]]
+      then
+        break
+      fi
+      nxf_sleep $timeout
+      attempt=$(( attempt + 1 ))
+      timeout=$(( timeout * 2 ))
+    done
+}
+
+nxf_parallel() {
+    IFS=$'\n'
+    local cmd=("$@")
+    local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
+    local max=$(if (( cpus>4 )); then echo 4; else echo $cpus; fi)
+    local i=0
+    local pid=()
+    (
+    set +u
+    while ((i<${#cmd[@]})); do
+        local copy=()
+        for x in "${pid[@]}"; do
+          [[ -e /proc/$x ]] && copy+=($x)
+        done
+        pid=("${copy[@]}")
+
+        if ((${#pid[@]}>=$max)); then
+          nxf_sleep 0.2
+        else
+          eval "${cmd[$i]}" &
+          pid+=($!)
+          ((i+=1))
+        fi
+    done
+    for p in "${pid[@]}"; do
+        wait $p
+    done
+    )
+    unset IFS
+}
+
+# google storage helper
+gs_opts=('-q' '-m' '-o' 'GSUtil:parallel_thread_count=1' '-o' 'GSUtil:sliced_object_download_max_components=8')
+
+nxf_gs_download() {
+    local source=$1
+    local target=$2
+    local project=$3
+    local basedir=$(dirname $2)
+    local ret
+    local opts=("${gs_opts[@]}")
+    if [[ $project ]]; then
+      opts+=('-u' "$project")
+    fi
+
+    ## download assuming it's a file download
+    mkdir -p $basedir
+    ret=$(gsutil ${opts[@]} cp "$source" "$target" 2>&1) || {
+        ## if fails check if it was trying to download a directory
+        mkdir $target
+        gsutil ${opts[@]} cp -R "$source/*" "$target" || {
+          rm -rf $target
+          >&2 echo "Unable to download path: $source"
+          exit 1
+        }
+    }
+}
+
+nxf_gs_upload() {
+    local name=$1
+    local target=$2
+    gsutil ${gs_opts[@]} cp -R "$name" "$target/$name"
+}
+
+nxf_sleep() {
+  sleep $1 2>/dev/null || sleep 1;
+}
+
+nxf_date() {
+    local ts=$(date +%s%3N);
+    if [[ ${#ts} == 10 ]]; then echo ${ts}000
+    elif [[ $ts == *%3N ]]; then echo ${ts/\%3N/000}
+    elif [[ $ts == *3N ]]; then echo ${ts/3N/000}
+    elif [[ ${#ts} == 13 ]]; then echo $ts
+    else echo "Unexpected timestamp value: $ts"; exit 1
+    fi
+}
+
+nxf_env() {
+    echo '============= task environment ============='
+    env | sort | sed "s/\(.*\)AWS\(.*\)=\(.\{6\}\).*/\1AWS\2=\3xxxxxxxxxxxxx/"
+    echo '============= task output =================='
+}
+
+nxf_kill() {
+    declare -a children
+    while read P PP;do
+        children[$PP]+=" $P"
+    done < <(ps -e -o pid= -o ppid=)
+
+    kill_all() {
+        [[ $1 != $$ ]] && kill $1 2>/dev/null || true
+        for i in ${children[$1]:=}; do kill_all $i; done
+    }
+
+    kill_all $1
+}
+
+nxf_mktemp() {
+    local base=${1:-/tmp}
+    if [[ $(uname) = Darwin ]]; then mktemp -d $base/nxf.XXXXXXXXXX
+    else TMPDIR="$base" mktemp -d -t nxf.XXXXXXXXXX
+    fi
+}
+
+nxf_fs_copy() {
+  local source=$1
+  local target=$2
+  local basedir=$(dirname $1)
+  mkdir -p $target/$basedir
+  cp -fRL $source $target/$basedir
+}
+
+nxf_fs_move() {
+  local source=$1
+  local target=$2
+  local basedir=$(dirname $1)
+  mkdir -p $target/$basedir
+  mv -f $source $target/$basedir
+}
+
+nxf_fs_rsync() {
+  rsync -rRl $1 $2
+}
+
+on_exit() {
+    exit_status=${nxf_main_ret:=$?}
+    printf $exit_status > {{folder}}/.exitcode
+    set +u
+    [[ "$tee1" ]] && kill $tee1 2>/dev/null
+    [[ "$tee2" ]] && kill $tee2 2>/dev/null
+    [[ "$ctmp" ]] && rm -rf $ctmp || true
+    exit $exit_status
+}
+
+on_term() {
+    set +e
+    [[ "$pid" ]] && nxf_kill $pid
+}
+
+nxf_launch() {
+    /bin/bash -ue {{folder}}/.command.sh
+}
+
+nxf_stage() {
+    true
+    # stage input files
+    echo start | gsutil -q cp  -c - gs://bucket/work/dir/.command.begin
+    downloads=(true)
+    downloads+=("nxf_gs_download gs://bucket/work/dir/.command.sh .command.sh ")
+    nxf_parallel "${downloads[@]}"
+}
+
+nxf_unstage() {
+    true
+    gsutil -m -q cp -R .command.out gs://bucket/work/dir/.command.out || true
+    gsutil -m -q cp -R .command.err gs://bucket/work/dir/.command.err || true
+    gsutil -m -q cp -R .exitcode gs://bucket/work/dir/.exitcode || true
+    [[ ${nxf_main_ret:=0} != 0 ]] && return
+}
+
+nxf_main() {
+    trap on_exit EXIT
+    trap on_term TERM INT USR2
+    trap '' USR1
+
+    [[ "${NXF_CHDIR:-}" ]] && cd "$NXF_CHDIR"
+    NXF_SCRATCH={{folder}}
+    [[ $NXF_DEBUG > 0 ]] && nxf_env
+    set +u
+    set -u
+    [[ $NXF_SCRATCH ]] && echo "nxf-scratch-dir $HOSTNAME:$NXF_SCRATCH" && cd $NXF_SCRATCH
+
+    set +e
+    local ctmp=$(set +u; nxf_mktemp /dev/shm 2>/dev/null || nxf_mktemp $TMPDIR)
+    local cout=$ctmp/.command.out; mkfifo $cout
+    local cerr=$ctmp/.command.err; mkfifo $cerr
+    tee .command.out < $cout &
+    tee1=$!
+    tee .command.err < $cerr >&2 &
+    tee2=$!
+    ( nxf_launch ) >$cout 2>$cerr &
+    pid=$!
+    wait $pid || nxf_main_ret=$?
+    wait $tee1 $tee2
+}
+
+$NXF_ENTRY

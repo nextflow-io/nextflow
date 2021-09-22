@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +21,8 @@ import java.nio.file.Paths
 
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -31,7 +33,7 @@ class DockerBuilderTest extends Specification {
     def 'test docker mounts'() {
 
         given:
-        def builder = [:] as DockerBuilder
+        def builder = Spy(DockerBuilder)
         def files =  [Paths.get('/folder/data'),  Paths.get('/folder/db'), Paths.get('/folder/db') ]
         def real = [ Paths.get('/user/yo/nextflow/bin'), Paths.get('/user/yo/nextflow/work'), Paths.get('/db/pdb/local/data') ]
         def quotes =  [ Paths.get('/folder with blanks/A'), Paths.get('/folder with blanks/B') ]
@@ -44,16 +46,20 @@ class DockerBuilderTest extends Specification {
 
     }
 
-
+    @Unroll
     def 'test docker env'() {
 
         given:
-        def builder = [:] as DockerBuilder
+        def builder = Spy(DockerBuilder)
 
         expect:
-        builder.makeEnv('X=1').toString() == '-e "X=1"'
-        builder.makeEnv([VAR_X:1, VAR_Y: 2]).toString() == '-e "VAR_X=1" -e "VAR_Y=2"'
-        builder.makeEnv('BAR').toString() == '${BAR:+-e "BAR=$BAR"}'
+        builder.makeEnv(ENV).toString() == EXPECT
+
+        where:
+        ENV                 | EXPECT
+        'X=1'               | '-e "X=1"'
+        [VAR_X:1, VAR_Y: 2] | '-e "VAR_X=1" -e "VAR_Y=2"'
+        'BAR'               | '${BAR:+-e "BAR=$BAR"}'
     }
 
     def 'test docker create command line'() {
@@ -132,15 +138,33 @@ class DockerBuilderTest extends Specification {
 
         expect:
         new DockerBuilder('fedora')
-                .setCpus('1,2')
+                .setCpus(2)
                 .build()
-                .runCommand == 'docker run -i --cpuset-cpus 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i --cpus 2.0 -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('fedora')
-                .params(legacy:true)
-                .setCpus('1,2')
+                .setCpus(1.414)
+                .build()
+                .runCommand == 'docker run -i --cpus 1.4 -v "$PWD":"$PWD" -w "$PWD" fedora'
+
+        new DockerBuilder('fedora')
+                .setCpus(2.5)
+                .setCpuset('1,2')
+                .build()
+                .runCommand == 'docker run -i --cpus 2.5 --cpuset-cpus 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'
+
+        new DockerBuilder('fedora')
+                .params(legacy: true)
+                .setCpuset('1,2')
                 .build()
                 .runCommand == 'docker run -i --cpuset 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'
+
+
+        new DockerBuilder('fedora')
+                .params(legacy: true)
+                .setCpus(1)
+                .build()
+                .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('fedora')
                 .setMemory('10g')
@@ -153,7 +177,7 @@ class DockerBuilderTest extends Specification {
                 .runCommand == 'docker run -i --memory 100m -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('fedora')
-                .setCpus('1-3')
+                .setCpuset('1-3')
                 .setMemory(new MemoryUnit('100M'))
                 .build()
                 .runCommand == 'docker run -i --cpuset-cpus 1-3 --memory 100m -v "$PWD":"$PWD" -w "$PWD" fedora'

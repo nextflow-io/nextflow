@@ -144,7 +144,10 @@ $(function() {
   }
 
   // Build the trace table
-  function make_duration(ms){
+  function make_duration(ms, type){
+    if (type === 'sort') {
+      return parseInt(ms);
+    }
     if($('#nf-table-humanreadable').val() == 'false'){
       return ms;
     }
@@ -153,7 +156,10 @@ $(function() {
     }
     return humanize(moment.duration( parseInt(ms) ));
   }
-  function make_date(ms){
+  function make_date(ms, type){
+    if (type === 'sort') {
+      return parseInt(ms);
+    }
     if($('#nf-table-humanreadable').val() == 'false'){
       return ms;
     }
@@ -162,7 +168,10 @@ $(function() {
     }
     return moment( parseInt(ms) ).format();
   }
-  function make_memory(bytes){
+  function make_memory(bytes, type){
+    if (type === 'sort') {
+      return parseInt(bytes);
+    }
     if($('#nf-table-humanreadable').val() == 'false'){
       return bytes;
     }
@@ -220,29 +229,29 @@ $(function() {
           },
           { title: 'allocated cpus', data: 'cpus' },
           { title: '%cpu', data: '%cpu' },
-          { title: 'allocated memory', data: 'memory', render: make_memory },
+          { title: 'allocated memory', data: 'memory', type: 'num', render: make_memory },
           { title: '%mem', data: '%mem' },
-          { title: 'vmem', data: 'vmem', render: make_memory },
-          { title: 'rss', data: 'rss', render: make_memory },
-          { title: 'peak_vmem', data: 'peak_vmem', render: make_memory },
-          { title: 'peak_rss', data: 'peak_rss', render: make_memory },
-          { title: 'allocated time', data: 'time', render: make_duration },
-          { title: 'duration', data: 'duration', render: make_duration },
-          { title: 'realtime', data: 'realtime', render: make_duration },
+          { title: 'vmem', data: 'vmem', type: 'num', render: make_memory },
+          { title: 'rss', data: 'rss', type: 'num', render: make_memory },
+          { title: 'peak_vmem', data: 'peak_vmem', type: 'num', render: make_memory },
+          { title: 'peak_rss', data: 'peak_rss', type: 'num', render: make_memory },
+          { title: 'allocated time', data: 'time', type: 'num', render: make_duration },
+          { title: 'duration', data: 'duration', type: 'num', render: make_duration },
+          { title: 'realtime', data: 'realtime', type: 'num', render: make_duration },
           { title: 'script', data: 'script', render: function(data) {
               return '<pre class="script_block short"><code>' + data.trim() + '</code></pre>';
             }
           },
           { title: 'exit', data: 'exit' },
-          { title: 'submit', data: 'submit', render: make_date },
-          { title: 'start', data: 'start', render: make_date },
-          { title: 'complete', data: 'complete', render: make_date },
-          { title: 'rchar', data: 'rchar', render: make_memory },
-          { title: 'wchar', data: 'wchar', render: make_memory },
-          { title: 'syscr', data: 'syscr', render: make_memory },
-          { title: 'syscw', data: 'syscw', render: make_memory },
-          { title: 'read_bytes', data: 'read_bytes', render: make_memory },
-          { title: 'write_bytes', data: 'write_bytes', render: make_memory },
+          { title: 'submit', data: 'submit', type: 'num', render: make_date },
+          { title: 'start', data: 'start', type: 'num', render: make_date },
+          { title: 'complete', data: 'complete', type: 'num', render: make_date },
+          { title: 'rchar', data: 'rchar', type: 'num', render: make_memory },
+          { title: 'wchar', data: 'wchar', type: 'num', render: make_memory },
+          { title: 'syscr', data: 'syscr', type: 'num', render: make_memory },
+          { title: 'syscw', data: 'syscw', type: 'num', render: make_memory },
+          { title: 'read_bytes', data: 'read_bytes', type: 'num', render: make_memory },
+          { title: 'write_bytes', data: 'write_bytes', type: 'num', render: make_memory },
           { title: 'native_id', data: 'native_id' },
           { title: 'name', data: 'name' },
           { title: 'module', data: 'module' },

@@ -42,8 +42,9 @@ class OarExecutor extends AbstractGridExecutor {
 
         result << '-d' << quote(task.workDir)
         result << '-n' << getJobNameFor(task)
-        result << '-O' << quote(task.workDir.resolve(TaskRun.CMD_OUTFILE))     
-        result << '-E' << quote(task.workDir.resolve(TaskRun.CMD_ERRFILE))     
+        // see discussion https://github.com/nextflow-io/nextflow/issues/1761
+        result << '-O' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
+        result << '-E' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
 
         if( task.config.getMemory() ) {
             if( task.config.getMemory().toMega() < 1024 ) {
@@ -183,5 +184,8 @@ class OarExecutor extends AbstractGridExecutor {
         return p!=-1 ? line.substring(p+prefix.size()).trim() : null
     }
 
-
+    @Override
+    protected String sanitizeJobName(String name) {
+        name.size() > 100 ? name.substring(0,100) : name
+    }
 }

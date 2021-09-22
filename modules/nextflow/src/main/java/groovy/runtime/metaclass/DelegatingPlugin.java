@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,8 @@
 
 package groovy.runtime.metaclass;
 
+import java.util.Set;
+
 /**
  * Define the interface to plug the delegating metaclass
  * extension methods implementing the nextflow operators
@@ -29,4 +31,7 @@ public interface DelegatingPlugin {
 
     Object invokeExtensionMethod(Object channel, String method, Object[] args);
 
+    ChannelFactory getChannelFactory(String factoryDomain);
+
+    Set<String> operatorNames();
 }

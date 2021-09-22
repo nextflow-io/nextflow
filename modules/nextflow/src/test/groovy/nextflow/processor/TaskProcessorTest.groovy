@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,7 +51,7 @@ class TaskProcessorTest extends Specification {
     static class DummyProcessor extends TaskProcessor {
 
         DummyProcessor(String name, Session session, BaseScript script, ProcessConfig taskConfig) {
-            super(name, new NopeExecutor(), session, script, taskConfig, new BodyDef({}, '..'))
+            super(name, new NopeExecutor(session: session), session, script, taskConfig, new BodyDef({}, '..'))
         }
 
         @Override protected void createOperator() { }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +25,7 @@ import com.beust.jcommander.Parameters
 import com.sun.management.OperatingSystemMXBean
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.scm.AssetManager
@@ -36,6 +37,7 @@ import org.yaml.snakeyaml.Yaml
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Print project and system runtime information")
 class CmdInfo extends CmdBase {
@@ -157,6 +159,46 @@ class CmdInfo extends CmdBase {
         getInfo( detailed ? 1 : 0, true )
     }
 
+    static private String totMem(OperatingSystemMXBean os) {
+        try {
+            new MemoryUnit(os.totalPhysicalMemorySize).toString()
+        }
+        catch (Throwable t) {
+            log.debug "Unable to fetch totalPhysicalMemorySize - ${t.message ?: t}"
+            return '-'
+        }
+    }
+
+    static private String freeMem(OperatingSystemMXBean os) {
+        try {
+            return new MemoryUnit(os.freePhysicalMemorySize).toString()
+        }
+        catch (Throwable t) {
+            log.debug "Unable to fetch freePhysicalMemorySize - ${t.message ?: t}"
+            return '-'
+        }
+    }
+
+    static private String totSwap(OperatingSystemMXBean os) {
+        try {
+            new MemoryUnit(os.totalSwapSpaceSize).toString()
+        }
+        catch (Throwable t) {
+            log.debug "Unable to fetch totalSwapSpaceSize - ${t.message ?: t}"
+            return '-'
+        }
+    }
+
+    static private String freeSwap(OperatingSystemMXBean os) {
+        try {
+            return new MemoryUnit(os.freeSwapSpaceSize).toString()
+        }
+        catch (Throwable t) {
+            log.debug "Unable to fetch freeSwapSpaceSize - ${t.message ?: t}"
+            return '-'
+        }
+    }
+
     /**
      * @return A string containing some system runtime information
      */
@@ -171,9 +213,9 @@ class CmdInfo extends CmdBase {
         result << BLANK << "Encoding: ${System.getProperty('file.encoding')} (${System.getProperty('sun.jnu.encoding')})" << NEWLINE
 
         if( printProc ) {
-            def OS = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean()
+            final os = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean()
             result << BLANK << "Process: ${ManagementFactory.getRuntimeMXBean().getName()} " << getLocalAddress() << NEWLINE
-            result << BLANK << "CPUs: ${OS.availableProcessors} - Mem: ${new MemoryUnit(OS.totalPhysicalMemorySize)} (${new MemoryUnit(OS.freePhysicalMemorySize)}) - Swap: ${new MemoryUnit(OS.totalSwapSpaceSize)} (${new MemoryUnit(OS.freeSwapSpaceSize)})"
+            result << BLANK << "CPUs: ${os.availableProcessors} - Mem: ${totMem(os)} (${freeMem(os)}) - Swap: ${totSwap(os)} (${freeSwap(os)})"
         }
 
         if( level == 0  )

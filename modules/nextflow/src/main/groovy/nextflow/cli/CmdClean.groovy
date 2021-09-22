@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,6 +30,7 @@ import groovy.util.logging.Slf4j
 import nextflow.CacheDB
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
+import nextflow.plugin.Plugins
 import nextflow.trace.TraceRecord
 import nextflow.util.HistoryFile.Record
 
@@ -89,9 +90,8 @@ class CmdClean extends CmdBase implements CacheBase {
     void run() {
         init()
         validateOptions()
-
-        listIds().each { entry -> cleanup(entry)}
-
+        Plugins.setup()
+        listIds().each { entry -> cleanup(entry) }
     }
 
     /**

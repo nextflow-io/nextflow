@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,7 @@ package nextflow.extension
 
 import nextflow.Channel
 import nextflow.Session
+import spock.lang.Retry
 import spock.lang.Specification
 
 /**
@@ -27,7 +28,7 @@ import spock.lang.Specification
  */
 class DataflowMathExtensionTest extends Specification {
 
-    def setupSpec() {
+    def setup() {
         new Session()
     }
 
@@ -164,6 +165,7 @@ class DataflowMathExtensionTest extends Specification {
 
     }
 
+    @Retry
     def 'should return a random sample' () {
 
         when:

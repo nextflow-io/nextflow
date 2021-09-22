@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,7 @@
  */
 
 package nextflow.util
+
 
 import spock.lang.Specification
 /**
@@ -112,6 +113,42 @@ class PathTrieTest extends Specification {
 
     }
 
+    def 'testLongest3' () {
+        when:
+        def tree = new PathTrie()
+        tree.add('/home/data/')
+        tree.add('/home/data/some/other/path')
+        then:
+        tree.longest().size() ==1
+        tree.longest().get(0) == '/home/data'
+
+        when:
+        tree = new PathTrie()
+        tree.add('s3://my-bucket/home/data/some/other/path')
+        tree.add('s3://my-bucket/home/data')
+        then:
+        tree.longest().size() ==1
+        tree.longest().get(0) == 's3://my-bucket/home/data'
+
+        when:
+        tree = new PathTrie()
+        tree.add('s3://my-bucket/home/data/')
+        tree.add('s3://my-bucket/home/data/some')
+        tree.add('s3://my-bucket/home/data/some/other/path')
+        then:
+        tree.longest().size() ==1
+        tree.longest().get(0) == 's3://my-bucket/home/data'
+
+        when:
+        tree = new PathTrie()
+        tree.add('s3://my-bucket/foo')
+        tree.add('s3://my-bucket/bar/x')
+        then:
+        tree.longest().size() ==2
+        tree.longest().get(0) == 's3://my-bucket/foo'
+        tree.longest().get(1) == 's3://my-bucket/bar/x'
+    }
+
     def testOnlyRoot() {
 
         when:
@@ -135,5 +172,66 @@ class PathTrieTest extends Specification {
         tree.longest().get(0) == '/a'
     }
 
+    def 'should traverse paths'() {
+        when:
+        def tree = new PathTrie()
+        tree.add('/home/data')
+        tree.add('/home/data/work')
+        tree.add('/db/blast/unitprot')
+        and:
+        def result = tree.traverse()
+        then:
+        result.size() == 2
+        result[0] == '/home/data'
+        result[1] == '/db/blast/unitprot'
+
+        when:
+        tree = new PathTrie()
+        tree.add('/db/blast/unitprot')
+        tree.add('/home/data/work')
+        tree.add('/home/data')
+        and:
+        result = tree.traverse()
+        then:
+        result.size() == 2
+        result[0] == '/db/blast/unitprot'
+        result[1] == '/home/data'
+
+        when:
+        tree = new PathTrie()
+        tree.add('/home/file.txt')
+        tree.add('/home/bar/file.txt')
+        tree.add('/home/data/work')
+        tree.add('/home/data/work/file.txt')
+        tree.add('/home/data')
+        and:
+        result = tree.traverse()
+        then:
+        result.size() == 3
+        and:
+        result[0] == '/home/file.txt'
+        result[1] == '/home/bar/file.txt'
+        result[2] == '/home/data'
+
+    }
+
+    def 'should traverse on remote path' () {
+        given:
+        def tree = new PathTrie()
+        and:
+        tree.add('s3://my-bucket/home/data')
+        tree.add('s3://my-bucket/home/data')
+        tree.add('s3://my-bucket/home/data/work')
+        tree.add('s3://my-bucket/home/data/work/file.txt')
+        tree.add('s3://other-bucket/db/blast/unitprot')
+
+        when:
+        def result = tree.traverse()
+        then:
+        result.size()==2
+        and:
+        result[0] == 's3://my-bucket/home/data'
+        result[1] == 's3://other-bucket/db/blast/unitprot'
+    }
 
 }

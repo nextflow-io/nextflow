@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -75,6 +75,19 @@ public class CustomThreadPool extends DefaultPool {
 
     }
 
+    static Pool defaultPool(int poolSize, int maxThreads) {
+        log.debug(String.format("Creating default thread pool > poolSize: %s; maxThreads: %s", poolSize, maxThreads));
+
+        return new CustomThreadPool(
+                new ThreadPoolExecutor(
+                        poolSize,
+                        maxThreads,
+                        KEEP_ALIVE_TIME,
+                        TimeUnit.SECONDS,
+                        new SynchronousQueue<Runnable>(),
+                        newDaemonThreadFactory(),
+                        new ThreadPoolExecutor.CallerRunsPolicy()) );
+    }
 
     static Pool synchronousPool(int maxThreads) {
         log.debug(String.format("Creating synchronous thread pool > maxThread: %s", maxThreads));

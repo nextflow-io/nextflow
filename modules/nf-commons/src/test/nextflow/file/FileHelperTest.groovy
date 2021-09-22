@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -127,38 +127,18 @@ class FileHelperTest extends Specification {
         uri.scheme == 'file'
 
         when:
-        uri = FileHelper.toPathURI('s3:///cbcrg-eu/raw/**_R1*{fastq,fq,fastq.gz,fq.gz}')
+        uri = FileHelper.toPathURI('dx://grape:/data/ggal/ggal_test_1.fq')
         then:
-        uri.path == '/cbcrg-eu/raw/**_R1*{fastq,fq,fastq.gz,fq.gz}'
-        uri.scheme == 's3'
-
-        when:
-        uri = FileHelper.toPathURI('s3:///cbcrg-eu//raw/x_r1.fq')
-        then:
-        uri == new URI('s3:///cbcrg-eu//raw/x_r1.fq')
-        uri.path == '/cbcrg-eu//raw/x_r1.fq'
-        uri.scheme == 's3'
-
-        when:
-        uri = FileHelper.toPathURI('s3://cbcrg-eu//raw/x_r1.fq')
-        then:
-        uri == new URI('s3:///cbcrg-eu//raw/x_r1.fq')
-        uri.path == '/cbcrg-eu//raw/x_r1.fq'
-        uri.scheme == 's3'
-
-        when:
-        uri = FileHelper.toPathURI('dxfs://grape:/data/ggal/ggal_test_1.fq')
-        then:
-        uri == new URI('dxfs://grape:/data/ggal/ggal_test_1.fq')
-        uri.scheme == 'dxfs'
+        uri == new URI('dx://grape:/data/ggal/ggal_test_1.fq')
+        uri.scheme == 'dx'
         uri.path == '/data/ggal/ggal_test_1.fq'
         uri.authority == 'grape:'
 
         when:
-        uri = FileHelper.toPathURI('dxfs://grape:/data/ggal/ggal_test_?.fq')
+        uri = FileHelper.toPathURI('dx://grape:/data/ggal/ggal_test_?.fq')
         then:
-        uri == new URI('dxfs://grape:/data/ggal/ggal_test_%3F.fq')
-        uri.scheme == 'dxfs'
+        uri == new URI('dx://grape:/data/ggal/ggal_test_%3F.fq')
+        uri.scheme == 'dx'
         uri.path == '/data/ggal/ggal_test_?.fq'
         uri.authority == 'grape:'
 
@@ -321,7 +301,7 @@ class FileHelperTest extends Specification {
         FileHelper.envFor0('s3', env).secret_key == 's1'
 
         // any other return just the session
-        FileHelper.envFor0('dxfs', env).session == sess
+        FileHelper.envFor0('dx', env).session == sess
 
     }
 
@@ -960,6 +940,21 @@ class FileHelperTest extends Specification {
         null        | '3s://bucket/abc'
         null        | 'abc:xyz'
         null        | '/a/bc/'
+    }
+
+    @Unroll
+    def 'should add max error retry' () {
+
+        expect:
+        FileHelper.checkDefaultErrorRetry(SOURCE, ENV) == EXPECTED
+
+        where:
+        SOURCE                          | ENV                   | EXPECTED
+        null                            | null                  | [max_error_retry: '5']
+        [foo: 1]                        | [:]                   | [max_error_retry: '5', foo: 1]
+        [foo: 1]                        | [AWS_MAX_ATTEMPTS:'3']| [max_error_retry: '3', foo: 1]
+        [max_error_retry: '2', foo: 1]  | [:]                   | [max_error_retry: '2', foo: 1]
+        [:]                             | [:]                   | [max_error_retry: '5']
     }
 
 }

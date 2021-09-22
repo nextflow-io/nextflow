@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -101,6 +101,7 @@ class CmdLogTest extends Specification {
                 .readLines()
                 // remove the log part
                 .findResults { line -> !line.contains('DEBUG') ? line : null }
+                .findResults { line -> !line.contains('INFO') ? line : null }
                 .join('\n')
         then:
         stdout.readLines().size() == 3

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,11 +25,13 @@ import nextflow.Channel
 import nextflow.Session
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Timeout
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(10)
 class CollectFileOperatorTest extends Specification {
 
     @Shared

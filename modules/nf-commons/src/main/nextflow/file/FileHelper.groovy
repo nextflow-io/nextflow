@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,9 +46,9 @@ import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
+import nextflow.plugin.Plugins
 import nextflow.util.CacheHelper
 import nextflow.util.Escape
-
 /**
  * Provides some helper method handling files
  *
@@ -254,13 +254,45 @@ class FileHelper {
             return Paths.get(str)
         }
 
-        final result = FileSystemPathFactory.parse(str)
-        if( result )
-            return result
+        while(true) {
+            final result = FileSystemPathFactory.parse(str)
+            if( result )
+                return result
+            if( !autoStartMissingPlugin(str) )
+                break
+        }
 
         asPath(toPathURI(str))
     }
 
+    static private Map<String,String> PLUGINS_MAP = [s3:'nf-amazon', gs:'nf-google', az:'nf-azure']
+
+    static final private Map<String,Boolean> SCHEME_CHECKED = new HashMap<>()
+
+    static protected boolean autoStartMissingPlugin(String str) {
+        final scheme = getUrlProtocol(str)
+        if( SCHEME_CHECKED[scheme] )
+            return false
+        // find out the default plugin for the given scheme and try to load it
+        synchronized (SCHEME_CHECKED) {
+            final pluginId = PLUGINS_MAP.get(scheme)
+            if( pluginId ) try {
+                if( Plugins.startIfMissing(pluginId) ) {
+                    log.debug "Started plugin '$pluginId' required to handle file: $str"
+                    // return true to signal a new plugin was laoded
+                    return true
+                }
+            }
+            catch (Exception e) {
+                log.warn ("Unable to start plugin '$pluginId' required by $str", e)
+            }
+            finally {
+                SCHEME_CHECKED[scheme] = true
+            }
+        }
+        // no change in the plugin loaded, therefore return false
+        return false
+    }
 
     /**
      * Given a {@link URI} return a {@link Path} object
@@ -315,12 +347,8 @@ class FileHelper {
     @PackageScope
     static URI toPathURI( String str ) {
 
-        // normalise 's3' path
-        if( str.startsWith('s3://') && str[5]!='/' ) {
-            str = "s3:///${str.substring(5)}"
-        }
         // normalise 'igfs' path
-        else if( str.startsWith('igfs://') && str[7]!='/' ) {
+        if( str.startsWith('igfs://') && str[7]!='/' ) {
             str = "igfs:///${str.substring(7)}"
         }
 
@@ -472,7 +500,8 @@ class FileHelper {
             if( region ) result.region = region
 
             // -- remaining client config options
-            def config = Global.getAwsClientConfig()
+            def config = Global.getAwsClientConfig() ?: new HashMap<>(10)
+            config = checkDefaultErrorRetry(config, env)
             if( config ) {
                 result.putAll(config)
             }
@@ -480,9 +509,30 @@ class FileHelper {
             log.debug "AWS S3 config details: ${dumpAwsConfig(result)}"
         }
         else {
-            assert Global.session, "Session is not available -- make sure to call this after Session object has been created"
+            if( !Global.session )
+                log.debug "Session is not available while creating environment for '$scheme' file system provider"
             result.session = Global.session
         }
+        return result
+    }
+
+    @PackageScope
+    static Map checkDefaultErrorRetry(Map result, Map env) {
+        if( result == null )
+            result = new HashMap(10)
+
+        if( result.max_error_retry==null ) {
+            result.max_error_retry = env?.AWS_MAX_ATTEMPTS
+        }
+        // fallback to default
+        if( result.max_error_retry==null ) {
+            result.max_error_retry = '5'
+        }
+        // make sure that's a string value as it's expected by the client
+        else {
+            result.max_error_retry = result.max_error_retry.toString()
+        }
+
         return result
     }
 
@@ -542,14 +592,12 @@ class FileHelper {
      * @param clazz A class extending {@code FileSystemProvider}
      * @return An instance of the specified class
      */
-    @Deprecated
     synchronized static <T extends FileSystemProvider> T getOrInstallProvider( Class<T> clazz ) {
 
         FileSystemProvider result = FileSystemProvider.installedProviders().find { it.class == clazz }
         if( result )
             return (T)result
 
-        // try to load DnaNexus file system provider dynamically
         result = (T)clazz.newInstance()
 
         // add it manually
@@ -853,7 +901,7 @@ class FileHelper {
     }
 
     /**
-     * Move a path to a target destination. It handles file or directory both to a local
+     * Copy a path to a target destination. It handles file or directory both to a local
      * or to a foreign file system.
      *
      * @param source
@@ -897,27 +945,29 @@ class FileHelper {
         if( !attr )
             return
 
-        // if it's not a dir just delete the file
-        if( !attr.isDirectory() ) {
-            Files.delete(path)
-            return
+        if( attr.isDirectory() ) {
+            deleteDir0(path)
         }
+        else {
+            Files.delete(path)
+        }
+    }
 
+    static private deleteDir0(Path path) {
         Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
 
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+            FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
                 Files.delete(file)
                 FileVisitResult.CONTINUE
             }
 
-            public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
+            FileVisitResult postVisitDirectory(Path dir, IOException exc) {
                 Files.delete(dir)
                 FileVisitResult.CONTINUE
             }
 
         })
     }
-
     /**
      * List the content of a file system path
      *

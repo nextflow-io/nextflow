@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,8 +33,6 @@ import nextflow.processor.TaskProcessor
  */
 @Slf4j
 abstract class BaseScript extends Script implements ExecutionContext {
-
-    private static Object[] EMPTY_ARGS = [] as Object[]
 
     private Session session
 
@@ -102,7 +100,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         binding.setVariable( 'workflow', session.workflowMetadata )
         binding.setVariable( 'nextflow', NextflowMeta.instance )
         binding.setVariable('launchDir', Paths.get('./').toRealPath())
-        binding.setVariable('moduleDir', meta.scriptPath?.parent )
+        binding.setVariable('moduleDir', meta.moduleDir )
     }
 
     protected process( String name, Closure<BodyDef> body ) {
@@ -147,7 +145,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
     protected IncludeDef include( IncludeDef include ) {
         if(!NF.isDsl2())
             throw new IllegalStateException("Module feature not enabled -- Set `nextflow.enable.dsl=2` to import module files")
-
+        if(ExecutionStack.withinWorkflow())
+            throw new IllegalStateException("Include statement is not allowed within a workflow definition")
         include .setSession(session)
     }
 
@@ -188,7 +187,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
         // invoke the entry workflow
         session.notifyBeforeWorkflowExecution()
-        final ret = entryFlow.invoke_a(EMPTY_ARGS)
+        final ret = entryFlow.invoke_a(BaseScriptConsts.EMPTY_ARGS)
         session.notifyAfterWorkflowExecution()
         return ret
     }
@@ -209,5 +208,45 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     protected abstract Object runScript()
+
+    @Override
+    void print(Object object) {
+        if( session?.ansiLog )
+            log.info(object?.toString())
+        else
+            super.print(object)
+    }
+
+    @Override
+    void println() {
+        if( session?.ansiLog )
+            log.info("")
+        else
+            super.println()
+    }
+
+    @Override
+    void println(Object object) {
+        if( session?.ansiLog )
+            log.info(object?.toString())
+        else
+            super.println(object)
+    }
+
+    @Override
+    void printf(String msg, Object arg) {
+        if( session?.ansiLog )
+            log.info(String.printf(msg, arg))
+        else
+            super.printf(msg, arg)
+    }
+
+    @Override
+    void printf(String msg, Object[] args) {
+        if( session?.ansiLog )
+            log.info(String.printf(msg, args))
+        else
+            super.printf(msg, args)
+    }
 
 }

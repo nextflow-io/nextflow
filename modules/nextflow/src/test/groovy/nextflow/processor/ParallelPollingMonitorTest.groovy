@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,9 +54,7 @@ class ParallelPollingMonitorTest extends Specification {
 
         def exec = ThrottlingExecutor.create(opts)
 
-        def reaper = Mock(ThrottlingExecutor)
-
-        def mon = new ParallelPollingMonitor(exec, reaper, [session:session, name:'foo', pollInterval:'1sec'])
+        def mon = new ParallelPollingMonitor(exec, [session:session, name:'foo', pollInterval:'1sec'])
         when:
         mon.submitter = exec
         mon.submit(handler)

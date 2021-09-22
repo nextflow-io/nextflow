@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -139,7 +139,6 @@ class DataflowHelper {
      * @param params The map holding inputs, outputs channels and other parameters
      * @param code The closure to be executed by the operator
      */
-    @PackageScope
     static DataflowProcessor newOperator( Map params, Closure code ) {
 
         // -- add a default error listener
@@ -166,7 +165,6 @@ class DataflowHelper {
      * @param outputs The list of list output {@code DataflowWriteChannel}s
      * @param code The closure to be executed by the operator
      */
-    @PackageScope
     static DataflowProcessor newOperator( List inputs, List outputs, Closure code ) {
         newOperator( inputs: inputs, outputs: outputs, code )
     }
@@ -180,7 +178,6 @@ class DataflowHelper {
      * @param output An instance of {@code DataflowWriteChannel} representing the output channel
      * @param code The closure to be executed by the operator
      */
-    @PackageScope
     static DataflowProcessor newOperator( DataflowReadChannel input, DataflowWriteChannel output, Closure code ) {
         newOperator(input, output, DEF_ERROR_LISTENER, code )
     }
@@ -195,7 +192,6 @@ class DataflowHelper {
      * @param listener An instance of {@code DataflowEventListener} listening to operator's events
      * @param code The closure to be executed by the operator
      */
-    @PackageScope
     static DataflowProcessor newOperator( DataflowReadChannel input, DataflowWriteChannel output, DataflowEventListener listener, Closure code ) {
 
         if( !listener )

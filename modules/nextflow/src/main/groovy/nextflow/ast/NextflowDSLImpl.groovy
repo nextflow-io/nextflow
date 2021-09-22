@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -80,6 +80,16 @@ import org.codehaus.groovy.transform.GroovyASTTransformation
 @GroovyASTTransformation(phase = CompilePhase.CONVERSION)
 class NextflowDSLImpl implements ASTTransformation {
 
+    @Deprecated final static private String WORKFLOW_GET = 'get'
+    @Deprecated final static private String WORKFLOW_PUBLISH = 'publish'
+    final static private String WORKFLOW_TAKE = 'take'
+    final static private String WORKFLOW_EMIT = 'emit'
+    final static private String WORKFLOW_MAIN = 'main'
+    final static private List<String> SCOPES = [WORKFLOW_TAKE, WORKFLOW_EMIT, WORKFLOW_MAIN]
+
+    final static public String PROCESS_WHEN = 'when'
+    final static public String PROCESS_STUB = 'stub'
+
     static public String OUT_PREFIX = '$out'
 
     static private Set<String> RESERVED_NAMES
@@ -109,18 +119,14 @@ class NextflowDSLImpl implements ASTTransformation {
     @CompileStatic
     static class DslCodeVisitor extends ClassCodeVisitorSupport {
 
-        @Deprecated final static private String WORKFLOW_GET = 'get'
-        @Deprecated final static private String WORKFLOW_PUBLISH = 'publish'
-        final static private String WORKFLOW_TAKE = 'take'
-        final static private String WORKFLOW_EMIT = 'emit'
-        final static private String WORKFLOW_MAIN = 'main'
-        final static private List<String> SCOPES = [WORKFLOW_TAKE, WORKFLOW_EMIT, WORKFLOW_MAIN]
 
         final private SourceUnit unit
 
         private String currentTaskName
 
         private String currentLabel
+
+        private String bodyLabel
 
         private Set<String> processNames = []
 
@@ -215,6 +221,7 @@ class NextflowDSLImpl implements ASTTransformation {
             if( methodName == 'process' && preCondition ) {
 
                 // clear block label
+                bodyLabel = null
                 currentLabel = null
                 currentTaskName = methodName
                 try {
@@ -576,6 +583,10 @@ class NextflowDSLImpl implements ASTTransformation {
                 List<Statement> whenStatements = []
                 def whenSource = new StringBuilder()
 
+                List<Statement> stubStatements = []
+                def stubSource = new StringBuilder()
+
+
                 def iterator = block.getStatements().iterator()
                 while( iterator.hasNext() ) {
 
@@ -603,6 +614,7 @@ class NextflowDSLImpl implements ASTTransformation {
                             break
 
                         case 'exec':
+                            bodyLabel = currentLabel
                             iterator.remove()
                             execStatements << stm
                             readSource(stm,source,unit)
@@ -610,13 +622,20 @@ class NextflowDSLImpl implements ASTTransformation {
 
                         case 'script':
                         case 'shell':
+                            bodyLabel = currentLabel
                             iterator.remove()
                             execStatements << stm
                             readSource(stm,source,unit)
                             break
 
+                        case PROCESS_STUB:
+                            iterator.remove()
+                            stubStatements << stm
+                            readSource(stm,stubSource,unit)
+                            break
+
                         // capture the statements in a when guard and remove from the current block
-                        case 'when':
+                        case PROCESS_WHEN:
                             if( iterator.hasNext() ) {
                                 iterator.remove()
                                 whenStatements << stm
@@ -656,6 +675,14 @@ class NextflowDSLImpl implements ASTTransformation {
                 }
 
                 /*
+                 * add try `stub` block if found
+                 */
+                if( stubStatements ) {
+                    final newBLock = addStubCall(stubStatements, stubSource, block)
+                    newBLock.visit(new TaskCmdXformVisitor(unit))
+                }
+
+                /*
                  * wrap all the statements after the 'exec:'  label by a new closure containing them (in a new block)
                  */
                 final len = block.statements.size()
@@ -667,12 +694,26 @@ class NextflowDSLImpl implements ASTTransformation {
 
                     // append the new block to the
                     // set the 'script' flag parameter
-                    def wrap = makeScriptWrapper(execClosure, source, currentLabel, unit)
+                    def wrap = makeScriptWrapper(execClosure, source, bodyLabel, unit)
                     block.addStatement( new ExpressionStatement(wrap) )
-                    if( currentLabel == 'script' )
+                    if( bodyLabel == 'script' )
                         block.visit(new TaskCmdXformVisitor(unit))
                     done = true
 
+                }
+                // when only the `stub` block is defined add an empty command
+                else if ( !bodyLabel && stubStatements ) {
+                    final cmd = 'true'
+                    final list = new ArrayList<Statement>(1);
+                    list.add( new ExpressionStatement(constX(cmd)) )
+                    final dummyBlock = new BlockStatement( list, new VariableScope(block.variableScope))
+                    final dummyClosure = new ClosureExpression( Parameter.EMPTY_ARRAY, dummyBlock )
+
+                    // append the new block to the
+                    // set the 'script' flag parameter
+                    final wrap = makeScriptWrapper(dummyClosure, cmd, 'script', unit)
+                    block.addStatement( new ExpressionStatement(wrap) )
+                    done = true
                 }
 
                 /*
@@ -692,8 +733,6 @@ class NextflowDSLImpl implements ASTTransformation {
 
                     // apply command variables escape
                     stm.visit(new TaskCmdXformVisitor(unit))
-                    // set the 'script' flag
-                    currentLabel = 'script'
                 }
 
                 if (!done) {
@@ -712,7 +751,15 @@ class NextflowDSLImpl implements ASTTransformation {
          * See {@link nextflow.script.ProcessConfig#configProperties}
          * See {@link nextflow.processor.TaskConfig#getGuard(java.lang.String)}
          */
-        protected void addWhenGuardCall( List<Statement> statements, StringBuilder source, BlockStatement parent ) {
+        protected BlockStatement addWhenGuardCall( List<Statement> statements, StringBuilder source, BlockStatement parent ) {
+            createBlock0(PROCESS_WHEN, statements, source, parent)
+        }
+
+        protected BlockStatement addStubCall(List<Statement> statements, StringBuilder source, BlockStatement parent ) {
+            createBlock0(PROCESS_STUB, statements, source, parent)
+        }
+
+        protected BlockStatement createBlock0( String blockName, List<Statement> statements, StringBuilder source, BlockStatement parent ) {
             // wrap the code block into a closure expression
             def block = new BlockStatement(statements, new VariableScope(parent.variableScope))
             def closure = new ClosureExpression( Parameter.EMPTY_ARRAY, block )
@@ -725,10 +772,12 @@ class NextflowDSLImpl implements ASTTransformation {
             def whenObj = createX( TaskClosure, newArgs )
 
             // creates a method call expression for the method `when`
-            def method = new MethodCallExpression(VariableExpression.THIS_EXPRESSION, 'when', whenObj)
+            def method = new MethodCallExpression(VariableExpression.THIS_EXPRESSION, blockName, whenObj)
             parent.getStatements().add(0, new ExpressionStatement(method))
 
+            return block
         }
+
         /**
          * Wrap the user provided piece of code, either a script or a closure with a {@code BodyDef} object
          *

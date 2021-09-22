@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,13 +41,19 @@ final class GithubRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getEndpointUrl() {
-        "${config.endpoint}/repos/${project}"
+        return "${config.endpoint}/repos/${project}"
     }
 
     /** {@inheritDoc} */
     @Override
     String getContentUrl( String path ) {
-        "${config.endpoint}/repos/$project/contents/$path"
+        // see
+        // https://docs.github.com/en/rest/reference/repos#get-repository-content
+        //
+        def result = "${config.endpoint}/repos/$project/contents/$path"
+        if( revision )
+            result += "?ref=$revision"
+        return result
     }
 
     /** {@inheritDoc} */

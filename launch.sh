@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#  Copyright 2020, Seqera Labs
+#  Copyright 2020-2021, Seqera Labs
 #  Copyright 2013-2019, Centre for Genomic Regulation (CRG)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -67,28 +67,27 @@ fi
 JAVA_VER=$(echo "$JAVA_VER" | awk '/version/ {gsub(/"/, "", $3); print $3}')
 major=${BASH_REMATCH[1]}
 minor=${BASH_REMATCH[2]}
-version_check="^(1.8|9|10|11|12|13|14)"
+version_check="^(1.8|9|10|11|12|13|14|15)"
 if [[ ! $JAVA_VER =~ $version_check ]]; then
     echo "Error: cannot find Java or it's a wrong version -- please make sure that Java 8 or higher is installed"
     exit 1
 fi
 JVM_ARGS+=" -Dfile.encoding=UTF-8 -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
-[[ $JAVA_VER =~ ^(9|10|11|12|13|14) ]] && JVM_ARGS+=" --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/sun.nio.fs=ALL-UNNAMED --add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED --add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED --add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED --add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED --illegal-access=deny"
+[[ $JAVA_VER =~ ^(9|10|11|12|13|14|15|16) ]] && JVM_ARGS+=" --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.nio.file.spi=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/sun.nio.fs=ALL-UNNAMED --add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED --add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED --add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED --add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED"
 
 ## flight recorded -- http://docs.oracle.com/javacomponents/jmc-5-4/jfr-runtime-guide/run.htm
 ##JVM_ARGS+=" -XX:+UnlockCommercialFeatures -XX:+FlightRecorder -XX:StartFlightRecording=duration=60s,filename=myrecording.jfr"
+NXF_PLUGINS_DIR=${NXF_PLUGINS_DIR:-$base_dir/plugins}
+NXF_PLUGINS_MODE=${NXF_PLUGINS_MODE:-dev}
+NXF_PLUGINS_DEFAULT=${NXF_PLUGINS_DEFAULT:-true}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_OPTS=${NXF_OPTS:-}
-EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}
 NXF_CLI="$0 $@"
 export NXF_CLI
 export COLUMNS
-export EXTRAE_CONFIG_FILE
-
-DRIP_INIT_CLASS=nextflow.cli.DripMain
-DRIP_INIT=''
-
-EXTRAE_CONFIG_FILE=${EXTRAE_CONFIG_FILE:-$NXF_HOME/extrae/config}
+export NXF_PLUGINS_DIR
+export NXF_PLUGINS_MODE
+export NXF_PLUGINS_DEFAULT
 
 #
 # classpath when the application is compiled with gradle

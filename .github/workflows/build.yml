@@ -6,18 +6,19 @@ on:
       - '*'
     tags-ignore:
       - '*'  
-
+  pull_request:
+    branches:
+      - '*'
 jobs:
   build:
     name: Build Nextflow
-    # This job runs on Linux
+    if: "!contains(github.event.head_commit.message, '[ci skip]')"
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        #java_version: ['8.0.222','10.0.2','11.0.4']
-        java_version: [8, 11, 14]
+        java_version: [8, 11, 16]
 
     steps:
     - name: Environment
@@ -29,17 +30,17 @@ jobs:
         fetch-depth: 1
         submodules: true
 
-    - name: Setup Java
-      uses: actions/setup-java@v1
-      with:
-        java-version: ${{matrix.java_version}}
-        architecture: x64
-
     - name: Setup env
       run: |
            rm -f $HOME/.gitconfig; 
            mkdir -p "$HOME/.nextflow";
            echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
+
+    - name: Setup Java ${{ matrix.java_version }}
+      uses: actions/setup-java@v1
+      with:
+        java-version: ${{matrix.java_version}}
+        architecture: x64
 
     - name: Compile
       run: make assemble
@@ -53,24 +54,57 @@ jobs:
         NXF_BITBUCKET_ACCESS_TOKEN: ${{ secrets.NXF_BITBUCKET_ACCESS_TOKEN }}
         NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
         NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
+        NXF_AZURE_REPOS_TOKEN: ${{ secrets.NXF_AZURE_REPOS_TOKEN }}
+        AZURE_STORAGE_ACCOUNT_NAME: nfbucket 
+        AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+        AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
     - name: Integration
+      if: "!contains(github.event.head_commit.message, '[ci fast]')"
       run: make install && ./integration-tests.sh
       env:
         TEST_JDK: ${{ matrix.java_version }}
+        GRADLE_OPTS: '-Dorg.gradle.daemon=false'
+        AWS_DEFAULT_REGION: eu-west-1
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        NXF_BITBUCKET_ACCESS_TOKEN: ${{ secrets.NXF_BITBUCKET_ACCESS_TOKEN }}
+        NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
+        NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
+        NXF_AZURE_REPOS_TOKEN: ${{ secrets.NXF_AZURE_REPOS_TOKEN }}
+        TOWER_ACCESS_TOKEN: ${{ secrets.TOWER_ACCESS_TOKEN }}
+        GOOGLE_SECRET: ${{ secrets.GOOGLE_SECRET }}
+        AZURE_STORAGE_ACCOUNT_NAME: nfbucket
+        AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+        AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
+
+    - name: Setup Java 8
+      if: "matrix.java_version != 8 && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/testing') && !contains(github.event.head_commit.message, '[ci fast]')"
+      uses: actions/setup-java@v1
+      with:
+        java-version: 8
+        architecture: x64
+
+    - name: Integration vs Java 8
+      if: "matrix.java_version != 8 && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/testing') && !contains(github.event.head_commit.message, '[ci fast]')"
+      run: ./integration-tests.sh
+      env:
+        TEST_JDK: 8
+        TEST_SMOKE: true
         GRADLE_OPTS: '-Dorg.gradle.daemon=false'
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         NXF_BITBUCKET_ACCESS_TOKEN: ${{ secrets.NXF_BITBUCKET_ACCESS_TOKEN }}
         NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
         NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
-        TOWER_ACCESS_TOKEN: ${{ secrets.TOWER_ACCESS_TOKEN }}
-        GOOGLE_SECRET: ${{ secrets.GOOGLE_SECRET }}
+        NXF_AZURE_REPOS_TOKEN: ${{ secrets.NXF_AZURE_REPOS_TOKEN }}
+        AZURE_STORAGE_ACCOUNT_NAME: nfbucket
+        AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+        AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
-    - name: Publish
+    - name: Publish tests report
       if: failure()
-      run: bash pub-tests.sh github
-      env:
-        TEST_JDK: ${{ matrix.java_version }}
-        NXF_AWS_ACCESS: ${{ secrets.NXF_AWS_ACCESS }}
-        NXF_AWS_SECRET: ${{ secrets.NXF_AWS_SECRET }}
+      uses: actions/upload-artifact@v2
+      with:
+        name: test-reports-jdk-${{ matrix.java_version }}
+        path: "**/build/reports/tests/test"

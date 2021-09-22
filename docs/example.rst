@@ -48,7 +48,7 @@ In more detail:
 
 * line 13: Opens the `output` declaration block. Lines following this clause are interpreted as output definitions.
 
-* line 14: Defines that the process outputs files whose names match the pattern ``seq_*``. These files are sent over the
+* line 14: Defines that the process output files whose names match the pattern ``seq_*``. These files are sent over the
   channel ``records``.
 
 * lines 16-18: The actual script executed by the process to split the provided file.

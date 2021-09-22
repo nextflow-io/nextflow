@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -86,4 +86,36 @@ class GitlabRepositoryProviderTest extends Specification {
 
     }
 
+    @Requires({System.getenv('NXF_GITLAB_ACCESS_TOKEN')})
+    def 'should return content URL' () {
+        given:
+        String CONFIG = '''
+        providers {
+            mygitlab {
+                server = 'https://gitlab.com'
+                endpoint = 'https://gitlab.com'
+                platform = 'gitlab'
+                user = 'myname'
+                password = 'mypassword'
+            }
+        }
+        '''
+
+        def config = new ConfigSlurper().parse(CONFIG)
+        def obj = new ProviderConfig('github', config.providers.mygitlab as ConfigObject)
+
+        expect:
+        new GitlabRepositoryProvider('pditommaso/hello', obj)
+                .getContentUrl('main.nf') == 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/files/main.nf?ref=master'
+
+        and:
+        new GitlabRepositoryProvider('pditommaso/hello', obj)
+                .setRevision('the-commit-id')
+                .getContentUrl('main.nf') == 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/files/main.nf?ref=the-commit-id'
+
+        and:
+        new GitlabRepositoryProvider('pditommaso/hello', obj)
+                .getContentUrl('conf/extra.conf') == 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/files/conf%2Fextra.conf?ref=master'
+
+    }
 }

@@ -1,0 +1,4 @@
+NF-SQLDB CHANGE-LOG
+===================
+0.1.0 - 1 Sep 2021
+- Initial release [https://github.com/nextflow-io/nextflow/commit/4d57979526d807a0d146697eb9c47d22696b0587]

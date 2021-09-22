@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -116,7 +116,7 @@ class TransposeOp {
 
         for( int i=0; i<max; i++ ) {
             final c = tuple.size()
-            final buffer = new ArrayList(c)
+            final buffer = new ArrayList<Object>(c)
             for( int j=0; j<c; j++ ) {
                 // `j` is used to iterate over the `tuple`
                 if( j in indexes ) {

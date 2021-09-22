@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -108,11 +108,20 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
         if( runOptions )
             result << runOptions.join(' ') << ' '
 
+        if( cpus ) {
+            result << "--cpus ${String.format(Locale.ROOT, "%.1f", cpus)} "
+        }
+
+        if( memory ) {
+            result << "--memory ${memory} "
+        }
+
+
         // the name is after the user option so it has precedence over any options provided by the user
-        if( name )
+        if ( name )
             result << '--name ' << name << ' '
 
-        if( registry )
+        if ( registry )
             result << registry
 
         // finally the container name

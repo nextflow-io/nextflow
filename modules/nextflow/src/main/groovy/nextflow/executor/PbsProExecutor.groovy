@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,6 +44,13 @@ class PbsProExecutor extends PbsExecutor {
     @Override
     protected List<String> getDirectives(TaskRun task, List<String> result ) {
         assert result !=null
+        
+        // when multiple competing directives are provided, only the first one will take effect
+        // therefore clusterOptions is added as first to give priority over other options as expected
+        // by the clusterOptions semantics -- see https://github.com/nextflow-io/nextflow/pull/2036
+        if( task.config.clusterOptions ) {
+            result << task.config.clusterOptions.toString() << ''
+        }
 
         result << '-N' << getJobNameFor(task)
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
@@ -72,18 +79,17 @@ class PbsProExecutor extends PbsExecutor {
             result << "-l" << "walltime=${duration.format('HH:mm:ss')}".toString()
         }
 
-        // -- at the end append the command script wrapped file name
-        if( task.config.clusterOptions ) {
-            result << task.config.clusterOptions.toString() << ''
-        }
-
         return result
     }
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
-        String cmd = 'qstat -f'
-        if( queue ) cmd += ' ' + queue
+        String cmd = 'qstat -f ' 
+        if( queue ) {
+            cmd += queue
+        } else {
+            cmd += '$( qstat -B | egrep -v \'(^Server|^---)\' | awk -v ORS=\' \' \'{print \"@\"\$1}\' )'
+        }
         return ['bash','-c', "set -o pipefail; $cmd | { egrep '(Job Id:|job_state =)' || true; }".toString()]
     }
 

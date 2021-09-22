@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@
 
 package nextflow.extension
 
-import java.nio.file.NoSuchFileException
+
 import java.nio.file.Path
 import java.text.DateFormat
 import java.text.SimpleDateFormat
@@ -686,13 +686,13 @@ class Bolts {
      */
     static <T extends Closure> T cloneWith( T self, binding ) {
 
-        def copy = (T)self.clone()
+        def copy = (Closure)self.clone()
         if( binding != null ) {
             copy.setDelegate(binding)
             copy.setResolveStrategy( Closure.DELEGATE_FIRST )
         }
 
-        return copy
+        return (T)copy
     }
 
     /**
@@ -710,8 +710,7 @@ class Bolts {
         for( int i=0; i<self.valueCount; i++ ) {
             values[i] = ( self.values[i] instanceof Closure
                     ? cloneWith(self.values[i] as Closure, binding)
-                    : self.values[i]
-            )
+                    : self.values[i] )
         }
 
         new GStringImpl(values, self.strings)
@@ -895,11 +894,35 @@ class Bolts {
         }
     }
 
-    static String getErrMessage(Throwable e) {
-        if( e instanceof NoSuchFileException ) {
-            return "No such file: $e.message"
-        }
+    static redact(String self, int max=5, String suffix='...') {
+        if( !self )
+            return self
+        if( self.size()<max )
+            return suffix
+        else
+            return self.substring(0,Math.min(self.size()-max, max)) + suffix
+    }
 
-        return e.message ?: e.toString()
+    protected static <T extends Serializable> T deepClone0(T obj) {
+        final buffer = new ByteArrayOutputStream()
+        final oos = new ObjectOutputStream(buffer)
+        oos.writeObject(obj)
+        oos.flush()
+
+        final inputStream = new ByteArrayInputStream(buffer.toByteArray())
+        return (T) new ObjectInputStream(inputStream).readObject()
+    }
+
+    static <T extends Map> T deepClone(T map) {
+        if( map == null)
+            return null
+        final result = map instanceof LinkedHashMap ? new LinkedHashMap<>(map) : new HashMap<>(map)
+        for( def key : map.keySet() ) {
+            def value = map.get(key)
+            if( value instanceof Map ) {
+                result.put(key, deepClone(value))
+            }
+        }
+        return (T)result
     }
 }

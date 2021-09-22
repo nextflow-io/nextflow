@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,7 @@
  */
 
 package nextflow.cli
-import java.nio.file.Files
+
 import java.nio.file.Path
 import java.util.regex.Pattern
 
@@ -26,13 +26,16 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import nextflow.Const
+import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
+import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
@@ -160,6 +163,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names = ['-with-timeline'], description = 'Create processes execution timeline file')
     String withTimeline
 
+    @Parameter(names = '-with-charliecloud', description = 'Enable process execution in a Charliecloud container runtime')
+    def withCharliecloud
+
     @Parameter(names = '-with-singularity', description = 'Enable process execution in a Singularity container')
     def withSingularity
 
@@ -216,8 +222,21 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-dsl2'], description = 'Execute the workflow using DSL2 syntax')
     boolean dsl2
 
+    @Parameter(names=['-main-script'], description = 'The script file to be executed when launching a project directory or repository' )
+    String mainScript
+
+    @Parameter(names=['-stub-run','-stub'], description = 'Execute the workflow replacing process scripts with command stubs')
+    boolean stubRun
+
+    @Parameter(names=['-plugins'], description = 'Specify the plugins to be applied for this run e.g. nf-amazon,nf-tower')
+    String plugins
+
     @Override
     String getName() { NAME }
+
+    String getParamsFile() { paramsFile ?: env.get('NXF_PARAMS_FILE') }
+
+    boolean hasParams() { params || getParamsFile() }
 
     @Override
     void run() {
@@ -246,10 +265,15 @@ class CmdRun extends CmdBase implements HubOptions {
         final scriptFile = getScriptFile(pipeline)
 
         // create the config object
-        final config = new ConfigBuilder()
-                        .setOptions(launcher.options)
-                        .setCmdRun(this)
-                        .setBaseDir(scriptFile.parent)
+        final builder = new ConfigBuilder()
+                .setOptions(launcher.options)
+                .setCmdRun(this)
+                .setBaseDir(scriptFile.parent)
+        final config = builder .build()
+
+        // -- load plugins
+        final cfg = plugins ? [plugins: plugins.tokenize(',')] : config
+        Plugins.setup( cfg )
 
         // -- create a new runner instance
         final runner = new ScriptRunner(config)
@@ -258,7 +282,11 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.session.commandLine = launcher.cliString
         runner.session.ansiLog = launcher.options.ansiLog
         runner.session.resolvedConfig = resolveConfig(scriptFile.parent)
-
+        // note config files are collected during the build process
+        // this line should be after `ConfigBuilder#build`
+        runner.session.configFiles = builder.parsedConfigFiles
+        // set the commit id (if any)
+        runner.session.commitId = scriptFile.commitId
         if( this.test ) {
             runner.test(this.test, scriptArgs)
             return
@@ -315,7 +343,7 @@ class CmdRun extends CmdBase implements HubOptions {
          */
         def script = new File(pipelineName)
         if( script.isDirectory()  ) {
-            script = new AssetManager().setLocalPath(script).getMainScriptFile()
+            script = mainScript ? new File(mainScript) : new AssetManager().setLocalPath(script).getMainScriptFile()
         }
 
         if( script.exists() ) {
@@ -346,7 +374,7 @@ class CmdRun extends CmdBase implements HubOptions {
         try {
             manager.checkout(revision)
             manager.updateModules()
-            def scriptFile = manager.getScriptFile()
+            final scriptFile = manager.getScriptFile(mainScript)
             log.info "Launching `$repo` [$runName] - revision: ${scriptFile.revisionInfo}"
             if( checkForUpdate && !offline )
                 manager.checkRemoteStatus(scriptFile.revisionInfo)
@@ -377,38 +405,71 @@ class CmdRun extends CmdBase implements HubOptions {
         return result
     }
 
-    Map getParsedParams() {
+    @Memoized  // <-- avoid parse multiple times the same file and params
+    Map parsedParams(Map configVars) {
 
         final result = [:]
-        final file = paramsFile ?: env.get('NXF_PARAMS_FILE')
+        final file = getParamsFile()
         if( file ) {
             def path = validateParamsFile(file)
             def type = path.extension.toLowerCase() ?: null
             if( type == 'json' )
-                readJsonFile(path, result)
+                readJsonFile(path, configVars, result)
             else if( type == 'yml' || type == 'yaml' )
-                readYamlFile(path, result)
+                readYamlFile(path, configVars, result)
         }
 
-        // read the params file if any
-
         // set the CLI params
-        params?.each { key, value ->
-            result.put( key, parseParam(value) )
+        if( !params )
+            return result
+
+        for( Map.Entry<String,String> entry : params ) {
+            addParam( result, entry.key, entry.value )
         }
         return result
     }
 
-    static protected parseParam( String str ) {
+
+    static final private Pattern DOT_ESCAPED = ~/\\\./
+    static final private Pattern DOT_NOT_ESCAPED = ~/(?<!\\)\./
+
+    static protected void addParam(Map params, String key, String value, List path=[], String fullKey=null) {
+        if( !fullKey )
+            fullKey = key
+        final m = DOT_NOT_ESCAPED.matcher(key)
+        if( m.find() ) {
+            final p = m.start()
+            final root = key.substring(0, p)
+            if( !root ) throw new AbortOperationException("Invalid parameter name: $fullKey")
+            path.add(root)
+            def nested = params.get(root)
+            if( nested == null ) {
+                nested = new LinkedHashMap<>()
+                params.put(root, nested)
+            }
+            else if( nested !instanceof Map ) {
+                log.warn "Command line parameter --${path.join('.')} is overwritten by --${fullKey}"
+                nested = new LinkedHashMap<>()
+                params.put(root, nested)
+            }
+            addParam((Map)nested, key.substring(p+1), value, path, fullKey)
+        }
+        else {
+            params.put(key.replaceAll(DOT_ESCAPED,'.'), parseParamValue(value))
+        }
+    }
+
+
+    static protected parseParamValue(String str ) {
 
         if ( str == null ) return null
 
         if ( str.toLowerCase() == 'true') return Boolean.TRUE
         if ( str.toLowerCase() == 'false' ) return Boolean.FALSE
 
-        if ( str.isInteger() ) return str.toInteger()
-        if ( str.isLong() ) return str.toLong()
-        if ( str.isDouble() ) return str.toDouble()
+        if ( str==~/\d+(\.\d+)?/ && str.isInteger() ) return str.toInteger()
+        if ( str==~/\d+(\.\d+)?/ && str.isLong() ) return str.toLong()
+        if ( str==~/\d+(\.\d+)?/ && str.isDouble() ) return str.toDouble()
 
         return str
     }
@@ -426,20 +487,45 @@ class CmdRun extends CmdBase implements HubOptions {
         return result
     }
 
+    static private Pattern PARAMS_VAR = ~/(?m)\$\{(\p{javaJavaIdentifierStart}\p{javaJavaIdentifierPart}*)}/
 
-    private void readJsonFile(Path file, Map result) {
-        try {
-            def json = (Map)new JsonSlurper().parse(Files.newInputStream(file))
-            result.putAll(json)
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Cannot parse params file: $file", e)
+    protected String replaceVars0(String content, Map binding) {
+        content.replaceAll(PARAMS_VAR) { List<String> matcher ->
+            // - the regex matcher is represented as list
+            // - the first element is the matching string ie. `${something}`
+            // - the second element is the group content ie. `something`
+            // - make sure the regex contains at least a group otherwise the closure
+            // parameter is a string instead of a list of the call fail
+            final placeholder = matcher.get(0)
+            final key = matcher.get(1)
+
+            if( !binding.containsKey(key) ) {
+                final msg = "Missing params file variable: $placeholder"
+                if(NF.strictMode)
+                    throw new AbortOperationException(msg)
+                log.warn msg
+                return placeholder
+            }
+
+            return binding.get(key)
         }
     }
 
-    private void readYamlFile(Path file, Map result) {
+    private void readJsonFile(Path file, Map configVars, Map result) {
         try {
-            def yaml = (Map)new Yaml().load(Files.newInputStream(file))
+            def text = configVars ? replaceVars0(file.text, configVars) : file.text
+            def json = (Map)new JsonSlurper().parseText(text)
+            result.putAll(json)
+        }
+        catch( Exception e ) {
+            throw new AbortOperationException("Cannot parse params file: $file - Cause: ${e.message}", e)
+        }
+    }
+
+    private void readYamlFile(Path file, Map configVars, Map result) {
+        try {
+            def text = configVars ? replaceVars0(file.text, configVars) : file.text
+            def yaml = (Map)new Yaml().load(text)
             result.putAll(yaml)
         }
         catch( Exception e ) {

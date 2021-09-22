@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,10 +16,10 @@
  */
 
 package nextflow.trace
+
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardOpenOption
 import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
@@ -68,6 +68,11 @@ class TraceFileObserver implements TraceObserver {
      * The delimiter character used to separate column in the CSV file
      */
     String separator = '\t'
+
+    /**
+     * Overwrite existing trace file instead of rolling it
+     */
+    boolean overwrite
 
     /**
      * The path where the file is created. It is set by the object constructor
@@ -198,11 +203,14 @@ class TraceFileObserver implements TraceObserver {
         if( parent )
             Files.createDirectories(parent)
 
-        // roll the any trace files that may exist
-        tracePath.rollFile()
+        if( overwrite )
+            Files.deleteIfExists(tracePath)
+        else
+            // roll the any trace files that may exist
+            tracePath.rollFile()
 
         // create a new trace file
-        traceFile = new PrintWriter(Files.newBufferedWriter(tracePath, Charset.defaultCharset(), StandardOpenOption.APPEND, StandardOpenOption.CREATE))
+        traceFile = new PrintWriter(Files.newBufferedWriter(tracePath, Charset.defaultCharset()))
 
         // launch the agent
         writer = new Agent<PrintWriter>(traceFile)

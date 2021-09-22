@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,6 +33,8 @@ import java.security.cert.X509Certificate
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.exception.NodeTerminationException
+import nextflow.exception.ProcessFailedException
 import org.yaml.snakeyaml.Yaml
 /**
  * Kubernetes API client
@@ -260,6 +262,16 @@ class K8sClient {
             return Collections.emptyMap()
         }
 
+        if( status?.phase == 'Failed' ) {
+            def msg = "K8s pod '$podName' execution failed"
+            if( status.reason ) msg += " - reason: ${status.reason}"
+            if( status.message ) msg += " - message: ${status.message}"
+            final err = status.reason == 'Shutdown'
+                    ? new NodeTerminationException(msg)
+                    : new ProcessFailedException(msg)
+            throw err
+        }
+
         throw new K8sResponseException("K8s undetermined status conditions for pod $podName", resp)
     }
 
@@ -338,6 +350,27 @@ class K8sClient {
      *      the second element is the text (json) response
      */
     protected K8sResponseApi makeRequest(String method, String path, String body=null) throws K8sResponseException {
+
+        final int maxTrials = 5
+        int trial = 0
+
+        while ( trial < maxTrials ) {
+            trial++
+
+            try {
+                return makeRequestCall( method, path, body )
+            } catch ( SocketException e ) {
+                log.error "[K8s] API request threw socket exception: $e.message for $method $path ${body ? '\n'+prettyPrint(body).indent() : ''}"
+                if ( trial < maxTrials ) log.info( "[K8s] Try API request again, remaining trials: ${ maxTrials - trial }" )
+                else throw e
+                final long delay = (Math.pow(3, trial - 1) as long) * 250
+                sleep( delay )
+            }
+        }
+    }
+
+
+    private K8sResponseApi makeRequestCall(String method, String path, String body=null) throws K8sResponseException {
         assert config.server, 'Missing Kubernetes server name'
         assert path.startsWith('/'), 'Kubernetes API request path must starts with a `/` character'
 

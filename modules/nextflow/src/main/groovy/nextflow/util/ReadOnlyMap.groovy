@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,7 +40,7 @@ class ReadOnlyMap implements Map {
     ReadOnlyMap( Map map ) {
         assert map != null
         this.target.putAll(map)
-        this.readOnlyNames = new ArrayList(map.keySet())
+        this.readOnlyNames = new ArrayList<String>(map.keySet())
     }
 
     /**

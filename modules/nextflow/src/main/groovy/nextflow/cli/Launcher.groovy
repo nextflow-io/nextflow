@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,6 @@
 
 package nextflow.cli
 
-import nextflow.util.SpuriousDeps
 import static nextflow.Const.*
 
 import java.lang.reflect.Field
@@ -38,6 +37,8 @@ import nextflow.exception.ScriptCompilationException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.util.Escape
 import nextflow.util.LoggerHelper
+import nextflow.util.ProxyConfig
+import nextflow.util.SpuriousDeps
 import org.eclipse.jgit.api.errors.GitAPIException
 /**
  * Main application entry point. It parses the command line and
@@ -101,7 +102,8 @@ class Launcher {
                 new CmdNode(),
                 new CmdView(),
                 new CmdHelp(),
-                new CmdSelfUpdate()
+                new CmdSelfUpdate(),
+                new CmdPlugins()
         ]
 
         // legacy command
@@ -247,6 +249,10 @@ class Launcher {
                 normalized << '-'
             }
 
+            else if( current == '-with-charliecloud' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
+            }
+
             else if( current == '-with-weblog' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << '-'
             }
@@ -256,6 +262,10 @@ class Launcher {
             }
 
             else if( current == '-ansi-log' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << 'true'
+            }
+
+            else if( (current == '-stub' || current == '-stub-run') && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << 'true'
             }
 
@@ -540,17 +550,21 @@ class Launcher {
      * environment variables:
      * <li>http_proxy</li>
      * <li>https_proxy</li>
+     * <li>ftp_proxy</li>
      * <li>HTTP_PROXY</li>
      * <li>HTTPS_PROXY</li>
+     * <li>FTP_PROXY</li>
      * <li>NO_PROXY</li>
      */
     private void setupEnvironment() {
 
         setProxy('HTTP',System.getenv())
         setProxy('HTTPS',System.getenv())
+        setProxy('FTP',System.getenv())
 
         setProxy('http',System.getenv())
         setProxy('https',System.getenv())
+        setProxy('ftp',System.getenv())
 
         setNoProxy(System.getenv())
     }
@@ -573,7 +587,7 @@ class Launcher {
 
 
     /**
-     * Setup proxy system properties
+     * Setup proxy system properties and optionally configure the network authenticator
      *
      * See:
      * http://docs.oracle.com/javase/6/docs/technotes/guides/net/proxies.html
@@ -584,57 +598,30 @@ class Launcher {
      */
     @PackageScope
     static void setProxy(String qualifier, Map<String,String> env ) {
-        assert qualifier in ['http','https','HTTP','HTTPS']
+        assert qualifier in ['http','https','ftp','HTTP','HTTPS','FTP']
         def str = null
         def var = "${qualifier}_" + (qualifier.isLowerCase() ? 'proxy' : 'PROXY')
 
         // -- setup HTTP proxy
         try {
-            List<String> proxy = parseProxy(str = env.get(var.toString()))
+            final proxy = ProxyConfig.parse(str = env.get(var.toString()))
             if( proxy ) {
+                // set the expected protocol
+                proxy.protocol = qualifier.toLowerCase()
                 log.debug "Setting $qualifier proxy: $proxy"
-                System.setProperty("${qualifier.toLowerCase()}.proxyHost", proxy[0])
-                if( proxy[1] ) System.setProperty("${qualifier.toLowerCase()}.proxyPort", proxy[1])
+                System.setProperty("${qualifier.toLowerCase()}.proxyHost", proxy.host)
+                if( proxy.port )
+                    System.setProperty("${qualifier.toLowerCase()}.proxyPort", proxy.port)
+                if( proxy.authenticator() ) {
+                    log.debug "Setting $qualifier proxy authenticator"
+                    Authenticator.setDefault(proxy.authenticator())
+                }
             }
         }
         catch ( MalformedURLException e ) {
             log.warn "Not a valid $qualifier proxy: '$str' -- Check the value of variable `$var` in your environment"
         }
 
-    }
-
-    /**
-     * Parse a proxy URL string retrieving the host and port components
-     *
-     * @param value A proxy string e.g. {@code hostname}, {@code hostname:port}, {@code http://hostname:port}
-     * @return A list object containing at least the host name and optionally a second entry for the port.
-     *      An empty list if the specified value is empty
-     *
-     * @throws MalformedURLException when the specified value is not a valid proxy url
-     */
-    @PackageScope
-    static List parseProxy( String value ) {
-        List<String> result = []
-        int p
-
-        if( !value ) return result
-
-        if( value.contains('://') ) {
-            def url = new URL(value)
-            result.add(url.host)
-            if( url.port > 0 )
-                result.add(url.port as String)
-
-        }
-        else if( (p=value.indexOf(':')) != -1 ) {
-            result.add( value.substring(0,p) )
-            result.add( value.substring(p+1) )
-        }
-        else {
-            result.add( value )
-        }
-
-        return result
     }
 
     /**

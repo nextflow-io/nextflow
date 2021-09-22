@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -81,7 +81,12 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getContentUrl( String path ) {
-        "${config.endpoint}/api/v4/projects/${getProjectName()}/repository/files/${path}?ref=${getDefaultBranch()}"
+        // see
+        //  https://docs.gitlab.com/ee/api/repository_files.html#get-raw-file-from-repository
+        //
+        final ref = revision ?: getDefaultBranch()
+        final encodedPath = URLEncoder.encode(path,'utf-8')
+        return "${config.endpoint}/api/v4/projects/${getProjectName()}/repository/files/${encodedPath}?ref=${ref}"
     }
 
     /** {@inheritDoc} */
