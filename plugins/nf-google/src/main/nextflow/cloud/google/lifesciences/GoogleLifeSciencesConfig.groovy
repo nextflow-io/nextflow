@@ -97,7 +97,7 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
             fromSession0(session.config)
         }
         catch (Exception e) {
-            session.abort()
+            session?.abort()
             throw e
         }
     }
