@@ -43,21 +43,10 @@ class AzStorageOptsTest extends Specification {
         opts1.mountOptions == '-o vers=3.0,dir_mode=0777,file_mode=0777,sec=ntlmssp'
 
         when:
-        def opts2 = new AzStorageOpts(
-                [fileName: 'source', relativeMountPath: 'target', 'mountOptions': 'options here'],
-                [AZURE_STORAGE_FILE_NAME: 'env-source', AZURE_STORAGE_MOUNT_PATH:'env-target'])
+        def opts2 = new AzStorageOpts([fileName: 'source', relativeMountPath: 'target', 'mountOptions': 'options here'])
         then:
         opts2.fileName == 'source'
         opts2.relativeMountPath == 'target'
         opts2.mountOptions == 'options here'
-
-        when:
-        def opts3 = new AzStorageOpts(
-                [:],
-                [AZURE_STORAGE_FILE_NAME: 'env-source', AZURE_STORAGE_MOUNT_PATH:'env-target'])
-        then:
-        opts3.fileName == 'env-source'
-        opts3.relativeMountPath == 'env-target'
-        opts3.mountOptions == '-o vers=3.0,dir_mode=0777,file_mode=0777,sec=ntlmssp'
     }
 }

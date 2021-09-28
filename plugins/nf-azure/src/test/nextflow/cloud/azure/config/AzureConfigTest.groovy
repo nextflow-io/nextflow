@@ -58,8 +58,6 @@ class AzureConfigTest extends Specification {
         and:
         cfg.storage().getEnv() == [AZURE_STORAGE_ACCOUNT_KEY: KEY,
                                    AZURE_STORAGE_ACCOUNT_NAME: NAME,
-                                   AZURE_STORAGE_FILE_NAME: FILENAME,
-                                   AZURE_STORAGE_MOUNT_PATH: MOUNTPATH,
                                    AZURE_STORAGE_SAS_TOKEN: SAS ]
 
         and:
