@@ -4,7 +4,7 @@ import java.nio.file.Files
 
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Channel
-import nextflow.sql.config.SqlDatasource
+import nextflow.sql.config.SqlDataSource
 import spock.lang.Specification
 
 /**
@@ -27,7 +27,7 @@ class QueryHandlerTest extends Specification {
         given:
         def ext = new QueryHandler()
         when:
-        def conn = ext.connect(new SqlDatasource([:]))
+        def conn = ext.connect(new SqlDataSource([:]))
         then:
         conn != null
         cleanup:

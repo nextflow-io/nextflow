@@ -36,15 +36,16 @@ dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:1.7.10'
     compileOnly 'org.pf4j:pf4j:3.4.1'
-    api("org.codehaus.groovy:groovy-sql:3.0.8") { transitive = false }
+    api("org.codehaus.groovy:groovy-sql:3.0.9") { transitive = false }
     api 'com.h2database:h2:1.4.200'
     api 'mysql:mysql-connector-java:8.0.22'
     api 'org.mariadb.jdbc:mariadb-java-client:2.7.0'
     api 'org.postgresql:postgresql:42.2.23'
+    api 'org.xerial:sqlite-jdbc:3.36.0.3'
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.codehaus.groovy:groovy:3.0.8"
-    testImplementation "org.codehaus.groovy:groovy-nio:3.0.8"
+    testImplementation "org.codehaus.groovy:groovy:3.0.9"
+    testImplementation "org.codehaus.groovy:groovy-nio:3.0.9"
 }
 

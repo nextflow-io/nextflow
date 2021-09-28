@@ -28,26 +28,26 @@ import nextflow.extension.Bolts
  */
 @ToString(includePackage = false, includeNames = true)
 @EqualsAndHashCode
-class SqlDatasource {
+class SqlDataSource {
     public static String DEFAULT_URL = 'jdbc:h2:mem:'
     public static String DEFAULT_DRIVER = 'org.h2.Driver'
     public static String DEFAULT_USER = 'sa'
 
-    static SqlDatasource DEFAULT = new SqlDatasource(Collections.emptyMap())
+    static SqlDataSource DEFAULT = new SqlDataSource(Collections.emptyMap())
 
     String driver
     String url
     String user
     String password
 
-    SqlDatasource(Map opts) {
+    SqlDataSource(Map opts) {
         this.url = opts.url ?: DEFAULT_URL
         this.driver = opts.driver ?: urlToDriver(url) ?: DEFAULT_DRIVER
         this.user = opts.user ?: DEFAULT_USER
         this.password = opts.password
     }
 
-    SqlDatasource(Map opts, SqlDatasource fallback) {
+    SqlDataSource(Map opts, SqlDataSource fallback) {
         this.url = opts.url ?: fallback.url ?: DEFAULT_URL
         this.driver = opts.driver ?: urlToDriver(url) ?: fallback.driver ?: DEFAULT_DRIVER
         this.user = opts.user ?: fallback.user ?: DEFAULT_USER
@@ -60,6 +60,7 @@ class SqlDatasource {
         if( !url.startsWith('jdbc:') ) throw new IllegalArgumentException("Invalid database JDBC connection url: $url")
         switch (url.tokenize(':')[1]) {
             case 'h2': return 'org.h2.Driver'
+            case 'sqlite': return 'org.sqlite.JDBC'
             case 'mysql': return 'com.mysql.cj.jdbc.Driver'
             case 'mariadb': return 'org.mariadb.jdbc.Driver'
             case 'postgresql': return 'org.postgresql.Driver'
@@ -82,6 +83,6 @@ class SqlDatasource {
 
     @Override
     String toString() {
-        return "SqlDatasource[url=$url; driver=$driver; user=$user; password=${Bolts.redact(password)}]"
+        return "SqlDataSource[url=$url; driver=$driver; user=$user; password=${Bolts.redact(password)}]"
     }
 }

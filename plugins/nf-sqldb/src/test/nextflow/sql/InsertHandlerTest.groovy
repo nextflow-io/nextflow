@@ -18,7 +18,7 @@
 package nextflow.sql
 
 import groovy.sql.Sql
-import nextflow.sql.config.SqlDatasource
+import nextflow.sql.config.SqlDataSource
 import spock.lang.Specification
 
 /**
@@ -30,19 +30,19 @@ class InsertHandlerTest extends Specification {
     def 'should get sql insert from statement' () {
         given:
         def DML = 'insert into foo xyz'
-        def handler = new InsertHandler(Mock(SqlDatasource), [statement: DML])
+        def handler = new InsertHandler(Mock(SqlDataSource), [statement: DML])
         expect:
         handler.getSqlStatement(null) == DML
     }
 
     def 'should get sql insert from table and columns' () {
         when:
-        def handler1 = new InsertHandler(Mock(SqlDatasource), [into: 'FOO', columns:['x1','y2','z3']])
+        def handler1 = new InsertHandler(Mock(SqlDataSource), [into: 'FOO', columns:['x1', 'y2', 'z3']])
         then:
         handler1.getSqlStatement([]) == 'insert into FOO ( x1,y2,z3 ) values ( ?,?,? )'
 
         when:
-        def handler2 = new InsertHandler(Mock(SqlDatasource), [into: 'FOO', columns:'a,b,c'])
+        def handler2 = new InsertHandler(Mock(SqlDataSource), [into: 'FOO', columns:'a,b,c'])
         then:
         handler2.getSqlStatement([]) == 'insert into FOO ( a,b,c ) values ( ?,?,? )'
     }
@@ -53,7 +53,7 @@ class InsertHandlerTest extends Specification {
         def sql = Sql.newInstance(JDBC_URL, 'sa', null)
         sql.execute('create table FOO(id int primary key, alpha varchar(255), omega int);')
         and:
-        def ds = new SqlDatasource([url:JDBC_URL])
+        def ds = new SqlDataSource([url:JDBC_URL])
 
         when:
         def handler = new InsertHandler(ds, [into: 'FOO'])
@@ -68,7 +68,7 @@ class InsertHandlerTest extends Specification {
         def sql = Sql.newInstance(JDBC_URL, 'sa', null)
         sql.execute('create table FOO(id int primary key, alpha varchar(255), omega int);')
         and:
-        def ds = new SqlDatasource([url:JDBC_URL])
+        def ds = new SqlDataSource([url:JDBC_URL])
         and:
         def handler = new InsertHandler(ds, [into: 'FOO'])
 
@@ -91,7 +91,7 @@ class InsertHandlerTest extends Specification {
         def sql = Sql.newInstance(JDBC_URL, 'sa', null)
         sql.execute('create table FOO(id int primary key, alpha varchar(255), omega int);')
         and:
-        def ds = new SqlDatasource([url:JDBC_URL])
+        def ds = new SqlDataSource([url:JDBC_URL])
         and:
         def handler = new InsertHandler(ds, [into: 'FOO', columns: 'id'])
 
@@ -112,7 +112,7 @@ class InsertHandlerTest extends Specification {
         def sql = Sql.newInstance(JDBC_URL, 'sa', null)
         sql.execute('create table FOO(id int primary key, alpha varchar(255), omega int);')
         and:
-        def ds = new SqlDatasource([url:JDBC_URL])
+        def ds = new SqlDataSource([url:JDBC_URL])
         and:
         def handler = new InsertHandler(ds, [into: 'FOO', columns: 'id,alpha' ])
 

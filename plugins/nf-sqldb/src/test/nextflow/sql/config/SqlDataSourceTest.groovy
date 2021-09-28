@@ -23,7 +23,7 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class SqlDatasourceTest extends Specification {
+class SqlDataSourceTest extends Specification {
 
     def 'should configure datasource'  () {
 
@@ -57,13 +57,14 @@ class SqlDatasourceTest extends Specification {
 
     def 'should map url to driver' () {
         given:
-        def helper = new SqlDatasource([:])
+        def helper = new SqlDataSource([:])
 
         expect:
         helper.urlToDriver(JBDC_URL) == DRIVER
         where:
         JBDC_URL                        | DRIVER
         'jdbc:postgresql:database'      | 'org.postgresql.Driver'
+        'jdbc:sqlite:database'          | 'org.sqlite.JDBC'
         'jdbc:h2:mem:'                  | 'org.h2.Driver'
         'jdbc:mysql:some-host'          | 'com.mysql.cj.jdbc.Driver'
         'jdbc:mariadb:other-host'       | 'org.mariadb.jdbc.Driver'
@@ -71,22 +72,22 @@ class SqlDatasourceTest extends Specification {
 
     def 'should get default config' () {
         given:
-        def ds = new SqlDatasource([:])
+        def ds = new SqlDataSource([:])
         expect:
-        ds.url == SqlDatasource.DEFAULT_URL
-        ds.driver == SqlDatasource.DEFAULT_DRIVER
-        ds.user == SqlDatasource.DEFAULT_USER
+        ds.url == SqlDataSource.DEFAULT_URL
+        ds.driver == SqlDataSource.DEFAULT_DRIVER
+        ds.user == SqlDataSource.DEFAULT_USER
         ds.password == null
     }
 
 
     def 'should get postgresql config' () {
         given:
-        def ds = new SqlDatasource([url:'jdbc:postgresql:some-host'])
+        def ds = new SqlDataSource([url:'jdbc:postgresql:some-host'])
         expect:
         ds.url == 'jdbc:postgresql:some-host'
         ds.driver == 'org.postgresql.Driver'
-        ds.user == SqlDatasource.DEFAULT_USER
+        ds.user == SqlDataSource.DEFAULT_USER
         ds.password == null
     }
 
@@ -98,7 +99,7 @@ class SqlDatasourceTest extends Specification {
                 user: 'foo',
                 password: 'secret']
         and:
-        def ds = new SqlDatasource(config)
+        def ds = new SqlDataSource(config)
         
         expect:
         ds.url == 'jdbc:xyz:host-name'
@@ -109,7 +110,7 @@ class SqlDatasourceTest extends Specification {
 
     def 'should convert to map' () {
         when:
-        def ds = new SqlDatasource(url:'x', driver: 'y', user: 'w', password: 'z')
+        def ds = new SqlDataSource(url:'x', driver: 'y', user: 'w', password: 'z')
         then:
         ds.toMap().url == 'x'
         ds.toMap().driver == 'y'
@@ -119,9 +120,9 @@ class SqlDatasourceTest extends Specification {
 
     def 'should validate equals & hashcode' () {
         given:
-        def ds1 = new SqlDatasource(url:'x', driver: 'y', user: 'w', password: 'z')
-        def ds2 = new SqlDatasource(url:'x', driver: 'y', user: 'w', password: 'z')
-        def ds3 = new SqlDatasource(url:'p', driver: 'q', user: 'r', password: 'v')
+        def ds1 = new SqlDataSource(url:'x', driver: 'y', user: 'w', password: 'z')
+        def ds2 = new SqlDataSource(url:'x', driver: 'y', user: 'w', password: 'z')
+        def ds3 = new SqlDataSource(url:'p', driver: 'q', user: 'r', password: 'v')
         expect:
         ds1 == ds2
         ds1 != ds3

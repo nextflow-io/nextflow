@@ -29,7 +29,8 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
-import nextflow.sql.config.SqlDatasource
+import nextflow.sql.config.SqlDataSource
+
 /**
  * Implement the logic for query a DB in async manner
  *
@@ -65,7 +66,7 @@ class QueryHandler implements QueryOp {
 
     private DataflowWriteChannel target
     private String statement
-    private SqlDatasource datasource
+    private SqlDataSource dataSource
 
     @Override
     QueryOp withStatement(String stm) {
@@ -80,21 +81,21 @@ class QueryHandler implements QueryOp {
     }
 
     @Override
-    QueryOp withDatasource(SqlDatasource datasource) {
-        this.datasource = datasource
+    QueryOp withDataSource(SqlDataSource datasource) {
+        this.dataSource = datasource
         return this
     }
 
     @Override
     void perform(boolean async=false) {
-        final conn = connect(datasource ?: SqlDatasource.DEFAULT)
+        final conn = connect(dataSource ?: SqlDataSource.DEFAULT)
         if( async )
             queryAsync(conn)
         else
             query0(conn)
     }
 
-    protected Connection connect(SqlDatasource ds) {
+    protected Connection connect(SqlDataSource ds) {
         log.debug "Creating SQL connection: ${ds}"
         Sql.newInstance(ds.toMap()).getConnection()
     }

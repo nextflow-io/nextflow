@@ -22,6 +22,7 @@ import static java.nio.file.StandardCopyOption.*
 import java.nio.file.Files
 import java.nio.file.Path
 
+import com.github.zafarkhaja.semver.Version
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
@@ -55,6 +56,8 @@ class PluginUpdater extends UpdateManager {
     private Path pluginsStore
 
     private boolean pullOnly
+
+    private DefaultPlugins defaultPlugins = new DefaultPlugins()
 
     protected PluginUpdater(CustomPluginManager pluginManager) {
         super(pluginManager)
@@ -256,7 +259,11 @@ class PluginUpdater extends UpdateManager {
             }
 
             // 2. find latest satisfying req
-            final depVersion = findFirstMatchingRelease(it.pluginId, it.pluginVersionSupport)?.version
+            // -- if it's a core nextflow plugin use the version expected by it
+            def depVersion = defaultPlugins.getPlugin(it.pluginId)?.version
+            // -- otherwise try to find the newest matching release
+            if( !depVersion )
+                depVersion = findNewestMatchingRelease(it.pluginId, it.pluginVersionSupport)?.version
             log.debug "Plugin $id requires $it.pluginId supported version: $it.pluginVersionSupport - available version: $depVersion"
             if( pullOnly )
                 pullPlugin0(it.pluginId, depVersion)
@@ -330,14 +337,13 @@ class PluginUpdater extends UpdateManager {
     }
 
     /**
-     * Find lower release version matching the requested constraint e.g.
-     * given 1.5.x and release 1.4.0, 1.5.0 and 1.5.1 are avail it returns 1.5.0
+     * Find newest release version matching the requested plugin constraint and nextflow runtime
      *
      * @param id The plugin id
      * @param verConstraint The version constraint
      * @return The plugin release satisfying the requested criteria or null it none is found
      */
-    protected PluginInfo.PluginRelease findFirstMatchingRelease(String id, String verConstraint) {
+    protected PluginInfo.PluginRelease findNewestMatchingRelease(String id, String verConstraint) {
         assert verConstraint
 
         final versionManager = pluginManager.getVersionManager()
@@ -346,20 +352,16 @@ class PluginUpdater extends UpdateManager {
         if( !pluginInfo )
             throw new IllegalArgumentException("Unknown plugin id: $id")
 
-        PluginInfo.PluginRelease lower = null
-        for (PluginInfo.PluginRelease release : pluginInfo.releases) {
-            if( !versionManager.checkVersionConstraint(release.version, verConstraint) || !release.url )
+        // note: order releases list by descending version numbers ie. latest version comes first
+        def releases = pluginInfo.releases.sort(false) { a,b -> Version.valueOf(b.version) <=> Version.valueOf(a.version) }
+        for (PluginInfo.PluginRelease rel : releases ) {
+            if( !versionManager.checkVersionConstraint(rel.version, verConstraint) || !rel.url )
                 continue
 
-            if( !versionManager.checkVersionConstraint(Const.APP_VER, release.requires) )
-                continue
-
-            if( lower == null )
-                lower = release
-            else if( versionManager.compareVersions(release.version, lower.version)<0 )
-                lower = release
+            if( versionManager.checkVersionConstraint(Const.APP_VER, rel.requires) )
+                return rel
         }
 
-        return lower
+        return null
     }
 }

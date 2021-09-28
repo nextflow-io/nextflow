@@ -235,6 +235,11 @@ as shown below::
 Nextflow looks for the ``my_script.sh`` template file in the directory ``templates`` that must exist in the same folder
 where the Nextflow script file is located (any other location can be provided by using an absolute template path).
 
+.. note::
+  When using :ref:`DSL2 <dsl2-page>` Nextflow looks for the specified file name also in the ``templates`` directory
+  located in the same folder where the module script is placed. See :ref:`module templates <module-templates>`.
+
+
 The template script can contain any piece of code that can be executed by the underlying system. For example::
 
   #!/bin/bash
@@ -2332,16 +2337,23 @@ The ``time`` directive allows you to define how long a process is allowed to run
 
 
 
-The following time unit suffix can be used when specifying the duration value:
+The following time unit suffixes can be used when specifying the duration value:
 
-======= =============
-Unit    Description
-======= =============
-s       Seconds
-m       Minutes
-h       Hours
-d       Days
-======= =============
++---------------------------------+--------------+
+| Unit                            | Description  |
++=================================+==============+
+| `ms`, `milli`, `millis`         | Milliseconds |
++---------------------------------+--------------+
+| `s`, `sec`, `second`, `seconds` | Seconds      |
++---------------------------------+--------------+
+| `m`, `min`, `minute`, `minutes` | Minutes      |
++---------------------------------+--------------+
+| `h`, `hour`, `hours`            | Hours        |
++---------------------------------+--------------+
+| `d`, `day`, `days`              | Days         |
++---------------------------------+--------------+
+
+Multiple units can be used in a single declaration, for example: ``'1day 6hours 3minutes 30seconds'``
 
 .. note:: This directive is taken in account only when using one of the following grid based executors:
   :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor`,
@@ -2412,6 +2424,15 @@ All directives can be assigned to a dynamic value except the following:
 * `executor`_
 * `maxForks`_
 
+
+.. tip::
+  Directives taking a string value containing one or more variables are always resolved in a dynamic manner, and therefore
+  it's semantically equivalent to the above above syntax. Therefore the above directive can also be written as::
+
+    queue "${ entries > 100 ? 'long' : 'short' }"
+
+  Note however the latter syntax can be used both for directive main argument (like in the ``queue`` example) and for directive
+  optional named attributes. Instead the closure based syntax is only resolved dynamically for the directive main argument.
 
 .. note:: You can retrieve the current value of a dynamic directive in the process script by using the implicit variable ``task``
   which holds the directive values defined in the current process instance.

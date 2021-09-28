@@ -197,7 +197,8 @@ class SraExplorerTest extends Specification {
         when:
         def result = slurper.getConfigApiKey()
         then:
-        1 * slurper.getEnv() >> [NCBI_API_KEY: '1bc']
+        1 * slurper.config() >> [:]
+        1 * slurper.env() >> [NCBI_API_KEY: '1bc']
         then:
         result == '1bc'
     }

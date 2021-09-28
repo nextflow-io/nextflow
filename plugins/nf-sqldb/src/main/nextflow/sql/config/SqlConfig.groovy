@@ -31,31 +31,35 @@ import groovy.transform.ToString
 @CompileStatic
 class SqlConfig {
 
-    private Map<String,SqlDatasource> dataSources
-    private SqlDatasource defSource
+    private Map<String,SqlDataSource> dataSources
+    private SqlDataSource defSource
 
     SqlConfig(Map config) {
         dataSources = parseDataSources(config)
     }
 
-    SqlDatasource getDatasource(String name) {
+    SqlDataSource getDataSource(String name) {
         return name=='default'
                 ? defSource
                 : dataSources.get(name)
     }
 
+    List<String> getDataSourceNames() {
+        return new ArrayList<String>(dataSources.keySet())
+    }
+
     protected Map parseDataSources(Map<String,Map> config) {
         // create the `default`datasource as fallback for missing values
-        this.defSource = new SqlDatasource(config?.'default' as Map ?: Collections.emptyMap())
+        this.defSource = new SqlDataSource(config?.'default' as Map ?: Collections.emptyMap())
 
-        // setup other datasources by name
-        final result = new LinkedHashMap<String,SqlDatasource>()
+        // setup other db by name
+        final result = new LinkedHashMap<String,SqlDataSource>()
         for( Map.Entry<String,Map> entry : config ) {
             if( entry.key == 'default' ) {
                 result.put( entry.key, defSource )
             }
             else {
-                result.put( entry.key, new SqlDatasource(entry.value, defSource) )
+                result.put( entry.key, new SqlDataSource(entry.value, defSource) )
             }
         }
 
