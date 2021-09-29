@@ -39,6 +39,11 @@ class Global {
     static private ISession session
 
     /**
+     * Allow to load session in a lazy manner
+     */
+    static private Closure<ISession> loader
+
+    /**
      * The main configuration object
      */
     static Map config
@@ -47,7 +52,11 @@ class Global {
      * @return The object instance representing the current session
      */
     static ISession getSession() {
-        session
+        if( session != null )
+            return session
+        if( loader != null )
+            session = loader.call()
+        return session
     }
 
     /**
@@ -57,6 +66,15 @@ class Global {
      */
     static void setSession( ISession value ) {
         session = value
+    }
+
+    /**
+     * Set a session lazy loader
+     *
+     * @param loader
+     */
+    static void setLazySession( Closure<ISession> loader ) {
+        Global.loader = loader
     }
 
     /**
