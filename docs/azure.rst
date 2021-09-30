@@ -237,13 +237,13 @@ Private container registry
 --------------------------
 As of version ``21.05.0-edge``, a private container registry from where to pull Docker images can be optionally specified as follows ::
 
-    azure {
-		registry {
-			server =  '<YOUR REGISTRY SERVER>' // e.g.: docker.io, quay.io, <ACCOUNT>.azurecr.io, etc.
-			userName =  '<YOUR REGISTRY USER NAME>'
-			password =  '<YOUR REGISTRY PASSWORD>'
-		}
-    }
+	azure {
+	  registry {
+	    server =  '<YOUR REGISTRY SERVER>' // e.g.: docker.io, quay.io, <ACCOUNT>.azurecr.io, etc.
+	    userName =  '<YOUR REGISTRY USER NAME>'
+	    password =  '<YOUR REGISTRY PASSWORD>'
+	  }
+	}
 
 
 The private registry is not exclusive, rather it is an addition to the configuration.
