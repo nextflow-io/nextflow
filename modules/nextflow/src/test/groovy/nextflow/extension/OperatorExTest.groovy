@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,6 @@ package nextflow.extension
 
 import java.nio.file.Paths
 
-import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
@@ -38,35 +37,7 @@ class OperatorExTest extends Specification {
         new Session()
     }
 
-    def 'should check dataflow read channel' () {
-        expect:
-        OperatorEx.isReadChannel(DataflowVariable.class)
-        OperatorEx.isReadChannel(DataflowQueue.class)
-        !OperatorEx.isReadChannel(DataflowBroadcast.class)
-    }
 
-    def 'should check extension method' () {
-        given:
-        def ext = new OperatorEx()
-        expect:
-        ext.isExtensionMethod(new DataflowVariable(), 'map')
-        ext.isExtensionMethod(new DataflowVariable(), 'flatMap')
-        !ext.isExtensionMethod(new DataflowVariable(), 'foo')
-    }
-
-    def 'should invoke ext method' () {
-        given:
-        def ext = new OperatorEx()
-        def ch = new DataflowQueue(); ch<<1<<2<<3
-
-        when:
-        def result = ext.invokeExtensionMethod(ch, 'map', { it -> it * it })
-        then:
-        result instanceof DataflowReadChannel
-        result.val == 1
-        result.val == 4
-        result.val == 9 
-    }
 
     def testFilter() {
 
@@ -1186,7 +1157,7 @@ class OperatorExTest extends Specification {
 
     }
 
-    def testGroupTupleWithClosure() {
+    def testGroupTupleWithClosureWithSingle() {
 
         when:
         def result = Channel
@@ -1197,6 +1168,21 @@ class OperatorExTest extends Specification {
         result.val == [1, ['a', 'b','c','w','z'] ]
         result.val == [2, ['x','y'] ]
         result.val == [3, ['p', 'q'] ]
+        result.val == Channel.STOP
+
+    }
+
+    def testGroupTupleWithComparatorWithPair() {
+
+        when:
+        def result = Channel
+                .from([1,'z'], [1,'w'], [1,'a'], [1,'b'], [2, 'y'], [2,'x'], [3, 'q'], [1,'c'], [3, 'p'])
+                .groupTuple(sort: { o1, o2 -> o2<=>o1 } )
+
+        then:
+        result.val == [1, ['z','w','c','b','a'] ]
+        result.val == [2, ['y','x'] ]
+        result.val == [3, ['q','p'] ]
         result.val == Channel.STOP
 
     }

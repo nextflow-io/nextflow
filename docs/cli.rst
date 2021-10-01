@@ -15,7 +15,6 @@ Here's what you'll see at the top-level upon invoking the Nextflow CLI. ::
     Usage: nextflow [options] COMMAND [arg...]
 
 
-
 .. _cli-options:
 
 Options
@@ -24,6 +23,11 @@ Options
 The top-level options are meant to be invoked in relation to the core 
 Nextflow application and are applied to all commands. For options 
 specific to any command, refer the CLI Commands section.
+
+.. note::
+  Nextflow options only use single dash prefix e.g. ``-foo``. Do not confuse
+  double dash notation e.g. ``--foo`` that is instead used for
+  :ref:`Pipeline parameters <cli-params>`.
 
 An overview of the top-level options. ::
 
@@ -96,7 +100,7 @@ Set JVM properties.
 This options allows the definition of custom Java system properties that can be used to 
 properly configure or fine tuning the JVM instance used by the Nextflow runtime.
  
-For specifying other JVM level options, please refer to the `environment variables section <https://www.nextflow.io/docs/latest/config.html#environment-variables>`__.
+For specifying other JVM level options, please refer to the :ref:`config-env-vars` section.
 
 
 **Examples**
@@ -511,7 +515,7 @@ Print the resolved pipeline configuration.
 
 The ``config`` command is used for printing the project's configuration i.e. the ``nextflow.config`` 
 and is especially useful for understanding the resolved profiles and parameters that Nextflow will use 
-run a pipeline. For in-depth information, please refer `config-profiles section <https://www.nextflow.io/docs/latest/config.html#config-profiles>`_.
+run a pipeline. For in-depth information, please refer the :ref:`config-profiles` section.
 
 **Options**
 
@@ -792,7 +796,7 @@ The ``kuberun`` command builds upon the ``run`` command and offers a deep integr
 the Kubernetes execution environment. This command deploys the Nextflow runtime as a Kubernetes 
 pod and assumes that you've already installed the ``kubectl`` CLI. The ``kuberun`` command 
 does not allow the execution of **local** Nextflow scripts. For more information please refer 
-the `Kubernetes executor section <https://www.nextflow.io/docs/latest/config/kubernetes.html>`__.
+the :ref:`k8s-page` section.
 
 
 **Options**
@@ -1172,6 +1176,8 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -params-file              |             | Load script parameters from a JSON/YAML file.                                  |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
+| -plugins                  |             | Comma separated list of plugin ids to be applied in the pipeline execution.    |
++---------------------------+-------------+--------------------------------------------------------------------------------+
 | -process.                 | {}          | Set process options. Syntax ``-process.key=value``                             |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -profile                  |             | Choose a configuration profile.                                                |
@@ -1234,7 +1240,7 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
     $ nextflow run main.nf -profile docker
 
 
-- Invoke the pipeline execution and generate the summary HTML report. For more information on the metrics, please refer the `Tracing & visualization section <https://www.nextflow.io/docs/latest/tracing.html>`__. ::
+- Invoke the pipeline execution and generate the summary HTML report. For more information on the metrics, please refer the :ref:`perfanalysis-page` section::
 
     $ nextflow run main.nf -with-report
 
@@ -1250,7 +1256,9 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
 
 
 - Invoke the pipeline with a specific workflow as the entry-point, this option is meant to be used with DSL-2.
-For more information on DSL-2, please refer the `DSL2 section <https://www.nextflow.io/docs/latest/dsl2.html>`__. ::
+For more information on DSL-2, please
+
+refer the :ref:`dsl2-page`::
 
    $ nextflow run main.nf -entry workflow_A
 
@@ -1387,3 +1395,28 @@ Viewing the contents of a downloaded pipeline without omitting the header. ::
         echo '$x world!'
         """
     }
+
+
+.. _cli-params:
+
+Pipeline parameters
+====================
+
+Pipeline script can use an arbitrary number of parameters that can be overridden either
+using the command line or the Nextflow configuration file. Any script parameter can be specified
+on the command line prefixing the parameter name with double dash characters e.g.::
+
+    nextflow run <my script> --foo Hello
+
+Then, the parameter can be accessed in the pipeline script using the ``params.foo`` identifier.
+
+.. note::
+  When the parameter name is formatted using the `camelCase` notation e.g. ``fooBar``, a second parameter
+  is created with the same value using the `kebab-case` notation e.g. ``foo-bar``, and the other way around.
+
+.. warning::
+  When a command line parameters includes one or more glob characters i.e. wildcards like ``*`` or ``?``,
+  the parameter value needs to be enclosed with double-quote character to prevent Bash expansion and preserve
+  the glob characters. For example::
+
+        nextflow run <my script> --files "*.fasta"

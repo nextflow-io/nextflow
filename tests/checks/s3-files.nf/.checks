@@ -1,6 +1,12 @@
 set -e
 export NXF_PLUGINS_DEFAULT=nf-amazon
 
+# Skip test if AWS keys are missing
+if [[ ! $AWS_ACCESS_KEY_ID ]]; then
+  echo "Skip s3-files test since AWS keys are not available"
+  exit 0
+fi
+
 #
 # run normal mode
 #

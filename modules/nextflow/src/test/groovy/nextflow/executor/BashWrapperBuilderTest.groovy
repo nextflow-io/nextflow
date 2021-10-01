@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -399,9 +399,11 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.unstage_outputs == '''\
-                mkdir -p /work/dir
-                cp -fRL test.bam /work/dir || true
-                cp -fRL test.bai /work/dir || true
+                IFS=$'\\n'
+                for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
+                    nxf_fs_copy "$name" /work/dir || true
+                done
+                unset IFS
                 '''.stripIndent().rightTrim()
 
 
@@ -414,9 +416,11 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.unstage_outputs == '''\
-                mkdir -p /another/dir
-                mv -f test.bam /another/dir || true
-                mv -f test.bai /another/dir || true
+                IFS=$'\\n'
+                for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
+                    nxf_fs_move "$name" /another/dir || true
+                done
+                unset IFS
                 '''.stripIndent().rightTrim()
     }
 
@@ -738,7 +742,7 @@ class BashWrapperBuilderTest extends Specification {
                 containerConfig: [enabled: true, engine: 'singularity'] as ContainerConfig ).makeBinding()
 
         then:
-        binding.launch_cmd == 'set +u; env - PATH="$PATH" SINGULARITYENV_TMP="$TMP" SINGULARITYENV_TMPDIR="$TMPDIR" singularity exec docker:ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec docker:ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == ""
         binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
 
@@ -892,7 +896,7 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.launch_cmd == 'podman run -i -v /work/dir:/work/dir -v "$PWD":"$PWD" -w "$PWD" --entrypoint /bin/bash --name $NXF_BOXID busybox -c "/bin/bash -ue /work/dir/.command.sh"'
-        binding.cleanup_cmd == '(sudo -n true && sudo rm -rf "$NXF_SCRATCH" || rm -rf "$NXF_SCRATCH")&>/dev/null || true\npodman rm $NXF_BOXID &>/dev/null || true\n'
+        binding.cleanup_cmd == 'rm -rf $NXF_SCRATCH || true\npodman rm $NXF_BOXID &>/dev/null || true\n'
         binding.kill_cmd == 'podman kill $NXF_BOXID'
     }
 }

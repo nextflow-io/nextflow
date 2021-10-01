@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,10 +20,9 @@ package nextflow.script
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.exception.IllegalInvocationException
 import nextflow.extension.OpCall
-import nextflow.extension.OperatorEx
-
 /**
  * Models the execution context of a workflow component
  *
@@ -96,11 +95,30 @@ class WorkflowBinding extends Binding  {
             }
 
             // check it's an operator name
-            if( OperatorEx.OPERATOR_NAMES.contains(name) )
+            if( NF.hasOperator(name) )
                 return OpCall.create(name, args)
         }
 
         throw new MissingMethodException(name,this.getClass())
+    }
+
+    @Override
+    void setProperty(String name, Object value) {
+        // when a script variable name matches a BaseScript attribute name
+        // set it directly via `setVariable` otherwise groovy will try to
+        // set into the base script attribute
+        if( name in BaseScriptConsts.PRIVATE_NAMES )
+            setVariable(name, value)
+        else
+            super.setProperty(name, value)
+    }
+
+    @Override
+    Object getProperty(String name) {
+        if( name in BaseScriptConsts.PRIVATE_NAMES )
+            return getVariable(name)
+        else
+            return super.getProperty(name)
     }
 
     @Override
@@ -122,7 +140,7 @@ class WorkflowBinding extends Binding  {
                 return component
 
             // check it's an operator name
-            if( OperatorEx.OPERATOR_NAMES.contains(name) )
+            if( NF.hasOperator(name) )
                 return OpCall.create(name)
 
             throw e

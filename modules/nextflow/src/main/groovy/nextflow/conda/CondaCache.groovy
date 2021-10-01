@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,6 +60,8 @@ class CondaCache {
 
     private String createOptions
 
+    private boolean useMamba 
+
     private Path configCacheDir0
 
     @PackageScope String getCreateOptions() { createOptions }
@@ -69,6 +71,10 @@ class CondaCache {
     @PackageScope Map<String,String> getEnv() { System.getenv() }
 
     @PackageScope Path getConfigCacheDir0() { configCacheDir0 }
+
+    @PackageScope String getBinaryName() {
+        useMamba ? "mamba" : "conda"
+    }
 
     /** Only for debugging purpose - do not use */
     @PackageScope
@@ -90,6 +96,10 @@ class CondaCache {
 
         if( config.cacheDir )
             configCacheDir0 = (config.cacheDir as Path).toAbsolutePath()
+
+        if( config.useMamba )
+            useMamba = config.useMamba as boolean
+
     }
 
     /**
@@ -212,12 +222,12 @@ class CondaCache {
     Path createLocalCondaEnv(String condaEnv) {
         final prefixPath = condaPrefixPath(condaEnv)
         if( prefixPath.isDirectory() ) {
-            log.debug "Conda found local env for environment=$condaEnv; path=$prefixPath"
+            log.debug "${binaryName} found local env for environment=$condaEnv; path=$prefixPath"
             return prefixPath
         }
 
         final file = new File("${prefixPath.parent}/.${prefixPath.name}.lock")
-        final wait = "Another Nextflow instance is creatign the Conda environment $condaEnv -- please wait it completes"
+        final wait = "Another Nextflow instance is creating the conda environment $condaEnv -- please wait till it completes"
         final err =  "Unable to acquire exclusive lock after $createTimeout on file: $file"
 
         final mutex = new FileMutex(target: file, timeout: createTimeout, waitMessage: wait, errorMessage: err)
@@ -239,23 +249,25 @@ class CondaCache {
     @PackageScope
     Path createLocalCondaEnv0(String condaEnv, Path prefixPath) {
 
-        log.info "Creating Conda env: $condaEnv [cache $prefixPath]"
+        log.info "Creating env using ${binaryName}: $condaEnv [cache $prefixPath]"
 
         final opts = createOptions ? "$createOptions " : ''
         def cmd
         if( isYamlFilePath(condaEnv) ) {
-            cmd = "conda env create --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
+            cmd = "${binaryName} env create --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
         }
         else if( isTextFilePath(condaEnv) ) {
-            cmd = "conda create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
+
+            cmd = "${binaryName} create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
         }
+
         else {
-            cmd = "conda create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} $condaEnv"
+            cmd = "${binaryName} create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} $condaEnv"
         }
 
         try {
             runCommand( cmd )
-            log.debug "Conda create complete env=$condaEnv path=$prefixPath"
+            log.debug "'${binaryName}' create complete env=$condaEnv path=$prefixPath"
         }
         catch( Exception e ){
             // clean-up to avoid to keep eventually corrupted image file
@@ -267,7 +279,7 @@ class CondaCache {
 
     @PackageScope
     int runCommand( String cmd ) {
-        log.trace """Conda create
+        log.trace """${binaryName} create
                      command: $cmd
                      timeout: $createTimeout""".stripIndent()
 
@@ -301,8 +313,9 @@ class CondaCache {
      */
     @PackageScope
     DataflowVariable<Path> getLazyImagePath(String condaEnv) {
+
         if( condaEnv in condaPrefixPaths ) {
-            log.trace "Conda found local environment `$condaEnv`"
+            log.trace "${binaryName} found local environment `$condaEnv`"
             return condaPrefixPaths[condaEnv]
         }
 
@@ -313,7 +326,7 @@ class CondaCache {
                 condaPrefixPaths[condaEnv] = result
             }
             else {
-                log.trace "Conda found local cache for environment `$condaEnv` (2)"
+                log.trace "${binaryName} found local cache for environment `$condaEnv` (2)"
             }
             return result
         }

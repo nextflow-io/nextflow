@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,7 @@ package nextflow.processor
 
 import static nextflow.processor.ErrorStrategy.*
 
+import java.lang.reflect.InvocationTargetException
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -58,6 +59,7 @@ import nextflow.dag.NodeMarker
 import nextflow.exception.FailedGuardException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
+import nextflow.exception.NodeTerminationException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessUnrecoverableException
@@ -98,6 +100,7 @@ import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.CollectionHelper
 import nextflow.util.LockManager
+import nextflow.util.LoggerHelper
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 /**
@@ -967,12 +970,23 @@ class TaskProcessor {
             if( error instanceof Error ) throw error
 
             // -- retry without increasing the error counts
-            if( task && error.cause instanceof CloudSpotTerminationException ) {
-                log.info "[$task.hashLog] NOTE: ${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
+            if( task && (error instanceof NodeTerminationException || error.cause instanceof CloudSpotTerminationException) ) {
+                if( error instanceof NodeTerminationException )
+                    log.info "[$task.hashLog] NOTE: ${error.message} -- Execution is retried"
+                else
+                    log.info "[$task.hashLog] NOTE: ${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
                 task.failCount+=1
                 final taskCopy = task.makeCopy()
-                taskCopy.runType = RunType.RETRY
-                session.getExecService().submit { checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false ) }
+                session.getExecService().submit {
+                    try {
+                        taskCopy.runType = RunType.RETRY
+                        checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
+                    }
+                    catch( Throwable e ) {
+                        log.error("Unable to re-submit task `${taskCopy.name}`", e)
+                        session.abort(e)
+                    }
+                }
                 task.failed = true
                 task.errorAction = RETRY
                 return RETRY
@@ -1213,15 +1227,34 @@ class TaskProcessor {
 
         def message
         if( error instanceof ShowOnlyExceptionMessage || !error.cause )
-            message = error.getErrMessage()
+            message = err0(error)
         else
-            message = error.cause.getErrMessage()
+            message = err0(error.cause)
 
         result
             .append('  ')
             .append(message)
             .append('\n')
             .toString()
+    }
+
+
+    static String err0(Throwable e) {
+        final fail = e instanceof InvocationTargetException ? e.targetException : e
+
+        if( fail instanceof NoSuchFileException ) {
+            return "No such file: $fail.message"
+        }
+        if( fail instanceof MissingPropertyException ) {
+            def name = fail.property ?: LoggerHelper.getDetailMessage(fail)
+            def result = "No such variable: ${name}"
+            def details = LoggerHelper.findErrorLine(fail)
+            if( details )
+                result += " -- Check script '${details[0]}' at line: ${details[1]}"
+            return result
+        }
+
+        return fail.message ?: fail.toString()
     }
 
     /**

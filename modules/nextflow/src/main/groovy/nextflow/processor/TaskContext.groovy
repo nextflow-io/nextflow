@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,8 +17,12 @@
 
 package nextflow.processor
 
+import nextflow.NF
+import nextflow.script.ScriptMeta
+
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.esotericsoftware.kryo.io.Input
@@ -303,14 +307,22 @@ class TaskContext implements Map<String,Object>, Cloneable {
         if( !path )
             throw new ProcessException("Process `$name` missing template name")
 
-        if( !(path instanceof Path) )
+        if( path !instanceof Path )
             path = Paths.get(path.toString())
 
         // if the path is already absolute just return it
         if( path.isAbsolute() )
             return path
 
-        // otherwise make
+        // make from the module dir
+        def module = NF.isDsl2Final() ? ScriptMeta.get(this.script)?.getModuleDir() : null
+        if( module ) {
+            def target = module.resolve('templates').resolve(path)
+            if (Files.exists(target))
+                return target
+        }
+
+        // otherwise make from the base dir
         def base = Global.session.baseDir
         if( base )
             return base.resolve('templates').resolve(path)

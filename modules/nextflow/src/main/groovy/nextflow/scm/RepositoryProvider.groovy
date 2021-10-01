@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,9 +57,19 @@ abstract class RepositoryProvider {
      */
     protected ProviderConfig config
 
+    /**
+     * The name of the commit/branch/tag
+     */
+    protected String revision
+
     RepositoryProvider setCredentials(String userName, String password) {
         config.user = userName
         config.password = password
+        return this
+    }
+
+    RepositoryProvider setRevision(String revision) {
+        this.revision = revision
         return this
     }
 
@@ -145,7 +155,6 @@ abstract class RepositoryProvider {
             String authString = "${config.user}:${config.password}".bytes.encodeBase64().toString()
             connection.setRequestProperty("Authorization","Basic " + authString)
         }
-
     }
 
     /**

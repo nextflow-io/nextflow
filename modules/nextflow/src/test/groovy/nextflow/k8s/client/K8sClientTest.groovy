@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,8 +16,11 @@
  */
 
 package nextflow.k8s.client
+
 import javax.net.ssl.HttpsURLConnection
 
+import nextflow.exception.NodeTerminationException
+import nextflow.exception.ProcessFailedException
 import spock.lang.Specification
 /**
  *
@@ -467,6 +470,38 @@ class K8sClientTest extends Specification {
         result == [:]
     }
 
+    def 'should return a process execution on pod not found' () {
+        given:
+        def JSON = '''
+               {
+                  "kind": "Status",
+                  "apiVersion": "v1",
+                  "metadata": {
+                      
+                  },
+                  "status": "Failure",
+                  "message": "pods \\"nf-7cee928c1dd05b39cd50ab79a3e742f9\\" not found",
+                  "reason": "NotFound",
+                  "details": {
+                      "name": "nf-7cee928c1dd05b39cd50ab79a3e742f9",
+                      "kind": "pods"
+                  },
+                  "code": 404
+              }
+        '''
+
+        def client = Spy(K8sClient)
+        final POD_NAME = 'pod-xyz'
+
+        when:
+        client.podState(POD_NAME)
+        then:
+        1 * client.podStatus(POD_NAME) >> { throw new K8sResponseException("Request GET /api/v1/namespaces/xyz/pods/nf-xyz/status returned an error code=404", new ByteArrayInputStream(JSON.bytes)) }
+
+        and:
+        thrown(ProcessFailedException)
+    }
+
     def 'should fail to get pod state' () {
 
         given:
@@ -677,6 +712,56 @@ class K8sClientTest extends Specification {
 
     }
 
+    def 'client should throw process exception on failed state' () {
+        def JSON = '''
+             {
+              "kind": "Pod",
+              "apiVersion": "v1",
+              "metadata": {
+                  "name": "nf-f34e124e1471736f27c8ef1aa52d02be",
+                  "namespace": "tower-nf",
+                  "uid": "8ddb536f-da4c-4a99-a5c5-3b5b53df6411",
+                  "resourceVersion": "31269576",
+                  "creationTimestamp": "2021-08-09T17:58:42Z",
+                  "labels": {
+                      "app": "nextflow",
+                      "processName": "bulk_rnaseq_trim_galore",
+                      "runName": "insane_agnesi",
+                      "sessionId": "uuid-35a8fe1a-2622-4582-a1b2-1cc21bd85b57",
+                      "taskName": "bulk_rnaseq_trim_galore_d0_tdTOM-0701"
+                  }
+              },
+              "spec": {
+                  "restartPolicy": "Never",
+                  "terminationGracePeriodSeconds": 30,
+                  "dnsPolicy": "ClusterFirst",
+                  "serviceAccountName": "default",
+                  "serviceAccount": "default",
+                  "nodeName": "gke-bioinformatics-s-pipeline-pool-sm-bbac2e1c-k1tw",
+                  "priority": 0,
+                  "enableServiceLinks": true,
+                  "preemptionPolicy": "PreemptLowerPriority"
+              },
+              "status": {
+                  "phase": "Failed",
+                  "message": "Node is shutting, evicting pods",
+                  "reason": "Shutdown",
+                  "startTime": "2021-08-09T17:59:31Z"
+              }
+            }
+'''
+        def client = Spy(K8sClient)
+        final POD_NAME = 'nf-xyz'
+
+        when:
+        client.podState(POD_NAME)
+        then:
+        1 * client.podStatus(POD_NAME) >> new K8sResponseJson(JSON)
+        and:
+        def e = thrown(NodeTerminationException)
+        e.message == "K8s pod 'nf-xyz' execution failed - reason: Shutdown - message: Node is shutting, evicting pods"
+
+    }
 
     def 'client should fail when config fail' () {
         given:

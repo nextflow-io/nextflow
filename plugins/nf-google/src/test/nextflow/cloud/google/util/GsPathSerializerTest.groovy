@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +21,8 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
+import nextflow.Global
+import nextflow.Session
 import nextflow.util.KryoHelper
 import spock.lang.Specification
 
@@ -31,6 +33,11 @@ import spock.lang.Specification
 class GsPathSerializerTest extends Specification {
 
     def 'should serialize a google cloud path'() {
+        given:
+        Global.session = Mock(Session) {
+            getConfig() >> [google:[project:'foo', region:'x']]
+        }
+        
         when:
         def uri = URI.create("gs://my-seq/data/ggal/sample.fq")
         def path = Paths.get(uri)

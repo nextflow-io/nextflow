@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -317,14 +317,22 @@ class ConfigBuilder {
         buildGivenFiles(files as List<Path>)
     }
 
+    protected Map configVars() {
+        final binding = new HashMap(10)
+        binding.put('baseDir', baseDir)
+        binding.put('projectDir', baseDir)
+        binding.put('launchDir', Paths.get('.').toRealPath())
+        return binding
+    }
+
     protected ConfigObject buildConfig0( Map env, List configEntries )  {
         assert env != null
 
         final slurper = new ConfigParser().setRenderClosureAsString(showClosures)
         ConfigObject result = new ConfigObject()
 
-        if( cmdRun && (cmdRun.params || cmdRun.paramsFile) )
-            slurper.setParams(cmdRun.parsedParams)
+        if( cmdRun && (cmdRun.hasParams()) )
+            slurper.setParams(cmdRun.parsedParams(configVars()))
 
         // add the user specified environment to the session env
         env.sort().each { name, value -> result.env.put(name,value) }
@@ -335,9 +343,7 @@ class ConfigBuilder {
             // in the current environment
             final binding = new HashMap(System.getenv())
             binding.putAll(env)
-            binding.put('baseDir', baseDir)
-            binding.put('projectDir', baseDir)
-            binding.put('launchDir', Paths.get('.').toRealPath())
+            binding.putAll(configVars())
 
             slurper.setBinding(binding)
 
@@ -645,8 +651,8 @@ class ConfigBuilder {
         }
 
         // -- add the command line parameters to the 'taskConfig' object
-        if( cmdRun.params || cmdRun.paramsFile )
-            config.params = mergeMaps( (Map)config.params, cmdRun.parsedParams, NF.strictMode )
+        if( cmdRun.hasParams() )
+            config.params = mergeMaps( (Map)config.params, cmdRun.parsedParams(configVars()), NF.strictMode )
 
         if( cmdRun.withoutDocker && config.docker instanceof Map ) {
             // disable docker execution

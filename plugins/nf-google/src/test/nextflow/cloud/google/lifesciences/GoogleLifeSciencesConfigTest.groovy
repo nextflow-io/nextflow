@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,7 @@
  */
 package nextflow.cloud.google.lifesciences
 
+import nextflow.util.Duration
 import spock.lang.Unroll
 
 import nextflow.exception.AbortOperationException
@@ -255,4 +256,33 @@ class GoogleLifeSciencesConfigTest extends Specification {
 
     }
 
+    def 'should config thread count & max components' () {
+        when:
+        def config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [:]]])
+        then:
+        config.parallelThreadCount == 1
+        config.downloadMaxComponents == 8
+
+        when:
+        config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', storage: [parallelThreadCount: 10, downloadMaxComponents: 20]]])
+        then:
+        config.parallelThreadCount == 10
+        config.downloadMaxComponents == 20
+    }
+
+    def 'should config parallel transfer' () {
+        when:
+        def config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [:]]])
+        then:
+        config.maxTransferAttempts == 1
+        config.maxParallelTransfers == 4
+        config.delayBetweenAttempts == Duration.of('10 sec')
+
+        when:
+        config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', storage: [maxTransferAttempts: 10, maxParallelTransfers: 20, delayBetweenAttempts: '30s']]])
+        then:
+        config.maxTransferAttempts == 10
+        config.maxParallelTransfers == 20
+        config.delayBetweenAttempts == Duration.of('30 sec')
+    }
 }

@@ -16,6 +16,11 @@
 
 package nextflow.cloud.azure.batch
 
+import com.microsoft.azure.batch.protocol.models.AutoUserScope
+import com.microsoft.azure.batch.protocol.models.AutoUserSpecification
+import com.microsoft.azure.batch.protocol.models.ElevationLevel
+import com.microsoft.azure.batch.protocol.models.UserIdentity
+
 import java.math.RoundingMode
 import java.nio.file.Path
 import java.time.Instant
@@ -28,6 +33,7 @@ import com.microsoft.azure.batch.protocol.models.CloudPool
 import com.microsoft.azure.batch.protocol.models.CloudTask
 import com.microsoft.azure.batch.protocol.models.ComputeNodeFillType
 import com.microsoft.azure.batch.protocol.models.ContainerConfiguration
+import com.microsoft.azure.batch.protocol.models.ContainerRegistry
 import com.microsoft.azure.batch.protocol.models.ImageInformation
 import com.microsoft.azure.batch.protocol.models.OutputFile
 import com.microsoft.azure.batch.protocol.models.OutputFileBlobContainerDestination
@@ -51,6 +57,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzPoolOpts
+import nextflow.cloud.azure.config.CopyToolInstallMode
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
@@ -69,6 +76,8 @@ import org.joda.time.Period
 @Slf4j
 @CompileStatic
 class AzBatchService implements Closeable {
+
+    static private final String AZCOPY_URL = 'https://github.com/nextflow-io/azcopy-tool/raw/linux_amd64_10.8.0/azcopy'
 
     static private final long _1GB = 1 << 30
 
@@ -121,6 +130,7 @@ class AzBatchService implements Closeable {
     }
 
     AzVmType guessBestVm(String location, int cpus, MemoryUnit mem, String family) {
+        log.debug "[AZURE BATCH] guess best VM given location=$location; cpus=$cpus; mem=$mem; family=$family"
         if( !family.contains('*') && !family.contains('?') )
             return findBestVm(location, cpus, mem, family)
 
@@ -139,17 +149,30 @@ class AzBatchService implements Closeable {
         return result
     }
 
-    AzVmType findBestVm(String location, int cpus, MemoryUnit mem, String family) {
+    /**
+     * Find the best VM matching the specified criteria
+     *
+     * @param location The azure location
+     * @param cpus The requested number of cpus
+     * @param mem The requested amount of memory. Can be null if no mem has been specified
+     * @param allFamilies Comma separate list of Azure VM machine types, each value can also contain wildcard characters ie. `*` and `?`
+     * @return The `AzVmType` instance that best accommodate the resource requirement
+     */
+    AzVmType findBestVm(String location, int cpus, MemoryUnit mem, String allFamilies) {
         def all = listAllVms(location)
         def scores = new TreeMap<Double,String>()
-        for( Map entry : all ) {
-            if( !matchType(family, entry.name as String) )
-                continue
-            def score = computeScore(cpus, mem, entry)
-            if( score != null )
-                scores.put(score, entry.name as String)
+        def list = allFamilies ? allFamilies.tokenize(',') : ['']
+        for( String family : list ) {
+            for( Map entry : all ) {
+                if( !matchType(family, entry.name as String) )
+                    continue
+                def score = computeScore(cpus, mem, entry)
+                if( score != null )
+                    scores.put(score, entry.name as String)
+            }
         }
-        return getVmType(location, scores.firstEntry().value)
+
+        return scores ? getVmType(location, scores.firstEntry().value) : null
     }
 
     protected boolean matchType(String family, String vmType) {
@@ -162,7 +185,7 @@ class AzBatchService implements Closeable {
 
         return vmType =~ /(?i)^${family}$/
     }
-    
+
     protected Double computeScore(int cpus, MemoryUnit mem, Map entry) {
         def vmCores = entry.numberOfCores as int
         double vmMemGb = (entry.memoryInMb as int) /1024
@@ -323,12 +346,12 @@ class AzBatchService implements Closeable {
 
         final taskToAdd = new TaskAddParameter()
                 .withId(taskId)
+                .withUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs))
                 .withContainerSettings(containerOpts)
                 .withCommandLine("sh -c 'bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}'")
                 .withResourceFiles(resourceFileUrls(task,sas))
                 .withOutputFiles(outputFileUrls(task, sas))
                 .withRequiredSlots(slots)
-
         client.taskOperations().createTask(jobId, taskToAdd)
         return new AzTaskKey(jobId, taskId)
     }
@@ -338,6 +361,13 @@ class AzBatchService implements Closeable {
         final cmdScript = (AzPath) task.workDir.resolve(TaskRun.CMD_SCRIPT)
 
         final resFiles = new ArrayList(10)
+
+        if( config.batch().copyToolInstallMode == CopyToolInstallMode.task ) {
+            log.trace "[AZURE BATCH] installing azcopy as task resource"
+            resFiles << new ResourceFile()
+                    .withHttpUrl(AZCOPY_URL)
+                    .withFilePath('.nextflow-bin/azcopy')
+        }
 
         resFiles << new ResourceFile()
                 .withHttpUrl(AzHelper.toHttpUrl(cmdRun, sas))
@@ -393,13 +423,14 @@ class AzBatchService implements Closeable {
         throw new IllegalStateException("Cannot find a matching VM image with publister=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; verification type=$opts.verification")
     }
 
-    protected AzVmPoolSpec specFromConfigPool(String poolId) {
+    protected AzVmPoolSpec specFromPoolConfig(String poolId) {
 
         def opts = config.batch().pool(poolId)
-        if( !opts )
+        def name = opts ? opts.vmType : getPool(poolId)?.vmSize()
+        if( !name )
             throw new IllegalArgumentException("Cannot find Azure Batch config for pool: $poolId")
 
-        def type = getVmType(config.batch().location, opts.vmType)
+        def type = getVmType(config.batch().location, name)
         if( !type )
             throw new IllegalArgumentException("Cannot find Azure Batch VM type '$poolId' - Check pool definition $poolId in the Nextflow config file")
 
@@ -417,11 +448,11 @@ class AzBatchService implements Closeable {
         final cpus = task.config.getCpus()
         final type = task.config.getMachineType() ?: opts.vmType
         if( !type )
-            throw new IllegalArgumentException("Missing Azure Batch VM type")
+            throw new IllegalArgumentException("Missing Azure Batch VM type for task '${task.name}'")
 
         final vmType = guessBestVm(loc, cpus, mem, type)
         if( !vmType ) {
-            def msg = "Cannot find a VM matching this requirements: type=$type, cpus=${cpus}, mem=${mem?:'-'}, location=${loc}"
+            def msg = "Cannot find a VM for task '${task.name}' matching this requirements: type=$type, cpus=${cpus}, mem=${mem?:'-'}, location=${loc}"
             throw new IllegalArgumentException(msg)
         }
 
@@ -464,7 +495,7 @@ class AzBatchService implements Closeable {
         }
 
         return poolId
-                ? specFromConfigPool(poolId)
+                ? specFromPoolConfig(poolId)
                 : specFromAutoPool(task)
 
     }
@@ -474,7 +505,7 @@ class AzBatchService implements Closeable {
         final spec = specForTask(task)
         if( spec && allPools.containsKey(spec.poolId) )
             return spec.poolId
-        
+
         // check existence and create if needed
         log.debug "[AZURE BATCH] Checking VM pool id=$spec.poolId; size=$spec.vmType"
         def pool = getPool(spec.poolId)
@@ -518,6 +549,18 @@ class AzBatchService implements Closeable {
          * https://github.com/MicrosoftDocs/azure-docs/blob/master/articles/batch/batch-docker-container-workloads.md#:~:text=Run%20container%20applications%20on%20Azure,compatible%20containers%20on%20the%20nodes.
          */
         final containerConfig = new ContainerConfiguration();
+        final registryOpts = config.registry()
+
+        if( registryOpts && registryOpts.isConfigured() ) {
+            List<ContainerRegistry> containerRegistries = new ArrayList(1)
+            containerRegistries << new ContainerRegistry()
+                .withRegistryServer(registryOpts.server)
+                .withUserName(registryOpts.userName)
+                .withPassword(registryOpts.password)
+            containerConfig.withContainerRegistries(containerRegistries).withType('dockerCompatible')
+            log.debug "[AZURE BATCH] Connecting Azure Batch pool to Container Registry '$registryOpts.server'"
+        }
+
         final image = getImage(opts)
 
         new VirtualMachineConfiguration()
@@ -529,9 +572,9 @@ class AzBatchService implements Closeable {
     protected void createPool(AzVmPoolSpec spec) {
 
         def resourceFiles = new ArrayList(10)
-        
+
         resourceFiles << new ResourceFile()
-                .withHttpUrl("https://nf-xpack.s3-eu-west-1.amazonaws.com/azcopy/linux_amd64_10.8.0/azcopy")
+                .withHttpUrl(AZCOPY_URL)
                 .withFilePath('azcopy')
 
         def poolStartTask = new StartTask()
@@ -562,7 +605,7 @@ class AzBatchService implements Closeable {
             final interval = spec.opts.scaleInterval.seconds as int
             poolParams
                     .withEnableAutoScale(true)
-                    .withAutoScaleEvaluationInterval( new Period().withSeconds(interval) ) 
+                    .withAutoScaleEvaluationInterval( new Period().withSeconds(interval) )
                     .withAutoScaleFormula(scaleFormula(spec.opts))
         }
         else {
@@ -638,6 +681,17 @@ class AzBatchService implements Closeable {
         }
     }
 
+    protected UserIdentity userIdentity(boolean  privileged, String runAs) {
+        UserIdentity identity = new UserIdentity()
+        if (runAs) {
+            identity.withUserName(runAs)
+        } else  {
+            identity.withAutoUser(new AutoUserSpecification()
+                    .withElevationLevel(privileged ? ElevationLevel.ADMIN : ElevationLevel.NON_ADMIN)
+                    .withScope(AutoUserScope.TASK))
+        }
+        return identity
+    }
     @Override
     void close() {
         // cleanup app successful jobs

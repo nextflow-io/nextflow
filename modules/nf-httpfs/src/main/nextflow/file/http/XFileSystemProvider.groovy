@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,7 +45,7 @@ import groovy.transform.PackageScope
 import sun.net.www.protocol.ftp.FtpURLConnection
 
 /**
- * Implements a read-only JSR-203 complaint file system provider for http/ftp protocols
+ * Implements a read-only JSR-203 compliant file system provider for http/ftp protocols
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Emilio Palumbo <emilio.palumbo@crg.eu>

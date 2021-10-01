@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -184,6 +184,11 @@ class WorkflowMetadata {
     boolean resume
 
     /**
+     * Returns ``true`` whenever the current instance is a stub-run execution
+     */
+    boolean stubRun
+
+    /**
      * Which container engine was used to execute the workflow
      */
     String containerEngine
@@ -233,6 +238,7 @@ class WorkflowMetadata {
         this.profile = session.profile ?:  ConfigBuilder.DEFAULT_PROFILE
         this.sessionId = session.uniqueId
         this.resume = session.resumeMode
+        this.stubRun = session.stubRun
         this.runName = session.runName
         this.containerEngine = session.containerConfig.with { isEnabled() ? getEngine() : null }
         this.configFiles = session.configFiles?.collect { it.toAbsolutePath() }

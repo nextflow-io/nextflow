@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import static java.nio.file.StandardCopyOption.*
 import java.nio.file.Files
 import java.nio.file.Path
 
+import com.github.zafarkhaja.semver.Version
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
@@ -55,6 +56,8 @@ class PluginUpdater extends UpdateManager {
     private Path pluginsStore
 
     private boolean pullOnly
+
+    private DefaultPlugins defaultPlugins = new DefaultPlugins()
 
     protected PluginUpdater(CustomPluginManager pluginManager) {
         super(pluginManager)
@@ -93,7 +96,8 @@ class PluginUpdater extends UpdateManager {
             updatePlugin(pluginId, version)
         }
         else {
-            log.debug "Starting plugin ${pluginId} version: ${version ?: 'latest'}"
+            if( !version ) version = current.descriptor.version
+            log.debug "Starting plugin ${pluginId} version: ${version}"
             pluginManager.startPlugin(pluginId)
         }
     }
@@ -156,7 +160,7 @@ class PluginUpdater extends UpdateManager {
         // 2. Download to temporary location
         Path downloaded = downloadPlugin(id, version);
 
-        // 3. unzip the content and delete download filed
+        // 3. unzip the content and delete downloaded file
         Path dir = FileUtils.expandIfZip(downloaded)
         FileHelper.deletePath(downloaded)
 
@@ -212,7 +216,7 @@ class PluginUpdater extends UpdateManager {
             return mutex.lock { download0(id, version) }
         }
         finally {
-            sentinel.deleteDir()
+            sentinel.delete()
         }
     }
 
@@ -247,8 +251,20 @@ class PluginUpdater extends UpdateManager {
         // pull all required required deps
         final deps = wrapper.descriptor.dependencies ?: Collections.<PluginDependency>emptyList()
         for( PluginDependency it : deps ) {
-            final depVersion = findReleaseMatchingCriteria(it.pluginId, it.pluginVersionSupport)?.version
-            log.debug "Plugin $id requires $it.pluginId supported version: $it.pluginVersionSupport - resolved version: $depVersion"
+            // 1. check for installed version satisfying req
+            final installed = checkInstalled(it.pluginId, it.pluginVersionSupport)
+            if( installed ) {
+                log.debug "Plugin $id requires $it.pluginId supported version: $it.pluginVersionSupport - found version: $installed"
+                continue
+            }
+
+            // 2. find latest satisfying req
+            // -- if it's a core nextflow plugin use the version expected by it
+            def depVersion = defaultPlugins.getPlugin(it.pluginId)?.version
+            // -- otherwise try to find the newest matching release
+            if( !depVersion )
+                depVersion = findNewestMatchingRelease(it.pluginId, it.pluginVersionSupport)?.version
+            log.debug "Plugin $id requires $it.pluginId supported version: $it.pluginVersionSupport - available version: $depVersion"
             if( pullOnly )
                 pullPlugin0(it.pluginId, depVersion)
             else
@@ -304,44 +320,48 @@ class PluginUpdater extends UpdateManager {
             return false
         }
 
-        final matches = pluginManager
+        return pluginManager
                 .getVersionManager()
-                .checkVersionConstraint(current.descriptor.version, version)
+                .compareVersions(current.descriptor.version, version) < 0
+    }
 
-        // update of the request plugin version is different from the current one
-        return !matches
+    protected String checkInstalled(String id, String verConstraint) {
+        final versionManager = pluginManager.getVersionManager()
+        // check if the installed version satisfies the requirement
+        final current = pluginManager.getPlugin(id)
+        if( !current )
+            return null
+
+        final found = versionManager.checkVersionConstraint(current.descriptor.version, verConstraint)
+        return found ? current.descriptor.version : null
     }
 
     /**
-     * Find lower release version matching the requested constraint e.g.
-     * given 1.5.x and release 1.4.0, 1.5.0 and 1.5.1 are avail it returns 1.5.0
+     * Find newest release version matching the requested plugin constraint and nextflow runtime
      *
      * @param id The plugin id
      * @param verConstraint The version constraint
      * @return The plugin release satisfying the requested criteria or null it none is found
      */
-    protected PluginInfo.PluginRelease findReleaseMatchingCriteria(String id, String verConstraint) {
+    protected PluginInfo.PluginRelease findNewestMatchingRelease(String id, String verConstraint) {
         assert verConstraint
 
-        final versionManager = pluginManager.getVersionManager();
+        final versionManager = pluginManager.getVersionManager()
+
         PluginInfo pluginInfo = getPluginsMap().get(id)
         if( !pluginInfo )
             throw new IllegalArgumentException("Unknown plugin id: $id")
 
-        PluginInfo.PluginRelease lower = null
-        for (PluginInfo.PluginRelease release : pluginInfo.releases) {
-            if( !versionManager.checkVersionConstraint(release.version, verConstraint) || !release.url )
+        // note: order releases list by descending version numbers ie. latest version comes first
+        def releases = pluginInfo.releases.sort(false) { a,b -> Version.valueOf(b.version) <=> Version.valueOf(a.version) }
+        for (PluginInfo.PluginRelease rel : releases ) {
+            if( !versionManager.checkVersionConstraint(rel.version, verConstraint) || !rel.url )
                 continue
 
-            if( !versionManager.checkVersionConstraint(Const.APP_VER, release.requires) )
-                continue
-
-            if( lower == null )
-                lower = release
-            else if( versionManager.compareVersions(release.version, lower.version)<0 )
-                lower = release
+            if( versionManager.checkVersionConstraint(Const.APP_VER, rel.requires) )
+                return rel
         }
 
-        return lower
+        return null
     }
 }

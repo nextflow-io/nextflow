@@ -48,6 +48,7 @@ profile                     Used configuration profile.
 runName                     Mnemonic name assigned to this execution instance.
 sessionId                   Unique identifier (UUID) associated to current execution.
 resume                      Returns ``true`` whenever the current instance is resumed from a previous execution.
+stubRun                     Returns ``true`` whenever the current instance is a stub-run execution .
 start                       Timestamp of workflow at execution start.
 manifest                    Entries of the workflow manifest.
 :sup:`✝` complete           Timestamp of workflow when execution is completed.
@@ -121,8 +122,8 @@ For example::
 
 .. note:: Both the ``onError`` and ``onComplete`` handlers are invoked when an error condition is encountered.
     However the first is called as soon as the error is raised, while the second just before the pipeline execution
-    is going terminate. When using the ``finish`` :ref:`process-page-error-strategy`, between the two there could be
-    a significant time gap depending by the time required to complete any pending job.
+    is going to terminate. When using the ``finish`` :ref:`process-page-error-strategy`, between the two there could be
+    a significant time gap depending on the time required to complete any pending job.
 
 
 Decoupling metadata

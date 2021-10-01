@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -71,6 +71,7 @@ class PodSpecBuilderTest extends Specification {
                 .withNamespace('xyz')
                 .withLabel('app','myApp')
                 .withLabel('runName','something')
+                .withLabel('version','3.6.1')
                 .withAnnotation("anno1", "value1")
                 .withAnnotations([anno2: "value2", anno3: "value3"])
                 .build()
@@ -83,7 +84,8 @@ class PodSpecBuilderTest extends Specification {
                            namespace:'xyz',
                            labels: [
                                    app: 'myApp',
-                                   runName: 'something'
+                                   runName: 'something',
+                                   version: '3.6.1'
                            ],
                            annotations: [
                                    anno1: "value1",
@@ -203,6 +205,7 @@ class PodSpecBuilderTest extends Specification {
                     .withCommand(['echo'])
                     .withVolumeClaim(new PodVolumeClaim('first','/work'))
                     .withVolumeClaim(new PodVolumeClaim('second', '/data', '/foo'))
+                    .withVolumeClaim(new PodVolumeClaim('third', '/things', null, true))
                     .build()
         then:
         spec ==  [ apiVersion: 'v1',
@@ -217,11 +220,13 @@ class PodSpecBuilderTest extends Specification {
                                     workingDir:'/path',
                                     volumeMounts:[
                                             [name:'vol-1', mountPath:'/work'],
-                                            [name:'vol-2', mountPath:'/data', subPath: '/foo']] ]
+                                            [name:'vol-2', mountPath:'/data', subPath: '/foo'],
+                                            [name:'vol-3', mountPath:'/things', readOnly: true]] ]
                            ],
                            volumes:[
                                    [name:'vol-1', persistentVolumeClaim:[claimName:'first']],
-                                   [name:'vol-2', persistentVolumeClaim:[claimName:'second']] ]
+                                   [name:'vol-2', persistentVolumeClaim:[claimName:'second']],
+                                   [name:'vol-3', persistentVolumeClaim:[claimName:'third']] ]
                    ]
 
         ]
@@ -664,7 +669,7 @@ class PodSpecBuilderTest extends Specification {
         'hello_world.'  | 'hello_world'
         'hello_123'     | 'hello_123'
         'HELLO 123'     | 'HELLO_123'
-        '123hello'      | 'hello'
+        '123hello'      | '123hello'
         'x2345678901234567890123456789012345678901234567890123456789012345' | 'x23456789012345678901234567890123456789012345678901234567890123'
     }
 }

@@ -23,7 +23,7 @@ class SecretHelper {
 
     static Object hideSecrets( obj ) {
         if( obj == null )
-            return 
+            return null
         
         if( obj instanceof Map ) {
             final names = obj.keySet()

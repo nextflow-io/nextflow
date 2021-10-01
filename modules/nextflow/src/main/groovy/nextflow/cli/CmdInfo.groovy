@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +25,7 @@ import com.beust.jcommander.Parameters
 import com.sun.management.OperatingSystemMXBean
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.scm.AssetManager
@@ -36,6 +37,7 @@ import org.yaml.snakeyaml.Yaml
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Print project and system runtime information")
 class CmdInfo extends CmdBase {
@@ -158,19 +160,43 @@ class CmdInfo extends CmdBase {
     }
 
     static private String totMem(OperatingSystemMXBean os) {
-        os.totalPhysicalMemorySize>=0 ? new MemoryUnit(os.totalPhysicalMemorySize).toString() : '-'
+        try {
+            new MemoryUnit(os.totalPhysicalMemorySize).toString()
+        }
+        catch (Throwable t) {
+            log.debug "Unable to fetch totalPhysicalMemorySize - ${t.message ?: t}"
+            return '-'
+        }
     }
 
     static private String freeMem(OperatingSystemMXBean os) {
-        os.freePhysicalMemorySize>=0 ? new MemoryUnit(os.freePhysicalMemorySize).toString() : '-'
+        try {
+            return new MemoryUnit(os.freePhysicalMemorySize).toString()
+        }
+        catch (Throwable t) {
+            log.debug "Unable to fetch freePhysicalMemorySize - ${t.message ?: t}"
+            return '-'
+        }
     }
 
     static private String totSwap(OperatingSystemMXBean os) {
-        os.totalSwapSpaceSize>=0 ? new MemoryUnit(os.totalSwapSpaceSize) : '-'
+        try {
+            new MemoryUnit(os.totalSwapSpaceSize).toString()
+        }
+        catch (Throwable t) {
+            log.debug "Unable to fetch totalSwapSpaceSize - ${t.message ?: t}"
+            return '-'
+        }
     }
 
     static private String freeSwap(OperatingSystemMXBean os) {
-        os.freeSwapSpaceSize>=0 ? new MemoryUnit(os.freeSwapSpaceSize) : '-'
+        try {
+            return new MemoryUnit(os.freeSwapSpaceSize).toString()
+        }
+        catch (Throwable t) {
+            log.debug "Unable to fetch freeSwapSpaceSize - ${t.message ?: t}"
+            return '-'
+        }
     }
 
     /**

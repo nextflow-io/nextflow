@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -408,7 +408,11 @@ class TaskPollingMonitor implements TaskMonitor {
             // check all running tasks for termination
             checkAllTasks(tasks)
 
-            if( (session.isTerminated() && runningQueue.size()==0 && pendingQueue.size()==0) || session.isAborted() ) {
+            final shouldBreak
+                    =  (session.isTerminated() && runningQueue.size()==0 && pendingQueue.size()==0)
+                    || (session.isCancelled() && runningQueue.size()==0) // cancel is set when error 'finish' is set, therefore tasks in the pending queue should not be taken in consideration
+                    || session.isAborted()
+            if( shouldBreak ) {
                 break
             }
 
@@ -546,26 +550,24 @@ class TaskPollingMonitor implements TaskMonitor {
 
         int count = 0
         def itr = pendingQueue.iterator()
-        while( itr.hasNext() ) {
+        while( itr.hasNext() && session.isSuccess() ) {
             final handler = itr.next()
+            submitRateLimit?.acquire()
             try {
-                submitRateLimit?.acquire()
-
                 if( !canSubmit(handler) )
                     continue
 
-                if( session.isSuccess() ) {
-                    itr.remove(); count++   // <-- remove the task in all cases
-                    handler.incProcessForks()
-                    submit(handler)
-                }
-                else
-                    break
+                count++
+                handler.incProcessForks()
+                submit(handler)
             }
             catch ( Throwable e ) {
                 handleException(handler, e)
                 session.notifyTaskComplete(handler)
             }
+            // remove processed handler either on successful submit or failed one (managed by catch section)
+            // when `canSubmit` return false the handler should be retained to be tried in a following iteration
+            itr.remove()
         }
 
         return count

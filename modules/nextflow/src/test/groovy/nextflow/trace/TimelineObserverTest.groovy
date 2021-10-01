@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,19 +31,6 @@ import test.TestHelper
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class TimelineObserverTest extends Specification {
-
-    def 'should read html template' () {
-
-        given:
-        def observer = Spy(TimelineObserver)
-        when:
-        def tpl = observer.readTemplate()
-        then:
-        tpl.startsWith '<!doctype html>'
-        tpl.contains 'REPLACE_WITH_TIMELINE_DATA'
-
-    }
-
     def 'should return timeline in json format' () {
 
         given:
@@ -64,6 +51,7 @@ class TimelineObserverTest extends Specification {
         r2.duration = 500
         r2.process = 'alpha'
         r2.peak_rss = 60_000_000
+        r2.cached = true
 
         def r3 = new TraceRecord()
         r3.task_id = '3'
@@ -86,14 +74,16 @@ class TimelineObserverTest extends Specification {
 
         expect:
         observer.renderData().toString() == /
-            var elapsed="2.5s"
-            var beginningMillis=1000;
-            var endingMillis=3500;
-            var data=[
-            {"label": "foo", "times": []},
-            {"label": "bar", "times": [{"starting_time": 1429821425141, "ending_time": 1429821425241, "color":c1(0)}, {"starting_time": 1429821425241, "ending_time": 1429821425641, "color":c2(0), "label": "500ms \\/ 57.2 MB"}]},
-            {"label": "baz", "times": [{"starting_time": 1429821425141, "ending_time": 1429821425341, "color":c1(1)}, {"starting_time": 1429821425341, "ending_time": 1429821425841, "color":c2(1), "label": "700ms \\/ 66.8 MB"}]}
-            ]
+            {
+                "elapsed": "2.5s",
+                "beginningMillis": 1000,
+                "endingMillis": 3500,
+                "processes": [
+                    {"label": "foo", "cached": false, "index": 0, "times": []},
+                    {"label": "bar", "cached": true, "index": 0, "times": [{"starting_time": 1429821425141, "ending_time": 1429821425241}, {"starting_time": 1429821425241, "ending_time": 1429821425641, "label": "500ms \\/ 57.2 MB \\/ CACHED"}]},
+                    {"label": "baz", "cached": false, "index": 1, "times": [{"starting_time": 1429821425141, "ending_time": 1429821425341}, {"starting_time": 1429821425341, "ending_time": 1429821425841, "label": "700ms \\/ 66.8 MB"}]}
+                ]
+            }
             /
             .stripIndent().leftTrim()
     }

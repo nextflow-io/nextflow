@@ -6,17 +6,19 @@ on:
       - '*'
     tags-ignore:
       - '*'  
-
+  pull_request:
+    branches:
+      - '*'
 jobs:
   build:
     name: Build Nextflow
     if: "!contains(github.event.head_commit.message, '[ci skip]')"
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        java_version: [8, 11, 15]
+        java_version: [8, 11, 16]
 
     steps:
     - name: Environment
@@ -63,6 +65,7 @@ jobs:
       env:
         TEST_JDK: ${{ matrix.java_version }}
         GRADLE_OPTS: '-Dorg.gradle.daemon=false'
+        AWS_DEFAULT_REGION: eu-west-1
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         NXF_BITBUCKET_ACCESS_TOKEN: ${{ secrets.NXF_BITBUCKET_ACCESS_TOKEN }}
@@ -99,11 +102,9 @@ jobs:
         AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
         AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
-
-    - name: Publish
+    - name: Publish tests report
       if: failure()
-      run: bash pub-tests.sh github
-      env:
-        TEST_JDK: ${{ matrix.java_version }}
-        NXF_AWS_ACCESS: ${{ secrets.NXF_AWS_ACCESS }}
-        NXF_AWS_SECRET: ${{ secrets.NXF_AWS_SECRET }}
+      uses: actions/upload-artifact@v2
+      with:
+        name: test-reports-jdk-${{ matrix.java_version }}
+        path: "**/build/reports/tests/test"

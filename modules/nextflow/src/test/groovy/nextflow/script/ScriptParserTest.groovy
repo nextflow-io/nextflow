@@ -32,8 +32,8 @@ class ScriptParserTest extends Specification {
         parser.script instanceof BaseScript
         parser.result == 'Hello world!'
         parser.result == binding.getVariable('bar')
-        parser.binding.scriptPath == file
-        parser.binding.session == session
+        parser.binding.getScriptPath() == file
+        parser.binding.getSession() == session
         !session.binding.hasVariable('bar')
     }
 
@@ -55,8 +55,8 @@ class ScriptParserTest extends Specification {
         parser.script instanceof BaseScript
         parser.result == 'Hello world!'
         parser.result == binding.getVariable('bar')
-        parser.binding.scriptPath == null
-        parser.binding.session == session
+        parser.binding.getScriptPath() == null
+        parser.binding.getSession() == session
         !session.binding.hasVariable('bar')
     }
 
@@ -76,8 +76,8 @@ class ScriptParserTest extends Specification {
         then:
         parser.script instanceof BaseScript
         parser.result == 'Hello world!'
-        parser.binding.scriptPath == null
-        parser.binding.session == session
+        parser.binding.getScriptPath() == null
+        parser.binding.getSession() == session
         session.binding.getVariable('foo') == 'Hello'
         session.binding.getVariable('bar') == 'Hello world!'
     }

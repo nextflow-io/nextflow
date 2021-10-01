@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,12 +17,19 @@
 
 package nextflow.util
 
+import java.nio.file.Paths
+
+import nextflow.Global
+import nextflow.Session
+import org.apache.commons.codec.digest.DigestUtils
 import spock.lang.Specification
 
 import java.nio.file.Files
 import java.nio.file.attribute.FileTime
 
 import com.google.common.hash.Hashing
+import test.TestHelper
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -219,14 +226,60 @@ class CacheHelperTest extends Specification {
         CacheHelper.HashMode.of(VALUE) == EXPECTED
 
         where:
-        VALUE       | EXPECTED
-        null        | null
-        true        | null
-        'true'      | null
-        'false'     | null
-        'standard'  | CacheHelper.HashMode.STANDARD
-        'deep'      | CacheHelper.HashMode.DEEP
-        'lenient'   | CacheHelper.HashMode.LENIENT
+        VALUE      | EXPECTED
+        null       | null
+        true       | null
+        'true'     | null
+        'false'    | null
+        'standard' | CacheHelper.HashMode.STANDARD
+        'deep'     | CacheHelper.HashMode.DEEP
+        'lenient'  | CacheHelper.HashMode.LENIENT
+        'sha256'   | CacheHelper.HashMode.SHA256
+    }
+    
+    def 'should validate is asset file'() {
+        when:
+        def BASE = Paths.get("/some/pipeline/dir")
+        and:
+        Global.session = Mock(Session) { getBaseDir() >> BASE }
+        then:
+        !CacheHelper.isAssetFile(BASE.resolve('foo'))
 
+
+        when:
+        Global.session = Mock(Session) {
+            getBaseDir() >> BASE
+            getCommitId() >> '123456'
+        }
+        then:
+        CacheHelper.isAssetFile(BASE.resolve('foo'))
+        and:
+        !CacheHelper.isAssetFile(Paths.get('/other/dir'))
+    }
+
+
+    def 'should hash file content'() {
+        given:
+        def EXPECTED = '64ec88ca00b268e5ba1a35678a1b5316d212f4f366b2477232534a8aeca37f3c'
+        def file = TestHelper.createInMemTempFile('foo', 'Hello world')
+        expect:
+        CacheHelper.hashFileSha256Impl0(file) == EXPECTED
+        and:
+        CacheHelper.hashFileSha256Impl0(file) == DigestUtils.sha256Hex(file.bytes)
+    }
+
+    def 'should hash content with sha256' () {
+        given:
+        def file = TestHelper.createInMemTempFile('foo.txt', 'Hello world')
+        and:
+        Global.session = Mock(Session) {
+            getBaseDir() >> file.getParent()
+            getCommitId() >> '123456'
+        }
+
+        expect:
+        // this is not expecting to return the sha-256 of the file content BUT
+        // the murmur hashing of the sha-256 string obtained by hashing the file
+        CacheHelper.hasher(file, CacheHelper.HashMode.SHA256).hash().toString() == 'd29e7ba0fbcc617ab8e1e44e81381aed'
     }
 }

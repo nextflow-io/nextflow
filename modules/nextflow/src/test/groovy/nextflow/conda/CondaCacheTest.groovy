@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,7 +31,7 @@ class CondaCacheTest extends Specification {
 
         given:
         def cache = new CondaCache()
-        
+
         expect:
         !cache.isYamlFilePath('foo=1.0')
         cache.isYamlFilePath('env.yml')
@@ -196,7 +196,36 @@ class CondaCacheTest extends Specification {
         0 * cache.makeAbsolute(_)
         1 * cache.runCommand( "conda create --mkdir --yes --quiet --prefix $PREFIX $ENV" ) >> null
         result == PREFIX
-        
+
+    }
+
+    def 'should create a conda environment - using mamba' () {
+
+        given:
+        def ENV = 'bwa=1.1.1'
+        def PREFIX = Files.createTempDirectory('foo')
+        def cache = Spy(CondaCache)
+
+        when:
+        cache.useMamba = true
+        // the prefix directory exists ==> no mamba command is executed
+        def result = cache.createLocalCondaEnv(ENV)
+        then:
+        1 * cache.condaPrefixPath(ENV) >> PREFIX
+        0 * cache.isYamlFilePath(ENV)
+        0 * cache.runCommand(_)
+        result == PREFIX
+
+        when:
+        PREFIX.deleteDir()
+        cache.useMamba = true
+        result = cache.createLocalCondaEnv0(ENV, PREFIX)
+        then:
+        1 * cache.isYamlFilePath(ENV)
+        0 * cache.makeAbsolute(_)
+        1 * cache.runCommand("mamba create --mkdir --yes --quiet --prefix $PREFIX $ENV") >> null
+        result == PREFIX
+
     }
 
     def 'should create conda env with options' () {
@@ -216,6 +245,23 @@ class CondaCacheTest extends Specification {
         result == PREFIX
     }
 
+def 'should create conda env with options - using mamba' () {
+        given:
+        def ENV = 'bwa=1.1.1'
+        def PREFIX = Paths.get('/foo/bar')
+        def cache = Spy(CondaCache)
+
+        when:
+        cache.createOptions = '--this --that'
+        cache.useMamba = true
+        def result = cache.createLocalCondaEnv0(ENV, PREFIX)
+        then:
+        1 * cache.isYamlFilePath(ENV)
+        1 * cache.isTextFilePath(ENV)
+        0 * cache.makeAbsolute(_)
+        1 * cache.runCommand("mamba create --this --that --mkdir --yes --quiet --prefix $PREFIX $ENV") >> null
+        result == PREFIX
+    }
 
     def 'should create a conda env with a yaml file' () {
 
@@ -262,13 +308,16 @@ class CondaCacheTest extends Specification {
         cache.createTimeout.minutes == 20
         cache.createOptions == null
         cache.configCacheDir0 == null
-        
+        cache.useMamba == false
+        cache.binaryName == "conda"
         when:
-        cache = new CondaCache(new CondaConfig(createTimeout: '5 min', createOptions: '--foo --bar', cacheDir: '/conda/cache'))
+        cache = new CondaCache(new CondaConfig(createTimeout: '5 min', createOptions: '--foo --bar', cacheDir: '/conda/cache', useMamba: true))
         then:
         cache.createTimeout.minutes == 5
         cache.createOptions == '--foo --bar'
         cache.configCacheDir0 == Paths.get('/conda/cache')
+        cache.useMamba == true
+        cache.binaryName == "mamba"
     }
 
     def 'should define cache dir from config' () {

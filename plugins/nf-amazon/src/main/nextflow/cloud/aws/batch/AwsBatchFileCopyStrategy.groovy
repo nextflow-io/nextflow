@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +21,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.cloud.aws.util.S3BashLib
 import nextflow.executor.SimpleFileCopyStrategy
 import nextflow.processor.TaskBean
 import nextflow.util.Escape
@@ -50,7 +51,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      * etc.
      */
     String getBeforeStartScript() {
-        S3Helper.getUploaderScript(opts)
+        S3BashLib.script(opts)
     }
 
     /**
@@ -82,7 +83,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
 
     @Override
     String getStageInputFilesScript(Map<String,Path> inputFiles) {
-        def result = 'downloads=()\n'
+        def result = 'downloads=(true)\n'
         result += super.getStageInputFilesScript(inputFiles) + '\n'
         result += 'nxf_parallel "${downloads[@]}"\n'
         return result
@@ -94,7 +95,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     @Override
     String stageInputFile( Path path, String targetName ) {
         // third param should not be escaped, because it's used in the grep match rule
-        def stage_cmd = opts.maxTransferAttempts > 1
+        def stage_cmd = opts.maxTransferAttempts > 1 && !opts.retryMode
                 ? "downloads+=(\"nxf_cp_retry nxf_s3_download s3:/${Escape.path(path)} ${Escape.path(targetName)}\")"
                 : "downloads+=(\"nxf_s3_download s3:/${Escape.path(path)} ${Escape.path(targetName)}\")"
         return stage_cmd
@@ -151,6 +152,10 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     @Override
     String copyFile( String name, Path target ) {
         "nxf_s3_upload ${Escape.path(name)} s3:/${Escape.path(target.getParent())}"
+    }
+
+    static String uploadCmd( String source, Path target ) {
+        "nxf_s3_upload '$source' s3:/$target"
     }
 
     /**

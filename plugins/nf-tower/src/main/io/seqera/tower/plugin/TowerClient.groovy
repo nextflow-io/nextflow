@@ -34,6 +34,7 @@ import nextflow.trace.TraceObserver
 import nextflow.trace.TraceRecord
 import nextflow.util.Duration
 import nextflow.util.LoggerHelper
+import nextflow.util.ProcessHelper
 import nextflow.util.SimpleHttpClient
 /**
  * Send out messages via HTTP to a configured URL on different workflow
@@ -64,7 +65,7 @@ class TowerClient implements TraceObserver {
     }
 
     @ToString(includeNames = true)
-    class ProcessEvent {
+    static class ProcessEvent {
         TraceRecord trace
         boolean completed
     }
@@ -123,6 +124,8 @@ class TowerClient implements TraceObserver {
 
     private String refreshToken
 
+    private String workspaceId 
+
     /**
      * Constructor that consumes a URL and creates
      * a basic HTTP client.
@@ -152,7 +155,7 @@ class TowerClient implements TraceObserver {
     String getRunName() { runName }
 
     String getRunId() { runId }
-    
+
     void setAliveInterval(Duration d) {
         this.aliveInterval = d
     }
@@ -172,6 +175,12 @@ class TowerClient implements TraceObserver {
     void setBackOffDelay( int value ) {
         this.backOffDelay = value
     }
+
+    void setWorkspaceId( String workspaceId ) {
+        this.workspaceId = workspaceId
+    }
+
+    String getWorkspaceId() { workspaceId }
 
     /**
      * Check the URL and create an HttpPost() object. If a invalid i.e. protocol is used,
@@ -197,23 +206,38 @@ class TowerClient implements TraceObserver {
     }
 
     protected String getUrlTraceCreate() {
-        this.endpoint + '/trace/create'
+        def result = this.endpoint + '/trace/create'
+        if( workspaceId )
+            result += "?workspaceId=$workspaceId"
+        return result
     }
 
     protected String getUrlTraceBegin() {
-        "$endpoint/trace/$workflowId/begin"
+        def result = "$endpoint/trace/$workflowId/begin"
+        if( workspaceId )
+            result += "?workspaceId=$workspaceId"
+        return result
     }
 
     protected String getUrlTraceComplete() {
-        "$endpoint/trace/$workflowId/complete"
+        def result = "$endpoint/trace/$workflowId/complete"
+        if( workspaceId )
+            result += "?workspaceId=$workspaceId"
+        return result
     }
 
     protected String getUrlTraceHeartbeat() {
-        "$endpoint/trace/$workflowId/heartbeat"
+        def result = "$endpoint/trace/$workflowId/heartbeat"
+        if( workspaceId )
+            result += "?workspaceId=$workspaceId"
+        return result
     }
 
     protected String getUrlTraceProgress() {
-        "$endpoint/trace/$workflowId/progress"
+        def result = "$endpoint/trace/$workflowId/progress"
+        if( workspaceId )
+            result += "?workspaceId=$workspaceId"
+        return result
     }
 
     /**
@@ -237,12 +261,19 @@ class TowerClient implements TraceObserver {
         // send hello to verify auth
         final req = makeCreateReq(session)
         final resp = sendHttpMessage(urlTraceCreate, req, 'POST')
-        if( resp.error )
+        if( resp.error ) {
+            log.debug """\
+                Unexpected HTTP response
+                - endpoint    : $urlTraceCreate
+                - status code : $resp.code
+                - response msg: $resp.cause
+                """.stripIndent()
             throw new AbortOperationException(resp.message)
+        }
         final ret = parseTowerResponse(resp)
         this.workflowId = ret.workflowId
         if( !workflowId )
-            throw new AbortOperationException("Invalid Tower response")
+            throw new AbortOperationException("Invalid Tower response - Missing workflow Id")
         if( ret.message )
             log.warn(ret.message.toString())
     }
@@ -279,6 +310,7 @@ class TowerClient implements TraceObserver {
         result.projectName = session.workflowMetadata.projectName
         result.repository = session.workflowMetadata.repository
         result.workflowId = env.get('TOWER_WORKFLOW_ID')
+        result.instant = Instant.now().toEpochMilli()
         this.towerLaunch = result.workflowId != null
         return result
     }
@@ -299,8 +331,15 @@ class TowerClient implements TraceObserver {
 
         final req = makeBeginReq(session)
         final resp = sendHttpMessage(urlTraceBegin, req, 'PUT')
-        if( resp.error )
+        if( resp.error ) {
+            log.debug """\
+                Unexpected HTTP response
+                - endpoint    : $urlTraceBegin
+                - status code : $resp.code
+                - response msg: $resp.cause
+                """.stripIndent()
             throw new AbortOperationException(resp.message)
+        }
 
         final payload = parseTowerResponse(resp)
         this.watchUrl = payload.watchUrl
@@ -477,12 +516,43 @@ class TowerClient implements TraceObserver {
                     log.trace("Got error $code - refreshTries=$refreshTries - currentRefresh=$currentRefresh")
                 }
 
-                String msg = ( code == 401
-                        ? 'Unauthorized Tower access -- Make sure you have specified the correct access token'
-                        : "Unexpected response code $code for request $url"  )
+                String msg
+                if( code == 401 ) {
+                    msg = 'Unauthorized Tower access -- Make sure you have specified the correct access token'
+                }
+                else {
+                    msg = parseCause(httpClient.response) ?: "Unexpected response for request $url"
+                }
                 return new Response(code, msg, httpClient.response)
             }
         }
+    }
+
+    protected boolean isCliLogsEnabled() {
+        return env.get('TOWER_ALLOW_NEXTFLOW_LOGS') == 'true'
+    }
+
+    protected String getOperationId() {
+        if( !isCliLogsEnabled() )
+            return null
+        try {
+            if( env.get('AWS_BATCH_JOB_ID') )
+                return  "aws-batch::${env.get('AWS_BATCH_JOB_ID')}"
+            else
+                return "local-platform::${ProcessHelper.selfPid()}"
+        }
+        catch (Exception e) {
+            log.warn "Unable to retrieve native environment operation id", e
+            return null
+        }
+    }
+
+    protected String getLogFile() {
+        return isCliLogsEnabled() ? env.get('NXF_LOG_FILE') : null
+    }
+
+    protected String getOutFile() {
+        return isCliLogsEnabled() ? env.get('NXF_OUT_FILE') : null
     }
 
     protected Map makeBeginReq(Session session) {
@@ -494,11 +564,16 @@ class TowerClient implements TraceObserver {
         // render as a string
         workflow.container = mapToString(workflow.container)
         workflow.configText = session.resolvedConfig
+        // extra metadata
+        workflow.operationId = getOperationId()
+        workflow.logFile = getLogFile()
+        workflow.outFile = getOutFile()
 
         def result = new LinkedHashMap(5)
         result.workflow = workflow
         result.processNames = new ArrayList(processNames)
         result.towerLaunch = towerLaunch
+        result.instant = Instant.now().toEpochMilli()
         return result
     }
 
@@ -509,17 +584,23 @@ class TowerClient implements TraceObserver {
         // render as a string
         workflow.container = mapToString(workflow.container)
         workflow.configText = session.resolvedConfig
+        // extra metadata
+        workflow.operationId = getOperationId()
+        workflow.logFile = getLogFile()
+        workflow.outFile = getOutFile()
 
         def result = new LinkedHashMap(5)
         result.workflow = workflow
         result.metrics = getMetricsList()
         result.progress = getWorkflowProgress(false)
+        result.instant = Instant.now().toEpochMilli()
         return result
     }
 
     protected Map makeHeartbeatReq() {
         def result = new HashMap(1)
         result.progress = getWorkflowProgress(true)
+        result.instant = Instant.now().toEpochMilli()
         return result
     }
 
@@ -582,6 +663,7 @@ class TowerClient implements TraceObserver {
         final result = new LinkedHashMap(5)
         result.put('tasks', payload)
         result.put('progress', getWorkflowProgress(true))
+        result.instant = Instant.now().toEpochMilli()
         return result
     }
 
@@ -606,7 +688,7 @@ class TowerClient implements TraceObserver {
             def msg = """\
                 Unexpected HTTP response.
                 Failed to send message to ${endpoint} -- received 
-                - status code : $resp.code    
+                - status code : $resp.code
                 - response msg: $resp.message
                 """.stripIndent()
             // append separately otherwise formatting get broken
@@ -625,7 +707,7 @@ class TowerClient implements TraceObserver {
         def msg = """\
                 Unexpected Tower response
                 - endpoint url: $endpoint
-                - status code : $resp.code    
+                - status code : $resp.code
                 - response msg: ${resp.message} 
                 """.stripIndent()
         // append separately otherwise formatting get broken

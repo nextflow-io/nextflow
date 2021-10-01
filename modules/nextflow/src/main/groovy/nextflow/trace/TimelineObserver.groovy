@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,9 @@
  */
 
 package nextflow.trace
+
+import groovy.text.GStringTemplateEngine
+
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
@@ -80,7 +83,12 @@ class TimelineObserver implements TraceObserver {
     void onFlowComplete() {
         log.debug "Flow completing -- rendering html timeline"
         endMillis = System.currentTimeMillis()
-        renderHtml()
+        try {
+            renderHtml()
+        }
+        catch (Exception e) {
+            log.warn "Failed to render execution report -- see the log file for details", e
+        }
     }
 
 
@@ -145,11 +153,22 @@ class TimelineObserver implements TraceObserver {
     }
 
 
-    final private String REPLACE_STR = '/*REPLACE_WITH_TIMELINE_DATA*/'
-
     protected void renderHtml() {
-        final tpl = readTemplate()
-        final p = tpl.indexOf(REPLACE_STR)
+        // render HTML timeline template
+        final tpl_fields = [
+                payload : renderData(),
+                assets_js : [
+                        readTemplate('assets/jquery-3.2.1.min.js'),
+                        readTemplate('assets/d3.v3.min.js'),
+                        readTemplate('assets/d3-timeline.min.js'),
+                        readTemplate('assets/TimelineTemplate.js')
+                ]
+        ]
+
+        final tpl = readTemplate('TimelineTemplate.html')
+        def engine = new GStringTemplateEngine()
+        def html_template = engine.createTemplate(tpl)
+        def html_output = html_template.make(tpl_fields).toString()
 
         // make sure the parent path exists
         def parent = reportFile.getParent()
@@ -159,29 +178,30 @@ class TimelineObserver implements TraceObserver {
         if( overwrite )
             Files.deleteIfExists(reportFile)
         else
-            // roll the any trace files that may exist
+            // roll any trace files that may exist
             reportFile.rollFile()
 
         def writer = Files.newBufferedWriter(reportFile, Charset.defaultCharset())
-        writer.write(tpl, 0, p)
-        writer.append( renderData() )
-        writer.write(tpl, p+REPLACE_STR.size(), tpl.size() -p-REPLACE_STR.size())
+        writer.withWriter { w -> w << html_output }
         writer.close()
     }
 
-    protected StringBuilder renderData() {
+    protected String renderData() {
+        // Returns a JSON formatted string
         final result = new StringBuilder()
-        result << 'var elapsed="' << new Duration(endMillis-startMillis).toString() << '"\n'
-        result << 'var beginningMillis=' << beginMillis << ';\n'
-        result << 'var endingMillis=' << endMillis << ';\n'
-        result << 'var data=[\n'
+        final indent = "    ";
+        result << '{\n'
+        result << indent << '"elapsed": "' << new Duration(endMillis-startMillis).toString() << '",\n'
+        result << indent << '"beginningMillis": ' << beginMillis << ',\n'
+        result << indent << '"endingMillis": ' << endMillis << ',\n'
+        result << indent << '"processes": [\n'
         records.values().eachWithIndex { TraceRecord it, index ->
             if( index ) result << ',\n'
             append(result, it)
         }
-        result << '\n'
-        result << ']\n'
-        result
+        result << '\n' << indent << ']\n'
+        result << '}\n'
+        return result.toString()
     }
 
     protected void append(StringBuilder template, TraceRecord record) {
@@ -191,29 +211,30 @@ class TimelineObserver implements TraceObserver {
         final realtime = record.get('realtime') as Long
         final process = record.get('process') as String
         final complete = record.get('complete') as Long
+        final index = colorIndexes.getOrCreate(process) { colorIndexes.size() }
+        final indent = "    ";
 
-        template << '{'
+        template << indent << indent << '{'
         template << "\"label\": \"${StringEscapeUtils.escapeJavaScript(name)}\", "
+        template << "\"cached\": ${record.cached}, "
+        template << "\"index\": $index, "
         template << "\"times\": ["
 
         if( submit && start ) {
-            final index = colorIndexes.getOrCreate(process) { colorIndexes.size() }
-            template << "{\"starting_time\": $submit, \"ending_time\": $start, \"color\":c1($index)}"
+            template << "{\"starting_time\": $submit, \"ending_time\": $start}"
 
             if( start && realtime ) {
                 def label = StringEscapeUtils.escapeJavaScript(labelString(record))
                 def ending = start+realtime
-                def clr = record.cached ? 'c0' : 'c2'
-                template << ", {\"starting_time\": $start, \"ending_time\": $ending, \"color\":$clr($index), \"label\": \"$label\"}"
+                template << ", {\"starting_time\": $start, \"ending_time\": $ending, \"label\": \"$label\"}"
 
                 if( complete && ending < complete ) {
-                    template << ", {\"starting_time\": $ending, \"ending_time\": $complete, \"color\":c1($index)}"
+                    template << ", {\"starting_time\": $ending, \"ending_time\": $complete}"
                 }
             }
         }
 
-        template << "]"
-        template << '}'
+        template << "]}"
     }
 
     protected String labelString( TraceRecord record ) {
@@ -233,9 +254,15 @@ class TimelineObserver implements TraceObserver {
         result.join(' / ')
     }
 
-    protected String readTemplate() {
+    /**
+     * Read the document HTML template from the application classpath
+     *
+     * @param path A resource path location
+     * @return The loaded template as a string
+     */
+    private String readTemplate( String path ) {
         StringWriter writer = new StringWriter();
-        def res =  this.class.getResourceAsStream('TimelineTemplate.html')
+        def res =  this.class.getResourceAsStream( path )
         int ch
         while( (ch=res.read()) != -1 ) {
             writer.append(ch as char);

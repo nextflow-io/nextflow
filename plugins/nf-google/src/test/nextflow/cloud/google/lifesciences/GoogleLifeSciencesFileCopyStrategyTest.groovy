@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,7 +47,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         then:
         result == '''\
                 echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
-                downloads=()
+                downloads=(true)
                 downloads+=("nxf_gs_download gs://my-bucket/bar/foo.txt foo.txt ")
                 nxf_parallel "${downloads[@]}"
                 '''.stripIndent()
@@ -59,7 +59,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         then:
         result == '''\
                 echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
-                downloads=()
+                downloads=(true)
                 downloads+=("nxf_gs_download gs://my-bucket/bar/foo.txt hola.txt ")
                 nxf_parallel "${downloads[@]}"
                 '''.stripIndent()
@@ -71,7 +71,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         then:
         result == '''\
                 echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
-                downloads=()
+                downloads=(true)
                 downloads+=("nxf_gs_download gs://my-bucket/bar/f\\ o\\ o.txt f\\ o\\ o.txt ")
                 nxf_parallel "${downloads[@]}"
                 '''.stripIndent()
@@ -83,7 +83,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         then:
         result == '''\
                 echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
-                downloads=()
+                downloads=(true)
                 downloads+=("nxf_gs_download gs://my-bucket/bar/foo.txt subdir/foo.txt ")
                 nxf_parallel "${downloads[@]}"
                 '''.stripIndent()
@@ -110,7 +110,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         then:
         result == '''\
                 echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
-                downloads=()
+                downloads=(true)
                 downloads+=("nxf_gs_download gs://my-bucket/bar/foo.txt foo.txt foo")
                 nxf_parallel "${downloads[@]}"
                 '''.stripIndent()
@@ -122,7 +122,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         then:
         result == '''\
                 echo start | gsutil -q cp  -c - gs://my-bucket/work/xx/yy/.command.begin
-                downloads=()
+                downloads=(true)
                 downloads+=("nxf_gs_download gs://my-bucket/foo/dir1 dir1 foo")
                 nxf_parallel "${downloads[@]}"
                 '''.stripIndent()

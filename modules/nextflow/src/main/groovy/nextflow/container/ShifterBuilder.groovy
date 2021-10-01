@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -83,7 +83,8 @@ class ShifterBuilder extends ContainerBuilder<ShifterBuilder> {
      * @param result
      * @return
      */
-    protected CharSequence makeEnv( env, StringBuilder result = new StringBuilder() ) {
+    @Override
+    protected StringBuilder makeEnv( env, StringBuilder result = new StringBuilder() ) {
 
         if( env instanceof Map ) {
             short index = 0

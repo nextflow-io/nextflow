@@ -1,5 +1,23 @@
+/*
+ * Copyright 2020-2021, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package nextflow.executor
 
+import nextflow.cloud.CloudTransferOptions
 import nextflow.util.Duration
 
 /**
@@ -7,13 +25,41 @@ import nextflow.util.Duration
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class BashFunLib {
+class BashFunLib<V extends BashFunLib> {
 
-    static String body(int maxConnect, int maxAttempts, Duration delayBetweenAttempts) {
+    protected int maxParallelTransfers = CloudTransferOptions.MAX_TRANSFER
+    protected int maxTransferAttempts = CloudTransferOptions.MAX_TRANSFER_ATTEMPTS
+    protected Duration delayBetweenAttempts = CloudTransferOptions.DEFAULT_DELAY_BETWEEN_ATTEMPTS
+    protected boolean includeCoreFun
+
+    V includeCoreFun(boolean value) {
+        this.includeCoreFun = value
+        return (V)this
+    }
+
+    V withMaxParallelTransfers(Integer value) {
+        if( value )
+            maxParallelTransfers = value
+        return (V)this
+    }
+
+    V withMaxTransferAttempts(Integer value) {
+        if( value )
+            maxTransferAttempts = value
+        return (V)this
+    }
+
+    V withDelayBetweenAttempts(Duration value) {
+        if( value )
+            delayBetweenAttempts = value
+        return (V)this
+    }
+
+    String coreLib() {
         """\
         # bash helper functions
         nxf_cp_retry() {
-            local max_attempts=$maxAttempts
+            local max_attempts=$maxTransferAttempts
             local timeout=${delayBetweenAttempts.seconds}
             local attempt=0
             local exitCode=0
@@ -29,7 +75,7 @@ class BashFunLib {
               then
                 break
               fi
-              sleep \$timeout
+              nxf_sleep \$timeout
               attempt=\$(( attempt + 1 ))
               timeout=\$(( timeout * 2 ))
             done
@@ -39,7 +85,7 @@ class BashFunLib {
             IFS=\$'\\n'
             local cmd=("\$@")
             local cpus=\$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
-            local max=\$(if (( cpus>$maxConnect )); then echo $maxConnect; else echo \$cpus; fi)
+            local max=\$(if (( cpus>$maxParallelTransfers )); then echo $maxParallelTransfers; else echo \$cpus; fi)
             local i=0
             local pid=()
             (
@@ -52,7 +98,7 @@ class BashFunLib {
                 pid=("\${copy[@]}")
                 
                 if ((\${#pid[@]}>=\$max)); then
-                  sleep 0.2
+                  nxf_sleep 0.2
                 else
                   eval "\${cmd[\$i]}" &
                   pid+=(\$!)
@@ -66,5 +112,18 @@ class BashFunLib {
             unset IFS
         }
         """.stripIndent()
+    }
+
+    String render() {
+        includeCoreFun ? coreLib() : ''
+    }
+
+    static String body(int maxParallelTransfer, int maxTransferAttempts, Duration delay) {
+        new BashFunLib()
+                .includeCoreFun(true)
+                .withMaxParallelTransfers(maxParallelTransfer)
+                .withMaxTransferAttempts(maxTransferAttempts)
+                .withDelayBetweenAttempts(delay)
+                .render()
     }
 }

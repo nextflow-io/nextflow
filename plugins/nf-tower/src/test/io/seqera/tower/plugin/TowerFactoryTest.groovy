@@ -57,4 +57,25 @@ class TowerFactoryTest extends Specification {
 
     }
 
+    def 'should create with with workspace id'() {
+        given:
+        def session = Mock(Session)
+        def factory = new TowerFactory(env: [TOWER_WORKSPACE_ID: '100'])
+
+        when:
+        def client = (TowerClient) factory.create(session)[0]
+        then:
+        session.getConfig() >> [tower: [enabled: true]]
+        and:
+        client.getWorkspaceId() == '100'
+
+
+        when:
+        client = (TowerClient) factory.create(session)[0]
+        then:
+        session.getConfig() >> [tower: [enabled: true, workspaceId: '200']]
+        and:
+        client.getWorkspaceId() == '200'
+    }
+
 }

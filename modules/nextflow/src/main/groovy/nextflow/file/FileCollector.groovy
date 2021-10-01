@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -289,7 +289,7 @@ abstract class FileCollector implements Closeable {
             List<Path> items = (List<Path>)KryoHelper.deserialize(temp)
             def notFound = items.find { Path p -> !p.exists() }
             if( notFound ) throw new NoSuchFileException("Missing cached file: $notFound")
-            log.debug "Retrivied cached collect-files from: ${temp} -- cached files: ${items}"
+            log.debug "Retrieved cached collect-files from: ${temp} -- cached files: ${items}"
             return items
         }
         catch( NoSuchFileException e ) {

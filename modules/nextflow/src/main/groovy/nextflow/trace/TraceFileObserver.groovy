@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,10 +16,10 @@
  */
 
 package nextflow.trace
+
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardOpenOption
 import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
@@ -210,7 +210,7 @@ class TraceFileObserver implements TraceObserver {
             tracePath.rollFile()
 
         // create a new trace file
-        traceFile = new PrintWriter(Files.newBufferedWriter(tracePath, Charset.defaultCharset(), StandardOpenOption.APPEND, StandardOpenOption.CREATE))
+        traceFile = new PrintWriter(Files.newBufferedWriter(tracePath, Charset.defaultCharset()))
 
         // launch the agent
         writer = new Agent<PrintWriter>(traceFile)

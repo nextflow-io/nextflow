@@ -580,4 +580,28 @@ class ScriptDslTest extends Dsl2Spec {
                           sleeper2
                         '''.stripIndent()
     }
+
+    def 'should not conflict with private meta attribute' () {
+        when:
+        def result = dsl_eval '''
+         
+        process foo {
+          input: val x
+          output: val y 
+          exec: y = x
+        }
+       
+        workflow {
+            main: 
+              meta = channel.of('Hello')
+              foo(meta)
+            emit: 
+              foo.out
+        }
+        '''
+
+        then:
+        result.val == 'Hello'
+    }
+
 }

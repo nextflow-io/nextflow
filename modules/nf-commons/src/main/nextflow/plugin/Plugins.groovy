@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,6 +51,14 @@ class Plugins {
         INSTANCE.getExtensions(type)
     }
 
+    static <T> List<T> getPriorityExtensions(Class<T> type, String group=null) {
+        INSTANCE.getPriorityExtensions(type,group)
+    }
+
+    static <T> Set<T> getScopedExtensions(Class<T> type, String scope=null) {
+        INSTANCE.getScopedExtensions(type,scope)
+    }
+
     static <T> T getExtension(Class<T> type) {
         final allExtensions = INSTANCE.getExtensions(type)
         return allExtensions ? allExtensions.first() : null
@@ -58,5 +66,14 @@ class Plugins {
 
     static void pull(List<String> ids) {
         INSTANCE.pullPlugins(ids)
+    }
+
+    static boolean startIfMissing(String pluginId) {
+        if( INSTANCE ) {
+            return INSTANCE.startIfMissing(pluginId)
+        } else {
+            log.debug "Plugins subsystem not available - Ignoring installIfMissing('$pluginId')"
+            return false
+        }
     }
 }

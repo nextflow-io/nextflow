@@ -2,5 +2,5 @@ Manifest-Version: 1.0
 Plugin-Class: nextflow.ignite.IgnitePlugin
 Plugin-Id: nf-ignite
 Plugin-Provider: Seqera Labs
-Plugin-Version: 1.2.1
+Plugin-Version: 1.2.3
 Plugin-Requires: >=21.01.1-edge

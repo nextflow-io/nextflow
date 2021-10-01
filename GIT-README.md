@@ -96,3 +96,11 @@ https://gist.github.com/danieleggert/b029d44d4a54b328c0bac65d46ba4c65
 
 https://stackoverflow.com/questions/4515580/how-do-i-remove-the-old-history-from-a-git-repository
 
+# Pull master while in a another branch
+
+    git fetch origin master:master
+
+# Alternative to `git pull` 
+
+Use `git fetch && git rebase`
+

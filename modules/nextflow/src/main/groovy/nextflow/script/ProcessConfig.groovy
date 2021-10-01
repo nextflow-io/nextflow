@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -316,38 +316,69 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      *
      * @param configDirectives
      *      A map object modelling the setting defined defined by the user in the nextflow configuration file
-     * @param category
-     *      The type of annotation either {@code withLabel:} or {@code withName:}
-     * @param processLabel
-     *      A specific label representing the object holding the configuration setting to apply
+     * @param labels
+     *      All the labels representing the object holding the configuration setting to apply
      */
-    protected void applyConfigSelector(Map<String,?> configDirectives, String category, String target ) {
-        assert category in ['withLabel:','withName:']
-
+    protected void applyConfigSelectorWithLabels(Map<String,?> configDirectives, List<String> labels ) {
+        final prefix = 'withLabel:'
         for( String rule : configDirectives.keySet() ) {
-            if( !rule.startsWith(category) )
+            if( !rule.startsWith(prefix) )
                 continue
-            final isLabel = category=='withLabel:'
-            final pattern = rule.substring(category.size()).trim()
-            if( !matchesSelector(target, pattern) )
+            final pattern = rule.substring(prefix.size()).trim()
+            if( !matchesLabels(labels, pattern) )
                 continue
 
-            log.debug "Config settings `$rule` matches ${isLabel ? "label `$target` for process with name $processName" : "process $processName"}"
+            log.debug "Config settings `$rule` matches labels `${labels.join(',')}` for process with name $processName"
             def settings = configDirectives.get(rule)
             if( settings instanceof Map ) {
                 applyConfigSettings(settings)
             }
             else if( settings != null ) {
-                throw new ConfigParseException("Unknown config settings for ${isLabel?"process":'process with name'}: $target  -- settings=$settings ")
+                throw new ConfigParseException("Unknown config settings for process labeled ${labels.join(',')} -- settings=$settings ")
             }
         }
     }
 
-    static boolean matchesSelector( String target, String pattern ) {
+    static boolean matchesLabels( List<String> labels, String pattern ) {
         final isNegated = pattern.startsWith('!')
         if( isNegated )
             pattern = pattern.substring(1).trim()
-        return Pattern.compile(pattern).matcher(target).matches() ^ isNegated
+
+        final regex = Pattern.compile(pattern)
+        for (label in labels) {
+            if (regex.matcher(label).matches()) {
+                return !isNegated
+            }
+        }
+
+        return isNegated
+    }
+
+    protected void applyConfigSelectorWithName(Map<String,?> configDirectives, String target ) {
+        final prefix = 'withName:'
+        for( String rule : configDirectives.keySet() ) {
+            if( !rule.startsWith(prefix) )
+                continue
+            final pattern = rule.substring(prefix.size()).trim()
+            if( !matchesSelector(target, pattern) )
+                continue
+
+            log.debug "Config settings `$rule` matches process $processName"
+            def settings = configDirectives.get(rule)
+            if( settings instanceof Map ) {
+                applyConfigSettings(settings)
+            }
+            else if( settings != null ) {
+                throw new ConfigParseException("Unknown config settings for process with name: $target  -- settings=$settings ")
+            }
+        }
+    }
+
+    static boolean matchesSelector( String name, String pattern ) {
+        final isNegated = pattern.startsWith('!')
+        if( isNegated )
+            pattern = pattern.substring(1).trim()
+        return Pattern.compile(pattern).matcher(name).matches() ^ isNegated
     }
 
     /**
@@ -361,20 +392,18 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     void applyConfig(Map configProcessScope, String baseName, String simpleName, String fullyQualifiedName) {
         // -- Apply the directives defined in the config object using the`withLabel:` syntax
         final processLabels = this.getLabels() ?: ['']
-        for( String lbl : processLabels ) {
-            this.applyConfigSelector(configProcessScope, "withLabel:", lbl)
-        }
+        this.applyConfigSelectorWithLabels(configProcessScope, processLabels)
 
         // -- apply setting defined in the config file using the process base name
-        this.applyConfigSelector(configProcessScope, "withName:", baseName)
+        this.applyConfigSelectorWithName(configProcessScope, baseName)
 
         // -- apply setting defined in the config file using the process simple name
         if( simpleName && simpleName!=baseName )
-            this.applyConfigSelector(configProcessScope, "withName:", simpleName)
+            this.applyConfigSelectorWithName(configProcessScope, simpleName)
 
         // -- apply setting defined in the config file using the process qualified name (ie. with the execution scope)
         if( fullyQualifiedName && (fullyQualifiedName!=simpleName || fullyQualifiedName!=baseName) )
-            this.applyConfigSelector(configProcessScope, "withName:", fullyQualifiedName)
+            this.applyConfigSelectorWithName(configProcessScope, fullyQualifiedName)
 
         // -- Apply defaults
         this.applyConfigDefaults(configProcessScope)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,10 +45,15 @@ class PluginSpec implements CacheFunnel {
      * @param fqid The fully qualified plugin id
      * @return A {@link PluginSpec} representing the plugin
      */
-    static PluginSpec parse(String fqid) {
+    static PluginSpec parse(String fqid, DefaultPlugins defaultPlugins=null) {
         final tokens = fqid.tokenize('@') as List<String>
         final id = tokens[0]
-        return new PluginSpec(id, tokens[1])
+        final ver = tokens[1]
+        if( ver || defaultPlugins==null )
+            return new PluginSpec(id, ver)
+        if( defaultPlugins.hasPlugin(id) )
+            return defaultPlugins.getPlugin(id)
+        return new PluginSpec(id)
     }
 
     @Override

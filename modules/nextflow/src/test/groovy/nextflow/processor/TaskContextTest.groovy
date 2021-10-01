@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,13 +17,21 @@
 
 package nextflow.processor
 
+import java.nio.file.Files
 import java.nio.file.Paths
 
+import groovy.runtime.metaclass.DelegatingPlugin
+import groovy.runtime.metaclass.NextflowDelegatingMetaClass
 import groovy.transform.InheritConstructors
+import nextflow.Global
+import nextflow.NF
+import nextflow.NextflowMeta
+import nextflow.Session
 import nextflow.script.BaseScript
+import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptBinding
-import nextflow.script.BodyDef
+import nextflow.script.ScriptMeta
 import nextflow.util.BlankSeparatedList
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -34,6 +42,10 @@ import spock.lang.Specification
  */
 class TaskContextTest extends Specification {
 
+    def setupSpec() {
+        NF.init()
+    }
+    
     def 'should save and read TaskContext object' () {
 
         setup:
@@ -76,8 +88,8 @@ class TaskContextTest extends Specification {
 
         setup:
         def bind = new ScriptBinding([x:1, y:2])
-        def script = new MockScript(bind)
-
+        def script = Mock(BaseScript) { getBinding() >> bind }
+        and:
         def local = [p:3, q:4, path: Paths.get('some/path')]
         def delegate = new TaskContext( script, local, 'hola' )
 
@@ -138,6 +150,66 @@ class TaskContextTest extends Specification {
         holder.yyy == null
 
     }
+
+
+    def 'should resolve absolute paths as template paths' () {
+        given:
+        def temp = Files.createTempDirectory('test')
+        and:
+        Global.session = Mock(Session) { getBaseDir() >> temp  }
+        and:
+        def holder = [:]
+        def script = Mock(BaseScript)
+        TaskContext context = Spy(TaskContext, constructorArgs: [script, holder, 'proc_1'])
+
+        when:
+        // an absolute path is specified
+        def absolutePath = Paths.get('/some/template.txt')
+        def result = context.template(absolutePath)
+        then:
+        // the path is returned
+        result == absolutePath
+
+        when:
+        // an absolute string path is specified
+        result = context.template('/some/template.txt')
+        then:
+        // the path is returned
+        result == absolutePath
+
+        when:
+        // when a rel file path is matched against the project
+        // template dir, it's returned as the template file
+        temp.resolve('templates').mkdirs()
+        temp.resolve('templates/foo.txt').text = 'echo hello'
+        and:
+        result = context.template('foo.txt')
+        then:
+        result == temp.resolve('templates/foo.txt')
+
+        when:
+        // it's a DSL2 module
+        NextflowMeta.instance.enableDsl2()
+        NextflowDelegatingMetaClass.plugin = Mock(DelegatingPlugin) { operatorNames() >> new HashSet<String>() }
+        def meta = ScriptMeta.register(script)
+        meta.setScriptPath(temp.resolve('modules/my-module/main.nf'))
+        and:
+        // the module has a nested `templates` directory
+        temp.resolve('modules/my-module/templates').mkdirs()
+        temp.resolve('modules/my-module/templates/foo.txt').text = 'echo Hola'
+        and:
+        // the template is a relative path
+        result = context.template('foo.txt')
+        then:
+        // the path is resolved against the module templates
+        result == temp.resolve('modules/my-module/templates/foo.txt')
+
+        cleanup:
+        NextflowDelegatingMetaClass.plugin = null
+        NextflowMeta.instance.disableDsl2()
+        temp?.deleteDir()
+    }
+
 
 }
 

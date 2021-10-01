@@ -35,14 +35,14 @@ class AzureConfigTest extends Specification {
         and:
         def session = Mock(Session) {
             getConfig() >> [ azure:
-                                [storage:[
-                                    accountKey: KEY,
-                                    accountName: NAME,
-                                    fileStores: STORES,
-                                    sasToken: SAS
-                                ] ]]
+                                     [storage:[
+                                        accountKey: KEY,
+                                        accountName: NAME,
+                                        fileStores: STORES,
+                                        sasToken: SAS
+                                     ] ]]
         }
-        
+
         when:
         def cfg = AzConfig.getConfig(session)
         then:
@@ -53,17 +53,15 @@ class AzureConfigTest extends Specification {
         cfg.storage().getEnv() == [AZURE_STORAGE_ACCOUNT_KEY: KEY,
                                    AZURE_STORAGE_ACCOUNT_NAME: NAME,
                                    AZURE_STORAGE_SAS_TOKEN: SAS ]
-        
+
         and:
-        cfg.batch().accountKey == null
-        cfg.batch().accountName == null
         cfg.batch().endpoint == null
         cfg.batch().deleteJobsOnCompletion == null
         cfg.batch().deletePoolsOnCompletion == null
         cfg.batch().location == null
         cfg.batch().autoPoolMode == null
         cfg.batch().allowPoolCreation == null
-        cfg.batch().autoPoolOpts().vmType == 'Standard_A3'
+        cfg.batch().autoPoolOpts().vmType == 'Standard_D4_v3'
         cfg.batch().autoPoolOpts().vmCount == 1
         cfg.batch().autoPoolOpts().maxVmCount == 3
         cfg.batch().autoPoolOpts().scaleInterval == Duration.of('5 min')
@@ -87,17 +85,18 @@ class AzureConfigTest extends Specification {
                                              endpoint: ENDPOINT,
                                              location: LOCATION,
                                              autoPoolMode: true,
-                                             allowPoolCreation: true
-,                                            deleteJobsOnCompletion: false,
+                                             allowPoolCreation: true,                                            deleteJobsOnCompletion: false,
                                              deletePoolsOnCompletion: true,
                                              pools: [ myPool: [
-                                                         vmType: 'Foo_A1',
-                                                         autoScale: true,
-                                                         vmCount: 5,
-                                                         maxVmCount: 50,
-                                                         scaleFormula: 'x + y + z',
-                                                         scaleInterval:  '15 min',
-                                                         schedulePolicy: 'pack' ]]
+                                                     vmType: 'Foo_A1',
+                                                     autoScale: true,
+                                                     vmCount: 5,
+                                                     maxVmCount: 50,
+                                                     privileged: true,
+                                                     runAs: 'root',
+                                                     scaleFormula: 'x + y + z',
+                                                     scaleInterval:  '15 min',
+                                                     schedulePolicy: 'pack' ]]
                                      ]] ]
         }
 
@@ -121,10 +120,8 @@ class AzureConfigTest extends Specification {
         cfg.batch().pool('myPool').maxVmCount == 50
         cfg.batch().pool('myPool').scaleFormula == 'x + y + z'
         cfg.batch().pool('myPool').scaleInterval == Duration.of('15 min')
-        and:
-        cfg.storage().accountKey == null
-        cfg.storage().accountName == null
-        cfg.storage().sasToken == null
+        cfg.batch().pool('myPool').privileged == true
+        cfg.batch().pool('myPool').runAs == 'root'
     }
 
     def 'should get azure batch endpoint from account and location' () {

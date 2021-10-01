@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,6 +57,7 @@ allprojects {
     apply plugin: 'java-test-fixtures'
     apply plugin: 'idea'
     apply plugin: 'groovy'
+    apply plugin: 'java-library'
 
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
@@ -66,7 +67,6 @@ allprojects {
     }
 
     repositories {
-        jcenter()
         mavenCentral()
         maven { url 'https://repo.eclipse.org/content/groups/releases' }
         maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
@@ -88,8 +88,8 @@ allprojects {
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:1.11'
-        groovyDoc "org.codehaus.groovy:groovy-groovydoc:3.0.7"
-        groovyDoc "org.codehaus.groovy:groovy-ant:3.0.7"
+        groovyDoc "org.codehaus.groovy:groovy-groovydoc:3.0.9"
+        groovyDoc "org.codehaus.groovy:groovy-ant:3.0.9"
     }
 
     test {
@@ -112,11 +112,15 @@ allprojects {
         }
     }
 
+    tasks.withType(Jar) {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
+
     // patched as described here
     // http://forums.gradle.org/gradle/topics/gradle_task_groovydoc_failing_with_noclassdeffounderror
     tasks.withType(Groovydoc) {
         groovyClasspath = project.configurations.groovyDoc
-        includes  = ["nextflow/**"]
+        includes = ["nextflow/**"]
     }
 
     // Required to run tests on Java 9 and higher in compatibility mode
@@ -126,8 +130,12 @@ allprojects {
                     '--add-opens=java.base/java.lang=ALL-UNNAMED',
                     '--add-opens=java.base/java.io=ALL-UNNAMED',
                     '--add-opens=java.base/java.nio=ALL-UNNAMED',
+                    '--add-opens=java.base/java.net=ALL-UNNAMED',
                     '--add-opens=java.base/java.util=ALL-UNNAMED',
+                    '--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED',
+                    '--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED',
                     '--add-opens=java.base/sun.nio.ch=ALL-UNNAMED',
+                    '--add-opens=java.base/sun.nio.fs=ALL-UNNAMED',
                     '--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED',
                     '--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED',
                     '--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED',
@@ -200,18 +208,19 @@ task compile {
 
 def getRuntimeConfigs() {
     def names = subprojects
-            .findAll { prj -> prj.name in ['nextflow','nf-commons','nf-https'] }
+            .findAll { prj -> prj.name in ['nextflow','nf-commons','nf-httpfs'] }
             .collect { it.name }
 
     FileCollection result = null
     for( def it : names ) {
-        def cfg = project(it).configurations.getByName('runtime')
+        def cfg = project(it).configurations.getByName('runtimeClasspath')
         if( result==null )
             result = cfg
         else
             result += cfg
         // this include the module actual jar file
-        result = result + cfg.getOutgoing().getArtifacts().getFiles()
+        // note: migrating to gradle 7 does not work any more
+        //result = result + cfg.getOutgoing().getArtifacts().getFiles()
     }
     return result
 }
@@ -225,7 +234,8 @@ task exportClasspath {
         def home = System.getProperty('user.home')
         def all = getRuntimeConfigs()
         def libs = all.collect { File file ->  /*println file.canonicalPath.replace(home, '$HOME');*/ file.canonicalPath;  }
-        file('.launch.classpath').text = libs.join(':')
+        ['nextflow','nf-commons','nf-httfs'].each {libs << file("modules/$it/build/libs/${it}-${version}.jar").canonicalPath }
+        file('.launch.classpath').text = libs.unique().join(':')
     }
 }
 
@@ -249,7 +259,7 @@ configure(coreProjects) {
  * http://central.sonatype.org/pages/gradle.html
  */
 configure(coreProjects) {
-    apply plugin: 'maven'
+    apply plugin: 'maven-publish'
     apply plugin: 'signing'
 
     task javadocJar(type: Jar) {
@@ -262,61 +272,68 @@ configure(coreProjects) {
         from sourceSets.main.allSource
     }
 
-    artifacts {
-        archives javadocJar, sourcesJar
-    }
-
-    signing {
-        sign configurations.archives
-    }
-
-    uploadArchives {
-        repositories {
-            mavenDeployer {
-                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-
-                repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-                    authentication(userName: nexusUsername, password: nexusPassword)
-                }
-
-                snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-                    authentication(userName: nexusUsername, password: nexusPassword)
-                }
-
-                pom.project {
-                    name 'Nextflow'
-                    packaging 'jar'
-                    // optionally artifactId can be defined here
-                    description 'A DSL modelled around the UNIX pipe concept, that simplifies writing parallel and scalable pipelines in a portable manner'
-                    url 'http://www.nextflow.io'
-
-                    scm {
-                        connection 'scm:git:https://github.com/nextflow-io/nextflow'
-                        developerConnection 'scm:git:git@github.com:nextflow-io/nextflow.git'
-                        url 'https://github.com/nextflow-io/nextflow'
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                suppressPomMetadataWarningsFor('testFixturesApiElements')
+                suppressPomMetadataWarningsFor('testFixturesRuntimeElements')
+                from components.java
+                versionMapping {
+                    usage('java-api') {
+                        fromResolutionOf('runtimeClasspath')
                     }
-
+                    usage('java-runtime') {
+                        fromResolutionResult()
+                    }
+                }
+                pom {
+                    name = 'Nextflow'
+                    description = 'A DSL modelled around the UNIX pipe concept, that simplifies writing parallel and scalable pipelines in a portable manner'
+                    url = 'http://www.nextflow.io'
                     licenses {
                         license {
-                            name 'Apache 2.0'
-                            url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                            name = 'The Apache License, Version 2.0'
+                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
                         }
                     }
-
                     developers {
                         developer {
-                            id nexusUsername
-                            name nexusFullName
-                            email nexusEmail
+                            id = nexusUsername
+                            name = nexusFullName
+                            email = nexusEmail
                         }
                     }
+                    scm {
+                        connection = 'scm:git:https://github.com/nextflow-io/nextflow'
+                        developerConnection = 'scm:git:git@github.com:nextflow-io/nextflow.git'
+                        url = 'https://github.com/nextflow-io/nextflow'
+                    }
+                }
 
+                artifact sourcesJar
+                artifact javadocJar
+            }
+        }
+
+        repositories {
+            maven {
+                // change URLs to point to your repos, e.g. http://my.org/repo
+                def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+                def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
+                url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+                credentials(PasswordCredentials) {
+                    username nexusUsername
+                    password nexusPassword
                 }
             }
         }
     }
 
-    signArchives.onlyIf { enableSignArchives }
+    signing {
+        required { enableSignArchives }
+        sign publishing.publications.mavenJava
+    }
+
 }
 
 
@@ -344,7 +361,7 @@ task makeDigest { doLast {
 task upload {
     dependsOn compile
     dependsOn makeDigest
-    dependsOn coreProjects.uploadArchives
+    dependsOn coreProjects.publish
 }
 
 /*

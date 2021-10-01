@@ -29,7 +29,7 @@ class AzPathFactoryTest extends Specification {
         then:
         path instanceof AzPath
         (path as AzPath).containerName == CONTAINER
-        (path as AzPath).blobName() == 'foo/bar'
+        (path as AzPath).blobName() == BLOB
 
         when:
         def ret = AzPathFactory.getUriString(path)
@@ -37,8 +37,9 @@ class AzPathFactoryTest extends Specification {
         ret == AZ_URI
 
         where:
-        AZ_URI                  | CONTAINER     | BLOB
-        'az://my-data/foo/bar'  | 'my-data'     | 'foo/bar'
+        AZ_URI                          | CONTAINER     | BLOB
+        'az://my-data/foo/bar'          | 'my-data'     | 'foo/bar'
+        'az://my-data/data/*{1,2}.fq.gz'| 'my-data'     | 'data/*{1,2}.fq.gz'
     }
 
 }

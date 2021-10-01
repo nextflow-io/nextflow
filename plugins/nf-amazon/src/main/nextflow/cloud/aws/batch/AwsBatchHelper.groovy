@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -72,7 +72,7 @@ class AwsBatchHelper {
 
     private CloudMachineInfo getInfoByClusterAndTaskArn(String clusterArn, String taskArn) {
         final containerId = getContainerIdByClusterAndTaskArn(clusterArn, taskArn)
-        final instanceId = getInstanceIdByClusterAndContainerId(clusterArn, containerId)
+        final instanceId = containerId ? getInstanceIdByClusterAndContainerId(clusterArn, containerId) : null as String
         return instanceId ? getInfoByInstanceId(instanceId) : null
     }
 
@@ -113,7 +113,7 @@ class AwsBatchHelper {
             throw new IllegalStateException("Found more than one EC2 instance for containerId=$containerId")
     }
 
-    @Memoized(maxCacheSize = 100)
+    @Memoized(maxCacheSize = 1_000)
     private CloudMachineInfo getInfoByInstanceId(String instanceId) {
         assert instanceId
         final req = new DescribeInstancesRequest() .withInstanceIds(instanceId)

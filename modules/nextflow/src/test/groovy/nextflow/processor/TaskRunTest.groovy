@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -755,18 +755,18 @@ class TaskRunTest extends Specification {
         processor.name = 'Hello'
         and:
         def context = Mock(TaskContext)
-        def binding = new Binding(x:1, y:2, params: [alpha: 'one'], 'workDir': Paths.get('/work/dir'), baseDir: Paths.get('/base/dir'))
+        def binding = new Binding(x:1, y:2, params: [alpha: 'one'], 'workDir': Paths.get('/work/dir'), baseDir: Paths.get('/base/dir'), projectDir: Paths.get('/prj/dir'))
         and:
         def task = Spy(TaskRun)
         task.context = context
         task.processor = processor
-        task.getVariableNames() >> ['q', 'x', 'y', 'params.alpha', 'params.beta.delta', 'workDir', 'baseDir']
+        task.getVariableNames() >> ['q', 'x', 'y', 'params.alpha', 'params.beta.delta', 'workDir', 'baseDir', 'projectDir']
 
         when:
         def result = task.getGlobalVars(binding)
         then:
         // note: since 'q' is include in the task local scope, is not returned in the var list
-        result == [x:1, y:2, 'params.alpha': 'one', 'params.beta.delta': null , baseDir: '/base/dir', workDir: '/work/dir']
+        result == [x:1, y:2, 'params.alpha': 'one', 'params.beta.delta': null , baseDir: '/base/dir', workDir: '/work/dir', projectDir: '/prj/dir']
 
         when:
         result = task.getGlobalVars(binding)
@@ -774,7 +774,7 @@ class TaskRunTest extends Specification {
         1 * context.isLocalVar('x') >> true
         1 * context.isLocalVar('y') >> true
         and:
-        result == ['params.alpha': 'one', 'params.beta.delta': null , baseDir: '/base/dir', workDir: '/work/dir']
+        result == ['params.alpha': 'one', 'params.beta.delta': null , baseDir: '/base/dir', workDir: '/work/dir', projectDir: '/prj/dir']
     }
 
     def 'should fetch script variable names' () {

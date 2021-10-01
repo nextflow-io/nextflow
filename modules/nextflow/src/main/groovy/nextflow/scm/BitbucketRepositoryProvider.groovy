@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,7 +51,8 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
 
     @Override
     String getContentUrl( String path ) {
-        "${config.endpoint}/api/2.0/repositories/$project/src/${getMainBranch()}/$path"
+        final ref = revision ?: getMainBranch()
+        return "${config.endpoint}/api/2.0/repositories/$project/src/$ref/$path"
     }
 
     private String getMainBranchUrl() {

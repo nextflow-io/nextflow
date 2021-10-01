@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -408,11 +408,14 @@ class ConfigBuilderTest extends Specification {
 
     def 'params-file should override params in the config file' () {
         setup:
+        def baseDir = Paths.get('/my/base/dir')
+        and:
         def params = Files.createTempFile('test', '.yml')
         params.text = '''
             alpha: "Hello" 
             beta: "World" 
             omega: "Last"
+            theta: "${baseDir}/something"
             '''.stripIndent()
         and:
         def file = Files.createTempFile('test',null)
@@ -434,7 +437,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions()
         def run = new CmdRun(paramsFile: params)
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).setBaseDir(baseDir).buildGivenFiles(file)
 
         then:
         result.params.alpha == 'Hello'  // <-- params defined in the params-file overrides the ones in the config file
@@ -442,6 +445,7 @@ class ConfigBuilderTest extends Specification {
         result.params.gamma == 'Hello'  // <--   as above
         result.params.omega == 'Last'
         result.params.delta == 'Foo'
+        result.params.theta == "$baseDir/something"
         result.process.publishDir == [path: 'Hello']
 
         cleanup:
@@ -1872,7 +1876,99 @@ class ConfigBuilderTest extends Specification {
         [foo:1, bar:[:]]            | [bar: [x:10, y:20]]           | [foo: 1, bar: [x:10, y:20]]
         [foo:1, bar:[x:1, y:2]]     | [bar: [x:10, y:20]]           | [foo: 1, bar: [x:10, y:20]]
         [foo:1, bar:[x:1, y:2]]     | [foo: 2, bar: [x:10, y:20]]   | [foo: 2, bar: [x:10, y:20]]
+    }
 
+    def 'prevent config side effects' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def config = folder.resolve('nf.config')
+        config.text = '''\
+        params.test.foo = "foo_def"
+        params.test.bar = "bar_def"        
+        '''.stripIndent()
+
+        when:
+        def cfg1 = new ConfigBuilder()
+                .setOptions( new CliOptions(userConfig: [config.toString()]))
+                .build()
+        then:
+        cfg1.params.test.foo == "foo_def"
+        cfg1.params.test.bar == "bar_def"
+
+        
+        when:
+        def cfg2 = new ConfigBuilder()
+                .setOptions( new CliOptions(userConfig: [config.toString()]))
+                .setCmdRun( new CmdRun(params: ['test.foo': 'CLI_FOO'] ))
+                .build()
+        then:
+        cfg2.params.test.foo == "CLI_FOO"
+        cfg2.params.test.bar == "bar_def"
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'parse nested json' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def config = folder.resolve('nf.json')
+        config.text = '''\
+        {
+            "title": "something",
+            "nested": {
+                "name": "Mike",
+                "and": {
+                    "more": "nesting",
+                    "still": {
+                        "another": "layer"
+                    }
+                }
+            }
+        }
+        '''.stripIndent()
+
+        when:
+        def cfg1 = new ConfigBuilder().setCmdRun(new CmdRun(paramsFile: config.toString())).build()
+
+        then:
+        cfg1.params.title == "something"
+        cfg1.params.nested.name == 'Mike'
+        cfg1.params.nested.and.more == 'nesting'
+        cfg1.params.nested.and.still.another == 'layer'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'parse nested yaml' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def config = folder.resolve('nf.yaml')
+        config.text = '''\
+            title: "something"
+            nested: 
+              name: "Mike"
+              and:
+                more: nesting
+                still:
+                  another: layer      
+        '''.stripIndent()
+
+        when:
+        def cfg1 = new ConfigBuilder().setCmdRun(new CmdRun(paramsFile: config.toString())).build()
+
+        then:
+        cfg1.params.title == "something"
+        cfg1.params.nested.name == 'Mike'
+        cfg1.params.nested.and.more == 'nesting'
+        cfg1.params.nested.and.still.another == 'layer'
+
+        cleanup:
+        folder?.deleteDir()
     }
 
 }

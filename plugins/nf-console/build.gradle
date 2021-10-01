@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,11 +38,11 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-api:1.7.10'
     compileOnly 'org.pf4j:pf4j:3.4.1'
 
-    compile("org.codehaus.groovy:groovy-console:3.0.7") { transitive=false }
-    compile("org.codehaus.groovy:groovy-swing:3.0.7")  { transitive=false }
+    api("org.codehaus.groovy:groovy-console:3.0.9") { transitive=false }
+    api("org.codehaus.groovy:groovy-swing:3.0.9")  { transitive=false }
 
     testImplementation project(':nextflow')
-    testImplementation "org.codehaus.groovy:groovy:3.0.7"
-    testImplementation "org.codehaus.groovy:groovy-nio:3.0.7"
+    testImplementation "org.codehaus.groovy:groovy:3.0.9"
+    testImplementation "org.codehaus.groovy:groovy-nio:3.0.9"
 }
 

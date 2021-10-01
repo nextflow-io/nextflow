@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,6 +47,8 @@ class GithubUploader extends DefaultTask {
     @Input final Property<String> repo = project.objects.property(String)
 
     @Input final Property<String> release = project.objects.property(String)
+
+    @Input final Property<Boolean> unstable = project.objects.property(Boolean)
 
     @Input String owner
 
@@ -119,7 +121,7 @@ class GithubUploader extends DefaultTask {
         }
         else {
             logger.quiet("Uploading ${sourceFile} → github.com://$owner/${repo.get()}")
-            final rel = client.getRelease(release.get()) ?: client.createRelease(release.get())
+            final rel = client.getRelease(release.get()) ?: client.createRelease(release.get(), unstable.get())
             final releaseId = (rel.id as Long).toString()
             client.uploadReleaseAsset(releaseId, sourceFile, mime(sourceFile.name))
         }

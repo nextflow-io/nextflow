@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,10 +16,12 @@
  */
 
 package nextflow.util
+
+import java.nio.file.FileSystems
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
-import nextflow.file.FileHelper
+import nextflow.file.FileSystemPathFactory
 /**
  * A trie data structure specialised to find the longest common paths
  * in a given list of paths
@@ -45,7 +47,7 @@ class PathTrie {
      * @return A {@code Trie<String>} for the given path item
      */
     protected Trie<String> getOrCreate( String item ) {
-        def found = paths.find { Trie it -> it.vertex == item }
+        def found = paths.find { Trie it -> it.node == item }
         if( !found ) {
             found = new Trie<String>(item)
             paths << found
@@ -58,22 +60,17 @@ class PathTrie {
      *
      * @param path The path to add, it can an absolute or relative path
      */
-    void add( Path path )  {
+    void add( String path )  {
         assert path
-
-        List<String> tokens = path.collect { Path it -> it.name }
-        if( !tokens )
-            return
-
-        def head = tokens.head()
-        if( path.isAbsolute() )
-            head = PATH_SEP + head
-
-        def tail = tokens.tail()
+        if( path=='/' ) return
+        
+        def splitter = PathSplitter.parse(path)
+        def head = splitter.head
+        def tail = splitter.tail
         // add an extra entry to mark the end of a path
         if( tail ) tail.add(END_PATH)
         else tail = [END_PATH]
-        getOrCreate(head).append(tail)
+        getOrCreate(head).addPath(tail)
     }
 
     /**
@@ -82,7 +79,7 @@ class PathTrie {
      * @param file
      */
     void add( File file ) {
-        add(file.toPath())
+        add(file.toString())
     }
 
     /**
@@ -90,8 +87,11 @@ class PathTrie {
      *
      * @param path
      */
-    void add( String path ) {
-        add( FileHelper.asPath(path) )
+    void add( Path path ) {
+        final str = path.fileSystem == FileSystems.default
+                ? path.toString()
+                : FileSystemPathFactory.getUriString(path)
+        add( str )
     }
 
     /**
@@ -116,11 +116,11 @@ class PathTrie {
     List<String> longest() {
 
         List<String> result = new LinkedList<String>()
-        paths.each {
+        for( Trie<String> it : paths ) {
 
             List<String> tokens = it.longest()
             if( !tokens )
-                return
+                break
 
             // remove the entry marking the end of the path
             def last = tokens.size()-1
@@ -132,4 +132,15 @@ class PathTrie {
         return result
     }
 
+    List<String> traverse() {
+        List<String> result = new LinkedList<String>()
+        for( Trie<String> it : paths ) {
+            def allTrails = it.traverse(END_PATH)
+            for( List<String> t : allTrails ) {
+                result.add( t.join('/') )
+            }
+        }
+        return result
+    }
 }
+

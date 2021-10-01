@@ -23,7 +23,7 @@ nxf_cp_retry() {
       then
         break
       fi
-      sleep $timeout
+      nxf_sleep $timeout
       attempt=$(( attempt + 1 ))
       timeout=$(( timeout * 2 ))
     done
@@ -33,7 +33,7 @@ nxf_parallel() {
     IFS=$'\n'
     local cmd=("$@")
     local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
-    local max=$(if (( cpus>16 )); then echo 16; else echo $cpus; fi)
+    local max=$(if (( cpus>4 )); then echo 4; else echo $cpus; fi)
     local i=0
     local pid=()
     (
@@ -46,7 +46,7 @@ nxf_parallel() {
         pid=("${copy[@]}")
 
         if ((${#pid[@]}>=$max)); then
-          sleep 0.2
+          nxf_sleep 0.2
         else
           eval "${cmd[$i]}" &
           pid+=($!)
@@ -61,18 +61,17 @@ nxf_parallel() {
 }
 
 # google storage helper
+gs_opts=('-q' '-m' '-o' 'GSUtil:parallel_thread_count=1' '-o' 'GSUtil:sliced_object_download_max_components=8')
+
 nxf_gs_download() {
     local source=$1
     local target=$2
     local project=$3
     local basedir=$(dirname $2)
     local ret
-    local opts="-m -q"
-    local opts
+    local opts=("${gs_opts[@]}")
     if [[ $project ]]; then
-      opts=('-q' '-m' '-u' "$project")
-    else
-      opts=('-q' '-m')
+      opts+=('-u' "$project")
     fi
 
     ## download assuming it's a file download
@@ -91,7 +90,11 @@ nxf_gs_download() {
 nxf_gs_upload() {
     local name=$1
     local target=$2
-    gsutil -m -q cp -R "$name" "$target/$name"
+    gsutil ${gs_opts[@]} cp -R "$name" "$target/$name"
+}
+
+nxf_sleep() {
+  sleep $1 2>/dev/null || sleep 1;
 }
 
 nxf_date() {
@@ -131,6 +134,26 @@ nxf_mktemp() {
     fi
 }
 
+nxf_fs_copy() {
+  local source=$1
+  local target=$2
+  local basedir=$(dirname $1)
+  mkdir -p $target/$basedir
+  cp -fRL $source $target/$basedir
+}
+
+nxf_fs_move() {
+  local source=$1
+  local target=$2
+  local basedir=$(dirname $1)
+  mkdir -p $target/$basedir
+  mv -f $source $target/$basedir
+}
+
+nxf_fs_rsync() {
+  rsync -rRl $1 $2
+}
+
 on_exit() {
     exit_status=${nxf_main_ret:=$?}
     printf $exit_status > {{folder}}/.exitcode
@@ -154,7 +177,7 @@ nxf_stage() {
     true
     # stage input files
     echo start | gsutil -q cp  -c - gs://bucket/work/dir/.command.begin
-    downloads=()
+    downloads=(true)
     downloads+=("nxf_gs_download gs://bucket/work/dir/.command.sh .command.sh ")
     nxf_parallel "${downloads[@]}"
 }

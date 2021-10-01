@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -63,7 +63,7 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
     CharliecloudBuilder build(StringBuilder result) {
         assert image
 
-        result << 'ch-run --no-home --unset-env="*" -w '
+        result << 'ch-run --no-home --unset-env="*" -w --set-env=' + image + '/ch/environment '
 
         appendEnv(result)
 
@@ -133,7 +133,7 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
     }
 
     @Override
-    protected CharSequence makeEnv( env, StringBuilder result = new StringBuilder() ) {
+    protected StringBuilder makeEnv( env, StringBuilder result = new StringBuilder() ) {
 
         if( env instanceof Map ) {
             short index = 0

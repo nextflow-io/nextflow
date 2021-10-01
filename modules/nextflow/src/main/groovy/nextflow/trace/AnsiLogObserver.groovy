@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,7 +38,7 @@ import static org.fusesource.jansi.Ansi.ansi
 @CompileStatic
 class AnsiLogObserver implements TraceObserver {
 
-    static final private String NEWLINE = System.getProperty("line.separator")
+    static final private String NEWLINE = '\n'
 
     static class Event {
         String message
@@ -116,6 +116,8 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     synchronized void appendInfo(String message) {
+        if( message==null )
+            return
         boolean warn
         if( isHashLogPrefix(message) && !(warn=message.indexOf('NOTE:')>0) )
             return
@@ -134,6 +136,8 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     synchronized void appendWarning(String message) {
+        if( message==null )
+            return
         if( !started || !statsObserver.hasProgressRecords() )
             printAnsi(message, Color.YELLOW)
         else {
@@ -143,6 +147,8 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     synchronized void appendError(String message) {
+        if( message==null )
+            return
         if( !started || !statsObserver.hasProgressRecords() ) {
             printAnsi(message, Color.RED)
         }
@@ -154,6 +160,8 @@ class AnsiLogObserver implements TraceObserver {
     }
 
     synchronized void appendSticky(String message) {
+        if( message==null )
+            return
         if( !started || !statsObserver.hasProgressRecords() )
             printAnsi(message, Color.GREEN)
         else {

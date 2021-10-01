@@ -1,5 +1,5 @@
 ##
-##  Copyright 2020, Seqera Labs
+##  Copyright 2020-2021, Seqera Labs
 ##  Copyright 2013-2019, Centre for Genomic Regulation (CRG)
 ##
 ##  Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +24,10 @@ NXF_ENTRY=${1:-nxf_main}
 {{trace_script}}
 {{helpers_script}}
 {{container_env}}
+
+nxf_sleep() {
+  sleep $1 2>/dev/null || sleep 1;
+}
 
 nxf_date() {
     ## should return the current timestamp in milliseconds
@@ -64,6 +68,26 @@ nxf_mktemp() {
     if [[ $(uname) = Darwin ]]; then mktemp -d $base/nxf.XXXXXXXXXX
     else TMPDIR="$base" mktemp -d -t nxf.XXXXXXXXXX
     fi
+}
+
+nxf_fs_copy() {
+  local source=$1
+  local target=$2
+  local basedir=$(dirname $1)
+  mkdir -p $target/$basedir
+  cp -fRL $source $target/$basedir
+}
+
+nxf_fs_move() {
+  local source=$1
+  local target=$2
+  local basedir=$(dirname $1)
+  mkdir -p $target/$basedir
+  mv -f $source $target/$basedir
+}
+
+nxf_fs_rsync() {
+  rsync -rRl $1 $2
 }
 
 on_exit() {

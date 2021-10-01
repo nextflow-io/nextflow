@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +21,7 @@ import java.io.File;
 import java.nio.file.Path;
 
 import groovy.lang.MetaClass;
+import nextflow.Channel;
 import nextflow.file.FileHelper;
 
 /**
@@ -58,8 +59,20 @@ public class NextflowDelegatingMetaClass extends groovy.lang.DelegatingMetaClass
         else if( plugin!=null && plugin.isExtensionMethod(obj,methodName) ) {
             return plugin.invokeExtensionMethod(obj, methodName, args);
         }
+        else if( obj instanceof ChannelFactory ) {
+            return ((ChannelFactory) obj).invokeExtensionMethod(methodName, args);
+        }
 
         return delegate.invokeMethod(obj, methodName, args);
+    }
+
+    @Override
+    public Object getProperty(Object object, String property) {
+        // check if the property name is
+        ChannelFactory ext = Channel.class.equals(object) && plugin!=null
+                ? plugin.getChannelFactory(property)
+                : null;
+        return ext != null ? ext : delegate.getProperty(object, property);
     }
 
 }

@@ -20,6 +20,7 @@ package nextflow.script
 import java.nio.file.Files
 
 import nextflow.exception.DuplicateModuleIncludeException
+import nextflow.exception.MissingProcessException
 import spock.lang.Timeout
 import test.Dsl2Spec
 import test.MockScriptRunner
@@ -946,7 +947,6 @@ class ScriptIncludesTest extends Dsl2Spec {
         true
     }
 
-
     def 'should not allow unwrapped include' () {
         given:
         def folder = TestHelper.createInMemTempDir()
@@ -981,6 +981,34 @@ class ScriptIncludesTest extends Dsl2Spec {
         then:
         def e = thrown(DeprecationException)
         e.message == "Unwrapped module inclusion is deprecated -- Replace `include foo from './MODULE/PATH'` with `include { foo } from './MODULE/PATH'`"
+
+    }
+
+    def 'should not allow include nested within a workflow' () {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def MODULE = folder.resolve('module.nf')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = '''
+        
+        process foo {
+          script:
+          /echo hello/
+        }
+        '''
+
+        SCRIPT.text = """
+        workflow { 
+            include { foo } from "./module.nf"
+            foo()
+        }
+        """
+
+        when:
+        new MockScriptRunner().setScript(SCRIPT).execute()
+        then:
+        def e = thrown(MissingProcessException)
 
     }
 }

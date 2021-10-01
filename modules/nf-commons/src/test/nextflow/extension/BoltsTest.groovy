@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -331,6 +331,38 @@ class BoltsTest extends Specification {
         and:
         Bolts.redact('foo', 3, 'xx') == 'xx'
         Bolts.redact('12345', 3, 'xx') == '12xx'
+    }
+
+    def 'should deep clone obj' () {
+        given:
+        Map map = [foo: 1, bar: [x: 2, y: 3]]
+
+        when:
+        def copy = Bolts.deepClone0((Serializable)map)
+        then:
+        copy == map
+
+        when:
+        copy.bar.x = 20
+        then:
+        copy.bar.x == 20
+        map.bar.x == 2
+    }
+
+    def 'should deep clone map' () {
+        given:
+        Map map = [foo: 1, bar: [x: 2, y: 3]]
+
+        when:
+        def copy = Bolts.deepClone((Map)map)
+        then:
+        copy == map
+
+        when:
+        copy.bar.x = 20
+        then:
+        copy.bar.x == 20
+        map.bar.x == 2
     }
 
 }

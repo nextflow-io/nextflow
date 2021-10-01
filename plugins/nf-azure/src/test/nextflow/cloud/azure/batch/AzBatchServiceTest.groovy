@@ -1,5 +1,6 @@
 package nextflow.cloud.azure.batch
 
+import com.microsoft.azure.batch.protocol.models.CloudPool
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzPoolOpts
 import nextflow.processor.TaskConfig
@@ -137,6 +138,11 @@ class AzBatchServiceTest extends Specification {
         ret = svc.findBestVm('northeurope', 4, null, 'standard_a?')
         then:
         ret.name == 'Standard_A6'
+
+        when:
+        ret = svc.findBestVm('northeurope', 4, MemoryUnit.of(7168), 'standard_a2,standard_a*')
+        then:
+        ret.name == 'Standard_A3'
     }
 
     def 'should match familty' () {
@@ -313,7 +319,7 @@ class AzBatchServiceTest extends Specification {
         then:
         1 * svc.guessBestVm(LOC, CPUS, MEM, TYPE) >> VM
         and:
-        spec.poolId == 'nf-pool-175d746e021c0fd88f2ed09029a8c6f8-Standard_X1'
+        spec.poolId == 'nf-pool-a5e122212f86de03464327e6d525eb73-Standard_X1'
 
     }
 
@@ -384,4 +390,37 @@ class AzBatchServiceTest extends Specification {
         then:
         0 * svc.cleanupPools() >> null
     }
+
+    def 'should get spec from pool config' () {
+        given:
+        def POOL_ID = 'foo'
+        def CONFIG = [batch:[location: 'northeurope', pools: [(POOL_ID): [vmType: 'Standard_D2_v2']]]]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+
+        when:
+        def result = svc.specFromPoolConfig(POOL_ID)
+        then:
+        result.vmType.name == 'Standard_D2_v2'
+        result.vmType.numberOfCores == 2
+        and:
+        0 * svc.getPool(_) >> null
+    }
+
+    def 'should get spec from existing pool' () {
+        given:
+        def POOL_ID = 'foo'
+        def CONFIG = [batch:[location: 'northeurope']]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+
+        when:
+        def result = svc.specFromPoolConfig(POOL_ID)
+        then:
+        1 * svc.getPool(_) >> new CloudPool(vmSize: 'Standard_D2_v2')
+        and:        
+        result.vmType.name == 'Standard_D2_v2'
+        result.vmType.numberOfCores == 2
+    }
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,12 +32,30 @@ class PodVolumeClaimTest extends Specification {
         then:
         vol1.claimName == 'foo'
         vol1.mountPath == '/bar'
+        vol1.readOnly == false
 
         when:
         def vol2 = new PodVolumeClaim(volumeClaim: 'alpha', mountPath: '/gamma')
         then:
         vol2.claimName == 'alpha'
         vol2.mountPath == '/gamma'
+        vol2.readOnly == false
+
+        when:
+        def vol3 = new PodVolumeClaim('aaa', '/bbb', null, true)
+
+        then:
+        vol3.claimName == 'aaa'
+        vol3.mountPath == '/bbb'
+        vol3.readOnly == true
+
+        when:
+        def vol4 = new PodVolumeClaim(volumeClaim: 'ccc', mountPath: '/ddd', readOnly: true)
+
+        then:
+        vol4.claimName == 'ccc'
+        vol4.mountPath == '/ddd'
+        vol4.readOnly == true
 
     }
 

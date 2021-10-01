@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,7 @@
 package nextflow.k8s.client
 
 import groovy.transform.CompileStatic
+import nextflow.exception.ProcessException
 import nextflow.exception.ShowOnlyExceptionMessage
 
 /**
@@ -28,7 +29,7 @@ import nextflow.exception.ShowOnlyExceptionMessage
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class PodUnschedulableException extends Exception implements ShowOnlyExceptionMessage {
+class PodUnschedulableException extends ProcessException implements ShowOnlyExceptionMessage {
 
     PodUnschedulableException(String message, Throwable cause) {
         super(message,cause)

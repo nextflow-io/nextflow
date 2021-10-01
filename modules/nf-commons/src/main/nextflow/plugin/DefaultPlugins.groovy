@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,11 +56,11 @@ class DefaultPlugins {
     }
 
     boolean hasPlugin(String pluginId) {
-        plugins.containsKey(pluginId)
+        return plugins.containsKey(pluginId)
     }
 
-    List getPlugins() {
-        new ArrayList(plugins.values())
+    List<PluginSpec> getPlugins() {
+        return new ArrayList(plugins.values())
     }
 
 }

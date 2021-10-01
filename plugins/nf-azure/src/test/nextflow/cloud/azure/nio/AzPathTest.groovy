@@ -18,7 +18,11 @@ class AzPathTest extends Specification {
         def container = path.tokenize('/')[0]
         def fs = cache.get(container)
         if( !fs ) {
-            fs = new AzFileSystem(Spy(AzFileSystemProvider), GroovyMock(BlobServiceClient), container)
+            def provider = Spy(AzFileSystemProvider)
+            provider.@env = [
+                    (AzFileSystemProvider.AZURE_STORAGE_ACCOUNT_NAME):'foo',
+                    (AzFileSystemProvider.AZURE_STORAGE_ACCOUNT_KEY):'12345' ]
+            fs = new AzFileSystem(provider, GroovyMock(BlobServiceClient), container)
             cache.put(container, fs)
         }
         return new AzPath(fs, path)

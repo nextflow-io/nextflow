@@ -13,7 +13,7 @@ be extremely useful to package the binary dependencies of a script into a standa
 executed on any platform supporting the Charliecloud engine.
 
 .. note::
-    This feature requires Nextflow version ``20.12.0-edge`` or later.
+    This feature requires Nextflow version ``21.03.0-edge`` or later and Charliecloud ``v0.22` or later.
 
 .. warning::
     This is an incubating feature. The use in production environment is not recommended.
@@ -21,7 +21,7 @@ executed on any platform supporting the Charliecloud engine.
 Prerequisites
 ==============
 
-You will need Charliecloud version ``0.21`` or later installed on your execution environment e.g. your computer or a
+You will need Charliecloud version ``0.22`` or later installed on your execution environment e.g. your computer or a
 distributed cluster, depending on where you want to run your pipeline.
 
 How it works
@@ -81,18 +81,6 @@ Whereas this would pull from Docker Hub::
     process.container = 'nextflow/examples:latest'
     charliecloud.enabled = true
 
-Container environment
-=====================
-
-A current limitation is that Charliecloud does not inherit environment variables specified in Docker ENV layers.
-This means that if a container has software dependencies installed at a location that is not in the host system's
-``$PATH``, it needs to be added explicitly using the :ref:`env scope <config-env>`.
-
-For example::
-
-    process.container = 'https://quay.io/biocontainers/multiqc:1.3--py35_2'
-    charliecloud.enabled = true
-    env.PATH = '/opt/conda/bin:$PATH'
 
 Multiple containers
 ===================

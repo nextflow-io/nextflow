@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -122,7 +122,7 @@ class PhaseOp {
      *
      */
     @PackageScope
-    static final List phaseImpl( Map<Object,Map<Integer,List>> buffer, int size, int index, def item, Closure mapper, boolean isCross = false) {
+    static final List phaseImpl( Map<Object,Map<Integer,List>> buffer, int size, int index, Object item, Closure mapper, boolean isCross = false) {
 
         // The 'buffer' structure track the values emitted by the channel, it is arranged in the following manner:
         //
@@ -170,7 +170,7 @@ class PhaseOp {
             def entry = (Map.Entry<Integer,List>)itr.next()
 
             def list = entry.getValue()
-            result << list[0]
+            result.add(list[0])
 
             // do not remove the first element when it is 'cross' op
             if( isCross && entry.getKey() == 0 )

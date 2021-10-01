@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,15 +17,13 @@
 
 package nextflow.cloud.aws.batch
 
-
-import nextflow.util.Duration
-import spock.lang.Specification
-
 import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.Session
 import nextflow.processor.TaskBean
+import nextflow.util.Duration
+import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -78,7 +76,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                       then
                         break
                       fi
-                      sleep \$timeout
+                      nxf_sleep \$timeout
                       attempt=\$(( attempt + 1 ))
                       timeout=\$(( timeout * 2 ))
                     done
@@ -88,7 +86,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                     IFS=$'\\n\'
                     local cmd=("$@")
                     local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
-                    local max=$(if (( cpus>16 )); then echo 16; else echo $cpus; fi)
+                    local max=$(if (( cpus>4 )); then echo 4; else echo $cpus; fi)
                     local i=0
                     local pid=()
                     (
@@ -101,7 +99,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                         pid=("${copy[@]}")
                 
                         if ((${#pid[@]}>=$max)); then
-                          sleep 0.2
+                          nxf_sleep 0.2
                         else
                           eval "${cmd[$i]}" &
                           pid+=($!)
@@ -210,7 +208,7 @@ class AwsBatchScriptLauncherTest extends Specification {
 
         binding.stage_inputs == '''\
                 # stage input files
-                downloads=()
+                downloads=(true)
                 rm -f .command.sh
                 rm -f .command.run
                 rm -f .command.in
@@ -253,7 +251,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                           then
                             break
                           fi
-                          sleep \$timeout
+                          nxf_sleep \$timeout
                           attempt=\$(( attempt + 1 ))
                           timeout=\$(( timeout * 2 ))
                         done
@@ -263,7 +261,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                         IFS=$'\\n\'
                         local cmd=("$@")
                         local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
-                        local max=$(if (( cpus>16 )); then echo 16; else echo $cpus; fi)
+                        local max=$(if (( cpus>4 )); then echo 4; else echo $cpus; fi)
                         local i=0
                         local pid=()
                         (
@@ -276,7 +274,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                             pid=("${copy[@]}")
                     
                             if ((${#pid[@]}>=$max)); then
-                              sleep 0.2
+                              nxf_sleep 0.2
                             else
                               eval "${cmd[$i]}" &
                               pid+=($!)
@@ -369,7 +367,7 @@ class AwsBatchScriptLauncherTest extends Specification {
 
         binding.stage_inputs == '''\
                 # stage input files
-                downloads=()
+                downloads=(true)
                 rm -f .command.sh
                 downloads+=("nxf_cp_retry nxf_s3_download s3://bucket/work/.command.sh .command.sh")
                 nxf_parallel "${downloads[@]}"
@@ -394,7 +392,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                           then
                             break
                           fi
-                          sleep \$timeout
+                          nxf_sleep \$timeout
                           attempt=\$(( attempt + 1 ))
                           timeout=\$(( timeout * 2 ))
                         done
@@ -404,7 +402,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                         IFS=$'\\n\'
                         local cmd=("$@")
                         local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
-                        local max=$(if (( cpus>16 )); then echo 16; else echo $cpus; fi)
+                        local max=$(if (( cpus>4 )); then echo 4; else echo $cpus; fi)
                         local i=0
                         local pid=()
                         (
@@ -417,7 +415,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                             pid=("${copy[@]}")
                     
                             if ((${#pid[@]}>=$max)); then
-                              sleep 0.2
+                              nxf_sleep 0.2
                             else
                               eval "${cmd[$i]}" &
                               pid+=($!)
@@ -455,6 +453,140 @@ class AwsBatchScriptLauncherTest extends Specification {
                     }
                     
                     '''.stripIndent(true)
+
+    }
+
+    def 'should aws cli native retry'() {
+
+        /*
+         * simple bash run
+         */
+        when:
+        def bucket = Paths.get('/bucket/work')
+        def opts = new AwsOptions()
+        opts.maxTransferAttempts = 3
+        opts.retryMode = 'adaptive'
+        opts.delayBetweenAttempts = '9 sec' as Duration
+
+        def binding = new AwsBatchScriptLauncher([
+                name: 'Hello 1',
+                workDir: bucket,
+                // targetDir: bucket,
+                script: 'echo Hello world!',
+        ] as TaskBean, opts) .makeBinding()
+
+        then:
+
+        binding.stage_inputs == '''\
+                # stage input files
+                downloads=(true)
+                rm -f .command.sh
+                downloads+=("nxf_s3_download s3://bucket/work/.command.sh .command.sh")
+                nxf_parallel "${downloads[@]}"
+                '''.stripIndent()
+
+        binding.helpers_script == '''\
+                    # bash helper functions
+                    nxf_cp_retry() {
+                        local max_attempts=3
+                        local timeout=9
+                        local attempt=0
+                        local exitCode=0
+                        while (( \$attempt < \$max_attempts ))
+                        do
+                          if "\$@"
+                            then
+                              return 0
+                          else
+                            exitCode=\$?
+                          fi
+                          if [[ \$exitCode == 0 ]]
+                          then
+                            break
+                          fi
+                          nxf_sleep \$timeout
+                          attempt=\$(( attempt + 1 ))
+                          timeout=\$(( timeout * 2 ))
+                        done
+                    }
+                    
+                    nxf_parallel() {
+                        IFS=$'\\n\'
+                        local cmd=("$@")
+                        local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
+                        local max=$(if (( cpus>4 )); then echo 4; else echo $cpus; fi)
+                        local i=0
+                        local pid=()
+                        (
+                        set +u
+                        while ((i<${#cmd[@]})); do
+                            local copy=()
+                            for x in "${pid[@]}"; do
+                              [[ -e /proc/$x ]] && copy+=($x)
+                            done
+                            pid=("${copy[@]}")
+                    
+                            if ((${#pid[@]}>=$max)); then
+                              nxf_sleep 0.2
+                            else
+                              eval "${cmd[$i]}" &
+                              pid+=($!)
+                              ((i+=1))
+                            fi
+                        done
+                        for p in "${pid[@]}"; do
+                            wait $p
+                        done
+                        )
+                        unset IFS
+                    }
+                    
+                    # aws cli retry config
+                    export AWS_RETRY_MODE=adaptive 
+                    export AWS_MAX_ATTEMPTS=3
+                    # aws helper
+                    nxf_s3_upload() {
+                        local name=$1
+                        local s3path=$2
+                        if [[ -d "$name" ]]; then
+                          aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                        else
+                          aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                        fi
+                    }
+                    
+                    nxf_s3_download() {
+                        local source=$1
+                        local target=$2
+                        local file_name=$(basename $1)
+                        local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                        if [[ $is_dir == 1 ]]; then
+                            aws s3 cp --only-show-errors --recursive "$source" "$target"
+                        else 
+                            aws s3 cp --only-show-errors "$source" "$target"
+                        fi
+                    }
+                    
+                    '''.stripIndent(true)
+
+    }
+
+
+    def 'should include fix ownership command' () {
+        given:
+        def opts = new AwsOptions(cliPath:'/conda/bin/aws', region: 'eu-west-1')
+        def builder = new AwsBatchScriptLauncher([
+                name: 'Hello 1',
+                workDir: Paths.get('/work/dir'),
+                script: 'echo Hello world!',
+                containerConfig: [fixOwnership: true],
+                input: 'Ciao ciao' ] as TaskBean, opts)
+
+        when:
+        def binding = builder.makeBinding()
+        then:
+        builder.fixOwnership() >> true
+        binding.fix_ownership == '[ ${NXF_OWNER:=\'\'} ] && chown -fR --from root $NXF_OWNER /work/dir/{*,.*} || true'
 
     }
 

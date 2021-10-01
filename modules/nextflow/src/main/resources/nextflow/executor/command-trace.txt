@@ -1,5 +1,5 @@
 ##
-##  Copyright 2020, Seqera Labs
+##  Copyright 2020-2021, Seqera Labs
 ##  Copyright 2013-2019, Centre for Genomic Regulation (CRG)
 ##
 ##  Licensed under the Apache License, Version 2.0 (the "License");
@@ -77,10 +77,6 @@ nxf_stat() {
 
     [ $NXF_DEBUG = 1 ] && echo -e "++ stat PEAK=${sum[*]}\n"
     nxf_stat_ret=(${sum[*]})
-}
-
-nxf_sleep() {
-  sleep $1 2>/dev/null || sleep 1;
 }
 
 nxf_mem_watch() {

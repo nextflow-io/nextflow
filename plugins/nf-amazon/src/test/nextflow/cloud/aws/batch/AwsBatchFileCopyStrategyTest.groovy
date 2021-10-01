@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -147,7 +147,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                           then
                             break
                           fi
-                          sleep \$timeout
+                          nxf_sleep \$timeout
                           attempt=\$(( attempt + 1 ))
                           timeout=\$(( timeout * 2 ))
                         done
@@ -157,7 +157,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                         IFS=$'\\n'
                         local cmd=("$@")
                         local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
-                        local max=$(if (( cpus>16 )); then echo 16; else echo $cpus; fi)
+                        local max=$(if (( cpus>4 )); then echo 4; else echo $cpus; fi)
                         local i=0
                         local pid=()
                         (
@@ -170,7 +170,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                             pid=("${copy[@]}")
                     
                             if ((${#pid[@]}>=$max)); then
-                              sleep 0.2
+                              nxf_sleep 0.2
                             else
                               eval "${cmd[$i]}" &
                               pid+=($!)
@@ -213,7 +213,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         then:
         1 * opts.getAwsCli() >> '/foo/aws'
         1 * opts.getStorageClass() >> 'STANDARD_IA'
-        2 * opts.getStorageEncryption() >> 'AES256'
+        1 * opts.getStorageEncryption() >> 'AES256'
 
         script == '''\
                 # bash helper functions
@@ -234,7 +234,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                       then
                         break
                       fi
-                      sleep \$timeout
+                      nxf_sleep \$timeout
                       attempt=\$(( attempt + 1 ))
                       timeout=\$(( timeout * 2 ))
                     done
@@ -244,7 +244,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                     IFS=$'\\n'
                     local cmd=("$@")
                     local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
-                    local max=$(if (( cpus>16 )); then echo 16; else echo $cpus; fi)
+                    local max=$(if (( cpus>4 )); then echo 4; else echo $cpus; fi)
                     local i=0
                     local pid=()
                     (
@@ -257,7 +257,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                         pid=("${copy[@]}")
                 
                         if ((${#pid[@]}>=$max)); then
-                          sleep 0.2
+                          nxf_sleep 0.2
                         else
                           eval "${cmd[$i]}" &
                           pid+=($!)

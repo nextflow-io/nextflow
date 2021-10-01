@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -436,7 +436,7 @@ class LoggerHelper {
         final message = event.getFormattedMessage()
         final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException || ScriptRuntimeException
         final normalize = { String str -> str ?. replace("${className}.", '')}
-        List error = fail ? findErrorLine(fail, ScriptMeta.allScriptNames()) : null
+        List error = fail ? findErrorLine(fail) : null
 
         // error string is not shown for abort operation
         if( !quiet ) {
@@ -451,11 +451,20 @@ class LoggerHelper {
         else if( fail instanceof MissingMethodException ) {
             buffer.append(getMissingMethodMessage(fail))
         }
+        else if( fail instanceof NoSuchFieldException ) {
+            buffer.append("No such field: ${normalize(fail.message)}")
+        }
         else if( fail instanceof NoSuchFileException ) {
             buffer.append("No such file: ${normalize(fail.message)}")
         }
+        else if( fail instanceof ClassNotFoundException ) {
+            buffer.append("Class not found: ${normalize(fail.message)}")
+        }
         else if( fail instanceof DirectoryNotEmptyException ) {
             buffer.append("Unable to delete not empty directory: $fail.message")
+        }
+        else if( fail instanceof UnknownHostException ) {
+            buffer.append("Unknown network host: $fail.message")
         }
         else if( message && message.startsWith(STARTUP_ERROR))  {
             buffer.append(formatStartupErrorMessage(message))
@@ -503,7 +512,7 @@ class LoggerHelper {
 
     static String getMissingMethodMessage(MissingMethodException error) {
         try {
-            return getMissingMethodMessage0(error)
+            return error.class==MissingMethodException ? getMissingMethodMessage0(error) : error.message
         }
         catch( Throwable e ) {
             return error?.message
@@ -540,7 +549,11 @@ class LoggerHelper {
         return msg
     }
 
-    static @PackageScope List<String> findErrorLine( Throwable e, Map<String, Path> allNames ) {
+    static List<String> findErrorLine( Throwable e ) {
+        return findErrorLine(e, ScriptMeta.allScriptNames())
+    }
+
+    static List<String> findErrorLine( Throwable e, Map<String, Path> allNames ) {
         def lines = getErrorLines(e)
         List error = null
         for( String str : lines ) {

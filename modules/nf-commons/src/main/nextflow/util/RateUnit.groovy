@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -115,6 +115,6 @@ class RateUnit {
     }
 
     String toString() {
-        String.format("%.2f", rate) + '/sec'
+        String.format(Locale.ROOT, "%.2f", rate) + '/sec'
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -998,7 +998,10 @@ class AssetManager {
 
     protected String getRemoteCommitId(RevisionInfo rev) {
         final tag = rev.type == RevisionInfo.Type.TAG
-        final list = git.lsRemote().setTags(tag).call()
+        final cmd = git.lsRemote().setTags(tag)
+        if( provider.hasCredentials() )
+            cmd.setCredentialsProvider(new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
+        final list = cmd.call()
         final ref = list.find { Repository.shortenRefName(it.name) == rev.name }
         if( !ref ) {
             log.debug "WARN: Cannot find any Git revision matching: ${rev.name}; ls-remote: $list"

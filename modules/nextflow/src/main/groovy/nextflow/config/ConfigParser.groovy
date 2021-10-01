@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +24,7 @@ import com.google.common.hash.Hashing
 import groovy.transform.PackageScope
 import nextflow.ast.NextflowXform
 import nextflow.exception.ConfigParseException
+import nextflow.extension.Bolts
 import nextflow.file.FileHelper
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -195,7 +196,9 @@ class ConfigParser {
     }
 
     ConfigParser setParams(Map vars) {
-        this.paramVars = vars
+        // deep clone the map to prevent side-effect
+        // see https://github.com/nextflow-io/nextflow/issues/1923
+        this.paramVars = Bolts.deepClone(vars)
         return this
     }
 

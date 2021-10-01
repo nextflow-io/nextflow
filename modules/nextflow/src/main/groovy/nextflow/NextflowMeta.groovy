@@ -37,7 +37,7 @@ class NextflowMeta {
             if( num != 2 && num != 1 )
                 throw new IllegalArgumentException("Not a valid DSL version number: $num")
             if( num == 2 && !ignoreWarnDsl2 )
-                log.warn1 "DSL 2 IS AN EXPERIMENTAL FEATURE UNDER DEVELOPMENT -- SYNTAX MAY CHANGE IN FUTURE RELEASE"
+                log.warn1 "DSL 2 PREVIEW MODE IS DEPRECATED - USE THE STABLE VERSION INSTEAD -- Read more at https://www.nextflow.io/docs/latest/dsl2.html#dsl2-migration-notes"
             dsl = num
         }
     }

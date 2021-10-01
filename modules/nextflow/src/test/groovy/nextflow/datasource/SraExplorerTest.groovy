@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -197,7 +197,8 @@ class SraExplorerTest extends Specification {
         when:
         def result = slurper.getConfigApiKey()
         then:
-        1 * slurper.getEnv() >> [NCBI_API_KEY: '1bc']
+        1 * slurper.config() >> [:]
+        1 * slurper.env() >> [NCBI_API_KEY: '1bc']
         then:
         result == '1bc'
     }

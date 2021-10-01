@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020, Seqera Labs
+ * Copyright 2020-2021, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,7 +51,7 @@ process pyTask {
     stdin randNums
 
     '''
-    #!/usr/bin/env python
+    #!/usr/bin/env python3
     import sys
 
     x = 0
@@ -63,7 +63,7 @@ process pyTask {
         y = y+ float(items[1])
         lines = lines+1
 
-    print "avg: %s - %s" % ( x/lines, y/lines )
+    print("avg: %s - %s" % ( x/lines, y/lines ))
 	'''
 
 }

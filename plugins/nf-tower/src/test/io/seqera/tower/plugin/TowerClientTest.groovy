@@ -11,8 +11,6 @@
 
 package io.seqera.tower.plugin
 
-import spock.lang.Specification
-
 import java.nio.file.Files
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -28,12 +26,19 @@ import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStats
 import nextflow.trace.WorkflowStatsObserver
+import nextflow.util.ProcessHelper
 import nextflow.util.SimpleHttpClient
+import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class TowerClientTest extends Specification {
+
+    protected boolean aroundNow(value) {
+        def now = Instant.now().toEpochMilli()
+        value > now-1_000 && value <= now
+    }
 
     def 'should parse response' () {
         given:
@@ -72,6 +77,9 @@ class TowerClientTest extends Specification {
         1 * meta.toMap() >> [foo:1, bar:2, container: [p1: 'c1', p2: 'c2']]
         1 * tower.getMetricsList() >> [[process:'foo', cpu: [min: 1, max:5], time: [min: 6, max: 9]]]
         1 * tower.getWorkflowProgress(false) >> new WorkflowProgress()
+        1 * tower.getOutFile() >> 'bar.out'
+        1 * tower.getLogFile() >> 'foo.out'
+        1 * tower.getOperationId() >> 'op-12345'
         then:
         map.workflow.foo == 1
         map.workflow.bar == 2
@@ -80,6 +88,12 @@ class TowerClientTest extends Specification {
         map.workflow.container == 'p1:c1,p2:c2'
         map.metrics == [[process:'foo', cpu: [min: 1, max:5], time: [min: 6, max: 9]]]
         map.progress == new WorkflowProgress()
+        and:
+        aroundNow(map.instant)
+        and:
+        map.workflow.outFile == 'bar.out'
+        map.workflow.logFile == 'foo.out'
+        map.workflow.operationId == 'op-12345'
     }
 
     def 'should capitalise underscores' () {
@@ -204,6 +218,8 @@ class TowerClientTest extends Specification {
         req.progress.running == 1
         req.progress.succeeded == 2
         req.progress.failed == 3
+        and:
+        aroundNow(req.instant)
 
         when:
         observer.sendHttpMessage(URL, req)
@@ -237,8 +253,12 @@ class TowerClientTest extends Specification {
         def sessionId = UUID.randomUUID()
         def dir = Files.createTempDirectory('test')
         def http = Mock(SimpleHttpClient)
-        Map args = [httpClient: http, env: ENV]
-        TowerClient client = Spy(TowerClient, constructorArgs: [ args ])
+        TowerClient client = Spy(new TowerClient([httpClient: http, env: ENV]))
+        and:
+        client.getOperationId() >> 'op-112233'
+        client.getLogFile() >> 'log.file'
+        client.getOutFile() >> 'out.file'
+
         and:
         def session = Mock(Session)
         session.getUniqueId() >> sessionId
@@ -262,6 +282,8 @@ class TowerClientTest extends Specification {
         req1.projectName == 'the-project-name'
         req1.repository == 'git://repo.com/foo'
         req1.workflowId == WORKFLOW_ID
+        and:
+        aroundNow(req1.instant)
 
         when:
         def req = client.makeBeginReq(session)
@@ -270,8 +292,13 @@ class TowerClientTest extends Specification {
         and:
         req.workflow.id == '12345'
         req.workflow.params == [foo:'Hello', bar:'World']
+        req.workflow.outFile == 'out.file'
+        req.workflow.logFile == 'log.file'
+        req.workflow.operationId == 'op-112233'
         and:
         req.towerLaunch == TOWER_LAUNCH
+        and:
+        aroundNow(req.instant)
 
         cleanup:
         dir?.deleteDir()
@@ -330,6 +357,9 @@ class TowerClientTest extends Specification {
         req.repository == 'git://repo.com/foo'
         req.workflowId == 'x123'
         and:
+        aroundNow(req.instant)
+
+        and:
         client.towerLaunch
     }
 
@@ -376,6 +406,20 @@ class TowerClientTest extends Specification {
         tower.getUrlTraceComplete() == 'https://tower.nf/trace/12345/complete'
     }
 
+    def 'should get trace endpoint with workspace' () {
+        given:
+        def tower = new TowerClient('https://tower.nf')
+        tower.workflowId = '12345'
+        tower.workspaceId = '300'
+
+        expect:
+        tower.getUrlTraceCreate() == 'https://tower.nf/trace/create?workspaceId=300'
+        tower.getUrlTraceBegin() == 'https://tower.nf/trace/12345/begin?workspaceId=300'
+        tower.getUrlTraceProgress() == 'https://tower.nf/trace/12345/progress?workspaceId=300'
+        tower.getUrlTraceHeartbeat() == 'https://tower.nf/trace/12345/heartbeat?workspaceId=300'
+        tower.getUrlTraceComplete() == 'https://tower.nf/trace/12345/complete?workspaceId=300'
+    }
+
     def 'should set the auth token' () {
         given:
         def http = Mock(SimpleHttpClient)
@@ -398,5 +442,21 @@ class TowerClientTest extends Specification {
         client.setAuthToken(http, BEARER)
         then:
         http.setBearerToken(BEARER) >> null
+    }
+
+    def 'should fetch workflow meta' () {
+        given:
+        def client = Spy(new TowerClient(env: ENV))
+
+        expect:
+        client.getOperationId() == OP_ID
+        client.getLogFile() == LOG_FILE
+        client.getOutFile() == OUT_FILE
+
+        where:
+        OP_ID                                           | OUT_FILE      | LOG_FILE    | ENV
+        null                                            | null          | null        | [:]
+        "local-platform::${ProcessHelper.selfPid()}"    | null          | null        | [TOWER_ALLOW_NEXTFLOW_LOGS:'true']
+        'aws-batch::1234z'                              | 'xyz.out'     | 'hola.log'  | [TOWER_ALLOW_NEXTFLOW_LOGS:'true', AWS_BATCH_JOB_ID: '1234z', NXF_OUT_FILE: 'xyz.out', NXF_LOG_FILE: 'hola.log']
     }
 }
