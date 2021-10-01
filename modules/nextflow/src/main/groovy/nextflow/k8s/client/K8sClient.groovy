@@ -197,9 +197,31 @@ class K8sClient {
         final action = "/api/v1/namespaces/$config.namespace/pods/$name/status"
         final resp = get(action)
         trace('GET', action, resp.text)
-        new K8sResponseJson(resp.text)
+        return new K8sResponseJson(resp.text)
     }
 
+    protected K8sResponseJson podStatus0(String name) {
+        try {
+            return podStatus(name)
+        }
+        catch (K8sResponseException err) {
+            if( err.response.code == 404 && isKindPods(err.response)  ) {
+                // this may happen when K8s node is shutdown and the pod is evicted
+                // therefore process exception is thrown so that the failure
+                // can be managed by the nextflow as re-triable execution
+                throw new ProcessFailedException("Unable to find pod $name - The pod may be evicted by a node shutdown event")
+            }
+            throw err
+        }
+    }
+
+    protected boolean isKindPods(K8sResponseJson resp) {
+        if( resp.details instanceof Map ) {
+            final details = (Map) resp.details
+            return details.kind == 'pods'
+        }
+        return false
+    }
 
     /**
      * Get pod current state object
@@ -227,7 +249,7 @@ class K8sClient {
     Map podState( String podName ) {
         assert podName
 
-        final resp = podStatus(podName)
+        final K8sResponseJson resp = podStatus0(podName)
         final status = resp.status as Map
         final containerStatuses = status?.containerStatuses as List<Map>
 
