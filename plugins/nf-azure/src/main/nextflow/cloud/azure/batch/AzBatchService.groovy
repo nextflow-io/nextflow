@@ -297,10 +297,10 @@ class AzBatchService implements Closeable {
         // create a batch job
         final jobId = makeJobId(task)
         final poolInfo = new PoolInformation()
-                            .withPoolId(poolId)
+                .withPoolId(poolId)
         client
-            .jobOperations()
-            .createJob(jobId, poolInfo)
+                .jobOperations()
+                .createJob(jobId, poolInfo)
         // add to the map
         allJobIds[mapKey] = jobId
         return jobId
@@ -333,11 +333,15 @@ class AzBatchService implements Closeable {
         if( !container )
             throw new IllegalArgumentException("Missing container image for process: $task.name")
         final taskId = "nf-${task.hash.toString()}"
-        final mountPath = allPools.get(poolId).opts.getMountPath()
+        final mountPath = allPools.get(poolId).opts.getFileShareRootPath()
+        def volumes = ''
+        config.storage().getFileShares().each {
+            volumes += " -v ${mountPath}/${it.key}:${it.value.mountPath}:rw"
+        }
         final containerOpts = new TaskContainerSettings()
                 .withImageName(container)
-                // mount host certificates otherwise `azcopy fails
-                .withContainerRunOptions("-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro -v ${mountPath}:${mountPath}:rw -e AZ_BATCH_NODE_MOUNTS_DIR=${mountPath}")
+        // mount host certificates otherwise `azcopy fails
+                .withContainerRunOptions("-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro ${volumes} -e AZ_BATCH_NODE_MOUNTS_DIR")
         final pool = allPools.get(poolId)
         if( !pool )
             throw new IllegalStateException("Missing Azure Batch pool spec with id: $poolId")
@@ -555,9 +559,9 @@ class AzBatchService implements Closeable {
         if( registryOpts && registryOpts.isConfigured() ) {
             List<ContainerRegistry> containerRegistries = new ArrayList(1)
             containerRegistries << new ContainerRegistry()
-                .withRegistryServer(registryOpts.server)
-                .withUserName(registryOpts.userName)
-                .withPassword(registryOpts.password)
+                    .withRegistryServer(registryOpts.server)
+                    .withUserName(registryOpts.userName)
+                    .withPassword(registryOpts.password)
             containerConfig.withContainerRegistries(containerRegistries).withType('dockerCompatible')
             log.debug "[AZURE BATCH] Connecting Azure Batch pool to Container Registry '$registryOpts.server'"
         }
@@ -586,10 +590,10 @@ class AzBatchService implements Closeable {
         final poolParams = new PoolAddParameter()
                 .withId(spec.poolId)
                 .withVirtualMachineConfiguration(poolVmConfig(spec.opts))
-                // https://docs.microsoft.com/en-us/azure/batch/batch-pool-vm-sizes
+        // https://docs.microsoft.com/en-us/azure/batch/batch-pool-vm-sizes
                 .withVmSize(spec.vmType.name)
-                // same as the num ofd cores
-                // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
+        // same as the num ofd cores
+        // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
                 .withTaskSlotsPerNode(spec.vmType.numberOfCores)
                 .withStartTask(poolStartTask)
 
@@ -604,13 +608,17 @@ class AzBatchService implements Closeable {
         if ( config.storage().fileShares ) {
             List<MountConfiguration> mountConfigs = new ArrayList(config.storage().fileShares.size())
             config.storage().fileShares.each {
-                def azureFileShareConfiguration = new AzureFileShareConfiguration()
-                        .withAccountKey(config.storage().accountKey)
-                        .withAccountName(config.storage().accountName)
-                        .withAzureFileUrl("https://${config.storage().accountName}.file.core.windows.net/${it.key}")
-                        .withMountOptions(it.value.mountOptions)
-                        .withRelativeMountPath(it.value.rootPath)
-                mountConfigs << new MountConfiguration().withAzureFileShareConfiguration(azureFileShareConfiguration)
+                if (it.key) {
+                    def azureFileShareConfiguration = new AzureFileShareConfiguration()
+                            .withAccountKey(config.storage().accountKey)
+                            .withAccountName(config.storage().accountName)
+                            .withAzureFileUrl("https://${config.storage().accountName}.file.core.windows.net/${it.key}")
+                            .withMountOptions(it.value.mountOptions)
+                            .withRelativeMountPath(it.key)
+                    mountConfigs << new MountConfiguration().withAzureFileShareConfiguration(azureFileShareConfiguration)
+                } else {
+                    throw new IllegalArgumentException("Cannot mount a null File Share")
+                }
             }
             poolParams.withMountConfiguration(mountConfigs)
         }

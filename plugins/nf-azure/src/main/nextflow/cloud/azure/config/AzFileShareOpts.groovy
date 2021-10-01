@@ -19,12 +19,12 @@ class AzFileShareOpts implements CacheFunnel {
 
 	static public final String DEFAULT_MOUNT_OPTIONS = '-o vers=3.0,dir_mode=0777,file_mode=0777,sec=ntlmssp'
 
-	String rootPath
+	String mountPath
 	String mountOptions
 
 	AzFileShareOpts(Map opts) {
 		assert opts!=null
-		this.rootPath = opts.rootPath ?: ''
+		this.mountPath = opts.mountPath ?: ''
 		this.mountOptions = opts.mountOptions ?: DEFAULT_MOUNT_OPTIONS
 	}
 
@@ -34,7 +34,7 @@ class AzFileShareOpts implements CacheFunnel {
 
 	@Override
 	Hasher funnel(Hasher hasher, CacheHelper.HashMode mode) {
-		hasher.putUnencodedChars(rootPath)
+		hasher.putUnencodedChars(mountPath)
 		hasher.putUnencodedChars(mountOptions)
 		return hasher
 	}

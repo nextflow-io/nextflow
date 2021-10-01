@@ -54,27 +54,33 @@ Azure File Shares
 Nextflow has built-in support also for `Azure Files <https://azure.microsoft.com/en-us/services/storage/files/>`_.
 Files available in the serverless Azure File shares can be mounted concurrently on the nodes of a pool executing the pipeline.
 These files become immediately available in the file system and can be referred as local files within the processes. This
-is especially useful when a task needs to access large amount of data (such as genome indexes) during its execution.
+is especially useful when a task needs to access large amount of data (such as genome indexes) during its execution. An
+arbitrary number of File shares can be mounted on each pool noode.
 
 The Azure File share must exist in the storage account configured for Blob Storage.
-The `fileName` (the source Azure File share) and `relativeMountPath` (the destination path where the files are mounted) must be provided.
+The name of the source Azure File share and mount path (the destination path where the files are mounted) must be provided.
 Additional mount options (see the Azure Files documentation) can be set as well for further customisation of the mounting process.
 
 For example::
 
-    azure {
-      storage {
-        accountName = "<YOUR BLOB ACCOUNT NAME>"
-        accountKey = "<YOUR BLOB ACCOUNT KEY>"
-        fileName = '<YOUR SOURCE FILE SHARE>'
-        relativeMountPath = '<YOUR MOUNT DESTINATION>'
-        mountOptions = '<YOUR OPTIONAL MOUNT SETTINGS>'
-      }
-    }
+	azure {
+		storage {
+			accountName = "<YOUR BLOB ACCOUNT NAME>"
+			accountKey = "<YOUR BLOB ACCOUNT KEY>"
+			fileShares {
+				<YOUR SOURCE FILE SHARE NAME> {
+					mountPath = "<YOUR MOUNT DESTINATION>"
+					mountOptions = "<SAME AS MOUNT COMMAND>" //optional
+				}
+				<YOUR SOURCE FILE SHARE NAME> {
+					mountPath = "<YOUR MOUNT DESTINATION>"
+					mountOptions = "<SAME AS MOUNT COMMAND>" //optional
+				}
+			}
+		}
+	}
 
-The mount path is relative to the Batch mounts directory. This location is accessible via the `AZ_BATCH_NODE_MOUNTS_DIR`
-environment variable available on the pool node. For instance, if the mount path is set to `myResources` the mounted files
-can be from the process' script with `$AZ_BATCH_NODE_MOUNTS_DIR\myResources'.
+The directory specified in `mountPath` is where the task can access to the files available in the File share.
 
 .. _azure-batch:
 
@@ -307,6 +313,7 @@ azure.batch.pools.<name>.vmType                 Specify the virtual machine type
 azure.batch.pools.<name>.vmCount                Specify the number of virtual machines provisioned by the pool identified with ``<name>``.
 azure.batch.pools.<name>.maxVmCount             Specify the max of virtual machine when using auto scale option.
 azure.batch.pools.<name>.autoScale              Enable autoscaling feature for the pool identified with ``<name>``.
+azure.batch.pools.<name>.fileShareRootPath      If mounting File Shares, this is the internal root mounting point. Must be ``/mnt/resource/batch/tasks/fsmounts`` for CentOS nodes or ``/mnt/batch/tasks/fsmounts`` for Ubuntu nodes (default is for CentOS).
 azure.batch.pools.<name>.scaleFormula           Specify the scale formula for the pool identified with ``<name>``. See Azure Batch `scaling documentation <https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling>`_ for details.
 azure.batch.pools.<name>.scaleInterval          Specify the interval at which to automatically adjust the Pool size according to the autoscale formula. The minimum and maximum value are 5 minutes and 168 hours respectively (default: `10 mins`).
 azure.batch.pools.<name>.schedulePolicy         Specify the scheduling policy for the pool identified with ``<name>``. It can be either ``spread`` or ``pack`` (default: ``spread``).

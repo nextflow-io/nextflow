@@ -38,20 +38,20 @@ class AzureConfigTest extends Specification {
         def session = Mock(Session) {
             getConfig() >> [ azure:
                                      [storage:[
-                                        accountKey: KEY,
-                                        accountName: NAME,
-                                        fileStores: STORES,
-                                        sasToken: SAS,
-                                        fileShares: [
-                                            file1: [
-                                                    rootPath: '',
-                                                    mountOptions:''
-                                            ],
-                                            file2: [
-                                                    rootPath: '',
-                                                    mountOptions:''
-                                            ]
-                                        ]
+                                             accountKey: KEY,
+                                             accountName: NAME,
+                                             fileStores: STORES,
+                                             sasToken: SAS,
+                                             fileShares: [
+                                                     file1: [
+                                                             mountPath: '/my/path/1',
+                                                             mountOptions:''
+                                                     ],
+                                                     file2: [
+                                                             mountPath: '/my/path/2',
+                                                             mountOptions:''
+                                                     ]
+                                             ]
                                      ] ]]
         }
 
@@ -61,6 +61,8 @@ class AzureConfigTest extends Specification {
         cfg.storage().accountKey == KEY
         cfg.storage().accountName == NAME
         cfg.storage().sasToken == SAS
+        cfg.storage().getFileShares().get('file1').mountPath == '/my/path/1'
+        cfg.storage().getFileShares().get('file2').mountPath == '/my/path/2'
         and:
         cfg.storage().getEnv() == [AZURE_STORAGE_ACCOUNT_KEY: KEY,
                                    AZURE_STORAGE_ACCOUNT_NAME: NAME,
@@ -104,7 +106,7 @@ class AzureConfigTest extends Specification {
                                                      autoScale: true,
                                                      vmCount: 5,
                                                      maxVmCount: 50,
-                                                     mountPath: '/somewhere/over/the/rainbow',
+                                                     fileShareRootPath: '/somewhere/over/the/rainbow',
                                                      privileged: true,
                                                      runAs: 'root',
                                                      scaleFormula: 'x + y + z',
@@ -131,7 +133,7 @@ class AzureConfigTest extends Specification {
         cfg.batch().pool('myPool').schedulePolicy == 'pack'
         cfg.batch().pool('myPool').vmCount == 5
         cfg.batch().pool('myPool').maxVmCount == 50
-        cfg.batch().pool('myPool').mountPath == '/somewhere/over/the/rainbow'
+        cfg.batch().pool('myPool').fileShareRootPath == '/somewhere/over/the/rainbow'
         cfg.batch().pool('myPool').scaleFormula == 'x + y + z'
         cfg.batch().pool('myPool').scaleInterval == Duration.of('15 min')
         cfg.batch().pool('myPool').privileged == true
