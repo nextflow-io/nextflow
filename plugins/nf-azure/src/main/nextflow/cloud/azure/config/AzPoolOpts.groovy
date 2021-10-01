@@ -40,12 +40,14 @@ class AzPoolOpts implements CacheFunnel {
     static public final String DEFAULT_OFFER = "centos-container"
     static public final String DEFAULT_VM_TYPE = "Standard_D4_v3"
     static public final OSType DEFAULT_OS_TYPE = OSType.LINUX
+    static public final String DEFAULT_MOUNT_PATH = "/mnt/resource/batch/tasks/fsmounts"
     static public final Duration DEFAULT_SCALE_INTERVAL = Duration.of('5 min')
 
     String runAs
     boolean privileged
     String publisher
     String offer
+    String mountPath
     OSType osType = DEFAULT_OS_TYPE
     VerificationType verification = VerificationType.VERIFIED
 
@@ -71,6 +73,7 @@ class AzPoolOpts implements CacheFunnel {
         this.publisher = opts.publisher ?: DEFAULT_PUBLISHER
         this.offer = opts.offer ?: DEFAULT_OFFER
         this.vmType = opts.vmType ?: DEFAULT_VM_TYPE
+        this.mountPath = opts.mounthPath ?: DEFAULT_MOUNT_PATH
         this.vmCount = opts.vmCount as Integer ?: 1
         this.autoScale = opts.autoScale as boolean
         this.scaleFormula = opts.scaleFormula
@@ -89,6 +92,7 @@ class AzPoolOpts implements CacheFunnel {
         hasher.putUnencodedChars(publisher)
         hasher.putUnencodedChars(offer)
         hasher.putUnencodedChars(vmType)
+        hasher.putUnencodedChars(mountPath)
         hasher.putUnencodedChars(registry ?: '')
         hasher.putUnencodedChars(userName ?: '')
         hasher.putUnencodedChars(password ?: '')

@@ -332,12 +332,12 @@ class AzBatchService implements Closeable {
         final container = task.config.container as String
         if( !container )
             throw new IllegalArgumentException("Missing container image for process: $task.name")
-
         final taskId = "nf-${task.hash.toString()}"
+        final mountPath = allPools.get(poolId).opts.getMountPath()
         final containerOpts = new TaskContainerSettings()
                 .withImageName(container)
                 // mount host certificates otherwise `azcopy fails
-                .withContainerRunOptions('-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro -v /mnt/resource/batch/tasks/fsmounts:/mnt/resource/batch/tasks/fsmounts:rw -e AZ_BATCH_NODE_MOUNTS_DIR=/mnt/resource/batch/tasks/fsmounts')
+                .withContainerRunOptions("-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro -v ${mountPath}:${mountPath}:rw -e AZ_BATCH_NODE_MOUNTS_DIR=${mountPath}")
         final pool = allPools.get(poolId)
         if( !pool )
             throw new IllegalStateException("Missing Azure Batch pool spec with id: $poolId")
@@ -600,22 +600,21 @@ class AzBatchService implements Closeable {
             poolParams.withTaskSchedulingPolicy( new TaskSchedulingPolicy().withNodeFillType(pol) )
         }
 
-        // mount point
-        if ( config.storage().fileName ) {
-            if ( config.storage().relativeMountPath ) {
-                List<MountConfiguration> mountConfigs = new ArrayList(1)
+        // mount points
+        if ( config.storage().fileShares ) {
+            List<MountConfiguration> mountConfigs = new ArrayList(config.storage().fileShares.size())
+            config.storage().fileShares.each {
                 def azureFileShareConfiguration = new AzureFileShareConfiguration()
                         .withAccountKey(config.storage().accountKey)
                         .withAccountName(config.storage().accountName)
-                        .withAzureFileUrl("https://${config.storage().accountName}.file.core.windows.net/${config.storage().fileName}")
-                        .withMountOptions(config.storage().mountOptions)
-                        .withRelativeMountPath(config.storage().relativeMountPath)
+                        .withAzureFileUrl("https://${config.storage().accountName}.file.core.windows.net/${it.key}")
+                        .withMountOptions(it.value.mountOptions)
+                        .withRelativeMountPath(it.value.rootPath)
                 mountConfigs << new MountConfiguration().withAzureFileShareConfiguration(azureFileShareConfiguration)
-                poolParams.withMountConfiguration(mountConfigs)
-            } else {
-                throw new IllegalArgumentException("Can't mount the specified Azure Files. The target mount path is missing")
             }
+            poolParams.withMountConfiguration(mountConfigs)
         }
+
         // autoscale
         if( spec.opts.autoScale ) {
             log.debug "Creating autoscale pool with id: ${spec.poolId}; vmCount=${spec.opts.vmCount}; maxVmCount=${spec.opts.maxVmCount}; interval=${spec.opts.scaleInterval}"

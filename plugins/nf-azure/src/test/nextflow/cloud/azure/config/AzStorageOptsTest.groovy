@@ -33,20 +33,33 @@ class AzStorageOptsTest extends Specification {
         opts3.accountKey == 'env-key'
     }
 
-    def 'should get azure files name, mount path & options'() {
-        when:
-        def opts1 = new AzStorageOpts([:], [:])
+    def 'should get azure files name, root path & options'() {
 
-        then:
-        opts1.fileName == null
-        opts1.relativeMountPath == null
-        opts1.mountOptions == '-o vers=3.0,dir_mode=0777,file_mode=0777,sec=ntlmssp'
+        given:
+        def filesOpts = new LinkedHashMap<String,Map>()
+        def storageOpts
 
         when:
-        def opts2 = new AzStorageOpts([fileName: 'source', relativeMountPath: 'target', 'mountOptions': 'options here'])
+        filesOpts.clear()
+        filesOpts['file1'] = [mountOptions: 'mountOptions1', rootPath: 'rootPath1']
+        filesOpts['file2'] = [mountOptions: 'mountOptions2', rootPath: 'rootPath2']
+        storageOpts = new AzStorageOpts(['fileShares':filesOpts], [:])
+
         then:
-        opts2.fileName == 'source'
-        opts2.relativeMountPath == 'target'
-        opts2.mountOptions == 'options here'
+        storageOpts.fileShares.size() == 2
+        storageOpts.fileShares.get('file1').getRootPath() == 'rootPath1'
+        storageOpts.fileShares.get('file1').getMountOptions() == 'mountOptions1'
+        storageOpts.fileShares.get('file2').getRootPath() == 'rootPath2'
+        storageOpts.fileShares.get('file2').getMountOptions() == 'mountOptions2'
+
+        when:
+        filesOpts.clear()
+        filesOpts['file1'] = [rootPath: 'rootPath1']
+        storageOpts = new AzStorageOpts(['fileShares':filesOpts], [:])
+
+        then:
+        storageOpts.fileShares.size() == 1
+        storageOpts.fileShares.get('file1').getRootPath() == 'rootPath1'
+        storageOpts.fileShares.get('file1').getMountOptions() == AzFileShareOpts.DEFAULT_MOUNT_OPTIONS
     }
 }

@@ -40,10 +40,18 @@ class AzureConfigTest extends Specification {
                                      [storage:[
                                         accountKey: KEY,
                                         accountName: NAME,
-                                        fileName: FILENAME,
-                                        relativeMountPath: MOUNTPATH,
                                         fileStores: STORES,
-                                        sasToken: SAS
+                                        sasToken: SAS,
+                                        fileShares: [
+                                            file1: [
+                                                    rootPath: '',
+                                                    mountOptions:''
+                                            ],
+                                            file2: [
+                                                    rootPath: '',
+                                                    mountOptions:''
+                                            ]
+                                        ]
                                      ] ]]
         }
 
@@ -52,8 +60,6 @@ class AzureConfigTest extends Specification {
         then:
         cfg.storage().accountKey == KEY
         cfg.storage().accountName == NAME
-        cfg.storage().fileName == FILENAME
-        cfg.storage().relativeMountPath == MOUNTPATH
         cfg.storage().sasToken == SAS
         and:
         cfg.storage().getEnv() == [AZURE_STORAGE_ACCOUNT_KEY: KEY,
@@ -98,6 +104,7 @@ class AzureConfigTest extends Specification {
                                                      autoScale: true,
                                                      vmCount: 5,
                                                      maxVmCount: 50,
+                                                     mountPath: '/somewhere/over/the/rainbow',
                                                      privileged: true,
                                                      runAs: 'root',
                                                      scaleFormula: 'x + y + z',
@@ -124,6 +131,7 @@ class AzureConfigTest extends Specification {
         cfg.batch().pool('myPool').schedulePolicy == 'pack'
         cfg.batch().pool('myPool').vmCount == 5
         cfg.batch().pool('myPool').maxVmCount == 50
+        cfg.batch().pool('myPool').mountPath == '/somewhere/over/the/rainbow'
         cfg.batch().pool('myPool').scaleFormula == 'x + y + z'
         cfg.batch().pool('myPool').scaleInterval == Duration.of('15 min')
         cfg.batch().pool('myPool').privileged == true
