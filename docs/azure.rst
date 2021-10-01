@@ -249,8 +249,10 @@ As of version ``21.05.0-edge``, a private container registry from where to pull 
 The private registry is not exclusive, rather it is an addition to the configuration.
 Public images from other registries are still pulled (if requested by a Task) when a private registry is configured.
 
-.. note:: When pulling from a private registry, the registry server must be also specified in the ``container`` setting
-	of the private image with this format: `[server]/[your-project-id]/[image]:[tag]`.
+.. note::
+  When using containers hosted into a private registry, the registry name must also be provided in the container name
+  specified via the :ref:`container <process-container>` directive using the format: ``[server]/[your-organization]/[your-image]:[tag]``.
+  Read more about image fully qualified image names in the `Docker documentation <https://docs.docker.com/engine/reference/commandline/pull/#pull-from-a-different-registry>`_.
 
 Advanced settings
 ==================
