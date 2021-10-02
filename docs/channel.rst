@@ -435,6 +435,7 @@ Name            Description
 apiKey          NCBI user API key.
 cache           Enable/disable the caching API requests (default: ``true``).
 max             Maximum number of entries that can be retried (default: unlimited) .
+protocol        Allow choosing the protocol for the resulting remote URLs. Available choices: ``ftp``, ``http``, ``https`` (default: ``ftp``).
 =============== ===================
 
 
