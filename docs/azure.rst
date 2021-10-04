@@ -238,18 +238,21 @@ Private container registry
 As of version ``21.05.0-edge``, a private container registry from where to pull Docker images can be optionally specified as follows ::
 
     azure {
-        batch {
-            registry {
-                server =  '<YOUR REGISTRY SERVER>' // e.g.: docker.io, quay.io, <ACCOUNT>.azurecr.io, etc.
-                userName =  '<YOUR REGISTRY USER NAME>'
-                password =  '<YOUR REGISTRY PASSWORD>'
-            }
+        registry {
+            server =  '<YOUR REGISTRY SERVER>' // e.g.: docker.io, quay.io, <ACCOUNT>.azurecr.io, etc.
+            userName =  '<YOUR REGISTRY USER NAME>'
+            password =  '<YOUR REGISTRY PASSWORD>'
         }
     }
 
 
 The private registry is not exclusive, rather it is an addition to the configuration.
 Public images from other registries are still pulled (if requested by a Task) when a private registry is configured.
+
+.. note::
+  When using containers hosted into a private registry, the registry name must also be provided in the container name
+  specified via the :ref:`container <process-container>` directive using the format: ``[server]/[your-organization]/[your-image]:[tag]``.
+  Read more about image fully qualified image names in the `Docker documentation <https://docs.docker.com/engine/reference/commandline/pull/#pull-from-a-different-registry>`_.
 
 Advanced settings
 ==================

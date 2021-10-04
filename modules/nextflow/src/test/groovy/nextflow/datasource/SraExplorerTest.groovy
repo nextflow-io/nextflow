@@ -143,6 +143,46 @@ class SraExplorerTest extends Specification {
         then:
         1 * slurper.readRunFastqs('ERR908503') >> RESP2
         result == [f1, f2]
+
+        when:
+        slurper.protocol = 'http'
+        and:
+        result = slurper.getFastqUrl('SRR1448774')
+        then:
+        1 * slurper.readRunFastqs('SRR1448774') >> RESP1
+        // should return http url
+        result == ('http://ftp.sra.ebi.ac.uk/vol1/fastq/SRR144/004/SRR1448774/SRR1448774.fastq.gz' as Path)
+    }
+
+    def 'should return http files for accession id' () {
+        given:
+        def RESP1 = '''
+                run_accession\tfastq_ftp
+                SRR1448774\tftp.sra.ebi.ac.uk/vol1/fastq/SRR144/004/SRR1448774/SRR1448774.fastq.gz
+                '''.stripIndent()
+
+        def RESP2 = '''
+                run_accession\tfastq_ftp
+                ERR908503\tftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908503/ERR908503_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908503/ERR908503_2.fastq.gz
+                '''.stripIndent()
+
+
+        def slurper = Spy(SraExplorer)
+        def f0 = 'ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR144/004/SRR1448774/SRR1448774.fastq.gz' as Path
+        def f1 = "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908503/ERR908503_1.fastq.gz" as Path
+        def f2= "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908503/ERR908503_2.fastq.gz" as Path
+
+        when:
+        def result = slurper.getFastqUrl('SRR1448774')
+        then:
+        1 * slurper.readRunFastqs('SRR1448774') >> RESP1
+        result == f0
+
+        when:
+        result = slurper.getFastqUrl('ERR908503')
+        then:
+        1 * slurper.readRunFastqs('ERR908503') >> RESP2
+        result == [f1, f2]
     }
 
     def 'should cache fastq_ftp' () {
@@ -188,7 +228,7 @@ class SraExplorerTest extends Specification {
         when:
         def target = slurper.apply()
         then:
-        target.count().val == 10
+        target.length() == 10 +1 // add one to include the stop element
     }
 
     def 'should retrieve NCBI api env' () {
@@ -197,8 +237,10 @@ class SraExplorerTest extends Specification {
         when:
         def result = slurper.getConfigApiKey()
         then:
-        1 * slurper.getEnv() >> [NCBI_API_KEY: '1bc']
+        1 * slurper.config() >> [:]
+        1 * slurper.env() >> [NCBI_API_KEY: '1bc']
         then:
         result == '1bc'
     }
+
 }

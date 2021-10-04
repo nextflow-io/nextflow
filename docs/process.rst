@@ -235,6 +235,11 @@ as shown below::
 Nextflow looks for the ``my_script.sh`` template file in the directory ``templates`` that must exist in the same folder
 where the Nextflow script file is located (any other location can be provided by using an absolute template path).
 
+.. note::
+  When using :ref:`DSL2 <dsl2-page>` Nextflow looks for the specified file name also in the ``templates`` directory
+  located in the same folder where the module script is placed. See :ref:`module templates <module-templates>`.
+
+
 The template script can contain any piece of code that can be executed by the underlying system. For example::
 
   #!/bin/bash
