@@ -43,7 +43,7 @@ import nextflow.util.Duration
 @Slf4j
 class SraExplorer {
 
-    static public Map PARAMS = [apiKey:[String,GString], cache: Boolean, max: Integer]
+    static public Map PARAMS = [apiKey:[String,GString], cache: Boolean, max: Integer, protocol: ['ftp','http','https']]
 
     @ToString
     static class SearchRecord {
@@ -66,6 +66,7 @@ class SraExplorer {
     private int entriesPerChunk = 1000
     private List<String> missing = new ArrayList<>()
     private Path cacheFolder
+    private String protocol = 'ftp'
 
     String apiKey
     boolean useCache = true
@@ -91,6 +92,8 @@ class SraExplorer {
             useCache = opts.cache as boolean
         if( opts.max )
             maxResults = opts.max as int
+        if( opts.protocol )
+            protocol = opts.protocol as String
     }
 
     DataflowWriteChannel apply() {
@@ -295,7 +298,7 @@ class SraExplorer {
         def files = value.split(';')
         def result = new ArrayList(files.size())
         for( def str : files ) {
-            result.add( FileHelper.asPath("ftp://$str") )
+            result.add( FileHelper.asPath("$protocol://$str") )
         }
 
         return result.size()==1 ? result[0] : result
