@@ -341,7 +341,7 @@ class AzBatchService implements Closeable {
         final containerOpts = new TaskContainerSettings()
                 .withImageName(container)
         // mount host certificates otherwise `azcopy fails
-                .withContainerRunOptions("-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro ${volumes} -e AZ_BATCH_NODE_MOUNTS_DIR")
+                .withContainerRunOptions("-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro ${volumes} ")
         final pool = allPools.get(poolId)
         if( !pool )
             throw new IllegalStateException("Missing Azure Batch pool spec with id: $poolId")
