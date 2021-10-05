@@ -822,6 +822,24 @@ enabled             If ``true`` it will send HTTP POST requests to a given url.
 url                The url where to send HTTP POST requests (default: ``http:localhost``).
 ================== ================
 
+.. _config-miscellaneous:
+
+Miscellaneous
+-------------
+
+There are additional variables that can be defined within a configuration file that do not have a dedicated scope.
+
+These are defined alongside other scopes, but the option is assigned as typically variable.
+
+================== ================
+Name                Description
+================== ================
+cleanup             If ``true``, on a successful completion of a run all files in *work* directory are automatically deleted.
+================== ================
+
+.. warning:: 
+    The use of the above ``cleanup`` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run. 
+    Also, be aware that deleting all scratch files can take a lot of time especially when using shared file system or remote cloud storage.
 
 .. _config-profiles:
 
