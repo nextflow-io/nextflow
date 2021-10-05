@@ -233,6 +233,43 @@ to zero nodes automatically.
 If you need a different strategy you can provide your own formula using the ``scaleFormula`` option.
 See the `Azure Batch <https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling>`_ documentation for details.
 
+Pool nodes
+-----------
+When Nextflow creates a pool of compute nodes, it selects:
+* the virtual machine image reference to be installed on the node
+* the Batch node agent SKU, a program that runs on each node and provides an interface between
+the node and the Batch service
+
+Together, these settings determine the Operating System and version installed on each node.
+
+By default, Nextflow creates CentOS 8-based pool nodes, but this behavior can be customised in the pool configuration.
+Below some configurations for image reference/SKU combinations to select popular OSs.
+* Ubuntu 18.04::
+
+	sku = "batch.node.ubuntu 18.04"
+	offer = "ubuntuserver"
+	publisher = "canonical"
+
+* Ubuntu 20::
+
+	sku = "batch.node.ubuntu 20.04"
+	offer = "0001-com-ubuntu-server-focal"
+	publisher = "canonical"
+
+* Debian 10::
+
+	sku = "batch.node.debian 10"
+	offer = "debian-10"
+	publisher = "debian"
+
+* CentOS 8 (Nextflow default)::
+
+	sku = "batch.node.centos 8"
+	offer = "centos-container"
+	publisher = "microsoft-azure-batch"
+
+See the `Advanced settings`_ below for more details.
+
 Private container registry
 --------------------------
 As of version ``21.05.0-edge``, a private container registry from where to pull Docker images can be optionally specified as follows ::
