@@ -38,6 +38,7 @@ class AzPoolOpts implements CacheFunnel {
 
     static public final String DEFAULT_PUBLISHER = "microsoft-azure-batch"
     static public final String DEFAULT_OFFER = "centos-container"
+    static public final String DEFAULT_SKU = "batch.node.centos 8"
     static public final String DEFAULT_VM_TYPE = "Standard_D4_v3"
     static public final OSType DEFAULT_OS_TYPE = OSType.LINUX
     static public final Duration DEFAULT_SCALE_INTERVAL = Duration.of('5 min')
@@ -46,6 +47,7 @@ class AzPoolOpts implements CacheFunnel {
     boolean privileged
     String publisher
     String offer
+    String sku
     OSType osType = DEFAULT_OS_TYPE
     VerificationType verification = VerificationType.VERIFIED
 
@@ -70,6 +72,7 @@ class AzPoolOpts implements CacheFunnel {
         this.privileged = opts.privileged ?: false
         this.publisher = opts.publisher ?: DEFAULT_PUBLISHER
         this.offer = opts.offer ?: DEFAULT_OFFER
+        this.sku = opts.sku ?: DEFAULT_SKU
         this.vmType = opts.vmType ?: DEFAULT_VM_TYPE
         this.vmCount = opts.vmCount as Integer ?: 1
         this.autoScale = opts.autoScale as boolean
@@ -88,6 +91,7 @@ class AzPoolOpts implements CacheFunnel {
         hasher.putBoolean(privileged)
         hasher.putUnencodedChars(publisher)
         hasher.putUnencodedChars(offer)
+        hasher.putUnencodedChars(sku)
         hasher.putUnencodedChars(vmType)
         hasher.putUnencodedChars(registry ?: '')
         hasher.putUnencodedChars(userName ?: '')
