@@ -23,7 +23,7 @@ class AzFileShareOpts implements CacheFunnel {
 	String mountOptions
 
 	AzFileShareOpts(Map opts) {
-		assert opts!=null
+		assert opts != null
 		this.mountPath = opts.mountPath ?: ''
 		this.mountOptions = opts.mountOptions ?: DEFAULT_MOUNT_OPTIONS
 	}
