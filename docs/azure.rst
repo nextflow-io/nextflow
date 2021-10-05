@@ -236,6 +236,7 @@ See the `Azure Batch <https://docs.microsoft.com/en-us/azure/batch/batch-automat
 Pool nodes
 -----------
 When Nextflow creates a pool of compute nodes, it selects:
+
 * the virtual machine image reference to be installed on the node
 * the Batch node agent SKU, a program that runs on each node and provides an interface between
 the node and the Batch service
