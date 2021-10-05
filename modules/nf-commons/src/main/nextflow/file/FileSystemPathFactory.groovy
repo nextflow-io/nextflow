@@ -91,7 +91,7 @@ abstract class FileSystemPathFactory implements ExtensionPoint {
 
     private static List<FileSystemPathFactory> factories0() {
         final factories = new ArrayList(10)
-        final itr = Plugins.getExtensions(FileSystemPathFactory).iterator()
+        final itr = Plugins.getPriorityExtensions(FileSystemPathFactory).iterator()
         while( itr.hasNext() )
             factories.add(itr.next())
         log.trace "File system path factories: ${factories}"

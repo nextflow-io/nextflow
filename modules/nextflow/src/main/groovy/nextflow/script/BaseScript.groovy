@@ -34,8 +34,6 @@ import nextflow.processor.TaskProcessor
 @Slf4j
 abstract class BaseScript extends Script implements ExecutionContext {
 
-    private static Object[] EMPTY_ARGS = [] as Object[]
-
     private Session session
 
     private ProcessFactory processFactory
@@ -102,7 +100,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         binding.setVariable( 'workflow', session.workflowMetadata )
         binding.setVariable( 'nextflow', NextflowMeta.instance )
         binding.setVariable('launchDir', Paths.get('./').toRealPath())
-        binding.setVariable('moduleDir', meta.scriptPath?.parent )
+        binding.setVariable('moduleDir', meta.moduleDir )
     }
 
     protected process( String name, Closure<BodyDef> body ) {
@@ -189,7 +187,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
         // invoke the entry workflow
         session.notifyBeforeWorkflowExecution()
-        final ret = entryFlow.invoke_a(EMPTY_ARGS)
+        final ret = entryFlow.invoke_a(BaseScriptConsts.EMPTY_ARGS)
         session.notifyAfterWorkflowExecution()
         return ret
     }

@@ -27,7 +27,7 @@ import nextflow.processor.TaskRun
 /**
  * Implements BASH launcher script for Google Pipelines.
  *
- * @author Paolo Di Tommaso
+ * @author  Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Ólafur Haukur Flygenring <olafurh@wuxinextcode.com>
  */
 @CompileStatic

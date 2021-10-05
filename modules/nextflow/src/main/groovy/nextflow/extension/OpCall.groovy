@@ -30,7 +30,7 @@ class OpCall implements Callable {
 
     static ThreadLocal<OpCall> current = new ThreadLocal<>()
 
-    private OperatorEx owner
+    private Object owner
     private String methodName
     private Method method
     private Object source
@@ -47,7 +47,7 @@ class OpCall implements Callable {
         new OpCall(methodName, InvokerHelper.asArray(null))
     }
 
-    OpCall(OperatorEx owner, Object source, String method, Object[] args ) {
+    OpCall(Object owner, Object source, String method, Object[] args ) {
         assert owner
         assert method
         this.owner = owner

@@ -19,7 +19,9 @@ package nextflow.cli
 import java.nio.file.FileVisitResult
 import java.nio.file.FileVisitor
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.nio.file.attribute.BasicFileAttributes
 
 import com.beust.jcommander.Parameter
@@ -28,8 +30,13 @@ import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.CacheDB
+import nextflow.Global
+import nextflow.ISession
+import nextflow.Session
+import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
+import nextflow.plugin.Plugins
 import nextflow.trace.TraceRecord
 import nextflow.util.HistoryFile.Record
 
@@ -89,9 +96,25 @@ class CmdClean extends CmdBase implements CacheBase {
     void run() {
         init()
         validateOptions()
+        createSession()
+        Plugins.setup()
+        listIds().each { entry -> cleanup(entry) }
+    }
 
-        listIds().each { entry -> cleanup(entry)}
+    /**
+     * Create the NF session which can be required to access cloud file store
+     */
+    private void createSession() {
+        Global.setLazySession {
+            final builder = new ConfigBuilder()
+                    .setShowClosures(true)
+                    .showMissingVariables(true)
+                    .setOptions(launcher.options)
+                    .setBaseDir(Paths.get('.'))
 
+            final config = builder.buildConfigObject()
+            return (ISession) new Session(config)
+        }
     }
 
     /**
@@ -214,9 +237,9 @@ class CmdClean extends CmdBase implements CacheBase {
             FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
 
                 final canDelete = !keepLogs || ( keepLogs &&  !(file.name.startsWith('.command.')  || file.name == '.exitcode'))
-                if( canDelete && !file.delete() ) {
+                if( canDelete && !delete0(file,false) ) {
                     result = false
-                    if(!quiet) System.err.println "Failed to remove $file"
+                    if(!quiet) System.err.println "Failed to remove ${file.toUriString()}"
                 }
 
                 result ? FileVisitResult.CONTINUE : FileVisitResult.TERMINATE
@@ -229,9 +252,9 @@ class CmdClean extends CmdBase implements CacheBase {
 
             @Override
             FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                if( !keepLogs && result && !dir.delete() ) {
+                if( !keepLogs && result && !delete0(dir,true) ) {
                     result = false
-                    if(!quiet) System.err.println "Failed to remove $dir"
+                    if(!quiet) System.err.println "Failed to remove ${dir.toUriString()}"
                 }
                 
                 result ? FileVisitResult.CONTINUE : FileVisitResult.TERMINATE
@@ -239,6 +262,21 @@ class CmdClean extends CmdBase implements CacheBase {
         })
 
         return result
+    }
+
+    private static delete0(Path path, boolean dir) {
+        try {
+            log.trace "Deleting path [dir=$dir]: ${path.toUriString()}"
+            Files.delete(path)
+            return true
+        }
+        catch( IOException e ) {
+            // kind of hack: directory deletion
+            if( dir && path.scheme=='gs' && e instanceof NoSuchFileException )
+                return true
+            log.debug("Failed to remove path: ${path.toUriString()}", e)
+            return false
+        }
     }
 
 }

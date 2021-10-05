@@ -57,11 +57,14 @@ class S3Upload extends AbstractS3Task {
             throw new GradleException("S3 upload failed -- Source file does not exists: $sourceFile")
 
         if (s3Client.doesObjectExist(bucket, targetKey)) {
-            if( skipExisting && isSameContent(sourceFile, bucket, targetKey) ) {
-                logger.quiet("s3://${bucket}/${targetKey} exists! -- Skipping it.")
+            if( skipExisting ) {
+                logger.quiet("s3://${bucket}/${targetKey} exists. Skipping it!")
             }
             else if (overwrite) {
                 copy(sourceFile, bucket, targetKey, true)
+            }
+            else if( isSameContent(sourceFile, bucket, targetKey) ) {
+                logger.quiet("s3://${bucket}/${targetKey} exists!")
             }
             else {
                 throw new GradleException("s3://${bucket}/${targetKey} exists! -- Refuse to owerwrite it.")

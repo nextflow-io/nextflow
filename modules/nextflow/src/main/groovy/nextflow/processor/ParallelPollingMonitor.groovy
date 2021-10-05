@@ -18,7 +18,6 @@
 package nextflow.processor
 
 import java.util.concurrent.Callable
-import java.util.concurrent.TimeUnit
 
 import com.google.common.util.concurrent.RateLimiter
 import groovy.transform.CompileStatic
@@ -35,8 +34,6 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
 
     private ThrottlingExecutor submitter
 
-    private ThrottlingExecutor reaper
-
     /**
      * Create the task polling monitor with the provided named parameters object.
      * <p>
@@ -49,10 +46,9 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
      *
      * @param params
      */
-    ParallelPollingMonitor(ThrottlingExecutor executor, ThrottlingExecutor reaper, Map params) {
+    ParallelPollingMonitor(ThrottlingExecutor executor, Map params) {
         super(params)
         this.submitter = executor
-        this.reaper = reaper
     }
 
     protected RateLimiter createSubmitRateLimit() {
@@ -90,15 +86,4 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
         submitter.submit(wrapper)
     }
 
-    @Override
-    protected void cleanup() {
-        def tasks = submitter.shutdownNow()
-        if( tasks ) log.warn "Execution interrupted -- cleaning up execution pool"
-        submitter.awaitTermination(5, TimeUnit.MINUTES)
-        // -- now cleanup pending task
-        super.cleanup()
-        // -- finally delete cleanup executor
-        reaper.shutdown()
-        reaper.awaitTermination(5, TimeUnit.MINUTES)
-    }
 }

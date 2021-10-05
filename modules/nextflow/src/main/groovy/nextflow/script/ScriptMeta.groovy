@@ -27,7 +27,6 @@ import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.exception.DuplicateModuleIncludeException
 import nextflow.exception.MissingModuleComponentException
-import nextflow.extension.OperatorEx
 /**
  * Holds a nextflow script meta-data such as the
  * defines processes and workflows, the included modules
@@ -48,7 +47,7 @@ class ScriptMeta {
 
     static ScriptMeta get(BaseScript script) {
         if( !script ) throw new IllegalStateException("Missing current script context")
-        REGISTRY.get(script)
+        return REGISTRY.get(script)
     }
 
     static Set<String> allProcessNames() {
@@ -72,7 +71,7 @@ class ScriptMeta {
     /** the script {@link Class} object */
     private Class<? extends BaseScript> clazz
 
-    /** The location path from there the script has been loaded */
+    /** The location path from where the script has been loaded */
     private Path scriptPath
 
     /** The list of function, procs and workflow defined in this script */
@@ -87,6 +86,8 @@ class ScriptMeta {
     private boolean module
 
     Path getScriptPath() { scriptPath }
+
+    Path getModuleDir () { scriptPath?.parent }
 
     String getScriptName() { clazz.getName() }
 
@@ -154,7 +155,7 @@ class ScriptMeta {
 
     ScriptMeta addDefinition(ComponentDef component) {
         final name = component.name
-        if( !module && name in OperatorEx.OPERATOR_NAMES )
+        if( !module && NF.hasOperator(name) )
             log.warn "${component.type.capitalize()} with name '$name' overrides a built-in operator with the same name"
         definitions.put(component.name, component)
         return this

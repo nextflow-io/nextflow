@@ -33,6 +33,8 @@ import java.security.cert.X509Certificate
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.exception.NodeTerminationException
+import nextflow.exception.ProcessFailedException
 import org.yaml.snakeyaml.Yaml
 /**
  * Kubernetes API client
@@ -195,9 +197,31 @@ class K8sClient {
         final action = "/api/v1/namespaces/$config.namespace/pods/$name/status"
         final resp = get(action)
         trace('GET', action, resp.text)
-        new K8sResponseJson(resp.text)
+        return new K8sResponseJson(resp.text)
     }
 
+    protected K8sResponseJson podStatus0(String name) {
+        try {
+            return podStatus(name)
+        }
+        catch (K8sResponseException err) {
+            if( err.response.code == 404 && isKindPods(err.response)  ) {
+                // this may happen when K8s node is shutdown and the pod is evicted
+                // therefore process exception is thrown so that the failure
+                // can be managed by the nextflow as re-triable execution
+                throw new ProcessFailedException("Unable to find pod $name - The pod may be evicted by a node shutdown event")
+            }
+            throw err
+        }
+    }
+
+    protected boolean isKindPods(K8sResponseJson resp) {
+        if( resp.details instanceof Map ) {
+            final details = (Map) resp.details
+            return details.kind == 'pods'
+        }
+        return false
+    }
 
     /**
      * Get pod current state object
@@ -225,7 +249,7 @@ class K8sClient {
     Map podState( String podName ) {
         assert podName
 
-        final resp = podStatus(podName)
+        final K8sResponseJson resp = podStatus0(podName)
         final status = resp.status as Map
         final containerStatuses = status?.containerStatuses as List<Map>
 
@@ -258,6 +282,16 @@ class K8sClient {
             }
             // undetermined status -- return an empty response
             return Collections.emptyMap()
+        }
+
+        if( status?.phase == 'Failed' ) {
+            def msg = "K8s pod '$podName' execution failed"
+            if( status.reason ) msg += " - reason: ${status.reason}"
+            if( status.message ) msg += " - message: ${status.message}"
+            final err = status.reason == 'Shutdown'
+                    ? new NodeTerminationException(msg)
+                    : new ProcessFailedException(msg)
+            throw err
         }
 
         throw new K8sResponseException("K8s undetermined status conditions for pod $podName", resp)

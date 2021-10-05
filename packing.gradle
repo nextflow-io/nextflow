@@ -9,6 +9,7 @@ configurations {
     amazon.extendsFrom defaultCfg
     azure.extendsFrom defaultCfg
     legacy.extendsFrom defaultCfg
+    tower.extendsFrom defaultCfg
 }
 
 dependencies {
@@ -26,6 +27,7 @@ dependencies {
     amazon  project(':plugins:nf-amazon')
     azure   project(':plugins:nf-azure')
     ignite  project(':plugins:nf-ignite')
+    tower   project(':plugins:nf-tower')
 }
 
 
@@ -134,7 +136,7 @@ task packAll(type: Jar) {
     archiveName = "nextflow-${version}-all.jar"
 
     from jar // embed our application jar
-    from (configurations.ignite + configurations.amazon + configurations.google)
+    from (configurations.ignite + configurations.amazon + configurations.google + configurations.tower)
     from (configurations.capsule.collect { zipTree(it) })
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     
@@ -263,6 +265,8 @@ task dockerImage(type: Exec) {
     def temp = File.createTempFile('upload',null)
     temp.deleteOnExit()
     temp.text =  """\
+    grep $version nextflow
+    cp nextflow docker/nextflow
     cd docker
     make release version=$version
     """.stripIndent()

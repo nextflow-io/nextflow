@@ -10,6 +10,7 @@ import nextflow.cloud.azure.batch.AzHelper
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.file.AzPathFactory
 import nextflow.processor.TaskBean
+import spock.lang.Requires
 import spock.lang.Specification
 
 /**
@@ -18,6 +19,7 @@ import spock.lang.Specification
  */
 class BashWrapperBuilderWithAzTest extends Specification {
 
+    @Requires({System.getenv('AZURE_STORAGE_ACCOUNT_NAME') && System.getenv('AZURE_STORAGE_ACCOUNT_KEY')})
     def 'should include az helpers' () {
         given:
         Global.session = Mock(Session) { getConfig() >> [:] }
@@ -88,6 +90,7 @@ class BashWrapperBuilderWithAzTest extends Specification {
             '''.stripIndent(true)
     }
 
+    @Requires({System.getenv('AZURE_STORAGE_ACCOUNT_NAME') && System.getenv('AZURE_STORAGE_ACCOUNT_KEY')})
     def 'should include az helpers and bash lib' () {
         given:
         Global.session = Mock(Session) { getConfig() >> [:] }

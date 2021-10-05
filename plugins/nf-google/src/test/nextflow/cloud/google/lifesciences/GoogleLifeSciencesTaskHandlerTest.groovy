@@ -25,6 +25,7 @@ import nextflow.Session
 import nextflow.cloud.google.GoogleSpecification
 import nextflow.cloud.types.PriceModel
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.executor.BashWrapperBuilder
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
@@ -95,6 +96,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
 
     def 'should submit a task'() {
         given:
+        def builder = Mock(BashWrapperBuilder)
         def task = Mock(TaskRun)
         task.getName() >> 'foo'
 
@@ -108,7 +110,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         handler.submit()
 
         then:
-        1 * handler.createTaskWrapper() >> null
+        1 * handler.createTaskWrapper() >> builder
         1 * handler.createPipelineRequest() >> req
         1 * handler.submitPipeline(req) >> operation
         1 * handler.getPipelineIdFromOp(operation) >> '123'

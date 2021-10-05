@@ -179,7 +179,7 @@ nxf_stage() {
     true
     # stage input files
     echo start | gsutil -q cp  -c - gs://bucket/work/dir/.command.begin
-    downloads=()
+    downloads=(true)
     downloads+=("nxf_gs_download gs://bucket/work/dir/.command.sh .command.sh ")
     nxf_parallel "${downloads[@]}"
 }

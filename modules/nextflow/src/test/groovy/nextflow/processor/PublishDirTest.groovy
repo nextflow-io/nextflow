@@ -70,7 +70,24 @@ class PublishDirTest extends Specification {
         !publish.enabled
 
         when:
+        publish =  PublishDir.create( [path: '/some/data', mode: 'copy', enabled: 'false'] )
+        then:
+        publish.path == Paths.get('/some/data')
+        publish.mode == PublishDir.Mode.COPY
+        publish.pattern == null
+        publish.overwrite == null
+        !publish.enabled
+
+        when:
         publish =  PublishDir.create( [path:'this/folder', overwrite: false, pattern: '*.txt', mode: 'copy'] )
+        then:
+        publish.path == Paths.get('this/folder').complete()
+        publish.mode == PublishDir.Mode.COPY
+        publish.pattern == '*.txt'
+        publish.overwrite == false
+
+        when:
+        publish =  PublishDir.create( [path:'this/folder', overwrite: 'false', pattern: '*.txt', mode: 'copy'] )
         then:
         publish.path == Paths.get('this/folder').complete()
         publish.mode == PublishDir.Mode.COPY
@@ -218,7 +235,7 @@ class PublishDirTest extends Specification {
             if( it !='file4.temp' ) return target2.resolve(it)
             return null
         }
-        def publisher = new PublishDir(path: target1, saveAs: rule )
+        def publisher = new PublishDir(path: target1, saveAs: rule)
         publisher.apply( outputs, task )
 
         then:
@@ -301,5 +318,49 @@ class PublishDirTest extends Specification {
         cleanup:
         folder?.deleteDir()
 
+    }
+
+    def 'should only return not overlapping paths' () {
+        given:
+        def publisher = new PublishDir()
+
+        expect:
+        publisher.dedupPaths( GIVEN.collect{Paths.get(it)} ).collect{it.toString()} == EXPECT
+
+        where:
+        GIVEN                                               | EXPECT
+        ['/foo/bar.txt','/foo/bar.txt', '/foo']             | ['/foo']
+        ['/foo/bar.txt','/foo/bar.txt', '/foo/delta']       | ['/foo/bar.txt', '/foo/delta']
+        ['/foo/x1','/foo/x1/y', '/bar/x2']                  | ['/foo/x1','/bar/x2']
+    }
+
+    def 'should detected overlapping paths' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def pubDir = folder.resolve('pub-dir'); pubDir.mkdir()
+        def workDir = folder.resolve('work-dir'); workDir.mkdir()
+        and:
+        def publisher = new PublishDir(sourceDir: workDir)
+
+        when:
+        def foo = pubDir.resolve('foo'); foo.text = 'This is foo'
+        def bar = workDir.resolve('bar'); bar.text = 'This is bar'
+        then:
+        !publisher.checkSourcePathConflicts(foo)
+        publisher.checkSourcePathConflicts(bar)
+
+        when:
+        def linkOK = Files.createSymbolicLink(pubDir.resolve("link1.txt"), foo)
+        then:
+        !publisher.checkSourcePathConflicts(linkOK)
+
+        when:
+        def linkNotOK = Files.createSymbolicLink(pubDir.resolve("link2.txt"), bar)
+        then:
+        publisher.checkSourcePathConflicts(linkNotOK)
+
+        cleanup:
+        folder?.deleteDir()
     }
 }

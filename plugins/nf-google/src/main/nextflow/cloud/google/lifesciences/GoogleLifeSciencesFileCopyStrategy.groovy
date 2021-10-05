@@ -31,7 +31,7 @@ import nextflow.util.Escape
 /**
  * Defines the file/script copy strategies for Google Pipelines.
  *
- * @author Paolo Di Tommaso
+ * @author  Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Ólafur Haukur Flygenring <olafurh@wuxinextcode.com>
  */
 @Slf4j
@@ -77,7 +77,7 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
 
         // stage files
         if( stagingCommands ) {
-            result.append('downloads=()\n')
+            result.append('downloads=(true)\n')
             result.append(stagingCommands.join('\n')).append('\n')
             result.append('nxf_parallel "${downloads[@]}"\n')
         }

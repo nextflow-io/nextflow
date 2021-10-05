@@ -251,19 +251,19 @@ To access your local BitBucket Server create an entry in the `SCM configuration 
 GitHub credentials
 ------------------
 
-Create a ``github`` entry in the `SCM configuration file`_ specifying your user name and password as shown below::
+Create a ``github`` entry in the `SCM configuration file`_ specifying your user name and access token as shown below::
 
     providers {
 
         github {
-            user = 'me'
-            password = 'my-secret'
+            user = 'your-user-name'
+            password = 'your-personal-access-token;'
         }
 
     }
 
-.. tip:: You can use use a `Personal API token <https://github.com/blog/1509-personal-api-tokens>`_ in place of your
-    GitHub password.
+.. tip:: GitHub requires the use of the personal access token (PAT) in place of password field when accessing APIs.
+  Learn more about PAT and how to create it at `this link <https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token>`_.
 
 
 GitLab credentials

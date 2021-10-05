@@ -51,6 +51,14 @@ class Plugins {
         INSTANCE.getExtensions(type)
     }
 
+    static <T> List<T> getPriorityExtensions(Class<T> type, String group=null) {
+        INSTANCE.getPriorityExtensions(type,group)
+    }
+
+    static <T> Set<T> getScopedExtensions(Class<T> type, String scope=null) {
+        INSTANCE.getScopedExtensions(type,scope)
+    }
+
     static <T> T getExtension(Class<T> type) {
         final allExtensions = INSTANCE.getExtensions(type)
         return allExtensions ? allExtensions.first() : null

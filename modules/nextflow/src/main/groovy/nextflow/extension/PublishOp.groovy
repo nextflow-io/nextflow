@@ -71,7 +71,7 @@ class PublishOp {
     protected void publish0(entry) {
         log.debug "Publish operator got: $entry"
         sourceDir = null
-        // use an set to avoid duplicates
+        // use a set to avoid duplicates
         final result = new HashSet(10)
         collectFiles(entry, result)
         publisher.apply(result, sourceDir)
