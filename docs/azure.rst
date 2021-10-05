@@ -251,7 +251,7 @@ Below some configurations for image reference/SKU combinations to select popular
 	offer = "ubuntuserver"
 	publisher = "canonical"
 
-* Ubuntu 20::
+* Ubuntu 20.04::
 
 	sku = "batch.node.ubuntu 20.04"
 	offer = "0001-com-ubuntu-server-focal"
