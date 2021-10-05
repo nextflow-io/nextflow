@@ -115,6 +115,10 @@ Simply prefix your variable names with the ``env`` scope or surround them by cur
         GAMMA = "/my/path:$PATH"
    }
 
+.. tip:: In the above example, variables like `$HOME` and `$PATH` are evaluated when the workflow is launched. If
+  you want these variables to be evaluated during task execution, escape them with `\$`. This difference is important
+  for variables like `$PATH`, which may be very different in the workflow environment versus the task environment.
+
 
 Scope `params`
 --------------
