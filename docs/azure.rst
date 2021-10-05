@@ -238,8 +238,7 @@ Pool nodes
 When Nextflow creates a pool of compute nodes, it selects:
 
 * the virtual machine image reference to be installed on the node
-* the Batch node agent SKU, a program that runs on each node and provides an interface between
-the node and the Batch service
+* the Batch node agent SKU, a program that runs on each node and provides an interface between the node and the Batch service
 
 Together, these settings determine the Operating System and version installed on each node.
 
