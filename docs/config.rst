@@ -834,8 +834,12 @@ These are defined alongside other scopes, but the option is assigned as typicall
 ================== ================
 Name                Description
 ================== ================
-cleanup             If ``true``, on a successful completion of a run all files in `work/` directory are automatically deleted. Note this means `-resume` cannot be subsequently used on that pipeline run.
+cleanup             If ``true``, on a successful completion of a run all files in *work* directory are automatically deleted.
 ================== ================
+
+.. warning:: 
+    The use of the above ``cleanup`` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run. 
+    Also, be aware that deleting all scratch files can take a lot of time especially when using shared file system or remote cloud storage.
 
 .. _config-profiles:
 
