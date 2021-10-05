@@ -269,7 +269,7 @@ Below some configurations for image reference/SKU combinations to select popular
 	offer = "centos-container"
 	publisher = "microsoft-azure-batch"
 
-See the `Advanced settings`_ below for more details.
+See the `Advanced settings`_ below and `Azure Batch nodes <https://docs.microsoft.com/en-us/azure/batch/batch-linux-nodes>` documentation for more details.
 
 Private container registry
 --------------------------
