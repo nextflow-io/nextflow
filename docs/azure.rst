@@ -243,7 +243,8 @@ the node and the Batch service
 Together, these settings determine the Operating System and version installed on each node.
 
 By default, Nextflow creates CentOS 8-based pool nodes, but this behavior can be customised in the pool configuration.
-Below some configurations for image reference/SKU combinations to select popular OSs.
+Below some configurations for image reference/SKU combinations to select popular systems.
+
 * Ubuntu 18.04::
 
 	sku = "batch.node.ubuntu 18.04"
