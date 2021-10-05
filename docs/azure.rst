@@ -233,6 +233,44 @@ to zero nodes automatically.
 If you need a different strategy you can provide your own formula using the ``scaleFormula`` option.
 See the `Azure Batch <https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling>`_ documentation for details.
 
+Pool nodes
+-----------
+When Nextflow creates a pool of compute nodes, it selects:
+
+* the virtual machine image reference to be installed on the node
+* the Batch node agent SKU, a program that runs on each node and provides an interface between the node and the Batch service
+
+Together, these settings determine the Operating System and version installed on each node.
+
+By default, Nextflow creates CentOS 8-based pool nodes, but this behavior can be customised in the pool configuration.
+Below some configurations for image reference/SKU combinations to select popular systems.
+
+* Ubuntu 18.04::
+
+	sku = "batch.node.ubuntu 18.04"
+	offer = "ubuntuserver"
+	publisher = "canonical"
+
+* Ubuntu 20.04::
+
+	sku = "batch.node.ubuntu 20.04"
+	offer = "0001-com-ubuntu-server-focal"
+	publisher = "canonical"
+
+* Debian 10::
+
+	sku = "batch.node.debian 10"
+	offer = "debian-10"
+	publisher = "debian"
+
+* CentOS 8 (default)::
+
+	sku = "batch.node.centos 8"
+	offer = "centos-container"
+	publisher = "microsoft-azure-batch"
+
+See the `Advanced settings`_ below and `Azure Batch nodes <https://docs.microsoft.com/en-us/azure/batch/batch-linux-nodes>` documentation for more details.
+
 Private container registry
 --------------------------
 As of version ``21.05.0-edge``, a private container registry from where to pull Docker images can be optionally specified as follows ::
@@ -275,6 +313,9 @@ azure.batch.allowPoolCreation                   Enable the automatic creation of
 azure.batch.deleteJobsOnCompletion              Enable the automatic deletion of jobs created by the pipeline execution (default: ``true``).
 azure.batch.deletePoolsOnCompletion             Enable the automatic deletion of compute node pools upon pipeline completion (default: ``false``).
 azure.batch.copyToolInstallMode                 Specify where the `azcopy` tool used by Nextflow. When ``node`` is specified it's copied once during the pool creation. When ``task`` is provider, it's installed for each task execution (default: ``node``).
+azure.batch.pools.<name>.publisher              Specify the publisher of virtual machine type used by the pool identified with ``<name>`` (default: ``microsoft-azure-batch``).
+azure.batch.pools.<name>.offer                  Specify the offer type of the virtual machine type used by the pool identified with ``<name>`` (default: ``centos-container``).
+azure.batch.pools.<name>.sku                    Specify the ID of the Compute Node agent SKU which the pool identified with ``<name>`` supports (default: ``batch.node.centos 8``).
 azure.batch.pools.<name>.vmType                 Specify the virtual machine type used by the pool identified with ``<name>``.
 azure.batch.pools.<name>.vmCount                Specify the number of virtual machines provisioned by the pool identified with ``<name>``.
 azure.batch.pools.<name>.maxVmCount             Specify the max of virtual machine when using auto scale option.
