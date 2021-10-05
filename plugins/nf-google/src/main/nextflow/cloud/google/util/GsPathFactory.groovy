@@ -43,7 +43,7 @@ class GsPathFactory extends FileSystemPathFactory {
     static private CloudStorageConfiguration getCloudStorageConfig() {
         final session = (Session) Global.getSession()
         if (!session)
-            new IllegalStateException("Cannot initialize GsPathFactory: missing session")
+            throw new IllegalStateException("Cannot initialize GsPathFactory: missing session")
 
         final config = GoogleLifeSciencesConfig.fromSession(session)
         final builder = CloudStorageConfiguration.builder()

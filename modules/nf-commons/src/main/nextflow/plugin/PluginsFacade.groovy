@@ -143,7 +143,8 @@ class PluginsFacade implements PluginStateListener {
     }
 
     protected CustomPluginManager createManager(Path root, List<PluginSpec> specs) {
-        final result = mode!=DEV_MODE ? new LocalPluginManager( localRoot(specs) ) : new DevPluginManager(root)
+        final localRoot = localRoot(specs)
+        final result = mode!=DEV_MODE ? new LocalPluginManager(localRoot, root, specs) : new DevPluginManager(root)
         result.addPluginStateListener(this)
         return result
     }
@@ -272,7 +273,7 @@ class PluginsFacade implements PluginStateListener {
     }
 
     void start( String pluginId ) {
-        if( isSelfContained() ) {
+        if( isSelfContained() && defaultPlugins.hasPlugin(pluginId) ) {
             log.debug "Plugin 'start' is not required in self-contained mode -- ignoring it for plugin: $pluginId"
             return
         }
@@ -281,7 +282,7 @@ class PluginsFacade implements PluginStateListener {
     }
 
     void start(PluginSpec plugin) {
-        if( isSelfContained() ) {
+        if( isSelfContained() && defaultPlugins.hasPlugin(plugin.id) ) {
             log.debug "Plugin 'start' is not required in self-contained mode -- ignoring it for plugin: $plugin.id"
             return
         }
@@ -290,11 +291,6 @@ class PluginsFacade implements PluginStateListener {
     }
 
     void start(List<PluginSpec> specs) {
-        if( isSelfContained() ) {
-            log.debug "Plugin 'start' is not required in self-contained mode -- ignoring it for plugins: $specs"
-            return
-        }
-
         for( PluginSpec it : specs ) {
             start(it)
         }

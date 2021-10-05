@@ -22,6 +22,7 @@ import java.nio.file.Paths
 
 import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.AWSBatchException
+import com.amazonaws.services.batch.model.ClientException
 import com.amazonaws.services.batch.model.ContainerOverrides
 import com.amazonaws.services.batch.model.ContainerProperties
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
@@ -43,6 +44,7 @@ import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.TerminateJobRequest
 import com.amazonaws.services.batch.model.Volume
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.container.ContainerNameValidator
@@ -352,7 +354,28 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @param container The Docker container image name which need to be used to run the job
      * @return The Batch Job Definition name associated with the specified container
      */
+    @CompileStatic
     protected String resolveJobDefinition(String container) {
+        final int DEFAULT_BACK_OFF_BASE = 3
+        final int DEFAULT_BACK_OFF_DELAY = 250
+        final int MAX_ATTEMPTS = 5
+        int attempt=0
+        while( true ) {
+            try {
+                return resolveJobDefinition0(container)
+            }
+            catch (ClientException e) {
+                if( e.statusCode != 404 || attempt++ > MAX_ATTEMPTS)
+                    throw e
+
+                final delay = (Math.pow(DEFAULT_BACK_OFF_BASE, attempt) as long) * DEFAULT_BACK_OFF_DELAY
+                log.debug "Got AWS Client exception on Batch resolve job definition - message=$e.message; waiting for ${delay}ms (attempt=$attempt)"
+                Thread.sleep(delay)
+            }
+        }
+    }
+
+    protected String resolveJobDefinition0(String container) {
         if( jobDefinitions.containsKey(container) )
             return jobDefinitions[container]
 
@@ -394,8 +417,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final result = configJobDefRequest(image, uniq)
 
         // create a job marker uuid
-        def uuid = computeUniqueToken(uniq)
-        result.setParameters(['nf-token':uuid])
+        def hash = computeUniqueToken(uniq)
+        result.setParameters(['nf-token':hash])
 
         return result
     }

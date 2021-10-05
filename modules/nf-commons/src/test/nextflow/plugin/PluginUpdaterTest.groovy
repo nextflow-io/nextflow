@@ -51,7 +51,7 @@ class PluginUpdaterTest extends Specification {
         // the app local dir
         def localDir =  Files.createDirectory(folder.resolve('local'))
         and:
-        def manager = new LocalPluginManager(localDir)
+        def manager = new LocalPluginManager(localDir, cacheDir, [])
         def updater = new PluginUpdater(manager, cacheDir, new URL("file:${repoDir.resolve('plugins.json')}"))
 
         when:
@@ -96,7 +96,7 @@ class PluginUpdaterTest extends Specification {
         // the app local dir
         def localDir =  Files.createDirectory(folder.resolve('local'))
         and:
-        def manager = new LocalPluginManager(localDir)
+        def manager = new LocalPluginManager(localDir, cacheDir, [])
         def updater = new PluginUpdater(manager, cacheDir, new URL("file:${repoDir.resolve('plugins.json')}"))
 
         when:
@@ -143,7 +143,7 @@ class PluginUpdaterTest extends Specification {
         // the app local dir
         def localDir =  Files.createDirectory(folder.resolve('local'))
         and:
-        def manager = new LocalPluginManager(localDir)
+        def manager = new LocalPluginManager(localDir, cacheDir, [])
         def updater = new PluginUpdater(manager, cacheDir, new URL("file:${repoDir.resolve('plugins.json')}"))
 
         when:

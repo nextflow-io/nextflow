@@ -38,6 +38,7 @@ class AzPoolOpts implements CacheFunnel {
 
     static public final String DEFAULT_PUBLISHER = "microsoft-azure-batch"
     static public final String DEFAULT_OFFER = "centos-container"
+    static public final String DEFAULT_SKU = "batch.node.centos 8"
     static public final String DEFAULT_VM_TYPE = "Standard_D4_v3"
     static public final OSType DEFAULT_OS_TYPE = OSType.LINUX
     static public final String DEFAULT_SHARE_ROOT_PATH = "/mnt/resource/batch/tasks/fsmounts"
@@ -48,6 +49,7 @@ class AzPoolOpts implements CacheFunnel {
     String publisher
     String offer
     String fileShareRootPath
+    String sku
     OSType osType = DEFAULT_OS_TYPE
     VerificationType verification = VerificationType.VERIFIED
 
@@ -72,6 +74,7 @@ class AzPoolOpts implements CacheFunnel {
         this.privileged = opts.privileged ?: false
         this.publisher = opts.publisher ?: DEFAULT_PUBLISHER
         this.offer = opts.offer ?: DEFAULT_OFFER
+        this.sku = opts.sku ?: DEFAULT_SKU
         this.vmType = opts.vmType ?: DEFAULT_VM_TYPE
         this.fileShareRootPath = opts.fileShareRootPath ?: DEFAULT_SHARE_ROOT_PATH
         this.vmCount = opts.vmCount as Integer ?: 1
@@ -91,6 +94,7 @@ class AzPoolOpts implements CacheFunnel {
         hasher.putBoolean(privileged)
         hasher.putUnencodedChars(publisher)
         hasher.putUnencodedChars(offer)
+        hasher.putUnencodedChars(sku)
         hasher.putUnencodedChars(vmType)
         hasher.putUnencodedChars(fileShareRootPath)
         hasher.putUnencodedChars(registry ?: '')

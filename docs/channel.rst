@@ -425,7 +425,7 @@ Multiple accession IDs can be specified using a list object::
 .. note:: Read pairs are implicitly managed are returned as a list of files.
 
 .. tip:: Behind the scene it's uses the NCBI `ESearch <https://www.ncbi.nlm.nih.gov/books/NBK25499/#chapter4.ESearch>`_
-  API, therefore the ``fromSRA`` method allow the usage of any query term supported by this API.
+  API, therefore the ``fromSRA`` method allows the usage of any query term supported by this API.
 
 Table of optional parameters available:
 
@@ -435,6 +435,7 @@ Name            Description
 apiKey          NCBI user API key.
 cache           Enable/disable the caching API requests (default: ``true``).
 max             Maximum number of entries that can be retried (default: unlimited) .
+protocol        Allow choosing the protocol for the resulting remote URLs. Available choices: ``ftp``, ``http``, ``https`` (default: ``ftp``).
 =============== ===================
 
 

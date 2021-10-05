@@ -415,6 +415,8 @@ class AzBatchService implements Closeable {
         List<ImageInformation> images = client.accountOperations().listSupportedImages()
 
         for (ImageInformation it : images) {
+            if( !it.nodeAgentSKUId().equalsIgnoreCase(opts.sku) )
+                continue
             if( it.osType() != opts.osType )
                 continue
             if( it.verificationType() != opts.verification )
