@@ -19,7 +19,7 @@ use the following command to download it in your computer::
 Azure Blob Storage
 ===================
 
-As of version nf-azure@0.11.0, Nextflow has built-in support for `Azure Blob Storage <https://azure.microsoft.com/en-us/services/storage/blobs/>`_.
+Nextflow has built-in support for `Azure Blob Storage <https://azure.microsoft.com/en-us/services/storage/blobs/>`_.
 Files stored in a Azure blob container can be accessed transparently in your pipeline script like any other file
 in the local file system.
 
@@ -51,7 +51,7 @@ file path ``az://my-data/foo.txt``.
 Azure File Shares
 ==================
 
-Nextflow has built-in support also for `Azure Files <https://azure.microsoft.com/en-us/services/storage/files/>`_.
+As of version nf-azure@0.11.0, Nextflow has built-in support also for `Azure Files <https://azure.microsoft.com/en-us/services/storage/files/>`_.
 Files available in the serverless Azure File shares can be mounted concurrently on the nodes of a pool executing the pipeline.
 These files become immediately available in the file system and can be referred as local files within the processes. This
 is especially useful when a task needs to access large amount of data (such as genome indexes) during its execution. An
