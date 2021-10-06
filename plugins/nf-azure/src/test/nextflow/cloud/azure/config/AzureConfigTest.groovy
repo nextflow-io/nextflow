@@ -175,7 +175,7 @@ class AzureConfigTest extends Specification {
         when:
         def session = Mock(Session) {
             getConfig() >> [ azure:
-			                     [batch:[
+                                 [batch:[
                                      accountKey: KEY,
                                      accountName: NAME,
                                      endpoint: ENDPOINT,
