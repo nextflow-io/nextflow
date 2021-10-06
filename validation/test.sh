@@ -63,19 +63,31 @@ fi
 #
 # AWS Batch tests
 #
-echo "AWS batch tests"
-bash awsbatch.sh
+if [ "$AWS_ACCESS_KEY_ID" ]; then
+  echo "AWS batch tests"
+  bash awsbatch.sh
+else
+  echo "Missing AWS_ACCESS_KEY_ID variable -- Skipping AWS Batch tests"
+fi
+
 
 #
 # Azure Batch tests
 #
-echo "Azure batch tests"
-bash azure.sh
+if [ "$AZURE_BATCH_ACCOUNT_KEY" ]; then
+  echo "Azure batch tests"
+  bash azure.sh
+else
+  echo "Missing AZURE_BATCH_ACCOUNT_KEY variable -- Skipping Azure Batch tests"
+fi
 
 #
 # Google Life Sciences
 #
-echo "Google LS tests"
-bash gls.sh
-
+if [ "$GOOGLE_SECRET" ]; then
+  echo "Google LS tests"
+  bash gls.sh
+else
+  echo "Missing GOOGLE_SECRET variable -- Skipping Google LS tests"
+fi
 
