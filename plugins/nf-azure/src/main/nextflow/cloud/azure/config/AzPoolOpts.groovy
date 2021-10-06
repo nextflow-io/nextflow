@@ -41,12 +41,14 @@ class AzPoolOpts implements CacheFunnel {
     static public final String DEFAULT_SKU = "batch.node.centos 8"
     static public final String DEFAULT_VM_TYPE = "Standard_D4_v3"
     static public final OSType DEFAULT_OS_TYPE = OSType.LINUX
+    static public final String DEFAULT_SHARE_ROOT_PATH = "/mnt/resource/batch/tasks/fsmounts"
     static public final Duration DEFAULT_SCALE_INTERVAL = Duration.of('5 min')
 
     String runAs
     boolean privileged
     String publisher
     String offer
+    String fileShareRootPath
     String sku
     OSType osType = DEFAULT_OS_TYPE
     VerificationType verification = VerificationType.VERIFIED
@@ -74,6 +76,7 @@ class AzPoolOpts implements CacheFunnel {
         this.offer = opts.offer ?: DEFAULT_OFFER
         this.sku = opts.sku ?: DEFAULT_SKU
         this.vmType = opts.vmType ?: DEFAULT_VM_TYPE
+        this.fileShareRootPath = opts.fileShareRootPath ?: buildFileShareRootPath()
         this.vmCount = opts.vmCount as Integer ?: 1
         this.autoScale = opts.autoScale as boolean
         this.scaleFormula = opts.scaleFormula
@@ -93,6 +96,7 @@ class AzPoolOpts implements CacheFunnel {
         hasher.putUnencodedChars(offer)
         hasher.putUnencodedChars(sku)
         hasher.putUnencodedChars(vmType)
+        hasher.putUnencodedChars(fileShareRootPath)
         hasher.putUnencodedChars(registry ?: '')
         hasher.putUnencodedChars(userName ?: '')
         hasher.putUnencodedChars(password ?: '')
@@ -102,4 +106,13 @@ class AzPoolOpts implements CacheFunnel {
         hasher.putUnencodedChars(schedulePolicy ?: '')
         return hasher
     }
+
+    def buildFileShareRootPath() {
+        if (this.sku ==~ /.*centos.*/)
+            return "/mnt/resource/batch/tasks/fsmounts"
+        else if (this.sku ==~ /.*ubuntu.*/)
+            return "/mnt/batch/tasks/fsmounts"
+        else
+            return ''
+	}
 }

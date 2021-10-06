@@ -30,16 +30,28 @@ class AzureConfigTest extends Specification {
         given:
         def KEY = 'xyz1343'
         def NAME = 'container-foo'
+        def FILENAME = 'filename-foo'
+        def MOUNTPATH = 'mountpath-foo'
         def STORES = 'this-that'
         def SAS = 'foo'
         and:
         def session = Mock(Session) {
             getConfig() >> [ azure:
                                      [storage:[
-                                        accountKey: KEY,
-                                        accountName: NAME,
-                                        fileStores: STORES,
-                                        sasToken: SAS
+                                             accountKey: KEY,
+                                             accountName: NAME,
+                                             fileStores: STORES,
+                                             sasToken: SAS,
+                                             fileShares: [
+                                                     file1: [
+                                                             mountPath: '/my/path/1',
+                                                             mountOptions:''
+                                                     ],
+                                                     file2: [
+                                                             mountPath: '/my/path/2',
+                                                             mountOptions:''
+                                                     ]
+                                             ]
                                      ] ]]
         }
 
@@ -49,6 +61,8 @@ class AzureConfigTest extends Specification {
         cfg.storage().accountKey == KEY
         cfg.storage().accountName == NAME
         cfg.storage().sasToken == SAS
+        cfg.storage().getFileShares().get('file1').mountPath == '/my/path/1'
+        cfg.storage().getFileShares().get('file2').mountPath == '/my/path/2'
         and:
         cfg.storage().getEnv() == [AZURE_STORAGE_ACCOUNT_KEY: KEY,
                                    AZURE_STORAGE_ACCOUNT_NAME: NAME,
@@ -92,6 +106,7 @@ class AzureConfigTest extends Specification {
                                                      autoScale: true,
                                                      vmCount: 5,
                                                      maxVmCount: 50,
+                                                     fileShareRootPath: '/somewhere/over/the/rainbow',
                                                      privileged: true,
                                                      runAs: 'root',
                                                      scaleFormula: 'x + y + z',
@@ -118,6 +133,7 @@ class AzureConfigTest extends Specification {
         cfg.batch().pool('myPool').schedulePolicy == 'pack'
         cfg.batch().pool('myPool').vmCount == 5
         cfg.batch().pool('myPool').maxVmCount == 50
+        cfg.batch().pool('myPool').fileShareRootPath == '/somewhere/over/the/rainbow'
         cfg.batch().pool('myPool').scaleFormula == 'x + y + z'
         cfg.batch().pool('myPool').scaleInterval == Duration.of('15 min')
         cfg.batch().pool('myPool').privileged == true
@@ -147,4 +163,38 @@ class AzureConfigTest extends Specification {
         cfg.batch().endpoint == 'https://nfbucket.europenorth.batch.azure.com'
         cfg.batch().location == LOCATION
     }
+
+	def 'should get azure batch file share root point' () {
+
+        given:
+        def KEY = 'xyz1343'
+        def NAME = 'container-foo'
+        def ENDPOINT = 'http://foo/bar'
+        def LOCATION = 'europenorth'
+
+        when:
+        def session = Mock(Session) {
+            getConfig() >> [ azure:
+                                 [batch:[
+                                     accountKey: KEY,
+                                     accountName: NAME,
+                                     endpoint: ENDPOINT,
+                                     location: LOCATION,
+                                     pools: [
+            		                     myPool1: [ fileShareRootPath: '/somewhere/over/the/rainbow' ],
+            		                     myPool2: [ sku:'batch.node.centos 8' ],
+            		                     myPool3: [ sku:'batch.node.ubuntu 20.04' ],
+            		                     myPool4: [ sku:'batch.node.debian 10', fileShareRootPath: '/mounting/here' ],
+            		                     myPool5: [ : ]]
+            	                 ]] ]
+        }
+        def cfg = AzConfig.getConfig(session)
+        then:
+        cfg.batch().pool('myPool1').fileShareRootPath == '/somewhere/over/the/rainbow'
+        cfg.batch().pool('myPool2').fileShareRootPath == '/mnt/resource/batch/tasks/fsmounts'
+        cfg.batch().pool('myPool3').fileShareRootPath == '/mnt/batch/tasks/fsmounts'
+        cfg.batch().pool('myPool4').fileShareRootPath == '/mounting/here'
+        cfg.batch().pool('myPool5').fileShareRootPath == '/mnt/resource/batch/tasks/fsmounts'
+   }
+
 }
