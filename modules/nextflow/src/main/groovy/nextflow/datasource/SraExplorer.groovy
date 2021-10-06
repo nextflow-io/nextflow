@@ -43,7 +43,7 @@ import nextflow.util.Duration
 @Slf4j
 class SraExplorer {
 
-    static public Map PARAMS = [apiKey:[String,GString], cache: Boolean, max: Integer]
+    static public Map PARAMS = [apiKey:[String,GString], cache: Boolean, max: Integer, protocol: ['ftp','http','https']]
 
     @ToString
     static class SearchRecord {
@@ -66,6 +66,7 @@ class SraExplorer {
     private int entriesPerChunk = 1000
     private List<String> missing = new ArrayList<>()
     private Path cacheFolder
+    private String protocol = 'ftp'
 
     String apiKey
     boolean useCache = true
@@ -91,6 +92,8 @@ class SraExplorer {
             useCache = opts.cache as boolean
         if( opts.max )
             maxResults = opts.max as int
+        if( opts.protocol )
+            protocol = opts.protocol as String
     }
 
     DataflowWriteChannel apply() {
@@ -109,7 +112,14 @@ class SraExplorer {
         return target
     }
 
-    protected Map getEnv() { System.getenv() }
+    protected Map env() {
+        return System.getenv()
+    }
+
+    protected Map config() {
+        final session = Global.session as Session
+        return session.getConfig()
+    }
 
     protected Path getCacheFolder() {
         if( cacheFolder )
@@ -120,10 +130,9 @@ class SraExplorer {
     }
 
     protected String getConfigApiKey() {
-        def session = Global.session as Session
-        def result = session ?.config ?. navigate('ncbi.apiKey')
+        def result = config().navigate('ncbi.apiKey')
         if( !result )
-            result = getEnv().get('NCBI_API_KEY')
+            result = env().get('NCBI_API_KEY')
         if( !result )
             log.warn1("Define the NCBI_API_KEY env variable to use NCBI search service -- Read more https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities/")
         return result
@@ -289,7 +298,7 @@ class SraExplorer {
         def files = value.split(';')
         def result = new ArrayList(files.size())
         for( def str : files ) {
-            result.add( FileHelper.asPath("ftp://$str") )
+            result.add( FileHelper.asPath("$protocol://$str") )
         }
 
         return result.size()==1 ? result[0] : result

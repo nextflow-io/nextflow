@@ -265,6 +265,8 @@ task dockerImage(type: Exec) {
     def temp = File.createTempFile('upload',null)
     temp.deleteOnExit()
     temp.text =  """\
+    grep $version nextflow
+    cp nextflow docker/nextflow
     cd docker
     make release version=$version
     """.stripIndent()

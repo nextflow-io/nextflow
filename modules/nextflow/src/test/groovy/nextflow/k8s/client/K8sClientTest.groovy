@@ -20,6 +20,7 @@ package nextflow.k8s.client
 import javax.net.ssl.HttpsURLConnection
 
 import nextflow.exception.NodeTerminationException
+import nextflow.exception.ProcessFailedException
 import spock.lang.Specification
 /**
  *
@@ -467,6 +468,38 @@ class K8sClientTest extends Specification {
         1 * client.podStatus(POD_NAME) >> new K8sResponseJson(JSON)
 
         result == [:]
+    }
+
+    def 'should return a process execution on pod not found' () {
+        given:
+        def JSON = '''
+               {
+                  "kind": "Status",
+                  "apiVersion": "v1",
+                  "metadata": {
+                      
+                  },
+                  "status": "Failure",
+                  "message": "pods \\"nf-7cee928c1dd05b39cd50ab79a3e742f9\\" not found",
+                  "reason": "NotFound",
+                  "details": {
+                      "name": "nf-7cee928c1dd05b39cd50ab79a3e742f9",
+                      "kind": "pods"
+                  },
+                  "code": 404
+              }
+        '''
+
+        def client = Spy(K8sClient)
+        final POD_NAME = 'pod-xyz'
+
+        when:
+        client.podState(POD_NAME)
+        then:
+        1 * client.podStatus(POD_NAME) >> { throw new K8sResponseException("Request GET /api/v1/namespaces/xyz/pods/nf-xyz/status returned an error code=404", new ByteArrayInputStream(JSON.bytes)) }
+
+        and:
+        thrown(ProcessFailedException)
     }
 
     def 'should fail to get pod state' () {

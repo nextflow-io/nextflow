@@ -25,7 +25,7 @@ config ?= compileClasspath
 ifdef module 
 mm = :${module}:
 else 
-mm = :nextflow:
+mm = 
 endif 
 
 clean:

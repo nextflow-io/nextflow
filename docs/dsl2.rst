@@ -354,7 +354,7 @@ Multiple inclusions
 -------------------
 
 A Nextflow script allows the inclusion of any number of modules. When multiple
-components need to be included from the some module script, the component names can be
+components need to be included from the same module script, the component names can be
 specified in the same inclusion using the curly brackets notation as shown below::
 
     include { foo; bar } from './some/module'
@@ -446,6 +446,66 @@ The above snippet prints::
 
 Finally the include option ``params`` allows the specification of one or more parameters without
 inheriting any value from the external environment. 
+
+.. _module-templates:
+
+Module templates
+-----------------
+The module script can be defined in an external :ref:`template <process-template>` file. With DSL2 the template file
+can be placed under the ``templates`` directory where the module script is located.
+
+For example, let's suppose to have a project L with a module script defining 2 processes (P1 and P2) and both use templates.
+The template files can be made available under the local ``templates`` directory::
+
+	Project L
+		|-myModules.nf
+		|-templates
+			|-P1-template.sh
+			|-P2-template.sh
+
+Then, we have a second project A with a workflow that includes P1 and P2::
+
+	Pipeline A
+		|-main.nf
+
+Finally, we have a third project B with a workflow that includes again P1 and P2::
+
+	Pipeline B
+		|-main.nf
+
+With the possibility to keep the template files inside the project L, A and B can use the modules defined in L without any changes.
+A future prject C would do the same, just cloning L (if not available on the system) and including its module script.
+
+Beside promoting sharing modules across pipelines, there are several advantages in keeping the module template under the script path::
+1 - module components are *self-contained*
+2 - module components can be tested independently from the pipeline(s) importing them
+3 - it is possible to create libraries of module components
+
+Ultimately, having multiple template locations allows a more structured organization within the same project. If a project
+has several module components, and all them use templates, the project could group module scripts and their templates as needed. For example::
+
+	baseDir
+		|-main.nf
+		|-Phase0-Modules
+			|-mymodules1.nf
+			|-mymodules2.nf
+			|-templates
+				|-P1-template.sh
+				|-P2-template.sh
+		|-Phase1-Modules
+			|-mymodules3.nf
+			|-mymodules4.nf
+			|-templates
+				|-P3-template.sh
+				|-P4-template.sh
+		|-Phase2-Modules
+			|-mymodules5.nf
+			|-mymodules6.nf
+			|-templates
+				|-P5-template.sh
+				|-P6-template.sh
+				|-P7-template.sh
+
 
 Channel forking
 ===============
