@@ -297,10 +297,10 @@ class AzBatchService implements Closeable {
         // create a batch job
         final jobId = makeJobId(task)
         final poolInfo = new PoolInformation()
-			.withPoolId(poolId)
+            .withPoolId(poolId)
         client
-			.jobOperations()
-			.createJob(jobId, poolInfo)
+            .jobOperations()
+            .createJob(jobId, poolInfo)
         // add to the map
         allJobIds[mapKey] = jobId
         return jobId
