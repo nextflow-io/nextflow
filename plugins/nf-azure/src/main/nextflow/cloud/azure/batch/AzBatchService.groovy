@@ -18,7 +18,9 @@ package nextflow.cloud.azure.batch
 
 import com.microsoft.azure.batch.protocol.models.AutoUserScope
 import com.microsoft.azure.batch.protocol.models.AutoUserSpecification
+import com.microsoft.azure.batch.protocol.models.AzureFileShareConfiguration
 import com.microsoft.azure.batch.protocol.models.ElevationLevel
+import com.microsoft.azure.batch.protocol.models.MountConfiguration
 import com.microsoft.azure.batch.protocol.models.UserIdentity
 
 import java.math.RoundingMode
@@ -295,7 +297,7 @@ class AzBatchService implements Closeable {
         // create a batch job
         final jobId = makeJobId(task)
         final poolInfo = new PoolInformation()
-                            .withPoolId(poolId)
+            .withPoolId(poolId)
         client
             .jobOperations()
             .createJob(jobId, poolInfo)
@@ -330,13 +332,18 @@ class AzBatchService implements Closeable {
         final container = task.config.container as String
         if( !container )
             throw new IllegalArgumentException("Missing container image for process: $task.name")
-
         final taskId = "nf-${task.hash.toString()}"
+        final mountPath = allPools.get(poolId).opts.getFileShareRootPath()
+	    if ( !mountPath )
+		    throw new IllegalArgumentException("Missing FileShareRootPath for pool: $poolId")
+        def volumes = ''
+        config.storage().getFileShares().each {
+            volumes += " -v ${mountPath}/${it.key}:${it.value.mountPath}:rw"
+        }
         final containerOpts = new TaskContainerSettings()
                 .withImageName(container)
                 // mount host certificates otherwise `azcopy fails
-                .withContainerRunOptions('-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro')
-
+                .withContainerRunOptions("-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro ${volumes} ")
         final pool = allPools.get(poolId)
         if( !pool )
             throw new IllegalStateException("Missing Azure Batch pool spec with id: $poolId")
@@ -556,9 +563,9 @@ class AzBatchService implements Closeable {
         if( registryOpts && registryOpts.isConfigured() ) {
             List<ContainerRegistry> containerRegistries = new ArrayList(1)
             containerRegistries << new ContainerRegistry()
-                .withRegistryServer(registryOpts.server)
-                .withUserName(registryOpts.userName)
-                .withPassword(registryOpts.password)
+                    .withRegistryServer(registryOpts.server)
+                    .withUserName(registryOpts.userName)
+                    .withPassword(registryOpts.password)
             containerConfig.withContainerRegistries(containerRegistries).withType('dockerCompatible')
             log.debug "[AZURE BATCH] Connecting Azure Batch pool to Container Registry '$registryOpts.server'"
         }
@@ -599,6 +606,25 @@ class AzBatchService implements Closeable {
             final pol = ComputeNodeFillType.fromString(spec.opts.schedulePolicy)
             if( !pol ) throw new IllegalArgumentException("Unknown Azure Batch scheduling policy: ${spec.opts.schedulePolicy}")
             poolParams.withTaskSchedulingPolicy( new TaskSchedulingPolicy().withNodeFillType(pol) )
+        }
+
+        // mount points
+        if ( config.storage().fileShares ) {
+            List<MountConfiguration> mountConfigs = new ArrayList(config.storage().fileShares.size())
+            config.storage().fileShares.each {
+                if (it.key) {
+                    def azureFileShareConfiguration = new AzureFileShareConfiguration()
+            	            .withAccountKey(config.storage().accountKey)
+            	            .withAccountName(config.storage().accountName)
+            	            .withAzureFileUrl("https://${config.storage().accountName}.file.core.windows.net/${it.key}")
+            	            .withMountOptions(it.value.mountOptions)
+            	            .withRelativeMountPath(it.key)
+            	    mountConfigs << new MountConfiguration().withAzureFileShareConfiguration(azureFileShareConfiguration)
+	            } else {
+                    throw new IllegalArgumentException("Cannot mount a null File Share")
+                }
+            }
+            poolParams.withMountConfiguration(mountConfigs)
         }
 
         // autoscale
