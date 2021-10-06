@@ -280,25 +280,13 @@ When Nextflow creates a pool of compute nodes, it selects:
 Together, these settings determine the Operating System and version installed on each node.
 
 By default, Nextflow creates CentOS 8-based pool nodes, but this behavior can be customised in the pool configuration.
-Below some configurations for image reference/SKU combinations to select popular systems.
-
-* Ubuntu 18.04::
-
-	sku = "batch.node.ubuntu 18.04"
-	offer = "ubuntuserver"
-	publisher = "canonical"
+Below the configurations for image reference/SKU combinations to select two popular systems.
 
 * Ubuntu 20.04::
 
 	sku = "batch.node.ubuntu 20.04"
-	offer = "0001-com-ubuntu-server-focal"
-	publisher = "canonical"
-
-* Debian 10::
-
-	sku = "batch.node.debian 10"
-	offer = "debian-10"
-	publisher = "debian"
+	offer = "ubuntu-server-container"
+	publisher = "microsoft-azure-batch"
 
 * CentOS 8 (default)::
 
