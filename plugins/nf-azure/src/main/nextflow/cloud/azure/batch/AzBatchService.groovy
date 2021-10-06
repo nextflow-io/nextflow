@@ -334,6 +334,8 @@ class AzBatchService implements Closeable {
             throw new IllegalArgumentException("Missing container image for process: $task.name")
         final taskId = "nf-${task.hash.toString()}"
         final mountPath = allPools.get(poolId).opts.getFileShareRootPath()
+	    if ( !mountPath )
+		    throw new IllegalArgumentException("Missing FileShareRootPath for pool: $poolId")
         def volumes = ''
         config.storage().getFileShares().each {
             volumes += " -v ${mountPath}/${it.key}:${it.value.mountPath}:rw"

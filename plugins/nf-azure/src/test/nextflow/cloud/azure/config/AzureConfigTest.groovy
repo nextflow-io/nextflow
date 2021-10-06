@@ -163,4 +163,38 @@ class AzureConfigTest extends Specification {
         cfg.batch().endpoint == 'https://nfbucket.europenorth.batch.azure.com'
         cfg.batch().location == LOCATION
     }
+
+	def 'should get azure batch file share root point' () {
+
+        given:
+        def KEY = 'xyz1343'
+        def NAME = 'container-foo'
+        def ENDPOINT = 'http://foo/bar'
+        def LOCATION = 'europenorth'
+
+        when:
+        def session = Mock(Session) {
+            getConfig() >> [ azure:
+			                     [batch:[
+                                     accountKey: KEY,
+                                     accountName: NAME,
+                                     endpoint: ENDPOINT,
+                                     location: LOCATION,
+                                     pools: [
+            		                     myPool1: [ fileShareRootPath: '/somewhere/over/the/rainbow' ],
+            		                     myPool2: [ sku:'batch.node.centos 8' ],
+            		                     myPool3: [ sku:'batch.node.ubuntu 20.04' ],
+            		                     myPool4: [ sku:'batch.node.debian 10', fileShareRootPath: '/mounting/here' ],
+            		                     myPool5: [ : ]]
+            	                 ]] ]
+        }
+        def cfg = AzConfig.getConfig(session)
+        then:
+        cfg.batch().pool('myPool1').fileShareRootPath == '/somewhere/over/the/rainbow'
+        cfg.batch().pool('myPool2').fileShareRootPath == '/mnt/resource/batch/tasks/fsmounts'
+        cfg.batch().pool('myPool3').fileShareRootPath == '/mnt/batch/tasks/fsmounts'
+        cfg.batch().pool('myPool4').fileShareRootPath == '/mounting/here'
+        cfg.batch().pool('myPool5').fileShareRootPath == '/mnt/resource/batch/tasks/fsmounts'
+   }
+
 }

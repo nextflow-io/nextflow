@@ -76,7 +76,7 @@ class AzPoolOpts implements CacheFunnel {
         this.offer = opts.offer ?: DEFAULT_OFFER
         this.sku = opts.sku ?: DEFAULT_SKU
         this.vmType = opts.vmType ?: DEFAULT_VM_TYPE
-        this.fileShareRootPath = opts.fileShareRootPath ?: DEFAULT_SHARE_ROOT_PATH
+        this.fileShareRootPath = opts.fileShareRootPath ?: buildFileShareRootPath()
         this.vmCount = opts.vmCount as Integer ?: 1
         this.autoScale = opts.autoScale as boolean
         this.scaleFormula = opts.scaleFormula
@@ -106,4 +106,13 @@ class AzPoolOpts implements CacheFunnel {
         hasher.putUnencodedChars(schedulePolicy ?: '')
         return hasher
     }
+
+    def buildFileShareRootPath() {
+        if (this.sku ==~ /.*centos.*/)
+            return "/mnt/resource/batch/tasks/fsmounts"
+        else if (this.sku ==~ /.*ubuntu.*/)
+            return "/mnt/batch/tasks/fsmounts"
+        else
+            return ''
+	}
 }
