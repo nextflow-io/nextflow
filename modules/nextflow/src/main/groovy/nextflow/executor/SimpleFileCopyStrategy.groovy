@@ -168,9 +168,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
             String escaped = Escape.path( it, true )
             //Bash glob behaves different than Java's Glob, if the path starts with **
             //https://unix.stackexchange.com/questions/49913/recursive-glob
-            if( escaped.startsWith("**") && escaped.size() > 2 ) {
-                escaped = "**/*" + escaped.substring(2)
-            }
+            escaped = escaped.replace( '**', '{*,*/**/*}' )
             escape.add( escaped )
         }
 
