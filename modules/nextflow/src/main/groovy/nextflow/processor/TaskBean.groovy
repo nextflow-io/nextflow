@@ -100,6 +100,10 @@ class TaskBean implements Serializable, Cloneable {
 
     def cleanup
 
+    boolean secretNative
+
+    List<String> secretNames
+
     @PackageScope
     TaskBean() {
         shell = BashWrapperBuilder.BASH
@@ -136,6 +140,9 @@ class TaskBean implements Serializable, Cloneable {
         this.containerNative = task.isContainerNative()
         this.containerEnabled = task.isContainerEnabled()
         this.containerOptions = task.config.getContainerOptions()
+        // secret management
+        this.secretNative = task.isSecretNative()
+        this.secretNames = task.config.getSecret()
 
         // stats
         this.outputEnvNames = task.getOutputEnvNames()

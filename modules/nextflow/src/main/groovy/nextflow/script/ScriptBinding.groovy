@@ -25,6 +25,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.Session
+import nextflow.secret.SecretHolder
 import org.apache.commons.lang.StringUtils
 /**
  * Defines the script execution context. By default provided the following variables
@@ -267,10 +268,15 @@ class ScriptBinding extends WorkflowBinding {
             (name in scriptAssignment
                     ? log.warn("`params.$name` is defined multiple times -- Assignments following the first are ignored")
                     : scriptAssignment << name )
-            put0(name,value)
+            return put0(name,value)
         }
 
         private String put0(String name, Object value) {
+            if( value instanceof SecretHolder ) {
+                log.warn "`params.$name` cannot be assigned to a secret value -- Assignment is ignored"
+                return null
+            }
+            
             // keep track of the real name
             realNames << name
 

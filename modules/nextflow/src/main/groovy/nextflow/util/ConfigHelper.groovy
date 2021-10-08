@@ -22,6 +22,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.secret.SecretHolder
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Helper method to handle configuration object
@@ -240,7 +241,9 @@ class ConfigHelper {
             return render0(val)
         if( val instanceof Map )
             return render0(val)
-
+        if( val instanceof SecretHolder )
+            return val.call()
+        
         InvokerHelper.inspect(val)
     }
 

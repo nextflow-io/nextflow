@@ -17,3 +17,4 @@
 
 nextflow.trace.DefaultObserverFactory
 nextflow.util.DefaultSerializers
+nextflow.secret.LocalSecretsProvider
