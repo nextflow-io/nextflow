@@ -17,7 +17,7 @@
 
 package nextflow.processor
 
-import java.lang.reflect.InvocationTargetException
+
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -610,6 +610,10 @@ class TaskRun implements Cloneable {
 
     boolean isContainerEnabled() {
         getConfig().container && (getContainerConfig().enabled || isContainerNative())
+    }
+
+    boolean isSecretNative() {
+        processor.executor?.isSecretNative() ?: false
     }
 
     boolean isSuccess( status = exitStatus ) {

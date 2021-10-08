@@ -39,6 +39,7 @@ import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
+import nextflow.secret.SecretsLoader
 import nextflow.util.ConfigHelper
 import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
@@ -274,6 +275,10 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- load plugins
         final cfg = plugins ? [plugins: plugins.tokenize(',')] : config
         Plugins.setup( cfg )
+
+        // -- load secret provider
+        final provider = SecretsLoader.instance.load()
+        config.withSecretProvider(provider)
 
         // -- create a new runner instance
         final runner = new ScriptRunner(config)

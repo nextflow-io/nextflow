@@ -103,7 +103,8 @@ class Launcher {
                 new CmdView(),
                 new CmdHelp(),
                 new CmdSelfUpdate(),
-                new CmdPlugins()
+                new CmdPlugins(),
+                new CmdSecret()
         ]
 
         // legacy command

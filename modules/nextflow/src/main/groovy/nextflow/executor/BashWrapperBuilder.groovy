@@ -35,6 +35,7 @@ import nextflow.exception.ProcessException
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
 /**
  * Builder to create the BASH script which is used to
@@ -250,6 +251,13 @@ class BashWrapperBuilder {
         }
 
         /*
+         * add the task secrets
+         */
+        if( !isSecretNative() ) {
+            binding.secrets_env = getSecretsEnv()
+        }
+
+        /*
          * staging input files when required
          */
         final stagingScript = copyStrategy.getStageInputFilesScript(inputFiles)
@@ -280,6 +288,10 @@ class BashWrapperBuilder {
         binding.trace_script = isTraceRequired() ? getTraceScript(binding) : null
         
         return binding
+    }
+
+    protected String getSecretsEnv() {
+        return SecretsLoader.instance.load() .getSecretEnv()
     }
 
     protected boolean isBash(String interpreter) {
@@ -519,6 +531,13 @@ class BashWrapperBuilder {
 
         for( String var : containerConfig.getEnvWhitelist() ) {
             builder.addEnv(var)
+        }
+
+        // when secret are not managed by the execution platform natively
+        // the secret names are added to the container env var white list
+        if( !isSecretNative() && secretNames )  {
+            for( String var : secretNames )
+                builder.addEnv(var)
         }
 
         // set up run docker params
