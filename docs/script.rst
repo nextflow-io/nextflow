@@ -328,9 +328,9 @@ for each key-value pair in the ``Map``. Here, we use the obvious variable names 
 Prints::
 
 
-    Yue=Wu
-    Mark=Williams
-    Sudha=Kumari
+    Yue = Wu
+    Mark = Williams
+    Sudha = Kumari
 
 A closure has two other important features. First, it can access variables in the scope where it is defined,
 so that it can `interact` with them.
