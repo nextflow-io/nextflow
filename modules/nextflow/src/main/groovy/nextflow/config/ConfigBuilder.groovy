@@ -34,6 +34,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.secret.SecretHolder
 import nextflow.secret.SecretsContext
+import nextflow.secret.SecretsLoader
 import nextflow.trace.GraphObserver
 import nextflow.trace.ReportObserver
 import nextflow.trace.TimelineObserver
@@ -324,7 +325,8 @@ class ConfigBuilder {
         binding.put('baseDir', baseDir)
         binding.put('projectDir', baseDir)
         binding.put('launchDir', Paths.get('.').toRealPath())
-        binding.put('secrets', new SecretsContext())
+        if( SecretsLoader.isEnabled() )
+            binding.put('secrets', new SecretsContext())
         return binding
     }
 

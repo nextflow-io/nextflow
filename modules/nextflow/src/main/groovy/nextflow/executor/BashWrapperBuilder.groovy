@@ -291,7 +291,9 @@ class BashWrapperBuilder {
     }
 
     protected String getSecretsEnv() {
-        return SecretsLoader.instance.load() .getSecretEnv()
+        return SecretsLoader.isEnabled()
+                ? SecretsLoader.instance.load() .getSecretEnv()
+                : null
     }
 
     protected boolean isBash(String interpreter) {

@@ -277,8 +277,10 @@ class CmdRun extends CmdBase implements HubOptions {
         Plugins.setup( cfg )
 
         // -- load secret provider
-        final provider = SecretsLoader.instance.load()
-        config.withSecretProvider(provider)
+        if( SecretsLoader.isEnabled() ) {
+            final provider = SecretsLoader.instance.load()
+            config.withSecretProvider(provider)
+        }
 
         // -- create a new runner instance
         final runner = new ScriptRunner(config)

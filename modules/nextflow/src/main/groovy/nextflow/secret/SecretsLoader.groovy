@@ -29,6 +29,10 @@ import nextflow.plugin.Plugins
 @Singleton
 class SecretsLoader {
 
+    static boolean isEnabled() {
+        System.getenv('NXF_ENABLE_SECRETS')=='true'
+    }
+
     @Memoized
     SecretsProvider load() {
         final provider = Plugins.getExtensions(SecretsProvider).first()
