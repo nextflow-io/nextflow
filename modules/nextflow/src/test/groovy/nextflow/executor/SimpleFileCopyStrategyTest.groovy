@@ -17,7 +17,6 @@
 
 package nextflow.executor
 
-
 import java.nio.file.Paths
 
 import nextflow.processor.TaskBean
@@ -71,32 +70,6 @@ class SimpleFileCopyStrategyTest extends Specification {
         lines[0] == "rm -f file.txt; rm -f seq_1.fa; ln -s /data/file file.txt; ln -s /data/seq seq_1.fa"
         lines.size() == 1
 
-    }
-
-
-    def 'should remove star glob pattern'() {
-
-        given:
-        def strategy = [:] as SimpleFileCopyStrategy
-
-        expect:
-        strategy.removeGlobStar('a/b/c') == 'a/b/c'
-        strategy.removeGlobStar('/a/b/c') == '/a/b/c'
-        strategy.removeGlobStar('some/*/path') == 'some/*/path'
-        strategy.removeGlobStar('some/**/path') == 'some'
-        strategy.removeGlobStar('some/**/path') == 'some'
-        strategy.removeGlobStar('some*') == 'some*'
-        strategy.removeGlobStar('some**') == '*'
-
-    }
-
-    def 'should normalize path'() {
-
-        given:
-        def strategy = [:] as SimpleFileCopyStrategy
-
-        expect:
-        strategy.normalizeGlobStarPaths(['file1.txt','path/file2.txt','path/**/file3.txt', 'path/**/file4.txt','**/fa']) == ['file1.txt','path/file2.txt','path','*']
     }
 
     @Unroll
@@ -260,7 +233,7 @@ class SimpleFileCopyStrategyTest extends Specification {
     def 'should return cp script to unstage output files' () {
 
         given:
-        def outputs =  [ 'simple.txt', 'my/path/file.bam' ]
+        def outputs =  ScriptOutputFiles.wrap('simple.txt', 'my/path/file.bam')
         def target = Paths.get('/target/work dir')
         def task = new TaskBean(workDir: target)
 
@@ -282,7 +255,7 @@ class SimpleFileCopyStrategyTest extends Specification {
     def 'should return mv script to unstage output files when storeDir used' () {
 
         given:
-        def outputs =  [ 'simple.txt', 'my/path/file.bam' ]
+        def outputs =  ScriptOutputFiles.wrap('simple.txt', 'my/path/file.bam' )
         def workDir = Paths.get('/target/work')
         def storeDir = Paths.get('/target/store')
         def task = new TaskBean(workDir: workDir)
@@ -305,7 +278,7 @@ class SimpleFileCopyStrategyTest extends Specification {
     def 'should return rsync script to unstage output files' () {
 
         given:
-        def outputs = [ 'simple.txt', 'my/path/file.bam' ];
+        def outputs = ScriptOutputFiles.wrap('simple.txt', 'my/path/file.bam' );
         def target = Paths.get("/target/work's")
         def task = new TaskBean(stageOutMode: 'rsync', workDir: target)
 

@@ -21,6 +21,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.file.AzBashLib
+import nextflow.executor.ScriptOutputFiles
 import nextflow.executor.SimpleFileCopyStrategy
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
@@ -112,22 +113,17 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
      * {@inheritDoc}
      */
     @Override
-    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
-        final patterns = normalizeGlobStarPaths(outputFiles)
+    String getUnstageOutputFilesScript(ScriptOutputFiles outputFiles, Path targetDir) {
         // create a bash script that will copy the out file to the working directory
-        log.trace "[AZURE BATCH] Unstaging file path: $patterns"
+        log.trace "[AZURE BATCH] Unstaging file path: $outputFiles"
 
-        if( !patterns )
+        if( !outputFiles )
             return null
-
-        final escape = new ArrayList(outputFiles.size())
-        for( String it : patterns )
-            escape.add( Escape.path(it) )
 
         return """\
             uploads=()
             IFS=\$'\\n'
-            for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
+            for name in \$(eval "ls -1d ${outputFiles.toShellEscapedNames()}" | sort | uniq); do
                 uploads+=("nxf_az_upload '\$name' '${AzHelper.toHttpUrl(targetDir)}'")
             done
             unset IFS

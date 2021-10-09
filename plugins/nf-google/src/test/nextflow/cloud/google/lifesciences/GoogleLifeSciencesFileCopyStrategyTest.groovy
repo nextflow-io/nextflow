@@ -17,8 +17,8 @@
 
 package nextflow.cloud.google.lifesciences
 
-
 import nextflow.cloud.google.GoogleSpecification
+import nextflow.executor.ScriptOutputFiles
 import nextflow.processor.TaskBean
 /**
  *
@@ -144,7 +144,8 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         def strategy = new GoogleLifeSciencesFileCopyStrategy(bean, handler)
 
         when:
-        def result = strategy.getUnstageOutputFilesScript(['foo.txt', 'dirx/'], gsPath('gs://other/dir'))
+        def outputs = ScriptOutputFiles.wrap('foo.txt', 'dirx/')
+        def result = strategy.getUnstageOutputFilesScript(outputs, gsPath('gs://other/dir'))
         then:
         result ==
                 '''\
@@ -159,7 +160,8 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
                 .stripIndent()
 
         when:
-        result = strategy.getUnstageOutputFilesScript(['fo o.txt'], gsPath('gs://other/dir x/'))
+        outputs = ScriptOutputFiles.wrap('fo o.txt')
+        result = strategy.getUnstageOutputFilesScript(outputs, gsPath('gs://other/dir x/'))
         then:
         result ==
                 '''\

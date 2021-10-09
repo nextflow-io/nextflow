@@ -16,8 +16,10 @@
  */
 
 package nextflow.cloud.aws.batch
+
 import java.nio.file.Paths
 
+import nextflow.executor.ScriptOutputFiles
 import nextflow.processor.TaskBean
 import spock.lang.Specification
 import test.TestHelper
@@ -26,7 +28,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
 
     def 'should strip out file/folder name from target S3 path' () {
         given:
-        def OUTPUTS = ["outputs_*","final_folder"]
+        def OUTPUTS = ScriptOutputFiles.wrap("outputs_*", "final_folder")
         def TARGET =  Paths.get('/data/results')
         def FILE = Paths.get('/some/data/nobel_prize_results.gz')
         def EXIT = Paths.get('/some/path/.exitcode')
@@ -58,7 +60,8 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         def target = Paths.get('/foo/bar')
 
         when:
-        def script = copy.getUnstageOutputFilesScript(['file.txt'],target)
+        def outputs = ScriptOutputFiles.wrap('file.txt')
+        def script = copy.getUnstageOutputFilesScript(outputs,target)
         then:
         script.trim() == '''
                     uploads=()
@@ -72,7 +75,8 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                     .stripIndent().trim()
 
         when:
-        script = copy.getUnstageOutputFilesScript(['file-*.txt'],target)
+        outputs = ScriptOutputFiles.wrap('file-*.txt')
+        script = copy.getUnstageOutputFilesScript(outputs,target)
         then:
         script.trim() == '''
                         uploads=()
@@ -86,7 +90,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                         .stripIndent().trim()
 
         when:
-        script = copy.getUnstageOutputFilesScript(['file-[a,b].txt'],target)
+        script = copy.getUnstageOutputFilesScript(ScriptOutputFiles.wrap('file-[a,b].txt'),target)
         then:
         script.trim() == '''
                     uploads=()
@@ -100,7 +104,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                     .stripIndent().trim()
 
         when:
-        script = copy.getUnstageOutputFilesScript(['file-01(A).txt', 'f o o.txt'],target)
+        script = copy.getUnstageOutputFilesScript(ScriptOutputFiles.wrap('file-01(A).txt', 'f o o.txt'),target)
         then:
         script.trim() == '''
                     uploads=()

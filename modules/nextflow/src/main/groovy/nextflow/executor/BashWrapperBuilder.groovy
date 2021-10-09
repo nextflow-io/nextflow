@@ -274,7 +274,7 @@ class BashWrapperBuilder {
         binding.unstage_controls = changeDir || shouldUnstageOutputs() ? getUnstageControls() : null
 
         if( changeDir || shouldUnstageOutputs() ) {
-            binding.unstage_outputs = copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)
+            binding.unstage_outputs = copyStrategy.getUnstageOutputFilesScript(choice0(outputGlobs, outputFiles),targetDir)
         }
         else {
             binding.unstage_outputs = null
@@ -288,6 +288,13 @@ class BashWrapperBuilder {
         binding.trace_script = isTraceRequired() ? getTraceScript(binding) : null
         
         return binding
+    }
+
+    private ScriptOutputFiles choice0(ScriptOutputFiles value, List<String> fallback) {
+        if( value!=null )
+            return value
+        // fallback on list of names assuming any wildcard represents a glob
+        return ScriptOutputFiles.wrap(fallback as String[])
     }
 
     protected String getSecretsEnv() {

@@ -16,6 +16,7 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Path
 /**
  * Declares file operations used in the task wrapper script
@@ -36,11 +37,18 @@ interface ScriptFileCopyStrategy {
     String getStageInputFilesScript(Map<String,Path> inputFiles)
 
     /**
-     * @param outputFiles List of the output file names to unstage
-     * @param targetDir The directory where output files need to be unstaged ie. stored
-     * @return A BASH snippet included in the wrapper script that un-stages the task output files
+     * Create a shell snippet to copy/uplod the task output files to the expected
+     * work target directory
+     *
+     * @param outputFiles
+     *      List of the output file names to unstage. NOTE: special chars contained in the file
+     *      names are escaped
+     * @param targetDir
+     *      The directory where output files need to be unstaged ie. stored
+     * @return
+     *      A Bash snippet included in the wrapper script that un-stages the task output files
      */
-    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir)
+    String getUnstageOutputFilesScript(ScriptOutputFiles outputFiles, Path targetDir)
 
     /**
      * Command to 'touch' a file

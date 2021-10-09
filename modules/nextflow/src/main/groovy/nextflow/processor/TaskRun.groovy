@@ -17,11 +17,11 @@
 
 package nextflow.processor
 
-
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import com.google.common.hash.HashCode
+import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -33,6 +33,7 @@ import nextflow.container.ContainerHandler
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessTemplateException
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.executor.ScriptOutputFiles
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
@@ -423,8 +424,9 @@ class TaskRun implements Cloneable {
      *
      */
     @Memoized
+    @CompileStatic
     List<String> getOutputFilesNames() {
-        def result = []
+        def result = new ArrayList<String>()
 
         for( FileOutParam param : getOutputsByType(FileOutParam).keySet() ) {
             result.addAll( param.getFilePatterns(context, workDir) )
@@ -433,6 +435,17 @@ class TaskRun implements Cloneable {
         return result.unique()
     }
 
+    ScriptOutputFiles getOutputFilesGlobs() {
+        final result = new ScriptOutputFiles()
+        for( FileOutParam param : getOutputsByType(FileOutParam).keySet() ) {
+            final names = param.getFilePatterns(context, workDir)
+            for( String it : names ) {
+                if( !result.get(it) )
+                    result.putName(it, param.isGlob())
+            }
+        }
+        return result
+    }
 
     /**
      * Get the map of *input* objects by the given {@code InParam} type

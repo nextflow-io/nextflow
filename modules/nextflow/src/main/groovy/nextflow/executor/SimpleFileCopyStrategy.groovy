@@ -158,22 +158,17 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * to the shared working directory
      */
     @Override
-    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
-        final patterns = normalizeGlobStarPaths(outputFiles)
+    String getUnstageOutputFilesScript(ScriptOutputFiles outputFiles, Path targetDir) {
         // create a bash script that will copy the out file to the working directory
-        log.trace "Unstaging file path: $patterns"
+        log.trace "Unstaging file path: $outputFiles"
 
-        if( !patterns )
+        if( !outputFiles )
             return null
-
-        final escape = new ArrayList(outputFiles.size())
-        for( String it : patterns )
-            escape.add( Escape.path(it) )
 
         final mode = stageoutMode ?: ( workDir==targetDir ? 'copy' : 'move' )
         return """\
             IFS=\$'\\n'
-            for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
+            for name in \$(eval "ls -1d ${outputFiles.toShellEscapedNames()}" | sort | uniq); do
                 ${stageOutCommand('$name', targetDir, mode)} || true
             done
             unset IFS""".stripIndent(true)
@@ -286,57 +281,6 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
 
         def path  = new File(target,source.substring(0,p)).toString()
         return "mkdir -p ${Escape.path(path)} && $cmd ${Escape.path(source)} ${Escape.path(path)}"
-    }
-
-    /**
-     * Normalize path that contains glob star wildcards (i.e. double star character) since
-     * they are not supported by plain BASH
-     *
-     * @param files
-     * @return
-     */
-    protected List<String> normalizeGlobStarPaths( List<String> files ) {
-
-        def result = new ArrayList(files.size())
-        for( int i=0; i<files.size(); i++ ) {
-            def item = removeGlobStar(files.get(i))
-            if( !result.contains(item) )
-                result.add(item)
-        }
-
-        return result
-    }
-
-    /**
-     * Remove a glob star specifier returning the longest parent path
-     *
-     * <pre>
-     * /some/data/&#42;&#42;/file.txt  ->   /some/data
-     * /some/data/file.txt     ->   /some/data/file.txt
-     * /some&#42;&#42;                 ->   *
-     * </pre>
-     *
-     * @param path
-     * @return
-     */
-    protected removeGlobStar(String path) {
-
-        def p = path?.indexOf('**')
-        if( p == -1 )
-            return path
-
-        def slash = -1
-        for( int i=p-1; i>=0; i-- ) {
-            if( path.charAt(i) == '/' as char) {
-                slash = i
-                break
-            }
-        }
-
-        if( slash == -1 )
-            return '*'
-
-        path.substring(0,slash)
     }
 
     @Override

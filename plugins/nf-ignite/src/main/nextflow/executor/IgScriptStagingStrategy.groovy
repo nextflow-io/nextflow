@@ -96,7 +96,7 @@ class IgScriptStagingStrategy extends IgFileStagingStrategy implements ScriptFil
      * @return A {@code null} string
      */
     @Override
-    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
+    String getUnstageOutputFilesScript(ScriptOutputFiles outputFiles, Path targetDir) {
         return null
     }
 

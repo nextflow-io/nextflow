@@ -22,6 +22,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.aws.util.S3BashLib
+import nextflow.executor.ScriptOutputFiles
 import nextflow.executor.SimpleFileCopyStrategy
 import nextflow.processor.TaskBean
 import nextflow.util.Escape
@@ -105,23 +106,17 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      * {@inheritDoc}
      */
     @Override
-    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
-
-        final patterns = normalizeGlobStarPaths(outputFiles)
+    String getUnstageOutputFilesScript(ScriptOutputFiles outputFiles, Path targetDir) {
         // create a bash script that will copy the out file to the working directory
-        log.trace "[AWS BATCH] Unstaging file path: $patterns"
+        log.trace "[AWS BATCH] Unstaging file path: $outputFiles"
 
-        if( !patterns )
+        if( !outputFiles )
             return null
-
-        final escape = new ArrayList(outputFiles.size())
-        for( String it : patterns )
-            escape.add( Escape.path(it) )
 
         return """\
             uploads=()
             IFS=\$'\\n'
-            for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
+            for name in \$(eval "ls -1d ${outputFiles.toShellEscapedNames()}" | sort | uniq); do
                 uploads+=("nxf_s3_upload '\$name' s3:/${Escape.path(targetDir)}")
             done
             unset IFS

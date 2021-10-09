@@ -20,6 +20,7 @@ package nextflow.ga4gh.tes.executor
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import nextflow.executor.ScriptOutputFiles
 import nextflow.executor.ScriptFileCopyStrategy
 import nextflow.processor.TaskProcessor
 import nextflow.util.Escape
@@ -52,7 +53,7 @@ class TesFileCopyStrategy implements ScriptFileCopyStrategy {
      * {@inheritDoc}
      */
     @Override
-    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
+    String getUnstageOutputFilesScript(ScriptOutputFiles outputFiles, Path targetDir) {
         return null
     }
 

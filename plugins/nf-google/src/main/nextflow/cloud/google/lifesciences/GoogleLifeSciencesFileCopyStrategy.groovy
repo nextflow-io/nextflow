@@ -24,6 +24,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.google.util.GsBashLib
+import nextflow.executor.ScriptOutputFiles
 import nextflow.executor.SimpleFileCopyStrategy
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
@@ -93,34 +94,18 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
         result.toString()
     }
 
-    /**
-     * Trim-trailing-slash
-     * @return
-     */
-    private String tts(String loc) {
-        while( log && loc.size()>1 && loc.endsWith('/') )
-            loc = loc.substring(0,loc.length()-1)
-        return loc
-    }
-
     @Override
-    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
-
-        final patterns = normalizeGlobStarPaths(outputFiles)
+    String getUnstageOutputFilesScript(ScriptOutputFiles outputFiles, Path targetDir) {
         // create a bash script that will copy the out file to the working directory
-        log.trace "[GLS] Unstaging file path: $patterns"
+        log.trace "[GLS] Unstaging file path: $outputFiles"
 
-        if( !patterns )
+        if( !outputFiles )
             return null
-
-        final escape = new ArrayList(outputFiles.size())
-        for( String it : patterns )
-            escape.add(tts(Escape.path(it)))
 
         """\
         uploads=()
         IFS=\$'\\n'
-        for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
+        for name in \$(eval "ls -1d ${outputFiles.toShellEscapedNames()}" | sort | uniq); do
             uploads+=("nxf_gs_upload '\$name' ${Escape.uriPath(targetDir)}")
         done
         unset IFS

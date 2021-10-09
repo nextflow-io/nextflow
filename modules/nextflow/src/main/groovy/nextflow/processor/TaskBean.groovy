@@ -23,8 +23,8 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.container.ContainerConfig
 import nextflow.executor.BashWrapperBuilder
+import nextflow.executor.ScriptOutputFiles
 import nextflow.util.MemoryUnit
-
 /**
  * Serializable task value object. Holds configuration values required to
  * launch the task execution
@@ -89,6 +89,8 @@ class TaskBean implements Serializable, Cloneable {
 
     List<String> outputFiles
 
+    ScriptOutputFiles outputGlobs
+
     String stageInMode
 
     String stageOutMode
@@ -147,6 +149,7 @@ class TaskBean implements Serializable, Cloneable {
 
         this.inputFiles = task.getInputFilesMap()
         this.outputFiles = task.getOutputFilesNames()
+        this.outputGlobs = task.getOutputFilesGlobs()
         this.binDir = task.getProcessor().getExecutor().getBinDir()
         this.stageInMode = task.config.stageInMode
         this.stageOutMode = task.config.stageOutMode
