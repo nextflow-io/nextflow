@@ -93,9 +93,6 @@ class TaskBean implements Serializable, Cloneable {
 
     String stageOutMode
 
-    @Deprecated
-    Path sharedDir
-
     Path binDir
 
     def cleanup
@@ -150,7 +147,6 @@ class TaskBean implements Serializable, Cloneable {
 
         this.inputFiles = task.getInputFilesMap()
         this.outputFiles = task.getOutputFilesNames()
-        this.sharedDir = task.getProcessor().getSession().getWorkDir()
         this.binDir = task.getProcessor().getExecutor().getBinDir()
         this.stageInMode = task.config.stageInMode
         this.stageOutMode = task.config.stageOutMode
