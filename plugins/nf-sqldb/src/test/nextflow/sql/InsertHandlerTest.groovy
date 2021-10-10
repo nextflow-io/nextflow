@@ -50,13 +50,12 @@ class InsertHandlerTest extends Specification {
     def 'should fetch columns names from db' () {
         given:
         def JDBC_URL = 'jdbc:h2:mem:test_' + Random.newInstance().nextInt(1_000)
-        def sql = Sql.newInstance(JDBC_URL, 'sa', null)
-        sql.execute('create table FOO(id int primary key, alpha varchar(255), omega int);')
+        def TABLE = 'create table FOO(id int primary key, alpha varchar(255), omega int);'
         and:
         def ds = new SqlDataSource([url:JDBC_URL])
 
         when:
-        def handler = new InsertHandler(ds, [into: 'FOO'])
+        def handler = new InsertHandler(ds, [into: 'FOO', setup: TABLE])
         then:
         handler.getSqlStatement([]) == 'insert into FOO ( ID,ALPHA,OMEGA ) values ( ?,?,? )'
 
@@ -66,11 +65,11 @@ class InsertHandlerTest extends Specification {
         given:
         def JDBC_URL = 'jdbc:h2:mem:test_' + Random.newInstance().nextInt(1_000)
         def sql = Sql.newInstance(JDBC_URL, 'sa', null)
-        sql.execute('create table FOO(id int primary key, alpha varchar(255), omega int);')
+        def TABLE = 'create table FOO(id int primary key, alpha varchar(255), omega int);'
         and:
         def ds = new SqlDataSource([url:JDBC_URL])
         and:
-        def handler = new InsertHandler(ds, [into: 'FOO'])
+        def handler = new InsertHandler(ds, [into: 'FOO', setup: TABLE])
 
         when:
         handler.perform([1, 'Hello world', 100])
@@ -90,12 +89,12 @@ class InsertHandlerTest extends Specification {
     def 'should insert single value into table' () {
         given:
         def JDBC_URL = 'jdbc:h2:mem:test_' + Random.newInstance().nextInt(1_000)
-        def sql = Sql.newInstance(JDBC_URL, 'sa', null)
-        sql.execute('create table FOO(id int primary key, alpha varchar(255), omega int);')
+        def TABLE = 'create table FOO(id int primary key, alpha varchar(255), omega int);'
         and:
+        def sql = Sql.newInstance(JDBC_URL, 'sa', null)
         def ds = new SqlDataSource([url:JDBC_URL])
         and:
-        def handler = new InsertHandler(ds, [into: 'FOO', columns: 'id'])
+        def handler = new InsertHandler(ds, [into: 'FOO', columns: 'id', setup: TABLE])
 
         when:
         handler.perform(1)
@@ -113,12 +112,12 @@ class InsertHandlerTest extends Specification {
     def 'should insert map into table' () {
         given:
         def JDBC_URL = 'jdbc:h2:mem:test_' + Random.newInstance().nextInt(1_000)
-        def sql = Sql.newInstance(JDBC_URL, 'sa', null)
-        sql.execute('create table FOO(id int primary key, alpha varchar(255), omega int);')
+        def TABLE = 'create table FOO(id int primary key, alpha varchar(255), omega int);'
         and:
+        def sql = Sql.newInstance(JDBC_URL, 'sa', null)
         def ds = new SqlDataSource([url:JDBC_URL])
         and:
-        def handler = new InsertHandler(ds, [into: 'FOO', columns: 'id,alpha' ])
+        def handler = new InsertHandler(ds, [into: 'FOO', columns: 'id,alpha', setup: TABLE ])
 
         when:
         handler.perform([id: 1, alpha: 'Hola'])

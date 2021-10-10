@@ -49,6 +49,7 @@ class InsertHandler implements Closeable {
     private int batchSize
     private int batchCount
     private PreparedStatement preparedStatement
+    private String setupStatement
 
     InsertHandler(SqlDataSource ds, Map opts) {
         this.ds = ds
@@ -57,6 +58,7 @@ class InsertHandler implements Closeable {
         this.columns = cols0(this.opts.columns)
         this.sqlStatement = this.opts.statement
         this.batchSize = this.opts.batch ? this.opts.batch as int : DEFAULT_BATCH_SIZE
+        this.setupStatement = this.opts.setup
         if( batchSize<1 )
             throw new IllegalArgumentException("SQL batch option must be greater than zero: $batchSize")
     }
@@ -64,9 +66,20 @@ class InsertHandler implements Closeable {
     private Connection getConnection() {
         if( connection == null ) {
             connection = Sql.newInstance(ds.toMap()).getConnection()
+            checkCreate(connection)
             connection.setAutoCommit(false)
         }
         return connection
+    }
+
+    private void checkCreate(Connection connection) {
+        if( !setupStatement )
+            return
+        // this allows performing a SQL statement ideally create the required table
+        // note: the underlying DB should support the idiom `create table if not exist`
+        try( def stm = connection.createStatement()) {
+            stm.executeUpdate(setupStatement)
+        }
     }
 
     protected List cols0(names) {
@@ -219,13 +232,17 @@ class InsertHandler implements Closeable {
     void close() {
         try {
             if( preparedStatement && batchCount>0 ) {
+                log.debug("[SQL] flushing and committing open batch")
                 preparedStatement.executeBatch()
                 preparedStatement.close()
                 connection.commit()
             }
         }
         finally {
-            connection?.close()
+            if( connection ) {
+                log.debug "[SQL] closing JDBC connection"
+                connection.close()
+            }
         }
     }
 }
