@@ -28,7 +28,14 @@ class ChannelSqlExtension extends ChannelExtensionPoint {
 
     private static final Map QUERY_PARAMS = [db: CharSequence]
 
-    private static final Map INSERT_PARAMS = [db: CharSequence, into: CharSequence, columns: [CharSequence, List], statement: CharSequence, batch: Integer]
+    private static final Map INSERT_PARAMS = [
+            db: CharSequence,
+            into: CharSequence,
+            columns: [CharSequence, List],
+            statement: CharSequence,
+            batch: Integer,
+            setup: CharSequence
+    ]
 
     private Session session
     private SqlConfig config
