@@ -76,6 +76,8 @@ class InsertHandlerTest extends Specification {
         handler.perform([1, 'Hello world', 100])
         handler.perform([2, 'Hola mundo', 200])
         handler.perform([3, 'Ciao mondo', 300])
+        and:
+        handler.close()
         then:
         def result = sql.rows('select * from FOO')
         result.size() == 3
@@ -99,6 +101,8 @@ class InsertHandlerTest extends Specification {
         handler.perform(1)
         handler.perform(2)
         handler.perform(3)
+        and:
+        handler.close()
         then:
         def result = sql.rows('select id from FOO')
         result.size() == 3
@@ -120,6 +124,8 @@ class InsertHandlerTest extends Specification {
         handler.perform([id: 1, alpha: 'Hola'])
         handler.perform([id: 2, alpha: 'Ciao'])
         handler.perform([id: 3, alpha: 'Hello'])
+        and:
+        handler.close()
         then:
         def result = sql.rows('select id, alpha from FOO')
         result.size() == 3

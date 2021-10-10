@@ -23,6 +23,8 @@ import java.sql.PreparedStatement
 import groovy.sql.Sql
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import groovy.transform.stc.ClosureParams
+import groovy.transform.stc.SimpleType
 import groovy.util.logging.Slf4j
 import nextflow.sql.config.SqlDataSource
 import nextflow.util.TupleHelper
@@ -36,6 +38,7 @@ import nextflow.util.TupleHelper
 class InsertHandler implements Closeable {
 
     static final List<String> QM = ['?']
+    static final int DEFAULT_BATCH_SIZE = 10
 
     private Map opts
     private SqlDataSource ds
@@ -43,6 +46,9 @@ class InsertHandler implements Closeable {
     private String sqlStatement
     private String into
     private List<String> columns
+    private int batchSize
+    private int batchCount
+    private PreparedStatement preparedStatement
 
     InsertHandler(SqlDataSource ds, Map opts) {
         this.ds = ds
@@ -50,11 +56,16 @@ class InsertHandler implements Closeable {
         this.into = this.opts.into
         this.columns = cols0(this.opts.columns)
         this.sqlStatement = this.opts.statement
+        this.batchSize = this.opts.batch ? this.opts.batch as int : DEFAULT_BATCH_SIZE
+        if( batchSize<1 )
+            throw new IllegalArgumentException("SQL batch option must be greater than zero: $batchSize")
     }
 
     private Connection getConnection() {
-        if( connection == null )
+        if( connection == null ) {
             connection = Sql.newInstance(ds.toMap()).getConnection()
+            connection.setAutoCommit(false)
+        }
         return connection
     }
 
@@ -125,36 +136,53 @@ class InsertHandler implements Closeable {
     }
 
     protected void performAsMap(String sql, Map record) {
-        PreparedStatement stm = getConnection().prepareStatement(sql)
-        try {
+        executeStm(sql) {stm ->
+            // loop over the expected columns and fetch a corresponding record value to be inserted
             for(int i=0; i<columns.size(); i++ ) {
                 final col = columns[i]
                 final value = record.get(col)
                 stm.setObject(i+1, value)
             }
-
+            // report a debug line
             log.debug "[SQL] perform sql statemet=$sql; entry=$record"
-            stm.execute()
-        }
-        finally {
-            stm.close()
         }
     }
 
     protected void performAsTuple(String sql, List tuple) {
-
-        PreparedStatement stm = getConnection().prepareStatement(sql)
-        try {
+        executeStm(sql) { stm ->
+            // loop over the tuple values and set a corresponding sql statement value
             for(int i=0; i<tuple.size(); i++ ) {
                 def value = tuple[i]
                 stm.setObject(i+1, value)
             }
-
+            // report a debug line
             log.debug "[SQL] perform sql statemet=$sql; entry=$tuple"
-            stm.execute()
         }
-        finally {
-            stm.close()
+    }
+
+    protected void executeStm(String sql, @ClosureParams(value = SimpleType.class, options = "java.sql.PreparedStatement") Closure operation) {
+        // create the statement if needed
+        if( preparedStatement==null )
+            preparedStatement = getConnection().prepareStatement(sql)
+
+        // make sure to clear previous params
+        preparedStatement.clearParameters()
+        // invoke the operation closure with setup the statement params
+        operation.call(preparedStatement)
+        // add to current batch
+        preparedStatement.addBatch()
+        // if the batch size is reached, perform the batch statement
+        if( ++batchCount == batchSize ) {
+            try {
+                preparedStatement.executeBatch()
+                preparedStatement.clearBatch()
+            }
+            finally {
+                // reset the current batch count
+                batchCount = 0
+                // make sure to commit the current batch
+                connection.commit()
+            }
         }
     }
 
@@ -189,6 +217,15 @@ class InsertHandler implements Closeable {
     }
 
     void close() {
-        connection?.close()
+        try {
+            if( preparedStatement && batchCount>0 ) {
+                preparedStatement.executeBatch()
+                preparedStatement.close()
+                connection.commit()
+            }
+        }
+        finally {
+            connection?.close()
+        }
     }
 }
