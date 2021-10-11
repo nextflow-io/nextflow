@@ -8,10 +8,13 @@ on:
       - '!refs/tags/.*'
     tags-ignore:
       - '*'
+  pull_request:
+    branches:
+      - '*'
 jobs:
   build:
     name: Build Nextflow
-    if: "!contains(github.event.head_commit.message, '[ci skip]')"
+    if: "!contains(github.event.head_commit.message, '[ci skip]') && (github.event == 'push' || github.repository != github.event.pull_request.head.repo.full_name')"
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
