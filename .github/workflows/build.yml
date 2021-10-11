@@ -109,4 +109,6 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: test-reports-jdk-${{ matrix.java_version }}
-        path: "**/build/reports/tests/test"
+        path: |
+          **/build/reports/tests/test
+          tests/checks/**
