@@ -1,13 +1,12 @@
 name: Nextflow CI
-# This workflow is triggered on pushes to the repository.
+# read more here
+# https://help.github.com/en/articles/workflow-syntax-for-github-actions#on
 on:
   push:
     branches:
       - '*'
+      - '!refs/tags/.*'
     tags-ignore:
-      - '*'  
-  pull_request:
-    branches:
       - '*'
 jobs:
   build:
