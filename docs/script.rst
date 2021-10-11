@@ -854,7 +854,7 @@ operation succeeds, and ``false`` otherwise::
 
   myFile = file('some/file.txt')
   result = myFile.delete()
-  println result ? "OK" : "Can delete: $myFile"
+  println result ? "OK" : "Cannot delete: $myFile"
 
 
 .. note:: This method deletes a directory ONLY if it does not contain any files or sub-directories. To
