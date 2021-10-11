@@ -49,7 +49,12 @@ class BashWrapperBuilderTest extends Specification {
             bean.workDir = Paths.get('/work/dir')
         if( !bean.script )
             bean.script = 'echo Hello world!'
-        new BashWrapperBuilder(bean as TaskBean)
+        new BashWrapperBuilder(bean as TaskBean) {
+            @Override
+            protected String getSecretsEnv() {
+                return null
+            }
+        }
     }
 
     def 'test map constructor'() {
@@ -202,6 +207,9 @@ class BashWrapperBuilderTest extends Specification {
         bash.getContainerCpus() >> null
         bash.getContainerCpuset() >> null
         bash.getContainerOptions() >> null
+
+        bash.isSecretNative() >> false
+        bash.getSecretNames() >> []
 
         builder instanceof SingularityBuilder
         builder.env == ['FOO','BAR']
@@ -476,6 +484,36 @@ class BashWrapperBuilderTest extends Specification {
         binding.container_env == null
         !binding.launch_cmd.contains('nxf_container_env')
     }
+
+    def 'should create secret env' () {
+
+        when:
+        def binding0 = newBashWrapperBuilder().makeBinding()
+        then:
+        binding0.containsKey('secrets_env')
+        binding0.secrets_env == null
+
+        when:
+        def builder1 = Spy(newBashWrapperBuilder()) {
+            getSecretsEnv() >> 'source /some/file.txt'
+            isSecretNative() >> false
+        }
+        and:
+        def binding1 = builder1.makeBinding()
+        then:
+        binding1.secrets_env == 'source /some/file.txt'
+
+        when:
+        def builder2 = Spy(newBashWrapperBuilder()) {
+            getSecretsEnv() >> 'source /some/file.txt'
+            isSecretNative() >> true
+        }
+        and:
+        def binding2 = builder2.makeBinding()
+        then:
+        binding2.secrets_env == null
+    }
+
 
     def 'should enable trace feature' () {
         when:

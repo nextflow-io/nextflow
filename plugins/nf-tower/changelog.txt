@@ -1,0 +1,4 @@
+nf-tower changelog
+===================
+1.2.0 - 6 Aug 2021
+- Add support for Nextflow cli logs via variable TOWER_ALLOW_NEXTFLOW_LOGS [d29a5bd1c]

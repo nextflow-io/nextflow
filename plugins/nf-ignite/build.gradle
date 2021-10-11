@@ -26,8 +26,8 @@ dependencies {
     api ('org.apache.ignite:ignite-slf4j:2.4.0') { transitive = false }
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.codehaus.groovy:groovy:3.0.8"
-    testImplementation "org.codehaus.groovy:groovy-nio:3.0.8"
+    testImplementation "org.codehaus.groovy:groovy:3.0.9"
+    testImplementation "org.codehaus.groovy:groovy-nio:3.0.9"
 
     /* testCompile inherited from top gradle build file */
     testImplementation ('org.apache.ignite:ignite-spring:2.4.0') {

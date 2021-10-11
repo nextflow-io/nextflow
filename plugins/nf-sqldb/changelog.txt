@@ -1,0 +1,10 @@
+NF-SQLDB CHANGE-LOG
+===================
+0.2.0 - x Oct 2021
+- Add support for batch inserts
+- Add support for insert operation setup statement to create missing table(s)
+- Add support fot SQLite
+- Add support for DuckDB
+
+0.1.0 - 1 Sep 2021
+- Initial release [https://github.com/nextflow-io/nextflow/commit/4d57979526d807a0d146697eb9c47d22696b0587]

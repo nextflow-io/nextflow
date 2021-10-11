@@ -9,12 +9,13 @@ Requirements
 
 Nextflow
 --------
-The support for Google Cloud requires Nextflow version ``20.01.0``. To install it define the following variables
+The support for Google Cloud requires Nextflow version ``20.01.0`` or later. To install it define the following variables
 in your system environment::
 
     export NXF_VER=20.01.0
     export NXF_MODE=google
 
+.. note:: As of version ``21.04.0`` or later the above variables are not required anymore and therefore should not be used.
 
 Credentials
 -----------
@@ -134,6 +135,7 @@ google.lifeSciences.serviceAccountEmail        Define the Google service account
 google.lifeSciences.subnetwork                 Define the name of the subnetwork to attach the instance to must be specified here, when the specified network is configured for custom subnet creation. The value is prefixed with `regions/subnetworks/` unless it contains a `/`, in which case it is assumed to be a fully specified subnetwork resource URL. Requires version ``21.03.0-edge`` or later.
 google.lifeSciences.sshDaemon                  When ``true`` runs SSH daemon in the VM carrying out the job to which it's possible to connect for debugging purposes (default: ``false``).
 google.lifeSciences.sshImage                   The container image used to run the SSH daemon (default: ``gcr.io/cloud-genomics-pipelines/tools``).
+google.lifeSciences.keepAliveOnFailure         When ``true`` and a task complete with an unexpected exit status the associated computing node is kept up for 1 hour. This options implies ``sshDaemon=true`` (default: ``false``, requires Nextflow version ``21.06.0-edge`` or later).
 google.storage.delayBetweenAttempts            Delay between download attempts from Google Storage (default `10 sec`, requires version ``21.06.0-edge`` or later).
 google.storage.maxParallelTransfers            Max parallel upload/download transfer operations *per job* (default: ``4``, requires version ``21.06.0-edge`` or later).
 google.storage.maxTransferAttempts             Max number of downloads attempts from Google Storage (default: `1`, requires version ``21.06.0-edge`` or later).

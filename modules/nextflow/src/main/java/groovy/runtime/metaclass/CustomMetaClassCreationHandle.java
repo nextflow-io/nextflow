@@ -25,6 +25,7 @@ import groovy.lang.MetaClass;
 import groovy.lang.MetaClassRegistry;
 import groovyx.gpars.dataflow.DataflowBroadcast;
 import groovyx.gpars.dataflow.DataflowReadChannel;
+import nextflow.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,6 +71,8 @@ public class CustomMetaClassCreationHandle extends MetaClassRegistry.MetaClassCr
     protected boolean isExtensionClass(Class theClass) {
         return  File.class == theClass ||
                 Path.class.isAssignableFrom(theClass) ||
+                Channel.class == theClass ||
+                ChannelFactory.class.isAssignableFrom(theClass) ||
                 DataflowBroadcast.class.isAssignableFrom(theClass) ||
                 DataflowReadChannel.class.isAssignableFrom(theClass) ||
                 // NOTE: groovy class cannot be referenced explicitly

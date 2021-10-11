@@ -46,7 +46,7 @@ import nextflow.util.Escape
  * Helper class for Google Pipelines.
  *
  * @author Ólafur Haukur Flygenring <olafurh@wuxinextcode.com>
- * @author  Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
@@ -119,7 +119,7 @@ class GoogleLifeSciencesHelper {
         return result
     }
 
-    Action createAction(String name, String imageUri, List<String> commands, List<Mount> mounts, List<ActionFlags> flags = [], String entrypoint = null) {
+    protected Action createAction0(String name, String imageUri, List<String> commands, List<Mount> mounts, List<ActionFlags> flags = [], String entrypoint = null) {
         final action = new Action()
                 .setContainerName(name)
                 .setImageUri(imageUri)
@@ -155,18 +155,22 @@ class GoogleLifeSciencesHelper {
         new Pipeline().setActions(actions).setResources(resources)
     }
 
+    protected List<Action> createActions(GoogleLifeSciencesSubmitRequest req) {
+        def result = []
+        if( config.sshDaemon || config.keepAliveOnFailure ) 
+            result.add(createSshDaemonAction(req))
+        result.add(createStagingAction(req))
+        result.add(createMainAction(req))
+        result.add(createUnstagingAction(req))
+        if( config.keepAliveOnFailure )
+            result.add(createKeepAlive(req))
+        return result
+    }
+
     Operation submitPipeline(GoogleLifeSciencesSubmitRequest req) {
-
         final actions = new ArrayList(5)
-        if( config.sshDaemon ) {
-            actions.add(createSshDaemonAction(req))
-        }
-        actions.add(createStagingAction(req))
-        actions.add(createMainAction(req))
-        actions.add(createUnstagingAction(req))
-
+        actions.addAll( createActions(req) )
         final pipeline = createPipeline( actions, createResources(req) )
-
         runPipeline(req.project, req.location, pipeline, ["taskName" : req.taskName])
     }
 
@@ -228,35 +232,51 @@ class GoogleLifeSciencesHelper {
         return result
     }
 
+    protected List<Mount> createMounts(GoogleLifeSciencesSubmitRequest req) {
+        final result = new ArrayList()
+        if( req.sharedMount )
+            result.add(req.sharedMount)
+        return result
+    }
+
     protected Action createMainAction(GoogleLifeSciencesSubmitRequest req) {
         // flag pipefail is required otherwise the command exit status is not returned
         List<String> cmd = ['-o', 'pipefail', '-c', getMainScript(req.workDir)]
         if( !req.entryPoint )
             cmd.add(0, 'bash')
 
-        createAction(
+        createAction0(
                 "$req.taskName-main",
                 req.containerImage,
                 cmd,
-                [req.sharedMount],
+                createMounts(req),
                 Collections.<ActionFlags>emptyList(),
                 req.entryPoint)
     }
 
     protected Action createStagingAction(GoogleLifeSciencesSubmitRequest req) {
-        createAction(
+        createAction0(
                 "$req.taskName-stage",
                 config.copyImage,
                 ["bash", "-c", getStagingScript(req.workDir)],
-                [req.sharedMount] )
+                createMounts(req) )
     }
 
     protected Action createUnstagingAction(GoogleLifeSciencesSubmitRequest req) {
-        createAction(
+        createAction0(
                 "$req.taskName-unstage",
                 config.copyImage,
                 ["bash", "-c", getUnstagingScript(req.workDir)],
-                [req.sharedMount],
+                createMounts(req),
+                [ActionFlags.ALWAYS_RUN, ActionFlags.IGNORE_EXIT_STATUS])
+    }
+
+    protected Action createKeepAlive(GoogleLifeSciencesSubmitRequest req) {
+        createAction0(
+                "$req.taskName-keepalive",
+                config.copyImage,
+                ["bash", "-c", "[ \$GOOGLE_PIPELINE_FAILED -eq 1 ] && sleep 60m"],
+                createMounts(req),
                 [ActionFlags.ALWAYS_RUN, ActionFlags.IGNORE_EXIT_STATUS])
     }
 
@@ -265,7 +285,7 @@ class GoogleLifeSciencesHelper {
             .setContainerName(SSH_DAEMON_NAME)
             .setImageUri(config.sshImage)
             .setEntrypoint('ssh-server')
-            .setMounts([req.sharedMount])
+            .setMounts( createMounts(req) )
             .setPortMappings(['22':22])
             .setAlwaysRun(true)
             .setRunInBackground(true)

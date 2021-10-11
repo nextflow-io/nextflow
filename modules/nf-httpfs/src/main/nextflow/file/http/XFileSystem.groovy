@@ -30,7 +30,7 @@ import java.nio.file.spi.FileSystemProvider
 import groovy.transform.PackageScope
 
 /**
- * Implements a read-only JSR-203 complaint file system for http/ftp protocols
+ * Implements a read-only JSR-203 compliant file system for http/ftp protocols
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Emilio Palumbo <emilio.palumbo@crg.eu>

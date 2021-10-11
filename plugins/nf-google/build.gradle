@@ -37,13 +37,13 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-api:1.7.10'
     compileOnly 'org.pf4j:pf4j:3.4.1'
 
-    api 'com.google.apis:google-api-services-lifesciences:v2beta-rev20191030-1.30.3'
-    api 'com.google.cloud:google-cloud-nio:0.120.0-alpha'
+    api 'com.google.apis:google-api-services-lifesciences:v2beta-rev20210527-1.31.5'
+    api 'com.google.cloud:google-cloud-nio:0.123.2'
     api 'com.google.auth:google-auth-library-oauth2-http:0.18.0'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.codehaus.groovy:groovy:3.0.8"
-    testImplementation "org.codehaus.groovy:groovy-nio:3.0.8"
+    testImplementation "org.codehaus.groovy:groovy:3.0.9"
+    testImplementation "org.codehaus.groovy:groovy-nio:3.0.9"
 }
 
 test {

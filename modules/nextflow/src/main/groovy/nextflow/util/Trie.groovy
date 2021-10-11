@@ -30,53 +30,52 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class Trie<T> {
 
-    private T vertex
+    private T node
 
     private List<Trie<T>> children
 
-    T getVertex() { vertex }
+    T getNode() { node }
 
     List<Trie<T>> getChildren() { children }
 
     Trie( T obj ) {
-        this.vertex = obj
+        this.node = obj
     }
 
-    Trie append( T value ) {
+    protected Trie addNode( T node ) {
 
         if( children == null ) {
-            def result = new Trie<T>(value)
+            final result = new Trie<T>(node)
             children = new LinkedList<Trie<T>>()
-            children << result
+            children.add(result)
             return result
         }
 
-        def result = children?.find { node -> node.vertex == value }
+        def result = children?.find { trie -> trie.node == node }
         if( !result ) {
-            result = new Trie<T>(value)
-            children << result
+            result = new Trie<T>(node)
+            children.add(result)
             return result
         }
 
         return result
     }
 
-    Trie append( List<T> values ) {
-        if(!values)
+    Trie addPath( List<T> nodes ) {
+        if(!nodes)
             return null
 
-        def v = values.head()
-        def node = append(v)
-        node.append( values.tail() )
+        def node = addNode(nodes.head())
+        node.addPath(nodes.tail())
         return node
     }
 
-    Trie append( T... values ) {
-        append( values as List<T> )
+    Trie addPath( T... nodes ) {
+        addPath( nodes as List<T> )
     }
 
-    Trie getChild( T value ) {
-        children?.find { node -> node.vertex == value }
+    Trie getChild( T name ) {
+        children?.find { trie -> trie.node == name }
     }
 
     List<T> longest() {
@@ -84,14 +83,29 @@ class Trie<T> {
     }
 
     private List<T> longestImpl(List<T> result) {
-        result << vertex
+        result << node
         if( children?.size() == 1 ) {
             children.get(0).longestImpl(result)
         }
         return result
     }
 
+    List<List<T>> traverse(T stop=null) {
+        def result = new ArrayList<List<T>>()
+        traverse0(new LinkedList<T>(), result, stop)
+        return result
+    }
 
+    private void traverse0(List<T> current, List<List<T>> result, T stop) {
+        current.add(node)
+        if( !children || children.any { it.node==stop } ) {
+            result.add(current)
+            return
+        }
+        for( Trie t : children ) {
+            t.traverse0(new ArrayList<T>(current), result, stop)
+        }
+    }
 
 }
 

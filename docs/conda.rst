@@ -44,7 +44,7 @@ accessible from all computing nodes.
   a remote object storage as a work directory eg. AWS Batch.
 
 Use Mamba to resolve packages
-=======================
+=============================
 
 It is also possible to use `mamba <https://github.com/mamba-org/mamba>`_ for speeding up creation of conda environments. For more information on how to enable this feature please refer :ref:`Conda <config-conda>`.
 

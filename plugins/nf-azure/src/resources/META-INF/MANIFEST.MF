@@ -3,4 +3,4 @@ Plugin-Class: nextflow.cloud.azure.AzurePlugin
 Plugin-Id: nf-azure
 Plugin-Version: 0.10.0
 Plugin-Provider: Seqera Labs
-Plugin-Requires: >=21.06.0-SNAPSHOT
+Plugin-Requires: >=21.06.0-edge

@@ -1,5 +1,7 @@
 package nextflow.util
 
+import java.lang.management.ManagementFactory
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
@@ -31,6 +33,15 @@ class ProcessHelper {
         }
         catch(Exception e) {
             throw new UnsupportedOperationException("Unable to access process pid for class: ${process.getClass().getName()}",e )
+        }
+    }
+
+    static long selfPid() {
+        try {
+            Long.parseLong(ManagementFactory.getRuntimeMXBean().getName().split("@")[0])
+        }
+        catch(Exception e) {
+            throw new UnsupportedOperationException("Unable to find current process pid",e)
         }
     }
 

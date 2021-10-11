@@ -16,7 +16,7 @@
 #  limitations under the License.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'21.05.0-edge'}
+NXF_VER=${NXF_VER:-'21.09.0-SNAPSHOT'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -24,6 +24,7 @@ NXF_BASE=${NXF_BASE:-$NXF_PROT://www.nextflow.io/releases}
 NXF_TEMP=${NXF_TEMP:-$TMPDIR}
 NXF_DIST=${NXF_DIST:-$NXF_HOME/framework}
 NXF_CLI="$0 $@"
+NXF_CLI_OPTS=${NXF_CLI_OPTS:-}
 
 export NXF_CLI
 export NXF_ORG
@@ -98,10 +99,10 @@ function resolve_link() {
       realpath "$1"
     elif command -v readlink &>/dev/null; then
       local target="$1"
-      cd $(dirname $target); target=$(basename $target)
+      cd "$(dirname "$target")"; target="$(basename "$target")"
       while [ -L "$target" ]; do
         target="$(readlink "$target")"
-        cd $(dirname $target); target=$(basename $target)
+        cd "$(dirname "$target")"; target="$(basename "$target")"
       done
       echo "$(cd "$(dirname "$target")"; pwd -P)/$target"
     else
@@ -196,6 +197,10 @@ dockerize=''
 declare -a jvmopts=()
 declare -a args=("$@")
 declare -a commands=(clone config drop help history info ls pull run view node console kuberun)
+# $NXF_CLI_OPTS allow to pass arbitrary cli opts via the environment
+# note: do not wrap with quotes because the variable can be used to specify more than on option separate by blanks
+[ "$NXF_CLI_OPTS" ] && args+=($NXF_CLI_OPTS)
+
 cmd=''
 while [[ $# != 0 ]]; do
     case $1 in
@@ -373,7 +378,7 @@ fi
 [[ "$JAVA_HOME" ]] && JAVA_OPTS+=(-Dcapsule.java.home="$JAVA_HOME")
 [[ "$CAPSULE_LOG" ]] && JAVA_OPTS+=(-Dcapsule.log=$CAPSULE_LOG)
 [[ "$CAPSULE_RESET" ]] && JAVA_OPTS+=(-Dcapsule.reset=true)
-[[ "$cmd" != "run" && "$cmd" != "node" ]] && JAVA_OPTS+=(-XX:+TieredCompilation -XX:TieredStopAtLevel=1)
+[[ "$cmd" != "run" && "$cmd" != "node" ]] && JAVA_OPTS+=(-XX:+TieredCompilation -XX:TieredStopAtLevel=1 -Dcom.sun.security.enableAIAcaIssuers=true)
 [[ "$NXF_OPTS" ]] && JAVA_OPTS+=($NXF_OPTS)
 [[ "$NXF_CLASSPATH" ]] && export NXF_CLASSPATH
 [[ "$NXF_GRAB" ]] && export NXF_GRAB
@@ -422,7 +427,7 @@ else
   LAUNCH_FILE="${NXF_LAUNCHER}/classpath-$(env_md5)"
 fi
 if [ -s "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ]; then
-    launcher=($(cat "$LAUNCH_FILE"))
+    declare -a launcher="($(cat "$LAUNCH_FILE"))"
 else
     # otherwise run the capsule and get the result classpath in the 'launcher' and save it to a file
     cli=($("$JAVA_CMD" "${JAVA_OPTS[@]}" -jar "$NXF_BIN"))

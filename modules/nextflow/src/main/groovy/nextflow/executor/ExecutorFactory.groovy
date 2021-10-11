@@ -235,4 +235,13 @@ class ExecutorFactory {
             exec.signal()
     }
 
+    void shutdown() {
+        for( Executor exec : executors.values() ) try {
+            exec.shutdown()
+        }
+        catch( Exception e ) {
+            log.warn "Unable to gracefully shutdown executor: $exec.name", e
+        }
+    }
+    
 }

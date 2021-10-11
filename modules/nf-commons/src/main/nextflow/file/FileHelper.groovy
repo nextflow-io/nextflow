@@ -254,27 +254,44 @@ class FileHelper {
             return Paths.get(str)
         }
 
-        checkForMissingPlugins(str)
-
-        final result = FileSystemPathFactory.parse(str)
-        if( result )
-            return result
+        while(true) {
+            final result = FileSystemPathFactory.parse(str)
+            if( result )
+                return result
+            if( !autoStartMissingPlugin(str) )
+                break
+        }
 
         asPath(toPathURI(str))
     }
 
     static private Map<String,String> PLUGINS_MAP = [s3:'nf-amazon', gs:'nf-google', az:'nf-azure']
 
-    static protected void checkForMissingPlugins(String str) {
+    static final private Map<String,Boolean> SCHEME_CHECKED = new HashMap<>()
+
+    static protected boolean autoStartMissingPlugin(String str) {
         final scheme = getUrlProtocol(str)
-        final pluginId = PLUGINS_MAP.get(scheme)
-        if( pluginId ) try {
-            if( Plugins.startIfMissing(pluginId) )
-                log.debug "Started plugin '$pluginId' required to handle file: $str"
+        if( SCHEME_CHECKED[scheme] )
+            return false
+        // find out the default plugin for the given scheme and try to load it
+        synchronized (SCHEME_CHECKED) {
+            final pluginId = PLUGINS_MAP.get(scheme)
+            if( pluginId ) try {
+                if( Plugins.startIfMissing(pluginId) ) {
+                    log.debug "Started plugin '$pluginId' required to handle file: $str"
+                    // return true to signal a new plugin was laoded
+                    return true
+                }
+            }
+            catch (Exception e) {
+                log.warn ("Unable to start plugin '$pluginId' required by $str", e)
+            }
+            finally {
+                SCHEME_CHECKED[scheme] = true
+            }
         }
-        catch (Exception e) {
-            log.warn ("Unable to start plugin '$pluginId' required by $str")
-        }
+        // no change in the plugin loaded, therefore return false
+        return false
     }
 
     /**
@@ -483,7 +500,8 @@ class FileHelper {
             if( region ) result.region = region
 
             // -- remaining client config options
-            def config = Global.getAwsClientConfig()
+            def config = Global.getAwsClientConfig() ?: new HashMap<>(10)
+            config = checkDefaultErrorRetry(config, env)
             if( config ) {
                 result.putAll(config)
             }
@@ -495,6 +513,26 @@ class FileHelper {
                 log.debug "Session is not available while creating environment for '$scheme' file system provider"
             result.session = Global.session
         }
+        return result
+    }
+
+    @PackageScope
+    static Map checkDefaultErrorRetry(Map result, Map env) {
+        if( result == null )
+            result = new HashMap(10)
+
+        if( result.max_error_retry==null ) {
+            result.max_error_retry = env?.AWS_MAX_ATTEMPTS
+        }
+        // fallback to default
+        if( result.max_error_retry==null ) {
+            result.max_error_retry = '5'
+        }
+        // make sure that's a string value as it's expected by the client
+        else {
+            result.max_error_retry = result.max_error_retry.toString()
+        }
+
         return result
     }
 
@@ -907,27 +945,29 @@ class FileHelper {
         if( !attr )
             return
 
-        // if it's not a dir just delete the file
-        if( !attr.isDirectory() ) {
-            Files.delete(path)
-            return
+        if( attr.isDirectory() ) {
+            deleteDir0(path)
         }
+        else {
+            Files.delete(path)
+        }
+    }
 
+    static private deleteDir0(Path path) {
         Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
 
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+            FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
                 Files.delete(file)
                 FileVisitResult.CONTINUE
             }
 
-            public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
+            FileVisitResult postVisitDirectory(Path dir, IOException exc) {
                 Files.delete(dir)
                 FileVisitResult.CONTINUE
             }
 
         })
     }
-
     /**
      * List the content of a file system path
      *

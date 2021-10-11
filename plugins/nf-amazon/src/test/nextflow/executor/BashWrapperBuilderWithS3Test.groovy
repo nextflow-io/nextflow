@@ -68,6 +68,9 @@ class BashWrapperBuilderWithS3Test extends Specification {
                     '''.stripIndent().rightTrim()
 
         binding.helpers_script == '''\
+            # aws cli retry config
+            export AWS_RETRY_MODE=standard 
+            export AWS_MAX_ATTEMPTS=5
             # aws helper
             nxf_s3_upload() {
                 local name=$1

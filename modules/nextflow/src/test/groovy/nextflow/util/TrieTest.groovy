@@ -29,67 +29,75 @@ class TrieTest extends Specification {
 
         when:
         def node = new Trie<String>('/')
-        node.append('db')
-        node.append('data')
+        node.addNode('db')
+        node.addNode('data')
         then:
         node.getChildren().size() == 2
-        node.getChildren() *. vertex == ['db','data']
+        node.getChildren() *. node == ['db', 'data']
 
     }
 
     def testAppendTwice() {
         when:
         def node = new Trie<String>('/')
-        node.append('db')
-        node.append('db')
+        node.addNode('db')
+        node.addNode('db')
         then:
         node.getChildren().size() == 1
-        node.getChildren() *. vertex == ['db']
+        node.getChildren() *. node == ['db']
     }
 
     def testAppendConcat() {
         when:
         def node = new Trie<String>('/')
-        node.append('db').append('some').append('path')
+        node.addNode('db').addNode('some').addNode('path')
         then:
         node.children.size() == 1
-        node.children[0].vertex == 'db'
-        node.children[0].children[0].vertex == 'some'
-        node.children[0].children[0].children[0].vertex == 'path'
+        node.children[0].node == 'db'
+        node.children[0].children[0].node == 'some'
+        node.children[0].children[0].children[0].node == 'path'
         node.children[0].children[0].children[0].children == null
     }
 
 
-    def testAppendList() {
+    def 'should add path'() {
         when:
         def node = new Trie<String>('/')
-        node.append( 'db', 'some', 'path' )
+        node.addPath( 'alpha', 'beta' )
         then:
         node.children.size() == 1
-        node.children[0].vertex == 'db'
-        node.children[0].children[0].vertex == 'some'
-        node.children[0].children[0].children[0].vertex == 'path'
-        node.children[0].children[0].children[0].children == null
+        and:
+        node.children[0].node == 'alpha'
+        node.children[0].children[0].node == 'beta'
+        node.children[0].children[0].children == null
+
+        when:
+        node.addPath('alpha','beta','delta','omega')
+        then:
+        node.children[0].children[0].node == 'beta'
+        node.children[0].children[0].children[0].node == 'delta'
+        node.children[0].children[0].children[0].children[0].node == 'omega'
+
     }
 
     def testAppend2() {
         when:
         def node = new Trie<String>('/')
-        node.append( 'db', 'some', 'file.txt' )
-        node.append( 'db', 'some', 'file.fa' )
+        node.addPath( 'db', 'some', 'file.txt' )
+        node.addPath( 'db', 'some', 'file.fa' )
 
         then:
         node.children.size() == 1
-        node.children[0].vertex == 'db'
+        node.children[0].node == 'db'
 
         node.children[0].children.size() == 1
-        node.children[0].children[0].vertex == 'some'
+        node.children[0].children[0].node == 'some'
 
         node.children[0].children[0].children.size() == 2
-        node.children[0].children[0].children[0].vertex == 'file.txt'
+        node.children[0].children[0].children[0].node == 'file.txt'
         node.children[0].children[0].children[0].children == null
 
-        node.children[0].children[0].children[1].vertex == 'file.fa'
+        node.children[0].children[0].children[1].node == 'file.fa'
         node.children[0].children[0].children[1].children == null
     }
 
@@ -102,11 +110,29 @@ class TrieTest extends Specification {
 
         when:
         node = new Trie<String>('db')
-        node.append('data','path','file1')
-        node.append('data','path','file2')
+        node.addPath('data','path','file1')
+        node.addPath('data','path','file2')
         then:
         node.longest() == ['db','data','path']
 
+    }
+
+    def 'should traverse tree' () {
+        given:
+        def trie = new Trie<String>('root')
+        and:
+        trie.addPath('alpha','beta','delta')
+        trie.addPath('alpha','beta','gamma')
+        trie.addPath('alpha','beta','gamma','omega')
+        trie.addPath('alpha','episol','teta')
+        when:
+        def result = trie.traverse()
+        then:
+        result.size() == 3
+        and:
+        result[0].join(', ') == 'root, alpha, beta, delta'
+        result[1].join(', ') == 'root, alpha, beta, gamma, omega'
+        result[2].join(', ') == 'root, alpha, episol, teta'
     }
 
 }

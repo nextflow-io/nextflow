@@ -573,4 +573,21 @@ class TaskConfigTest extends Specification {
         res.type == 'nvidia'
     }
 
+    def 'should configure secrets'()  {
+
+        given:
+        def script = Mock(BaseScript)
+
+        when:
+        def process = new ProcessConfig(script)
+        process.secret 'alpha'
+        process.secret 'omega'
+
+        then:
+        process.getSecret() == ['alpha', 'omega']
+        and:
+        process.createTaskConfig().secret == ['alpha', 'omega']
+        process.createTaskConfig().getSecret() == ['alpha', 'omega']
+
+    }
 }

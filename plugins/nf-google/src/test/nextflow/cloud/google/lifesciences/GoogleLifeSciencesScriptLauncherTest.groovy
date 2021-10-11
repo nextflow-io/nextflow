@@ -49,7 +49,8 @@ class GoogleLifeSciencesScriptLauncherTest extends GoogleSpecification {
                 script: 'echo Hello world!' ] as TaskBean
 
         when:
-        def binding = new GoogleLifeSciencesScriptLauncher(bean, handler).makeBinding()
+        def builder = Spy(new GoogleLifeSciencesScriptLauncher(bean, handler) ) { getSecretsEnv() >> null }
+        def binding = builder.makeBinding()
         then:
         binding.touch_file == null
         binding.stage_cmd == null
@@ -78,7 +79,8 @@ class GoogleLifeSciencesScriptLauncherTest extends GoogleSpecification {
          * simple bash run
          */
         when:
-        def wrapper = new GoogleLifeSciencesScriptLauncher(bean, handler) .buildNew0()
+        def builder = Spy(new GoogleLifeSciencesScriptLauncher(bean, handler) ) { getSecretsEnv() >> null }
+        def wrapper =  builder.buildNew0()
 
         then:
         wrapper == load('bash-wrapper-gcp.txt', [folder: WORK_DIR.toString()])
