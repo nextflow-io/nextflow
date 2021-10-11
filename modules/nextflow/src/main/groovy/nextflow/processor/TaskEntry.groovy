@@ -17,6 +17,8 @@
 
 package nextflow.processor
 
+import java.nio.file.Path
+
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 import groovy.transform.TupleConstructor
