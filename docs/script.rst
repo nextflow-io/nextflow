@@ -777,7 +777,7 @@ overwrite           When ``true`` overwrites any existing file with the same nam
 Copy files
 ----------
 
-The method ``copyTo`` copies a file into a new file or into a directory, or copie a directory to a new
+The method ``copyTo`` copies a file into a new file or into a directory, or copies a directory to a new
 directory::
 
   myFile.copyTo('new_name.txt')
