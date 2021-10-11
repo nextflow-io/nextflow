@@ -777,7 +777,7 @@ overwrite           When ``true`` overwrites any existing file with the same nam
 Copy files
 ----------
 
-The method ``copyTo`` copies a file into a new file or into a directory, or copie a directory to a new
+The method ``copyTo`` copies a file into a new file or into a directory, or copies a directory to a new
 directory::
 
   myFile.copyTo('new_name.txt')
@@ -854,7 +854,7 @@ operation succeeds, and ``false`` otherwise::
 
   myFile = file('some/file.txt')
   result = myFile.delete()
-  println result ? "OK" : "Can delete: $myFile"
+  println result ? "OK" : "Cannot delete: $myFile"
 
 
 .. note:: This method deletes a directory ONLY if it does not contain any files or sub-directories. To
