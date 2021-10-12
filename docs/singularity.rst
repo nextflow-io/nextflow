@@ -149,6 +149,11 @@ Nextflow caches those images in the ``singularity`` directory in the pipeline wo
 suggest to provide a centralised caching directory by using either the ``NXF_SINGULARITY_CACHEDIR`` environment variable
 or the ``singularity.cacheDir`` setting in the Nextflow config file.
 
+As of version ``21.09.0-edge``, when looking for a Singularity image file, Nextflow before checks the *library* directory,
+if the image file is not found, the *cache* directory is used as usual. The library directory can be defined either using
+the ``NXF_SINGULARITY_LIBRARYDIR`` environment variable or the ``singularity.libraryDir`` configuration setting (the latter
+overrides th
+
 .. warning:: When using a computing cluster the Singularity cache directory must be a shared folder accessible
   to all computing nodes.
 
